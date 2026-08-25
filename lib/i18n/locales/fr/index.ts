@@ -52,6 +52,7 @@ import nsDonPage from './donPage';
 import nsInscription2026 from './inscription2026';
 import nsAssociationPage from './associationPage';
 import nsLeaderboardPage from './leaderboardPage';
+import nsPalmaresPage from './palmaresPage';
 import nsScrimsPage from './scrimsPage';
 import nsScrimLanding from './scrimLanding';
 import nsTournamentsList from './tournamentsList';
@@ -216,6 +217,7 @@ export const frDict = {
   inscription2026: nsInscription2026.fr,
   associationPage: nsAssociationPage.fr,
   leaderboardPage: nsLeaderboardPage.fr,
+  palmaresPage: nsPalmaresPage.fr,
   scrimsPage: nsScrimsPage.fr,
   scrimLanding: nsScrimLanding.fr,
   tournamentsList: nsTournamentsList.fr,

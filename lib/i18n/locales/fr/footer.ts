@@ -14,6 +14,7 @@ export default ns('footer', {
   colCommunity: 'Communauté',
   colLegal: 'Légal & contact',
   leaderboard: 'Classement des joueuses',
+  palmares: 'Palmarès',
   ambassadors: 'Ambassadeur·rices',
   rules: 'Règlement',
   news: 'Actualités OW',

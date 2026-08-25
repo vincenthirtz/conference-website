@@ -24,6 +24,7 @@ export default ns('planDuSite', {
   linkTimeline2026: 'Timeline 2026',
   linkAllTournaments: 'Tous les tournois',
   linkLeaderboard: 'Classement des joueuses',
+  linkPalmares: 'Palmarès des joueuses',
   linkLeagues: 'Ligues & saisons',
   linkGames: 'Jeux supportés',
   linkInstallApp: "Installer l'app",

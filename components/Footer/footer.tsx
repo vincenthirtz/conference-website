@@ -43,6 +43,7 @@ type FooterDict = typeof nsFooter.fr;
 
 const tournoiLinks = (t: FooterDict): FooterLink[] => [
   { label: t.leaderboard, href: '/leaderboard', Icon: TrophyIcon },
+  { label: t.palmares, href: '/palmares', Icon: TrophyIcon },
   { label: t.ambassadors, href: '/live', Icon: LiveIcon },
   { label: t.rules, href: '/rules', Icon: RulesIcon },
   { label: t.news, href: '/actualites', Icon: NewsIcon },

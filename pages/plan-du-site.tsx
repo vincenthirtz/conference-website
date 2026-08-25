@@ -24,6 +24,7 @@ const getSiteSections = (t: PlanDict): SiteSection[] => [
       { label: t.linkTimeline2026, href: '/timeline-2026' },
       { label: t.linkAllTournaments, href: '/tournaments' },
       { label: t.linkLeaderboard, href: '/leaderboard' },
+      { label: t.linkPalmares, href: '/palmares' },
       { label: t.linkLeagues, href: '/leagues' },
       { label: t.linkGames, href: '/jeux' },
       { label: t.linkInstallApp, href: '/app' },
