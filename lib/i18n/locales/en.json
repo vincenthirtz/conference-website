@@ -1046,7 +1046,8 @@
     "developers": "API / Developers",
     "contact": "Contact us",
     "legal": "Legal notice",
-    "copyright": "WOMEN'S CUP association — All rights reserved — Made with ❤️ by"
+    "copyright": "WOMEN'S CUP association — All rights reserved — Made with ❤️ by",
+    "leaderboard": "Player rankings"
   },
   "newsletterSignup": {
     "footerTitle": "Newsletter",
@@ -1640,7 +1641,14 @@
     "newsEmpty": "No news yet. Check back soon!",
     "supportLead": "They support the competition · they broadcast it · they talk about it",
     "supportPartnersLink": "View all partners",
-    "heroCtaJoin": "I'm looking for a team"
+    "heroCtaJoin": "I'm looking for a team",
+    "playersEyebrow": "The players",
+    "playersTitle": "They make the competition",
+    "playersLead": "The top of the Glicko-2 rankings, updated after every official match. Every player has her own page: rating curve, record and head-to-head.",
+    "playersAll": "Full rankings",
+    "playersRecord": "{rating} pts · {wins}W – {losses}L",
+    "playersUnknown": "Unknown player",
+    "playersMvpTitle": "Latest match MVPs"
   },
   "homeHeader": {
     "subtitle1": "The 100% women, French-speaking Overwatch tournament.",
@@ -4191,7 +4199,10 @@
     "linkStaffDashboard": "Staff dashboard",
     "linkStaffLogin": "Staff login",
     "linkForgotPassword": "Forgot password",
-    "linkResetPassword": "Reset password"
+    "linkResetPassword": "Reset password",
+    "linkLeaderboard": "Player rankings",
+    "linkLeagues": "Leagues & seasons",
+    "linkFindTeam": "I'm looking for a team"
   },
   "adminTopBar": {
     "accueilAria": "Home",

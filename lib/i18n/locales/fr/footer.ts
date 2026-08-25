@@ -13,6 +13,7 @@ export default ns('footer', {
   colTournament: 'Tournoi',
   colCommunity: 'Communauté',
   colLegal: 'Légal & contact',
+  leaderboard: 'Classement des joueuses',
   ambassadors: 'Ambassadeur·rices',
   rules: 'Règlement',
   news: 'Actualités OW',

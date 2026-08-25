@@ -466,3 +466,40 @@ export function AboutIcon({
     </svg>
   );
 }
+
+export function TrophyIcon({
+  className,
+  fill,
+}: Readonly<SVGTypes>): JSX.Element {
+  const stroke = fill || 'currentColor';
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M7 4h10v5a5 5 0 0 1-10 0V4Z"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M7 5.5H4.5V7a3.5 3.5 0 0 0 3 3.46M17 5.5h2.5V7a3.5 3.5 0 0 1-3 3.46"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 14v3.5M9 20.5h6M9.5 20.5l.5-3h4l.5 3"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

@@ -14,10 +14,14 @@ import { type HomeNewsItem } from '@/components/News/HomeNewsSection';
 import { type Announcement } from '@/components/Ads/AnnouncementsTicker';
 import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
 import { type HomePartner } from '@/components/Home/HomeSponsors';
+import { type HomeMvp } from '@/components/Home/HomePlayers';
+import type { LeaderboardPlayer } from '@/types/rating';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import {
   loadHomeData,
   loadTournamentPrizeCents,
+  loadTopPlayers,
+  loadRecentMvps,
 } from '@/utils/home/loadHomeData';
 import { useT } from '@/lib/i18n/useT';
 import { useTwitchLive } from '@/components/Home/useTwitchLive';
@@ -25,6 +29,7 @@ import HomeTopAnnounce from '@/components/Home/HomeTopAnnounce';
 import HomeHeroV2 from '@/components/Home/HomeHeroV2';
 import HomeSpotlight from '@/components/Home/HomeSpotlight';
 import HomeSteps from '@/components/Home/HomeSteps';
+import HomePlayers from '@/components/Home/HomePlayers';
 import HomeNewsV2 from '@/components/Home/HomeNewsV2';
 import HomeSupportStrip from '@/components/Home/HomeSupportStrip';
 import NewsletterSignup from '@/components/NewsletterSignup';
@@ -37,6 +42,8 @@ type HomeProps = {
   partners: HomePartner[];
   countdownTarget: string | null;
   prizeCents: number | null;
+  topPlayers: LeaderboardPlayer[];
+  recentMvps: HomeMvp[];
   // Vrai quand le chargement du contenu dynamique a échoué côté serveur : on le
   // signale plutôt que d'afficher une home faussement vide (hero reste rendu).
   loadError: boolean;
@@ -46,9 +53,13 @@ type HomeProps = {
 // par tenant en multi-tenant.
 export const getStaticProps: GetStaticProps<HomeProps> = async () => {
   const data = await loadHomeData(DEFAULT_TENANT_ID);
-  const prizeCents = data.upcomingTournament
-    ? await loadTournamentPrizeCents(data.upcomingTournament.id)
-    : null;
+  const [prizeCents, topPlayers, recentMvps] = await Promise.all([
+    data.upcomingTournament
+      ? loadTournamentPrizeCents(data.upcomingTournament.id)
+      : Promise.resolve(null),
+    loadTopPlayers(DEFAULT_TENANT_ID),
+    loadRecentMvps(DEFAULT_TENANT_ID),
+  ]);
 
   return {
     props: {
@@ -58,6 +69,8 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
       partners: data.partners,
       countdownTarget: data.countdownTarget,
       prizeCents,
+      topPlayers,
+      recentMvps,
       loadError: data.loadError,
     },
     revalidate: 900,
@@ -71,6 +84,8 @@ function Home({
   partners,
   countdownTarget,
   prizeCents,
+  topPlayers,
+  recentMvps,
   loadError,
 }: HomeProps) {
   const t = useT(nsHomeV2);
@@ -101,6 +116,8 @@ function Home({
       />
 
       <HomeSteps />
+
+      <HomePlayers players={topPlayers} mvps={recentMvps} />
 
       <HomeNewsV2 news={news} />
 

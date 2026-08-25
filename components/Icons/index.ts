@@ -17,4 +17,5 @@ export {
   AboutIcon,
   AppIcon,
   CodeIcon,
+  TrophyIcon,
 } from './ui';

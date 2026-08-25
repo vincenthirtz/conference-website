@@ -13,7 +13,12 @@ import { type HomeNewsItem } from '@/components/News/HomeNewsSection';
 import { type Announcement } from '@/components/Ads/AnnouncementsTicker';
 import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
 import { type HomePartner } from '@/components/Home/HomeSponsors';
+import { type HomeMvp } from '@/components/Home/HomePlayers';
+import type { LeaderboardPlayer } from '@/types/rating';
+import { readLeaderboard } from '@/utils/rating/readLeaderboard';
+import { maskBattleTag } from '@/utils/battleTag';
 import { supabaseAdmin } from '@/utils/supabase';
+import { logger } from '@/utils/logger';
 
 // Marge de troncature du `content` des news de la home. HomeNewsSection ne rend
 // qu'un excerpt d'au plus ~220 caractères ; on garde une marge confortable.
@@ -249,4 +254,108 @@ export async function loadTournamentPrizeCents(
     typeof data.raised_amount_cents === 'number' ? data.raised_amount_cents : 0;
   const total = base + raised;
   return total > 0 ? total : null;
+}
+
+/** Nombre de joueuses et de MVP mises en avant sur l'accueil. */
+const HOME_TOP_PLAYERS = 3;
+const HOME_RECENT_MVPS = 3;
+
+/**
+ * Podium du classement pour la section « joueuses » de l'accueil.
+ *
+ * Best-effort : `readLeaderboard` lève en cas d'erreur DB, on retombe sur une
+ * liste vide — la section se tait plutôt que de faire échouer toute la home.
+ */
+export async function loadTopPlayers(
+  tenantId: string
+): Promise<LeaderboardPlayer[]> {
+  if (!supabaseAdmin) return [];
+  try {
+    const { players } = await readLeaderboard(tenantId, HOME_TOP_PLAYERS, 0);
+    return players;
+  } catch (error) {
+    logger.error('[loadTopPlayers] read error', error);
+    return [];
+  }
+}
+
+/**
+ * Dernières MVP de match désignées par le staff.
+ *
+ * Deux allers-retours seulement : les polls gagnés les plus récents, puis les
+ * membres correspondants (compte lié + équipe) pour pouvoir pointer vers le
+ * profil public. Le BattleTag est masqué, comme partout côté public.
+ */
+export async function loadRecentMvps(tenantId: string): Promise<HomeMvp[]> {
+  if (!supabaseAdmin) return [];
+
+  const { data, error } = await supabaseAdmin
+    .from('match_mvp_polls')
+    .select('match_id, winner_member_id, winner_battle_tag, winner_imported_at')
+    .eq('tenant_id', tenantId)
+    .not('winner_imported_at', 'is', null)
+    .order('winner_imported_at', { ascending: false })
+    .limit(HOME_RECENT_MVPS);
+
+  if (error || !data || data.length === 0) {
+    if (error) logger.error('[loadRecentMvps] read error', error);
+    return [];
+  }
+
+  const memberIds = Array.from(
+    new Set(
+      data
+        .map((row: any) => row.winner_member_id)
+        .filter((id: unknown): id is string => typeof id === 'string')
+    )
+  );
+
+  const memberInfo = new Map<
+    string,
+    {
+      userId: string | null;
+      displayName: string | null;
+      teamName: string | null;
+      teamSlug: string | null;
+    }
+  >();
+
+  if (memberIds.length > 0) {
+    const { data: members } = await supabaseAdmin
+      .from('team_members')
+      .select('id, user_id, display_name, team:team_id ( name, slug )')
+      .eq('tenant_id', tenantId)
+      .in('id', memberIds);
+    for (const m of (members || []) as any[]) {
+      const team = Array.isArray(m.team)
+        ? (m.team[0] ?? null)
+        : (m.team ?? null);
+      memberInfo.set(m.id, {
+        userId: m.user_id ?? null,
+        displayName: m.display_name ?? null,
+        teamName: team?.name ?? null,
+        teamSlug: team?.slug ?? null,
+      });
+    }
+  }
+
+  return data
+    .map((row: any) => {
+      const info = row.winner_member_id
+        ? memberInfo.get(row.winner_member_id)
+        : undefined;
+      const label =
+        maskBattleTag(row.winner_battle_tag ?? null) ||
+        info?.displayName ||
+        null;
+      if (!label) return null;
+      return {
+        userId: info?.userId ?? null,
+        label,
+        teamName: info?.teamName ?? null,
+        teamSlug: info?.teamSlug ?? null,
+        matchId: row.match_id as string,
+      };
+    })
+    .filter((m): m is HomeMvp => m !== null);
 }

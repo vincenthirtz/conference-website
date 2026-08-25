@@ -23,6 +23,8 @@ const getSiteSections = (t: PlanDict): SiteSection[] => [
       { label: t.linkTournament2025, href: '/tournoi' },
       { label: t.linkTimeline2026, href: '/timeline-2026' },
       { label: t.linkAllTournaments, href: '/tournaments' },
+      { label: t.linkLeaderboard, href: '/leaderboard' },
+      { label: t.linkLeagues, href: '/leagues' },
       { label: t.linkGames, href: '/jeux' },
       { label: t.linkInstallApp, href: '/app' },
     ],
@@ -43,6 +45,7 @@ const getSiteSections = (t: PlanDict): SiteSection[] => [
     links: [
       { label: t.linkRegister, href: '/register' },
       { label: t.linkRegister2026, href: '/inscription-2026' },
+      { label: t.linkFindTeam, href: '/rejoindre' },
       { label: t.linkCreateTeam, href: '/team/create' },
       { label: t.linkCaptainGuide, href: '/guide/gerer-mon-equipe' },
       { label: t.linkCaptainSpace, href: '/espace-capitaine' },
