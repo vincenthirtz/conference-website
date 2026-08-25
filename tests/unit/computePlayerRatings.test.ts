@@ -241,3 +241,88 @@ describe('applyMatchToStates', () => {
     expect(states.size).toBe(0);
   });
 });
+
+describe('computePlayerRatings — scrims', () => {
+  it('un scrim fait gagner moins de points qu’un match de compétition', () => {
+    const parts = new Map<string, RatingParticipant[]>([
+      ['m1', [part('m1', 'A', 'u1'), part('m1', 'B', 'u2')]],
+    ]);
+
+    const officiel = computePlayerRatings({
+      matches: [match({ id: 'm1', winnerTeamId: 'A' })],
+      participantsByMatch: parts,
+    }).ratings.get('u1') as PlayerRatingState;
+
+    const scrim = computePlayerRatings({
+      matches: [
+        match({
+          id: 'm1',
+          winnerTeamId: 'A',
+          tournamentId: null,
+          scrimId: 's1',
+        }),
+      ],
+      participantsByMatch: parts,
+    }).ratings.get('u1') as PlayerRatingState;
+
+    expect(scrim.rating).toBeGreaterThan(DEFAULT_RATING);
+    expect(scrim.rating).toBeLessThan(officiel.rating);
+    // Le gain du scrim est exactement la moitié de celui du match officiel.
+    expect(scrim.rating - DEFAULT_RATING).toBeCloseTo(
+      (officiel.rating - DEFAULT_RATING) / 2,
+      10
+    );
+    // Il informe aussi moitié moins : le RD descend deux fois moins.
+    expect(DEFAULT_RD - scrim.rd).toBeCloseTo(
+      (DEFAULT_RD - officiel.rd) / 2,
+      10
+    );
+    // La partie reste comptée comme jouée.
+    expect(scrim.gamesPlayed).toBe(1);
+    expect(scrim.wins).toBe(1);
+  });
+
+  it('un scrim contre une équipe sans joueuses en base note quand même le camp inscrit', () => {
+    const m = match({
+      id: 'm1',
+      winnerTeamId: 'A',
+      tournamentId: null,
+      scrimId: 's1',
+    });
+    // Seul le camp A a des participantes : B est un sparring externe.
+    const { ratings, history } = computePlayerRatings({
+      matches: [m],
+      participantsByMatch: new Map([['m1', [part('m1', 'A', 'u1')]]]),
+    });
+
+    const winner = ratings.get('u1') as PlayerRatingState;
+    expect(winner.rating).toBeGreaterThan(DEFAULT_RATING);
+    // L'adversaire par défaut vaut 1500 : c'est ce que porte l'historique.
+    expect(history).toHaveLength(1);
+    expect(history[0].opponentAvgRating).toBe(DEFAULT_RATING);
+    // Aucune joueuse fantôme n'est créée côté adverse.
+    expect(ratings.size).toBe(1);
+  });
+
+  it('un match de COMPÉTITION sans participantes d’un côté reste ignoré', () => {
+    const m = match({ id: 'm1', winnerTeamId: 'A' });
+    const { ratings, history } = computePlayerRatings({
+      matches: [m],
+      participantsByMatch: new Map([['m1', [part('m1', 'A', 'u1')]]]),
+    });
+    expect(ratings.size).toBe(0);
+    expect(history).toEqual([]);
+  });
+
+  it('un scrim sans aucune participante des deux côtés ne note rien', () => {
+    const m = match({
+      id: 'm1',
+      winnerTeamId: 'A',
+      tournamentId: null,
+      scrimId: 's1',
+    });
+    const states = new Map<string, PlayerRatingState>();
+    expect(applyMatchToStates(states, m, [])).toEqual([]);
+    expect(states.size).toBe(0);
+  });
+});

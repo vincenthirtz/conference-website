@@ -32,11 +32,14 @@ const SCORED_STATUSES = new Set(['finished', 'walkover']);
 
 /** Colonnes lues sur `matches` pour construire un RatingMatch. */
 const MATCH_COLUMNS =
-  'id, tournament_id, team1_id, team2_id, winner_team_id, completed_at, status, is_bye, forfeit_team_id';
+  'id, tournament_id, scrim_id, team1_id, team2_id, winner_team_id, completed_at, status, is_bye, forfeit_team_id';
 
 type MatchRow = {
   id: string;
   tournament_id: string | null;
+  // Non nul sur les lignes MIROIR d'un scrim : le moteur en tire le poids
+  // reduit du rating (cf. SCRIM_RATING_WEIGHT).
+  scrim_id?: string | null;
   team1_id: string | null;
   team2_id: string | null;
   winner_team_id: string | null;
@@ -50,6 +53,7 @@ function toRatingMatch(m: MatchRow): RatingMatch {
   return {
     id: m.id,
     tournamentId: m.tournament_id,
+    scrimId: m.scrim_id ?? null,
     team1Id: m.team1_id,
     team2Id: m.team2_id,
     winnerTeamId: m.winner_team_id,

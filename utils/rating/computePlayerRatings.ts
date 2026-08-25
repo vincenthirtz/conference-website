@@ -18,6 +18,11 @@
 //    Score = 1 pour le camp gagnant, 0 pour le perdant (pas de nul en tournoi).
 //    Chaque joueur d'un camp recoit un unique GlickoOutcome vs ce pseudo-adv.
 //  - opponentAvgRating dans l'history = rating moyen du camp adverse AVANT match.
+//  - Un SCRIM (match miroir, `scrimId` non nul) pese moins qu'un match de
+//    competition : cf. SCRIM_RATING_WEIGHT plus bas.
+//  - Un scrim peut se jouer contre une equipe SANS joueuses en base (sparring
+//    externe) : ce camp-la est alors represente par un adversaire par defaut
+//    et ne recoit aucun rating. Cette tolerance est reservee aux scrims.
 
 import {
   updateGlicko,
@@ -34,6 +39,12 @@ import {
 export type RatingMatch = {
   id: string;
   tournamentId: string | null;
+  /**
+   * Scrim d'origine quand ce match est le MIROIR d'un scrim
+   * (cf. utils/scrims/ratedMatch.ts). Non nul => partie d'entrainement :
+   * poids reduit, et adversaire sans roster tolere.
+   */
+  scrimId?: string | null;
   team1Id: string | null;
   team2Id: string | null;
   winnerTeamId: string | null;
@@ -87,6 +98,42 @@ export type PlayerRatingHistoryRow = {
 // ---------------------------------------------------------------------------
 
 const SCORED_STATUSES = new Set(['finished', 'walkover']);
+
+/**
+ * Poids d'un scrim dans le rating, relatif a un match de competition (1).
+ *
+ * WHY : gagner un entrainement ne vaut pas gagner un match de tournoi. Sans
+ * ce poids, une equipe qui enchaine les scrims contre des adversaires faibles
+ * grimperait au classement aussi vite qu'une equipe qui gagne la competition,
+ * et le classement cesserait de dire quoi que ce soit sur le niveau en match
+ * officiel.
+ *
+ * COMMENT : on ne bricole pas le moteur Glicko-2 (ce serait fausser ses
+ * proprietes mathematiques). On calcule la mise a jour normale, puis on
+ * n'applique qu'une FRACTION du deplacement — rating, RD et volatilite
+ * ensemble. A 0.5, un scrim bouge deux fois moins qu'un match officiel, et
+ * reduit deux fois moins l'incertitude : il informe moitie moins.
+ */
+export const SCRIM_RATING_WEIGHT = 0.5;
+
+/**
+ * Applique une FRACTION du deplacement calcule par Glicko-2.
+ *
+ * PUR. `weight = 1` renvoie `next` tel quel (aucune perte de precision sur le
+ * chemin nominal) ; `weight = 0` laisserait l'etat inchange.
+ */
+function blendGlicko(
+  prev: { rating: number; rd: number; volatility: number },
+  next: { rating: number; rd: number; volatility: number },
+  weight: number
+): { rating: number; rd: number; volatility: number } {
+  if (weight >= 1) return next;
+  return {
+    rating: prev.rating + weight * (next.rating - prev.rating),
+    rd: prev.rd + weight * (next.rd - prev.rd),
+    volatility: prev.volatility + weight * (next.volatility - prev.volatility),
+  };
+}
 
 /** Cree un etat de rating vierge pour un nouveau joueur. */
 function newState(userId: string): PlayerRatingState {
@@ -157,7 +204,17 @@ export function applyMatchToStates(
     else if (p.teamId === team2Id) team2Users.push(p.userId);
   }
 
-  if (team1Users.length === 0 || team2Users.length === 0) return [];
+  // Un scrim peut se jouer contre un sparring-partner qui n'a aucune joueuse
+  // en base : ce camp est alors represente par un adversaire par defaut
+  // (1500 / RD 350, soit l'incertitude maximale — on ne sait rien de lui) et
+  // ne recoit aucune ligne d'historique. La tolerance s'arrete la : sur un
+  // match de COMPETITION, un camp sans participants signale une donnee
+  // incomplete, et noter dessus serait une attribution au hasard.
+  const isScrim = Boolean(match.scrimId);
+  if (team1Users.length === 0 && team2Users.length === 0) return [];
+  if (!isScrim && (team1Users.length === 0 || team2Users.length === 0)) {
+    return [];
+  }
 
   const occurredAt = match.completedAt ?? '';
 
@@ -168,14 +225,22 @@ export function applyMatchToStates(
     before.set(uid, { ...s });
   }
 
-  const avg = (users: string[], pick: (s: PlayerRatingState) => number) =>
-    users.reduce((acc, uid) => acc + pick(before.get(uid) as PlayerRatingState), 0) /
-    users.length;
+  const avg = (
+    users: string[],
+    pick: (s: PlayerRatingState) => number,
+    fallback: number
+  ) =>
+    users.length === 0
+      ? fallback
+      : users.reduce(
+          (acc, uid) => acc + pick(before.get(uid) as PlayerRatingState),
+          0
+        ) / users.length;
 
-  const team1AvgRating = avg(team1Users, (s) => s.rating);
-  const team1AvgRd = avg(team1Users, (s) => s.rd);
-  const team2AvgRating = avg(team2Users, (s) => s.rating);
-  const team2AvgRd = avg(team2Users, (s) => s.rd);
+  const team1AvgRating = avg(team1Users, (s) => s.rating, DEFAULT_RATING);
+  const team1AvgRd = avg(team1Users, (s) => s.rd, DEFAULT_RD);
+  const team2AvgRating = avg(team2Users, (s) => s.rating, DEFAULT_RATING);
+  const team2AvgRd = avg(team2Users, (s) => s.rd, DEFAULT_RD);
 
   const winnerId = match.winnerTeamId as string;
 
@@ -194,11 +259,17 @@ export function applyMatchToStates(
       opponentRd: oppAvgRd,
       score,
     };
+    const weight = isScrim ? SCRIM_RATING_WEIGHT : 1;
+
     for (const uid of users) {
       const prev = before.get(uid) as PlayerRatingState;
-      const next = updateGlicko(
-        { rating: prev.rating, rd: prev.rd, volatility: prev.volatility },
-        [outcome]
+      const next = blendGlicko(
+        prev,
+        updateGlicko(
+          { rating: prev.rating, rd: prev.rd, volatility: prev.volatility },
+          [outcome]
+        ),
+        weight
       );
       const s = states.get(uid) as PlayerRatingState;
       s.rating = next.rating;
