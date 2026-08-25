@@ -9,6 +9,12 @@ import Button from '@/components/Buttons/button';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { maskBattleTag } from '@/utils/battleTag';
+import { splitTeamMembers, isNonPlayingTeamRole } from '@/utils/teams/roleKind';
+import {
+  resolveMissingDisplayNames,
+  withFallbackDisplayName,
+} from '@/utils/teams/memberDisplayName';
 import type { MatchStatus, BracketSide } from '@/types/admin';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -23,6 +29,33 @@ type SimpleTeam = {
   name: string;
   short_name?: string | null;
   logo_url?: string | null;
+  captain_id?: string | null;
+};
+
+// Une ligne de composition, telle qu'affichée publiquement. `battle_tag` est
+// masqué (maskBattleTag) — le discriminant numérique n'a rien à faire sur une
+// page indexable. `user_id` conditionne le lien vers le profil public.
+type LineupMember = {
+  id: string;
+  user_id: string | null;
+  display_name: string | null;
+  battle_tag: string | null;
+  role: string | null;
+  is_substitute: boolean;
+  is_captain: boolean;
+};
+
+type MatchLineups = {
+  team1: LineupMember[];
+  team2: LineupMember[];
+};
+
+// MVP du match : `memberId` pointe une ligne `team_members` (donc une entrée de
+// la composition), `battleTag` est le snapshot pris à l'import — il survit à la
+// suppression du membre.
+type MatchMvp = {
+  memberId: string | null;
+  battleTag: string | null;
 };
 
 type Tournament = {
@@ -77,6 +110,8 @@ type Match = {
 
 type Props = {
   match: Match | null;
+  lineups: MatchLineups;
+  mvp: MatchMvp | null;
   seo: SeoProps;
 };
 
@@ -84,11 +119,36 @@ const SEO_BASE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
   'https://owwomenscup.fr';
 
+/** Libellé public d'une joueuse : pseudo de compte, sinon BattleTag masqué. */
+function lineupLabel(member: LineupMember): string | null {
+  // L'encadrement (coach / manager) n'a pas de BattleTag : on inverse la
+  // priorité pour ces rôles, comme sur la fiche d'équipe.
+  return isNonPlayingTeamRole(member.role)
+    ? member.display_name || member.battle_tag
+    : member.battle_tag || member.display_name;
+}
+
+/** Retrouve la MVP dans les compositions (elle peut avoir quitté l'équipe). */
+function findMvpMember(
+  lineups: MatchLineups,
+  mvp: MatchMvp | null
+): LineupMember | null {
+  if (!mvp?.memberId) return null;
+  return (
+    [...lineups.team1, ...lineups.team2].find((m) => m.id === mvp.memberId) ??
+    null
+  );
+}
+
 // SEO par-entité pour un match : titre lisible « T1 vs T2 – Tournoi » (les noms
 // d'équipe ne se traduisent pas, d'où un `string` simple), description bilingue
 // et un JSON-LD `SportsEvent` (un match = un évènement sportif daté), inspiré du
 // modèle de la page tournoi. Retourné via `props.seo`.
-function buildMatchSeo(match: Match): SeoProps {
+function buildMatchSeo(
+  match: Match,
+  lineups: MatchLineups,
+  mvp: MatchMvp | null
+): SeoProps {
   const t1 = match.team1?.short_name || match.team1?.name || 'TBD';
   const t2 =
     match.team2?.short_name ||
@@ -122,6 +182,51 @@ function buildMatchSeo(match: Match): SeoProps {
     sport: game,
     inLanguage: 'fr-FR',
   };
+
+  // Les joueuses sont nommées dans le JSON-LD (`competitor.athlete`) : un match
+  // n'est pas qu'une confrontation de logos, et c'est le seul endroit où les
+  // moteurs peuvent relier une joueuse à l'évènement qu'elle a joué. Chaque
+  // athlète pointe vers son profil public quand elle a un compte.
+  const competitors = [
+    { team: match.team1, members: lineups.team1 },
+    { team: match.team2, members: lineups.team2 },
+  ]
+    .filter((c) => c.team)
+    .map((c) => {
+      const athletes = c.members
+        .filter((m) => !isNonPlayingTeamRole(m.role))
+        .map((m) => ({ member: m, name: lineupLabel(m) }))
+        .filter((a) => Boolean(a.name))
+        .map((a) => ({
+          '@type': 'Person',
+          name: a.name,
+          ...(a.member.user_id
+            ? {
+                url: `${SEO_BASE_URL}/player/${encodeURIComponent(a.member.user_id)}`,
+              }
+            : {}),
+        }));
+      return {
+        '@type': 'SportsTeam',
+        name: c.team!.name,
+        ...(athletes.length > 0 ? { athlete: athletes } : {}),
+      };
+    });
+  if (competitors.length > 0) jsonLd.competitor = competitors;
+
+  const mvpMember = findMvpMember(lineups, mvp);
+  const mvpName = mvpMember ? lineupLabel(mvpMember) : (mvp?.battleTag ?? null);
+  if (mvpName) {
+    jsonLd.performer = {
+      '@type': 'Person',
+      name: mvpName,
+      ...(mvpMember?.user_id
+        ? {
+            url: `${SEO_BASE_URL}/player/${encodeURIComponent(mvpMember.user_id)}`,
+          }
+        : {}),
+    };
+  }
 
   return {
     title: `${versus} – ${tournamentName}`,
@@ -167,8 +272,8 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       replay_url,
       lobby_code,
       notes,
-      team1:team1_id ( id, slug, name, short_name, logo_url ),
-      team2:team2_id ( id, slug, name, short_name, logo_url ),
+      team1:team1_id ( id, slug, name, short_name, logo_url, captain_id ),
+      team2:team2_id ( id, slug, name, short_name, logo_url, captain_id ),
       tournament:tournament_id ( id, slug, name, short_name, game ),
       stage:stage_id ( id, name, stage_type ),
       games (*)
@@ -193,16 +298,87 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       return oa - ob;
     }) ?? [];
 
+  const [lineups, mvp] = await Promise.all([
+    readMatchLineups(match),
+    readMatchMvp(match.id),
+  ]);
+
   return {
     props: {
       match,
-      seo: buildMatchSeo(match),
+      lineups,
+      mvp,
+      seo: buildMatchSeo(match, lineups, mvp),
     },
     revalidate: 30,
   };
 };
 
-export default function MatchPage({ match }: Props) {
+/**
+ * Compositions des deux équipes.
+ *
+ * Best-effort : une erreur de lecture renvoie des listes vides plutôt que de
+ * faire tomber la page — le score et les maps restent la valeur principale.
+ * Le pseudo suit le même repli que partout ailleurs (surcharge d'équipe →
+ * pseudo de compte), et le BattleTag est masqué.
+ */
+async function readMatchLineups(match: Match): Promise<MatchLineups> {
+  const teamIds = [match.team1?.id, match.team2?.id].filter(
+    (id): id is string => Boolean(id)
+  );
+  if (teamIds.length === 0) return { team1: [], team2: [] };
+
+  const { data, error } = await supabaseAdmin
+    .from('team_members')
+    .select(
+      'id, team_id, user_id, display_name, battle_tag, role, is_substitute'
+    )
+    .in('team_id', teamIds)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    logger.error('match lineups error:', error);
+    return { team1: [], team2: [] };
+  }
+
+  const rows = (data || []) as any[];
+  const resolved = await resolveMissingDisplayNames(rows);
+
+  const toLineup = (team: SimpleTeam | null): LineupMember[] => {
+    if (!team) return [];
+    return rows
+      .filter((m) => m.team_id === team.id)
+      .map((m) => ({
+        id: m.id,
+        user_id: m.user_id ?? null,
+        display_name: withFallbackDisplayName(m, resolved),
+        battle_tag: maskBattleTag(m.battle_tag ?? null),
+        role: m.role ?? null,
+        is_substitute: Boolean(m.is_substitute),
+        is_captain: Boolean(team.captain_id && m.user_id === team.captain_id),
+      }));
+  };
+
+  return { team1: toLineup(match.team1), team2: toLineup(match.team2) };
+}
+
+/** MVP du match, si le staff a importé le résultat du sondage Discord. */
+async function readMatchMvp(matchId: string): Promise<MatchMvp | null> {
+  const { data, error } = await supabaseAdmin
+    .from('match_mvp_polls')
+    .select('winner_member_id, winner_battle_tag')
+    .eq('match_id', matchId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  if (!data.winner_member_id && !data.winner_battle_tag) return null;
+  return {
+    memberId: data.winner_member_id ?? null,
+    battleTag: maskBattleTag(data.winner_battle_tag ?? null),
+  };
+}
+
+export default function MatchPage({ match, lineups, mvp }: Props) {
   const t = useT(nsMatchDetail);
   const locale = useLocale();
   if (!match) {
@@ -382,6 +558,11 @@ export default function MatchPage({ match }: Props) {
           </div>
         </section>
 
+        {/* Compositions + MVP */}
+        <MvpBanner match={match} lineups={lineups} mvp={mvp} t={t} />
+
+        <LineupsSection match={match} lineups={lineups} mvp={mvp} t={t} />
+
         {/* Maps list + extra info */}
         <section className="grid grid-cols-1 md:grid-cols-[minmax(0,1.7fr)_minmax(0,1.3fr)] gap-6">
           {/* Maps */}
@@ -515,6 +696,264 @@ export default function MatchPage({ match }: Props) {
 /* ─────────────────────────────────────────────
  * UI Components
  * ────────────────────────────────────────────*/
+
+/**
+ * Bandeau MVP du match. Affiché uniquement si le staff a importé la gagnante du
+ * sondage Discord — c'est la seule distinction individuelle du site, elle mérite
+ * mieux qu'une ligne dans un tableau.
+ */
+function MvpBanner({
+  match,
+  lineups,
+  mvp,
+  t,
+}: {
+  match: Match;
+  lineups: MatchLineups;
+  mvp: MatchMvp | null;
+  t: MatchDict;
+}) {
+  const member = findMvpMember(lineups, mvp);
+  const name = member ? lineupLabel(member) : (mvp?.battleTag ?? null);
+  if (!name) return null;
+
+  const team = member
+    ? lineups.team1.some((m) => m.id === member.id)
+      ? match.team1
+      : match.team2
+    : null;
+
+  return (
+    <section className="mb-6">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-400/30 bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-transparent px-4 py-3">
+        <span
+          aria-hidden="true"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-400/20 text-lg"
+        >
+          ★
+        </span>
+        <div className="min-w-0">
+          <p className="text-[10px] uppercase tracking-wide text-amber-200/80">
+            {t.mvpTitle}
+          </p>
+          <p className="truncate text-sm font-semibold text-white">
+            {member?.user_id ? (
+              <Link
+                href={`/player/${encodeURIComponent(member.user_id)}`}
+                className="hover:underline"
+              >
+                {name}
+              </Link>
+            ) : (
+              name
+            )}
+            {team && (
+              <span className="ml-2 text-[11px] font-normal text-gray-300">
+                {team.short_name || team.name}
+              </span>
+            )}
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Compositions des deux équipes. Section muette si aucune des deux n'a de
+ * roster connu (matchs importés, équipes TBD) — un titre suivi de deux cadres
+ * vides n'apprend rien.
+ */
+function LineupsSection({
+  match,
+  lineups,
+  mvp,
+  t,
+}: {
+  match: Match;
+  lineups: MatchLineups;
+  mvp: MatchMvp | null;
+  t: MatchDict;
+}) {
+  if (lineups.team1.length === 0 && lineups.team2.length === 0) return null;
+
+  return (
+    <section className="mb-6">
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-[11px] uppercase tracking-wide text-gray-400">
+          {t.lineupsTitle}
+        </p>
+        <span className="text-[10px] text-gray-500">{t.lineupsHint}</span>
+      </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <LineupPanel
+          team={match.team1}
+          fallbackName={t.teamFallback1}
+          members={lineups.team1}
+          mvp={mvp}
+          t={t}
+        />
+        <LineupPanel
+          team={match.team2}
+          fallbackName={match.is_bye ? t.bye : t.teamFallback2}
+          members={lineups.team2}
+          mvp={mvp}
+          t={t}
+        />
+      </div>
+    </section>
+  );
+}
+
+function LineupPanel({
+  team,
+  fallbackName,
+  members,
+  mvp,
+  t,
+}: {
+  team: SimpleTeam | null;
+  fallbackName: string;
+  members: LineupMember[];
+  mvp: MatchMvp | null;
+  t: MatchDict;
+}) {
+  const { roster, subs, staff } = splitTeamMembers(members);
+  const teamName = team?.name || fallbackName;
+
+  return (
+    <div className="rounded-2xl border border-white/5 bg-black/60 p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-white">
+          {team?.slug ? (
+            <Link href={`/team/${team.slug}`} className="hover:underline">
+              {teamName}
+            </Link>
+          ) : (
+            teamName
+          )}
+        </p>
+        <span className="text-[10px] text-gray-500">
+          {format(roster.length > 1 ? t.lineupCount_other : t.lineupCount_one, {
+            count: roster.length,
+          })}
+        </span>
+      </div>
+
+      {members.length === 0 ? (
+        <p className="text-[11px] text-gray-400">{t.lineupEmpty}</p>
+      ) : (
+        <div className="space-y-3">
+          <LineupGroup members={roster} mvp={mvp} t={t} />
+          {subs.length > 0 && (
+            <LineupGroup
+              label={t.lineupSubs}
+              members={subs}
+              mvp={mvp}
+              t={t}
+              muted
+            />
+          )}
+          {staff.length > 0 && (
+            <LineupGroup
+              label={t.lineupStaff}
+              members={staff}
+              mvp={mvp}
+              t={t}
+              muted
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LineupGroup({
+  label,
+  members,
+  mvp,
+  t,
+  muted = false,
+}: {
+  label?: string;
+  members: LineupMember[];
+  mvp: MatchMvp | null;
+  t: MatchDict;
+  muted?: boolean;
+}) {
+  if (members.length === 0) return null;
+  return (
+    <div>
+      {label && (
+        <p className="mb-1 text-[10px] uppercase tracking-wide text-gray-500">
+          {label}
+        </p>
+      )}
+      <ul className="space-y-1">
+        {members.map((member) => (
+          <LineupRow
+            key={member.id}
+            member={member}
+            isMvp={Boolean(mvp?.memberId && mvp.memberId === member.id)}
+            muted={muted}
+            t={t}
+          />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function LineupRow({
+  member,
+  isMvp,
+  muted,
+  t,
+}: {
+  member: LineupMember;
+  isMvp: boolean;
+  muted: boolean;
+  t: MatchDict;
+}) {
+  const name = lineupLabel(member) || t.lineupUnknown;
+  const nameClass = `truncate text-[12px] ${muted ? 'text-gray-300' : 'text-white'}`;
+
+  return (
+    <li className="flex items-center gap-2">
+      <span
+        aria-hidden="true"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/5 text-[9px] font-semibold text-gray-300"
+      >
+        {initials(name)}
+      </span>
+      {member.user_id ? (
+        <Link
+          href={`/player/${encodeURIComponent(member.user_id)}`}
+          className={`${nameClass} hover:underline`}
+        >
+          {name}
+        </Link>
+      ) : (
+        <span className={nameClass}>{name}</span>
+      )}
+      {member.is_captain && (
+        <span
+          className="shrink-0 text-[10px] text-amber-300"
+          title={t.lineupCaptain}
+          aria-label={t.lineupCaptain}
+        >
+          ★
+        </span>
+      )}
+      {isMvp && (
+        <span className="shrink-0 rounded-full border border-amber-400/40 bg-amber-400/10 px-1.5 py-[1px] text-[9px] uppercase tracking-wide text-amber-200">
+          {t.mvpBadge}
+        </span>
+      )}
+    </li>
+  );
+}
 
 function TeamHeader({
   team,

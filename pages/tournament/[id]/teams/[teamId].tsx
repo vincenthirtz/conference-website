@@ -54,6 +54,8 @@ type Team = {
 
 type RosterMember = {
   id: string;
+  /** Compte lié — conditionne le lien vers le profil public de la joueuse. */
+  user_id: string | null;
   battle_tag: string | null;
   /** Pseudo — l'encadrement n'a pas forcément de BattleTag. */
   display_name: string | null;
@@ -264,6 +266,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 
   const roster: RosterMember[] = (members || []).map((m: any) => ({
     id: m.id,
+    user_id: m.user_id ?? null,
     // Anonymat public : on retire l'ID numérique du BattleTag (après le « # »).
     battle_tag: maskBattleTag(m.battle_tag ?? null),
     display_name: withFallbackDisplayName(m, memberNames),
@@ -624,14 +627,25 @@ function StatCard({
 
 function RosterRow({ member }: { member: RosterMember }) {
   const t = useT(nsTournamentTeamDetail);
+  const label =
+    (isNonPlayingTeamRole(member.role)
+      ? member.display_name || member.battle_tag
+      : member.battle_tag || member.display_name) || t.unknownMember;
   return (
     <li className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-white/5">
       <div className="flex items-center gap-3 min-w-0">
-        <span className="text-sm font-medium truncate">
-          {(isNonPlayingTeamRole(member.role)
-            ? member.display_name || member.battle_tag
-            : member.battle_tag || member.display_name) || t.unknownMember}
-        </span>
+        {/* Maillage interne : lien vers le profil public de la joueuse, comme
+            sur la fiche d'équipe. */}
+        {member.user_id ? (
+          <Link
+            href={`/player/${encodeURIComponent(member.user_id)}`}
+            className="text-sm font-medium truncate hover:text-[var(--color-violet-light)] hover:underline"
+          >
+            {label}
+          </Link>
+        ) : (
+          <span className="text-sm font-medium truncate">{label}</span>
+        )}
         {member.is_captain && (
           <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold border bg-yellow-500/20 text-yellow-300 border-yellow-500/40">
             {t.captainBadge}

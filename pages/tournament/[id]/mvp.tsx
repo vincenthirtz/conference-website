@@ -10,6 +10,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import { maskBattleTag } from '@/utils/battleTag';
+import {
+  resolveMissingDisplayNames,
+  withFallbackDisplayName,
+} from '@/utils/teams/memberDisplayName';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
@@ -17,9 +21,12 @@ import nsTournamentMvp from '@/lib/i18n/locales/fr/tournamentMvp';
 
 type LeaderboardEntry = {
   memberId: string | null;
+  userId: string | null;
+  displayName: string | null;
   battleTag: string | null;
   teamId: string | null;
   teamName: string | null;
+  teamSlug: string | null;
   mvpCount: number;
   matchIds: string[];
 };
@@ -29,9 +36,12 @@ type PerMatchEntry = {
   roundName: string | null;
   completedAt: string | null;
   memberId: string | null;
+  userId: string | null;
+  displayName: string | null;
   battleTag: string | null;
   teamId: string | null;
   teamName: string | null;
+  teamSlug: string | null;
 };
 
 type Tournament = {
@@ -147,13 +157,28 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     new Set(enriched.map((e) => e.memberId).filter((x): x is string => !!x))
   );
   const memberToTeam = new Map<string, string>();
+  // Identité de la joueuse : `user_id` ouvre le lien vers son profil public,
+  // `display_name` (surcharge d'équipe, sinon pseudo de compte) donne un
+  // libellé à celles qui n'ont pas de BattleTag renseigné.
+  const memberToIdentity = new Map<
+    string,
+    { userId: string | null; displayName: string | null }
+  >();
   if (memberIds.length > 0) {
     const { data: members } = await supabaseAdmin
       .from('team_members')
-      .select('id, team_id')
+      .select('id, team_id, user_id, display_name')
       .eq('tenant_id', tenantId)
       .in('id', memberIds);
-    for (const m of members || []) memberToTeam.set(m.id, m.team_id);
+    const rows = (members || []) as any[];
+    const resolvedNames = await resolveMissingDisplayNames(rows);
+    for (const m of rows) {
+      memberToTeam.set(m.id, m.team_id);
+      memberToIdentity.set(m.id, {
+        userId: m.user_id ?? null,
+        displayName: withFallbackDisplayName(m, resolvedNames),
+      });
+    }
   }
 
   // Noms des equipes
@@ -168,25 +193,33 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     )
   );
   const teamNameMap = new Map<string, string>();
+  const teamSlugMap = new Map<string, string | null>();
   if (teamIds.length > 0) {
     const { data: teams } = await supabaseAdmin
       .from('teams')
-      .select('id, name')
+      .select('id, name, slug')
       .eq('tenant_id', tenantId)
       .in('id', teamIds);
-    for (const t of teams || []) teamNameMap.set(t.id, t.name);
+    for (const t of teams || []) {
+      teamNameMap.set(t.id, t.name);
+      teamSlugMap.set(t.id, t.slug ?? null);
+    }
   }
 
   const perMatch: PerMatchEntry[] = enriched.map((e) => {
     const teamId = e.memberId ? (memberToTeam.get(e.memberId) ?? null) : null;
+    const identity = e.memberId ? memberToIdentity.get(e.memberId) : undefined;
     return {
       matchId: e.matchId,
       roundName: e.roundName,
       completedAt: e.completedAt,
       memberId: e.memberId,
+      userId: identity?.userId ?? null,
+      displayName: identity?.displayName ?? null,
       battleTag: e.battleTag,
       teamId,
       teamName: teamId ? (teamNameMap.get(teamId) ?? null) : null,
+      teamSlug: teamId ? (teamSlugMap.get(teamId) ?? null) : null,
     };
   });
 
@@ -203,9 +236,12 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     } else {
       lbMap.set(key, {
         memberId: e.memberId,
+        userId: e.userId,
+        displayName: e.displayName,
         battleTag: e.battleTag,
         teamId: e.teamId,
         teamName: e.teamName,
+        teamSlug: e.teamSlug,
         mvpCount: 1,
         matchIds: [e.matchId],
       });
@@ -213,7 +249,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   }
   const leaderboard = Array.from(lbMap.values()).sort((a, b) => {
     if (b.mvpCount !== a.mvpCount) return b.mvpCount - a.mvpCount;
-    return (a.battleTag || '').localeCompare(b.battleTag || '');
+    return entryLabel(a).localeCompare(entryLabel(b));
   });
 
   return {
@@ -234,6 +270,17 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     revalidate: 60,
   };
 };
+
+/**
+ * Libellé d'une MVP : BattleTag masqué en priorité (c'est l'identité en jeu),
+ * repli sur le pseudo de compte pour celles qui n'en ont pas renseigné.
+ */
+function entryLabel(entry: {
+  battleTag: string | null;
+  displayName: string | null;
+}): string {
+  return entry.battleTag || entry.displayName || '';
+}
 
 function rankColor(rank: number): string {
   if (rank === 1)
@@ -341,12 +388,30 @@ export default function TournamentMvpPage({
                         </span>
                       </div>
                       <div className="col-span-5">
-                        <p className="text-sm font-semibold truncate">
-                          {entry.battleTag || t.unknownPlayer}
-                        </p>
+                        {entry.userId ? (
+                          <Link
+                            href={`/player/${encodeURIComponent(entry.userId)}`}
+                            className="text-sm font-semibold truncate block hover:text-[var(--color-violet-light)] hover:underline"
+                          >
+                            {entryLabel(entry) || t.unknownPlayer}
+                          </Link>
+                        ) : (
+                          <p className="text-sm font-semibold truncate">
+                            {entryLabel(entry) || t.unknownPlayer}
+                          </p>
+                        )}
                       </div>
                       <div className="col-span-4 text-sm text-gray-300 truncate">
-                        {entry.teamName || '—'}
+                        {entry.teamName && entry.teamSlug ? (
+                          <Link
+                            href={`/team/${entry.teamSlug}`}
+                            className="hover:text-white hover:underline"
+                          >
+                            {entry.teamName}
+                          </Link>
+                        ) : (
+                          entry.teamName || '—'
+                        )}
                       </div>
                       <div className="col-span-2 text-right font-mono text-lg font-semibold">
                         {entry.mvpCount}
@@ -362,25 +427,50 @@ export default function TournamentMvpPage({
                     {t.perMatchHeading}
                   </Heading>
                   <div className="bg-black/60 border border-white/5 rounded-2xl overflow-hidden">
+                    {/* Chaque cellule porte son propre lien : la ligne mène au
+                        match, le nom au profil de la joueuse. Un lien imbriqué
+                        dans un autre serait invalide — d'où la grille en div. */}
                     {matchesWithMvp.map((m) => (
-                      <Link
+                      <div
                         key={m.matchId}
-                        href={`/match/${m.matchId}`}
                         className="grid grid-cols-12 gap-2 px-4 py-3 items-center border-b border-white/5 last:border-b-0 hover:bg-white/5"
                       >
                         <div className="col-span-3 text-xs text-gray-400">
                           {formatDate(m.completedAt, locale)}
                         </div>
                         <div className="col-span-3 text-sm text-gray-300 truncate">
-                          {m.roundName || '—'}
+                          <Link
+                            href={`/match/${m.matchId}`}
+                            className="hover:text-white hover:underline"
+                          >
+                            {m.roundName || t.viewMatch}
+                          </Link>
                         </div>
                         <div className="col-span-3 text-sm font-medium text-[var(--color-violet-light)] truncate">
-                          {m.battleTag || '—'}
+                          {m.userId ? (
+                            <Link
+                              href={`/player/${encodeURIComponent(m.userId)}`}
+                              className="hover:underline"
+                            >
+                              {entryLabel(m) || t.unknownPlayer}
+                            </Link>
+                          ) : (
+                            entryLabel(m) || '—'
+                          )}
                         </div>
                         <div className="col-span-3 text-sm text-gray-300 truncate text-right">
-                          {m.teamName || '—'}
+                          {m.teamName && m.teamSlug ? (
+                            <Link
+                              href={`/team/${m.teamSlug}`}
+                              className="hover:text-white hover:underline"
+                            >
+                              {m.teamName}
+                            </Link>
+                          ) : (
+                            m.teamName || '—'
+                          )}
                         </div>
-                      </Link>
+                      </div>
                     ))}
                   </div>
                 </section>

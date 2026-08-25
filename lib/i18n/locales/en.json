@@ -1846,7 +1846,18 @@
     "statusPending": "Upcoming",
     "statusOngoing": "Live",
     "statusFinished": "Finished",
-    "statusCancelled": "Cancelled"
+    "statusCancelled": "Cancelled",
+    "lineupsTitle": "Line-ups",
+    "lineupsHint": "Tap a player to open her profile",
+    "lineupCount_one": "{count} player",
+    "lineupCount_other": "{count} players",
+    "lineupSubs": "Substitutes",
+    "lineupStaff": "Coaching staff",
+    "lineupEmpty": "No line-up recorded for this match.",
+    "lineupUnknown": "Unknown player",
+    "lineupCaptain": "Captain",
+    "mvpTitle": "Match MVP",
+    "mvpBadge": "MVP"
   },
   "jeuxPage": {
     "overwatchTagline": "The title that founded the community.",
@@ -3417,7 +3428,8 @@
     "colTeam": "Team",
     "colMvp": "MVP",
     "unknownPlayer": "Unknown player",
-    "perMatchHeading": "MVP per match"
+    "perMatchHeading": "MVP per match",
+    "viewMatch": "View match"
   },
   "tournamentPodium": {
     "headTitle": "Podium · {name}",

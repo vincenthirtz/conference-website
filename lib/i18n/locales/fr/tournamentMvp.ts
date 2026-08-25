@@ -18,9 +18,10 @@ export default ns('tournamentMvp', {
   allMatches: 'Tous les matchs',
   empty:
     "Aucun MVP n'a encore été désigné sur ce tournoi. Les MVP sont importés manuellement par le staff après le sondage Discord.",
-  colPlayer: 'Joueur',
+  colPlayer: 'Joueuse',
   colTeam: 'Équipe',
   colMvp: 'MVP',
-  unknownPlayer: 'Joueur inconnu',
+  unknownPlayer: 'Joueuse inconnue',
   perMatchHeading: 'MVP par match',
+  viewMatch: 'Voir le match',
 });
