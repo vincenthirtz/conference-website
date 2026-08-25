@@ -55,6 +55,16 @@ export type LandingMatch = {
   stage: { id: string; name: string; stage_type: string } | null;
 };
 
+export type LandingRound = {
+  /** `round_number` des matchs ; `0` si la donnée manque. */
+  number: number;
+  /** `round_name` tel que saisi (« J1 », « Petite finale »…). */
+  name: string | null;
+  matchCount: number;
+  /** `bracket_side` : 'none' pour la saison régulière / les poules. */
+  side: 'none' | 'wb' | 'lb' | 'final';
+};
+
 export type LandingPartner = {
   id: string;
   name: string;

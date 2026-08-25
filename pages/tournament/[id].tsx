@@ -33,6 +33,7 @@ import StickyRegisterBar from '@/components/tournament/landing/StickyRegisterBar
 import TournamentInfoCards from '@/components/tournament/landing/TournamentInfoCards';
 import type {
   LandingTournament,
+  LandingRound,
   LandingStage,
   LandingTeam,
   LandingPartner,
@@ -48,6 +49,7 @@ type TournamentPageProps = {
     format_details?: string | null;
   };
   stages: LandingStage[];
+  rounds: LandingRound[];
   teams: LandingTeam[];
   partners: LandingPartner[];
   totalTeams: number;
@@ -138,6 +140,7 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
     teamsResult,
     leaguesResult,
     partnersResult,
+    roundsResult,
   ] = await Promise.all([
     supabaseAdmin
       .from('tournament_stages')
@@ -181,6 +184,17 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       .eq('is_active', true)
       .order('display_order', { ascending: true })
       .order('created_at', { ascending: true }),
+
+    // Manches réelles : l'aperçu du déroulé est dérivé des matchs (round robin
+    // vs arbre d'élimination), pas d'un schéma codé en dur. Projection minimale
+    // — seuls le numéro, le nom et le côté de bracket comptent ici.
+    supabaseAdmin
+      .from('matches')
+      .select('round_number, round_name, bracket_side')
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournamentId)
+      .neq('status', 'cancelled')
+      .order('round_number', { ascending: true }),
   ]);
 
   if (stagesResult.error)
@@ -195,6 +209,8 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
     logger.error('tournament leagues error:', leaguesResult.error);
   if (partnersResult.error)
     logger.error('tournament partners error:', partnersResult.error);
+  if (roundsResult.error)
+    logger.error('tournament rounds error:', roundsResult.error);
 
   const rawStages = (stagesResult.data || []) as unknown as (LandingStage & {
     visible?: boolean | null;
@@ -269,10 +285,46 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       websiteUrl: r.website_url ?? null,
     }));
 
+  // Agrégation des matchs par manche : une entrée par (round_number,
+  // bracket_side), dans l'ordre du calendrier.
+  const roundRows = (roundsResult.data ?? []) as unknown as {
+    round_number: number | null;
+    round_name: string | null;
+    bracket_side: string | null;
+  }[];
+  const roundMap = new Map<string, LandingRound>();
+  roundRows.forEach((r) => {
+    const side = (
+      r.bracket_side === 'wb' ||
+      r.bracket_side === 'lb' ||
+      r.bracket_side === 'final'
+        ? r.bracket_side
+        : 'none'
+    ) as LandingRound['side'];
+    const number = r.round_number ?? 0;
+    const key = `${side}:${number}`;
+    const existing = roundMap.get(key);
+    if (existing) {
+      existing.matchCount += 1;
+      existing.name = existing.name ?? r.round_name ?? null;
+    } else {
+      roundMap.set(key, {
+        number,
+        name: r.round_name ?? null,
+        matchCount: 1,
+        side,
+      });
+    }
+  });
+  const rounds = Array.from(roundMap.values()).sort(
+    (a, b) => a.number - b.number
+  );
+
   return {
     props: {
       tournament,
       stages,
+      rounds,
       teams,
       partners,
       totalTeams: teams.length,
@@ -289,6 +341,7 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
 export default function TournamentPage({
   tournament,
   stages,
+  rounds,
   teams,
   partners,
   totalTeams,
@@ -357,7 +410,11 @@ export default function TournamentPage({
 
       <ScheduleTimeline tournament={tournament} phase={phase} />
 
-      <BracketPreview stages={stages} tournamentPath={tournamentPath} />
+      <BracketPreview
+        stages={stages}
+        rounds={rounds}
+        tournamentPath={tournamentPath}
+      />
 
       <PrizeTeaser />
 

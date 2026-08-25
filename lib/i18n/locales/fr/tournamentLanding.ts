@@ -94,7 +94,18 @@ export default ns('tournamentLanding', {
   bracketFinal: 'Grande Finale',
   bracketTbd: 'À déterminer',
   bracketCta: 'Ouvrir le bracket',
+  bracketCtaSchedule: 'Voir le calendrier',
   bracketRound: 'Manche {n}',
+  bracketPathEyebrow: 'Le déroulé',
+  bracketPathHeading: 'Le parcours du tournoi',
+  bracketPathSubtitle:
+    'De la saison régulière aux finales : chaque journée, puis le dernier carré.',
+  bracketRegularSeason: 'Saison régulière',
+  bracketFinals: 'Phase finale',
+  bracketMatchCount_one: '{count} match',
+  bracketMatchCount_other: '{count} matchs',
+  bracketScheduleSoon:
+    'Le calendrier sera publié dès que les équipes engagées seront connues.',
   prizeEyebrow: 'Les récompenses',
   prizeHeading: 'À jouer cette édition',
   prizeSubtitle:
