@@ -20,6 +20,18 @@ export default ns('tournamentMaps', {
   viewBracket: 'Voir le bracket',
   emptyGames:
     "Aucun game enregistré pour ce tournoi pour l'instant. Les stats de maps apparaîtront au fur et à mesure des résultats.",
+  // Pool du tournoi — visible dès la publication, sans attendre le premier match.
+  poolHeading: 'Pool de maps du tournoi',
+  poolSubtitle:
+    'Les cartes jouables sur ce tournoi, par mode. Les vignettes sont des maquettes réalisées par nos soins.',
+  poolCount_one: '{count} carte',
+  poolCount_other: '{count} cartes',
+  poolModeControl: 'Contrôle',
+  poolModeEscort: 'Escorte',
+  poolModeHybrid: 'Hybride',
+  poolModePush: 'Poussée',
+  poolModeFlashpoint: 'Point chaud',
+  poolModeOther: 'Autres',
   statDistinctMaps: 'Maps distinctes',
   statGamesPlayed: 'Games joués',
   statOvertimes: 'Overtimes',

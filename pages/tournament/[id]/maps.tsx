@@ -43,6 +43,13 @@ type VetoRow = {
   map_name: string;
 };
 
+/** Une carte du pool du tournoi (table `tournament_maps`). */
+type PoolMap = {
+  name: string;
+  type: string | null;
+  image: string | null;
+};
+
 type TeamMini = {
   id: string;
   name: string;
@@ -86,6 +93,8 @@ type MapStat = {
 
 type Props = {
   tournament: Tournament;
+  /** Pool jouable, indépendant des stats : il existe dès la publication. */
+  pool: PoolMap[];
   maps: MapStat[];
   hasVetoData: boolean;
   hasFfaStage: boolean;
@@ -104,6 +113,40 @@ function buildMapsSeo(tournament: Tournament): SeoProps {
     },
     type: 'website',
   };
+}
+
+/**
+ * Ordre d'affichage des modes de jeu. Tout type inconnu (autre jeu que
+ * l'Overwatch, type saisi à la main) retombe dans « Autres » plutôt que de
+ * disparaître.
+ */
+const POOL_MODES = ['control', 'escort', 'hybrid', 'push', 'flashpoint'] as const;
+
+function poolModeLabel(t: MapsDict, mode: string): string {
+  return (
+    {
+      control: t.poolModeControl,
+      escort: t.poolModeEscort,
+      hybrid: t.poolModeHybrid,
+      push: t.poolModePush,
+      flashpoint: t.poolModeFlashpoint,
+    }[mode] ?? t.poolModeOther
+  );
+}
+
+/** Regroupe le pool par mode, dans l'ordre ci-dessus, « Autres » en dernier. */
+function groupPoolByMode(pool: PoolMap[]): { mode: string; maps: PoolMap[] }[] {
+  const groups = new Map<string, PoolMap[]>();
+  for (const map of pool) {
+    const mode = (map.type ?? '').toLowerCase();
+    const key = (POOL_MODES as readonly string[]).includes(mode) ? mode : 'other';
+    const bucket = groups.get(key);
+    if (bucket) bucket.push(map);
+    else groups.set(key, [map]);
+  }
+  return [...POOL_MODES, 'other']
+    .filter((mode) => groups.has(mode))
+    .map((mode) => ({ mode, maps: groups.get(mode) as PoolMap[] }));
 }
 
 export const getStaticPaths: GetStaticPaths = async () => {
@@ -133,8 +176,20 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   }
   const tournamentId = tournament.id;
 
-  // 2) Matches du tournoi + phases (pour l'onglet FFA)
-  const [matchesRes, stagesRes] = await Promise.all([
+  // 2) Pool jouable + matches du tournoi + phases (pour l'onglet FFA)
+  //
+  // Le pool ne dépend NI des matchs NI des vetos : c'est ce qui permet à
+  // l'onglet d'avoir un contenu dès la publication du tournoi, alors que les
+  // statistiques restent vides jusqu'au premier game joué.
+  const [poolRes, matchesRes, stagesRes] = await Promise.all([
+    supabaseAdmin
+      .from('tournament_maps')
+      .select('map_name, map_type, image_url, order_index')
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournamentId)
+      .eq('enabled', true)
+      .order('order_index', { ascending: true, nullsFirst: false })
+      .order('map_name', { ascending: true }),
     supabaseAdmin
       .from('matches')
       .select('id, status, is_bye, team1_id, team2_id')
@@ -151,6 +206,15 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   if (matchesRes.error) {
     logger.error('maps page matches error:', matchesRes.error);
   }
+  if (poolRes.error) {
+    logger.error('maps page pool error:', poolRes.error);
+  }
+
+  const pool: PoolMap[] = (poolRes.data || []).map((row: any) => ({
+    name: row.map_name,
+    type: row.map_type ?? null,
+    image: row.image_url ?? null,
+  }));
 
   const hasFfaStage = (stagesRes.data || []).some(
     (s: any) => s.stage_type === 'ffa'
@@ -216,6 +280,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   return {
     props: {
       tournament: tournament as Tournament,
+      pool,
       maps,
       hasVetoData,
       hasFfaStage,
@@ -227,6 +292,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 
 export default function TournamentMapsPage({
   tournament,
+  pool,
   maps,
   hasVetoData,
   hasFfaStage,
@@ -302,6 +368,71 @@ export default function TournamentMapsPage({
           showPodium={isCompleted}
           showFfa={hasFfaStage}
         />
+
+        {/* Pool jouable — affiché dès la publication du tournoi, alors que les
+            statistiques plus bas restent vides jusqu'au premier game. */}
+        {pool.length > 0 && (
+          <section className="mb-6">
+            <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 className="text-lg font-semibold text-white">
+                  {t.poolHeading}
+                </h2>
+                <span className="font-mono text-xs tabular-nums text-gray-400">
+                  {format(
+                    pool.length > 1 ? t.poolCount_other : t.poolCount_one,
+                    { count: pool.length }
+                  )}
+                </span>
+              </div>
+              <Paragraph
+                typeStyle="body-sm"
+                textColor="text-gray-300"
+                className="mt-1"
+              >
+                {t.poolSubtitle}
+              </Paragraph>
+
+              <div className="mt-4 flex flex-col gap-5">
+                {groupPoolByMode(pool).map(({ mode, maps: modeMaps }) => (
+                  <div key={mode}>
+                    <h3 className="text-xs uppercase tracking-[0.18em] text-purple-200">
+                      {poolModeLabel(t, mode)}
+                    </h3>
+                    <ul className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                      {modeMaps.map((map) => (
+                        <li
+                          key={map.name}
+                          className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]"
+                        >
+                          {/* Le dégradé sert de repli : si la vignette manque ou
+                              échoue, la tuile reste présentable sans JS. */}
+                          <div className="relative aspect-[16/10] w-full bg-gradient-to-br from-purple-900/40 to-black/50">
+                            {map.image && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={map.image}
+                                alt={map.name}
+                                loading="lazy"
+                                className="h-full w-full object-cover"
+                              />
+                            )}
+                          </div>
+                          <p
+                            className="truncate px-2 py-1.5 text-xs font-medium text-gray-100"
+                            title={map.name}
+                          >
+                            {map.name}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Stats globales */}
         <section className="mb-6">
