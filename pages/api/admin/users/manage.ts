@@ -13,6 +13,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { emitRoleSyncEvent } from '@/utils/botRoleSync';
 import { logStaffAction } from '@/utils/staffLogs';
 import { computeBattleTagMismatch } from '@/utils/auth/battleTagMismatch';
+import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
 
 import { logger } from '../../../../utils/logger';
 type TeamMembership = {
@@ -516,7 +517,7 @@ async function handler(
       // Validate battle_tag format
       const trimmedTag = battleTag.trim();
       if (trimmedTag) {
-        const re = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
+        const re = BATTLE_TAG_REGEX;
         if (!re.test(trimmedTag)) {
           return res.status(400).json({
             error: 'Invalid BattleTag (format Name#0000)',

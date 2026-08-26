@@ -25,8 +25,12 @@ import {
 } from '@/utils/botActor';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
+import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
 
-const BATTLE_TAG_RE = /^[A-Za-z0-9À-ɏ]+#[0-9]{4,6}$/;
+// Source unique partagée avec le site (utils/teams/roleKind) : lettres de
+// tout script + accents, suffixe numérique. Évite qu'un tag accepté par le
+// bot soit refusé par le site (ou l'inverse).
+const BATTLE_TAG_RE = BATTLE_TAG_REGEX;
 const DISPLAY_NAME_MAX = 50;
 const RANK_MAX = 30;
 const STAFF_PRIVILEGED = new Set(['admin', 'owner']);

@@ -108,7 +108,8 @@ export default {
   battleTagModalTeamPrefix: 'Team: ',
   battleTagLabel: 'BattleTag',
   battleTagPlaceholder: 'Name#1234',
-  battleTagHelp: 'Format: Name#0000 (alphanumeric + # + 3 to 6 digits)',
+  battleTagHelp:
+    'Format: Name#0000 (letters or digits, accents allowed, + # + 3 to 6 digits)',
   registeredAgo: 'Registered {ago}',
   lastSeenAgo: 'Seen {ago}',
   sortLabel: 'Sort by',

@@ -20,6 +20,7 @@ import {
   withFallbackDisplayName,
 } from '@/utils/teams/memberDisplayName';
 import {
+  BATTLE_TAG_REGEX,
   validateBattleTagForRole,
   roleRequiresBattleTag,
 } from '@/utils/teams/addMember';
@@ -440,7 +441,7 @@ async function handler(
     if (typeof battleTag === 'string') {
       if (battleTag.trim()) {
         const trimmed = battleTag.trim();
-        const re = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
+        const re = BATTLE_TAG_REGEX;
         if (!re.test(trimmed)) {
           return res.status(400).json({
             error: 'Invalid BattleTag (format Name#0000)',

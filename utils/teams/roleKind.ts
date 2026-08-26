@@ -14,8 +14,19 @@
 //   - hors du roster jouant à l'affichage (section « staff de l'équipe ») ;
 //   - hors du décompte d'effectif (cf. `min_players` à l'inscription).
 
-/** Format d'un BattleTag Blizzard : `Nom#1234`. */
-export const BATTLE_TAG_REGEX = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
+/**
+ * Format d'un BattleTag Blizzard : `Nom#1234`.
+ *
+ * La partie « nom » accepte les lettres de n'importe quel script — Blizzard
+ * autorise les accents (`Noémiedepain#1234`), et une joueuse ne peut pas
+ * changer son BattleTag pour nous faire plaisir. `\p{M}` couvre la forme
+ * décomposée (NFD : « e » + accent combinant) que renvoient certains
+ * claviers/copier-coller macOS. Le suffixe reste strictement numérique.
+ *
+ * Source unique : à importer partout (pages, composants, routes API). Le
+ * pendant SQL est la contrainte `team_members_battletag_format`.
+ */
+export const BATTLE_TAG_REGEX = /^[\p{L}\p{M}\p{N}]{2,}#[0-9]{3,6}$/u;
 
 /**
  * Rôles d'encadrement : ils appartiennent au staff de l'équipe, pas au roster

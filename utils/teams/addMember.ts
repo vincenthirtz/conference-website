@@ -39,7 +39,7 @@ import {
 } from './roleKind';
 
 export const BATTLE_TAG_FORMAT_HINT =
-  'BattleTag required (format Name#0000, alphanumeric + # + 3 to 6 digits)';
+  'BattleTag required (format Name#0000: letters/digits, accents allowed, + # + 3 to 6 digits)';
 
 /**
  * Valide un BattleTag.

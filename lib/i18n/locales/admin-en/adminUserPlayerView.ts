@@ -105,7 +105,8 @@ export default {
   displayNamePlaceholder: 'Display name',
   battleTagLabel: 'BattleTag',
   battleTagPlaceholder: 'Name#1234',
-  battleTagHelp: 'Format: Name#0000 (alphanumeric + # + 3 to 6 digits)',
+  battleTagHelp:
+    'Format: Name#0000 (letters or digits, accents allowed, + # + 3 to 6 digits)',
   transferModalTitle: 'Transfer to another team',
   transferring: 'Transferring…',
   transferConfirmBtn: 'Transfer',

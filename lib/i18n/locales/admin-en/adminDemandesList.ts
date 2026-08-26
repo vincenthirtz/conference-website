@@ -95,7 +95,7 @@ export default {
   tagInputLabel: 'BattleTag (format Name#0000)',
   tagInputPlaceholder: 'Name#1234',
   tagFormatInvalid:
-    'Invalid format (expected: alphanumeric + # + 3 to 6 digits).',
+    'Invalid format (expected: letters or digits, accents allowed, + # + 3 to 6 digits).',
   infoModalTitle: 'Request more info',
   infoModalSubtitle:
     'The note is saved on the request (staff note). The status stays “pending”.',

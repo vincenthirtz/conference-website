@@ -27,6 +27,7 @@ import { getDiscordLinkForUser } from '@/utils/discordLinks';
 import { alertIfEntityBlacklisted } from '@/utils/moderation/entityBlacklist';
 import { verifyCaptcha } from '@/utils/captcha';
 import {
+  BATTLE_TAG_REGEX,
   roleRequiresBattleTag,
   isNonPlayingTeamRole,
   countPlayingMembers,
@@ -383,10 +384,10 @@ export default async function handler(
   }[] = [];
   const validateBattleTag = (tag: string) => {
     const trimmed = tag.trim();
-    const re = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
+    const re = BATTLE_TAG_REGEX;
     if (!re.test(trimmed)) {
       throw new Error(
-        'Invalid BattleTag. Expected format: Name#0000 (alphanumeric + # + 3 to 6 digits).'
+        'Invalid BattleTag. Expected format: Name#0000 (letters or digits, accents allowed, + # + 3 to 6 digits).'
       );
     }
     return trimmed;

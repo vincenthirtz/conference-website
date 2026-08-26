@@ -9,6 +9,7 @@ import {
   type StaffRole,
 } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
+import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -188,7 +189,7 @@ function quickFilterLabel(t: Dict, f: QuickFilter): string {
 }
 
 /** Miroir EXACT de la validation serveur (pages/api/admin/users/manage.ts). */
-const BATTLE_TAG_RE = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
+const BATTLE_TAG_RE = BATTLE_TAG_REGEX;
 
 function isStaffRoleValue(role: string | null): boolean {
   return STAFF_ROLE_OPTIONS.includes((role || '').toLowerCase());

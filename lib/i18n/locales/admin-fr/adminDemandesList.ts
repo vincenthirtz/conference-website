@@ -95,7 +95,7 @@ export default adminNs('adminDemandesList', {
   tagInputLabel: 'BattleTag (format Nom#0000)',
   tagInputPlaceholder: 'Nom#1234',
   tagFormatInvalid:
-    'Format invalide (attendu : alphanumérique + # + 3 à 6 chiffres).',
+    'Format invalide (attendu : lettres ou chiffres, accents acceptés, + # + 3 à 6 chiffres).',
   infoModalTitle: "Demander plus d'infos",
   infoModalSubtitle:
     'La note est enregistrée sur la demande (note staff). Le statut reste « en attente ».',

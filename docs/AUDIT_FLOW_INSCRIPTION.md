@@ -24,7 +24,7 @@ Audit de correction (bugs) sur tout le parcours : inscription → création/rejo
 - `teams/leave.ts` : le **capitaine seul membre** peut désormais quitter → dissolution de l'équipe (soft-delete + event `team.dissolved` avec les IDs Discord pour le nettoyage bot). Fin du cul-de-sac.
 - `teams/create-with-member.ts` : rejette 400 si des membres sont fournis sans capitaine désigné (plus d'équipe orpheline).
 - `demandes/cancel.ts` : annulation en CAS (`status='pending'` dans le WHERE) → 409 si déjà traitée (fin du TOCTOU cancel↔approve).
-- `auth/register.ts` + `register.tsx` : regex BattleTag unifiée sur `BATTLE_TAG_REGEX` (`/^[A-Za-z0-9]{2,}#[0-9]{3,6}$/`).
+- `auth/register.ts` + `register.tsx` : regex BattleTag unifiée sur `BATTLE_TAG_REGEX` (`/^[\p{L}\p{M}\p{N}]{2,}#[0-9]{3,6}$/u` — accents et scripts non latins acceptés, cf. `utils/teams/roleKind.ts` et la contrainte SQL `team_members_battletag_format`).
 
 ### UI
 - `NewTeamForm.tsx` remonte sa validité (`onValidityChange`) + regex BattleTag canonique → `request-captain` (mode « nouvelle équipe ») ne soumet plus malgré une erreur affichée.

@@ -104,7 +104,8 @@ export default adminNs('adminUserPlayerView', {
   displayNamePlaceholder: 'Nom affiché',
   battleTagLabel: 'BattleTag',
   battleTagPlaceholder: 'Pseudo#1234',
-  battleTagHelp: 'Format : Pseudo#0000 (alphanumérique + # + 3 à 6 chiffres)',
+  battleTagHelp:
+    'Format : Pseudo#0000 (lettres ou chiffres, accents acceptés, + # + 3 à 6 chiffres)',
   transferModalTitle: 'Transférer vers une autre équipe',
   transferring: 'Transfert…',
   transferConfirmBtn: 'Transférer',

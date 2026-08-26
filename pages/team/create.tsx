@@ -555,7 +555,7 @@ export default function PublicCreateTeamPage() {
     setResult(null);
 
     try {
-      const battleTagRegex = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
+      const battleTagRegex = BATTLE_TAG_REGEX;
       const preparedMembers = members
         .map((m, idx) => ({
           email: m.email.trim(),

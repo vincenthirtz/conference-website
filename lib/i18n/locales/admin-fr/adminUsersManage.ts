@@ -108,7 +108,8 @@ export default adminNs('adminUsersManage', {
   battleTagModalTeamPrefix: 'Équipe : ',
   battleTagLabel: 'BattleTag',
   battleTagPlaceholder: 'Pseudo#1234',
-  battleTagHelp: 'Format : Pseudo#0000 (alphanumérique + # + 3 à 6 chiffres)',
+  battleTagHelp:
+    'Format : Pseudo#0000 (lettres ou chiffres, accents acceptés, + # + 3 à 6 chiffres)',
   registeredAgo: 'Inscrit {ago}',
   lastSeenAgo: 'Vu {ago}',
   sortLabel: 'Trier par',

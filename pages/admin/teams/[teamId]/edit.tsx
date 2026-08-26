@@ -15,6 +15,7 @@ import AddMemberModal from '@/components/admin/teams/AddMemberModal';
 import EditMemberModal from '@/components/admin/teams/EditMemberModal';
 import ImportBattleTagsModal from '@/components/admin/teams/ImportBattleTagsModal';
 import {
+  BATTLE_TAG_REGEX,
   roleRequiresBattleTag,
   isNonPlayingTeamRole,
 } from '@/utils/teams/roleKind';
@@ -52,7 +53,7 @@ type TournamentRegistration = TournamentRow & {
   }>;
 };
 
-const BATTLE_TAG_RE = /^[A-Za-z0-9]{2,}#[0-9]{3,6}$/;
+const BATTLE_TAG_RE = BATTLE_TAG_REGEX;
 
 export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
   'admin',

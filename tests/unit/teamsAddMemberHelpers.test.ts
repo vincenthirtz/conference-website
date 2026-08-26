@@ -70,6 +70,33 @@ describe('validateBattleTag', () => {
     expect(BATTLE_TAG_REGEX.test('Player#1234')).toBe(true);
     expect(BATTLE_TAG_REGEX.test('bad')).toBe(false);
   });
+
+  // Régression : la regex ASCII refusait « Noémiedepain#1234 », un BattleTag
+  // parfaitement valide côté Blizzard — la manager ne pouvait pas inscrire la
+  // joueuse. Le pendant SQL est team_members_battletag_format.
+  it('accepte les lettres accentuées et non latines', () => {
+    expect(validateBattleTag('Noémiedepain#1234')).toBe('Noémiedepain#1234');
+    expect(BATTLE_TAG_REGEX.test('Noémiedepain#1234')).toBe(true);
+    expect(BATTLE_TAG_REGEX.test('Chloé#123')).toBe(true);
+    expect(BATTLE_TAG_REGEX.test('Ångström#4242')).toBe(true);
+    expect(BATTLE_TAG_REGEX.test('Мила#1234')).toBe(true);
+    expect(BATTLE_TAG_REGEX.test('さくら#1234')).toBe(true);
+  });
+
+  it('accepte la forme décomposée (NFD) d’un accent', () => {
+    // « e » + U+0301 : ce que produisent certains claviers / copier-coller.
+    const nfd = 'Noe\u0301miedepain#1234';
+    expect(nfd).not.toBe('Noémiedepain#1234');
+    expect(BATTLE_TAG_REGEX.test(nfd)).toBe(true);
+  });
+
+  it('reste strict malgré l’ouverture aux accents', () => {
+    expect(BATTLE_TAG_REGEX.test('Noémie depain#1234')).toBe(false); // espace
+    expect(BATTLE_TAG_REGEX.test('Noémie-depain#1234')).toBe(false); // tiret
+    expect(BATTLE_TAG_REGEX.test('Noémie#12')).toBe(false); // suffixe trop court
+    expect(BATTLE_TAG_REGEX.test('é#1234')).toBe(false); // nom trop court
+    expect(BATTLE_TAG_REGEX.test('Noémie#１２３４')).toBe(false); // chiffres pleine largeur
+  });
 });
 
 /* -----------------------------------------------------------

@@ -48,9 +48,9 @@ function RegisterPage() {
     trackEvent(ANALYTICS_EVENTS.registerStart, { account_type: accountType });
   };
 
-  // Format BattleTag canonique (Name#0000, alphanumérique + # + 3 à 6
-  // chiffres). Constante partagée avec l'API (utils/teams/addMember) pour
-  // garder page et route synchronisées.
+  // Format BattleTag canonique (Name#0000 : lettres/chiffres, accents
+  // acceptés, + # + 3 à 6 chiffres). Constante partagée avec l'API
+  // (utils/teams/addMember) pour garder page et route synchronisées.
   const BATTLETAG_PATTERN = BATTLE_TAG_REGEX;
 
   // Message neutre, identique au chemin succès, pour ne pas révéler si un
