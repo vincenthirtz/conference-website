@@ -8,6 +8,7 @@ import { mapSlug } from '@/utils/maps/slug';
 import { LANDMARK_KINDS, MAP_LAYOUTS, type MapRecipe } from '@/utils/maps/types';
 import { buildLandmark } from '@/utils/maps/landmarks';
 import { buildLayout } from '@/utils/maps/layouts';
+import { canDress, groundProp, railing, roofProps } from '@/utils/maps/props';
 import { deriveRecipe, getMapRecipe, hasAuthoredRecipe } from '@/config/maps';
 import { OVERWATCH_RECIPES } from '@/config/maps/overwatch';
 import { getGame, GAME_SLUGS } from '@/config/games';
@@ -215,6 +216,18 @@ describe('generateScene', () => {
     expect(invalid).toEqual([]);
   });
 
+  // Régression : une balise d'objectif posée sur l'ancre d'une silhouette
+  // faisait calculer l'altitude de pose au sommet de la balise. La silhouette
+  // était montée d'une dizaine de crans puis sous-bassée, ce qui donnait des
+  // pilotis absurdes. Le garde-fou vit dans anchorBase (generate.ts).
+  it('aucune maquette ne part en pilotis (hauteur totale plausible)', () => {
+    const tall = OVERWATCH_RECIPES.map((r) => ({
+      slug: r.slug,
+      maxY: generateScene(r).bounds.maxY,
+    })).filter((r) => r.maxY > 34);
+    expect(tall).toEqual([]);
+  });
+
   it("n'émet une nappe d'environnement que si la recette en déclare une", () => {
     const withEnv = generateScene({
       ...BASE,
@@ -237,6 +250,46 @@ describe('generateScene', () => {
       if (brick.role !== 'environment') continue;
       expect(ground.has(`${brick.x},${brick.z}`)).toBe(false);
     }
+  });
+});
+
+describe('props', () => {
+  it('canDress refuse une colonne dont le sommet est un objectif', () => {
+    const b = new SceneBuilder();
+    b.box(0, 0, 0, 1, 3, 1, 'ground');
+    b.box(1, 0, 0, 1, 3, 1, 'highlight');
+    expect(canDress(b, 0, 0, 3)).toBe(true);
+    expect(canDress(b, 1, 0, 3)).toBe(false);
+  });
+
+  it('canDress refuse une colonne trop haute (un toit)', () => {
+    const b = new SceneBuilder();
+    b.box(0, 0, 0, 1, 6, 1, 'ground');
+    expect(canDress(b, 0, 0, 3)).toBe(false);
+  });
+
+  it('groundProp pose quelque chose, jamais sous le niveau zéro', () => {
+    for (let seed = 0; seed < 40; seed += 1) {
+      const b = new SceneBuilder();
+      b.box(-4, 0, -4, 9, 3, 9, 'ground');
+      const before = b.size;
+      groundProp(b, 0, 3, 0, createRng(`prop-${seed}`));
+      expect(b.size).toBeGreaterThan(before);
+      expect(b.toBricks().every((brick) => brick.y >= 0)).toBe(true);
+    }
+  });
+
+  it('railing ne pose que le pourtour', () => {
+    const b = new SceneBuilder();
+    railing(b, 0, 0, 0, 5, 5);
+    expect(b.has(2, 0, 2)).toBe(false); // centre laissé libre
+    expect(b.has(0, 0, 0)).toBe(true);
+  });
+
+  it('roofProps ne fait rien sur une toiture trop petite', () => {
+    const b = new SceneBuilder();
+    roofProps(b, createRng('roof'), 'modern', 0, 5, 0, 2, 2);
+    expect(b.size).toBe(0);
   });
 });
 

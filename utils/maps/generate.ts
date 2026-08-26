@@ -7,6 +7,7 @@
 import { SceneBuilder } from './builder';
 import { buildEnvironment, buildLayout, GROUND_HEIGHT, patchShade } from './layouts';
 import { buildLandmark } from './landmarks';
+import { canDress, groundProp, shrub } from './props';
 import { createRng } from './rng';
 import type { Brick, MapLayout, MapRecipe, VoxelScene } from './types';
 import { MAP_LAYOUTS } from './types';
@@ -43,24 +44,10 @@ function scatterProps(
   for (let i = 0; i < attempts; i += 1) {
     const x = rng.int(-13, 13);
     const z = rng.int(-13, 13);
-    const y = b.columnTop(x, z);
-    if (y !== GROUND_HEIGHT) continue;
-    if (b.has(x, y, z)) continue;
-    const kind = rng.next();
-    if (kind < vegetation) {
-      // Arbuste : tronc + petite couronne.
-      b.box(x, y, z, 1, rng.int(2, 3), 1, 'structure', { shade: -0.12 });
-      b.box(x - 1, y + rng.int(2, 3), z, 3, 1, 1, 'accent');
-      b.box(x, y + rng.int(2, 3), z - 1, 1, 1, 3, 'accent');
-    } else if (kind < vegetation + 0.3) {
-      b.box(x, y, z, 1, rng.int(1, 2), 1, 'structure', { shade: -0.08 });
-    } else if (kind < vegetation + 0.42) {
-      // Lampadaire — ponctue le décor sans écraser l'objectif.
-      b.box(x, y, z, 1, 3, 1, 'structure');
-      b.place(x, y + 3, z, 'highlight');
-    } else {
-      b.box(x, y, z, 1, 1, 1, 'accent', { shade: -0.05 });
-    }
+    if (!canDress(b, x, z, GROUND_HEIGHT)) continue;
+    const y = GROUND_HEIGHT;
+    if (rng.next() < vegetation) shrub(b, x, y, z, rng);
+    else groundProp(b, x, y, z, rng);
   }
 }
 
@@ -72,6 +59,28 @@ const VEGETATION: Record<string, number> = {
   snow: 0.15,
   lava: 0.05,
 };
+
+/**
+ * Altitude de pose d'une silhouette : le PLUS BAS des sommets de colonne du 3x3
+ * autour de l'ancre, les colonnes vides exclues.
+ *
+ * WHY: prendre bêtement `columnTop(ancre)` suffit tant que rien d'autre
+ * n'occupe la case. Dès qu'un prop fin s'y trouve — une balise d'objectif, un
+ * lampadaire — la silhouette est posée à son sommet, donc en l'air, et le
+ * sous-bassement automatique lui coule des pilotis de dix mètres. Regarder le
+ * voisinage rend la pose insensible à ce genre d'accident.
+ */
+function anchorBase(b: SceneBuilder, x: number, z: number): number {
+  let best = Infinity;
+  for (let dx = -1; dx <= 1; dx += 1) {
+    for (let dz = -1; dz <= 1; dz += 1) {
+      const top = b.columnTop(x + dx, z + dz);
+      if (top === 0) continue; // colonne vide : ne dit rien du niveau du sol
+      if (top < best) best = top;
+    }
+  }
+  return Number.isFinite(best) ? best : 0;
+}
 
 function computeBounds(bricks: Brick[]): VoxelScene['bounds'] {
   if (bricks.length === 0) {
@@ -103,7 +112,7 @@ export function generateScene(recipe: MapRecipe): VoxelScene {
 
   recipe.landmarks.slice(0, anchors.length).forEach((kind, i) => {
     const anchor = anchors[i];
-    const baseY = builder.columnTop(anchor.x, anchor.z);
+    const baseY = anchorBase(builder, anchor.x, anchor.z);
     // Une ancre tombée dans le vide (bord effrité du sol) : on ne pose rien.
     if (baseY === 0) return;
     const mark = builder.mark();

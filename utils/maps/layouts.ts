@@ -18,6 +18,16 @@
 // cadrage du rendu se déduit des bornes réelles, donc un layout peut déborder.
 
 import { SceneBuilder } from './builder';
+import {
+  beacon,
+  canDress,
+  captureFrame,
+  lampLine,
+  payload,
+  pushBot,
+  railing,
+  roofProps,
+} from './props';
 import type { Architecture, MapRecipe } from './types';
 import type { Rng } from './rng';
 
@@ -118,6 +128,23 @@ function shift(rng: Rng, x: number, z: number, amp = 3): { x: number; z: number 
 }
 
 /**
+ * Plafond de hauteur par typologie. Une mitoyenne de bourg ou une maison
+ * blanchie à la chaux n'a pas huit niveaux : sans ce plafond, les layouts qui
+ * tirent des hauteurs hautes transformaient chaque village en front de tours.
+ * `modern` et `futurist` n'en ont pas — ce sont justement les typologies de
+ * gratte-ciel.
+ */
+const MAX_STOREYS: Partial<Record<Architecture, number>> = {
+  whitewash: 5,
+  colonial: 6,
+  terrace: 6,
+  alpine: 6,
+  tiered: 6,
+  ancient: 7,
+  industrial: 6,
+};
+
+/**
  * Bâtiment de remplissage. Son STYLE porte une large part de la reconnaissance :
  * une rue de maisons mitoyennes à toits pentus et une enfilade de cubes blancs à
  * toits plats se lisent très différemment, à palette égale.
@@ -130,15 +157,25 @@ function building(
   cz: number,
   w: number,
   d: number,
-  h: number,
+  storeys: number,
 ): void {
   const y = b.columnTop(cx, cz);
   if (y === 0) return;
+  const h = Math.max(2, Math.min(storeys, MAX_STOREYS[arch] ?? storeys));
   const x0 = cx - Math.floor(w / 2);
   const z0 = cz - Math.floor(d / 2);
   const shade = (rng.int(0, 2) - 1) * 0.06;
 
   b.box(x0, y, z0, w, h, d, 'structure', { shade });
+
+  // Soubassement : une assise plus sombre au pied du volume. C'est le détail le
+  // moins cher qui empêche un bâtiment de flotter sur son terrain.
+  b.box(x0, y, z0, w, 1, d, 'structure', { shade: shade - 0.16, keepExisting: false });
+
+  // Porte : on perce, et la case juste derrière devient un intérieur éclairé.
+  const dx = x0 + Math.floor(w / 2);
+  b.carveBox(dx, y + 1, z0 + d - 1, 1, Math.min(2, h - 1), 1);
+  b.place(dx, y + 1, z0 + d - 2, 'highlight', OVER);
 
   // Fenêtres sur les deux faces visibles en isométrie.
   const lit = arch === 'ancient' ? 0.2 : 0.5;
@@ -255,6 +292,11 @@ function building(
       b.box(x0 - 1, y + h, z0 - 1, w + 2, 1, d + 2, 'accent', OVER);
       if (rng.chance(0.35)) b.box(cx, y + h + 1, cz, 1, 2, 1, 'highlight', OVER);
   }
+
+  // Couronnement habité. Les toits à pente (terrace/alpine/tiered) ont déjà
+  // leur volume propre : on n'y pose qu'une souche, gérée par roofProps.
+  const roofY = arch === 'terrace' || arch === 'alpine' ? y + h + 1 : y + h + 1;
+  roofProps(b, rng, arch, x0, roofY, z0, w, d);
 }
 
 // ---------------------------------------------------------------------------
@@ -268,11 +310,22 @@ const control: LayoutFn = (b, rng, arch) => {
   b.disc(0, 0, 5, GROUND_HEIGHT, 2, 'structure');
   b.ring(0, 0, 5.6, 1.5, GROUND_HEIGHT, 2, 'accent');
   b.ring(0, 0, 5.6, 1.5, GROUND_HEIGHT + 2, 1, 'accent');
-  b.disc(0, 0, 3.2, GROUND_HEIGHT + 2, 1, 'highlight');
+  // Dallage du point : deux teintes en damier plutôt qu'un aplat.
+  for (let x = -4; x <= 4; x += 1) {
+    for (let z = -4; z <= 4; z += 1) {
+      if (Math.hypot(x, z) > 3.2) continue;
+      b.place(x, GROUND_HEIGHT + 2, z, 'highlight', {
+        keepExisting: false,
+        shade: (x + z) % 2 === 0 ? 0.08 : -0.08,
+      });
+    }
+  }
+  captureFrame(b, 0, GROUND_HEIGHT + 3, 0, 4);
   // Plateformes latérales symétriques et leurs rampes.
   for (const side of [-1, 1]) {
     b.box(side * 9 - 2, GROUND_HEIGHT, -2, 5, 2, 5, 'structure');
     b.box(side * 9 - 2, GROUND_HEIGHT + 2, -2, 5, 1, 5, 'accent', OVER);
+    railing(b, side * 9 - 2, GROUND_HEIGHT + 3, -2, 5, 5);
     b.path({ x: side * 7, z: 0 }, { x: side * 5, z: 0 }, 3, GROUND_HEIGHT, 1, 'structure');
   }
   relief(b, rng, 3, 7);
@@ -315,6 +368,21 @@ const escort: LayoutFn = (b, rng, arch) => {
       b.box(p.x + s * 3, GROUND_HEIGHT + 5, p.z + s * 3, 1, 1, 1, 'accent', OVER);
     }
   });
+  // Marquage au sol en pointillé, puis le convoi arrêté sur sa voie.
+  for (let i = 0; i < route.length - 1; i += 1) {
+    const a = route[i];
+    const c = route[i + 1];
+    const steps = Math.round(Math.hypot(c.x - a.x, c.z - a.z));
+    for (let k = 0; k < steps; k += 3) {
+      const t = k / steps;
+      b.place(Math.round(a.x + (c.x - a.x) * t), GROUND_HEIGHT, Math.round(a.z + (c.z - a.z) * t), 'accent', {
+        keepExisting: false,
+        shade: -0.25,
+      });
+    }
+    lampLine(b, rng, a, c, GROUND_HEIGHT, 6, 4);
+  }
+  payload(b, route[1].x, GROUND_HEIGHT, route[1].z);
   relief(b, rng, 3, 6);
   for (const [px, pz] of [
     [-10, -6],
@@ -342,6 +410,7 @@ const hybrid: LayoutFn = (b, rng, arch) => {
   b.box(-12, GROUND_HEIGHT, 3, 9, 2, 9, 'structure');
   b.box(-12, GROUND_HEIGHT + 2, 3, 9, 1, 9, 'accent', OVER);
   b.box(-10, GROUND_HEIGHT + 3, 5, 5, 1, 5, 'highlight', OVER);
+  captureFrame(b, -8, GROUND_HEIGHT + 4, 7, 2);
   const route: Anchor[] = [
     { x: -4, z: 8 },
     { x: 1, z: 2 },
@@ -352,6 +421,8 @@ const hybrid: LayoutFn = (b, rng, arch) => {
     b.path(route[i], route[i + 1], 3, GROUND_HEIGHT, 1, 'highlight', OVER);
   }
   b.box(11, GROUND_HEIGHT, -10, 1, 6, 1, 'highlight', OVER);
+  for (let i = 0; i < route.length - 1; i += 1) lampLine(b, rng, route[i], route[i + 1], GROUND_HEIGHT, 6, 4);
+  payload(b, route[1].x, GROUND_HEIGHT, route[1].z);
   relief(b, rng, 3, 6);
   for (const [px, pz] of [
     [-9, -7],
@@ -378,10 +449,12 @@ const push: LayoutFn = (b, rng, arch) => {
   // Voie de progression, bordée.
   b.box(-13, GROUND_HEIGHT, -3, 27, 1, 7, 'accent', OVER);
   b.box(-13, GROUND_HEIGHT, -1, 27, 1, 3, 'highlight', OVER);
-  // Marqueur central.
-  b.box(-1, GROUND_HEIGHT, -1, 3, 5, 3, 'structure');
-  b.box(-2, GROUND_HEIGHT + 5, -2, 5, 1, 5, 'accent', OVER);
-  b.box(-1, GROUND_HEIGHT + 6, -1, 3, 1, 3, 'highlight', OVER);
+  // Marquage de la voie, puis l'automate qui la pousse.
+  for (let x = -12; x <= 12; x += 3) {
+    b.place(x, GROUND_HEIGHT, 0, 'accent', { keepExisting: false, shade: -0.25 });
+  }
+  pushBot(b, 0, GROUND_HEIGHT, 0);
+  lampLine(b, rng, { x: -13, z: 0 }, { x: 13, z: 0 }, GROUND_HEIGHT, 6, 5);
   // Décor miroir en x — c'est la signature du mode. Le bâti est repoussé sur les
   // bords : la voie centrale doit rester dégagée jusqu'au bout, sinon le mode ne
   // se lit plus sur une vignette.
@@ -416,6 +489,7 @@ const flashpoint: LayoutFn = (b, rng, arch) => {
     plate(b, rng, isle.x, isle.z, 6.4);
     b.ring(isle.x, isle.z, 6, 1.4, GROUND_HEIGHT, 1, 'accent');
     b.disc(isle.x, isle.z, 2.6, GROUND_HEIGHT, 1, 'highlight');
+    beacon(b, isle.x, GROUND_HEIGHT + 1, isle.z, 6);
   }
   // Passerelles : tablier accent, garde-corps clairs, piles au milieu.
   for (let i = 0; i < isles.length; i += 1) {
@@ -431,7 +505,14 @@ const flashpoint: LayoutFn = (b, rng, arch) => {
     const p = shift(rng, isle.x, isle.z, 4);
     building(b, rng, arch, p.x, p.z, rng.int(3, 5), rng.int(3, 5), rng.int(3, 6));
   }
-  return { anchors: isles.map((p) => ({ x: p.x, z: p.z })) };
+  // Les silhouettes se décalent vers l'extérieur de l'îlot : la balise occupe le
+  // centre, qui est l'objectif et doit rester dégagé.
+  return {
+    anchors: isles.map((p) => ({
+      x: p.x + Math.round(Math.sign(p.x) * 3),
+      z: p.z + Math.round(Math.sign(p.z) * 3),
+    })),
+  };
 };
 
 /** Repli générique (jeux sans typologie de map) : deux sites et un milieu. */
@@ -441,6 +522,8 @@ const standard: LayoutFn = (b, rng, arch) => {
     b.box(side * 9 - 3, GROUND_HEIGHT, side * 5 - 3, 7, 2, 7, 'structure');
     b.box(side * 9 - 3, GROUND_HEIGHT + 2, side * 5 - 3, 7, 1, 7, 'accent', OVER);
     b.box(side * 9 - 1, GROUND_HEIGHT + 3, side * 5 - 1, 3, 1, 3, 'highlight', OVER);
+    railing(b, side * 9 - 3, GROUND_HEIGHT + 3, side * 5 - 3, 7, 7);
+    beacon(b, side * 9, GROUND_HEIGHT + 4, side * 5, 4);
   }
   b.box(-2, GROUND_HEIGHT, -2, 5, 3, 5, 'structure');
   b.box(-2, GROUND_HEIGHT + 3, -2, 5, 1, 5, 'accent', OVER);

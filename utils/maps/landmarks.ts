@@ -535,8 +535,9 @@ const market: LandmarkFn = (b, cx, cz, y, rng) => {
       b.box(x, y, z, 3, 1, 3, 'structure');
       b.box(x, y + 1, z, 1, 2, 1, 'structure');
       b.box(x + 2, y + 1, z + 2, 1, 2, 1, 'structure');
-      // Auvent : c'est la nappe colorée qui fait lire l'étal.
-      b.box(x - 1, y + 3, z - 1, 5, 1, 5, 'accent', OVER);
+      // Auvent : c'est la nappe colorée qui fait lire l'étal. Volontairement
+      // plus petit que l'entraxe, sinon les auvents se rejoignent en une dalle.
+      b.box(x, y + 3, z, 3, 1, 3, 'accent', OVER);
       if (rng.chance(0.6)) b.place(x + 1, y + 4, z + 1, 'highlight', OVER);
     }
   }
