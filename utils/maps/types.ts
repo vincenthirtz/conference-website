@@ -52,11 +52,29 @@ export const LANDMARK_KINDS = [
   'townhouses',
   'village',
   'tram',
+  'pagoda',
+  'castle',
+  'stupa',
+  'market',
+  'bridge',
+  'dish',
+  'rocket',
+  'ferriswheel',
 ] as const;
 export type LandmarkKind = (typeof LANDMARK_KINDS)[number];
 
 /** Style du bâti de remplissage généré par les layouts. */
-export const ARCHITECTURES = ['modern', 'terrace', 'whitewash', 'industrial', 'ancient'] as const;
+export const ARCHITECTURES = [
+  'modern',
+  'terrace',
+  'whitewash',
+  'industrial',
+  'ancient',
+  'colonial',
+  'tiered',
+  'futurist',
+  'alpine',
+] as const;
 export type Architecture = (typeof ARCHITECTURES)[number];
 
 /** Ambiance — n'influence que le fond et l'intensité du contraste au rendu. */
@@ -124,8 +142,11 @@ export type MapRecipe = {
   /**
    * Style du bâti de remplissage, qui porte une grande part de la
    * reconnaissance : `terrace` = rangées mitoyennes à toits pentus,
-   * `whitewash` = cubes blancs à toits plats, `industrial` = volumes bas et
-   * cheminées, `modern` = tours vitrées. Défaut `modern`.
+   * `whitewash` = cubes blancs à toits plats, `industrial` = hangars et
+   * cheminées, `ancient` = pierre à colonnade, `colonial` = arcades et
+   * balcons, `tiered` = toits étagés à auvents, `futurist` = bandeaux vitrés
+   * continus, `alpine` = soubassement de pierre et pignons très pentus,
+   * `modern` = volumes simples à toit plat. Défaut `modern`.
    */
   architecture?: Architecture;
 };

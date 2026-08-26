@@ -14,6 +14,16 @@
 //   sy = (x + z) * tile/4 - y * cubeHeight
 //   Les trois faces visibles sont donc : dessus (+y), droite (+x), gauche (+z).
 //
+// ÉCLAIRAGE:
+//   Trois termes s'ajoutent à l'éclairement de face, et c'est leur cumul qui
+//   sort la maquette de l'aplat :
+//     - occlusion ambiante : une face s'assombrit à proportion des briques qui
+//       la bordent au niveau supérieur (un angle rentrant est plus sombre) ;
+//     - ombre portée : le soleil vient de derrière-gauche, l'ombre file donc
+//       vers (+x, +z) ; une case de sol est ombrée si une colonne assez haute
+//       se trouve en diagonale arrière, sur quatre cases de portée ;
+//     - perspective aérienne : très léger éclaircissement avec l'altitude.
+//
 // TAILLE DU FICHIER — trois leviers, dans l'ordre d'efficacité :
 //   1) face culling : une face masquée par la brique voisine n'est pas émise
 //      (~85 % des faces disparaissent) ;
@@ -32,6 +42,7 @@
 //   d'éléments par maquette, c'est négligeable pour un rasterizer mais lourd
 //   dans le DOM si on en met trente sur une page.
 
+import { hashSeed } from './rng';
 import type { Brick, BrickRole, MapMood, MapRecipe, VoxelScene } from './types';
 
 export type IsoSvgOptions = {
@@ -55,10 +66,29 @@ export type IsoSvgOptions = {
   title?: string;
   /** Rendu décoratif : masque l'élément aux lecteurs d'écran. Défaut false. */
   decorative?: boolean;
+  /**
+   * Préfixe appliqué à TOUS les identifiants internes du SVG.
+   *
+   * Par défaut seul le dégradé de ciel est déjà namespacé (il dépend de
+   * l'ambiance, donc il diffère d'une maquette à l'autre) ; les trois faces
+   * unitaires gardent des identifiants courts et partagés, ce qui est sans
+   * danger car leur géométrie ne dépend que de `tile`/`cubeHeight`. Passer un
+   * préfixe distinct par maquette dès qu'on inline PLUSIEURS SVG de tailles de
+   * tuile différentes dans un même document — sinon la première définition de
+   * `#t` gagne pour tout le monde.
+   */
+  idPrefix?: string;
 };
 
 /** Éclairement par face — c'est ce qui donne le volume sur un aplat. */
 const FACE_LIGHT = { top: 1, right: 0.74, left: 0.5 } as const;
+
+/** Assombrissement par brique voisine au niveau supérieur (occlusion ambiante). */
+const AO_STEP = 0.075;
+/** Portée de l'ombre portée, et sa force en fonction de la distance. */
+const SHADOW_FALLOFF = [0.24, 0.17, 0.11, 0.06] as const;
+/** Éclaircissement maximal dû à l'altitude (perspective aérienne). */
+const HEIGHT_LIFT = 0.07;
 
 /**
  * Ambiance : teinte globale appliquée aux briques + couleurs de fond.
@@ -138,9 +168,50 @@ export function renderIsoSvg(scene: VoxelScene, options: IsoSvgOptions = {}): st
   const hw = tile / 2;
   const hh = tile / 4;
 
+  // Identifiants internes. Le ciel est TOUJOURS namespacé : deux maquettes
+  // d'ambiances différentes inlinées dans la même page partageraient sinon le
+  // même `#sky`, et la première l'emporterait pour toutes les autres.
+  const prefix = (options.idPrefix ?? '').replace(/[^A-Za-z0-9_-]/g, '');
+  const skyId = `${prefix}sky-${hashSeed(`${scene.recipe.slug}:${mood}`).toString(36)}`;
+  const idTop = `${prefix}t`;
+  const idRight = `${prefix}r`;
+  const idLeft = `${prefix}l`;
+  const idStud = `${prefix}s`;
+
   const byCell = new Map<string, Brick>();
-  for (const brick of scene.bricks) byCell.set(cellKey(brick.x, brick.y, brick.z), brick);
+  let peak = 1;
+  for (const brick of scene.bricks) {
+    byCell.set(cellKey(brick.x, brick.y, brick.z), brick);
+    if (brick.y > peak) peak = brick.y;
+  }
   const occupied = (x: number, y: number, z: number): boolean => byCell.has(cellKey(x, y, z));
+
+  // Carte des hauteurs (sommet de chaque colonne), base de l'ombre portée.
+  const heights = new Map<string, number>();
+  for (const brick of scene.bricks) {
+    const k = `${brick.x},${brick.z}`;
+    const current = heights.get(k);
+    if (current === undefined || brick.y > current) heights.set(k, brick.y);
+  }
+  const heightAt = (x: number, z: number): number => heights.get(`${x},${z}`) ?? -99;
+
+  /** Nombre de briques bordant la face du dessus au niveau supérieur (0..4). */
+  const aoTop = (x: number, y: number, z: number): number =>
+    (occupied(x + 1, y + 1, z) ? 1 : 0) +
+    (occupied(x - 1, y + 1, z) ? 1 : 0) +
+    (occupied(x, y + 1, z + 1) ? 1 : 0) +
+    (occupied(x, y + 1, z - 1) ? 1 : 0);
+
+  /**
+   * Ombre portée sur une face du dessus. Le soleil vient de (-x, -z) : on
+   * remonte la diagonale arrière et on garde l'occulteur le plus proche.
+   */
+  const shadowTop = (x: number, y: number, z: number): number => {
+    for (let d = 1; d <= SHADOW_FALLOFF.length; d += 1) {
+      if (heightAt(x - d, z - d) > y + d) return SHADOW_FALLOFF[d - 1];
+    }
+    return 0;
+  };
 
   // Ordre du peintre : du fond vers l'avant.
   const sorted: Brick[] = [...scene.bricks].sort((a, b) => a.x + a.y + a.z - (b.x + b.y + b.z));
@@ -163,9 +234,27 @@ export function renderIsoSvg(scene: VoxelScene, options: IsoSvgOptions = {}): st
     if (sy + hh + cubeHeight > maxSy) maxSy = sy + hh + cubeHeight;
   };
 
-  /** Deux briques fusionnent si leur face du dessus aura exactement la même couleur. */
-  const sameFill = (a: Brick, b: Brick): boolean =>
-    a.role === b.role && (a.shade ?? 0) === (b.shade ?? 0);
+  /** Couleur finale d'une face, tous termes d'éclairage cumulés. */
+  const faceColor = (brick: Brick, light: number): string => {
+    const lift = 1 + (brick.y / peak) * HEIGHT_LIFT;
+    return shadeColor(colorForRole(brick.role, scene.recipe), light * lift, brick.shade ?? 0, mood);
+  };
+
+  // La fusion des faces du dessus se décide sur la COULEUR FINALE, pas sur le
+  // rôle : depuis l'ajout de l'occlusion et des ombres, deux briques de même
+  // rôle peuvent très bien ne plus avoir la même teinte.
+  const topFills = new Map<Brick, string>();
+  const topFill = (brick: Brick): string => {
+    let value = topFills.get(brick);
+    if (value === undefined) {
+      const ao = aoTop(brick.x, brick.y, brick.z) * AO_STEP;
+      const shadow = shadowTop(brick.x, brick.y, brick.z);
+      value = faceColor(brick, FACE_LIGHT.top * (1 - ao) * (1 - shadow));
+      topFills.set(brick, value);
+    }
+    return value;
+  };
+
   const topVisible = (b: Brick): boolean => !occupied(b.x, b.y + 1, b.z);
 
   for (const brick of sorted) {
@@ -178,52 +267,52 @@ export function renderIsoSvg(scene: VoxelScene, options: IsoSvgOptions = {}): st
     const [sx, sy] = project(x, y, z);
     track(sx, sy);
 
-    const base = colorForRole(brick.role, scene.recipe);
-    const variation = brick.shade ?? 0;
-
     // L'ordre d'émission des faces d'une même brique n'a pas d'importance :
     // elles ne se recouvrent jamais entre elles.
     if (!leftHidden) {
+      const ao = occupied(x, y + 1, z + 1) ? AO_STEP * 2 : 0;
       parts.push(
-        `<use href="#l" x="${sx}" y="${sy}" fill="${shadeColor(base, FACE_LIGHT.left, variation, mood)}"/>`,
+        `<use href="#${idLeft}" x="${sx}" y="${sy}" fill="${faceColor(brick, FACE_LIGHT.left * (1 - ao))}"/>`,
       );
     }
     if (!rightHidden) {
+      const ao = occupied(x + 1, y + 1, z) ? AO_STEP * 2 : 0;
       parts.push(
-        `<use href="#r" x="${sx}" y="${sy}" fill="${shadeColor(base, FACE_LIGHT.right, variation, mood)}"/>`,
+        `<use href="#${idRight}" x="${sx}" y="${sy}" fill="${faceColor(brick, FACE_LIGHT.right * (1 - ao))}"/>`,
       );
     }
     if (topHidden) continue;
 
+    const fill = topFill(brick);
+
     // La cellule précédente en x porte déjà ce run : rien à émettre.
     const prev = byCell.get(cellKey(x - 1, y, z));
-    if (prev && topVisible(prev) && sameFill(prev, brick)) continue;
+    if (prev && topVisible(prev) && topFill(prev) === fill) continue;
 
     let last = brick;
     for (let n = 1; ; n += 1) {
       const nextBrick = byCell.get(cellKey(x + n, y, z));
-      if (!nextBrick || !topVisible(nextBrick) || !sameFill(nextBrick, brick)) break;
+      if (!nextBrick || !topVisible(nextBrick) || topFill(nextBrick) !== fill) break;
       last = nextBrick;
     }
 
-    const topFill = shadeColor(base, FACE_LIGHT.top, variation, mood);
     if (last === brick) {
-      parts.push(`<use href="#t" x="${sx}" y="${sy}" fill="${topFill}"/>`);
+      parts.push(`<use href="#${idTop}" x="${sx}" y="${sy}" fill="${fill}"/>`);
     } else {
       const [ex, ey] = project(last.x, last.y, last.z);
       track(ex, ey);
       parts.push(
-        `<path fill="${topFill}" d="M${sx - hw} ${sy}L${sx} ${sy - hh}L${ex + hw} ${ey}L${ex} ${ey + hh}Z"/>`,
+        `<path fill="${fill}" d="M${sx - hw} ${sy}L${sx} ${sy - hh}L${ex + hw} ${ey}L${ex} ${ey + hh}Z"/>`,
       );
     }
 
     // Les tenons ne sont posés que sur le bâti : sol et nappe restent lisses
     // (plaque de base), ce qui économise la majorité des éléments.
     if (withStuds && brick.role !== 'ground' && brick.role !== 'environment') {
-      const studFill = shadeColor(base, FACE_LIGHT.top * 1.13, variation, mood);
+      const studFill = faceColor(brick, FACE_LIGHT.top * 1.13);
       for (let cx = brick.x; cx <= last.x; cx += 1) {
         const [ux, uy] = project(cx, y, z);
-        parts.push(`<use href="#s" x="${ux}" y="${uy}" fill="${studFill}"/>`);
+        parts.push(`<use href="#${idStud}" x="${ux}" y="${uy}" fill="${studFill}"/>`);
       }
     }
   }
@@ -268,12 +357,12 @@ export function renderIsoSvg(scene: VoxelScene, options: IsoSvgOptions = {}): st
 
   const sky = MOODS[mood].sky;
   const bg = withBackground
-    ? `<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">` +
+    ? `<linearGradient id="${skyId}" x1="0" y1="0" x2="0" y2="1">` +
       `<stop offset="0" stop-color="${sky[0]}"/><stop offset="1" stop-color="${sky[1]}"/>` +
       `</linearGradient>`
     : '';
   const bgRect = withBackground
-    ? `<rect x="${vbX}" y="${vbY}" width="${vbW}" height="${vbH}" fill="url(#sky)"/>`
+    ? `<rect x="${vbX}" y="${vbY}" width="${vbW}" height="${vbH}" fill="url(#${skyId})"/>`
     : '';
 
   const label = escapeXml(options.title ?? scene.recipe.name);
@@ -287,8 +376,9 @@ export function renderIsoSvg(scene: VoxelScene, options: IsoSvgOptions = {}): st
     ` preserveAspectRatio="xMidYMid meet"${a11y}>` +
     titleTag +
     `<defs>${bg}` +
-    `<path id="t" d="${top}"/><path id="r" d="${right}"/><path id="l" d="${left}"/>` +
-    (withStuds ? `<path id="s" d="${stud}"/>` : '') +
+    `<path id="${idTop}" d="${top}"/><path id="${idRight}" d="${right}"/>` +
+    `<path id="${idLeft}" d="${left}"/>` +
+    (withStuds ? `<path id="${idStud}" d="${stud}"/>` : '') +
     `</defs>` +
     bgRect +
     parts.join('') +

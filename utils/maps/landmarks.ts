@@ -276,8 +276,8 @@ const gate: LandmarkFn = (b, cx, cz, y, rng) => {
 
 /** Amphithéâtre : anneau à arcades sur plusieurs niveaux, avec sa brèche. */
 const amphitheatre: LandmarkFn = (b, cx, cz, y, rng) => {
-  const outer = rng.int(6, 7);
-  const thickness = 2.2;
+  const outer = 8;
+  const thickness = 2.4;
   const tiers = 3;
 
   /** Perce l'anneau de part en part sur un rayon donné. */
@@ -424,6 +424,250 @@ const tram: LandmarkFn = (b, cx, cz, y, rng) => {
   b.box(car, deck + 4, cz - 1, 6, 1, 3, 'structure', OVER);
 };
 
+
+/** Tour à toits étagés et auvents relevés. */
+const pagoda: LandmarkFn = (b, cx, cz, y, rng) => {
+  const tiers = rng.int(3, 4);
+  b.box(cx - 3, y, cz - 3, 7, 2, 7, 'structure');
+  b.box(cx - 4, y + 2, cz - 4, 9, 1, 9, 'accent', OVER);
+  let width = 5;
+  let level = y + 3;
+  for (let t = 0; t < tiers; t += 1) {
+    const o = Math.floor(width / 2);
+    b.box(cx - o, level, cz - o, width, 3, width, 'structure');
+    // Fenêtres du niveau.
+    for (let i = -o + 1; i <= o - 1; i += 2) {
+      b.place(cx + i, level + 1, cz + o, 'highlight', OVER);
+      b.place(cx + o, level + 1, cz + i, 'highlight', OVER);
+    }
+    // Auvent : plus large que l'étage, avec les angles relevés — c'est le
+    // débord et le relèvement qui donnent la silhouette, pas la couleur.
+    b.box(cx - o - 2, level + 3, cz - o - 2, width + 4, 1, width + 4, 'accent', OVER);
+    for (const sx of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        b.place(cx + sx * (o + 2), level + 4, cz + sz * (o + 2), 'accent', OVER);
+      }
+    }
+    level += 4;
+    width = Math.max(3, width - 2);
+  }
+  b.box(cx, level, cz, 1, 3, 1, 'highlight', OVER);
+};
+
+/** Château fort : donjon, courtines crénelées et tours d'angle. */
+const castle: LandmarkFn = (b, cx, cz, y, rng) => {
+  const half = rng.int(6, 7);
+  // Courtines.
+  b.shell(cx - half, y, cz - half, half * 2 + 1, 5, half * 2 + 1, 'structure');
+  for (let i = -half; i <= half; i += 2) {
+    b.place(cx + i, y + 5, cz - half, 'accent', OVER);
+    b.place(cx + i, y + 5, cz + half, 'accent', OVER);
+    b.place(cx - half, y + 5, cz + i, 'accent', OVER);
+    b.place(cx + half, y + 5, cz + i, 'accent', OVER);
+  }
+  // Porte.
+  b.carveBox(cx - 1, y, cz + half, 3, 3, 1);
+  b.box(cx - 2, y + 3, cz + half, 5, 1, 1, 'accent', OVER);
+  // Tours d'angle.
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      const tx = cx + sx * half;
+      const tz = cz + sz * half;
+      b.disc(tx, tz, 2.2, y, 8, 'structure');
+      b.ring(tx, tz, 2.6, 1.2, y + 8, 1, 'accent');
+      for (let i = 0; i < 4; i += 1) {
+        const s = 4 - i;
+        b.disc(tx, tz, s / 2, y + 9 + i, 1, 'accent');
+      }
+    }
+  }
+  // Donjon.
+  const keep = rng.int(9, 12);
+  b.box(cx - 2, y, cz - 2, 5, keep, 5, 'structure');
+  for (let i = -2; i <= 2; i += 2) b.place(cx + i, y + 2, cz + 2, 'highlight', OVER);
+  b.box(cx - 3, y + keep, cz - 3, 7, 1, 7, 'accent', OVER);
+  for (let i = 0; i < 4; i += 1) {
+    const s = 5 - i;
+    const o = Math.floor(s / 2);
+    b.box(cx - o, y + keep + 1 + i, cz - o, s, 1, s, 'accent', OVER);
+  }
+};
+
+/** Stupa : dôme sur base carrée, flèche annelée, mâts à fanions. */
+const stupa: LandmarkFn = (b, cx, cz, y, rng) => {
+  const base = rng.int(9, 11);
+  const o = Math.floor(base / 2);
+  b.box(cx - o, y, cz - o, base, 2, base, 'structure');
+  b.box(cx - o + 1, y + 2, cz - o + 1, base - 2, 2, base - 2, 'structure');
+  b.box(cx - o, y + 4, cz - o, base, 1, base, 'accent', OVER);
+  const r = base / 2 - 1;
+  const layers = Math.round(r) + 1;
+  for (let i = 0; i <= layers; i += 1) {
+    const lr = r * Math.sqrt(Math.max(0, 1 - ((i + 0.4) / (layers + 1)) ** 2));
+    if (lr < 0.4) break;
+    b.disc(cx, cz, lr, y + 5 + i, 1, 'structure');
+  }
+  const topY = y + 5 + layers;
+  b.box(cx - 1, topY, cz - 1, 3, 1, 3, 'accent', OVER);
+  for (let i = 0; i < 5; i += 1) {
+    b.box(cx, topY + 1 + i, cz, 1, 1, 1, i % 2 === 0 ? 'accent' : 'highlight', OVER);
+  }
+  // Cordes à fanions tendues vers le sol.
+  for (const [dx, dz] of [
+    [1, 1],
+    [-1, 1],
+    [1, -1],
+  ]) {
+    for (let i = 1; i <= 5; i += 1) {
+      b.place(cx + dx * i, topY + 4 - i, cz + dz * i, 'highlight', OVER);
+    }
+  }
+};
+
+/** Marché : rangées d'étals sous auvents colorés. */
+const market: LandmarkFn = (b, cx, cz, y, rng) => {
+  const rows = rng.int(2, 3);
+  const stalls = rng.int(3, 4);
+  for (let r = 0; r < rows; r += 1) {
+    const z = cz - 3 + r * 5;
+    for (let s = 0; s < stalls; s += 1) {
+      const x = cx - stalls * 2 + s * 4;
+      b.box(x, y, z, 3, 1, 3, 'structure');
+      b.box(x, y + 1, z, 1, 2, 1, 'structure');
+      b.box(x + 2, y + 1, z + 2, 1, 2, 1, 'structure');
+      // Auvent : c'est la nappe colorée qui fait lire l'étal.
+      b.box(x - 1, y + 3, z - 1, 5, 1, 5, 'accent', OVER);
+      if (rng.chance(0.6)) b.place(x + 1, y + 4, z + 1, 'highlight', OVER);
+    }
+  }
+  // Guirlande tendue au-dessus de l'allée.
+  if (rows > 1) {
+    for (let x = cx - stalls * 2; x < cx + stalls * 2; x += 2) {
+      b.place(x, y + 5, cz + 1, 'highlight', OVER);
+    }
+  }
+};
+
+/** Pont en dos d'âne : culées, tablier arqué, piles espacées. */
+const bridge: LandmarkFn = (b, cx, cz, y, rng) => {
+  const span = rng.int(11, 15);
+  const half = Math.floor(span / 2);
+  const rise = rng.int(3, 4);
+
+  // Culées : les SEULS appuis posés au niveau du sol. Le reste du pont doit
+  // rester en l'air, sinon le sous-bassement automatique (SceneBuilder.underpin)
+  // lui coule un mur plein sur toute la longueur et on obtient un remblai.
+  for (const s of [-1, 1]) {
+    b.box(cx + s * half - 1, y, cz - 2, 3, 2, 5, 'structure');
+    b.box(cx + s * half - 1, y + 2, cz - 2, 3, 1, 5, 'accent', OVER);
+  }
+
+  const deck = (i: number): number => y + 1 + Math.round(rise * (1 - (i / half) ** 2));
+
+  for (let i = -half; i <= half; i += 1) {
+    const h = deck(i);
+    b.box(cx + i, h, cz - 2, 1, 1, 5, 'accent', OVER);
+    // Parapets.
+    b.place(cx + i, h + 1, cz - 2, 'structure', OVER);
+    b.place(cx + i, h + 1, cz + 2, 'structure', OVER);
+    if (Math.abs(i) % 4 === 2) {
+      b.place(cx + i, h + 2, cz - 2, 'highlight', OVER);
+      b.place(cx + i, h + 2, cz + 2, 'highlight', OVER);
+    }
+    // Piles, une tous les cinq mètres seulement — c'est le vide entre elles qui
+    // fait lire un pont plutôt qu'un talus.
+    if (Math.abs(i) % 5 === 0 && Math.abs(i) < half - 1) {
+      for (let yy = y; yy < h; yy += 1) {
+        b.place(cx + i, yy, cz - 1, 'structure');
+        b.place(cx + i, yy, cz + 1, 'structure');
+      }
+    }
+  }
+};
+
+/** Antenne parabolique sur son berceau. */
+const dish: LandmarkFn = (b, cx, cz, y, rng) => {
+  const r = rng.int(5, 6);
+  b.box(cx - 2, y, cz - 2, 5, 4, 5, 'structure');
+  b.box(cx - 1, y + 4, cz - 1, 3, 3, 3, 'structure');
+  // Coupe parabolique inclinée : chaque anneau monte d'un cran en s'écartant.
+  for (let i = 0; i <= r; i += 1) {
+    b.ring(cx, cz, i + 0.6, 1.2, y + 7 + Math.round((i * i) / (r * 1.6)), 1, 'accent');
+  }
+  b.disc(cx, cz, 1.4, y + 7, 1, 'accent');
+  // Contre-réflecteur au foyer.
+  b.box(cx, y + 8, cz, 1, 3, 1, 'structure', OVER);
+  b.place(cx, y + 11, cz, 'highlight', OVER);
+};
+
+/** Pas de tir : lanceur, portique de service et bras ombilical. */
+const rocket: LandmarkFn = (b, cx, cz, y, rng) => {
+  const h = rng.int(14, 18);
+  // Table de lancement.
+  b.box(cx - 4, y, cz - 4, 9, 2, 9, 'structure');
+  b.box(cx - 4, y + 2, cz - 4, 9, 1, 9, 'accent', OVER);
+  // Corps du lanceur.
+  for (let i = 0; i < h; i += 1) {
+    b.disc(cx, cz, 1.8, y + 3 + i, 1, i % 6 === 5 ? 'accent' : 'structure');
+  }
+  // Coiffe.
+  for (let i = 0; i < 4; i += 1) b.disc(cx, cz, 1.8 - i * 0.45, y + 3 + h + i, 1, 'accent');
+  b.place(cx, y + 7 + h, cz, 'highlight', OVER);
+  // Ailerons.
+  for (const [dx, dz] of [
+    [2, 0],
+    [-2, 0],
+    [0, 2],
+    [0, -2],
+  ]) {
+    for (let i = 0; i < 4; i += 1) b.place(cx + dx, y + 3 + i, cz + dz, 'accent', OVER);
+  }
+  // Portique de service et bras ombilical.
+  b.box(cx + 5, y, cz - 1, 2, h, 2, 'structure');
+  for (let i = 4; i < h; i += 5) b.box(cx + 2, y + i, cz, 3, 1, 1, 'highlight', OVER);
+};
+
+/** Grande roue : jante verticale épaisse, rayons clairsemés, nacelles. */
+const ferriswheel: LandmarkFn = (b, cx, cz, y, rng) => {
+  const r = rng.int(7, 9);
+  const hub = y + r + 2;
+
+  // Mâts porteurs en A, de part et d'autre du moyeu.
+  for (const s of [-1, 1]) {
+    for (let i = 0; i <= r + 1; i += 1) {
+      const x = cx + Math.round((1 - i / (r + 1)) * 4) * s;
+      b.box(x, y + i, cz - 1, 1, 1, 3, 'structure');
+    }
+  }
+  b.box(cx - 1, hub - 1, cz - 2, 3, 3, 5, 'structure', OVER);
+
+  // Jante : trois voxels d'épaisseur, sinon elle disparaît en vignette.
+  const steps = 64;
+  for (let k = 0; k < steps; k += 1) {
+    const a = (k / steps) * Math.PI * 2;
+    const px = cx + Math.round(Math.cos(a) * r);
+    const py = hub + Math.round(Math.sin(a) * r);
+    if (py < y) continue;
+    for (let dz = -1; dz <= 1; dz += 1) b.place(px, py, cz + dz, 'accent', OVER);
+  }
+
+  // Rayons et nacelles : un sur huit, pour garder la roue ajourée.
+  const arms = 8;
+  for (let k = 0; k < arms; k += 1) {
+    const a = (k / arms) * Math.PI * 2 + 0.2;
+    for (let t = 0.2; t < 0.95; t += 0.1) {
+      const sx = cx + Math.round(Math.cos(a) * r * t);
+      const sy = hub + Math.round(Math.sin(a) * r * t);
+      if (sy >= y) b.place(sx, sy, cz, 'structure');
+    }
+    const nx = cx + Math.round(Math.cos(a) * (r - 1));
+    const ny = hub + Math.round(Math.sin(a) * (r - 1));
+    if (ny > y) {
+      for (let dz = -1; dz <= 1; dz += 1) b.place(nx, ny, cz + dz, 'highlight', OVER);
+    }
+  }
+};
+
 const LANDMARKS: Record<LandmarkKind, LandmarkFn> = {
   tower,
   clocktower,
@@ -446,6 +690,14 @@ const LANDMARKS: Record<LandmarkKind, LandmarkFn> = {
   townhouses,
   village,
   tram,
+  pagoda,
+  castle,
+  stupa,
+  market,
+  bridge,
+  dish,
+  rocket,
+  ferriswheel,
 };
 
 export function buildLandmark(

@@ -32,6 +32,11 @@ export class SceneBuilder {
     this.cells.set(k, { x: ix, y: iy, z: iz, role, shade: opts.shade });
   }
 
+  /** Brique posée à cette case, si elle existe. */
+  get(x: number, y: number, z: number): Brick | undefined {
+    return this.cells.get(key(Math.round(x), Math.round(y), Math.round(z)));
+  }
+
   has(x: number, y: number, z: number): boolean {
     return this.cells.has(key(Math.round(x), Math.round(y), Math.round(z)));
   }

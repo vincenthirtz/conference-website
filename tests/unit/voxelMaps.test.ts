@@ -12,6 +12,13 @@ import { deriveRecipe, getMapRecipe, hasAuthoredRecipe } from '@/config/maps';
 import { OVERWATCH_RECIPES } from '@/config/maps/overwatch';
 import { getGame, GAME_SLUGS } from '@/config/games';
 
+/** Les tests visent des recettes PAR SLUG : l'ordre du tableau n'est pas un contrat. */
+const bySlug = (slug: string): MapRecipe => {
+  const recipe = OVERWATCH_RECIPES.find((r) => r.slug === slug);
+  if (!recipe) throw new Error(`recette introuvable : ${slug}`);
+  return recipe;
+};
+
 const BASE: MapRecipe = {
   slug: 'test-map',
   name: 'Test Map',
@@ -175,38 +182,37 @@ describe('buildLandmark', () => {
 
 describe('generateScene', () => {
   it('est déterministe pour une même recette', () => {
-    const a = generateScene(OVERWATCH_RECIPES[0]);
-    const c = generateScene(OVERWATCH_RECIPES[0]);
+    const a = generateScene(bySlug('kings-row'));
+    const c = generateScene(bySlug('kings-row'));
     expect(a.bricks).toEqual(c.bricks);
   });
 
   it('deux recettes différentes donnent des scènes différentes', () => {
-    const a = generateScene(OVERWATCH_RECIPES[0]);
-    const c = generateScene(OVERWATCH_RECIPES[1]);
-    expect(a.bricks.length).not.toBe(c.bricks.length);
+    const a = generateScene(bySlug('kings-row'));
+    const c = generateScene(bySlug('ilios'));
+    expect(a.bricks).not.toEqual(c.bricks);
   });
 
   it('les bornes encadrent réellement les briques', () => {
-    const scene = generateScene(OVERWATCH_RECIPES[2]);
-    for (const brick of scene.bricks) {
-      expect(brick.x).toBeGreaterThanOrEqual(scene.bounds.minX);
-      expect(brick.x).toBeLessThanOrEqual(scene.bounds.maxX);
-      expect(brick.y).toBeGreaterThanOrEqual(scene.bounds.minY);
-      expect(brick.y).toBeLessThanOrEqual(scene.bounds.maxY);
-      expect(brick.z).toBeGreaterThanOrEqual(scene.bounds.minZ);
-      expect(brick.z).toBeLessThanOrEqual(scene.bounds.maxZ);
-    }
+    const scene = generateScene(bySlug('junkertown'));
+    const { minX, maxX, minY, maxY, minZ, maxZ } = scene.bounds;
+    // Une assertion agrégée : 4 000 briques x 6 expect() feraient exploser le
+    // temps du test pour la même information.
+    const outside = scene.bricks.filter(
+      (b) =>
+        b.x < minX || b.x > maxX || b.y < minY || b.y > maxY || b.z < minZ || b.z > maxZ,
+    );
+    expect(outside).toEqual([]);
   });
 
-  it('toutes les coordonnées sont des entiers positifs en hauteur', () => {
-    for (const recipe of OVERWATCH_RECIPES) {
-      for (const brick of generateScene(recipe).bricks) {
-        expect(Number.isInteger(brick.x)).toBe(true);
-        expect(Number.isInteger(brick.y)).toBe(true);
-        expect(Number.isInteger(brick.z)).toBe(true);
-        expect(brick.y).toBeGreaterThanOrEqual(0);
-      }
-    }
+  it('toutes les coordonnées sont des entiers, y jamais négatif', () => {
+    const invalid = OVERWATCH_RECIPES.flatMap((recipe) =>
+      generateScene(recipe).bricks.filter(
+        (b) =>
+          !Number.isInteger(b.x) || !Number.isInteger(b.y) || !Number.isInteger(b.z) || b.y < 0,
+      ),
+    );
+    expect(invalid).toEqual([]);
   });
 
   it("n'émet une nappe d'environnement que si la recette en déclare une", () => {
@@ -235,7 +241,7 @@ describe('generateScene', () => {
 });
 
 describe('renderIsoSvg', () => {
-  const scene = generateScene(OVERWATCH_RECIPES[1]);
+  const scene = generateScene(bySlug('ilios'));
 
   it('produit un SVG bien formé', () => {
     const svg = renderIsoSvg(scene);
@@ -288,6 +294,25 @@ describe('renderIsoSvg', () => {
 
   it('sans tenons, aucune instance du losange', () => {
     expect(renderIsoSvg(scene, { studs: false })).not.toContain('href="#s"');
+  });
+
+  it("namespace le dégradé de ciel — deux maquettes inlinées ne doivent pas partager d'id", () => {
+    const other = generateScene(bySlug('kings-row'));
+    const idOf = (svg: string) => /linearGradient id="([^"]+)"/.exec(svg)?.[1];
+    expect(idOf(renderIsoSvg(scene))).toBeDefined();
+    expect(idOf(renderIsoSvg(scene))).not.toBe(idOf(renderIsoSvg(other)));
+  });
+
+  it("l'id du ciel est stable pour une même maquette", () => {
+    const idOf = (svg: string) => /linearGradient id="([^"]+)"/.exec(svg)?.[1];
+    expect(idOf(renderIsoSvg(scene))).toBe(idOf(renderIsoSvg(scene)));
+  });
+
+  it('idPrefix namespace aussi les faces unitaires', () => {
+    const svg = renderIsoSvg(scene, { idPrefix: 'ilios-' });
+    expect(svg).toContain('<path id="ilios-t"');
+    expect(svg).toContain('href="#ilios-t"');
+    expect(svg).not.toContain('href="#t"');
   });
 
   it('rend une scène vide sans lever', () => {
@@ -346,6 +371,26 @@ describe('registre de recettes', () => {
     const a = deriveRecipe('Numbani', 'hybrid');
     const b = deriveRecipe('Hollywood', 'hybrid');
     expect(a.palette).not.toEqual(b.palette);
+  });
+
+  it('toutes les maps Overwatch du registre ont une recette écrite à la main', () => {
+    const game = getGame('overwatch');
+    expect(game).not.toBeNull();
+    const missing = game!.mapPool
+      .filter((m) => !hasAuthoredRecipe('overwatch', m.name))
+      .map((m) => m.name);
+    expect(missing).toEqual([]);
+  });
+
+  it("le lot Overwatch ne contient pas de recette orpheline (map retirée du pool)", () => {
+    const pool = new Set(getGame('overwatch')!.mapPool.map((m) => mapSlug(m.name)));
+    const orphans = OVERWATCH_RECIPES.filter((r) => !pool.has(r.slug)).map((r) => r.slug);
+    expect(orphans).toEqual([]);
+  });
+
+  it('chaque mode de jeu Overwatch est couvert par au moins une recette', () => {
+    const layouts = new Set(OVERWATCH_RECIPES.map((r) => r.layout));
+    expect([...layouts].sort()).toEqual(['control', 'escort', 'flashpoint', 'hybrid', 'push']);
   });
 
   it('chaque map de chaque jeu du registre produit une maquette rendable', () => {
