@@ -14,7 +14,8 @@
     "test": "playwright test",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
-    "test:unit:coverage": "vitest run --coverage --no-isolate"
+    "test:unit:coverage": "vitest run --coverage --no-isolate",
+    "maps:render": "node --import ./scripts/register-ts.mjs scripts/render-map-previews.ts"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.5.3",

@@ -7,6 +7,9 @@
     "allowJs": true,
     "checkJs": true,
     "noEmit": true,
+    // Autorise `import ... from './x.ts'` dans les scripts Node exécutés
+    // directement (type-stripping natif). Sans effet sur le build Next : noEmit.
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,

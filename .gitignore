@@ -45,3 +45,6 @@ tsconfig.tsbuildinfo
 
 # ESLint cache (npm run verify)
 .eslintcache
+
+# Planche-contact des maquettes voxel (npm run maps:render)
+map-previews.html
