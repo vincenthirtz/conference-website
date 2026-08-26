@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+
 import { describe, it, expect } from 'vitest';
 
 import { SceneBuilder } from '@/utils/maps/builder';
@@ -446,15 +449,51 @@ describe('registre de recettes', () => {
     expect([...layouts].sort()).toEqual(['control', 'escort', 'flashpoint', 'hybrid', 'push']);
   });
 
-  it('chaque map de chaque jeu du registre produit une maquette rendable', () => {
-    for (const slug of GAME_SLUGS) {
-      const game = getGame(slug);
-      if (!game) continue;
-      for (const map of game.mapPool) {
-        const recipe = getMapRecipe(slug, map.name, map.type);
-        const scene = generateScene(recipe);
-        expect(scene.bricks.length).toBeGreaterThan(200);
-      }
-    }
+  // Le catalogue Overwatch ne pointe plus vers un CDN tiers : les vignettes sont
+  // nos propres maquettes, servies depuis public/. Une map ajoutée sans
+  // `npm run maps:render` afficherait une image cassée en production — ces deux
+  // tests sont le seul filet, `next build` ne vérifiant pas les chemins d'assets.
+  it('chaque map Overwatch pointe vers le chemin de sa maquette locale', () => {
+    const wrong = getGame('overwatch')!
+      .mapPool.map((m) => ({ name: m.name, image: m.image }))
+      .filter((m) => m.image !== `/img/maps/overwatch/${mapSlug(m.name)}.svg`);
+    expect(wrong).toEqual([]);
   });
+
+  it('le fichier de chaque vignette Overwatch existe sur le disque', () => {
+    const missing = getGame('overwatch')!
+      .mapPool.map((m) => m.image)
+      .filter((image) => !existsSync(path.join(process.cwd(), 'public', image)));
+    expect(missing).toEqual([]);
+  });
+
+  it('aucune vignette Overwatch ne dépend encore d\'un hôte externe', () => {
+    const remote = getGame('overwatch')!
+      .mapPool.map((m) => m.image)
+      .filter((image) => /^https?:\/\//.test(image));
+    expect(remote).toEqual([]);
+  });
+
+  // Exhaustif par construction : ~200 maps x une scène complète. Le délai par
+  // défaut de vitest (5 s) suffit en isolation mais pas quand la suite entière
+  // tourne en parallèle — d'où le délai explicite, préféré à un échantillonnage
+  // qui ferait perdre à ce test tout son intérêt (c'est LA garantie que le repli
+  // ne produit jamais de maquette vide, pour n'importe quelle map de n'importe
+  // quel jeu).
+  it(
+    'chaque map de chaque jeu du registre produit une maquette rendable',
+    () => {
+      const empty: string[] = [];
+      for (const slug of GAME_SLUGS) {
+        const game = getGame(slug);
+        if (!game) continue;
+        for (const map of game.mapPool) {
+          const scene = generateScene(getMapRecipe(slug, map.name, map.type));
+          if (scene.bricks.length <= 200) empty.push(`${slug}/${map.name}`);
+        }
+      }
+      expect(empty).toEqual([]);
+    },
+    60_000
+  );
 });
