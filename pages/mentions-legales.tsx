@@ -10,10 +10,22 @@ const getDataUses = (t: MentionsDict) => [t.use1, t.use2, t.use3, t.use4];
 
 const getRights = (t: MentionsDict) => [t.right1, t.right2, t.right3, t.right4];
 
+const getIdentityRows = (t: MentionsDict) => [
+  { label: t.rnaLabel, value: t.rnaValue },
+  { label: t.rnaCreatedLabel, value: t.rnaCreatedValue },
+  { label: t.rnaJoLabel, value: t.rnaJoValue },
+  { label: t.rnaDeclarationLabel, value: t.rnaDeclarationValue },
+  { label: t.sirenLabel, value: t.sirenValue },
+  { label: t.siretLabel, value: t.siretValue },
+  { label: t.sireneCreatedLabel, value: t.sireneCreatedValue },
+  { label: t.sireneUpdatedLabel, value: t.sireneUpdatedValue },
+];
+
 function MentionsLegalesPage() {
   const t = useT(nsMentionsLegales);
   const dataUses = getDataUses(t);
   const rights = getRights(t);
+  const identityRows = getIdentityRows(t);
   const { value: contactEmail } = useSiteSetting('contact_email');
 
   return (
@@ -67,7 +79,6 @@ function MentionsLegalesPage() {
             <h2 className="mt-2 text-xl font-semibold">{t.editorTitle}</h2>
             <p className="mt-2 text-sm text-gray-200">{t.editorDesc}</p>
             <ul className="mt-3 space-y-2 text-sm text-gray-200">
-              <li>{t.rnaNumber}</li>
               <li>{t.pubResponsible}</li>
               <li>
                 {t.contactPrincipalLabel}{' '}
@@ -81,6 +92,21 @@ function MentionsLegalesPage() {
               </li>
               <li>{t.postalLabel}</li>
             </ul>
+            <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.04] p-4">
+              <p className="text-sm font-semibold text-white">
+                {t.identityTitle}
+              </p>
+              <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+                {identityRows.map((row) => (
+                  <div key={row.label} className="flex flex-col">
+                    <dt className="text-xs uppercase tracking-[0.08em] text-gray-400">
+                      {row.label}
+                    </dt>
+                    <dd className="text-gray-100">{row.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
           </div>
 
           <div className="card-brand rounded-2xl bg-white/[0.05] p-5 shadow-xl shadow-black/20">
