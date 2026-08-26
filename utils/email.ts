@@ -1,4 +1,5 @@
 import { logger } from './logger';
+import { sanitizeEmailHtml } from './emailHtmlSanitizer';
 // utils/email.ts
 // Lightweight email utility using Brevo (ex-Sendinblue) transactional API.
 // Free tier: 300 emails/day — https://brevo.com
@@ -353,10 +354,24 @@ export function sendIdahobitLiveEmail(
 
 // ─── Generic campaign template ─────────────────────────────────
 //
-// Corps STRUCTURÉ d'une campagne créée depuis l'admin (table email_campaigns).
-// Pas de HTML libre : on assemble heading + greeting + paragraphes + CTA +
-// footer dans le wrapper de marque (emailLayout). Tout le texte fourni par
-// l'admin est échappé (escapeHtml) — y compris l'URL du CTA (contexte attribut).
+// Corps d'une campagne créée depuis l'admin (table email_campaigns), en DEUX
+// modes (`bodyFormat`) :
+//
+//   'structured' (défaut) — on assemble heading + greeting + paragraphes + CTA
+//     + footer. Tout le texte fourni par l'admin est échappé (escapeHtml), y
+//     compris l'URL du CTA (contexte attribut). Aucun balisage possible.
+//
+//   'html' — le staff écrit directement le corps de la carte (mise en page,
+//     images, tableaux). Le HTML passe par `sanitizeEmailHtml` : allowlist de
+//     balises/attributs, scripts et gestionnaires d'événements retirés, URLs
+//     relatives absolutisées. Le greeting reste disponible (case à cocher) et
+//     est inséré AVANT le HTML.
+//
+// Dans les deux cas le rendu vit dans le wrapper de marque (emailLayout) : en-
+// tête, pied de page et lien de désinscription RGPD ne sont jamais remplaçables
+// par le corps de la campagne.
+
+export type CampaignBodyFormat = 'structured' | 'html';
 
 export type CampaignBody = {
   heading: string;
@@ -365,7 +380,23 @@ export type CampaignBody = {
   ctaLabel?: string | null;
   ctaUrl?: string | null;
   footerNote?: string | null;
+  /** 'structured' (défaut) ou 'html' — cf. commentaire ci-dessus. */
+  bodyFormat?: CampaignBodyFormat;
+  /** Corps HTML libre, utilisé uniquement quand `bodyFormat === 'html'`. */
+  bodyHtml?: string | null;
 };
+
+/**
+ * Lien de désinscription RGPD (broadcasts uniquement). Discret, centré, sous le
+ * footer. L'URL est déjà signée + porte &scope=broadcast (contexte attribut →
+ * escapeHtml). Absent pour les emails transactionnels.
+ */
+function unsubscribeBlock(unsubscribeUrl?: string): string {
+  if (!unsubscribeUrl || !unsubscribeUrl.trim()) return '';
+  return `<p style="margin:20px 0 0;font-size:11px;color:#675788;line-height:1.4;text-align:center;">
+          <a href="${escapeHtml(unsubscribeUrl.trim())}" style="color:#9081B0;text-decoration:underline;">Se désinscrire des annonces</a>
+        </p>`;
+}
 
 export function buildCampaignEmailHtml(
   body: CampaignBody,
@@ -376,6 +407,19 @@ export function buildCampaignEmailHtml(
     body.greetingEnabled !== false && displayLabel
       ? `<p style="margin:0 0 16px;font-size:15px;color:#C6BED9;line-height:1.6;">Hey ${escapeHtml(displayLabel)},</p>`
       : '';
+
+  // Mode HTML libre : le corps saisi remplace heading / paragraphes / CTA /
+  // footer — le staff les compose lui-même dans son balisage. Le greeting et le
+  // lien de désinscription restent ajoutés par le wrapper.
+  if (body.bodyFormat === 'html') {
+    const safeHtml = sanitizeEmailHtml(body.bodyHtml ?? '', SITE_URL);
+    return emailLayout(`
+    ${gradientBar()}
+    ${greeting}
+    ${safeHtml}
+    ${unsubscribeBlock(unsubscribeUrl)}
+  `);
+  }
 
   const paragraphs = (body.bodyParagraphs ?? [])
     .filter((p) => typeof p === 'string' && p.trim())
@@ -398,15 +442,7 @@ export function buildCampaignEmailHtml(
       ? `<p style="margin:24px 0 0;font-size:13px;color:#9081B0;line-height:1.5;text-align:center;">${escapeHtml(body.footerNote.trim())}</p>`
       : '';
 
-  // Lien de désinscription RGPD (broadcasts uniquement). Discret, centré, sous
-  // le footer. L'URL est déjà signée + porte &scope=broadcast (contexte
-  // attribut → escapeHtml). Absent pour les emails transactionnels.
-  const unsubscribe =
-    unsubscribeUrl && unsubscribeUrl.trim()
-      ? `<p style="margin:20px 0 0;font-size:11px;color:#675788;line-height:1.4;text-align:center;">
-          <a href="${escapeHtml(unsubscribeUrl.trim())}" style="color:#9081B0;text-decoration:underline;">Se désinscrire des annonces</a>
-        </p>`
-      : '';
+  const unsubscribe = unsubscribeBlock(unsubscribeUrl);
 
   return emailLayout(`
     ${gradientBar()}
@@ -998,7 +1034,8 @@ export function sendNewsletterConfirmEmail(opts: {
 // contenu que la personne vient de saisir volontairement), l'email informe et
 // arme le retrait.
 
-const FREE_PLAYER_PUBLISHED_SUBJECT = 'Ta fiche est en ligne — OW Women\u2019s Cup';
+const FREE_PLAYER_PUBLISHED_SUBJECT =
+  'Ta fiche est en ligne — OW Women\u2019s Cup';
 
 /** HTML de l'email « ta fiche est publiée » + lien de retrait. */
 export function buildFreePlayerPublishedEmailHtml(opts: {

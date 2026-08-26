@@ -42,6 +42,9 @@ type CampaignBody = {
   ctaLabel: string | null;
   ctaUrl: string | null;
   footerNote: string | null;
+  /** 'structured' (template assemblé) ou 'html' (corps rédigé à la main). */
+  bodyFormat?: 'structured' | 'html';
+  bodyHtml?: string | null;
 };
 
 type CampaignSummary = {
@@ -1735,9 +1738,13 @@ function CampaignFormModal({
   const [greetingEnabled, setGreetingEnabled] = useState(
     campaign?.body?.greetingEnabled ?? true
   );
+  const [bodyFormat, setBodyFormat] = useState<'structured' | 'html'>(
+    campaign?.body?.bodyFormat === 'html' ? 'html' : 'structured'
+  );
   const [bodyText, setBodyText] = useState(
     campaign?.body?.bodyParagraphs?.join('\n\n') ?? ''
   );
+  const [bodyHtml, setBodyHtml] = useState(campaign?.body?.bodyHtml ?? '');
   const [ctaLabel, setCtaLabel] = useState(campaign?.body?.ctaLabel ?? '');
   const [ctaUrl, setCtaUrl] = useState(campaign?.body?.ctaUrl ?? '');
   const [footerNote, setFooterNote] = useState(
@@ -1773,8 +1780,12 @@ function CampaignFormModal({
       setFormError(t.errorHeadingRequired);
       return;
     }
-    if (bodyParagraphs.length === 0) {
+    if (bodyFormat === 'structured' && bodyParagraphs.length === 0) {
       setFormError(t.errorBodyRequired);
+      return;
+    }
+    if (bodyFormat === 'html' && !bodyHtml.trim()) {
+      setFormError(t.errorHtmlRequired);
       return;
     }
     if (ctaMismatch) {
@@ -1790,7 +1801,9 @@ function CampaignFormModal({
       audience,
       heading: heading.trim(),
       greetingEnabled,
+      bodyFormat,
       bodyParagraphs,
+      bodyHtml: bodyFormat === 'html' ? bodyHtml.trim() : undefined,
       ctaLabel: ctaLabelTrimmed || undefined,
       ctaUrl: ctaUrlTrimmed || undefined,
       footerNote: footerNote.trim() || undefined,
@@ -1961,57 +1974,104 @@ function CampaignFormModal({
             </span>
           </label>
 
-          <FormField label={t.bodyLabel} required hint={t.bodyHint}>
-            <textarea
-              value={bodyText}
-              onChange={(e) => setBodyText(e.target.value)}
-              rows={8}
-              placeholder={t.bodyPlaceholder}
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-y leading-relaxed"
-            />
-            <p className="text-xs text-neutral-500 mt-1">
-              {format(
-                bodyParagraphs.length > 1
-                  ? t.paragraphsDetected_other
-                  : t.paragraphsDetected_one,
-                { count: bodyParagraphs.length }
-              )}
-            </p>
-          </FormField>
-
-          <FormField label={t.ctaLabel} hint={t.ctaHint}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input
-                type="text"
-                value={ctaLabel}
-                onChange={(e) => setCtaLabel(e.target.value)}
-                maxLength={80}
-                placeholder={t.ctaLabelPlaceholder}
-                className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              />
-              <input
-                type="url"
-                value={ctaUrl}
-                onChange={(e) => setCtaUrl(e.target.value)}
-                placeholder={t.ctaUrlPlaceholder}
-                className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              />
+          {/* Mode de rédaction du corps. Le template structuré couvre la
+              majorité des envois ; le mode HTML sert aux campagnes qui ont
+              besoin d'images ou d'une vraie mise en page. */}
+          <FormField label={t.bodyFormatLabel} hint={t.bodyFormatHint}>
+            <div className="inline-flex rounded-xl bg-neutral-900/50 border border-neutral-600 p-1 gap-1">
+              {(['structured', 'html'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setBodyFormat(mode)}
+                  aria-pressed={bodyFormat === mode}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    bodyFormat === mode
+                      ? 'bg-blue-600 text-white'
+                      : 'text-neutral-300 hover:bg-neutral-800'
+                  }`}
+                >
+                  {mode === 'structured'
+                    ? t.bodyFormatStructured
+                    : t.bodyFormatHtml}
+                </button>
+              ))}
             </div>
-            {ctaMismatch && (
-              <p className="text-xs text-amber-300 mt-1">{t.ctaMismatchHint}</p>
-            )}
           </FormField>
 
-          <FormField label={t.footerLabel}>
-            <input
-              type="text"
-              value={footerNote}
-              onChange={(e) => setFooterNote(e.target.value)}
-              maxLength={280}
-              placeholder={t.footerPlaceholder}
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-            />
-          </FormField>
+          {bodyFormat === 'structured' ? (
+            <FormField label={t.bodyLabel} required hint={t.bodyHint}>
+              <textarea
+                value={bodyText}
+                onChange={(e) => setBodyText(e.target.value)}
+                rows={8}
+                placeholder={t.bodyPlaceholder}
+                className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-y leading-relaxed"
+              />
+              <p className="text-xs text-neutral-500 mt-1">
+                {format(
+                  bodyParagraphs.length > 1
+                    ? t.paragraphsDetected_other
+                    : t.paragraphsDetected_one,
+                  { count: bodyParagraphs.length }
+                )}
+              </p>
+            </FormField>
+          ) : (
+            <FormField label={t.htmlLabel} required hint={t.htmlHint}>
+              <textarea
+                value={bodyHtml}
+                onChange={(e) => setBodyHtml(e.target.value)}
+                rows={16}
+                spellCheck={false}
+                placeholder={t.htmlPlaceholder}
+                className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs font-mono resize-y leading-relaxed"
+              />
+              <p className="text-xs text-neutral-500 mt-1">
+                {t.htmlSanitizeNote}
+              </p>
+            </FormField>
+          )}
+
+          {bodyFormat === 'structured' && (
+            <>
+              <FormField label={t.ctaLabel} hint={t.ctaHint}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    value={ctaLabel}
+                    onChange={(e) => setCtaLabel(e.target.value)}
+                    maxLength={80}
+                    placeholder={t.ctaLabelPlaceholder}
+                    className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                  <input
+                    type="url"
+                    value={ctaUrl}
+                    onChange={(e) => setCtaUrl(e.target.value)}
+                    placeholder={t.ctaUrlPlaceholder}
+                    className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                </div>
+                {ctaMismatch && (
+                  <p className="text-xs text-amber-300 mt-1">
+                    {t.ctaMismatchHint}
+                  </p>
+                )}
+              </FormField>
+
+              <FormField label={t.footerLabel}>
+                <input
+                  type="text"
+                  value={footerNote}
+                  onChange={(e) => setFooterNote(e.target.value)}
+                  maxLength={280}
+                  placeholder={t.footerPlaceholder}
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+              </FormField>
+            </>
+          )}
 
           {formError && (
             <div className="px-3 py-2 rounded-xl bg-red-900/40 border border-red-500/50 text-red-300 text-sm">

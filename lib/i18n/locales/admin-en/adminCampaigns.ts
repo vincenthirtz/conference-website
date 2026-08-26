@@ -167,6 +167,7 @@ export default {
   errorSubjectRequired: 'Subject is required.',
   errorHeadingRequired: 'The email title is required.',
   errorBodyRequired: 'The body must contain at least one paragraph.',
+  errorHtmlRequired: 'The HTML body cannot be empty.',
   errorCtaMismatch: 'The button requires both a label AND a URL (or neither).',
   campaignUpdated: 'Campaign « {name} » updated.',
   campaignCreated: 'Campaign « {name} » created.',
@@ -198,6 +199,18 @@ export default {
   headingPlaceholder: 'Welcome to the adventure',
   greetingLabel: 'Personalize with first name',
   greetingHint: 'Adds « Hello First name, » at the top of the email.',
+  bodyFormatLabel: 'Authoring mode',
+  bodyFormatHint:
+    'HTML mode replaces the heading, paragraphs, button and footer note with your own markup.',
+  bodyFormatStructured: 'Structured template',
+  bodyFormatHtml: 'Free-form HTML',
+  htmlLabel: 'HTML body',
+  htmlHint:
+    'The content of the email card. The header, footer and unsubscribe link are still added automatically.',
+  htmlPlaceholder:
+    '<h1 style="color:#fff;font-size:22px;">Heading</h1>\n<p style="color:#C6BED9;">A paragraph.</p>\n<img src="/img/logos/pogtv.png" alt="POGTV" width="120" />',
+  htmlSanitizeNote:
+    'Allowed tags: headings, p, lists, links, images, tables, inline formatting. Scripts, iframes, forms and event attributes are stripped on send. Paths starting with / are turned into absolute URLs.',
   bodyLabel: 'Body',
   bodyHint: 'Separate each paragraph with a blank line.',
   bodyPlaceholder:

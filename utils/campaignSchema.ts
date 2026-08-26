@@ -1,7 +1,17 @@
 // utils/campaignSchema.ts
 // Validation (zod) du formulaire de création / édition d'une campagne email.
 // Partagé entre POST /api/admin/broadcast (créer) et PATCH /api/admin/broadcast/[id]
-// (éditer). Le corps est un template structuré — pas de HTML libre.
+// (éditer).
+//
+// Deux modes de rédaction du corps (`bodyFormat`) :
+//   - 'structured' (défaut) : template assemblé depuis heading + paragraphes +
+//     CTA + note de pied, chaque champ échappé au rendu ;
+//   - 'html' : `bodyHtml` porte le corps de la carte. Il n'est PAS validé ici
+//     balise par balise — c'est `sanitizeEmailHtml` (allowlist) qui tranche au
+//     rendu. Zod se limite à exiger un contenu non vide et borné.
+//
+// `heading` reste requis dans les deux modes : il sert d'étiquette de la
+// campagne dans l'admin et de titre de repli.
 
 import { z } from 'zod';
 
@@ -29,10 +39,13 @@ export const campaignInputSchema = z
     status: z.enum(['draft', 'active', 'archived']).optional().default('draft'),
     heading: z.string().trim().min(1, 'Titre requis').max(160),
     greetingEnabled: z.boolean().optional().default(true),
+    bodyFormat: z.enum(['structured', 'html']).optional().default('structured'),
     bodyParagraphs: z
       .array(z.string().trim().min(1).max(4000))
-      .min(1, 'Au moins un paragraphe')
-      .max(20),
+      .max(20)
+      .optional()
+      .default([]),
+    bodyHtml: z.string().trim().max(100_000).nullish(),
     ctaLabel: z.string().trim().max(60).nullish(),
     ctaUrl: z
       .string()
@@ -45,6 +58,17 @@ export const campaignInputSchema = z
   .refine((d) => Boolean(d.ctaLabel) === Boolean(d.ctaUrl), {
     message: 'Le libellé et l’URL du bouton doivent être fournis ensemble.',
     path: ['ctaUrl'],
+  })
+  // Le corps requis dépend du mode : au moins un paragraphe en 'structured',
+  // du HTML non vide en 'html'. Une campagne au corps vide partirait sinon à
+  // toute une audience sous forme de carte blanche.
+  .refine((d) => d.bodyFormat !== 'structured' || d.bodyParagraphs.length > 0, {
+    message: 'Au moins un paragraphe',
+    path: ['bodyParagraphs'],
+  })
+  .refine((d) => d.bodyFormat !== 'html' || Boolean(d.bodyHtml?.trim()), {
+    message: 'Le corps HTML ne peut pas être vide.',
+    path: ['bodyHtml'],
   });
 
 export type CampaignInput = z.infer<typeof campaignInputSchema>;

@@ -167,6 +167,7 @@ export default adminNs('adminCampaigns', {
   errorSubjectRequired: "L'objet est requis.",
   errorHeadingRequired: "Le titre de l'email est requis.",
   errorBodyRequired: 'Le corps doit contenir au moins un paragraphe.',
+  errorHtmlRequired: 'Le corps HTML ne peut pas être vide.',
   errorCtaMismatch:
     'Le bouton requiert un libellé ET une URL (ou aucun des deux).',
   campaignUpdated: 'Campagne « {name} » mise à jour.',
@@ -192,8 +193,7 @@ export default adminNs('adminCampaigns', {
   audienceAdherents: "Adhérent·es de l'association",
   audienceTournamentNeverLoggedIn: 'Inscrit·es au tournoi jamais connecté·es',
   audienceTournamentIncompleteRoster: 'Capitaines — roster incomplet',
-  audienceTeamMembersWithoutDiscord:
-    'Membres d’équipe — Discord non lié',
+  audienceTeamMembersWithoutDiscord: 'Membres d’équipe — Discord non lié',
   audienceNewsletter: 'Newsletter (abonné·es externes)',
   audienceAllPlusNewsletter: 'Comptes confirmés + newsletter',
   audienceAdherentsPlusNewsletter: 'Adhérent·es + newsletter',
@@ -201,6 +201,18 @@ export default adminNs('adminCampaigns', {
   headingPlaceholder: "Bienvenue dans l'aventure",
   greetingLabel: 'Personnaliser avec le prénom',
   greetingHint: "Ajoute « Bonjour Prénom, » en tête de l'email.",
+  bodyFormatLabel: 'Mode de rédaction',
+  bodyFormatHint:
+    'Le mode HTML remplace le titre, les paragraphes, le bouton et la note de bas de page par ton propre balisage.',
+  bodyFormatStructured: 'Template structuré',
+  bodyFormatHtml: 'HTML libre',
+  htmlLabel: 'Corps HTML',
+  htmlHint:
+    "Le contenu de la carte de l'email. L'en-tête, le pied de page et le lien de désinscription restent ajoutés automatiquement.",
+  htmlPlaceholder:
+    '<h1 style="color:#fff;font-size:22px;">Titre</h1>\n<p style="color:#C6BED9;">Un paragraphe.</p>\n<img src="/img/logos/pogtv.png" alt="POGTV" width="120" />',
+  htmlSanitizeNote:
+    'Balises autorisées : titres, p, listes, liens, images, tableaux, mise en forme. Les scripts, iframes, formulaires et attributs d’événement sont retirés à l’envoi. Les chemins commençant par / sont convertis en URLs absolues.',
   bodyLabel: 'Corps',
   bodyHint: 'Sépare chaque paragraphe par une ligne vide.',
   bodyPlaceholder:

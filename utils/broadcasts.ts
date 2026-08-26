@@ -13,7 +13,11 @@ import {
   buildCampaignEmailHtml,
   sendCampaignEmail,
 } from './email';
-import type { SendEmailResult, CampaignBody } from './email';
+import type {
+  SendEmailResult,
+  CampaignBody,
+  CampaignBodyFormat,
+} from './email';
 import {
   generateUnsubscribeToken,
   generateEmailUnsubscribeToken,
@@ -152,6 +156,9 @@ export type EmailCampaignRow = {
   cta_label: string | null;
   cta_url: string | null;
   footer_note: string | null;
+  /** 'structured' (défaut) ou 'html'. Absent des lignes antérieures à la migration. */
+  body_format?: CampaignBodyFormat | null;
+  body_html?: string | null;
 };
 
 /** Convertit une ligne email_campaigns en BroadcastCampaign exécutable. */
@@ -167,6 +174,8 @@ export function rowToCampaign(row: EmailCampaignRow): BroadcastCampaign {
     ctaLabel: row.cta_label,
     ctaUrl: row.cta_url,
     footerNote: row.footer_note,
+    bodyFormat: row.body_format === 'html' ? 'html' : 'structured',
+    bodyHtml: row.body_html ?? null,
   };
   return {
     id: row.id,
@@ -629,7 +638,10 @@ async function listIncompleteRosterCaptainIds(): Promise<Set<string>> {
 
   const starterCountByTeam = new Map<string, number>();
   for (const r of members ?? []) {
-    const row = r as { team_id?: string | null; is_substitute?: boolean | null };
+    const row = r as {
+      team_id?: string | null;
+      is_substitute?: boolean | null;
+    };
     if (!row.team_id || row.is_substitute) continue;
     starterCountByTeam.set(
       row.team_id,
@@ -906,7 +918,9 @@ async function fetchLastSentAt(campaignId: string): Promise<string | null> {
     .order('created_at', { ascending: false })
     .limit(1);
   if (logErr) throw logErr;
-  consider((logs?.[0] as { created_at?: string | null } | undefined)?.created_at);
+  consider(
+    (logs?.[0] as { created_at?: string | null } | undefined)?.created_at
+  );
 
   const { data: recs, error: recErr } = await supabaseAdmin
     .from('broadcast_recipients')

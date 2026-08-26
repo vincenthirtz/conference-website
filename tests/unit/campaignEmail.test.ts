@@ -410,3 +410,109 @@ describe('slugifyCampaignName', () => {
     expect(slug.endsWith('-')).toBe(false);
   });
 });
+
+/* -----------------------------------------------------------
+ * Mode HTML libre (bodyFormat: 'html')
+ * ---------------------------------------------------------*/
+
+describe('buildCampaignEmailHtml — bodyFormat html', () => {
+  it('rend le HTML fourni à la place du template structuré', () => {
+    const html = buildCampaignEmailHtml(
+      baseBody({
+        bodyFormat: 'html',
+        bodyHtml: '<h2>Mon titre</h2><p>Mon paragraphe.</p>',
+        heading: 'Titre ignoré',
+        bodyParagraphs: ['Paragraphe ignoré.'],
+      }),
+      null
+    );
+    expect(html).toContain('<h2>Mon titre</h2>');
+    expect(html).toContain('Mon paragraphe.');
+    // Les champs du mode structuré ne sont plus rendus.
+    expect(html).not.toContain('Titre ignoré');
+    expect(html).not.toContain('Paragraphe ignoré.');
+  });
+
+  it('nettoie le HTML avant de le rendre', () => {
+    const html = buildCampaignEmailHtml(
+      baseBody({
+        bodyFormat: 'html',
+        bodyHtml: '<p onclick="x()">ok</p><script>alert(1)</script>',
+      }),
+      null
+    );
+    expect(html).not.toContain('onclick');
+    expect(html).not.toContain('alert(1)');
+    expect(html).toContain('ok');
+  });
+
+  it('absolutise les chemins relatifs sur le domaine du site', () => {
+    const html = buildCampaignEmailHtml(
+      baseBody({
+        bodyFormat: 'html',
+        bodyHtml: '<img src="/img/logos/pogtv.png" alt="POGTV" />',
+      }),
+      null
+    );
+    expect(html).toContain('https://owwomenscup.fr/img/logos/pogtv.png');
+  });
+
+  it('conserve le greeting, le wrapper de marque et la désinscription', () => {
+    const html = buildCampaignEmailHtml(
+      baseBody({ bodyFormat: 'html', bodyHtml: '<p>corps</p>' }),
+      'Vincent',
+      'https://owwomenscup.fr/unsub?token=abc'
+    );
+    expect(html).toContain('Hey Vincent,');
+    expect(html).toContain('<!DOCTYPE html>');
+    expect(html).toContain('Se désinscrire des annonces');
+    expect(html).toContain('unsub?token=abc');
+  });
+
+  it('reste sur le template structuré quand bodyFormat est absent', () => {
+    const html = buildCampaignEmailHtml(
+      baseBody({ bodyHtml: '<p>ne doit pas apparaître</p>' }),
+      null
+    );
+    expect(html).not.toContain('ne doit pas apparaître');
+    expect(html).toContain('Premier paragraphe.');
+  });
+});
+
+describe('campaignInputSchema — bodyFormat', () => {
+  it("vaut 'structured' par défaut", () => {
+    const parsed = campaignInputSchema.safeParse(validInput());
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.bodyFormat).toBe('structured');
+  });
+
+  it('accepte un corps HTML sans paragraphes', () => {
+    const parsed = campaignInputSchema.safeParse({
+      ...validInput({ bodyFormat: 'html', bodyHtml: '<p>Coucou</p>' }),
+      bodyParagraphs: undefined,
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('rejette un mode html au corps HTML vide', () => {
+    const parsed = campaignInputSchema.safeParse(
+      validInput({ bodyFormat: 'html', bodyHtml: '   ' })
+    );
+    expect(parsed.success).toBe(false);
+  });
+
+  it('exige toujours un paragraphe en mode structuré', () => {
+    const parsed = campaignInputSchema.safeParse({
+      ...validInput(),
+      bodyParagraphs: [],
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it('rejette un bodyFormat inconnu', () => {
+    const parsed = campaignInputSchema.safeParse(
+      validInput({ bodyFormat: 'markdown' })
+    );
+    expect(parsed.success).toBe(false);
+  });
+});
