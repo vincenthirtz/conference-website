@@ -600,3 +600,90 @@ export async function listPendingInvitationsForUser(
   );
   return { ok: true, data: fresh as InvitationRow[] };
 }
+
+/**
+ * Invitations en attente émises PAR une équipe — le pendant côté équipe de
+ * `listPendingInvitationsForUser` (qui, lui, regarde côté invitée).
+ *
+ * Pourquoi ça manquait, et ce que ça coûtait : l'inscription web crée une
+ * invitation par membre saisi (invite-accept model, cf. create-with-member),
+ * mais l'espace équipe n'avait AUCUN moyen de les lire. Une capitaine ou un
+ * manager qui venait de saisir six joueuses voyait donc un roster d'une seule
+ * personne et une section « demandes » vide — celle-ci ne liste que les
+ * demandes ENTRANTES (type `join_request`), pas les invitations SORTANTES. Rien
+ * à l'écran ne distinguait « les invitations sont parties, personne n'a encore
+ * accepté » de « la saisie n'a pas été enregistrée ».
+ *
+ * Contrairement à la variante « pour l'invitée », les expirées ne sont PAS
+ * filtrées : côté équipe, une invitation expirée est précisément l'information
+ * utile (c'est elle qu'il faut relancer). Chaque ligne porte son `expired`.
+ */
+export async function listPendingInvitationsForTeam(
+  tenantId: string,
+  teamId: string
+): Promise<Result<(InvitationRow & { expired: boolean })[]>> {
+  if (!supabaseAdmin) {
+    return { ok: false, error: 'Service unavailable.', status: 503 };
+  }
+  const { data, error } = await supabaseAdmin
+    .from('demandes')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .eq('team_id', teamId)
+    .eq('type', 'invite')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
+  if (error) {
+    logger.error('[invitations] list-for-team error', error);
+    return { ok: false, error: 'Erreur de chargement', status: 500 };
+  }
+  const rows = (data ?? []) as InvitationRow[];
+  return {
+    ok: true,
+    data: rows.map((row) => ({ ...row, expired: isExpired(row.payload) })),
+  };
+}
+
+/**
+ * Relance une invitation en attente : repousse l'expiration et remplace le
+ * hash du lien privé (l'ancien lien cesse donc de fonctionner — c'est voulu,
+ * un lien relancé ne doit pas laisser deux jetons valides en circulation).
+ *
+ * Ne change ni le destinataire, ni le rôle, ni le drapeau capitaine : relancer
+ * n'est pas ré-inviter. L'envoi de l'email reste à la charge de l'appelant,
+ * qui seul sait construire l'URL (cf. utils/teams/inviteLinks).
+ */
+export async function refreshInvitationToken(
+  tenantId: string,
+  demandeId: string,
+  inviteTokenHash: string | null
+): Promise<Result<InvitationRow>> {
+  if (!supabaseAdmin) {
+    return { ok: false, error: 'Service unavailable.', status: 503 };
+  }
+  const loaded = await loadPendingInvitation(tenantId, demandeId);
+  if (!loaded.ok) return loaded;
+  const demande = loaded.data;
+
+  const payload: InvitationPayload = {
+    ...demande.payload,
+    expires_at: expiresAtFromNow(),
+  };
+  // Pas de lien privé (invitée sans email connu) : on retire la clé plutôt que
+  // d'y laisser l'ancien hash, qui resterait valide indéfiniment.
+  if (inviteTokenHash) payload.invite_token_hash = inviteTokenHash;
+  else delete payload.invite_token_hash;
+
+  const { data, error } = await supabaseAdmin
+    .from('demandes')
+    .update({ payload })
+    .eq('tenant_id', tenantId)
+    .eq('id', demande.id)
+    .select('*')
+    .maybeSingle();
+  if (error || !data) {
+    logger.error('[invitations] resend error', error);
+    return { ok: false, error: 'Échec de la relance', status: 500 };
+  }
+  return { ok: true, data: data as InvitationRow };
+}

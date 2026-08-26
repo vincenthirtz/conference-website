@@ -25828,6 +25828,83 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
   /api/teams/invitations:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
+        - $ref: '#/components/parameters/SubjectAs'
+        - $ref: '#/components/parameters/ActAs'
+      tags:
+        - public/teams
+      summary: Invitations en attente émises par l'équipe gérée.
+      description: >-
+        Le pendant « côté équipe » des invitations : sans lui, l'espace équipe
+        n'affichait que le roster (les personnes ayant ACCEPTÉ) et les demandes
+        ENTRANTES — une équipe fraîchement inscrite paraissait donc n'avoir
+        qu'un seul membre, sans que rien n'explique où étaient passées les
+        joueuses saisies. Gate `manage_roster`, la même que la création. Les
+        invitations EXPIRÉES sont conservées et marquées `expired` : ce sont
+        celles qu'il faut relancer. Le jeton du lien privé n'est jamais renvoyé
+        (il n'est stocké que hashé) — seul `has_invite_link` indique s'il en
+        existe un.
+      operationId: playerListTeamInvitations
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Invitations en attente de l'équipe gérée.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - invitations
+                properties:
+                  invitations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        user_id:
+                          type: string
+                          format: uuid
+                        email:
+                          type: string
+                          format: email
+                          nullable: true
+                        role:
+                          type: string
+                          nullable: true
+                        battle_tag:
+                          type: string
+                          nullable: true
+                        specialty:
+                          type: string
+                          nullable: true
+                        set_captain:
+                          type: boolean
+                        created_at:
+                          type: string
+                          format: date-time
+                        expires_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        expired:
+                          type: boolean
+                        has_invite_link:
+                          type: boolean
+                        source:
+                          type: string
+                          nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
     post:
       parameters:
         - $ref: '#/components/parameters/TeamScope'
@@ -25928,6 +26005,110 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/teams/invitations/{invitationId}:
+    parameters:
+      - name: invitationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/TeamScope'
+      - $ref: '#/components/parameters/SubjectAs'
+      - $ref: '#/components/parameters/ActAs'
+    post:
+      tags:
+        - public/teams
+      summary: Relancer une invitation en attente.
+      description: >-
+        Renvoie l'email d'invitation avec un NOUVEAU lien privé et repousse
+        l'expiration de 7 jours. L'ancien lien cesse de fonctionner — deux
+        jetons valides pour une même invitation seraient une porte laissée
+        ouverte. Ne change ni le destinataire, ni le rôle, ni le drapeau
+        capitaine : relancer n'est pas ré-inviter. Gate `manage_roster` sur
+        l'équipe gérée, PAS « l'émetteur seul » : une capitaine doit pouvoir
+        relancer une invitation envoyée par son manager, et réciproquement.
+        400 NO_INVITE_EMAIL si l'invitation n'a pas d'email associé (invitation
+        Discord). 404 si elle n'appartient pas à l'équipe gérée ou n'est plus
+        pending — un id d'une autre équipe ne se distingue pas d'un id inconnu.
+      operationId: playerResendTeamInvitation
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Invitation relancée. Le nouveau jeton n'est renvoyé qu'ici.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - invite_url
+                  - email_sent
+                properties:
+                  status:
+                    type: string
+                    enum: [resent]
+                  id:
+                    type: string
+                    format: uuid
+                  email:
+                    type: string
+                    format: email
+                  invite_url:
+                    type: string
+                    format: uri
+                  email_sent:
+                    type: boolean
+                  expires_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    delete:
+      tags:
+        - public/teams
+      summary: Annuler une invitation en attente.
+      description: >-
+        Passe l'invitation en `cancelled`. L'UPDATE est conditionné à
+        `status = 'pending'` : si l'invitée vient d'accepter, l'annulation ne
+        défait pas son adhésion. Même gate que la relance.
+      operationId: playerCancelTeamInvitation
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Invitation annulée.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [cancelled]
+                  id:
+                    type: string
+                    format: uuid
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/RateLimited'
   /api/teams/invitations/by-token:

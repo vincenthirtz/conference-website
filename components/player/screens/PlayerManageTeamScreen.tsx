@@ -100,6 +100,27 @@ type JoinRequest = {
   } | null;
 };
 
+/**
+ * Invitation SORTANTE en attente (GET /api/teams/invitations).
+ *
+ * À ne pas confondre avec `JoinRequest`, qui va dans l'autre sens : une
+ * personne demande à rejoindre l'équipe. La confusion entre les deux est
+ * exactement ce qui a fait croire à une inscription perdue — le roster
+ * n'affichait que les personnes ayant accepté, et la seule section « en
+ * attente » de l'écran parlait des demandes entrantes.
+ */
+type SentInvitation = {
+  id: string;
+  email: string | null;
+  role: string | null;
+  battle_tag: string | null;
+  set_captain: boolean;
+  created_at: string;
+  expires_at: string | null;
+  expired: boolean;
+  has_invite_link: boolean;
+};
+
 export default function PlayerManageTeamScreen() {
   const t = useT(nsManageTeam);
   const locale = useLocale();
@@ -167,6 +188,8 @@ export default function PlayerManageTeamScreen() {
   const [isCaptain, setIsCaptain] = useState(false);
   const [isManager, setIsManager] = useState(false);
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
+  const [sentInvitations, setSentInvitations] = useState<SentInvitation[]>([]);
+  const [invitationsError, setInvitationsError] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -212,6 +235,24 @@ export default function PlayerManageTeamScreen() {
     setIsManager(managedTeam.isManager);
   }, [managedTeam]);
 
+  /**
+   * Invitations en attente émises par l'équipe. Échec TOLÉRÉ : la section
+   * affiche son erreur, mais le reste de l'écran (roster, demandes) reste
+   * utilisable — contrairement aux demandes de join, dont l'échec bascule
+   * l'écran entier en état d'erreur.
+   */
+  const loadSentInvitations = useCallback(async () => {
+    try {
+      const data = await adminFetchJson<{ invitations?: SentInvitation[] }>(
+        withTeam(withSubject('/api/teams/invitations'))
+      );
+      setSentInvitations(data.invitations || []);
+      setInvitationsError(false);
+    } catch {
+      setInvitationsError(true);
+    }
+  }, [adminFetchJson, withSubject, withTeam]);
+
   const loadJoinRequests = useCallback(async () => {
     // Let failures propagate so the effect can surface a real error state
     // (distinct from the "no pending requests" empty state).
@@ -226,6 +267,7 @@ export default function PlayerManageTeamScreen() {
     let cancelled = false;
     setRequestsLoading(true);
     setRequestsError(false);
+    void loadSentInvitations();
     loadJoinRequests()
       .catch(() => {
         if (!cancelled) setRequestsError(true);
@@ -236,7 +278,7 @@ export default function PlayerManageTeamScreen() {
     return () => {
       cancelled = true;
     };
-  }, [ready, loadJoinRequests]);
+  }, [ready, loadJoinRequests, loadSentInvitations]);
 
   const showSuccess = (msg: string) => {
     setSuccessMsg(msg);
@@ -276,8 +318,67 @@ export default function PlayerManageTeamScreen() {
       setInviteResult(data);
       setInviteEmail('');
       showSuccess(data.email_sent ? t.inviteSentEmail : t.inviteCreated);
+      // La nouvelle invitation doit apparaître tout de suite dans la liste
+      // ci-dessous, sinon on recrée le doute qu'on vient de lever.
+      void loadSentInvitations();
     } catch (err: unknown) {
       setError((err as Error).message || t.inviteError);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // ── Relancer / annuler une invitation en attente ─────────────────────────
+  // La relance invalide l'ancien lien privé et repousse l'expiration : c'est
+  // la sortie de secours quand l'email d'origine s'est perdu (spam, adresse
+  // mal saisie) et que l'invitation allait expirer sans réponse.
+  const handleResendInvitation = async (invitation: SentInvitation) => {
+    setActionLoading(`invite-resend-${invitation.id}`);
+    setError(null);
+    try {
+      const data = await adminFetchJson<{
+        invite_url: string;
+        email_sent: boolean;
+        expires_at: string | null;
+      }>(withTeam(`/api/teams/invitations/${invitation.id}`), {
+        method: 'POST',
+      });
+      setInviteResult({
+        invite_url: data.invite_url,
+        email_sent: data.email_sent,
+      });
+      showSuccess(
+        data.email_sent
+          ? t.resendInvitationDone
+          : t.resendInvitationDoneNoEmail
+      );
+      await loadSentInvitations();
+    } catch (err: unknown) {
+      setError((err as Error).message || t.resendInvitationError);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleCancelInvitation = async (invitation: SentInvitation) => {
+    const label = invitation.email || invitation.battle_tag || t.defaultPlayerName;
+    const ok = await confirm({
+      title: format(t.cancelInvitationConfirm, { name: label }),
+      variant: 'warning',
+      confirmLabel: t.cancelInvitation,
+      cancelLabel: t.promoteCancel,
+    });
+    if (!ok) return;
+    setActionLoading(`invite-cancel-${invitation.id}`);
+    setError(null);
+    try {
+      await adminFetchJson(withTeam(`/api/teams/invitations/${invitation.id}`), {
+        method: 'DELETE',
+      });
+      setSentInvitations((prev) => prev.filter((i) => i.id !== invitation.id));
+      showSuccess(t.cancelInvitationDone);
+    } catch (err: unknown) {
+      setError((err as Error).message || t.cancelInvitationError);
     } finally {
       setActionLoading(null);
     }
@@ -1044,9 +1145,120 @@ export default function PlayerManageTeamScreen() {
             </div>
           </div>
 
+          {/* Invitations envoyées, en attente de réponse.
+              Placée AVANT les demandes entrantes : c'est la section qui
+              répond à « où sont passées les joueuses que je viens de saisir ? ». */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
+            <h2 className="text-lg font-semibold">
+              {t.sentInvitations}
+              {sentInvitations.length > 0 && (
+                <span className="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-violet-500/20 text-violet-300 text-xs font-bold">
+                  {sentInvitations.length}
+                </span>
+              )}
+            </h2>
+            <p className="mt-1 mb-4 text-sm text-gray-400">
+              {t.sentInvitationsHelp}
+            </p>
+
+            {invitationsError ? (
+              <p className="text-sm text-red-300">{t.invitationsError}</p>
+            ) : sentInvitations.length === 0 ? (
+              <p className="text-sm text-gray-500">{t.noSentInvitations}</p>
+            ) : (
+              <div className="space-y-3">
+                {sentInvitations.map((invitation) => {
+                  const label =
+                    invitation.email ||
+                    invitation.battle_tag ||
+                    t.defaultPlayerName;
+                  const role = invitation.set_captain
+                    ? t.invitedAsCaptain
+                    : roleLabel(invitation.role ?? undefined);
+                  const busy =
+                    actionLoading === `invite-resend-${invitation.id}` ||
+                    actionLoading === `invite-cancel-${invitation.id}`;
+
+                  return (
+                    <div
+                      key={invitation.id}
+                      className="p-4 rounded-xl bg-white/5 border border-white/5"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm break-all">
+                            {label}
+                            {invitation.expired && (
+                              <span className="ml-2 inline-block rounded-full bg-red-500/20 px-2 py-0.5 text-[11px] font-semibold text-red-300 align-middle">
+                                {t.invitationExpired}
+                              </span>
+                            )}
+                          </div>
+                          {invitation.battle_tag && invitation.email && (
+                            <div className="text-xs text-gray-400 font-mono mt-0.5">
+                              {invitation.battle_tag}
+                            </div>
+                          )}
+                          <div className="text-xs text-gray-500 mt-1">
+                            {t.invitedAs}
+                            <span className="text-gray-300">{role}</span>
+                            {' · '}
+                            {format(t.invitationSentOn, {
+                              date: new Date(
+                                invitation.created_at
+                              ).toLocaleDateString(locale),
+                            })}
+                            {invitation.expires_at && !invitation.expired && (
+                              <>
+                                {' · '}
+                                {format(t.invitationExpiresOn, {
+                                  date: new Date(
+                                    invitation.expires_at
+                                  ).toLocaleDateString(locale),
+                                })}
+                              </>
+                            )}
+                          </div>
+                          {!invitation.email && (
+                            <div className="text-xs text-amber-300/80 mt-1">
+                              {t.invitationNoEmail}
+                            </div>
+                          )}
+                        </div>
+                        {!readOnly && (
+                          <div className="flex gap-2 flex-shrink-0">
+                            {invitation.email && (
+                              <button
+                                onClick={() =>
+                                  handleResendInvitation(invitation)
+                                }
+                                disabled={busy}
+                                title={t.resendInvitationTitle}
+                                className="px-3 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 text-violet-200 text-xs font-semibold transition disabled:opacity-50"
+                              >
+                                {t.resendInvitation}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleCancelInvitation(invitation)}
+                              disabled={busy}
+                              className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-semibold transition disabled:opacity-50"
+                            >
+                              {t.cancelInvitation}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Demandes en attente */}
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">
+            <h2 className="text-lg font-semibold">
               {t.pendingRequests}
               {joinRequests.length > 0 && (
                 <span className="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">
@@ -1054,6 +1266,9 @@ export default function PlayerManageTeamScreen() {
                 </span>
               )}
             </h2>
+            <p className="mt-1 mb-4 text-sm text-gray-400">
+              {t.pendingRequestsHelp}
+            </p>
 
             {joinRequests.length === 0 ? (
               <p className="text-sm text-gray-500">{t.noPendingRequests}</p>

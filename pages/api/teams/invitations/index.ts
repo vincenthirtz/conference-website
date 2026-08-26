@@ -1,7 +1,16 @@
 // pages/api/teams/invitations/index.ts
 //
+// GET  — liste les invitations EN ATTENTE émises par l'équipe gérée.
 // POST — la capitaine (ou un membre au rôle de gestion) invite quelqu'un dans
 // son équipe par EMAIL, et récupère en retour un LIEN PRIVÉ partageable.
+//
+// Le GET a longtemps manqué, et son absence se lisait comme une perte de
+// données : l'inscription web crée une invitation par joueuse saisie, mais
+// l'espace équipe n'affichait que le roster (les personnes ayant ACCEPTÉ) et
+// les demandes entrantes. Une capitaine qui venait d'inscrire six joueuses
+// voyait donc « 1 membre » et « aucune demande en attente » — rien ne
+// distinguait « tout est parti, personne n'a encore accepté » de « ma saisie
+// n'a pas été enregistrée ».
 //
 // Deux usages symétriques, tous deux couverts ici :
 //   - une CAPITAINE désigne un MANAGER (`role: 'manager'`) pour l'épauler ;
@@ -24,7 +33,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { withSubjectRoute } from '@/utils/subject';
+import { withSubjectRoute, type SubjectContext } from '@/utils/subject';
 import { findOrCreateUserByEmail } from '@/utils/find-or-create-user';
 import { sendTeamInviteLinkEmail } from '@/utils/email';
 import {
@@ -40,7 +49,10 @@ import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
-import { createInvitation } from '@/utils/teams/invitations';
+import {
+  createInvitation,
+  listPendingInvitationsForTeam,
+} from '@/utils/teams/invitations';
 import {
   buildInviteUrl,
   generateInviteToken,
@@ -61,15 +73,81 @@ const bodySchema = z.object({
   comment: z.string().trim().max(500).optional().nullable(),
 });
 
+/**
+ * GET — invitations en attente de l'équipe gérée.
+ *
+ * Gate : `manage_roster`, la même que le POST. Voir qui a été invité fait
+ * partie de la gestion du roster, et rien ici n'est plus sensible que ce que
+ * l'appelante vient elle-même de saisir.
+ *
+ * Le jeton en clair n'est JAMAIS renvoyé (il n'est stocké que hashé, cf. POST).
+ * On expose seulement `has_invite_link`, pour que l'UI sache si une relance par
+ * email est possible ou si l'invitation doit être transmise autrement.
+ */
+async function handleList(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  subject: SubjectContext
+) {
+  const { userId, tenantId } = subject;
+
+  const access = await getManagedTeamForRequest(req, userId, tenantId);
+  if (!access) {
+    return res
+      .status(403)
+      .json({ error: TEAM_MANAGEMENT_FORBIDDEN, code: 'FORBIDDEN' });
+  }
+  const denied = assertTeamPermission(access, 'manage_roster');
+  if (denied) {
+    return res
+      .status(denied.status)
+      .json({ error: denied.error, code: 'FORBIDDEN' });
+  }
+
+  const listed = await listPendingInvitationsForTeam(tenantId, access.teamId);
+  if (!listed.ok) {
+    return res
+      .status(listed.status)
+      .json({ error: listed.error, code: 'LIST_FAILED' });
+  }
+
+  return res.status(200).json({
+    invitations: listed.data.map((row) => ({
+      id: row.id,
+      user_id: row.user_id,
+      email: row.payload?.invite_email ?? null,
+      role: row.payload?.desired_role ?? null,
+      battle_tag: row.payload?.battle_tag ?? null,
+      specialty: row.payload?.specialty ?? null,
+      set_captain: row.payload?.set_captain ?? false,
+      created_at: row.created_at,
+      expires_at: row.payload?.expires_at ?? null,
+      expired: row.expired,
+      has_invite_link: Boolean(row.payload?.invite_token_hash),
+      source: row.source,
+    })),
+  });
+}
+
 export default withSubjectRoute(
   async function handler(
     req: NextApiRequest,
     res: NextApiResponse,
     { subject }
   ) {
-    if (req.method !== 'POST') {
-      res.setHeader('Allow', 'POST');
-      return res.status(405).json({ error: 'Method not allowed' });
+    // `switch` plutôt qu'une garde négative composée : le garde-fou de dérive
+    // OpenAPI (tests/unit/openapiContractDrift.test.ts) lit les méthodes
+    // acceptées dans le source, et ne reconnaît les formes négatives que
+    // lorsqu'il n'y en a qu'une. Écrire les deux verbes positivement garde le
+    // test capable de détecter une vraie divergence, plutôt que de l'allowlister.
+    switch (req.method) {
+      case 'GET':
+        return handleList(req, res, subject);
+      case 'POST':
+        break;
+      default:
+        res.setHeader('Allow', 'GET, POST');
+        return res.status(405).json({ error: 'Method not allowed' });
     }
 
     // Ce endpoint peut créer des comptes auth et envoyer des emails : plafond

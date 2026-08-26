@@ -36,7 +36,37 @@ export default ns('manageTeam', {
   optionCoach: 'Coach',
   removeTitle: 'Retirer',
   pendingRequests: 'Demandes en attente',
+  pendingRequestsHelp:
+    "Joueuses qui demandent à rejoindre ton équipe. Les personnes que TU as invitées apparaissent au-dessus, dans « Invitations envoyées ».",
   noPendingRequests: 'Aucune demande en attente.',
+
+  // Invitations SORTANTES — celles créées à l'inscription ou depuis le
+  // formulaire ci-dessus. Sans cette section, une équipe fraîchement inscrite
+  // affichait un roster d'une seule personne sans que rien n'explique où
+  // étaient passées les joueuses saisies.
+  sentInvitations: 'Invitations envoyées',
+  sentInvitationsHelp:
+    "En attente de réponse. Une joueuse rejoint le roster au moment où elle accepte son invitation — pas avant.",
+  noSentInvitations: 'Aucune invitation en attente.',
+  invitationsError: 'Impossible de charger les invitations en attente.',
+  invitedAs: 'Invitée comme ',
+  invitedAsCaptain: 'capitaine',
+  invitationSentOn: 'Envoyée le {date}',
+  invitationExpiresOn: 'expire le {date}',
+  invitationExpired: 'Expirée',
+  invitationNoEmail: 'Sans email — à transmettre à la main',
+  resendInvitation: 'Relancer',
+  resendInvitationTitle:
+    "Renvoyer l'email d'invitation avec un nouveau lien (l'ancien cesse de fonctionner)",
+  resendInvitationDone: 'Invitation relancée',
+  resendInvitationDoneNoEmail:
+    "Invitation relancée, mais l'email n'est pas parti — copie le lien et transmets-le.",
+  resendInvitationError: 'Échec de la relance.',
+  cancelInvitation: 'Annuler',
+  cancelInvitationConfirm: "Annuler l'invitation de {name} ?",
+  cancelInvitationDone: 'Invitation annulée',
+  cancelInvitationError: "Échec de l'annulation.",
+  copyInviteLink: 'Copier le lien',
   defaultPlayerName: 'Joueur',
   wantsToJoinAs: 'Souhaite rejoindre en tant que ',
   accept: 'Accepter',

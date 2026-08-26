@@ -37,7 +37,33 @@ export default {
   optionCoach: 'Coach',
   removeTitle: 'Remove',
   pendingRequests: 'Pending requests',
+  pendingRequestsHelp:
+    'Players asking to join your team. People YOU invited appear above, under "Sent invitations".',
   noPendingRequests: 'No pending request.',
+
+  sentInvitations: 'Sent invitations',
+  sentInvitationsHelp:
+    'Awaiting a reply. A player joins the roster when she accepts her invitation — not before.',
+  noSentInvitations: 'No pending invitation.',
+  invitationsError: 'Could not load pending invitations.',
+  invitedAs: 'Invited as ',
+  invitedAsCaptain: 'captain',
+  invitationSentOn: 'Sent on {date}',
+  invitationExpiresOn: 'expires on {date}',
+  invitationExpired: 'Expired',
+  invitationNoEmail: 'No email — share the link manually',
+  resendInvitation: 'Resend',
+  resendInvitationTitle:
+    'Send the invitation email again with a new link (the old one stops working)',
+  resendInvitationDone: 'Invitation resent',
+  resendInvitationDoneNoEmail:
+    "Invitation resent, but the email did not go out — copy the link and share it.",
+  resendInvitationError: 'Could not resend the invitation.',
+  cancelInvitation: 'Cancel',
+  cancelInvitationConfirm: "Cancel {name}'s invitation?",
+  cancelInvitationDone: 'Invitation cancelled',
+  cancelInvitationError: 'Could not cancel the invitation.',
+  copyInviteLink: 'Copy link',
   defaultPlayerName: 'Player',
   wantsToJoinAs: 'Wants to join as ',
   accept: 'Accept',
