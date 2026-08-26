@@ -12,7 +12,8 @@ import type { PublicNs } from './ns';
  *   const t = useT(nsProfileSummary);
  *   <h2>{t.title}</h2>
  *
- * `en.json` reste un blob unique, charge paresseusement a la bascule FR→EN
+ * l'anglais reste UN SEUL chunk (`locales/en/index.ts`), charge
+ * paresseusement a la bascule FR→EN
  * (cf. `lazyLocale.ts`). Il doit avoir exactement les memes cles que le
  * francais — garde-fou de compilation : `locales/parity.ts`.
  *
@@ -20,7 +21,7 @@ import type { PublicNs } from './ns';
  * `{nom}` resolus par `format()`. Pour la pluralisation, deux cles
  * `xxx_one` / `xxx_other` selectionnees cote composant.
  */
-const useEnDict = createEnDictHook(() => import('./locales/en.json'));
+const useEnDict = createEnDictHook(() => import('./locales/en'));
 
 /** Renvoie le bloc de traductions d'un namespace pour la langue active. */
 export function useT<T>(nsDef: PublicNs<string, T>): T {

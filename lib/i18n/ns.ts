@@ -16,9 +16,12 @@
 // ~95 % de poids mort. En passant par un module par namespace, le bundler ne
 // retient que ceux effectivement importés par la page.
 //
-// L'anglais, lui, reste un blob unique chargé paresseusement à la bascule
-// FR→EN (cf. `lazyLocale.ts`) : il n'est jamais requis de façon synchrone, donc
-// le découper n'apporterait rien et multiplierait les requêtes.
+// L'anglais est écrit de la même façon — un fichier par namespace dans
+// `locales/en/` — mais RECOMPOSÉ en un seul module (`locales/en/index.ts`)
+// chargé paresseusement à la bascule FR→EN (cf. `lazyLocale.ts`). Il n'est
+// jamais requis de façon synchrone : le livrer en un chunk unique évite de
+// multiplier les requêtes, tandis que le découpage en fichiers garde chaque
+// namespace lisible et diffable en face de son pendant français.
 
 /** Portée d'un namespace : dictionnaire public ou dictionnaire admin. */
 export type NsScope = 'public' | 'admin';

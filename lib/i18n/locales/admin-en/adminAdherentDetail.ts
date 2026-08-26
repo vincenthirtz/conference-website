@@ -1,0 +1,72 @@
+// lib/i18n/locales/admin-en/adminAdherentDetail.ts
+//
+// Traductions ANGLAISES du namespace admin `adminAdherentDetail`.
+//
+// La SOURCE DE VERITE est le francais (`../admin-fr/adminAdherentDetail.ts`) : toute cle
+// ajoutee la-bas doit l'etre ici avec exactement la meme structure, sans quoi
+// le garde-fou de compilation `../admin-parity.ts` casse le typecheck.
+//
+// Ne PAS annoter `as const` : la parite se verifie contre le francais, dont
+// les valeurs sont de type `string` — des types litteraux la feraient echouer.
+
+export default {
+  sectionPersonal: 'Personal information',
+  firstName: 'First name *',
+  lastName: 'Last name *',
+  email: 'Email *',
+  phone: 'Phone',
+  birthDate: 'Date of birth',
+  country: 'Country',
+  address: 'Address',
+  postalCode: 'Postal code',
+  city: 'City',
+  sectionMembership: 'Membership',
+  joinDate: 'Join date',
+  cotisationYear: 'Membership year',
+  roleInAssoc: 'Role in the association',
+  roleMember: 'Member',
+  roleVolunteer: 'Volunteer',
+  roleBoard: 'Board member',
+  rolePresident: 'President',
+  roleTreasurer: 'Treasurer',
+  roleSecretary: 'Secretary',
+  activeMember: 'Active member',
+  sectionPayment: 'Membership fee payment',
+  markPaid: 'Mark as paid ({amount} €)',
+  paymentStatus: 'Payment status',
+  statusPending: 'Pending',
+  statusPartial: 'Partial',
+  statusPaid: 'Paid',
+  statusExempt: 'Exempt',
+  statusOverdue: 'Overdue',
+  paymentAmount: 'Amount paid (€)',
+  paymentDate: 'Payment date',
+  paymentMethod: 'Payment method',
+  methodUnspecified: 'Unspecified',
+  methodCash: 'Cash',
+  methodCheck: 'Check',
+  methodTransfer: 'Bank transfer',
+  methodCard: 'Card',
+  methodHelloasso: 'HelloAsso',
+  methodOther: 'Other',
+  paymentReference: 'Payment reference',
+  paymentReferencePlaceholder: 'Check no., HelloAsso transaction ID...',
+  sectionNotes: 'Internal notes',
+  notesPlaceholder: 'Internal notes (visible to staff only)...',
+  cancel: 'Cancel',
+  errorFirstNameRequired: 'First name is required.',
+  errorLastNameRequired: 'Last name is required.',
+  errorEmailRequired: 'Email is required.',
+  errorGeneric: 'An error occurred.',
+  pageTitle: 'Admin - {name}',
+  notFound: 'Member not found',
+  backToList: 'Back to list',
+  backToAdherents: 'Back to members',
+  memberSince: 'Member since {date}',
+  cotisationInfo: 'Membership fee: {amount} €',
+  errorLoad: 'Loading error',
+  createdOn: 'Created on {date}',
+  lastModified: ' • Last modified on {date}',
+  saving: 'Saving...',
+  submit: 'Save changes',
+};

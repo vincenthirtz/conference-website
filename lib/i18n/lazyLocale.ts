@@ -7,11 +7,13 @@
 // mismatch d'hydratation). L'anglais n'est donc jamais requis de façon
 // synchrone : on le charge à la demande, en chunk séparé, à la bascule FR→EN.
 //
-// Il reste volontairement MONOLITHIQUE (un `en.json`, un `admin-en.json`),
-// contrairement au français qui est éclaté par namespace (cf. `ns.ts`) : le
-// français doit tenir dans le bundle de chaque page, l'anglais est une requête
-// unique déclenchée par un clic. Le découper multiplierait les requêtes sans
-// rien économiser.
+// Il est écrit par namespace (`locales/en/<ns>.ts`, en miroir du français) mais
+// livré MONOLITHIQUE : `locales/en/index.ts` les recompose, et c'est ce module
+// unique qui est importé dynamiquement. Le français, lui, doit tenir dans le
+// bundle de chaque page ; l'anglais est une requête unique déclenchée par un
+// clic. Le livrer en chunks séparés multiplierait les requêtes sans rien
+// économiser — d'où la dissociation entre la façon dont on l'ÉCRIT et la façon
+// dont on le LIVRE.
 
 import { useEffect, useSyncExternalStore } from 'react';
 import { useLang } from './LanguageProvider';
@@ -23,7 +25,7 @@ export type EnDict = Record<string, unknown>;
  * Fabrique un hook qui renvoie le dictionnaire anglais une fois chargé, `null`
  * tant que la langue active est le français (ou que le chargement est en vol).
  *
- * @param loadEn loader dynamique du blob anglais (`() => import('./en.json')`)
+ * @param loadEn loader dynamique du dictionnaire anglais (`() => import('./locales/en')`)
  */
 export function createEnDictHook(
   loadEn: () => Promise<unknown>

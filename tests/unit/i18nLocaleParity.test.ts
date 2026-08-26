@@ -13,9 +13,9 @@ import path from 'node:path';
 
 import { describe, it, expect } from 'vitest';
 
-import en from '@/lib/i18n/locales/en.json';
+import en from '@/lib/i18n/locales/en';
 import { frDict as fr } from '@/lib/i18n/locales/fr';
-import adminEn from '@/lib/i18n/locales/admin-en.json';
+import adminEn from '@/lib/i18n/locales/admin-en';
 import { frDict as adminFr } from '@/lib/i18n/locales/admin-fr';
 
 type Json = Record<string, unknown>;

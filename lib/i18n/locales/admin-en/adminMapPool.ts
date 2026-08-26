@@ -1,0 +1,72 @@
+// lib/i18n/locales/admin-en/adminMapPool.ts
+//
+// Traductions ANGLAISES du namespace admin `adminMapPool`.
+//
+// La SOURCE DE VERITE est le francais (`../admin-fr/adminMapPool.ts`) : toute cle
+// ajoutee la-bas doit l'etre ici avec exactement la meme structure, sans quoi
+// le garde-fou de compilation `../admin-parity.ts` casse le typecheck.
+//
+// Ne PAS annoter `as const` : la parite se verifie contre le francais, dont
+// les valeurs sont de type `string` — des types litteraux la feraient echouer.
+
+export default {
+  headTitle: 'Admin · Map pool',
+  eyebrow: 'Admin · Global catalogue',
+  pageTitle: 'Map pool',
+  subtitle: 'Per-game map catalogue, reusable across every tournament.',
+  tablistLabel: 'Game selection',
+  refresh: 'Refresh',
+  loading: 'Loading…',
+  errorLoad: 'Loading error',
+  addMapButton: '+ Add a map',
+  importDefaults: 'Import default maps',
+  importing: 'Importing…',
+  importResult: '{imported} map(s) imported, {skipped} skipped.',
+  importError: 'Error while importing default maps',
+  empty: 'No maps in the catalogue for this game.',
+  emptyHint: 'Add a map or import the default pool.',
+  gameBadge: 'Game: {game}',
+  mapCount: '{count} map(s)',
+  imageFallback: 'Preview unavailable',
+  editTitle: 'Edit',
+  deleteTitle: 'Delete',
+  enabled: 'Enabled',
+  disabled: 'Disabled',
+  toggleEnabledLabel: 'Enable or disable {name}',
+  orderLabel: 'Order: {order}',
+  addMapTitle: 'Add a map',
+  editMapTitle: 'Edit map',
+  mapNameLabel: 'Map name',
+  mapNamePlaceholder: "e.g. King's Row",
+  mapTypeLabel: 'Map type',
+  mapTypePlaceholder: 'e.g. control, hybrid, escort, standard…',
+  imageUrlLabel: 'Image URL (optional)',
+  imageUrlPlaceholder: 'https://example.com/image.jpg',
+  imagePreviewLabel: 'Image preview',
+  previewAlt: 'Preview',
+  save: 'Save',
+  saving: 'Saving…',
+  add: 'Add',
+  adding: 'Adding…',
+  cancel: 'Cancel',
+  alertEnterMapName: 'Please enter a map name',
+  confirmDeleteMap: 'Delete this map from the catalogue?',
+  confirmDeleteSubtitle: 'This action is irreversible.',
+  toastCreated: 'Map added',
+  toastUpdated: 'Map updated',
+  toastDeleted: 'Map deleted',
+  toastEnabled: 'Map enabled',
+  toastDisabled: 'Map disabled',
+  errorAdd: 'Error while adding',
+  errorUpdate: 'Error while updating',
+  errorDelete: 'Error while deleting',
+  errorToggle: 'Error while toggling state',
+  typeControl: 'Control',
+  typeHybrid: 'Hybrid',
+  typeEscort: 'Escort',
+  typePush: 'Push',
+  typeFlashpoint: 'Flashpoint',
+  typeClash: 'Clash',
+  typeStandard: 'Standard',
+  typeActiveDuty: 'Active Duty',
+};

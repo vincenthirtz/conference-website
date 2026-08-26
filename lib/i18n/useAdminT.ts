@@ -13,7 +13,7 @@ import type { AdminNs } from './ns';
  *
  * Même mécanique que `useT` : un fichier par namespace sous
  * `locales/admin-fr/<ns>.ts` (déclaré via `adminNs()`), importé par le seul
- * composant qui en a besoin ; `admin-en.json` reste un blob unique chargé
+ * composant qui en a besoin ; l'anglais reste UN SEUL chunk (`locales/admin-en/index.ts`), chargé
  * paresseusement à la bascule FR→EN.
  *
  *   import nsAdminDashboard from '@/lib/i18n/locales/admin-fr/adminDashboard';
@@ -21,7 +21,7 @@ import type { AdminNs } from './ns';
  *
  * `format()` (ré-exporté) interpole les marqueurs `{nom}`.
  */
-const useEnDict = createEnDictHook(() => import('./locales/admin-en.json'));
+const useEnDict = createEnDictHook(() => import('./locales/admin-en'));
 
 export function useAdminT<T>(nsDef: AdminNs<string, T>): T {
   const en = useEnDict();

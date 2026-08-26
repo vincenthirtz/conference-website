@@ -1,7 +1,8 @@
 // Regression tripwire against re-introducing hardcoded French user-facing text.
 //
 // The whole public site is internationalised through `lib/i18n` (useT + format
-// + fr/en.json). Nothing enforces that at push time (pushes to `work` skip CI),
+// + fr/en per-namespace files). Nothing enforces that at push time (pushes to
+// `work` skip CI),
 // so this unit test — which we DO run before commit — fails the moment a
 // French-accented string reappears in a JSX **text node** or a localizable
 // attribute (placeholder / aria-label / alt / title) outside the allowed zones.

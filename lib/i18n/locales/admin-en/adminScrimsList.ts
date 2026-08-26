@@ -1,0 +1,53 @@
+// lib/i18n/locales/admin-en/adminScrimsList.ts
+//
+// Traductions ANGLAISES du namespace admin `adminScrimsList`.
+//
+// La SOURCE DE VERITE est le francais (`../admin-fr/adminScrimsList.ts`) : toute cle
+// ajoutee la-bas doit l'etre ici avec exactement la meme structure, sans quoi
+// le garde-fou de compilation `../admin-parity.ts` casse le typecheck.
+//
+// Ne PAS annoter `as const` : la parite se verifie contre le francais, dont
+// les valeurs sont de type `string` — des types litteraux la feraient echouer.
+
+export default {
+  pageTitle: 'Admin – Scrims',
+  heading: 'Scrim management',
+  subtitle: 'Friendly match sessions between 2 teams.',
+  newScrim: '+ New scrim',
+  tabsAriaLabel: 'Scrims sections',
+  tabScrims: 'Scrims',
+  tabPlannings: 'Planning grids',
+  statusFilterLabel: 'Status',
+  filterAll: 'All',
+  statusDraft: 'Draft',
+  statusScheduled: 'Scheduled',
+  statusRunning: 'Running',
+  statusCompleted: 'Completed',
+  statusCancelled: 'Cancelled',
+  errorLoad: 'Loading error.',
+  loading: 'Loading…',
+  empty: 'No scrims for this filter.',
+  publicBadge: '• Public',
+  teamsVs: '{team1} vs {team2}',
+  tabCalendar: 'Calendar',
+  calToday: 'Today',
+  calPrevWeek: 'Previous week',
+  calNextWeek: 'Next week',
+  calThisWeek: 'This week',
+  calWeekOf: 'Week of {date}',
+  calCreateHint: 'Click a slot to create a scrim',
+  calViewWeek: 'Week',
+  calViewMonth: 'Month',
+  calMatchTag: 'Match',
+  calMonthPrev: 'Previous month',
+  calMonthNext: 'Next month',
+  calFilterTeam: 'Team',
+  calFilterStatus: 'Status',
+  calFilterAllTeams: 'All teams',
+  calConflictWarning: 'Slot conflicts with a team already booked.',
+  calRescheduled: 'Scrim rescheduled.',
+  calResized: 'Scrim duration updated.',
+  calMoreEvents: '+{count}',
+  calCollapse: '− collapse',
+  calUpdateError: 'Could not update the scrim.',
+};

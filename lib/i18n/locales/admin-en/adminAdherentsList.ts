@@ -1,0 +1,75 @@
+// lib/i18n/locales/admin-en/adminAdherentsList.ts
+//
+// Traductions ANGLAISES du namespace admin `adminAdherentsList`.
+//
+// La SOURCE DE VERITE est le francais (`../admin-fr/adminAdherentsList.ts`) : toute cle
+// ajoutee la-bas doit l'etre ici avec exactement la meme structure, sans quoi
+// le garde-fou de compilation `../admin-parity.ts` casse le typecheck.
+//
+// Ne PAS annoter `as const` : la parite se verifie contre le francais, dont
+// les valeurs sont de type `string` — des types litteraux la feraient echouer.
+
+export default {
+  statusPending: 'Pending',
+  statusPartial: 'Partial',
+  statusPaid: 'Paid',
+  statusExempt: 'Exempt',
+  statusOverdue: 'Overdue',
+  roleMember: 'Member',
+  roleVolunteer: 'Volunteer',
+  roleBoard: 'Board',
+  rolePresident: 'President',
+  roleTreasurer: 'Treasurer',
+  roleSecretary: 'Secretary',
+  confirmDeleteTitle: 'Delete member “{name}”?',
+  delete: 'Delete',
+  errorDeleteFailed: 'Deletion failed',
+  errorDelete: 'Deletion error.',
+  errorUpdateFailed: 'Update failed',
+  errorUpdate: 'Update error.',
+  syncOk:
+    'Sync OK: {created} created, {updated} updated, {skipped} already synced.',
+  syncError: 'Error: {message}',
+  pageTitle: 'Admin - Members',
+  heading: 'Member management',
+  countMembers_one: '{count} member',
+  countMembers_other: '{count} members',
+  cotisationInfo: 'Membership fee: {amount} €',
+  syncing: 'Syncing...',
+  syncHelloAsso: 'Sync HelloAsso',
+  newAdherent: 'New member',
+  statTotalActive: 'Total active',
+  statYear: 'Year {year}',
+  statPaid: 'Paid',
+  statPending: 'Pending',
+  statOverdue: 'Overdue',
+  filterSearch: 'Search',
+  searchPlaceholder: 'Last name, first name, email or member no...',
+  filterPaymentStatus: 'Payment status',
+  paymentStatusAll: 'All statuses',
+  filterYear: 'Year',
+  yearAll: 'All',
+  filterRole: 'Role',
+  roleAll: 'All roles',
+  filterActive: 'Status',
+  activeAll: 'All',
+  activeYes: 'Active',
+  activeNo: 'Inactive',
+  empty: 'No members found',
+  colMemberNumber: 'Member no.',
+  colName: 'Name',
+  colEmail: 'Email',
+  colRole: 'Role',
+  colYear: 'Year',
+  colPayment: 'Payment',
+  colAmount: 'Amount',
+  colActions: 'Actions',
+  inactiveTag: '(inactive)',
+  markPaidTitle: 'Mark as paid',
+  markPaidShort: 'Paid',
+  edit: 'Edit',
+  deleteShort: 'Del.',
+  previous: 'Previous',
+  next: 'Next',
+  paginationTotal: ' of {total}',
+};

@@ -1,7 +1,7 @@
 // lib/i18n/locales/admin-fr/adminMatchLineups.ts
 //
 // Traductions FRANCAISES du namespace admin `adminMatchLineups` — SOURCE DE
-// VERITE. Le pendant anglais vit dans `../admin-en.json`.
+// VERITE. Le pendant anglais vit dans `../admin-en/adminMatchLineups.ts`.
 
 import { adminNs } from '../../ns';
 

@@ -1,0 +1,93 @@
+// lib/i18n/locales/admin-en/adminTournamentEdit.ts
+//
+// Traductions ANGLAISES du namespace admin `adminTournamentEdit`.
+//
+// La SOURCE DE VERITE est le francais (`../admin-fr/adminTournamentEdit.ts`) : toute cle
+// ajoutee la-bas doit l'etre ici avec exactement la meme structure, sans quoi
+// le garde-fou de compilation `../admin-parity.ts` casse le typecheck.
+//
+// Ne PAS annoter `as const` : la parite se verifie contre le francais, dont
+// les valeurs sont de type `string` — des types litteraux la feraient echouer.
+
+export default {
+  pageTitle: 'Admin – Edit tournament',
+  breadcrumbTournaments: 'Tournaments',
+  defaultTournamentName: 'Tournament',
+  breadcrumbEdit: 'Edit',
+  back: 'Back to tournament dashboard',
+  heading: 'Edit tournament',
+  subtitle: "Update the tournament's main information.",
+  sectionGeneral: 'General information',
+  nameLabel: 'Tournament name',
+  slugLabel: 'Slug (URL)',
+  slugHelp: 'If you change the slug, the public URL will change.',
+  gameLabel: 'Game',
+  statusLabel: 'Status',
+  statusDraft: 'Draft',
+  statusPublished: 'Published',
+  statusRunning: 'Running',
+  statusCompleted: 'Completed',
+  statusArchived: 'Archived',
+  sectionSchedule: 'Schedule & format',
+  startDateLabel: 'Start date',
+  endDateLabel: 'End date',
+  rosterLockLabel: 'Roster lock',
+  rosterLockHelp:
+    'After this date, registered teams can no longer change their roster (add, remove, swap). Empty = no lock.',
+  timezoneLabel: 'Timezone',
+  timezoneHelp: 'Times will be displayed in this timezone.',
+  formatLabel: 'Format (short label)',
+  formatHelp:
+    'Short text shown on the "Format" card of the public page (e.g. "BO3", "Swiss + playoffs").',
+  formatTypeLabel: 'Global format',
+  formatTypeNone: "(Don't change / to be defined)",
+  formatSingleElim: 'Single Elim',
+  formatDoubleElim: 'Double Elim',
+  formatSwiss: 'Swiss',
+  formatRoundRobin: 'Round Robin',
+  formatShowmatch: 'Showmatch',
+  maxTeamsLabel: 'Max. number of teams',
+  minPlayersLabel: 'Min. players per team',
+  minPlayersHelp: 'Minimum number of members required to register a team',
+  maxPlayersLabel: 'Max. players per team',
+  maxPlayersHelp: 'Maximum number of members allowed per team',
+  sectionVisuals: 'Visuals',
+  logoLabel: 'Logo (URL)',
+  bannerLabel: 'Banner (URL)',
+  rulesLabel: 'Rules (PDF)',
+  uploading: 'Uploading…',
+  uploadPdf: 'Upload a PDF',
+  rulesHelp:
+    'Shown as a "Tournament rules" link on the public page. PDF max 5 MB.',
+  openCurrentRules: 'Open current rules ↗',
+  sectionPublic: 'Public information',
+  publicHelp:
+    "These fields are shown on the tournament's public page only if they're filled in.",
+  descriptionLabel: 'General info',
+  descriptionPlaceholder: 'Tournament description shown on the public page...',
+  scheduleDetailsLabel: 'Detailed schedule',
+  scheduleDetailsPlaceholder: 'Key dates, stages, deadlines...',
+  scheduleRulesLabel: 'Scheduling rules',
+  scheduleRulesPlaceholder: 'Check-in times, match times, deadlines...',
+  formatDetailsLabel: 'Tournament format',
+  formatDetailsPlaceholder: 'Match format, BO3/BO5, bracket, specific rules...',
+  sectionVisibility: 'Visibility',
+  publicToggle: 'Public tournament',
+  publicToggleHelp: 'Visible on the site',
+  featuredToggle: 'Featured',
+  featuredToggleHelp: '"featured" section',
+  sectionActions: 'Actions',
+  saving: 'Saving...',
+  saveChanges: 'Save changes',
+  cancel: 'Cancel',
+  errorPdfOnly: 'Only PDF files are accepted.',
+  errorPdfTooLarge: 'PDF too large (max 5 MB).',
+  errorRulesUpload: 'Rules upload failed',
+  toastRulesUploaded: 'Rules uploaded.',
+  errorUploadFailed: 'Upload failed',
+  errorLoad: 'Unexpected error while loading the tournament',
+  errorNameRequired: 'The tournament name is required.',
+  errorEndBeforeStart: 'The end date must be after the start date.',
+  toastUpdated: 'Tournament updated successfully.',
+  errorUpdate: 'Unknown error during update',
+};

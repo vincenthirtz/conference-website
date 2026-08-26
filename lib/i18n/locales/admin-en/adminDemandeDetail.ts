@@ -1,0 +1,78 @@
+// lib/i18n/locales/admin-en/adminDemandeDetail.ts
+//
+// Traductions ANGLAISES du namespace admin `adminDemandeDetail`.
+//
+// La SOURCE DE VERITE est le francais (`../admin-fr/adminDemandeDetail.ts`) : toute cle
+// ajoutee la-bas doit l'etre ici avec exactement la meme structure, sans quoi
+// le garde-fou de compilation `../admin-parity.ts` casse le typecheck.
+//
+// Ne PAS annoter `as const` : la parite se verifie contre le francais, dont
+// les valeurs sont de type `string` — des types litteraux la feraient echouer.
+
+export default {
+  pageTitle: 'Request {id} – Admin',
+  backToList: 'Back to list',
+  errorUnexpected: 'Unexpected error',
+  errorLoadTeams: 'Unable to load teams.',
+  toastForwarded: 'Request forwarded to {team}.',
+  fallbackTeam: 'the team',
+  error: 'Error',
+  toastApproved: 'Request approved.',
+  toastRejected: 'Request rejected.',
+  typeJoin: 'Join a team',
+  typeLeave: 'Leave a team',
+  typeCaptainRequest: 'Captain request',
+  typeTeamRegistration: 'Tournament registration',
+  typeScrim: 'Scrim request',
+  typeOther: 'Other',
+  statusPending: 'Pending',
+  statusApproved: 'Approved',
+  statusRejected: 'Rejected',
+  statusCancelled: 'Cancelled',
+  idLabel: 'ID:',
+  createdOn: 'Created on {date}',
+  message: 'Message',
+  user: 'User',
+  battleTagLabel: 'BattleTag:',
+  discordLabel: 'Discord:',
+  teamTarget: 'Target team',
+  team: 'Team',
+  tournament: 'Tournament',
+  scrimDetails: 'Scrim details',
+  externalRequest: 'External request',
+  requestingTeam: 'Requesting team',
+  preferredDate: 'Preferred date',
+  format: 'Format',
+  contact: 'Contact',
+  email: 'Email',
+  discord: 'Discord',
+  forwardedFromPrefix: 'Forwarded from ',
+  forwardedFromLink: 'the original request',
+  forwardedFromDate: ' on {date}',
+  forwardToOther: 'Forward to another team',
+  chooseTargetTeam: 'Choose the recipient team',
+  selectPlaceholder: '— Select —',
+  forwarding: 'Forwarding…',
+  confirmForward: 'Confirm forward',
+  cancel: 'Cancel',
+  forwardHelp:
+    'A new request will be created for the chosen team, with the same contact and message.',
+  registrationDetails: 'Registration details',
+  teamName: 'Team name',
+  contactEmail: 'Contact email',
+  membersCount: 'Members ({count})',
+  memberBt: 'BT: {tag}',
+  requestDetails: 'Request details',
+  type: 'Type',
+  existingTeam: 'Existing team',
+  newTeamToCreate: 'New team to create',
+  viewRawPayload: 'View full payload (JSON)',
+  staffNoteHeading: 'Staff note (internal)',
+  staffNotePlaceholder: 'Internal note, reason for the decision...',
+  approve: 'Approve',
+  reject: 'Reject',
+  treated: 'This request has been processed',
+  treatedBy: ' by ',
+  treatedOn: ' on {date}',
+  createPlanningGrid: 'Create an availability grid',
+};

@@ -1,0 +1,128 @@
+// lib/i18n/locales/admin-en/adminMatchEdit.ts
+//
+// Traductions ANGLAISES du namespace admin `adminMatchEdit`.
+//
+// La SOURCE DE VERITE est le francais (`../admin-fr/adminMatchEdit.ts`) : toute cle
+// ajoutee la-bas doit l'etre ici avec exactement la meme structure, sans quoi
+// le garde-fou de compilation `../admin-parity.ts` casse le typecheck.
+//
+// Ne PAS annoter `as const` : la parite se verifie contre le francais, dont
+// les valeurs sont de type `string` — des types litteraux la feraient echouer.
+
+export default {
+  statusPending: 'Upcoming',
+  statusOngoing: 'Ongoing',
+  statusFinished: 'Finished',
+  statusCancelled: 'Cancelled',
+  statusPostponed: 'Postponed',
+  statusDisputed: 'Disputed',
+  statusWalkover: 'Walkover',
+  pageTitle: 'Admin – Edit match',
+  breadcrumbMatches: 'Matches',
+  breadcrumbEdit: 'Edit match',
+  backToMatch: '← Back to match (admin)',
+  heading: 'Edit match',
+  matchWord: 'Match',
+  tournamentBullet: '• Tournament',
+  phaseBullet: '• Phase',
+  casterViewTitle:
+    'Open the caster dashboard (lobby code, live veto, H2H, rosters)',
+  casterView: 'Caster view',
+  conflictTitle: 'Concurrent edit',
+  lastServerEditPrefix: 'Last server edit:',
+  conflictReloadedNote:
+    'The form has been reloaded with the latest data. Check the fields and try again.',
+  closeAndReload: 'Close and reload',
+  warningsTitle: 'Warnings',
+  loadingMatch: 'Loading match…',
+  matchNotFound: 'Match not found.',
+  statusRoundHeading: 'Status & round',
+  statusFieldLabel: 'Status',
+  roundHashLabel: 'Round #',
+  formatBoLabel: 'Format (BO)',
+  planningStreamHeading: 'Scheduling & stream',
+  scheduledLabel: 'Scheduled time',
+  scheduledHint: 'Used by the auto-scheduler & the public match view.',
+  streamUrlLabel: 'Stream URL',
+  scoreHeading: 'Score',
+  team1Fallback: 'Team 1',
+  team2Fallback: 'Team 2',
+  scoreHint:
+    'Filling in the score and saving will apply the result and propagate it in the bracket automatically.',
+  forfeitHeading: 'Forfeit / No-show',
+  forfeitHint:
+    'Declaring a forfeit ends the match and awards the win to the opposing team.',
+  forfeitTeam: '{team} forfeit',
+  mapsHeading: 'Maps ({count})',
+  addMap: '+ Add a map',
+  mapsEmpty:
+    'No maps recorded. Click « Add a map » to detail the score per map.',
+  mapLabel: 'Map',
+  mapNamePlaceholder: 'Map name',
+  teamShort1Fallback: 'T1',
+  teamShort2Fallback: 'T2',
+  ot: 'OT',
+  tb: 'TB',
+  deleteMapTitle: 'Delete this map',
+  notesHeading: 'Internal notes',
+  notesPlaceholder:
+    'Info for referees / casters (setup, lobby code, casters, specifics, etc.).',
+  cancel: 'Cancel',
+  saving: 'Saving...',
+  saveChanges: 'Save changes',
+  summaryHeading: 'Match summary',
+  currentStatus: 'Current status',
+  roundLabel: 'Round',
+  formatLabel: 'Format',
+  scheduledSummary: 'Scheduled',
+  startedLabel: 'Started',
+  finishedLabel: 'Finished',
+  fullIdLabel: 'Full ID:',
+  teamsHeading: 'Teams',
+  summaryNote:
+    'The score and maps are edited in the main form. Bracket propagation is automatic.',
+  viewDetail: 'View match details →',
+  historyHeading: 'History',
+  statusRegressionTitle: 'Status regression',
+  statusRegressionSubtitle:
+    'You are about to change the status from « {from} » to « {to} ».',
+  confirmChange: 'Confirm the change',
+  confirmingLabel: 'Saving...',
+  statusRegressionBody:
+    'This action reverts the match to an earlier state. Score and propagation data could be affected. Do you want to continue?',
+  forfeitConfirmTitle: 'Confirm the forfeit',
+  forfeitConfirmSubtitle: '{team} will be declared forfeit.',
+  declareForfeit: 'Declare forfeit',
+  forfeitBodyPrefix: 'The win will be awarded to',
+  forfeitBodySuffix:
+    'and the match will be marked as finished. This action will be propagated in the bracket.',
+  errorLoadMatch: 'Unable to load the match',
+  errorLoadUnexpected: 'Unexpected error while loading the match',
+  conflictMsg:
+    'This match was modified by another user. Reload the page and try again.',
+  errorUpdateMatch: 'Error while updating the match',
+  errorUpdateScore: 'Error while updating the score',
+  errorSaveMaps: 'Error while saving the maps',
+  matchUpdated: 'Match updated successfully.',
+  errorUpdateUnexpected: 'Unexpected error while updating',
+  errorForfeit: 'Error during the forfeit',
+  forfeitSaved: 'Forfeit saved successfully.',
+  errorForfeitUnexpected: 'Unexpected error during the forfeit',
+  tbd: 'TBD',
+  scoreLabelShort: 'Score',
+  mvpHeading: 'Match MVP',
+  mvpLoading: 'Loading...',
+  mvpPollPostedPrefix: 'Discord poll posted on',
+  mvpPollDuration: '— duration {hours}h',
+  mvpNoPollPrefix: 'No Discord poll posted (webhook',
+  mvpNoPollSuffix: 'not configured or fewer than 2 candidates).',
+  mvpRegistered: 'MVP recorded',
+  mvpImportedPrefix: '· imported on',
+  clearBtn: 'Clear',
+  mvpSelectLabel: 'Select the MVP (winner of the Discord poll)',
+  mvpSelectPlaceholder: '— Choose a player —',
+  mvpMemberFallback: '(member {id})',
+  mvpSaving: 'Saving...',
+  mvpSave: 'Save the MVP',
+  confirmClearMvp: 'Clear the recorded MVP?',
+};

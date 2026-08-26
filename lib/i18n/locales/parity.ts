@@ -1,9 +1,10 @@
 import { frDict } from './fr';
-import en from './en.json';
+import en from './en';
 
 /**
  * Garde-fou de compilation : le francais (recompose depuis `fr/<ns>.ts`) et
- * `en.json` doivent avoir exactement la meme structure de cles. Si une cle
+ * l'anglais (recompose depuis `en/<ns>.ts`) doivent avoir exactement la meme
+ * structure de cles. Si une cle
  * manque ou diverge d'un cote, l'une de ces deux affectations echoue au
  * typecheck.
  *
