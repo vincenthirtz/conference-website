@@ -31,7 +31,7 @@ export const OVERWATCH_RECIPES: MapRecipe[] = [
     name: 'Antarctic Peninsula',
     layout: 'control',
     // Glace, coques de station polaire, acier peint, projecteurs froids.
-    palette: ['#c3d2dd', '#8fa4b6', '#2f4a63', '#eaf4ff'],
+    palette: ['#c3d2dd', '#93a8ba', '#3f6a8c', '#eaf4ff'],
     architecture: 'industrial',
     landmarks: ['dish', 'crane', 'tower'],
     environment: { kind: 'snow', color: '#dfeaf3' },
@@ -150,8 +150,8 @@ export const OVERWATCH_RECIPES: MapRecipe[] = [
     slug: 'havana',
     name: 'Havana',
     layout: 'escort',
-    // Façades pastel écaillées, mer des Caraïbes, terre cuite.
-    palette: ['#c9a97e', '#f1dab6', '#4a8fa8', '#e8734a'],
+    // Façades pastel écaillées, tuiles cuites, menuiseries turquoise.
+    palette: ['#c9a97e', '#f1dab6', '#c2543a', '#4fb0c8'],
     architecture: 'colonial',
     landmarks: ['bridge', 'market', 'lighthouse'],
     environment: { kind: 'sea', color: '#2a7f9e' },

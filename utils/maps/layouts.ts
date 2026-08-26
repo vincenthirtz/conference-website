@@ -57,13 +57,60 @@ export function patchShade(x: number, z: number): number {
   return ((h % 4) - 1.4) * 0.055;
 }
 
-/** Sol rectangulaire au bord effrité. */
+/**
+ * Hauteur du terrain en fonction de la proximité du bord.
+ *
+ * WHY: un plateau à hauteur constante se termine par une falaise de trois
+ * briques, ce qui lit comme une plaque découpée. Deux gradins en périphérie
+ * suffisent à transformer la coupe en rive — c'est particulièrement net dès
+ * qu'une nappe d'eau vient buter dessus.
+ */
+function shoreHeight(distanceToEdge: number): number {
+  // Un seul gradin, et jamais plus bas que la nappe + 1 : descendre de deux
+  // crans mettait la rive au niveau de l'eau et l'île paraissait submergée.
+  return distanceToEdge < 1.6 ? GROUND_HEIGHT - 1 : GROUND_HEIGHT;
+}
+
+/** Sol rectangulaire au bord effrité, terminé en gradins. */
 function slab(b: SceneBuilder, rng: Rng, halfX: number, halfZ: number): void {
   for (let x = -halfX; x <= halfX; x += 1) {
     for (let z = -halfZ; z <= halfZ; z += 1) {
       const edge = Math.max(Math.abs(x) / halfX, Math.abs(z) / halfZ);
       if (edge > 0.85 && rng.chance((edge - 0.85) * 4)) continue;
-      b.box(x, 0, z, 1, GROUND_HEIGHT, 1, 'ground', { shade: patchShade(x, z) });
+      const margin = Math.min(halfX - Math.abs(x), halfZ - Math.abs(z));
+      b.box(x, 0, z, 1, shoreHeight(margin), 1, 'ground', { shade: patchShade(x, z) });
+    }
+  }
+}
+
+/**
+ * Repeint le sommet du terrain le long d'un segment — une chaussée.
+ *
+ * Ne change QUE la teinte, jamais l'altitude : une rue doit se lire à plat, et
+ * surtout ne rien casser de ce qui a été posé avant (objectif, plateformes).
+ */
+function pave(
+  b: SceneBuilder,
+  from: { x: number; z: number },
+  to: { x: number; z: number },
+  width: number,
+  shade: number,
+): void {
+  const dx = to.x - from.x;
+  const dz = to.z - from.z;
+  const steps = Math.max(1, Math.ceil(Math.hypot(dx, dz) * 2));
+  const half = (width - 1) / 2;
+  for (let s = 0; s <= steps; s += 1) {
+    const t = s / steps;
+    for (let ox = -half; ox <= half; ox += 1) {
+      for (let oz = -half; oz <= half; oz += 1) {
+        const x = Math.round(from.x + dx * t + ox);
+        const z = Math.round(from.z + dz * t + oz);
+        const top = b.columnTop(x, z);
+        if (top === 0) continue;
+        if (b.get(x, top - 1, z)?.role !== 'ground') continue;
+        b.place(x, top - 1, z, 'ground', { keepExisting: false, shade });
+      }
     }
   }
 }
@@ -76,7 +123,7 @@ function plate(b: SceneBuilder, rng: Rng, cx: number, cz: number, radius: number
       const d = Math.hypot(x, z);
       if (d > radius) continue;
       if (d > radius - 1.4 && rng.chance(0.4)) continue;
-      b.box(cx + x, 0, cz + z, 1, GROUND_HEIGHT, 1, 'ground', {
+      b.box(cx + x, 0, cz + z, 1, shoreHeight(radius - d), 1, 'ground', {
         shade: patchShade(cx + x, cz + z),
       });
     }
@@ -128,6 +175,20 @@ function shift(rng: Rng, x: number, z: number, amp = 3): { x: number; z: number 
 }
 
 /**
+ * Un emplacement de bâti est-il assez loin des ancres de silhouettes ?
+ *
+ * WHY: les silhouettes sont posées APRÈS le bâti, à l'altitude du terrain sous
+ * leur ancre. Si un bâtiment recouvre cette ancre, la silhouette se construit
+ * sur son TOIT, puis le sous-bassement automatique lui coule une colonne pleine
+ * jusqu'au sol — un pilotis de dix mètres au milieu de la maquette. Depuis que
+ * l'implantation est tirée au sort, la collision est devenue probable ; on
+ * l'écarte ici plutôt que d'espérer qu'elle n'arrive pas.
+ */
+function clearOfAnchors(p: { x: number; z: number }, anchors: Anchor[], min = 7): boolean {
+  return anchors.every((a) => Math.hypot(a.x - p.x, a.z - p.z) >= min);
+}
+
+/**
  * Plafond de hauteur par typologie. Une mitoyenne de bourg ou une maison
  * blanchie à la chaux n'a pas huit niveaux : sans ce plafond, les layouts qui
  * tirent des hauteurs hautes transformaient chaque village en front de tours.
@@ -160,7 +221,9 @@ function building(
   storeys: number,
 ): void {
   const y = b.columnTop(cx, cz);
-  if (y === 0) return;
+  // Rien ne se construit sur la rive : un volume posé un cran plus bas donne
+  // l'impression d'un bâtiment les pieds dans l'eau.
+  if (y < GROUND_HEIGHT) return;
   const h = Math.max(2, Math.min(storeys, MAX_STOREYS[arch] ?? storeys));
   const x0 = cx - Math.floor(w / 2);
   const z0 = cz - Math.floor(d / 2);
@@ -201,11 +264,15 @@ function building(
       break;
     }
     case 'whitewash':
-      b.box(x0 - 1, y + h, z0 - 1, w + 2, 1, d + 2, 'accent', OVER);
+      // Terrasse blanche, acrotère seul en accent : une dalle d'accent pleine
+      // repeignait tout le village de la couleur des coupoles.
+      b.box(x0 - 1, y + h, z0 - 1, w + 2, 1, d + 2, 'structure', { shade: shade + 0.1, keepExisting: false });
+      b.shell(x0 - 1, y + h + 1, z0 - 1, w + 2, 1, d + 2, 'accent', OVER);
       if (rng.chance(0.4)) b.disc(cx, cz, Math.min(w, d) / 2 - 0.5, y + h + 1, 1, 'accent');
       break;
     case 'industrial':
-      b.box(x0 - 1, y + h, z0 - 1, w + 2, 1, d + 2, 'accent', OVER);
+      b.box(x0 - 1, y + h, z0 - 1, w + 2, 1, d + 2, 'structure', { shade: shade - 0.14, keepExisting: false });
+      b.shell(x0 - 1, y + h, z0 - 1, w + 2, 1, d + 2, 'accent', OVER);
       if (rng.chance(0.45)) b.box(x0 + 1, y + h + 1, z0 + 1, 1, rng.int(3, 6), 1, 'structure', OVER);
       break;
     case 'ancient': {
@@ -269,7 +336,8 @@ function building(
         b.box(x0, by, z0 + d - 1, w, 1, 1, 'highlight', OVER);
         b.box(x0 + w - 1, by, z0, 1, 1, d, 'highlight', OVER);
       }
-      b.box(x0 - 1, y + h, z0 - 1, w + 2, 1, d + 2, 'accent', OVER);
+      b.box(x0 - 1, y + h, z0 - 1, w + 2, 1, d + 2, 'structure', { shade: shade - 0.1, keepExisting: false });
+      b.shell(x0 - 1, y + h, z0 - 1, w + 2, 1, d + 2, 'accent', OVER);
       b.disc(cx, cz, Math.min(w, d) / 2, y + h + 1, 1, 'accent');
       b.box(cx, y + h + 2, cz, 1, 3, 1, 'structure', OVER);
       b.place(cx, y + h + 5, cz, 'highlight', OVER);
@@ -289,7 +357,8 @@ function building(
       break;
     }
     default:
-      b.box(x0 - 1, y + h, z0 - 1, w + 2, 1, d + 2, 'accent', OVER);
+      b.box(x0 - 1, y + h, z0 - 1, w + 2, 1, d + 2, 'structure', { shade: shade - 0.12, keepExisting: false });
+      b.shell(x0 - 1, y + h, z0 - 1, w + 2, 1, d + 2, 'accent', OVER);
       if (rng.chance(0.35)) b.box(cx, y + h + 1, cz, 1, 2, 1, 'highlight', OVER);
   }
 
@@ -328,6 +397,16 @@ const control: LayoutFn = (b, rng, arch) => {
     railing(b, side * 9 - 2, GROUND_HEIGHT + 3, -2, 5, 5);
     b.path({ x: side * 7, z: 0 }, { x: side * 5, z: 0 }, 3, GROUND_HEIGHT, 1, 'structure');
   }
+  const anchors: Anchor[] = [
+    { x: 1, z: -10 },
+    { x: -10, z: 6 },
+    { x: 9, z: -4 },
+  ];
+  // Rues rayonnantes depuis le point : quatre percées qui structurent l'arène.
+  for (let k = 0; k < 4; k += 1) {
+    const a = (k / 4) * Math.PI * 2 + 0.4;
+    pave(b, { x: Math.cos(a) * 6, z: Math.sin(a) * 6 }, { x: Math.cos(a) * 13, z: Math.sin(a) * 13 }, 3, -0.2);
+  }
   relief(b, rng, 3, 7);
   for (const [px, pz] of [
     [-7, -8],
@@ -336,15 +415,10 @@ const control: LayoutFn = (b, rng, arch) => {
   ] as const) {
     if (rng.chance(0.2)) continue;
     const p = shift(rng, px, pz, 2);
+    if (!clearOfAnchors(p, anchors)) continue;
     building(b, rng, arch, p.x, p.z, rng.int(4, 6), rng.int(4, 6), rng.int(4, 7));
   }
-  return {
-    anchors: [
-      { x: 1, z: -10 },
-      { x: -10, z: 6 },
-      { x: 9, z: -4 },
-    ],
-  };
+  return { anchors };
 };
 
 /** Escorte : convoi serpentant entre trois jalons. */
@@ -383,6 +457,14 @@ const escort: LayoutFn = (b, rng, arch) => {
     lampLine(b, rng, a, c, GROUND_HEIGHT, 6, 4);
   }
   payload(b, route[1].x, GROUND_HEIGHT, route[1].z);
+  const anchors: Anchor[] = [
+    { x: -8, z: -10 },
+    { x: 4, z: 11 },
+    { x: 11, z: -1 },
+  ];
+  // Rues transversales : elles coupent la voie du convoi et donnent un quartier.
+  pave(b, { x: -13, z: -4 }, { x: 6, z: -13 }, 3, -0.2);
+  pave(b, { x: -6, z: 13 }, { x: 13, z: 6 }, 3, -0.2);
   relief(b, rng, 3, 6);
   for (const [px, pz] of [
     [-10, -6],
@@ -392,15 +474,10 @@ const escort: LayoutFn = (b, rng, arch) => {
   ] as const) {
     if (rng.chance(0.25)) continue;
     const p = shift(rng, px, pz, 2);
+    if (!clearOfAnchors(p, anchors)) continue;
     building(b, rng, arch, p.x, p.z, rng.int(4, 7), rng.int(4, 6), rng.int(4, 8));
   }
-  return {
-    anchors: [
-      { x: -8, z: -10 },
-      { x: 4, z: 11 },
-      { x: 11, z: -1 },
-    ],
-  };
+  return { anchors };
 };
 
 /** Hybride : point de capture, puis convoi. */
@@ -423,6 +500,13 @@ const hybrid: LayoutFn = (b, rng, arch) => {
   b.box(11, GROUND_HEIGHT, -10, 1, 6, 1, 'highlight', OVER);
   for (let i = 0; i < route.length - 1; i += 1) lampLine(b, rng, route[i], route[i + 1], GROUND_HEIGHT, 6, 4);
   payload(b, route[1].x, GROUND_HEIGHT, route[1].z);
+  const anchors: Anchor[] = [
+    { x: -9, z: -11 },
+    { x: 5, z: -10 },
+    { x: 10, z: 10 },
+  ];
+  pave(b, { x: -13, z: -3 }, { x: 5, z: -13 }, 3, -0.2);
+  pave(b, { x: -2, z: 13 }, { x: 13, z: 8 }, 3, -0.2);
   relief(b, rng, 3, 6);
   for (const [px, pz] of [
     [-9, -7],
@@ -432,15 +516,10 @@ const hybrid: LayoutFn = (b, rng, arch) => {
   ] as const) {
     if (rng.chance(0.25)) continue;
     const p = shift(rng, px, pz, 2);
+    if (!clearOfAnchors(p, anchors)) continue;
     building(b, rng, arch, p.x, p.z, rng.int(4, 7), rng.int(4, 6), rng.int(4, 7));
   }
-  return {
-    anchors: [
-      { x: -9, z: -11 },
-      { x: 5, z: -10 },
-      { x: 10, z: 10 },
-    ],
-  };
+  return { anchors };
 };
 
 /** Poussée : couloir strictement symétrique, ligne centrale et barricades miroir. */
@@ -449,6 +528,15 @@ const push: LayoutFn = (b, rng, arch) => {
   // Voie de progression, bordée.
   b.box(-13, GROUND_HEIGHT, -3, 27, 1, 7, 'accent', OVER);
   b.box(-13, GROUND_HEIGHT, -1, 27, 1, 3, 'highlight', OVER);
+  const anchors: Anchor[] = [
+    { x: 0, z: -6 },
+    { x: -12, z: 9 },
+    { x: 12, z: 9 },
+  ];
+  // Deux rues perpendiculaires à la voie, en miroir.
+  for (const side of [-1, 1]) {
+    pave(b, { x: side * 8, z: -11 }, { x: side * 8, z: 11 }, 3, -0.2);
+  }
   // Marquage de la voie, puis l'automate qui la pousse.
   for (let x = -12; x <= 12; x += 3) {
     b.place(x, GROUND_HEIGHT, 0, 'accent', { keepExisting: false, shade: -0.25 });
@@ -461,21 +549,22 @@ const push: LayoutFn = (b, rng, arch) => {
   // Le tirage est fait UNE fois puis appliqué en miroir : la symétrie du mode
   // ne doit pas être bruitée, seule l'implantation change d'une map à l'autre.
   const plots = [
-    { x: 7 + rng.int(-2, 2), z: 9 + rng.int(-1, 1), w: rng.int(4, 6), d: rng.int(4, 5), h: rng.int(3, 5) },
-    { x: 12 + rng.int(-1, 1), z: 6 + rng.int(-2, 2), w: rng.int(4, 5), d: rng.int(4, 5), h: rng.int(4, 6) },
+    { x: 6 + rng.int(-1, 1), z: 9 + rng.int(-1, 1), w: rng.int(4, 6), d: rng.int(4, 5), h: rng.int(3, 5) },
+    { x: 12 + rng.int(-1, 1), z: 3 + rng.int(-2, 2), w: rng.int(4, 5), d: rng.int(4, 5), h: rng.int(4, 6) },
+    { x: 9 + rng.int(-1, 1), z: -8 + rng.int(-1, 1), w: rng.int(4, 5), d: rng.int(4, 4), h: rng.int(3, 5) },
   ];
   for (const side of [-1, 1]) {
-    for (const plot of plots) building(b, rng, arch, side * plot.x, plot.z, plot.w, plot.d, plot.h);
+    for (const plot of plots) {
+      const p = { x: side * plot.x, z: plot.z };
+      // Distance réduite : le couloir de poussée est étroit, 7 crans vidaient
+      // la maquette de tout son bâti.
+      if (!clearOfAnchors(p, anchors, 5)) continue;
+      building(b, rng, arch, p.x, p.z, plot.w, plot.d, plot.h);
+    }
     // Barricades de part et d'autre de la voie.
     for (const z of [-1, 1]) b.box(side * 4, GROUND_HEIGHT, z * 4, 2, 3, 2, 'structure', OVER);
   }
-  return {
-    anchors: [
-      { x: 0, z: -6 },
-      { x: -12, z: 9 },
-      { x: 12, z: 9 },
-    ],
-  };
+  return { anchors };
 };
 
 /** Point chaud : trois îlots reliés par des passerelles. */
@@ -500,19 +589,19 @@ const flashpoint: LayoutFn = (b, rng, arch) => {
     const mid = { x: (from.x + to.x) / 2, z: (from.z + to.z) / 2 };
     b.box(Math.round(mid.x) - 1, 0, Math.round(mid.z) - 1, 3, GROUND_HEIGHT, 3, 'structure');
   }
+  // Les silhouettes se décalent vers l'extérieur de l'îlot : la balise occupe le
+  // centre, qui est l'objectif et doit rester dégagé.
+  const anchors: Anchor[] = isles.map((p) => ({
+    x: p.x + Math.round(Math.sign(p.x) * 3),
+    z: p.z + Math.round(Math.sign(p.z) * 3),
+  }));
   for (const isle of isles) {
     if (rng.chance(0.3)) continue;
     const p = shift(rng, isle.x, isle.z, 4);
+    if (!clearOfAnchors(p, anchors, 5)) continue;
     building(b, rng, arch, p.x, p.z, rng.int(3, 5), rng.int(3, 5), rng.int(3, 6));
   }
-  // Les silhouettes se décalent vers l'extérieur de l'îlot : la balise occupe le
-  // centre, qui est l'objectif et doit rester dégagé.
-  return {
-    anchors: isles.map((p) => ({
-      x: p.x + Math.round(Math.sign(p.x) * 3),
-      z: p.z + Math.round(Math.sign(p.z) * 3),
-    })),
-  };
+  return { anchors };
 };
 
 /** Repli générique (jeux sans typologie de map) : deux sites et un milieu. */
@@ -527,21 +616,23 @@ const standard: LayoutFn = (b, rng, arch) => {
   }
   b.box(-2, GROUND_HEIGHT, -2, 5, 3, 5, 'structure');
   b.box(-2, GROUND_HEIGHT + 3, -2, 5, 1, 5, 'accent', OVER);
+  const anchors: Anchor[] = [
+    { x: -11, z: -7 },
+    { x: 11, z: 9 },
+    { x: 0, z: 10 },
+  ];
+  pave(b, { x: -13, z: -2 }, { x: 13, z: 2 }, 3, -0.2);
+  pave(b, { x: -2, z: -11 }, { x: 2, z: 11 }, 3, -0.2);
   relief(b, rng, 2, 7);
   for (const [px, pz] of [
     [-10, 8],
     [10, -8],
   ] as const) {
     const p = shift(rng, px, pz, 2);
+    if (!clearOfAnchors(p, anchors)) continue;
     building(b, rng, arch, p.x, p.z, rng.int(5, 7), rng.int(4, 6), rng.int(4, 7));
   }
-  return {
-    anchors: [
-      { x: -11, z: -7 },
-      { x: 11, z: 9 },
-      { x: 0, z: 10 },
-    ],
-  };
+  return { anchors };
 };
 
 const LAYOUTS: Record<MapRecipe['layout'], LayoutFn> = {
@@ -572,15 +663,24 @@ export function buildEnvironment(b: SceneBuilder, recipe: MapRecipe): void {
       const d = Math.hypot(x, z);
       if (d > radius) continue;
       if (b.columnTop(x, z) !== 0) continue;
-      // Écume / rive : la bande au contact du terrain est plus claire.
-      const near =
-        b.columnTop(x + 1, z) > 0 ||
-        b.columnTop(x - 1, z) > 0 ||
-        b.columnTop(x, z + 1) > 0 ||
-        b.columnTop(x, z - 1) > 0;
-      b.box(x, 0, z, 1, 1, 1, 'environment', {
-        shade: near ? 0.3 : patchShade(x, z) * 0.6,
-      });
+      // Trois bandes de profondeur : écume au contact, haut-fond, puis large.
+      // Un aplat uniforme lit comme du papier découpé ; le dégradé fait le
+      // volume de la nappe sans coûter une seule brique de plus.
+      let distance = 99;
+      for (let d = 1; d <= 3 && distance === 99; d += 1) {
+        for (let a = -d; a <= d && distance === 99; a += 1) {
+          if (
+            b.columnTop(x + a, z + d) > 0 ||
+            b.columnTop(x + a, z - d) > 0 ||
+            b.columnTop(x + d, z + a) > 0 ||
+            b.columnTop(x - d, z + a) > 0
+          ) {
+            distance = d;
+          }
+        }
+      }
+      const depth = distance === 1 ? 0.3 : distance === 2 ? 0.16 : distance === 3 ? 0.06 : -0.06;
+      b.box(x, 0, z, 1, 1, 1, 'environment', { shade: depth + patchShade(x, z) * 0.4 });
     }
   }
 }

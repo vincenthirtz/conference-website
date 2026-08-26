@@ -72,6 +72,7 @@ import nsLiveEventBanner from './liveEventBanner';
 import nsScrimDetail from './scrimDetail';
 import nsMatchDetail from './matchDetail';
 import nsJeuxPage from './jeuxPage';
+import nsMapsVoxelPage from './mapsVoxelPage';
 import nsMentionsLegales from './mentionsLegales';
 import nsDeveloppeursReference from './developpeursReference';
 import nsDeveloppeursPage from './developpeursPage';
@@ -237,6 +238,7 @@ export const frDict = {
   scrimDetail: nsScrimDetail.fr,
   matchDetail: nsMatchDetail.fr,
   jeuxPage: nsJeuxPage.fr,
+  mapsVoxelPage: nsMapsVoxelPage.fr,
   mentionsLegales: nsMentionsLegales.fr,
   developpeursReference: nsDeveloppeursReference.fr,
   developpeursPage: nsDeveloppeursPage.fr,
