@@ -713,6 +713,46 @@ function AdminDemandeDetailPage() {
                     <div className="font-medium">{payload.user_email}</div>
                   </div>
                 )}
+                {/* Effectif au moment de la candidature. Depuis que `min_players`
+                    n'interdit plus de candidater (2026-08-27), c'est ICI que la
+                    règle s'applique : le staff valide en voyant l'écart, au lieu
+                    qu'un 400 l'ait tranché à sa place — et sans qu'il sache
+                    qu'une équipe existait. */}
+                {typeof payload.roster_players === 'number' && (
+                  <div>
+                    <div className="text-neutral-500 text-xs">{t.rosterAtApply}</div>
+                    <div
+                      className={`font-medium ${
+                        payload.min_players &&
+                        payload.roster_players < payload.min_players
+                          ? 'text-amber-300'
+                          : ''
+                      }`}
+                    >
+                      {payload.min_players
+                        ? format(t.rosterVsMin, {
+                            count: payload.roster_players,
+                            min: payload.min_players,
+                          })
+                        : String(payload.roster_players)}
+                    </div>
+                  </div>
+                )}
+                {/* Candidature issue du wizard de création : le roster est alors
+                    surtout composé d'invitations non encore acceptées. */}
+                {payload.auto_from_team_create && (
+                  <div>
+                    <div className="text-neutral-500 text-xs">
+                      {t.rosterDeclared}
+                    </div>
+                    <div className="font-medium">
+                      {format(t.rosterConfirmedVsDeclared, {
+                        confirmed: payload.confirmed_players ?? 0,
+                        declared: payload.declared_players ?? 0,
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
               {Array.isArray(payload.members) && payload.members.length > 0 && (
                 <div className="mt-4">
