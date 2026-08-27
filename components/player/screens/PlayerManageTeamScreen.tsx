@@ -21,6 +21,7 @@ import CopyButton from '@/components/player/CopyButton';
 import FreePlayersSection from '@/components/player/FreePlayersSection';
 import BattlenetVerifyCard from '@/components/player/BattlenetVerifyCard';
 import RegistrationDeadlineBanner from '@/components/player/RegistrationDeadlineBanner';
+import TeamRegistrationCard from '@/components/player/TeamRegistrationCard';
 import {
   discordReadinessSummary,
   hasDiscordLinkInfo,
@@ -688,6 +689,11 @@ export default function PlayerManageTeamScreen() {
               plusieurs (manager multi-équipes). Placé juste sous l'en-tête :
               tout ce qui suit porte sur l'équipe choisie. */}
           <ActiveTeamSwitcher className="mb-6" />
+
+          {/* Inscription au tournoi — le geste de rattrapage quand l'inscription
+              automatique de la création d'équipe n'a pas abouti. Placée haut :
+              c'est ce qui décide si l'équipe joue, tout le reste vient après. */}
+          <TeamRegistrationCard />
 
           {successMsg && (
             <div

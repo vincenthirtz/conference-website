@@ -1,22 +1,28 @@
 // pages/api/demandes/register-team.ts
-// Public: une equipe (via son capitaine) soumet sa candidature pour un tournoi.
+// Public: une equipe (via son capitaine ou son manager) soumet sa candidature
+// pour un tournoi.
 // POST : creer une demande de type 'team_registration'
-// GET  : recuperer ses propres demandes de type 'team_registration'
+// GET  : ses propres demandes 'team_registration' + `status`, la photo de
+//        l'inscription de l'equipe au tournoi en cours (cf.
+//        TeamRegistrationStatus) que lit la carte de l'espace equipe.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import {
+  accessHasPermission,
   assertTeamPermission,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
 import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
+import { resolveCurrentTournamentId } from '@/utils/currentTournament';
 import { emitBotEvent } from '@/utils/botEvents';
 import {
   validateFieldDefinitions,
   validateRegistrationAnswers,
+  type RegistrationField,
 } from '@/utils/registrationFields';
 
 import { logger } from '../../../utils/logger';
@@ -27,6 +33,225 @@ export type RegisterTeamBody = {
   /** Réponses aux champs d'inscription personnalisés du tournoi (Flow B). */
   field_values?: Record<string, unknown> | null;
 };
+
+/**
+ * Ce qui empêche l'équipe de déposer sa candidature, en CODES et non en
+ * phrases : l'UI porte le libellé, le « pourquoi » et le geste qui répare —
+ * même séparation que les constats de `utils/teams/teamHealth.ts`.
+ */
+export type TeamRegistrationBlocker =
+  /** Aucun tournoi en cours dans ce tenant. */
+  | 'no_tournament'
+  /** Le tournoi existe mais ses inscriptions ne sont pas ouvertes. */
+  | 'not_open'
+  /** L'équipe y est déjà inscrite. */
+  | 'already_registered'
+  /** Une candidature attend déjà la validation du staff. */
+  | 'pending_request'
+  /** Roster en dessous du `min_players` du tournoi. */
+  | 'roster_shortfall'
+  /** Le tournoi a atteint `max_teams`. */
+  | 'tournament_full'
+  /** Le rôle de l'appelant ne couvre pas `register_tournaments`. */
+  | 'no_permission';
+
+/**
+ * Photo de l'inscription de l'équipe au tournoi en cours.
+ *
+ * Elle existe parce que le chemin d'inscription automatique
+ * (`/api/teams/create-with-member`) est BEST-EFFORT : il crée l'équipe même
+ * quand l'inscription échoue, et le wizard renvoie alors la capitaine vers son
+ * espace équipe pour « réessayer ». Sans cette lecture, cet espace n'avait
+ * aucun moyen de savoir où en était l'inscription — donc aucun bouton à
+ * offrir, et le renvoi tournait à l'impasse.
+ */
+export type TeamRegistrationStatus = {
+  team: { id: string; name: string } | null;
+  tournament: { id: string; name: string } | null;
+  /** Inscription confirmée (`tournament_teams`). */
+  registered: boolean;
+  /** Candidature en attente de validation, quel qu'en soit l'auteur. */
+  pendingDemandeId: string | null;
+  /**
+   * Dernière candidature TRAITÉE de l'équipe (approuvée / refusée). Sans elle,
+   * une équipe refusée voit un bouton « s'inscrire » et rien qui explique
+   * pourquoi sa demande précédente n'a rien donné.
+   */
+  lastDemande: { id: string; status: string; created_at: string } | null;
+  canSubmit: boolean;
+  blockers: TeamRegistrationBlocker[];
+  minPlayers: number | null;
+  /** Effectif compté comme le fait le POST — voir `countRegistrationMembers`. */
+  playerCount: number;
+  maxTeams: number | null;
+  registeredTeams: number;
+  /** Champs d'inscription personnalisés à remplir avant de candidater. */
+  fields: RegistrationField[];
+};
+
+const EMPTY_STATUS: TeamRegistrationStatus = {
+  team: null,
+  tournament: null,
+  registered: false,
+  pendingDemandeId: null,
+  lastDemande: null,
+  canSubmit: false,
+  blockers: [],
+  minPlayers: null,
+  playerCount: 0,
+  maxTeams: null,
+  registeredTeams: 0,
+  fields: [],
+};
+
+/**
+ * Effectif retenu pour `min_players`.
+ *
+ * Partagé entre le GET (qui annonce l'éligibilité) et le POST (qui la
+ * tranche) : deux décomptes divergents feraient mentir la carte — « prête à
+ * s'inscrire » suivi d'un refus, ou l'inverse.
+ *
+ * NB : seul le rôle `coach` est exclu, PAS `manager`. C'est le comportement
+ * historique du POST, laissé intact — le changer déplacerait la règle
+ * d'éligibilité d'un tournoi en cours.
+ */
+async function countRegistrationMembers(
+  tenantId: string,
+  teamId: string
+): Promise<number> {
+  const { count } = await supabaseAdmin
+    .from('team_members')
+    .select('id', { count: 'exact', head: true })
+    .eq('team_id', teamId)
+    .eq('tenant_id', tenantId)
+    .neq('role', 'coach');
+  return count ?? 0;
+}
+
+/** Nombre d'équipes déjà inscrites au tournoi (plafond `max_teams`). */
+async function countRegisteredTeams(
+  tenantId: string,
+  tournamentId: string
+): Promise<number> {
+  const { count } = await supabaseAdmin
+    .from('tournament_teams')
+    .select('id', { count: 'exact', head: true })
+    .eq('tournament_id', tournamentId)
+    .eq('tenant_id', tenantId);
+  return count ?? 0;
+}
+
+/**
+ * Assemble la photo lue par la carte « Inscription au tournoi ».
+ *
+ * Best-effort de bout en bout : une lecture qui échoue ne fait pas échouer le
+ * GET (la liste des demandes reste utile), elle renvoie une photo vide.
+ */
+async function buildRegistrationStatus(
+  req: NextApiRequest,
+  userId: string,
+  tenantId: string
+): Promise<TeamRegistrationStatus> {
+  const access = await getManagedTeamForRequest(req, userId, tenantId);
+  if (!access) return EMPTY_STATUS;
+
+  const { data: team } = await supabaseAdmin
+    .from('teams')
+    .select('id, name, is_active')
+    .eq('id', access.teamId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+  if (!team || !team.is_active) return EMPTY_STATUS;
+
+  const teamRef = { id: team.id as string, name: team.name as string };
+
+  const tournamentId = await resolveCurrentTournamentId(tenantId);
+  if (!tournamentId) {
+    return {
+      ...EMPTY_STATUS,
+      team: teamRef,
+      blockers: ['no_tournament'],
+    };
+  }
+
+  const { data: tournament } = await supabaseAdmin
+    .from('tournaments')
+    .select('id, name, status, max_teams, min_players, registration_fields')
+    .eq('id', tournamentId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+
+  if (!tournament) {
+    return { ...EMPTY_STATUS, team: teamRef, blockers: ['no_tournament'] };
+  }
+
+  const [{ data: existingReg }, { data: demandes }, playerCount] =
+    await Promise.all([
+      supabaseAdmin
+        .from('tournament_teams')
+        .select('id')
+        .eq('tournament_id', tournamentId)
+        .eq('team_id', team.id)
+        .eq('tenant_id', tenantId)
+        .maybeSingle(),
+      // Toutes les candidatures de l'ÉQUIPE, pas seulement celles de
+      // l'appelant : dans une équipe à deux encadrants, la demande déposée par
+      // l'autre doit être visible ici, sinon la carte propose de la doubler.
+      supabaseAdmin
+        .from('demandes')
+        .select('id, status, created_at')
+        .eq('team_id', team.id)
+        .eq('tournament_id', tournamentId)
+        .eq('tenant_id', tenantId)
+        .eq('type', 'team_registration')
+        .order('created_at', { ascending: false }),
+      countRegistrationMembers(tenantId, team.id),
+    ]);
+
+  const rows = (demandes ?? []) as {
+    id: string;
+    status: string;
+    created_at: string;
+  }[];
+  const pending = rows.find((d) => d.status === 'pending') ?? null;
+  const lastHandled = rows.find((d) => d.status !== 'pending') ?? null;
+
+  const fieldDefsResult = validateFieldDefinitions(
+    tournament.registration_fields
+  );
+  const fields = fieldDefsResult.ok ? fieldDefsResult.fields : [];
+
+  const minPlayers = Number(tournament.min_players) || null;
+  const maxTeams = Number(tournament.max_teams) || null;
+  const registeredTeams = maxTeams
+    ? await countRegisteredTeams(tenantId, tournamentId)
+    : 0;
+
+  const blockers: TeamRegistrationBlocker[] = [];
+  if (tournament.status !== 'published') blockers.push('not_open');
+  if (existingReg) blockers.push('already_registered');
+  if (pending) blockers.push('pending_request');
+  if (minPlayers && playerCount < minPlayers) blockers.push('roster_shortfall');
+  if (maxTeams && registeredTeams >= maxTeams) blockers.push('tournament_full');
+  if (!accessHasPermission(access, 'register_tournaments')) {
+    blockers.push('no_permission');
+  }
+
+  return {
+    team: teamRef,
+    tournament: { id: tournament.id, name: tournament.name },
+    registered: Boolean(existingReg),
+    pendingDemandeId: pending?.id ?? null,
+    lastDemande: lastHandled,
+    canSubmit: blockers.length === 0,
+    blockers,
+    minPlayers,
+    playerCount,
+    maxTeams,
+    registeredTeams,
+    fields,
+  };
+}
 
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
@@ -57,7 +282,18 @@ export default withAuthRoute(async function handler(
       return res.status(500).json({ error: 'Failed to load requests.' });
     }
 
-    return res.status(200).json({ demandes: demandes || [] });
+    // `status` est ADDITIF : les consommateurs existants lisent toujours
+    // `demandes`. Il porte la photo dont la carte « Inscription au tournoi » a
+    // besoin (espace équipe) — l'historique des demandes seul ne dit ni à quel
+    // tournoi s'inscrire, ni si l'équipe y est déjà, ni ce qui la bloque.
+    let status: TeamRegistrationStatus = EMPTY_STATUS;
+    try {
+      status = await buildRegistrationStatus(req, userId, tenantId);
+    } catch (err) {
+      logger.error('[demandes/register-team] status error:', err);
+    }
+
+    return res.status(200).json({ demandes: demandes || [], status });
   }
 
   if (req.method === 'POST') {
@@ -183,29 +419,20 @@ export default withAuthRoute(async function handler(
     // EXCLUS (décision produit : un coach ne compte pas dans le roster
     // minimum requis pour s'inscrire).
     if (tournament.min_players) {
-      const { count: memberCount } = await supabaseAdmin
-        .from('team_members')
-        .select('id', { count: 'exact', head: true })
-        .eq('team_id', teamId)
-        .eq('tenant_id', tenantId)
-        .neq('role', 'coach');
+      const memberCount = await countRegistrationMembers(tenantId, teamId);
 
-      if ((memberCount ?? 0) < tournament.min_players) {
+      if (memberCount < tournament.min_players) {
         return res.status(400).json({
-          error: `L'equipe doit avoir au moins ${tournament.min_players} joueur(s). Actuellement: ${memberCount ?? 0}.`,
+          error: `L'equipe doit avoir au moins ${tournament.min_players} joueur(s). Actuellement: ${memberCount}.`,
         });
       }
     }
 
     // Check max_teams
     if (tournament.max_teams) {
-      const { count: teamCount } = await supabaseAdmin
-        .from('tournament_teams')
-        .select('id', { count: 'exact', head: true })
-        .eq('tournament_id', tournamentId)
-        .eq('tenant_id', tenantId);
+      const teamCount = await countRegisteredTeams(tenantId, tournamentId);
 
-      if ((teamCount ?? 0) >= tournament.max_teams) {
+      if (teamCount >= tournament.max_teams) {
         return res.status(400).json({
           error: `Le tournoi a atteint le nombre maximum d'equipes (${tournament.max_teams}).`,
         });

@@ -172,6 +172,7 @@ import enTeamHealth from './teamHealth';
 import enScouting from './scouting';
 import enProgression from './progression';
 import enRegistrationDeadline from './registrationDeadline';
+import enTeamRegistration from './teamRegistration';
 import enMatchLineup from './matchLineup';
 import enRejoindrePage from './rejoindrePage';
 import enProductionPartner from './productionPartner';
@@ -338,6 +339,7 @@ const enDict = {
   scouting: enScouting,
   progression: enProgression,
   registrationDeadline: enRegistrationDeadline,
+  teamRegistration: enTeamRegistration,
   matchLineup: enMatchLineup,
   rejoindrePage: enRejoindrePage,
   productionPartner: enProductionPartner,

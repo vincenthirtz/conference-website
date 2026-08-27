@@ -169,6 +169,7 @@ import nsTeamHealth from './teamHealth';
 import nsScouting from './scouting';
 import nsProgression from './progression';
 import nsRegistrationDeadline from './registrationDeadline';
+import nsTeamRegistration from './teamRegistration';
 import nsMatchLineup from './matchLineup';
 import nsProductionPartner from './productionPartner';
 
@@ -335,6 +336,7 @@ export const frDict = {
   scouting: nsScouting.fr,
   progression: nsProgression.fr,
   registrationDeadline: nsRegistrationDeadline.fr,
+  teamRegistration: nsTeamRegistration.fr,
   matchLineup: nsMatchLineup.fr,
   productionPartner: nsProductionPartner.fr,
 };
