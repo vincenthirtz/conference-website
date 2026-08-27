@@ -100,7 +100,7 @@ export default ns('teamCreate', {
   resultRegistered: 'Inscrite au tournoi « {name} »',
   resultApplied: 'Candidature déposée pour le tournoi « {name} »',
   resultAppliedDesc:
-    "Tant que tes coéquipières n'ont pas accepté leur invitation, l'inscription n'est pas automatique : le staff valide la candidature. Tu peux suivre l'avancement depuis ton espace équipe.",
+    "Tant que tes coéquipières n'ont pas accepté leur invitation, l'inscription n'est pas automatique : le staff valide la candidature. Tu peux compléter ton roster et suivre l'avancement depuis ton espace équipe.",
   viewTeamPage: 'Voir la page équipe ↗',
   invitedPlayers: 'Joueuses invitées',
   invitedPlayersHint:
@@ -168,9 +168,9 @@ export default ns('teamCreate', {
   errServerError: 'Une erreur inattendue est survenue. Réessaie plus tard.',
   partialWarningTitle: 'Inscription au tournoi à finaliser',
   partialWarningDesc:
-    "Ton équipe a bien été créée, mais l'inscription au tournoi n'a pas pu être finalisée automatiquement (roster incomplet ou tournoi complet).",
+    "Ton équipe a bien été créée, mais aucune candidature n'a pu être enregistrée pour le tournoi — il est probablement complet.",
   partialWarningAction:
-    "Réessaie depuis ton espace capitaine ou contacte le staff pour finaliser l'inscription.",
+    "Vérifie depuis ton espace équipe, ou contacte le staff pour en parler.",
   contactStaffCta: 'Contacter le staff',
   accessEmailTitle: 'Accède à ton espace équipe',
   accessEmailSent:

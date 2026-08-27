@@ -23,7 +23,7 @@
 //   - 400 MANAGER_EMAIL_INVALID
 //   - le manager ne compte pas comme joueuse pour `min_players` : l'équipe
 //     n'est pas INSCRITE (roster confirmé vide) mais une CANDIDATURE est
-//     déposée si le roster déclaré suffit (invitations émises)
+//     déposée — sans exigence d'effectif minimum, le staff arbitre
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -390,7 +390,11 @@ describe('POST /api/teams/create-with-member — mode manager', () => {
     });
   });
 
-  it('ne dépose aucune candidature quand le roster déclaré est lui aussi trop court', async () => {
+  it('dépose une candidature même très loin de min_players', async () => {
+    // Décision produit 2026-08-27 : la candidature n'exige aucun effectif
+    // minimum. Une équipe d'une personne peut se déclarer ; le staff arbitre,
+    // avec les deux décomptes sous les yeux. Le contraire — ce qui existait —
+    // laissait l'équipe invisible du staff pendant toute sa constitution.
     store.tournaments = [
       { id: 'tour-1', name: 'Cup', status: 'published', min_players: 5 },
     ] as any;
@@ -416,10 +420,17 @@ describe('POST /api/teams/create-with-member — mode manager', () => {
 
     expect(res.statusCode).toBe(201);
     expect((res.body as any).tournament).toBeUndefined();
-    expect((res.body as any).tournament_application).toBeUndefined();
-    expect(
-      (store.demandes as any[]).filter((d) => d.type === 'team_registration')
-    ).toHaveLength(0);
+    expect((res.body as any).tournament_application).toMatchObject({
+      tournament_name: 'Cup',
+    });
+    const application = (store.demandes as any[]).find(
+      (d) => d.type === 'team_registration'
+    );
+    expect(application.payload).toMatchObject({
+      confirmed_players: 0,
+      declared_players: 1,
+      min_players: 5,
+    });
   });
 
   it('ne dépose aucune candidature quand le tournoi est complet', async () => {

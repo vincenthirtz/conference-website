@@ -1036,8 +1036,7 @@ export default async function handler(
         // On distingue donc :
         //   - effectif CONFIRMÉ (`insertedMembers`) → inscription directe, la
         //     règle du tournoi est vérifiée sur des membres réels ;
-        //   - effectif DÉCLARÉ (confirmé + invitations émises) → CANDIDATURE
-        //     `demandes` en attente de validation staff, pas une inscription.
+        //   - sinon → CANDIDATURE `demandes` en attente de validation staff.
         //
         // Pourquoi ne PAS inscrire directement sur le déclaré : une invitation
         // n'est pas une joueuse. Un roster entièrement en attente consommerait
@@ -1045,6 +1044,12 @@ export default async function handler(
         // que personne n'ait accepté. La candidature dit l'intention, laisse la
         // décision au staff, et se voit des deux côtés (espace équipe +
         // /admin/demandes).
+        //
+        // La candidature n'exige AUCUN effectif minimum (décision produit
+        // 2026-08-27) : une équipe se compose souvent après s'être manifestée,
+        // et exiger le roster complet dès la création la rendait invisible du
+        // staff jusqu'à la 5ᵉ joueuse. Les deux décomptes voyagent dans le
+        // payload — c'est le staff qui arbitre, en connaissance de cause.
         //
         // `min_players` compte les JOUEUSES (player + substitute) : coachs ET
         // managers exclus, l'encadrement ne remplit pas un roster.
@@ -1072,10 +1077,8 @@ export default async function handler(
         }
 
         const canRegister = !tournamentFull && confirmedPlayers >= minPlayers;
-        // Une candidature n'a de sens que si l'inscription directe est hors de
-        // portée pour cette SEULE raison : un tournoi complet le reste.
-        const canApply =
-          !tournamentFull && !canRegister && declaredPlayers >= minPlayers;
+        // Un tournoi complet reste un non : candidater ne libère pas de place.
+        const canApply = !tournamentFull && !canRegister;
 
         if (canRegister) {
           // Get all stages for the tournament
@@ -1183,6 +1186,7 @@ export default async function handler(
                   auto_from_team_create: true,
                   confirmed_players: confirmedPlayers,
                   declared_players: declaredPlayers,
+                  min_players: minPlayers || null,
                 },
                 tenant_id: tenantId,
               })

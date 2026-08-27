@@ -414,7 +414,11 @@ describe('/api/demandes/register-team', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('POST 400 when min_players not met', async () => {
+  it('POST 201 même sous min_players — le roster ne bloque plus la candidature', async () => {
+    // Décision produit 2026-08-27 : `min_players` gouverne la COMPLÉTUDE (et
+    // donc l'inscription auto directe + la validation staff), pas le droit de
+    // candidater. Refuser jusqu'à la 5ᵉ joueuse rendait l'équipe invisible du
+    // staff pendant toute sa constitution.
     setAuthUser({ id: 'user-1' });
     store.teams = [
       { id: 'team-1', name: 'A', captain_id: 'user-1', is_active: true },
@@ -429,6 +433,7 @@ describe('/api/demandes/register-team', () => {
       },
     ] as any;
     store.tournament_teams = [];
+    store.demandes = [];
     store.team_members = [{ id: 'm1', team_id: 'team-1' }] as any;
     const res = makeRes();
     await registerTeamHandler(
@@ -441,7 +446,12 @@ describe('/api/demandes/register-team', () => {
       ),
       res
     );
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBe(201);
+    // L'écart voyage dans le payload : c'est ce que le staff arbitre.
+    expect((res.body as any).demande.payload).toMatchObject({
+      roster_players: 1,
+      min_players: 5,
+    });
   });
 
   it('POST 201 when min_players met by players only (coach not counted)', async () => {
@@ -481,7 +491,9 @@ describe('/api/demandes/register-team', () => {
     expect(res.statusCode).toBe(201);
   });
 
-  it('POST 400 when only a coach fills the min_players gap (coach excluded)', async () => {
+  it('POST : un coach ne comble pas le trou de min_players (compté hors coach)', async () => {
+    // Le décompte n'a pas changé — seule sa conséquence a changé : il ne
+    // refuse plus, il informe le staff. Un coach n'y entre toujours pas.
     setAuthUser({ id: 'user-1' });
     store.teams = [
       { id: 'team-1', name: 'A', captain_id: 'user-1', is_active: true },
@@ -497,7 +509,7 @@ describe('/api/demandes/register-team', () => {
     ] as any;
     store.tournament_teams = [];
     store.demandes = [];
-    // 2 players + 1 coach ; min_players=3 → échoue (coach exclu → 2 < 3).
+    // 2 players + 1 coach ; min_players=3 → 2 comptés, pas 3.
     store.team_members = [
       { id: 'm1', team_id: 'team-1', role: 'player' },
       { id: 'm2', team_id: 'team-1', role: 'player' },
@@ -514,7 +526,8 @@ describe('/api/demandes/register-team', () => {
       ),
       res
     );
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBe(201);
+    expect((res.body as any).demande.payload.roster_players).toBe(2);
   });
 
   it('POST 400 when tournament max_teams reached', async () => {

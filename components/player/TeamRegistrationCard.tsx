@@ -203,11 +203,6 @@ export default function TeamRegistrationCard({
     switch (code) {
       case 'not_open':
         return t.blockerNotOpen;
-      case 'roster_shortfall':
-        return format(t.blockerRosterShortfall, {
-          min: status.minPlayers ?? 0,
-          count: status.playerCount,
-        });
       case 'tournament_full':
         return format(t.blockerTournamentFull, {
           registered: status.registeredTeams,
@@ -227,6 +222,12 @@ export default function TeamRegistrationCard({
     .filter((b): b is { code: TeamRegistrationBlocker; label: string } =>
       Boolean(b.label)
     );
+
+  // Roster incomplet : AVERTISSEMENT, pas blocage. On le dit avant le bouton —
+  // la personne doit savoir que le staff regardera ce chiffre — mais on ne lui
+  // retire pas le geste : c'est souvent en se déclarant qu'une équipe finit de
+  // se composer.
+  const showRosterWarning = status.rosterShortfall > 0;
 
   const rejectedAt = status.lastDemande?.created_at
     ? new Date(status.lastDemande.created_at).toLocaleDateString(locale, {
@@ -249,6 +250,31 @@ export default function TeamRegistrationCard({
         </p>
       )}
 
+      {showRosterWarning && (
+        <div className="mt-4 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+          <p className="text-sm text-amber-100">
+            {format(t.rosterWarning, {
+              missing: status.rosterShortfall,
+              min: status.minPlayers ?? 0,
+              count: status.playerCount,
+            })}
+          </p>
+          <p className="mt-1 text-xs text-amber-100/80">
+            {t.rosterWarningStillOpen}
+          </p>
+          {!readOnly && (
+            <div className="mt-3">
+              <Link
+                href={rosterAnchor}
+                className="inline-flex items-center rounded-full border border-amber-500/50 bg-amber-500/15 px-4 py-2 text-xs font-semibold text-amber-100 transition hover:bg-amber-500/25"
+              >
+                {t.rosterCta}
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+
       {blockerLines.length > 0 && (
         <div className="mt-4 rounded-xl border border-white/10 bg-black/30 p-4">
           <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-300">
@@ -265,14 +291,6 @@ export default function TeamRegistrationCard({
             ))}
           </ul>
           <div className="mt-3 flex flex-wrap gap-2">
-            {status.blockers.includes('roster_shortfall') && !readOnly && (
-              <Link
-                href={rosterAnchor}
-                className="inline-flex items-center rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
-              >
-                {t.rosterCta}
-              </Link>
-            )}
             <Link
               href="/support"
               className="inline-flex items-center rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-gray-200 transition hover:border-white/40 hover:bg-white/10"

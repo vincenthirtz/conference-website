@@ -28,11 +28,14 @@ export default ns('teamRegistration', {
   notRegisteredDesc:
     "L'inscription tentée à la création de l'équipe n'a pas abouti — c'est le cas quand le roster n'est pas encore complet au moment où l'équipe est créée. Dépose la candidature d'ici, quand tu es prête.",
 
+  rosterWarning:
+    'Il te manque {missing} membres pour atteindre les {min} attendus — vous êtes {count} (hors coach).',
+  rosterWarningStillOpen:
+    'Ça ne t\'empêche pas de déposer ta candidature dès maintenant : le staff la validera quand le roster sera au complet. Beaucoup d\'équipes se composent après s\'être déclarées.',
+
   blockersTitle: 'Ce qu\'il reste à faire',
   blockerNotOpen:
     'Les inscriptions à ce tournoi ne sont pas ouvertes en ce moment.',
-  blockerRosterShortfall:
-    'Il faut au moins {min} membres dans le roster (hors coach) — vous êtes {count}.',
   blockerTournamentFull:
     'Le tournoi est complet : {registered} équipes sur {max}.',
   blockerNoPermission:

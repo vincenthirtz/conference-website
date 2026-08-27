@@ -100,7 +100,7 @@ export default {
   resultRegistered: 'Registered for the tournament « {name} »',
   resultApplied: 'Application sent for the tournament « {name} »',
   resultAppliedDesc:
-    "Until your teammates accept their invitation, registration isn't automatic: the staff reviews the application. You can follow it from your team space.",
+    "Until your teammates accept their invitation, registration isn't automatic: the staff reviews the application. You can complete your roster and follow it from your team space.",
   viewTeamPage: 'View team page ↗',
   invitedPlayers: 'Invited players',
   invitedPlayersHint:
@@ -168,9 +168,9 @@ export default {
   errServerError: 'An unexpected error occurred. Please try again later.',
   partialWarningTitle: 'Tournament registration to finalize',
   partialWarningDesc:
-    'Your team was created, but the tournament registration could not be completed automatically (incomplete roster or full tournament).',
+    'Your team was created, but no application could be recorded for the tournament — it is most likely full.',
   partialWarningAction:
-    'Try again from your captain space or contact the staff to finalize the registration.',
+    'Check from your team space, or contact the staff about it.',
   contactStaffCta: 'Contact the staff',
   accessEmailTitle: 'Access your team space',
   accessEmailSent:

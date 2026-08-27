@@ -115,16 +115,30 @@ describe('GET /api/demandes/register-team → status', () => {
     expect(status.canSubmit).toBe(true);
   });
 
-  it('nomme le blocage « roster incomplet » avec le décompte réel', async () => {
+  it('un roster incomplet AVERTIT mais ne bloque pas la candidature', async () => {
+    // Décision produit 2026-08-27 : `min_players` reste la règle de complétude
+    // (inscription auto directe, relances, validation staff) mais n'interdit
+    // plus de se déclarer. La carte affiche l'écart et garde le bouton.
     seedBase({ minPlayers: 5 });
     seedRoster(2);
 
     const status = await getStatus();
 
-    expect(status.blockers).toContain('roster_shortfall');
-    expect(status.canSubmit).toBe(false);
+    expect(status.blockers).toEqual([]);
+    expect(status.canSubmit).toBe(true);
+    expect(status.rosterShortfall).toBe(3);
     expect(status.minPlayers).toBe(5);
     expect(status.playerCount).toBe(2);
+  });
+
+  it('rosterShortfall vaut 0 quand le roster est complet', async () => {
+    seedBase({ minPlayers: 5 });
+    seedRoster(6);
+
+    const status = await getStatus();
+
+    expect(status.rosterShortfall).toBe(0);
+    expect(status.canSubmit).toBe(true);
   });
 
   it('signale le tournoi complet', async () => {
@@ -245,9 +259,36 @@ describe('GET /api/demandes/register-team → status', () => {
     expect(res.statusCode).toBe(201);
   });
 
-  it('canSubmit=false sur roster incomplet est tenu par le POST', async () => {
+  it('canSubmit=true sur roster incomplet est AUSSI tenu par le POST', async () => {
+    // L'invariant « GET et POST tranchent pareil » reste le point sensible :
+    // c'est lui qui empêche la carte d'annoncer un bouton que le serveur
+    // refuse. Il vaut donc dans les deux sens, y compris depuis l'assouplissement.
     seedBase({ minPlayers: 5 });
     seedRoster(2);
+    const status = await getStatus();
+    expect(status.canSubmit).toBe(true);
+    expect(status.rosterShortfall).toBe(3);
+
+    const res = makeRes();
+    await registerTeamHandler(
+      makeAuthedReq({
+        method: 'POST',
+        body: {
+          teamId: TEAM_ID,
+          tournamentId: DEFAULT_CURRENT_TOURNAMENT_ID,
+        },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(201);
+  });
+
+  it('un tournoi complet, lui, bloque toujours (candidater ne libère pas de place)', async () => {
+    seedBase({ maxTeams: 1 });
+    store.tournament_teams = [
+      { id: 'r1', tournament_id: DEFAULT_CURRENT_TOURNAMENT_ID, team_id: 'x' },
+    ] as any;
     const status = await getStatus();
     expect(status.canSubmit).toBe(false);
 

@@ -24,10 +24,13 @@ export default {
   notRegisteredDesc:
     "The registration attempted when the team was created didn't go through — that happens when the roster isn't complete yet at creation time. Send the application from here whenever you're ready.",
 
+  rosterWarning:
+    'You are {missing} members short of the {min} expected — you are {count} (coaches excluded).',
+  rosterWarningStillOpen:
+    "That doesn't stop you from applying right now: the staff will approve it once the roster is complete. Plenty of teams fill up after declaring themselves.",
+
   blockersTitle: "What's left to do",
   blockerNotOpen: 'Registrations for this tournament are currently closed.',
-  blockerRosterShortfall:
-    'The roster needs at least {min} members (coaches excluded) — you are {count}.',
   blockerTournamentFull: 'The tournament is full: {registered} teams of {max}.',
   blockerNoPermission:
     "Your team role doesn't allow registering the team for a tournament. Ask your captain.",

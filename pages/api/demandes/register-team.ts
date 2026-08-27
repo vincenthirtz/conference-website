@@ -48,8 +48,6 @@ export type TeamRegistrationBlocker =
   | 'already_registered'
   /** Une candidature attend déjà la validation du staff. */
   | 'pending_request'
-  /** Roster en dessous du `min_players` du tournoi. */
-  | 'roster_shortfall'
   /** Le tournoi a atteint `max_teams`. */
   | 'tournament_full'
   /** Le rôle de l'appelant ne couvre pas `register_tournaments`. */
@@ -80,6 +78,18 @@ export type TeamRegistrationStatus = {
   lastDemande: { id: string; status: string; created_at: string } | null;
   canSubmit: boolean;
   blockers: TeamRegistrationBlocker[];
+  /**
+   * Membres manquants pour atteindre `min_players`, 0 si le roster est complet.
+   *
+   * AVERTISSEMENT, PAS BLOCAGE (décision produit 2026-08-27) : un roster
+   * incomplet n'empêche plus de candidater. Une équipe se compose souvent
+   * APRÈS s'être manifestée, et refuser la candidature jusqu'à la 5ᵉ joueuse
+   * revenait à rendre l'inscription invisible du staff pendant tout ce temps —
+   * exactement ce qui a été observé sur l'édition 2026. `min_players` reste la
+   * règle de COMPLÉTUDE : elle gouverne l'inscription automatique directe, les
+   * relances Discord, la santé d'équipe et la décision de validation du staff.
+   */
+  rosterShortfall: number;
   minPlayers: number | null;
   /** Effectif compté comme le fait le POST — voir `countRegistrationMembers`. */
   playerCount: number;
@@ -97,6 +107,7 @@ const EMPTY_STATUS: TeamRegistrationStatus = {
   lastDemande: null,
   canSubmit: false,
   blockers: [],
+  rosterShortfall: 0,
   minPlayers: null,
   playerCount: 0,
   maxTeams: null,
@@ -231,11 +242,15 @@ async function buildRegistrationStatus(
   if (tournament.status !== 'published') blockers.push('not_open');
   if (existingReg) blockers.push('already_registered');
   if (pending) blockers.push('pending_request');
-  if (minPlayers && playerCount < minPlayers) blockers.push('roster_shortfall');
   if (maxTeams && registeredTeams >= maxTeams) blockers.push('tournament_full');
   if (!accessHasPermission(access, 'register_tournaments')) {
     blockers.push('no_permission');
   }
+
+  // Volontairement HORS `blockers` : cf. le champ `rosterShortfall`.
+  const rosterShortfall = minPlayers
+    ? Math.max(0, minPlayers - playerCount)
+    : 0;
 
   return {
     team: teamRef,
@@ -245,6 +260,7 @@ async function buildRegistrationStatus(
     lastDemande: lastHandled,
     canSubmit: blockers.length === 0,
     blockers,
+    rosterShortfall,
     minPlayers,
     playerCount,
     maxTeams,
@@ -415,18 +431,13 @@ export default withAuthRoute(async function handler(
       });
     }
 
-    // Check min_players — nombre de JOUEURS (player + substitute), coachs
-    // EXCLUS (décision produit : un coach ne compte pas dans le roster
-    // minimum requis pour s'inscrire).
-    if (tournament.min_players) {
-      const memberCount = await countRegistrationMembers(tenantId, teamId);
-
-      if (memberCount < tournament.min_players) {
-        return res.status(400).json({
-          error: `L'equipe doit avoir au moins ${tournament.min_players} joueur(s). Actuellement: ${memberCount}.`,
-        });
-      }
-    }
+    // `min_players` NE BLOQUE PLUS la candidature (décision produit
+    // 2026-08-27). Une équipe se compose souvent après s'être manifestée, et
+    // refuser sa candidature jusqu'à la 5ᵉ joueuse la rendait invisible du
+    // staff pendant toute cette période — le cas observé sur l'édition 2026.
+    // On COMPTE quand même, pour le poser dans le payload : le staff voit
+    // l'écart au moment de valider, et c'est là que la règle s'applique.
+    const memberCount = await countRegistrationMembers(tenantId, teamId);
 
     // Check max_teams
     if (tournament.max_teams) {
@@ -449,6 +460,11 @@ export default withAuthRoute(async function handler(
         user.user_metadata?.full_name ||
         null,
       field_values: answersResult.values,
+      // Écart au roster requis, figé à la soumission : c'est ce que le staff
+      // arbitre. Un roster complet donne simplement `roster_players >=
+      // min_players`.
+      roster_players: memberCount,
+      min_players: Number(tournament.min_players) || null,
     };
 
     const { data: newDemande, error: insertErr } = await supabaseAdmin
