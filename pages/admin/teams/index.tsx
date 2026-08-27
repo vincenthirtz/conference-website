@@ -1393,6 +1393,7 @@ export const getServerSideProps = withStaffPage(
       .from('teams')
       .select('*', { count: 'exact' })
       .eq('tenant_id', tenantId)
+      .is('deleted_at', null) // corbeille : cf. /api/admin/teams (même filtre)
       .order('created_at', { ascending: false })
       .range(offset, offset + LIMIT - 1);
 

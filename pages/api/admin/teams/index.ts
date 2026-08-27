@@ -52,7 +52,7 @@ async function handleGet(
   res: NextApiResponse<TeamsApiResponse>,
   ctx: AuthenticatedStaffContext
 ) {
-  const { isActive, includeTotal, tournamentId } = req.query;
+  const { isActive, includeTotal, tournamentId, includeDeleted } = req.query;
 
   const { limit: limitNum, offset: offsetNum } = parsePagination(req, {
     limit: 50,
@@ -71,6 +71,17 @@ async function handleGet(
     .eq('tenant_id', ctx.tenantId)
     .order('created_at', { ascending: false })
     .range(offsetNum, offsetNum + limitNum - 1);
+
+  // Les équipes supprimées (soft-delete `deleted_at`) sortent du listing : elles
+  // vivent dans la corbeille (/admin/recycle-bin), qui est la seule vue à les
+  // lister et le seul endroit d'où on les restaure. Sans ce filtre, supprimer
+  // une équipe ne faisait que la repasser `is_active=false` à l'écran — elle
+  // restait dans la liste, ce qui se lit comme "la suppression ne marche pas".
+  // `?includeDeleted=1` reste possible pour un diagnostic ponctuel.
+  const withDeleted = includeDeleted === '1' || includeDeleted === 'true';
+  if (!withDeleted) {
+    query = query.is('deleted_at', null);
+  }
 
   if (typeof activeFilter === 'boolean') {
     query = query.eq('is_active', activeFilter);

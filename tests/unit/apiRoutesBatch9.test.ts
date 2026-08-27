@@ -115,6 +115,60 @@ describe('GET /api/admin/teams', () => {
     expect((res.body as any).teams).toHaveLength(2);
   });
 
+  it('excludes soft-deleted teams (deleted_at) — they live in the recycle bin', async () => {
+    store.teams = [
+      { id: 't1', name: 'Alpha', is_active: true, created_at: '2026' },
+      {
+        id: 't2',
+        name: 'Beta',
+        is_active: false,
+        deleted_at: '2026-08-27T00:00:00.000Z',
+        created_at: '2026',
+      },
+    ] as any;
+    const res = makeRes();
+    await adminTeamsHandler(makeReq({ method: 'GET' }), res);
+    expect((res.body as any).teams.map((t: any) => t.id)).toEqual(['t1']);
+  });
+
+  it('?isActive=false still hides soft-deleted teams (deactivated != deleted)', async () => {
+    store.teams = [
+      { id: 't1', name: 'Alpha', is_active: false, created_at: '2026' },
+      {
+        id: 't2',
+        name: 'Beta',
+        is_active: false,
+        deleted_at: '2026-08-27T00:00:00.000Z',
+        created_at: '2026',
+      },
+    ] as any;
+    const res = makeRes();
+    await adminTeamsHandler(
+      makeReq({ method: 'GET', query: { isActive: 'false' } }),
+      res
+    );
+    expect((res.body as any).teams.map((t: any) => t.id)).toEqual(['t1']);
+  });
+
+  it('?includeDeleted=1 opts back into soft-deleted teams', async () => {
+    store.teams = [
+      { id: 't1', name: 'Alpha', is_active: true, created_at: '2026' },
+      {
+        id: 't2',
+        name: 'Beta',
+        is_active: false,
+        deleted_at: '2026-08-27T00:00:00.000Z',
+        created_at: '2026',
+      },
+    ] as any;
+    const res = makeRes();
+    await adminTeamsHandler(
+      makeReq({ method: 'GET', query: { includeDeleted: '1' } }),
+      res
+    );
+    expect((res.body as any).teams).toHaveLength(2);
+  });
+
   it('?isActive=false filters inactive teams', async () => {
     store.teams = [
       { id: 't1', name: 'Alpha', is_active: true, created_at: '2026' },

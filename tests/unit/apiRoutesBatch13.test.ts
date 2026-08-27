@@ -509,7 +509,10 @@ describe('POST /api/admin/teams/bulk', () => {
     expect((store.teams[0] as any).deleted_at).toBeNull();
   });
 
-  it('200 deactivate is symmetric to delete', async () => {
+  it('200 deactivate flags is_active=false WITHOUT soft-deleting', async () => {
+    // 'deactivate' != 'delete' : une équipe désactivée reste dans le listing
+    // admin (qui filtre `deleted_at IS NULL`), seule 'delete' l'envoie en
+    // corbeille.
     store.teams = [{ id: 't1', is_active: true }] as any;
     const res = makeRes();
     await bulkTeamsHandler(
@@ -521,6 +524,7 @@ describe('POST /api/admin/teams/bulk', () => {
     );
     expect(res.statusCode).toBe(200);
     expect((store.teams[0] as any).is_active).toBe(false);
+    expect((store.teams[0] as any).deleted_at ?? null).toBeNull();
   });
 
   it('400 assign without tournamentId', async () => {

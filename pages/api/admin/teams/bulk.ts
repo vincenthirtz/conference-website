@@ -97,9 +97,12 @@ async function handler(
       }
 
       case 'deactivate': {
+        // Désactiver n'est PAS supprimer : on ne touche pas à `deleted_at`,
+        // sinon l'équipe part en corbeille et disparaît du listing admin
+        // (qui filtre `deleted_at IS NULL`) — indistinguable de 'delete'.
         const { data, error } = await supabaseAdmin
           .from('teams')
-          .update({ is_active: false, deleted_at: nowIso, updated_at: nowIso })
+          .update({ is_active: false, updated_at: nowIso })
           .in('id', teamIds)
           .eq('tenant_id', ctx.tenantId)
           .select('id');
