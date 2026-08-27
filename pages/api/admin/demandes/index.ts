@@ -596,6 +596,53 @@ async function handlePost(
           if (regErr) {
             logger.error('auto-register team_registration error:', regErr);
           } else {
+            // Seeding dans les phases. `tournament_teams` dit « inscrite »,
+            // `stage_teams` dit « dans quelles phases » — approuver sans la
+            // seconde laissait l'équipe inscrite mais absente du calendrier et
+            // du bracket, et personne ne s'en apercevait avant le tirage.
+            // Best-effort : l'inscription reste valide si ça échoue.
+            try {
+              const { data: stages } = await supabaseAdmin
+                .from('tournament_stages')
+                .select('id')
+                .eq('tenant_id', ctx.tenantId)
+                .eq('tournament_id', d.tournament_id);
+
+              const stageIds = (stages || []).map((st) => st.id);
+              if (stageIds.length > 0) {
+                const { data: alreadySeeded } = await supabaseAdmin
+                  .from('stage_teams')
+                  .select('stage_id')
+                  .eq('tenant_id', ctx.tenantId)
+                  .eq('team_id', d.team_id)
+                  .in('stage_id', stageIds);
+
+                const seededIds = new Set(
+                  (alreadySeeded || []).map((r) => r.stage_id)
+                );
+                const missing = stageIds.filter((id) => !seededIds.has(id));
+                if (missing.length > 0) {
+                  const { error: seedErr } = await supabaseAdmin
+                    .from('stage_teams')
+                    .insert(
+                      missing.map((stageId) => ({
+                        tenant_id: ctx.tenantId,
+                        stage_id: stageId,
+                        team_id: d.team_id,
+                      }))
+                    );
+                  if (seedErr) {
+                    logger.error(
+                      '[admin/demandes] stage_teams seed error:',
+                      seedErr
+                    );
+                  }
+                }
+              }
+            } catch (seedCrash) {
+              logger.error('[admin/demandes] stage_teams seed crash:', seedCrash);
+            }
+
             // Auto news: team approved for tournament
             try {
               const teamName = (d.payload as any)?.team_name || 'Équipe';

@@ -13,6 +13,13 @@ export default adminNs('adminTeamEdit', {
   toastTeamUpdated: 'Équipe mise à jour',
   errRegister: "Échec de l'inscription",
   confirmUnregister: 'Désinscrire cette équipe de ce tournoi ?',
+  toastRegistered: 'Équipe inscrite au tournoi',
+  toastUnregistered: 'Équipe désinscrite du tournoi',
+  confirmIncompleteRoster: 'Roster incomplet : {count} joueuse(s) sur {min}',
+  confirmIncompleteRosterDesc:
+    "L'équipe n'atteint pas l'effectif attendu par le tournoi. Tu peux l'inscrire quand même — l'écart est consigné dans les journaux staff.",
+  rosterGapWarning:
+    'Cette équipe compte {count} joueuse(s) pour {min} attendues (coachs et managers exclus).',
   errEmailOrUserId: 'Email ou User ID requis',
   errBattleTagRequired: 'BattleTag est obligatoire',
   errAddMember: "Impossible d'ajouter le membre",

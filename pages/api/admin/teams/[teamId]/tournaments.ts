@@ -12,11 +12,13 @@ import { logger } from '../../../../../utils/logger';
  * Retrieve tournaments a team is registered for and available tournaments
  *
  * POST /api/admin/teams/[teamId]/tournaments
- * Register a team to a tournament (creates entry in stage_teams for all stages or first stage)
+ * Register a team to a tournament. Écrit les DEUX tables : `tournament_teams`
+ * (inscription canonique, lue partout ailleurs) et `stage_teams` (seeding dans
+ * les phases). `min_players` n'y fait pas obstacle — le staff arbitre.
  * Body: { tournamentId: string, stageId?: string }
  *
  * DELETE /api/admin/teams/[teamId]/tournaments
- * Unregister a team from a tournament (removes from all stages)
+ * Unregister a team from a tournament (retire des deux tables)
  * Body: { tournamentId: string }
  */
 
@@ -79,10 +81,16 @@ async function handleGet(
 
   try {
     // Get all published tournaments
+    // `min_players` voyage avec : depuis qu'il n'interdit plus l'inscription
+    // (cf. handlePost), c'est l'ÉCRAN qui doit prévenir le staff qu'il inscrit
+    // une équipe incomplète — sinon l'assouplissement se transforme en
+    // inscription accidentelle.
     const { data: allTournaments, error: tournamentsError } =
       await supabaseAdmin
         .from('tournaments')
-        .select('id, name, slug, game, status, start_date, end_date, max_teams')
+        .select(
+          'id, name, slug, game, status, start_date, end_date, max_teams, min_players'
+        )
         .eq('tenant_id', ctx.tenantId)
         .eq('status', 'published')
         .order('start_date', { ascending: false });
@@ -90,6 +98,18 @@ async function handleGet(
     if (tournamentsError) {
       throw tournamentsError;
     }
+
+    // Effectif JOUANT de l'équipe (coachs et managers exclus) — même décompte
+    // que celui qu'appliquait la garde `min_players`, pour que l'avertissement
+    // affiché soit exactement le chiffre qui compte.
+    const { data: memberRows } = await supabaseAdmin
+      .from('team_members')
+      .select('role')
+      .eq('tenant_id', ctx.tenantId)
+      .eq('team_id', teamId);
+    const playerCount = countPlayingMembers(
+      (memberRows || []) as { role?: string | null }[]
+    );
 
     // Get tournaments the team is registered for (via stage_teams)
     const { data: registrations, error: registrationsError } =
@@ -156,6 +176,7 @@ async function handleGet(
 
     return res.status(200).json({
       teamId,
+      playerCount,
       registered,
       available,
     });
@@ -201,32 +222,27 @@ async function handlePost(
         .json({ error: 'Tournament must be published to register a team' });
     }
 
-    // Check if team has enough players (min_players validation)
-    if (tournament.min_players) {
-      // `min_players` porte sur les JOUEUSES : l'encadrement (coach /
-      // manager) ne consomme pas de place de roster, il n'en tient donc pas
-      // lieu non plus pour atteindre le minimum.
-      const { data: playingRows, error: countPlayersError } =
-        await supabaseAdmin
-          .from('team_members')
-          .select('role')
-          .eq('tenant_id', ctx.tenantId)
-          .eq('team_id', teamId);
+    // `min_players` N'INTERDIT PLUS au staff d'inscrire (décision produit
+    // 2026-08-27, même arbitrage que `/api/demandes/register-team`). Un refus
+    // automatique ici était le moins défendable des trois : le staff est
+    // précisément la personne qui décide de faire l'exception, et le 400 la
+    // laissait sans recours devant un formulaire qui « ne faisait rien ».
+    //
+    // On compte quand même, pour le journal : l'écart au moment de
+    // l'inscription se relit après coup dans `staff_logs`.
+    const { data: playingRows, error: countPlayersError } = await supabaseAdmin
+      .from('team_members')
+      .select('role')
+      .eq('tenant_id', ctx.tenantId)
+      .eq('team_id', teamId);
 
-      if (countPlayersError) {
-        throw countPlayersError;
-      }
-
-      const playerCount = countPlayingMembers(
-        (playingRows || []) as { role?: string | null }[]
-      );
-
-      if ((playerCount || 0) < tournament.min_players) {
-        return res.status(400).json({
-          error: `L'équipe doit avoir au moins ${tournament.min_players} joueur(s) pour s'inscrire. Actuellement : ${playerCount || 0} membre(s).`,
-        });
-      }
+    if (countPlayersError) {
+      throw countPlayersError;
     }
+
+    const playerCount = countPlayingMembers(
+      (playingRows || []) as { role?: string | null }[]
+    );
 
     // Check if max_teams limit is reached
     if (tournament.max_teams) {
@@ -323,11 +339,52 @@ async function handlePost(
       throw insertError;
     }
 
-    // Log staff action
-    const staffContext = (req as any).staffContext;
-    if (staffContext?.staff?.id) {
+    // `tournament_teams` est la table d'inscription CANONIQUE : c'est elle que
+    // lisent la page publique du tournoi, l'espace équipe, la santé d'équipe et
+    // le plafond `max_teams` de `/api/demandes/register-team`. `stage_teams`
+    // dit seulement « dans quelles phases l'équipe est seedée ».
+    //
+    // Cet écran n'écrivait QUE `stage_teams` : l'inscription réussissait,
+    // n'échouait nulle part, et restait invisible partout où elle compte —
+    // « le formulaire ne le fait pas en base ». Les deux tables restent
+    // volontairement distinctes (cf. docs/AUDIT_FLOW_INSCRIPTION.md), mais ce
+    // chemin doit renseigner les deux.
+    const { error: ttError } = await supabaseAdmin
+      .from('tournament_teams')
+      .upsert(
+        {
+          tenant_id: ctx.tenantId,
+          tournament_id: tournamentId,
+          team_id: teamId,
+          status: 'registered',
+        },
+        { onConflict: 'tournament_id,team_id' }
+      );
+
+    if (ttError) {
+      // On ne rollback pas `stage_teams` : l'équipe est seedée, c'est déjà la
+      // moitié utile. Mais on le DIT — un succès silencieux ici reproduirait
+      // exactement le bug qu'on corrige.
+      logger.error(
+        '[admin/teams/tournaments] tournament_teams upsert failed',
+        { teamId, tournamentId, error: ttError.message }
+      );
+      return res.status(500).json({
+        error:
+          "L'équipe a été seedée dans les phases mais son inscription n'a pas pu être enregistrée. Réessaie ou préviens un dev.",
+      });
+    }
+
+    // Journal staff.
+    //
+    // Lisait une propriété `staffContext` posée sur `req`, qui n'existe pas :
+    // `withStaffRoute` passe le contexte en 3ᵉ ARGUMENT (`ctx`) et le mémoïse
+    // sous un Symbol. La condition était donc toujours fausse — ce chemin n'a
+    // jamais écrit une seule ligne de journal, ni à l'inscription ni à la
+    // désinscription.
+    if (ctx.staff?.id) {
       await logStaffAction({
-        staff_id: staffContext.staff.id,
+        staff_id: ctx.staff.id,
         action: 'update_team',
         entity_type: 'team',
         entity_id: teamId,
@@ -337,6 +394,10 @@ async function handlePost(
           team_name: teamName,
           tournament_name: tournament.name,
           stage_ids: targetStageIds,
+          // Trace de l'écart au roster requis : depuis que `min_players` ne
+          // refuse plus, c'est ici qu'on relit ce que le staff a arbitré.
+          roster_players: playerCount,
+          min_players: tournament.min_players ?? null,
         },
       });
     }
@@ -438,11 +499,30 @@ async function handleDelete(
       throw deleteError;
     }
 
-    // Log staff action
-    const staffContext = (req as any).staffContext;
-    if (staffContext?.staff?.id) {
+    // Pendant du POST : sans ça, désinscrire retirait l'équipe des phases mais
+    // la laissait « inscrite » sur la page publique du tournoi.
+    const { error: ttDeleteError } = await supabaseAdmin
+      .from('tournament_teams')
+      .delete()
+      .eq('tenant_id', ctx.tenantId)
+      .eq('team_id', teamId)
+      .eq('tournament_id', tournamentId);
+
+    if (ttDeleteError) {
+      logger.error(
+        '[admin/teams/tournaments] tournament_teams delete failed',
+        { teamId, tournamentId, error: ttDeleteError.message }
+      );
+      return res.status(500).json({
+        error:
+          "L'équipe a été retirée des phases mais son inscription n'a pas pu être supprimée. Réessaie ou préviens un dev.",
+      });
+    }
+
+    // Journal staff — même correction que dans handlePost.
+    if (ctx.staff?.id) {
       await logStaffAction({
-        staff_id: staffContext.staff.id,
+        staff_id: ctx.staff.id,
         action: 'update_team',
         entity_type: 'team',
         entity_id: teamId,

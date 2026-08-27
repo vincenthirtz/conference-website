@@ -504,4 +504,126 @@ describe('/api/admin/teams/[teamId]/tournaments', () => {
     );
     expect(res.statusCode).toBe(405);
   });
+
+  /* ---------------------------------------------------------------------
+   * Inscription : les DEUX tables, et pas de refus sur min_players.
+   *
+   * `tournament_teams` est l'inscription canonique (page publique du tournoi,
+   * espace équipe, santé d'équipe) ; `stage_teams` n'est que le seeding dans
+   * les phases. Cet écran n'écrivait que la seconde : l'inscription réussissait
+   * sans erreur et restait invisible partout où elle compte.
+   * ------------------------------------------------------------------- */
+
+  function seedRegistrable({ minPlayers = 5, players = 2 } = {}) {
+    store.teams = [{ id: TEAM_ID, name: 'Alpha' }] as any;
+    store.tournaments = [
+      {
+        id: TID,
+        name: 'Cup',
+        status: 'published',
+        max_teams: null,
+        min_players: minPlayers,
+      },
+    ] as any;
+    store.tournament_stages = [{ id: 's1', tournament_id: TID }] as any;
+    store.stage_teams = [];
+    store.tournament_teams = [];
+    store.team_members = Array.from({ length: players }, (_, i) => ({
+      id: `tm-${i}`,
+      team_id: TEAM_ID,
+      user_id: `u${i}`,
+      role: 'player',
+    })) as any;
+  }
+
+  it('POST 201 écrit tournament_teams ET stage_teams', async () => {
+    seedRegistrable({ minPlayers: 1, players: 3 });
+    const res = makeRes();
+    await teamTournamentsHandler(
+      makeReq({
+        method: 'POST',
+        query: { teamId: TEAM_ID },
+        body: { tournamentId: TID },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(201);
+    expect(store.stage_teams).toHaveLength(1);
+    const registration = (store.tournament_teams as any[]).find(
+      (r) => r.team_id === TEAM_ID && r.tournament_id === TID
+    );
+    expect(registration).toMatchObject({ status: 'registered' });
+  });
+
+  it('POST 201 même sous min_players — le staff arbitre', async () => {
+    // 2 joueuses pour 5 requises : c'était un 400 sec, devant un formulaire
+    // dont le message d'erreur s'affichait hors écran.
+    seedRegistrable({ minPlayers: 5, players: 2 });
+    const res = makeRes();
+    await teamTournamentsHandler(
+      makeReq({
+        method: 'POST',
+        query: { teamId: TEAM_ID },
+        body: { tournamentId: TID },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(201);
+    expect(store.tournament_teams).toHaveLength(1);
+    // L'écart est consigné pour relecture dans les journaux staff.
+    expect(logStaffActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          roster_players: 2,
+          min_players: 5,
+        }),
+      })
+    );
+  });
+
+  it('GET expose l’effectif jouant et min_players (avertissement côté écran)', async () => {
+    seedRegistrable({ minPlayers: 5, players: 2 });
+    // Un manager ne compte pas comme joueuse.
+    (store.team_members as any[]).push({
+      id: 'tm-mgr',
+      team_id: TEAM_ID,
+      user_id: 'mgr',
+      role: 'manager',
+    });
+
+    const res = makeRes();
+    await teamTournamentsHandler(
+      makeReq({ method: 'GET', query: { teamId: TEAM_ID } }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    expect(body.playerCount).toBe(2);
+    expect(body.available[0].min_players).toBe(5);
+  });
+
+  it('DELETE retire des deux tables', async () => {
+    seedRegistrable({ minPlayers: 1, players: 3 });
+    store.stage_teams = [{ stage_id: 's1', team_id: TEAM_ID }] as any;
+    store.tournament_teams = [
+      { id: 'tt-1', tournament_id: TID, team_id: TEAM_ID, status: 'registered' },
+    ] as any;
+
+    const res = makeRes();
+    await teamTournamentsHandler(
+      makeReq({
+        method: 'DELETE',
+        query: { teamId: TEAM_ID },
+        body: { tournamentId: TID },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(store.stage_teams).toHaveLength(0);
+    expect(store.tournament_teams).toHaveLength(0);
+  });
 });

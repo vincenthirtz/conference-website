@@ -13,6 +13,13 @@ export default {
   errUnexpected: 'Unexpected error',
   toastTeamUpdated: 'Team updated',
   errRegister: 'Registration failed',
+  toastRegistered: 'Team registered for the tournament',
+  toastUnregistered: 'Team unregistered from the tournament',
+  confirmIncompleteRoster: 'Incomplete roster: {count} player(s) of {min}',
+  confirmIncompleteRosterDesc:
+    "The team is below the roster size the tournament expects. You can register it anyway — the gap is recorded in the staff logs.",
+  rosterGapWarning:
+    'This team has {count} player(s) for {min} expected (coaches and managers excluded).',
   confirmUnregister: 'Unregister this team from this tournament?',
   errEmailOrUserId: 'Email or User ID required',
   errBattleTagRequired: 'BattleTag is required',

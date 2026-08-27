@@ -43,6 +43,7 @@ type TournamentRow = {
   start_date: string | null;
   end_date: string | null;
   max_teams?: number | null;
+  min_players?: number | null;
 };
 
 type TournamentRegistration = TournamentRow & {
@@ -92,6 +93,16 @@ function AdminEditTeamPage({
   const [availableTournaments, setAvailableTournaments] = useState<
     TournamentRow[]
   >([]);
+  /** Effectif JOUANT (coachs/managers exclus), renvoyé par le GET. */
+  const [playingCount, setPlayingCount] = useState(0);
+  /**
+   * Erreur de la section Tournois, rendue DANS la section.
+   *
+   * `errorMsg` s'affiche en tête d'une page de 1400 lignes : depuis le bloc
+   * Tournois, tout en bas, un refus serveur était strictement invisible — d'où
+   * « le formulaire ne fait rien ».
+   */
+  const [tournamentError, setTournamentError] = useState<string | null>(null);
   const [tournamentsLoading, setTournamentsLoading] = useState(false);
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>('');
 
@@ -214,6 +225,7 @@ function AdminEditTeamPage({
       if (res.ok && !json.error) {
         setRegisteredTournaments(json.registered || []);
         setAvailableTournaments(json.available || []);
+        setPlayingCount(Number(json.playerCount) || 0);
       }
     } catch {
       // Silently fail
@@ -279,6 +291,26 @@ function AdminEditTeamPage({
 
   async function handleRegisterToTournament() {
     if (!teamId || !selectedTournamentId) return;
+    setTournamentError(null);
+
+    // `min_players` ne refuse plus côté serveur : c'est ici que le staff est
+    // prévenu qu'il inscrit une équipe incomplète, et qu'il le confirme. Sans
+    // cette étape, l'assouplissement deviendrait une inscription accidentelle.
+    const target = availableTournaments.find(
+      (tourn) => tourn.id === selectedTournamentId
+    );
+    const minPlayers = Number(target?.min_players) || 0;
+    if (minPlayers > 0 && playingCount < minPlayers) {
+      const ok = await confirm({
+        title: format(t.confirmIncompleteRoster, {
+          count: playingCount,
+          min: minPlayers,
+        }),
+        subtitle: t.confirmIncompleteRosterDesc,
+      });
+      if (!ok) return;
+    }
+
     setTournamentsLoading(true);
 
     try {
@@ -297,8 +329,12 @@ function AdminEditTeamPage({
 
       setSelectedTournamentId('');
       await fetchTournaments();
+      addToast(t.toastRegistered, 'success');
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
+      // Dans la section ET en toast : le bandeau de tête reste hors de vue.
+      const msg = (err as Error)?.message ?? t.errUnexpected;
+      setTournamentError(msg);
+      addToast(msg, 'error');
     } finally {
       setTournamentsLoading(false);
     }
@@ -313,21 +349,40 @@ function AdminEditTeamPage({
     if (!ok) return;
 
     setTournamentsLoading(true);
+    setTournamentError(null);
     try {
       const res = await adminFetch(`/api/admin/teams/${teamId}/tournaments`, {
         method: 'DELETE',
         body: JSON.stringify({ tournamentId }),
       });
+      const json = await res.json().catch(() => ({}));
 
-      if (res.ok) {
-        await fetchTournaments();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || t.errUnexpected);
       }
-    } catch {
-      // Silently fail
+
+      await fetchTournaments();
+      addToast(t.toastUnregistered, 'success');
+    } catch (err: unknown) {
+      // Auparavant avalé en silence : une désinscription qui échouait laissait
+      // la ligne à l'écran et personne ne savait pourquoi.
+      const msg = (err as Error)?.message ?? t.errUnexpected;
+      setTournamentError(msg);
+      addToast(msg, 'error');
     } finally {
       setTournamentsLoading(false);
     }
   }
+
+  // Écart au roster requis du tournoi SÉLECTIONNÉ dans le menu déroulant.
+  // Sert à l'avertissement sous le sélecteur ET à la confirmation au clic.
+  const selectedMinPlayers =
+    Number(
+      availableTournaments.find((tourn) => tourn.id === selectedTournamentId)
+        ?.min_players
+    ) || 0;
+  const selectedRosterGap =
+    selectedMinPlayers > 0 ? Math.max(0, selectedMinPlayers - playingCount) : 0;
 
   // Member handlers
   const openAddMemberModal = useCallback(() => {
@@ -1217,6 +1272,15 @@ function AdminEditTeamPage({
                     </div>
                   ) : (
                     <div className="space-y-4">
+                      {tournamentError && (
+                        <div
+                          role="alert"
+                          className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm text-red-100"
+                        >
+                          {tournamentError}
+                        </div>
+                      )}
+
                       {/* Registered tournaments */}
                       <div>
                         <h3 className="text-sm font-semibold text-neutral-400 mb-2">
@@ -1288,6 +1352,16 @@ function AdminEditTeamPage({
                               {t.register}
                             </button>
                           </div>
+                          {/* Avertissement, pas blocage : le bouton reste
+                              actif, la confirmation se fait au clic. */}
+                          {selectedRosterGap > 0 && (
+                            <p className="mt-2 text-xs text-amber-300">
+                              {format(t.rosterGapWarning, {
+                                count: playingCount,
+                                min: selectedMinPlayers,
+                              })}
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>
