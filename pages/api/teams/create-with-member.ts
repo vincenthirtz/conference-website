@@ -142,6 +142,15 @@ type ApiResponse =
       members?: MemberResult[];
       invitedMembers?: InvitedMemberResult[];
       tournament?: { tournament_name: string; stages_count: number };
+      /**
+       * Candidature en attente de validation staff, déposée quand le roster
+       * DÉCLARÉ suffit mais que le roster CONFIRMÉ non — cas normal depuis le
+       * modèle invite-accept. Mutuellement exclusif avec `tournament`.
+       */
+      tournament_application?: {
+        tournament_name: string;
+        demande_id: string | null;
+      };
       info?: string;
       /**
        * Pont magic-link : indique si un email d'accès à l'espace équipe a été
@@ -992,6 +1001,15 @@ export default async function handler(
     tournament_name: string;
     stages_count: number;
   } | null = null;
+  /**
+   * Candidature déposée à la place de l'inscription directe — voir le bloc
+   * ci-dessous. Elle attend la validation du staff (`demandes` type
+   * `team_registration`, le même objet que `/api/demandes/register-team`).
+   */
+  let tournamentApplication: {
+    tournament_name: string;
+    demande_id: string | null;
+  } | null = null;
   const tournamentId = body.tournament_id?.toString().trim() || null;
 
   if (tournamentId) {
@@ -1005,17 +1023,41 @@ export default async function handler(
         .single();
 
       if (tournament && tournament.status === 'published') {
-        // Check max_teams limit
-        let canRegister = true;
-        // min_players = nombre de JOUEURS (player + substitute), coachs ET
-        // managers EXCLUS (décision produit : l'encadrement ne compte pas dans
-        // le roster minimum requis pour l'inscription auto).
-        const playerCount = insertedMembers.filter(
+        // ── Deux effectifs, deux décisions ────────────────────────────────
+        //
+        // Depuis le modèle invite-accept (« existence ≠ consentement »), les
+        // coéquipières ne sont plus insérées : elles sont INVITÉES. Le seul
+        // membre confirmé à cet instant est donc la créatrice — et en mode
+        // manager, elle ne joue même pas. Compter le roster confirmé face à
+        // `min_players` revenait donc à refuser TOUTE inscription automatique,
+        // en silence : l'équipe était créée, jamais inscrite, et le tournoi ne
+        // voyait rien passer.
+        //
+        // On distingue donc :
+        //   - effectif CONFIRMÉ (`insertedMembers`) → inscription directe, la
+        //     règle du tournoi est vérifiée sur des membres réels ;
+        //   - effectif DÉCLARÉ (confirmé + invitations émises) → CANDIDATURE
+        //     `demandes` en attente de validation staff, pas une inscription.
+        //
+        // Pourquoi ne PAS inscrire directement sur le déclaré : une invitation
+        // n'est pas une joueuse. Un roster entièrement en attente consommerait
+        // une place sur les 8 du tournoi et apparaîtrait dans le bracket sans
+        // que personne n'ait accepté. La candidature dit l'intention, laisse la
+        // décision au staff, et se voit des deux côtés (espace équipe +
+        // /admin/demandes).
+        //
+        // `min_players` compte les JOUEUSES (player + substitute) : coachs ET
+        // managers exclus, l'encadrement ne remplit pas un roster.
+        const confirmedPlayers = insertedMembers.filter(
           (m) => !isNonPlayingTeamRole(m.role)
         ).length;
-        if (tournament.min_players && playerCount < tournament.min_players) {
-          canRegister = false;
-        }
+        const invitedPlayers = invitedMembers.filter(
+          (i) => i.invitation_id && !isNonPlayingTeamRole(i.role)
+        ).length;
+        const declaredPlayers = confirmedPlayers + invitedPlayers;
+        const minPlayers = Number(tournament.min_players) || 0;
+
+        let tournamentFull = false;
         if (tournament.max_teams) {
           const { data: existingTeams } = await supabaseAdmin
             .from('stage_teams')
@@ -1026,10 +1068,14 @@ export default async function handler(
           const uniqueTeams = new Set(
             existingTeams?.map((t) => t.team_id) || []
           );
-          if (uniqueTeams.size >= tournament.max_teams) {
-            canRegister = false;
-          }
+          tournamentFull = uniqueTeams.size >= tournament.max_teams;
         }
+
+        const canRegister = !tournamentFull && confirmedPlayers >= minPlayers;
+        // Une candidature n'a de sens que si l'inscription directe est hors de
+        // portée pour cette SEULE raison : un tournoi complet le reste.
+        const canApply =
+          !tournamentFull && !canRegister && declaredPlayers >= minPlayers;
 
         if (canRegister) {
           // Get all stages for the tournament
@@ -1107,6 +1153,75 @@ export default async function handler(
               );
             }
           }
+        } else if (canApply && creatorUserId) {
+          // Candidature au lieu d'une inscription : même objet que
+          // `/api/demandes/register-team` (demandes type 'team_registration'),
+          // donc même écran de validation staff (/admin/demandes) et même
+          // lecture côté équipe (carte « Inscription au tournoi »).
+          //
+          // Best-effort comme tout ce bloc : un échec ici ne remet pas en cause
+          // l'équipe déjà créée. Le wizard affichera alors son avertissement.
+          const { data: applicationDemande, error: applicationErr } =
+            await supabaseAdmin
+              .from('demandes')
+              .insert({
+                user_id: creatorUserId,
+                team_id: createdTeam.id,
+                tournament_id: tournamentId,
+                type: 'team_registration',
+                status: 'pending',
+                source: 'website',
+                payload: {
+                  team_name: createdTeam.name,
+                  tournament_name: tournament.name,
+                  user_email: userIdToEmail.get(creatorUserId) ?? null,
+                  field_values: cleanedFieldValues,
+                  // Trace pour le staff : cette candidature n'a pas été
+                  // déposée à la main, elle vient du wizard — et les deux
+                  // décomptes disent d'un coup d'œil ce qu'il reste à
+                  // confirmer avant de valider.
+                  auto_from_team_create: true,
+                  confirmed_players: confirmedPlayers,
+                  declared_players: declaredPlayers,
+                },
+                tenant_id: tenantId,
+              })
+              .select('id')
+              .maybeSingle();
+
+          if (applicationErr) {
+            logger.error(
+              '[create-with-member] NEEDS_REVIEW tournament application failed',
+              {
+                teamId: createdTeam.id,
+                tournamentId,
+                error: applicationErr.message,
+              }
+            );
+          } else {
+            tournamentApplication = {
+              tournament_name: tournament.name,
+              demande_id: applicationDemande?.id ?? null,
+            };
+
+            void emitBotEvent(
+              'registration.new',
+              {
+                demande_id: applicationDemande?.id ?? null,
+                team_id: createdTeam.id,
+                team_name: createdTeam.name,
+                tournament_id: tournamentId,
+                tournament_name: tournament.name,
+                captain_user_id: creatorUserId,
+              },
+              tenantId
+            ).catch((err) =>
+              logger.warn(
+                '[create-with-member] registration.new emit failed',
+                err
+              )
+            );
+          }
         }
       }
     } catch (err) {
@@ -1137,9 +1252,13 @@ export default async function handler(
     infoParts.push(
       `inscrite au tournoi "${tournamentRegistration.tournament_name}"`
     );
+  } else if (tournamentApplication) {
+    infoParts.push(
+      `candidature déposée pour le tournoi "${tournamentApplication.tournament_name}" — le staff la validera`
+    );
   } else if (tournamentId) {
     infoParts.push(
-      "L'inscription au tournoi n'a pas pu être effectuée (nombre de joueurs insuffisant ou tournoi complet). Vous pourrez vous inscrire plus tard."
+      "L'inscription au tournoi n'a pas pu être effectuée (nombre de joueurs insuffisant ou tournoi complet). Vous pourrez la déposer depuis votre espace équipe."
     );
   }
 
@@ -1207,6 +1326,7 @@ export default async function handler(
     members: insertedMembers.length ? insertedMembers : undefined,
     invitedMembers: invitedMembers.length ? invitedMembers : undefined,
     tournament: tournamentRegistration || undefined,
+    tournament_application: tournamentApplication || undefined,
     info: infoParts.join(' — '),
     accessEmail,
   });

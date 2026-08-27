@@ -21,8 +21,9 @@
 //   - capitaine facultative en mode manager (roster invité, aucun capitanat)
 //   - 400 MANAGER_DUPLICATE (email manager présent dans le roster)
 //   - 400 MANAGER_EMAIL_INVALID
-//   - le manager ne compte pas comme joueuse pour `min_players` (inscription
-//     tournoi refusée plutôt que validée avec un roster vide)
+//   - le manager ne compte pas comme joueuse pour `min_players` : l'équipe
+//     n'est pas INSCRITE (roster confirmé vide) mais une CANDIDATURE est
+//     déposée si le roster déclaré suffit (invitations émises)
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -366,8 +367,110 @@ describe('POST /api/teams/create-with-member — mode manager', () => {
     );
 
     expect(res.statusCode).toBe(201);
-    // Le seul membre inséré est le manager : 0 joueuse → pas d'inscription auto
-    // (les joueuses doivent d'abord accepter leur invitation).
+    // Le seul membre inséré est le manager : 0 joueuse CONFIRMÉE → pas
+    // d'inscription directe. L'équipe ne prend donc aucune place dans le
+    // tournoi tant que personne n'a accepté.
     expect((res.body as any).tournament).toBeUndefined();
+    // …mais le roster DÉCLARÉ (1 invitation joueuse) atteint min_players : une
+    // candidature part vers le staff plutôt que rien du tout.
+    expect((res.body as any).tournament_application).toMatchObject({
+      tournament_name: 'Cup',
+    });
+    const application = (store.demandes as any[]).find(
+      (d) => d.type === 'team_registration'
+    );
+    expect(application).toMatchObject({
+      status: 'pending',
+      tournament_id: 'tour-1',
+    });
+    expect(application.payload).toMatchObject({
+      auto_from_team_create: true,
+      confirmed_players: 0,
+      declared_players: 1,
+    });
+  });
+
+  it('ne dépose aucune candidature quand le roster déclaré est lui aussi trop court', async () => {
+    store.tournaments = [
+      { id: 'tour-1', name: 'Cup', status: 'published', min_players: 5 },
+    ] as any;
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Too Small',
+          manager_email: 'mgr@example.com',
+          tournament_id: 'tour-1',
+          members: [
+            {
+              email: 'cap@example.com',
+              role: 'player',
+              battle_tag: 'Cap#1234',
+              set_captain: true,
+            },
+          ],
+        },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(201);
+    expect((res.body as any).tournament).toBeUndefined();
+    expect((res.body as any).tournament_application).toBeUndefined();
+    expect(
+      (store.demandes as any[]).filter((d) => d.type === 'team_registration')
+    ).toHaveLength(0);
+  });
+
+  it('ne dépose aucune candidature quand le tournoi est complet', async () => {
+    store.tournaments = [
+      {
+        id: 'tour-1',
+        name: 'Cup',
+        status: 'published',
+        min_players: 1,
+        max_teams: 1,
+      },
+    ] as any;
+    // Une équipe occupe déjà l'unique place. Le handler lit la capacité via
+    // `stage_teams` avec un embed PostgREST
+    // (`tournament_stages!inner(tournament_id)`) que le mock ne sait pas
+    // joindre : il compare littéralement la colonne filtrée. On seede donc la
+    // clé sous sa forme pointée — c'est une contrainte du mock, pas du schéma.
+    store.tournament_stages = [
+      { id: 'stage-1', tournament_id: 'tour-1' },
+    ] as any;
+    store.stage_teams = [
+      {
+        id: 'st-1',
+        stage_id: 'stage-1',
+        team_id: 'other-team',
+        'tournament_stages.tournament_id': 'tour-1',
+      },
+    ] as any;
+
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Late Comer',
+          manager_email: 'mgr@example.com',
+          tournament_id: 'tour-1',
+          members: [
+            {
+              email: 'cap@example.com',
+              role: 'player',
+              battle_tag: 'Cap#1234',
+              set_captain: true,
+            },
+          ],
+        },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(201);
+    expect((res.body as any).tournament).toBeUndefined();
+    expect((res.body as any).tournament_application).toBeUndefined();
   });
 });

@@ -568,6 +568,80 @@ describe('POST /api/teams/create-with-member', () => {
     expect((res.body as any).tournament).toBeFalsy();
   });
 
+  it("201 dépose une candidature quand le roster DÉCLARÉ atteint min_players", async () => {
+    // Flux capitaine : seule la créatrice est insérée, les 4 autres sont
+    // invitées. Le roster confirmé (1) ne peut pas atteindre min_players=5 —
+    // c'est structurel depuis le modèle invite-accept, pas un cas limite. Sans
+    // la candidature, ce parcours ne produisait RIEN : équipe créée, tournoi
+    // jamais au courant.
+    setAuthListUsers([
+      { id: 'u1', email: 'p1@example.com' },
+      { id: 'u2', email: 'p2@example.com' },
+      { id: 'u3', email: 'p3@example.com' },
+      { id: 'u4', email: 'p4@example.com' },
+      { id: 'u5', email: 'p5@example.com' },
+    ]);
+    store.teams = [];
+    store.team_members = [];
+    store.demandes = [];
+    store.tournaments = [
+      {
+        id: 'tour-apply',
+        name: 'ApplyCup',
+        status: 'published',
+        max_teams: null,
+        min_players: 5,
+      },
+    ] as any;
+    store.tournament_stages = [
+      { id: 's1', tournament_id: 'tour-apply' },
+    ] as any;
+    store.stage_teams = [];
+
+    const res = makeRes();
+    await createWithMemberHandler(
+      makeReq({
+        body: {
+          name: 'Declared Five',
+          tournament_id: 'tour-apply',
+          members: [
+            {
+              email: 'p1@example.com',
+              role: 'player',
+              battle_tag: 'P1#1234',
+              set_captain: true,
+            },
+            { email: 'p2@example.com', role: 'player', battle_tag: 'P2#1234' },
+            { email: 'p3@example.com', role: 'player', battle_tag: 'P3#1234' },
+            { email: 'p4@example.com', role: 'player', battle_tag: 'P4#1234' },
+            { email: 'p5@example.com', role: 'player', battle_tag: 'P5#1234' },
+          ],
+        },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(201);
+    // Aucune place consommée dans le tournoi tant que personne n'a accepté.
+    expect((res.body as any).tournament).toBeFalsy();
+    expect((store.stage_teams as any[]).length).toBe(0);
+    // Mais l'intention est enregistrée et visible du staff.
+    expect((res.body as any).tournament_application).toMatchObject({
+      tournament_name: 'ApplyCup',
+    });
+    const application = (store.demandes as any[]).find(
+      (d) => d.type === 'team_registration'
+    );
+    expect(application).toMatchObject({
+      status: 'pending',
+      tournament_id: 'tour-apply',
+    });
+    expect(application.payload).toMatchObject({
+      confirmed_players: 1,
+      declared_players: 5,
+    });
+  });
+
   it('201 auto-registers when the sole player meets min_players (coach not counted, player captain)', async () => {
     // min_players=1, un capitaine JOUEUR → 1 joueur inséré → passe.
     setAuthListUsers([{ id: 'u1', email: 'p1@example.com' }]);

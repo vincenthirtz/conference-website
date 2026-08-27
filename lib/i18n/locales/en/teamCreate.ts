@@ -98,6 +98,9 @@ export default {
   resultTeamLabel: 'Team:',
   resultIdLabel: 'ID:',
   resultRegistered: 'Registered for the tournament « {name} »',
+  resultApplied: 'Application sent for the tournament « {name} »',
+  resultAppliedDesc:
+    "Until your teammates accept their invitation, registration isn't automatic: the staff reviews the application. You can follow it from your team space.",
   viewTeamPage: 'View team page ↗',
   invitedPlayers: 'Invited players',
   invitedPlayersHint:

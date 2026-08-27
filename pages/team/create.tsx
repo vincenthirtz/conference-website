@@ -54,6 +54,13 @@ type CreateResponse = {
     tournament_name: string;
     stages_count: number;
   };
+  // Candidature déposée au lieu d'une inscription immédiate : le roster
+  // déclaré suffit, mais les coéquipières n'ont pas encore accepté leur
+  // invitation. Le staff valide. Mutuellement exclusif avec `tournament`.
+  tournament_application?: {
+    tournament_name: string;
+    demande_id: string | null;
+  };
   info?: string;
   error?: string;
   // Code machine-readable renvoyé par le serveur sur les réponses d'erreur
@@ -713,9 +720,14 @@ export default function PublicCreateTeamPage() {
     .map((_, i) => i)
     .filter((i) => members[i].email.trim().length > 0);
   // Inscription tournoi « à moitié échouée » : on a demandé une inscription
-  // (tournamentIdParam) mais le serveur n'a pas confirmé de tournoi → NEEDS_REVIEW.
+  // (tournamentIdParam) mais le serveur n'a NI inscrit l'équipe NI enregistré
+  // de candidature → NEEDS_REVIEW. Une candidature déposée n'est pas un échec :
+  // c'est le déroulé normal tant que les invitations n'ont pas été acceptées.
   const tournamentHalfFailed =
-    !!result && !!tournamentIdParam && !result.tournament;
+    !!result &&
+    !!tournamentIdParam &&
+    !result.tournament &&
+    !result.tournament_application;
 
   const inputCls =
     'w-full rounded-xl border border-white/15 bg-black/50 px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-violet)]/70 focus:border-[var(--color-violet)]/70 transition';
@@ -858,6 +870,19 @@ export default function PublicCreateTeamPage() {
               {format(t.resultRegistered, {
                 name: result.tournament.tournament_name,
               })}
+            </div>
+          )}
+
+          {result.tournament_application && (
+            <div className="rounded-2xl border border-[var(--color-violet)]/40 bg-[var(--color-violet)]/10 px-4 py-3">
+              <p className="text-sm font-semibold text-[var(--color-violet-light)]">
+                {format(t.resultApplied, {
+                  name: result.tournament_application.tournament_name,
+                })}
+              </p>
+              <p className="mt-1 text-xs text-[var(--color-violet-light)]/80">
+                {t.resultAppliedDesc}
+              </p>
             </div>
           )}
 

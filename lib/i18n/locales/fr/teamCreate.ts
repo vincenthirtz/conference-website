@@ -98,6 +98,9 @@ export default ns('teamCreate', {
   resultTeamLabel: 'Équipe :',
   resultIdLabel: 'ID :',
   resultRegistered: 'Inscrite au tournoi « {name} »',
+  resultApplied: 'Candidature déposée pour le tournoi « {name} »',
+  resultAppliedDesc:
+    "Tant que tes coéquipières n'ont pas accepté leur invitation, l'inscription n'est pas automatique : le staff valide la candidature. Tu peux suivre l'avancement depuis ton espace équipe.",
   viewTeamPage: 'Voir la page équipe ↗',
   invitedPlayers: 'Joueuses invitées',
   invitedPlayersHint:
