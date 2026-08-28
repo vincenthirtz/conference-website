@@ -9,6 +9,11 @@ import { useSiteSetting } from '@/hooks/useSiteSettings';
 import { POLE_KEYS, type PoleKey } from '@/utils/associationPoles';
 import { useT } from '@/lib/i18n/useT';
 import ProductionPartner from '@/components/Production/ProductionPartner';
+import {
+  RIBBIT_LOGO,
+  RIBBIT_NAME,
+  RIBBIT_URL,
+} from '@/components/Association/ribbit';
 
 type AssoDict = typeof nsAssociationPage.fr;
 
@@ -348,6 +353,58 @@ const getTimeline = (t: AssoDict) => [
   { year: '2026', title: t.timeline2Title, desc: t.timeline2Desc },
   { year: '2027', title: t.timeline3Title, desc: t.timeline3Desc },
 ];
+
+/**
+ * Encart « Partenaire staff » affiché dans la carte du pôle Tournoi &
+ * arbitrage. À part de la liste « Membres », pour la même raison que
+ * `ProductionPartner` plus bas : Ribbit fournit du staff d'arbitrage, ce ne
+ * sont pas des bénévoles adhérentes de l'asso — les mélanger laisserait croire
+ * à une adhésion.
+ */
+function StaffPartner({ t }: { t: AssoDict }) {
+  const inner = (
+    <>
+      <Image
+        src={RIBBIT_LOGO}
+        alt=""
+        width={40}
+        height={40}
+        // SVG local : l'optimiseur next/image le refuse sans
+        // `dangerouslyAllowSVG`, que la config n'active pas.
+        unoptimized
+        className="h-10 w-10 flex-shrink-0 rounded-lg bg-white/[0.06] object-contain ring-1 ring-white/10"
+      />
+      <span className="min-w-0">
+        <span className="block truncate font-semibold text-white">
+          {RIBBIT_NAME}
+        </span>
+        <span className="block text-xs text-gray-400">{t.staffPartnerRole}</span>
+      </span>
+    </>
+  );
+  const className =
+    'flex items-center gap-3 rounded-xl border border-cyan-400/20 bg-white/[0.03] p-2.5';
+
+  return (
+    <div className="border-t border-white/5 pt-3">
+      <p className="mb-2 text-[11px] uppercase tracking-[0.16em] text-gray-500">
+        {t.staffPartnerLabel}
+      </p>
+      {RIBBIT_URL ? (
+        <a
+          href={RIBBIT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`${className} transition hover:border-cyan-400/40 hover:bg-white/[0.06]`}
+        >
+          {inner}
+        </a>
+      ) : (
+        <div className={className}>{inner}</div>
+      )}
+    </div>
+  );
+}
 
 function AssociationPage({
   castMembers,
@@ -747,6 +804,8 @@ function AssociationPage({
                       </div>
                     </div>
                   )}
+
+                  {role.poleKey === 'tournoi' && <StaffPartner t={t} />}
                 </div>
               );
             })}

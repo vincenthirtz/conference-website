@@ -80,6 +80,8 @@ export default {
   polesIntro:
     'Anyone can offer their help. The association runs on themed areas led by motivated volunteers.',
   membersLabel: 'Members',
+  staffPartnerLabel: 'Staff partner',
+  staffPartnerRole: 'Tournament refereeing staff',
   role1Title: 'Direction & admin',
   role1Desc: 'General organisation, partnerships, budget tracking.',
   role2Title: 'Tournament & refereeing',

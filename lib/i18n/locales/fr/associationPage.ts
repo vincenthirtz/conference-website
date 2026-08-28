@@ -88,6 +88,8 @@ export default ns('associationPage', {
   polesIntro:
     "Chacun peut proposer son aide. L'asso fonctionne par pôles thématiques animés par des bénévoles motivées.",
   membersLabel: 'Membres',
+  staffPartnerLabel: 'Partenaire staff',
+  staffPartnerRole: "Staff d'arbitrage du tournoi",
   role1Title: 'Direction & admin',
   role1Desc: 'Organisation générale, partenariats, suivi des budgets.',
   role2Title: 'Tournoi & arbitrage',

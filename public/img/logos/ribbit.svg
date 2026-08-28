@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Logo Ribbit — partenaire staff / arbitrage (page /association).
+  Reconstitution vectorielle du logo fourni : à remplacer par le fichier
+  officiel du partenaire dès qu'il est disponible (même chemin, ou mettre à
+  jour RIBBIT_LOGO dans components/Association/ribbit.ts si l'extension change).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 2000" role="img" aria-label="Ribbit">
+  <title>Ribbit</title>
+  <g>
+    <!-- Yeux -->
+    <circle cx="400" cy="575" r="285" fill="#FF6B00"/>
+    <circle cx="1540" cy="575" r="285" fill="#FF6B00"/>
+    <!-- Tête -->
+    <circle cx="975" cy="1090" r="665" fill="#FF6B00"/>
+    <!-- Blanc des yeux (au-dessus de la tête pour rester lisible) -->
+    <circle cx="400" cy="575" r="218" fill="#FFFFFF"/>
+    <circle cx="1540" cy="575" r="218" fill="#FFFFFF"/>
+    <circle cx="430" cy="578" r="118" fill="#000000"/>
+    <circle cx="1510" cy="578" r="118" fill="#000000"/>
+    <!-- Bouche -->
+    <circle cx="965" cy="1250" r="540" fill="#000000"/>
+    <!-- Lettrage en arc -->
+    <path id="ribbit-arc" d="M 617 1494 A 425 425 0 1 1 1313 1494" fill="none"/>
+    <text fill="#C25A12" font-family="Arial, Helvetica, sans-serif" font-size="245" font-weight="700" letter-spacing="140">
+      <textPath href="#ribbit-arc" startOffset="52%" text-anchor="middle">RIBBIT</textPath>
+    </text>
+  </g>
+</svg>
