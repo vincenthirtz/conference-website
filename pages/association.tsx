@@ -14,6 +14,11 @@ import {
   RIBBIT_NAME,
   RIBBIT_URL,
 } from '@/components/Association/ribbit';
+import {
+  POGTV_LOGO,
+  POGTV_NAME,
+  POGTV_TWITCH,
+} from '@/components/Production/pogtv';
 
 type AssoDict = typeof nsAssociationPage.fr;
 
@@ -355,47 +360,82 @@ const getTimeline = (t: AssoDict) => [
 ];
 
 /**
- * Encart « Partenaire staff » affiché dans la carte du pôle Tournoi &
- * arbitrage. À part de la liste « Membres », pour la même raison que
- * `ProductionPartner` plus bas : Ribbit fournit du staff d'arbitrage, ce ne
- * sont pas des bénévoles adhérentes de l'asso — les mélanger laisserait croire
- * à une adhésion.
+ * Un partenaire rattaché à un pôle : signalé dans la carte du pôle, mais à
+ * part de la liste « Membres » — ce sont des prestataires, pas des bénévoles
+ * adhérentes de l'asso, et les mélanger laisserait croire à une adhésion.
+ * POGTV garde en plus son encart développé (`ProductionPartner`) plus bas :
+ * la carte du pôle se contente de dire qui tient la régie.
  */
-function StaffPartner({ t }: { t: AssoDict }) {
+type PolePartnerInfo = {
+  label: string;
+  name: string;
+  logo: string;
+  role: string;
+  /** `null` tant que le partenaire n'a pas d'URL publique : encart non cliquable. */
+  url: string | null;
+  /** Classes Tailwind écrites en dur : le JIT ne voit pas les noms construits. */
+  border: string;
+  hover: string;
+  /** SVG : l'optimiseur next/image les refuse sans `dangerouslyAllowSVG`, que la config n'active pas. */
+  unoptimized?: boolean;
+};
+
+const getPolePartners = (
+  t: AssoDict
+): Partial<Record<PoleKey, PolePartnerInfo>> => ({
+  tournoi: {
+    label: t.staffPartnerLabel,
+    name: RIBBIT_NAME,
+    logo: RIBBIT_LOGO,
+    role: t.staffPartnerRole,
+    url: RIBBIT_URL,
+    border: 'border-cyan-400/20',
+    hover: 'hover:border-cyan-400/40',
+    unoptimized: true,
+  },
+  production: {
+    label: t.prodPartnerLabel,
+    name: POGTV_NAME,
+    logo: POGTV_LOGO,
+    role: t.prodPartnerRole,
+    url: POGTV_TWITCH,
+    border: 'border-pink-400/20',
+    hover: 'hover:border-pink-400/40',
+  },
+});
+
+function PolePartner({ partner }: { partner: PolePartnerInfo }) {
   const inner = (
     <>
       <Image
-        src={RIBBIT_LOGO}
+        src={partner.logo}
         alt=""
         width={40}
         height={40}
-        // SVG local : l'optimiseur next/image le refuse sans
-        // `dangerouslyAllowSVG`, que la config n'active pas.
-        unoptimized
+        unoptimized={partner.unoptimized}
         className="h-10 w-10 flex-shrink-0 rounded-lg bg-white/[0.06] object-contain ring-1 ring-white/10"
       />
       <span className="min-w-0">
         <span className="block truncate font-semibold text-white">
-          {RIBBIT_NAME}
+          {partner.name}
         </span>
-        <span className="block text-xs text-gray-400">{t.staffPartnerRole}</span>
+        <span className="block text-xs text-gray-400">{partner.role}</span>
       </span>
     </>
   );
-  const className =
-    'flex items-center gap-3 rounded-xl border border-cyan-400/20 bg-white/[0.03] p-2.5';
+  const className = `flex items-center gap-3 rounded-xl border ${partner.border} bg-white/[0.03] p-2.5`;
 
   return (
     <div className="border-t border-white/5 pt-3">
       <p className="mb-2 text-[11px] uppercase tracking-[0.16em] text-gray-500">
-        {t.staffPartnerLabel}
+        {partner.label}
       </p>
-      {RIBBIT_URL ? (
+      {partner.url ? (
         <a
-          href={RIBBIT_URL}
+          href={partner.url}
           target="_blank"
           rel="noopener noreferrer"
-          className={`${className} transition hover:border-cyan-400/40 hover:bg-white/[0.06]`}
+          className={`${className} transition ${partner.hover} hover:bg-white/[0.06]`}
         >
           {inner}
         </a>
@@ -416,6 +456,7 @@ function AssociationPage({
   const pillars = getPillars(t);
   const commitments = getCommitments(t);
   const teamRoles = getTeamRoles(t);
+  const polePartners = getPolePartners(t);
   const stats = getStats(t);
   const timeline = getTimeline(t);
   const { value: contactEmail } = useSiteSetting('contact_email');
@@ -736,6 +777,7 @@ function AssociationPage({
           <div className="grid gap-4 sm:grid-cols-2">
             {teamRoles.map((role) => {
               const members = membersByPole[role.poleKey] ?? [];
+              const partner = polePartners[role.poleKey];
               return (
                 <div
                   key={role.title}
@@ -805,7 +847,7 @@ function AssociationPage({
                     </div>
                   )}
 
-                  {role.poleKey === 'tournoi' && <StaffPartner t={t} />}
+                  {partner && <PolePartner partner={partner} />}
                 </div>
               );
             })}

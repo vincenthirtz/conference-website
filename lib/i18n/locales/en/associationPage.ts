@@ -82,6 +82,8 @@ export default {
   membersLabel: 'Members',
   staffPartnerLabel: 'Staff partner',
   staffPartnerRole: 'Tournament refereeing staff',
+  prodPartnerLabel: 'Production partner',
+  prodPartnerRole: 'Match control room and broadcast',
   role1Title: 'Direction & admin',
   role1Desc: 'General organisation, partnerships, budget tracking.',
   role2Title: 'Tournament & refereeing',

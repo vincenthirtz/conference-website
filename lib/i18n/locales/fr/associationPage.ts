@@ -90,6 +90,8 @@ export default ns('associationPage', {
   membersLabel: 'Membres',
   staffPartnerLabel: 'Partenaire staff',
   staffPartnerRole: "Staff d'arbitrage du tournoi",
+  prodPartnerLabel: 'Partenaire production',
+  prodPartnerRole: 'Régie et diffusion des matchs',
   role1Title: 'Direction & admin',
   role1Desc: 'Organisation générale, partenariats, suivi des budgets.',
   role2Title: 'Tournoi & arbitrage',
