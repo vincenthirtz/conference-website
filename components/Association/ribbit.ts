@@ -8,7 +8,7 @@
 // Le logo est servi en local : une URL distante casse `next/image`
 // (remotePatterns), comme pour POGTV et les logos d'équipes.
 
-export const RIBBIT_NAME = 'Ribbit';
+export const RIBBIT_NAME = 'Orange Ribbit';
 export const RIBBIT_LOGO = '/img/logos/ribbit.svg';
-/** `null` tant que le partenaire n'a pas fourni d'URL publique. */
-export const RIBBIT_URL: string | null = null;
+/** Serveur Discord public du partenaire. */
+export const RIBBIT_URL: string | null = 'https://discord.gg/tzJqgnTNUF';
