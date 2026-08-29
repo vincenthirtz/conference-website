@@ -10,6 +10,11 @@ import { POLE_KEYS, type PoleKey } from '@/utils/associationPoles';
 import { useT } from '@/lib/i18n/useT';
 import ProductionPartner from '@/components/Production/ProductionPartner';
 import {
+  IGUEL_CHANNEL,
+  IGUEL_NAME,
+  IGUEL_TWITCH,
+} from '@/components/Association/iguel';
+import {
   RIBBIT_LOGO,
   RIBBIT_NAME,
   RIBBIT_URL,
@@ -66,6 +71,8 @@ type Props = {
   castMembers: CastMember[];
   poleMembers: PoleMember[];
   ambassadors: Ambassador[];
+  /** Avatar Twitch de l'ambassadeur du pôle Communauté, résolu au build. */
+  communityPartnerAvatar: string | null;
 };
 
 const getPillars = (t: AssoDict) => [
@@ -369,7 +376,13 @@ const getTimeline = (t: AssoDict) => [
 type PolePartnerInfo = {
   label: string;
   name: string;
-  logo: string;
+  /**
+   * Absent quand le partenaire n'a ni logo local ni avatar Twitch disponible
+   * (Helix muet au build) : l'encart retombe alors sur l'initiale.
+   */
+  logo?: string;
+  /** Avatar de personne : cercle plutôt que carré arrondi, comme la grille ambassadeur·rices. */
+  rounded?: boolean;
   role: string;
   /** `null` tant que le partenaire n'a pas d'URL publique : encart non cliquable. */
   url: string | null;
@@ -381,7 +394,9 @@ type PolePartnerInfo = {
 };
 
 const getPolePartners = (
-  t: AssoDict
+  t: AssoDict,
+  /** Avatar Twitch de l'ambassadeur, résolu au build ; `null` si Helix n'a pas répondu. */
+  communityPartnerAvatar: string | null
 ): Partial<Record<PoleKey, PolePartnerInfo>> => ({
   tournoi: {
     label: t.staffPartnerLabel,
@@ -402,19 +417,44 @@ const getPolePartners = (
     border: 'border-pink-400/20',
     hover: 'hover:border-pink-400/40',
   },
+  communaute: {
+    label: t.communityPartnerLabel,
+    name: IGUEL_NAME,
+    logo: communityPartnerAvatar ?? undefined,
+    rounded: true,
+    role: t.communityPartnerRole,
+    url: IGUEL_TWITCH,
+    border: 'border-emerald-400/20',
+    hover: 'hover:border-emerald-400/40',
+  },
 });
 
 function PolePartner({ partner }: { partner: PolePartnerInfo }) {
   const inner = (
     <>
-      <Image
-        src={partner.logo}
-        alt=""
-        width={40}
-        height={40}
-        unoptimized={partner.unoptimized}
-        className="h-10 w-10 flex-shrink-0 rounded-lg bg-white/[0.06] object-contain ring-1 ring-white/10"
-      />
+      {partner.logo ? (
+        <Image
+          src={partner.logo}
+          alt=""
+          width={40}
+          height={40}
+          unoptimized={partner.unoptimized}
+          className={
+            partner.rounded
+              ? 'h-10 w-10 flex-shrink-0 rounded-full bg-white/[0.06] object-cover ring-1 ring-white/10'
+              : 'h-10 w-10 flex-shrink-0 rounded-lg bg-white/[0.06] object-contain ring-1 ring-white/10'
+          }
+        />
+      ) : (
+        <span
+          aria-hidden
+          className={`flex h-10 w-10 flex-shrink-0 items-center justify-center bg-white/[0.06] font-bold text-white/80 ring-1 ring-white/10 ${
+            partner.rounded ? 'rounded-full' : 'rounded-lg'
+          }`}
+        >
+          {partner.name.slice(0, 1).toUpperCase()}
+        </span>
+      )}
       <span className="min-w-0">
         <span className="block truncate font-semibold text-white">
           {partner.name}
@@ -450,13 +490,14 @@ function AssociationPage({
   castMembers,
   poleMembers,
   ambassadors,
+  communityPartnerAvatar,
 }: Props) {
   const t = useT(nsAssociationPage);
   const adhesionPerks = getAdhesionPerks(t);
   const pillars = getPillars(t);
   const commitments = getCommitments(t);
   const teamRoles = getTeamRoles(t);
-  const polePartners = getPolePartners(t);
+  const polePartners = getPolePartners(t, communityPartnerAvatar);
   const stats = getStats(t);
   const timeline = getTimeline(t);
   const { value: contactEmail } = useSiteSetting('contact_email');
@@ -484,7 +525,6 @@ function AssociationPage({
     ...membersByPole.production,
     ...castAsPoleMembers,
   ];
-
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
@@ -1007,6 +1047,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
         castMembers: [],
         poleMembers: [],
         ambassadors: [],
+        communityPartnerAvatar: null,
       },
       revalidate: 60,
     };
@@ -1062,10 +1103,15 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
     label: string | null;
     badge: string | null;
   }>;
-  const avatars =
-    ambassadorRows.length > 0
-      ? await fetchTwitchProfileImages(ambassadorRows.map((a) => a.channel))
-      : {};
+  // `IGUEL_CHANNEL` est ajouté même s'il n'est pas (ou plus) une ligne active de
+  // `twitch_channels` : l'encart du pôle Communauté ne dépend pas de cette table.
+  const avatarLogins = Array.from(
+    new Set([
+      ...ambassadorRows.map((a) => a.channel.toLowerCase()),
+      IGUEL_CHANNEL,
+    ])
+  );
+  const avatars = await fetchTwitchProfileImages(avatarLogins);
   const ambassadorsWithAvatars: Ambassador[] = ambassadorRows.map((a) => ({
     ...a,
     profileImageUrl: avatars[a.channel.toLowerCase()] ?? null,
@@ -1074,6 +1120,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
   return {
     props: {
       castMembers: castRes.data ?? [],
+      communityPartnerAvatar: avatars[IGUEL_CHANNEL] ?? null,
       poleMembers: (poleRes.data ?? []) as PoleMember[],
       ambassadors: ambassadorsWithAvatars,
     },

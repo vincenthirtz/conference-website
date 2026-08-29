@@ -84,6 +84,8 @@ export default {
   staffPartnerRole: 'Tournament refereeing staff',
   prodPartnerLabel: 'Production partner',
   prodPartnerRole: 'Match control room and broadcast',
+  communityPartnerLabel: 'Ambassador',
+  communityPartnerRole: 'Partner Twitch channel',
   role1Title: 'Direction & admin',
   role1Desc: 'General organisation, partnerships, budget tracking.',
   role2Title: 'Tournament & refereeing',
