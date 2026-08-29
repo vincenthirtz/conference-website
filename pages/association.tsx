@@ -510,7 +510,7 @@ function AssociationPage({
     { direction: [], tournoi: [], production: [], communaute: [] }
   );
 
-  // Le pôle "Production & cast" inclut aussi les casteuses actives (hors carte promo).
+  // Le pôle "Multimédia" inclut aussi les casteuses actives (hors carte promo).
   const castAsPoleMembers: PoleMember[] = castMembers
     .filter((m) => !m.is_promo)
     .map((m) => ({
@@ -895,7 +895,7 @@ function AssociationPage({
         </section>
 
         {/* ── Production (prestataire) ────────────────────── */}
-        {/* Encart à part du pôle « Production & cast » : POGTV n'est pas une
+        {/* Encart à part du pôle « Multimédia » : POGTV n'est pas une
             équipe de bénévoles de l'asso mais un studio partenaire qui produit
             la diffusion. Les mélanger laisserait croire à une adhésion. */}
         <section>

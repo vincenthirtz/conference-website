@@ -98,7 +98,7 @@ export default ns('associationPage', {
   role1Desc: 'Organisation générale, partenariats, suivi des budgets.',
   role2Title: 'Tournoi & arbitrage',
   role2Desc: 'Règles, lobby settings, gestion des matchs et litiges.',
-  role3Title: 'Production & cast',
+  role3Title: 'Multimédia',
   role3Desc: 'Overlay, graphismes, casters et modération live.',
   role4Title: 'Communauté',
   role4Desc: 'Mentorat, ateliers, communication et support joueuses/équipes.',

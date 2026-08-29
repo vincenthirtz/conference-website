@@ -90,7 +90,7 @@ export default {
   role1Desc: 'General organisation, partnerships, budget tracking.',
   role2Title: 'Tournament & refereeing',
   role2Desc: 'Rules, lobby settings, match and dispute management.',
-  role3Title: 'Production & cast',
+  role3Title: 'Multimedia',
   role3Desc: 'Overlay, graphics, casters and live moderation.',
   role4Title: 'Community',
   role4Desc: 'Mentoring, workshops, communication and player/team support.',

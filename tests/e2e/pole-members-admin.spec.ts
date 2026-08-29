@@ -200,7 +200,7 @@ test.describe('Page association affiche les pôles', () => {
   });
 });
 
-test.describe('Pôle Production & cast inclut les casteuses', () => {
+test.describe('Pôle Multimédia inclut les casteuses', () => {
   test.skip(
     !supabaseTestClient,
     'Supabase service role manquant pour insérer une casteuse de test'
@@ -230,7 +230,7 @@ test.describe('Pôle Production & cast inclut les casteuses', () => {
       // Bypass ISR: cache-busting query string forces a fresh render in dev/test.
       await page.goto(`/association?_=${Date.now()}`);
 
-      // Le badge dans la carte "Production & cast" doit contenir le nom unique.
+      // Le badge dans la carte "Multimédia" doit contenir le nom unique.
       await expect(page.getByText(uniqueName).first()).toBeVisible({
         timeout: 10000,
       });

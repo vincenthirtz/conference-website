@@ -10,7 +10,7 @@ export type PoleKey = (typeof POLE_KEYS)[number];
 export const POLE_LABELS: Record<PoleKey, string> = {
   direction: 'Direction & admin',
   tournoi: 'Tournoi & arbitrage',
-  production: 'Production & cast',
+  production: 'Multimédia',
   communaute: 'Communauté',
 };
 

@@ -224,11 +224,11 @@ test.describe('Page association affiche les casteuses', () => {
     expect(res?.status()).toBeLessThan(400);
   });
 
-  test('La carte du pôle "Production & cast" est présente', async ({ page }) => {
+  test('La carte du pôle "Multimédia" est présente', async ({ page }) => {
     await page.goto('/association');
 
-    // Casteuses are now merged into the "Production & cast" pole card.
-    await expect(page.getByText(/production & cast/i).first()).toBeVisible({
+    // Casteuses are now merged into the "Multimédia" pole card.
+    await expect(page.getByText(/multimédia/i).first()).toBeVisible({
       timeout: 5000,
     });
   });
