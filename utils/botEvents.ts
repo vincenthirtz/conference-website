@@ -123,6 +123,25 @@ function isConfigured(): boolean {
 }
 
 /**
+ * Secret webhook par tenant, mis en cache en mémoire du process.
+ *
+ * Il était relu à chaque événement émis. Combiné à l'authentification des
+ * appels bot (utils/botAuth.ts), `tenant_secrets` totalisait 8 898 lectures en
+ * 24 h — pour une valeur qui ne change qu'à la rotation.
+ *
+ * TTL court, et seuls les succès sont mémorisés : un secret tout juste posé est
+ * pris en compte immédiatement, et une rotation met au plus une minute à se
+ * propager aux process déjà chauds. Une signature obsolète est refusée par le
+ * bot, pas acceptée à tort — le risque est une livraison ratée, rattrapée par
+ * l'outbox, pas un trou de sécurité.
+ */
+const WEBHOOK_SECRET_TTL_MS = 60_000;
+const webhookSecretCache = new Map<
+  string,
+  { secret: string; expiresAt: number }
+>();
+
+/**
  * Resolve the HMAC webhook secret to sign a push to the bot for `tenantId`.
  *
  * Lookup `tenant_secrets.bot_webhook_secret` (provisioned via
@@ -135,12 +154,24 @@ function isConfigured(): boolean {
  */
 async function resolveWebhookSecret(tenantId: string): Promise<string | null> {
   if (!supabaseAdmin) return null;
+  const cached = webhookSecretCache.get(tenantId);
+  if (cached && cached.expiresAt > Date.now()) return cached.secret;
+
   const { data } = await supabaseAdmin
     .from('tenant_secrets')
     .select('bot_webhook_secret')
     .eq('tenant_id', tenantId)
     .maybeSingle();
-  return (data?.bot_webhook_secret as string | undefined) ?? null;
+  const secret = (data?.bot_webhook_secret as string | undefined) ?? null;
+  // On ne met en cache qu'un secret TROUVÉ : une absence est un état qu'on veut
+  // revoir tout de suite (secret fraîchement seedé, tenant en cours de setup).
+  if (secret) {
+    webhookSecretCache.set(tenantId, {
+      secret,
+      expiresAt: Date.now() + WEBHOOK_SECRET_TTL_MS,
+    });
+  }
+  return secret;
 }
 
 async function persistOutbox(params: {

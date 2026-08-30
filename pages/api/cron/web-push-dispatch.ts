@@ -76,7 +76,25 @@ import {
 
 const DEFAULT_VAPID_SUBJECT = 'mailto:hirtzvincent@gmail.com';
 const DEFAULT_BATCH_LIMIT = 200;
-const DEFAULT_WINDOW_HOURS = 24;
+/**
+ * Fenêtre d'événements rebalayée à chaque tick.
+ *
+ * Elle valait 24 h. Le cron tourne CHAQUE MINUTE : il reprenait donc, 1 440
+ * fois par jour, tous les événements de la journée écoulée — résolution
+ * d'audience (`tenant_staff` + `staff`), abonnements et préférences compris —
+ * pour des notifications livrées depuis des heures. C'est ce qui tenait le
+ * plancher de trafic base observé en production : ~360 lectures `staff`/h et
+ * ~195 `push_subscriptions`/h alors qu'il n'y avait rien à envoyer.
+ *
+ * Une heure suffit largement comme filet de reprise : une livraison en échec
+ * est retentée à chaque tick jusqu'à MAX_ATTEMPTS_BEFORE_GIVING_UP, soit cinq
+ * minutes au pire. On garde donc un ordre de grandeur de marge, sans repayer la
+ * journée entière chaque minute.
+ *
+ * Réglable par `WEB_PUSH_WINDOW_HOURS` si un incident demande de remonter plus
+ * loin en arrière.
+ */
+const DEFAULT_WINDOW_HOURS = 1;
 const SOFT_TIME_BUDGET_MS = 8_000;
 const MAX_ATTEMPTS_BEFORE_GIVING_UP = 5;
 

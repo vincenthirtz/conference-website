@@ -48,6 +48,27 @@ const DEFAULT_TENANT_ID_FOR_CACHE = DEFAULT_TENANT_ID;
  * clé seedée dans `tenant_secrets`. Returns `{ ok: false }` si la clé ne matche
  * aucune row (→ 401 côté middleware).
  */
+/**
+ * Cache des clés d'API bot vérifiées, en mémoire du process.
+ *
+ * Cette lecture se faisait à CHAQUE appel du bot — 8 898 lectures de
+ * `tenant_secrets` en 24 h en production, soit 8 % de tout le trafic base, pour
+ * répondre chaque fois la même chose. Le bot interroge le site en continu
+ * (outbox toutes les 60 s, rappels, role-sync, annonces live…), et chacun de
+ * ces appels payait une résolution de secret.
+ *
+ * Deux garde-fous sur la sécurité :
+ *   - on ne met en cache QUE les succès. Une clé refusée est re-vérifiée à
+ *     chaque tentative, donc une clé fraîchement tournée est acceptée tout de
+ *     suite — pas de fenêtre où le nouveau secret serait rejeté ;
+ *   - le TTL est court (60 s), ce qui borne à une minute la durée pendant
+ *     laquelle une clé RÉVOQUÉE resterait acceptée par un process déjà chaud.
+ *     C'est le seul compromis, et il est explicite.
+ */
+const API_KEY_TTL_MS = 60_000;
+const API_KEY_CACHE_MAX = 50;
+const apiKeyCache = new Map<string, { tenantId: string; expiresAt: number }>();
+
 export async function verifyBotApiKeyMultiTenant(
   req: NextApiRequest
 ): Promise<{ ok: false } | { ok: true; tenantId: string }> {
@@ -58,13 +79,28 @@ export async function verifyBotApiKeyMultiTenant(
   if (!supabaseAdmin) return { ok: false };
 
   const hash = crypto.createHash('sha256').update(provided).digest('hex');
+
+  const cached = apiKeyCache.get(hash);
+  if (cached && cached.expiresAt > Date.now()) {
+    return { ok: true, tenantId: cached.tenantId };
+  }
+
   const { data } = await supabaseAdmin
     .from('tenant_secrets')
     .select('tenant_id')
     .eq('bot_api_key_hash', hash)
     .maybeSingle();
   if (data?.tenant_id) {
-    return { ok: true, tenantId: data.tenant_id as string };
+    const tenantId = data.tenant_id as string;
+    apiKeyCache.set(hash, { tenantId, expiresAt: Date.now() + API_KEY_TTL_MS });
+    if (apiKeyCache.size > API_KEY_CACHE_MAX) {
+      // Borne mémoire : une clé inventée par requête ne doit pas faire enfler
+      // le cache. On repart de zéro plutôt que d'implémenter un LRU pour ce
+      // qui compte, en pratique, une poignée d'entrées.
+      const oldest = apiKeyCache.keys().next().value;
+      if (oldest !== undefined) apiKeyCache.delete(oldest);
+    }
+    return { ok: true, tenantId };
   }
   return { ok: false };
 }
