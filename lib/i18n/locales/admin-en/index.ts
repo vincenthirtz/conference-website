@@ -121,6 +121,7 @@ import enAdminStatsMaps from './adminStatsMaps';
 import enAdminStatsTeams from './adminStatsTeams';
 import enAdminTournamentTemplates from './adminTournamentTemplates';
 import enAdminTenantDiscordConfig from './adminTenantDiscordConfig';
+import enAdminDiscordTeamChannels from './adminDiscordTeamChannels';
 import enAdminTournamentSimulator from './adminTournamentSimulator';
 import enAdminAdvancementRulesEditor from './adminAdvancementRulesEditor';
 import enAdminAutoSaveIndicator from './adminAutoSaveIndicator';
@@ -306,6 +307,7 @@ const adminEnDict = {
   adminStatsTeams: enAdminStatsTeams,
   adminTournamentTemplates: enAdminTournamentTemplates,
   adminTenantDiscordConfig: enAdminTenantDiscordConfig,
+  adminDiscordTeamChannels: enAdminDiscordTeamChannels,
   adminTournamentSimulator: enAdminTournamentSimulator,
   adminAdvancementRulesEditor: enAdminAdvancementRulesEditor,
   adminAutoSaveIndicator: enAdminAutoSaveIndicator,

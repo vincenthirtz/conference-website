@@ -124,6 +124,7 @@ import nsAdminStatsMaps from './adminStatsMaps';
 import nsAdminStatsTeams from './adminStatsTeams';
 import nsAdminTournamentTemplates from './adminTournamentTemplates';
 import nsAdminTenantDiscordConfig from './adminTenantDiscordConfig';
+import nsAdminDiscordTeamChannels from './adminDiscordTeamChannels';
 import nsAdminTournamentSimulator from './adminTournamentSimulator';
 import nsAdminAdvancementRulesEditor from './adminAdvancementRulesEditor';
 import nsAdminAutoSaveIndicator from './adminAutoSaveIndicator';
@@ -309,6 +310,7 @@ export const frDict = {
   adminStatsTeams: nsAdminStatsTeams.fr,
   adminTournamentTemplates: nsAdminTournamentTemplates.fr,
   adminTenantDiscordConfig: nsAdminTenantDiscordConfig.fr,
+  adminDiscordTeamChannels: nsAdminDiscordTeamChannels.fr,
   adminTournamentSimulator: nsAdminTournamentSimulator.fr,
   adminAdvancementRulesEditor: nsAdminAdvancementRulesEditor.fr,
   adminAutoSaveIndicator: nsAdminAutoSaveIndicator.fr,

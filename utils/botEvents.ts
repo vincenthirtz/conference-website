@@ -34,6 +34,22 @@ export const BOT_EVENT_NAMES = [
   'news.published',
   'team.created',
   'team.dissolved',
+  // Gestion des salons d'équipe DEPUIS L'ADMIN. Le cron autonome qui faisait ça
+  // tout seul a été supprimé : il a détruit les salons d'une équipe vivante,
+  // puis recréé des salons dont personne ne voulait. Chaque geste est désormais
+  // demandé par quelqu'un, depuis /admin/discord/team-channels.
+  //
+  // `snapshot.request` est une LECTURE : le bot regarde le guild et repose sa
+  // photo sur le site. Les autres sont des écritures, une par geste — pas de
+  // « réconcilie », qui est justement le mot qui a coûté des salons.
+  'team.channels.snapshot.request',
+  'team.channels.provision',
+  'team.channels.repair',
+  'team.channel.deleted',
+  'team.channel.access.granted',
+  'team.channel.access.revoked',
+  'team.role.granted',
+  'team.role.revoked',
   'team.message',
   'team.member.added',
   'team.member.removed',

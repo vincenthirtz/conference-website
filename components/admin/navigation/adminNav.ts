@@ -608,6 +608,23 @@ export const ADMIN_NAV: AdminNavNode[] = [
         href: '/admin/onboarding',
         minRole: 'admin',
       },
+      // Salons Discord des équipes. Cette page EXISTE parce que le cron qui
+      // gérait ces salons tout seul a été supprimé : il en a détruit, puis en a
+      // recréé dont personne ne voulait. La gestion est redevenue un geste
+      // humain, il lui faut donc un endroit.
+      {
+        id: 'discord-team-channels',
+        topBarLabel: 'Salons Discord',
+        href: '/admin/discord/team-channels',
+        minRole: 'admin',
+        card: {
+          order: 19.5,
+          titleKey: 'navDiscordTeamChannelsTitle',
+          descKey: 'navDiscordTeamChannelsDesc',
+          icon: 'signal',
+          accent: 'border-indigo-500/30 from-indigo-500/10 text-indigo-300',
+        },
+      },
       // Gestion des tenants : déplacée de la top-bar Configuration vers une
       // CARTE du dashboard (dashboard-only, plus d'entrée top-bar). La création
       // reste accessible via le bouton « Créer un tenant » de la liste (?new=1).

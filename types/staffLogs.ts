@@ -128,6 +128,19 @@ export type StaffLogAction =
   // --- Discord / webhooks / bot ---
   | 'update_discord_webhook'
   | 'delete_discord_webhook'
+  // --- Salons Discord d'équipe (gestion admin) ---
+  // Le cron autonome qui gérait ces salons a été supprimé après avoir détruit
+  // puis recréé des salons de son propre chef. Chaque geste est désormais
+  // demandé par quelqu'un — et tracé ici, ce qui manquait cruellement : nul ne
+  // pouvait dire qui avait supprimé quoi.
+  | 'discord_refresh'
+  | 'discord_provision'
+  | 'discord_repair'
+  | 'discord_delete_channel'
+  | 'discord_grant_access'
+  | 'discord_revoke_access'
+  | 'discord_grant_role'
+  | 'discord_revoke_role'
   | 'create_webhook'
   | 'delete_webhook'
   | 'rotate_bot_secrets'

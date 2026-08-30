@@ -9442,6 +9442,211 @@ paths:
                     type: integer
                   offset:
                     type: integer
+  /api/admin/discord/team-channels:
+    get:
+      tags:
+        - admin
+      summary: Etat Discord de chaque equipe (stocke + vu par le bot).
+      description: >-
+        Remplace le cron `team-channel-reconcile`, supprime. Renvoie pour chaque
+        equipe ce que le SITE a enregistre (`teams.discord_*`) ET ce que le BOT a
+        vu la derniere fois (`team_discord_channels`). Les deux, parce qu'ils
+        divergent : un id stocke peut pointer sur un salon supprime, et c'est le
+        cas qui interesse le plus. `live` vaut null quand l'etat n'a jamais ete
+        rafraichi.
+      operationId: adminGetDiscordTeamChannels
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Une entree par equipe du tenant.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - teams
+                properties:
+                  teams:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        teamId:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                          nullable: true
+                        slug:
+                          type: string
+                          nullable: true
+                        isActive:
+                          type: boolean
+                        stored:
+                          type: object
+                          description: Ce que le site a enregistre.
+                        live:
+                          type: object
+                          nullable: true
+                          description: Ce que le bot a vu, avec sa date de capture.
+    post:
+      tags:
+        - admin
+      summary: Demande une action Discord sur les salons d'une equipe.
+      description: >-
+        Un geste nomme par appel — `refresh`, `provision`, `repair`,
+        `delete-channel`, `grant-access`, `revoke-access`, `grant-role`,
+        `revoke-role`. Pas de « reconcilie » : c'est le mot qui laisse la machine
+        decider, et qui a coute des salons.
+
+        Le site n'a pas le token Discord : l'action part en evenement vers le bot
+        (push HMAC, outbox en repli) qui execute puis repose une photo. Reponse
+        202 : `delivered` dit si le bot a pris l'evenement tout de suite ou s'il
+        attend en file. Chaque action est journalisee dans `staff_logs`.
+      operationId: adminActOnDiscordTeamChannels
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+              properties:
+                action:
+                  type: string
+                  enum:
+                    - refresh
+                    - provision
+                    - repair
+                    - delete-channel
+                    - grant-access
+                    - revoke-access
+                    - grant-role
+                    - revoke-role
+                teamId:
+                  type: string
+                  format: uuid
+                  description: Requis sauf pour `refresh`, qui accepte tout le tenant.
+                channel:
+                  type: string
+                  enum: [text, voice]
+                discordUserId:
+                  type: string
+      responses:
+        '202':
+          description: Action transmise au bot.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted:
+                    type: boolean
+                  delivered:
+                    type: boolean
+                  action:
+                    type: string
+        '400':
+          description: Action inconnue ou parametres invalides.
+        '404':
+          description: Equipe introuvable dans ce tenant.
+  /api/bot/v1/team-channels/snapshot:
+    post:
+      tags:
+        - bot/misc
+      summary: Le bot depose l'etat Discord observe pour un lot d'equipes.
+      description: >-
+        Seul le bot voit le guild. Le site ne connait que des ids stockes, qui
+        peuvent pointer sur un salon supprime — d'ou cette photo, datee, qui
+        alimente l'ecran /admin/discord/team-channels.
+
+        Upsert par equipe (pas de purge) : le bot peut rafraichir UNE equipe
+        apres une action sans reposter tout le guild. `access` dit qui entre et
+        PAR QUEL CHEMIN (role d'equipe / permission individuelle sur le salon
+        texte / sur le vocal) — la distinction sert a retirer quelqu'un au bon
+        endroit.
+      operationId: botPostTeamChannelsSnapshot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - teams
+              properties:
+                teams:
+                  type: array
+                  maxItems: 500
+                  items:
+                    type: object
+                    required:
+                      - teamId
+                      - roleExists
+                      - textChannelExists
+                      - voiceChannelExists
+                    properties:
+                      teamId:
+                        type: string
+                        format: uuid
+                      roleId:
+                        type: string
+                        nullable: true
+                      roleName:
+                        type: string
+                        nullable: true
+                      roleExists:
+                        type: boolean
+                      textChannelId:
+                        type: string
+                        nullable: true
+                      textChannelName:
+                        type: string
+                        nullable: true
+                      textChannelExists:
+                        type: boolean
+                      voiceChannelId:
+                        type: string
+                        nullable: true
+                      voiceChannelName:
+                        type: string
+                        nullable: true
+                      voiceChannelExists:
+                        type: boolean
+                      access:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            discordUserId:
+                              type: string
+                            username:
+                              type: string
+                              nullable: true
+                            source:
+                              type: string
+                              enum: [role, text, voice]
+                      warnings:
+                        type: array
+                        items:
+                          type: string
+      responses:
+        '200':
+          description: Photo enregistree.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  capturedAt:
+                    type: string
+                    format: date-time
   /api/bot/v1/reconcile/team-channels:
     get:
       tags:

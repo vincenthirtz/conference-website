@@ -1346,6 +1346,35 @@ Le caster clique le bouton "Je confirme" du DM T-30. Marque
 | [`reconcile/discord-orphans.ts`](../pages/api/bot/v1/reconcile/discord-orphans.ts) | GET     | —     | `bot-reconcile-orphans`       | per-tenant                                        |
 | [`reconcile/team-channels.ts`](../pages/api/bot/v1/reconcile/team-channels.ts)     | GET     | —     | `bot-reconcile-team-channels` | per-tenant                                        |
 
+#### `POST /api/bot/v1/team-channels/snapshot`
+
+Le bot dépose l'état Discord **observé** pour un lot d'équipes : le rôle et les
+deux salons existent-ils vraiment, et qui peut entrer.
+
+Seul le bot voit le guild. Le site ne connaît que des ids stockés dans
+`teams.discord_*`, qui peuvent parfaitement pointer sur un salon supprimé — et
+c'est le cas qui intéresse le plus. Sans cette photo, l'écran
+`/admin/discord/team-channels` afficherait des ids en se taisant sur leur
+validité.
+
+**Notes** :
+
+- **Upsert par équipe**, pas de purge : le bot peut rafraîchir UNE équipe après
+  une action sans reposter tout le guild.
+- `access[].source` dit par quel chemin la personne entre — `role` (rôle
+  d'équipe) ou `text` / `voice` (permission individuelle sur ce salon). La
+  distinction n'est pas cosmétique : on retire au bon endroit, sinon on croit
+  avoir sorti quelqu'un qui rentre encore par l'autre porte.
+- `warnings[]` remonte ce que le bot n'a pas su faire (salon introuvable,
+  permissions manquantes) — affiché tel quel dans l'admin.
+- `captured_at` est posé côté site : une photo sans date induit en erreur plus
+  qu'elle n'informe.
+
+Déclenché par l'événement `team.channels.snapshot.request` (bouton « Rafraîchir »
+de l'admin) et après chaque action, pour que l'écran reflète le résultat.
+
+---
+
 #### `GET /api/bot/v1/reconcile/team-channels`
 
 Cron quotidien de réconciliation Discord côté bot. Retourne les **équipes
@@ -2863,8 +2892,39 @@ Le bot provisionne, de maniere **idempotente** :
 3. **Writeback** des IDs role/texte/vocal via le PATCH ci-dessus.
 
 **`team.dissolved`** — payload inclut `discordRoleId`, `discordChannelId`,
-`discordVoiceChannelId` (enrichis depuis `teams`). Le bot supprime le salon
-vocal, le salon texte et le role d'equipe, puis remet les 3 colonnes a `null`.
+`discordVoiceChannelId` (enrichis depuis `teams`). Le bot **ne supprime plus
+rien** : role et salons sont CONSERVES, et une demande de decision est postee
+dans le salon de resolution. Les 3 colonnes restent renseignees — les vider
+ferait passer des salons bien vivants pour des inconnus.
+
+La politique « on ne supprime jamais un role automatiquement » existait deja
+pour les roles ; elle couvre desormais les salons, apres qu'un cron a detruit
+ceux d'une equipe vivante. Un salon Discord emporte son historique et rien ne le
+rend : aucune heuristique ne merite ce pouvoir en autonomie. La suppression est
+devenue une action admin explicite (voir ci-dessous).
+
+#### Events de gestion des salons d'equipe (admin -> bot)
+
+Emis par `/admin/discord/team-channels`, ou un humain clique. Ils remplacent le
+cron `team-channel-reconcile`, supprime. Chaque evenement est UN geste nomme —
+pas de « reconcilie », qui est le mot qui laisse la machine decider.
+
+Tous portent `teams[]` (contexte Discord enrichi depuis `teams` : `teamId`,
+`name`, `slug`, `discordRoleId`, `discordChannelId`, `discordVoiceChannelId`) et
+`requestedByStaffId`. Le contexte voyage AVEC l'evenement plutot que d'etre
+rappele au site : un aller-retour de moins, une occasion de moins de travailler
+sur une vue perimee.
+
+| Event | Effet cote bot |
+| --- | --- |
+| `team.channels.snapshot.request` | LECTURE seule : observe le guild et POST `/team-channels/snapshot`. |
+| `team.channels.provision` | Cree ce qui manque (idempotent : reutilise role et salons vivants). |
+| `team.channels.repair` | Repose les overwrites cibles sur les 2 salons. Ne cree rien. |
+| `team.channel.deleted` | Supprime UN salon (`channel: text\|voice`) et vide son mapping. Seule suppression que le bot pratique encore, et elle vient d'un clic. |
+| `team.channel.access.granted` / `.revoked` | Permission INDIVIDUELLE sur un salon (coach externe, casteuse invitee). Le revoke RETIRE l'overwrite au lieu de poser un `deny`, qui survivrait au role et bloquerait sans explication. |
+| `team.role.granted` / `.revoked` | Role d'equipe : ouvre ou ferme les deux salons d'un coup. |
+
+Chaque action rejoue une photo apres coup, pour que l'ecran reflete le resultat.
 
 **Resolution manuelle** — tout conflit/probleme bloquant (perms bot
 insuffisantes sur la categorie, role ambigu, hierarchie du role du bot trop

@@ -76,6 +76,9 @@ export default adminNs('adminDashboard', {
   navApiTokensTitle: 'Tokens API',
   navApiTokensDesc: "Tokens d'accès scopés à l'API publique.",
   navWebhooksTitle: 'Webhooks (API)',
+  navDiscordTeamChannelsTitle: 'Salons Discord',
+  navDiscordTeamChannelsDesc:
+    'Rôles et salons d’équipe : état réel, provisioning, accès, suppression.',
   navWebhooksDesc:
     'Abonner une URL pour recevoir nos events en POST signé HMAC.',
   navDeveloperHubTitle: 'Développeurs (API)',

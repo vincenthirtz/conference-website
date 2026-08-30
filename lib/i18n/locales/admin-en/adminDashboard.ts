@@ -75,6 +75,9 @@ export default {
   navApiTokensTitle: 'Tokens API',
   navApiTokensDesc: "Tokens d'accès scopés à l'API publique.",
   navWebhooksTitle: 'Webhooks (API)',
+  navDiscordTeamChannelsTitle: 'Discord channels',
+  navDiscordTeamChannelsDesc:
+    'Team roles and channels: real state, provisioning, access, deletion.',
   navWebhooksDesc:
     'Subscribe a URL to receive our events as HMAC-signed POSTs.',
   navDeveloperHubTitle: 'Developers (API)',
