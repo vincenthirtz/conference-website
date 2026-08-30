@@ -137,6 +137,7 @@ export type StaffLogAction =
   | 'discord_provision'
   | 'discord_repair'
   | 'discord_delete_channel'
+  | 'discord_delete_role'
   | 'discord_grant_access'
   | 'discord_revoke_access'
   | 'discord_grant_role'

@@ -63,4 +63,23 @@ export default {
   toastError: 'The action failed.',
   errorLoad: 'Could not load the channel state.',
   errorInvalidId: 'Invalid Discord ID (15 to 25 digits).',
+  searchPlaceholder: 'Filter by team name…',
+  filterAll: 'All',
+  filterIssues: 'Needs attention',
+  summary: '{ok} in order · {issues} to handle · {never} never seen',
+  refreshTeam: 'Refresh',
+  stale: 'Snapshot older than 24 h — refresh before acting.',
+  rosterTitle: 'Site roster',
+  rosterAllIn: 'The whole roster has access.',
+  rosterMissing: '{count} roster member(s) without access',
+  rosterNoDiscord:
+    'Discord account not linked — the bot can do nothing for this person.',
+  rosterGrantRole: 'Grant the role',
+  rosterUnknownAccess:
+    'Refresh to know who has access: without a snapshot we do not guess.',
+  rosterCaptain: 'captain',
+  actionDeleteRole: 'Delete the role',
+  confirmDeleteRoleTitle: 'Delete this role?',
+  confirmDeleteRoleBody:
+    'The role disappears from the server, and everyone who had it loses access to both channels.',
 };

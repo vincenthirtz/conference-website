@@ -35,11 +35,22 @@ type AccessEntry = {
   source: 'role' | 'text' | 'voice';
 };
 
+type RosterEntry = {
+  userId: string | null;
+  label: string | null;
+  role: string | null;
+  discordUserId: string | null;
+  isCaptain: boolean;
+  /** `null` = indéterminé tant qu'aucune photo n'existe. */
+  hasAccess: boolean | null;
+};
+
 type TeamRow = {
   teamId: string;
   name: string | null;
   slug: string | null;
   isActive: boolean;
+  roster: RosterEntry[];
   stored: {
     roleId: string | null;
     textChannelId: string | null;
@@ -117,8 +128,14 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [openTeamId, setOpenTeamId] = useState<string | null>(null);
-  const [grantUser, setGrantUser] = useState('');
-  const [grantMode, setGrantMode] = useState<'role' | 'text' | 'voice'>('role');
+  // Saisie PAR ÉQUIPE. Un état partagé faisait suivre l'ID tapé pour l'équipe A
+  // quand on ouvrait la B — de quoi donner un accès à la mauvaise équipe.
+  const [grantUser, setGrantUser] = useState<Record<string, string>>({});
+  const [grantMode, setGrantMode] = useState<
+    Record<string, 'role' | 'text' | 'voice'>
+  >({});
+  const [search, setSearch] = useState('');
+  const [onlyIssues, setOnlyIssues] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -185,25 +202,60 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
 
   const grant = useCallback(
     async (team: TeamRow) => {
-      const id = grantUser.trim();
+      const id = (grantUser[team.teamId] ?? '').trim();
+      const mode = grantMode[team.teamId] ?? 'role';
       if (!DISCORD_ID_RE.test(id)) {
         addToast(t.errorInvalidId, 'error');
         return;
       }
       await act(
-        grantMode === 'role'
+        mode === 'role'
           ? { action: 'grant-role', teamId: team.teamId, discordUserId: id }
           : {
               action: 'grant-access',
               teamId: team.teamId,
-              channel: grantMode,
+              channel: mode,
               discordUserId: id,
             },
         `${team.teamId}:grant`
       );
-      setGrantUser('');
+      setGrantUser((prev) => ({ ...prev, [team.teamId]: '' }));
     },
     [act, addToast, grantMode, grantUser, t]
+  );
+
+  /** Donne le rôle à un membre du roster — sans avoir à retaper son ID. */
+  const grantToMember = useCallback(
+    async (team: TeamRow, entry: RosterEntry) => {
+      if (!entry.discordUserId) return;
+      await act(
+        {
+          action: 'grant-role',
+          teamId: team.teamId,
+          discordUserId: entry.discordUserId,
+        },
+        `${team.teamId}:member:${entry.discordUserId}`
+      );
+    },
+    [act]
+  );
+
+  const deleteRole = useCallback(
+    async (team: TeamRow) => {
+      const ok = await confirm({
+        title: t.confirmDeleteRoleTitle,
+        subtitle: t.confirmDeleteRoleBody,
+        variant: 'danger',
+        confirmLabel: t.confirmDelete,
+        cancelLabel: t.confirmCancel,
+      });
+      if (!ok) return;
+      await act(
+        { action: 'delete-role', teamId: team.teamId },
+        `${team.teamId}:delrole`
+      );
+    },
+    [act, confirm, t]
   );
 
   const revoke = useCallback(
@@ -226,6 +278,47 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
     },
     [act]
   );
+
+  /**
+   * Une équipe « à traiter » = quelque chose de concret à faire dessus : un id
+   * qui ne répond plus, un avertissement du bot, ou un membre du roster sans
+   * accès. « Jamais rafraîchie » est compté à part : ça n'appelle pas une
+   * action sur l'équipe, ça appelle un rafraîchissement.
+   */
+  const needsAttention = (team: TeamRow) => {
+    const live = team.live;
+    if (!live) return false;
+    if (live.warnings.length > 0) return true;
+    if (team.stored.roleId && !live.roleExists) return true;
+    if (team.stored.textChannelId && !live.textChannelExists) return true;
+    if (team.stored.voiceChannelId && !live.voiceChannelExists) return true;
+    return team.roster.some((r) => r.discordUserId && r.hasAccess === false);
+  };
+
+  const counters = {
+    never: teams.filter((t) => !t.live).length,
+    issues: teams.filter((t) => needsAttention(t)).length,
+    ok: teams.filter((t) => t.live && !needsAttention(t)).length,
+  };
+
+  const needle = search.trim().toLowerCase();
+  const visibleTeams = teams.filter((team) => {
+    if (onlyIssues && !needsAttention(team)) return false;
+    if (!needle) return true;
+    return (team.name || '').toLowerCase().includes(needle);
+  });
+
+  /**
+   * Les membres du roster qui n'ont PAS acces, plus ceux qu'on ne peut pas
+   * servir faute de compte Discord lie. C'est la liste sur laquelle on agit ;
+   * ceux qui sont deja dedans n'appellent rien.
+   */
+  const missingRoster = (team: TeamRow) =>
+    team.roster.filter((r) => r.hasAccess === false || !r.discordUserId);
+
+  /** Une photo de plus de 24 h ne doit pas servir de base à une suppression. */
+  const isStale = (capturedAt: string) =>
+    Date.now() - new Date(capturedAt).getTime() > 24 * 60 * 60 * 1000;
 
   const sourceLabel = (source: AccessEntry['source']) =>
     source === 'role'
@@ -257,6 +350,45 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
           </button>
         </div>
 
+        {!loading && teams.length > 0 && (
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t.searchPlaceholder}
+              className="w-64 rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-sm"
+            />
+            <div className="flex overflow-hidden rounded-xl border border-white/15">
+              {[
+                [false, t.filterAll],
+                [true, t.filterIssues],
+              ].map(([value, label]) => (
+                <button
+                  key={String(value)}
+                  type="button"
+                  onClick={() => setOnlyIssues(value as boolean)}
+                  aria-pressed={onlyIssues === value}
+                  className={`px-3 py-2 text-xs transition ${
+                    onlyIssues === value
+                      ? 'bg-white/15 text-white'
+                      : 'text-neutral-400 hover:bg-white/5'
+                  }`}
+                >
+                  {label as string}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-neutral-500">
+              {format(t.summary, {
+                ok: String(counters.ok),
+                issues: String(counters.issues),
+                never: String(counters.never),
+              })}
+            </p>
+          </div>
+        )}
+
         {loading ? (
           <p className="text-sm text-neutral-500">{t.loading}</p>
         ) : teams.length === 0 ? (
@@ -275,7 +407,7 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
                 </tr>
               </thead>
               <tbody>
-                {teams.map((team) => {
+                {visibleTeams.map((team) => {
                   const live = team.live;
                   const open = openTeamId === team.teamId;
                   return (
@@ -358,6 +490,19 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
                           <button
                             type="button"
                             onClick={() =>
+                              act(
+                                { action: 'refresh', teamId: team.teamId },
+                                `${team.teamId}:refresh`
+                              )
+                            }
+                            disabled={busy !== null}
+                            className="rounded-lg border border-white/15 px-3 py-1.5 text-xs transition hover:bg-white/10 disabled:opacity-50"
+                          >
+                            {t.refreshTeam}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
                               setOpenTeamId(open ? null : team.teamId)
                             }
                             className="rounded-lg border border-white/15 px-3 py-1.5 text-xs transition hover:bg-white/10"
@@ -368,6 +513,12 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
 
                         {open && (
                           <div className="mt-4 space-y-4 rounded-xl border border-white/10 bg-black/30 p-4">
+                            {live && isStale(live.capturedAt) && (
+                              <p className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
+                                {t.stale}
+                              </p>
+                            )}
+
                             {live?.warnings?.length ? (
                               <ul className="space-y-1 text-xs text-amber-200">
                                 {live.warnings.map((w) => (
@@ -375,6 +526,61 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
                                 ))}
                               </ul>
                             ) : null}
+
+                            {/* Le roster du SITE en regard de l'acces Discord.
+                                C'est la question qui pousse a agir : qui
+                                devrait etre la et n'y est pas ? Sans ca,
+                                assigner quelqu'un suppose de connaitre son ID
+                                Discord par coeur. */}
+                            <div>
+                              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                                {t.rosterTitle}
+                              </p>
+                              {!live ? (
+                                <p className="text-xs text-neutral-500">
+                                  {t.rosterUnknownAccess}
+                                </p>
+                              ) : missingRoster(team).length === 0 ? (
+                                <p className="text-xs text-emerald-300">
+                                  {t.rosterAllIn}
+                                </p>
+                              ) : (
+                                <ul className="space-y-1">
+                                  {missingRoster(team).map((entry) => (
+                                    <li
+                                      key={entry.userId || entry.label || ''}
+                                      className="flex items-center justify-between gap-3 text-xs"
+                                    >
+                                      <span className="text-neutral-200">
+                                        {entry.label || '—'}
+                                        {entry.isCaptain && (
+                                          <span className="ml-1 text-neutral-500">
+                                            ({t.rosterCaptain})
+                                          </span>
+                                        )}
+                                        {!entry.discordUserId && (
+                                          <span className="ml-2 text-amber-300/80">
+                                            {t.rosterNoDiscord}
+                                          </span>
+                                        )}
+                                      </span>
+                                      {entry.discordUserId && (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            grantToMember(team, entry)
+                                          }
+                                          disabled={busy !== null}
+                                          className="shrink-0 rounded-lg border border-white/15 px-2 py-1 transition hover:bg-white/10 disabled:opacity-50"
+                                        >
+                                          {t.rosterGrantRole}
+                                        </button>
+                                      )}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
 
                             <div>
                               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
@@ -421,21 +627,27 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
                               <div className="flex flex-wrap items-center gap-2">
                                 <input
                                   type="text"
-                                  value={grantUser}
-                                  onChange={(e) => setGrantUser(e.target.value)}
+                                  value={grantUser[team.teamId] ?? ''}
+                                  onChange={(e) =>
+                                    setGrantUser((prev) => ({
+                                      ...prev,
+                                      [team.teamId]: e.target.value,
+                                    }))
+                                  }
                                   placeholder={t.grantUserPlaceholder}
                                   aria-label={t.grantUserLabel}
                                   className="w-56 rounded-lg border border-white/15 bg-black/50 px-3 py-2 text-xs"
                                 />
                                 <select
-                                  value={grantMode}
+                                  value={grantMode[team.teamId] ?? 'role'}
                                   onChange={(e) =>
-                                    setGrantMode(
-                                      e.target.value as
+                                    setGrantMode((prev) => ({
+                                      ...prev,
+                                      [team.teamId]: e.target.value as
                                         | 'role'
                                         | 'text'
-                                        | 'voice'
-                                    )
+                                        | 'voice',
+                                    }))
                                   }
                                   className="rounded-lg border border-white/15 bg-black/50 px-3 py-2 text-xs"
                                 >
@@ -476,6 +688,14 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
                                 className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-200 transition hover:bg-red-500/10 disabled:opacity-50"
                               >
                                 {t.actionDeleteVoice}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => deleteRole(team)}
+                                disabled={busy !== null || !team.stored.roleId}
+                                className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-200 transition hover:bg-red-500/10 disabled:opacity-50"
+                              >
+                                {t.actionDeleteRole}
                               </button>
                             </div>
                           </div>

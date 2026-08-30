@@ -46,6 +46,10 @@ export const BOT_EVENT_NAMES = [
   'team.channels.provision',
   'team.channels.repair',
   'team.channel.deleted',
+  // Le rôle a la même règle que les salons : jamais supprimé tout seul, mais
+  // supprimable depuis l'admin. Sans ça, un rôle créé par erreur reste à vie —
+  // c'est arrivé à deux équipes.
+  'team.role.deleted',
   'team.channel.access.granted',
   'team.channel.access.revoked',
   'team.role.granted',

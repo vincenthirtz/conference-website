@@ -9490,6 +9490,34 @@ paths:
                           type: object
                           nullable: true
                           description: Ce que le bot a vu, avec sa date de capture.
+                        roster:
+                          type: array
+                          description: >-
+                            Le roster du site en regard de l'acces Discord.
+                            `hasAccess` vaut null tant qu'aucune photo n'existe
+                            (on ne devine pas), et `discordUserId` null signale
+                            une personne hors de portee du bot faute de compte
+                            lie.
+                          items:
+                            type: object
+                            properties:
+                              userId:
+                                type: string
+                                nullable: true
+                              label:
+                                type: string
+                                nullable: true
+                              role:
+                                type: string
+                                nullable: true
+                              discordUserId:
+                                type: string
+                                nullable: true
+                              isCaptain:
+                                type: boolean
+                              hasAccess:
+                                type: boolean
+                                nullable: true
     post:
       tags:
         - admin
@@ -9523,6 +9551,7 @@ paths:
                     - provision
                     - repair
                     - delete-channel
+                    - delete-role
                     - grant-access
                     - revoke-access
                     - grant-role

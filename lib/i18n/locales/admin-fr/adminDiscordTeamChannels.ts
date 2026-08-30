@@ -70,4 +70,26 @@ export default adminNs('adminDiscordTeamChannels', {
   toastError: 'L’action a échoué.',
   errorLoad: 'Impossible de charger l’état des salons.',
   errorInvalidId: 'ID Discord invalide (15 à 25 chiffres).',
+
+  searchPlaceholder: 'Filtrer par nom d’équipe…',
+  filterAll: 'Toutes',
+  filterIssues: 'À traiter',
+  summary: '{ok} en ordre · {issues} à traiter · {never} jamais vues',
+  refreshTeam: 'Rafraîchir',
+  stale: 'Photo datant de plus de 24 h — rafraîchis avant d’agir.',
+
+  rosterTitle: 'Roster du site',
+  rosterAllIn: 'Tout le roster a accès.',
+  rosterMissing: '{count} membre(s) du roster sans accès',
+  rosterNoDiscord:
+    'Compte Discord non lié — le bot ne peut rien pour cette personne.',
+  rosterGrantRole: 'Donner le rôle',
+  rosterUnknownAccess:
+    'Rafraîchis pour savoir qui a accès : sans photo, on ne prétend pas le deviner.',
+  rosterCaptain: 'capitaine',
+
+  actionDeleteRole: 'Supprimer le rôle',
+  confirmDeleteRoleTitle: 'Supprimer ce rôle ?',
+  confirmDeleteRoleBody:
+    'Le rôle disparaît du serveur, et tous ceux qui l’avaient perdent l’accès aux deux salons.',
 });

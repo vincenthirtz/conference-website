@@ -2920,6 +2920,7 @@ sur une vue perimee.
 | `team.channels.snapshot.request` | LECTURE seule : observe le guild et POST `/team-channels/snapshot`. |
 | `team.channels.provision` | Cree ce qui manque (idempotent : reutilise role et salons vivants). |
 | `team.channels.repair` | Repose les overwrites cibles sur les 2 salons. Ne cree rien. |
+| `team.role.deleted` | Supprime le ROLE d'equipe et vide son mapping. Meme regle que les salons : jamais automatique, mais possible sur demande — sinon un role cree par erreur reste a vie. |
 | `team.channel.deleted` | Supprime UN salon (`channel: text\|voice`) et vide son mapping. Seule suppression que le bot pratique encore, et elle vient d'un clic. |
 | `team.channel.access.granted` / `.revoked` | Permission INDIVIDUELLE sur un salon (coach externe, casteuse invitee). Le revoke RETIRE l'overwrite au lieu de poser un `deny`, qui survivrait au role et bloquerait sans explication. |
 | `team.role.granted` / `.revoked` | Role d'equipe : ouvre ou ferme les deux salons d'un coup. |

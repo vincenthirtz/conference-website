@@ -291,6 +291,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   discord_provision: 'Salons d’équipe provisionnés',
   discord_repair: 'Permissions des salons d’équipe réparées',
   discord_delete_channel: 'Salon d’équipe supprimé',
+  discord_delete_role: 'Rôle d’équipe supprimé',
   discord_grant_access: 'Accès à un salon d’équipe accordé',
   discord_revoke_access: 'Accès à un salon d’équipe retiré',
   discord_grant_role: 'Rôle d’équipe attribué',

@@ -152,6 +152,87 @@ describe('GET /api/admin/discord/team-channels', () => {
   });
 });
 
+describe('GET — le roster du site en regard de l’accès Discord', () => {
+  const USER_IN = '111111111111111111';
+  const USER_OUT = '222222222222222222';
+
+  beforeEach(() => {
+    store.team_members = [
+      {
+        team_id: TEAM_A,
+        tenant_id: CONFERENCE_TENANT_ID,
+        user_id: 'auth-in',
+        role: 'player',
+        battle_tag: 'In#1111',
+        display_name: null,
+      },
+      {
+        team_id: TEAM_A,
+        tenant_id: CONFERENCE_TENANT_ID,
+        user_id: 'auth-out',
+        role: 'player',
+        battle_tag: 'Out#2222',
+        display_name: null,
+      },
+      {
+        team_id: TEAM_A,
+        tenant_id: CONFERENCE_TENANT_ID,
+        user_id: 'auth-nodiscord',
+        role: 'coach',
+        battle_tag: null,
+        display_name: 'Sans Discord',
+      },
+    ] as any;
+    store.user_discord_links = [
+      { auth_user_id: 'auth-in', discord_user_id: USER_IN },
+      { auth_user_id: 'auth-out', discord_user_id: USER_OUT },
+    ] as any;
+  });
+
+  it('dit qui a accès, qui ne l’a pas, et qui est hors de portée', async () => {
+    store.team_discord_channels = [
+      {
+        team_id: TEAM_A,
+        tenant_id: CONFERENCE_TENANT_ID,
+        role_id: 'role-a',
+        role_exists: true,
+        text_channel_id: 'text-a',
+        text_channel_exists: true,
+        voice_channel_id: 'voice-a',
+        voice_channel_exists: true,
+        access: [{ discordUserId: USER_IN, username: 'in', source: 'role' }],
+        warnings: [],
+        captured_at: '2026-08-30T10:00:00.000Z',
+      },
+    ] as any;
+
+    const res = makeRes();
+    await handler(makeReq({ method: 'GET' }), res);
+
+    const roster = (res.body as any).teams.find(
+      (t: any) => t.teamId === TEAM_A
+    ).roster;
+    const byTag = Object.fromEntries(roster.map((r: any) => [r.label, r]));
+
+    expect(byTag['In#1111'].hasAccess).toBe(true);
+    expect(byTag['Out#2222'].hasAccess).toBe(false);
+    // Sans compte Discord lié, le bot ne peut rien : l'écran doit le dire au
+    // lieu de proposer un bouton qui ne marchera pas.
+    expect(byTag['Sans Discord'].discordUserId).toBeNull();
+  });
+
+  it('sans photo, `hasAccess` est null — on ne devine pas', async () => {
+    store.team_discord_channels = [] as any;
+    const res = makeRes();
+    await handler(makeReq({ method: 'GET' }), res);
+
+    const roster = (res.body as any).teams.find(
+      (t: any) => t.teamId === TEAM_A
+    ).roster;
+    expect(roster.every((r: any) => r.hasAccess === null)).toBe(true);
+  });
+});
+
 describe('POST — chaque action est un geste nommé', () => {
   const cases: Array<[Record<string, unknown>, string]> = [
     [{ action: 'refresh' }, 'team.channels.snapshot.request'],
@@ -161,6 +242,7 @@ describe('POST — chaque action est un geste nommé', () => {
       { action: 'delete-channel', teamId: TEAM_A, channel: 'voice' },
       'team.channel.deleted',
     ],
+    [{ action: 'delete-role', teamId: TEAM_A }, 'team.role.deleted'],
     [
       {
         action: 'grant-access',

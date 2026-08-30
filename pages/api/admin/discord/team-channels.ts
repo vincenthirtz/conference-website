@@ -55,6 +55,9 @@ const bodySchema = z.discriminatedUnion('action', [
     teamId: z.string().uuid(),
     channel: z.enum(['text', 'voice']),
   }),
+  // Même règle pour le rôle : jamais supprimé tout seul, supprimable ici. Un
+  // rôle créé par erreur restait sinon à vie sur le serveur.
+  z.object({ action: z.literal('delete-role'), teamId: z.string().uuid() }),
   // Accès individuel à UN salon (coach externe, caster invité) — sans donner
   // le rôle d'équipe, qui ouvre les deux salons et marque l'appartenance.
   z.object({
@@ -94,6 +97,7 @@ const LOG_ACTION_BY_ACTION: Record<Body['action'], StaffLogAction> = {
   provision: 'discord_provision',
   repair: 'discord_repair',
   'delete-channel': 'discord_delete_channel',
+  'delete-role': 'discord_delete_role',
   'grant-access': 'discord_grant_access',
   'revoke-access': 'discord_revoke_access',
   'grant-role': 'discord_grant_role',
@@ -106,6 +110,7 @@ const EVENT_BY_ACTION: Record<Body['action'], BotEventName> = {
   provision: 'team.channels.provision',
   repair: 'team.channels.repair',
   'delete-channel': 'team.channel.deleted',
+  'delete-role': 'team.role.deleted',
   'grant-access': 'team.channel.access.granted',
   'revoke-access': 'team.channel.access.revoked',
   'grant-role': 'team.role.granted',
@@ -117,9 +122,27 @@ type TeamRow = {
   name: string | null;
   slug: string | null;
   is_active: boolean | null;
+  captain_id?: string | null;
   discord_role_id: string | null;
   discord_channel_id: string | null;
   discord_voice_channel_id: string | null;
+};
+
+type MemberRow = {
+  team_id: string | null;
+  user_id: string | null;
+  role: string | null;
+  battle_tag: string | null;
+  display_name: string | null;
+};
+
+/** Un membre du roster, tel que l'écran a besoin de le voir. */
+type RosterEntry = {
+  userId: string | null;
+  label: string | null;
+  role: string | null;
+  /** `null` = compte Discord non lié → le bot ne peut rien pour cette personne. */
+  discordUserId: string | null;
 };
 
 type SnapshotRow = {
@@ -145,11 +168,11 @@ type SnapshotRow = {
 async function handleGet(res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   const tenantId = ctx.tenantId;
 
-  const [teamsRes, snapsRes] = await Promise.all([
+  const [teamsRes, snapsRes, membersRes] = await Promise.all([
     supabaseAdmin
       .from('teams')
       .select(
-        'id, name, slug, is_active, discord_role_id, discord_channel_id, discord_voice_channel_id'
+        'id, name, slug, is_active, captain_id, discord_role_id, discord_channel_id, discord_voice_channel_id'
       )
       .eq('tenant_id', tenantId)
       .is('deleted_at', null)
@@ -157,6 +180,13 @@ async function handleGet(res: NextApiResponse, ctx: AuthenticatedStaffContext) {
     supabaseAdmin
       .from('team_discord_channels')
       .select('*')
+      .eq('tenant_id', tenantId),
+    // Le roster du site, pour répondre à la question que l'écran doit poser :
+    // « qui DEVRAIT être là et n'y est pas ? ». Sans ça, assigner quelqu'un
+    // suppose de connaître son ID Discord par cœur — ce que personne ne fait.
+    supabaseAdmin
+      .from('team_members')
+      .select('team_id, user_id, role, battle_tag, display_name')
       .eq('tenant_id', tenantId),
   ]);
 
@@ -178,13 +208,64 @@ async function handleGet(res: NextApiResponse, ctx: AuthenticatedStaffContext) {
     snapshots.set(row.team_id, row);
   }
 
+  // Un membre sans compte Discord lié est HORS de portée du bot : on ne peut ni
+  // lui donner le rôle, ni lui ouvrir un salon. L'écran doit le dire plutôt que
+  // de proposer un bouton qui ne marchera pas.
+  const members = (membersRes.data ?? []) as MemberRow[];
+  const authUserIds = [
+    ...new Set(members.map((m) => m.user_id).filter(Boolean) as string[]),
+  ];
+  const discordByUser = new Map<string, string>();
+  if (authUserIds.length > 0) {
+    const { data: links } = await supabaseAdmin
+      .from('user_discord_links')
+      .select('auth_user_id, discord_user_id')
+      .in('auth_user_id', authUserIds);
+    for (const l of (links ?? []) as Array<{
+      auth_user_id: string | null;
+      discord_user_id: string | null;
+    }>) {
+      if (l.auth_user_id && l.discord_user_id) {
+        discordByUser.set(l.auth_user_id, l.discord_user_id);
+      }
+    }
+  }
+
+  const rosterByTeam = new Map<string, RosterEntry[]>();
+  for (const m of members) {
+    if (!m.team_id) continue;
+    const list = rosterByTeam.get(m.team_id) ?? [];
+    list.push({
+      userId: m.user_id,
+      label: m.display_name || m.battle_tag || null,
+      role: m.role,
+      discordUserId: m.user_id ? (discordByUser.get(m.user_id) ?? null) : null,
+    });
+    rosterByTeam.set(m.team_id, list);
+  }
+
   const teams = ((teamsRes.data ?? []) as TeamRow[]).map((team) => {
     const snap = snapshots.get(team.id) ?? null;
+    const roster = rosterByTeam.get(team.id) ?? [];
+    // Qui a déjà un accès, quel qu'en soit le chemin. Sert à calculer le
+    // manque — la seule information qui pousse à agir.
+    const withAccess = new Set(
+      (snap?.access ?? []).map((a) => a.discordUserId)
+    );
+
     return {
       teamId: team.id,
       name: team.name,
       slug: team.slug,
       isActive: team.is_active === true,
+      roster: roster.map((r) => ({
+        ...r,
+        isCaptain: Boolean(r.userId) && r.userId === team.captain_id,
+        // Indéterminé tant qu'aucune photo n'existe : on ne prétend pas savoir.
+        hasAccess: snap
+          ? Boolean(r.discordUserId && withAccess.has(r.discordUserId))
+          : null,
+      })),
       // Ce que le SITE croit.
       stored: {
         roleId: team.discord_role_id,
@@ -221,12 +302,10 @@ async function handlePost(
 ) {
   const parsed = bodySchema.safeParse(req.body ?? {});
   if (!parsed.success) {
-    return res
-      .status(400)
-      .json({
-        error: 'Action inconnue ou paramètres invalides.',
-        code: 'INVALID_BODY',
-      });
+    return res.status(400).json({
+      error: 'Action inconnue ou paramètres invalides.',
+      code: 'INVALID_BODY',
+    });
   }
   const body = parsed.data;
   const tenantId = ctx.tenantId;
