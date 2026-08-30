@@ -22,6 +22,7 @@ export default {
     'You must be a captain or manager of a team to access this page.',
   backToSpace: 'Back to my space',
   tabTitle: "Manage {name} | OW Women's Cup",
+  tabTitleMember: "{name} | OW Women's Cup",
   publicPage: 'Public page →',
   recruitment: 'Recruitment',
   recruitmentOpenDesc: 'Your team is open to player requests.',
@@ -57,7 +58,7 @@ export default {
     'Send the invitation email again with a new link (the old one stops working)',
   resendInvitationDone: 'Invitation resent',
   resendInvitationDoneNoEmail:
-    "Invitation resent, but the email did not go out — copy the link and share it.",
+    'Invitation resent, but the email did not go out — copy the link and share it.',
   resendInvitationError: 'Could not resend the invitation.',
   cancelInvitation: 'Cancel',
   cancelInvitationConfirm: "Cancel {name}'s invitation?",

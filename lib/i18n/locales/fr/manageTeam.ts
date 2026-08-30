@@ -21,6 +21,9 @@ export default ns('manageTeam', {
     "Tu dois etre capitaine ou manager d'une equipe pour acceder a cette page.",
   backToSpace: 'Retour a mon espace',
   tabTitle: "Gerer {name} | OW Women's Cup",
+  // Une membre sans droits VOIT son équipe sans la gérer : lui promettre
+  // « Gérer » dans l'onglet serait faux.
+  tabTitleMember: "{name} | OW Women's Cup",
   publicPage: 'Page publique →',
   recruitment: 'Recrutement',
   recruitmentOpenDesc: 'Ton equipe est ouverte aux demandes de joueurs.',
@@ -37,7 +40,7 @@ export default ns('manageTeam', {
   removeTitle: 'Retirer',
   pendingRequests: 'Demandes en attente',
   pendingRequestsHelp:
-    "Joueuses qui demandent à rejoindre ton équipe. Les personnes que TU as invitées apparaissent au-dessus, dans « Invitations envoyées ».",
+    'Joueuses qui demandent à rejoindre ton équipe. Les personnes que TU as invitées apparaissent au-dessus, dans « Invitations envoyées ».',
   noPendingRequests: 'Aucune demande en attente.',
 
   // Invitations SORTANTES — celles créées à l'inscription ou depuis le
@@ -46,7 +49,7 @@ export default ns('manageTeam', {
   // étaient passées les joueuses saisies.
   sentInvitations: 'Invitations envoyées',
   sentInvitationsHelp:
-    "En attente de réponse. Une joueuse rejoint le roster au moment où elle accepte son invitation — pas avant.",
+    'En attente de réponse. Une joueuse rejoint le roster au moment où elle accepte son invitation — pas avant.',
   noSentInvitations: 'Aucune invitation en attente.',
   invitationsError: 'Impossible de charger les invitations en attente.',
   invitedAs: 'Invitée comme ',

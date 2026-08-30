@@ -37,6 +37,14 @@ import Switch from '@/components/ui/Switch';
 import { isNonPlayingTeamRole, splitTeamMembers } from '@/utils/teams/roleKind';
 import nsManageTeam from '@/lib/i18n/locales/fr/manageTeam';
 
+/**
+ * Le serveur a répondu « tu ne gères pas cette équipe » (403), ce qui est une
+ * réponse légitime pour une joueuse simple — pas une erreur à afficher.
+ */
+function isNotManagerResponse(err: unknown): boolean {
+  return (err as { status?: number } | null)?.status === 403;
+}
+
 type Specialty = 'tank' | 'dps' | 'support' | 'flex' | null;
 
 type Member = {
@@ -211,6 +219,15 @@ export default function PlayerManageTeamScreen() {
 
   const loading = authLoading || teamLoading || requestsLoading;
 
+  // Gérer son équipe et VOIR son équipe sont deux choses. Le serveur l'a
+  // toujours su — `loadManagedTeamSlice` retombe sur la simple appartenance
+  // pour une joueuse sans droits, et renvoie roster compris. L'écran, lui,
+  // renvoyait tout le monde sauf capitaines et managers sur un mur « accès
+  // refusé » : 43 membres ne pouvaient pas voir leur propre équipe.
+  const canManage = isCaptain || isManager;
+  /** Peut AGIR : gère l'équipe, et n'est pas une inspection staff en lecture. */
+  const canEdit = !readOnly && canManage;
+
   // Une équipe créée « en tant que manager » naît sans capitaine : la capitaine
   // désignée doit d'abord accepter son invitation (ou être désignée ici).
   const hasCaptain = members.some((m) => m.is_captain);
@@ -250,18 +267,34 @@ export default function PlayerManageTeamScreen() {
       );
       setSentInvitations(data.invitations || []);
       setInvitationsError(false);
-    } catch {
-      setInvitationsError(true);
+    } catch (err) {
+      // Un 403 n'est pas une panne : c'est la réponse correcte à « je ne gère
+      // pas cette équipe ». Cf. loadJoinRequests juste en dessous.
+      setInvitationsError(!isNotManagerResponse(err));
     }
   }, [adminFetchJson, withSubject, withTeam]);
 
   const loadJoinRequests = useCallback(async () => {
     // Let failures propagate so the effect can surface a real error state
     // (distinct from the "no pending requests" empty state).
-    const requestsData = await adminFetchJson<{ demandes?: JoinRequest[] }>(
-      withTeam(withSubject('/api/teams/join-requests'))
-    );
-    setJoinRequests(requestsData.demandes || []);
+    try {
+      const requestsData = await adminFetchJson<{ demandes?: JoinRequest[] }>(
+        withTeam(withSubject('/api/teams/join-requests'))
+      );
+      setJoinRequests(requestsData.demandes || []);
+    } catch (err) {
+      // 403 = « tu ne gères pas cette équipe ». C'est une RÉPONSE, pas un
+      // échec — et la traiter comme une panne réseau faisait basculer TOUT
+      // l'écran en « Impossible de charger l'équipe » pour n'importe quelle
+      // joueuse simple, alors que son équipe se chargeait très bien. L'écran
+      // doit continuer jusqu'à la garde `!isCaptain && !isManager`, qui sait
+      // dire les choses correctement.
+      if (isNotManagerResponse(err)) {
+        setJoinRequests([]);
+        return;
+      }
+      throw err;
+    }
   }, [adminFetchJson, withSubject, withTeam]);
 
   useEffect(() => {
@@ -350,9 +383,7 @@ export default function PlayerManageTeamScreen() {
         email_sent: data.email_sent,
       });
       showSuccess(
-        data.email_sent
-          ? t.resendInvitationDone
-          : t.resendInvitationDoneNoEmail
+        data.email_sent ? t.resendInvitationDone : t.resendInvitationDoneNoEmail
       );
       await loadSentInvitations();
     } catch (err: unknown) {
@@ -363,7 +394,8 @@ export default function PlayerManageTeamScreen() {
   };
 
   const handleCancelInvitation = async (invitation: SentInvitation) => {
-    const label = invitation.email || invitation.battle_tag || t.defaultPlayerName;
+    const label =
+      invitation.email || invitation.battle_tag || t.defaultPlayerName;
     const ok = await confirm({
       title: format(t.cancelInvitationConfirm, { name: label }),
       variant: 'warning',
@@ -374,9 +406,12 @@ export default function PlayerManageTeamScreen() {
     setActionLoading(`invite-cancel-${invitation.id}`);
     setError(null);
     try {
-      await adminFetchJson(withTeam(`/api/teams/invitations/${invitation.id}`), {
-        method: 'DELETE',
-      });
+      await adminFetchJson(
+        withTeam(`/api/teams/invitations/${invitation.id}`),
+        {
+          method: 'DELETE',
+        }
+      );
       setSentInvitations((prev) => prev.filter((i) => i.id !== invitation.id));
       showSuccess(t.cancelInvitationDone);
     } catch (err: unknown) {
@@ -608,7 +643,9 @@ export default function PlayerManageTeamScreen() {
     );
   }
 
-  if (!team || (!isCaptain && !isManager)) {
+  // Plus de mur pour une membre : si le serveur a renvoyé une équipe, elle a le
+  // droit de la voir. Seule l'absence totale d'équipe reste un refus.
+  if (!team) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white flex items-center justify-center px-4">
         <div className="text-center">
@@ -629,7 +666,11 @@ export default function PlayerManageTeamScreen() {
     <>
       {dialog}
       <Head>
-        <title>{format(t.tabTitle, { name: team.name })}</title>
+        <title>
+          {format(canManage ? t.tabTitle : t.tabTitleMember, {
+            name: team.name,
+          })}
+        </title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
@@ -716,18 +757,20 @@ export default function PlayerManageTeamScreen() {
             </div>
           )}
 
-          {/* Recrutement toggle */}
-          {!readOnly && (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 mb-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold">{t.recruitment}</h2>
-                  <p className="text-sm text-gray-400 mt-1">
-                    {team.is_joinable
-                      ? t.recruitmentOpenDesc
-                      : t.recruitmentClosedDesc}
-                  </p>
-                </div>
+          {/* Recrutement. Le bloc reste visible pour TOUTE membre : savoir que
+              son equipe recrute est une information, pas une commande. Seul
+              l'interrupteur demande des droits. */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">{t.recruitment}</h2>
+                <p className="text-sm text-gray-400 mt-1">
+                  {team.is_joinable
+                    ? t.recruitmentOpenDesc
+                    : t.recruitmentClosedDesc}
+                </p>
+              </div>
+              {canEdit && (
                 <Switch
                   checked={!!team.is_joinable}
                   onChange={handleToggleJoinable}
@@ -735,20 +778,18 @@ export default function PlayerManageTeamScreen() {
                   label={t.recruitment}
                   size="md"
                 />
-              </div>
+              )}
             </div>
-          )}
+          </div>
 
-          {/* Scrims toggle */}
-          {!readOnly && (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 mb-6">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-semibold">{t.scrimOpenLabel}</h2>
-                  <p className="text-sm text-gray-400 mt-1">
-                    {t.scrimOpenHelp}
-                  </p>
-                </div>
+          {/* Scrims : idem, l'etat se lit, le reglage se merite. */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 mb-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold">{t.scrimOpenLabel}</h2>
+                <p className="text-sm text-gray-400 mt-1">{t.scrimOpenHelp}</p>
+              </div>
+              {canEdit && (
                 <Switch
                   checked={!!team.open_for_scrim}
                   onChange={handleToggleScrimOpen}
@@ -756,12 +797,12 @@ export default function PlayerManageTeamScreen() {
                   label={t.scrimOpenLabel}
                   size="md"
                 />
-              </div>
+              )}
             </div>
-          )}
+          </div>
 
           {/* Inviter par email / lien privé */}
-          {!readOnly && (
+          {canEdit && (
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 mb-6">
               <h2 className="text-lg font-semibold">{t.inviteTitle}</h2>
               <p className="mt-1 text-sm text-gray-400">{t.inviteHelp}</p>
@@ -855,7 +896,7 @@ export default function PlayerManageTeamScreen() {
           {/* Lien d'invitation : le pendant sans email du bloc ci-dessus.
               Rendu juste après, parce que c'est la même question posée
               autrement — « comment je fais entrer quelqu'un ? ». */}
-          {!readOnly && (
+          {canEdit && (
             <TeamJoinLinkPanel
               scopeUrl={(url) => withTeam(withSubject(url))}
               isCaptain={isCaptain}
@@ -1049,7 +1090,7 @@ export default function PlayerManageTeamScreen() {
                       </div>
                     </div>
 
-                    {!m.is_captain && !readOnly && (
+                    {!m.is_captain && canEdit && (
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {pendingRemoval === m.id ? (
                           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -1164,202 +1205,217 @@ export default function PlayerManageTeamScreen() {
 
           {/* Invitations envoyées, en attente de réponse.
               Placée AVANT les demandes entrantes : c'est la section qui
-              répond à « où sont passées les joueuses que je viens de saisir ? ». */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
-            <h2 className="text-lg font-semibold">
-              {t.sentInvitations}
-              {sentInvitations.length > 0 && (
-                <span className="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-violet-500/20 text-violet-300 text-xs font-bold">
-                  {sentInvitations.length}
-                </span>
-              )}
-            </h2>
-            <p className="mt-1 mb-4 text-sm text-gray-400">
-              {t.sentInvitationsHelp}
-            </p>
+              répond à « où sont passées les joueuses que je viens de saisir ? ».
+              Réservée à qui gère : le serveur refuse ces données à une membre
+              simple (403), et afficher une section vide lui laisserait croire
+              qu'elle pourrait agir. */}
+          {canManage && (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
+              <h2 className="text-lg font-semibold">
+                {t.sentInvitations}
+                {sentInvitations.length > 0 && (
+                  <span className="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-violet-500/20 text-violet-300 text-xs font-bold">
+                    {sentInvitations.length}
+                  </span>
+                )}
+              </h2>
+              <p className="mt-1 mb-4 text-sm text-gray-400">
+                {t.sentInvitationsHelp}
+              </p>
 
-            {invitationsError ? (
-              <p className="text-sm text-red-300">{t.invitationsError}</p>
-            ) : sentInvitations.length === 0 ? (
-              <p className="text-sm text-gray-500">{t.noSentInvitations}</p>
-            ) : (
-              <div className="space-y-3">
-                {sentInvitations.map((invitation) => {
-                  const label =
-                    invitation.email ||
-                    invitation.battle_tag ||
-                    t.defaultPlayerName;
-                  const role = invitation.set_captain
-                    ? t.invitedAsCaptain
-                    : roleLabel(invitation.role ?? undefined);
-                  const busy =
-                    actionLoading === `invite-resend-${invitation.id}` ||
-                    actionLoading === `invite-cancel-${invitation.id}`;
+              {invitationsError ? (
+                <p className="text-sm text-red-300">{t.invitationsError}</p>
+              ) : sentInvitations.length === 0 ? (
+                <p className="text-sm text-gray-500">{t.noSentInvitations}</p>
+              ) : (
+                <div className="space-y-3">
+                  {sentInvitations.map((invitation) => {
+                    const label =
+                      invitation.email ||
+                      invitation.battle_tag ||
+                      t.defaultPlayerName;
+                    const role = invitation.set_captain
+                      ? t.invitedAsCaptain
+                      : roleLabel(invitation.role ?? undefined);
+                    const busy =
+                      actionLoading === `invite-resend-${invitation.id}` ||
+                      actionLoading === `invite-cancel-${invitation.id}`;
 
-                  return (
-                    <div
-                      key={invitation.id}
-                      className="p-4 rounded-xl bg-white/5 border border-white/5"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="font-medium text-sm break-all">
-                            {label}
-                            {invitation.expired && (
-                              <span className="ml-2 inline-block rounded-full bg-red-500/20 px-2 py-0.5 text-[11px] font-semibold text-red-300 align-middle">
-                                {t.invitationExpired}
-                              </span>
+                    return (
+                      <div
+                        key={invitation.id}
+                        className="p-4 rounded-xl bg-white/5 border border-white/5"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="font-medium text-sm break-all">
+                              {label}
+                              {invitation.expired && (
+                                <span className="ml-2 inline-block rounded-full bg-red-500/20 px-2 py-0.5 text-[11px] font-semibold text-red-300 align-middle">
+                                  {t.invitationExpired}
+                                </span>
+                              )}
+                            </div>
+                            {invitation.battle_tag && invitation.email && (
+                              <div className="text-xs text-gray-400 font-mono mt-0.5">
+                                {invitation.battle_tag}
+                              </div>
+                            )}
+                            <div className="text-xs text-gray-500 mt-1">
+                              {t.invitedAs}
+                              <span className="text-gray-300">{role}</span>
+                              {' · '}
+                              {format(t.invitationSentOn, {
+                                date: new Date(
+                                  invitation.created_at
+                                ).toLocaleDateString(locale),
+                              })}
+                              {invitation.expires_at && !invitation.expired && (
+                                <>
+                                  {' · '}
+                                  {format(t.invitationExpiresOn, {
+                                    date: new Date(
+                                      invitation.expires_at
+                                    ).toLocaleDateString(locale),
+                                  })}
+                                </>
+                              )}
+                            </div>
+                            {!invitation.email && (
+                              <div className="text-xs text-amber-300/80 mt-1">
+                                {t.invitationNoEmail}
+                              </div>
                             )}
                           </div>
-                          {invitation.battle_tag && invitation.email && (
-                            <div className="text-xs text-gray-400 font-mono mt-0.5">
-                              {invitation.battle_tag}
-                            </div>
-                          )}
-                          <div className="text-xs text-gray-500 mt-1">
-                            {t.invitedAs}
-                            <span className="text-gray-300">{role}</span>
-                            {' · '}
-                            {format(t.invitationSentOn, {
-                              date: new Date(
-                                invitation.created_at
-                              ).toLocaleDateString(locale),
-                            })}
-                            {invitation.expires_at && !invitation.expired && (
-                              <>
-                                {' · '}
-                                {format(t.invitationExpiresOn, {
-                                  date: new Date(
-                                    invitation.expires_at
-                                  ).toLocaleDateString(locale),
-                                })}
-                              </>
-                            )}
-                          </div>
-                          {!invitation.email && (
-                            <div className="text-xs text-amber-300/80 mt-1">
-                              {t.invitationNoEmail}
-                            </div>
-                          )}
-                        </div>
-                        {!readOnly && (
-                          <div className="flex gap-2 flex-shrink-0">
-                            {invitation.email && (
+                          {canEdit && (
+                            <div className="flex gap-2 flex-shrink-0">
+                              {invitation.email && (
+                                <button
+                                  onClick={() =>
+                                    handleResendInvitation(invitation)
+                                  }
+                                  disabled={busy}
+                                  title={t.resendInvitationTitle}
+                                  className="px-3 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 text-violet-200 text-xs font-semibold transition disabled:opacity-50"
+                                >
+                                  {t.resendInvitation}
+                                </button>
+                              )}
                               <button
                                 onClick={() =>
-                                  handleResendInvitation(invitation)
+                                  handleCancelInvitation(invitation)
                                 }
                                 disabled={busy}
-                                title={t.resendInvitationTitle}
-                                className="px-3 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 text-violet-200 text-xs font-semibold transition disabled:opacity-50"
+                                className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-semibold transition disabled:opacity-50"
                               >
-                                {t.resendInvitation}
+                                {t.cancelInvitation}
                               </button>
-                            )}
-                            <button
-                              onClick={() => handleCancelInvitation(invitation)}
-                              disabled={busy}
-                              className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-semibold transition disabled:opacity-50"
-                            >
-                              {t.cancelInvitation}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Demandes en attente */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
-            <h2 className="text-lg font-semibold">
-              {t.pendingRequests}
-              {joinRequests.length > 0 && (
-                <span className="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">
-                  {joinRequests.length}
-                </span>
-              )}
-            </h2>
-            <p className="mt-1 mb-4 text-sm text-gray-400">
-              {t.pendingRequestsHelp}
-            </p>
-
-            {joinRequests.length === 0 ? (
-              <p className="text-sm text-gray-500">{t.noPendingRequests}</p>
-            ) : (
-              <div className="space-y-3">
-                {joinRequests.map((req) => {
-                  const name =
-                    req.user?.display_name ||
-                    req.payload?.user_display_name ||
-                    req.user?.email?.split('@')[0] ||
-                    t.defaultPlayerName;
-                  const btag =
-                    req.user?.battle_tag || req.payload?.user_battle_tag;
-                  const role = roleLabel(req.payload?.desired_role);
-
-                  return (
-                    <div
-                      key={req.id}
-                      className="p-4 rounded-xl bg-white/5 border border-white/5"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="font-medium text-sm">
-                            {name}
-                            {btag && (
-                              <span className="text-gray-400 font-mono ml-2 text-xs">
-                                {btag}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {t.wantsToJoinAs}
-                            <span className="text-gray-300">{role}</span>
-                            {' · '}
-                            {new Date(req.created_at).toLocaleDateString(
-                              locale
-                            )}
-                          </div>
-                          {req.comment && (
-                            <div className="mt-2 text-xs text-gray-400 italic bg-white/5 rounded-lg px-3 py-2">
-                              &ldquo;{req.comment}&rdquo;
                             </div>
                           )}
                         </div>
-                        {!readOnly && (
-                          <div className="flex gap-2 flex-shrink-0">
-                            <button
-                              onClick={() =>
-                                handleJoinAction(req.id, 'approve')
-                              }
-                              disabled={actionLoading === `join-${req.id}`}
-                              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold transition disabled:opacity-50"
-                            >
-                              {t.accept}
-                            </button>
-                            <button
-                              onClick={() => handleJoinAction(req.id, 'reject')}
-                              disabled={actionLoading === `join-${req.id}`}
-                              className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-semibold transition disabled:opacity-50"
-                            >
-                              {t.reject}
-                            </button>
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
-          {/* Joueurs cherchant une equipe */}
-          {!isInspecting && <FreePlayersSection teamId={team.id} />}
+          {/* Demandes en attente. Même raison : donnée de gestion, refusée par
+              le serveur à une membre simple. */}
+          {canManage && (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
+              <h2 className="text-lg font-semibold">
+                {t.pendingRequests}
+                {joinRequests.length > 0 && (
+                  <span className="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">
+                    {joinRequests.length}
+                  </span>
+                )}
+              </h2>
+              <p className="mt-1 mb-4 text-sm text-gray-400">
+                {t.pendingRequestsHelp}
+              </p>
+
+              {joinRequests.length === 0 ? (
+                <p className="text-sm text-gray-500">{t.noPendingRequests}</p>
+              ) : (
+                <div className="space-y-3">
+                  {joinRequests.map((req) => {
+                    const name =
+                      req.user?.display_name ||
+                      req.payload?.user_display_name ||
+                      req.user?.email?.split('@')[0] ||
+                      t.defaultPlayerName;
+                    const btag =
+                      req.user?.battle_tag || req.payload?.user_battle_tag;
+                    const role = roleLabel(req.payload?.desired_role);
+
+                    return (
+                      <div
+                        key={req.id}
+                        className="p-4 rounded-xl bg-white/5 border border-white/5"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="font-medium text-sm">
+                              {name}
+                              {btag && (
+                                <span className="text-gray-400 font-mono ml-2 text-xs">
+                                  {btag}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {t.wantsToJoinAs}
+                              <span className="text-gray-300">{role}</span>
+                              {' · '}
+                              {new Date(req.created_at).toLocaleDateString(
+                                locale
+                              )}
+                            </div>
+                            {req.comment && (
+                              <div className="mt-2 text-xs text-gray-400 italic bg-white/5 rounded-lg px-3 py-2">
+                                &ldquo;{req.comment}&rdquo;
+                              </div>
+                            )}
+                          </div>
+                          {canEdit && (
+                            <div className="flex gap-2 flex-shrink-0">
+                              <button
+                                onClick={() =>
+                                  handleJoinAction(req.id, 'approve')
+                                }
+                                disabled={actionLoading === `join-${req.id}`}
+                                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold transition disabled:opacity-50"
+                              >
+                                {t.accept}
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleJoinAction(req.id, 'reject')
+                                }
+                                disabled={actionLoading === `join-${req.id}`}
+                                className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-semibold transition disabled:opacity-50"
+                              >
+                                {t.reject}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Joueuses cherchant une équipe : c'est un outil de recrutement.
+              Réservé à qui recrute. */}
+          {!isInspecting && canManage && (
+            <FreePlayersSection teamId={team.id} />
+          )}
         </main>
       </div>
     </>
