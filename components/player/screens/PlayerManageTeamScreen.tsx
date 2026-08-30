@@ -77,6 +77,8 @@ type Member = {
    * alors en règle. `null` = non constaté, jamais « absente ».
    */
   discord_in_guild?: boolean | null;
+  /** Date (ISO) du constat ci-dessus. Le bot repasse toutes les 30 min. */
+  discord_checked_at?: string | null;
 };
 
 type TeamInfo = {
@@ -244,6 +246,21 @@ export default function PlayerManageTeamScreen() {
   // communique l'état qu'à qui gère l'équipe.
   const discordKnown = hasDiscordLinkInfo(members);
   const discordGaps = discordReadinessSummary(members);
+  // Date du dernier constat du bot. Le badge « a quitté le Discord » ne vaut
+  // que jusqu'au cycle suivant (30 min) : quelqu'un qui vient de rejoindre le
+  // serveur y reste affiché comme parti. Sans cette date, la capitaine part
+  // réinviter une personne déjà revenue.
+  const discordCheckedAt = members.reduce<string | null>((latest, m) => {
+    const at = m.discord_checked_at ?? null;
+    if (!at) return latest;
+    return !latest || at > latest ? at : latest;
+  }, null);
+  const discordCheckedLabel = discordCheckedAt
+    ? new Date(discordCheckedAt).toLocaleString(locale, {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      })
+    : null;
 
   // Sync local mirror whenever the shared team payload changes.
   useEffect(() => {
@@ -969,6 +986,13 @@ export default function PlayerManageTeamScreen() {
                         ? t.discordLeftBody
                         : t.discordGapBody}
                   </p>
+                  {discordGaps.left > 0 && discordCheckedLabel && (
+                    <p className="mt-1 text-xs text-amber-100/60">
+                      {format(t.discordCheckedAt, {
+                        date: discordCheckedLabel,
+                      })}
+                    </p>
+                  )}
                 </div>
               )}
             {members.filter((m) => !m.is_captain).length === 0 ? (
@@ -1073,7 +1097,21 @@ export default function PlayerManageTeamScreen() {
                           {m.discord_linked === true &&
                             m.discord_in_guild === false && (
                               <span
-                                title={t.discordLeftBadgeTitle}
+                                title={
+                                  m.discord_checked_at
+                                    ? `${t.discordLeftBadgeTitle} ${format(
+                                        t.discordCheckedAt,
+                                        {
+                                          date: new Date(
+                                            m.discord_checked_at
+                                          ).toLocaleString(locale, {
+                                            dateStyle: 'short',
+                                            timeStyle: 'short',
+                                          }),
+                                        }
+                                      )}`
+                                    : t.discordLeftBadgeTitle
+                                }
                                 className="shrink-0 inline-flex items-center rounded-full border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-red-300"
                               >
                                 {t.discordLeftBadge}

@@ -21,7 +21,18 @@ export default ns('invitationLink', {
   loading: 'Chargement…',
   loginRequired:
     "Connecte-toi avec l'adresse invitée pour accepter ou refuser.",
+  // Le piège n°1 de ce flow : le bouton « Continuer avec Discord » ouvre une
+  // session sur l'adresse du compte DISCORD, presque jamais celle que la
+  // capitaine a saisie — et l'acceptation est alors refusée sans que la
+  // personne comprenne pourquoi. On le dit AVANT le clic.
+  loginDiscordWarning:
+    "Attention : « Continuer avec Discord » te connecte avec l'adresse de ton compte Discord. Si elle diffère de l'adresse invitée, l'invitation sera refusée.",
   loginCta: 'Se connecter',
+  connectedAs: 'Connecté(e) avec {email}',
+  mismatchTitle: "Ce n'est pas le compte invité",
+  mismatchBody:
+    "Cette invitation vise {invited}, mais tu es connecté(e) avec {current}. Reconnecte-toi avec l'adresse invitée — si tu es passé(e) par Discord, ton adresse Discord n'est probablement pas celle-là. Sinon, demande à ta capitaine de te réinviter sur l'adresse que tu utilises ici.",
+  switchAccount: 'Changer de compte',
   acceptedTitle: 'Bienvenue !',
   acceptedBody: "Tu fais désormais partie de l'équipe {team}.",
   acceptedCaptainBody: "Tu es désormais capitaine de l'équipe {team}.",

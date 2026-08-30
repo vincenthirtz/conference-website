@@ -21,7 +21,14 @@ export default {
   pending: 'One moment…',
   loading: 'Loading…',
   loginRequired: 'Sign in with the invited address to accept or decline.',
+  loginDiscordWarning:
+    'Heads-up: "Continue with Discord" signs you in with your Discord account address. If it differs from the invited address, the invitation will be rejected.',
   loginCta: 'Sign in',
+  connectedAs: 'Signed in as {email}',
+  mismatchTitle: 'This is not the invited account',
+  mismatchBody:
+    'This invitation is for {invited}, but you are signed in as {current}. Sign in again with the invited address — if you came in through Discord, your Discord address is probably not that one. Otherwise, ask your captain to re-invite you at the address you use here.',
+  switchAccount: 'Switch account',
   acceptedTitle: 'Welcome!',
   acceptedBody: 'You are now part of the team {team}.',
   acceptedCaptainBody: 'You are now the captain of {team}.',

@@ -1868,6 +1868,32 @@ Idempotent : un 2eme POST avec la meme `actionKey` UPDATE
 | [`role-sync/snapshot.ts`](../pages/api/bot/v1/role-sync/snapshot.ts) | GET     | —     | `bot-role-sync-snapshot` |
 | [`role-sync/presence.ts`](../pages/api/bot/v1/role-sync/presence.ts) | POST    | yes   | `bot-role-sync-presence` |
 
+#### `POST /role-sync/presence`
+
+Le bot rapporte QUI est effectivement sur le serveur Discord (le site ne sait
+que si un compte est LIE). Alimente le badge « a quitte le Discord » de
+l'espace equipe.
+
+```json
+{
+  "members": [{ "discordUserId": "1027928…", "inGuild": true }],
+  "mode": "replace"
+}
+```
+
+- `mode: "replace"` (defaut, champ optionnel) — **fin de cycle role-sync**. Le
+  bot vient de parcourir tous les comptes lies : sa vue est complete, le site
+  purge le tenant et reecrit le constat. Un bot d'une version anterieure, qui
+  n'envoie pas le champ, garde donc son comportement historique.
+- `mode: "upsert"` — **evenement ponctuel** (`GuildMemberAdd` /
+  `GuildMemberRemove`). Seules les lignes envoyees sont ecrites ; aucune purge.
+  A utiliser des que le bot ne rapporte qu'une partie du roster, sinon le full
+  replace efface tout le tenant sur la foi d'un membre.
+
+Reponse 200 : `{ count, present, absent, mode }`.
+**Rate limit** : 120/min, bucket `bot-role-sync-presence` (le mode `upsert`
+ajoute un POST par arrivee/depart, en plus du POST par cycle).
+
 ### Demandes & invitations
 
 | Route                                                                          | Methods | Idem. | Rate-key                 |

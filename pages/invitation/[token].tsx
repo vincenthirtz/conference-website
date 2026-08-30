@@ -12,9 +12,27 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useSession } from '@/hooks/useSession';
+import { supabaseClient } from '@/utils/supabase';
 import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import nsInvitationLink from '@/lib/i18n/locales/fr/invitationLink';
+
+/**
+ * Même masque que le serveur (`maskEmail` dans
+ * pages/api/teams/invitations/by-token.ts) : le GET ne renvoie que l'adresse
+ * invitée MASQUÉE, on masque donc l'adresse de session pour pouvoir les
+ * comparer sans jamais demander l'adresse invitée en clair.
+ *
+ * Heuristique volontairement prudente : deux adresses différentes qui
+ * partagent initiale et domaine se ressemblent une fois masquées, et on
+ * n'avertit pas. C'est le serveur qui tranche à l'acceptation — l'avertissement
+ * n'est là que pour éviter le clic perdu, pas pour autoriser quoi que ce soit.
+ */
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return '***';
+  return `${local.slice(0, 1) || '*'}***@${domain}`;
+}
 
 type InvitationInfo = {
   team_name: string | null;
@@ -32,6 +50,7 @@ function InvitationByTokenPage() {
   const t = useT(nsInvitationLink);
   const router = useRouter();
   const { user, token: authToken, loading: authLoading } = useSession();
+  const sessionEmail = user?.email ?? null;
 
   const token =
     typeof router.query.token === 'string' ? router.query.token : null;
@@ -92,6 +111,19 @@ function InvitationByTokenPage() {
         });
         const json = await res.json().catch(() => null);
         if (!res.ok) {
+          // 403 « pas la destinataire » : on recompose le message côté client
+          // pour l'avoir traduit, et surtout pour NOMMER les deux adresses.
+          // « Cette invitation ne t'est pas destinée » seul laissait la personne
+          // relire son propre mail et conclure que le site se trompait.
+          if (json?.code === 'NOT_INVITEE' && json?.invited_email) {
+            setActionError(
+              format(t.mismatchBody, {
+                invited: json.invited_email,
+                current: json.session_email || sessionEmail || '—',
+              })
+            );
+            return;
+          }
           setActionError(json?.error || t.errorAction);
           return;
         }
@@ -103,7 +135,7 @@ function InvitationByTokenPage() {
         setActionLoading(null);
       }
     },
-    [token, authToken, t]
+    [token, authToken, sessionEmail, t]
   );
 
   const roleLabel = (role: string, asCaptain: boolean): string => {
@@ -123,6 +155,25 @@ function InvitationByTokenPage() {
   const loginHref = `/login?next=${encodeURIComponent(
     `/invitation/${token ?? ''}`
   )}`;
+
+  // Compte connecté ≠ compte invité : le cas réel le plus fréquent (connexion
+  // via Discord, dont l'adresse n'est pas celle saisie par la capitaine). On
+  // prévient AVANT le clic ; les boutons restent actifs, car le masque peut
+  // se tromper dans les deux sens et c'est le serveur qui décide.
+  const emailMismatch =
+    !!info?.invited_email &&
+    !!sessionEmail &&
+    maskEmail(sessionEmail.toLowerCase()) !== info.invited_email.toLowerCase();
+
+  const switchAccount = useCallback(async () => {
+    try {
+      await supabaseClient.auth.signOut();
+    } catch {
+      // Peu importe : ce qui compte est d'arriver sur /login, qui refera une
+      // session propre par-dessus.
+    }
+    router.push(loginHref);
+  }, [router, loginHref]);
 
   return (
     <>
@@ -201,6 +252,20 @@ function InvitationByTokenPage() {
                   </p>
                 )}
 
+                {!authLoading && user && emailMismatch && (
+                  <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+                    <p className="text-sm font-semibold text-amber-100">
+                      {t.mismatchTitle}
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-amber-100/80">
+                      {format(t.mismatchBody, {
+                        invited: info?.invited_email ?? '',
+                        current: sessionEmail ?? '',
+                      })}
+                    </p>
+                  </div>
+                )}
+
                 {authLoading ? (
                   <p className="mt-6 text-sm text-gray-400">{t.loading}</p>
                 ) : user ? (
@@ -221,10 +286,24 @@ function InvitationByTokenPage() {
                     >
                       {actionLoading === 'reject' ? t.pending : t.reject}
                     </button>
+                    {/* Sortie de secours : sans elle, la personne connectée au
+                        mauvais compte n'a AUCUN moyen évident de changer — le
+                        header de la page publique n'a pas de déconnexion. */}
+                    <button
+                      type="button"
+                      onClick={switchAccount}
+                      disabled={!!actionLoading}
+                      className="inline-flex rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold transition hover:bg-white/10 disabled:opacity-50"
+                    >
+                      {t.switchAccount}
+                    </button>
                   </div>
                 ) : (
                   <div className="mt-6">
                     <p className="text-sm text-gray-300">{t.loginRequired}</p>
+                    <p className="mt-2 text-xs leading-relaxed text-amber-200/80">
+                      {t.loginDiscordWarning}
+                    </p>
                     <Link
                       href={loginHref}
                       className="mt-3 inline-flex rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-semibold transition hover:bg-purple-500"
@@ -232,6 +311,11 @@ function InvitationByTokenPage() {
                       {t.loginCta}
                     </Link>
                   </div>
+                )}
+                {!authLoading && user && sessionEmail && (
+                  <p className="mt-3 text-xs text-gray-500">
+                    {format(t.connectedAs, { email: sessionEmail })}
+                  </p>
                 )}
               </>
             )}

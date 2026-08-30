@@ -309,6 +309,29 @@ describe('GET/POST /api/teams/invitations/by-token', () => {
     expect((res.body as any).code).toBe('NOT_INVITEE');
   });
 
+  it('le 403 nomme les DEUX adresses — sinon la personne ne sait pas quoi corriger', async () => {
+    // Cas réel : l'invitée se connecte via « Continuer avec Discord », dont
+    // l'adresse n'est pas celle saisie par la capitaine. « Cette invitation ne
+    // t'est pas destinée » la laissait relire son propre mail et conclure que
+    // le site se trompait. L'adresse invitée reste MASQUÉE (elle l'est déjà sur
+    // le GET public) ; celle de la session est la sienne, donc en clair.
+    const token = await createInvite();
+    setAuthUser({ id: MANAGER_ID, email: 'Manager@Example.com' });
+    const res = makeRes();
+
+    await byTokenHandler(
+      makeReq({ method: 'POST', body: { token, action: 'accept' } }),
+      res
+    );
+
+    const body = res.body as any;
+    expect(body.invited_email).toBe('i***@example.com');
+    expect(body.invited_email).not.toContain(INVITEE_EMAIL.split('@')[0]);
+    expect(body.session_email).toBe('manager@example.com');
+    expect(body.error).toContain('i***@example.com');
+    expect(body.error).toContain('manager@example.com');
+  });
+
   it('POST accept par l’invitée : la RPC d’acceptation est appelée', async () => {
     const token = await createInvite();
     setRpcResult('accept_invitation', {

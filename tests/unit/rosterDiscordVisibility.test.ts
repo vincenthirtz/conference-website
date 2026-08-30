@@ -35,6 +35,7 @@ const LINKED = 'c0000000-0000-4000-8000-000000000002';
 const UNLINKED_A = 'c0000000-0000-4000-8000-000000000003';
 const UNLINKED_B = 'c0000000-0000-4000-8000-000000000004';
 const LEFT_GUILD = 'c0000000-0000-4000-8000-000000000005';
+const CHECKED_AT = '2026-08-30T17:40:43.390Z';
 
 beforeEach(() => {
   resetSupabaseMock();
@@ -71,9 +72,24 @@ beforeEach(() => {
     { auth_user_id: LEFT_GUILD, discord_user_id: '333' },
   ] as any;
   store.discord_guild_presence = [
-    { tenant_id: DEFAULT_TENANT_ID, discord_user_id: '111', in_guild: true },
-    { tenant_id: DEFAULT_TENANT_ID, discord_user_id: '222', in_guild: true },
-    { tenant_id: DEFAULT_TENANT_ID, discord_user_id: '333', in_guild: false },
+    {
+      tenant_id: DEFAULT_TENANT_ID,
+      discord_user_id: '111',
+      in_guild: true,
+      checked_at: CHECKED_AT,
+    },
+    {
+      tenant_id: DEFAULT_TENANT_ID,
+      discord_user_id: '222',
+      in_guild: true,
+      checked_at: CHECKED_AT,
+    },
+    {
+      tenant_id: DEFAULT_TENANT_ID,
+      discord_user_id: '333',
+      in_guild: false,
+      checked_at: CHECKED_AT,
+    },
   ] as any;
 });
 
@@ -103,6 +119,19 @@ describe('pour qui GÈRE l’équipe', () => {
     expect(inGuild[LEFT_GUILD]).toBe(false);
     // Non liée : pas de présence à constater, donc `null` — jamais `false`.
     expect(inGuild[UNLINKED_A]).toBeNull();
+  });
+
+  it('date le constat — un badge « partie » périmé fait réinviter pour rien', async () => {
+    // Le bot ne repasse que toutes les 30 min : quelqu'un qui vient de
+    // rejoindre le Discord reste affiché « a quitté le serveur » jusqu'au
+    // cycle suivant. L'écran doit pouvoir dire DE QUAND date le constat.
+    const slice = await loadManagedTeamSlice(CAPTAIN, DEFAULT_TENANT_ID);
+    const checked = Object.fromEntries(
+      slice.members.map((m) => [m.user_id, m.discord_checked_at])
+    );
+    expect(checked[LEFT_GUILD]).toBe(CHECKED_AT);
+    // Aucune présence rapportée pour elle : pas de date inventée.
+    expect(checked[UNLINKED_A]).toBeNull();
   });
 
   it('donne le constat que lit l’écran : 2 non liées, 1 partie, sur 5', async () => {
@@ -137,6 +166,9 @@ describe('pour une joueuse ordinaire', () => {
     // …mais aucun état de liaison ni de présence, y compris le sien.
     expect(slice.members.every((m) => m.discord_linked === null)).toBe(true);
     expect(slice.members.every((m) => m.discord_in_guild === null)).toBe(true);
+    expect(slice.members.every((m) => m.discord_checked_at === null)).toBe(
+      true
+    );
   });
 
   it('ne lit même pas la table des liaisons', async () => {

@@ -192,12 +192,114 @@ describe('full replace', () => {
   });
 });
 
+describe('mode upsert (constat ponctuel : GuildMemberAdd / Remove)', () => {
+  // Le cycle complet ne repasse que toutes les 30 min. Sans constat à chaud,
+  // l'espace équipe affiche « a quitté le Discord » sur quelqu'un qui vient de
+  // rejoindre le serveur — et la capitaine part la réinviter pour rien.
+  it('met à jour la ligne visée SANS purger le reste du tenant', async () => {
+    store.discord_guild_presence = [
+      {
+        tenant_id: CONFERENCE_TENANT_ID,
+        discord_user_id: PRESENT,
+        in_guild: false,
+        checked_at: '2026-01-01T00:00:00.000Z',
+      },
+      {
+        tenant_id: CONFERENCE_TENANT_ID,
+        discord_user_id: ABSENT,
+        in_guild: true,
+        checked_at: '2026-01-01T00:00:00.000Z',
+      },
+    ] as any;
+
+    const res = makeRes();
+    await handler(
+      makeReq({
+        body: {
+          members: [{ discordUserId: PRESENT, inGuild: true }],
+          mode: 'upsert',
+        },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({ count: 1, present: 1, mode: 'upsert' });
+
+    const rows = store.discord_guild_presence as any[];
+    expect(rows).toHaveLength(2);
+    // La ligne visée est corrigée…
+    const target = rows.find((r) => r.discord_user_id === PRESENT);
+    expect(target.in_guild).toBe(true);
+    expect(target.checked_at).not.toBe('2026-01-01T00:00:00.000Z');
+    // …et celle qu'on n'a pas rapportée est intacte : le bot ne savait rien
+    // d'elle à cet instant, il n'avait aucun titre à l'effacer.
+    expect(rows.find((r) => r.discord_user_id === ABSENT).in_guild).toBe(true);
+  });
+
+  it('crée la ligne quand le tenant n’a encore aucun constat', async () => {
+    const res = makeRes();
+    await handler(
+      makeReq({
+        body: {
+          members: [{ discordUserId: ABSENT, inGuild: false }],
+          mode: 'upsert',
+        },
+      }),
+      res
+    );
+    const rows = store.discord_guild_presence as any[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0].in_guild).toBe(false);
+  });
+
+  it('sans `mode`, on reste en full replace — contrat historique du bot', async () => {
+    store.discord_guild_presence = [
+      {
+        tenant_id: CONFERENCE_TENANT_ID,
+        discord_user_id: ABSENT,
+        in_guild: true,
+        checked_at: '2026-01-01T00:00:00.000Z',
+      },
+    ] as any;
+
+    const res = makeRes();
+    await handler(
+      makeReq({
+        body: { members: [{ discordUserId: PRESENT, inGuild: true }] },
+      }),
+      res
+    );
+
+    expect(res.body).toMatchObject({ mode: 'replace' });
+    const rows = store.discord_guild_presence as any[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0].discord_user_id).toBe(PRESENT);
+  });
+});
+
 describe('validation', () => {
   it('400 sur un inGuild non booléen', async () => {
     const res = makeRes();
     await handler(
       makeReq({
         body: { members: [{ discordUserId: PRESENT, inGuild: 'oui' }] },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('400 sur un mode inconnu — pas de repli silencieux sur replace', async () => {
+    // Un typo (`upserts`) qui retomberait sur le full replace effacerait tout
+    // le constat du tenant sur la foi d'un seul membre.
+    const res = makeRes();
+    await handler(
+      makeReq({
+        body: {
+          members: [{ discordUserId: PRESENT, inGuild: true }],
+          mode: 'upserts',
+        },
       }),
       res
     );

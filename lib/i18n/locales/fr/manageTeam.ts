@@ -127,6 +127,10 @@ export default ns('manageTeam', {
     '{count} membre sur {total} a quitté le serveur Discord',
   discordLeftTitle_other:
     '{count} membres sur {total} ont quitté le serveur Discord',
+  // Fraîcheur du constat : le bot ne repasse que toutes les 30 min, un badge
+  // « partie » peut donc être périmé — le dire évite une réinvitation inutile.
+  discordCheckedAt:
+    'Dernier constat du bot : {date} — il revérifie toutes les 30 minutes.',
   discordLeftBody:
     "Leur compte est bien lié — c'est le serveur qu'elles ont quitté. Elles ne peuvent pas régler ça depuis leur espace joueur : il faut les réinviter sur le Discord.",
   discordGapBodyBoth:

@@ -113,9 +113,21 @@ const handlePost = withAuthRoute(async function post(req, res, { user }) {
     !!invitedEmail && !!sessionEmail && invitedEmail === sessionEmail;
 
   if (!sameUser && !sameEmail) {
+    // Cas de loin le plus fréquent : la personne s'est connectée avec un AUTRE
+    // compte que celui invité — typiquement via « Continuer avec Discord », dont
+    // l'adresse diffère de celle saisie par la capitaine. Le message doit donc
+    // nommer les deux adresses, sinon elle relit son propre mail et conclut que
+    // le site se trompe. L'adresse invitée reste MASQUÉE (elle l'est déjà sur le
+    // GET public) ; l'adresse de session est celle de l'appelante, donc en clair.
+    const invitedMask = invitedEmail ? maskEmail(invitedEmail) : null;
     return res.status(403).json({
-      error: 'Cette invitation ne t’est pas destinée.',
+      error: invitedMask
+        ? `Cette invitation vise ${invitedMask}, mais tu es connecté(e) avec ${sessionEmail ?? 'un autre compte'}. Reconnecte-toi avec l’adresse invitée, ou demande à ta capitaine de te réinviter sur celle-ci.`
+        : 'Cette invitation ne t’est pas destinée.',
       code: 'NOT_INVITEE',
+      // Consommé par /invitation/[token] pour recomposer le message traduit.
+      invited_email: invitedMask,
+      session_email: sessionEmail,
     });
   }
 

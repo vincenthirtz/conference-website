@@ -108,6 +108,17 @@ export type ManagedTeamMemberRow = {
    * personne sur la foi d'un silence.
    */
   discord_in_guild: boolean | null;
+  /**
+   * Date du constat de présence ci-dessus (ISO), telle que rapportée par le
+   * bot. `null` quand il n'y a pas de constat.
+   *
+   * Exposée parce que ce constat est PÉRIMABLE : le bot ne repasse que toutes
+   * les 30 min, donc quelqu'un qui vient de rejoindre le Discord reste affiché
+   * « a quitté le serveur » jusqu'au cycle suivant. Sans date, le badge se lit
+   * comme une vérité du moment et la capitaine va réinviter quelqu'un qui est
+   * déjà là.
+   */
+  discord_checked_at: string | null;
 };
 
 /**
@@ -191,7 +202,12 @@ async function loadManagedTeamSummaries(
 }
 
 /** Ce que le site sait de la « joignabilité Discord » d'un compte. */
-type DiscordStatus = { linked: boolean; inGuild: boolean | null };
+type DiscordStatus = {
+  linked: boolean;
+  inGuild: boolean | null;
+  /** Date du constat `inGuild` (ISO), `null` si jamais rapporté. */
+  checkedAt: string | null;
+};
 
 /**
  * État Discord du roster : compte lié, et présence constatée sur le serveur.
@@ -229,10 +245,13 @@ async function loadDiscordStatus(
   if (links.size === 0) return status;
 
   const discordIds = [...links.values()].map((l) => l.discordUserId);
-  const presenceByDiscordId = new Map<string, boolean>();
+  const presenceByDiscordId = new Map<
+    string,
+    { inGuild: boolean; checkedAt: string | null }
+  >();
   const { data, error } = await supabaseAdmin
     .from('discord_guild_presence')
-    .select('discord_user_id, in_guild')
+    .select('discord_user_id, in_guild, checked_at')
     .eq('tenant_id', tenantId)
     .in('discord_user_id', discordIds);
   if (error) {
@@ -241,17 +260,23 @@ async function loadDiscordStatus(
     for (const row of (data || []) as {
       discord_user_id?: string | null;
       in_guild?: boolean | null;
+      checked_at?: string | null;
     }[]) {
       if (row?.discord_user_id && typeof row.in_guild === 'boolean') {
-        presenceByDiscordId.set(row.discord_user_id, row.in_guild);
+        presenceByDiscordId.set(row.discord_user_id, {
+          inGuild: row.in_guild,
+          checkedAt: row.checked_at ?? null,
+        });
       }
     }
   }
 
   for (const [authUserId, link] of links) {
+    const presence = presenceByDiscordId.get(link.discordUserId);
     status.set(authUserId, {
       linked: true,
-      inGuild: presenceByDiscordId.get(link.discordUserId) ?? null,
+      inGuild: presence?.inGuild ?? null,
+      checkedAt: presence?.checkedAt ?? null,
     });
   }
   return status;
@@ -431,6 +456,10 @@ export async function loadManagedTeamSlice(
         discord_in_guild:
           managesThisTeam && memberUserId
             ? (discordStatus.get(memberUserId)?.inGuild ?? null)
+            : null,
+        discord_checked_at:
+          managesThisTeam && memberUserId
+            ? (discordStatus.get(memberUserId)?.checkedAt ?? null)
             : null,
       };
     });

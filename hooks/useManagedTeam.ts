@@ -60,6 +60,12 @@ export type ManagedTeamMember = TeamMemberLite & {
    * gestion) — jamais « absent ».
    */
   discord_in_guild?: boolean | null;
+  /**
+   * Date du constat de présence (ISO). Le bot ne repasse que toutes les 30 min :
+   * sans cette date, un badge « a quitté le Discord » vieux d'une demi-heure se
+   * lit comme une vérité du moment.
+   */
+  discord_checked_at?: string | null;
 };
 
 export type ManagedTeamData = {

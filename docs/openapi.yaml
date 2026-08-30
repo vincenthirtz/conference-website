@@ -9966,14 +9966,17 @@ paths:
         - bot/misc
       summary: >-
         Le bot rapporte qui est effectivement present sur le serveur Discord
-        (full replace par tenant).
+        (full replace par tenant, ou constat ponctuel en mode upsert).
       description: >-
         Pendant du snapshot, dans l'autre sens. Le site sait qu'un compte
         Discord est LIE (user_discord_links), pas que la personne est encore
         sur le serveur : lier son compte puis quitter le Discord la laissait
         apparaitre en regle. Le bot pousse ici le constat qu'il fait deja a
-        chaque role-sync. FULL REPLACE : les lignes du tenant absentes du
-        payload sont supprimees.
+        chaque role-sync. mode=replace (defaut) : FULL REPLACE, les lignes du
+        tenant absentes du payload sont supprimees. mode=upsert : constat
+        ponctuel (GuildMemberAdd / GuildMemberRemove), seules les lignes
+        envoyees sont ecrites — sans quoi un badge « a quitte le Discord »
+        survit jusqu'a 30 min au retour effectif de la personne.
       operationId: botReportRoleSyncPresence
       requestBody:
         required: true
@@ -10000,6 +10003,17 @@ paths:
                         description: >-
                           Constat, pas absence d'information : le bot n'envoie
                           une ligne que lorsque Discord a repondu clairement.
+                mode:
+                  type: string
+                  enum:
+                    - replace
+                    - upsert
+                  default: replace
+                  description: >-
+                    replace (defaut, contrat historique) : la vue du bot est
+                    complete, le site purge le tenant avant de reecrire.
+                    upsert : le bot ne rapporte qu'une partie du roster (un
+                    membre qui vient d'arriver ou de partir), aucune purge.
       responses:
         '200':
           description: Presences enregistrees.
@@ -10014,6 +10028,11 @@ paths:
                     type: integer
                   absent:
                     type: integer
+                  mode:
+                    type: string
+                    enum:
+                      - replace
+                      - upsert
   /api/bot/v1/runs/current:
     get:
       tags:

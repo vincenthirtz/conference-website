@@ -122,6 +122,8 @@ export default {
     '{count} member out of {total} has left the Discord server',
   discordLeftTitle_other:
     '{count} members out of {total} have left the Discord server',
+  discordCheckedAt:
+    'Last checked by the bot: {date} — it re-checks every 30 minutes.',
   discordLeftBody:
     'Their account is linked — it is the server they left. They cannot fix this from their player space: they need a new invite to the Discord.',
   discordGapBodyBoth:
