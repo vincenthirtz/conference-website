@@ -231,6 +231,37 @@ async function handlePost(
     return res.status(500).json({ error: 'Failed to add team to tournament' });
   }
 
+  // La candidature de cette équipe, s'il y en avait une, est désormais SANS
+  // OBJET : l'équipe est inscrite. La laisser `pending` a deux effets bien
+  // réels — elle reste indéfiniment dans /admin/demandes, et côté capitaine la
+  // carte d'inscription affiche un blocage `pending_request` alors que l'équipe
+  // est dans le tournoi. C'est arrivé à trois équipes d'OW WOMEN'S CUP 2026.
+  //
+  // Best-effort : l'inscription vient de réussir, on ne la remet pas en cause
+  // parce que le ménage a échoué.
+  try {
+    const { error: demandeErr } = await supabaseAdmin
+      .from('demandes')
+      .update({
+        status: 'approved',
+        processed_at: new Date().toISOString(),
+        processed_by_staff_id: ctx?.staff?.id ?? null,
+      })
+      .eq('tenant_id', ctx.tenantId)
+      .eq('tournament_id', tournamentId)
+      .eq('team_id', team_id)
+      .eq('type', 'team_registration')
+      .eq('status', 'pending');
+    if (demandeErr) {
+      logger.error(
+        'admin POST tournament team: close demande error',
+        demandeErr
+      );
+    }
+  } catch (e) {
+    logger.error('admin POST tournament team: close demande exception', e);
+  }
+
   // Log staff action
   if (ctx?.staff?.id) {
     try {

@@ -15,6 +15,12 @@ export default ns('inscription2026', {
   heroSubtitle:
     "Suis ces étapes pour rejoindre l'édition 2026 de la OW Women's Cup. Roster, capitaine, BattleTag : on récapitule tout ce qu'il te faut.",
   ctaRegister: 'Inscrire mon équipe',
+  // Le tournoi a rempli ses places : on cesse d'inviter à le rejoindre, sans
+  // fermer le site pour autant.
+  tournamentFull: 'Tournoi complet',
+  tournamentFullHint:
+    'Les {count} places sont pourvues. Tu peux quand même créer ton équipe sur le site — elle sera prête pour la suite.',
+  ctaCreateTeam: 'Créer mon équipe',
   ctaDiscord: 'Discord',
   ctaFaq: 'FAQ',
   ctaSteps: 'Voir les étapes',

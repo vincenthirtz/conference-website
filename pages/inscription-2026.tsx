@@ -1,8 +1,12 @@
 import Head from 'next/head';
 import Link from 'next/link';
+import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { ACTIVE_WOMEN_TOURNAMENT_ID } from '@/utils/activeEdition';
-import { useT } from '@/lib/i18n/useT';
+import { supabaseAdmin } from '@/utils/supabase';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { useT, format } from '@/lib/i18n/useT';
+import { logger } from '../utils/logger';
 import nsInscription2026 from '@/lib/i18n/locales/fr/inscription2026';
 
 type InscriptionDict = typeof nsInscription2026.fr;
@@ -126,10 +130,74 @@ const faqSchema = {
   })),
 };
 
-function Inscription2026Page() {
+type Inscription2026Props = {
+  /** Le tournoi a rempli ses places : on cesse d'inviter a le rejoindre. */
+  tournamentFull: boolean;
+  /** Nombre de places, pour le dire au lieu de le sous-entendre. */
+  maxTeams: number | null;
+};
+
+/**
+ * Cette page invitait sans condition. Elle pointe vers l'inscription du tournoi
+ * actif : quand il est complet, elle envoyait les gens dans un tunnel qui ne
+ * pouvait plus aboutir — le serveur refuse deja (`tournament_full`), mais rien
+ * ne le disait avant d'y arriver.
+ *
+ * Comme sur la home, l'etat se DEDUIT des donnees (places vs inscrites) plutot
+ * que d'un drapeau a lever : le jour ou une place se libere, la page reinvite
+ * d'elle-meme.
+ */
+export const getStaticProps: GetStaticProps<
+  Inscription2026Props
+> = async () => {
+  let tournamentFull = false;
+  let maxTeams: number | null = null;
+
+  if (supabaseAdmin) {
+    try {
+      const { data: tournament } = await supabaseAdmin
+        .from('tournaments')
+        .select('max_teams')
+        .eq('id', ACTIVE_WOMEN_TOURNAMENT_ID)
+        .eq('tenant_id', DEFAULT_TENANT_ID)
+        .maybeSingle();
+
+      maxTeams = (tournament?.max_teams as number | null) ?? null;
+
+      if (maxTeams) {
+        const { count } = await supabaseAdmin
+          .from('tournament_teams')
+          .select('id', { count: 'exact', head: true })
+          .eq('tenant_id', DEFAULT_TENANT_ID)
+          .eq('tournament_id', ACTIVE_WOMEN_TOURNAMENT_ID);
+        tournamentFull = (count ?? 0) >= maxTeams;
+      }
+    } catch (err) {
+      // Une lecture ratee ne doit pas casser une page de contenu : on retombe
+      // sur « ouvert », l'etat qui a toujours ete celui de cette page, et le
+      // serveur refusera de toute facon une inscription de trop.
+      logger.error('[inscription-2026] tournament state error', err);
+    }
+  }
+
+  return { props: { tournamentFull, maxTeams }, revalidate: 300 };
+};
+
+function Inscription2026Page({
+  tournamentFull,
+  maxTeams,
+}: Inscription2026Props) {
   const t = useT(nsInscription2026);
   const prerequisites = getPrerequisites(t);
   const steps = getSteps(t);
+  // Étape « Inscris ton équipe » : sans place disponible, la marche n'a plus
+  // d'objet. On garde le texte (il explique le parcours) mais on retire le
+  // bouton, qui mènerait à un refus.
+  const visibleSteps = tournamentFull
+    ? steps.map((step) =>
+        step.cta?.href === REGISTER_HREF ? { ...step, cta: undefined } : step
+      )
+    : steps;
   const faqs = getFaqs(t);
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
@@ -159,13 +227,25 @@ function Inscription2026Page() {
           <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-200">
             {t.heroSubtitle}
           </p>
+          {tournamentFull && (
+            <p className="mx-auto mt-4 max-w-2xl text-sm text-[var(--color-yellow)]/90">
+              {format(t.tournamentFullHint, { count: String(maxTeams ?? '') })}
+            </p>
+          )}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href={REGISTER_HREF}
-              className="rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-[var(--color-violet)]/30 transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
-            >
-              {t.ctaRegister} <span aria-hidden="true">↗</span>
-            </Link>
+            {tournamentFull ? (
+              // Un etat, pas une porte : il n'y a plus de place a prendre.
+              <span className="rounded-full border border-[var(--color-yellow)]/40 bg-[var(--color-yellow)]/10 px-6 py-3 text-sm font-bold text-[var(--color-yellow)]">
+                {t.tournamentFull}
+              </span>
+            ) : (
+              <Link
+                href={REGISTER_HREF}
+                className="rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-[var(--color-violet)]/30 transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
+              >
+                {t.ctaRegister} <span aria-hidden="true">↗</span>
+              </Link>
+            )}
             <a
               href={DISCORD_INVITE}
               target="_blank"
@@ -238,7 +318,7 @@ function Inscription2026Page() {
             </p>
           </div>
           <ol className="space-y-4">
-            {steps.map((step) => (
+            {visibleSteps.map((step) => (
               <li
                 key={step.number}
                 className="card-brand flex flex-col gap-4 rounded-2xl bg-white/[0.05] p-5 sm:flex-row sm:items-start"
@@ -288,10 +368,11 @@ function Inscription2026Page() {
               <p className="mt-2 text-sm text-gray-200">{t.finalBody}</p>
             </div>
             <Link
-              href={REGISTER_HREF}
+              href={tournamentFull ? '/team/create' : REGISTER_HREF}
               className="inline-flex items-center justify-center rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-[var(--color-violet)]/30 transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
             >
-              {t.ctaRegister} <span aria-hidden="true">↗</span>
+              {tournamentFull ? t.ctaCreateTeam : t.ctaRegister}{' '}
+              <span aria-hidden="true">↗</span>
             </Link>
           </div>
         </section>

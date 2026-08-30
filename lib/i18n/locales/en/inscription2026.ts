@@ -16,6 +16,10 @@ export default {
   heroSubtitle:
     "Follow these steps to join the 2026 edition of the OW Women's Cup. Roster, captain, BattleTag: here's everything you need.",
   ctaRegister: 'Register my team',
+  tournamentFull: 'Tournament full',
+  tournamentFullHint:
+    'All {count} spots are taken. You can still create your team on the site — it will be ready for what comes next.',
+  ctaCreateTeam: 'Create my team',
   ctaDiscord: 'Discord',
   ctaFaq: 'FAQ',
   ctaSteps: 'See the steps',
