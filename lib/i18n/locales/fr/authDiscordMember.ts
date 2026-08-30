@@ -19,5 +19,11 @@ export default ns('authDiscordMember', {
   errNoStaff:
     "Ton compte n'a pas d'accès staff. Contacte un admin si c'est une erreur.",
   errConnection: 'Erreur de connexion Discord. Réessaie.',
+  statusLinkFailed: 'Le compte Discord n’a pas pu être rattaché.',
+  errAlreadyLinked:
+    'Ce compte Discord est déjà rattaché à un autre compte du site. Déconnecte-le de l’autre compte, ou connecte-toi avec celui-là.',
+  errLinkGeneric:
+    'Le rattachement Discord a échoué. Réessaie, et signale-le au staff si ça persiste.',
+  backCta: 'Revenir',
   waitMessage: 'Merci de patienter pendant la finalisation de la connexion.',
 });

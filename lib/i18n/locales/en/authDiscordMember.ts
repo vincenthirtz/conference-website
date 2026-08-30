@@ -20,5 +20,11 @@ export default {
   errNoStaff:
     'Your account has no staff access. Contact an admin if this is a mistake.',
   errConnection: 'Discord connection error. Try again.',
+  statusLinkFailed: 'The Discord account could not be linked.',
+  errAlreadyLinked:
+    'This Discord account is already attached to another account on the site. Unlink it there, or sign in with that account.',
+  errLinkGeneric:
+    'Linking Discord failed. Try again, and tell the staff if it keeps happening.',
+  backCta: 'Go back',
   waitMessage: 'Please wait while the connection is finalized.',
 };
