@@ -17,6 +17,7 @@ import {
   STAFF_CACHE_KEY,
   STAFF_CACHE_TTL,
   isCacheFresh,
+  isStaffRole,
   parseStaffCache,
   type StaffCache,
 } from '../../hooks/useStaffSession';
@@ -113,5 +114,30 @@ describe('isCacheFresh', () => {
 
   it('treats future timestamps as fresh (clock skew tolerance)', () => {
     expect(isCacheFresh({ ts: now + 5000 }, now)).toBe(true);
+  });
+});
+
+describe('isStaffRole', () => {
+  it('accepts the three staff roles', () => {
+    expect(isStaffRole('owner')).toBe(true);
+    expect(isStaffRole('admin')).toBe(true);
+    expect(isStaffRole('caster')).toBe(true);
+  });
+
+  it('rejects "captain" — /api/admin/me répond 200 pour une capitaine', () => {
+    // Régression : une capitaine d'équipe (repli `teams.captain_id` du
+    // handler) était prise pour du staff → nav publique masquée, PlayerTopBar
+    // bloquée et top-bar admin sans le moindre lien.
+    expect(isStaffRole('captain')).toBe(false);
+  });
+
+  it('rejects team roles and junk values', () => {
+    expect(isStaffRole('manager')).toBe(false);
+    expect(isStaffRole('player')).toBe(false);
+    expect(isStaffRole('member')).toBe(false);
+    expect(isStaffRole('')).toBe(false);
+    expect(isStaffRole(null)).toBe(false);
+    expect(isStaffRole(undefined)).toBe(false);
+    expect(isStaffRole(1)).toBe(false);
   });
 });

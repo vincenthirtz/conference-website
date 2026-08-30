@@ -76,6 +76,7 @@ function Navbar(): JSX.Element {
   // Staff takes precedence: never show both bars. The player bar shows only on
   // /player routes, for a signed-in non-staff user, once both sessions resolved.
   const isPlayerRoute = router.pathname.startsWith('/player');
+  const showAdminBar = !loading && isStaff;
   const showPlayerBar =
     isPlayerRoute && !loading && !playerLoading && !!playerUser && !isStaff;
 
@@ -91,15 +92,18 @@ function Navbar(): JSX.Element {
   const playerAvatarUrl =
     (playerUser?.user_metadata?.avatar_url as string | undefined) || null;
 
-  const headerOffset =
-    !loading && isStaff
-      ? ADMIN_BAR_HEIGHT
-      : showPlayerBar
-        ? PLAYER_BAR_HEIGHT
-        : 0;
+  const headerOffset = showAdminBar
+    ? ADMIN_BAR_HEIGHT
+    : showPlayerBar
+      ? PLAYER_BAR_HEIGHT
+      : 0;
   const headerHeight = NAV_HEIGHT + headerOffset;
 
-  const hideMarketingNav = isStaff || showPlayerBar;
+  // Masquer la nav publique est conditionné EXACTEMENT à ce qui la remplace.
+  // Avec `isStaff` seul, la fenêtre `isStaff && loading` (ou un chunk
+  // AdminTopBar — `dynamic(ssr:false)` — qui n'arrive pas) laissait la page
+  // sans AUCUN en-tête : ni nav publique, ni top-bar.
+  const hideMarketingNav = showAdminBar || showPlayerBar;
 
   const handleLogout = async () => {
     setDrawerOpen(false);
@@ -127,7 +131,7 @@ function Navbar(): JSX.Element {
         {tNav.skipToContent}
       </a>
 
-      {!loading && isStaff && (
+      {showAdminBar && (
         <AdminTopBar
           staffName={staffName}
           staffRole={staffRole}

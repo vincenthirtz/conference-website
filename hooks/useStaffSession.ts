@@ -10,6 +10,28 @@ export const STAFF_CACHE_TTL = 2 * 60 * 1000;
 // `activeTenantKind` masquerait la console développeur au 1er render).
 export const STAFF_CACHE_KEY = 'staff_cache_v2';
 
+/**
+ * Rôles qui font de quelqu'un un membre du STAFF. Copie CLIENT de
+ * `STAFF_ROLES` (utils/staff.ts) — importer ce module ici embarquerait le
+ * client Supabase service-role dans le bundle (même convention que
+ * `STAFF_LIKE_ROLES` dans pages/admin/users/new.tsx).
+ */
+const STAFF_ROLES_CLIENT: readonly string[] = ['owner', 'admin', 'caster'];
+
+/**
+ * `GET /api/admin/me` répond aussi 200 pour une CAPITAINE d'équipe
+ * (`role: 'captain'`, cf. le repli `teams.captain_id` du handler) : c'est une
+ * réponse d'IDENTITÉ, pas un laissez-passer back-office. Prendre ce 200 pour du
+ * staff cassait la navbar de toute capitaine / manager devenue `captain_id` :
+ * nav publique masquée (`hideMarketingNav`), PlayerTopBar bloquée (`&& !isStaff`)
+ * et top-bar admin VIDE (`filterAdminLinks` n'a pas de rang pour 'captain').
+ * `pages/login.tsx` faisait déjà cette distinction (`me.role !== 'captain'`
+ * avant d'amorcer le cache) — on l'applique ici aussi.
+ */
+export function isStaffRole(role: unknown): role is StaffRole {
+  return typeof role === 'string' && STAFF_ROLES_CLIENT.includes(role);
+}
+
 export type StaffCache = {
   isStaff: boolean;
   staffName: string | null;
@@ -131,7 +153,7 @@ export function useStaffSession(): StaffSession {
           });
           const me = await res.json().catch(() => null);
 
-          if (!res.ok || me?.error || !me?.role) {
+          if (!res.ok || me?.error || !isStaffRole(me?.role)) {
             reset();
             return;
           }
