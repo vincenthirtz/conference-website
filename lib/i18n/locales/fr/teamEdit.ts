@@ -15,9 +15,11 @@ export default ns('teamEdit', {
   viewPage: '← Voir la page',
   identitySection: 'Identité visuelle',
   logoLabel: 'Logo',
-  logoHint: 'PNG, JPEG ou WebP, max 2 Mo. Carré recommandé (512×512).',
+  logoHint:
+    'PNG, JPEG, WebP ou SVG — max 2 Mo (512 Ko en SVG). Carré recommandé (512×512).',
   bannerLabel: 'Bannière',
-  bannerHint: 'PNG, JPEG ou WebP, max 2 Mo. Format paysage (1500×500).',
+  bannerHint:
+    'PNG, JPEG, WebP ou SVG — max 2 Mo (512 Ko en SVG). Format paysage (1500×500).',
   accentColorLabel: "Couleur d'accent",
   secondaryColorLabel: 'Couleur secondaire',
   secondaryColorHint:

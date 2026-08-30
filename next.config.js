@@ -4,6 +4,16 @@ const nextConfig = {
   trailingSlash: false,
   images: {
     formats: ['image/avif', 'image/webp'],
+    // Les équipes peuvent envoyer un logo SVG (cf. utils/svgSanitize.ts, qui
+    // reconstruit le fichier à partir d'une liste blanche AVANT stockage).
+    // L'optimiseur d'images refuse le SVG par défaut, ce qui casserait tout
+    // <Image src="…​.svg">. On le réautorise avec la CSP recommandée par Next :
+    // le SVG est servi en bac à sable, sans script ni ressource externe — la
+    // deuxième barrière, après le nettoyage à l'upload.
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy:
+      "default-src 'self'; script-src 'none'; sandbox; style-src 'unsafe-inline'",
     // Remote CDN images (Blizzard/Twitch/Discord/Supabase Storage) are
     // near-static; the 60s default causes needless re-fetch/re-encode.
     minimumCacheTTL: 86400,

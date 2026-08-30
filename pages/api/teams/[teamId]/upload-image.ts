@@ -11,6 +11,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { hasTeamPermission } from '@/utils/teams/permissions';
+import { SVG_MAX_BYTES, SVG_MIME, sanitizeSvg } from '@/utils/svgSanitize';
 import { logger } from '@/utils/logger';
 
 export const config = {
@@ -25,6 +26,7 @@ const ALLOWED_TYPES: Record<string, string> = {
   'image/png': '.png',
   'image/jpeg': '.jpg',
   'image/webp': '.webp',
+  [SVG_MIME]: '.svg',
 };
 
 const MAX_BYTES = 2 * 1024 * 1024;
@@ -90,7 +92,7 @@ export default withAuthRoute(async function handler(
   const ext = ALLOWED_TYPES[mimeType];
   if (!ext) {
     return res.status(400).json({
-      error: `Type non supporté: ${mimeType}. Formats acceptés: PNG, JPEG, WebP.`,
+      error: `Type non supporté: ${mimeType}. Formats acceptés: PNG, JPEG, WebP, SVG.`,
     });
   }
 
@@ -102,14 +104,28 @@ export default withAuthRoute(async function handler(
     return res.status(400).json({ error: 'Données base64 invalides' });
   }
 
-  if (buffer.length > MAX_BYTES) {
-    return res.status(400).json({ error: 'Image trop lourde (max 2 Mo)' });
-  }
+  // Le SVG est un DOCUMENT, pas une image : pas de magic bytes à vérifier, mais
+  // du script possible. On ne stocke jamais la source reçue — seulement ce que
+  // `sanitizeSvg` a reconstruit à partir d'une liste blanche (cf. le module).
+  if (mimeType === SVG_MIME) {
+    if (buffer.length > SVG_MAX_BYTES) {
+      return res.status(400).json({ error: 'SVG trop lourd (max 512 Ko)' });
+    }
+    const sanitized = sanitizeSvg(buffer.toString('utf8'));
+    if (!sanitized.ok) {
+      return res.status(400).json({ error: sanitized.reason });
+    }
+    buffer = Buffer.from(sanitized.svg, 'utf8');
+  } else {
+    if (buffer.length > MAX_BYTES) {
+      return res.status(400).json({ error: 'Image trop lourde (max 2 Mo)' });
+    }
 
-  if (!validateMagicBytes(buffer, mimeType)) {
-    return res.status(400).json({
-      error: 'Le contenu du fichier ne correspond pas au type MIME déclaré.',
-    });
+    if (!validateMagicBytes(buffer, mimeType)) {
+      return res.status(400).json({
+        error: 'Le contenu du fichier ne correspond pas au type MIME déclaré.',
+      });
+    }
   }
 
   const hash = crypto.randomBytes(8).toString('hex');

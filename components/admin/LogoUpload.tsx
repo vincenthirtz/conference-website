@@ -50,14 +50,25 @@ export default function LogoUpload({
     async (file: File) => {
       setError(null);
 
-      // Validation côté client
-      const allowed = ['image/png', 'image/jpeg', 'image/webp'];
+      // Validation côté client (le serveur revalide et, pour un SVG, nettoie).
+      const allowed = [
+        'image/png',
+        'image/jpeg',
+        'image/webp',
+        'image/svg+xml',
+      ];
       if (!allowed.includes(file.type)) {
         setError(t.errorFormat);
         return;
       }
-      if (file.size > 2 * 1024 * 1024) {
-        setError(t.errorTooBig);
+      // Un SVG est du texte : plafond plus bas, aligné sur SVG_MAX_BYTES
+      // (utils/svgSanitize.ts). Au-delà, ce n'est plus un logo.
+      const maxBytes =
+        file.type === 'image/svg+xml' ? 512 * 1024 : 2 * 1024 * 1024;
+      if (file.size > maxBytes) {
+        setError(
+          file.type === 'image/svg+xml' ? t.errorSvgTooBig : t.errorTooBig
+        );
         return;
       }
 
@@ -185,7 +196,7 @@ export default function LogoUpload({
           <input
             ref={inputRef}
             type="file"
-            accept="image/png,image/jpeg,image/webp"
+            accept="image/png,image/jpeg,image/webp,image/svg+xml"
             onChange={handleInputChange}
             className="hidden"
           />

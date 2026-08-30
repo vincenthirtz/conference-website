@@ -16,9 +16,11 @@ export default {
   viewPage: '← View the page',
   identitySection: 'Visual identity',
   logoLabel: 'Logo',
-  logoHint: 'PNG, JPEG or WebP, max 2 MB. Square recommended (512×512).',
+  logoHint:
+    'PNG, JPEG, WebP or SVG — max 2 MB (512 KB for SVG). Square recommended (512×512).',
   bannerLabel: 'Banner',
-  bannerHint: 'PNG, JPEG or WebP, max 2 MB. Landscape format (1500×500).',
+  bannerHint:
+    'PNG, JPEG, WebP or SVG — max 2 MB (512 KB for SVG). Landscape format (1500×500).',
   accentColorLabel: 'Accent color',
   secondaryColorLabel: 'Secondary color',
   secondaryColorHint:

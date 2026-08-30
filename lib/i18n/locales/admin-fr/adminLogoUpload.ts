@@ -10,9 +10,11 @@ import { adminNs } from '../../ns';
 
 export default adminNs('adminLogoUpload', {
   defaultLabel: 'Logo',
-  defaultHint: 'PNG, JPEG ou WebP, max 2 Mo, idéalement 512×512.',
-  errorFormat: 'Format non supporté. Utilise PNG, JPEG ou WebP.',
+  defaultHint:
+    'PNG, JPEG, WebP ou SVG — max 2 Mo (512 Ko en SVG), idéalement 512×512.',
+  errorFormat: 'Format non supporté. Utilise PNG, JPEG, WebP ou SVG.',
   errorTooBig: 'Image trop lourde (max 2 Mo).',
+  errorSvgTooBig: 'SVG trop lourd (max 512 Ko).',
   errorUpload: "Erreur lors de l'upload",
   uploadTab: 'Upload',
   uploading: 'Upload en cours...',

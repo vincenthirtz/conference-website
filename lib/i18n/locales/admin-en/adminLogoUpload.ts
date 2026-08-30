@@ -11,9 +11,11 @@
 
 export default {
   defaultLabel: 'Logo',
-  defaultHint: 'PNG, JPEG or WebP, max 2 MB, ideally 512×512.',
-  errorFormat: 'Unsupported format. Use PNG, JPEG or WebP.',
+  defaultHint:
+    'PNG, JPEG, WebP or SVG — max 2 MB (512 KB for SVG), ideally 512×512.',
+  errorFormat: 'Unsupported format. Use PNG, JPEG, WebP or SVG.',
   errorTooBig: 'Image too large (max 2 MB).',
+  errorSvgTooBig: 'SVG too large (max 512 KB).',
   errorUpload: 'Upload error',
   uploadTab: 'Upload',
   uploading: 'Uploading...',

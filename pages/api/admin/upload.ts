@@ -7,6 +7,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { withStaffRoute } from '@/utils/staff';
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/utils/supabase';
+import { SVG_MAX_BYTES, SVG_MIME, sanitizeSvg } from '@/utils/svgSanitize';
 
 import { logger } from '../../../utils/logger';
 export const config = {
@@ -21,6 +22,7 @@ const ALLOWED_TYPES: Record<string, string> = {
   'image/png': '.png',
   'image/jpeg': '.jpg',
   'image/webp': '.webp',
+  [SVG_MIME]: '.svg',
   'application/pdf': '.pdf',
 };
 
@@ -28,6 +30,7 @@ const MAX_BYTES_BY_TYPE: Record<string, number> = {
   'image/png': 2 * 1024 * 1024,
   'image/jpeg': 2 * 1024 * 1024,
   'image/webp': 2 * 1024 * 1024,
+  [SVG_MIME]: SVG_MAX_BYTES,
   'application/pdf': 5 * 1024 * 1024,
 };
 
@@ -84,7 +87,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const ext = ALLOWED_TYPES[mimeType];
   if (!ext) {
     return res.status(400).json({
-      error: `Type non supporté: ${mimeType}. Formats acceptés: PNG, JPEG, WebP, PDF.`,
+      error: `Type non supporté: ${mimeType}. Formats acceptés: PNG, JPEG, WebP, SVG, PDF.`,
     });
   }
 
@@ -106,8 +109,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .json({ error: `Fichier trop lourd (max ${maxMo} Mo)` });
   }
 
-  // Vérifier les magic bytes (le contenu correspond bien au type MIME déclaré)
-  if (!validateMagicBytes(buffer, mimeType)) {
+  // Le SVG est un DOCUMENT (script, entités XML, références externes) et n'a
+  // pas de magic bytes : il passe par le nettoyage à liste blanche, et c'est la
+  // source RÉÉCRITE qu'on stocke — jamais celle reçue. Cf. utils/svgSanitize.ts.
+  if (mimeType === SVG_MIME) {
+    const sanitized = sanitizeSvg(buffer.toString('utf8'));
+    if (!sanitized.ok) {
+      return res.status(400).json({ error: sanitized.reason });
+    }
+    buffer = Buffer.from(sanitized.svg, 'utf8');
+  } else if (!validateMagicBytes(buffer, mimeType)) {
+    // Vérifier les magic bytes (le contenu correspond bien au type MIME déclaré)
     return res.status(400).json({
       error: 'Le contenu du fichier ne correspond pas au type MIME déclaré.',
     });
