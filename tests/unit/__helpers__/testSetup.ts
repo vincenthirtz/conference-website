@@ -23,5 +23,9 @@ vi.mock('../../utils/supabase', async () => {
 vi.mock('@/utils/rateLimit', () => ({
   applyRateLimit: () => false,
   applyActorRateLimit: () => false,
+  // Rendre une tentative n'a pas de sens quand la limite est neutralisée :
+  // le no-op suffit, et l'implémentation réelle est couverte par
+  // tests/unit/rateLimit.test.ts, qui démocke le module.
+  refundRateLimit: () => {},
   getClientIp: () => '127.0.0.1',
 }));

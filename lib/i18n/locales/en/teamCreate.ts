@@ -15,9 +15,6 @@ export default {
   title: 'Create a team',
   subtitle:
     "Add your team's key info and, if you like, fill in the whole roster (existing emails or accounts created automatically) all at once.",
-  tournamentEyebrow: 'Tournament registration',
-  tournamentRegisteredText:
-    'Your team will be automatically registered for the tournament',
   registrationsEyebrow: 'Team registrations',
   registrationsDesc:
     'Milestones and key dates are detailed in the roadmap. Check the 2026 timeline to anticipate the next steps.',

@@ -14,9 +14,6 @@ export default ns('teamCreate', {
   title: 'Créer une équipe',
   subtitle:
     'Ajoute les infos principales de ton équipe et, si tu veux, renseigne tout le roster (emails existants ou comptes créés automatiquement) en une seule fois.',
-  tournamentEyebrow: 'Inscription au tournoi',
-  tournamentRegisteredText:
-    'Ton équipe sera automatiquement inscrite au tournoi',
   registrationsEyebrow: 'Inscriptions équipes',
   registrationsDesc:
     'Les jalons et dates clés sont détaillés dans la roadmap. Consulte la timeline 2026 pour anticiper les prochaines étapes.',
@@ -170,7 +167,7 @@ export default ns('teamCreate', {
   partialWarningDesc:
     "Ton équipe a bien été créée, mais aucune candidature n'a pu être enregistrée pour le tournoi — il est probablement complet.",
   partialWarningAction:
-    "Vérifie depuis ton espace équipe, ou contacte le staff pour en parler.",
+    'Vérifie depuis ton espace équipe, ou contacte le staff pour en parler.',
   contactStaffCta: 'Contacter le staff',
   accessEmailTitle: 'Accède à ton espace équipe',
   accessEmailSent:

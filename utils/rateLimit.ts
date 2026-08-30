@@ -95,6 +95,33 @@ export function applyRateLimit(
 }
 
 /**
+ * Rend la tentative qui vient d'être décomptée à cette IP.
+ *
+ * `applyRateLimit` débite AVANT d'agir — il ne peut pas savoir si ce qui suit
+ * va réussir. Quand l'échec vient de NOUS (fournisseur indisponible, quota
+ * d'e-mails épuisé), la personne paie une tentative pour une panne qui n'est
+ * pas la sienne. Elle réessaie, paie encore, et finit par lire « trop de
+ * tentatives » alors qu'elle n'a rien fait de mal — c'est exactement ce qui est
+ * arrivé à une inscription bloquée pendant la panne d'envoi d'e-mails.
+ *
+ * À n'appeler QUE sur un échec de notre côté. Un refus légitime (validation,
+ * doublon, mot de passe faible) doit rester décompté : c'est là que sert
+ * l'anti-abus.
+ */
+export function refundRateLimit(
+  req: NextApiRequest,
+  storeName = 'default'
+): void {
+  const store = getStore(storeName);
+  const ip = getClientIp(req);
+  const timestamps = store.get(ip);
+  if (!timestamps || timestamps.length === 0) return;
+  timestamps.pop();
+  if (timestamps.length === 0) store.delete(ip);
+  else store.set(ip, timestamps);
+}
+
+/**
  * Per-actor rate limit. Keyed on an arbitrary string (typically a Discord
  * user id) rather than the request IP. Useful in /api/bot/v1/* where every
  * request comes from the bot's IP — a per-IP cap would treat all users as

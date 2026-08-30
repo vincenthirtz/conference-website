@@ -5,7 +5,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 // exercises the REAL implementation, so undo that mock before importing.
 vi.unmock('@/utils/rateLimit');
 
-import { applyRateLimit, getClientIp } from '../../utils/rateLimit';
+import {
+  applyRateLimit,
+  getClientIp,
+  refundRateLimit,
+} from '../../utils/rateLimit';
 
 function makeReq(
   headers: Record<string, string> = {},
@@ -200,5 +204,48 @@ describe('applyRateLimit', () => {
     );
     expect(blocked).toBe(false);
     expect(status).not.toHaveBeenCalled();
+  });
+});
+
+describe('refundRateLimit', () => {
+  it('rend la tentative : une panne de notre côté ne coûte rien', () => {
+    // C'est le scénario vécu : le quota d'e-mails était épuisé, l'inscription
+    // échouait en 500, et chaque essai débitait quand même. Au 6ᵉ, la personne
+    // lisait « trop de tentatives » sans avoir rien fait de mal.
+    const store = 'refund-panne';
+    const cfg = { max: 2, windowMs: 60_000 };
+    const req = makeReq({ 'x-real-ip': '9.9.9.9' });
+
+    expect(applyRateLimit(req, makeRes().res, cfg, store)).toBe(false);
+    refundRateLimit(req, store); // l'appel a échoué chez nous
+    expect(applyRateLimit(req, makeRes().res, cfg, store)).toBe(false);
+    refundRateLimit(req, store);
+
+    // Après deux échecs rendus, le quota est intact.
+    expect(applyRateLimit(req, makeRes().res, cfg, store)).toBe(false);
+    expect(applyRateLimit(req, makeRes().res, cfg, store)).toBe(false);
+    const blocked = makeRes();
+    expect(applyRateLimit(req, blocked.res, cfg, store)).toBe(true);
+  });
+
+  it('ne rend rien quand l’IP n’a aucune tentative en cours', () => {
+    const req = makeReq({ 'x-real-ip': '9.9.9.10' });
+    expect(() => refundRateLimit(req, 'refund-vide')).not.toThrow();
+  });
+
+  it('ne rend qu’UNE tentative par appel', () => {
+    // Un refus légitime (validation, doublon) doit rester décompté : le refund
+    // est ciblé, il ne remet pas les compteurs à zéro.
+    const store = 'refund-unitaire';
+    const cfg = { max: 3, windowMs: 60_000 };
+    const req = makeReq({ 'x-real-ip': '9.9.9.11' });
+
+    applyRateLimit(req, makeRes().res, cfg, store);
+    applyRateLimit(req, makeRes().res, cfg, store);
+    refundRateLimit(req, store);
+
+    expect(applyRateLimit(req, makeRes().res, cfg, store)).toBe(false);
+    expect(applyRateLimit(req, makeRes().res, cfg, store)).toBe(false);
+    expect(applyRateLimit(req, makeRes().res, cfg, store)).toBe(true);
   });
 });

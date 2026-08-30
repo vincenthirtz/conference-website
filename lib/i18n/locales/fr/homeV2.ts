@@ -22,7 +22,7 @@ export default ns('homeV2', {
   // ne ferme pas le site pour autant : une équipe peut toujours se constituer.
   heroTournamentFull: 'Tournoi complet',
   heroTournamentFullHint:
-    'Les {count} places de l’édition {year} sont pourvues. Tu peux quand même créer ton équipe sur le site.',
+    'Les {count} places de l’édition {year} sont pourvues.',
   heroCtaCreateTeam: 'Créer mon équipe',
   // Lot 1 acquisition : la joueuse SANS équipe n'avait aucune porte d'entrée
   // dans le hero. CTA de rang égal, pas un lien de repli.

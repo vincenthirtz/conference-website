@@ -21,7 +21,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { supabaseAnonServer, supabaseAdmin } from '@/utils/supabase';
-import { applyRateLimit } from '@/utils/rateLimit';
+import { applyRateLimit, refundRateLimit } from '@/utils/rateLimit';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/addMember';
@@ -190,6 +190,12 @@ export default async function handler(
       return res.status(200).json({ status: 'ok' });
     }
 
+    // L'échec vient de nous (fournisseur d'auth indisponible, quota d'e-mails
+    // épuisé) : on rend la tentative. Sans ça, la personne paie pour notre
+    // panne, réessaie, et finit par se voir refuser l'inscription pour « trop
+    // de tentatives » — ce qui s'est produit pendant la saturation d'envoi
+    // d'e-mails du 29-30 août.
+    refundRateLimit(req, 'register');
     logger.error('[api/auth/register] signUp error:', error);
     return res.status(500).json({
       error:

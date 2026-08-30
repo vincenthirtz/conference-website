@@ -1898,31 +1898,12 @@ export default function PublicCreateTeamPage() {
           </p>
         </header>
 
-        {tournamentInfo && (
-          <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-[var(--color-violet)]/30 bg-[var(--color-violet)]/5 px-4 py-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-violet-light)]">
-                {t.tournamentEyebrow}
-              </p>
-              <p className="text-sm text-purple-50/90">
-                {t.tournamentRegisteredText}{' '}
-                <span className="font-semibold text-white">
-                  {tournamentInfo.name}
-                </span>
-                {tournamentInfo.start_date && (
-                  <>
-                    {' '}
-                    —{' '}
-                    {new Date(tournamentInfo.start_date).toLocaleDateString(
-                      locale,
-                      { day: 'numeric', month: 'long', year: 'numeric' }
-                    )}
-                  </>
-                )}
-              </p>
-            </div>
-          </div>
-        )}
+        {/* Bandeau « ton équipe sera automatiquement inscrite au tournoi »
+            retiré : c'était une promesse que le serveur ne tient plus une fois
+            le tournoi complet (`create-with-member` n'inscrit ni ne candidate
+            au-delà de `max_teams`). Mieux vaut ne rien annoncer que d'annoncer
+            faux — la page reste ce qu'elle est, un formulaire de création
+            d'équipe. */}
 
         <div className="mb-8 grid gap-4 md:grid-cols-2">
           <div className="flex flex-col justify-between gap-3 rounded-2xl border border-[var(--color-green)]/30 bg-[var(--color-green)]/5 px-4 py-3 sm:flex-row sm:items-center">

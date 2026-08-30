@@ -114,20 +114,28 @@ export default function HomeHeroV2({
 
         <div className="mt-8 flex w-full max-w-md flex-col items-center justify-center gap-3 sm:max-w-none sm:flex-row sm:gap-4">
           {tournamentFull ? (
-            // Un etat, pas un bouton : il n'y a plus rien a cliquer pour
-            // rejoindre. Le lien vers la creation d'equipe reste juste en
-            // dessous, sans promettre une place dans le tournoi.
-            <div className="flex w-full flex-col items-center gap-2 sm:w-auto sm:items-start">
-              <span className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--color-yellow)]/40 bg-[var(--color-yellow)]/10 px-6 py-3.5 text-base font-extrabold uppercase tracking-wider text-[var(--color-yellow)] sm:w-auto sm:px-8 sm:py-4 sm:text-lg">
-                {t.heroTournamentFull}
-              </span>
-              <Link
-                href="/team/create"
-                className="text-sm font-semibold text-white underline decoration-white/40 underline-offset-4 transition hover:decoration-white"
+            // Un ETAT, pas un bouton : il n'y a plus rien a cliquer pour
+            // rejoindre, et rien ne doit ressembler a une porte. On garde
+            // neanmoins le poids visuel du CTA qu'il remplace — c'est
+            // l'information principale du hero, pas une note de bas de page.
+            <span
+              role="status"
+              className="inline-flex w-full items-center justify-center gap-2.5 rounded-xl border border-[var(--color-yellow)]/45 bg-gradient-to-r from-[var(--color-yellow)]/20 via-[var(--color-yellow)]/10 to-transparent px-6 py-3.5 text-base font-extrabold uppercase tracking-wider text-[var(--color-yellow)] shadow-[0_0_28px_-10px_var(--color-yellow)] backdrop-blur sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
+            >
+              <svg
+                className="h-5 w-5 shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
               >
-                {t.heroCtaCreateTeam}
-              </Link>
-            </div>
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+              {t.heroTournamentFull}
+            </span>
           ) : (
             <Link href="/team/create" className="w-full sm:w-auto">
               <button
