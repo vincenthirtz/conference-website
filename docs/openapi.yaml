@@ -9452,7 +9452,7 @@ paths:
         ses membres resolus vers leur ID Discord.
       description: >-
         Consomme par un cron quotidien de reconciliation cote bot. Selectionne
-        les equipes ACTIVES (`is_active = true`, `deleted_at IS NULL`) INSCRITES au tournoi de l'annee en cours (tournament_teams), paginees via
+        les equipes ACTIVES (`is_active = true`, `deleted_at IS NULL`) INSCRITES au tournoi de l'annee en cours (tournament_teams) OU dont l'inscription a ce tournoi est EN ATTENTE (demandes team_registration pending), paginees via
         `limit` (defaut 200, max 500) et `offset`. Les membres sans lien Discord
         (aucune row `user_discord_links`) sont omis : le bot ne peut pas agir sur
         eux. `captainDiscordUserId` est null si le capitaine n'est pas lie a

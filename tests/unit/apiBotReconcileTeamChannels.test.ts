@@ -323,35 +323,54 @@ describe('GET /api/bot/v1/reconcile/team-channels', () => {
     expect(slugs).toEqual(['alpha']);
   });
 
-  it('without a current-year tournament, still maintains ALREADY provisioned teams', async () => {
-    // Le provisioning est scopé aux inscrites, mais on n'abandonne pas ce qu'on
-    // a déjà créé : sans ça, une équipe provisionnée à sa création puis jamais
-    // inscrite sort du champ du cron — plus d'entretien, et aucune réparation
-    // quand ses salons disparaissent. C'est ce qui est arrivé à Eclypse.
-    store.tournaments = [] as any;
+  it('includes a team whose registration is PENDING for that tournament', async () => {
+    // Une inscription déposée mais pas encore validée, c'est déjà une équipe du
+    // tournoi : elle recrute, elle a ses salons. L'exclure du champ du cron la
+    // laisse sans entretien NI réparation — c'est ce qui a fait qu'Eclypse a
+    // perdu ses salons sans que rien ne les recrée.
     store.tournament_teams = [] as any;
-    const res = makeRes();
-    await handler(makeBotReq(), res);
-    expect(res.statusCode).toBe(200);
-    // TEAM_A a des ids Discord → entretenue. TEAM_B n'en a aucun → toujours
-    // exclue : on ne provisionne personne qui n'avait rien.
-    expect((res.body as any).teams.map((t: any) => t.slug)).toEqual(['alpha']);
-  });
-
-  it('ignores a tournament from a DIFFERENT year for the REGISTERED scope', async () => {
-    store.tournaments = [
+    store.demandes = [
       {
-        id: TOURNEY,
+        id: 'dem-1',
         tenant_id: CONFERENCE_TENANT_ID,
-        status: 'published',
-        start_date: `${CURRENT_YEAR - 1}-05-01`,
-        end_date: `${CURRENT_YEAR - 1}-06-01`,
+        tournament_id: TOURNEY,
+        team_id: TEAM_A,
+        type: 'team_registration',
+        status: 'pending',
       },
     ] as any;
     const res = makeRes();
     await handler(makeBotReq(), res);
-    // Aucune inscrite retenue ; seule subsiste l'équipe déjà provisionnée.
+    expect(res.statusCode).toBe(200);
     expect((res.body as any).teams.map((t: any) => t.slug)).toEqual(['alpha']);
+  });
+
+  it('excludes a team with NO registration and NO pending request', async () => {
+    // Une vieille équipe hors tournoi ne doit jamais se voir provisionner de
+    // salons, même si elle en a déjà eu.
+    store.tournament_teams = [] as any;
+    store.demandes = [] as any;
+    const res = makeRes();
+    await handler(makeBotReq(), res);
+    expect((res.body as any).teams).toEqual([]);
+    expect((res.body as any).count).toBe(0);
+  });
+
+  it('ignores a REJECTED registration request', async () => {
+    store.tournament_teams = [] as any;
+    store.demandes = [
+      {
+        id: 'dem-2',
+        tenant_id: CONFERENCE_TENANT_ID,
+        tournament_id: TOURNEY,
+        team_id: TEAM_A,
+        type: 'team_registration',
+        status: 'rejected',
+      },
+    ] as any;
+    const res = makeRes();
+    await handler(makeBotReq(), res);
+    expect((res.body as any).teams).toEqual([]);
   });
 
   it('exposes knownChannelIds — exhaustive, including inactive teams', async () => {

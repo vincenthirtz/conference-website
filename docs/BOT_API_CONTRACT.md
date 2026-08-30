@@ -1365,7 +1365,11 @@ que `discord-orphans`.
 - `isCaptain` = (`member.user_id === team.captain_id`). `isSubstitute` vient de
   `team_members.is_substitute`. Les membres sont dédupliqués par `discordUserId`.
 - `captainDiscordUserId` = l'ID Discord du capitaine s'il est lié, sinon `null`.
-- **Scoping** : seules les équipes **inscrites au tournoi de l'année en cours** (via `tournament_teams`) sont renvoyées ; aucune inscription / aucun tournoi de l'année → `teams: []`.
+- **Scoping** : équipes **inscrites au tournoi de l'année en cours** (via
+  `tournament_teams`) **OU** dont l'inscription à ce tournoi est **en attente**
+  (`demandes` type `team_registration`, statut `pending`). Une candidature
+  déposée est déjà une équipe du tournoi : l'exclure la laisserait sans
+  entretien ni réparation de salons. Aucun tournoi de l'année → `teams: []`.
 - `knownChannelIds` = ids de salons Discord de **TOUTES les équipes actives** du
   tenant, inscrites ou non, **non paginé**. C'est un ensemble de RÉFÉRENCE, pas
   une page de travail : `teams` (scopé) répond « à qui provisionner ? »,
