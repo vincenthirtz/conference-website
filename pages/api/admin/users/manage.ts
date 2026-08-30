@@ -562,6 +562,14 @@ async function handler(
       // pastille « ✓ vérifié » restait collée à un tag que personne n'a jamais
       // vérifié (faux négatif anti-smurf : le mismatch ne se déclenche que si
       // la joueuse a par ailleurs un lien Battle.net).
+      //
+      // Depuis `sync_team_member_battletag_verification.sql`, ce n'est plus le
+      // dernier mot : le trigger recalcule l'estampille à chaque écriture du
+      // tag. S'il s'avère que le nouveau tag EST celui du compte Blizzard
+      // prouvé par cette personne, la ligne ressort vérifiée — ce qui est
+      // exact. On garde la remise à zéro (elle décrit l'intention et vaut pour
+      // toute base où le trigger n'est pas encore appliqué), et on RELIT
+      // l'état réel plus bas au lieu de le prédire.
       const updatePayload: Record<string, unknown> = { battle_tag: nextTag };
       if (tagChanged) {
         updatePayload.battle_tag_verified_at = null;
@@ -608,12 +616,22 @@ async function handler(
         .limit(1);
       const linkedTag = (bnetLink as any)?.[0]?.battle_tag ?? null;
 
-      const verifiedAt = tagChanged
-        ? null
-        : membership.battle_tag_verified_at || null;
-      const verifiedBattleNetId = tagChanged
-        ? null
-        : membership.verified_battle_net_id || null;
+      // Relecture plutôt que prédiction : le trigger a pu (re)poser
+      // l'estampille, et une pastille qui ment jusqu'au prochain rafraîchissement
+      // est précisément ce que ce lot corrige. Repli sur l'ancien calcul si la
+      // relecture échoue — mieux vaut une pastille approximative qu'une 500.
+      const { data: refreshed } = await supabaseAdmin
+        .from('team_members')
+        .select('battle_tag_verified_at, verified_battle_net_id')
+        .eq('id', membership.id)
+        .maybeSingle();
+
+      const verifiedAt =
+        refreshed?.battle_tag_verified_at ??
+        (tagChanged ? null : membership.battle_tag_verified_at || null);
+      const verifiedBattleNetId =
+        refreshed?.verified_battle_net_id ??
+        (tagChanged ? null : membership.verified_battle_net_id || null);
 
       return res.status(200).json({
         success: true,
