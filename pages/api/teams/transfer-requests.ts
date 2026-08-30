@@ -237,6 +237,7 @@ async function handlePost(
         excerpt: `${playerName} quitte ${fromTeamName} et rejoint ${captainTeam.name} en tant que ${desiredRole}.`,
         content: `${playerName} a ete transfere de ${fromTeamName} vers ${captainTeam.name} en tant que ${desiredRole}. Bienvenue !`,
         image_url: captainTeam.logo_url ?? null,
+        team_id: captainTeam.id,
         status: 'published',
         published_at: new Date().toISOString(),
         tenant_id: tenantId,

@@ -262,6 +262,7 @@ async function handlePost(
       excerpt: `${team.name} s'est inscrite au tournoi ${tournament.name}.`,
       content: `L'équipe ${team.name} est désormais inscrite au tournoi ${tournament.name}. Bonne chance !`,
       image_url: (data as any)?.team?.logo_url ?? null,
+      team_id: team_id,
       status: 'published',
       published_at: new Date().toISOString(),
     });

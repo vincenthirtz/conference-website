@@ -10,6 +10,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
+import { resolveNewsImage } from '@/utils/news/newsImage';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -26,6 +27,8 @@ type NewsItem = {
   tag: string;
   excerpt: string | null;
   imageUrl: string | null;
+  /** `imageUrl` est le logo de l'équipe liée → cadrage `contain`. */
+  imageIsTeamLogo: boolean;
   publishedAt: string | null;
   createdAt: string | null;
 };
@@ -53,7 +56,7 @@ export const getStaticProps: GetStaticProps<NewsIndexProps> = async () => {
     const { data, error } = await supabaseAdmin
       .from('news')
       .select(
-        'id, title, slug, tag, excerpt, image_url, published_at, created_at'
+        'id, title, slug, tag, excerpt, image_url, published_at, created_at, teams(logo_url)'
       )
       .eq('tenant_id', DEFAULT_TENANT_ID)
       .eq('status', 'published')
@@ -67,16 +70,20 @@ export const getStaticProps: GetStaticProps<NewsIndexProps> = async () => {
     } else if (data) {
       news = data
         .filter((row: any) => row.slug)
-        .map((row: any) => ({
-          id: row.id,
-          title: row.title,
-          slug: row.slug,
-          tag: row.tag || 'general',
-          excerpt: row.excerpt || null,
-          imageUrl: row.image_url || null,
-          publishedAt: row.published_at || null,
-          createdAt: row.created_at || null,
-        }));
+        .map((row: any) => {
+          const image = resolveNewsImage(row.image_url, row.teams);
+          return {
+            id: row.id,
+            title: row.title,
+            slug: row.slug,
+            tag: row.tag || 'general',
+            excerpt: row.excerpt || null,
+            imageUrl: image.url,
+            imageIsTeamLogo: image.fromTeamLogo,
+            publishedAt: row.published_at || null,
+            createdAt: row.created_at || null,
+          };
+        });
     }
   }
 
@@ -110,7 +117,11 @@ function NewsCard({ item }: { item: NewsItem }) {
             alt=""
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            className="object-cover transition group-hover:scale-105"
+            className={`transition group-hover:scale-105 ${
+              item.imageIsTeamLogo
+                ? 'bg-gradient-to-br from-purple-900/40 via-neutral-900 to-blue-900/30 object-contain p-6'
+                : 'object-cover'
+            }`}
             unoptimized
           />
           <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/80 to-transparent" />

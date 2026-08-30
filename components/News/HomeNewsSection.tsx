@@ -15,6 +15,11 @@ export type HomeNewsItem = {
   excerpt?: string | null;
   content?: string | null;
   imageUrl?: string | null;
+  /**
+   * Vrai quand `imageUrl` est le LOGO de l'équipe liée et non un visuel
+   * d'article : les cartes cadrent alors en `contain` au lieu de recadrer.
+   */
+  imageIsTeamLogo?: boolean;
   publishedAt?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;

@@ -93,6 +93,9 @@ export default async function handler(
           tag: 'teams',
           excerpt: `L'équipe ${name} rejoint le tournoi.`,
           content: `Bienvenue à ${name} ! Une nouvelle équipe vient d'être créée pour participer au tournoi. Restez à l'écoute pour suivre ses matchs.`,
+          // Ce chemin n'a jamais posé d'image (l'équipe naît sans logo). Le
+          // rattachement suffit : le logo apparaîtra dès qu'elle en aura un.
+          team_id: (data as any)?.id ?? null,
           status: 'published',
           published_at: new Date().toISOString(),
           tenant_id: tenantId,

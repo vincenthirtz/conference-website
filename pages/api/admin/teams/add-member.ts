@@ -139,6 +139,7 @@ async function handler(
         excerpt: `${playerName} rejoint ${teamName} en tant que ${resolvedRole}.`,
         content: `${playerName} a rejoint ${teamName} en tant que ${resolvedRole}. Bienvenue !`,
         image_url: team?.logo_url ?? null,
+        team_id: teamId,
         status: 'published',
         published_at: new Date().toISOString(),
       });

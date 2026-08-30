@@ -5,6 +5,7 @@ import Heading from '@/components/Typography/heading';
 import Button from '@/components/Buttons/button';
 import Link from 'next/link';
 import { supabaseAdmin } from '@/utils/supabase';
+import { resolveNewsImage } from '@/utils/news/newsImage';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useEffect, useRef, useState, Fragment, type ReactNode } from 'react';
 import { useToast } from '@/components/Toast';
@@ -74,6 +75,8 @@ type NewsPageProps = {
   tag?: string | null;
   excerpt?: string | null;
   imageUrl?: string | null;
+  /** `imageUrl` est le logo de l'équipe liée → cadrage `contain`. */
+  imageIsTeamLogo?: boolean;
   publishedAt?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
@@ -96,7 +99,9 @@ export const getStaticProps: GetStaticProps<NewsPageProps> = async (
   // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
   const { data, error } = await supabaseAdmin
     .from('news')
-    .select('*')
+    // `teams(logo_url)` : l'illustration se dérive de l'équipe liée quand
+    // l'article n'a pas d'image propre (cf. utils/news/newsImage.ts).
+    .select('*, teams(logo_url)')
     .eq('tenant_id', DEFAULT_TENANT_ID)
     .eq('slug', slug)
     .maybeSingle();
@@ -124,7 +129,9 @@ export const getStaticProps: GetStaticProps<NewsPageProps> = async (
       slug: data.slug || null,
       tag: data.tag || 'general',
       excerpt: data.excerpt || '',
-      imageUrl: data.image_url || '',
+      imageUrl: resolveNewsImage(data.image_url, data.teams).url || '',
+      imageIsTeamLogo: resolveNewsImage(data.image_url, data.teams)
+        .fromTeamLogo,
       publishedAt: data.published_at || null,
       createdAt: data.created_at || null,
       updatedAt: data.updated_at || null,
@@ -141,6 +148,7 @@ export default function NewsSlugPage({
   tag,
   excerpt,
   imageUrl,
+  imageIsTeamLogo,
   publishedAt,
   createdAt,
   updatedAt,
@@ -285,7 +293,11 @@ export default function NewsSlugPage({
                   height={630}
                   priority
                   sizes="(max-width:768px) 100vw, 800px"
-                  className="mt-4 w-full rounded-2xl border border-white/10 object-cover aspect-[1200/630]"
+                  className={`mt-4 aspect-[1200/630] w-full rounded-2xl border border-white/10 ${
+                    imageIsTeamLogo
+                      ? 'bg-white/[0.03] object-contain p-8'
+                      : 'object-cover'
+                  }`}
                 />
               )}
             </div>

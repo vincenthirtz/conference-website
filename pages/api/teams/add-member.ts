@@ -205,6 +205,7 @@ export default withAuthRoute(async function handler(
         excerpt: `${playerName} rejoint ${captainTeam.name} en tant que ${memberPayload.role}.`,
         content: `${playerName} a rejoint ${captainTeam.name} en tant que ${memberPayload.role}. Bienvenue !`,
         image_url: captainTeam.logo_url ?? null,
+        team_id: captainTeam.id,
         status: 'published',
         published_at: new Date().toISOString(),
         tenant_id: tenantId,

@@ -663,6 +663,7 @@ async function handlePost(
                 excerpt: `${teamName} s'est inscrite au tournoi ${tournamentName}.`,
                 content: `L'équipe ${teamName} est désormais inscrite au tournoi ${tournamentName}. Bonne chance !`,
                 image_url: teamData?.logo_url ?? null,
+                team_id: d.team_id,
                 status: 'published',
                 published_at: new Date().toISOString(),
               });
@@ -840,6 +841,7 @@ async function handlePost(
                 excerpt: `${playerName} rejoint ${teamName} en tant que ${desiredRole}.`,
                 content: `${playerName} a rejoint ${teamName} en tant que ${desiredRole}. Bienvenue !`,
                 image_url: teamData?.logo_url ?? null,
+                team_id: d.team_id,
                 status: 'published',
                 published_at: new Date().toISOString(),
               });

@@ -4,6 +4,7 @@ import slugify from 'slugify';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { parsePagination } from '@/utils/apiHelpers';
+import { resolveNewsImageUrl } from '@/utils/news/newsImage';
 import { emitBotEvent } from '@/utils/botEvents';
 import {
   resolveTenantIdForPublicRequest,
@@ -70,7 +71,7 @@ export default async function handler(
   let query = admin
     .from('news')
     .select(
-      'id, title, slug, tag, excerpt, content, image_url, published_at, created_at, updated_at, news_comments(count)'
+      'id, title, slug, tag, excerpt, content, image_url, published_at, created_at, updated_at, news_comments(count), teams(logo_url)'
     )
     .eq('status', 'published')
     .eq('tenant_id', tenantId)
@@ -97,7 +98,7 @@ export default async function handler(
       tag: row.tag,
       excerpt: row.excerpt,
       content: row.content,
-      imageUrl: row.image_url,
+      imageUrl: resolveNewsImageUrl(row.image_url, (row as any).teams),
       createdAt: row.created_at,
       publishedAt: row.published_at,
       updatedAt: row.updated_at,

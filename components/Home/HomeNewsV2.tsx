@@ -50,12 +50,18 @@ function NewsCard({ item }: { item: HomeNewsItem }) {
     >
       <div className="relative aspect-[16/10] w-full overflow-hidden">
         {item.imageUrl ? (
+          // Un logo d'équipe n'est pas une bannière : le recadrer en `cover`
+          // le décapite. On le pose entier sur le dégradé de repli.
           <Image
             src={item.imageUrl}
             alt=""
             fill
             sizes="(max-width: 768px) 100vw, 33vw"
-            className="object-cover transition-transform duration-500 group-hover:scale-[1.04] motion-reduce:transform-none"
+            className={`transition-transform duration-500 group-hover:scale-[1.04] motion-reduce:transform-none ${
+              item.imageIsTeamLogo
+                ? 'bg-gradient-to-br from-[var(--color-violet)]/30 to-[var(--color-green)]/20 object-contain p-6'
+                : 'object-cover'
+            }`}
           />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-violet)]/30 to-[var(--color-green)]/20" />

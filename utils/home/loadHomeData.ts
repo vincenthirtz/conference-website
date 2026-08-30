@@ -14,6 +14,7 @@ import { type Announcement } from '@/components/Ads/AnnouncementsTicker';
 import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
 import { type HomePartner } from '@/components/Home/HomeSponsors';
 import { supabaseAdmin } from '@/utils/supabase';
+import { resolveNewsImage } from '@/utils/news/newsImage';
 
 // Marge de troncature du `content` des news de la home. HomeNewsSection ne rend
 // qu'un excerpt d'au plus ~220 caractères ; on garde une marge confortable.
@@ -154,7 +155,7 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
       supabaseAdmin
         .from('news')
         .select(
-          'id, title, slug, tag, excerpt, content, image_url, published_at, created_at, updated_at, news_comments(count)'
+          'id, title, slug, tag, excerpt, content, image_url, published_at, created_at, updated_at, news_comments(count), teams(logo_url)'
         )
         .eq('tenant_id', tenantId)
         .eq('status', 'published')
@@ -185,26 +186,32 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
     }
 
     if (!newsRes.error && newsRes.data) {
-      news = newsRes.data.map((row: any) => ({
-        id: row.id,
-        title: row.title,
-        slug: row.slug,
-        tag: row.tag || 'general',
-        excerpt: row.excerpt,
-        // La home n'affiche qu'un excerpt tronqué (jusqu'à ~220 caractères via
-        // HomeNewsSection.getExcerpt). Sérialiser le `content` complet de 30
-        // news gonflait inutilement __NEXT_DATA__ sur la page la plus vue : on
-        // tronque côté serveur, avec une marge > à la fenêtre d'excerpt.
-        content:
-          typeof row.content === 'string'
-            ? row.content.slice(0, HOME_NEWS_CONTENT_MAX)
-            : row.content,
-        imageUrl: row.image_url,
-        publishedAt: row.published_at,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        commentsCount: row.news_comments?.[0]?.count ?? 0,
-      }));
+      news = newsRes.data.map((row: any) => {
+        const image = resolveNewsImage(row.image_url, row.teams);
+        return {
+          id: row.id,
+          title: row.title,
+          slug: row.slug,
+          tag: row.tag || 'general',
+          excerpt: row.excerpt,
+          // La home n'affiche qu'un excerpt tronqué (jusqu'à ~220 caractères via
+          // HomeNewsSection.getExcerpt). Sérialiser le `content` complet de 30
+          // news gonflait inutilement __NEXT_DATA__ sur la page la plus vue : on
+          // tronque côté serveur, avec une marge > à la fenêtre d'excerpt.
+          content:
+            typeof row.content === 'string'
+              ? row.content.slice(0, HOME_NEWS_CONTENT_MAX)
+              : row.content,
+          // L'article DÉSIGNE son équipe (news.team_id) au lieu d'avoir copié
+          // son logo à la publication : un logo posé après coup remonte enfin.
+          imageUrl: image.url,
+          imageIsTeamLogo: image.fromTeamLogo,
+          publishedAt: row.published_at,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+          commentsCount: row.news_comments?.[0]?.count ?? 0,
+        };
+      });
     }
 
     if (!announcementsRes.error && announcementsRes.data) {
