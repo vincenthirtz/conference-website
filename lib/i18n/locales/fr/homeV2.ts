@@ -18,6 +18,12 @@ export default ns('homeV2', {
   heroTagline: 'La compétition qui met les joueuses au centre du jeu.',
   heroTaglineStrong: 'Des équipes, un cash-prize, des casts en direct.',
   heroCtaRegister: 'Inscrire mon équipe',
+  // Le tournoi a rempli ses places. On cesse d'inviter à le rejoindre, mais on
+  // ne ferme pas le site pour autant : une équipe peut toujours se constituer.
+  heroTournamentFull: 'Tournoi complet',
+  heroTournamentFullHint:
+    'Les {count} places de l’édition {year} sont pourvues. Tu peux quand même créer ton équipe sur le site.',
+  heroCtaCreateTeam: 'Créer mon équipe',
   // Lot 1 acquisition : la joueuse SANS équipe n'avait aucune porte d'entrée
   // dans le hero. CTA de rang égal, pas un lien de repli.
   heroCtaJoin: 'Je cherche une équipe',

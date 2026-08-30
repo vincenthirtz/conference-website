@@ -20,6 +20,10 @@ export default {
     'The competition that puts women players at the heart of the game.',
   heroTaglineStrong: 'Teams, a cash prize, live casts.',
   heroCtaRegister: 'Register my team',
+  heroTournamentFull: 'Tournament full',
+  heroTournamentFullHint:
+    'All {count} spots for the {year} edition are taken. You can still create your team on the site.',
+  heroCtaCreateTeam: 'Create my team',
   heroCtaDiscord: 'Join the Discord',
   heroTrust: '100% women · Live FR casts · Community-funded prize pool',
   stepsEyebrow: 'Take part',

@@ -11,7 +11,7 @@
 
 import { useEffect, useState, type JSX } from 'react';
 import Link from 'next/link';
-import { useT } from '@/lib/i18n/useT';
+import { useT, format } from '@/lib/i18n/useT';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 
 type HomeHeroV2Props = {
@@ -19,6 +19,14 @@ type HomeHeroV2Props = {
   countdownTarget: string | null;
   /** Vrai quand une diffusion Twitch est en cours (pastille "en direct"). */
   isLive?: boolean;
+  /**
+   * Le tournoi a rempli ses places. On cesse alors d'inviter a le REJOINDRE :
+   * le CTA principal devient un etat, pas une porte. Creer une equipe reste
+   * possible — c'est le site, pas le tournoi, qui accueille.
+   */
+  tournamentFull?: boolean;
+  /** Nombre de places du tournoi, pour le dire au lieu de le sous-entendre. */
+  tournamentMaxTeams?: number | null;
 };
 
 type Parts = { days: number; hours: number; minutes: number; seconds: number };
@@ -42,6 +50,8 @@ const DISCORD_URL = 'https://discord.gg/gERSsjC3Vd';
 export default function HomeHeroV2({
   countdownTarget,
   isLive = false,
+  tournamentFull = false,
+  tournamentMaxTeams = null,
 }: HomeHeroV2Props): JSX.Element {
   const t = useT(nsHomeV2);
   const currentYear = new Date().getFullYear();
@@ -93,28 +103,54 @@ export default function HomeHeroV2({
           <span className="font-medium text-white">{t.heroTaglineStrong}</span>
         </p>
 
+        {tournamentFull && (
+          <p className="mt-4 max-w-[52ch] text-sm text-[var(--color-yellow)]/90">
+            {format(t.heroTournamentFullHint, {
+              count: String(tournamentMaxTeams ?? ''),
+              year: String(currentYear),
+            })}
+          </p>
+        )}
+
         <div className="mt-8 flex w-full max-w-md flex-col items-center justify-center gap-3 sm:max-w-none sm:flex-row sm:gap-4">
-          <Link href="/team/create" className="w-full sm:w-auto">
-            <button
-              type="button"
-              className="esport-cta group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-3.5 text-base font-extrabold uppercase tracking-wider text-white shadow-2xl transition-all duration-300 hover:scale-105 sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
-            >
-              <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-              <span className="relative">{t.heroCtaRegister}</span>
-              <svg
-                className="relative h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 sm:h-5 sm:w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={3}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+          {tournamentFull ? (
+            // Un etat, pas un bouton : il n'y a plus rien a cliquer pour
+            // rejoindre. Le lien vers la creation d'equipe reste juste en
+            // dessous, sans promettre une place dans le tournoi.
+            <div className="flex w-full flex-col items-center gap-2 sm:w-auto sm:items-start">
+              <span className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--color-yellow)]/40 bg-[var(--color-yellow)]/10 px-6 py-3.5 text-base font-extrabold uppercase tracking-wider text-[var(--color-yellow)] sm:w-auto sm:px-8 sm:py-4 sm:text-lg">
+                {t.heroTournamentFull}
+              </span>
+              <Link
+                href="/team/create"
+                className="text-sm font-semibold text-white underline decoration-white/40 underline-offset-4 transition hover:decoration-white"
               >
-                <path d="M5 12h14M13 6l6 6-6 6" />
-              </svg>
-            </button>
-          </Link>
+                {t.heroCtaCreateTeam}
+              </Link>
+            </div>
+          ) : (
+            <Link href="/team/create" className="w-full sm:w-auto">
+              <button
+                type="button"
+                className="esport-cta group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-3.5 text-base font-extrabold uppercase tracking-wider text-white shadow-2xl transition-all duration-300 hover:scale-105 sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
+              >
+                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                <span className="relative">{t.heroCtaRegister}</span>
+                <svg
+                  className="relative h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 sm:h-5 sm:w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </button>
+            </Link>
+          )}
           {/* Lot 1 acquisition : la porte d'entrée des joueuses SANS équipe.
               Placée juste après « Inscrire mon équipe » et avant Discord —
               c'est le plus gros gisement, il n'avait aucun CTA. */}

@@ -81,7 +81,18 @@ function Home({
     <div>
       <HomeTopAnnounce announcement={topAnnouncement} />
 
-      <HomeHeroV2 countdownTarget={countdownTarget} isLive={live.live} />
+      <HomeHeroV2
+        countdownTarget={countdownTarget}
+        isLive={live.live}
+        // « Complet » se DÉDUIT des données déjà chargées (places vs inscrites)
+        // plutôt que d'un drapeau à penser à lever : le jour où une place se
+        // libère, la home réinvite d'elle-même.
+        tournamentFull={
+          upcomingTournament?.maxTeams != null &&
+          upcomingTournament.teamCount >= upcomingTournament.maxTeams
+        }
+        tournamentMaxTeams={upcomingTournament?.maxTeams ?? null}
+      />
 
       {loadError && (
         <div className="container mx-auto mt-6 px-4">
