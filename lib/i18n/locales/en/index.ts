@@ -163,6 +163,7 @@ import enRegieStartPrepared from './regieStartPrepared';
 import enBattlenetVerify from './battlenetVerify';
 import enBattlenetLogin from './battlenetLogin';
 import enInvitationLink from './invitationLink';
+import enTeamJoinLink from './teamJoinLink';
 import enPlayerTeams from './playerTeams';
 import enNetworkOnboarding from './networkOnboarding';
 import enMyScrims from './myScrims';
@@ -330,6 +331,7 @@ const enDict = {
   battlenetVerify: enBattlenetVerify,
   battlenetLogin: enBattlenetLogin,
   invitationLink: enInvitationLink,
+  teamJoinLink: enTeamJoinLink,
   playerTeams: enPlayerTeams,
   networkOnboarding: enNetworkOnboarding,
   myScrims: enMyScrims,

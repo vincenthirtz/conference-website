@@ -25827,6 +25827,243 @@ paths:
           $ref: '#/components/responses/Conflict'
         '429':
           $ref: '#/components/responses/RateLimited'
+  /api/teams/invite-links:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
+        - $ref: '#/components/parameters/SubjectAs'
+        - $ref: '#/components/parameters/ActAs'
+      tags:
+        - public/teams
+      summary: Etat du lien d'auto-inscription actif de l'equipe geree.
+      description: >-
+        Le « lien d'equipe » : un lien prive et unique que la capitaine (ou un
+        manager) diffuse elle-meme, et qui inscrit AU ROSTER quiconque l'ouvre
+        en etant connecte — sans email, sans invitation nominative. Gate
+        `manage_roster`. Le jeton n'est JAMAIS renvoye ici : il n'est stocke que
+        hashe (SHA-256) et n'est montre qu'une fois, a la creation.
+      operationId: playerGetTeamInviteLink
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Lien actif, ou null s'il n'y en a pas.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - link
+                properties:
+                  link:
+                    type: object
+                    nullable: true
+        '403':
+          description: L'appelante ne gere pas cette equipe.
+    post:
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
+        - $ref: '#/components/parameters/SubjectAs'
+        - $ref: '#/components/parameters/ActAs'
+      tags:
+        - public/teams
+      summary: (Re)genere le lien d'auto-inscription de l'equipe.
+      description: >-
+        Revoque le lien precedent (un seul lien vivant par equipe) et en cree un
+        neuf. Le jeton en clair est renvoye UNE SEULE FOIS. Anti-escalade :
+        seule la capitaine peut creer un lien qui accorde un role a privileges
+        (403 ROLE_ESCALATION sinon). Refuse si le roster est verrouille par un
+        tournoi en cours (409 ROSTER_LOCKED).
+      operationId: playerCreateTeamInviteLink
+      security:
+        - PlayerBearer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  description: Role attribue a qui entre par ce lien. Fige.
+                max_uses:
+                  type: integer
+                  minimum: 1
+                  maximum: 50
+                  nullable: true
+                  description: Nombre d'entrees autorisees. null = illimite.
+                ttl_days:
+                  type: integer
+                  minimum: 1
+                  maximum: 30
+      responses:
+        '201':
+          description: Lien cree. token / url ne seront plus jamais reaffiches.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - link
+                  - url
+                  - token
+                properties:
+                  link:
+                    type: object
+                  url:
+                    type: string
+                  token:
+                    type: string
+        '400':
+          description: Corps invalide (INVALID_BODY).
+        '403':
+          description: Pas de permission, ou ROLE_ESCALATION.
+        '409':
+          description: Roster verrouille (ROSTER_LOCKED).
+    delete:
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
+        - $ref: '#/components/parameters/SubjectAs'
+        - $ref: '#/components/parameters/ActAs'
+      tags:
+        - public/teams
+      summary: Revoque le lien d'auto-inscription actif.
+      description: >-
+        Le lien cesse immediatement de fonctionner. Idempotent : revoquer alors
+        qu'il n'y a pas de lien actif reussit sans rien changer.
+      operationId: playerRevokeTeamInviteLink
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Lien revoque.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  link:
+                    type: object
+                    nullable: true
+                  revoked:
+                    type: boolean
+  /api/teams/invite-links/by-token:
+    get:
+      tags:
+        - public/teams
+      summary: Metadonnees publiques d'un lien d'auto-inscription.
+      description: >-
+        PUBLIC (aucune session) : la page /rejoindre/[token] doit pouvoir
+        presenter l'equipe AVANT de demander a quelqu'un de se connecter. Le
+        lien n'authentifie pas. Un lien inconnu, revoque, expire ou epuise
+        repond le MEME message — il ne doit pas devenir un oracle confirmant
+        l'existence d'une equipe.
+      operationId: getTeamInviteLinkByToken
+      security: []
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Description de l'equipe et du role propose.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  team:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      short_name:
+                        type: string
+                        nullable: true
+                      logo_url:
+                        type: string
+                        nullable: true
+                      slug:
+                        type: string
+                        nullable: true
+                  role:
+                    type: string
+                  battle_tag_required:
+                    type: boolean
+                  expires_at:
+                    type: string
+                    format: date-time
+                  remaining_uses:
+                    type: integer
+                    nullable: true
+        '404':
+          description: Lien inconnu.
+        '410':
+          description: Lien revoque, expire ou epuise.
+    post:
+      tags:
+        - public/teams
+      summary: S'inscrire au roster via le lien d'equipe.
+      description: >-
+        Session OBLIGATOIRE : c'est le seul endroit ou le lien agit. Rejoue les
+        memes gardes qu'une acceptation d'invitation (une seule equipe par
+        joueuse, roster verrouille, quota d'equipe) et consomme une entree du
+        lien de facon atomique — deux personnes sur un lien a usage unique ne
+        peuvent pas entrer toutes les deux.
+      operationId: joinTeamByInviteLink
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                battle_tag:
+                  type: string
+                  nullable: true
+                  description: Exige pour les roles JOUANTS.
+                specialty:
+                  type: string
+                  nullable: true
+                  enum: [tank, dps, support, flex]
+      responses:
+        '200':
+          description: Inscrite, ou deja membre.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  joined:
+                    type: boolean
+                  already_member:
+                    type: boolean
+                  role:
+                    type: string
+                  team:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      slug:
+                        type: string
+                        nullable: true
+        '400':
+          description: BattleTag manquant (BATTLE_TAG_REQUIRED), ou deja dans une equipe (ALREADY_IN_TEAM).
+        '401':
+          description: Aucune session — le lien n'authentifie pas.
+        '409':
+          description: Roster verrouille, ou lien epuise entre-temps (LINK_EXHAUSTED).
+        '410':
+          description: Lien revoque, expire ou epuise.
   /api/teams/invitations:
     get:
       parameters:

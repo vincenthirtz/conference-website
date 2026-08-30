@@ -95,6 +95,11 @@ const ALLOWLIST_AUTH_MISMATCH = new Set<string>([
   // et voit donc `player` pour les deux ; côté spec, seul le POST porte
   // PlayerBearer. La divergence est voulue, pas une dérive.
   'GET /api/teams/invitations/by-token',
+  // Même forme, pour le « lien d'équipe » (auto-inscription sans email) : GET
+  // PUBLIC qui décrit l'équipe avant connexion, POST sous `withAuthRoute` qui
+  // inscrit. Un seul fichier, deux surfaces — `detectAuth()` raisonne au
+  // fichier.
+  'GET /api/teams/invite-links/by-token',
 ]);
 
 /** Bot client URLs that intentionally don't have a matching openapi entry. */

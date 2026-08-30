@@ -19,6 +19,7 @@ import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import CopyButton from '@/components/player/CopyButton';
 import FreePlayersSection from '@/components/player/FreePlayersSection';
+import TeamJoinLinkPanel from '@/components/player/TeamJoinLinkPanel';
 import BattlenetVerifyCard from '@/components/player/BattlenetVerifyCard';
 import RegistrationDeadlineBanner from '@/components/player/RegistrationDeadlineBanner';
 import TeamRegistrationCard from '@/components/player/TeamRegistrationCard';
@@ -849,6 +850,16 @@ export default function PlayerManageTeamScreen() {
                 </div>
               )}
             </div>
+          )}
+
+          {/* Lien d'invitation : le pendant sans email du bloc ci-dessus.
+              Rendu juste après, parce que c'est la même question posée
+              autrement — « comment je fais entrer quelqu'un ? ». */}
+          {!readOnly && (
+            <TeamJoinLinkPanel
+              scopeUrl={(url) => withTeam(withSubject(url))}
+              isCaptain={isCaptain}
+            />
           )}
 
           {/* Roster */}

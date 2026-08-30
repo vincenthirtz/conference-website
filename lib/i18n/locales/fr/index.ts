@@ -160,6 +160,7 @@ import nsRegieStartPrepared from './regieStartPrepared';
 import nsBattlenetVerify from './battlenetVerify';
 import nsBattlenetLogin from './battlenetLogin';
 import nsInvitationLink from './invitationLink';
+import nsTeamJoinLink from './teamJoinLink';
 import nsPlayerTeams from './playerTeams';
 import nsNetworkOnboarding from './networkOnboarding';
 import nsMyScrims from './myScrims';
@@ -327,6 +328,7 @@ export const frDict = {
   battlenetVerify: nsBattlenetVerify.fr,
   battlenetLogin: nsBattlenetLogin.fr,
   invitationLink: nsInvitationLink.fr,
+  teamJoinLink: nsTeamJoinLink.fr,
   playerTeams: nsPlayerTeams.fr,
   networkOnboarding: nsNetworkOnboarding.fr,
   myScrims: nsMyScrims.fr,
