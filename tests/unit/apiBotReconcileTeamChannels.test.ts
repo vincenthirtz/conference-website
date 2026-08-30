@@ -323,17 +323,22 @@ describe('GET /api/bot/v1/reconcile/team-channels', () => {
     expect(slugs).toEqual(['alpha']);
   });
 
-  it('returns no teams when there is no current-year tournament', async () => {
+  it('without a current-year tournament, still maintains ALREADY provisioned teams', async () => {
+    // Le provisioning est scopé aux inscrites, mais on n'abandonne pas ce qu'on
+    // a déjà créé : sans ça, une équipe provisionnée à sa création puis jamais
+    // inscrite sort du champ du cron — plus d'entretien, et aucune réparation
+    // quand ses salons disparaissent. C'est ce qui est arrivé à Eclypse.
     store.tournaments = [] as any;
     store.tournament_teams = [] as any;
     const res = makeRes();
     await handler(makeBotReq(), res);
     expect(res.statusCode).toBe(200);
-    expect((res.body as any).teams).toEqual([]);
-    expect((res.body as any).count).toBe(0);
+    // TEAM_A a des ids Discord → entretenue. TEAM_B n'en a aucun → toujours
+    // exclue : on ne provisionne personne qui n'avait rien.
+    expect((res.body as any).teams.map((t: any) => t.slug)).toEqual(['alpha']);
   });
 
-  it('ignores a tournament from a DIFFERENT year', async () => {
+  it('ignores a tournament from a DIFFERENT year for the REGISTERED scope', async () => {
     store.tournaments = [
       {
         id: TOURNEY,
@@ -345,7 +350,21 @@ describe('GET /api/bot/v1/reconcile/team-channels', () => {
     ] as any;
     const res = makeRes();
     await handler(makeBotReq(), res);
-    expect((res.body as any).teams).toEqual([]);
+    // Aucune inscrite retenue ; seule subsiste l'équipe déjà provisionnée.
+    expect((res.body as any).teams.map((t: any) => t.slug)).toEqual(['alpha']);
+  });
+
+  it('exposes knownChannelIds — exhaustive, including inactive teams', async () => {
+    // C'est l'ensemble qui sert au bot à décider ce qui est légitime. Le
+    // déduire de `teams` (scopé) est ce qui a détruit des salons valides.
+    const res = makeRes();
+    await handler(makeBotReq(), res);
+    const known: string[] = (res.body as any).knownChannelIds;
+    expect(known).toContain('chan-a');
+    expect(known).toContain('voice-a');
+    // Équipe INACTIVE : ses salons restent connus (le bot ne supprime jamais,
+    // les signaler comme inconnus pousserait à supprimer à tort).
+    expect(known).toContain('chan-x');
   });
 
   it('tournamentInProgress is false when no running tournament', async () => {

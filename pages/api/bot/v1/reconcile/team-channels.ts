@@ -39,6 +39,75 @@ type MemberRow = {
   is_substitute: boolean | null;
 };
 
+/**
+ * Une seule lecture des équipes du tenant, dont on tire DEUX ensembles que
+ * rien ne doit confondre :
+ *
+ *   - `knownChannelIds` — ids de salons connus du site, TOUTES équipes
+ *     confondues (actives ou non, inscrites ou non). Répond à « ce salon
+ *     est-il légitime ? ». Une équipe dissoute garde ses salons — le bot ne
+ *     supprime jamais — donc ils restent connus.
+ *   - `provisionedTeamIds` — équipes ACTIVES qui ont déjà au moins un id
+ *     Discord enregistré. Répond à « qui faut-il continuer d'entretenir ? ».
+ *
+ * `teams` (plus bas) est un troisième ensemble, scopé au tournoi de l'année :
+ * « à qui provisionner ? ». C'est de l'avoir confondu avec le premier qu'est
+ * né un incident — le cron a détruit les salons d'Eclypse, équipe active dont
+ * l'inscription était encore en attente.
+ *
+ * Filtrage en JS plutôt qu'en `.or()` PostgREST : la condition « au moins un id
+ * non nul » s'exprime mal côté requête, et le nombre d'équipes par tenant se
+ * compte en dizaines.
+ */
+async function loadTeamChannelIndex(tenantId: string): Promise<{
+  knownChannelIds: string[];
+  provisionedTeamIds: string[];
+} | null> {
+  const { data, error } = await supabaseAdmin
+    .from('teams')
+    .select(
+      'id, is_active, deleted_at, discord_role_id, discord_channel_id, discord_voice_channel_id'
+    )
+    .eq('tenant_id', tenantId);
+
+  if (error) {
+    logger.error('[reconcile/team-channels] team index lookup error', error);
+    // `null` = « je ne sais pas ». Le bot doit alors s'abstenir plutôt que de
+    // traiter l'inconnu comme un vide.
+    return null;
+  }
+
+  const knownChannelIds = new Set<string>();
+  const provisionedTeamIds = new Set<string>();
+
+  for (const row of (data ?? []) as Array<{
+    id: string | null;
+    is_active: boolean | null;
+    deleted_at: string | null;
+    discord_role_id: string | null;
+    discord_channel_id: string | null;
+    discord_voice_channel_id: string | null;
+  }>) {
+    if (row.discord_channel_id) knownChannelIds.add(row.discord_channel_id);
+    if (row.discord_voice_channel_id) {
+      knownChannelIds.add(row.discord_voice_channel_id);
+    }
+
+    const provisioned =
+      Boolean(row.discord_channel_id) ||
+      Boolean(row.discord_voice_channel_id) ||
+      Boolean(row.discord_role_id);
+    if (row.id && provisioned && row.is_active === true && !row.deleted_at) {
+      provisionedTeamIds.add(row.id);
+    }
+  }
+
+  return {
+    knownChannelIds: [...knownChannelIds],
+    provisionedTeamIds: [...provisionedTeamIds],
+  };
+}
+
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const tenantId = req.botContext.tenantId;
 
@@ -128,6 +197,20 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     );
   }
 
+  // On ne PROVISIONNE que les inscrites — mais on n'ABANDONNE pas ce qui a déjà
+  // été provisionné. Une équipe active dont les salons existent déjà doit
+  // continuer d'être entretenue : permissions vérifiées, et salon recréé s'il a
+  // disparu. Sans ça, une équipe provisionnée à sa création puis jamais
+  // inscrite sortait du champ du cron — plus d'entretien, et aucune réparation
+  // quand ses salons disparaissaient. C'est le cas d'Eclypse.
+  //
+  // Aucun élargissement du provisioning : une équipe SANS aucun id enregistré
+  // n'entre pas ici, donc on ne crée de salons à personne qui n'en avait pas.
+  const index = await loadTeamChannelIndex(tenantId);
+  const scopedTeamIds = Array.from(
+    new Set([...registeredTeamIds, ...(index?.provisionedTeamIds ?? [])])
+  );
+
   const limitRaw = Number(req.query.limit);
   const limit = Number.isFinite(limitRaw)
     ? Math.min(Math.max(Math.floor(limitRaw), 1), MAX_LIMIT)
@@ -140,18 +223,22 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   // Aucune équipe inscrite au tournoi de l'année → réponse vide (le bot ne
   // provisionne rien et, ensemble connu vide, le nettoyage est neutralisé par
   // sa garde de sécurité côté cron).
-  if (registeredTeamIds.length === 0) {
+  if (scopedTeamIds.length === 0) {
+    // Rien à entretenir ne veut pas dire « aucun salon légitime » : on renvoie
+    // quand même l'ensemble connu, sans quoi le signalement prendrait des
+    // salons parfaitement valides pour des orphelins.
     return res.status(200).json({
       tournamentInProgress,
       teams: [],
+      knownChannelIds: index ? index.knownChannelIds : null,
       limit,
       offset,
       count: 0,
     });
   }
 
-  // 1. Équipes ACTIVES du tenant INSCRITES au tournoi de l'année (non
-  // supprimées), paginées et ordonnées.
+  // 1. Équipes ACTIVES du tenant à entretenir : inscrites au tournoi de l'année
+  // OU déjà provisionnées (cf. `scopedTeamIds`), paginées et ordonnées.
   const { data: teamsRaw, error: teamErr } = await supabaseAdmin
     .from('teams')
     .select(
@@ -160,7 +247,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
     .is('deleted_at', null)
-    .in('id', registeredTeamIds)
+    .in('id', scopedTeamIds)
     .order('id', { ascending: true })
     .range(offset, offset + limit - 1);
   if (teamErr) {
@@ -272,6 +359,10 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   return res.status(200).json({
     tournamentInProgress,
     teams: payloadTeams,
+    // Exhaustif et NON paginé : c'est un ensemble de référence pour le
+    // nettoyage, pas une page de travail. `null` si la lecture a échoué —
+    // le bot s'abstient alors de supprimer quoi que ce soit.
+    knownChannelIds: index ? index.knownChannelIds : null,
     limit,
     offset,
     count: payloadTeams.length,

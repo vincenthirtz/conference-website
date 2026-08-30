@@ -9484,6 +9484,19 @@ paths:
                       True si un tournoi du tenant est EN COURS (status
                       `running`). Le cron bot saute alors entierement le run
                       (aucune modification de salon pendant un tournoi).
+                  knownChannelIds:
+                    type: array
+                    nullable: true
+                    items:
+                      type: string
+                    description: >-
+                      Ensemble de REFERENCE, non pagine : ids de salons Discord
+                      de TOUTES les equipes actives du tenant, inscrites au
+                      tournoi ou non. `teams` (scope) repond « a qui
+                      provisionner ? », ce champ repond « quels salons sont
+                      legitimes ? ». Ne jamais deduire le second du premier. Vaut
+                      null si la lecture a echoue : le consommateur doit alors
+                      s'abstenir plutot que de conclure « rien n'est connu ».
                   teams:
                     type: array
                     items:

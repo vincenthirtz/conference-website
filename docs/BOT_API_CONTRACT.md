@@ -1366,6 +1366,14 @@ que `discord-orphans`.
   `team_members.is_substitute`. Les membres sont dédupliqués par `discordUserId`.
 - `captainDiscordUserId` = l'ID Discord du capitaine s'il est lié, sinon `null`.
 - **Scoping** : seules les équipes **inscrites au tournoi de l'année en cours** (via `tournament_teams`) sont renvoyées ; aucune inscription / aucun tournoi de l'année → `teams: []`.
+- `knownChannelIds` = ids de salons Discord de **TOUTES les équipes actives** du
+  tenant, inscrites ou non, **non paginé**. C'est un ensemble de RÉFÉRENCE, pas
+  une page de travail : `teams` (scopé) répond « à qui provisionner ? »,
+  `knownChannelIds` répond « quels salons sont légitimes ? ». Ne jamais déduire
+  le second du premier — un cron l'a fait et a détruit les salons d'une équipe
+  active dont l'inscription était encore en attente. `null` si la lecture a
+  échoué : le consommateur doit alors s'abstenir, pas conclure « rien n'est
+  connu ».
 - `count` = nombre d'équipes retournées sur cette page.
 - `tournamentInProgress` = `true` s'il existe un tournoi du tenant au statut
   `running`. Le cron bot **saute alors entièrement le run** (aucune création /
@@ -1374,6 +1382,7 @@ que `discord-orphans`.
 ```json
 {
   "tournamentInProgress": false,
+  "knownChannelIds": ["456", "789", "654", "987"],
   "teams": [
     {
       "teamId": "uuid",
