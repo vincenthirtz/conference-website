@@ -10,9 +10,11 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import { withSubjectRoute } from '@/utils/subject';
 import {
+  assertTeamPermission,
   getManagedTeam,
   TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
+import type { TeamPermission } from '@/utils/teamRoles';
 import {
   loadManagedTeamSlice,
   type ManagedTeamSummary,
@@ -59,6 +61,13 @@ type GetResponse = {
   isCaptain: boolean;
   isManager: boolean;
   /**
+   * Permissions EFFECTIVES de l'appelant sur `team`. Le client en a besoin
+   * pour n'afficher que les gestes qu'il pourra réellement faire : avec les
+   * seuls `isCaptain` / `isManager`, un coach voyait tout l'écran de gestion
+   * et se prenait un 403 à chaque bouton.
+   */
+  permissions?: TeamPermission[];
+  /**
    * Toutes les équipes gérées par l'appelant, `team` comprise — le sélecteur
    * d'équipe du cockpit s'y branche. Un seul élément dans le cas courant.
    *
@@ -98,8 +107,11 @@ export default withSubjectRoute(
       return;
 
     // GET inspectable par le staff (`?as=`) ; le PATCH plus bas reste
-    // strictement l'affaire de l'appelant (le wrapper refuse `?as=` en écriture).
+    // strictement l'affaire de l'appelant (le wrapper refuse `?as=` en écriture,
+    // faute d'`allowActAs` — d'où `subject.userId === user.id` garanti côté
+    // écriture).
     const userId = user.id;
+    const tenantId = subject.tenantId;
 
     if (req.method === 'GET') {
       // `?teamId=` désigne l'équipe voulue quand l'appelant en gère plusieurs
@@ -121,6 +133,7 @@ export default withSubjectRoute(
         members: slice.members,
         isCaptain: slice.isCaptain,
         isManager: slice.isManager,
+        permissions: slice.permissions,
         managedTeams: slice.managedTeams,
       });
     }
@@ -134,15 +147,30 @@ export default withSubjectRoute(
       // Vérifier que l'utilisateur peut gérer CETTE team (capitaine ou
       // manager). L'accès est résolu sur `body.teamId` : un manager peut en
       // gérer plusieurs, « sa » team ne veut plus rien dire.
-      const access = await getManagedTeam(userId, undefined, body.teamId);
+      //
+      // Scopé au tenant de l'appelant : l'appel passait `undefined`, donc
+      // DEFAULT_TENANT_ID — le même bug S5c que le GET a corrigé de son côté.
+      // Hors tenant par défaut, PERSONNE ne pouvait éditer les infos de son
+      // équipe (403 systématique).
+      const access = await getManagedTeam(userId, tenantId, body.teamId);
       if (!access || access.teamId !== body.teamId) {
         return res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
       }
+
+      // Permission fine (R2), qui manquait ici : cette route écrit le nom, le
+      // logo, la description et le SR de l'équipe — c'est exactement
+      // `manage_team_info`. Sans ce contrôle, tout rôle accordant AU MOINS UNE
+      // permission (un coach, qui n'a que les scrims et la feuille de match)
+      // pouvait renommer l'équipe.
+      const denied = assertTeamPermission(access, 'manage_team_info');
+      if (denied)
+        return res.status(denied.status).json({ error: denied.error });
 
       const { data: teamData, error: teamErr } = await supabaseAdmin
         .from('teams')
         .select('captain_id')
         .eq('id', body.teamId)
+        .eq('tenant_id', tenantId)
         .maybeSingle();
 
       if (teamErr || !teamData) {
@@ -223,6 +251,7 @@ export default withSubjectRoute(
         .from('teams')
         .update(updatePayload)
         .eq('id', body.teamId)
+        .eq('tenant_id', tenantId)
         .select('*')
         .maybeSingle();
 

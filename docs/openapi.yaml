@@ -19070,6 +19070,9 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     patch:
       summary: Patch the team(s) the current user captains/operates.
+      description: >-
+        Requires the `manage_team_info` team permission (a captain has every
+        permission; a privileged role only has its own).
       operationId: adminPatchMyTeams
       tags:
         - admin/teams
@@ -19092,6 +19095,8 @@ paths:
                 additionalProperties: true
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/teams/{teamId}:
     parameters:
       - $ref: '#/components/parameters/TeamId'

@@ -569,16 +569,21 @@ describe('PATCH /api/admin/teams/my as manager', () => {
       if (table === 'teams') {
         const builder: any = {
           select: () => builder,
-          update: (payload: any) => ({
-            eq: () => ({
+          // `eq` chaînable : la route filtre l'update sur l'id ET sur le
+          // tenant (scope ajouté avec la permission `manage_team_info`). Un
+          // stub à un seul `.eq()` cassait la chaîne au second appel.
+          update: (payload: any) => {
+            const chain: any = {
+              eq: () => chain,
               select: () => ({
                 maybeSingle: async () => ({
                   data: { id: TEAM_ID, ...payload },
                   error: null,
                 }),
               }),
-            }),
-          }),
+            };
+            return chain;
+          },
           eq: () => builder,
           maybeSingle: async () => ({
             data: store.teams?.[0] ?? null,

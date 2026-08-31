@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useManagedTeam } from '@/hooks/useManagedTeam';
+import { makeTeamPermissionCheck } from '@/utils/teams/clientPermissions';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import RequestTabs from '@/components/player/requests/RequestTabs';
 import TransferRequestForm from '@/components/player/requests/TransferRequestForm';
@@ -46,6 +47,15 @@ export default function PlayerRequestsPage() {
   const isCaptain = managedTeam?.isCaptain ?? false;
   const isManager = managedTeam?.isManager ?? false;
   const myTeamId = managedTeam?.team?.id ?? null;
+  /**
+   * Permissions EFFECTIVES : `isManager` ne dit que « ce rôle accorde au moins
+   * une permission ». Une coach (scrims + feuille de match) se voyait donc
+   * proposer le transfert d'une coéquipière, refusé ensuite par
+   * /api/demandes/transfer.
+   */
+  const can = makeTeamPermissionCheck(managedTeam?.permissions ?? []);
+  const canProposeTransfer = can('manage_roster');
+  const canManageScrims = can('manage_scrims');
 
   // Equipes
   const [teams, setTeams] = useState<Team[]>([]);
@@ -113,7 +123,8 @@ export default function PlayerRequestsPage() {
       setTeamMembers([]);
       return;
     }
-    if (managedTeam.isCaptain || managedTeam.isManager) {
+    // Cibles proposables = seulement si le rôle couvre `manage_roster`.
+    if (canProposeTransfer) {
       setTeamMembers(
         managedTeam.members
           .filter((m) => m.user_id && m.user_id !== user.id)
@@ -126,7 +137,9 @@ export default function PlayerRequestsPage() {
     } else {
       setTeamMembers([]);
     }
-  }, [user, managedTeam]);
+    // `canProposeTransfer` dérive de `managedTeam` : la dépendance est
+    // redondante, mais explicite (et le booléen ne change pas d'identité).
+  }, [user, managedTeam, canProposeTransfer]);
 
   // Pre-select the scrim tab from the URL.
   useEffect(() => {
@@ -381,7 +394,7 @@ export default function PlayerRequestsPage() {
                 <TransferRequestForm
                   hasTeam={hasTeam}
                   isCaptain={isCaptain}
-                  isManager={isManager}
+                  canProposeForOthers={canProposeTransfer}
                   transferMode={transferMode}
                   setTransferMode={setTransferMode}
                   teamMembers={teamMembers}
@@ -410,8 +423,7 @@ export default function PlayerRequestsPage() {
               {tab === 'scrim' && (
                 <ScrimRequestForm
                   hasTeam={hasTeam}
-                  isCaptain={isCaptain}
-                  isManager={isManager}
+                  canManageScrims={canManageScrims}
                   teamSearch={teamSearch}
                   setTeamSearch={setTeamSearch}
                   errorField={errorField}

@@ -45,6 +45,7 @@ import {
   getManagedTeams,
   type TeamManagementAccess,
 } from '@/utils/teams/managementAccess';
+import type { TeamPermission } from '@/utils/teamRoles';
 import {
   resolveMissingDisplayNames,
   withFallbackDisplayName,
@@ -146,6 +147,13 @@ export type ManagedTeamSummary = {
   slug: string | null;
   isCaptain: boolean;
   isManager: boolean;
+  /**
+   * Permissions EFFECTIVES de l'utilisateur sur CETTE équipe. Portées par
+   * chaque entrée et pas seulement par l'équipe active : changer d'équipe dans
+   * le sélecteur change les droits (manager ici, coach là), et l'écran doit
+   * pouvoir le refléter sans attendre la réponse suivante.
+   */
+  permissions: TeamPermission[];
 };
 
 export type ManagedTeamSlice = {
@@ -154,6 +162,19 @@ export type ManagedTeamSlice = {
   teamId: string | null;
   isCaptain: boolean;
   isManager: boolean;
+  /**
+   * Permissions EFFECTIVES de l'utilisateur sur `team` (cf.
+   * `TeamManagementAccess.permissions`). Le capitaine les a toutes ; un rôle
+   * privilégié n'a que les siennes.
+   *
+   * Exposée au CLIENT depuis 2026-08-31 : l'espace joueur ne connaissait que
+   * `isCaptain` / `isManager` et en déduisait un droit de gestion TOTAL. Un
+   * coach (rôle privilégié : `manage_scrims` + `validate_lineup`) voyait donc
+   * l'écran de gestion complet — roster, invitations, infos d'équipe — et
+   * chacun de ses gestes repartait en 403. Les écrans gatent désormais sur
+   * cette liste, la MÊME que celle appliquée par les routes.
+   */
+  permissions: TeamPermission[];
   /**
    * Toutes les équipes que l'utilisateur GÈRE, `team` comprise. Vide pour une
    * joueuse sans droits de gestion — l'écran n'affiche alors aucun sélecteur.
@@ -167,6 +188,7 @@ const EMPTY_SLICE: ManagedTeamSlice = {
   teamId: null,
   isCaptain: false,
   isManager: false,
+  permissions: [],
   managedTeams: [],
 };
 
@@ -175,7 +197,7 @@ const EMPTY_SLICE: ManagedTeamSlice = {
  * d'abord). Une seule lecture `teams` pour tout le lot.
  */
 async function loadManagedTeamSummaries(
-  accesses: { teamId: string; isCaptain: boolean; isManager: boolean }[]
+  accesses: TeamManagementAccess[]
 ): Promise<ManagedTeamSummary[]> {
   if (!supabaseAdmin || accesses.length === 0) return [];
   const { data, error } = await supabaseAdmin
@@ -207,6 +229,7 @@ async function loadManagedTeamSummaries(
         slug: (row.slug as string | null) ?? null,
         isCaptain: a.isCaptain,
         isManager: a.isManager,
+        permissions: a.permissions,
       },
     ];
   });
@@ -385,6 +408,7 @@ export async function loadManagedTeamSlice(
     const access = accesses.find((a) => a.teamId === teamId) ?? null;
     const isCaptain = !!access?.isCaptain;
     const isManager = !!access?.isManager;
+    const permissions = access?.permissions ?? [];
     const managedTeams = await summariesPromise;
 
     const { data: teamRowRaw, error: teamErr } = teamRes;
@@ -396,6 +420,7 @@ export async function loadManagedTeamSlice(
         teamId,
         isCaptain,
         isManager,
+        permissions,
         managedTeams,
       };
     }
@@ -421,7 +446,15 @@ export async function loadManagedTeamSlice(
     const { data: membersRaw, error: membersErr } = membersRes;
     if (membersErr) {
       logger.error('[managedTeamSlice] members error:', membersErr);
-      return { team, members: [], teamId, isCaptain, isManager, managedTeams };
+      return {
+        team,
+        members: [],
+        teamId,
+        isCaptain,
+        isManager,
+        permissions,
+        managedTeams,
+      };
     }
 
     const memberRows = (membersRaw || []) as Record<string, unknown>[];
@@ -479,7 +512,15 @@ export async function loadManagedTeamSlice(
       };
     });
 
-    return { team, members, teamId, isCaptain, isManager, managedTeams };
+    return {
+      team,
+      members,
+      teamId,
+      isCaptain,
+      isManager,
+      permissions,
+      managedTeams,
+    };
   } catch (err) {
     logger.error('[managedTeamSlice] unexpected error:', err);
     return EMPTY_SLICE;

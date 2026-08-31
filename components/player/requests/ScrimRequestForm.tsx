@@ -17,8 +17,7 @@ type ErrorField = 'team' | 'player' | 'slots' | null;
 
 export default function ScrimRequestForm({
   hasTeam,
-  isCaptain,
-  isManager,
+  canManageScrims,
   teamSearch,
   setTeamSearch,
   errorField,
@@ -35,8 +34,13 @@ export default function ScrimRequestForm({
   onSubmit,
 }: {
   hasTeam: boolean;
-  isCaptain: boolean;
-  isManager: boolean;
+  /**
+   * Permission EFFECTIVE `manage_scrims` — et non plus « capitaine ou manager ».
+   * `isManager` valait `true` dès qu'un rôle accordait au moins une permission :
+   * un rôle sans les scrims voyait le formulaire et se prenait un 403 à
+   * l'envoi (cf. /api/demandes/scrim).
+   */
+  canManageScrims: boolean;
   teamSearch: string;
   setTeamSearch: (v: string) => void;
   errorField: ErrorField;
@@ -71,7 +75,7 @@ export default function ScrimRequestForm({
     );
   }
 
-  if (!isCaptain && !isManager) {
+  if (!canManageScrims) {
     return (
       <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-200">
         <p className="font-semibold mb-1">{t.captainOrManagerTitle}</p>

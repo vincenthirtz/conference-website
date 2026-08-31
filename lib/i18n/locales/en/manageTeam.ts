@@ -168,4 +168,18 @@ export default {
     'Private link to share (valid 7 days, usable by one person only):',
   inviteCopyLink: 'Copy link',
   inviteError: 'The invitation could not be created.',
+
+  scopeTitle: 'What your role lets you do',
+  scopeIntro:
+    'Your team role ({role}) unlocks the actions below. Everything else is reserved for the captain or a manager — that is why some sections are missing.',
+  scopeNone:
+    'Your role does not unlock any management action right now. Ask your captain to widen it if you need to.',
+  permManageRoster: 'Manage the roster',
+  permManageTeamInfo: 'Edit team info',
+  permManageScrims: 'Manage scrims',
+  permManageJoinRequests: 'Handle join requests',
+  permRegisterTournaments: 'Register for tournaments',
+  permSendCaptainMessages: 'Send team messages',
+  permEditPublicPage: 'Customise the public page',
+  permValidateLineup: 'Validate the lineup',
 };

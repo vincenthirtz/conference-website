@@ -214,7 +214,7 @@ function TransferForm({
 export default function TransferRequestForm({
   hasTeam,
   isCaptain,
-  isManager,
+  canProposeForOthers,
   transferMode,
   setTransferMode,
   teamMembers,
@@ -239,7 +239,13 @@ export default function TransferRequestForm({
 }: {
   hasTeam: boolean;
   isCaptain: boolean;
-  isManager: boolean;
+  /**
+   * Permission EFFECTIVE `manage_roster` : proposer le transfert de QUELQU'UN
+   * D'AUTRE l'exige (cf. /api/demandes/transfer). Distincte de `isCaptain`,
+   * qui sert encore ici à bloquer le mode « mon transfert » — une capitaine
+   * doit d'abord passer le capitanat.
+   */
+  canProposeForOthers: boolean;
   transferMode: TransferMode;
   setTransferMode: (m: TransferMode) => void;
   teamMembers: TransferTeamMember[];
@@ -291,8 +297,8 @@ export default function TransferRequestForm({
 
   return (
     <>
-      {/* Mode toggle pour les capitaines/managers */}
-      {(isCaptain || isManager) && (
+      {/* Mode toggle — réservé à qui peut proposer pour autrui. */}
+      {canProposeForOthers && (
         <div
           role="tablist"
           aria-label={t.transferModeAria}
@@ -344,8 +350,8 @@ export default function TransferRequestForm({
           </div>
         )}
 
-        {/* Mode "proposer un transfert" (capitaine ou manager) */}
-        {(isCaptain || isManager) && transferMode === 'propose' && (
+        {/* Mode "proposer un transfert" (permission `manage_roster`) */}
+        {canProposeForOthers && transferMode === 'propose' && (
           <TransferForm
             mode="propose"
             teamMembers={teamMembers}

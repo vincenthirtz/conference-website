@@ -35,4 +35,9 @@ export default ns('playerMessages', {
   composeLabel: 'Ton message',
   replyLabel: 'Écrire une réponse',
   conversationLabel: 'Fil de la conversation',
+  // Rôle qui LIT sans pouvoir écrire (permission `send_captain_messages`
+  // absente — une coach, typiquement). Le serveur refusait l'envoi ; l'écran
+  // proposait quand même le champ.
+  readOnlyHint:
+    "Ton rôle te permet de suivre les conversations de l'équipe, pas d'y répondre.",
 });

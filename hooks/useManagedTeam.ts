@@ -25,6 +25,8 @@ import {
   type ActiveTeamOption,
 } from '@/components/player/ActiveTeamContext';
 import type { TeamMemberLite } from '@/components/player/TeamCard';
+import { readTeamPermissions } from '@/utils/teams/clientPermissions';
+import type { TeamPermission } from '@/utils/teamRoles';
 
 export type ManagedTeamInfo = {
   id: string;
@@ -74,6 +76,13 @@ export type ManagedTeamData = {
   isCaptain: boolean;
   isManager: boolean;
   /**
+   * Permissions EFFECTIVES sur `team` — la liste que les routes appliqueront.
+   * `isManager` ne dit que « ce rôle accorde AU MOINS UNE permission » : s'en
+   * servir comme droit de gestion total faisait afficher au coach un écran de
+   * gestion complet dont chaque bouton repartait en 403.
+   */
+  permissions: TeamPermission[];
+  /**
    * Toutes les équipes gérées, `team` comprise — un manager peut en encadrer
    * plusieurs. Le hook la republie dans `ActiveTeamContext`, qui alimente le
    * sélecteur : la liste et l'équipe affichée viennent ainsi de la MÊME
@@ -87,6 +96,7 @@ type ApiPayload = {
   members?: ManagedTeamMember[];
   isCaptain?: boolean;
   isManager?: boolean;
+  permissions?: TeamPermission[];
   managedTeams?: ActiveTeamOption[];
 };
 
@@ -117,6 +127,9 @@ function normalize(payload: ApiPayload | null): ManagedTeamData {
     members: payload?.members ?? [],
     isCaptain: payload?.isCaptain ?? false,
     isManager: payload?.isManager ?? false,
+    // Champ absent = payload antérieur au déploiement : repli sur l'ancien
+    // comportement (tout, si l'appelant gère l'équipe). Cf. clientPermissions.
+    permissions: readTeamPermissions(payload),
     managedTeams: payload?.managedTeams ?? [],
   };
 }

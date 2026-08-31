@@ -9,7 +9,14 @@
 // d'invitation, changement de rôle ou de spécialité, promotion, exclusion,
 // acceptation/refus des demandes, section joueuses libres.
 
-import { useEffect, useState, useCallback, useRef, Fragment } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+  Fragment,
+} from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -39,6 +46,8 @@ import {
   isNonPlayingTeamRole,
   splitTeamMembers,
 } from '@/utils/teams/roleKind';
+import { makeTeamPermissionCheck } from '@/utils/teams/clientPermissions';
+import { TEAM_PERMISSION_VALUES, type TeamPermission } from '@/utils/teamRoles';
 import nsManageTeam from '@/lib/i18n/locales/fr/manageTeam';
 import nsOverwatchRank from '@/lib/i18n/locales/fr/overwatchRank';
 import SkillRatingBadge from '@/components/Team/SkillRatingBadge';
@@ -148,6 +157,60 @@ type SentInvitation = {
   has_invite_link: boolean;
 };
 
+/**
+ * Périmètre du rôle — encart affiché à qui encadre l'équipe SANS en être
+ * capitaine et sans avoir toutes les permissions (le cas type : une coach).
+ *
+ * Il ne donne aucun droit : il NOMME ceux qu'on a. Sans lui, l'écran gate
+ * silencieusement, et l'absence du roster ou des demandes se lit comme une
+ * panne. Une capitaine (toutes les permissions) ne le voit jamais : lui lister
+ * l'intégralité du catalogue serait du bruit.
+ */
+function RoleScopeCard({
+  roleLabel,
+  permissions,
+  t,
+}: {
+  roleLabel: string;
+  permissions: TeamPermission[];
+  t: typeof nsManageTeam.fr;
+}) {
+  const labels: Record<TeamPermission, string> = {
+    manage_roster: t.permManageRoster,
+    manage_team_info: t.permManageTeamInfo,
+    manage_scrims: t.permManageScrims,
+    manage_join_requests: t.permManageJoinRequests,
+    register_tournaments: t.permRegisterTournaments,
+    send_captain_messages: t.permSendCaptainMessages,
+    edit_public_page: t.permEditPublicPage,
+    validate_lineup: t.permValidateLineup,
+  };
+
+  return (
+    <div className="rounded-2xl border border-sky-400/20 bg-sky-500/[0.06] backdrop-blur-xl p-6 mb-6">
+      <h2 className="text-lg font-semibold">{t.scopeTitle}</h2>
+      <p className="mt-1 text-sm text-gray-300">
+        {permissions.length === 0
+          ? t.scopeNone
+          : format(t.scopeIntro, { role: roleLabel })}
+      </p>
+      {permissions.length > 0 && (
+        <ul className="mt-3 flex flex-wrap gap-2">
+          {permissions.map((permission) => (
+            <li
+              key={permission}
+              className="inline-flex items-center gap-1.5 rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-100"
+            >
+              <span aria-hidden>✓</span>
+              {labels[permission]}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default function PlayerManageTeamScreen() {
   const t = useT(nsManageTeam);
   const tRank = useT(nsOverwatchRank);
@@ -155,7 +218,7 @@ export default function PlayerManageTeamScreen() {
   const router = useRouter();
   // `readOnly` = inspection staff : l'écran devient une photo fidèle, sans
   // aucun levier. Le roster et les demandes viennent du sujet via `?as=`.
-  const { withSubject, readOnly, isInspecting } = usePlayerArea();
+  const { withSubject, readOnly, isInspecting, subjectId } = usePlayerArea();
   // Équipe sur laquelle l'écran agit — pertinent seulement pour un manager
   // multi-équipes ; `withTeam` est l'identité dans tous les autres cas.
   const { withTeam } = useActiveTeam();
@@ -215,6 +278,7 @@ export default function PlayerManageTeamScreen() {
   const [members, setMembers] = useState<Member[]>([]);
   const [isCaptain, setIsCaptain] = useState(false);
   const [isManager, setIsManager] = useState(false);
+  const [permissions, setPermissions] = useState<TeamPermission[]>([]);
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
   const [sentInvitations, setSentInvitations] = useState<SentInvitation[]>([]);
   const [invitationsError, setInvitationsError] = useState(false);
@@ -243,8 +307,56 @@ export default function PlayerManageTeamScreen() {
   // renvoyait tout le monde sauf capitaines et managers sur un mur « accès
   // refusé » : 43 membres ne pouvaient pas voir leur propre équipe.
   const canManage = isCaptain || isManager;
-  /** Peut AGIR : gère l'équipe, et n'est pas une inspection staff en lecture. */
-  const canEdit = !readOnly && canManage;
+
+  /**
+   * Ce que l'utilisateur peut RÉELLEMENT faire, permission par permission.
+   *
+   * Avant : un seul booléen `canEdit = !readOnly && (isCaptain || isManager)`
+   * ouvrait TOUT l'écran. Or `isManager` signifie seulement « ce rôle accorde
+   * au moins une permission » : un coach (par défaut `manage_scrims` +
+   * `validate_lineup`) recevait donc le roster complet, les invitations, les
+   * demandes et l'édition des infos d'équipe — et chacun de ces gestes
+   * repartait en 403 côté serveur, sans explication. On gate désormais sur la
+   * MÊME liste que celle appliquée par les routes.
+   *
+   * Deux prédicats, volontairement distincts :
+   *  - `can` = VISIBILITÉ. Pas de `readOnly` : en inspection staff l'écran doit
+   *    rester la photo fidèle de ce que la personne voit.
+   *  - `canDo` = ACTION. Neutralisé en inspection, comme avant.
+   */
+  const can = useMemo(
+    () => makeTeamPermissionCheck(permissions),
+    [permissions]
+  );
+  const canDo = useMemo(
+    () => makeTeamPermissionCheck(permissions, { readOnly }),
+    [permissions, readOnly]
+  );
+
+  /**
+   * Identité dont on décrit le périmètre. En inspection, c'est la personne
+   * INSPECTÉE (`subjectId`) et non le staff connecté : l'écran doit montrer ce
+   * que voit la joueuse, pas ce que verrait l'admin à sa place.
+   */
+  const viewerId = subjectId ?? sessionUser?.id ?? null;
+  const viewerRole =
+    members.find((m) => m.user_id && m.user_id === viewerId)?.role ?? null;
+  /**
+   * Encadrement à droits PARTIELS : ni capitaine (qui a tout), ni membre
+   * ordinaire (qui n'a rien à expliquer). En pratique : une coach, ou un rôle
+   * reconfiguré par le staff.
+   */
+  const showRoleScope =
+    canManage &&
+    !isCaptain &&
+    permissions.length < TEAM_PERMISSION_VALUES.length;
+
+  const canSeeRoster = can('manage_roster');
+  const canSeeJoinRequests = can('manage_join_requests');
+  const canEditRoster = canDo('manage_roster');
+  const canEditJoinRequests = canDo('manage_join_requests');
+  const canEditScrims = canDo('manage_scrims');
+  const canEditTeamInfo = canDo('manage_team_info');
 
   // Une équipe créée « en tant que manager » naît sans capitaine : la capitaine
   // désignée doit d'abord accepter son invitation (ou être désignée ici).
@@ -290,6 +402,7 @@ export default function PlayerManageTeamScreen() {
     setMembers((managedTeam.members as Member[]) || []);
     setIsCaptain(managedTeam.isCaptain);
     setIsManager(managedTeam.isManager);
+    setPermissions(managedTeam.permissions);
   }, [managedTeam]);
 
   /**
@@ -929,6 +1042,16 @@ export default function PlayerManageTeamScreen() {
           {/* Inscription au tournoi — le geste de rattrapage quand l'inscription
               automatique de la création d'équipe n'a pas abouti. Placée haut :
               c'est ce qui décide si l'équipe joue, tout le reste vient après. */}
+          {/* Périmètre du rôle — AVANT toute section gatée : on nomme les
+              droits avant que leur absence ne se remarque. */}
+          {showRoleScope && (
+            <RoleScopeCard
+              roleLabel={roleLabel(viewerRole)}
+              permissions={permissions}
+              t={t}
+            />
+          )}
+
           <TeamRegistrationCard />
 
           {successMsg && (
@@ -964,7 +1087,7 @@ export default function PlayerManageTeamScreen() {
                     : t.recruitmentClosedDesc}
                 </p>
               </div>
-              {canEdit && (
+              {canEditJoinRequests && (
                 <Switch
                   checked={!!team.is_joinable}
                   onChange={handleToggleJoinable}
@@ -983,7 +1106,7 @@ export default function PlayerManageTeamScreen() {
                 <h2 className="text-lg font-semibold">{t.scrimOpenLabel}</h2>
                 <p className="text-sm text-gray-400 mt-1">{t.scrimOpenHelp}</p>
               </div>
-              {canEdit && (
+              {canEditScrims && (
                 <Switch
                   checked={!!team.open_for_scrim}
                   onChange={handleToggleScrimOpen}
@@ -996,7 +1119,7 @@ export default function PlayerManageTeamScreen() {
           </div>
 
           {/* Inviter par email / lien privé */}
-          {canEdit && (
+          {canEditRoster && (
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 mb-6">
               <h2 className="text-lg font-semibold">{t.inviteTitle}</h2>
               <p className="mt-1 text-sm text-gray-400">{t.inviteHelp}</p>
@@ -1090,7 +1213,7 @@ export default function PlayerManageTeamScreen() {
           {/* Lien d'invitation : le pendant sans email du bloc ci-dessus.
               Rendu juste après, parce que c'est la même question posée
               autrement — « comment je fais entrer quelqu'un ? ». */}
-          {canEdit && (
+          {canEditRoster && (
             <TeamJoinLinkPanel
               scopeUrl={(url) => withTeam(withSubject(url))}
               isCaptain={isCaptain}
@@ -1176,7 +1299,7 @@ export default function PlayerManageTeamScreen() {
                 montrer OU quelqu'un pour en saisir un : une carte « aucune
                 donnée » sur chaque équipe qui n'utilise pas la fonctionnalité
                 serait du bruit permanent. */}
-            {(skillAverage || canEdit) && (
+            {(skillAverage || canEditTeamInfo) && (
               <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <span className="text-xs font-medium uppercase tracking-[0.12em] text-gray-400">
@@ -1212,7 +1335,7 @@ export default function PlayerManageTeamScreen() {
                   )}
                 </div>
 
-                {canEdit && (
+                {canEditTeamInfo && (
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <label
                       htmlFor="team-skill-rating"
@@ -1412,7 +1535,7 @@ export default function PlayerManageTeamScreen() {
                         même garde-fou masquait aussi son sélecteur de
                         spécialité : sa fiche n'affichait donc jamais tank, dps
                         ou support, et personne ne pouvait le corriger. */}
-                    {canEdit && (
+                    {canEditRoster && (
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {pendingRemoval === m.id ? (
                           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -1613,7 +1736,7 @@ export default function PlayerManageTeamScreen() {
               Réservée à qui gère : le serveur refuse ces données à une membre
               simple (403), et afficher une section vide lui laisserait croire
               qu'elle pourrait agir. */}
-          {canManage && (
+          {canSeeRoster && (
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
               <h2 className="text-lg font-semibold">
                 {t.sentInvitations}
@@ -1691,7 +1814,7 @@ export default function PlayerManageTeamScreen() {
                               </div>
                             )}
                           </div>
-                          {canEdit && (
+                          {canEditRoster && (
                             <div className="flex gap-2 flex-shrink-0">
                               {invitation.email && (
                                 <button
@@ -1727,7 +1850,7 @@ export default function PlayerManageTeamScreen() {
 
           {/* Demandes en attente. Même raison : donnée de gestion, refusée par
               le serveur à une membre simple. */}
-          {canManage && (
+          {canSeeJoinRequests && (
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
               <h2 className="text-lg font-semibold">
                 {t.pendingRequests}
@@ -1784,7 +1907,7 @@ export default function PlayerManageTeamScreen() {
                               </div>
                             )}
                           </div>
-                          {canEdit && (
+                          {canEditJoinRequests && (
                             <div className="flex gap-2 flex-shrink-0">
                               <button
                                 onClick={() =>
@@ -1807,7 +1930,7 @@ export default function PlayerManageTeamScreen() {
                             </div>
                           )}
                         </div>
-                        {canEdit && !btag && (
+                        {canEditJoinRequests && !btag && (
                           <div className="w-full sm:w-64">
                             <label
                               htmlFor={`join-btag-${req.id}`}
@@ -1848,7 +1971,7 @@ export default function PlayerManageTeamScreen() {
 
           {/* Joueuses cherchant une équipe : c'est un outil de recrutement.
               Réservé à qui recrute. */}
-          {!isInspecting && canManage && (
+          {!isInspecting && canSeeRoster && (
             <FreePlayersSection teamId={team.id} />
           )}
         </main>

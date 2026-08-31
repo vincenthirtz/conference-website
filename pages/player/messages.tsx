@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useManagedTeam } from '@/hooks/useManagedTeam';
+import { makeTeamPermissionCheck } from '@/utils/teams/clientPermissions';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 import { useDebounce } from '@/hooks/useDebounce';
 import {
@@ -75,6 +76,15 @@ export default function MessagesPage() {
   const { data: managedTeam, loading: teamLoading } = useManagedTeam();
   const isCaptain = managedTeam?.isCaptain ?? false;
   const isManager = managedTeam?.isManager ?? false;
+  /**
+   * LIRE et ÉCRIRE sont deux droits distincts ici : les conversations sont
+   * ouvertes à qui gère l'équipe, l'envoi exige `send_captain_messages` (cf.
+   * /api/player/messages). Sans ce test, une coach voyait le champ de réponse
+   * et récoltait un 403 à chaque envoi.
+   */
+  const canSend = makeTeamPermissionCheck(managedTeam?.permissions ?? [])(
+    'send_captain_messages'
+  );
   const hasTeam = !!managedTeam?.team;
 
   // Inbox
@@ -499,7 +509,7 @@ export default function MessagesPage() {
                 </span>
               )}
 
-              {!activeConvId && !showNewConv && (
+              {!activeConvId && !showNewConv && canSend && (
                 <button
                   ref={newButtonRef}
                   onClick={handleNewConversation}
@@ -634,40 +644,45 @@ export default function MessagesPage() {
 
                 <div className="mt-4" />
 
-                {/* Compose area */}
-                <form onSubmit={handleSendMessage} className="space-y-3">
-                  <textarea
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    rows={3}
-                    aria-label={t.composeLabel}
-                    className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/80 transition resize-none"
-                    placeholder={t.composePlaceholder}
-                    maxLength={2000}
-                  />
+                {/* Compose area — jamais atteignable sans `canSend` (le bouton
+                    d'ouverture est masqué), gardée par sûreté. */}
+                {canSend && (
+                  <form onSubmit={handleSendMessage} className="space-y-3">
+                    <textarea
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      rows={3}
+                      aria-label={t.composeLabel}
+                      className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/80 transition resize-none"
+                      placeholder={t.composePlaceholder}
+                      maxLength={2000}
+                    />
 
-                  {error && (
-                    <div
-                      role="alert"
-                      aria-live="assertive"
-                      className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100"
+                    {error && (
+                      <div
+                        role="alert"
+                        aria-live="assertive"
+                        className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100"
+                      >
+                        {error}
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={
+                        sending || !selectedTeamId || !newMessage.trim()
+                      }
+                      className={`w-full px-4 py-3 rounded-xl font-semibold transition ${
+                        sending || !selectedTeamId || !newMessage.trim()
+                          ? 'bg-gray-600 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400'
+                      }`}
                     >
-                      {error}
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={sending || !selectedTeamId || !newMessage.trim()}
-                    className={`w-full px-4 py-3 rounded-xl font-semibold transition ${
-                      sending || !selectedTeamId || !newMessage.trim()
-                        ? 'bg-gray-600 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400'
-                    }`}
-                  >
-                    {sending ? t.sending : t.send}
-                  </button>
-                </form>
+                      {sending ? t.sending : t.send}
+                    </button>
+                  </form>
+                )}
               </div>
             )}
 
@@ -742,33 +757,41 @@ export default function MessagesPage() {
                       <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Reply bar */}
-                    <form
-                      onSubmit={handleSendMessage}
-                      className="border-t border-white/10 px-4 py-3 flex gap-3"
-                    >
-                      <input
-                        ref={replyInputRef}
-                        type="text"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        aria-label={t.replyLabel}
-                        className="flex-1 rounded-xl border border-white/15 bg-black/60 px-4 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/80 transition"
-                        placeholder={t.replyPlaceholder}
-                        maxLength={2000}
-                      />
-                      <button
-                        type="submit"
-                        disabled={sending || !newMessage.trim()}
-                        className={`px-4 py-2 rounded-xl font-semibold text-sm transition ${
-                          sending || !newMessage.trim()
-                            ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                            : 'bg-emerald-500 hover:bg-emerald-400 text-white'
-                        }`}
+                    {/* Barre de réponse — seulement pour qui peut envoyer.
+                        Sinon un rappel de périmètre, pas un champ mort. */}
+                    {!canSend && (
+                      <p className="border-t border-white/10 px-4 py-3 text-xs text-gray-400">
+                        {t.readOnlyHint}
+                      </p>
+                    )}
+                    {canSend && (
+                      <form
+                        onSubmit={handleSendMessage}
+                        className="border-t border-white/10 px-4 py-3 flex gap-3"
                       >
-                        {sending ? t.sendingShort : t.send}
-                      </button>
-                    </form>
+                        <input
+                          ref={replyInputRef}
+                          type="text"
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          aria-label={t.replyLabel}
+                          className="flex-1 rounded-xl border border-white/15 bg-black/60 px-4 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/80 transition"
+                          placeholder={t.replyPlaceholder}
+                          maxLength={2000}
+                        />
+                        <button
+                          type="submit"
+                          disabled={sending || !newMessage.trim()}
+                          className={`px-4 py-2 rounded-xl font-semibold text-sm transition ${
+                            sending || !newMessage.trim()
+                              ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                              : 'bg-emerald-500 hover:bg-emerald-400 text-white'
+                          }`}
+                        >
+                          {sending ? t.sendingShort : t.send}
+                        </button>
+                      </form>
+                    )}
 
                     {error && (
                       <div

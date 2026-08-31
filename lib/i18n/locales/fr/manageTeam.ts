@@ -176,4 +176,22 @@ export default ns('manageTeam', {
     "Lien privé à transmettre (valable 7 jours, une seule personne peut l'utiliser) :",
   inviteCopyLink: 'Copier le lien',
   inviteError: "L'invitation n'a pas pu être créée.",
+
+  // ── Périmètre du rôle ────────────────────────────────────────────────
+  // Encart affiché à qui encadre l'équipe sans en être capitaine (coach,
+  // manager à droits partiels). Sans lui, les sections absentes se lisent
+  // comme un bug : « pourquoi je ne vois pas le roster ? ».
+  scopeTitle: 'Ce que ton rôle te permet',
+  scopeIntro:
+    "Ton rôle dans l'équipe ({role}) ouvre les actions ci-dessous. Le reste est réservé à la capitaine ou à une manager — c'est pour ça que certaines sections n'apparaissent pas.",
+  scopeNone:
+    "Ton rôle n'ouvre aucune action de gestion pour le moment. Demande à ta capitaine de l'élargir si tu en as besoin.",
+  permManageRoster: 'Gérer le roster',
+  permManageTeamInfo: "Modifier les infos de l'équipe",
+  permManageScrims: 'Gérer les scrims',
+  permManageJoinRequests: 'Traiter les demandes',
+  permRegisterTournaments: 'Inscrire aux tournois',
+  permSendCaptainMessages: 'Envoyer des messages équipe',
+  permEditPublicPage: 'Personnaliser la page publique',
+  permValidateLineup: 'Valider la feuille de match',
 });

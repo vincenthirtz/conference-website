@@ -26,6 +26,7 @@ import {
   type ManagedTeamSummary,
 } from '@/utils/teams/managedTeamSlice';
 import { readRequestedTeamId } from '@/utils/teams/teamScope';
+import type { TeamPermission } from '@/utils/teamRoles';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
 import { readScrimNego } from '@/utils/teams/scrimNegotiation';
 import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
@@ -124,6 +125,13 @@ export type PlayerDashboardPayload = {
   members: MemberRow[];
   isCaptain: boolean;
   isManager: boolean;
+  /**
+   * Permissions EFFECTIVES sur `team` — la MÊME liste que celle appliquée par
+   * les routes d'écriture. Le client s'en sert pour ne proposer que les gestes
+   * qui aboutiront : `isCaptain` / `isManager` seuls faisaient afficher au
+   * coach des actions que le serveur lui refusait ensuite.
+   */
+  permissions: TeamPermission[];
   /**
    * Toutes les équipes gérées, `team` comprise (un manager peut en encadrer
    * plusieurs). Vide pour une joueuse sans droits de gestion.
@@ -521,6 +529,7 @@ export default withSubjectRoute(async function handler(
     members: teamSlice.members,
     isCaptain,
     isManager,
+    permissions: teamSlice.permissions,
     managedTeams: teamSlice.managedTeams,
     demandesCaptain,
     demandesJoin,

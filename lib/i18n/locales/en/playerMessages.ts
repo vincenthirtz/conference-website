@@ -36,4 +36,6 @@ export default {
   composeLabel: 'Your message',
   replyLabel: 'Write a reply',
   conversationLabel: 'Conversation thread',
+  readOnlyHint:
+    "Your role lets you follow the team's conversations, but not reply to them.",
 };

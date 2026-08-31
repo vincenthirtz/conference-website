@@ -336,4 +336,54 @@ describe('/api/player/dashboard', () => {
     expect(b.nextMatch.match?.id).toBe(MATCH_ID);
     expect(b.nextMatch.readiness?.shortfall).toBe(3);
   });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Permissions fines (2026-08-31)
+  //
+  // Le payload ne portait que `isCaptain` / `isManager`, et l'écran en
+  // déduisait un droit de gestion TOTAL. Or `isManager` vaut `true` dès qu'un
+  // rôle accorde AU MOINS UNE permission : un coach voyait donc les actions
+  // roster / messages / infos d'équipe, toutes refusées ensuite par le serveur.
+  // Le dashboard publie maintenant la liste effective.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  it('publie toutes les permissions pour la capitaine', async () => {
+    seed({ minPlayers: 5, memberCount: 5 });
+    setAuthUser({ id: CAPTAIN_ID });
+    const res = makeRes();
+    await dashboardHandler(makeReq(), res);
+
+    const b = res.body as any;
+    expect(b.permissions).toEqual(
+      expect.arrayContaining([
+        'manage_roster',
+        'manage_team_info',
+        'manage_scrims',
+        'send_captain_messages',
+      ])
+    );
+  });
+
+  it('un coach n’obtient que scrims + feuille de match', async () => {
+    seed({ minPlayers: 5, memberCount: 5 });
+    // m-1 devient coach : le rôle privilégié le plus courant, et celui dont
+    // les droits sont les plus étroits.
+    (store.team_members as any[])[1].role = 'coach';
+    setAuthUser({ id: PLAYER_ID });
+    const res = makeRes();
+    await dashboardHandler(makeReq(), res);
+
+    const b = res.body as any;
+    expect(b.isManager).toBe(true);
+    expect(b.permissions).toEqual(['manage_scrims', 'validate_lineup']);
+  });
+
+  it('une joueuse ordinaire n’a aucune permission', async () => {
+    seed({ minPlayers: 5, memberCount: 5 });
+    setAuthUser({ id: PLAYER_ID });
+    const res = makeRes();
+    await dashboardHandler(makeReq(), res);
+
+    expect((res.body as any).permissions).toEqual([]);
+  });
 });

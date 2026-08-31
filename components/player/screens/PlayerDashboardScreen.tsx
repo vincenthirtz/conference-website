@@ -13,7 +13,7 @@
 // fetchent leur propre tranche (NextMatchCard, TeamHealthCard, MyScrimsCard…)
 // font pareil de leur côté.
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
@@ -55,6 +55,11 @@ import {
 } from '@/components/player/ActiveTeamContext';
 import ActiveTeamSwitcher from '@/components/player/ActiveTeamSwitcher';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import {
+  makeTeamPermissionCheck,
+  readTeamPermissions,
+} from '@/utils/teams/clientPermissions';
+import type { TeamPermission } from '@/utils/teamRoles';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 
@@ -128,6 +133,13 @@ type DashboardResponse = {
   members?: TeamMemberLite[];
   isCaptain?: boolean;
   isManager?: boolean;
+  /**
+   * Permissions EFFECTIVES sur l'équipe affichée. `isManager` ne dit que « ce
+   * rôle accorde au moins une permission » : un coach (scrims + feuille de
+   * match) le voyait donc `true` et se faisait proposer roster, transferts et
+   * gestion d'équipe, refusés ensuite par le serveur.
+   */
+  permissions?: TeamPermission[];
   demandesCaptain?: Demande[];
   demandesJoin?: Demande[];
   pendingScrims?: PendingScrim[];
@@ -151,22 +163,29 @@ function buildQuickActions(args: {
   team: NonNullable<TeamInfo>;
   isCaptain: boolean;
   isManager: boolean;
+  /** Prédicat de permission effective (cf. utils/teams/clientPermissions). */
+  can: (permission: TeamPermission) => boolean;
   unreadMessages: number;
   t: typeof nsPlayerIndex.fr;
 }): QuickActionProps[] {
-  const { team, isCaptain, isManager, unreadMessages, t } = args;
+  const { team, isCaptain, isManager, can, unreadMessages, t } = args;
   const canManage = isCaptain || isManager;
   const actions: QuickActionProps[] = [];
 
+  // Proposer le transfert de QUELQU'UN D'AUTRE demande `manage_roster` (cf.
+  // /api/demandes/transfer). Sans la permission, l'action reste — mais dans sa
+  // variante « demander MON transfert », qui, elle, est ouverte à tous.
   actions.push({
     href: '/player/requests?tab=transfer',
-    label: canManage ? t.qaProposeTransfer : t.qaRequestTransfer,
-    description: canManage ? t.qaTransferPlayer : t.qaTransferToOther,
+    label: can('manage_roster') ? t.qaProposeTransfer : t.qaRequestTransfer,
+    description: can('manage_roster')
+      ? t.qaTransferPlayer
+      : t.qaTransferToOther,
     iconPath: SVG_PATHS.transfer,
     tone: 'purple',
   });
 
-  if (canManage) {
+  if (can('manage_scrims')) {
     actions.push({
       href: '/player/requests?tab=scrim',
       label: t.qaProposeScrim,
@@ -174,6 +193,12 @@ function buildQuickActions(args: {
       iconPath: SVG_PATHS.scrim,
       tone: 'blue',
     });
+  }
+
+  if (canManage) {
+    // Messagerie : la LECTURE des conversations est ouverte à qui gère
+    // l'équipe, seul l'envoi exige `send_captain_messages` (la page masque son
+    // formulaire le cas échéant). L'entrée reste donc visible.
     actions.push({
       href: '/player/messages',
       label: t.qaMessaging,
@@ -330,6 +355,7 @@ export default function PlayerDashboardScreen() {
   const [members, setMembers] = useState<TeamMemberLite[]>([]);
   const [isCaptain, setIsCaptain] = useState(false);
   const [isManager, setIsManager] = useState(false);
+  const [permissions, setPermissions] = useState<TeamPermission[]>([]);
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [pendingScrims, setPendingScrims] = useState<PendingScrim[]>([]);
   const [scrimActionId, setScrimActionId] = useState<string | null>(null);
@@ -344,6 +370,16 @@ export default function PlayerDashboardScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const canManage = isCaptain || isManager;
+  /**
+   * Ce que l'utilisateur peut RÉELLEMENT faire sur l'équipe affichée. Sert à la
+   * VISIBILITÉ (pas de readOnly ici) : en inspection staff, l'écran doit rester
+   * une photo fidèle de ce que la personne voit — seuls les gestes sont
+   * neutralisés, comme partout ailleurs (`readOnly ? undefined : handler`).
+   */
+  const can = useMemo(
+    () => makeTeamPermissionCheck(permissions),
+    [permissions]
+  );
 
   // Single aggregated call (one request, one wave). Each section is optional in
   // the payload and defaulted defensively, so a server-side section failure
@@ -361,6 +397,15 @@ export default function PlayerDashboardScreen() {
     setMembers(Array.isArray(data.members) ? data.members : []);
     setIsCaptain(data.isCaptain || false);
     setIsManager(data.isManager || false);
+    // Champ absent (payload d'un serveur antérieur) = repli sur l'ancien
+    // comportement : tout, si l'appelant gère l'équipe. Cf. clientPermissions.
+    setPermissions(
+      readTeamPermissions({
+        permissions: data.permissions,
+        isCaptain: data.isCaptain,
+        isManager: data.isManager,
+      })
+    );
 
     const allDemandes: Demande[] = [
       ...(data.demandesCaptain || []),
@@ -485,9 +530,10 @@ export default function PlayerDashboardScreen() {
   );
 
   // Grilles de dispo ouvertes : chargées une fois pour la catégorie Scrims.
-  // Réservé aux capitaines/managers avec équipe (les seuls à voir le hub).
+  // Réservé à qui peut gérer les scrims — les seuls à voir le hub.
+  const canManageScrims = can('manage_scrims');
   useEffect(() => {
-    if (!ready || !token || !canManage) return;
+    if (!ready || !token || !canManageScrims) return;
     let cancelled = false;
     (async () => {
       try {
@@ -509,7 +555,7 @@ export default function PlayerDashboardScreen() {
     return () => {
       cancelled = true;
     };
-  }, [ready, token, canManage, withSubject, withTeam]);
+  }, [ready, token, canManageScrims, withSubject, withTeam]);
 
   // Bascule la disponibilité aux scrims. L'état vit ici (page) : mise à jour
   // optimiste de team.open_for_scrim + feedback toast, cohérent avec le reste.
@@ -744,7 +790,7 @@ export default function PlayerDashboardScreen() {
               Réservée aux capitaines/managers avec équipe : le hub en est
               l'en-tête permanent, les blocs de détail (négociations, grilles)
               s'affichent dessous quand ils sont non vides. */}
-          {team && canManage && (
+          {team && canManageScrims && (
             <CategorySection label={t.catScrims}>
               <ScrimsHubCard
                 team={team}
@@ -813,6 +859,7 @@ export default function PlayerDashboardScreen() {
                     team,
                     isCaptain,
                     isManager,
+                    can,
                     unreadMessages,
                     t,
                   }).map((action) => (
