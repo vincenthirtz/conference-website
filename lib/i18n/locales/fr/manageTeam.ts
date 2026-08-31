@@ -115,6 +115,8 @@ export default ns('manageTeam', {
   joinMissingBattleTagLabel: 'BattleTag de la joueuse',
   joinMissingBattleTagHint:
     "Elle ne l'a pas renseigné : saisis-le pour l'ajouter au roster, ou demande-lui de compléter son profil.",
+  skillRatingUpdated: 'Niveau mis à jour',
+  skillRatingError: 'Impossible de mettre à jour le niveau.',
   verifiedBadgeTitle: 'BattleTag vérifié via Battle.net',
   discordUnlinkedBadge: 'Discord non lié',
   discordUnlinkedBadgeTitle:

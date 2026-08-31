@@ -36,6 +36,12 @@ import ActiveTeamSwitcher from '@/components/player/ActiveTeamSwitcher';
 import Switch from '@/components/ui/Switch';
 import { isNonPlayingTeamRole, splitTeamMembers } from '@/utils/teams/roleKind';
 import nsManageTeam from '@/lib/i18n/locales/fr/manageTeam';
+import nsOverwatchRank from '@/lib/i18n/locales/fr/overwatchRank';
+import SkillRatingBadge from '@/components/Team/SkillRatingBadge';
+import {
+  averageTeamSkillRating,
+  isValidSkillRating,
+} from '@/utils/overwatchRank';
 
 /**
  * Le serveur a répondu « tu ne gères pas cette équipe » (403), ce qui est une
@@ -60,6 +66,8 @@ type Member = {
   is_substitute: boolean;
   is_captain?: boolean;
   specialty?: Specialty;
+  /** SR Overwatch déclaré par l'équipe (0-5000), `null` si non renseigné. */
+  skill_rating?: number | null;
   // Exposé par l'API manage-team seulement une fois que la vérification
   // Battle.net est câblée côté back (cf. TODO API). Tant que la clé est
   // absente, le badge ne s'affiche pas ; `null` = non vérifié, string = vérifié.
@@ -135,6 +143,7 @@ type SentInvitation = {
 
 export default function PlayerManageTeamScreen() {
   const t = useT(nsManageTeam);
+  const tRank = useT(nsOverwatchRank);
   const locale = useLocale();
   const router = useRouter();
   // `readOnly` = inspection staff : l'écran devient une photo fidèle, sans
@@ -236,6 +245,10 @@ export default function PlayerManageTeamScreen() {
 
   // Joueuses d'abord, encadrement (coach / manager) ensuite sous son intitulé.
   const { roster, subs, staff } = splitTeamMembers(members);
+
+  // Moyenne de niveau de l'équipe. Calculée à partir de `members`, donc elle
+  // suit chaque enregistrement sans qu'on ait à la recalculer à la main.
+  const skillAverage = averageTeamSkillRating(members);
   const orderedMembers = [...roster, ...subs, ...staff];
   const firstStaffIndex = staff.length ? roster.length + subs.length : -1;
   const playingCount = roster.length + subs.length;
@@ -601,6 +614,53 @@ export default function PlayerManageTeamScreen() {
       showSuccess(t.specialtyUpdated);
     } catch (err: unknown) {
       setError((err as Error).message || t.specialtyError);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Brouillons de SR : le champ est libre (0-5000), donc on ne peut pas
+  // enregistrer a chaque frappe comme le fait un <select>. La valeur part au
+  // blur ou a Entree, et le brouillon est oublie ensuite pour que la ligne
+  // reparte de ce que le serveur a reellement retenu.
+  const [skillRatingDrafts, setSkillRatingDrafts] = useState<
+    Record<string, string>
+  >({});
+
+  const handleUpdateSkillRating = async (member: Member, raw: string) => {
+    const trimmed = raw.trim();
+    const current = member.skill_rating ?? null;
+    const next = trimmed === '' ? null : Number(trimmed);
+
+    // Rien saisi de neuf : on referme le brouillon sans deranger le serveur.
+    if (next === current) {
+      setSkillRatingDrafts((prev) => {
+        const { [member.id]: _drop, ...rest } = prev;
+        return rest;
+      });
+      return;
+    }
+
+    if (next !== null && !isValidSkillRating(next)) {
+      setError(tRank.fieldInvalid);
+      return;
+    }
+
+    setActionLoading(`skill-rating-${member.id}`);
+    setError(null);
+    try {
+      await adminFetchJson(withTeam('/api/teams/update-member'), {
+        method: 'PATCH',
+        body: JSON.stringify({ memberId: member.id, skill_rating: next }),
+      });
+      setSkillRatingDrafts((prev) => {
+        const { [member.id]: _drop, ...rest } = prev;
+        return rest;
+      });
+      await reloadTeam();
+      showSuccess(t.skillRatingUpdated);
+    } catch (err: unknown) {
+      setError((err as Error).message || t.skillRatingError);
     } finally {
       setActionLoading(null);
     }
@@ -1006,6 +1066,31 @@ export default function PlayerManageTeamScreen() {
                   )}
                 </div>
               )}
+            {/* Niveau moyen. Affiché seulement quand au moins une fiche est
+                renseignée : une carte « aucune donnée » sur chaque équipe qui
+                n'utilise pas la fonctionnalité serait du bruit permanent. */}
+            {skillAverage && (
+              <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                <span className="text-xs font-medium uppercase tracking-[0.12em] text-gray-400">
+                  {tRank.teamAverageLabel}
+                </span>
+                <SkillRatingBadge
+                  skillRating={skillAverage.average}
+                  size="md"
+                />
+                <span className="text-xs text-gray-500">
+                  {format(
+                    skillAverage.count === skillAverage.eligible
+                      ? tRank.teamAverageComplete
+                      : tRank.teamAverageBasis,
+                    {
+                      count: String(skillAverage.count),
+                      eligible: String(skillAverage.eligible),
+                    }
+                  )}
+                </span>
+              </div>
+            )}
             {members.filter((m) => !m.is_captain).length === 0 ? (
               <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 px-4 py-5 text-center">
                 <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-purple-500/20 flex items-center justify-center">
@@ -1068,6 +1153,13 @@ export default function PlayerManageTeamScreen() {
                               className="h-5 w-5 shrink-0"
                             />
                           )}
+                          {/* Niveau déclaré. Le composant ne rend rien quand
+                              il n'y en a pas : « non déclaré » n'a pas à
+                              occuper une pastille sur chaque ligne. */}
+                          <SkillRatingBadge
+                            skillRating={m.skill_rating}
+                            className="shrink-0"
+                          />
                           {/* Badge de vérification Battle.net. Rendu
                             uniquement quand l'API expose
                             battle_tag_verified_at par membre. */}
@@ -1168,6 +1260,44 @@ export default function PlayerManageTeamScreen() {
                           </div>
                         ) : (
                           <>
+                            {/* SR : seulement pour les rôles JOUANTS — le
+                                niveau d'une coach n'entre pas dans la moyenne,
+                                lui offrir le champ ferait croire l'inverse. */}
+                            {!isNonPlayingTeamRole(m.role) && (
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                min={0}
+                                max={5000}
+                                step={50}
+                                value={
+                                  skillRatingDrafts[m.id] ??
+                                  (m.skill_rating != null
+                                    ? String(m.skill_rating)
+                                    : '')
+                                }
+                                onChange={(e) =>
+                                  setSkillRatingDrafts((prev) => ({
+                                    ...prev,
+                                    [m.id]: e.target.value,
+                                  }))
+                                }
+                                onBlur={(e) =>
+                                  handleUpdateSkillRating(m, e.target.value)
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    e.currentTarget.blur();
+                                  }
+                                }}
+                                disabled={!!actionLoading}
+                                aria-label={tRank.fieldLabel}
+                                title={tRank.fieldLabel}
+                                placeholder={tRank.fieldPlaceholder}
+                                className="w-20 bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400 disabled:opacity-50"
+                              />
+                            )}
                             <select
                               value={m.specialty || ''}
                               onChange={(e) =>

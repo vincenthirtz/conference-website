@@ -8,7 +8,9 @@
 //   - inline BattleTag edit (valid + invalid format)
 //   - substitute toggle (mark / unmark)
 //   - access control (plain player -> 403, member of another team -> 404)
-//   - audit logs emitted: update_player_battle_tag, manage_substitute
+//   - niveau Overwatch declare (skill_rating) : pose, correction, effacement
+//   - audit logs emitted: update_player_battle_tag, manage_substitute,
+//     update_player_skill_rating
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -96,6 +98,7 @@ function seed() {
       user_id: PLAYER_ID,
       role: 'player',
       battle_tag: 'Old#1234',
+      skill_rating: 3000,
       is_substitute: false,
     },
     {
@@ -162,6 +165,110 @@ describe('/api/teams/update-member - BattleTag', () => {
     );
     expect(log).toBeTruthy();
     expect(log.entity_id).toBe(TM_PLY);
+  });
+});
+
+describe('/api/teams/update-member - skill_rating', () => {
+  it('la capitaine pose un niveau', async () => {
+    const res = makeRes();
+    await updateMemberHandler(
+      makeAuthedReq({ body: { memberId: TM_PLY, skill_rating: 3500 } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const member = (store.team_members as any[]).find((m) => m.id === TM_PLY);
+    expect(member.skill_rating).toBe(3500);
+  });
+
+  // Le formulaire envoie une chaine : la refuser obligerait chaque appelant a
+  // convertir, et un `Number()` oublie quelque part poserait un NaN en base.
+  it('accepte une valeur envoyée sous forme de chaîne', async () => {
+    const res = makeRes();
+    await updateMemberHandler(
+      makeAuthedReq({ body: { memberId: TM_PLY, skill_rating: '2750' } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const member = (store.team_members as any[]).find((m) => m.id === TM_PLY);
+    expect(member.skill_rating).toBe(2750);
+  });
+
+  // Vider est une intention, pas une absence : `null` efface, et l'absence de
+  // cle ne touche a rien (couvert par « rejects when no field is provided »).
+  it('efface le niveau sur null', async () => {
+    const res = makeRes();
+    await updateMemberHandler(
+      makeAuthedReq({ body: { memberId: TM_PLY, skill_rating: null } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const member = (store.team_members as any[]).find((m) => m.id === TM_PLY);
+    expect(member.skill_rating).toBeNull();
+  });
+
+  it('efface le niveau sur chaîne vide', async () => {
+    const res = makeRes();
+    await updateMemberHandler(
+      makeAuthedReq({ body: { memberId: TM_PLY, skill_rating: '' } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const member = (store.team_members as any[]).find((m) => m.id === TM_PLY);
+    expect(member.skill_rating).toBeNull();
+  });
+
+  it('refuse hors bornes et non entier, sans rien écrire', async () => {
+    for (const bad of [5001, -1, 3500.5, 'beaucoup']) {
+      const res = makeRes();
+      await updateMemberHandler(
+        makeAuthedReq({ body: { memberId: TM_PLY, skill_rating: bad } }),
+        res
+      );
+      expect(res.statusCode).toBe(400);
+      expect((res.body as any).code).toBe('SKILL_RATING_INVALID');
+      const member = (store.team_members as any[]).find((m) => m.id === TM_PLY);
+      expect(member.skill_rating).toBe(3000);
+    }
+  });
+
+  it('journalise update_player_skill_rating avec l’avant et l’après', async () => {
+    const res = makeRes();
+    await updateMemberHandler(
+      makeAuthedReq({ body: { memberId: TM_PLY, skill_rating: 4200 } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const log = (store.staff_logs as any[]).find(
+      (l) => l.action === 'update_player_skill_rating'
+    );
+    expect(log).toBeTruthy();
+    expect(log.entity_id).toBe(TM_PLY);
+    expect(log.payload.previous).toBe(3000);
+    expect(log.payload.next).toBe(4200);
+  });
+
+  it('ne journalise rien quand la valeur ne change pas', async () => {
+    const res = makeRes();
+    await updateMemberHandler(
+      makeAuthedReq({ body: { memberId: TM_PLY, skill_rating: 3000 } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(
+      (store.staff_logs as any[]).find(
+        (l) => l.action === 'update_player_skill_rating'
+      )
+    ).toBeFalsy();
+  });
+
+  it('un membre simple ne peut pas noter le roster (403)', async () => {
+    setAuthUser({ id: PLAYER_ID });
+    const res = makeRes();
+    await updateMemberHandler(
+      makeAuthedReq({ body: { memberId: TM_CAP, skill_rating: 1000 } }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
   });
 });
 

@@ -51,6 +51,8 @@ type MemberRow = {
   battle_tag: string | null;
   battle_tag_verified_at?: string | null;
   specialty: string | null;
+  /** SR Overwatch déclaré (cf. utils/overwatchRank.ts), `null` si non renseigné. */
+  skill_rating: number | null;
   is_substitute: boolean;
   captain?: boolean | null;
   is_captain?: boolean | null;

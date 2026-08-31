@@ -16,6 +16,11 @@ import {
 } from '@/utils/teams/reliability';
 import { maskBattleTag } from '@/utils/battleTag';
 import { splitTeamMembers } from '@/utils/teams/roleKind';
+import SkillRatingBadge from '@/components/Team/SkillRatingBadge';
+import {
+  averageTeamSkillRating,
+  type TeamSkillRatingAverage,
+} from '@/utils/overwatchRank';
 import {
   resolveMissingDisplayNames,
   withFallbackDisplayName,
@@ -35,6 +40,7 @@ import {
 
 import { logger } from '../../../utils/logger';
 import nsTeamDetail from '@/lib/i18n/locales/fr/teamDetail';
+import nsOverwatchRank from '@/lib/i18n/locales/fr/overwatchRank';
 
 type TeamDetailDict = typeof nsTeamDetail.fr;
 
@@ -202,6 +208,12 @@ type TeamPageProps = {
    */
   scrimHistory: ScrimHistoryEntry[];
   reliability: TeamReliability;
+  /**
+   * Niveau moyen DÉCLARÉ de l'équipe. `null` tant qu'aucune joueuse n'a
+   * renseigné le sien. Seul l'agrégat est public : les SR individuels ne
+   * quittent pas l'espace d'équipe.
+   */
+  skillAverage: TeamSkillRatingAverage | null;
 };
 
 export const getStaticPaths: GetStaticPaths = async () => {
@@ -290,7 +302,7 @@ export const getStaticProps: GetStaticProps<TeamPageProps> = async (ctx) => {
     supabaseAdmin
       .from('team_members')
       .select(
-        'id, user_id, role, battle_tag, is_substitute, display_name, specialty, avatar_url, pronouns, tagline, twitter, twitch, created_at'
+        'id, user_id, role, battle_tag, is_substitute, display_name, specialty, skill_rating, avatar_url, pronouns, tagline, twitter, twitch, created_at'
       )
       .eq('tenant_id', tenantId)
       .eq('team_id', teamId)
@@ -379,14 +391,26 @@ export const getStaticProps: GetStaticProps<TeamPageProps> = async (ctx) => {
     }[]
   );
 
+  // Niveau moyen de l'équipe. Calculé ICI, sur les lignes brutes, parce que le
+  // SR INDIVIDUEL ne sort pas de la page : l'équipe le renseigne pour elle et
+  // pour le staff, seule l'agrégat est publique. C'est aussi pourquoi
+  // `skill_rating` est retiré ligne par ligne juste après — un `...m` le
+  // laisserait filer dans les props, donc dans le HTML servi.
+  const skillAverage = averageTeamSkillRating(
+    (rawMembers || []) as { role?: string | null; skill_rating?: number | null }[]
+  );
+
   // Compute is_captain based on team.captain_id
-  const membersWithCaptain = (rawMembers || []).map((m: any) => ({
-    ...m,
-    // Anonymat public : on masque l'ID numérique du BattleTag (après le « # »).
-    battle_tag: maskBattleTag(m.battle_tag ?? null),
-    display_name: withFallbackDisplayName(m, memberNames),
-    is_captain: team.captain_id === m.user_id,
-  }));
+  const membersWithCaptain = (rawMembers || []).map((m: any) => {
+    const { skill_rating: _privateSkillRating, ...publicFields } = m;
+    return {
+      ...publicFields,
+      // Anonymat public : on masque l'ID numérique du BattleTag (après le « # »).
+      battle_tag: maskBattleTag(m.battle_tag ?? null),
+      display_name: withFallbackDisplayName(m, memberNames),
+      is_captain: team.captain_id === m.user_id,
+    };
+  });
   // Sort captain first
   membersWithCaptain.sort((a: any, b: any) => {
     if (a.is_captain && !b.is_captain) return -1;
@@ -609,6 +633,7 @@ export const getStaticProps: GetStaticProps<TeamPageProps> = async (ctx) => {
       announcementActive,
       scrimHistory,
       reliability,
+      skillAverage,
     },
     revalidate: 60,
   };
@@ -617,6 +642,7 @@ export const getStaticProps: GetStaticProps<TeamPageProps> = async (ctx) => {
 export default function TeamPage({
   team,
   members,
+  skillAverage,
   tournaments,
   matchStats,
   scrimHistory,
@@ -626,6 +652,7 @@ export default function TeamPage({
   announcementActive,
 }: TeamPageProps) {
   const t = useT(nsTeamDetail);
+  const tRank = useT(nsOverwatchRank);
   const locale = useLocale();
   // `canEdit` is auth-dependent and therefore not part of the statically
   // generated payload. We resolve it client-side after hydration: a captain
@@ -1249,6 +1276,31 @@ export default function TeamPage({
                         )}
                       </span>
                     </div>
+
+                    {/* Niveau moyen déclaré. Agrégat SEUL : les SR individuels
+                        ne sortent pas de l'espace d'équipe. */}
+                    {skillAverage && (
+                      <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span className="text-xs uppercase tracking-wide text-gray-400">
+                          {tRank.teamAverageLabel}
+                        </span>
+                        <SkillRatingBadge
+                          skillRating={skillAverage.average}
+                          size="md"
+                        />
+                        <span className="text-xs text-gray-500">
+                          {format(
+                            skillAverage.count === skillAverage.eligible
+                              ? tRank.teamAverageComplete
+                              : tRank.teamAverageBasis,
+                            {
+                              count: String(skillAverage.count),
+                              eligible: String(skillAverage.eligible),
+                            }
+                          )}
+                        </span>
+                      </div>
+                    )}
 
                     {rosterMembers.length === 0 ? (
                       <Paragraph typeStyle="body-sm" textColor="text-gray-400">

@@ -79,6 +79,12 @@ export type ManagedTeamMemberRow = {
   battle_tag: string | null;
   battle_tag_verified_at: string | null;
   specialty: string | null;
+  /**
+   * Niveau Overwatch DÉCLARÉ par l'équipe (SR 0-5000), `null` quand personne
+   * ne l'a renseigné. Sans rapport avec `player_ratings`, qui est calculé par
+   * le site — cf. utils/overwatchRank.ts.
+   */
+  skill_rating: number | null;
   is_substitute: boolean;
   /** `captain` et `is_captain` sont deux alias du même flag (= team.captain_id === user_id). */
   captain: boolean;
@@ -364,7 +370,7 @@ export async function loadManagedTeamSlice(
       supabaseAdmin
         .from('team_members')
         .select(
-          'id, user_id, role, display_name, battle_tag, battle_tag_verified_at, specialty, is_substitute'
+          'id, user_id, role, display_name, battle_tag, battle_tag_verified_at, specialty, skill_rating, is_substitute'
         )
         .eq('team_id', teamId)
         .eq('tenant_id', tenantId)
@@ -447,6 +453,8 @@ export async function loadManagedTeamSlice(
         battle_tag_verified_at:
           (m.battle_tag_verified_at as string | null) ?? null,
         specialty: (m.specialty as string | null) ?? null,
+        skill_rating:
+          typeof m.skill_rating === 'number' ? m.skill_rating : null,
         is_substitute: Boolean(m.is_substitute),
         captain: isMemberCaptain,
         is_captain: isMemberCaptain,

@@ -110,6 +110,8 @@ export default {
   joinMissingBattleTagLabel: "Player's BattleTag",
   joinMissingBattleTagHint:
     'She has not filled it in: enter it to add her to the roster, or ask her to complete her profile.',
+  skillRatingUpdated: 'Rating updated',
+  skillRatingError: 'Could not update the rating.',
   verifiedBadgeTitle: 'BattleTag verified via Battle.net',
   discordUnlinkedBadge: 'Discord not linked',
   discordUnlinkedBadgeTitle:

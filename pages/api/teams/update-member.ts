@@ -3,6 +3,7 @@
 //   - battle_tag : correction du BattleTag (format Name#0000)
 //   - is_substitute : marquer / demarquer un membre comme remplacant
 //   - role : changement de role (player <-> substitute, coach, etc.)
+//   - skill_rating : niveau Overwatch DECLARE (SR 0-5000, null = non declare)
 //
 // Cette route complete update-member-role.ts (qui ne gere que le role) en
 // permettant la correction inline du BattleTag et la gestion remplacant depuis
@@ -12,8 +13,9 @@
 // l'equipe du membre cible (verifie via team_id + tenant).
 //
 // Audit :
-//   - update_player_battle_tag : quand battle_tag change
-//   - manage_substitute        : quand is_substitute change
+//   - update_player_battle_tag  : quand battle_tag change
+//   - manage_substitute         : quand is_substitute change
+//   - update_player_skill_rating: quand skill_rating change
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -36,6 +38,11 @@ import {
   isNonPlayingTeamRole,
   BATTLE_TAG_FORMAT_HINT,
 } from '@/utils/teams/addMember';
+import {
+  SKILL_RATING_MAX,
+  SKILL_RATING_MIN,
+  isValidSkillRating,
+} from '@/utils/overwatchRank';
 import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../utils/logger';
@@ -80,17 +87,19 @@ export default withSubjectRoute(
     const hasBattleTag = 'battle_tag' in (req.body || {});
     const hasIsSubstitute =
       'is_substitute' in (req.body || {}) && req.body.is_substitute != null;
+    const hasSkillRating = 'skill_rating' in (req.body || {});
 
-    if (!hasRole && !hasBattleTag && !hasIsSubstitute) {
+    if (!hasRole && !hasBattleTag && !hasIsSubstitute && !hasSkillRating) {
       return res.status(400).json({
-        error: 'Aucun champ a mettre a jour (role/battle_tag/is_substitute).',
+        error:
+          'Aucun champ a mettre a jour (role/battle_tag/is_substitute/skill_rating).',
       });
     }
 
     // Charger le membre cible et verifier qu'il appartient a l'equipe geree
     const { data: member, error: memberErr } = await supabaseAdmin
       .from('team_members')
-      .select('id, user_id, role, battle_tag, is_substitute')
+      .select('id, user_id, role, battle_tag, is_substitute, skill_rating')
       .eq('id', memberId)
       .eq('team_id', access.teamId)
       .eq('tenant_id', tenantId)
@@ -132,6 +141,34 @@ export default withSubjectRoute(
       if (newBattleTag !== member.battle_tag) {
         updatePayload.battle_tag = newBattleTag;
         battleTagChanged = true;
+      }
+    }
+
+    // --- Niveau Overwatch declare --------------------------------------------
+    // Le vider est une intention LEGITIME (on retire un niveau perime), pas une
+    // absence de champ : `null` et `''` effacent, l'absence de cle ne touche a
+    // rien. C'est aussi pour ca que `hasSkillRating` teste la presence de la
+    // cle et non sa valeur.
+    let skillRatingChanged = false;
+    let newSkillRating: number | null = member.skill_rating ?? null;
+    if (hasSkillRating) {
+      const raw = req.body.skill_rating;
+      if (raw == null || (typeof raw === 'string' && raw.trim() === '')) {
+        newSkillRating = null;
+      } else {
+        // Le formulaire envoie une chaine ; l'API accepte les deux.
+        const parsed = typeof raw === 'string' ? Number(raw.trim()) : raw;
+        if (!isValidSkillRating(parsed)) {
+          return res.status(400).json({
+            error: `Le SR doit etre un entier entre ${SKILL_RATING_MIN} et ${SKILL_RATING_MAX}.`,
+            code: 'SKILL_RATING_INVALID',
+          });
+        }
+        newSkillRating = parsed;
+      }
+      if (newSkillRating !== (member.skill_rating ?? null)) {
+        updatePayload.skill_rating = newSkillRating;
+        skillRatingChanged = true;
       }
     }
 
@@ -225,6 +262,7 @@ export default withSubjectRoute(
         battle_tag: newBattleTag,
         is_substitute: newIsSubstitute,
         role: newRole,
+        skill_rating: newSkillRating,
         message: 'Aucune modification.',
       });
     }
@@ -270,6 +308,20 @@ export default withSubjectRoute(
           },
         });
       }
+      if (skillRatingChanged) {
+        await logStaffAction({
+          staff_id: staff.id,
+          action: 'update_player_skill_rating',
+          entity_type: 'team_member',
+          entity_id: memberId,
+          tenant_id: tenantId,
+          payload: {
+            team_id: access.teamId,
+            previous: member.skill_rating ?? null,
+            next: newSkillRating,
+          },
+        });
+      }
       if (substituteChanged) {
         await logStaffAction({
           staff_id: staff.id,
@@ -291,6 +343,7 @@ export default withSubjectRoute(
       battle_tag: newBattleTag,
       is_substitute: newIsSubstitute,
       role: newRole,
+      skill_rating: newSkillRating,
       message: 'Membre mis a jour.',
     });
   },

@@ -236,6 +236,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   leave_team: "Départ d'une équipe",
   send_team_message: "Message envoyé aux salons d'équipe",
   update_player_battle_tag: 'BattleTag joueur modifié',
+  update_player_skill_rating: 'Niveau Overwatch modifié',
   update_member_profile: 'Modification profil membre',
   update_profile: 'Modification profil',
   // Invitations

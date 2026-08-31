@@ -77,6 +77,7 @@ export type StaffLogAction =
   | 'leave_team'
   | 'send_team_message'
   | 'update_player_battle_tag'
+  | 'update_player_skill_rating'
   | 'update_member_profile'
   | 'update_profile'
   // --- Invitations ---
