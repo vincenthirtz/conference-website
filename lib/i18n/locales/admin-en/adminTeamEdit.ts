@@ -62,6 +62,9 @@ export default {
   discordRoleIdLabel: 'Discord role ID',
   discordRoleIdHelp:
     'Pinged automatically for match announcements (T-15min, results).',
+  skillRatingLabel: 'Team SR (overall rating)',
+  skillRatingHint:
+    'Between 0 and 5000. When set, it replaces the average of individual SRs; leave empty to let the average take over again.',
   websiteLabel: 'Website',
   saving: 'Saving...',
   save: 'Save',

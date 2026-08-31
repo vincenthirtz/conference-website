@@ -118,6 +118,9 @@ function AdminEditTeamPage({
   const [discordRoleId, setDiscordRoleId] = useState('');
   const [website, setWebsite] = useState('');
   const [isActive, setIsActive] = useState(true);
+  // SR d'ensemble déclaré : saisi en chaîne (champ de formulaire), '' = effacer
+  // la déclaration et rendre la main à la moyenne des fiches.
+  const [skillRating, setSkillRating] = useState('');
 
   // Member modals
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -194,6 +197,7 @@ function AdminEditTeamPage({
       setDiscord(row.discord || '');
       setDiscordRoleId(row.discord_role_id || '');
       setWebsite(row.website || '');
+      setSkillRating(row.skill_rating != null ? String(row.skill_rating) : '');
       setIsActive(row.is_active !== false);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? t.errUnexpected);
@@ -272,6 +276,10 @@ function AdminEditTeamPage({
         discord_role_id: discordRoleId.trim() || null,
         website: website || null,
         is_active: isActive,
+        // Chaîne vide = effacer, pas « ne rien changer » : c'est la seule façon
+        // de retirer une déclaration devenue fausse depuis l'écran staff.
+        // Converti ici plutôt qu'envoyé en chaîne — l'API revalide de son côté.
+        skill_rating: skillRating.trim() ? Number(skillRating.trim()) : null,
       };
 
       const json = await adminFetchJson<{ team: TeamRow }>(
@@ -1194,6 +1202,25 @@ function AdminEditTeamPage({
                           className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                           placeholder="https://..."
                         />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-neutral-400 mb-1">
+                          {t.skillRatingLabel}
+                        </label>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          max={5000}
+                          step={50}
+                          value={skillRating}
+                          onChange={(e) => setSkillRating(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          placeholder="3500"
+                        />
+                        <p className="mt-1 text-xs text-neutral-500">
+                          {t.skillRatingHint}
+                        </p>
                       </div>
                     </div>
 

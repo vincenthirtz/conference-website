@@ -61,6 +61,9 @@ export default adminNs('adminTeamEdit', {
   discordRoleIdLabel: 'ID rôle Discord',
   discordRoleIdHelp:
     'Pingé automatiquement lors des annonces de match (J-15min, résultats).',
+  skillRatingLabel: 'SR d’équipe (niveau d’ensemble)',
+  skillRatingHint:
+    'Entre 0 et 5000. Renseigné, il remplace la moyenne des SR individuels ; vide, la moyenne reprend la main.',
   websiteLabel: 'Site web',
   saving: 'Enregistrement...',
   save: 'Enregistrer',

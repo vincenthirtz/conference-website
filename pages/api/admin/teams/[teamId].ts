@@ -10,6 +10,11 @@ import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { emitBotEvent } from '@/utils/botEvents';
+import {
+  SKILL_RATING_MAX,
+  SKILL_RATING_MIN,
+  isValidSkillRating,
+} from '@/utils/overwatchRank';
 
 import { logger } from '../../../../utils/logger';
 export type TeamRow = {
@@ -29,6 +34,8 @@ export type TeamRow = {
   website: string | null;
   is_active: boolean;
   captain_id: string | null;
+  /** SR d'ensemble déclaré (0-5000, `null` = non déclaré). */
+  skill_rating: number | null;
   created_at: string;
   updated_at: string | null;
 };
@@ -171,6 +178,7 @@ async function handlePut(
     'website',
     'is_active',
     'captain_id',
+    'skill_rating',
   ];
 
   const updatePayload: Partial<TeamRow> = {};
@@ -219,6 +227,25 @@ async function handlePut(
         error:
           'slug doit contenir uniquement [a-z0-9-] (1 à 64 caractères, sans tirets en bord)',
       });
+    }
+  }
+
+  // skill_rating : SR d'ensemble déclaré. La boucle d'allowlist ci-dessus
+  // recopie `body[key]` TEL QUEL — un « 3500 » venu d'un champ de formulaire
+  // partirait donc en base sous forme de chaîne. On parse et on valide ici, et
+  // on réécrit la valeur coercée dans le payload.
+  if ('skill_rating' in updatePayload) {
+    const raw = updatePayload.skill_rating as unknown;
+    if (raw === null || (typeof raw === 'string' && raw.trim() === '')) {
+      updatePayload.skill_rating = null;
+    } else {
+      const parsed = typeof raw === 'string' ? Number(raw.trim()) : raw;
+      if (!isValidSkillRating(parsed)) {
+        return res.status(400).json({
+          error: `skill_rating doit être un entier entre ${SKILL_RATING_MIN} et ${SKILL_RATING_MAX}, ou null`,
+        });
+      }
+      updatePayload.skill_rating = parsed;
     }
   }
 

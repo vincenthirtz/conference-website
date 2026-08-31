@@ -314,6 +314,11 @@ export type TeamRow = {
   website: string | null;
   is_active: boolean;
   captain_id: string | null;
+  /**
+   * SR Overwatch d'ensemble DÉCLARÉ (0-5000, `null` = non déclaré). Court-
+   * circuite la moyenne des fiches individuelles — cf. `resolveTeamSkillRating`.
+   */
+  skill_rating: number | null;
   created_at: string;
   updated_at: string | null;
 };
