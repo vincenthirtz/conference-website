@@ -606,6 +606,11 @@ export default function PlayerManageTeamScreen() {
     }
   };
 
+  // BattleTags saisis a la volee pour les demandes qui n'en portent pas.
+  const [joinBattleTags, setJoinBattleTags] = useState<Record<string, string>>(
+    {}
+  );
+
   const handleJoinAction = async (
     demandeId: string,
     action: 'approve' | 'reject'
@@ -615,7 +620,13 @@ export default function PlayerManageTeamScreen() {
     try {
       await adminFetchJson(withTeam('/api/teams/join-requests'), {
         method: 'POST',
-        body: JSON.stringify({ demandeId, action }),
+        body: JSON.stringify({
+          demandeId,
+          action,
+          // Rattrapage : une demande deposee sans BattleTag creerait une fiche
+          // de roster vide. Envoye seulement quand la capitaine en a saisi un.
+          battleTag: joinBattleTags[demandeId]?.trim() || undefined,
+        }),
       });
       setJoinRequests((prev) => prev.filter((r) => r.id !== demandeId));
       if (action === 'approve') {
@@ -1441,6 +1452,37 @@ export default function PlayerManageTeamScreen() {
                             </div>
                           )}
                         </div>
+                        {canEdit && !btag && (
+                          <div className="w-full sm:w-64">
+                            <label
+                              htmlFor={`join-btag-${req.id}`}
+                              className="block text-[11px] uppercase tracking-[0.12em] text-amber-300/90 mb-1"
+                            >
+                              {t.joinMissingBattleTagLabel}
+                            </label>
+                            <input
+                              id={`join-btag-${req.id}`}
+                              type="text"
+                              value={joinBattleTags[req.id] || ''}
+                              onChange={(e) =>
+                                setJoinBattleTags((prev) => ({
+                                  ...prev,
+                                  [req.id]: e.target.value,
+                                }))
+                              }
+                              placeholder="Pseudo#1234"
+                              maxLength={64}
+                              aria-describedby={`join-btag-hint-${req.id}`}
+                              className="w-full rounded-lg border border-amber-400/30 bg-black/60 px-3 py-2 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-400/70"
+                            />
+                            <p
+                              id={`join-btag-hint-${req.id}`}
+                              className="mt-1 text-[11px] text-gray-400"
+                            >
+                              {t.joinMissingBattleTagHint}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     );
                   })}

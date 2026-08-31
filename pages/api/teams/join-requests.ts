@@ -19,6 +19,7 @@ import {
 } from '@/utils/teams/rosterLock';
 import { mapTeamRpcError } from '@/utils/teams/rpcErrors';
 import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
+import { resolveDemandeBattleTag } from '@/utils/teams/demandeBattleTag';
 
 import { logger } from '../../../utils/logger';
 export default withSubjectRoute(
@@ -164,7 +165,7 @@ async function handlePost(
   captainUserId: string,
   tenantId: string
 ) {
-  const { demandeId, action } = req.body || {};
+  const { demandeId, action, battleTag: battleTagOverride } = req.body || {};
 
   if (!demandeId || typeof demandeId !== 'string' || !isValidUUID(demandeId)) {
     return res.status(400).json({ error: 'demandeId invalide.' });
@@ -199,7 +200,6 @@ async function handlePost(
   if (action === 'approve') {
     // Determine role/battle_tag from payload (utilise pour la news + roster-lock).
     const desiredRole = validateRole((demande.payload as any)?.desired_role);
-    const battleTag = (demande.payload as any)?.user_battle_tag || null;
 
     // Roster lock : refuser l'ajout si un tournoi a verrouille le roster.
     // Garde alignee sur add-member (elle etait absente ici). L'admin peut
@@ -210,6 +210,25 @@ async function handlePost(
         .status(409)
         .json({ error: rosterLockErrorMessage(lockStatus) });
     }
+
+    // Le BattleTag AVANT la RPC : c'est le payload qu'elle lit pour remplir
+    // team_members.battle_tag. Une demande deposee sans tag (compte cree via
+    // Discord, ou demande anterieure au controle de /api/demandes/join) creait
+    // sinon une fiche vide. La capitaine peut le corriger dans le corps.
+    const tagResolution = await resolveDemandeBattleTag({
+      demandeId,
+      tenantId,
+      userId: demande.user_id ?? null,
+      role: desiredRole,
+      payload: (demande.payload as Record<string, unknown> | null) ?? null,
+      override: battleTagOverride,
+    });
+    if (!tagResolution.ok) {
+      return res
+        .status(tagResolution.status)
+        .json({ error: tagResolution.error, code: tagResolution.code });
+    }
+    const battleTag = tagResolution.battleTag;
 
     // Ajout atomique : verrou FOR UPDATE + CAS status pending->approved +
     // insert team_members + garde max_players (trigger). La RPC est la seule

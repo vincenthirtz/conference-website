@@ -368,7 +368,7 @@ describe('/api/teams/join-requests', () => {
         type: 'join',
         status: 'pending',
         user_id: 'new-player',
-        payload: { desired_role: 'player' },
+        payload: { desired_role: 'player', user_battle_tag: 'New#1234' },
       },
     ] as any;
     store.tournament_teams = [];
@@ -406,7 +406,7 @@ describe('/api/teams/join-requests', () => {
         type: 'join',
         status: 'pending',
         user_id: 'new-player',
-        payload: { desired_role: 'player' },
+        payload: { desired_role: 'player', user_battle_tag: 'New#1234' },
       },
     ] as any;
     store.tournament_teams = [];
@@ -424,6 +424,135 @@ describe('/api/teams/join-requests', () => {
       res
     );
     expect(res.statusCode).toBe(409);
+  });
+
+  // `approve_join_request` remplit team_members.battle_tag avec le SEUL
+  // payload : une demande sans tag creait une fiche vide (cas des comptes
+  // crees via Discord, qui n'ont jamais eu l'occasion d'en saisir un).
+  it('POST approve: 400 BATTLE_TAG_REQUIRED when nothing carries a tag', async () => {
+    setAuthUser({ id: 'user-1' });
+    store.teams = [
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
+        is_active: true,
+        name: 'Alpha',
+      },
+    ] as any;
+    store.demandes = [
+      {
+        id: VALID_UUID,
+        team_id: 'team-1',
+        type: 'join',
+        status: 'pending',
+        user_id: 'new-player',
+        payload: { desired_role: 'player' },
+      },
+    ] as any;
+    store.tournament_teams = [];
+
+    const res = makeRes();
+    await joinRequestsHandler(
+      makeReq(
+        { method: 'POST', body: { demandeId: VALID_UUID, action: 'approve' } },
+        true
+      ),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).code).toBe('BATTLE_TAG_REQUIRED');
+    expect(rpcCalls.find((c) => c.fn === 'approve_join_request')).toBeFalsy();
+  });
+
+  it('POST approve: captain-supplied battleTag is written into the payload', async () => {
+    setAuthUser({ id: 'user-1' });
+    store.teams = [
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
+        is_active: true,
+        name: 'Alpha',
+      },
+    ] as any;
+    store.demandes = [
+      {
+        id: VALID_UUID,
+        team_id: 'team-1',
+        type: 'join',
+        status: 'pending',
+        user_id: 'new-player',
+        payload: { desired_role: 'player' },
+      },
+    ] as any;
+    store.tournament_teams = [];
+    setRpcResult('approve_join_request', { data: {}, error: null });
+
+    const res = makeRes();
+    await joinRequestsHandler(
+      makeReq(
+        {
+          method: 'POST',
+          body: {
+            demandeId: VALID_UUID,
+            action: 'approve',
+            battleTag: 'Kezya#21287',
+          },
+        },
+        true
+      ),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    // La RPC ne lit que le payload : sans cette reecriture, la correction de
+    // la capitaine serait perdue.
+    const dem = (store.demandes as any).find((d: any) => d.id === VALID_UUID);
+    expect(dem.payload.user_battle_tag).toBe('Kezya#21287');
+    expect(rpcCalls.find((c) => c.fn === 'approve_join_request')).toBeTruthy();
+  });
+
+  it('POST approve: 400 BATTLE_TAG_INVALID on a malformed correction', async () => {
+    setAuthUser({ id: 'user-1' });
+    store.teams = [
+      {
+        id: 'team-1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
+        is_active: true,
+        name: 'Alpha',
+      },
+    ] as any;
+    store.demandes = [
+      {
+        id: VALID_UUID,
+        team_id: 'team-1',
+        type: 'join',
+        status: 'pending',
+        user_id: 'new-player',
+        payload: { desired_role: 'player' },
+      },
+    ] as any;
+    store.tournament_teams = [];
+
+    const res = makeRes();
+    await joinRequestsHandler(
+      makeReq(
+        {
+          method: 'POST',
+          body: {
+            demandeId: VALID_UUID,
+            action: 'approve',
+            battleTag: 'Kezya21287',
+          },
+        },
+        true
+      ),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).code).toBe('BATTLE_TAG_INVALID');
+    expect(rpcCalls.find((c) => c.fn === 'approve_join_request')).toBeFalsy();
   });
 
   it('POST reject: marks demande rejected, no member added', async () => {

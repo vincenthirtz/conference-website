@@ -72,6 +72,9 @@ export default adminNs('adminTeamsMy', {
   roleSubstitute: 'Remplacant',
   rolePlayer: 'Joueur',
   unknownPlayer: 'Joueur inconnu',
+  joinMissingBattleTagLabel: 'BattleTag de la joueuse',
+  joinMissingBattleTagHint:
+    "Elle ne l'a pas renseigné : saisis-le pour l'ajouter au roster, ou demande-lui de compléter son profil.",
   accept: 'Accepter',
   reject: 'Refuser',
   addMemberModalTitle: 'Ajouter un membre',

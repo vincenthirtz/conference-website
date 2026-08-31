@@ -127,6 +127,24 @@ export default function DiscordMemberRedirect() {
         }
 
         setStatus(t.statusRedirecting);
+
+        // Ce flux ne demande jamais de BattleTag — il ne pose que `role`
+        // ci-dessus. Une joueuse arrivee par Discord repart donc sans tag, et
+        // sa fiche de roster naitra vide (cf. utils/teams/demandeBattleTag.ts).
+        // On l'envoie le renseigner AVANT toute autre chose, sauf si elle vient
+        // pour l'espace staff — /admin ne s'appuie pas sur le BattleTag et
+        // detourner un membre du staff serait gratuit.
+        const linkedUser = (await supabaseClient.auth.getUser()).data.user;
+        const hasBattleTag = Boolean(
+          ((linkedUser?.user_metadata?.battle_tag as string) || '').trim()
+        );
+        if (!hasBattleTag && !next.startsWith('/admin')) {
+          router.replace(
+            `/player/profile?setup=battletag&next=${encodeURIComponent(next)}`
+          );
+          return;
+        }
+
         router.replace(next);
       } catch (e) {
         logger.error('[discord-member] error', e);

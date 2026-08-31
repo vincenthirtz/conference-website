@@ -77,6 +77,21 @@ function PlayerProfile() {
     }
   }, [user, editingInitialized, displayName]);
 
+  // Arrivee depuis la liaison Discord : ce flux ne demande jamais de BattleTag
+  // (pages/auth/discord-member.tsx ne pose que `role`), et sans lui la fiche de
+  // roster nait vide. On amene donc ici, champ en avant, plutot que de laisser
+  // la personne le decouvrir plus tard sous forme de « BattleTag manquant ».
+  const needsBattleTagSetup =
+    router.query.setup === 'battletag' &&
+    !((user?.user_metadata?.battle_tag as string) || '').trim();
+
+  useEffect(() => {
+    if (!needsBattleTagSetup || !editingInitialized) return;
+    const field = document.getElementById('player-battle-tag');
+    field?.scrollIntoView({ block: 'center' });
+    (field as HTMLInputElement | null)?.focus();
+  }, [needsBattleTagSetup, editingInitialized]);
+
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setProfileSaving(true);
@@ -395,6 +410,17 @@ function PlayerProfile() {
               </div>
             )}
 
+            {needsBattleTagSetup && (
+              <div className="mb-4 rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-3">
+                <p className="text-sm font-semibold text-amber-100">
+                  {t.setupBattleTagTitle}
+                </p>
+                <p className="mt-1 text-xs text-amber-100/80">
+                  {t.setupBattleTagBody}
+                </p>
+              </div>
+            )}
+
             <form onSubmit={handleProfileSave} className="space-y-4">
               <div>
                 <label
@@ -425,7 +451,11 @@ function PlayerProfile() {
                   type="text"
                   value={editBattleTag}
                   onChange={(e) => setEditBattleTag(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm font-mono placeholder:text-gray-500"
+                  className={`w-full px-3 py-2 rounded-lg bg-white/5 border focus:outline-none text-sm font-mono placeholder:text-gray-500 ${
+                    needsBattleTagSetup
+                      ? 'border-amber-400/60 ring-2 ring-amber-400/30 focus:border-amber-300'
+                      : 'border-white/10 focus:border-purple-500/50'
+                  }`}
                   placeholder={t.battleTagPlaceholder}
                 />
               </div>

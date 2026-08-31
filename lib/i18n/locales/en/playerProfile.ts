@@ -39,6 +39,9 @@ export default {
   displayNameLabel: 'Display name',
   displayNamePlaceholder: 'Your nickname',
   battleTagPlaceholder: 'Name#1234',
+  setupBattleTagTitle: 'Your BattleTag is missing',
+  setupBattleTagBody:
+    'Your Discord account is linked. Now add your BattleTag: it is what identifies you on your team roster and in game.',
   avatarLabel: 'Avatar (URL)',
   avatarPlaceholder: 'https://…',
   avatarHelp: 'Leave empty to remove the avatar.',

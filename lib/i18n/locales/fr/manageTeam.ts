@@ -112,6 +112,9 @@ export default ns('manageTeam', {
   scrimOpenOff: 'Ton équipe est masquée de la page scrims publique',
   verifiedBadge: 'vérifié',
   unverifiedBadge: 'non vérifié',
+  joinMissingBattleTagLabel: 'BattleTag de la joueuse',
+  joinMissingBattleTagHint:
+    "Elle ne l'a pas renseigné : saisis-le pour l'ajouter au roster, ou demande-lui de compléter son profil.",
   verifiedBadgeTitle: 'BattleTag vérifié via Battle.net',
   discordUnlinkedBadge: 'Discord non lié',
   discordUnlinkedBadgeTitle:

@@ -71,6 +71,9 @@ export default {
   roleSubstitute: 'Substitute',
   rolePlayer: 'Player',
   unknownPlayer: 'Unknown player',
+  joinMissingBattleTagLabel: "Player's BattleTag",
+  joinMissingBattleTagHint:
+    'She has not filled it in: enter it to add her to the roster, or ask her to complete her profile.',
   accept: 'Accept',
   reject: 'Reject',
   addMemberModalTitle: 'Add a member',

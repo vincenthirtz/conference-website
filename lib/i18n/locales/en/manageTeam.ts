@@ -107,6 +107,9 @@ export default {
   scrimOpenOff: 'Your team is now hidden from the public scrims page',
   verifiedBadge: 'verified',
   unverifiedBadge: 'unverified',
+  joinMissingBattleTagLabel: "Player's BattleTag",
+  joinMissingBattleTagHint:
+    'She has not filled it in: enter it to add her to the roster, or ask her to complete her profile.',
   verifiedBadgeTitle: 'BattleTag verified via Battle.net',
   discordUnlinkedBadge: 'Discord not linked',
   discordUnlinkedBadgeTitle:

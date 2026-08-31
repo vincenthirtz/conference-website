@@ -444,6 +444,13 @@ function MyTeamPage({ staff }: StaffProps) {
     }
   };
 
+  // BattleTags saisis a la volee pour les demandes qui n'en portent pas : sans
+  // eux l'approbation creerait une fiche de roster vide (cf.
+  // utils/teams/demandeBattleTag.ts).
+  const [joinBattleTags, setJoinBattleTags] = useState<Record<string, string>>(
+    {}
+  );
+
   // Handle approve/reject join request
   const handleJoinRequestAction = async (
     demandeId: string,
@@ -457,7 +464,11 @@ function MyTeamPage({ staff }: StaffProps) {
         ),
         {
           method: 'POST',
-          body: JSON.stringify({ demandeId, action }),
+          body: JSON.stringify({
+            demandeId,
+            action,
+            battleTag: joinBattleTags[demandeId]?.trim() || undefined,
+          }),
         }
       );
       const json = await res.json();
@@ -1425,6 +1436,38 @@ function MyTeamPage({ staff }: StaffProps) {
                                 </button>
                               </div>
                             </div>
+
+                            {!battleTag && (
+                              <div className="mt-3 sm:max-w-xs">
+                                <label
+                                  htmlFor={`admin-join-btag-${jr.id}`}
+                                  className="block text-[11px] uppercase tracking-[0.12em] text-amber-300/90 mb-1"
+                                >
+                                  {t.joinMissingBattleTagLabel}
+                                </label>
+                                <input
+                                  id={`admin-join-btag-${jr.id}`}
+                                  type="text"
+                                  value={joinBattleTags[jr.id] || ''}
+                                  onChange={(e) =>
+                                    setJoinBattleTags((prev) => ({
+                                      ...prev,
+                                      [jr.id]: e.target.value,
+                                    }))
+                                  }
+                                  placeholder="Pseudo#1234"
+                                  maxLength={64}
+                                  aria-describedby={`admin-join-btag-hint-${jr.id}`}
+                                  className="w-full rounded-lg border border-amber-400/30 bg-black/60 px-3 py-2 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-amber-400/70"
+                                />
+                                <p
+                                  id={`admin-join-btag-hint-${jr.id}`}
+                                  className="mt-1 text-[11px] text-neutral-400"
+                                >
+                                  {t.joinMissingBattleTagHint}
+                                </p>
+                              </div>
+                            )}
                           </div>
                         );
                       })}

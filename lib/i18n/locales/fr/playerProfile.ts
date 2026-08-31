@@ -38,6 +38,9 @@ export default ns('playerProfile', {
   displayNameLabel: 'Nom affiché',
   displayNamePlaceholder: 'Ton pseudo',
   battleTagPlaceholder: 'Pseudo#1234',
+  setupBattleTagTitle: 'Il te manque ton BattleTag',
+  setupBattleTagBody:
+    "Ton compte Discord est lié. Renseigne maintenant ton BattleTag : c'est lui qui t'identifie sur le roster de ton équipe et en jeu.",
   avatarLabel: 'Avatar (URL)',
   avatarPlaceholder: 'https://…',
   avatarHelp: "Laisse vide pour retirer l'avatar.",
