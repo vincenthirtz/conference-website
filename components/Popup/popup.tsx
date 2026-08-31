@@ -54,7 +54,7 @@ function Popup() {
                 <div className="flex items-center justify-between">
                   <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
                     <img
-                      src="/img/logos/2025-logo.png"
+                      src="/img/logos/2026-logo.png"
                       alt="conference logo"
                       className="w-[150px]"
                     />

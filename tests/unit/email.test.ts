@@ -313,7 +313,7 @@ describe('email templates use branded layout', () => {
     await sendWelcomeEmail('u@t.com', 'pass123');
     const html = JSON.parse(mockFetch.mock.calls[0][1].body).htmlContent;
 
-    expect(html).toContain('2025-logo.png');
+    expect(html).toContain('2026-logo.png');
     expect(html).toContain('linear-gradient');
     expect(html).toContain('Se connecter');
     expect(html).toContain('owwomenscup.fr');
@@ -336,7 +336,7 @@ describe('email templates use branded layout', () => {
     await sendAccountDeletedEmail('u@t.com');
     const html = JSON.parse(mockFetch.mock.calls[0][1].body).htmlContent;
 
-    expect(html).toContain('2025-logo.png');
+    expect(html).toContain('2026-logo.png');
     expect(html).toContain('supprim');
     expect(html).not.toContain('Se connecter');
   });
@@ -346,7 +346,7 @@ describe('email templates use branded layout', () => {
     await sendTestEmail('u@t.com');
     const html = JSON.parse(mockFetch.mock.calls[0][1].body).htmlContent;
 
-    expect(html).toContain('2025-logo.png');
+    expect(html).toContain('2026-logo.png');
     expect(html).toContain('Brevo fonctionne');
   });
 });

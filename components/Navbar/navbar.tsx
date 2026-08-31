@@ -14,7 +14,7 @@ import { useT } from '@/lib/i18n/useT';
 import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
 import nsNavbar from '@/lib/i18n/locales/fr/navbar';
 
-const DEFAULT_LOGO_SRC = '/img/logos/2025-logo.png';
+const DEFAULT_LOGO_SRC = '/img/logos/2026-logo.png';
 
 const AdminTopBar = dynamic(() => import('./AdminTopBar'), { ssr: false });
 const PlayerTopBar = dynamic(() => import('./PlayerTopBar'), { ssr: false });

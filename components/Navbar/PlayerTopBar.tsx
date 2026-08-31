@@ -200,7 +200,7 @@ export default function PlayerTopBar({
           aria-label={t.homeAria}
         >
           <Image
-            src={branding?.logoUrl ?? '/img/logos/2025-logo.png'}
+            src={branding?.logoUrl ?? '/img/logos/2026-logo.png'}
             alt={branding?.name ? `${branding.name} logo` : 'conference logo'}
             width={150}
             height={38}

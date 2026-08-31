@@ -405,7 +405,7 @@ export async function resolveTenantIdForUserRequestAsync(
  * WHITELABEL — custom-domain resolution + per-tenant branding (S8)
  * ===========================================================================
  *
- * Le site est mono-tenant "par défaut" : logo `/img/logos/2025-logo.png`, nom
+ * Le site est mono-tenant "par défaut" : logo `/img/logos/2026-logo.png`, nom
  * "OW Women's Cup", tokens `:root` statiques. Le whitelabel est une couche
  * d'OVERRIDE : quand une requête arrive sur un `custom_domain` connu, on lit
  * le branding du tenant (logo, couleurs, nom) et on l'injecte au SSR (cf.

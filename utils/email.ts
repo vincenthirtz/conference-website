@@ -109,7 +109,7 @@ export async function sendEmail(
 // ─── Email layout ─────────────────────────────────────────────
 
 const SITE_URL = 'https://owwomenscup.fr';
-const LOGO_URL = `${SITE_URL}/img/logos/2025-logo.png`;
+const LOGO_URL = `${SITE_URL}/img/logos/2026-logo.png`;
 const DISCORD_URL = 'https://discord.gg/gERSsjC3Vd';
 
 function emailLayout(body: string): string {

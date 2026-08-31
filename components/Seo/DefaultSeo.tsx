@@ -51,10 +51,10 @@ const CANONICAL_URL = 'https://owwomenscup.fr';
 const BASE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || CANONICAL_URL;
 // `summary_large_image` (Twitter) / og:image expect a landscape ~1.91:1 image.
-// The square 2025-logo (300×300) renders badly when used as the large card
-// preview. `fourplayers.jpg` (1280×853) is the widest landscape asset shipped
-// under public/img/ and is a much better default share preview. The square
-// logo is still used for the JSON-LD Organization `logo` field below.
+// The square logo (2026-logo, 500×500) renders badly when used as the large
+// card preview. `fourplayers.jpg` (1280×853) is the widest landscape asset
+// shipped under public/img/ and is a much better default share preview. The
+// square logo is still used for the JSON-LD Organization `logo` field below.
 const DEFAULT_IMAGE = '/img/fourplayers.jpg';
 const DEFAULT_IMAGE_WIDTH = '1280';
 const DEFAULT_IMAGE_HEIGHT = '853';
@@ -65,7 +65,7 @@ const organizationSchema = {
   '@type': 'Organization',
   name: SITE_NAME,
   url: CANONICAL_URL,
-  logo: `${CANONICAL_URL}/img/logos/2025-logo.png`,
+  logo: `${CANONICAL_URL}/img/logos/2026-logo.png`,
   description: DEFAULT_DESCRIPTION,
   foundingDate: '2025',
   foundingLocation: {

@@ -168,7 +168,7 @@ export default function NewsSlugPage({
   const metaDescription = excerpt || `Actualité ${SITE_NAME} : ${title}`;
   const canonical = slug && BASE_URL ? `${BASE_URL}/news/${slug}` : undefined;
   const ogImage =
-    toAbsoluteUrl(imageUrl) || toAbsoluteUrl('/img/logos/2025-logo.png');
+    toAbsoluteUrl(imageUrl) || toAbsoluteUrl('/img/logos/2026-logo.png');
   const articlePublishedTime = publishedAt || createdAt || undefined;
   const articleModifiedTime = updatedAt || undefined;
 
@@ -192,7 +192,7 @@ export default function NewsSlugPage({
           name: SITE_NAME,
           logo: {
             '@type': 'ImageObject',
-            url: `${BASE_URL || 'https://owwomenscup.fr'}/img/logos/2025-logo.png`,
+            url: `${BASE_URL || 'https://owwomenscup.fr'}/img/logos/2026-logo.png`,
           },
         },
         mainEntityOfPage: canonical,
