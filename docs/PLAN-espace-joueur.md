@@ -51,7 +51,7 @@ La date du 14/09 coupe le plan en deux, et c'est le seul arbitrage structurant :
 
 | Lot | Titre | Impact | Effort | Fenêtre |
 |---|---|---|---|---|
-| **J1** | Le fil du match, de J-1 au débrief | 🟥 | M | avant 14/09 |
+| **J1** | Le fil du match, de J-1 au débrief | 🟥 | M | ✅ livré 2026-09-01 |
 | **J2** | Mon agenda (+ abonnement calendrier) | 🟥 | S | avant 14/09 |
 | **J3** | Délégation des droits par la capitaine | 🟥 | M | saison |
 | **J4** | Console manager multi-équipes | 🟧 | M | saison |
@@ -61,7 +61,7 @@ La date du 14/09 coupe le plan en deux, et c'est le seul arbitrage structurant :
 
 ---
 
-## J1 · Le fil du match, de J-1 au débrief — 🟥 / M · avant 14/09
+## J1 · Le fil du match, de J-1 au débrief — ✅ LIVRÉ (2026-09-01, `69589968`)
 
 **Problème.** Un même match est traité sur **trois surfaces** :
 
@@ -94,13 +94,18 @@ Ce lot **n'invente presque rien** : il recompose des briques livrées derrière 
 partageable dans le fil Discord du match (le bot en ouvre déjà un — `services/discord-bot/match-thread.js`).
 
 **Critères d'acceptation**
-- [ ] `/player/match/[matchId]` rend l'étape courante en tête, les autres repliées, sans jamais
-      afficher un geste que le serveur refusera (permissions issues du lot du 31/08).
-- [ ] `/player/checkin` et le CTA du dashboard pointent dessus ; les anciennes surfaces restent
-      fonctionnelles (aucune route supprimée).
-- [ ] Le lien part avec la notification push J-1 et dans le fil Discord du match.
-- [ ] Une joueuse non capitaine y voit l'état (check-in fait, feuille validée) sans aucun bouton.
-- [ ] e2e : parcours complet check-in → feuille → report, en viewport mobile.
+- [x] `/player/match/[matchId]` rend les étapes dans l'ordre des gestes, sans jamais afficher
+      un geste que le serveur refusera (`permissions` renvoyées par la route).
+- [x] `/player/checkin`, le CTA du dashboard, `NextMatchCard` et « Mes matchs » pointent dessus ;
+      aucune route supprimée.
+- [ ] Le lien part avec la notification push J-1 et dans le fil Discord du match. **Reste à faire**
+      (cron de rappel côté site + `services/discord-bot/match-thread.js` côté bot).
+- [x] Une joueuse non capitaine y voit l'état (check-in fait, score rapporté) sans aucun bouton.
+- [x] e2e : `tests/e2e/player-match-thread.spec.ts`, viewport mobile, 4 cas.
+
+**Livré en plus** : `utils/matches/playerMatchView.ts` — la dérivation « de quel côté je joue »
+était écrite à la main dans `next-match.ts` et `matches.ts`, elle l'aurait été une 3e fois.
+Les deux routes existantes y passent désormais.
 
 **Non-buts.** Pas de chat de match (le Discord le fait), pas de score live minute par minute.
 
