@@ -12,7 +12,12 @@ import { resolveMembership } from '@/utils/teams/memberships';
 import { readRequestedTeamId } from '@/utils/teams/teamScope';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withSubjectRoute } from '@/utils/subject';
-import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
+import {
+  PLAYER_MATCH_SELECT,
+  buildCheckin,
+  inferBestOf,
+  resolvePlayerSide,
+} from '@/utils/matches/playerMatchView';
 
 import { logger } from '../../../utils/logger';
 export type NextMatchPayload =
@@ -95,17 +100,7 @@ export default withSubjectRoute(async function handler(
 
   const { data: matches, error } = await supabaseAdmin
     .from('matches')
-    .select(
-      `
-      id, status, scheduled_at, match_format, round_name, stream_url,
-      team1_id, team2_id,
-      team1_checkin_token, team2_checkin_token,
-      team1_checked_in_at, team2_checked_in_at,
-      team1:team1_id(id, name),
-      team2:team2_id(id, name),
-      tournament:tournament_id(id, name, slug)
-      `
-    )
+    .select(PLAYER_MATCH_SELECT)
     .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
     .eq('tenant_id', tenantId)
     .in('status', ['pending', 'ongoing'])
@@ -129,48 +124,12 @@ export default withSubjectRoute(async function handler(
     });
   }
 
-  const isTeam1 = match.team1_id === teamId;
-  const slot: 1 | 2 = isTeam1 ? 1 : 2;
-  const team = (Array.isArray(match.team1) ? match.team1[0] : match.team1) as {
-    id: string;
-    name: string;
-  } | null;
-  const opp = (Array.isArray(match.team2) ? match.team2[0] : match.team2) as {
-    id: string;
-    name: string;
-  } | null;
-  const myTeam = isTeam1 ? team : opp;
-  const opponent = isTeam1 ? opp : team;
-  const tn = (
-    Array.isArray(match.tournament) ? match.tournament[0] : match.tournament
-  ) as { id: string; name: string; slug: string | null } | null;
-
-  const token = isTeam1 ? match.team1_checkin_token : match.team2_checkin_token;
-  const checkedInAt = isTeam1
-    ? match.team1_checked_in_at
-    : match.team2_checked_in_at;
-
+  // Côté joué, adversaire, check-in : dérivations partagées avec
+  // /api/player/matches et /api/player/matches/[matchId] (helper unique).
+  const side = resolvePlayerSide(match as Record<string, unknown>, teamId);
+  const checkin = buildCheckin(match as Record<string, unknown>, side.isTeam1);
   const scheduledAt = match.scheduled_at as string | null;
-  const opensAt = scheduledAt
-    ? new Date(
-        new Date(scheduledAt).getTime() - CHECKIN_OPEN_MINUTES * 60_000
-      ).toISOString()
-    : null;
-  const closesAt = scheduledAt;
-
-  const now = Date.now();
-  const isOpen =
-    !!opensAt &&
-    !!closesAt &&
-    now >= new Date(opensAt).getTime() &&
-    now <= new Date(closesAt).getTime();
-  const isPassed = !!closesAt && now > new Date(closesAt).getTime();
-
-  // Match-format BO inference (best-of); fallback to null when unknown.
   const formatStr = (match.match_format as string | null) ?? null;
-  const bestOf = formatStr
-    ? Number.parseInt(formatStr.replace(/[^\d]/g, ''), 10) || null
-    : null;
 
   res.setHeader('Cache-Control', 'private, max-age=15');
   return res.status(200).json({
@@ -181,19 +140,15 @@ export default withSubjectRoute(async function handler(
       format: formatStr,
       roundName: (match.round_name as string | null) ?? null,
       streamUrl: (match.stream_url as string | null) ?? null,
-      bestOf,
+      bestOf: inferBestOf(formatStr),
     },
-    team: myTeam ? { id: myTeam.id, name: myTeam.name, slot } : null,
-    opponent: opponent ? { id: opponent.id, name: opponent.name } : null,
-    tournament: tn,
-    checkin: {
-      token: (token as string | null) ?? null,
-      alreadyCheckedIn: !!checkedInAt,
-      checkedInAt: (checkedInAt as string | null) ?? null,
-      opensAt,
-      closesAt,
-      isOpen,
-      isPassed,
-    },
+    team: side.myTeam
+      ? { id: side.myTeam.id, name: side.myTeam.name, slot: side.slot }
+      : null,
+    opponent: side.opponent
+      ? { id: side.opponent.id, name: side.opponent.name }
+      : null,
+    tournament: side.tournament,
+    checkin,
   });
 });

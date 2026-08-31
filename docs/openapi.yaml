@@ -30261,6 +30261,49 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/ServerError'
+  /api/player/matches/{matchId}:
+    get:
+      tags:
+        - public/auth
+      summary: Le fil d'un match, vu par une joueuse de l'une des deux equipes.
+      description: |
+        Donnee du « fil du match » de l'espace joueur (docs/PLAN-espace-joueur.md
+        lot J1) : une seule rencontre, de la preparation au report du score.
+
+        Acces : appartenir a l'une des deux equipes (membre `team_members` ou
+        capitaine via `teams.captain_id`). Un tiers recoit **404** et non 403 —
+        « ce match ne te regarde pas » n'a pas a confirmer qu'il existe.
+
+        La reponse porte `permissions`, calculees avec les MEMES regles que les
+        routes d'ecriture : `validateLineup` = permission d'equipe
+        `validate_lineup`, `reportScore` = `teams.captain_id` au sens strict
+        (miroir de `/api/player/matches/{matchId}/report-score`). L'ecran s'y fie
+        pour n'afficher que des gestes qui aboutiront.
+
+        Inspectable par le staff via `?as=` (lecture seule, cf. SubjectAs).
+      operationId: getPlayerMatchDetail
+      security:
+        - PlayerBearer: []
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/SubjectAs'
+      responses:
+        '200':
+          description: Le match, du point de vue de l'equipe de l'appelant.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/player/matches/{matchId}/report-score:
     post:
       tags:

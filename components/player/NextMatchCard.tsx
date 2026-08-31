@@ -194,7 +194,9 @@ export default function NextMatchCard({
   const relative = formatRelative(scheduled, now, t);
   const isLive = data.match.status === 'ongoing';
   const checkin = data.checkin;
-  const matchHref = `/match/${data.match.id}`;
+  // Le fil du match (J1) : une seule URL qui porte le check-in, la feuille et
+  // le report. La fiche publique /match/[id] reste accessible depuis là.
+  const matchHref = `/player/match/${data.match.id}`;
 
   return (
     <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-purple-500/10 via-white/[0.03] to-cyan-500/10 backdrop-blur-xl p-6">
@@ -283,7 +285,7 @@ export default function NextMatchCard({
           </span>
         ) : checkin?.token && checkin.isOpen ? (
           <Link
-            href="/player/checkin"
+            href={matchHref}
             className="inline-flex items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow transition hover:-translate-y-0.5 hover:shadow-lg"
           >
             {t.checkinNow}
@@ -291,7 +293,7 @@ export default function NextMatchCard({
           </Link>
         ) : checkin?.token && checkin.opensAt ? (
           <Link
-            href="/player/checkin"
+            href={matchHref}
             className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-300 transition hover:bg-white/10"
           >
             {t.checkin} {formatRelative(checkin.opensAt, now, t) ?? t.soon}

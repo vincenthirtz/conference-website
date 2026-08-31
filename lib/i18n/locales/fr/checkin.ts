@@ -44,4 +44,5 @@ export default ns('checkin', {
   successToast: 'Présence confirmée ! Tu es bien check-in pour ce match.',
   alreadyToast: 'Tu étais déjà check-in pour ce match.',
   confirmedHeading: 'Présence confirmée ✓',
+  openMatchThread: 'Voir tout le déroulé de ce match →',
 });

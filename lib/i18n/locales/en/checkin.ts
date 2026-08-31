@@ -44,4 +44,5 @@ export default {
   successToast: "Attendance confirmed! You're checked in for this match.",
   alreadyToast: 'You were already checked in for this match.',
   confirmedHeading: 'Attendance confirmed ✓',
+  openMatchThread: 'See the full run of this match →',
 };

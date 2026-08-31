@@ -274,7 +274,9 @@ function MatchReadinessCard({
   const hasWarning = shortfall > 0;
 
   const checkin = nextMatch.checkin;
-  const matchHref = `/match/${nextMatch.match.id}`;
+  // Fil du match (J1) plutôt que la fiche publique : d'ici, le geste attendu
+  // est de préparer SON match, pas de le consulter.
+  const matchHref = `/player/match/${nextMatch.match.id}`;
 
   let checkinStatus: string;
   if (checkin?.alreadyCheckedIn) checkinStatus = t.readinessCheckinDone;
@@ -318,7 +320,7 @@ function MatchReadinessCard({
 
         {needsCheckin && checkin?.token && checkin.isOpen ? (
           <Link
-            href="/player/checkin"
+            href={matchHref}
             className="ml-auto inline-flex items-center gap-1 rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-neutral-900 transition hover:-translate-y-0.5"
           >
             {t.readinessCheckinAction}

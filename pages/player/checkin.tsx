@@ -241,6 +241,19 @@ function PlayerCheckin() {
             {checkin?.alreadyCheckedIn && match?.id && (
               <MatchLineupCard matchId={match.id} />
             )}
+
+            {/* Le fil du match (J1) porte désormais TOUT le déroulé — check-in
+                compris. Cette page reste le chemin court « je viens juste
+                pointer » (et la cible des liens déjà envoyés) ; on y ouvre la
+                porte vers le reste plutôt que de la fermer. */}
+            {match?.id && (
+              <Link
+                href={`/player/match/${encodeURIComponent(match.id)}`}
+                className="inline-flex items-center gap-1 text-sm text-purple-300 transition hover:text-purple-200"
+              >
+                {t.openMatchThread}
+              </Link>
+            )}
           </div>
         ) : null}
       </main>

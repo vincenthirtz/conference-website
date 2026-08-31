@@ -3403,6 +3403,24 @@ protège le flux contre le CSRF/replay.
 
 ---
 
+### Fil du match (espace joueur)
+
+Route **web** (pas bot), ajoutée avec le lot J1 de
+[PLAN-espace-joueur.md](./PLAN-espace-joueur.md) : une seule rencontre, de la
+préparation au report du score, derrière une URL partageable
+(`/player/match/[matchId]`). Elle recompose des briques déjà livrées — check-in
+public à jeton, feuille de match, self-report — au lieu de les éparpiller sur
+trois écrans.
+
+| Route                                                                                            | Methods | Auth                              | Notes                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------------------------------------------------------------------------------ | ------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`pages/api/player/matches/[matchId].ts`](../pages/api/player/matches/[matchId].ts)               | GET     | Bearer joueur (`withSubjectRoute`) | `200 { match, team{slot}, opponent, tournament, checkin, readiness, score, result, report{state,mine}, permissions }`. Accès = appartenir à l'une des deux équipes (membre ou `teams.captain_id`) ; sinon **404** (jamais 403 : on ne confirme pas l'existence d'un match qui ne vous regarde pas). `permissions.validateLineup` = permission d'équipe `validate_lineup` ; `permissions.reportScore` = `teams.captain_id` strict, miroir de `report-score`. Inspectable `?as=`. Rate-limit **60 / min**. |
+
+Les dérivations « de quel côté je joue / mon jeton de check-in / mon score »
+sont partagées avec `/api/player/next-match` et `/api/player/matches` via
+[`utils/matches/playerMatchView.ts`](../utils/matches/playerMatchView.ts) — trois
+routes, une seule règle.
+
 ## Where it lives
 
 - **Middleware** — [`utils/botAuth.ts`](../utils/botAuth.ts) (`withBotRoute`,

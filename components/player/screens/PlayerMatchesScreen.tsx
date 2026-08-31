@@ -191,8 +191,10 @@ function MatchCard({
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
+        {/* Le fil du match (J1) : check-in, feuille et report au même endroit.
+            La fiche publique reste atteignable depuis le fil. */}
         <Link
-          href={`/match/${match.id}`}
+          href={`/player/match/${match.id}`}
           className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
         >
           {t.viewMatch}
@@ -231,7 +233,7 @@ function MatchCard({
 
         {upcoming && checkin?.isOpen && !checkin.alreadyCheckedIn && (
           <Link
-            href="/player/checkin"
+            href={`/player/match/${match.id}`}
             className="inline-flex items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow transition hover:-translate-y-0.5 hover:shadow-lg"
           >
             {t.checkin}
