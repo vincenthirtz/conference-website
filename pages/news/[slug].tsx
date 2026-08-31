@@ -168,7 +168,7 @@ export default function NewsSlugPage({
   const metaDescription = excerpt || `Actualité ${SITE_NAME} : ${title}`;
   const canonical = slug && BASE_URL ? `${BASE_URL}/news/${slug}` : undefined;
   const ogImage =
-    toAbsoluteUrl(imageUrl) || toAbsoluteUrl('/img/logos/2026-logo.png');
+    toAbsoluteUrl(imageUrl) || toAbsoluteUrl('/img/og-cover.png');
   const articlePublishedTime = publishedAt || createdAt || undefined;
   const articleModifiedTime = updatedAt || undefined;
 
