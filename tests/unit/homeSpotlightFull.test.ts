@@ -16,10 +16,13 @@ import { renderToString } from 'react-dom/server';
 import HomeSpotlight from '@/components/Home/HomeSpotlight';
 import type { UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
 import type { TwitchLive } from '@/components/Home/useTwitchLive';
+import type { HomeTeam } from '@/utils/home/loadHomeData';
 
 const live: TwitchLive = { live: false, parent: null, channel: 'womens_cup' };
 
-function tournament(over: Partial<UpcomingTournament> = {}): UpcomingTournament {
+function tournament(
+  over: Partial<UpcomingTournament> = {}
+): UpcomingTournament {
   return {
     id: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b',
     name: "OW WOMEN's CUP 2026",
@@ -35,9 +38,17 @@ function tournament(over: Partial<UpcomingTournament> = {}): UpcomingTournament 
   };
 }
 
-function render(t: UpcomingTournament | null): string {
+function render(
+  t: UpcomingTournament | null,
+  teams: HomeTeam[] = []
+): string {
   return renderToString(
-    createElement(HomeSpotlight, { tournament: t, prizeCents: null, live })
+    createElement(HomeSpotlight, {
+      tournament: t,
+      prizeCents: null,
+      live,
+      teams,
+    })
   );
 }
 
@@ -98,5 +109,55 @@ describe('HomeSpotlight — tournoi complet', () => {
     expect(html).toContain('En cours');
     expect(html).not.toContain('Proposer un scrim');
     expect(html).not.toContain('Inscrire mon équipe');
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * Fusion avec la bande des équipes
+ *
+ * « Le prochain rendez-vous » et « elles participent » vivaient dans deux
+ * sections successives, qui disaient la même chose à deux endroits. Elles ne
+ * font plus qu'une carte : ces tests fixent que le pied en fait bien partie, et
+ * qu'il s'efface quand il n'a rien à montrer.
+ * ------------------------------------------------------------------------- */
+
+describe('HomeSpotlight — pied « équipes engagées »', () => {
+  const teams: HomeTeam[] = [
+    {
+      id: 'id-1',
+      name: 'Chocomates',
+      shortName: 'Choco',
+      slug: 'chocomates',
+      logoUrl: null,
+    },
+    {
+      id: 'id-2',
+      name: 'Eclypse',
+      shortName: 'LGE',
+      slug: 'eclypse',
+      logoUrl: null,
+    },
+  ];
+
+  it('rend les équipes DANS la carte du rendez-vous', () => {
+    const html = render(tournament(), teams);
+    // Un seul rendu porte les deux : le titre de la section et les liens
+    // d'équipe. C'est tout l'objet de la fusion.
+    expect(html).toContain('Le prochain rendez-vous');
+    expect(html).toContain('href="/team/chocomates"');
+    expect(html).toContain('href="/team/eclypse"');
+  });
+
+  it('annonce le nombre d’équipes engagées', () => {
+    const html = render(tournament(), teams);
+    expect(html).toContain('2');
+    expect(html).toContain('Elles participent');
+  });
+
+  it('s’efface quand aucune équipe n’est engagée, sans vider la carte', () => {
+    const html = render(tournament(), []);
+    expect(html).not.toContain('Elles participent');
+    // La carte, elle, reste : le rendez-vous existe même sans engagée.
+    expect(html).toContain('Le prochain rendez-vous');
   });
 });

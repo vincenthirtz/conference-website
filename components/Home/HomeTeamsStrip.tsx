@@ -1,7 +1,13 @@
 /* eslint-disable @next/next/no-img-element */
 // components/Home/HomeTeamsStrip.tsx
 //
-// La bande des équipes engagées, sur la page d'accueil.
+// La bande des équipes engagées — le PIED de la carte « prochain rendez-vous »
+// (HomeSpotlight), pas une section autonome.
+//
+// Fusionnée avec la carte de l'événement plutôt que posée en dessous : les
+// deux disaient la même chose à deux endroits — « voici la compétition » puis
+// « voici qui y court ». Séparées, elles se répétaient et diluaient l'une
+// l'autre ; réunies, l'affiche est complète d'un seul regard.
 //
 // PARTI PRIS GRAPHIQUE — ce que ce n'est PAS, et pourquoi :
 //
@@ -64,11 +70,11 @@ function TeamMedallion({ team }: { team: HomeTeam }): JSX.Element {
       href={teamHref(team)}
       // Le nom de l'équipe est DANS le lien : pas d'aria-label à ajouter, il
       // ferait doublon avec le texte visible.
-      className="group flex w-24 shrink-0 snap-center flex-col items-center gap-2 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] sm:w-28"
+      className="group flex w-20 shrink-0 snap-center flex-col items-center gap-2 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] sm:w-24"
       title={team.name}
     >
       <span
-        className="relative flex h-20 w-20 items-center justify-center rounded-full p-[2px] transition-transform duration-300 group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transform-none sm:h-24 sm:w-24"
+        className="relative flex h-16 w-16 items-center justify-center rounded-full p-[2px] transition-transform duration-300 group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transform-none sm:h-20 sm:w-20"
         aria-hidden="true"
       >
         {/* L'anneau dégradé : invisible au repos, il s'allume au survol et au
@@ -110,37 +116,30 @@ export default function HomeTeamsStrip({
   if (!teams.length) return null;
 
   return (
-    <section className="container mx-auto mt-16 px-4 md:mt-20 md:px-0">
-      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent py-8">
-        {/* Filet dégradé en tête de carte : la signature de marque, en une
-            ligne de 2px plutôt qu'un aplat qui écraserait les logos. */}
-        <span
-          aria-hidden
-          className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-[var(--color-violet)] to-transparent"
-        />
-
-        <div className="mb-6 flex flex-col items-center gap-1 px-6 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
-            {format(t.teamsStripEyebrow, { count: teams.length })}
-          </p>
-          <h2 className="text-balance text-xl font-extrabold tracking-tight text-white md:text-2xl">
-            {t.teamsStripTitle}
-          </h2>
-        </div>
-
-        {/* Défilement horizontal sous le seuil où tout tient : le fondu des
-            bords dit que la ligne continue. `snap` pour que le doigt s'arrête
-            sur une équipe et non entre deux. */}
-        <div className="[mask-image:linear-gradient(to_right,transparent,black_5%,black_95%,transparent)]">
-          <ul className="flex snap-x snap-mandatory list-none justify-start gap-4 overflow-x-auto px-6 pb-2 sm:gap-6 lg:flex-wrap lg:justify-center lg:overflow-visible">
-            {teams.map((team) => (
-              <li key={team.id}>
-                <TeamMedallion team={team} />
-              </li>
-            ))}
-          </ul>
-        </div>
+    // `md:col-span-2` : la bande traverse les deux colonnes de la carte (infos
+    // à gauche, Twitch à droite) au lieu de se ranger dans l'une d'elles.
+    <div className="border-t border-white/10 bg-black/20 py-6 md:col-span-2">
+      <div className="mb-5 flex flex-col items-center gap-0.5 px-6 text-center">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
+          {format(t.teamsStripEyebrow, { count: teams.length })}
+        </p>
+        <p className="text-balance text-sm font-semibold text-gray-200 md:text-base">
+          {t.teamsStripTitle}
+        </p>
       </div>
-    </section>
+
+      {/* Défilement horizontal sous le seuil où tout tient : le fondu des
+          bords dit que la ligne continue. `snap` pour que le doigt s'arrête
+          sur une équipe et non entre deux. */}
+      <div className="[mask-image:linear-gradient(to_right,transparent,black_5%,black_95%,transparent)]">
+        <ul className="flex snap-x snap-mandatory list-none justify-start gap-4 overflow-x-auto px-6 pb-2 sm:gap-6 lg:flex-wrap lg:justify-center lg:overflow-visible">
+          {teams.map((team) => (
+            <li key={team.id}>
+              <TeamMedallion team={team} />
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
   );
 }

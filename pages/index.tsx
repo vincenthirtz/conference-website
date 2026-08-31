@@ -25,7 +25,6 @@ import { useTwitchLive } from '@/components/Home/useTwitchLive';
 import HomeTopAnnounce from '@/components/Home/HomeTopAnnounce';
 import HomeHeroV2 from '@/components/Home/HomeHeroV2';
 import HomeSpotlight from '@/components/Home/HomeSpotlight';
-import HomeTeamsStrip from '@/components/Home/HomeTeamsStrip';
 import HomeSteps from '@/components/Home/HomeSteps';
 import HomeNewsV2 from '@/components/Home/HomeNewsV2';
 import HomeSupportStrip from '@/components/Home/HomeSupportStrip';
@@ -114,12 +113,8 @@ function Home({
         tournament={upcomingTournament}
         prizeCents={prizeCents}
         live={live}
+        teams={teams}
       />
-
-      {/* Les engagées, juste après la carte de l'événement : on annonce le
-          rendez-vous, puis on montre qui y court. Avant « participer en 3
-          étapes », qui s'adresse à celles qui ne sont pas encore dedans. */}
-      <HomeTeamsStrip teams={teams} />
 
       <HomeSteps />
 

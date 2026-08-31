@@ -10,6 +10,8 @@ import type { JSX } from 'react';
 import Link from 'next/link';
 import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
 import { type TwitchLive } from '@/components/Home/useTwitchLive';
+import HomeTeamsStrip from '@/components/Home/HomeTeamsStrip';
+import { type HomeTeam } from '@/utils/home/loadHomeData';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
@@ -18,6 +20,13 @@ type HomeSpotlightProps = {
   tournament: UpcomingTournament | null;
   prizeCents: number | null;
   live: TwitchLive;
+  /**
+   * Équipes engagées, rendues en pied de carte. Elles vivaient dans une
+   * section à part, juste en dessous : les deux disaient la même chose à deux
+   * endroits — « voici la compétition », puis « voici qui y court ». Réunies,
+   * l'affiche est complète d'un seul regard.
+   */
+  teams: HomeTeam[];
 };
 
 function formatRange(start: string | null, end: string | null, locale: string) {
@@ -130,6 +139,7 @@ export default function HomeSpotlight({
   tournament,
   prizeCents,
   live,
+  teams,
 }: HomeSpotlightProps): JSX.Element | null {
   const t = useT(nsHomeV2);
   const locale = useLocale();
@@ -314,6 +324,10 @@ export default function HomeSpotlight({
         <aside className="flex flex-col justify-center gap-3 border-t border-white/10 bg-black/20 p-6 md:border-l md:border-t-0 md:p-7">
           <TwitchPanel live={live} />
         </aside>
+
+        {/* Pied de carte, sur toute la largeur : qui court. Ne rend rien tant
+            qu'aucune équipe n'est engagée. */}
+        <HomeTeamsStrip teams={teams} />
       </div>
     </section>
   );
