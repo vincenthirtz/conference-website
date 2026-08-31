@@ -25,6 +25,7 @@ export default {
   emailLabel: 'User email',
   userIdLabel: 'Or User ID',
   battleTagFormat: 'Format: Name#0000',
+  skillRatingLabel: 'Overwatch skill rating (SR) — optional',
   roleLabel: 'Role in the team',
   statusLabel: 'Status',
   captain: 'Captain',

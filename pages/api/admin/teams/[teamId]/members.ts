@@ -159,8 +159,16 @@ async function handler(
 
   // POST - Ajouter un membre
   if (req.method === 'POST') {
-    const { userId, email, role, battleTag, setCaptain, isSubstitute, force } =
-      req.body || {};
+    const {
+      userId,
+      email,
+      role,
+      battleTag,
+      skillRating,
+      setCaptain,
+      isSubstitute,
+      force,
+    } = req.body || {};
 
     // Garde roster lock : refus si l'equipe est inscrite a un tournoi avec
     // roster_locked_at <= now() (sauf flag force=true).
@@ -235,6 +243,14 @@ async function handler(
       // enforce_tenant_id_not_null_and_fk.sql : l'omettre fait échouer l'insert
       // (23502) quel que soit le rôle. Tous les autres chemins d'ajout
       // (utils/teams/addMember, teams/create-with-member, bot, import) le posent.
+      // Niveau déclaré, facultatif : on ne le pose que s'il est fourni ET
+      // valide. Une valeur aberrante saisie à l'ajout ne doit pas faire échouer
+      // la création du membre, qui est l'objet de l'appel — elle est ignorée,
+      // et la personne la corrigera sur la ligne de roster.
+      const parsedSkillRating =
+        typeof skillRating === 'string'
+          ? Number(skillRating.trim())
+          : skillRating;
       const memberPayload = {
         tenant_id: ctx.tenantId,
         team_id: teamId,
@@ -242,6 +258,9 @@ async function handler(
         role: validateRole(role),
         battle_tag: battleTagValue,
         is_substitute: isSubstitute === true,
+        ...(isValidSkillRating(parsedSkillRating)
+          ? { skill_rating: parsedSkillRating }
+          : {}),
       };
 
       const { data: member, error: insertErr } = await supabaseAdmin

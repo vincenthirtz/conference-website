@@ -24,6 +24,7 @@ export default adminNs('adminTeamsAddMemberModal', {
   emailLabel: 'Email utilisateur',
   userIdLabel: 'Ou User ID',
   battleTagFormat: 'Format : Pseudo#0000',
+  skillRatingLabel: 'Niveau Overwatch (SR) — facultatif',
   roleLabel: "Rôle dans l'équipe",
   statusLabel: 'Statut',
   captain: 'Capitaine',

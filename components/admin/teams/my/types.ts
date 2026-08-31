@@ -9,6 +9,8 @@ export type Member = {
   display_name: string | null;
   role: string | null;
   battle_tag?: string | null;
+  /** SR Overwatch déclaré (cf. utils/overwatchRank.ts), null si non renseigné. */
+  skill_rating?: number | null;
   is_substitute?: boolean | null;
   captain?: boolean | null;
   is_captain?: boolean | null;

@@ -524,6 +524,7 @@ function AdminEditTeamPage({
           userId: memberForm.userId.trim() || undefined,
           role: memberForm.role.trim() || 'player',
           battleTag: memberForm.battleTag.trim() || undefined,
+          skillRating: memberForm.skillRating.trim() || undefined,
           setCaptain: memberForm.setCaptain,
           isSubstitute: memberForm.isSubstitute,
         }),

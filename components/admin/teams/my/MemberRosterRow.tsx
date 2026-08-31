@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import { isNonPlayingTeamRole } from '@/utils/teams/roleKind';
+import SkillRatingBadge from '@/components/Team/SkillRatingBadge';
 import type { Member } from './types';
 import nsAdminTeamsMy from '@/lib/i18n/locales/admin-fr/adminTeamsMy';
 
@@ -19,8 +20,16 @@ type MemberRosterRowProps = {
   swapMode: boolean;
   /** Cette ligne est la source de l'échange en cours. */
   isSwapSource: boolean;
+  /**
+   * Brouillon de SR pour CETTE ligne (`undefined` = pas de saisie en cours, on
+   * affiche la valeur enregistrée). Le champ est libre, donc il ne peut pas
+   * enregistrer à chaque frappe comme le fait un <select>.
+   */
+  skillRatingDraft?: string;
   onStartEditBattleTag: (member: Member) => void;
   onBattleTagDraftChange: (value: string) => void;
+  onSkillRatingDraftChange: (memberId: string, value: string) => void;
+  onSaveSkillRating: (member: Member, value: string) => void;
   onSaveBattleTag: (member: Member, draft: string) => void;
   onCancelEditBattleTag: () => void;
   onToggleSubstitute: (member: Member) => void;
@@ -36,11 +45,14 @@ function MemberRosterRowInner({
   membersCount,
   isEditingTag,
   battleTagDraft,
+  skillRatingDraft,
   busy,
   swapMode,
   isSwapSource,
   onStartEditBattleTag,
   onBattleTagDraftChange,
+  onSkillRatingDraftChange,
+  onSaveSkillRating,
   onSaveBattleTag,
   onCancelEditBattleTag,
   onToggleSubstitute,
@@ -140,12 +152,45 @@ function MemberRosterRowInner({
             {m.battle_tag && !isEditingTag && (
               <span className="text-blue-400 ml-2">{m.battle_tag}</span>
             )}
+            <SkillRatingBadge
+              skillRating={m.skill_rating}
+              className="ml-2 align-middle"
+            />
           </div>
         </div>
 
         {/* Per-member actions */}
         {canEdit && !isEditingTag && (
           <div className="flex items-center gap-1 flex-shrink-0">
+            {/* SR : rôles JOUANTS seulement — le niveau d'une coach n'entre
+                pas dans la moyenne d'équipe, lui offrir le champ laisserait
+                croire le contraire. Enregistre au blur ou à Entrée. */}
+            {!isNonPlayingTeamRole(m.role) && (
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={5000}
+                step={50}
+                value={
+                  skillRatingDraft ??
+                  (m.skill_rating != null ? String(m.skill_rating) : '')
+                }
+                onChange={(e) => onSkillRatingDraftChange(m.id, e.target.value)}
+                onBlur={(e) => onSaveSkillRating(m, e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.currentTarget.blur();
+                  }
+                }}
+                disabled={busy}
+                aria-label={t.skillRatingLabel}
+                title={t.skillRatingLabel}
+                placeholder="3500"
+                className="w-20 rounded-lg border border-neutral-600 bg-neutral-900 px-2 py-1 text-xs text-neutral-100 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+              />
+            )}
             {swapMode ? (
               isSwapSource ? (
                 <button

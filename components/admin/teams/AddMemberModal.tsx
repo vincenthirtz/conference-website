@@ -268,6 +268,33 @@ function AddMemberModalComponent({
             </p>
           </div>
 
+          {/* Niveau déclaré, seulement pour les rôles qui jouent : une coach
+              n'entre pas dans la moyenne d'équipe. Facultatif — il se corrige
+              ensuite sur la ligne de roster. */}
+          {battleTagRequired && (
+            <div>
+              <label className="block text-sm text-neutral-400 mb-1">
+                {t.skillRatingLabel}
+              </label>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={5000}
+                step={50}
+                value={memberForm.skillRating}
+                onChange={(e) =>
+                  setMemberForm((prev) => ({
+                    ...prev,
+                    skillRating: e.target.value,
+                  }))
+                }
+                className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                placeholder="3500"
+              />
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-neutral-200 mb-1.5">
               {t.roleLabel}

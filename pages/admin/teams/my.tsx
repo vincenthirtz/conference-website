@@ -17,6 +17,7 @@ import { withSubjectParam } from '@/utils/subjectParam';
 import { MemberRosterRow } from '@/components/admin/teams/my/MemberRosterRow';
 import { PlayerSearchResults } from '@/components/admin/teams/my/PlayerSearchResults';
 import type { Member, SearchResult } from '@/components/admin/teams/my/types';
+import { isValidSkillRating } from '@/utils/overwatchRank';
 
 import { logger } from '../../../utils/logger';
 import nsAdminTeamsMy from '@/lib/i18n/locales/admin-fr/adminTeamsMy';
@@ -546,13 +547,22 @@ function MyTeamPage({ staff }: StaffProps) {
       try {
         // Admins editing an arbitrary team go through the admin members endpoint;
         // captains/managers use the captain-scoped /api/teams route.
-        const url =
-          isStaffAdmin && selectedTeamId
-            ? `/api/admin/teams/${selectedTeamId}/members`
-            : '/api/teams/update-member';
+        // Les deux routes n'ont PAS le même contrat de corps : l'API admin
+        // attend `battleTag` (camelCase), la route capitaine `battle_tag`.
+        // Envoyer la seconde forme à la première ne produisait aucun champ à
+        // mettre à jour — donc un « No fields to update » sur toute correction
+        // faite par un admin depuis cet écran.
+        const isAdminPath = Boolean(isStaffAdmin && selectedTeamId);
+        const url = isAdminPath
+          ? `/api/admin/teams/${selectedTeamId}/members`
+          : '/api/teams/update-member';
         const res = await adminFetch(scopeToTeam(url), {
           method: 'PATCH',
-          body: JSON.stringify({ memberId: m.id, battle_tag: trimmed }),
+          body: JSON.stringify(
+            isAdminPath
+              ? { memberId: m.id, battleTag: trimmed }
+              : { memberId: m.id, battle_tag: trimmed }
+          ),
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -581,19 +591,106 @@ function MyTeamPage({ staff }: StaffProps) {
     ]
   );
 
+  // --- Member: niveau Overwatch déclaré (SR) ------------------------------
+  // Brouillons par ligne : le champ est libre (0-5000), donc on n'enregistre
+  // pas à chaque frappe. La valeur part au blur ou à Entrée, et le brouillon
+  // est oublié ensuite pour que la ligne reparte de ce que le serveur a retenu.
+  const [skillRatingDrafts, setSkillRatingDrafts] = useState<
+    Record<string, string>
+  >({});
+
+  const handleSkillRatingDraftChange = useCallback(
+    (memberId: string, value: string) => {
+      setSkillRatingDrafts((prev) => ({ ...prev, [memberId]: value }));
+    },
+    []
+  );
+
+  const clearSkillRatingDraft = useCallback((memberId: string) => {
+    setSkillRatingDrafts((prev) => {
+      const { [memberId]: _drop, ...rest } = prev;
+      return rest;
+    });
+  }, []);
+
+  const saveSkillRating = useCallback(
+    async (m: Member, raw: string) => {
+      const trimmed = raw.trim();
+      const current = m.skill_rating ?? null;
+      const next = trimmed === '' ? null : Number(trimmed);
+
+      // Rien de neuf : on referme le brouillon sans déranger le serveur.
+      if (next === current) {
+        clearSkillRatingDraft(m.id);
+        return;
+      }
+      if (next !== null && !isValidSkillRating(next)) {
+        addToast(t.errSkillRatingInvalid, 'error');
+        return;
+      }
+
+      setMemberActionId(m.id);
+      try {
+        // Même divergence de contrat que le BattleTag : `skillRating` côté
+        // admin, `skill_rating` côté capitaine.
+        const isAdminPath = Boolean(isStaffAdmin && selectedTeamId);
+        const url = isAdminPath
+          ? `/api/admin/teams/${selectedTeamId}/members`
+          : '/api/teams/update-member';
+        const res = await adminFetch(scopeToTeam(url), {
+          method: 'PATCH',
+          body: JSON.stringify(
+            isAdminPath
+              ? { memberId: m.id, skillRating: next }
+              : { memberId: m.id, skill_rating: next }
+          ),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          addToast(json?.error || t.errUpdate, 'error');
+          return;
+        }
+        clearSkillRatingDraft(m.id);
+        addToast(t.skillRatingUpdated, 'success');
+        await reloadTeam();
+      } catch (err) {
+        logger.error('saveSkillRating error', err);
+        addToast(t.errUpdate, 'error');
+      } finally {
+        setMemberActionId(null);
+      }
+    },
+    [
+      isStaffAdmin,
+      selectedTeamId,
+      adminFetch,
+      addToast,
+      t,
+      reloadTeam,
+      scopeToTeam,
+      clearSkillRatingDraft,
+    ]
+  );
+
   // --- Member: substitute toggle ------------------------------------------
   const toggleSubstitute = useCallback(
     async (m: Member) => {
       const next = !(m.is_substitute ?? false);
       setMemberActionId(m.id);
       try {
-        const url =
-          isStaffAdmin && selectedTeamId
-            ? `/api/admin/teams/${selectedTeamId}/members`
-            : '/api/teams/update-member';
+        // Même divergence de contrat que pour le BattleTag ci-dessus :
+        // `isSubstitute` côté admin, `is_substitute` côté capitaine.
+        const isAdminPath = Boolean(isStaffAdmin && selectedTeamId);
+        const url = isAdminPath
+          ? `/api/admin/teams/${selectedTeamId}/members`
+          : '/api/teams/update-member';
         const res = await adminFetch(url, {
           method: 'PATCH',
-          body: JSON.stringify({ memberId: m.id, is_substitute: next }),
+          body: JSON.stringify(
+            isAdminPath
+              ? { memberId: m.id, isSubstitute: next }
+              : { memberId: m.id, is_substitute: next }
+          ),
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -831,8 +928,11 @@ function MyTeamPage({ staff }: StaffProps) {
         busy={memberActionId === m.id}
         swapMode={swapMode}
         isSwapSource={swapSourceId === m.id}
+        skillRatingDraft={skillRatingDrafts[m.id]}
         onStartEditBattleTag={startEditBattleTag}
         onBattleTagDraftChange={setBattleTagDraft}
+        onSkillRatingDraftChange={handleSkillRatingDraftChange}
+        onSaveSkillRating={saveSkillRating}
         onSaveBattleTag={saveBattleTag}
         onCancelEditBattleTag={cancelEditBattleTag}
         onToggleSubstitute={toggleSubstitute}
