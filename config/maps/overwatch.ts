@@ -268,10 +268,11 @@ export const OVERWATCH_RECIPES: MapRecipe[] = [
     slug: 'neon-junction',
     name: 'Neon Junction',
     layout: 'hybrid',
-    // Ruelles de Tokyo la nuit : asphalte humide, béton, laque rouge, néons.
-    palette: ['#434a5c', '#6f6a86', '#a8324f', '#4ce0e8'],
+    // Ruelles de Tokyo la nuit : asphalte humide, béton que les enseignes
+    // éclairent, néon magenta des panneaux, néon cyan des vitrages.
+    palette: ['#39404f', '#79738a', '#6e2242', '#5ce9f0'],
     architecture: 'futurist',
-    landmarks: ['tram', 'billboard', 'pagoda'],
+    landmarks: ['tower', 'billboard', 'tram'],
     mood: 'night',
     scatter: 0.6,
   },
