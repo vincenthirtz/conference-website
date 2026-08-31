@@ -64,6 +64,7 @@ The site sits at the center of a small ecosystem:
   - Loose `*.sql` patches at root (legacy)
 - **netlify/functions/** — Netlify scheduled functions (cron entry points calling `/api/cron/*`)
 - **docs/** — [BOT_API_CONTRACT.md](docs/BOT_API_CONTRACT.md), [ONBOARDING.md](docs/ONBOARDING.md), [openapi.yaml](docs/openapi.yaml)
+  - Feuilles de route par espace : [PLAN-espace-joueur.md](docs/PLAN-espace-joueur.md) (joueuse / coach / manager / capitaine) et [PLAN-espace-admin.md](docs/PLAN-espace-admin.md) (staff) — lots séquencés autour de la 1re journée Cup 2026 (14/09/2026)
 - **tests/e2e/** — Playwright specs (~95)
 - **tests/unit/** — Vitest specs (~185 files, heavy API-route coverage with in-memory Supabase mock under `tests/unit/__helpers__/`)
 - **scripts/** — small ops scripts (`create-team-news.mjs`, `merge-openapi.mjs`)

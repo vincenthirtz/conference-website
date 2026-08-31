@@ -1,0 +1,286 @@
+# Plan — espace admin (staff)
+
+> Établi le 2026-09-01. Périmètre : `pages/admin/*` (125 pages, ~62 700 LOC),
+> `components/admin/*` (~190 composants), les routes `pages/api/admin/*` et le modèle de rôles staff.
+>
+> Pendant joueur : [PLAN-espace-joueur.md](./PLAN-espace-joueur.md). Même colonne vertébrale —
+> **le droit d'agir doit être fin, lisible et délégable** — et même échéance : la Cup 2026 démarre
+> la semaine du **14 septembre 2026**.
+>
+> Ce plan **complète** et ne remplace pas : [ADMIN_CONSOLIDATION.md](./ADMIN_CONSOLIDATION.md)
+> (navigation / hubs, livré) et [IMPROVEMENT_BACKLOG.md](./IMPROVEMENT_BACKLOG.md) (qualité continue,
+> 5 items ouverts). Les items Q018/Q019/Q021/Q026 y sont repris explicitement quand un lot les couvre.
+>
+> Légende — **Impact** : 🟥 élevé · 🟧 moyen · 🟩 faible · **Effort** : S (< 1 h) · M (qq h) · L (chantier).
+
+---
+
+## 1. État des lieux (prod, 2026-09-01)
+
+| Rail | Mesure | Valeur |
+|---|---|---|
+| Staff | comptes / owner / admin / caster | **9 / 4 / 4 / 1** |
+| Gating | pages `withStaffPage('admin')` / `('caster')` | **63 / 5** |
+| Surface | pages admin / LOC | 125 / ~62 700 |
+| Journal | lignes `staff_logs` | 454 |
+| Journal | part du slug fourre-tout `other` | **116 (26 %)** |
+| Tenants | tenants actifs | **1** |
+| Saison | matchs à arbitrer à partir du 14/09 | 69 (~6/semaine) |
+
+**Top des gestes staff journalisés** (`staff_logs`, tous temps) :
+
+| Action | n | Ce que ça dit |
+|---|---|---|
+| `other` | 116 | un quart du journal n'est pas typé — surtout la régie (`start_event_run`, segments) |
+| `view_player_data` | 66 | l'inspection de l'espace joueur est le 2e geste du staff : l'espace unifié sert |
+| `update_team` | 58 | **le staff édite les équipes à la place des équipes** |
+| `blacklist_add` | 23 | modération réelle et récurrente |
+| `settings_update` | 21 | réglages touchés souvent, par 8 personnes, sans granularité |
+
+---
+
+## 2. Séquencement
+
+| Lot | Titre | Impact | Effort | Fenêtre |
+|---|---|---|---|---|
+| **A1** | De l'alerte au geste (jour J) | 🟥 | M | avant 14/09 |
+| **A2** | Rôles staff fins (bénévole, arbitre) | 🟥 | L | avant 14/09 (socle) |
+| **A3** | Rendre aux équipes ce que le staff fait à leur place | 🟧 | M | saison |
+| **A4** | Recherche globale + palette de commandes | 🟧 | M | saison |
+| **A5** | Kit de listes admin (`DataTable`) | 🟧 | L | après |
+| **A6** | Journal exploitable + historique contextuel | 🟧 | M | après |
+| **A7** | Découpe des god-components (Q018) | 🟩 | L | continu |
+| **A8** | Réglages scopés par tenant | 🟧 | M | avant le 2e tenant |
+
+---
+
+## A1 · De l'alerte au geste — 🟥 / M · avant 14/09
+
+**Problème.** Le centre de contrôle existe et il est bon :
+[`pages/admin/tournament/[id]/dashboard.tsx`](../pages/admin/tournament/[id]/dashboard.tsx)
+(1 876 l., realtime + polling de secours) affiche des alertes priorisées — check-ins manquants
+sous 24 h, cron en retard, litiges. Mais **chaque alerte porte un lien, pas une action** :
+`cta: { label, href }` — même forme sur [`pages/admin/index.tsx`](../pages/admin/index.tsx).
+Constater « 3 équipes non checkées » demande donc d'ouvrir la page check-in, de retrouver les
+équipes, puis d'agir. Un soir de journée à 6 matchs simultanés, cette navigation est le coût
+principal, et elle tombe au pire moment.
+
+**Proposition.** Rendre les alertes **actionnables sur place**, sans quitter le centre de contrôle :
+
+- relancer les équipes non checkées (le bot sait déjà écrire dans le fil du match) ;
+- forcer un check-in / marquer un no-show (règles d'auto-DQ déjà livrées, cf. T2) ;
+- ouvrir un litige ou l'assigner ;
+- chaque action derrière une confirmation (`useConfirmDialog`) et journalisée avec son slug propre.
+
+Puis **mesurer avant d'optimiser le mobile** : un banc Playwright en viewport téléphone sur le
+centre de contrôle et la page matchs, capture à l'appui, avant d'affirmer quoi que ce soit sur
+leur ergonomie à une main. Le code utilise des grilles `md:`/`lg:` et peu de largeurs fixes —
+c'est un indice, pas une preuve.
+
+**Critères d'acceptation**
+- [ ] Les 3 alertes les plus fréquentes (check-in manquant, litige ouvert, feuille non validée)
+      exposent leur geste principal en un clic depuis le dashboard.
+- [ ] Chaque geste est idempotent (double clic = un seul effet) et journalisé avec un slug typé.
+- [ ] Aucune action n'apparaît à un rôle qui ne peut pas la faire (cf. **A2**).
+- [ ] Banc mobile : captures avant/après commitées dans la PR.
+
+---
+
+## A2 · Rôles staff fins — 🟥 / L · socle avant 14/09
+
+**Problème.** Le staff n'a que **trois** rôles — `owner | admin | caster`
+([`types/admin.ts:14`](../types/admin.ts#L14)) — et **63 pages** sont gatées `withStaffPage('admin')`.
+Il n'existe donc aucun moyen de faire entrer quelqu'un pour une tâche : une personne qui vient
+aider au check-in un samedi reçoit les mêmes droits que l'administrateur du site — suppression
+d'équipes, réglages, facturation, secrets bot. Avec 9 comptes staff dont 4 owners, ce n'est pas
+un risque théorique : c'est la seule façon actuelle d'accueillir un renfort.
+
+C'est exactement le problème résolu côté équipes le 31/08 (`TeamPermission` + `assertTeamPermission`) :
+un booléen « c'est un manager » masquait huit droits distincts. Le staff a la même maladie, un cran
+plus haut.
+
+**Proposition.** Un catalogue de permissions staff, sur le modèle exact de `utils/teamRoles.ts` —
+même vocabulaire, même garde-fou, mêmes tests :
+
+```
+STAFF_PERMISSION_CATALOG = [
+  run_checkin, arbitrate_matches, moderate_support, manage_teams,
+  manage_tournaments, manage_communications, manage_settings, manage_billing, …
+]
+```
+
+`owner` garde tout ; `admin` reçoit le catalogue moins `manage_billing`/`manage_settings` ;
+`caster` reste tel quel ; et deux rôles nouveaux — **`arbitre`** (`arbitrate_matches`,
+`run_checkin`) et **`bénévole`** (`run_checkin`) — deviennent possibles. `withStaffPage` et
+`withStaffRoute` acceptent une permission au lieu d'un rôle, avec équivalence rétrocompatible.
+
+**Critères d'acceptation**
+- [ ] `withStaffPage('admin')` continue de fonctionner (mapping rôle → permissions), migration page
+      par page, pas de big bang.
+- [ ] Un bénévole voit le check-in et **rien d'autre** : pas de menu mort, pas de 403 après clic.
+- [ ] Toute page admin déclare la permission qu'elle exige — un test le vérifie sur l'arbre `pages/admin`.
+- [ ] La UI de gestion du staff permet d'attribuer un rôle sans passer par SQL.
+- [ ] Les journaux portent l'acteur ET la permission utilisée.
+
+**Risque assumé.** C'est un lot L qui touche 68 pages. On livre le **socle** (catalogue, helpers,
+tests, mapping rétrocompatible) avant le 14/09 pour pouvoir créer des bénévoles ; la migration
+page par page suit pendant la saison.
+
+---
+
+## A3 · Rendre aux équipes ce que le staff fait à leur place — 🟧 / M · saison
+
+**Problème.** `update_team` est le 3e geste staff le plus journalisé (**58 lignes**) et
+`view_player_data` le 2e (66). Autrement dit : le staff regarde beaucoup l'espace joueur, puis
+édite beaucoup les équipes. Chaque occurrence est une chose qu'une capitaine n'a pas pu, pas su
+ou pas osé faire elle-même. Avec 10 équipes seulement, ce volume est un signal fort.
+
+**Proposition.** Un lot piloté par la donnée, pas par l'intuition :
+
+1. Instrumenter : ventiler `update_team` par **champ modifié** (nom, logo, description, SR,
+   Discord…) sur les 58 lignes existantes (`payload` déjà stocké).
+2. Pour les 3 champs les plus corrigés, décider — soit l'espace capitaine ne le permet pas
+   (→ l'ouvrir), soit il le permet mais personne ne le trouve (→ le rendre évident), soit c'est
+   légitimement staff (→ le documenter et arrêter d'en faire un problème).
+3. Refaire la mesure une journée de championnat plus tard : le succès du lot est la **baisse** de
+   `update_team`, pas une fonctionnalité de plus.
+
+**Critères d'acceptation**
+- [ ] Une note dans ce document répertorie les 3 champs, la décision prise et la mesure d'après.
+- [ ] Aucun droit élargi sans passer par `assertTeamPermission` (permission `manage_team_info`).
+
+---
+
+## A4 · Recherche globale + palette de commandes — 🟧 / M · saison
+
+**Problème.** 125 pages, aucune recherche transverse : pour retrouver une équipe, une joueuse, un
+match ou un ticket, le staff passe par la top-bar puis par le filtre local de chaque liste. Le seul
+raccourci clavier du produit vit dans la régie
+([`CueComposer.tsx`](../components/admin/director/CueComposer.tsx)). Un soir de journée, retrouver
+« l'équipe X » prend trois écrans.
+
+**Proposition.** Une palette `⌘K` / `Ctrl-K` unique :
+
+- **recherche** — équipes, joueuses, matchs, tournois, tickets, tâches, avec un endpoint
+  `GET /api/admin/search?q=` qui interroge ces tables et **respecte les permissions** de A2 ;
+- **actions** — « aller à », plus les gestes fréquents (ouvrir le tournoi en cours, créer une tâche,
+  ouvrir le check-in du jour) ;
+- **historique** local des 5 dernières cibles.
+
+**Critères d'acceptation**
+- [ ] Un résultat n'apparaît jamais si l'appelant n'a pas le droit de l'ouvrir.
+- [ ] Requête debouncée, réponse < 300 ms sur les volumes actuels, index vérifiés.
+- [ ] Accessible : rôle `dialog`, focus piégé, `Esc` ferme, navigation clavier complète.
+
+---
+
+## A5 · Kit de listes admin — 🟧 / L · après
+
+**Problème.** [`AdminListShell`](../components/admin/AdminListShell.tsx) unifie les états
+(erreur → chargement → vide → contenu) et son propre en-tête reconnaît factoriser « ~90 pages ».
+Il est adopté par **7 panneaux**. Tout le reste réimplémente à la main : tri, pagination, filtres,
+sélection multiple, export CSV (présent dans 7 écrans, chacun à sa façon). Aucune liste n'est
+virtualisée — acceptable à 90 comptes et 70 membres, plus du tout à l'échelle d'un 2e tenant.
+
+**Proposition.** Un `DataTable` partagé, adopté progressivement (les 10 plus grosses listes
+d'abord) : colonnes déclaratives, tri, **filtres persistés dans l'URL** (donc partageables entre
+staff), pagination serveur, sélection multiple + actions groupées, export CSV commun, `Th` avec
+`scope` (Q006 déjà livré), états délégués à `AdminListShell`. Couvre Q019 (barres d'onglets
+réinventées) sur les écrans migrés.
+
+**Critères d'acceptation**
+- [ ] Une liste migrée perd 100+ lignes de JSX sans changement fonctionnel visible.
+- [ ] Un filtre appliqué se retrouve dans l'URL et se recharge à l'identique.
+- [ ] Les actions groupées passent par un endpoint idempotent, journalisé une fois par lot.
+
+---
+
+## A6 · Journal exploitable + historique contextuel — 🟧 / M · après
+
+**Problème.** Deux trous distincts dans la traçabilité :
+
+1. **26 % du journal n'est pas typé.** 116 lignes portent le slug `other`, essentiellement les
+   gestes de régie (`start_event_run`, segments intro/match/outro) et quelques validations de
+   scrim. Une union typée de 236 slugs existe ([`types/staffLogs.ts`](../types/staffLogs.ts)) — ces gestes n'y sont simplement
+   jamais entrés.
+2. **L'historique n'est contextuel que pour les matchs.**
+   [`MatchHistoryDrawer`](../components/admin/MatchHistoryDrawer.tsx) lit
+   `GET /api/admin/matches/[matchId]/history` et fait exactement ce qu'il faut. Aucune autre fiche
+   — équipe, joueuse, tournoi, ticket — n'a son équivalent : pour savoir qui a modifié quoi, il
+   faut aller filtrer le journal global.
+
+**Proposition.** Typer les gestes de régie (slugs dédiés + migration de lecture rétrocompatible
+pour les 116 lignes existantes), puis **généraliser le tiroir** : un composant
+`EntityHistoryDrawer` + une route `GET /api/admin/:entity/:id/history`, branchés sur les fiches
+équipe, joueuse, tournoi et ticket.
+
+**Critères d'acceptation**
+- [ ] Plus aucun nouveau `other` écrit par la régie.
+- [ ] Le tiroir apparaît sur 4 types de fiches, avec le même rendu et la même pagination.
+- [ ] Les anciennes lignes `other` restent lisibles (aucune réécriture destructive du journal).
+
+---
+
+## A7 · Découpe des god-components — 🟩 / L · continu (Q018)
+
+**Problème.** Huit fichiers dépassent 1 400 LOC, dont
+[`tournament-simulator.tsx`](../pages/admin/tournament-simulator.tsx) (3 879),
+[`tasks/index.tsx`](../pages/admin/tasks/index.tsx) (3 291),
+[`users/manage.tsx`](../pages/admin/users/manage.tsx) (2 450),
+[`tournament/[id]/matches.tsx`](../pages/admin/tournament/[id]/matches.tsx) (2 326).
+Q018 est ouvert depuis le 2026-07-10. Ce n'est pas de l'esthétique : c'est le coût de chaque
+correctif fait dans l'urgence un soir de journée.
+
+**Proposition.** Une règle plutôt qu'un chantier : **tout lot qui touche un de ces fichiers en
+extrait au moins un panneau** (`components/admin/<domaine>/<X>Panel.tsx`) et ses hooks. Pas de
+grande refonte dédiée, pas de gel non plus. Un test de garde plafonne la taille des fichiers
+nouvellement créés.
+
+**Critères d'acceptation**
+- [ ] Aucun nouveau fichier > 800 LOC dans `pages/admin` (test de garde).
+- [ ] Chaque PR touchant un god-component réduit sa taille ou l'explique dans la description.
+
+---
+
+## A8 · Réglages scopés par tenant — 🟧 / M · avant le 2e tenant
+
+**Problème.** `site_settings` a pour clé primaire… `key`
+([`create_site_settings_table.sql`](../database/migrations/create_site_settings_table.sql)),
+sans `tenant_id`, et il est lu depuis **23 endroits**. Y vivent notamment `team_roles` (les
+permissions d'équipe de **toutes** les équipes), `roster_lock_deadline`, les seuils de rangs
+Overwatch et `bot_maintenance_mode`. Le produit est multi-tenant partout ailleurs (onboarding,
+`tenant_discord_config`, clés API, `x-tenant-id`) : ces réglages sont la dernière pièce globale.
+
+Aujourd'hui **il n'y a qu'un tenant** — d'où l'impact 🟧 et non 🟥. Mais le jour où le second
+arrive, il hérite silencieusement des réglages du premier, et modifier les siens casse ceux de
+l'autre. C'est typiquement la migration qu'on ne veut pas faire **après** avoir des utilisateurs
+des deux côtés.
+
+**Proposition.** `site_settings` en clé composite `(tenant_id, key)`, `tenant_id` par défaut sur le
+tenant existant (migration sans perte), helper unique `getSetting(key, tenantId)` remplaçant les 23
+lectures directes, et `team_roles` devient éditable par tenant — ce qui **débloque J3** côté joueur.
+
+**Critères d'acceptation**
+- [ ] Migration idempotente, valeurs actuelles rattachées au tenant existant.
+- [ ] Aucun `from('site_settings')` en dehors du helper (test de garde, sur le modèle de
+      `tests/unit/discordLinksColumnGuard.test.ts`).
+- [ ] Un réglage modifié dans un tenant est invisible depuis l'autre (test).
+
+---
+
+## 3. Ce qu'on ne fait pas (et pourquoi)
+
+- **Refondre la navigation.** [ADMIN_CONSOLIDATION.md](./ADMIN_CONSOLIDATION.md) l'a faite en
+  4 vagues ; le manque restant est la **recherche** (A4), pas le menu.
+- **Traduire l'admin en anglais.** `admin-en` existe, le staff est francophone : aucun signal.
+- **Une app mobile staff.** A1 mesure d'abord si le web tient dans la main ; on corrige ensuite.
+- **Un système de permissions maison générique.** A2 copie délibérément le modèle d'équipe déjà en
+  production, avec ses tests — deux moitiés du même problème, une seule façon de le résoudre.
+
+## 4. Vérification
+
+`npm run verify` avant chaque commit. Tout lot touchant l'auth staff doit garder verts
+`tests/unit/subjectResolution.test.ts` et les suites `apiRoutesBatch*` ; tout lot touchant un
+endpoint doit passer `tests/unit/openapiContractDrift.test.ts` et mettre à jour
+[`docs/openapi.yaml`](./openapi.yaml) + [BOT_API_CONTRACT.md](./BOT_API_CONTRACT.md).
+Les e2e admin (`tests/e2e/admin-*.spec.ts`) tournent en **local uniquement** — jamais sur la prod.
