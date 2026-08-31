@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 // components/Home/HomeTeamsStrip.tsx
 //
 // La bande des équipes engagées — le PIED de la carte « prochain rendez-vous »
@@ -41,6 +40,7 @@
 import type { JSX } from 'react';
 import Link from 'next/link';
 import { type HomeTeam } from '@/utils/home/loadHomeData';
+import TeamAvatar from '@/components/Team/TeamAvatar';
 import { useT, format } from '@/lib/i18n/useT';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 
@@ -81,21 +81,13 @@ function TeamMedallion({ team }: { team: HomeTeam }): JSX.Element {
             focus clavier. Deux couches plutôt qu'une bordure, parce qu'une
             bordure en dégradé n'existe pas en CSS. */}
         <span className="absolute inset-0 rounded-full bg-white/10 transition-colors duration-300 group-hover:bg-gradient-to-br group-hover:from-[var(--color-violet)] group-hover:to-[var(--color-green)] group-focus-visible:bg-gradient-to-br group-focus-visible:from-[var(--color-violet)] group-focus-visible:to-[var(--color-green)]" />
-        <span className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[var(--bg-base)] ring-1 ring-inset ring-white/10">
-          {team.logoUrl ? (
-            <img
-              src={team.logoUrl}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <span className="bg-gradient-to-br from-[var(--color-violet-light)] to-[var(--color-green-light)] bg-clip-text text-lg font-extrabold tracking-tight text-transparent">
-              {teamMonogram(team)}
-            </span>
-          )}
-        </span>
+        <TeamAvatar
+          name={team.name}
+          shortName={team.shortName}
+          logoUrl={team.logoUrl}
+          size="lg"
+          className="h-full w-full"
+        />
       </span>
       <span className="line-clamp-2 text-center text-[11px] font-semibold uppercase leading-tight tracking-wide text-gray-400 transition-colors duration-300 group-hover:text-white group-focus-visible:text-white">
         {team.name}

@@ -26,6 +26,7 @@ import {
 
 import { logger } from '../../../utils/logger';
 import PrintExportButton from '@/components/PrintExportButton';
+import TeamAvatar from '@/components/Team/TeamAvatar';
 import nsTournamentMatches from '@/lib/i18n/locales/fr/tournamentMatches';
 
 // Fuseau de référence pour placer les matchs dans la grille mensuelle.
@@ -156,8 +157,8 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       match_format,
       team1_score,
       team2_score,
-      team1:team1_id ( id, name, short_name ),
-      team2:team2_id ( id, name, short_name ),
+      team1:team1_id ( id, name, short_name, logo_url ),
+      team2:team2_id ( id, name, short_name, logo_url ),
       stage:tournament_stages ( id, name, stage_type )
     `
     )
@@ -691,11 +692,32 @@ function MatchRow({
       >
         {/* Teams */}
         <div className="flex flex-col">
-          <p className="text-gray-100 truncate">
-            {t1}{' '}
+          <p className="flex items-center gap-1.5 text-gray-100 truncate">
+            {/* Les pastilles rendent la ligne repérable d'un coup d'œil : sur
+                sept journées, on cherche SON équipe, pas une chaîne de
+                caractères. Une équipe sans logo reçoit son monogramme, jamais
+                un trou. */}
+            {match.team1 && (
+              <TeamAvatar
+                name={match.team1.name}
+                shortName={match.team1.short_name}
+                logoUrl={match.team1.logo_url}
+                size="xs"
+              />
+            )}
+            <span className="truncate">{t1}</span>
             {!match.is_bye && (
               <>
-                <span className="text-gray-500">{t.vsLabel}</span> {t2}
+                <span className="text-gray-500">{t.vsLabel}</span>
+                {match.team2 && (
+                  <TeamAvatar
+                    name={match.team2.name}
+                    shortName={match.team2.short_name}
+                    logoUrl={match.team2.logo_url}
+                    size="xs"
+                  />
+                )}
+                <span className="truncate">{t2}</span>
               </>
             )}
             {match.is_bye && (
