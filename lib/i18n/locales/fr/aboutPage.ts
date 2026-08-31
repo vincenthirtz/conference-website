@@ -67,7 +67,7 @@ export default ns('aboutPage', {
   poleProduction: 'Production',
   poleCommunity: 'Communauté',
   discoverAssoLink: "Découvrir l'association",
-  teamImgAlt: "L'équipe OW Women's Cup",
+  teamImgAlt: "Visuel de marque OW Women's Cup",
   partnersEyebrow: 'Ils nous soutiennent',
   partnersTitle: 'Nos partenaires',
   partnersDesc:
@@ -84,5 +84,5 @@ export default ns('aboutPage', {
     "Le but étant de promouvoir l'esport féminin et francophone à travers une compétition 100% féminine. Le cast sera aussi composé uniquement de femmes.",
   compP2:
     "Nous sommes à le recherche d'un super sponsor sur le long terme. Nous avons déjà deux partenaires pour l'édition 2026.",
-  playersAlt: 'Joueuses Overwatch',
+  playersAlt: "Logo OW Women's Cup",
 });

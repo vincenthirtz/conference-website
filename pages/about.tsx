@@ -277,7 +277,7 @@ function AboutPage({ videoUrl }: AboutPageProps) {
                       />
                     ) : (
                       <Image
-                        src="/img/fourplayers.jpg"
+                        src="/img/brand-cover.png"
                         alt={t.videoPreviewAlt}
                         fill
                         sizes="(max-width: 768px) 100vw, 720px"
@@ -480,7 +480,7 @@ function AboutPage({ videoUrl }: AboutPageProps) {
             </div>
             <div className="flex-1 relative min-h-[280px] md:min-h-0">
               <Image
-                src="/img/fourplayers.jpg"
+                src="/img/brand-cover.png"
                 alt={t.teamImgAlt}
                 fill
                 sizes="(max-width: 768px) 100vw, 50vw"

@@ -54,7 +54,7 @@ const BASE_URL =
 // Le logo brut (2026-logo, 500×500) est carré : utilisé tel quel en grande
 // carte il est rogné / mal cadré. `og-cover.png` est la carte de partage de
 // marque — le logo 2026 posé sur le fond violet du site, aux dimensions
-// canoniques 1200×630 (générée via sharp, cf. scripts/generate-og-cover.cjs).
+// canoniques 1200×630 (générée via sharp, cf. scripts/generate-brand-images.cjs).
 // Le logo carré reste utilisé pour le champ `logo` du JSON-LD Organization.
 const DEFAULT_IMAGE = '/img/og-cover.png';
 const DEFAULT_IMAGE_WIDTH = '1200';

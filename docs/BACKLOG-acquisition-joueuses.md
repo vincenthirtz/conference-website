@@ -79,8 +79,8 @@ la home.
   `/player/join-team`, derrière login ([join-team.tsx:79](../pages/player/join-team.tsx#L79)).
   Le sitemap ne liste aucune page d'annuaire.
 - **Aucun partage social natif** : pas de bouton de partage, pas d'OG image dynamique par équipe
-  ou par match. L'OG par défaut est une photo statique pour tout le site
-  ([DefaultSeo.tsx](../components/Seo/DefaultSeo.tsx), `DEFAULT_IMAGE = '/img/fourplayers.jpg'`).
+  ou par match. L'OG par défaut est une carte de marque statique pour tout le site
+  ([DefaultSeo.tsx](../components/Seo/DefaultSeo.tsx), `DEFAULT_IMAGE = '/img/og-cover.png'`).
 - **La découverte joueuse est invisible par défaut** (opt-in global, décision produit assumée) :
   1 profil sur 46 comptes. Ce lot ne doit pas la remettre en cause — c'est aux **équipes**
   d'être visibles, pas aux personnes.

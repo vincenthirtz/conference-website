@@ -51,7 +51,7 @@ function About(): JSX.Element {
       <div className="w-full max-w-[1120px] mx-auto flex flex-col items-center justify-between gap-10 min-[1024px]:flex-row min-[1024px]:items-start min-[1024px]:gap-12">
         <div className="relative w-full max-w-[480px] h-[320px] md:h-[420px] min-[1100px]:h-[550px] rounded-[30px] overflow-hidden">
           <Image
-            src="/img/fourplayers.jpg"
+            src="/img/brand-cover.png"
             alt={t.playersAlt}
             fill
             sizes="(max-width: 768px) 100vw, 480px"
@@ -77,7 +77,7 @@ function About(): JSX.Element {
                 <video
                   className="absolute inset-0 w-full h-full object-cover"
                   src={aboutVideoUrl}
-                  poster="/img/fourplayers.jpg"
+                  poster="/img/brand-cover.png"
                   autoPlay
                   loop
                   muted

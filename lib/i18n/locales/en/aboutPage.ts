@@ -68,7 +68,7 @@ export default {
   poleProduction: 'Production',
   poleCommunity: 'Community',
   discoverAssoLink: 'Discover the association',
-  teamImgAlt: "The OW Women's Cup team",
+  teamImgAlt: "OW Women's Cup brand visual",
   partnersEyebrow: 'They support us',
   partnersTitle: 'Our partners',
   partnersDesc:
@@ -85,5 +85,5 @@ export default {
     "The goal is to promote French-speaking women's esports through a 100% women's competition. The cast will be made up entirely of women too.",
   compP2:
     "We're looking for a headline sponsor for the long term. We already have two partners for the 2026 edition.",
-  playersAlt: 'Overwatch players',
+  playersAlt: "OW Women's Cup logo",
 };
