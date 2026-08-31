@@ -13,6 +13,9 @@ export default adminNs('adminTeamsEditMemberModal', {
   cancel: 'Annuler',
   saving: 'Enregistrement...',
   save: 'Enregistrer',
+  skillRatingLabel: 'Niveau Overwatch (SR)',
+  skillRatingHint:
+    'Entre 0 et 5000. Laisser vide pour effacer le niveau déclaré.',
   roleLabel: 'Rôle',
   substitute: 'Remplaçant',
 });

@@ -42,6 +42,7 @@ export default {
   errorClose: 'The listing could not be closed.',
   filterAll: 'All',
   filterScrim: 'Looking for a scrim',
+  filterLevel: 'At my level',
   filterRecruiting: 'Recruiting',
   searchPlaceholder: 'Search a team…',
   badgeScrim: 'looking for a scrim',

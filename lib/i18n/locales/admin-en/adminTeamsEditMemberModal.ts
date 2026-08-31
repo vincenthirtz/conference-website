@@ -14,6 +14,9 @@ export default {
   cancel: 'Cancel',
   saving: 'Saving...',
   save: 'Save',
+  skillRatingLabel: 'Overwatch skill rating (SR)',
+  skillRatingHint:
+    'Between 0 and 5000. Leave empty to clear the declared rating.',
   roleLabel: 'Role',
   substitute: 'Substitute',
 };

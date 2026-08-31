@@ -139,6 +139,8 @@ type TeamMember = {
   is_substitute?: boolean;
   display_name?: string | null;
   specialty?: string | null;
+  /** SR Overwatch déclaré par l'équipe (0-5000), `null` si non renseigné. */
+  skill_rating?: number | null;
   avatar_url?: string | null;
   pronouns?: string | null;
   tagline?: string | null;
@@ -210,8 +212,7 @@ type TeamPageProps = {
   reliability: TeamReliability;
   /**
    * Niveau moyen DÉCLARÉ de l'équipe. `null` tant qu'aucune joueuse n'a
-   * renseigné le sien. Seul l'agrégat est public : les SR individuels ne
-   * quittent pas l'espace d'équipe.
+   * renseigné le sien.
    */
   skillAverage: TeamSkillRatingAverage | null;
 };
@@ -391,26 +392,24 @@ export const getStaticProps: GetStaticProps<TeamPageProps> = async (ctx) => {
     }[]
   );
 
-  // Niveau moyen de l'équipe. Calculé ICI, sur les lignes brutes, parce que le
-  // SR INDIVIDUEL ne sort pas de la page : l'équipe le renseigne pour elle et
-  // pour le staff, seule l'agrégat est publique. C'est aussi pourquoi
-  // `skill_rating` est retiré ligne par ligne juste après — un `...m` le
-  // laisserait filer dans les props, donc dans le HTML servi.
+  // Niveau moyen de l'équipe, calculé sur les lignes brutes.
+  //
+  // Le SR est PUBLIC, par joueuse comme en moyenne : c'est une annonce de
+  // niveau, pas une donnée d'identité — tout l'intérêt est qu'une équipe qui
+  // cherche un scrim puisse la lire sans demander. Le BattleTag, lui, reste
+  // masqué juste en dessous : les deux ne relèvent pas de la même chose.
   const skillAverage = averageTeamSkillRating(
     (rawMembers || []) as { role?: string | null; skill_rating?: number | null }[]
   );
 
   // Compute is_captain based on team.captain_id
-  const membersWithCaptain = (rawMembers || []).map((m: any) => {
-    const { skill_rating: _privateSkillRating, ...publicFields } = m;
-    return {
-      ...publicFields,
-      // Anonymat public : on masque l'ID numérique du BattleTag (après le « # »).
-      battle_tag: maskBattleTag(m.battle_tag ?? null),
-      display_name: withFallbackDisplayName(m, memberNames),
-      is_captain: team.captain_id === m.user_id,
-    };
-  });
+  const membersWithCaptain = (rawMembers || []).map((m: any) => ({
+    ...m,
+    // Anonymat public : on masque l'ID numérique du BattleTag (après le « # »).
+    battle_tag: maskBattleTag(m.battle_tag ?? null),
+    display_name: withFallbackDisplayName(m, memberNames),
+    is_captain: team.captain_id === m.user_id,
+  }));
   // Sort captain first
   membersWithCaptain.sort((a: any, b: any) => {
     if (a.is_captain && !b.is_captain) return -1;
@@ -1277,8 +1276,8 @@ export default function TeamPage({
                       </span>
                     </div>
 
-                    {/* Niveau moyen déclaré. Agrégat SEUL : les SR individuels
-                        ne sortent pas de l'espace d'équipe. */}
+                    {/* Niveau moyen déclaré, au-dessus des fiches qui portent
+                        chacune le sien. */}
                     {skillAverage && (
                       <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
                         <span className="text-xs uppercase tracking-wide text-gray-400">
@@ -1695,6 +1694,9 @@ function MemberCard({
               {t.substituteBadge}
             </span>
           )}
+          {/* Niveau déclaré. Le composant ne rend rien quand il n'y en a pas :
+              « non déclaré » sur chaque fiche ferait du bruit. */}
+          <SkillRatingBadge skillRating={member.skill_rating} />
         </div>
         {(member.pronouns || member.battle_tag) && (
           <p className="text-[11px] text-gray-400 mt-0.5 truncate">

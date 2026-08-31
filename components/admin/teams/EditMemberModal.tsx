@@ -87,6 +87,29 @@ function EditMemberModalComponent({
 
           <div>
             <label className="block text-sm text-neutral-400 mb-1">
+              {t.skillRatingLabel}
+            </label>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={5000}
+              step={50}
+              value={memberForm.skillRating}
+              onChange={(e) =>
+                setMemberForm((prev) => ({
+                  ...prev,
+                  skillRating: e.target.value,
+                }))
+              }
+              className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              placeholder="3500"
+            />
+            <p className="mt-1 text-xs text-neutral-500">{t.skillRatingHint}</p>
+          </div>
+
+          <div>
+            <label className="block text-sm text-neutral-400 mb-1">
               {t.roleLabel}
             </label>
             <select

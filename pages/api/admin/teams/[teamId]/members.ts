@@ -24,6 +24,11 @@ import {
   validateBattleTagForRole,
   roleRequiresBattleTag,
 } from '@/utils/teams/addMember';
+import {
+  SKILL_RATING_MAX,
+  SKILL_RATING_MIN,
+  isValidSkillRating,
+} from '@/utils/overwatchRank';
 
 type TeamMemberRow = {
   id: string;
@@ -44,10 +49,12 @@ type TeamMemberRow = {
    * défaut depuis le compte auth (RPC batch).
    */
   display_name?: string | null;
+  /** SR Overwatch déclaré par l'équipe (0-5000, `null` = non déclaré). */
+  skill_rating?: number | null;
 };
 
 const MEMBER_SELECT =
-  'id, team_id, user_id, role, battle_tag, display_name, is_substitute, created_at, battle_tag_verified_at, verified_battle_net_id';
+  'id, team_id, user_id, role, battle_tag, display_name, skill_rating, is_substitute, created_at, battle_tag_verified_at, verified_battle_net_id';
 
 type MembersResponse =
   | {
@@ -332,22 +339,33 @@ async function handler(
 
   // PATCH - Modifier un membre ou échanger deux membres (swap)
   if (req.method === 'PATCH') {
-    const { memberId, role, battleTag, isSubstitute, swapWithMemberId, force } =
-      req.body || {};
+    const {
+      memberId,
+      role,
+      battleTag,
+      skillRating,
+      isSubstitute,
+      swapWithMemberId,
+      force,
+    } = req.body || {};
 
     if (!memberId || typeof memberId !== 'string') {
       return res.status(400).json({ error: 'memberId is required' });
     }
 
     // Garde roster lock : on bloque toute mutation (sauf force=true). On laisse
-    // passer un PATCH qui ne change que le BattleTag : c'est une correction de typo,
-    // pas un mouvement de roster. battleTag != reorganisation d'effectif.
-    const onlyBattleTagChange =
-      typeof battleTag === 'string' &&
-      role === undefined &&
-      isSubstitute === undefined &&
-      !swapWithMemberId;
-    if (force !== true && !onlyBattleTagChange) {
+    // passer un PATCH qui ne touche qu'a des ATTRIBUTS de fiche — BattleTag
+    // (correction de typo) ou niveau declare. Ni l'un ni l'autre ne deplace
+    // qui que ce soit : verrouiller un roster fige sa COMPOSITION, pas la
+    // correction d'une coquille ni la mise a jour d'un SR de saison.
+    const touchesRoster =
+      role !== undefined ||
+      isSubstitute !== undefined ||
+      Boolean(swapWithMemberId);
+    const attributesOnly =
+      !touchesRoster &&
+      (typeof battleTag === 'string' || skillRating !== undefined);
+    if (force !== true && !attributesOnly) {
       const lockStatus = await isTeamRosterLocked(ctx.tenantId, String(teamId));
       if (lockStatus.locked) {
         return res.status(409).json({
@@ -450,6 +468,28 @@ async function handler(
         updatePayload.battle_tag = trimmed;
       } else {
         updatePayload.battle_tag = null;
+      }
+    }
+    if (skillRating !== undefined) {
+      // `null` / chaine vide effacent ; l'absence de cle ne touche a rien.
+      // Meme contrat que /api/teams/update-member cote capitaine, pour que les
+      // deux chemins d'ecriture ne divergent pas.
+      if (
+        skillRating === null ||
+        (typeof skillRating === 'string' && skillRating.trim() === '')
+      ) {
+        updatePayload.skill_rating = null;
+      } else {
+        const parsed =
+          typeof skillRating === 'string'
+            ? Number(skillRating.trim())
+            : skillRating;
+        if (!isValidSkillRating(parsed)) {
+          return res.status(400).json({
+            error: `Skill rating must be an integer between ${SKILL_RATING_MIN} and ${SKILL_RATING_MAX}`,
+          });
+        }
+        updatePayload.skill_rating = parsed;
       }
     }
     if (typeof isSubstitute === 'boolean') {

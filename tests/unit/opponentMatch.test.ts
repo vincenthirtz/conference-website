@@ -24,11 +24,74 @@ function input(
     slotsComparable: false,
     myRating: null,
     theirRating: null,
+    mySkillRating: null,
+    theirSkillRating: null,
     responseRate: null,
     encountersRecent: 0,
     ...overrides,
   };
 }
+
+describe('niveau : repli sur le SR déclaré', () => {
+  it('utilise le SR déclaré quand aucun Glicko n’existe', () => {
+    // Le cas qui motive la fonctionnalité : deux équipes fraîchement arrivées,
+    // aucun match joué ici, donc aucun rating calculé — mais toutes deux ont
+    // annoncé leur niveau.
+    const result = computeOpponentMatch(
+      input({ mySkillRating: 3000, theirSkillRating: 3000 })
+    );
+    expect(result.factors.level).toBe(1);
+    expect(result.reasons).toContain('similar_level');
+  });
+
+  it('mesure l’écart sur l’échelle du SR, pas sur celle du Glicko', () => {
+    // 500 SR = un palier : on joue encore. Sur l'échelle Glicko (span 400) le
+    // facteur serait tombé à 0 — l'erreur d'unité que SKILL_LEVEL_SPAN évite.
+    const oneTier = computeOpponentMatch(
+      input({ mySkillRating: 3000, theirSkillRating: 3500 })
+    );
+    expect(oneTier.factors.level).toBe(0.5);
+
+    // Deux paliers : le match n'apprend plus rien.
+    const twoTiers = computeOpponentMatch(
+      input({ mySkillRating: 2000, theirSkillRating: 3000 })
+    );
+    expect(twoTiers.factors.level).toBe(0);
+    expect(twoTiers.reasons).toContain('level_gap');
+  });
+
+  it('laisse la priorité au Glicko quand les deux côtés en ont un', () => {
+    // Glicko identique (facteur 1) alors que les SR déclarés sont à deux
+    // paliers d'écart : c'est le mesuré qui doit l'emporter sur le déclaré.
+    const result = computeOpponentMatch(
+      input({
+        myRating: 1500,
+        theirRating: 1500,
+        mySkillRating: 2000,
+        theirSkillRating: 3000,
+      })
+    );
+    expect(result.factors.level).toBe(1);
+  });
+
+  it('reste inconnu quand un seul côté a déclaré', () => {
+    expect(
+      computeOpponentMatch(input({ mySkillRating: 3000 })).factors.level
+    ).toBeNull();
+    expect(
+      computeOpponentMatch(input({ theirSkillRating: 3000 })).factors.level
+    ).toBeNull();
+  });
+
+  it('ne mélange jamais un Glicko d’un côté et un SR de l’autre', () => {
+    // Les deux échelles ne mesurent pas la même chose : un rating calculé face
+    // à un SR déclaré donnerait un écart qui ne veut rien dire.
+    const result = computeOpponentMatch(
+      input({ myRating: 1500, theirSkillRating: 3000 })
+    );
+    expect(result.factors.level).toBeNull();
+  });
+});
 
 describe('facteurs inconnus', () => {
   it('expose l’ignorance comme telle plutôt qu’en la déguisant en zéro', () => {

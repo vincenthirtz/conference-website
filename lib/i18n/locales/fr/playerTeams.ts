@@ -42,6 +42,7 @@ export default ns('playerTeams', {
   errorClose: "L'annonce n'a pas pu être close.",
   filterAll: 'Toutes',
   filterScrim: 'Cherchent un scrim',
+  filterLevel: 'À mon niveau',
   filterRecruiting: 'Recrutent',
   searchPlaceholder: 'Rechercher une équipe…',
   badgeScrim: 'cherche un scrim',

@@ -347,4 +347,6 @@ export type TeamMemberRow = {
    * BattleTag : c'est ce champ qui identifie la ligne dans ce cas.
    */
   display_name?: string | null;
+  /** SR Overwatch déclaré par l'équipe (0-5000, `null` = non déclaré). */
+  skill_rating?: number | null;
 };

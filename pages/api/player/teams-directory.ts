@@ -33,6 +33,10 @@ import {
   type TeamReliability,
 } from '@/utils/teams/reliability';
 import {
+  averageTeamSkillRating,
+  type TeamSkillRatingAverage,
+} from '@/utils/overwatchRank';
+import {
   computeOpponentMatch,
   type OpponentMatch,
 } from '@/utils/teams/opponentMatch';
@@ -60,6 +64,12 @@ export type DirectoryTeam = {
   is_full: boolean;
   /** Rating d'équipe dérivé des matchs (null si jamais noté). */
   rating: number | null;
+  /**
+   * Niveau moyen DÉCLARÉ (SR Overwatch). Sert au facteur « niveau » quand le
+   * rating calculé manque — le cas de toute équipe qui vient d'arriver — et
+   * s'affiche tel quel dans l'annuaire.
+   */
+  skill_average: TeamSkillRatingAverage | null;
   /**
    * Fiabilité dérivée des propositions de scrim reçues (R10). Les taux sont
    * `null` sous le seuil d'échantillon : mieux vaut rien afficher qu'un
@@ -173,7 +183,7 @@ export default withAuthRoute(async function handler(
     .from('teams')
     .select(
       // Rôles plutôt qu'un agrégat : l'encadrement ne consomme pas de place.
-      'id, name, short_name, logo_url, slug, country, is_joinable, team_members(role)'
+      'id, name, short_name, logo_url, slug, country, is_joinable, team_members(role, skill_rating)'
     )
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
@@ -189,11 +199,15 @@ export default withAuthRoute(async function handler(
   const teamIds = teams.map((t) => t.id as string);
 
   const memberCountByTeam = new Map<string, number>();
+  const skillAverageByTeam = new Map<string, TeamSkillRatingAverage>();
   for (const t of teams) {
-    memberCountByTeam.set(
-      t.id as string,
-      countPlayingMembers(t.team_members as { role?: string | null }[])
-    );
+    const roster = t.team_members as {
+      role?: string | null;
+      skill_rating?: number | null;
+    }[];
+    memberCountByTeam.set(t.id as string, countPlayingMembers(roster));
+    const avg = averageTeamSkillRating(roster);
+    if (avg) skillAverageByTeam.set(t.id as string, avg);
   }
 
   // Fuseau de référence : celui que J'AI déclaré. Comparer des créneaux
@@ -237,6 +251,9 @@ export default withAuthRoute(async function handler(
   const mySlots = myTeamId ? (searchByTeam.get(myTeamId)?.slots ?? []) : [];
   const myRhythm = myTeamId ? (rhythmCores.get(myTeamId) ?? []) : [];
   const myRating = myTeamId ? (ratingByTeam.get(myTeamId) ?? null) : null;
+  const mySkillAverage = myTeamId
+    ? (skillAverageByTeam.get(myTeamId) ?? null)
+    : null;
 
   const directory: DirectoryTeam[] = teams
     .filter((t) => (t.id as string) !== myTeamId)
@@ -262,6 +279,8 @@ export default withAuthRoute(async function handler(
           ((search?.slots?.length ?? 0) > 0 || theirRhythm.length > 0),
         myRating,
         theirRating: ratingByTeam.get(id) ?? null,
+        mySkillRating: mySkillAverage?.average ?? null,
+        theirSkillRating: skillAverageByTeam.get(id)?.average ?? null,
         responseRate: reliability.responseRate,
         encountersRecent,
       });
@@ -277,6 +296,7 @@ export default withAuthRoute(async function handler(
         is_joinable: Boolean(t.is_joinable),
         is_full: memberCount >= MAX_TEAM_PLAYERS,
         rating: ratingByTeam.get(id) ?? null,
+        skill_average: skillAverageByTeam.get(id) ?? null,
         reliability,
         scrim_search: search
           ? {
@@ -315,5 +335,8 @@ export default withAuthRoute(async function handler(
     teams: directory,
     myTeamId,
     hasOwnSearch: mySlots.length > 0,
+    // Mon propre niveau moyen : l'annuaire exclut ma team de la liste, donc
+    // sans ça le client n'a rien à quoi comparer pour filtrer « à mon niveau ».
+    mySkillAverage,
   });
 });

@@ -130,6 +130,7 @@ function AdminEditTeamPage({
     userId: '',
     role: 'player',
     battleTag: '',
+    skillRating: '',
     setCaptain: false,
     isSubstitute: false,
   });
@@ -391,6 +392,7 @@ function AdminEditTeamPage({
       userId: '',
       role: 'player',
       battleTag: '',
+      skillRating: '',
       setCaptain: false,
       isSubstitute: false,
     });
@@ -486,6 +488,8 @@ function AdminEditTeamPage({
       userId: member.user_id,
       role: member.role,
       battleTag: member.battle_tag || '',
+      skillRating:
+        member.skill_rating != null ? String(member.skill_rating) : '',
       setCaptain: false,
       isSubstitute: member.is_substitute ?? false,
     });
@@ -553,6 +557,9 @@ function AdminEditTeamPage({
           memberId: editingMember.id,
           role: memberForm.role.trim() || 'player',
           battleTag: memberForm.battleTag.trim() || null,
+          // Champ vide = effacer, pas « ne rien changer » : c'est la seule
+          // façon de retirer un SR devenu faux depuis l'écran staff.
+          skillRating: memberForm.skillRating.trim() || null,
           isSubstitute: memberForm.isSubstitute,
         }),
       });

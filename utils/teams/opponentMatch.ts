@@ -63,6 +63,15 @@ export type OpponentMatchInput = {
   slotsComparable: boolean;
   myRating: number | null;
   theirRating: number | null;
+  /**
+   * Repli de niveau : la moyenne de SR DÉCLARÉE de chaque équipe
+   * (`utils/overwatchRank.ts`). Elle ne sert que si le Glicko manque d'un côté
+   * — c'est-à-dire dans le cas qui motive tout l'exercice : une équipe qui
+   * vient d'arriver n'a joué aucun match ici, donc aucun rating calculé, et se
+   * retrouvait avec un facteur « niveau » inconnu face à TOUT LE MONDE.
+   */
+  mySkillRating: number | null;
+  theirSkillRating: number | null;
   /** Taux de réponse aux propositions, 0-100. `null` sous le seuil (R10). */
   responseRate: number | null;
   /** Affrontements (match ou scrim) sur les 90 derniers jours. */
@@ -94,6 +103,14 @@ const WEIGHTS = {
  * 400 points = l'échelle Elo/Glicko où l'issue devient quasi certaine.
  */
 export const LEVEL_SPAN = 400;
+
+/**
+ * Le même écart, mais sur l'échelle du SR déclaré (0-5000) : deux paliers
+ * pleins. Un palier d'écart (500 SR) se joue encore ; deux, le match n'apprend
+ * plus rien à personne. Réutiliser LEVEL_SPAN ici serait une erreur d'unité —
+ * 400 SR, c'est moins d'un palier.
+ */
+export const SKILL_LEVEL_SPAN = 1000;
 
 /** Valeur d'un facteur dont on ignore tout (cf. parti pris n° 1). */
 const NEUTRAL = 0.5;
@@ -135,13 +152,24 @@ export function computeOpponentMatch(input: OpponentMatchInput): OpponentMatch {
         ? 0
         : null;
 
+  // Le Glicko PRIME quand les deux côtés en ont un : il est mesuré, le SR est
+  // déclaré. Le SR ne prend le relais que là où le Glicko est muet, et jamais
+  // en mélange — comparer un rating calculé à un SR déclaré n'aurait aucun
+  // sens, les deux échelles ne mesurent pas la même chose.
   const level =
     input.myRating != null && input.theirRating != null
       ? Math.max(
           0,
           1 - Math.abs(input.myRating - input.theirRating) / LEVEL_SPAN
         )
-      : null;
+      : input.mySkillRating != null && input.theirSkillRating != null
+        ? Math.max(
+            0,
+            1 -
+              Math.abs(input.mySkillRating - input.theirSkillRating) /
+                SKILL_LEVEL_SPAN
+          )
+        : null;
 
   const reliability =
     input.responseRate != null

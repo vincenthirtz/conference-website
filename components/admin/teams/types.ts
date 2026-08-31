@@ -8,6 +8,8 @@ export type MemberFormState = {
   userId: string;
   role: string;
   battleTag: string;
+  /** SR Overwatch déclaré, saisi en chaîne (champ de formulaire). '' = effacer. */
+  skillRating: string;
   setCaptain: boolean;
   isSubstitute: boolean;
 };

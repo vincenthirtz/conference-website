@@ -26,6 +26,8 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { DirectoryTeam } from '../api/player/teams-directory';
+import SkillRatingBadge from '@/components/Team/SkillRatingBadge';
+import type { TeamSkillRatingAverage } from '@/utils/overwatchRank';
 import type { OpponentReason } from '../../utils/teams/opponentMatch';
 
 import { logger } from '../../utils/logger';
@@ -34,6 +36,7 @@ import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 
 type DirectoryResponse = {
   teams: DirectoryTeam[];
+  mySkillAverage?: TeamSkillRatingAverage | null;
   myTeamId: string | null;
   hasOwnSearch: boolean;
 };
@@ -46,7 +49,7 @@ type MySearch = {
   expires_at: string;
 } | null;
 
-type Filter = 'all' | 'scrim' | 'recruiting';
+type Filter = 'all' | 'scrim' | 'recruiting' | 'level';
 
 /**
  * Couleur du badge de score. Trois bandes seulement : au-delà, la nuance
@@ -71,6 +74,8 @@ function PlayerTeamsPage() {
 
   const [teams, setTeams] = useState<DirectoryTeam[]>([]);
   const [myTeamId, setMyTeamId] = useState<string | null>(null);
+  const [mySkillAverage, setMySkillAverage] =
+    useState<TeamSkillRatingAverage | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
@@ -102,6 +107,7 @@ function PlayerTeamsPage() {
       );
       setTeams(data.teams ?? []);
       setMyTeamId(data.myTeamId ?? null);
+      setMySkillAverage(data.mySkillAverage ?? null);
     } catch (err) {
       logger.error('[player/teams] directory error', err);
       setLoadError(true);
@@ -202,12 +208,24 @@ function PlayerTeamsPage() {
       played_recently: t.reasonPlayedRecently,
     })[code] ?? '';
 
+  // « À mon niveau » : un palier d'écart de part et d'autre. Un palier se joue
+  // encore et reste formateur ; au-delà le scrim n'apprend plus rien à
+  // personne. Le filtre n'est proposé que si j'ai moi-même un niveau déclaré —
+  // sans point de comparaison il ne voudrait rien dire.
+  const LEVEL_FILTER_SPAN = 500;
+
   const visibleTeams = useMemo(() => {
     const q = query.trim().toLowerCase();
     return teams.filter((team) => {
       if (filter === 'scrim' && !team.scrim_search) return false;
       if (filter === 'recruiting' && (!team.is_joinable || team.is_full))
         return false;
+      if (filter === 'level') {
+        const mine = mySkillAverage?.average;
+        const theirs = team.skill_average?.average;
+        if (mine == null || theirs == null) return false;
+        if (Math.abs(mine - theirs) > LEVEL_FILTER_SPAN) return false;
+      }
       if (!q) return true;
       return (
         team.name.toLowerCase().includes(q) ||
@@ -215,12 +233,21 @@ function PlayerTeamsPage() {
         (team.country ?? '').toLowerCase().includes(q)
       );
     });
-  }, [teams, filter, query]);
+  }, [teams, filter, query, mySkillAverage]);
 
   const scrimCount = teams.filter((x) => x.scrim_search).length;
   const recruitingCount = teams.filter(
     (x) => x.is_joinable && !x.is_full
   ).length;
+  const levelCount =
+    mySkillAverage == null
+      ? 0
+      : teams.filter(
+          (x) =>
+            x.skill_average != null &&
+            Math.abs(x.skill_average.average - mySkillAverage.average) <=
+              LEVEL_FILTER_SPAN
+        ).length;
 
   if (authLoading || loading) return <PlayerPageSkeleton rows={4} />;
 
@@ -340,6 +367,18 @@ function PlayerTeamsPage() {
                   label: t.filterRecruiting,
                   count: recruitingCount,
                 },
+                // Proposé seulement quand MON équipe a déclaré un niveau :
+                // sans point de comparaison, « à mon niveau » ne veut rien
+                // dire et ne renverrait jamais que zéro résultat.
+                ...(mySkillAverage
+                  ? [
+                      {
+                        key: 'level' as const,
+                        label: t.filterLevel,
+                        count: levelCount,
+                      },
+                    ]
+                  : []),
               ] satisfies Array<{ key: Filter; label: string; count: number }>
             ).map((f) => (
               <button
@@ -428,6 +467,11 @@ function PlayerTeamsPage() {
                             })}
                           </span>
                         )}
+                        {/* Niveau déclaré : le seul repère disponible pour une
+                            équipe qui n'a encore joué aucun match ici. */}
+                        <SkillRatingBadge
+                          skillRating={team.skill_average?.average}
+                        />
                         {/* Fiabilité (R10) : affichée seulement au-dessus du
                             seuil d'échantillon — un taux calculé sur deux
                             demandes serait trompeur. */}
