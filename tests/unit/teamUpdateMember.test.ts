@@ -67,6 +67,8 @@ const PLAYER_ID = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
 const TM_CAP = '11111111-1111-1111-1111-111111111111';
 const TM_PLY = '33333333-3333-3333-3333-333333333333';
 const TM_OTHER = '55555555-5555-5555-5555-555555555555';
+const MANAGER_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+const TM_MGR = '66666666-6666-6666-6666-666666666666';
 
 function seed() {
   store.teams = [
@@ -107,6 +109,16 @@ function seed() {
       user_id: 'other-player',
       role: 'player',
       battle_tag: 'Other#9999',
+      is_substitute: false,
+    },
+    // Une manager de l'équipe : le rôle `manager` porte TOUTES les permissions
+    // d'équipe par défaut (cf. DEFAULT_TEAM_ROLES), dont `manage_roster`.
+    {
+      id: TM_MGR,
+      team_id: TEAM_ID,
+      user_id: MANAGER_ID,
+      role: 'manager',
+      battle_tag: null,
       is_substitute: false,
     },
   ] as any;
@@ -165,6 +177,70 @@ describe('/api/teams/update-member - BattleTag', () => {
     );
     expect(log).toBeTruthy();
     expect(log.entity_id).toBe(TM_PLY);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * MANAGER
+ *
+ * Tenir le roster est le métier du manager, pas une faveur : il corrige les
+ * attributs d'une fiche comme la capitaine. Seule la HIÉRARCHIE lui reste
+ * fermée — dégrader un pair privilégié est un conflit, pas une délégation, et
+ * c'est déjà couvert par teamManagerRole.test.ts.
+ *
+ * Ces cas existaient en pratique mais rien ne les verrouillait : le champ
+ * BattleTag de l'écran d'équipe s'appuie dessus.
+ * ------------------------------------------------------------------------- */
+
+describe('/api/teams/update-member as manager', () => {
+  it('une manager corrige le BattleTag d’une joueuse', async () => {
+    setAuthUser({ id: MANAGER_ID });
+    const res = makeRes();
+    await updateMemberHandler(
+      makeAuthedReq({ body: { memberId: TM_PLY, battle_tag: 'Fix#4242' } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const member = (store.team_members as any[]).find((m) => m.id === TM_PLY);
+    expect(member.battle_tag).toBe('Fix#4242');
+  });
+
+  it('une manager pose le niveau d’une joueuse', async () => {
+    setAuthUser({ id: MANAGER_ID });
+    const res = makeRes();
+    await updateMemberHandler(
+      makeAuthedReq({ body: { memberId: TM_PLY, skill_rating: 3200 } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const member = (store.team_members as any[]).find((m) => m.id === TM_PLY);
+    expect(member.skill_rating).toBe(3200);
+  });
+
+  it('une manager corrige aussi la fiche de la CAPITAINE', async () => {
+    // Le garde-fou de hiérarchie porte sur le rôle, pas sur les attributs :
+    // interdire ça obligerait à repasser par le staff pour une coquille.
+    setAuthUser({ id: MANAGER_ID });
+    const res = makeRes();
+    await updateMemberHandler(
+      makeAuthedReq({ body: { memberId: TM_CAP, battle_tag: 'Cap#2222' } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const member = (store.team_members as any[]).find((m) => m.id === TM_CAP);
+    expect(member.battle_tag).toBe('Cap#2222');
+  });
+
+  it('la règle de format vaut aussi pour elle', async () => {
+    setAuthUser({ id: MANAGER_ID });
+    const res = makeRes();
+    await updateMemberHandler(
+      makeAuthedReq({ body: { memberId: TM_PLY, battle_tag: 'pas-un-tag' } }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    const member = (store.team_members as any[]).find((m) => m.id === TM_PLY);
+    expect(member.battle_tag).toBe('Old#1234');
   });
 });
 
