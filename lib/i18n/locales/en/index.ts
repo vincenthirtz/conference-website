@@ -162,6 +162,7 @@ import enRegieNewRun from './regieNewRun';
 import enRegieStartPrepared from './regieStartPrepared';
 import enBattlenetVerify from './battlenetVerify';
 import enOverwatchRank from './overwatchRank';
+import enPrintExport from './printExport';
 import enBattlenetLogin from './battlenetLogin';
 import enInvitationLink from './invitationLink';
 import enTeamJoinLink from './teamJoinLink';
@@ -331,6 +332,7 @@ const enDict = {
   regieStartPrepared: enRegieStartPrepared,
   battlenetVerify: enBattlenetVerify,
   overwatchRank: enOverwatchRank,
+  printExport: enPrintExport,
   battlenetLogin: enBattlenetLogin,
   invitationLink: enInvitationLink,
   teamJoinLink: enTeamJoinLink,

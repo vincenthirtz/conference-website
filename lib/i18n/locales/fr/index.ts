@@ -159,6 +159,7 @@ import nsRegieNewRun from './regieNewRun';
 import nsRegieStartPrepared from './regieStartPrepared';
 import nsBattlenetVerify from './battlenetVerify';
 import nsOverwatchRank from './overwatchRank';
+import nsPrintExport from './printExport';
 import nsBattlenetLogin from './battlenetLogin';
 import nsInvitationLink from './invitationLink';
 import nsTeamJoinLink from './teamJoinLink';
@@ -328,6 +329,7 @@ export const frDict = {
   regieStartPrepared: nsRegieStartPrepared.fr,
   battlenetVerify: nsBattlenetVerify.fr,
   overwatchRank: nsOverwatchRank.fr,
+  printExport: nsPrintExport.fr,
   battlenetLogin: nsBattlenetLogin.fr,
   invitationLink: nsInvitationLink.fr,
   teamJoinLink: nsTeamJoinLink.fr,

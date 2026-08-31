@@ -21,6 +21,7 @@ import type {
   TeamMini,
   TournamentMini,
 } from '@/types/admin';
+import PrintExportButton from '@/components/PrintExportButton';
 import nsAdminTournamentMatches from '@/lib/i18n/locales/admin-fr/adminTournamentMatches';
 
 type Dict = typeof nsAdminTournamentMatches.fr;
@@ -862,14 +863,16 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
+      <div className="print-document min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           {/* Header */}
           <div className="mb-8">
-            <TournamentTabsNav
-              tournamentId={String(id ?? '')}
-              active="matches"
-            />
+            <div className="print:hidden">
+              <TournamentTabsNav
+                tournamentId={String(id ?? '')}
+                active="matches"
+              />
+            </div>
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -896,82 +899,85 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                 )}
               </div>
 
-              <button
-                type="button"
-                onClick={handleAutoSchedule}
-                disabled={autoSchedRunning}
-                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {autoSchedRunning ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    {t.planningInProgress}
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    {t.autoScheduler}
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setCsvImportMode(!csvImportMode)}
-                className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
-                  csvImportMode
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-neutral-800 hover:bg-neutral-700 border border-neutral-700'
-                }`}
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+              <div className="flex flex-wrap items-center gap-2 print:hidden">
+                <PrintExportButton variant="admin" />
+                <button
+                  type="button"
+                  onClick={handleAutoSchedule}
+                  disabled={autoSchedRunning}
+                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-                  />
-                </svg>
-                {t.importCsv}
-              </button>
+                  {autoSchedRunning ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      {t.planningInProgress}
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      {t.autoScheduler}
+                    </>
+                  )}
+                </button>
 
-              <Link
-                href={`/admin/tournament/${id}/bulk-ops`}
-                className="px-4 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700"
-                title={t.bulkOpsTitle}
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+                <button
+                  type="button"
+                  onClick={() => setCsvImportMode(!csvImportMode)}
+                  className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
+                    csvImportMode
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-neutral-800 hover:bg-neutral-700 border border-neutral-700'
+                  }`}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-                  />
-                </svg>
-                {t.bulkOps}
-              </Link>
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                    />
+                  </svg>
+                  {t.importCsv}
+                </button>
+
+                <Link
+                  href={`/admin/tournament/${id}/bulk-ops`}
+                  className="px-4 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700"
+                  title={t.bulkOpsTitle}
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                    />
+                  </svg>
+                  {t.bulkOps}
+                </Link>
+              </div>
             </div>
           </div>
 
@@ -992,8 +998,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
               {errorMsg}
             </div>
           )}
-          {/* Filters */}
-          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
+          {/* Filters — commandes d'écran : le PDF imprime la liste filtrée,
+              pas les filtres. */}
+          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6 print:hidden">
             <form
               onSubmit={handleFilterSubmit}
               className="flex gap-4 flex-wrap items-end"

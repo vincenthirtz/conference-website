@@ -346,8 +346,8 @@
     var(--color-neon-cyan)
   );
   --gradient-neon-electric: linear-gradient(
-    135deg,nop 
-    var(--color-neon-blue) 0%,
+    135deg,
+    nop var(--color-neon-blue) 0%,
     var(--color-neon-violet) 50%,
     var(--color-neon-magenta) 100%
   );
@@ -434,7 +434,8 @@ select option {
 /* Carte à liseré de marque : bordure + halo violet discrets sur fond sombre. */
 .card-brand {
   border: 1px solid color-mix(in srgb, var(--color-violet) 45%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-violet) 12%, transparent),
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-violet) 12%, transparent),
     0 18px 40px -24px color-mix(in srgb, var(--color-violet) 70%, transparent);
 }
 .card-brand:hover {
@@ -2074,11 +2075,21 @@ a:focus-visible,
   transform: none;
 }
 /* Décalage en cascade pour les grilles (stagger). */
-.tl-reveal[data-stagger='1'] { transition-delay: 0.06s; }
-.tl-reveal[data-stagger='2'] { transition-delay: 0.12s; }
-.tl-reveal[data-stagger='3'] { transition-delay: 0.18s; }
-.tl-reveal[data-stagger='4'] { transition-delay: 0.24s; }
-.tl-reveal[data-stagger='5'] { transition-delay: 0.30s; }
+.tl-reveal[data-stagger='1'] {
+  transition-delay: 0.06s;
+}
+.tl-reveal[data-stagger='2'] {
+  transition-delay: 0.12s;
+}
+.tl-reveal[data-stagger='3'] {
+  transition-delay: 0.18s;
+}
+.tl-reveal[data-stagger='4'] {
+  transition-delay: 0.24s;
+}
+.tl-reveal[data-stagger='5'] {
+  transition-delay: 0.3s;
+}
 
 /* Grain / bruit léger en overlay (texture premium, ~2% opacité). */
 .tl-grain::before {
@@ -2128,8 +2139,12 @@ a:focus-visible,
   z-index: -1;
 }
 @keyframes tl-border-flow {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 100% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
 }
 
 /* Halo pulsant du CTA principal (respiration). */
@@ -2138,8 +2153,13 @@ a:focus-visible,
   animation: tl-cta-pulse 3s ease-in-out infinite;
 }
 @keyframes tl-cta-pulse {
-  0%, 100% { box-shadow: 0 0 22px 0 rgba(178, 75, 224, 0.35); }
-  50% { box-shadow: 0 0 40px 6px rgba(123, 201, 106, 0.35); }
+  0%,
+  100% {
+    box-shadow: 0 0 22px 0 rgba(178, 75, 224, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 40px 6px rgba(123, 201, 106, 0.35);
+  }
 }
 
 /* Badge LIVE clignotant. */
@@ -2147,22 +2167,45 @@ a:focus-visible,
   animation: tl-live-blink 1.6s ease-in-out infinite;
 }
 @keyframes tl-live-blink {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.35; transform: scale(0.82); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.82);
+  }
 }
 
 /* Gradient mesh animé (fond de hero très léger). */
 .tl-mesh {
   background:
-    radial-gradient(40% 55% at 18% 20%, rgba(178, 75, 224, 0.28), transparent 70%),
-    radial-gradient(38% 50% at 82% 30%, rgba(123, 201, 106, 0.16), transparent 70%),
-    radial-gradient(45% 60% at 50% 100%, rgba(240, 230, 60, 0.10), transparent 70%);
+    radial-gradient(
+      40% 55% at 18% 20%,
+      rgba(178, 75, 224, 0.28),
+      transparent 70%
+    ),
+    radial-gradient(
+      38% 50% at 82% 30%,
+      rgba(123, 201, 106, 0.16),
+      transparent 70%
+    ),
+    radial-gradient(
+      45% 60% at 50% 100%,
+      rgba(240, 230, 60, 0.1),
+      transparent 70%
+    );
   background-size: 160% 160%;
   animation: tl-mesh-drift 18s ease-in-out infinite alternate;
 }
 @keyframes tl-mesh-drift {
-  0% { background-position: 0% 0%; }
-  100% { background-position: 100% 100%; }
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 100% 100%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2199,5 +2242,87 @@ a:focus-visible,
 @media (prefers-reduced-motion: reduce) {
   .wizard-step-enter {
     animation: none;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────
+ * Impression / export PDF.
+ *
+ * L'« export PDF » du site est un window.print() : le navigateur sait déjà
+ * écrire un PDF, et l'alternative (jsPDF, pdfmake, un rendu serveur headless)
+ * aurait coûté une dépendance et un second moteur de mise en page à tenir en
+ * phase avec le premier. Même choix que le simulateur de tournoi, qui
+ * imprimait déjà ses brackets avec sa propre feuille locale.
+ *
+ * DEUX NIVEAUX, et la distinction compte :
+ *
+ *   1. Ce bloc global ne fait que le strict nécessaire — page blanche, chrome
+ *      masqué, pas de page vide en fin de document. C'est vrai de toute page
+ *      imprimée, y compris celles qui savaient déjà s'imprimer.
+ *
+ *   2. Le passage en NOIR SUR BLANC est réservé à `.print-document`, posé sur
+ *      les pages qui offrent un export. Il ne peut pas être global : _app
+ *      enveloppe TOUTES les pages dans un `<main>`, donc forcer la couleur là
+ *      écraserait le `color-adjust: exact` du simulateur de brackets, dont
+ *      l'impression repose justement sur ses couleurs.
+ * ───────────────────────────────────────────────────────── */
+@media print {
+  /* Les fonds sombres décoratifs sont neutralisés à la racine : sans ça, un
+     seul `bg-gradient` oublié repeint la page entière en noir. */
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Chrome global : jamais utile sur une feuille. */
+  nav,
+  footer,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Les conteneurs pleine hauteur forcent des pages blanches en fin de
+     document. */
+  .min-h-screen {
+    min-height: 0 !important;
+  }
+
+  /* Une ligne de tableau ou de liste ne doit pas être coupée en deux pages. */
+  tr,
+  li {
+    break-inside: avoid;
+  }
+
+  @page {
+    margin: 12mm;
+  }
+
+  /* ── Documents à imprimer : encre économe, texte lisible ── */
+
+  /* Le texte clair du thème sombre est invisible sur blanc. */
+  .print-document,
+  .print-document * {
+    background-image: none !important;
+    background-color: transparent !important;
+    color: #000 !important;
+    border-color: #bbb !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Le dégradé de marque des titres repose sur un texte transparent : sans
+     cette reprise, les titres sortent blancs sur blanc. */
+  .print-document .text-brand-gradient,
+  .print-document .text-gradient {
+    background: none !important;
+    -webkit-text-fill-color: #000 !important;
+    color: #000 !important;
+  }
+
+  /* Un lien souligné dans un tableau imprimé n'aide personne : l'URL n'est pas
+     cliquable sur papier. */
+  .print-document a {
+    text-decoration: none !important;
   }
 }

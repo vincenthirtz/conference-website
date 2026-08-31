@@ -25,6 +25,7 @@ import {
 } from '@/utils/teams/scrimCalendar';
 
 import { logger } from '../../../utils/logger';
+import PrintExportButton from '@/components/PrintExportButton';
 import nsTournamentMatches from '@/lib/i18n/locales/fr/tournamentMatches';
 
 // Fuseau de référence pour placer les matchs dans la grille mensuelle.
@@ -298,7 +299,7 @@ export default function TournamentMatchesPage({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
+    <div className="print-document min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <main className="container mx-auto px-4 pt-24 pb-16 max-w-6xl">
         {/* Header */}
         <section className="mb-6">
@@ -342,18 +343,25 @@ export default function TournamentMatchesPage({
                 {t.description}
               </Paragraph>
             </div>
+
+            <PrintExportButton className="shrink-0 self-start" />
           </div>
         </section>
 
-        <TournamentTabs
-          tournamentPath={tournamentPath}
-          active="matches"
-          showPodium={isCompleted}
-          showFfa={hasFfaStage}
-        />
+        {/* Onglets : de la navigation, donc rien à faire sur une feuille. */}
+        <div className="print:hidden">
+          <TournamentTabs
+            tournamentPath={tournamentPath}
+            active="matches"
+            showPodium={isCompleted}
+            showFfa={hasFfaStage}
+          />
+        </div>
 
-        {/* Filters */}
-        <section className="mb-4">
+        {/* Filters — commandes d'écran. Le PDF garde la liste TELLE QU'ELLE est
+            filtrée à l'écran (c'est le but : imprimer ce qu'on regarde), mais
+            les boutons de filtre eux-mêmes n'ont rien à y faire. */}
+        <section className="mb-4 print:hidden">
           <div className="bg-black/60 border border-white/5 rounded-2xl p-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[11px]">
               <div className="flex flex-wrap gap-2 items-center">
