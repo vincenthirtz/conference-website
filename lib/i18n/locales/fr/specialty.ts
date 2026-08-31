@@ -14,6 +14,10 @@
 import { ns } from '../../ns';
 
 export default ns('specialty', {
+  fieldLabel: 'Mon poste',
+  none: 'Non déclaré',
+  fieldHint:
+    'Il s’affiche sur le roster de ton équipe et sur sa page publique.',
   tank: 'Tank',
   dps: 'DPS',
   support: 'Support',

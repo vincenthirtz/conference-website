@@ -10,7 +10,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { isValidUUID, validateSpecialty } from '@/utils/apiHelpers';
+import {
+  ALLOWED_SPECIALTIES,
+  isValidUUID,
+  validateSpecialty,
+} from '@/utils/apiHelpers';
 import { withSubjectRoute } from '@/utils/subject';
 import {
   assertTeamPermission,
@@ -20,7 +24,6 @@ import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 
 import { logger } from '../../../utils/logger';
 
-const ALLOWED_SPECIALTIES = new Set(['tank', 'dps', 'support', 'flex']);
 
 export default withSubjectRoute(
   async function handler(

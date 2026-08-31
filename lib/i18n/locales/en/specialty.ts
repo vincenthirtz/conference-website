@@ -10,6 +10,9 @@
 // les valeurs sont de type `string` — des types litteraux la feraient echouer.
 
 export default {
+  fieldLabel: 'My role',
+  none: 'Not declared',
+  fieldHint: 'It shows on your team roster and on its public page.',
   tank: 'Tank',
   dps: 'DPS',
   support: 'Support',

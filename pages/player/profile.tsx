@@ -18,11 +18,13 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { logger } from '../../utils/logger';
 import nsPlayerProfile from '@/lib/i18n/locales/fr/playerProfile';
 import nsOverwatchRank from '@/lib/i18n/locales/fr/overwatchRank';
+import nsSpecialty from '@/lib/i18n/locales/fr/specialty';
 
 function PlayerProfile() {
   const router = useRouter();
   const t = useT(nsPlayerProfile);
   const tRank = useT(nsOverwatchRank);
+  const tSpec = useT(nsSpecialty);
   const locale = useLocale();
   const { addToast } = useToast();
   const { user, loading: authLoading } = usePlayerSession({
@@ -40,6 +42,7 @@ function PlayerProfile() {
   const [editDisplayName, setEditDisplayName] = useState('');
   const [editBattleTag, setEditBattleTag] = useState('');
   const [editSkillRating, setEditSkillRating] = useState('');
+  const [editSpecialty, setEditSpecialty] = useState('');
   const [editAvatarUrl, setEditAvatarUrl] = useState('');
   const [editingInitialized, setEditingInitialized] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
@@ -80,6 +83,7 @@ function PlayerProfile() {
           ? String(user.user_metadata.skill_rating)
           : ''
       );
+      setEditSpecialty((user.user_metadata?.specialty as string) || '');
       setEditAvatarUrl((user.user_metadata?.avatar_url as string) || '');
       setEditingInitialized(true);
     }
@@ -114,6 +118,9 @@ function PlayerProfile() {
           // Chaîne vide = effacer : c'est ainsi qu'on retire un niveau qu'on
           // ne veut plus afficher.
           skill_rating: editSkillRating.trim() || null,
+          // Chaîne vide = effacer le poste ; une valeur inconnue serait
+          // refusée par l'API plutôt que ramenée à null en douce.
+          specialty: editSpecialty || null,
           avatar_url: editAvatarUrl,
         }),
       });
@@ -469,6 +476,27 @@ function PlayerProfile() {
                   }`}
                   placeholder={t.battleTagPlaceholder}
                 />
+              </div>
+              <div>
+                <label
+                  htmlFor="player-specialty"
+                  className="block text-xs text-gray-400 mb-1"
+                >
+                  {tSpec.fieldLabel}
+                </label>
+                <select
+                  id="player-specialty"
+                  value={editSpecialty}
+                  onChange={(e) => setEditSpecialty(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm"
+                >
+                  <option value="">{tSpec.none}</option>
+                  <option value="tank">{tSpec.tank}</option>
+                  <option value="dps">{tSpec.dps}</option>
+                  <option value="support">{tSpec.support}</option>
+                  <option value="flex">{tSpec.flex}</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">{tSpec.fieldHint}</p>
               </div>
               <div>
                 <label

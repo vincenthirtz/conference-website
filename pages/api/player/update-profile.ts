@@ -1,12 +1,14 @@
 // pages/api/player/update-profile.ts
-// PATCH : mise a jour du display_name, du battle_tag et du niveau Overwatch
-// declare dans user_metadata, avec propagation sur les fiches de roster.
+// PATCH : mise a jour du profil joueuse — display_name, battle_tag, niveau
+// Overwatch declare et poste — dans user_metadata, avec propagation sur les
+// fiches de roster.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { ALLOWED_SPECIALTIES, validateSpecialty } from '@/utils/apiHelpers';
 import {
   SKILL_RATING_MAX,
   SKILL_RATING_MIN,
@@ -36,7 +38,8 @@ export default withAuthRoute(async function handler(
   )
     return;
 
-  const { display_name, battle_tag, avatar_url, skill_rating } = req.body || {};
+  const { display_name, battle_tag, avatar_url, skill_rating, specialty } =
+    req.body || {};
   const updates: Record<string, unknown> = {};
 
   if (typeof display_name === 'string') {
@@ -84,6 +87,30 @@ export default withAuthRoute(async function handler(
     }
   }
 
+  // Poste (tank / dps / support / flex). Une joueuse sait mieux que quiconque
+  // a quel poste elle joue ; le lui faire demander a sa capitaine etait un
+  // detour sans raison.
+  //
+  // Une valeur inconnue est REFUSEE, jamais ramenee silencieusement a null :
+  // meme contrat que /api/teams/update-member-specialty cote capitaine. Corriger
+  // en douce effacerait le poste de quelqu'un sans le lui dire.
+  if ('specialty' in (req.body || {})) {
+    if (specialty === null || specialty === '') {
+      updates.specialty = null;
+    } else if (
+      typeof specialty === 'string' &&
+      ALLOWED_SPECIALTIES.has(specialty.trim().toLowerCase())
+    ) {
+      updates.specialty = validateSpecialty(specialty);
+    } else {
+      return res.status(400).json({
+        error:
+          'specialty invalide. Attendu : tank | dps | support | flex | null.',
+        code: 'SPECIALTY_INVALID',
+      });
+    }
+  }
+
   if (typeof avatar_url === 'string') {
     const trimmed = avatar_url.trim();
     if (
@@ -123,6 +150,7 @@ export default withAuthRoute(async function handler(
   // Le garder seulement dans les metadonnees du compte le rendrait invisible.
   if ('skill_rating' in updates)
     rosterUpdates.skill_rating = updates.skill_rating;
+  if ('specialty' in updates) rosterUpdates.specialty = updates.specialty;
 
   if (Object.keys(rosterUpdates).length > 0) {
     const tenantId = resolveTenantIdForUserRequest(req, {

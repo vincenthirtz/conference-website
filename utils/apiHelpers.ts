@@ -145,7 +145,18 @@ export function validateRole(role: string | null | undefined): string {
   return ALLOWED_ROLES.has(trimmed) ? trimmed : 'player';
 }
 
-const ALLOWED_SPECIALTIES = new Set(['tank', 'dps', 'support', 'flex']);
+/**
+ * Les postes reconnus. Exporté parce que trois routes en ont besoin pour
+ * REFUSER une valeur inconnue plutôt que de la ramener silencieusement à null —
+ * `validateSpecialty` seul ne permet pas de distinguer « effacer » de « valeur
+ * erronée ». Chaque route en gardait sa propre copie.
+ */
+export const ALLOWED_SPECIALTIES = new Set([
+  'tank',
+  'dps',
+  'support',
+  'flex',
+]);
 
 /**
  * Validate a team member in-game specialty against the allowed list

@@ -615,6 +615,79 @@ describe('PATCH /api/player/update-profile', () => {
     }
   });
 
+  // Une joueuse sait mieux que quiconque à quel poste elle joue ; le lui faire
+  // demander à sa capitaine était un détour sans raison.
+  it('200 propage le poste de la joueuse sur sa fiche de roster', async () => {
+    setAuthUser({ id: 'user-1', user_metadata: {} });
+    store.team_members = [
+      { id: 'tm1', user_id: 'user-1', specialty: null },
+      { id: 'tm2', user_id: 'user-2', specialty: 'dps' },
+    ] as any;
+
+    const res = makeRes();
+    await updateProfileHandler(
+      makeReq({ method: 'PATCH', body: { specialty: 'support' } }, true),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect((store.team_members as any)[0].specialty).toBe('support');
+    expect((store.team_members as any)[1].specialty).toBe('dps');
+  });
+
+  it('efface le poste sur null comme sur chaîne vide', async () => {
+    for (const vide of [null, '']) {
+      setAuthUser({ id: 'user-1', user_metadata: {} });
+      store.team_members = [
+        { id: 'tm1', user_id: 'user-1', specialty: 'tank' },
+      ] as any;
+
+      const res = makeRes();
+      await updateProfileHandler(
+        makeReq({ method: 'PATCH', body: { specialty: vide } }, true),
+        res
+      );
+
+      expect(res.statusCode).toBe(200);
+      expect((store.team_members as any)[0].specialty).toBeNull();
+    }
+  });
+
+  it('REFUSE un poste inconnu au lieu de l’effacer en douce', async () => {
+    // Ramener silencieusement à null supprimerait le poste de quelqu'un sans
+    // le lui dire — même contrat que la route capitaine.
+    setAuthUser({ id: 'user-1', user_metadata: {} });
+    store.team_members = [
+      { id: 'tm1', user_id: 'user-1', specialty: 'tank' },
+    ] as any;
+
+    const res = makeRes();
+    await updateProfileHandler(
+      makeReq({ method: 'PATCH', body: { specialty: 'jungler' } }, true),
+      res
+    );
+
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).code).toBe('SPECIALTY_INVALID');
+    expect((store.team_members as any)[0].specialty).toBe('tank');
+  });
+
+  it('accepte la casse : les imports ne normalisent pas toujours', async () => {
+    setAuthUser({ id: 'user-1', user_metadata: {} });
+    store.team_members = [
+      { id: 'tm1', user_id: 'user-1', specialty: null },
+    ] as any;
+
+    const res = makeRes();
+    await updateProfileHandler(
+      makeReq({ method: 'PATCH', body: { specialty: ' Support ' } }, true),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect((store.team_members as any)[0].specialty).toBe('support');
+  });
+
   it('modifier le seul pseudo ne touche pas au SR de la fiche', async () => {
     setAuthUser({ id: 'user-1', user_metadata: {} });
     store.team_members = [
