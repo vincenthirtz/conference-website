@@ -80,10 +80,4 @@ export default {
     "Whether you're a player, a streamer or just curious, there's a place for you in the OW Women's Cup community.",
   ctaCreateTeam: 'Create my team',
   ctaContact: 'Contact us',
-  sectionBadge: 'About the tournament',
-  compP1:
-    "The goal is to promote French-speaking women's esports through a 100% women's competition. The cast will be made up entirely of women too.",
-  compP2:
-    "We're looking for a headline sponsor for the long term. We already have two partners for the 2026 edition.",
-  playersAlt: "OW Women's Cup logo",
 };

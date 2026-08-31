@@ -22,7 +22,6 @@ import nsActiveTeamSwitcher from './activeTeamSwitcher';
 import nsManageTeam from './manageTeam';
 import nsFreePlayers from './freePlayers';
 import nsNewTeamForm from './newTeamForm';
-import nsExistingTeamSelector from './existingTeamSelector';
 import nsTeamCard from './teamCard';
 import nsPlayerRequests from './playerRequests';
 import nsRequestCaptain from './requestCaptain';
@@ -56,11 +55,7 @@ import nsPalmaresPage from './palmaresPage';
 import nsScrimsPage from './scrimsPage';
 import nsScrimLanding from './scrimLanding';
 import nsTournamentsList from './tournamentsList';
-import nsHome from './home';
 import nsHomeV2 from './homeV2';
-import nsHomeHeader from './homeHeader';
-import nsHomeCountdown from './homeCountdown';
-import nsHomeLive from './homeLive';
 import nsHomeEvents from './homeEvents';
 import nsHomeNews from './homeNews';
 import nsHomeSponsors from './homeSponsors';
@@ -100,7 +95,6 @@ import nsTournamentDetail from './tournamentDetail';
 import nsTournamentLanding from './tournamentLanding';
 import nsTournamentArbitration from './tournamentArbitration';
 import nsTournamentBracket from './tournamentBracket';
-import nsShareEmbed from './shareEmbed';
 import nsTournamentMatches from './tournamentMatches';
 import nsTournamentMaps from './tournamentMaps';
 import nsTournamentStats from './tournamentStats';
@@ -112,7 +106,6 @@ import nsTournoiPage from './tournoiPage';
 import nsLeaguesIndex from './leaguesIndex';
 import nsLeagueDetail from './leagueDetail';
 import nsCasterCockpit from './casterCockpit';
-import nsCockpitHeader from './cockpitHeader';
 import nsBriefingPanel from './briefingPanel';
 import nsLiveSegmentBlock from './liveSegmentBlock';
 import nsCockpitChecklist from './cockpitChecklist';
@@ -138,14 +131,10 @@ import nsHeroPicker from './heroPicker';
 import nsAuthDiscordMember from './authDiscordMember';
 import nsPlanDuSite from './planDuSite';
 import nsAdminTopBar from './adminTopBar';
-import nsPatchNotesSection from './patchNotesSection';
-import nsActualitesPreview from './actualitesPreview';
 import nsPushOptIn from './pushOptIn';
 import nsFloatingSocials from './floatingSocials';
 import nsErrorBoundary from './errorBoundary';
 import nsRulesPage from './rulesPage';
-import nsSubscriptionForm from './subscriptionForm';
-import nsInscriptionPopup from './inscriptionPopup';
 import nsToast from './toast';
 import nsEmbedBracket from './embedBracket';
 import nsEmbedStandings from './embedStandings';
@@ -193,7 +182,6 @@ export const frDict = {
   manageTeam: nsManageTeam.fr,
   freePlayers: nsFreePlayers.fr,
   newTeamForm: nsNewTeamForm.fr,
-  existingTeamSelector: nsExistingTeamSelector.fr,
   teamCard: nsTeamCard.fr,
   playerRequests: nsPlayerRequests.fr,
   requestCaptain: nsRequestCaptain.fr,
@@ -227,11 +215,7 @@ export const frDict = {
   scrimsPage: nsScrimsPage.fr,
   scrimLanding: nsScrimLanding.fr,
   tournamentsList: nsTournamentsList.fr,
-  home: nsHome.fr,
   homeV2: nsHomeV2.fr,
-  homeHeader: nsHomeHeader.fr,
-  homeCountdown: nsHomeCountdown.fr,
-  homeLive: nsHomeLive.fr,
   homeEvents: nsHomeEvents.fr,
   homeNews: nsHomeNews.fr,
   homeSponsors: nsHomeSponsors.fr,
@@ -271,7 +255,6 @@ export const frDict = {
   tournamentLanding: nsTournamentLanding.fr,
   tournamentArbitration: nsTournamentArbitration.fr,
   tournamentBracket: nsTournamentBracket.fr,
-  shareEmbed: nsShareEmbed.fr,
   tournamentMatches: nsTournamentMatches.fr,
   tournamentMaps: nsTournamentMaps.fr,
   tournamentStats: nsTournamentStats.fr,
@@ -283,7 +266,6 @@ export const frDict = {
   leaguesIndex: nsLeaguesIndex.fr,
   leagueDetail: nsLeagueDetail.fr,
   casterCockpit: nsCasterCockpit.fr,
-  cockpitHeader: nsCockpitHeader.fr,
   briefingPanel: nsBriefingPanel.fr,
   liveSegmentBlock: nsLiveSegmentBlock.fr,
   cockpitChecklist: nsCockpitChecklist.fr,
@@ -309,14 +291,10 @@ export const frDict = {
   authDiscordMember: nsAuthDiscordMember.fr,
   planDuSite: nsPlanDuSite.fr,
   adminTopBar: nsAdminTopBar.fr,
-  patchNotesSection: nsPatchNotesSection.fr,
-  actualitesPreview: nsActualitesPreview.fr,
   pushOptIn: nsPushOptIn.fr,
   floatingSocials: nsFloatingSocials.fr,
   errorBoundary: nsErrorBoundary.fr,
   rulesPage: nsRulesPage.fr,
-  subscriptionForm: nsSubscriptionForm.fr,
-  inscriptionPopup: nsInscriptionPopup.fr,
   toast: nsToast.fr,
   embedBracket: nsEmbedBracket.fr,
   embedStandings: nsEmbedStandings.fr,

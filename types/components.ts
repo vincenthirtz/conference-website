@@ -4,7 +4,7 @@ import type {
   ReactNode,
   SetStateAction,
 } from 'react';
-import type { City, Speaker, Team, SVGTypes } from './types';
+import type { Team } from './types';
 import type { StaffRole } from './admin';
 
 export type ButtonType = 'button' | 'submit' | 'reset' | undefined;
@@ -24,19 +24,6 @@ export interface IButton {
   href?: string;
   target?: string;
   rel?: string;
-}
-
-export interface IDropdown {
-  city: Partial<City>;
-  cities: City[];
-  setCity: Dispatch<SetStateAction<Partial<City>>>;
-  handleSpeakers: (arg0: string) => void;
-}
-
-export interface ISpeaker {
-  details: Speaker;
-  location?: string | undefined;
-  className?: string;
 }
 
 export type AdminLink = {
@@ -69,14 +56,6 @@ export interface TeamProps {
   details: Team;
   location?: string;
   className?: string;
-}
-
-export interface HamburgerProps {
-  className?: string;
-}
-
-export interface IArrows extends SVGTypes {
-  direction: string;
 }
 
 export type ParagraphTypeStyle = 'body-lg' | 'body-md' | 'body-sm';

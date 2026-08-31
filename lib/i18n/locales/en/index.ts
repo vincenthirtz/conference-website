@@ -27,7 +27,6 @@ import enJoinTeam from './joinTeam';
 import enManageTeam from './manageTeam';
 import enFreePlayers from './freePlayers';
 import enNewTeamForm from './newTeamForm';
-import enExistingTeamSelector from './existingTeamSelector';
 import enTeamCard from './teamCard';
 import enPlayerRequests from './playerRequests';
 import enRequestCaptain from './requestCaptain';
@@ -60,11 +59,7 @@ import enLeaderboardPage from './leaderboardPage';
 import enScrimsPage from './scrimsPage';
 import enScrimLanding from './scrimLanding';
 import enTournamentsList from './tournamentsList';
-import enHome from './home';
 import enHomeV2 from './homeV2';
-import enHomeHeader from './homeHeader';
-import enHomeCountdown from './homeCountdown';
-import enHomeLive from './homeLive';
 import enHomeEvents from './homeEvents';
 import enHomeNews from './homeNews';
 import enHomeSponsors from './homeSponsors';
@@ -103,7 +98,6 @@ import enTournamentDetail from './tournamentDetail';
 import enTournamentLanding from './tournamentLanding';
 import enTournamentArbitration from './tournamentArbitration';
 import enTournamentBracket from './tournamentBracket';
-import enShareEmbed from './shareEmbed';
 import enTournamentMatches from './tournamentMatches';
 import enTournamentMaps from './tournamentMaps';
 import enTournamentStats from './tournamentStats';
@@ -115,7 +109,6 @@ import enTournoiPage from './tournoiPage';
 import enLeaguesIndex from './leaguesIndex';
 import enLeagueDetail from './leagueDetail';
 import enCasterCockpit from './casterCockpit';
-import enCockpitHeader from './cockpitHeader';
 import enBriefingPanel from './briefingPanel';
 import enLiveSegmentBlock from './liveSegmentBlock';
 import enCockpitChecklist from './cockpitChecklist';
@@ -141,14 +134,10 @@ import enHeroPicker from './heroPicker';
 import enAuthDiscordMember from './authDiscordMember';
 import enPlanDuSite from './planDuSite';
 import enAdminTopBar from './adminTopBar';
-import enPatchNotesSection from './patchNotesSection';
-import enActualitesPreview from './actualitesPreview';
 import enPushOptIn from './pushOptIn';
 import enFloatingSocials from './floatingSocials';
 import enErrorBoundary from './errorBoundary';
 import enRulesPage from './rulesPage';
-import enSubscriptionForm from './subscriptionForm';
-import enInscriptionPopup from './inscriptionPopup';
 import enToast from './toast';
 import enEmbedBracket from './embedBracket';
 import enEmbedStandings from './embedStandings';
@@ -198,7 +187,6 @@ const enDict = {
   manageTeam: enManageTeam,
   freePlayers: enFreePlayers,
   newTeamForm: enNewTeamForm,
-  existingTeamSelector: enExistingTeamSelector,
   teamCard: enTeamCard,
   playerRequests: enPlayerRequests,
   requestCaptain: enRequestCaptain,
@@ -231,11 +219,7 @@ const enDict = {
   scrimsPage: enScrimsPage,
   scrimLanding: enScrimLanding,
   tournamentsList: enTournamentsList,
-  home: enHome,
   homeV2: enHomeV2,
-  homeHeader: enHomeHeader,
-  homeCountdown: enHomeCountdown,
-  homeLive: enHomeLive,
   homeEvents: enHomeEvents,
   homeNews: enHomeNews,
   homeSponsors: enHomeSponsors,
@@ -274,7 +258,6 @@ const enDict = {
   tournamentLanding: enTournamentLanding,
   tournamentArbitration: enTournamentArbitration,
   tournamentBracket: enTournamentBracket,
-  shareEmbed: enShareEmbed,
   tournamentMatches: enTournamentMatches,
   tournamentMaps: enTournamentMaps,
   tournamentStats: enTournamentStats,
@@ -286,7 +269,6 @@ const enDict = {
   leaguesIndex: enLeaguesIndex,
   leagueDetail: enLeagueDetail,
   casterCockpit: enCasterCockpit,
-  cockpitHeader: enCockpitHeader,
   briefingPanel: enBriefingPanel,
   liveSegmentBlock: enLiveSegmentBlock,
   cockpitChecklist: enCockpitChecklist,
@@ -312,14 +294,10 @@ const enDict = {
   authDiscordMember: enAuthDiscordMember,
   planDuSite: enPlanDuSite,
   adminTopBar: enAdminTopBar,
-  patchNotesSection: enPatchNotesSection,
-  actualitesPreview: enActualitesPreview,
   pushOptIn: enPushOptIn,
   floatingSocials: enFloatingSocials,
   errorBoundary: enErrorBoundary,
   rulesPage: enRulesPage,
-  subscriptionForm: enSubscriptionForm,
-  inscriptionPopup: enInscriptionPopup,
   toast: enToast,
   embedBracket: enEmbedBracket,
   embedStandings: enEmbedStandings,

@@ -79,10 +79,4 @@ export default ns('aboutPage', {
     "Que tu sois joueuse, streameuse ou simplement curieuse, il y a une place pour toi dans la communauté OW Women's Cup.",
   ctaCreateTeam: 'Créer mon équipe',
   ctaContact: 'Nous contacter',
-  sectionBadge: 'A propos du tournoi',
-  compP1:
-    "Le but étant de promouvoir l'esport féminin et francophone à travers une compétition 100% féminine. Le cast sera aussi composé uniquement de femmes.",
-  compP2:
-    "Nous sommes à le recherche d'un super sponsor sur le long terme. Nous avons déjà deux partenaires pour l'édition 2026.",
-  playersAlt: "Logo OW Women's Cup",
 });
