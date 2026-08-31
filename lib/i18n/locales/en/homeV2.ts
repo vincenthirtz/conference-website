@@ -53,6 +53,12 @@ export default {
   spotFactTeams: 'Teams',
   spotProgressAria: '{pct}% of slots taken',
   spotCtaRegister: 'Register my team',
+  spotChipFull: 'Full',
+  spotFullLead:
+    'Every slot is taken for this edition. In the meantime:',
+  spotCtaScrim: 'Propose a scrim',
+  spotCtaFindTeam: 'Find a team',
+  spotCtaCreateTeamNext: 'Create a team (next season)',
   spotCtaView: 'View the tournament',
   spotCtaTeams: 'View registered teams',
   spotLiveNow: 'Live on Twitch',

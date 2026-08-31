@@ -148,6 +148,11 @@ export default function HomeSpotlight({
           Math.round((tournament.teamCount / tournament.maxTeams) * 100)
         )
       : null;
+  // « Complet » se DÉDUIT des places, comme dans le hero : le jour où une
+  // équipe se désiste, la section réinvite d'elle-même. Un drapeau à lever à
+  // la main resterait levé.
+  const isFull =
+    tournament.maxTeams != null && tournament.teamCount >= tournament.maxTeams;
 
   return (
     <section className="container mx-auto mt-16 px-4 md:mt-20 md:px-0">
@@ -179,6 +184,10 @@ export default function HomeSpotlight({
                   <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-rose-500" />
                 </span>
                 {t.spotChipLive}
+              </span>
+            ) : isFull ? (
+              <span className="inline-flex items-center rounded-full border border-[var(--color-yellow)]/45 bg-[var(--color-yellow)]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-yellow)]">
+                {t.spotChipFull}
               </span>
             ) : (
               <span className="inline-flex items-center rounded-full border border-[var(--color-green)]/40 bg-[var(--color-green)]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-green-light)]">
@@ -254,14 +263,44 @@ export default function HomeSpotlight({
             </div>
           )}
 
+          {/* Complet : la section ne se contente pas de constater la porte
+              fermée, elle en ouvre trois autres. Une visiteuse qui arrive une
+              fois les places prises repartait sans rien à faire — or il lui
+              reste les scrims, la recherche d'équipe, et la saison suivante. */}
+          {isFull && !isRunning && (
+            <p className="mt-6 text-sm text-gray-300">{t.spotFullLead}</p>
+          )}
+
           <div className="mt-6 flex flex-wrap gap-3">
-            {!isRunning && (
+            {!isRunning && !isFull && (
               <Link
                 href="/team/create"
                 className="rounded-full bg-[var(--color-violet)] px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:-translate-y-0.5 hover:bg-[var(--color-violet-deep)] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] motion-reduce:transform-none"
               >
                 {t.spotCtaRegister}
               </Link>
+            )}
+            {!isRunning && isFull && (
+              <>
+                <Link
+                  href="/scrim"
+                  className="rounded-full bg-[var(--color-violet)] px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:-translate-y-0.5 hover:bg-[var(--color-violet-deep)] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] motion-reduce:transform-none"
+                >
+                  {t.spotCtaScrim}
+                </Link>
+                <Link
+                  href="/rejoindre"
+                  className="rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-medium text-white transition hover:border-[var(--color-violet-light)]/60 hover:bg-[var(--color-violet)]/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
+                >
+                  {t.spotCtaFindTeam}
+                </Link>
+                <Link
+                  href="/team/create"
+                  className="rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-medium text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
+                >
+                  {t.spotCtaCreateTeamNext}
+                </Link>
+              </>
             )}
             <Link
               href={detailHref}

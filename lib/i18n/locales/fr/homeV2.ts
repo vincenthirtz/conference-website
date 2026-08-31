@@ -60,6 +60,12 @@ export default ns('homeV2', {
   spotFactTeams: 'Équipes',
   spotProgressAria: '{pct} % des places prises',
   spotCtaRegister: 'Inscrire mon équipe',
+  spotChipFull: 'Complet',
+  spotFullLead:
+    'Toutes les places sont prises pour cette édition. En attendant la suite :',
+  spotCtaScrim: 'Proposer un scrim',
+  spotCtaFindTeam: 'Chercher une équipe',
+  spotCtaCreateTeamNext: 'Créer une équipe (prochaine saison)',
   spotCtaView: 'Voir le tournoi',
   spotCtaTeams: 'Voir les équipes engagées',
   spotLiveNow: 'En direct sur Twitch',
