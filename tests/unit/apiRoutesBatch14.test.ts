@@ -426,7 +426,7 @@ describe('/api/demandes/join', () => {
     setAuthUser({
       id: 'user-1',
       email: 'me@me.com',
-      user_metadata: { display_name: 'Me' },
+      user_metadata: { display_name: 'Me', battle_tag: 'Me#1234' },
     });
     store.teams = [
       { id: 'team-1', name: 'Open', is_active: true, is_joinable: true },
@@ -440,6 +440,8 @@ describe('/api/demandes/join', () => {
     );
     expect(res.statusCode).toBe(201);
     expect((store.demandes as any)[0].payload.desired_role).toBe('player');
+    // Le tag du profil suffit : on ne redemande pas ce qu'on sait deja.
+    expect((store.demandes as any)[0].payload.user_battle_tag).toBe('Me#1234');
   });
 
   it('POST 201 normalizes desiredRole to substitute', async () => {
@@ -454,13 +456,56 @@ describe('/api/demandes/join', () => {
       makeReq(
         {
           method: 'POST',
-          body: { teamId: 'team-1', desiredRole: 'substitute' },
+          body: {
+            teamId: 'team-1',
+            desiredRole: 'substitute',
+            battleTag: 'Sub#4321',
+          },
         },
         true
       ),
       res
     );
     expect((store.demandes as any)[0].payload.desired_role).toBe('substitute');
+  });
+
+  // Le trou d'ou vient tout le reste : un compte cree via Discord n'a pas de
+  // BattleTag, et la ligne de roster naissait vide a l'approbation.
+  it('POST 400 BATTLE_TAG_REQUIRED for a playing role without any tag', async () => {
+    setAuthUser({ id: 'user-1', email: 'me@me.com', user_metadata: {} });
+    store.teams = [
+      { id: 'team-1', name: 'Open', is_active: true, is_joinable: true },
+    ] as any;
+    store.team_members = [];
+    store.demandes = [];
+    const res = makeRes();
+    await demandesJoinHandler(
+      makeReq({ method: 'POST', body: { teamId: 'team-1' } }, true),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).code).toBe('BATTLE_TAG_REQUIRED');
+    expect(store.demandes).toHaveLength(0);
+  });
+
+  it('POST 400 BATTLE_TAG_INVALID on a malformed tag', async () => {
+    setAuthUser({ id: 'user-1', email: 'me@me.com', user_metadata: {} });
+    store.teams = [
+      { id: 'team-1', name: 'Open', is_active: true, is_joinable: true },
+    ] as any;
+    store.team_members = [];
+    store.demandes = [];
+    const res = makeRes();
+    await demandesJoinHandler(
+      makeReq(
+        { method: 'POST', body: { teamId: 'team-1', battleTag: 'Me1234' } },
+        true
+      ),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).code).toBe('BATTLE_TAG_INVALID');
+    expect(store.demandes).toHaveLength(0);
   });
 });
 

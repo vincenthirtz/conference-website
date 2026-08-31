@@ -12,6 +12,7 @@ import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import TeamPicker from '@/components/player/TeamPicker';
 import { MAX_TEAM_PLAYERS } from '@/utils/constants';
+import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
 import { useT, format } from '@/lib/i18n/useT';
 import { ANALYTICS_EVENTS, trackEvent } from '@/lib/analytics/track';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -58,12 +59,26 @@ export default function JoinTeamPage() {
     'player'
   );
 
+  // BattleTag. Un compte cree via Discord n'en a jamais eu l'occasion
+  // (pages/auth/discord-member.tsx ne pose que `role`), et l'API le REFUSE
+  // desormais pour un role jouant : la question se pose donc ici, une fois,
+  // pre-remplie quand le profil le porte deja.
+  const [battleTag, setBattleTag] = useState('');
+  const [battleTagSeeded, setBattleTagSeeded] = useState(false);
+
   // Message et etats
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [successTeamName, setSuccessTeamName] = useState('');
+
+  useEffect(() => {
+    if (user && !battleTagSeeded) {
+      setBattleTag((user.user_metadata?.battle_tag as string) || '');
+      setBattleTagSeeded(true);
+    }
+  }, [user, battleTagSeeded]);
 
   const debouncedSearch = useDebounce(teamSearch, 300);
 
@@ -156,6 +171,16 @@ export default function JoinTeamPage() {
       return;
     }
 
+    const trimmedBattleTag = battleTag.trim();
+    if (!trimmedBattleTag) {
+      setError(t.battleTagRequired);
+      return;
+    }
+    if (!BATTLE_TAG_REGEX.test(trimmedBattleTag)) {
+      setError(t.battleTagInvalid);
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -165,6 +190,7 @@ export default function JoinTeamPage() {
           teamId: selectedTeamId,
           message: message.trim() || undefined,
           desiredRole,
+          battleTag: trimmedBattleTag,
         }),
       });
 
@@ -348,6 +374,33 @@ export default function JoinTeamPage() {
                       {t.roleSub}
                     </button>
                   </div>
+                </div>
+
+                {/* BattleTag */}
+                <div>
+                  <label
+                    htmlFor="join-battle-tag"
+                    className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
+                  >
+                    {t.battleTagLabel}
+                  </label>
+                  <input
+                    id="join-battle-tag"
+                    type="text"
+                    value={battleTag}
+                    onChange={(e) => setBattleTag(e.target.value)}
+                    required
+                    aria-describedby="join-battle-tag-hint"
+                    className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 transition"
+                    placeholder={t.battleTagPlaceholder}
+                    maxLength={64}
+                  />
+                  <p
+                    id="join-battle-tag-hint"
+                    className="mt-2 text-xs text-gray-400"
+                  >
+                    {t.battleTagHint}
+                  </p>
                 </div>
 
                 {/* Message optionnel */}

@@ -46,6 +46,12 @@ export default ns('joinTeam', {
   alreadyInTeamBody:
     'Tu es deja membre de "{teamName}". Pour changer d\'equipe, passe par Demandes › Transfert.',
   alreadyInTeamCta: 'Aller a mes demandes de transfert →',
+  battleTagLabel: 'Ton BattleTag',
+  battleTagPlaceholder: 'Pseudo#1234',
+  battleTagHint:
+    'Format Blizzard : pseudo, dièse, quatre chiffres. Il apparaîtra sur le roster de ton équipe.',
+  battleTagInvalid: 'Format BattleTag invalide (ex: Pseudo#1234).',
+  battleTagRequired: 'Ton BattleTag est nécessaire pour rejoindre un roster.',
   teamsLoadError: 'Impossible de charger les équipes. Réessaie.',
   retry: 'Réessayer',
 });

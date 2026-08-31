@@ -8,12 +8,22 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { findExclusiveMembership } from '@/utils/teams/memberships';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withSubjectRoute } from '@/utils/subject';
+import {
+  BATTLE_TAG_REGEX,
+  roleRequiresBattleTag,
+} from '@/utils/teams/roleKind';
 
 import { logger } from '../../../utils/logger';
 export type JoinRequestBody = {
   teamId: string;
   message?: string;
   desiredRole?: 'player' | 'substitute' | 'coach';
+  /**
+   * BattleTag saisi dans le formulaire. Facultatif dans le type parce que le
+   * profil peut deja le porter : c'est la RESOLUTION plus bas (corps, puis
+   * metadonnees) qui decide s'il en manque un.
+   */
+  battleTag?: string;
 };
 
 export default withSubjectRoute(
@@ -139,6 +149,38 @@ export default withSubjectRoute(
             ? 'coach'
             : 'player';
 
+      // BattleTag. Sans lui, la ligne de roster creee a l'approbation nait
+      // vide (payload.user_battle_tag -> team_members.battle_tag) et la
+      // joueuse decouvre ensuite un « BattleTag manquant » qu'elle croyait
+      // avoir renseigne. Une inscription par Discord ne le demande jamais
+      // (pages/auth/discord-member.tsx ne pose que `role`) : rejoindre un
+      // roster est le dernier moment ou on peut l'exiger avant que le trou
+      // n'existe. Meme regle que le lien d'auto-inscription
+      // (api/teams/invite-links/by-token.ts) : exige des roles JOUANTS.
+      const metaBattleTag =
+        (typeof user.user_metadata?.battle_tag === 'string'
+          ? user.user_metadata.battle_tag
+          : ''
+        ).trim() || null;
+      const submittedBattleTag =
+        (typeof body.battleTag === 'string' ? body.battleTag : '').trim() ||
+        null;
+      const battleTag = submittedBattleTag || metaBattleTag;
+
+      if (battleTag && !BATTLE_TAG_REGEX.test(battleTag)) {
+        return res.status(400).json({
+          error: 'Format BattleTag invalide (ex: Pseudo#1234).',
+          code: 'BATTLE_TAG_INVALID',
+        });
+      }
+
+      if (!battleTag && roleRequiresBattleTag(desiredRole)) {
+        return res.status(400).json({
+          error: 'Ton BattleTag est necessaire pour rejoindre un roster.',
+          code: 'BATTLE_TAG_REQUIRED',
+        });
+      }
+
       // Construire le payload
       const payload: Record<string, any> = {
         user_email: user.email,
@@ -146,7 +188,7 @@ export default withSubjectRoute(
           user.user_metadata?.display_name ||
           user.user_metadata?.full_name ||
           null,
-        user_battle_tag: user.user_metadata?.battle_tag || null,
+        user_battle_tag: battleTag,
         team_name: teamData.name,
         desired_role: desiredRole,
       };
@@ -170,6 +212,23 @@ export default withSubjectRoute(
       if (insertErr) {
         logger.error('[demandes/join] insert error:', insertErr);
         return res.status(500).json({ error: 'Failed to create request.' });
+      }
+
+      // Le tag donne ici devient celui du profil : on ne le redemande pas a
+      // l'ecran suivant, et /player/profile cesse de l'afficher vide. Best
+      // effort — la demande est deja creee, une metadonnee non ecrite ne doit
+      // pas la faire echouer.
+      if (battleTag && battleTag !== metaBattleTag) {
+        const { error: metaErr } =
+          await supabaseAdmin.auth.admin.updateUserById(user.id, {
+            user_metadata: {
+              ...(user.user_metadata ?? {}),
+              battle_tag: battleTag,
+            },
+          });
+        if (metaErr) {
+          logger.warn('[demandes/join] battle_tag metadata update:', metaErr);
+        }
       }
 
       return res.status(201).json({

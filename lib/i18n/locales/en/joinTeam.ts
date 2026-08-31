@@ -46,6 +46,12 @@ export default {
   alreadyInTeamBody:
     'You are already a member of "{teamName}". To switch teams, use Requests › Transfer.',
   alreadyInTeamCta: 'Go to my transfer requests →',
+  battleTagLabel: 'Your BattleTag',
+  battleTagPlaceholder: 'Name#1234',
+  battleTagHint:
+    'Blizzard format: name, hash, four digits. It will show on your team roster.',
+  battleTagInvalid: 'Invalid BattleTag format (e.g. Name#1234).',
+  battleTagRequired: 'We need your BattleTag to add you to a roster.',
   teamsLoadError: 'Unable to load teams. Please try again.',
   retry: 'Retry',
 };
