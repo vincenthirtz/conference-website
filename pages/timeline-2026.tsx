@@ -1,3 +1,29 @@
+// pages/timeline-2026.tsx
+//
+// Le PARCOURS de l'édition 2026, présenté comme un vrai planning.
+//
+// Avant : trois jalons éditoriaux (mai / été / octobre) sur un rail dégradé
+// pulsant, puis une liste de matchs groupés par jour. Deux objets sans rapport,
+// aucune structure de compétition — la page ne disait ni où on en est, ni ce
+// qui vient après. Le jalon « en cours » était même détecté en re-parsant un
+// libellé de mois traduit (`frenchMonthMap`), donc faux dès qu'on lisait en
+// anglais.
+//
+// Maintenant : la structure de la compétition EST la page. Trois bandes
+// temporelles — avant-saison, saison régulière, finales — et dans la saison,
+// une carte par JOURNÉE (round_name : J1…J7), avec sa fenêtre de dates, son
+// avancement et ses matchs dépliables. La journée en cours (ou la prochaine)
+// est la seule chose mise en avant.
+//
+// Deux règles tenues ici :
+//   1. L'état vient des DONNÉES, jamais de l'horloge : « prochaine journée » =
+//      première journée non terminée d'après le statut des matchs. Une dérivation
+//      basée sur `new Date()` divergerait entre le rendu ISR et le client
+//      (mismatch d'hydratation), et cette page est en `revalidate: 300`.
+//   2. Seul le compte à rebours dépend de l'heure — il est donc rendu APRÈS
+//      montage, jamais côté serveur.
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -12,14 +38,6 @@ type Timeline2026Dict = typeof nsTimeline2026.fr;
 
 const WOMEN_TOURNAMENT_ID_2026 = 'e8fa740c-d92b-49d8-a654-05a37d0eea3b';
 const TWITCH_URL = 'https://www.twitch.tv/womens_cup';
-
-type TimelineItem = {
-  id: string;
-  title: string;
-  period: string;
-  description: string;
-  badge?: string;
-};
 
 type SimpleTeam = {
   id: string;
@@ -41,50 +59,46 @@ type SimpleMatch = {
   stage: { name: string | null } | null;
 };
 
-type DayGroup = {
+/** Une JOURNÉE de compétition (round_name), avec son avancement. */
+type RoundGroup = {
+  key: string;
+  /** Libellé court, tel que saisi côté staff : « J1 », « Grande finale »… */
+  label: string;
+  /** Phase à laquelle la journée appartient (nom de `tournament_stages`). */
+  phase: string | null;
+  matches: SimpleMatch[];
+  firstAt: string | null;
+  lastAt: string | null;
+  played: number;
+  live: boolean;
+};
+
+/** Une PHASE : un groupe de journées partageant la même étape de tournoi. */
+type Phase = {
   key: string;
   label: string;
-  matches: SimpleMatch[];
+  rounds: RoundGroup[];
+  firstAt: string | null;
+  lastAt: string | null;
+  /** Ce qu'il faut savoir pour LIRE la phase : son format de compétition. */
+  note: string | null;
 };
 
 type Props = {
   matches: SimpleMatch[];
   tournamentSlug: string | null;
+  teamCount: number;
 };
 
-const frenchMonthMap: Record<string, number> = {
-  janvier: 0,
-  fevrier: 1,
-  février: 1,
-  mars: 2,
-  avril: 3,
-  mai: 4,
-  juin: 5,
-  juillet: 6,
-  août: 7,
-  septembre: 8,
-  octobre: 9,
-  novembre: 10,
-  decembre: 11,
-  // Libellés EN : la détection du jalon « en cours » lit `period`, qui est
-  // désormais traduit — on accepte donc aussi les mois anglais.
-  january: 0,
-  february: 1,
-  march: 2,
-  april: 3,
-  may: 4,
-  june: 5,
-  july: 6,
-  august: 7,
-  september: 8,
-  october: 9,
-  november: 10,
-  december: 11,
-};
-
-const getTimeline = (t: Timeline2026Dict): TimelineItem[] => [
+/**
+ * Jalons éditoriaux d'avant-saison. Ils portent une DATE, pas seulement un
+ * libellé de mois : c'est elle qui décide de leur état, sans re-parser du texte
+ * traduit comme le faisait `frenchMonthMap`.
+ */
+const getPreseason = (t: Timeline2026Dict) => [
   {
     id: 'transphobia-day',
+    date: '2026-05-17',
     title: t.item1Title,
     period: t.item1Period,
     description: t.item1Desc,
@@ -92,26 +106,22 @@ const getTimeline = (t: Timeline2026Dict): TimelineItem[] => [
   },
   {
     id: 'summer',
+    date: '2026-06-01',
     title: t.item2Title,
     period: t.item2Period,
     description: t.item2Desc,
-  },
-  {
-    id: 'main-event',
-    title: t.item3Title,
-    period: t.item3Period,
-    description: t.item3Desc,
-    badge: t.item3Badge,
+    badge: undefined as string | undefined,
   },
 ];
 
 export const getStaticProps: GetStaticProps<Props> = async () => {
   let matches: SimpleMatch[] = [];
   let tournamentSlug: string | null = null;
+  let teamCount = 0;
 
   if (supabaseAdmin) {
     // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
-    const [matchesRes, tournamentRes] = await Promise.all([
+    const [matchesRes, tournamentRes, teamsRes] = await Promise.all([
       supabaseAdmin
         .from('matches')
         .select(
@@ -140,97 +150,209 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
         .eq('tenant_id', DEFAULT_TENANT_ID)
         .eq('id', WOMEN_TOURNAMENT_ID_2026)
         .maybeSingle(),
+      supabaseAdmin
+        .from('tournament_teams')
+        .select('id', { count: 'exact', head: true })
+        .eq('tournament_id', WOMEN_TOURNAMENT_ID_2026),
     ]);
 
     if (!matchesRes.error && matchesRes.data) {
       matches = matchesRes.data as unknown as SimpleMatch[];
     }
     tournamentSlug = tournamentRes.data?.slug ?? null;
+    teamCount = teamsRes.count ?? 0;
   }
 
   return {
-    props: { matches, tournamentSlug },
+    props: { matches, tournamentSlug, teamCount },
     revalidate: 300,
   };
 };
 
-function groupMatchesByDay(
+const FINISHED = new Set(['finished', 'completed', 'finalized']);
+const LIVE = new Set(['ongoing', 'running', 'live']);
+
+/**
+ * Journées, dans l'ordre où elles se jouent. La clé est `round_name` : c'est
+ * l'unité que le staff saisit et que les équipes emploient (« la J3 »), et la
+ * seule qui fasse d'un tas de matchs un calendrier.
+ */
+function groupMatchesByRound(
   matches: SimpleMatch[],
-  t: Timeline2026Dict,
-  locale: string
-): DayGroup[] {
-  const groups = new Map<string, DayGroup>();
+  t: Timeline2026Dict
+): RoundGroup[] {
+  const groups = new Map<string, RoundGroup>();
 
   for (const m of matches) {
-    const d = m.scheduled_at ? new Date(m.scheduled_at) : null;
-    const key = d ? d.toISOString().slice(0, 10) : 'unscheduled';
-    const label = d
-      ? d.toLocaleDateString(locale, {
-          weekday: 'long',
-          day: '2-digit',
-          month: 'long',
-        })
-      : t.dateTbd;
-
-    if (!groups.has(key)) {
-      groups.set(key, { key, label, matches: [] });
+    const label = m.round_name?.trim() || t.roundUnnamed;
+    const key = `${m.stage?.name ?? ''}::${label}`;
+    let g = groups.get(key);
+    if (!g) {
+      g = {
+        key,
+        label,
+        phase: m.stage?.name ?? null,
+        matches: [],
+        firstAt: null,
+        lastAt: null,
+        played: 0,
+        live: false,
+      };
+      groups.set(key, g);
     }
-    groups.get(key)!.matches.push(m);
+    g.matches.push(m);
+    if (m.scheduled_at) {
+      if (!g.firstAt || m.scheduled_at < g.firstAt) g.firstAt = m.scheduled_at;
+      if (!g.lastAt || m.scheduled_at > g.lastAt) g.lastAt = m.scheduled_at;
+    }
+    if (FINISHED.has(m.status)) g.played += 1;
+    if (LIVE.has(m.status)) g.live = true;
   }
 
-  const arr = Array.from(groups.values());
-  arr.sort((a, b) => {
-    if (a.key === 'unscheduled') return 1;
-    if (b.key === 'unscheduled') return -1;
-    return a.key.localeCompare(b.key);
-  });
-
-  return arr;
+  return Array.from(groups.values()).sort(sortByFirstAt);
 }
 
-function formatMatchTime(
+function sortByFirstAt(
+  a: { firstAt: string | null },
+  b: { firstAt: string | null }
+): number {
+  if (!a.firstAt) return 1;
+  if (!b.firstAt) return -1;
+  return a.firstAt.localeCompare(b.firstAt);
+}
+
+/** Phases (étapes de tournoi), dans l'ordre chronologique. */
+function groupRoundsByPhase(
+  rounds: RoundGroup[],
+  t: Timeline2026Dict
+): Phase[] {
+  const phases = new Map<string, Phase>();
+
+  for (const r of rounds) {
+    const label = r.phase?.trim() || t.phaseFinals;
+    let p = phases.get(label);
+    if (!p) {
+      // Note de format : déduite des matchs eux-mêmes (nombre d'équipes par
+      // journée, format des rencontres) plutôt qu'écrite en dur — la phrase
+      // suit le tournoi, elle ne le décrit pas de mémoire.
+      p = {
+        key: label,
+        label,
+        rounds: [],
+        firstAt: null,
+        lastAt: null,
+        note: null,
+      };
+      phases.set(label, p);
+    }
+    p.rounds.push(r);
+    if (r.firstAt && (!p.firstAt || r.firstAt < p.firstAt))
+      p.firstAt = r.firstAt;
+    if (r.lastAt && (!p.lastAt || r.lastAt > p.lastAt)) p.lastAt = r.lastAt;
+  }
+
+  const list = Array.from(phases.values()).sort(sortByFirstAt);
+  for (const p of list) {
+    const formats = Array.from(
+      new Set(
+        p.rounds.flatMap((r) =>
+          r.matches.map((m) => m.match_format?.toUpperCase()).filter(Boolean)
+        )
+      )
+    ) as string[];
+    const perRound = p.rounds[0]?.matches.length ?? 0;
+    const uniform = p.rounds.every((r) => r.matches.length === perRound);
+    if (p.rounds.length > 1 && uniform && formats.length === 1) {
+      p.note = format(t.phaseNoteRounds, {
+        rounds: p.rounds.length,
+        perRound,
+        format: formats[0],
+      });
+    } else if (formats.length === 1) {
+      p.note = format(t.phaseNoteSingle, { format: formats[0] });
+    }
+  }
+  return list;
+}
+
+function formatDay(iso: string | null, locale: string, t: Timeline2026Dict) {
+  if (!iso) return t.dateTbd;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return t.dateTbd;
+  return d.toLocaleDateString(locale, { day: '2-digit', month: 'short' });
+}
+
+function formatRange(
+  from: string | null,
+  to: string | null,
+  locale: string,
+  t: Timeline2026Dict
+) {
+  if (!from) return t.dateTbd;
+  const a = formatDay(from, locale, t);
+  const b = formatDay(to, locale, t);
+  return a === b ? a : `${a} → ${b}`;
+}
+
+/**
+ * Jour d'un match DANS sa journée : « ven. 18 ». Le mois est déjà porté par
+ * l'en-tête de la journée — le répéter sur chaque ligne poussait l'horaire sur
+ * une seconde ligne et cassait l'alignement de la colonne.
+ */
+function formatWeekday(
   iso: string | null,
-  t: Timeline2026Dict,
-  locale: string
-): string {
+  locale: string,
+  t: Timeline2026Dict
+) {
+  if (!iso) return t.dateTbd;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return t.dateTbd;
+  return d.toLocaleDateString(locale, { weekday: 'short', day: '2-digit' });
+}
+
+/**
+ * Jours restants avant `iso`, ou `null` si la date est passée / absente.
+ * Hors composant : lire l'horloge est impur, et ça n'a rien à faire dans un
+ * rendu — l'appelant s'en sert dans un effet, après montage.
+ */
+function daysUntil(iso: string | null): number | null {
+  if (!iso) return null;
+  const target = new Date(iso).getTime();
+  if (isNaN(target)) return null;
+  const days = Math.ceil((target - Date.now()) / 86_400_000);
+  return days > 0 ? days : null;
+}
+
+function formatTime(iso: string | null, locale: string, t: Timeline2026Dict) {
   if (!iso) return t.timeTbd;
   const d = new Date(iso);
   if (isNaN(d.getTime())) return t.timeTbd;
-  return d.toLocaleTimeString(locale, {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 }
 
-function getMatchStatusInfo(
-  status: string,
-  t: Timeline2026Dict
-): { label: string; cls: string } {
-  switch (status) {
-    case 'pending':
-    case 'upcoming':
-      return {
-        label: t.statusUpcoming,
-        cls: 'bg-yellow-500/15 text-yellow-200 border-yellow-500/40',
-      };
-    case 'ongoing':
-    case 'running':
-      return {
-        label: t.statusOngoing,
-        cls: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/40',
-      };
-    case 'completed':
-    case 'finished':
-      return {
-        label: t.statusFinished,
-        cls: 'bg-gray-500/15 text-gray-200 border-gray-500/40',
-      };
-    default:
-      return {
-        label: status,
-        cls: 'bg-white/10 text-white border-white/30',
-      };
-  }
+/* ─────────────────────────  Primitives visuelles  ───────────────────────── */
+
+function Chip({
+  children,
+  tone = 'muted',
+}: {
+  children: React.ReactNode;
+  tone?: 'muted' | 'accent' | 'live' | 'done';
+}) {
+  const tones: Record<string, string> = {
+    muted: 'border-white/15 text-neutral-400',
+    accent:
+      'border-[color-mix(in_srgb,var(--color-violet)_55%,transparent)] text-[var(--color-violet-200)]',
+    live: 'border-[color-mix(in_srgb,var(--color-green)_55%,transparent)] text-[var(--color-green)]',
+    done: 'border-white/10 text-neutral-500',
+  };
+  return (
+    <span
+      className={`inline-flex items-center rounded px-2 py-[2px] font-mono text-[10px] font-medium uppercase tracking-[0.08em] border ${tones[tone]}`}
+    >
+      {children}
+    </span>
+  );
 }
 
 function MatchRow({ match }: { match: SimpleMatch }) {
@@ -242,280 +364,355 @@ function MatchRow({ match }: { match: SimpleMatch }) {
     match.team2?.name ||
     (match.is_bye ? t.bye : t.teamFallback2);
 
-  const isFinished = match.status === 'finished';
+  const done = FINISHED.has(match.status);
   const hasScores =
     match.team1_score !== null &&
     match.team1_score !== undefined &&
     match.team2_score !== null &&
     match.team2_score !== undefined;
-  const scoreLabel =
-    isFinished || hasScores
-      ? `${match.team1_score ?? 0} – ${match.team2_score ?? 0}`
-      : '';
-
-  const status = getMatchStatusInfo(match.status, t);
 
   return (
     <Link
       href={`/match/${match.id}`}
-      className="group grid grid-cols-[64px_minmax(0,1fr)_auto] gap-3 items-center px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/10 transition hover:border-[var(--color-yellow)]/50 hover:bg-[var(--color-yellow)]/5"
+      className="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2 transition hover:border-[color-mix(in_srgb,var(--color-violet)_45%,transparent)] hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
     >
-      <span className="text-sm font-mono text-[var(--color-yellow)]">
-        {formatMatchTime(match.scheduled_at, t, locale)}
+      <span className="flex w-[92px] shrink-0 flex-col font-mono text-[11px] tabular-nums leading-tight sm:w-[124px] sm:flex-row sm:items-baseline sm:gap-1.5">
+        <span className="uppercase tracking-[0.04em] text-neutral-500">
+          {formatWeekday(match.scheduled_at, locale, t)}
+        </span>
+        <span className="text-white">
+          {formatTime(match.scheduled_at, locale, t)}
+        </span>
       </span>
 
-      <div className="min-w-0">
-        <p className="text-sm text-white truncate">
+      <span className="min-w-0">
+        <span className="block truncate text-sm text-white">
           <span className="font-medium">{t1}</span>
-          {!match.is_bye && (
+          {match.is_bye ? (
+            <span className="text-neutral-500"> {t.bye}</span>
+          ) : (
             <>
-              <span className="text-gray-500 mx-1">{t.vs}</span>
+              <span className="mx-1.5 text-neutral-600">{t.vs}</span>
               <span className="font-medium">{t2}</span>
             </>
           )}
-          {match.is_bye && <span className="text-gray-500"> {t.bye}</span>}
-        </p>
-        <div className="flex flex-wrap gap-1.5 text-[10px] text-gray-400 mt-0.5">
-          {match.stage?.name && <span>{match.stage.name}</span>}
-          {match.round_name && (
-            <>
-              <span className="text-gray-600">·</span>
-              <span>{match.round_name}</span>
-            </>
-          )}
-          {match.match_format && (
-            <>
-              <span className="text-gray-600">·</span>
-              <span>{match.match_format.toUpperCase()}</span>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div className="flex flex-col items-end gap-1">
-        <span
-          className={`text-[10px] px-2 py-[1px] rounded-full border ${status.cls}`}
-        >
-          {status.label}
         </span>
-        {scoreLabel && (
-          <span className="text-xs font-semibold text-emerald-300 tabular-nums">
-            {scoreLabel}
+      </span>
+
+      {/* Le format et le chevron sautent sous `sm` : sur 390 px, ils volaient
+          la place aux noms d'équipes, qui se retrouvaient tronqués (« Team… »).
+          Le format est déjà annoncé une fois par la note de phase. */}
+      <span className="flex shrink-0 items-center gap-2">
+        {match.match_format && (
+          <span className="hidden sm:inline-flex">
+            <Chip>{match.match_format}</Chip>
           </span>
         )}
-      </div>
+        {hasScores || done ? (
+          <span className="font-mono text-xs font-semibold tabular-nums text-[var(--color-green)]">
+            {match.team1_score ?? 0}–{match.team2_score ?? 0}
+          </span>
+        ) : (
+          <span className="hidden text-neutral-600 transition group-hover:text-[var(--color-violet-200)] sm:inline">
+            →
+          </span>
+        )}
+      </span>
     </Link>
   );
 }
 
-function Timeline2026Page({ matches, tournamentSlug }: Props) {
+/** Une journée : en-tête cliquable + ses matchs. */
+function RoundCard({
+  round,
+  state,
+  defaultOpen,
+}: {
+  round: RoundGroup;
+  state: 'done' | 'live' | 'next' | 'upcoming';
+  defaultOpen: boolean;
+}) {
   const t = useT(nsTimeline2026);
   const locale = useLocale();
-  const timeline = getTimeline(t);
+  const total = round.matches.length;
+
+  const statusChip =
+    state === 'live' ? (
+      <Chip tone="live">{t.roundLive}</Chip>
+    ) : state === 'next' ? (
+      <Chip tone="accent">{t.roundNext}</Chip>
+    ) : state === 'done' ? (
+      <Chip tone="done">{t.roundDone}</Chip>
+    ) : (
+      <Chip>{t.roundUpcoming}</Chip>
+    );
+
+  return (
+    <details
+      open={defaultOpen}
+      className={`group rounded-xl border bg-[var(--color-surface)] transition ${
+        state === 'next' || state === 'live'
+          ? 'border-[color-mix(in_srgb,var(--color-violet)_45%,transparent)]'
+          : 'border-white/10'
+      } ${state === 'done' ? 'opacity-70' : ''}`}
+    >
+      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]">
+        <span
+          className={`rounded px-2 py-[3px] font-mono text-xs font-semibold ${
+            state === 'next' || state === 'live'
+              ? 'bg-[color-mix(in_srgb,var(--color-violet)_22%,transparent)] text-[var(--color-violet-200)]'
+              : 'bg-white/[0.06] text-neutral-300'
+          }`}
+        >
+          {round.label}
+        </span>
+
+        <span className="font-mono text-xs tabular-nums text-neutral-400">
+          {formatRange(round.firstAt, round.lastAt, locale, t)}
+        </span>
+
+        <span className="ml-auto flex items-center gap-2">
+          <span className="font-mono text-[11px] tabular-nums text-neutral-500">
+            {format(t.roundProgress, { played: round.played, total })}
+          </span>
+          {statusChip}
+          <span
+            aria-hidden
+            className="font-mono text-xs text-neutral-500 transition group-open:rotate-90"
+          >
+            ›
+          </span>
+        </span>
+      </summary>
+
+      <div className="flex flex-col gap-1.5 border-t border-white/[0.07] px-4 py-3">
+        {round.matches.map((m) => (
+          <MatchRow key={m.id} match={m} />
+        ))}
+      </div>
+    </details>
+  );
+}
+
+/** En-tête de bande temporelle : titre + fenêtre, filet sous les deux. */
+function BandHead({
+  title,
+  when,
+  accent,
+}: {
+  title: string;
+  when: string;
+  accent?: boolean;
+}) {
+  return (
+    <div
+      className={`flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b-2 pb-2 ${
+        accent
+          ? 'border-[color-mix(in_srgb,var(--color-violet)_60%,transparent)]'
+          : 'border-white/15'
+      }`}
+    >
+      <h2 className="text-xl font-bold tracking-tight text-white">{title}</h2>
+      <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-neutral-500 tabular-nums">
+        {when}
+      </span>
+    </div>
+  );
+}
+
+/* ─────────────────────────────  La page  ────────────────────────────────── */
+
+function Timeline2026Page({ matches, tournamentSlug, teamCount }: Props) {
+  const t = useT(nsTimeline2026);
+  const locale = useLocale();
   const tournamentIdentifier = tournamentSlug || WOMEN_TOURNAMENT_ID_2026;
-  const now = new Date();
-  const currentIdx = timeline.findIndex((item) => {
-    const [monthLabel, yearLabel] = item.period.split(' ');
-    const normalized = monthLabel
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .toLowerCase();
-    const monthNumber = frenchMonthMap[normalized];
-    const yearNumber = parseInt(yearLabel, 10);
-    return monthNumber === now.getMonth() && yearNumber === now.getFullYear();
-  });
 
-  const highlightPercent =
-    currentIdx >= 0 && timeline.length > 1
-      ? (currentIdx / (timeline.length - 1)) * 100
-      : null;
+  const rounds = groupMatchesByRound(matches, t);
+  const phases = groupRoundsByPhase(rounds, t);
+  const preseason = getPreseason(t);
 
-  const grouped = groupMatchesByDay(matches, t, locale);
-  const totalMatches = matches.length;
+  // « Où en est-on ? » se lit dans les STATUTS, pas dans l'horloge — sinon le
+  // HTML rendu par l'ISR et celui du client divergent (cf. en-tête de fichier).
+  const liveKey = rounds.find((r) => r.live)?.key ?? null;
+  const nextKey =
+    liveKey ?? rounds.find((r) => r.played < r.matches.length)?.key ?? null;
+
+  const roundState = (r: RoundGroup): 'done' | 'live' | 'next' | 'upcoming' => {
+    if (r.live) return 'live';
+    if (r.played >= r.matches.length && r.matches.length > 0) return 'done';
+    return r.key === nextKey ? 'next' : 'upcoming';
+  };
+
+  const firstMatchAt = rounds.find((r) => r.firstAt)?.firstAt ?? null;
+  const lastMatchAt =
+    [...rounds].reverse().find((r) => r.lastAt)?.lastAt ?? null;
+  const playedTotal = rounds.reduce((n, r) => n + r.played, 0);
+
+  const nextRound = rounds.find((r) => r.key === nextKey) ?? null;
+
+  // Compte à rebours : la seule valeur dépendante de l'heure, donc calculée
+  // après montage. Rendu serveur = rien, plutôt qu'une valeur déjà périmée.
+  const [countdown, setCountdown] = useState<number | null>(null);
+  useEffect(() => {
+    setCountdown(daysUntil(nextRound?.firstAt ?? null));
+  }, [nextRound?.firstAt]);
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
-      {/* Hero */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -left-32 -top-32 w-[420px] h-[420px] rounded-full bg-purple-600/30 blur-3xl" />
-          <div className="absolute right-10 top-10 w-[360px] h-[360px] rounded-full bg-pink-500/20 blur-3xl" />
-        </div>
+      {/* ── En-tête ─────────────────────────────────────────────────────── */}
+      <header className="mx-auto max-w-5xl px-6 pb-10 pt-32">
+        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-neutral-500">
+          {t.heroEyebrow}
+        </p>
+        <h1 className="mt-3 text-4xl font-bold leading-tight text-brand-gradient md:text-5xl text-balance">
+          {t.heroTitle}
+        </h1>
+        <span className="brand-rule mt-4 block" aria-hidden />
+        <p className="mt-4 max-w-2xl text-lg text-neutral-300">
+          {t.heroSubtitle}
+        </p>
 
-        <div className="max-w-6xl mx-auto px-6 pt-32 pb-16 relative">
-          <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
-            {t.heroEyebrow}
-          </p>
-          <h1 className="text-4xl md:text-5xl font-bold mt-3 leading-tight text-brand-gradient">
-            {t.heroTitle}
-          </h1>
-          <span className="brand-rule mt-4" aria-hidden />
-          <p className="text-neutral-300 text-lg mt-4 max-w-2xl">
-            {t.heroSubtitle}
-          </p>
-        </div>
-      </div>
-
-      {/* Production — qui diffuse les matchs de l'édition */}
-      <div className="relative max-w-7xl mx-auto px-6 pb-10">
-        {/* `lg:pl-14` : le rail de réseaux sociaux flottant (fixed, left-5, à
-            partir de lg) recouvre le bord gauche de ce conteneur entre 1024 et
-            ~1400 px. Les blocs de la timeline se décalent déjà de la même
-            façon. */}
-        <div className="max-w-6xl lg:pl-14">
-          <ProductionPartner variant="compact" />
-        </div>
-      </div>
-
-      {/* Timeline */}
-      <div className="relative max-w-7xl mx-auto px-6 pb-12">
-        <div className="relative">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-y-0 left-4 w-2 rounded-full bg-gradient-to-b from-purple-400 via-purple-300/40 to-pink-500 shadow-[0_0_25px_rgba(178,75,224,0.4)]"
-          />
-          {highlightPercent !== null && (
-            <div
-              aria-hidden
-              className="pointer-events-none absolute left-4 w-3 h-20 -translate-y-1/2 rounded-full bg-gradient-to-b from-amber-300 via-pink-400 to-amber-200 blur-md opacity-70"
-              style={{ top: `${highlightPercent}%` }}
-            />
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          {countdown !== null && nextRound && (
+            <span className="inline-flex items-baseline gap-2 rounded-full border border-[color-mix(in_srgb,var(--color-violet)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-violet)_12%,transparent)] py-1.5 pl-3 pr-4">
+              <span className="font-mono text-base font-semibold tabular-nums text-[var(--color-violet-200)]">
+                {format(t.countdownValue, { n: countdown })}
+              </span>
+              <span className="text-sm text-neutral-300">
+                {format(t.countdownLabel, { round: nextRound.label })}
+              </span>
+            </span>
           )}
+          <Link
+            href={`/team/create?tournament=${WOMEN_TOURNAMENT_ID_2026}`}
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-green)] px-4 py-2 text-sm font-semibold text-black transition hover:bg-[var(--color-green-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green-light)]"
+          >
+            {t.registerTeam}
+          </Link>
+        </div>
 
-          <div className="grid max-w-6xl grid-cols-1 gap-10">
-            {timeline.map((item, idx) => {
-              const isCurrent = idx === currentIdx;
-              return (
-                <div key={item.id} className="relative pl-14">
-                  <div
-                    className={`absolute top-6 h-4 w-4 rounded-full bg-gradient-to-br from-purple-300 to-pink-500 border-2 border-white/60 shadow-[0_0_15px_rgba(219,39,119,0.65)] ${'left-3'} ${isCurrent ? 'scale-110 ring-4 ring-pink-400/40 animate-pulse' : ''}`}
-                  />
+        {/* Chiffres de l'édition — la carte d'identité du planning. */}
+        <dl className="mt-8 grid gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { v: String(teamCount), k: t.statTeams },
+            { v: String(rounds.length), k: t.statRounds },
+            {
+              v: format(t.statMatchesValue, {
+                played: playedTotal,
+                total: matches.length,
+              }),
+              k: t.statMatches,
+            },
+            {
+              v: formatRange(firstMatchAt, lastMatchAt, locale, t),
+              k: t.statWindow,
+            },
+          ].map((s) => (
+            <div key={s.k} className="bg-[var(--color-surface)] px-4 py-3">
+              <dd className="whitespace-nowrap font-mono text-lg font-semibold tabular-nums text-white sm:text-xl">
+                {s.v}
+              </dd>
+              <dt className="mt-0.5 text-xs text-neutral-400">{s.k}</dt>
+            </div>
+          ))}
+        </dl>
+      </header>
 
-                  <div
-                    className={`bg-neutral-900 border rounded-2xl p-6 shadow-xl shadow-black/20 backdrop-blur ${
-                      isCurrent
-                        ? 'border-pink-400/40 shadow-[0_0_30px_rgba(236,72,153,0.3)]'
-                        : 'border-white/10'
-                    }`}
+      <div className="mx-auto max-w-5xl px-6 pb-8">
+        <ProductionPartner variant="compact" />
+      </div>
+
+      <main className="mx-auto max-w-5xl px-6 pb-24">
+        {/* ── Avant-saison ──────────────────────────────────────────────── */}
+        <section className="mt-10">
+          <BandHead title={t.phasePreseason} when={t.phasePreseasonWhen} />
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {preseason.map((item) => (
+              <article
+                key={item.id}
+                className="rounded-xl border border-white/10 bg-[var(--color-surface)] p-5 opacity-80"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-neutral-500">
+                    {item.period}
+                  </span>
+                  {item.badge && <Chip>{item.badge}</Chip>}
+                </div>
+                <h3 className="mt-2 text-base font-semibold text-white text-balance">
+                  {item.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-neutral-400">
+                  {item.description}
+                </p>
+                {item.id === 'transphobia-day' && (
+                  <a
+                    href={TWITCH_URL}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[var(--color-violet-200)] transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
                   >
-                    <div className="flex items-center justify-between gap-3 flex-wrap">
-                      <span
-                        className={`text-xs uppercase tracking-[0.18em] ${
-                          isCurrent ? 'text-pink-100' : 'text-neutral-400'
-                        }`}
-                      >
-                        {item.period}
-                      </span>
-                      {item.badge && (
-                        <span
-                          className={`text-[11px] px-2 py-1 rounded-full border ${
-                            isCurrent
-                              ? 'bg-pink-500/20 text-pink-50 border-pink-300/60'
-                              : 'bg-purple-500/20 text-purple-100 border-purple-400/40'
-                          }`}
-                        >
-                          {item.badge}
-                        </span>
-                      )}
-                    </div>
-                    <h3
-                      className={`text-xl font-semibold mt-2 ${
-                        isCurrent ? 'text-white' : ''
-                      }`}
-                    >
-                      {item.title}
-                    </h3>
-                    <p className="text-neutral-300 text-sm mt-3 leading-relaxed">
-                      {item.description}
-                    </p>
-                    {item.id === 'transphobia-day' && (
-                      <div className="mt-4">
-                        <a
-                          href={TWITCH_URL}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-[var(--color-violet)] text-white transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
-                        >
-                          {t.followTwitch}
-                        </a>
-                      </div>
-                    )}
-                    {item.id === 'main-event' && (
-                      <div className="mt-4">
-                        <Link
-                          href={`/team/create?tournament=${WOMEN_TOURNAMENT_ID_2026}`}
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-[var(--color-green)] text-black transition hover:bg-[var(--color-green-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green-light)]"
-                        >
-                          {t.registerTeam}
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                    {t.followTwitch}
+                  </a>
+                )}
+              </article>
+            ))}
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* Match calendar */}
-      <div className="max-w-7xl mx-auto px-6 pb-20">
-        <div className="max-w-6xl">
-          <div className="flex items-end justify-between flex-wrap gap-3 mb-6">
-            <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-purple-200/80">
-                {t.calEyebrow}
-              </p>
-              <h2 className="text-3xl md:text-4xl font-bold mt-2 leading-tight text-brand-gradient">
-                {t.calTitle}
-              </h2>
-              <span className="brand-rule mt-3" aria-hidden />
-              <p className="text-neutral-300 text-base mt-2 max-w-2xl">
-                {t.calSubtitle}
-              </p>
-            </div>
-            <Link
-              href={`/tournament/${tournamentIdentifier}/matches`}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-white/20 text-white transition hover:border-[var(--color-yellow)]/60 hover:bg-[var(--color-yellow)]/10 hover:text-[var(--color-yellow)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]"
-            >
-              {t.viewAllTournament}
-            </Link>
-          </div>
-
-          {totalMatches === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-center">
-              <p className="text-neutral-300">{t.emptyTitle}</p>
-              <p className="text-neutral-500 text-sm mt-2">{t.emptySub}</p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {grouped.map((day) => (
-                <div
-                  key={day.key}
-                  className="card-brand rounded-2xl bg-white/[0.03] p-4 sm:p-5"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm font-semibold text-white capitalize">
-                      {day.label}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {format(
-                        day.matches.length > 1 ? t.match_other : t.match_one,
-                        { count: day.matches.length }
-                      )}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    {day.matches.map((m) => (
-                      <MatchRow key={m.id} match={m} />
-                    ))}
-                  </div>
+        {/* ── Compétition : une bande par phase, une carte par journée ───── */}
+        {matches.length === 0 ? (
+          <section className="mt-12 rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center">
+            <p className="text-neutral-300">{t.emptyTitle}</p>
+            <p className="mt-2 text-sm text-neutral-500">{t.emptySub}</p>
+          </section>
+        ) : (
+          phases.map((phase) => {
+            const hasCurrent = phase.rounds.some((r) => r.key === nextKey);
+            return (
+              <section key={phase.key} className="mt-12">
+                <BandHead
+                  title={phase.label}
+                  when={formatRange(phase.firstAt, phase.lastAt, locale, t)}
+                  accent={hasCurrent}
+                />
+                {phase.note && (
+                  <p className="mt-3 max-w-2xl text-sm text-neutral-400">
+                    {phase.note}
+                  </p>
+                )}
+                <div className="mt-4 flex flex-col gap-2">
+                  {phase.rounds.map((round) => {
+                    const state = roundState(round);
+                    return (
+                      <RoundCard
+                        key={round.key}
+                        round={round}
+                        state={state}
+                        defaultOpen={state === 'next' || state === 'live'}
+                      />
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
-          )}
+              </section>
+            );
+          })
+        )}
+
+        <div className="mt-10 flex flex-wrap gap-4 text-sm">
+          <Link
+            href={`/tournament/${tournamentIdentifier}/matches`}
+            className="text-[var(--color-violet-200)] transition hover:text-white"
+          >
+            {t.viewAllTournament}
+          </Link>
+          <Link
+            href={`/tournament/${tournamentIdentifier}`}
+            className="text-neutral-400 transition hover:text-white"
+          >
+            {t.viewStandings}
+          </Link>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

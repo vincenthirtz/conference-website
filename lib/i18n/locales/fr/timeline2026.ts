@@ -12,7 +12,7 @@ export default ns('timeline2026', {
   heroEyebrow: 'Roadmap 2026',
   heroTitle: "Toutes les étapes jusqu'aux finales 2026",
   heroSubtitle:
-    'Suis le déroulé de la saison : inscriptions, playoffs et grande finale. Chaque jalon sera détaillé et mis à jour en temps réel.',
+    "Le déroulé complet de l'édition : les journées, leurs dates, leurs affiches. Mis à jour à chaque résultat.",
   item1Title: 'Journée internationale contre la transphobie',
   item1Period: 'Mai 2026',
   item1Desc:
@@ -22,18 +22,37 @@ export default ns('timeline2026', {
   item2Period: 'Juin 2026',
   item2Desc:
     "Annonces progressives, recrutement staff, partenariats et teasers pour le grand événement féminin d'octobre.",
-  item3Title: 'Grand événement féminin',
-  item3Period: 'Octobre 2026',
-  item3Desc:
-    "L'événement phare de la saison : compétition 100 % féminine, grande scène, showmatchs, invitées spéciales et remise des récompenses.",
-  item3Badge: 'Main Event',
   followTwitch: 'Suivre sur Twitch ↗',
   registerTeam: 'Inscrire mon équipe ↗',
   calEyebrow: 'Tournoi féminin 2026',
   calTitle: 'Calendrier des matchs',
   calSubtitle:
     "Toutes les rencontres de l'édition féminine, mises à jour en temps réel. Clique sur un match pour ouvrir sa fiche détaillée.",
-  viewAllTournament: 'Voir tout le tournoi ↗',
+  viewAllTournament: 'Voir tous les matchs ↗',
+  viewStandings: 'Classement ↗',
+
+  // ── Planning : bandes, journées, chiffres ────────────────────────────
+  // Le parcours est structuré comme la compétition l'est : des phases, et
+  // dans chacune une carte par journée. Ces libellés nomment cette structure.
+  phasePreseason: 'Avant-saison',
+  phasePreseasonWhen: 'mai → août 2026',
+  phaseFinals: 'Finales',
+  roundUnnamed: 'Journée',
+  roundNext: 'Prochaine',
+  roundLive: 'En cours',
+  roundDone: 'Terminée',
+  roundUpcoming: 'À venir',
+  roundProgress: '{played}/{total} joués',
+  countdownValue: 'J-{n}',
+  countdownLabel: 'avant la {round}',
+  statTeams: 'équipes engagées',
+  statRounds: 'rendez-vous au programme',
+  phaseNoteRounds:
+    '{rounds} journées, {perRound} matchs par journée, en {format}. Chaque équipe affronte toutes les autres une fois.',
+  phaseNoteSingle: 'En {format}.',
+  statMatches: 'matchs joués',
+  statMatchesValue: '{played}/{total}',
+  statWindow: 'fenêtre de la saison',
   emptyTitle:
     'Le calendrier du tournoi féminin 2026 sera publié dès la fin des inscriptions.',
   emptySub: 'Reviens bientôt ou rejoins le Discord pour être prévenue.',
