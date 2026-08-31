@@ -3,10 +3,12 @@
 //
 // Deux acteurs possibles :
 //   1. la CAPITAINE en poste → transfert (RPC `transfer_captain`) ;
-//   2. un MANAGER d'une équipe SANS capitaine → amorçage du capitanat (RPC
-//      `designate_captain`). C'est le pendant de la création d'équipe « en tant
-//      que manager » : l'équipe naît sans capitaine puisque la capitaine
-//      désignée doit d'abord accepter son invitation.
+//   2. un MANAGER de l'équipe (permission `manage_roster`) → attribution du
+//      capitanat via la RPC `reassign_captain`, que l'équipe en ait déjà une
+//      ou non. Amorçage (équipe créée « en tant que manager », dont la
+//      capitaine désignée n'a pas encore accepté) ET réattribution passent par
+//      le même chemin : tenir le roster est son métier, et une capitaine
+//      inactive bloquait sinon l'équipe entière jusqu'à intervention du staff.
 // Dans les deux cas, la mutation est atomique côté RPC et le roster verrouillé
 // par un tournoi en cours bloque l'opération.
 
@@ -29,21 +31,28 @@ import { emitRoleSyncEvent } from '@/utils/botRoleSync';
 import { logger } from '../../../utils/logger';
 
 /**
- * Amorçage du capitanat par un manager (équipe sans capitaine). Séparé du
- * transfert classique : pas d'ancien capitaine, donc un seul event role-sync
- * (`role: 'new'`) et un log d'audit distinct.
+ * Attribution du capitanat PAR UN MANAGER. Couvre les deux cas d'un seul
+ * chemin, parce que du point de vue du manager c'est le même geste : désigner
+ * qui porte le brassard.
+ *
+ * `previousCaptainId` est lu AVANT la mutation : c'est lui qui détermine s'il
+ * faut désynchroniser un ancien capitaine côté Discord. Un amorçage n'a pas
+ * d'ancien, une réattribution en a un — et lui laisser son rôle Discord ferait
+ * deux capitaines visibles sur le serveur pour une équipe qui n'en a qu'une.
  */
-async function designateCaptain({
+async function assignCaptainAsManager({
   res,
   tenantId,
   teamId,
   actorUserId,
+  previousCaptainId,
   newCaptainUserId,
 }: {
   res: NextApiResponse;
   tenantId: string;
   teamId: string;
   actorUserId: string;
+  previousCaptainId: string | null;
   newCaptainUserId: string;
 }) {
   const lockStatus = await isTeamRosterLocked(tenantId, teamId);
@@ -51,7 +60,7 @@ async function designateCaptain({
     return res.status(409).json({ error: rosterLockErrorMessage(lockStatus) });
   }
 
-  const { error: rpcErr } = await supabaseAdmin.rpc('designate_captain', {
+  const { error: rpcErr } = await supabaseAdmin.rpc('reassign_captain', {
     p_team_id: teamId,
     p_new_captain: newCaptainUserId,
     p_tenant: tenantId,
@@ -60,12 +69,20 @@ async function designateCaptain({
   if (rpcErr) {
     const mapped = mapTeamRpcError(rpcErr);
     if (mapped.status >= 500) {
-      logger.error('[transfer-captain] designate_captain rpc error:', rpcErr);
+      logger.error('[transfer-captain] reassign_captain rpc error:', rpcErr);
     }
     return res.status(mapped.status).json({ error: mapped.error });
   }
 
-  // Pas d'ancien capitaine à désynchroniser : un seul event, pour la nouvelle.
+  // Ancien capitaine, s'il y en avait un : il perd le rôle Discord.
+  if (previousCaptainId) {
+    void emitRoleSyncEvent(
+      'team.captain.changed',
+      previousCaptainId,
+      tenantId,
+      { extras: { teamId, role: 'previous' } }
+    ).catch(logger.error);
+  }
   void emitRoleSyncEvent('team.captain.changed', newCaptainUserId, tenantId, {
     extras: { teamId, role: 'new' },
   }).catch(logger.error);
@@ -79,7 +96,7 @@ async function designateCaptain({
       entity_id: teamId,
       tenant_id: tenantId,
       payload: {
-        previous_captain_id: null,
+        previous_captain_id: previousCaptainId,
         new_captain_id: newCaptainUserId,
         designated_by: 'manager',
       },
@@ -88,7 +105,9 @@ async function designateCaptain({
 
   return res.status(200).json({
     success: true,
-    info: 'Capitaine désignée avec succès.',
+    info: previousCaptainId
+      ? 'Capitanat réattribué avec succès.'
+      : 'Capitaine désignée avec succès.',
     newCaptainUserId,
   });
 }
@@ -143,14 +162,18 @@ export default withSubjectRoute(
       return res.status(500).json({ error: 'Failed to find your team.' });
     }
 
-    // Repli MANAGER : une équipe créée par un manager naît SANS capitaine
-    // (`captain_id IS NULL` — la capitaine désignée doit d'abord accepter son
-    // invitation). Le manager, qui a la permission `manage_roster`, doit pouvoir
-    // amorcer le capitanat. On ne l'autorise QUE sur une équipe sans capitaine :
-    // voler un capitanat existant reste réservé à la capitaine (et aux routes
-    // admin). L'invariant est re-vérifié atomiquement par la RPC
-    // `designate_captain` (captain_already_set → 409).
-    let bootstrapTeamId: string | null = null;
+    // Chemin MANAGER : l'appelante n'est capitaine de rien, mais elle GÈRE une
+    // équipe (permission `manage_roster`). Elle peut alors désigner la
+    // capitaine — que le poste soit vacant (équipe créée « en tant que
+    // manager », la capitaine désignée n'ayant pas encore accepté) ou déjà
+    // occupé.
+    //
+    // La réattribution était auparavant réservée à la capitaine en poste. Ça
+    // laissait une équipe bloquée dès que sa capitaine décrochait : le manager
+    // voyait le bouton, cliquait, et recevait « Tu n'es capitaine d'aucune
+    // équipe » — un message qui ne décrivait même pas sa situation. Tenir le
+    // roster est précisément son rôle ; l'action est journalisée.
+    let managerTeam: { id: string; captainId: string | null } | null = null;
     if (!team) {
       const access = await getManagedTeamForRequest(req, userId, tenantId);
       // `permissions` est désormais exposé par getManagedTeam (R2) : plus besoin
@@ -163,26 +186,34 @@ export default withSubjectRoute(
           .eq('tenant_id', tenantId)
           .maybeSingle();
 
-        if (managedTeamRow && !managedTeamRow.captain_id) {
-          bootstrapTeamId = managedTeamRow.id as string;
+        if (managedTeamRow) {
+          managerTeam = {
+            id: managedTeamRow.id as string,
+            captainId: (managedTeamRow.captain_id as string | null) ?? null,
+          };
         }
       }
     }
 
-    if (bootstrapTeamId) {
-      return await designateCaptain({
+    if (managerTeam) {
+      return await assignCaptainAsManager({
         res,
         tenantId,
-        teamId: bootstrapTeamId,
+        teamId: managerTeam.id,
         actorUserId: subject.callerId,
+        previousCaptainId: managerTeam.captainId,
         newCaptainUserId,
       });
     }
 
     if (!team) {
-      return res
-        .status(403)
-        .json({ error: "Tu n'es capitaine d'aucune équipe." });
+      // Ni capitaine, ni gestionnaire de l'équipe : le refus est correct, mais
+      // il doit dire pourquoi. L'ancien message parlait de capitanat à
+      // quelqu'un qui n'en réclamait pas.
+      return res.status(403).json({
+        error:
+          "Seule la capitaine, ou une manager de l'équipe, peut désigner la capitaine.",
+      });
     }
 
     // Bloquer si le roster est verrouillé par un tournoi en cours :

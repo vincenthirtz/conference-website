@@ -611,11 +611,16 @@ describe('PATCH /api/admin/teams/my as manager', () => {
 });
 
 /* -----------------------------------------------------------
- * /api/teams/transfer-captain (CAPTAIN ONLY)
+ * /api/teams/transfer-captain (CAPITAINE ou MANAGER)
+ *
+ * La route était réservée à la capitaine en poste. Un manager d'une équipe qui
+ * AVAIT déjà une capitaine ne pouvait donc pas passer le brassard — l'équipe
+ * restait bloquée si la capitaine décrochait. Tenir le roster étant le rôle du
+ * manager, il en fait désormais partie (l'action est journalisée).
  * ---------------------------------------------------------*/
 
-describe('/api/teams/transfer-captain remains captain-only', () => {
-  it('manager CANNOT transfer captaincy', async () => {
+describe('/api/teams/transfer-captain : capitaine ou manager', () => {
+  it('un manager PEUT désigner la capitaine', async () => {
     const res = makeRes();
     await transferCaptainHandler(
       makeAuthedReq({
@@ -624,7 +629,7 @@ describe('/api/teams/transfer-captain remains captain-only', () => {
       }),
       res
     );
-    expect(res.statusCode).toBe(403);
+    expect(res.statusCode).toBe(200);
   });
 
   it('captain can transfer captaincy', async () => {

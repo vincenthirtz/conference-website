@@ -197,18 +197,23 @@ export default async function handler(
       return redirect(res, withStatus(returnTo, 'error'));
     }
 
-    const { verifiedCount, mismatchCount } = await stampVerifiedTeamMembers(
-      user.id,
-      info.battleTag,
-      info.battleNetId
-    );
+    const { verifiedCount, mismatchCount, filledCount } =
+      await stampVerifiedTeamMembers(
+        user.id,
+        info.battleTag,
+        info.battleNetId
+      );
 
     // Aucune ligne estampillée ET aucun mismatch ⇒ l'utilisateur n'est dans
     // aucun roster (staff non-joueuse, joueuse pas encore inscrite). Le lien est
     // valide : c'est un succès neutre, pas le « ton tag ne correspond pas »
     // qui n'aurait aucun sens ici.
+    // Une fiche qu'on vient de REMPLIR est vérifiée au même titre qu'une fiche
+    // qui portait déjà le bon tag : dans les deux cas, le roster affiche
+    // désormais un BattleTag prouvé. Annoncer « lié » à quelqu'un dont la
+    // fiche vient d'être complétée et estampillée serait faux.
     const status: BattlenetStatus =
-      verifiedCount > 0
+      verifiedCount + filledCount > 0
         ? 'verified'
         : mismatchCount > 0
           ? 'linked_no_match'

@@ -24,6 +24,14 @@ type MemberLike = {
  *
  * Renvoie une Map `user_id -> pseudo` ne contenant QUE les ids qui en avaient
  * besoin (aucun appel si tout le monde a déjà un display_name en roster).
+ *
+ * `display_name` PUIS `full_name` : un compte créé via Discord n'a jamais de
+ * `display_name` — l'OAuth ne renseigne que `full_name` (le pseudo Discord).
+ * Ne lire que le premier renvoyait `null` pour ces comptes, et l'écran
+ * retombait sur « Membre » / « Inconnu » alors que le pseudo était juste à
+ * côté. Le cas frappait surtout l'encadrement, qui n'a pas de BattleTag pour
+ * masquer le trou. Les autres appelants faisaient déjà ce repli à la main
+ * (`p.display_name || p.full_name`) : c'est ici qu'il manquait.
  */
 export async function resolveMissingDisplayNames(
   members: readonly MemberLike[]
@@ -37,7 +45,7 @@ export async function resolveMissingDisplayNames(
   const profiles = await fetchAdminUserProfiles(missing);
   const out = new Map<string, string | null>();
   for (const [id, profile] of profiles) {
-    out.set(id, profile.display_name ?? null);
+    out.set(id, profile.display_name || profile.full_name || null);
   }
   return out;
 }

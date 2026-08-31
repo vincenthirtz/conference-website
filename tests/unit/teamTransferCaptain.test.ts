@@ -299,13 +299,18 @@ describe('PATCH /api/teams/transfer-captain', () => {
 });
 
 /* ---------------------------------------------------------------------------
- * Amorçage du capitanat par un MANAGER (équipe sans capitaine)
+ * Attribution du capitanat par un MANAGER
  *
- * Une équipe créée « en tant que manager » (POST /api/teams/create-with-member
- * avec `manager_email`) naît avec `captain_id = NULL` : la capitaine désignée
- * n'est qu'invitée. Le manager doit pouvoir amorcer le capitanat — mais JAMAIS
- * voler un capitanat existant (ça reste réservé à la capitaine en poste).
- * Le handler route alors vers la RPC `designate_captain`.
+ * Deux situations, un seul geste de son point de vue :
+ *   - poste VACANT : une équipe créée « en tant que manager » naît avec
+ *     `captain_id = NULL`, la capitaine désignée n'étant qu'invitée ;
+ *   - poste OCCUPÉ : la capitaine en place décroche, et il faut passer le
+ *     brassard sans attendre qu'elle le fasse elle-même.
+ *
+ * La seconde était refusée (403) jusqu'à ce qu'un manager de LVN EMBERS s'y
+ * casse les dents : le bouton s'affichait, l'API répondait « Tu n'es capitaine
+ * d'aucune équipe », et l'équipe restait bloquée jusqu'à intervention du staff.
+ * Les deux passent maintenant par la RPC `reassign_captain`.
  * ------------------------------------------------------------------------- */
 
 const MANAGER_ID = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
@@ -333,7 +338,7 @@ describe('PATCH /api/teams/transfer-captain — désignation par un manager', ()
     ];
   });
 
-  it('appelle designate_captain quand l’équipe n’a pas de capitaine', async () => {
+  it('amorce le capitanat quand le poste est vacant', async () => {
     store.teams = [
       { id: TEAM_ID, captain_id: null, tenant_id: CONFERENCE_TENANT_ID },
     ];
@@ -346,7 +351,7 @@ describe('PATCH /api/teams/transfer-captain — désignation par un manager', ()
     );
 
     expect(res.statusCode).toBe(200);
-    const rpc = rpcCalls.find((c) => c.fn === 'designate_captain');
+    const rpc = rpcCalls.find((c) => c.fn === 'reassign_captain');
     expect(rpc).toBeDefined();
     expect(rpc!.params).toEqual({
       p_team_id: TEAM_ID,
@@ -363,7 +368,7 @@ describe('PATCH /api/teams/transfer-captain — désignation par un manager', ()
     );
   });
 
-  it('403 quand l’équipe a déjà une capitaine (pas de vol de capitanat)', async () => {
+  it('réattribue le capitanat quand le poste est déjà occupé', async () => {
     store.teams = [
       { id: TEAM_ID, captain_id: CAPTAIN_ID, tenant_id: CONFERENCE_TENANT_ID },
     ];
@@ -375,19 +380,46 @@ describe('PATCH /api/teams/transfer-captain — désignation par un manager', ()
       res
     );
 
-    expect(res.statusCode).toBe(403);
-    expect(rpcCalls.find((c) => c.fn === 'designate_captain')).toBeUndefined();
-    expect(store.teams[0].captain_id).toBe(CAPTAIN_ID);
-    expect(emitRoleSyncEvent).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(200);
+    expect(rpcCalls.find((c) => c.fn === 'reassign_captain')).toBeDefined();
   });
 
-  it('mappe captain_already_set → 409 (course entre deux désignations)', async () => {
+  it('désynchronise l’ANCIENNE capitaine côté Discord', async () => {
+    // Sans cet event, le serveur afficherait deux capitaines pour une équipe
+    // qui n'en a qu'une.
     store.teams = [
-      { id: TEAM_ID, captain_id: null, tenant_id: CONFERENCE_TENANT_ID },
+      { id: TEAM_ID, captain_id: CAPTAIN_ID, tenant_id: CONFERENCE_TENANT_ID },
     ];
-    setRpcResult('designate_captain', {
+    authAs(MANAGER_ID);
+    const res = makeRes();
+
+    await transferCaptainHandler(
+      makeAuthedReq({ body: { newCaptainUserId: MEMBER_ID } }),
+      res
+    );
+
+    expect(emitRoleSyncEvent).toHaveBeenCalledTimes(2);
+    expect(emitRoleSyncEvent).toHaveBeenCalledWith(
+      'team.captain.changed',
+      CAPTAIN_ID,
+      CONFERENCE_TENANT_ID,
+      { extras: { teamId: TEAM_ID, role: 'previous' } }
+    );
+    expect(emitRoleSyncEvent).toHaveBeenCalledWith(
+      'team.captain.changed',
+      MEMBER_ID,
+      CONFERENCE_TENANT_ID,
+      { extras: { teamId: TEAM_ID, role: 'new' } }
+    );
+  });
+
+  it('mappe target_not_member → 400 (cible absente ou coach)', async () => {
+    store.teams = [
+      { id: TEAM_ID, captain_id: CAPTAIN_ID, tenant_id: CONFERENCE_TENANT_ID },
+    ];
+    setRpcResult('reassign_captain', {
       data: null,
-      error: { message: 'captain_already_set' },
+      error: { message: 'target_not_member' },
     });
     authAs(MANAGER_ID);
     const res = makeRes();
@@ -397,7 +429,26 @@ describe('PATCH /api/teams/transfer-captain — désignation par un manager', ()
       res
     );
 
-    expect(res.statusCode).toBe(409);
+    expect(res.statusCode).toBe(400);
     expect(emitRoleSyncEvent).not.toHaveBeenCalled();
+  });
+
+  it('un membre simple reste refusé, avec un message qui l’explique', async () => {
+    store.teams = [
+      { id: TEAM_ID, captain_id: CAPTAIN_ID, tenant_id: CONFERENCE_TENANT_ID },
+    ];
+    // MEMBER_ID est joueuse, pas manager : aucune permission `manage_roster`.
+    authAs(MEMBER_ID);
+    const res = makeRes();
+
+    await transferCaptainHandler(
+      makeAuthedReq({ body: { newCaptainUserId: MANAGER_ID } }),
+      res
+    );
+
+    expect(res.statusCode).toBe(403);
+    expect((res.body as { error: string }).error).toContain('manager');
+    expect(rpcCalls.find((c) => c.fn === 'reassign_captain')).toBeUndefined();
+    expect(store.teams[0].captain_id).toBe(CAPTAIN_ID);
   });
 });

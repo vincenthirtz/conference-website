@@ -137,31 +137,71 @@ describe('upsertBattlenetLink', () => {
 describe('stampVerifiedTeamMembers', () => {
   it('stampe les lignes qui matchent (case-insensitive) et laisse les mismatch', async () => {
     store.team_members = [
-      { id: 'tm-1', user_id: USER_A, battle_tag: 'Tracer#2100' },
-      { id: 'tm-2', user_id: USER_A, battle_tag: 'tracer#2100' }, // case diff → match
-      { id: 'tm-3', user_id: USER_A, battle_tag: 'Widow#1111' }, // mismatch
-      { id: 'tm-4', user_id: USER_A, battle_tag: null }, // ni l'un ni l'autre
-      { id: 'tm-5', user_id: USER_B, battle_tag: 'Tracer#2100' }, // autre user
+      { id: 'tm-1', user_id: USER_A, role: 'player', battle_tag: 'Tracer#2100' },
+      // case diff → match
+      { id: 'tm-2', user_id: USER_A, role: 'player', battle_tag: 'tracer#2100' },
+      // mismatch
+      { id: 'tm-3', user_id: USER_A, role: 'player', battle_tag: 'Widow#1111' },
+      // autre user
+      { id: 'tm-5', user_id: USER_B, role: 'player', battle_tag: 'Tracer#2100' },
     ];
 
     const r = await stampVerifiedTeamMembers(USER_A, BTAG, BNET_ID);
     expect(r.verifiedCount).toBe(2);
     expect(r.mismatchCount).toBe(1);
+    expect(r.filledCount).toBe(0);
 
     const byId = (id: string) => store.team_members.find((m) => m.id === id)!;
     expect(byId('tm-1').battle_tag_verified_at).toBeTruthy();
     expect(byId('tm-1').verified_battle_net_id).toBe(BNET_ID);
     expect(byId('tm-2').battle_tag_verified_at).toBeTruthy();
-    // mismatch + null + autre user : non estampillés
+    // mismatch + autre user : non estampillés
     expect(byId('tm-3').battle_tag_verified_at).toBeUndefined();
-    expect(byId('tm-4').battle_tag_verified_at).toBeUndefined();
     expect(byId('tm-5').battle_tag_verified_at).toBeUndefined();
   });
 
-  it('renvoie 0/0 quand le user n’a aucune ligne team_members', async () => {
+  // Le trou qui laissait des fiches « BattleTag manquant » alors que Blizzard
+  // venait de prouver le tag (observé sur Chocomates et Team Positivité).
+  it('REMPLIT une fiche jouante sans tag avec le tag prouvé, et l’estampille', async () => {
+    store.team_members = [
+      { id: 'tm-vide', user_id: USER_A, role: 'player', battle_tag: null },
+      { id: 'tm-blanc', user_id: USER_A, role: 'substitute', battle_tag: '   ' },
+    ];
+
+    const r = await stampVerifiedTeamMembers(USER_A, BTAG, BNET_ID);
+    expect(r.filledCount).toBe(2);
+    expect(r.verifiedCount).toBe(0);
+    // Une fiche vide n'est pas un mismatch : il n'y a rien qui diverge.
+    expect(r.mismatchCount).toBe(0);
+
+    const byId = (id: string) => store.team_members.find((m) => m.id === id)!;
+    for (const id of ['tm-vide', 'tm-blanc']) {
+      expect(byId(id).battle_tag).toBe(BTAG);
+      expect(byId(id).battle_tag_verified_at).toBeTruthy();
+      expect(byId(id).verified_battle_net_id).toBe(BNET_ID);
+    }
+  });
+
+  it('laisse l’encadrement sans tag tranquille', async () => {
+    // Un coach n'a jamais à fournir de BattleTag : lui en écrire un serait une
+    // donnée que personne n'a demandée.
+    store.team_members = [
+      { id: 'tm-coach', user_id: USER_A, role: 'coach', battle_tag: null },
+      { id: 'tm-manager', user_id: USER_A, role: 'manager', battle_tag: null },
+    ];
+
+    const r = await stampVerifiedTeamMembers(USER_A, BTAG, BNET_ID);
+    expect(r.filledCount).toBe(0);
+
+    const byId = (id: string) => store.team_members.find((m) => m.id === id)!;
+    expect(byId('tm-coach').battle_tag).toBeNull();
+    expect(byId('tm-manager').battle_tag).toBeNull();
+  });
+
+  it('renvoie 0/0/0 quand le user n’a aucune ligne team_members', async () => {
     store.team_members = [];
     const r = await stampVerifiedTeamMembers(USER_A, BTAG, BNET_ID);
-    expect(r).toEqual({ verifiedCount: 0, mismatchCount: 0 });
+    expect(r).toEqual({ verifiedCount: 0, mismatchCount: 0, filledCount: 0 });
   });
 });
 

@@ -15,6 +15,7 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '../logger';
+import { roleRequiresBattleTag } from '../teams/roleKind';
 
 export type BattlenetLinkInput = {
   battleNetId: string;
@@ -95,67 +96,117 @@ export type StampVerifiedResult = {
   verifiedCount: number;
   /** Lignes team_members du user dont le battle_tag diffère → NON estampillées. */
   mismatchCount: number;
+  /**
+   * Lignes JOUANTES dont le battle_tag était VIDE et qu'on a remplies avec le
+   * tag prouvé. Comptées à part de `verifiedCount` : ce n'est pas la même
+   * chose de confirmer une déclaration et d'en écrire une à la place de
+   * quelqu'un.
+   */
+  filledCount: number;
 };
 
 /**
- * Pose `battle_tag_verified_at = now()` + `verified_battle_net_id` sur les
- * lignes team_members où `user_id = authUserId` ET `lower(battle_tag) =
+ * Pose `battle_tag_verified_at` + `verified_battle_net_id` sur les lignes
+ * team_members où `user_id = authUserId` ET `lower(battle_tag) =
  * lower(verifiedBattleTag)`.
  *
  * Les lignes dont le battle_tag diffère (mismatch) ne sont PAS estampillées :
  * l'admin les verra non vérifiées. Comparaison case-insensitive côté serveur
  * (lecture puis update ciblé par id — l'égalité insensible à la casse n'est pas
  * exprimable en un seul filtre PostgREST).
+ *
+ * UNE LIGNE JOUANTE SANS TAG EST REMPLIE, pas ignorée. Blizzard vient de
+ * prouver ce tag : le laisser de côté produisait une fiche « BattleTag
+ * manquant » alors que le site connaissait la réponse, et rien ne venait
+ * jamais la corriger — le cas s'est présenté sur trois rosters (Chocomates,
+ * Team Positivité). L'encadrement, lui, garde son tag vide : un coach n'a
+ * jamais à en fournir, et lui en écrire un serait une donnée que personne n'a
+ * demandée.
+ *
+ * L'estampille elle-même est ensuite (re)posée par le trigger
+ * `sync_team_member_battletag_verification`, qui lit `user_battlenet_links` —
+ * déjà à jour ici, `upsertBattlenetLink` tournant AVANT dans le callback. On
+ * l'écrit quand même explicitement : le code ne doit pas dépendre d'un effet
+ * de bord pour produire son propre résultat.
  */
 export async function stampVerifiedTeamMembers(
   authUserId: string,
   verifiedBattleTag: string,
   battleNetId: string
 ): Promise<StampVerifiedResult> {
-  if (!supabaseAdmin) return { verifiedCount: 0, mismatchCount: 0 };
+  const empty = { verifiedCount: 0, mismatchCount: 0, filledCount: 0 };
+  if (!supabaseAdmin) return empty;
 
   const { data: rows, error } = await supabaseAdmin
     .from('team_members')
-    .select('id, battle_tag')
+    .select('id, battle_tag, role')
     .eq('user_id', authUserId);
 
   if (error) {
     logger.error('[battlenetLinks] team_members read error', error);
-    return { verifiedCount: 0, mismatchCount: 0 };
+    return empty;
   }
 
-  const target = verifiedBattleTag.trim().toLowerCase();
+  const trimmedTag = verifiedBattleTag.trim();
+  const target = trimmedTag.toLowerCase();
   const matchingIds: string[] = [];
+  const emptyPlayingIds: string[] = [];
   let mismatchCount = 0;
 
   for (const row of rows ?? []) {
-    const tag = ((row as { battle_tag?: string | null }).battle_tag ?? '')
-      .trim()
-      .toLowerCase();
-    if (!tag) continue; // pas de battle_tag renseigné → ni vérifié ni mismatch
+    const typed = row as {
+      id: string;
+      battle_tag?: string | null;
+      role?: string | null;
+    };
+    const tag = (typed.battle_tag ?? '').trim().toLowerCase();
+    if (!tag) {
+      // Vide : à remplir si la fiche joue, à laisser tel quel sinon.
+      if (roleRequiresBattleTag(typed.role)) {
+        emptyPlayingIds.push(String(typed.id));
+      }
+      continue;
+    }
     if (tag === target) {
-      matchingIds.push(String((row as { id: string }).id));
+      matchingIds.push(String(typed.id));
     } else {
       mismatchCount += 1;
     }
   }
 
+  const now = new Date().toISOString();
+  const stamp = {
+    battle_tag_verified_at: now,
+    verified_battle_net_id: battleNetId,
+  };
+
   if (matchingIds.length > 0) {
-    const now = new Date().toISOString();
     const { error: updateErr } = await supabaseAdmin
       .from('team_members')
-      .update({
-        battle_tag_verified_at: now,
-        verified_battle_net_id: battleNetId,
-      })
+      .update(stamp)
       .in('id', matchingIds);
     if (updateErr) {
       logger.error('[battlenetLinks] team_members stamp error', updateErr);
-      return { verifiedCount: 0, mismatchCount };
+      return { verifiedCount: 0, mismatchCount, filledCount: 0 };
     }
   }
 
-  return { verifiedCount: matchingIds.length, mismatchCount };
+  let filledCount = 0;
+  if (emptyPlayingIds.length > 0) {
+    const { error: fillErr } = await supabaseAdmin
+      .from('team_members')
+      .update({ battle_tag: trimmedTag, ...stamp })
+      .in('id', emptyPlayingIds);
+    if (fillErr) {
+      // Le remplissage est un CONFORT : son échec ne doit pas annuler des
+      // estampilles déjà posées, qui sont, elles, l'objet du flux.
+      logger.error('[battlenetLinks] team_members fill error', fillErr);
+    } else {
+      filledCount = emptyPlayingIds.length;
+    }
+  }
+
+  return { verifiedCount: matchingIds.length, mismatchCount, filledCount };
 }
 
 export type BattlenetLinkStatus = {
