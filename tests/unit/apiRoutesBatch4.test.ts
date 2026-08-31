@@ -538,6 +538,98 @@ describe('PATCH /api/player/update-profile', () => {
     expect((store.team_members as any)[0].battle_tag).toBe('New#9999');
     expect((store.team_members as any)[1].battle_tag).toBe('Other#5678');
   });
+
+  // Une joueuse doit pouvoir annoncer son niveau sans passer par sa capitaine :
+  // c'est SA donnée. Et il doit atterrir sur la FICHE de roster, pas seulement
+  // dans les métadonnées du compte — c'est la fiche qui alimente la moyenne
+  // d'équipe et l'annuaire des adversaires.
+  it('200 propage le SR de la joueuse sur sa fiche de roster', async () => {
+    setAuthUser({ id: 'user-1', user_metadata: {} });
+    store.team_members = [
+      { id: 'tm1', user_id: 'user-1', skill_rating: null },
+      { id: 'tm2', user_id: 'user-2', skill_rating: 2000 },
+    ] as any;
+
+    const res = makeRes();
+    await updateProfileHandler(
+      makeReq({ method: 'PATCH', body: { skill_rating: 3200 } }, true),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect((store.team_members as any)[0].skill_rating).toBe(3200);
+    // La fiche d'une autre joueuse n'est jamais touchée.
+    expect((store.team_members as any)[1].skill_rating).toBe(2000);
+  });
+
+  it('accepte la chaîne du formulaire et écrit un nombre', async () => {
+    setAuthUser({ id: 'user-1', user_metadata: {} });
+    store.team_members = [
+      { id: 'tm1', user_id: 'user-1', skill_rating: null },
+    ] as any;
+
+    const res = makeRes();
+    await updateProfileHandler(
+      makeReq({ method: 'PATCH', body: { skill_rating: '2750' } }, true),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect((store.team_members as any)[0].skill_rating).toBe(2750);
+  });
+
+  it('efface le SR sur null comme sur chaîne vide', async () => {
+    for (const vide of [null, '']) {
+      setAuthUser({ id: 'user-1', user_metadata: {} });
+      store.team_members = [
+        { id: 'tm1', user_id: 'user-1', skill_rating: 3000 },
+      ] as any;
+
+      const res = makeRes();
+      await updateProfileHandler(
+        makeReq({ method: 'PATCH', body: { skill_rating: vide } }, true),
+        res
+      );
+
+      expect(res.statusCode).toBe(200);
+      expect((store.team_members as any)[0].skill_rating).toBeNull();
+    }
+  });
+
+  it('refuse un SR hors bornes sans rien écrire', async () => {
+    for (const mauvais of [5001, -1, 3500.5, 'beaucoup']) {
+      setAuthUser({ id: 'user-1', user_metadata: {} });
+      store.team_members = [
+        { id: 'tm1', user_id: 'user-1', skill_rating: 3000 },
+      ] as any;
+
+      const res = makeRes();
+      await updateProfileHandler(
+        makeReq({ method: 'PATCH', body: { skill_rating: mauvais } }, true),
+        res
+      );
+
+      expect(res.statusCode).toBe(400);
+      expect((res.body as any).code).toBe('SKILL_RATING_INVALID');
+      expect((store.team_members as any)[0].skill_rating).toBe(3000);
+    }
+  });
+
+  it('modifier le seul pseudo ne touche pas au SR de la fiche', async () => {
+    setAuthUser({ id: 'user-1', user_metadata: {} });
+    store.team_members = [
+      { id: 'tm1', user_id: 'user-1', skill_rating: 3000 },
+    ] as any;
+
+    const res = makeRes();
+    await updateProfileHandler(
+      makeReq({ method: 'PATCH', body: { display_name: 'Nouvelle' } }, true),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect((store.team_members as any)[0].skill_rating).toBe(3000);
+  });
 });
 
 /* -----------------------------------------------------------

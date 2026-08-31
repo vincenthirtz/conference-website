@@ -17,10 +17,12 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
 import nsPlayerProfile from '@/lib/i18n/locales/fr/playerProfile';
+import nsOverwatchRank from '@/lib/i18n/locales/fr/overwatchRank';
 
 function PlayerProfile() {
   const router = useRouter();
   const t = useT(nsPlayerProfile);
+  const tRank = useT(nsOverwatchRank);
   const locale = useLocale();
   const { addToast } = useToast();
   const { user, loading: authLoading } = usePlayerSession({
@@ -37,6 +39,7 @@ function PlayerProfile() {
   // Profile edit state
   const [editDisplayName, setEditDisplayName] = useState('');
   const [editBattleTag, setEditBattleTag] = useState('');
+  const [editSkillRating, setEditSkillRating] = useState('');
   const [editAvatarUrl, setEditAvatarUrl] = useState('');
   const [editingInitialized, setEditingInitialized] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
@@ -72,6 +75,11 @@ function PlayerProfile() {
     if (user && !editingInitialized) {
       setEditDisplayName(displayName);
       setEditBattleTag((user.user_metadata?.battle_tag as string) || '');
+      setEditSkillRating(
+        user.user_metadata?.skill_rating != null
+          ? String(user.user_metadata.skill_rating)
+          : ''
+      );
       setEditAvatarUrl((user.user_metadata?.avatar_url as string) || '');
       setEditingInitialized(true);
     }
@@ -103,6 +111,9 @@ function PlayerProfile() {
         body: JSON.stringify({
           display_name: editDisplayName,
           battle_tag: editBattleTag,
+          // Chaîne vide = effacer : c'est ainsi qu'on retire un niveau qu'on
+          // ne veut plus afficher.
+          skill_rating: editSkillRating.trim() || null,
           avatar_url: editAvatarUrl,
         }),
       });
@@ -458,6 +469,27 @@ function PlayerProfile() {
                   }`}
                   placeholder={t.battleTagPlaceholder}
                 />
+              </div>
+              <div>
+                <label
+                  htmlFor="player-skill-rating"
+                  className="block text-xs text-gray-400 mb-1"
+                >
+                  {tRank.fieldLabel}
+                </label>
+                <input
+                  id="player-skill-rating"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  max={5000}
+                  step={50}
+                  value={editSkillRating}
+                  onChange={(e) => setEditSkillRating(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
+                  placeholder={tRank.fieldPlaceholder}
+                />
+                <p className="text-xs text-gray-500 mt-1">{tRank.fieldHint}</p>
               </div>
               <div>
                 <label
