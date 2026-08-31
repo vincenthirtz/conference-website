@@ -26,7 +26,10 @@ import { BROADCAST_OPT_OUT_EVENT_TYPE } from './webPushEvents';
 import { slugifyCampaignName } from './campaignSchema';
 import { DEFAULT_TENANT_ID } from './tenant';
 import { resolveCurrentTournamentId } from './currentTournament';
-import { roleRequiresBattleTag } from './teams/roleKind';
+import {
+  isNonPlayingTeamRole,
+  roleRequiresBattleTag,
+} from './teams/roleKind';
 
 import { logger } from './logger';
 
@@ -86,7 +89,9 @@ export type CampaignAudience =
   | 'adherents'
   // Relance : inscrit·es au tournoi en cours qui n'ont JAMAIS ouvert de session.
   | 'tournament-never-logged-in'
-  // Relance : capitaines d'une équipe inscrite dont le roster est incomplet.
+  // Relance : celles et ceux qui pilotent une équipe inscrite au roster
+  // incomplet — capitaine ET managers. Le nom de clé ne dit que « captains »
+  // pour ne pas casser les campagnes déjà en base.
   | 'tournament-captains-incomplete-roster'
   // Relance : membres d'équipe dont le compte Discord n'est PAS lié au site.
   // Sans ce lien, le bot ne peut ni leur poser de rôle (Capitaine, Manager,
@@ -99,6 +104,17 @@ export type CampaignAudience =
   // roles d'encadrement (coach, manager) sont exclus : on ne leur en demande
   // pas (roleRequiresBattleTag).
   | 'team-members-without-battletag'
+  // Celles et ceux qui PILOTENT une équipe : la capitaine (teams.captain_id)
+  // ET les managers (team_members.role = 'manager'). `team-captains` ne lit
+  // que la première colonne, si bien qu'un manager — qui tient pourtant le
+  // roster au quotidien — n'était joignable par AUCUN segment, et qu'une
+  // équipe créée par un manager (captain_id NULL, état légitime) n'avait
+  // aucun destinataire du tout.
+  | 'team-captains-managers'
+  // Tout l'encadrement d'une équipe : capitaine + managers + coachs. À ne pas
+  // confondre avec `staff`, qui désigne le staff DU SITE (owner/admin/caster)
+  // — deux dimensions distinctes qui portent le même mot.
+  | 'team-staff'
   // Newsletter externe (abonné·es sans compte site) + combinaisons.
   | 'newsletter'
   | 'all-plus-newsletter'
@@ -510,6 +526,59 @@ async function listTeamMemberIds(): Promise<Set<string>> {
 }
 
 /**
+ * Auth user ids des membres d'équipe portant l'un des `roles` demandés.
+ *
+ * Lit `team_members.role`, donc le rôle D'ÉQUIPE — sans rapport avec le rôle
+ * STAFF du site (cf. `listStaffAuthUserIds`). Les deux dimensions coexistent
+ * et se confondent facilement à la lecture ; c'est pour ça que ce helper est
+ * nommé « team ».
+ */
+async function listTeamRoleIds(roles: readonly string[]): Promise<Set<string>> {
+  const { data, error } = await supabaseAdmin!
+    .from('team_members')
+    .select('user_id, role')
+    .in('role', roles as string[]);
+  if (error) throw error;
+  const set = new Set<string>();
+  for (const r of data ?? []) {
+    const id = (r as { user_id?: string | null }).user_id;
+    if (id) set.add(id);
+  }
+  return set;
+}
+
+/** Union de plusieurs ensembles d'ids. */
+function unionIds(...sets: Set<string>[]): Set<string> {
+  const out = new Set<string>();
+  for (const s of sets) for (const id of s) out.add(id);
+  return out;
+}
+
+/**
+ * Celles et ceux qui pilotent une équipe : capitaines + managers.
+ *
+ * Le capitanat vit dans `teams.captain_id`, le managérat dans
+ * `team_members.role` : deux endroits, donc deux lectures. C'est précisément
+ * ce que `team-captains` oubliait.
+ */
+async function listTeamLeadIds(): Promise<Set<string>> {
+  const [captains, managers] = await Promise.all([
+    listTeamCaptainIds(),
+    listTeamRoleIds(['manager']),
+  ]);
+  return unionIds(captains, managers);
+}
+
+/** Encadrement complet : capitaine + managers + coachs. */
+async function listTeamStaffIds(): Promise<Set<string>> {
+  const [captains, staff] = await Promise.all([
+    listTeamCaptainIds(),
+    listTeamRoleIds(['manager', 'coach']),
+  ]);
+  return unionIds(captains, staff);
+}
+
+/**
  * Membres d'équipe SANS compte Discord lié.
  *
  * Différence des deux ensembles : `team_members.user_id` moins les
@@ -669,7 +738,7 @@ async function listIncompleteRosterCaptainIds(): Promise<Set<string>> {
 
   const { data: members, error: membersError } = await supabaseAdmin!
     .from('team_members')
-    .select('team_id, is_substitute')
+    .select('team_id, user_id, role, is_substitute')
     .in('team_id', teamIds);
   if (membersError) throw membersError;
 
@@ -677,20 +746,49 @@ async function listIncompleteRosterCaptainIds(): Promise<Set<string>> {
   for (const r of members ?? []) {
     const row = r as {
       team_id?: string | null;
+      role?: string | null;
       is_substitute?: boolean | null;
     };
     if (!row.team_id || row.is_substitute) continue;
+    // L'ENCADREMENT NE COMPTE PAS dans l'effectif. Sans ce filtre, une équipe
+    // de 4 joueuses avec 2 managers en comptait 6 et passait pour complète :
+    // elle ne recevait donc jamais la relance qui la concernait le plus.
+    // Même règle que `countPlayingMembers` et que loadTeamRosterStates.
+    if (isNonPlayingTeamRole(row.role)) continue;
     starterCountByTeam.set(
       row.team_id,
       (starterCountByTeam.get(row.team_id) ?? 0) + 1
     );
   }
 
+  // Managers des équipes concernées : ce sont eux qui tiennent le roster au
+  // quotidien, et sur une équipe créée « en tant que manager » il n'y a même
+  // personne d'autre — `captain_id` y est NULL tant que la capitaine désignée
+  // n'a pas accepté. Ne viser que le capitanat laissait donc ces équipes SANS
+  // AUCUN destinataire, c'est-à-dire sans relance, sans que rien ne le dise.
+  const { data: managers, error: managersError } = await supabaseAdmin!
+    .from('team_members')
+    .select('team_id, user_id, role')
+    .in('team_id', teamIds)
+    .eq('role', 'manager');
+  if (managersError) throw managersError;
+
+  const managersByTeam = new Map<string, string[]>();
+  for (const r of managers ?? []) {
+    const row = r as { team_id?: string | null; user_id?: string | null };
+    if (!row.team_id || !row.user_id) continue;
+    const list = managersByTeam.get(row.team_id) ?? [];
+    list.push(row.user_id);
+    managersByTeam.set(row.team_id, list);
+  }
+
   for (const r of teams ?? []) {
     const team = r as { id?: string | null; captain_id?: string | null };
-    if (!team.id || !team.captain_id) continue;
-    if ((starterCountByTeam.get(team.id) ?? 0) < minPlayers) {
-      set.add(team.captain_id);
+    if (!team.id) continue;
+    if ((starterCountByTeam.get(team.id) ?? 0) >= minPlayers) continue;
+    if (team.captain_id) set.add(team.captain_id);
+    for (const managerId of managersByTeam.get(team.id) ?? []) {
+      set.add(managerId);
     }
   }
   return set;
@@ -875,6 +973,10 @@ export async function computeAudienceRecipients(
       return computeConfirmedRecipients(
         await listTeamMembersWithoutDiscordIds()
       );
+    case 'team-captains-managers':
+      return computeConfirmedRecipients(await listTeamLeadIds());
+    case 'team-staff':
+      return computeConfirmedRecipients(await listTeamStaffIds());
     case 'team-members-without-battletag':
       return computeConfirmedRecipients(
         await listTeamMembersWithoutBattleTagIds()

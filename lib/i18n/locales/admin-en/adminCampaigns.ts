@@ -186,7 +186,7 @@ export default {
   audienceLabel: 'Audience',
   audienceHint: 'Recipient segment for this campaign.',
   audienceValue: 'All confirmed registrants',
-  audienceTeamCaptains: 'Team captains',
+  audienceTeamCaptains: 'Team captains (managers excluded)',
   audienceTeamMembers: 'Players (team members)',
   audienceStaff: 'Staff / volunteers',
   audienceAdherents: 'Association members',
@@ -243,4 +243,6 @@ export default {
   subsUnsubColDate: 'Unsubscribed on',
   audienceTeamMembersWithoutDiscord: 'Team members — Discord not linked',
   audienceTeamMembersWithoutBattleTag: 'Team members — BattleTag missing',
+  audienceTeamCaptainsManagers: 'Team captains AND managers',
+  audienceTeamStaff: 'Team leadership (captain, manager, coach)',
 };

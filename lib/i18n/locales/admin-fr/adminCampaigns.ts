@@ -187,7 +187,7 @@ export default adminNs('adminCampaigns', {
   audienceLabel: 'Audience',
   audienceHint: 'Segment de destinataires de cette campagne.',
   audienceValue: 'Tous les inscrits confirmés',
-  audienceTeamCaptains: "Capitaines d'équipe",
+  audienceTeamCaptains: "Capitaines d'équipe (sans les managers)",
   audienceTeamMembers: "Joueuses (membres d'équipe)",
   audienceStaff: 'Staff / bénévoles',
   audienceAdherents: "Adhérent·es de l'association",
@@ -196,6 +196,11 @@ export default adminNs('adminCampaigns', {
   audienceTeamMembersWithoutDiscord: 'Membres d’équipe — Discord non lié',
   audienceTeamMembersWithoutBattleTag:
     'Membres d’équipe — BattleTag manquant',
+  audienceTeamCaptainsManagers: 'Capitaines ET managers d’équipe',
+  // « Encadrement » et non « staff » : dans ce produit, « staff » désigne le
+  // staff DU SITE (owner/admin/caster). Réutiliser le mot ici ferait choisir
+  // la mauvaise audience un jour de campagne.
+  audienceTeamStaff: 'Encadrement d’équipe (capitaine, manager, coach)',
   audienceNewsletter: 'Newsletter (abonné·es externes)',
   audienceAllPlusNewsletter: 'Comptes confirmés + newsletter',
   audienceAdherentsPlusNewsletter: 'Adhérent·es + newsletter',

@@ -31,6 +31,8 @@ export const campaignInputSchema = z
         'tournament-captains-incomplete-roster',
         'team-members-without-discord',
         'team-members-without-battletag',
+        'team-captains-managers',
+        'team-staff',
         'newsletter',
         'all-plus-newsletter',
         'adherents-plus-newsletter',

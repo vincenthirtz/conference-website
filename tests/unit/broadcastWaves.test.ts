@@ -396,6 +396,93 @@ describe('computeAudienceRecipients', () => {
     expect(recipients.map((r) => r.user_id).sort()).toEqual(['cap1', 'cap3']);
   });
 
+  it('tournament-captains-incomplete-roster : les MANAGERS sont relancés aussi', async () => {
+    // Avant : la relance ne visait que `teams.captain_id`. Une équipe pilotée
+    // par un manager — voire sans capitaine du tout, état légitime — ne
+    // recevait donc RIEN, sans que rien ne le signale.
+    setAuthListUsers([
+      { id: 'cap1', email: 'cap1@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'mgr1', email: 'mgr1@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'mgr2', email: 'mgr2@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'mgr3', email: 'mgr3@x.com', email_confirmed_at: '2026-01-01' } as any,
+    ]);
+    store.tournaments = [
+      {
+        id: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b',
+        status: 'published',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        min_players: 3,
+      },
+    ] as any;
+    store.tournament_teams = [
+      { tournament_id: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b', team_id: 't1' },
+      { tournament_id: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b', team_id: 't2' },
+      { tournament_id: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b', team_id: 't3' },
+    ] as any;
+    store.teams = [
+      // capitaine + manager, roster incomplet → les deux
+      { id: 't1', captain_id: 'cap1', is_active: true, deleted_at: null },
+      // AUCUNE capitaine, un manager → le manager seul
+      { id: 't2', captain_id: null, is_active: true, deleted_at: null },
+      // roster complet → personne, manager compris
+      { id: 't3', captain_id: null, is_active: true, deleted_at: null },
+    ] as any;
+    store.team_members = [
+      { team_id: 't1', user_id: 'mgr1', role: 'manager', is_substitute: false },
+      { team_id: 't2', user_id: 'mgr2', role: 'manager', is_substitute: false },
+      { team_id: 't3', user_id: 'mgr3', role: 'manager', is_substitute: false },
+      { team_id: 't3', user_id: 'p1', role: 'player', is_substitute: false },
+      { team_id: 't3', user_id: 'p2', role: 'player', is_substitute: false },
+      { team_id: 't3', user_id: 'p3', role: 'player', is_substitute: false },
+    ] as any;
+
+    const recipients = await computeAudienceRecipients(
+      'tournament-captains-incomplete-roster'
+    );
+    // t1 : cap1 + mgr1 (0 joueuse < 3). t2 : mgr2 (roster vide).
+    // t3 : 3 JOUEUSES → complet, personne — le manager ne compte pas.
+    expect(recipients.map((r) => r.user_id).sort()).toEqual([
+      'cap1',
+      'mgr1',
+      'mgr2',
+    ]);
+  });
+
+  it('tournament-captains-incomplete-roster : l’encadrement ne comble pas un effectif', async () => {
+    // 4 joueuses + 2 managers ne font pas 6 titulaires. Les compter faisait
+    // passer l'équipe pour complète, donc la privait de la relance.
+    setAuthListUsers([
+      { id: 'cap1', email: 'cap1@x.com', email_confirmed_at: '2026-01-01' } as any,
+    ]);
+    store.tournaments = [
+      {
+        id: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b',
+        status: 'published',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        min_players: 5,
+      },
+    ] as any;
+    store.tournament_teams = [
+      { tournament_id: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b', team_id: 't1' },
+    ] as any;
+    store.teams = [
+      { id: 't1', captain_id: 'cap1', is_active: true, deleted_at: null },
+    ] as any;
+    store.team_members = [
+      { team_id: 't1', user_id: 'p1', role: 'player', is_substitute: false },
+      { team_id: 't1', user_id: 'p2', role: 'player', is_substitute: false },
+      { team_id: 't1', user_id: 'p3', role: 'player', is_substitute: false },
+      { team_id: 't1', user_id: 'p4', role: 'player', is_substitute: false },
+      { team_id: 't1', user_id: 'm1', role: 'manager', is_substitute: false },
+      { team_id: 't1', user_id: 'c1', role: 'coach', is_substitute: false },
+    ] as any;
+
+    const recipients = await computeAudienceRecipients(
+      'tournament-captains-incomplete-roster'
+    );
+    expect(recipients.map((r) => r.user_id)).toEqual(['cap1']);
+  });
+
   it('team-members-without-discord: uniquement les membres sans lien Discord', async () => {
     setAuthListUsers([
       { id: 'u1', email: 'u1@x.com', email_confirmed_at: '2026-01-01' } as any,
@@ -432,6 +519,96 @@ describe('computeAudienceRecipients', () => {
     expect(
       await computeAudienceRecipients('team-members-without-discord')
     ).toEqual([]);
+  });
+
+  it('team-captains-managers : capitaines ET managers, dédupés', async () => {
+    // Le trou d'origine : « Capitaines d'équipe » ne lit que teams.captain_id,
+    // donc un manager n'était joignable par AUCUN segment.
+    setAuthListUsers([
+      { id: 'cap1', email: 'c1@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'mgr1', email: 'm1@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'coach1', email: 'co@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'ply1', email: 'p1@x.com', email_confirmed_at: '2026-01-01' } as any,
+    ]);
+    store.teams = [
+      { id: 't1', captain_id: 'cap1', is_active: true, deleted_at: null },
+    ] as any;
+    store.team_members = [
+      { team_id: 't1', user_id: 'cap1', role: 'player' },
+      { team_id: 't1', user_id: 'mgr1', role: 'manager' },
+      { team_id: 't1', user_id: 'coach1', role: 'coach' },
+      { team_id: 't1', user_id: 'ply1', role: 'player' },
+    ] as any;
+
+    const recipients = await computeAudienceRecipients(
+      'team-captains-managers'
+    );
+    expect(recipients.map((r) => r.user_id).sort()).toEqual(['cap1', 'mgr1']);
+  });
+
+  it('team-captains-managers : une équipe SANS capitaine garde son manager', async () => {
+    // `captain_id` NULL est un état légitime — équipe créée « en tant que
+    // manager », la capitaine désignée n'a pas encore accepté. L'ancien
+    // segment ne renvoyait alors personne pour cette équipe.
+    setAuthListUsers([
+      { id: 'mgr1', email: 'm1@x.com', email_confirmed_at: '2026-01-01' } as any,
+    ]);
+    store.teams = [
+      { id: 't1', captain_id: null, is_active: true, deleted_at: null },
+    ] as any;
+    store.team_members = [
+      { team_id: 't1', user_id: 'mgr1', role: 'manager' },
+    ] as any;
+
+    const recipients = await computeAudienceRecipients(
+      'team-captains-managers'
+    );
+    expect(recipients.map((r) => r.user_id)).toEqual(['mgr1']);
+  });
+
+  it('team-staff : capitaine + managers + coachs, joueuses exclues', async () => {
+    setAuthListUsers([
+      { id: 'cap1', email: 'c1@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'mgr1', email: 'm1@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'coach1', email: 'co@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'ply1', email: 'p1@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'sub1', email: 's1@x.com', email_confirmed_at: '2026-01-01' } as any,
+    ]);
+    store.teams = [
+      { id: 't1', captain_id: 'cap1', is_active: true, deleted_at: null },
+    ] as any;
+    store.team_members = [
+      { team_id: 't1', user_id: 'cap1', role: 'player' },
+      { team_id: 't1', user_id: 'mgr1', role: 'manager' },
+      { team_id: 't1', user_id: 'coach1', role: 'coach' },
+      { team_id: 't1', user_id: 'ply1', role: 'player' },
+      { team_id: 't1', user_id: 'sub1', role: 'substitute' },
+    ] as any;
+
+    const recipients = await computeAudienceRecipients('team-staff');
+    expect(recipients.map((r) => r.user_id).sort()).toEqual([
+      'cap1',
+      'coach1',
+      'mgr1',
+    ]);
+  });
+
+  it('team-captains reste strictement les capitaines', async () => {
+    // Le segment historique ne change PAS de définition : c'est son libellé qui
+    // dit désormais « sans les managers ». Des campagnes existantes le portent.
+    setAuthListUsers([
+      { id: 'cap1', email: 'c1@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'mgr1', email: 'm1@x.com', email_confirmed_at: '2026-01-01' } as any,
+    ]);
+    store.teams = [
+      { id: 't1', captain_id: 'cap1', is_active: true, deleted_at: null },
+    ] as any;
+    store.team_members = [
+      { team_id: 't1', user_id: 'mgr1', role: 'manager' },
+    ] as any;
+
+    const recipients = await computeAudienceRecipients('team-captains');
+    expect(recipients.map((r) => r.user_id)).toEqual(['cap1']);
   });
 
   it('team-members-without-battletag: exclut l’encadrement et les tags remplis', async () => {
