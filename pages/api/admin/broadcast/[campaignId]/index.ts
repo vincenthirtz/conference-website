@@ -16,6 +16,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import {
   computeAudienceRecipients,
   computeNewRecipients,
+  computeUnsentRecipients,
   recordSentRecipients,
   getCampaign,
   buildBroadcastUnsubscribeUrl,
@@ -23,6 +24,7 @@ import {
   type BroadcastCampaign,
   type ComputedRecipient,
   type NewRecipientsResult,
+  type UnsentRecipientsResult,
 } from '@/utils/broadcasts';
 import { campaignInputSchema } from '@/utils/campaignSchema';
 
@@ -95,6 +97,14 @@ async function handler(
   // l'audience actuelle jamais encore adressés pour cette campagne (diff sur
   // broadcast_recipients `sent`). Sert le renvoi après de nouvelles inscriptions.
   const onlyNew = Boolean(req.body?.onlyNew);
+  // onlyUnsent : diff PAR IDENTITÉ contre les envois déjà tracés. Sert le cas
+  // « j'ai changé l'audience » — les personnes qui entrent ont des comptes
+  // anciens, donc `onlyNew` (filtre daté) les écarte toutes et annonce zéro.
+  const onlyUnsent = Boolean(req.body?.onlyUnsent);
+  // Reconnaissance explicite qu'un envoi passé n'a laissé aucune trace : sans
+  // elle, on refuse plutôt que de réexpédier la campagne à tout le monde en
+  // croyant n'écrire qu'aux nouveaux.
+  const acknowledgeUntraced = Boolean(req.body?.acknowledgeUntraced);
   const rawLimit = Number(req.body?.limit);
   const rawOffset = Number(req.body?.offset);
   const limit =
@@ -104,8 +114,12 @@ async function handler(
 
   let recipients: ComputedRecipient[];
   let newMeta: NewRecipientsResult | null = null;
+  let unsentMeta: UnsentRecipientsResult | null = null;
   try {
-    if (onlyNew) {
+    if (onlyUnsent) {
+      unsentMeta = await computeUnsentRecipients(campaignId, campaign.audience);
+      recipients = unsentMeta.unsentRecipients;
+    } else if (onlyNew) {
       newMeta = await computeNewRecipients(campaignId, campaign.audience);
       recipients = newMeta.newRecipients;
     } else {
@@ -114,6 +128,24 @@ async function handler(
   } catch (err: unknown) {
     logger.error('[broadcast] computeAudienceRecipients error:', err);
     return res.status(500).json({ error: 'Echec du chargement des comptes' });
+  }
+
+  // Envoi RÉEL sur un diff qui ne peut pas diffé : refus. En aperçu (dryRun)
+  // on laisse passer — c'est justement là que l'écran doit pouvoir montrer le
+  // problème et proposer de le reconnaître.
+  if (
+    onlyUnsent &&
+    !dryRun &&
+    unsentMeta?.untracedPreviousSend &&
+    !acknowledgeUntraced
+  ) {
+    return res.status(409).json({
+      error:
+        'Cette campagne a déjà été envoyée sans trace par destinataire : le diff ne peut pas distinguer qui a reçu quoi. Confirme pour envoyer à toute l’audience.',
+      code: 'UNTRACED_PREVIOUS_SEND',
+      audienceTotal: unsentMeta.audienceTotal,
+      lastSentAt: unsentMeta.lastSentAt,
+    });
   }
 
   const windowed = recipients.slice(
@@ -139,6 +171,17 @@ async function handler(
             audienceTotal: newMeta.audienceTotal,
             alreadySent: newMeta.alreadySent,
             emailOnlyExcluded: newMeta.emailOnlyExcluded,
+          }
+        : {}),
+      ...(unsentMeta
+        ? {
+            unsentCount: unsentMeta.unsentRecipients.length,
+            audienceTotal: unsentMeta.audienceTotal,
+            alreadySent: unsentMeta.alreadySent,
+            tracedSent: unsentMeta.tracedSent,
+            emailOnlyExcluded: unsentMeta.emailOnlyExcluded,
+            untracedPreviousSend: unsentMeta.untracedPreviousSend,
+            lastSentAt: unsentMeta.lastSentAt,
           }
         : {}),
     });
@@ -198,10 +241,21 @@ async function handler(
           limit,
           sent,
           failed,
-          mode: onlyNew ? 'manual-new' : 'manual',
+          mode: onlyUnsent
+            ? 'manual-audience-diff'
+            : onlyNew
+              ? 'manual-new'
+              : 'manual',
           only_new: onlyNew,
-          already_sent: newMeta?.alreadySent,
-          email_only_excluded: newMeta?.emailOnlyExcluded,
+          only_unsent: onlyUnsent,
+          // Tracé pour que le journal dise s'il s'agissait d'un vrai diff ou
+          // d'un envoi complet assumé faute de trace.
+          acknowledged_untraced: onlyUnsent
+            ? Boolean(unsentMeta?.untracedPreviousSend && acknowledgeUntraced)
+            : undefined,
+          already_sent: newMeta?.alreadySent ?? unsentMeta?.alreadySent,
+          email_only_excluded:
+            newMeta?.emailOnlyExcluded ?? unsentMeta?.emailOnlyExcluded,
           errors: errors.length > 0 ? errors : undefined,
         },
       });
@@ -214,6 +268,7 @@ async function handler(
     success: true,
     campaignId,
     onlyNew,
+    onlyUnsent,
     totalConfirmedUsers: recipients.length,
     windowSize: windowed.length,
     offset,

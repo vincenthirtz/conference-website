@@ -138,6 +138,17 @@ export default {
   offsetLabel: 'Offset',
   dryRunBtn: 'Preview (dry-run)',
   launchBroadcast: 'Start the broadcast',
+  audienceDiffBtn: 'Send to the new audience',
+  audienceDiffHint:
+    'After an audience change: writes only to people the new audience brings in who have not already received this campaign. Unlike “new sign-ups”, account age plays no part.',
+  audienceDiffTitle: 'Send to the new audience',
+  audienceDiffNone:
+    'Nobody new: the whole current audience has already received this campaign.',
+  audienceDiffConfirmBody:
+    'Send “{name}” to {count} person(s) brought in by the new audience. {already} of {total} already received it and are left out.',
+  audienceDiffUntracedBody:
+    'Careful: “{name}” has already been sent, but with no per-recipient trace — there is no way to tell who received it. Confirming will send to {count} person(s), including those who may have already read it.',
+  audienceDiffConfirmBtn: 'Send to {count} person(s)',
   newSubscribersBtn: 'Send to new subscribers',
   newSubscribersHint:
     'Re-sends the campaign only to accounts that joined the audience since the last send (never a double-send). Recipients without an account (members) are not tracked.',

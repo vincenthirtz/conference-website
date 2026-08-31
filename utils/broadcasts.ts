@@ -1154,6 +1154,83 @@ export async function computeNewRecipients(
   };
 }
 
+export type UnsentRecipientsResult = {
+  /**
+   * Destinataires de l'audience ACTUELLE dont l'identité n'apparaît pas dans
+   * les envois déjà tracés — la cible de « Envoyer à la nouvelle audience ».
+   */
+  unsentRecipients: ComputedRecipient[];
+  /** Taille de l'audience résolue, tous types de destinataires confondus. */
+  audienceTotal: number;
+  /** Destinataires de l'audience actuelle DÉJÀ servis pour cette campagne. */
+  alreadySent: number;
+  /** Nombre total d'identités tracées `sent`, audience actuelle ou non. */
+  tracedSent: number;
+  /** Destinataires email-only écartés : sans compte, pas d'identité à diffé. */
+  emailOnlyExcluded: number;
+  lastSentAt: string | null;
+  /**
+   * VRAI quand la campagne a déjà été envoyée mais n'a laissé AUCUNE trace
+   * par-destinataire. Le diff est alors sans objet : tout le monde paraît
+   * neuf, et envoyer reviendrait à réexpédier la campagne entière. On le
+   * signale au lieu de le découvrir après coup.
+   */
+  untracedPreviousSend: boolean;
+};
+
+/**
+ * Les destinataires de l'audience actuelle jamais servis pour cette campagne —
+ * un diff PAR IDENTITÉ contre `broadcast_recipients`.
+ *
+ * À ne pas confondre avec `computeNewRecipients`, qui filtre sur la DATE DE
+ * CRÉATION du compte. Les deux répondent à deux questions différentes :
+ *
+ *   - « qui s'est inscrit depuis mon dernier envoi ? »  → computeNewRecipients
+ *   - « qui l'audience vient-elle de faire entrer ? »   → celle-ci
+ *
+ * Le second cas est celui d'un changement d'audience : les personnes qui
+ * entrent ont des comptes ANCIENS, donc le filtre daté les écarte toutes et le
+ * bouton « nouveaux inscrits » annonce zéro. C'est précisément ce qui a motivé
+ * cette fonction.
+ *
+ * Le prix du diff par identité est connu (il est écrit dans
+ * computeNewRecipients) : les envois historiques n'ont laissé qu'un compteur
+ * agrégé, sans ligne par destinataire. Plutôt que de deviner, on le REMONTE
+ * via `untracedPreviousSend` et on laisse l'appelant décider.
+ */
+export async function computeUnsentRecipients(
+  campaignId: string,
+  audience: CampaignAudience
+): Promise<UnsentRecipientsResult> {
+  const recipients = await computeAudienceRecipients(audience);
+  const [lastSentAt, sentIds] = await Promise.all([
+    fetchLastSentAt(campaignId),
+    fetchSentRecipientIds(campaignId),
+  ]);
+
+  let emailOnlyExcluded = 0;
+  const accountBased: (ComputedRecipient & { user_id: string })[] = [];
+  for (const r of recipients) {
+    if (r.user_id) {
+      accountBased.push(r as ComputedRecipient & { user_id: string });
+    } else {
+      emailOnlyExcluded += 1;
+    }
+  }
+
+  const unsentRecipients = accountBased.filter((r) => !sentIds.has(r.user_id));
+
+  return {
+    unsentRecipients,
+    audienceTotal: recipients.length,
+    alreadySent: accountBased.length - unsentRecipients.length,
+    tracedSent: sentIds.size,
+    emailOnlyExcluded,
+    lastSentAt,
+    untracedPreviousSend: lastSentAt !== null && sentIds.size === 0,
+  };
+}
+
 /**
  * Enregistre des destinataires comme `sent` dans broadcast_recipients (upsert
  * idempotent, chunké). Appelé après un envoi direct réussi pour amorcer / tenir

@@ -1168,6 +1168,85 @@ function CampaignDrawer({
     }
   }
 
+  // Envoi « à la nouvelle audience » : diff PAR IDENTITÉ contre les envois déjà
+  // tracés, à ne pas confondre avec « nouveaux inscrits » (filtre daté). Quand
+  // on CHANGE l'audience, les personnes qui entrent ont des comptes anciens :
+  // le filtre daté les écarte toutes et annonce zéro. Celui-ci les trouve.
+  async function runAudienceDiff() {
+    setSendBusy(true);
+    setActionError(null);
+    try {
+      const res = await adminFetch(`/api/admin/broadcast/${campaign.id}`, {
+        method: 'POST',
+        body: JSON.stringify({ dryRun: true, onlyUnsent: true }),
+      });
+      const dry = await res.json();
+      if (!res.ok || dry.error) {
+        throw new Error(dry.error || t.dryRunFailed);
+      }
+
+      const n = Number(dry.unsentCount ?? 0);
+      if (n <= 0) {
+        addToast(t.audienceDiffNone, 'info');
+        return;
+      }
+
+      // Un envoi passé sans trace par destinataire : le diff ne distingue
+      // rien, et « envoyer aux nouveaux » enverrait en fait à tout le monde.
+      // On le DIT avant, plutôt que de le constater après.
+      const untraced = Boolean(dry.untracedPreviousSend);
+      const ok = await confirm({
+        title: t.audienceDiffTitle,
+        subtitle: untraced
+          ? format(t.audienceDiffUntracedBody, {
+              count: n,
+              name: campaign.name,
+            })
+          : format(t.audienceDiffConfirmBody, {
+              count: n,
+              already: Number(dry.alreadySent ?? 0),
+              total: Number(dry.audienceTotal ?? 0),
+              name: campaign.name,
+            }),
+        variant: 'warning',
+        confirmLabel: format(t.audienceDiffConfirmBtn, { count: n }),
+        cancelLabel: t.cancel,
+      });
+      if (!ok) return;
+
+      const json = await mutateJson<SendResult & { errors?: string[] }>(
+        `/api/admin/broadcast/${campaign.id}`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            onlyUnsent: true,
+            // Reprend la reconnaissance donnée dans la boîte de dialogue :
+            // l'API refuse l'envoi sans elle quand la trace manque.
+            acknowledgeUntraced: untraced,
+          }),
+        }
+      );
+      setSendResult({
+        totalConfirmedUsers: json.totalConfirmedUsers,
+        windowSize: json.windowSize,
+        sent: json.sent,
+        failed: json.failed,
+        errors: json.errors,
+      });
+      addToast(
+        format(t.sendDoneToast, { sent: json.sent, failed: json.failed }),
+        json.failed > 0 ? 'warning' : 'success'
+      );
+      await onRefresh();
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message || t.sendFailed;
+      setActionError(msg);
+      addToast(msg, 'error');
+    } finally {
+      setSendBusy(false);
+    }
+  }
+
   return (
     <>
       {confirmDialog}
@@ -1563,9 +1642,32 @@ function CampaignDrawer({
                   </svg>
                   {t.newSubscribersBtn}
                 </button>
+                <button
+                  type="button"
+                  onClick={runAudienceDiff}
+                  disabled={dryRunBusy || sendBusy}
+                  title={t.audienceDiffHint}
+                  className="px-4 py-2.5 rounded-xl bg-indigo-700 hover:bg-indigo-600 border border-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 20h5v-2a3 3 0 0 0-5.36-1.86M9 20H4v-2a3 3 0 0 1 5.36-1.86M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"
+                    />
+                  </svg>
+                  {t.audienceDiffBtn}
+                </button>
               </div>
 
               <p className="text-xs text-neutral-500">{t.newSubscribersHint}</p>
+              <p className="text-xs text-neutral-500">{t.audienceDiffHint}</p>
 
               {actionError && (
                 <div className="px-3 py-2 rounded-xl bg-red-900/40 border border-red-500/50 text-red-300 text-sm">

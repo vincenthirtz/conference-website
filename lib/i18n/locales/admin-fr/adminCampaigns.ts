@@ -138,6 +138,19 @@ export default adminNs('adminCampaigns', {
   offsetLabel: 'Offset',
   dryRunBtn: 'Prévisualiser (dry-run)',
   launchBroadcast: 'Lancer la diffusion',
+  audienceDiffBtn: 'Envoyer à la nouvelle audience',
+  // Dit la différence avec le bouton voisin, sinon les deux se ressemblent :
+  // l'un regarde la date d'inscription, l'autre qui a DÉJÀ reçu ce message.
+  audienceDiffHint:
+    'Après un changement d’audience : n’écrit qu’aux personnes que la nouvelle audience fait entrer et qui n’ont pas déjà reçu cette campagne. Contrairement à « nouveaux inscrits », l’ancienneté du compte n’entre pas en compte.',
+  audienceDiffTitle: 'Envoyer à la nouvelle audience',
+  audienceDiffNone:
+    'Personne de neuf : toute l’audience actuelle a déjà reçu cette campagne.',
+  audienceDiffConfirmBody:
+    'Envoyer « {name} » à {count} personne(s) que la nouvelle audience fait entrer. {already} sur {total} l’ont déjà reçue et sont écartées.',
+  audienceDiffUntracedBody:
+    'Attention : « {name} » a déjà été envoyée, mais sans trace par destinataire — impossible de savoir qui l’a reçue. Confirmer enverra à {count} personne(s), y compris celles qui l’ont peut-être déjà lue.',
+  audienceDiffConfirmBtn: 'Envoyer à {count} personne(s)',
   newSubscribersBtn: 'Envoyer aux nouveaux inscrits',
   newSubscribersHint:
     "Renvoie la campagne uniquement aux comptes qui ont rejoint l'audience depuis le dernier envoi (jamais de double-envoi). Les destinataires sans compte (adhérent·es) ne sont pas suivis.",
