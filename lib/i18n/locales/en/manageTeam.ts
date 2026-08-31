@@ -110,6 +110,12 @@ export default {
   joinMissingBattleTagLabel: "Player's BattleTag",
   joinMissingBattleTagHint:
     'She has not filled it in: enter it to add her to the roster, or ask her to complete her profile.',
+  battleTagLabel: 'BattleTag',
+  battleTagUpdated: 'BattleTag updated',
+  battleTagError: 'Could not update the BattleTag.',
+  battleTagInvalid: 'Invalid BattleTag format (e.g. Name#1234).',
+  battleTagRequiredForRole:
+    'A player must have a BattleTag — only team staff can leave it empty.',
   skillRatingUpdated: 'Rating updated',
   skillRatingError: 'Could not update the rating.',
   verifiedBadgeTitle: 'BattleTag verified via Battle.net',

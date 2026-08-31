@@ -34,7 +34,11 @@ import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 import ActiveTeamSwitcher from '@/components/player/ActiveTeamSwitcher';
 import Switch from '@/components/ui/Switch';
-import { isNonPlayingTeamRole, splitTeamMembers } from '@/utils/teams/roleKind';
+import {
+  BATTLE_TAG_REGEX,
+  isNonPlayingTeamRole,
+  splitTeamMembers,
+} from '@/utils/teams/roleKind';
 import nsManageTeam from '@/lib/i18n/locales/fr/manageTeam';
 import nsOverwatchRank from '@/lib/i18n/locales/fr/overwatchRank';
 import SkillRatingBadge from '@/components/Team/SkillRatingBadge';
@@ -614,6 +618,65 @@ export default function PlayerManageTeamScreen() {
       showSuccess(t.specialtyUpdated);
     } catch (err: unknown) {
       setError((err as Error).message || t.specialtyError);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Brouillons de BattleTag. Même motif que le SR juste en dessous : champ
+  // libre, donc enregistrement au blur ou a Entree.
+  //
+  // Pourquoi ce champ existe : l'API capitaine acceptait `battle_tag` depuis
+  // toujours, mais cet ecran ne l'offrait pas — seul l'ecran staff l'avait. Une
+  // capitaine qui voulait corriger le tag d'une coequipiere devait donc passer
+  // par le staff, pour une donnee qu'elle est la mieux placee pour connaitre.
+  const [battleTagDrafts, setBattleTagDrafts] = useState<
+    Record<string, string>
+  >({});
+
+  const handleUpdateBattleTag = async (member: Member, raw: string) => {
+    const trimmed = raw.trim();
+    const current = member.battle_tag ?? '';
+
+    const forget = () =>
+      setBattleTagDrafts((prev) => {
+        const { [member.id]: _drop, ...rest } = prev;
+        return rest;
+      });
+
+    if (trimmed === current) {
+      forget();
+      return;
+    }
+
+    if (!trimmed) {
+      // Vider n'est legitime que pour l'encadrement : une joueuse sans
+      // BattleTag n'est identifiable nulle part. L'API refuse de toute facon —
+      // on le dit ici pour ne pas faire faire l'aller-retour.
+      if (!isNonPlayingTeamRole(member.role)) {
+        setError(t.battleTagRequiredForRole);
+        return;
+      }
+    } else if (!BATTLE_TAG_REGEX.test(trimmed)) {
+      setError(t.battleTagInvalid);
+      return;
+    }
+
+    setActionLoading(`battle-tag-${member.id}`);
+    setError(null);
+    try {
+      await adminFetchJson(withTeam('/api/teams/update-member'), {
+        method: 'PATCH',
+        body: JSON.stringify({
+          memberId: member.id,
+          battle_tag: trimmed || null,
+        }),
+      });
+      forget();
+      await reloadTeam();
+      showSuccess(t.battleTagUpdated);
+    } catch (err: unknown) {
+      setError((err as Error).message || t.battleTagError);
     } finally {
       setActionLoading(null);
     }
@@ -1271,6 +1334,38 @@ export default function PlayerManageTeamScreen() {
                           </div>
                         ) : (
                           <>
+                            {/* BattleTag : éditable ici, comme sur l'écran
+                                staff. La capitaine connaît le tag de ses
+                                coéquipières mieux que quiconque ; l'envoyer
+                                demander au staff n'avait aucune raison
+                                d'être. */}
+                            <input
+                              type="text"
+                              value={
+                                battleTagDrafts[m.id] ?? (m.battle_tag || '')
+                              }
+                              onChange={(e) =>
+                                setBattleTagDrafts((prev) => ({
+                                  ...prev,
+                                  [m.id]: e.target.value,
+                                }))
+                              }
+                              onBlur={(e) =>
+                                handleUpdateBattleTag(m, e.target.value)
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  e.currentTarget.blur();
+                                }
+                              }}
+                              disabled={!!actionLoading}
+                              aria-label={t.battleTagLabel}
+                              title={t.battleTagLabel}
+                              placeholder="Pseudo#1234"
+                              maxLength={64}
+                              className="w-32 bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400 disabled:opacity-50"
+                            />
                             {/* SR : seulement pour les rôles JOUANTS — le
                                 niveau d'une coach n'entre pas dans la moyenne,
                                 lui offrir le champ ferait croire l'inverse. */}

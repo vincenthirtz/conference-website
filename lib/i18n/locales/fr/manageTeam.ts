@@ -115,6 +115,12 @@ export default ns('manageTeam', {
   joinMissingBattleTagLabel: 'BattleTag de la joueuse',
   joinMissingBattleTagHint:
     "Elle ne l'a pas renseigné : saisis-le pour l'ajouter au roster, ou demande-lui de compléter son profil.",
+  battleTagLabel: 'BattleTag',
+  battleTagUpdated: 'BattleTag mis à jour',
+  battleTagError: 'Impossible de mettre à jour le BattleTag.',
+  battleTagInvalid: 'Format BattleTag invalide (ex : Pseudo#1234).',
+  battleTagRequiredForRole:
+    'Une joueuse doit avoir un BattleTag — seul l’encadrement peut le laisser vide.',
   skillRatingUpdated: 'Niveau mis à jour',
   skillRatingError: 'Impossible de mettre à jour le niveau.',
   verifiedBadgeTitle: 'BattleTag vérifié via Battle.net',
