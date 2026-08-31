@@ -434,6 +434,48 @@ describe('computeAudienceRecipients', () => {
     ).toEqual([]);
   });
 
+  it('team-members-without-battletag: exclut l’encadrement et les tags remplis', async () => {
+    setAuthListUsers([
+      { id: 'u1', email: 'u1@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'u2', email: 'u2@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'u3', email: 'u3@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'u4', email: 'u4@x.com', email_confirmed_at: '2026-01-01' } as any,
+      { id: 'u5', email: 'u5@x.com', email_confirmed_at: '2026-01-01' } as any,
+    ]);
+    store.team_members = [
+      // Relancées : rôle jouant, pas de tag (null, vide, espaces).
+      { team_id: 't1', user_id: 'u1', role: 'player', battle_tag: null },
+      { team_id: 't1', user_id: 'u2', role: 'substitute', battle_tag: '' },
+      { team_id: 't2', user_id: 'u3', role: 'player', battle_tag: '   ' },
+      // Tag renseigné : rien à demander.
+      { team_id: 't2', user_id: 'u4', role: 'player', battle_tag: 'Ok#1234' },
+      // Encadrement : on ne leur en demande jamais.
+      { team_id: 't2', user_id: 'u5', role: 'coach', battle_tag: null },
+    ] as any;
+
+    const recipients = await computeAudienceRecipients(
+      'team-members-without-battletag'
+    );
+    expect(recipients.map((r) => r.user_id).sort()).toEqual([
+      'u1',
+      'u2',
+      'u3',
+    ]);
+  });
+
+  it('team-members-without-battletag: audience vide quand tout le monde en a un', async () => {
+    setAuthListUsers([
+      { id: 'u1', email: 'u1@x.com', email_confirmed_at: '2026-01-01' } as any,
+    ]);
+    store.team_members = [
+      { team_id: 't1', user_id: 'u1', role: 'player', battle_tag: 'Ok#1234' },
+    ] as any;
+
+    expect(
+      await computeAudienceRecipients('team-members-without-battletag')
+    ).toEqual([]);
+  });
+
   it('tournament-captains-incomplete-roster: audience vide si min_players non configuré', async () => {
     setAuthListUsers([
       { id: 'cap1', email: 'cap1@x.com', email_confirmed_at: '2026-01-01' } as any,

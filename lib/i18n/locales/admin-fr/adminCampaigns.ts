@@ -194,6 +194,8 @@ export default adminNs('adminCampaigns', {
   audienceTournamentNeverLoggedIn: 'Inscrit·es au tournoi jamais connecté·es',
   audienceTournamentIncompleteRoster: 'Capitaines — roster incomplet',
   audienceTeamMembersWithoutDiscord: 'Membres d’équipe — Discord non lié',
+  audienceTeamMembersWithoutBattleTag:
+    'Membres d’équipe — BattleTag manquant',
   audienceNewsletter: 'Newsletter (abonné·es externes)',
   audienceAllPlusNewsletter: 'Comptes confirmés + newsletter',
   audienceAdherentsPlusNewsletter: 'Adhérent·es + newsletter',

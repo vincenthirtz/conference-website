@@ -242,4 +242,5 @@ export default {
   subsUnsubColLabel: 'First name',
   subsUnsubColDate: 'Unsubscribed on',
   audienceTeamMembersWithoutDiscord: 'Team members — Discord not linked',
+  audienceTeamMembersWithoutBattleTag: 'Team members — BattleTag missing',
 };

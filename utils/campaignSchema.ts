@@ -30,6 +30,7 @@ export const campaignInputSchema = z
         'tournament-never-logged-in',
         'tournament-captains-incomplete-roster',
         'team-members-without-discord',
+        'team-members-without-battletag',
         'newsletter',
         'all-plus-newsletter',
         'adherents-plus-newsletter',

@@ -26,6 +26,7 @@ import { BROADCAST_OPT_OUT_EVENT_TYPE } from './webPushEvents';
 import { slugifyCampaignName } from './campaignSchema';
 import { DEFAULT_TENANT_ID } from './tenant';
 import { resolveCurrentTournamentId } from './currentTournament';
+import { roleRequiresBattleTag } from './teams/roleKind';
 
 import { logger } from './logger';
 
@@ -92,6 +93,12 @@ export type CampaignAudience =
   // équipe), ni les faire apparaître dans le marché des joueuses libres — la
   // moitié de l'outillage Discord leur est invisible sans qu'elles le sachent.
   | 'team-members-without-discord'
+  // Relance : membres JOUANTS d'une equipe dont la fiche de roster n'a pas de
+  // BattleTag. Sans lui, personne ne peut les identifier en jeu ni les compter
+  // au classement, et la verification Battle.net n'a rien a comparer. Les
+  // roles d'encadrement (coach, manager) sont exclus : on ne leur en demande
+  // pas (roleRequiresBattleTag).
+  | 'team-members-without-battletag'
   // Newsletter externe (abonné·es sans compte site) + combinaisons.
   | 'newsletter'
   | 'all-plus-newsletter'
@@ -531,6 +538,36 @@ async function listTeamMembersWithoutDiscordIds(): Promise<Set<string>> {
 }
 
 /**
+ * Résout les auth user ids des membres JOUANTS dont la fiche de roster ne porte
+ * pas de BattleTag.
+ *
+ * On lit `team_members` directement plutôt que de filtrer `listTeamMemberIds()`
+ * : le tag est porté par la FICHE, pas par le compte, et c'est bien la fiche
+ * qu'il faut compléter. `roleRequiresBattleTag` garde la définition du « rôle
+ * jouant » alignée sur le reste du site — un coach ou une manager n'a jamais eu
+ * à en fournir, les relancer serait une fausse alerte.
+ */
+async function listTeamMembersWithoutBattleTagIds(): Promise<Set<string>> {
+  const { data, error } = await supabaseAdmin!
+    .from('team_members')
+    .select('user_id, role, battle_tag');
+  if (error) throw error;
+
+  const set = new Set<string>();
+  for (const r of (data ?? []) as Array<{
+    user_id?: string | null;
+    role?: string | null;
+    battle_tag?: string | null;
+  }>) {
+    if (!r.user_id) continue;
+    if (!roleRequiresBattleTag(r.role)) continue;
+    if ((r.battle_tag ?? '').trim()) continue;
+    set.add(r.user_id);
+  }
+  return set;
+}
+
+/**
  * Résout l'ensemble des auth user ids du staff actif (non soft-deleted). Global.
  */
 async function listStaffAuthUserIds(): Promise<Set<string>> {
@@ -837,6 +874,10 @@ export async function computeAudienceRecipients(
     case 'team-members-without-discord':
       return computeConfirmedRecipients(
         await listTeamMembersWithoutDiscordIds()
+      );
+    case 'team-members-without-battletag':
+      return computeConfirmedRecipients(
+        await listTeamMembersWithoutBattleTagIds()
       );
     case 'adherents':
       return computeAdherentRecipients();
