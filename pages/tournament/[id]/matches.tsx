@@ -313,8 +313,12 @@ export default function TournamentMatchesPage({
                 <span className="text-gray-200">
                   {tournament.game || 'Overwatch'}
                 </span>
-                <span className="w-[1px] h-3 bg-white/20" />
-                <span className={statusColor}>{statusLabel}</span>
+                {/* Le statut du tournoi est une métadonnée d'écran : sur une
+                    feuille, « PUBLISHED » n'apprend rien à personne. */}
+                <span className="w-[1px] h-3 bg-white/20 print:hidden" />
+                <span className={`${statusColor} print:hidden`}>
+                  {statusLabel}
+                </span>
               </div>
 
               <Heading
@@ -339,10 +343,16 @@ export default function TournamentMatchesPage({
               <Paragraph
                 typeStyle="body-sm"
                 textColor="text-gray-200"
-                className="max-w-xl"
+                className="max-w-xl print:hidden"
               >
                 {t.description}
               </Paragraph>
+              {/* À l'impression, la phrase d'écran renvoie à des filtres qui
+                  n'existent plus. Celle-ci dit ce que le lecteur a en main —
+                  et surtout que le document peut être un extrait filtré. */}
+              <p className="hidden max-w-xl text-sm print:block">
+                {t.printIntro}
+              </p>
             </div>
 
             <PrintExportButton className="shrink-0 self-start" />
@@ -531,7 +541,7 @@ export default function TournamentMatchesPage({
 
                 {hasScheduled && (
                   <div
-                    className="flex items-center gap-1.5"
+                    className="flex items-center gap-1.5 print:hidden"
                     aria-label={t.calendarLabel}
                   >
                     <a
@@ -591,7 +601,7 @@ export default function TournamentMatchesPage({
                 {grouped.map((day) => (
                   <div
                     key={day.key}
-                    className="rounded-2xl bg-white/3 border border-white/10 p-3"
+                    className="print-day-group rounded-2xl bg-white/3 border border-white/10 p-3"
                   >
                     <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-white/10">
                       <p className="text-[11px] font-semibold text-gray-100 uppercase tracking-wide">
@@ -665,6 +675,20 @@ function MatchRow({
     match.team2?.name ||
     (match.is_bye ? t.byeLabel : t.teamPlaceholder2);
 
+  // À l'écran, le nom court tient dans la colonne. Sur une feuille, il fait
+  // deviner : le PDF mélangeait « ASH », « HND SPRKL » et « Team Positivité »
+  // — cette dernière n'ayant pas de nom court. Le papier a la place, il prend
+  // le nom complet, et la liste redevient homogène.
+  const t1Print = match.team1?.name || t.teamPlaceholder1;
+  const t2Print =
+    match.team2?.name || (match.is_bye ? t.byeLabel : t.teamPlaceholder2);
+
+  // Tant que le classement n'est pas joué, une finale n'a aucune des deux
+  // équipes. « Équipe 1 vs Équipe 2 » se lit alors comme un gabarit oublié —
+  // surtout imprimé, où rien n'indique que la page est simplement en avance
+  // sur la compétition.
+  const pairingUnknown = !match.team1 && !match.team2 && !match.is_bye;
+
   const dateLabel = formatMatchDate(match.scheduled_at, locale);
   const statusLabel = getMatchStatusShort(match.status, t);
   const statusColor = getMatchStatusColor(match.status);
@@ -684,7 +708,7 @@ function MatchRow({
   return (
     <Link href={`/match/${match.id}`}>
       <div
-        className={`group grid gap-2 items-center px-2 py-1.5 rounded-xl bg-white/3 border border-white/10 hover:border-emerald-400/70 hover:bg-emerald-500/5 cursor-pointer transition-colors text-[11px] ${
+        className={`match-row group grid gap-2 items-center px-2 py-1.5 rounded-xl bg-white/3 border border-white/10 hover:border-emerald-400/70 hover:bg-emerald-500/5 cursor-pointer transition-colors text-[11px] ${
           showDate
             ? 'grid-cols-[minmax(0,2.2fr)_minmax(0,1.5fr)_minmax(0,0.7fr)]'
             : 'grid-cols-[minmax(0,1fr)_minmax(0,0.7fr)]'
@@ -697,16 +721,25 @@ function MatchRow({
                 sept journées, on cherche SON équipe, pas une chaîne de
                 caractères. Une équipe sans logo reçoit son monogramme, jamais
                 un trou. */}
-            {match.team1 && (
+            {pairingUnknown && (
+              <span className="italic text-gray-400">{t.pairingTbd}</span>
+            )}
+            {!pairingUnknown && match.team1 && (
               <TeamAvatar
                 name={match.team1.name}
                 shortName={match.team1.short_name}
                 logoUrl={match.team1.logo_url}
                 size="xs"
+                className="print:hidden"
               />
             )}
-            <span className="truncate">{t1}</span>
-            {!match.is_bye && (
+            {!pairingUnknown && (
+              <>
+                <span className="truncate print:hidden">{t1}</span>
+                <span className="hidden print:inline">{t1Print}</span>
+              </>
+            )}
+            {!pairingUnknown && !match.is_bye && (
               <>
                 <span className="text-gray-500">{t.vsLabel}</span>
                 {match.team2 && (
@@ -715,9 +748,11 @@ function MatchRow({
                     shortName={match.team2.short_name}
                     logoUrl={match.team2.logo_url}
                     size="xs"
+                    className="print:hidden"
                   />
                 )}
-                <span className="truncate">{t2}</span>
+                <span className="truncate print:hidden">{t2}</span>
+                <span className="hidden print:inline">{t2Print}</span>
               </>
             )}
             {match.is_bye && (
@@ -752,7 +787,13 @@ function MatchRow({
 
         {/* Status / score */}
         <div className="flex flex-col items-end justify-center gap-[2px]">
-          <span className={statusColor}>{statusLabel}</span>
+          <span
+            className={`${statusColor}${
+              match.status === 'pending' ? ' print:hidden' : ''
+            }`}
+          >
+            {statusLabel}
+          </span>
           {scoreLabel && (
             <span className="text-[11px] font-semibold text-emerald-300">
               {scoreLabel}

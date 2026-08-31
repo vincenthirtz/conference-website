@@ -18,6 +18,8 @@ export default {
   heading: 'Matches – {name}',
   description:
     'Find here the full list of tournament matches. Use the filters to browse by stage or by status (upcoming, ongoing, finished).',
+  printIntro:
+    'Full match schedule. This document reflects the list as it was filtered at print time.',
   backToTournament: '← Back to tournament',
   viewBracket: 'View bracket',
   topMaps: 'Top maps',
@@ -54,6 +56,7 @@ export default {
   timeTbd: 'Time to be confirmed',
   vsLabel: 'vs',
   byeLabel: '(bye)',
+  pairingTbd: 'Matchup to be determined',
   teamPlaceholder1: 'Team 1',
   teamPlaceholder2: 'Team 2',
 };

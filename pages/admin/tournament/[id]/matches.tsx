@@ -1184,7 +1184,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
           {/* View toggle & conflict warnings */}
           <div className="flex flex-wrap items-center gap-4 mb-6">
-            <div className="flex rounded-xl overflow-hidden border border-neutral-700">
+            <div className="flex rounded-xl overflow-hidden border border-neutral-700 print:hidden">
               <button
                 type="button"
                 onClick={() => setViewMode('list')}
@@ -1744,7 +1744,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                           </div>
 
                           {/* Actions */}
-                          <div className="flex gap-1.5 flex-shrink-0">
+                          <div className="flex gap-1.5 flex-shrink-0 print:hidden">
                             <Link
                               href={`/admin/matches/${m.id}/edit`}
                               className="px-2.5 py-1 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-xs font-medium transition-colors"
@@ -1895,7 +1895,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
           {/* Pagination */}
           {matches.length > 0 && (
-            <div className="flex justify-between items-center mt-6">
+            <div className="flex justify-between items-center mt-6 print:hidden">
               <button
                 type="button"
                 disabled={offset === 0}

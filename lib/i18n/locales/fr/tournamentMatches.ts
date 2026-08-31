@@ -17,6 +17,8 @@ export default ns('tournamentMatches', {
   heading: 'Matchs – {name}',
   description:
     'Retrouvez ici la liste complète des matchs du tournoi. Utilisez les filtres pour naviguer par phase ou par statut (à venir, en cours, terminés).',
+  printIntro:
+    'Calendrier complet des rencontres. Ce document reprend la liste telle qu’elle était filtrée au moment de l’impression.',
   backToTournament: '← Retour au tournoi',
   viewBracket: 'Voir le bracket',
   topMaps: 'Top maps',
@@ -53,6 +55,7 @@ export default ns('tournamentMatches', {
   timeTbd: 'Horaire à confirmer',
   vsLabel: 'vs',
   byeLabel: '(bye)',
+  pairingTbd: 'Affiche à déterminer',
   teamPlaceholder1: 'Équipe 1',
   teamPlaceholder2: 'Équipe 2',
 });

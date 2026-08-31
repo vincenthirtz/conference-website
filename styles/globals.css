@@ -2275,9 +2275,16 @@ a:focus-visible,
     color: #000 !important;
   }
 
-  /* Chrome global : jamais utile sur une feuille. */
+  /* Chrome global : jamais utile sur une feuille.
+   *
+   * Le bandeau cookies mérite une mention : il ne s'affiche que tant que le
+   * visiteur n'a pas répondu, donc il est INVISIBLE pour qui teste l'impression
+   * depuis son propre navigateur — et il s'imprimait en plein milieu du
+   * document, par-dessus le contenu, pour tous les autres. */
   nav,
   footer,
+  .cookie-banner,
+  .cookie-settings-btn,
   .print\:hidden {
     display: none !important;
   }
@@ -2324,5 +2331,62 @@ a:focus-visible,
      cliquable sur papier. */
   .print-document a {
     text-decoration: none !important;
+  }
+
+  /* Un texte en dégradé repose sur `-webkit-text-fill-color: transparent`, que
+     `color: #000` ne suffit PAS à reprendre : la propriété de remplissage gagne
+     et le texte sort blanc sur blanc. Les titres de marque étaient déjà traités
+     nommément ; la règle vaut pour tout `text-transparent`, notamment les
+     monogrammes d'équipe. */
+  .print-document .text-transparent {
+    -webkit-text-fill-color: #000 !important;
+    color: #000 !important;
+  }
+
+  /* ── Calendrier de matchs ──
+   *
+   * Un groupe-jour coupé entre deux pages laisse son en-tête orphelin en bas
+   * de feuille : on lit « MER. 14/10 » puis plus rien, et les matchs de ce jour
+   * commencent la page suivante sans dire à quel jour ils appartiennent. */
+  .print-day-group {
+    break-inside: avoid;
+    padding: 0 !important;
+    border: 0 !important;
+    margin-bottom: 4mm;
+  }
+
+  /* La ligne de match réserve une colonne de droite pour le statut. Sur un
+     calendrier imprimé, « À venir » est masqué parce qu'il est vrai partout :
+     sans cette reprise, la colonne resterait large et vide, et les noms
+     d'équipes se tasseraient dans le tiers gauche de la feuille. */
+  .print-document .match-row {
+    grid-template-columns: 1fr auto !important;
+    padding: 1mm 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid #e2e2e2 !important;
+    border-radius: 0 !important;
+    font-size: 10pt !important;
+  }
+
+  /* Les tailles d'écran sont calées sur du 10-11 px, illisibles une fois
+     rendues à 96 dpi sur du papier. */
+  .print-document .match-row .text-\[10px\],
+  .print-document .print-day-group .text-\[10px\] {
+    font-size: 8.5pt !important;
+  }
+
+  .print-document .print-day-group > div:first-child {
+    border-bottom: 1px solid #999 !important;
+  }
+
+  /* Le conteneur de la liste dessine un grand cadre arrondi qui, sur la
+     dernière feuille, encadre surtout du vide. */
+  .print-document .print-day-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .print-document section > .rounded-2xl {
+    border: 0 !important;
+    padding: 0 !important;
   }
 }
