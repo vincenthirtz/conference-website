@@ -48,6 +48,12 @@ export type TeamRosterState = {
   missingBattleTags: number;
   /** Membres avec un compte site qui n'a jamais servi à ouvrir une session. */
   neverLoggedIn: number;
+  /**
+   * Les matchs de CETTE équipe dans le tournoi, déjà mis en forme. Chaque
+   * équipe reçoit ainsi son propre calendrier dans son salon, au lieu du
+   * tableau complet où il faut chercher sa ligne.
+   */
+  fixtures: string[];
 };
 
 export type TeamRosterContext = {
@@ -207,6 +213,8 @@ export async function loadTeamRosterStates(
     byTeam.set(m.team_id, acc);
   }
 
+  const fixturesByTeam = await loadTeamFixtures(resolvedId, tenantId);
+
   base.teams = ((teams ?? []) as Array<{
     id: string;
     name?: string | null;
@@ -230,11 +238,83 @@ export async function loadTeamRosterStates(
         missingStarters: Math.max(0, base.minPlayers - acc.starters),
         missingBattleTags: acc.noTag,
         neverLoggedIn: acc.dormant,
+        fixtures: fixturesByTeam.get(team.id) ?? [],
       } satisfies TeamRosterState;
     })
     .sort((a, b) => a.teamName.localeCompare(b.teamName, 'fr'));
 
   return base;
+}
+
+/**
+ * Le calendrier de chaque équipe, mis en forme et prêt à coller.
+ *
+ * Une ligne par match : « J1 · ven. 18/09 à 19:00 · vs Venom Valkyries ». Le
+ * point de vue est celui de l'équipe DESTINATAIRE — « vs untel », jamais
+ * « A – B » — pour qu'elle lise son propre calendrier et non un extrait du
+ * tableau général.
+ *
+ * Les matchs annulés et supprimés sont écartés ; ceux sans date sont gardés
+ * mais annoncés comme tels, parce qu'un match manquant à l'appel inquiète plus
+ * qu'un match « date à venir ».
+ */
+async function loadTeamFixtures(
+  tournamentId: string,
+  tenantId: string
+): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
+  if (!supabaseAdmin) return out;
+
+  const { data, error } = await supabaseAdmin
+    .from('matches')
+    .select(
+      'team1_id, team2_id, scheduled_at, round_name, status, team1:team1_id(name), team2:team2_id(name)'
+    )
+    .eq('tournament_id', tournamentId)
+    .eq('tenant_id', tenantId)
+    .is('deleted_at', null)
+    .neq('status', 'cancelled')
+    .order('scheduled_at', { ascending: true, nullsFirst: false });
+
+  if (error) {
+    logger.warn('[teamMessages] lecture des matchs échouée: %s', error.message);
+    return out;
+  }
+
+  const nameOf = (embed: unknown): string | null => {
+    const row = Array.isArray(embed) ? embed[0] : embed;
+    const n = (row as { name?: string } | null)?.name;
+    return typeof n === 'string' ? n : null;
+  };
+
+  for (const raw of data ?? []) {
+    const m = raw as Record<string, unknown>;
+    const t1 = m.team1_id as string | null;
+    const t2 = m.team2_id as string | null;
+    // Un créneau dont les deux affiches ne sont pas posées ne dit rien à
+    // personne : on ne l'annonce pas.
+    if (!t1 || !t2) continue;
+
+    const when = m.scheduled_at
+      ? formatFrDate(m.scheduled_at as string, true)
+      : 'date à venir';
+    const round = (m.round_name as string | null) || '';
+
+    for (const [self, other] of [
+      [t1, nameOf(m.team2)],
+      [t2, nameOf(m.team1)],
+    ] as const) {
+      if (!other) continue;
+      const line = [round, when, `vs ${other}`]
+        .filter(Boolean)
+        .join(' · ');
+      const list = out.get(self) ?? [];
+      list.push(line);
+      out.set(self, list);
+    }
+  }
+
+  return out;
 }
 
 /**
@@ -284,6 +364,7 @@ export const TEMPLATE_VARIABLES = [
   'deadline',
   'debut',
   'lien_equipe',
+  'matchs',
 ] as const;
 
 export type TemplateVariable = (typeof TEMPLATE_VARIABLES)[number];
@@ -324,6 +405,9 @@ export function buildTemplateValues(
     deadline: formatFrDate(ctx.deadline, true),
     debut: formatFrDate(ctx.startDate),
     lien_equipe: `${SITE_URL}/player/manage-team`,
+    // Liste multiligne, prête à coller dans un message Discord. Vide quand
+    // l'équipe n'a aucun match programmé — le gabarit doit pouvoir le dire.
+    matchs: team.fixtures.join('\n'),
   };
 }
 

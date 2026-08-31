@@ -53,6 +53,7 @@ function team(overrides: Partial<TeamRosterState> = {}): TeamRosterState {
     captainUserId: 'u1',
     starters: 4,
     substitutes: 0,
+    fixtures: [],
     missingStarters: 1,
     missingBattleTags: 0,
     neverLoggedIn: 1,
@@ -541,5 +542,53 @@ describe('daysUntil', () => {
     const now = Date.parse('2026-09-11T23:00:00Z');
     expect(daysUntil('2026-09-18', now)).toBe(7);
     expect(daysUntil('2026-09-11', now)).toBe(0);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * {matchs} — le calendrier PROPRE à chaque équipe
+ *
+ * Le tableau complet oblige chaque équipe à chercher ses lignes parmi 28. La
+ * variable rend son calendrier à elle, du point de vue de la destinataire :
+ * « vs untel », jamais « A – B ».
+ * ------------------------------------------------------------------------- */
+
+describe('gabarit — variable {matchs}', () => {
+  const ctx: TeamRosterContext = {
+    tournamentId: TOURNAMENT,
+    tournamentName: "OW WOMEN's CUP 2026",
+    minPlayers: 5,
+    startDate: '2026-09-18',
+    deadline: null,
+    teams: [],
+  };
+
+  it('rend une ligne par match, dans l’ordre reçu', () => {
+    const values = buildTemplateValues(
+      team({
+        fixtures: [
+          'J1 · vendredi 18 septembre à 19:00 · vs Venom Valkyries',
+          'J2 · mercredi 23 septembre à 20:30 · vs Team Positivité',
+        ],
+      }),
+      ctx
+    );
+    expect(values.matchs).toBe(
+      'J1 · vendredi 18 septembre à 19:00 · vs Venom Valkyries\n' +
+        'J2 · mercredi 23 septembre à 20:30 · vs Team Positivité'
+    );
+  });
+
+  it('rend une chaîne vide quand l’équipe n’a aucun match', () => {
+    // Le gabarit doit pouvoir le dire lui-même plutôt que de recevoir un trou
+    // au milieu d'une phrase.
+    expect(buildTemplateValues(team({ fixtures: [] }), ctx).matchs).toBe('');
+  });
+
+  it('se substitue dans un gabarit libre', () => {
+    const rendered = renderTemplate('Vos matchs :\n{matchs}', {
+      matchs: 'J1 · vs Venom Valkyries',
+    });
+    expect(rendered).toBe('Vos matchs :\nJ1 · vs Venom Valkyries');
   });
 });
