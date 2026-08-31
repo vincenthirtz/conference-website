@@ -20,11 +20,11 @@
       "src": "/img/logos/2026-logo.png",
       "sizes": "500x500",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/favicon.ico",
-      "sizes": "48x48",
+      "sizes": "16x16 32x32 48x48 64x64 128x128",
       "type": "image/x-icon"
     }
   ]
