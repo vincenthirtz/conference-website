@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   readTeamLogo,
+  isLogoAsset,
   resolveNewsImage,
   resolveNewsImageUrl,
 } from '../../utils/news/newsImage';
@@ -64,25 +65,45 @@ describe('resolveNewsImageUrl', () => {
   });
 });
 
+describe('isLogoAsset', () => {
+  it('reconnaît le dossier des logos, pas le nom du fichier', () => {
+    expect(isLogoAsset('/img/logos/2026-logo.png')).toBe(true);
+    expect(isLogoAsset('https://owwomenscup.fr/img/logos/pogtv.png')).toBe(true);
+    // Un fichier qui s'appelle « logo » sans être rangé là n'en est pas un.
+    expect(isLogoAsset('/img/teams-images/logo-eclypse.png')).toBe(false);
+    expect(isLogoAsset('https://cdn.test/cover.jpg')).toBe(false);
+    expect(isLogoAsset(null)).toBe(false);
+  });
+});
+
 describe('resolveNewsImage', () => {
-  it('signale une image d’article comme NON dérivée du logo', () => {
+  it('signale une bannière d’article comme recadrable', () => {
     expect(
       resolveNewsImage('https://cdn.test/cover.jpg', { logo_url: LOGO })
-    ).toEqual({ url: 'https://cdn.test/cover.jpg', fromTeamLogo: false });
+    ).toEqual({ url: 'https://cdn.test/cover.jpg', fitContain: false });
   });
 
-  it('signale le repli logo, pour que le cadrage passe en contain', () => {
+  // La régression qui a motivé le drapeau : une actu illustrée À LA MAIN avec
+  // le logo du tournoi passait pour une bannière et se faisait rogner.
+  it('cadre en contain un logo choisi éditorialement', () => {
+    expect(resolveNewsImage('/img/logos/2026-logo.png', null)).toEqual({
+      url: '/img/logos/2026-logo.png',
+      fitContain: true,
+    });
+  });
+
+  it('signale le repli logo d’équipe, pour que le cadrage passe en contain', () => {
     // Une bannière se recadre volontiers ; un logo carré s'y fait massacrer.
     expect(resolveNewsImage(null, { logo_url: LOGO })).toEqual({
       url: LOGO,
-      fromTeamLogo: true,
+      fitContain: true,
     });
   });
 
   it('sans image ni logo : rien, et pas de faux drapeau', () => {
     expect(resolveNewsImage('', null)).toEqual({
       url: null,
-      fromTeamLogo: false,
+      fitContain: false,
     });
   });
 });

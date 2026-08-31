@@ -75,8 +75,8 @@ type NewsPageProps = {
   tag?: string | null;
   excerpt?: string | null;
   imageUrl?: string | null;
-  /** `imageUrl` est le logo de l'équipe liée → cadrage `contain`. */
-  imageIsTeamLogo?: boolean;
+  /** `imageUrl` est un logo (équipe ou tournoi) → cadrage `contain`. */
+  imageFitContain?: boolean;
   publishedAt?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
@@ -130,8 +130,8 @@ export const getStaticProps: GetStaticProps<NewsPageProps> = async (
       tag: data.tag || 'general',
       excerpt: data.excerpt || '',
       imageUrl: resolveNewsImage(data.image_url, data.teams).url || '',
-      imageIsTeamLogo: resolveNewsImage(data.image_url, data.teams)
-        .fromTeamLogo,
+      imageFitContain: resolveNewsImage(data.image_url, data.teams)
+        .fitContain,
       publishedAt: data.published_at || null,
       createdAt: data.created_at || null,
       updatedAt: data.updated_at || null,
@@ -148,7 +148,7 @@ export default function NewsSlugPage({
   tag,
   excerpt,
   imageUrl,
-  imageIsTeamLogo,
+  imageFitContain,
   publishedAt,
   createdAt,
   updatedAt,
@@ -294,7 +294,7 @@ export default function NewsSlugPage({
                   priority
                   sizes="(max-width:768px) 100vw, 800px"
                   className={`mt-4 aspect-[1200/630] w-full rounded-2xl border border-white/10 ${
-                    imageIsTeamLogo
+                    imageFitContain
                       ? 'bg-white/[0.03] object-contain p-8'
                       : 'object-cover'
                   }`}

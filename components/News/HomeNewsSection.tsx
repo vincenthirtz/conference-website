@@ -16,10 +16,11 @@ export type HomeNewsItem = {
   content?: string | null;
   imageUrl?: string | null;
   /**
-   * Vrai quand `imageUrl` est le LOGO de l'équipe liée et non un visuel
-   * d'article : les cartes cadrent alors en `contain` au lieu de recadrer.
+   * Vrai quand `imageUrl` est un LOGO — de l'équipe liée ou du tournoi — et non
+   * un visuel d'article : les cartes cadrent alors en `contain` au lieu de
+   * recadrer, un logo carré ne survivant pas à un `cover` en bandeau.
    */
-  imageIsTeamLogo?: boolean;
+  imageFitContain?: boolean;
   publishedAt?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;

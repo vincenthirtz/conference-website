@@ -58,7 +58,7 @@ function NewsCard({ item }: { item: HomeNewsItem }) {
             fill
             sizes="(max-width: 768px) 100vw, 33vw"
             className={`transition-transform duration-500 group-hover:scale-[1.04] motion-reduce:transform-none ${
-              item.imageIsTeamLogo
+              item.imageFitContain
                 ? 'bg-gradient-to-br from-[var(--color-violet)]/30 to-[var(--color-green)]/20 object-contain p-6'
                 : 'object-cover'
             }`}

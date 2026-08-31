@@ -276,7 +276,7 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
           // L'article DÉSIGNE son équipe (news.team_id) au lieu d'avoir copié
           // son logo à la publication : un logo posé après coup remonte enfin.
           imageUrl: image.url,
-          imageIsTeamLogo: image.fromTeamLogo,
+          imageFitContain: image.fitContain,
           publishedAt: row.published_at,
           createdAt: row.created_at,
           updatedAt: row.updated_at,

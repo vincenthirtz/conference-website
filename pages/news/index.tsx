@@ -27,8 +27,8 @@ type NewsItem = {
   tag: string;
   excerpt: string | null;
   imageUrl: string | null;
-  /** `imageUrl` est le logo de l'équipe liée → cadrage `contain`. */
-  imageIsTeamLogo: boolean;
+  /** `imageUrl` est un logo (équipe ou tournoi) → cadrage `contain`. */
+  imageFitContain: boolean;
   publishedAt: string | null;
   createdAt: string | null;
 };
@@ -79,7 +79,7 @@ export const getStaticProps: GetStaticProps<NewsIndexProps> = async () => {
             tag: row.tag || 'general',
             excerpt: row.excerpt || null,
             imageUrl: image.url,
-            imageIsTeamLogo: image.fromTeamLogo,
+            imageFitContain: image.fitContain,
             publishedAt: row.published_at || null,
             createdAt: row.created_at || null,
           };
@@ -118,7 +118,7 @@ function NewsCard({ item }: { item: NewsItem }) {
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className={`transition group-hover:scale-105 ${
-              item.imageIsTeamLogo
+              item.imageFitContain
                 ? 'bg-gradient-to-br from-purple-900/40 via-neutral-900 to-blue-900/30 object-contain p-6'
                 : 'object-cover'
             }`}

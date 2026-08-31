@@ -54,27 +54,44 @@ export function resolveNewsImageUrl(
   return readTeamLogo(team);
 }
 
+/**
+ * Cette URL désigne-t-elle un LOGO plutôt qu'une bannière ?
+ *
+ * Un logo est carré ou vertical, souvent détouré : le recadrer en `cover` lui
+ * coupe la tête. Le cas n'était traité que pour les logos d'ÉQUIPE, parce que
+ * c'était le seul chemin qui en produisait ; une actu illustrée à la main avec
+ * le logo du tournoi tombait dans le cadrage bannière et se faisait rogner.
+ *
+ * La convention porte sur le dossier — `public/img/logos/` — et non sur le nom
+ * de fichier, pour qu'y déposer un nouveau visuel suffise.
+ */
+export function isLogoAsset(url: string | null | undefined): boolean {
+  return typeof url === 'string' && /\/img\/logos\//.test(url);
+}
+
 export type ResolvedNewsImage = {
   /** URL à afficher, ou `null` : l'appelant rend alors son dégradé de repli. */
   url: string | null;
   /**
-   * Vrai quand l'image vient du LOGO de l'équipe et non d'un visuel d'article.
+   * Vrai quand l'image est un LOGO et non une bannière : logo de l'équipe liée,
+   * ou visuel éditorial rangé dans `public/img/logos/`.
    *
-   * Ça change le cadrage, pas la source : une bannière se recadre volontiers en
-   * `object-cover`, un logo carré ou vertical s'y fait massacrer. Les surfaces
-   * qui rendent l'image basculent sur `object-contain` quand ce drapeau est vrai.
+   * Ça décrit le CADRAGE, pas la provenance — c'est d'ailleurs tout ce que les
+   * appelants en font. Une bannière se recadre volontiers en `object-cover`, un
+   * logo carré s'y fait massacrer : les surfaces basculent sur `object-contain`
+   * quand ce drapeau est vrai.
    */
-  fromTeamLogo: boolean;
+  fitContain: boolean;
 };
 
-/** Variante de `resolveNewsImageUrl` qui dit AUSSI d'où vient l'image. */
+/** Variante de `resolveNewsImageUrl` qui dit AUSSI comment la cadrer. */
 export function resolveNewsImage(
   imageUrl: string | null | undefined,
   team: NewsTeamEmbed
 ): ResolvedNewsImage {
   if (typeof imageUrl === 'string' && imageUrl.trim()) {
-    return { url: imageUrl, fromTeamLogo: false };
+    return { url: imageUrl, fitContain: isLogoAsset(imageUrl) };
   }
   const logo = readTeamLogo(team);
-  return { url: logo, fromTeamLogo: logo !== null };
+  return { url: logo, fitContain: logo !== null };
 }
