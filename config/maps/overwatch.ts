@@ -51,18 +51,6 @@ export const OVERWATCH_RECIPES: MapRecipe[] = [
     scatter: 0.5,
   },
   {
-    slug: 'hanaoka',
-    name: 'Hanaoka',
-    layout: 'control',
-    // Enceinte de château, plâtre blanc, tuiles sombres, érables.
-    palette: ['#7c8a6d', '#f0eade', '#3c4a52', '#e0b25a'],
-    architecture: 'tiered',
-    landmarks: ['castle', 'pagoda', 'tree'],
-    environment: { kind: 'grass', color: '#5f7f52' },
-    mood: 'day',
-    scatter: 0.45,
-  },
-  {
     slug: 'ilios',
     name: 'Ilios',
     layout: 'control',
@@ -277,6 +265,17 @@ export const OVERWATCH_RECIPES: MapRecipe[] = [
     scatter: 0.4,
   },
   {
+    slug: 'neon-junction',
+    name: 'Neon Junction',
+    layout: 'hybrid',
+    // Ruelles de Tokyo la nuit : asphalte humide, béton, laque rouge, néons.
+    palette: ['#434a5c', '#6f6a86', '#a8324f', '#4ce0e8'],
+    architecture: 'futurist',
+    landmarks: ['tram', 'billboard', 'pagoda'],
+    mood: 'night',
+    scatter: 0.6,
+  },
+  {
     slug: 'numbani',
     name: 'Numbani',
     layout: 'hybrid',
@@ -375,8 +374,8 @@ export const OVERWATCH_RECIPES: MapRecipe[] = [
     scatter: 0.4,
   },
   {
-    slug: 'throne-of-aatlis',
-    name: 'Throne of Aatlis',
+    slug: 'aatlis',
+    name: 'Aatlis',
     layout: 'flashpoint',
     // Médina au bord du désert : terre battue, chaux, zellige, laiton.
     palette: ['#c98f5a', '#e9d3a9', '#2f8f9a', '#e8c04a'],

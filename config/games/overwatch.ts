@@ -27,7 +27,6 @@ export const OVERWATCH: GameDef = {
     // Control
     { name: 'Antarctic Peninsula', type: 'control', image: `${ART}/antarctic-peninsula.svg` },
     { name: 'Busan', type: 'control', image: `${ART}/busan.svg` },
-    { name: 'Hanaoka', type: 'control', image: `${ART}/hanaoka.svg` },
     { name: 'Ilios', type: 'control', image: `${ART}/ilios.svg` },
     { name: 'Lijiang Tower', type: 'control', image: `${ART}/lijiang-tower.svg` },
     { name: 'Nepal', type: 'control', image: `${ART}/nepal.svg` },
@@ -48,6 +47,7 @@ export const OVERWATCH: GameDef = {
     { name: 'Hollywood', type: 'hybrid', image: `${ART}/hollywood.svg` },
     { name: "King's Row", type: 'hybrid', image: `${ART}/kings-row.svg` },
     { name: 'Midtown', type: 'hybrid', image: `${ART}/midtown.svg` },
+    { name: 'Neon Junction', type: 'hybrid', image: `${ART}/neon-junction.svg` },
     { name: 'Numbani', type: 'hybrid', image: `${ART}/numbani.svg` },
     { name: 'Paraíso', type: 'hybrid', image: `${ART}/paraiso.svg` },
     // Push
@@ -56,9 +56,9 @@ export const OVERWATCH: GameDef = {
     { name: 'New Queen Street', type: 'push', image: `${ART}/new-queen-street.svg` },
     { name: 'Runasapi', type: 'push', image: `${ART}/runasapi.svg` },
     // Flashpoint
+    { name: 'Aatlis', type: 'flashpoint', image: `${ART}/aatlis.svg` },
     { name: 'New Junk City', type: 'flashpoint', image: `${ART}/new-junk-city.svg` },
     { name: 'Suravasa', type: 'flashpoint', image: `${ART}/suravasa.svg` },
-    { name: 'Throne of Aatlis', type: 'flashpoint', image: `${ART}/throne-of-aatlis.svg` },
   ],
   registrationPresets: [
     {
