@@ -42,6 +42,7 @@ import {
 import nsManageTeam from '@/lib/i18n/locales/fr/manageTeam';
 import nsOverwatchRank from '@/lib/i18n/locales/fr/overwatchRank';
 import SkillRatingBadge from '@/components/Team/SkillRatingBadge';
+import SpecialtyBadge from '@/components/Team/SpecialtyBadge';
 import {
   averageTeamSkillRating,
   isValidSkillRating,
@@ -1216,6 +1217,13 @@ export default function PlayerManageTeamScreen() {
                               className="h-5 w-5 shrink-0"
                             />
                           )}
+                          {/* Poste. Il ne vivait que dans le <select> réservé
+                              à qui peut éditer : une membre simple ne voyait
+                              donc jamais qui joue tank ou support. */}
+                          <SpecialtyBadge
+                            specialty={m.specialty}
+                            className="shrink-0"
+                          />
                           {/* Niveau déclaré. Le composant ne rend rien quand
                               il n'y en a pas : « non déclaré » n'a pas à
                               occuper une pastille sur chaque ligne. */}

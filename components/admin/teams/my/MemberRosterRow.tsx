@@ -2,6 +2,7 @@ import React from 'react';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import { isNonPlayingTeamRole } from '@/utils/teams/roleKind';
 import SkillRatingBadge from '@/components/Team/SkillRatingBadge';
+import SpecialtyBadge from '@/components/Team/SpecialtyBadge';
 import type { Member } from './types';
 import nsAdminTeamsMy from '@/lib/i18n/locales/admin-fr/adminTeamsMy';
 
@@ -152,6 +153,10 @@ function MemberRosterRowInner({
             {m.battle_tag && !isEditingTag && (
               <span className="text-blue-400 ml-2">{m.battle_tag}</span>
             )}
+            <SpecialtyBadge
+              specialty={m.specialty}
+              className="ml-2 align-middle"
+            />
             <SkillRatingBadge
               skillRating={m.skill_rating}
               className="ml-2 align-middle"

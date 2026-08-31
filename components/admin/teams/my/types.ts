@@ -9,6 +9,8 @@ export type Member = {
   display_name: string | null;
   role: string | null;
   battle_tag?: string | null;
+  /** Poste : tank / dps / support / flex. `null` = non déclaré. */
+  specialty?: string | null;
   /** SR Overwatch déclaré (cf. utils/overwatchRank.ts), null si non renseigné. */
   skill_rating?: number | null;
   is_substitute?: boolean | null;

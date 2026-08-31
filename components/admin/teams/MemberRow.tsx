@@ -3,6 +3,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { TeamMemberRow } from '@/types/admin';
 import nsAdminTeamsMemberRow from '@/lib/i18n/locales/admin-fr/adminTeamsMemberRow';
 import SkillRatingBadge from '@/components/Team/SkillRatingBadge';
+import SpecialtyBadge from '@/components/Team/SpecialtyBadge';
 
 function formatVerifiedDate(d: string | null | undefined): string {
   if (!d) return '';
@@ -232,6 +233,10 @@ function MemberRowComponent({
             <span className="px-2 py-0.5 rounded-full text-xs bg-blue-500/20 text-blue-300 border border-blue-500/30">
               {member.role}
             </span>
+            {/* Poste (tank / dps / support). Il n'était affiché NULLE PART sur
+                cet écran : la ligne montrait le rôle d'équipe, qui dit
+                « joueuse », jamais à quel poste. */}
+            <SpecialtyBadge specialty={member.specialty} />
             {/* Niveau déclaré. Rien à afficher quand il n'y en a pas. */}
             <SkillRatingBadge skillRating={member.skill_rating} />
             <span className="text-xs text-neutral-500 font-mono truncate">

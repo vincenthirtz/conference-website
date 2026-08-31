@@ -17,6 +17,7 @@ import {
 import { maskBattleTag } from '@/utils/battleTag';
 import { splitTeamMembers } from '@/utils/teams/roleKind';
 import SkillRatingBadge from '@/components/Team/SkillRatingBadge';
+import SpecialtyBadge from '@/components/Team/SpecialtyBadge';
 import {
   averageTeamSkillRating,
   type TeamSkillRatingAverage,
@@ -399,7 +400,10 @@ export const getStaticProps: GetStaticProps<TeamPageProps> = async (ctx) => {
   // cherche un scrim puisse la lire sans demander. Le BattleTag, lui, reste
   // masqué juste en dessous : les deux ne relèvent pas de la même chose.
   const skillAverage = averageTeamSkillRating(
-    (rawMembers || []) as { role?: string | null; skill_rating?: number | null }[]
+    (rawMembers || []) as {
+      role?: string | null;
+      skill_rating?: number | null;
+    }[]
   );
 
   // Compute is_captain based on team.captain_id
@@ -1559,31 +1563,6 @@ export default function TeamPage({
  * Components & utils
  * ────────────────────────────────────────────*/
 
-const getSpecialtyStyle = (
-  t: TeamDetailDict
-): Record<string, { label: string; bg: string; text: string }> => ({
-  tank: {
-    label: t.specialtyTank,
-    bg: 'bg-orange-500/20 border-orange-500/40',
-    text: 'text-orange-200',
-  },
-  dps: {
-    label: t.specialtyDps,
-    bg: 'bg-red-500/20 border-red-500/40',
-    text: 'text-red-200',
-  },
-  support: {
-    label: t.specialtySupport,
-    bg: 'bg-emerald-500/20 border-emerald-500/40',
-    text: 'text-emerald-200',
-  },
-  flex: {
-    label: t.specialtyFlex,
-    bg: 'bg-purple-500/20 border-purple-500/40',
-    text: 'text-purple-200',
-  },
-});
-
 function memberInitials(member: TeamMember): string {
   const source = member.display_name || member.battle_tag || 'M';
   const parts = source
@@ -1606,8 +1585,6 @@ function MemberCard({
 }) {
   const t = useT(nsTeamDetail);
   const name = member.display_name || member.battle_tag || t.memberFallback;
-  const specialtyStyle =
-    member.specialty && getSpecialtyStyle(t)[member.specialty.toLowerCase()];
   const avatar =
     member.avatar_url && safeHref(member.avatar_url) ? member.avatar_url : null;
   const twitterHref = socialHref('twitter', member.twitter ?? null);
@@ -1682,13 +1659,7 @@ function MemberCard({
               <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
             </svg>
           )}
-          {specialtyStyle && (
-            <span
-              className={`text-[10px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded border ${specialtyStyle.bg} ${specialtyStyle.text}`}
-            >
-              {specialtyStyle.label}
-            </span>
-          )}
+          <SpecialtyBadge specialty={member.specialty} />
           {substitute && (
             <span className="text-[10px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded bg-white/10 border border-white/10 text-gray-300">
               {t.substituteBadge}
