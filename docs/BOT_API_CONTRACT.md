@@ -1868,6 +1868,49 @@ Idempotent : un 2eme POST avec la meme `actionKey` UPDATE
 | [`role-sync/snapshot.ts`](../pages/api/bot/v1/role-sync/snapshot.ts) | GET     | —     | `bot-role-sync-snapshot` |
 | [`role-sync/presence.ts`](../pages/api/bot/v1/role-sync/presence.ts) | POST    | yes   | `bot-role-sync-presence` |
 
+#### `GET /role-sync/snapshot`
+
+Etat complet « qui doit avoir quel role Discord » pour le tenant. Reponse
+`{ generatedAt, count, users: SnapshotUser[] }` :
+
+```json
+{
+  "authUserId": "…",
+  "discordUserId": "236889…",
+  "discordUsername": "_amissa_",
+  "teams": [
+    {
+      "id": "…",
+      "name": "LVN ASHES",
+      "discordRoleId": "1542211…",
+      "isCaptain": false,
+      "isSubstitute": false,
+      "role": "manager"
+    },
+    { "id": "…", "name": "LVN EMBERS", "discordRoleId": "1543351…", "role": "manager" }
+  ],
+  "team": { "…": "appartenance principale (compat descendante)" },
+  "staffRole": "admin"
+}
+```
+
+- **`teams[]` porte TOUTES les appartenances** — un compte peut en avoir
+  plusieurs : l'index unique `(tenant_id, user_id)` est PARTIEL et exempte le
+  role `manager`, donc une manager peut encadrer deux equipes. Le bot attend
+  alors les DEUX roles d'equipe simultanement
+  (`services/discord-bot/role-sync.js`, `teamsOf()`), et les etiquettes
+  transverses (Capitaine / Manager / Remplacante) valent des UNE equipe.
+  N'en servir qu'une faisait retirer le role de l'autre a chaque cycle.
+- **`team`** reste servi : c'est l'appartenance principale (cf.
+  `utils/teams/memberships.ts#pickMembership`), lue en repli par un bot pas
+  encore deploye. Elle fait toujours partie de `teams[]`.
+
+Les memes champs sont pousses dans le payload des events `team.member.added` /
+`team.member.removed` / `team.captain.changed` / `staff.role.changed` (cf.
+`utils/botRoleSync.ts`), scopes au tenant de l'event.
+
+**Rate limit** : 12/min, bucket `bot-role-sync-snapshot`.
+
 #### `POST /role-sync/presence`
 
 Le bot rapporte QUI est effectivement sur le serveur Discord (le site ne sait

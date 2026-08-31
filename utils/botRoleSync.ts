@@ -7,7 +7,9 @@
 // Le bot (services/discord-bot/role-sync.js) attend exactement la forme
 // SnapshotUser ci-dessous — c'est la même que celle servie par
 // GET /api/bot/v1/role-sync/snapshot, mais résolue pour un seul authUserId
-// au moment où l'event est émis.
+// au moment où l'event est émis. `teams[]` porte TOUTES les appartenances :
+// c'est ce que le bot diffe, et n'en envoyer qu'une faisait retirer les rôles
+// des autres équipes d'un même compte.
 //
 // Sans ce helper, les emitters envoyaient { authUserId, teamId, ... } que
 // syncSingleUser rejette silencieusement (manque de discordUserId).
@@ -17,18 +19,31 @@ import { logger } from './logger';
 import { emitBotEvent, type BotEventName } from './botEvents';
 import { pickMembership } from '@/utils/teams/memberships';
 
+export type RoleSyncTeam = {
+  id: string;
+  name: string;
+  discordRoleId: string | null;
+  isCaptain: boolean;
+  isSubstitute: boolean;
+  role: string | null;
+};
+
 export type RoleSyncUser = {
   authUserId: string;
   discordUserId: string;
   discordUsername: string | null;
-  team: {
-    id: string;
-    name: string;
-    discordRoleId: string | null;
-    isCaptain: boolean;
-    isSubstitute: boolean;
-    role: string | null;
-  } | null;
+  /**
+   * TOUTES les appartenances du compte. Un manager peut en encadrer plusieurs
+   * (index unique partiel, cf. utils/teams/memberships.ts) et doit alors porter
+   * les rôles Discord des DEUX équipes. Le bot lit ce tableau en priorité.
+   */
+  teams: RoleSyncTeam[];
+  /**
+   * Appartenance « principale » (cf. pickMembership). Conservée pour la compat
+   * descendante : un bot pas encore déployé ne lit que ce champ. À terme,
+   * `teams` suffit.
+   */
+  team: RoleSyncTeam | null;
   staffRole: string | null;
 };
 
@@ -47,7 +62,8 @@ type RoleSyncTeamRel = RoleSyncTeamRelRow | RoleSyncTeamRelRow[] | null;
  * (auquel cas il n'y a rien à synchroniser côté bot).
  */
 export async function resolveRoleSyncUser(
-  authUserId: string
+  authUserId: string,
+  tenantId?: string | null
 ): Promise<RoleSyncUser | null> {
   if (!supabaseAdmin) return null;
 
@@ -62,36 +78,54 @@ export async function resolveRoleSyncUser(
   }
   if (!link?.discord_user_id) return null;
 
-  // Un rôle Discord d'équipe par compte : le sync en pousse UN. On lit donc
-  // l'appartenance qui « prend » le compte, à défaut la plus ancienne — un
-  // manager peut en encadrer plusieurs depuis 2026-08-20, auquel cas seule la
-  // première équipe reçoit son rôle Discord (limite assumée : Discord n'a pas
-  // de notion de « rôle d'équipe multiple » côté sync).
+  // TOUTES les appartenances, de la plus ancienne à la plus récente. Un manager
+  // peut en encadrer plusieurs depuis 2026-08-20 (index unique partiel) : on
+  // pousse alors les DEUX rôles Discord. N'en pousser qu'un faisait retirer
+  // l'autre par le diff du bot — c'est le bug « son rôle a disparu ».
   //
-  // La requête reste locale (et NON scopée tenant, comme avant) : ce résolveur
-  // ne reçoit pas de tenant. Seuls le tri et le choix changent, via le
-  // sélecteur pur partagé.
-  const { data: membershipRows } = await supabaseAdmin
+  // Scope tenant quand on le connaît (chemin event) : les rôles Discord d'un
+  // autre tenant n'existent pas sur ce serveur, les pousser ferait échouer
+  // l'appel `roles.add` en bloc. Sans tenant (appel direct, tests), on garde le
+  // comportement historique non scopé.
+  let membershipQuery = supabaseAdmin
     .from('team_members')
     .select(
       'team_id, role, is_substitute, team:team_id(id, name, captain_id, discord_role_id)'
     )
-    .eq('user_id', authUserId)
-    .order('created_at', { ascending: true });
+    .eq('user_id', authUserId);
+  if (tenantId) membershipQuery = membershipQuery.eq('tenant_id', tenantId);
+  const { data: membershipRows } = await membershipQuery.order('created_at', {
+    ascending: true,
+  });
 
-  const membership = pickMembership(
-    (membershipRows || []) as unknown as {
-      team_id: string;
-      role: string | null;
-      is_substitute: boolean | null;
-      team: RoleSyncTeamRel;
-    }[]
-  );
+  const rows = (membershipRows || []) as unknown as {
+    team_id: string;
+    role: string | null;
+    is_substitute: boolean | null;
+    team: RoleSyncTeamRel;
+  }[];
 
-  const teamRel = membership?.team
-    ? Array.isArray(membership.team)
-      ? membership.team[0]
-      : membership.team
+  const teams: RoleSyncTeam[] = [];
+  for (const row of rows) {
+    const rel = row.team
+      ? Array.isArray(row.team)
+        ? row.team[0]
+        : row.team
+      : null;
+    if (!rel) continue;
+    teams.push({
+      id: rel.id,
+      name: rel.name,
+      discordRoleId: rel.discord_role_id ?? null,
+      isCaptain: rel.captain_id === authUserId,
+      isSubstitute: !!row.is_substitute,
+      role: row.role ?? null,
+    });
+  }
+
+  const membership = pickMembership(rows);
+  const primary = membership
+    ? (teams.find((t) => t.id === membership.team_id) ?? null)
     : null;
 
   const { data: staffRow } = await supabaseAdmin
@@ -104,16 +138,8 @@ export async function resolveRoleSyncUser(
     authUserId,
     discordUserId: link.discord_user_id,
     discordUsername: link.discord_username ?? null,
-    team: teamRel
-      ? {
-          id: teamRel.id,
-          name: teamRel.name,
-          discordRoleId: teamRel.discord_role_id ?? null,
-          isCaptain: teamRel.captain_id === authUserId,
-          isSubstitute: !!membership?.is_substitute,
-          role: membership?.role ?? null,
-        }
-      : null,
+    teams,
+    team: primary,
     staffRole: staffRow?.role ?? null,
   };
 }
@@ -156,7 +182,7 @@ export async function emitRoleSyncEvent(
       );
       return;
     }
-    const snapshot = await resolveRoleSyncUser(authUserId);
+    const snapshot = await resolveRoleSyncUser(authUserId, tenantId);
     if (!snapshot) return;
 
     const payload: Record<string, unknown> = { ...snapshot };

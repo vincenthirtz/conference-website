@@ -120,6 +120,73 @@ describe('resolveRoleSyncUser', () => {
   });
 });
 
+describe('resolveRoleSyncUser — manager de plusieurs équipes', () => {
+  const TEAM_2 = '550e8400-e29b-41d4-a716-446655440b02';
+
+  const seedTwoManagerTeams = () => {
+    store.user_discord_links = [
+      { auth_user_id: AUTH_ID, discord_user_id: DISCORD_ID },
+    ] as any;
+    store.team_members = [
+      {
+        team_id: TEAM_ID,
+        user_id: AUTH_ID,
+        role: 'manager',
+        is_substitute: false,
+        created_at: '2026-08-26T00:00:00Z',
+        team: {
+          id: TEAM_ID,
+          name: 'LVN ASHES',
+          captain_id: 'someone-else',
+          discord_role_id: 'role-ashes',
+        },
+      },
+      {
+        team_id: TEAM_2,
+        user_id: AUTH_ID,
+        role: 'manager',
+        is_substitute: false,
+        created_at: '2026-08-29T00:00:00Z',
+        team: {
+          id: TEAM_2,
+          name: 'LVN EMBERS',
+          captain_id: 'someone-else',
+          discord_role_id: 'role-embers',
+        },
+      },
+    ] as any;
+  };
+
+  it('renvoie les DEUX équipes dans teams[] (sinon le bot retire un rôle)', async () => {
+    seedTwoManagerTeams();
+    const result = await resolveRoleSyncUser(AUTH_ID);
+    expect(result!.teams.map((t) => t.discordRoleId)).toEqual([
+      'role-ashes',
+      'role-embers',
+    ]);
+    expect(result!.teams.every((t) => t.role === 'manager')).toBe(true);
+  });
+
+  it('garde `team` = appartenance principale pour la compat descendante', async () => {
+    seedTwoManagerTeams();
+    const result = await resolveRoleSyncUser(AUTH_ID);
+    // Deux sièges de manager : aucun n'est « exclusif », on retombe sur le plus
+    // ancien — et il fait partie de teams[].
+    expect(result!.team!.id).toBe(TEAM_ID);
+    expect(result!.teams.some((t) => t.id === result!.team!.id)).toBe(true);
+  });
+
+  it('teams est un tableau vide (pas null) quand le compte n’a aucune équipe', async () => {
+    store.user_discord_links = [
+      { auth_user_id: AUTH_ID, discord_user_id: DISCORD_ID },
+    ] as any;
+    store.team_members = [];
+    const result = await resolveRoleSyncUser(AUTH_ID);
+    expect(result!.teams).toEqual([]);
+    expect(result!.team).toBeNull();
+  });
+});
+
 describe('resolvePreviousTeamRoleId', () => {
   it('returns discord_role_id of the team', async () => {
     store.teams = [

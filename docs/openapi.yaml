@@ -9797,6 +9797,10 @@ paths:
       tags:
         - bot/misc
       summary: Snapshot complet user_discord_links -> roles attendus (sync Discord roles).
+      description: >-
+        Chaque user porte `teams[]` (TOUTES ses equipes : une manager peut en
+        encadrer plusieurs, le bot doit alors poser les deux roles Discord) et
+        `team` (appartenance principale, conservee pour la compat descendante).
       operationId: botGetRoleSyncSnapshot
       responses:
         '200':
