@@ -68,6 +68,9 @@ export default {
   spotTwitchHandle: 'Twitch · womens_cup',
   spotNextLive: 'The player opens here when the channel goes live.',
   spotNextLiveHint: 'Follow on Twitch →',
+  teamsStripEyebrow: '{count} teams competing',
+  teamsStripTitle:
+    'They are taking part in the second Women’s Cup',
   newsEyebrow: 'News',
   newsTitle: 'Latest news',
   newsAll: 'All news',

@@ -15,6 +15,7 @@ import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournamen
 import { type HomePartner } from '@/components/Home/HomeSponsors';
 import { supabaseAdmin } from '@/utils/supabase';
 import { resolveNewsImage } from '@/utils/news/newsImage';
+import { logger } from '@/utils/logger';
 
 // Marge de troncature du `content` des news de la home. HomeNewsSection ne rend
 // qu'un excerpt d'au plus ~220 caractères ; on garde une marge confortable.
@@ -25,12 +26,78 @@ export type HomeData = {
   announcements: Announcement[];
   upcomingTournament: UpcomingTournament | null;
   partners: HomePartner[];
+  /** Équipes engagées dans l'édition en cours — cf. `loadContendingTeams`. */
+  teams: HomeTeam[];
   countdownTarget: string | null;
   // Vrai quand le chargement du contenu dynamique (news / annonces) a échoué
   // côté serveur. Permet d'afficher un avis d'erreur distinct d'un site
   // simplement vide, sans masquer le hero statique.
   loadError: boolean;
 };
+
+/** Une équipe telle que la bande d'accueil en a besoin, et rien de plus. */
+export type HomeTeam = {
+  id: string;
+  name: string;
+  shortName: string | null;
+  slug: string | null;
+  logoUrl: string | null;
+};
+
+/**
+ * Les équipes ENGAGÉES dans le tournoi en cours.
+ *
+ * Pas « toutes les équipes actives » : la bande d'accueil annonce « elles
+ * participent à la seconde édition ». Y faire figurer une équipe inscrite nulle
+ * part rendrait la phrase fausse, et la fausserait silencieusement — c'est le
+ * genre d'erreur qu'on ne voit qu'en la lisant depuis l'extérieur.
+ *
+ * Sans tournoi en cours, la liste est vide et la bande ne s'affiche pas : mieux
+ * vaut rien qu'un alignement de logos sans raison d'être là.
+ */
+export async function loadContendingTeams(
+  tenantId: string,
+  tournamentId: string | null
+): Promise<HomeTeam[]> {
+  if (!supabaseAdmin || !tournamentId) return [];
+
+  const { data, error } = await supabaseAdmin
+    .from('tournament_teams')
+    .select(
+      'teams!inner(id, name, short_name, slug, logo_url, is_active, deleted_at)'
+    )
+    .eq('tournament_id', tournamentId)
+    .eq('tenant_id', tenantId);
+
+  if (error) {
+    logger.error('[loadHomeData] contending teams error', error);
+    return [];
+  }
+
+  const teams: HomeTeam[] = [];
+  for (const row of (data ?? []) as unknown as Array<{
+    // PostgREST type l'embed en TABLEAU alors qu'une relation to-one renvoie un
+    // objet. On accepte les deux plutôt que de parier sur la forme.
+    teams?: Record<string, unknown> | Record<string, unknown>[] | null;
+  }>) {
+    const t = Array.isArray(row.teams) ? row.teams[0] : row.teams;
+    // Une équipe désactivée ou supprimée reste inscrite en base : elle ne doit
+    // pas pour autant s'afficher en page d'accueil.
+    if (!t || !t.is_active || t.deleted_at) continue;
+    teams.push({
+      id: t.id as string,
+      name: t.name as string,
+      shortName: (t.short_name as string | null) ?? null,
+      slug: (t.slug as string | null) ?? null,
+      logoUrl: (t.logo_url as string | null) ?? null,
+    });
+  }
+
+  // Ordre alphabétique : le seul qui ne suggère pas un classement. Trier par
+  // date d'inscription ferait lire un podium là où il n'y en a pas.
+  teams.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+  return teams;
+}
 
 export function sanitizeAnnouncementUrl(url: string | null): string | null {
   if (!url) return null;
@@ -137,6 +204,7 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
   let announcements: Announcement[] = [];
   let upcomingTournament: UpcomingTournament | null = null;
   let partners: HomePartner[] = [];
+  let teams: HomeTeam[] = [];
   let countdownTarget: string | null = null;
   // Client absent = on n'a pas pu charger le contenu : on le signale plutôt
   // que d'afficher une home faussement vide.
@@ -178,6 +246,9 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
     upcomingTournament = upcoming;
     partners = partnersList;
     countdownTarget = countdownSetting ?? upcomingTournament?.startDate ?? null;
+    // Après le tournoi : la liste des engagées en dépend, elle ne peut pas
+    // partir dans le même Promise.all.
+    teams = await loadContendingTeams(tenantId, upcomingTournament?.id ?? null);
 
     // Une erreur sur les requêtes de contenu (news / annonces) signale une
     // panne, à distinguer d'un contenu légitimement vide.
@@ -230,6 +301,7 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
     announcements,
     upcomingTournament,
     partners,
+    teams,
     countdownTarget,
     loadError,
   };

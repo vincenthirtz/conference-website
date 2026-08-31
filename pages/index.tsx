@@ -14,6 +14,7 @@ import { type HomeNewsItem } from '@/components/News/HomeNewsSection';
 import { type Announcement } from '@/components/Ads/AnnouncementsTicker';
 import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
 import { type HomePartner } from '@/components/Home/HomeSponsors';
+import { type HomeTeam } from '@/utils/home/loadHomeData';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import {
   loadHomeData,
@@ -24,6 +25,7 @@ import { useTwitchLive } from '@/components/Home/useTwitchLive';
 import HomeTopAnnounce from '@/components/Home/HomeTopAnnounce';
 import HomeHeroV2 from '@/components/Home/HomeHeroV2';
 import HomeSpotlight from '@/components/Home/HomeSpotlight';
+import HomeTeamsStrip from '@/components/Home/HomeTeamsStrip';
 import HomeSteps from '@/components/Home/HomeSteps';
 import HomeNewsV2 from '@/components/Home/HomeNewsV2';
 import HomeSupportStrip from '@/components/Home/HomeSupportStrip';
@@ -35,6 +37,7 @@ type HomeProps = {
   announcements: Announcement[];
   upcomingTournament: UpcomingTournament | null;
   partners: HomePartner[];
+  teams: HomeTeam[];
   countdownTarget: string | null;
   prizeCents: number | null;
   // Vrai quand le chargement du contenu dynamique a échoué côté serveur : on le
@@ -56,6 +59,7 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
       announcements: data.announcements,
       upcomingTournament: data.upcomingTournament,
       partners: data.partners,
+      teams: data.teams,
       countdownTarget: data.countdownTarget,
       prizeCents,
       loadError: data.loadError,
@@ -69,6 +73,7 @@ function Home({
   announcements,
   upcomingTournament,
   partners,
+  teams,
   countdownTarget,
   prizeCents,
   loadError,
@@ -110,6 +115,11 @@ function Home({
         prizeCents={prizeCents}
         live={live}
       />
+
+      {/* Les engagées, juste après la carte de l'événement : on annonce le
+          rendez-vous, puis on montre qui y court. Avant « participer en 3
+          étapes », qui s'adresse à celles qui ne sont pas encore dedans. */}
+      <HomeTeamsStrip teams={teams} />
 
       <HomeSteps />
 

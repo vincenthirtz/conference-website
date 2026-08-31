@@ -75,6 +75,9 @@ export default ns('homeV2', {
   spotTwitchHandle: 'Twitch · womens_cup',
   spotNextLive: "Le lecteur s'ouvre ici quand la chaîne est en direct.",
   spotNextLiveHint: 'Suivre sur Twitch →',
+  teamsStripEyebrow: '{count} équipes engagées',
+  teamsStripTitle:
+    'Elles participent à la seconde édition de la Women’s Cup',
   newsEyebrow: 'Actualités',
   newsTitle: 'Les dernières actus',
   newsAll: 'Toutes les actus',
