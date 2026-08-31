@@ -63,6 +63,11 @@ export type ManagedTeamRow = {
   captain_id: string | null;
   is_joinable: boolean;
   open_for_scrim: boolean;
+  /**
+   * SR d'ensemble DÉCLARÉ par la capitaine ou une manager. Court-circuite la
+   * moyenne des fiches à l'affichage — cf. `resolveTeamSkillRating`.
+   */
+  skill_rating: number | null;
 };
 
 /** Membre enrichi : identité roster + statut vérif battle_tag + dérivation capitaine. */
@@ -362,7 +367,7 @@ export async function loadManagedTeamSlice(
       supabaseAdmin
         .from('teams')
         .select(
-          'id, slug, name, short_name, logo_url, country, description, captain_id, is_joinable, open_for_scrim'
+          'id, slug, name, short_name, logo_url, country, description, captain_id, is_joinable, open_for_scrim, skill_rating'
         )
         .eq('id', teamId)
         .eq('tenant_id', tenantId)
@@ -409,6 +414,8 @@ export async function loadManagedTeamSlice(
       captain_id: captainId,
       is_joinable: (teamRaw.is_joinable as boolean | undefined) ?? false,
       open_for_scrim: (teamRaw.open_for_scrim as boolean | undefined) ?? false,
+      skill_rating:
+        typeof teamRaw.skill_rating === 'number' ? teamRaw.skill_rating : null,
     };
 
     const { data: membersRaw, error: membersErr } = membersRes;

@@ -18,6 +18,11 @@ import {
   type ManagedTeamSummary,
 } from '@/utils/teams/managedTeamSlice';
 import { readRequestedTeamId } from '@/utils/teams/teamScope';
+import {
+  SKILL_RATING_MAX,
+  SKILL_RATING_MIN,
+  isValidSkillRating,
+} from '@/utils/overwatchRank';
 
 import { logger } from '../../../../utils/logger';
 type MemberRow = {
@@ -42,6 +47,8 @@ type TeamRow = {
   name: string;
   short_name: string | null;
   logo_url: string | null;
+  /** SR d'ensemble déclaré (cf. utils/overwatchRank.ts), null si non déclaré. */
+  skill_rating?: number | null;
   country: string | null;
   description: string | null;
 };
@@ -71,6 +78,12 @@ type UpdateBody = {
   description?: string | null;
   discord?: string | null;
   website?: string | null;
+  /**
+   * SR d'ensemble déclaré (0-5000). `null` / chaîne vide effacent ; l'absence
+   * de clé ne touche à rien. Court-circuite la moyenne des fiches à
+   * l'affichage — cf. `resolveTeamSkillRating`.
+   */
+  skill_rating?: number | string | null;
 };
 
 export default withSubjectRoute(
@@ -157,6 +170,23 @@ export default withSubjectRoute(
       }
 
       // Valider les URLs
+      // SR d'ensemble : mêmes bornes et même contrat que le SR par joueuse.
+      let skillRating: number | null = null;
+      if ('skill_rating' in body) {
+        const raw = body.skill_rating;
+        if (raw === null || (typeof raw === 'string' && raw.trim() === '')) {
+          skillRating = null;
+        } else {
+          const parsed = typeof raw === 'string' ? Number(raw.trim()) : raw;
+          if (!isValidSkillRating(parsed)) {
+            return res.status(400).json({
+              error: `Le SR d'équipe doit être un entier entre ${SKILL_RATING_MIN} et ${SKILL_RATING_MAX}.`,
+            });
+          }
+          skillRating = parsed;
+        }
+      }
+
       const urlFields = ['logo_url', 'website', 'discord'] as const;
       for (const field of urlFields) {
         if (field in body && body[field]) {
@@ -184,6 +214,8 @@ export default withSubjectRoute(
         updatePayload.discord = body.discord ? sanitizeUrl(body.discord) : null;
       if ('website' in body)
         updatePayload.website = body.website ? sanitizeUrl(body.website) : null;
+
+      if ('skill_rating' in body) updatePayload.skill_rating = skillRating;
 
       updatePayload.updated_at = new Date().toISOString();
 

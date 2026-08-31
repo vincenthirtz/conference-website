@@ -27,7 +27,7 @@ import { useLocale } from '@/lib/i18n/useLocale';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { DirectoryTeam } from '../api/player/teams-directory';
 import SkillRatingBadge from '@/components/Team/SkillRatingBadge';
-import type { TeamSkillRatingAverage } from '@/utils/overwatchRank';
+import type { ResolvedTeamSkillRating } from '@/utils/overwatchRank';
 import type { OpponentReason } from '../../utils/teams/opponentMatch';
 
 import { logger } from '../../utils/logger';
@@ -36,7 +36,7 @@ import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 
 type DirectoryResponse = {
   teams: DirectoryTeam[];
-  mySkillAverage?: TeamSkillRatingAverage | null;
+  mySkillAverage?: ResolvedTeamSkillRating | null;
   myTeamId: string | null;
   hasOwnSearch: boolean;
 };
@@ -75,7 +75,7 @@ function PlayerTeamsPage() {
   const [teams, setTeams] = useState<DirectoryTeam[]>([]);
   const [myTeamId, setMyTeamId] = useState<string | null>(null);
   const [mySkillAverage, setMySkillAverage] =
-    useState<TeamSkillRatingAverage | null>(null);
+    useState<ResolvedTeamSkillRating | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 

@@ -159,3 +159,54 @@ export function averageTeamSkillRating(
     tier: overwatchTierFromSkillRating(average),
   };
 }
+
+export type TeamSkillRatingSource = 'declared' | 'average';
+
+export type ResolvedTeamSkillRating = TeamSkillRatingAverage & {
+  /**
+   * D'où vient le chiffre affiché. L'écran DOIT le dire : « 3k2 » annoncé par
+   * la capitaine et « 3k2 » moyenné sur trois fiches sur huit ne se lisent pas
+   * de la même façon, et c'est au lecteur d'en juger.
+   */
+  source: TeamSkillRatingSource;
+};
+
+/**
+ * Le niveau d'une équipe, tel qu'il doit s'afficher.
+ *
+ * Deux sources, et une priorité qui n'est pas négociable :
+ *
+ *   1. le SR d'ensemble DÉCLARÉ par la capitaine ou une manager
+ *      (`teams.skill_rating`) ;
+ *   2. à défaut, la moyenne des fiches jouantes renseignées.
+ *
+ * Le déclaré prime même quand les deux existent. Une équipe qui a pris la
+ * peine d'annoncer un chiffre d'ensemble sait mieux que nous ce qu'elle vaut ;
+ * voir cette annonce écrasée par une moyenne calculée sur trois fiches sur huit
+ * serait incompréhensible pour elle, et trompeur pour les autres.
+ *
+ * Sur le chemin DÉCLARÉ, `count` et `eligible` décrivent quand même le roster
+ * — l'écran peut ainsi dire « déclaré par l'équipe » sans mentir sur ce qu'il
+ * sait par ailleurs.
+ */
+export function resolveTeamSkillRating(
+  declared: number | null | undefined,
+  members: ReadonlyArray<SkillRatedMember> | null | undefined
+): ResolvedTeamSkillRating | null {
+  const average = averageTeamSkillRating(members);
+
+  if (isValidSkillRating(declared)) {
+    const playing = Array.isArray(members)
+      ? members.filter((m) => !isNonPlayingTeamRole(m?.role))
+      : [];
+    return {
+      average: declared,
+      count: average?.count ?? 0,
+      eligible: playing.length,
+      tier: overwatchTierFromSkillRating(declared),
+      source: 'declared',
+    };
+  }
+
+  return average ? { ...average, source: 'average' } : null;
+}

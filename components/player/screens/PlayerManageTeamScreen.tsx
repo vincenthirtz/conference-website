@@ -44,8 +44,8 @@ import nsOverwatchRank from '@/lib/i18n/locales/fr/overwatchRank';
 import SkillRatingBadge from '@/components/Team/SkillRatingBadge';
 import SpecialtyBadge from '@/components/Team/SpecialtyBadge';
 import {
-  averageTeamSkillRating,
   isValidSkillRating,
+  resolveTeamSkillRating,
 } from '@/utils/overwatchRank';
 
 /**
@@ -104,6 +104,8 @@ type TeamInfo = {
   description: string | null;
   is_joinable?: boolean;
   open_for_scrim?: boolean;
+  /** SR d'ensemble déclaré. Court-circuite la moyenne des fiches. */
+  skill_rating?: number | null;
 };
 
 type JoinRequest = {
@@ -251,9 +253,10 @@ export default function PlayerManageTeamScreen() {
   // Joueuses d'abord, encadrement (coach / manager) ensuite sous son intitulé.
   const { roster, subs, staff } = splitTeamMembers(members);
 
-  // Moyenne de niveau de l'équipe. Calculée à partir de `members`, donc elle
-  // suit chaque enregistrement sans qu'on ait à la recalculer à la main.
-  const skillAverage = averageTeamSkillRating(members);
+  // Niveau de l'équipe : le SR d'ensemble DÉCLARÉ s'il existe, sinon la
+  // moyenne des fiches. `resolveTeamSkillRating` porte la règle, l'écran ne
+  // fait que dire laquelle des deux il montre.
+  const skillAverage = resolveTeamSkillRating(team?.skill_rating, members);
   const orderedMembers = [...roster, ...subs, ...staff];
   const firstStaffIndex = staff.length ? roster.length + subs.length : -1;
   const playingCount = roster.length + subs.length;
@@ -619,6 +622,45 @@ export default function PlayerManageTeamScreen() {
       showSuccess(t.specialtyUpdated);
     } catch (err: unknown) {
       setError((err as Error).message || t.specialtyError);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // SR d'ENSEMBLE de l'équipe, saisi par la capitaine ou une manager. Il
+  // court-circuite la moyenne des fiches : une équipe peut annoncer son niveau
+  // sans exiger de chaque joueuse qu'elle expose le sien.
+  const [teamSkillDraft, setTeamSkillDraft] = useState<string | undefined>(
+    undefined
+  );
+
+  const handleUpdateTeamSkillRating = async (raw: string) => {
+    if (!team) return;
+    const trimmed = raw.trim();
+    const current = team.skill_rating ?? null;
+    const next = trimmed === '' ? null : Number(trimmed);
+
+    if (next === current) {
+      setTeamSkillDraft(undefined);
+      return;
+    }
+    if (next !== null && !isValidSkillRating(next)) {
+      setError(tRank.fieldInvalid);
+      return;
+    }
+
+    setActionLoading('team-skill-rating');
+    setError(null);
+    try {
+      await adminFetchJson('/api/admin/teams/my', {
+        method: 'PATCH',
+        body: JSON.stringify({ teamId: team.id, skill_rating: next }),
+      });
+      setTeamSkillDraft(undefined);
+      await reloadTeam();
+      showSuccess(t.skillRatingUpdated);
+    } catch (err: unknown) {
+      setError((err as Error).message || t.skillRatingError);
     } finally {
       setActionLoading(null);
     }
@@ -1130,29 +1172,86 @@ export default function PlayerManageTeamScreen() {
                   )}
                 </div>
               )}
-            {/* Niveau moyen. Affiché seulement quand au moins une fiche est
-                renseignée : une carte « aucune donnée » sur chaque équipe qui
-                n'utilise pas la fonctionnalité serait du bruit permanent. */}
-            {skillAverage && (
-              <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                <span className="text-xs font-medium uppercase tracking-[0.12em] text-gray-400">
-                  {tRank.teamAverageLabel}
-                </span>
-                <SkillRatingBadge
-                  skillRating={skillAverage.average}
-                  size="md"
-                />
-                <span className="text-xs text-gray-500">
-                  {format(
-                    skillAverage.count === skillAverage.eligible
-                      ? tRank.teamAverageComplete
-                      : tRank.teamAverageBasis,
-                    {
-                      count: String(skillAverage.count),
-                      eligible: String(skillAverage.eligible),
-                    }
+            {/* Niveau d'équipe. La bande n'apparaît que s'il y a un chiffre à
+                montrer OU quelqu'un pour en saisir un : une carte « aucune
+                donnée » sur chaque équipe qui n'utilise pas la fonctionnalité
+                serait du bruit permanent. */}
+            {(skillAverage || canEdit) && (
+              <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="text-xs font-medium uppercase tracking-[0.12em] text-gray-400">
+                    {tRank.teamAverageLabel}
+                  </span>
+                  {skillAverage ? (
+                    <>
+                      <SkillRatingBadge
+                        skillRating={skillAverage.average}
+                        size="md"
+                      />
+                      {/* D'OÙ vient le chiffre. « 3k2 » annoncé par la
+                          capitaine et « 3k2 » moyenné sur trois fiches sur huit
+                          ne se lisent pas pareil. */}
+                      <span className="text-xs text-gray-500">
+                        {skillAverage.source === 'declared'
+                          ? tRank.teamDeclaredBasis
+                          : format(
+                              skillAverage.count === skillAverage.eligible
+                                ? tRank.teamAverageComplete
+                                : tRank.teamAverageBasis,
+                              {
+                                count: String(skillAverage.count),
+                                eligible: String(skillAverage.eligible),
+                              }
+                            )}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-xs text-gray-500">
+                      {tRank.teamNotDeclared}
+                    </span>
                   )}
-                </span>
+                </div>
+
+                {canEdit && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <label
+                      htmlFor="team-skill-rating"
+                      className="text-xs text-gray-400"
+                    >
+                      {tRank.teamDeclaredLabel}
+                    </label>
+                    <input
+                      id="team-skill-rating"
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={5000}
+                      step={50}
+                      value={
+                        teamSkillDraft ??
+                        (team?.skill_rating != null
+                          ? String(team.skill_rating)
+                          : '')
+                      }
+                      onChange={(e) => setTeamSkillDraft(e.target.value)}
+                      onBlur={(e) =>
+                        handleUpdateTeamSkillRating(e.target.value)
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          e.currentTarget.blur();
+                        }
+                      }}
+                      disabled={!!actionLoading}
+                      placeholder={tRank.fieldPlaceholder}
+                      className="w-24 bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400 disabled:opacity-50"
+                    />
+                    <span className="text-[11px] text-gray-500">
+                      {tRank.teamDeclaredHint}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
             {members.filter((m) => !m.is_captain).length === 0 ? (

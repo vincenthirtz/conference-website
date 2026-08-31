@@ -25,6 +25,11 @@ export default {
   fieldInvalid: 'The SR must be a whole number between 0 and 5000.',
   notDeclared: 'Not declared',
 
+  teamDeclaredLabel: 'Team SR',
+  teamDeclaredHint:
+    'Set here, it replaces the average of individual cards — handy if your players would rather not expose theirs.',
+  teamDeclaredBasis: 'declared by the team',
+  teamNotDeclared: 'No rating announced yet.',
   teamAverageLabel: 'Team average rating',
   teamAverageBasis: 'average over {count} of {eligible} players',
   teamAverageComplete: 'average over all {count} players',

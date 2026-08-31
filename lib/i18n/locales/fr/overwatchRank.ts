@@ -28,6 +28,11 @@ export default ns('overwatchRank', {
   fieldInvalid: 'Le SR doit être un nombre entier entre 0 et 5000.',
   notDeclared: 'Non déclaré',
 
+  teamDeclaredLabel: 'SR d’équipe',
+  teamDeclaredHint:
+    'Renseigné ici, il remplace la moyenne des fiches — pratique si tes joueuses ne veulent pas exposer le leur.',
+  teamDeclaredBasis: 'déclaré par l’équipe',
+  teamNotDeclared: 'Pas encore de niveau annoncé.',
   teamAverageLabel: "Niveau moyen de l'équipe",
   /** « moyenne sur 4 des 6 joueuses » — dit sur quoi le chiffre porte. */
   teamAverageBasis: 'moyenne sur {count} des {eligible} joueuses',

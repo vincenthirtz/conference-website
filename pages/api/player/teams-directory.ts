@@ -33,8 +33,8 @@ import {
   type TeamReliability,
 } from '@/utils/teams/reliability';
 import {
-  averageTeamSkillRating,
-  type TeamSkillRatingAverage,
+  resolveTeamSkillRating,
+  type ResolvedTeamSkillRating,
 } from '@/utils/overwatchRank';
 import {
   computeOpponentMatch,
@@ -69,7 +69,7 @@ export type DirectoryTeam = {
    * rating calculé manque — le cas de toute équipe qui vient d'arriver — et
    * s'affiche tel quel dans l'annuaire.
    */
-  skill_average: TeamSkillRatingAverage | null;
+  skill_average: ResolvedTeamSkillRating | null;
   /**
    * Fiabilité dérivée des propositions de scrim reçues (R10). Les taux sont
    * `null` sous le seuil d'échantillon : mieux vaut rien afficher qu'un
@@ -183,7 +183,7 @@ export default withAuthRoute(async function handler(
     .from('teams')
     .select(
       // Rôles plutôt qu'un agrégat : l'encadrement ne consomme pas de place.
-      'id, name, short_name, logo_url, slug, country, is_joinable, team_members(role, skill_rating)'
+      'id, name, short_name, logo_url, slug, country, is_joinable, skill_rating, team_members(role, skill_rating)'
     )
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
@@ -199,14 +199,20 @@ export default withAuthRoute(async function handler(
   const teamIds = teams.map((t) => t.id as string);
 
   const memberCountByTeam = new Map<string, number>();
-  const skillAverageByTeam = new Map<string, TeamSkillRatingAverage>();
+  const skillAverageByTeam = new Map<string, ResolvedTeamSkillRating>();
   for (const t of teams) {
     const roster = t.team_members as {
       role?: string | null;
       skill_rating?: number | null;
     }[];
     memberCountByTeam.set(t.id as string, countPlayingMembers(roster));
-    const avg = averageTeamSkillRating(roster);
+    // Le SR d'ensemble déclaré prime sur la moyenne des fiches : une équipe qui
+    // annonce son niveau entre ainsi dans l'annuaire sans que chaque joueuse
+    // ait eu à exposer le sien.
+    const avg = resolveTeamSkillRating(
+      t.skill_rating as number | null | undefined,
+      roster
+    );
     if (avg) skillAverageByTeam.set(t.id as string, avg);
   }
 

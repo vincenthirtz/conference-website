@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest';
 import {
   OVERWATCH_TIERS,
   averageTeamSkillRating,
+  resolveTeamSkillRating,
   formatSkillRating,
   isValidSkillRating,
   overwatchTierFromSkillRating,
@@ -157,5 +158,71 @@ describe('averageTeamSkillRating', () => {
     ]);
     expect(res?.average).toBe(3000);
     expect(res?.count).toBe(1);
+  });
+});
+
+describe('resolveTeamSkillRating', () => {
+  const roster = [
+    { role: 'player', skill_rating: 3000 },
+    { role: 'player', skill_rating: 3200 },
+    { role: 'player', skill_rating: null },
+    { role: 'coach', skill_rating: 4500 },
+  ];
+
+  it('sans déclaré, retombe sur la moyenne des fiches', () => {
+    const res = resolveTeamSkillRating(null, roster);
+    expect(res?.source).toBe('average');
+    expect(res?.average).toBe(3100);
+    expect(res?.count).toBe(2);
+  });
+
+  // La règle qui compte : une équipe qui annonce un chiffre d'ensemble ne doit
+  // pas le voir écrasé par une moyenne calculée sur une poignée de fiches.
+  it('le SR déclaré PRIME sur la moyenne, même quand les deux existent', () => {
+    const res = resolveTeamSkillRating(2500, roster);
+    expect(res?.source).toBe('declared');
+    expect(res?.average).toBe(2500);
+    expect(res?.tier).toBe('emerald');
+  });
+
+  it('sur le chemin déclaré, dit quand même l’état du roster', () => {
+    // L'écran peut annoncer « déclaré par l'équipe » sans perdre l'information
+    // sur ce qui est renseigné par ailleurs.
+    const res = resolveTeamSkillRating(2500, roster);
+    expect(res?.count).toBe(2);
+    expect(res?.eligible).toBe(3); // le coach ne compte pas
+  });
+
+  it('un déclaré hors bornes ne prime pas : on retombe sur la moyenne', () => {
+    // Une valeur aberrante ne doit pas faire disparaître un chiffre valide.
+    expect(resolveTeamSkillRating(99999, roster)?.source).toBe('average');
+    expect(resolveTeamSkillRating(-10, roster)?.source).toBe('average');
+    expect(resolveTeamSkillRating(3500.5, roster)?.source).toBe('average');
+  });
+
+  it('un déclaré suffit, même sans aucune fiche renseignée', () => {
+    // C'est tout l'intérêt : annoncer son niveau sans exposer celui de chacune.
+    const res = resolveTeamSkillRating(3200, [
+      { role: 'player', skill_rating: null },
+      { role: 'player' },
+    ]);
+    expect(res?.source).toBe('declared');
+    expect(res?.average).toBe(3200);
+    expect(res?.count).toBe(0);
+    expect(res?.eligible).toBe(2);
+  });
+
+  it('rend null quand ni déclaré ni fiche', () => {
+    expect(resolveTeamSkillRating(null, [])).toBeNull();
+    expect(resolveTeamSkillRating(null, null)).toBeNull();
+    expect(
+      resolveTeamSkillRating(null, [{ role: 'player', skill_rating: null }])
+    ).toBeNull();
+  });
+
+  it('accepte 0 comme déclaré : c’est une valeur, pas une absence', () => {
+    const res = resolveTeamSkillRating(0, roster);
+    expect(res?.source).toBe('declared');
+    expect(res?.average).toBe(0);
   });
 });

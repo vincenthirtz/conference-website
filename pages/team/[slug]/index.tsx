@@ -19,8 +19,8 @@ import { splitTeamMembers } from '@/utils/teams/roleKind';
 import SkillRatingBadge from '@/components/Team/SkillRatingBadge';
 import SpecialtyBadge from '@/components/Team/SpecialtyBadge';
 import {
-  averageTeamSkillRating,
-  type TeamSkillRatingAverage,
+  resolveTeamSkillRating,
+  type ResolvedTeamSkillRating,
 } from '@/utils/overwatchRank';
 import {
   resolveMissingDisplayNames,
@@ -215,7 +215,7 @@ type TeamPageProps = {
    * Niveau moyen DÉCLARÉ de l'équipe. `null` tant qu'aucune joueuse n'a
    * renseigné le sien.
    */
-  skillAverage: TeamSkillRatingAverage | null;
+  skillAverage: ResolvedTeamSkillRating | null;
 };
 
 export const getStaticPaths: GetStaticPaths = async () => {
@@ -399,7 +399,11 @@ export const getStaticProps: GetStaticProps<TeamPageProps> = async (ctx) => {
   // niveau, pas une donnée d'identité — tout l'intérêt est qu'une équipe qui
   // cherche un scrim puisse la lire sans demander. Le BattleTag, lui, reste
   // masqué juste en dessous : les deux ne relèvent pas de la même chose.
-  const skillAverage = averageTeamSkillRating(
+  // Le SR d'ensemble DÉCLARÉ par l'équipe prime sur la moyenne des fiches :
+  // une équipe peut annoncer son niveau sans exiger de chacune qu'elle expose
+  // le sien. L'affichage dit laquelle des deux sources il montre.
+  const skillAverage = resolveTeamSkillRating(
+    (team as { skill_rating?: number | null }).skill_rating,
     (rawMembers || []) as {
       role?: string | null;
       skill_rating?: number | null;
@@ -1292,15 +1296,17 @@ export default function TeamPage({
                           size="md"
                         />
                         <span className="text-xs text-gray-500">
-                          {format(
-                            skillAverage.count === skillAverage.eligible
-                              ? tRank.teamAverageComplete
-                              : tRank.teamAverageBasis,
-                            {
-                              count: String(skillAverage.count),
-                              eligible: String(skillAverage.eligible),
-                            }
-                          )}
+                          {skillAverage.source === 'declared'
+                            ? tRank.teamDeclaredBasis
+                            : format(
+                                skillAverage.count === skillAverage.eligible
+                                  ? tRank.teamAverageComplete
+                                  : tRank.teamAverageBasis,
+                                {
+                                  count: String(skillAverage.count),
+                                  eligible: String(skillAverage.eligible),
+                                }
+                              )}
                         </span>
                       </div>
                     )}
