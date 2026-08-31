@@ -13,6 +13,12 @@ export default adminNs('adminTeamsEditMemberModal', {
   cancel: 'Annuler',
   saving: 'Enregistrement...',
   save: 'Enregistrer',
+  specialtyLabel: 'Poste',
+  specialtyNone: 'Non déclaré',
+  specialtyTank: 'Tank',
+  specialtyDps: 'DPS',
+  specialtySupport: 'Support',
+  specialtyFlex: 'Flex',
   skillRatingLabel: 'Niveau Overwatch (SR)',
   skillRatingHint:
     'Entre 0 et 5000. Laisser vide pour effacer le niveau déclaré.',

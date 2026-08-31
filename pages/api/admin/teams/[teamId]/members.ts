@@ -7,7 +7,11 @@ import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { findOrCreateUserByEmail } from '@/utils/find-or-create-user';
 import { sendTeamJoinEmail } from '@/utils/email';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { isValidUUID, validateRole } from '@/utils/apiHelpers';
+import {
+  isValidUUID,
+  validateRole,
+  validateSpecialty,
+} from '@/utils/apiHelpers';
 import { logger } from '../../../../../utils/logger';
 import { logStaffAction } from '@/utils/staffLogs';
 import {
@@ -49,12 +53,14 @@ type TeamMemberRow = {
    * défaut depuis le compte auth (RPC batch).
    */
   display_name?: string | null;
+  /** Poste : tank / dps / support / flex. `null` = non déclaré. */
+  specialty?: string | null;
   /** SR Overwatch déclaré par l'équipe (0-5000, `null` = non déclaré). */
   skill_rating?: number | null;
 };
 
 const MEMBER_SELECT =
-  'id, team_id, user_id, role, battle_tag, display_name, skill_rating, is_substitute, created_at, battle_tag_verified_at, verified_battle_net_id';
+  'id, team_id, user_id, role, battle_tag, display_name, specialty, skill_rating, is_substitute, created_at, battle_tag_verified_at, verified_battle_net_id';
 
 type MembersResponse =
   | {
@@ -362,6 +368,7 @@ async function handler(
       memberId,
       role,
       battleTag,
+      specialty,
       skillRating,
       isSubstitute,
       swapWithMemberId,
@@ -383,7 +390,9 @@ async function handler(
       Boolean(swapWithMemberId);
     const attributesOnly =
       !touchesRoster &&
-      (typeof battleTag === 'string' || skillRating !== undefined);
+      (typeof battleTag === 'string' ||
+        skillRating !== undefined ||
+        specialty !== undefined);
     if (force !== true && !attributesOnly) {
       const lockStatus = await isTeamRosterLocked(ctx.tenantId, String(teamId));
       if (lockStatus.locked) {
@@ -488,6 +497,14 @@ async function handler(
       } else {
         updatePayload.battle_tag = null;
       }
+    }
+    if (specialty !== undefined) {
+      // `validateSpecialty` renvoie null pour tout ce qui n'est pas un poste
+      // connu — y compris la chaîne vide, qui est la façon d'effacer. Un poste
+      // inventé n'est donc jamais écrit tel quel.
+      updatePayload.specialty = validateSpecialty(
+        typeof specialty === 'string' ? specialty : null
+      );
     }
     if (skillRating !== undefined) {
       // `null` / chaine vide effacent ; l'absence de cle ne touche a rien.

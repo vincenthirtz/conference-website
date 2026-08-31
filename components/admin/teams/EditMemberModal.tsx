@@ -87,6 +87,28 @@ function EditMemberModalComponent({
 
           <div>
             <label className="block text-sm text-neutral-400 mb-1">
+              {t.specialtyLabel}
+            </label>
+            <select
+              value={memberForm.specialty}
+              onChange={(e) =>
+                setMemberForm((prev) => ({
+                  ...prev,
+                  specialty: e.target.value,
+                }))
+              }
+              className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            >
+              <option value="">{t.specialtyNone}</option>
+              <option value="tank">{t.specialtyTank}</option>
+              <option value="dps">{t.specialtyDps}</option>
+              <option value="support">{t.specialtySupport}</option>
+              <option value="flex">{t.specialtyFlex}</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm text-neutral-400 mb-1">
               {t.skillRatingLabel}
             </label>
             <input

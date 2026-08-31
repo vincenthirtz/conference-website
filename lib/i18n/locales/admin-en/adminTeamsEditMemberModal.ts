@@ -14,6 +14,12 @@ export default {
   cancel: 'Cancel',
   saving: 'Saving...',
   save: 'Save',
+  specialtyLabel: 'Role',
+  specialtyNone: 'Not declared',
+  specialtyTank: 'Tank',
+  specialtyDps: 'DPS',
+  specialtySupport: 'Support',
+  specialtyFlex: 'Flex',
   skillRatingLabel: 'Overwatch skill rating (SR)',
   skillRatingHint:
     'Between 0 and 5000. Leave empty to clear the declared rating.',

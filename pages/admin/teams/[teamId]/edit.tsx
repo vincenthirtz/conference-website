@@ -130,6 +130,7 @@ function AdminEditTeamPage({
     userId: '',
     role: 'player',
     battleTag: '',
+    specialty: '',
     skillRating: '',
     setCaptain: false,
     isSubstitute: false,
@@ -392,6 +393,7 @@ function AdminEditTeamPage({
       userId: '',
       role: 'player',
       battleTag: '',
+      specialty: '',
       skillRating: '',
       setCaptain: false,
       isSubstitute: false,
@@ -488,6 +490,7 @@ function AdminEditTeamPage({
       userId: member.user_id,
       role: member.role,
       battleTag: member.battle_tag || '',
+      specialty: member.specialty || '',
       skillRating:
         member.skill_rating != null ? String(member.skill_rating) : '',
       setCaptain: false,
@@ -558,6 +561,8 @@ function AdminEditTeamPage({
           memberId: editingMember.id,
           role: memberForm.role.trim() || 'player',
           battleTag: memberForm.battleTag.trim() || null,
+          // Chaîne vide = effacer le poste (validateSpecialty la rend null).
+          specialty: memberForm.specialty,
           // Champ vide = effacer, pas « ne rien changer » : c'est la seule
           // façon de retirer un SR devenu faux depuis l'écran staff.
           skillRating: memberForm.skillRating.trim() || null,

@@ -1222,16 +1222,27 @@ export default function PlayerManageTeamScreen() {
                             )}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {m.is_captain ? (
-                            <span className="text-purple-300">{t.captain}</span>
-                          ) : (
-                            roleLabel(m.role)
+                          {m.is_captain && (
+                            <>
+                              <span className="text-purple-300">
+                                {t.captain}
+                              </span>
+                              {' · '}
+                            </>
                           )}
+                          {roleLabel(m.role)}
                         </div>
                       </div>
                     </div>
 
-                    {!m.is_captain && canEdit && (
+                    {/* Les attributs d'une fiche — spécialité, niveau — sont
+                        éditables pour TOUT LE MONDE, capitaine comprise. Seules
+                        les actions de HIÉRARCHIE (changer le rôle, promouvoir,
+                        exclure) lui restent fermées. Les avoir gardées dans le
+                        même garde-fou masquait aussi son sélecteur de
+                        spécialité : sa fiche n'affichait donc jamais tank, dps
+                        ou support, et personne ne pouvait le corriger. */}
+                    {canEdit && (
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {pendingRemoval === m.id ? (
                           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -1316,62 +1327,74 @@ export default function PlayerManageTeamScreen() {
                               </option>
                               <option value="flex">{t.specialtyFlex}</option>
                             </select>
-                            <select
-                              value={m.role || 'player'}
-                              onChange={(e) =>
-                                handleUpdateRole(m.id, e.target.value)
-                              }
-                              disabled={!!actionLoading || isRoleLockedFor(m)}
-                              aria-label={t.roleSelectLabel}
-                              title={
-                                isRoleLockedFor(m)
-                                  ? t.roleLockedPrivileged
-                                  : t.roleSelectLabel
-                              }
-                              className="bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400 disabled:opacity-50"
-                            >
-                              <option value="player">{t.optionPlayer}</option>
-                              <option value="substitute">
-                                {t.optionSubstitute}
-                              </option>
-                              <option value="coach">{t.optionCoach}</option>
-                              {/* `manager` manquait ici : l'API l'accepte
+                            {!m.is_captain && (
+                              <>
+                                <select
+                                  value={m.role || 'player'}
+                                  onChange={(e) =>
+                                    handleUpdateRole(m.id, e.target.value)
+                                  }
+                                  disabled={
+                                    !!actionLoading || isRoleLockedFor(m)
+                                  }
+                                  aria-label={t.roleSelectLabel}
+                                  title={
+                                    isRoleLockedFor(m)
+                                      ? t.roleLockedPrivileged
+                                      : t.roleSelectLabel
+                                  }
+                                  className="bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400 disabled:opacity-50"
+                                >
+                                  <option value="player">
+                                    {t.optionPlayer}
+                                  </option>
+                                  <option value="substitute">
+                                    {t.optionSubstitute}
+                                  </option>
+                                  <option value="coach">{t.optionCoach}</option>
+                                  {/* `manager` manquait ici : l'API l'accepte
                                   (assertTeamPermission `manage_roster`), mais
                                   aucun écran ne l'offrait — promouvoir un
                                   membre déjà présent était donc impossible,
                                   même pour la capitaine. */}
-                              <option value="manager">{t.roleManager}</option>
-                            </select>
-                            <button
-                              onClick={() => confirmPromote(m)}
-                              disabled={!!actionLoading || !m.user_id}
-                              className="px-2 py-1 rounded-lg border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 text-xs font-semibold transition disabled:opacity-50"
-                              title={hasCaptain ? t.promote : t.designate}
-                              aria-label={hasCaptain ? t.promote : t.designate}
-                            >
-                              {hasCaptain ? t.promote : t.designate}
-                            </button>
-                            <button
-                              onClick={() => setPendingRemoval(m.id)}
-                              disabled={!!actionLoading}
-                              className="p-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition disabled:opacity-50"
-                              title={t.removeTitle}
-                              aria-label={t.removeTitle}
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M6 18L18 6M6 6l12 12"
-                                />
-                              </svg>
-                            </button>
+                                  <option value="manager">
+                                    {t.roleManager}
+                                  </option>
+                                </select>
+                                <button
+                                  onClick={() => confirmPromote(m)}
+                                  disabled={!!actionLoading || !m.user_id}
+                                  className="px-2 py-1 rounded-lg border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 text-xs font-semibold transition disabled:opacity-50"
+                                  title={hasCaptain ? t.promote : t.designate}
+                                  aria-label={
+                                    hasCaptain ? t.promote : t.designate
+                                  }
+                                >
+                                  {hasCaptain ? t.promote : t.designate}
+                                </button>
+                                <button
+                                  onClick={() => setPendingRemoval(m.id)}
+                                  disabled={!!actionLoading}
+                                  className="p-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition disabled:opacity-50"
+                                  title={t.removeTitle}
+                                  aria-label={t.removeTitle}
+                                >
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M6 18L18 6M6 6l12 12"
+                                    />
+                                  </svg>
+                                </button>
+                              </>
+                            )}
                           </>
                         )}
                       </div>
