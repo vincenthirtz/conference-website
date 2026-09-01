@@ -1,6 +1,6 @@
 // pages/team/[slug]/stats.tsx
 
-import { GetServerSideProps } from 'next';
+import type { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -9,7 +9,7 @@ import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseAdmin } from '@/utils/supabase';
 import type { MatchStatus } from '@/types/admin';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../../utils/logger';
@@ -73,11 +73,19 @@ type Props = {
   matchesPlayed: number;
 };
 
-export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
+// Passage SSR → ISR, comme `/team/[slug]/maps` et pour la même raison : la
+// page ne lit rien de la requête (le tenant était déjà `DEFAULT_TENANT_ID`) et
+// sa page parente est en ISR. Servie par le CDN, avec la même fenêtre de
+// fraîcheur (`revalidate: 60`).
+export const getStaticPaths: GetStaticPaths = async () => {
+  return { paths: [], fallback: 'blocking' };
+};
+
+export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   const slug = ctx.params?.slug;
 
   if (!slug || Array.isArray(slug)) {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   const slugStr = slug as string;
@@ -86,7 +94,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       slugStr
     );
 
-  const tenantId = resolveTenantIdForPublicRequest(ctx.req);
+  // Même choix que la page parente (S5d) : DEFAULT_TENANT_ID en statique.
+  const tenantId = DEFAULT_TENANT_ID;
 
   // 1) Team — by slug first, fall back to id for legacy UUID URLs
   let team: any = null;
@@ -107,7 +116,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   }
 
   if (!team) {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   const teamId = team.id as string;
@@ -174,6 +183,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       mapStats,
       matchesPlayed,
     },
+    revalidate: 60,
   };
 };
 

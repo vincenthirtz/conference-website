@@ -1,12 +1,12 @@
 /* eslint-disable @next/next/no-img-element */
-import type { GetServerSideProps, NextPage } from 'next';
+import type { GetStaticPaths, GetStaticProps, NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { logger } from '../../../utils/logger';
 import { supabaseAdmin } from '@/utils/supabase'; // adapte le chemin si besoin
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT } from '@/lib/i18n/useT';
 import nsTeamMaps from '@/lib/i18n/locales/fr/teamMaps';
 
@@ -253,13 +253,30 @@ const TeamMapsPage: NextPage<Props> = ({ team, mapStats }) => {
   );
 };
 
-export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
+// Cette page était rendue à CHAQUE requête alors que sa page parente
+// (`/team/[slug]`) est en ISR depuis toujours, et qu'elle ne lit rien de la
+// requête : `resolveTenantIdForPublicRequest` renvoie `DEFAULT_TENANT_ID` sans
+// regarder `ctx.req`, et le reste ne dépend que du slug. Elle passe donc en ISR
+// avec la même fenêtre que la page parente (`revalidate: 60`) : servie par le
+// CDN au lieu d'invoquer une fonction serveur par visite.
+//
+// Aucun chemin pré-généré : les pages sont rendues à la première demande
+// (fallback blocking) puis mises en cache — même stratégie que la parente.
+export const getStaticPaths: GetStaticPaths = async () => {
+  return { paths: [], fallback: 'blocking' };
+};
+
+export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   const slug = ctx.params?.slug as string | undefined;
   if (!slug) {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
-  const tenantId = resolveTenantIdForPublicRequest(ctx.req);
+  // Même choix que la page parente (`/team/[slug]/index.tsx`, S5d) :
+  // getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — ISR par tenant).
+  // `resolveTenantIdForPublicRequest(ctx.req)` renvoyait déjà exactement ça,
+  // sans jamais lire la requête.
+  const tenantId = DEFAULT_TENANT_ID;
 
   // Look up by slug first; fall back to id (UUID) then name for legacy URLs.
   const isUuid =
@@ -297,7 +314,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
 
   if (teamError || !team) {
     logger.error('Erreur chargement équipe (maps):', teamError);
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   // 2) Récupérer les stats de maps
@@ -320,6 +337,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       team,
       mapStats: mapStats ?? [],
     },
+    revalidate: 60,
   };
 };
 
