@@ -71,4 +71,9 @@ export default adminNs('adminAdherentsList', {
   previous: 'Précédent',
   next: 'Suivant',
   paginationTotal: ' sur {total}',
+  exportCsv: 'Exporter en CSV',
+  selectedCount: '{n} sélectionné(s)',
+  selectAll: 'Tout sélectionner',
+  selectRow: 'Sélectionner la ligne',
+  pageOf: 'Page {page} / {pages}',
 });

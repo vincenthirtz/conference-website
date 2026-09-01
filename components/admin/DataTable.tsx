@@ -24,6 +24,8 @@
 
 import { useMemo, type ReactNode } from 'react';
 import AdminListShell from './AdminListShell';
+import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminDataTable from '@/lib/i18n/locales/admin-fr/adminDataTable';
 import Th from './Th';
 import { useTableQueryState } from '@/hooks/useTableQueryState';
 
@@ -51,16 +53,50 @@ export type DataTableProps<T> = {
   rows: T[];
   columns: DataTableColumn<T>[];
   rowKey: (row: T) => string;
+  /**
+   * Classe appliquée à la ligne — pour les états qui se lisent sur la LIGNE
+   * entière (une clé révoquée qu'on estompe, une ligne inactive). Sans ça,
+   * migrer une liste demanderait de répéter l'état dans chaque cellule.
+   */
+  rowClassName?: (row: T) => string;
+  /**
+   * `data-testid` de la ligne. Les suites e2e s'accrochent aux lignes, pas aux
+   * cellules : sans ce point d'accroche, migrer une liste testée casserait ses
+   * tests — et le kit deviendrait une raison de ne pas tester.
+   */
+  rowTestId?: (row: T) => string;
   loading?: boolean;
   error?: string | null;
   onRetry?: () => void;
   emptyTitle?: string;
   emptyMessage?: string;
-  /** Placeholder du champ de recherche. Absent = pas de recherche. */
-  searchPlaceholder?: string;
+  /**
+   * Affiche le champ de recherche. `true` = placeholder du kit ; une chaîne le
+   * remplace quand l'écran a mieux à dire (« Nom, email ou n° adhérent… »).
+   * Absent = pas de recherche.
+   */
+  searchPlaceholder?: string | boolean;
   /** Préfixe des paramètres d'URL, à distinguer si deux tables coexistent. */
   queryPrefix?: string;
   pageSize?: number;
+  /**
+   * Pagination SERVEUR : la table reçoit déjà la page à afficher et se contente
+   * de rendre les commandes. Révélé par la deuxième adoption (les adhérents, en
+   * `offset`/`limit`) — la corriger dans le kit plutôt que dans l'écran est
+   * tout l'intérêt d'avoir un kit.
+   *
+   * En mode serveur, la table NE trie ni ne filtre côté client : le faire
+   * n'ordonnerait que la page visible, ce qui se lit comme un tri global et
+   * ment. L'écran garde ses propres filtres, la table garde l'export et le
+   * rendu.
+   */
+  serverPagination?: {
+    offset: number;
+    limit: number;
+    /** Total connu, ou `null` si le serveur ne le renvoie pas. */
+    total: number | null;
+    onOffsetChange: (offset: number) => void;
+  };
   /** Nom du fichier CSV. Absent = pas d'export. */
   exportFilename?: string;
   selection?: {
@@ -68,8 +104,14 @@ export type DataTableProps<T> = {
     selected: Set<string>;
     onChange: (next: Set<string>) => void;
   };
-  labels: {
+  /**
+   * Surcharge des libellés du kit. Optionnelle : par défaut la table lit son
+   * propre namespace (`adminDataTable`) — sans quoi chaque écran migré devait
+   * recopier huit clés de vocabulaire qui ne parlent pas de son métier.
+   */
+  labels?: Partial<{
     search: string;
+    searchPlaceholder: string;
     empty: string;
     export: string;
     selected: string;
@@ -78,7 +120,7 @@ export type DataTableProps<T> = {
     previous: string;
     next: string;
     page: string;
-  };
+  }>;
 };
 
 function toCsvCell(value: string | number | null): string {
@@ -93,6 +135,8 @@ export default function DataTable<T>({
   rows,
   columns,
   rowKey,
+  rowClassName,
+  rowTestId,
   loading = false,
   error = null,
   onRetry,
@@ -102,9 +146,12 @@ export default function DataTable<T>({
   queryPrefix = '',
   pageSize = 25,
   exportFilename,
+  serverPagination,
   selection,
-  labels,
+  labels: labelOverrides,
 }: DataTableProps<T>) {
+  const tk = useAdminT(nsAdminDataTable);
+  const labels = { ...tk, ...(labelOverrides ?? {}) };
   const { q, sort, dir, page, setQ, toggleSort, setPage } =
     useTableQueryState(queryPrefix);
 
@@ -114,6 +161,9 @@ export default function DataTable<T>({
   );
 
   const filtered = useMemo(() => {
+    // Mode serveur : `rows` EST la page. Filtrer ici ne filtrerait que ce qui
+    // est déjà à l'écran.
+    if (serverPagination) return rows;
     const needle = q.trim().toLowerCase();
     if (!needle) return rows;
     return rows.filter((row) =>
@@ -123,9 +173,10 @@ export default function DataTable<T>({
           .includes(needle)
       )
     );
-  }, [rows, q, searchable]);
+  }, [rows, q, searchable, serverPagination]);
 
   const sorted = useMemo(() => {
+    if (serverPagination) return filtered;
     if (!sort) return filtered;
     const column = columns.find((c) => c.key === sort);
     if (!column?.value) return filtered;
@@ -145,11 +196,32 @@ export default function DataTable<T>({
         }) * factor
       );
     });
-  }, [filtered, sort, dir, columns]);
+  }, [filtered, sort, dir, columns, serverPagination]);
 
-  const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
-  const current = Math.min(page, pageCount);
-  const visible = sorted.slice((current - 1) * pageSize, current * pageSize);
+  const pageCount = serverPagination
+    ? Math.max(
+        1,
+        serverPagination.total !== null
+          ? Math.ceil(serverPagination.total / serverPagination.limit)
+          : serverPagination.offset / serverPagination.limit + 2
+      )
+    : Math.max(1, Math.ceil(sorted.length / pageSize));
+  const current = serverPagination
+    ? Math.floor(serverPagination.offset / serverPagination.limit) + 1
+    : Math.min(page, pageCount);
+  const visible = serverPagination
+    ? sorted
+    : sorted.slice((current - 1) * pageSize, current * pageSize);
+
+  const goToPage = (next: number) => {
+    if (serverPagination) {
+      serverPagination.onOffsetChange(
+        Math.max(0, (next - 1) * serverPagination.limit)
+      );
+      return;
+    }
+    setPage(next);
+  };
 
   const allVisibleSelected =
     !!selection &&
@@ -186,14 +258,18 @@ export default function DataTable<T>({
 
   return (
     <div className="flex flex-col gap-3">
-      {(searchPlaceholder || exportFilename) && (
+      {((searchPlaceholder && !serverPagination) || exportFilename) && (
         <div className="flex flex-wrap items-center gap-2">
-          {searchPlaceholder && (
+          {searchPlaceholder && !serverPagination && (
             <input
               type="search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder={searchPlaceholder}
+              placeholder={
+                typeof searchPlaceholder === 'string'
+                  ? searchPlaceholder
+                  : labels.searchPlaceholder
+              }
               aria-label={labels.search}
               className="min-w-0 flex-1 rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
             />
@@ -266,7 +342,8 @@ export default function DataTable<T>({
                 )}
                 {columns.map((c) => {
                   const isSorted = sort === c.key;
-                  const canSort = c.sortable !== false && !!c.value;
+                  const canSort =
+                    !serverPagination && c.sortable !== false && !!c.value;
                   return (
                     <Th
                       key={c.key}
@@ -302,7 +379,11 @@ export default function DataTable<T>({
               {visible.map((row) => {
                 const id = rowKey(row);
                 return (
-                  <tr key={id} className="hover:bg-white/[0.03]">
+                  <tr
+                    key={id}
+                    data-testid={rowTestId?.(row)}
+                    className={`hover:bg-white/[0.03] ${rowClassName?.(row) ?? ''}`}
+                  >
                     {selection && (
                       <td className="px-3 py-2">
                         <input
@@ -337,7 +418,7 @@ export default function DataTable<T>({
           <div className="mt-3 flex items-center justify-end gap-3 text-xs text-neutral-400">
             <button
               type="button"
-              onClick={() => setPage(current - 1)}
+              onClick={() => goToPage(current - 1)}
               disabled={current <= 1}
               className="rounded-lg border border-white/15 px-2 py-1 transition hover:bg-white/10 disabled:opacity-40"
             >
@@ -350,7 +431,7 @@ export default function DataTable<T>({
             </span>
             <button
               type="button"
-              onClick={() => setPage(current + 1)}
+              onClick={() => goToPage(current + 1)}
               disabled={current >= pageCount}
               className="rounded-lg border border-white/15 px-2 py-1 transition hover:bg-white/10 disabled:opacity-40"
             >

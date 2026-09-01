@@ -19,6 +19,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
 import { logger } from '@/utils/logger';
 import nsAdminAdherentsList from '@/lib/i18n/locales/admin-fr/adminAdherentsList';
 
@@ -238,6 +239,114 @@ export default function AdherentsListPanel() {
     }
   };
 
+  // Colonnes DÉCLARATIVES (lot A5) : `value` sert au tri, à la recherche et à
+  // l'export ; `render` ne s'occupe que de l'apparence. L'export CSV cesse
+  // d'être une seconde description des mêmes données.
+  const columns: DataTableColumn<AdherentRow>[] = [
+    {
+      key: 'member_number',
+      header: t.colMemberNumber,
+      value: (a) => a.member_number ?? '',
+      className: 'font-mono text-neutral-300',
+    },
+    {
+      key: 'name',
+      header: t.colName,
+      value: (a) => `${a.last_name} ${a.first_name}`,
+      render: (a) => (
+        <span>
+          <span className="font-medium text-white">
+            {a.last_name} {a.first_name}
+          </span>
+          {!a.is_active && (
+            <span className="ml-2 text-xs text-neutral-500">
+              {t.inactiveTag}
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: 'email',
+      header: t.colEmail,
+      value: (a) => a.email ?? '',
+      className: 'text-neutral-400',
+    },
+    {
+      key: 'role',
+      header: t.colRole,
+      value: (a) => roleLabels[a.role] || a.role,
+      className: 'text-neutral-300',
+    },
+    {
+      key: 'year',
+      header: t.colYear,
+      value: (a) => a.current_year ?? '',
+      className: 'text-neutral-300',
+    },
+    {
+      key: 'payment',
+      header: t.colPayment,
+      value: (a) => paymentStatusLabels[a.payment_status],
+      render: (a) => (
+        <span
+          className={`rounded-full border px-2 py-1 text-xs font-medium ${
+            paymentStatusColors[a.payment_status]
+          }`}
+        >
+          {paymentStatusLabels[a.payment_status]}
+        </span>
+      ),
+    },
+    {
+      key: 'amount',
+      header: t.colAmount,
+      value: (a) => a.payment_amount,
+      render: (a) => (
+        <span className="text-neutral-300">
+          {a.payment_amount.toFixed(2)} €
+          {cotisationAmount > 0 && a.payment_status !== 'paid' && (
+            <span className="ml-1 text-xs text-neutral-500">
+              / {cotisationAmount.toFixed(2)} €
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: t.colActions,
+      sortable: false,
+      headerClassName: 'text-right',
+      className: 'text-right',
+      render: (a) => (
+        <span className="flex items-center justify-end gap-2">
+          {a.payment_status !== 'paid' && a.payment_status !== 'exempt' && (
+            <button
+              onClick={() => updatePaymentStatus(a.id, 'paid', true)}
+              className="rounded-lg border border-emerald-500/40 px-2 py-1 text-xs text-emerald-300 transition-colors hover:border-emerald-400"
+              title={t.markPaidTitle}
+            >
+              {t.markPaidShort}
+            </button>
+          )}
+          <Link
+            href={`/admin/adherents/${a.id}`}
+            className="rounded-lg border border-neutral-600 px-2 py-1 text-xs transition-colors hover:border-neutral-500"
+          >
+            {t.edit}
+          </Link>
+          <button
+            onClick={() => onDelete(a.id, `${a.first_name} ${a.last_name}`)}
+            className="rounded-lg border border-red-500/40 px-2 py-1 text-xs text-red-300 transition-colors hover:border-red-400"
+          >
+            {t.deleteShort}
+          </button>
+        </span>
+      ),
+    },
+  ];
+
   return (
     <>
       {dialog}
@@ -442,229 +551,26 @@ export default function AdherentsListPanel() {
         </div>
       </section>
 
-      {/* Adherents List */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-          </div>
-        ) : adherents.length === 0 ? (
-          <div className="text-center py-20 text-neutral-400">
-            <svg
-              className="w-12 h-12 mx-auto mb-4 text-neutral-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-              />
-            </svg>
-            {t.empty}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-neutral-900/50 border-b border-neutral-700/50">
-                <tr>
-                  <th
-                    scope="col"
-                    className="text-left px-4 py-3 text-neutral-400 font-medium"
-                  >
-                    {t.colMemberNumber}
-                  </th>
-                  <th
-                    scope="col"
-                    className="text-left px-4 py-3 text-neutral-400 font-medium"
-                  >
-                    {t.colName}
-                  </th>
-                  <th
-                    scope="col"
-                    className="text-left px-4 py-3 text-neutral-400 font-medium"
-                  >
-                    {t.colEmail}
-                  </th>
-                  <th
-                    scope="col"
-                    className="text-left px-4 py-3 text-neutral-400 font-medium"
-                  >
-                    {t.colRole}
-                  </th>
-                  <th
-                    scope="col"
-                    className="text-left px-4 py-3 text-neutral-400 font-medium"
-                  >
-                    {t.colYear}
-                  </th>
-                  <th
-                    scope="col"
-                    className="text-left px-4 py-3 text-neutral-400 font-medium"
-                  >
-                    {t.colPayment}
-                  </th>
-                  <th
-                    scope="col"
-                    className="text-left px-4 py-3 text-neutral-400 font-medium"
-                  >
-                    {t.colAmount}
-                  </th>
-                  <th
-                    scope="col"
-                    className="text-right px-4 py-3 text-neutral-400 font-medium"
-                  >
-                    {t.colActions}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-700/50">
-                {adherents.map((a) => (
-                  <tr
-                    key={a.id}
-                    className={`hover:bg-neutral-700/30 transition-colors ${
-                      !a.is_active ? 'opacity-60' : ''
-                    }`}
-                  >
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-neutral-300">
-                        {a.member_number || '-'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div>
-                        <span className="font-medium text-white">
-                          {a.last_name} {a.first_name}
-                        </span>
-                        {!a.is_active && (
-                          <span className="ml-2 text-xs text-neutral-500">
-                            {t.inactiveTag}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-neutral-400">{a.email}</td>
-                    <td className="px-4 py-3">
-                      <span className="text-neutral-300">
-                        {roleLabels[a.role] || a.role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-neutral-300">
-                      {a.current_year}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium border ${
-                          paymentStatusColors[a.payment_status]
-                        }`}
-                      >
-                        {paymentStatusLabels[a.payment_status]}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-neutral-300">
-                        {a.payment_amount.toFixed(2)} €
-                        {cotisationAmount > 0 &&
-                          a.payment_status !== 'paid' && (
-                            <span className="text-neutral-500 text-xs ml-1">
-                              / {cotisationAmount.toFixed(2)} €
-                            </span>
-                          )}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        {a.payment_status !== 'paid' &&
-                          a.payment_status !== 'exempt' && (
-                            <button
-                              onClick={() =>
-                                updatePaymentStatus(a.id, 'paid', true)
-                              }
-                              className="px-2 py-1 rounded-lg border border-emerald-500/40 text-emerald-300 hover:border-emerald-400 text-xs transition-colors"
-                              title={t.markPaidTitle}
-                            >
-                              {t.markPaidShort}
-                            </button>
-                          )}
-                        <Link
-                          href={`/admin/adherents/${a.id}`}
-                          className="px-2 py-1 rounded-lg border border-neutral-600 hover:border-neutral-500 text-xs transition-colors"
-                        >
-                          {t.edit}
-                        </Link>
-                        <button
-                          onClick={() =>
-                            onDelete(a.id, `${a.first_name} ${a.last_name}`)
-                          }
-                          className="px-2 py-1 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-xs transition-colors"
-                        >
-                          {t.deleteShort}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      {/* Liste — kit partagé (lot A5). L'écran garde ses filtres (au-dessus) et
+          sa pagination serveur ; la table apporte les colonnes déclaratives,
+          l'export CSV et les en-têtes accessibles. */}
+      <section className="overflow-hidden rounded-2xl border border-neutral-700/50 bg-neutral-800/50 p-4 backdrop-blur">
+        <DataTable<AdherentRow>
+          rows={adherents}
+          columns={columns}
+          rowKey={(a) => a.id}
+          loading={loading}
+          error={null}
+          emptyTitle={t.empty}
+          exportFilename="adherents"
+          serverPagination={{
+            offset,
+            limit,
+            total,
+            onOffsetChange: setOffset,
+          }}
+        />
       </section>
-
-      {/* Pagination */}
-      {adherents.length > 0 && (
-        <div className="flex justify-between items-center mt-6">
-          <button
-            type="button"
-            disabled={offset === 0}
-            onClick={() => setOffset(Math.max(0, offset - limit))}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            {t.previous}
-          </button>
-
-          <span className="text-neutral-400 text-sm">
-            {offset + 1} – {offset + adherents.length}
-            {total !== null ? format(t.paginationTotal, { total }) : ''}
-          </span>
-
-          <button
-            type="button"
-            disabled={total !== null && offset + limit >= total}
-            onClick={() => setOffset(offset + limit)}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {t.next}
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </button>
-        </div>
-      )}
     </>
   );
 }

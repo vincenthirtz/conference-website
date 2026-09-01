@@ -47,19 +47,6 @@ export default function AdminFreePlayersPage(_props: StaffProps) {
   const [error, setError] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
 
-  /** Libellés du kit de listes (lot A5) — traduits ici, pas dans le composant. */
-  const tableLabels = {
-    search: t.searchPlaceholder,
-    empty: t.empty,
-    export: t.exportCsv,
-    selected: t.selectedCount,
-    selectAll: t.selectAll,
-    selectRow: t.selectRow,
-    previous: t.previousPage,
-    next: t.nextPage,
-    page: t.pageOf,
-  };
-
   const load = useCallback(async () => {
     setLoading(true);
     setError(false);
@@ -217,7 +204,6 @@ export default function AdminFreePlayersPage(_props: StaffProps) {
             emptyTitle={t.empty}
             searchPlaceholder={t.searchPlaceholder}
             exportFilename="joueuses-libres"
-            labels={tableLabels}
           />
         </div>
       </div>

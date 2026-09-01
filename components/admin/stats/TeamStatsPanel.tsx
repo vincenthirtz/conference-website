@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import Th from '@/components/admin/Th';
+import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
 
 import { logger } from '../../../utils/logger';
 import nsAdminStatsTeams from '@/lib/i18n/locales/admin-fr/adminStatsTeams';
@@ -167,6 +167,188 @@ export default function TeamStatsPanel() {
 
     window.location.href = '/api/admin/stats/teams?' + params.toString();
   }
+
+  // Colonnes déclaratives (lot A5). Le rang dépend de l'offset : il est calculé
+  // ici et pas dans le composant partagé, qui n'a pas à connaître la
+  // pagination du serveur.
+  const columns: DataTableColumn<TeamStatsRow>[] = [
+    {
+      key: 'rank',
+      header: '#',
+      sortable: false,
+      render: (row) => {
+        const rank = offset + stats.indexOf(row) + 1;
+        return (
+          <span
+            className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
+              rank === 1
+                ? 'bg-amber-500 text-black'
+                : rank === 2
+                  ? 'bg-neutral-400 text-black'
+                  : rank === 3
+                    ? 'bg-amber-700 text-white'
+                    : 'bg-neutral-700 text-neutral-300'
+            }`}
+          >
+            {rank}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'team',
+      header: t.thTeam,
+      value: (row) => row.team?.name || row.team_id,
+      render: (row) => (
+        <Link
+          href={`/admin/teams/${row.team_id}/edit`}
+          className="group flex items-center gap-3"
+        >
+          {row.team?.logo_url && (
+            <Image
+              src={row.team.logo_url}
+              alt={row.team?.name || row.team_id}
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded-lg border border-neutral-700 object-cover"
+            />
+          )}
+          <span>
+            <span className="block font-semibold text-white transition-colors group-hover:text-blue-400">
+              {row.team?.name || row.team_id}
+            </span>
+            {row.team?.short_name && (
+              <span className="block text-xs text-neutral-500">
+                {row.team.short_name}
+              </span>
+            )}
+          </span>
+        </Link>
+      ),
+    },
+    {
+      key: 'tournament',
+      header: t.thTournament,
+      value: (row) => row.tournament?.name ?? '',
+      render: (row) =>
+        row.tournament ? (
+          <Link
+            href={`/admin/tournament/${row.tournament_id}`}
+            className="transition-colors hover:text-blue-400"
+          >
+            <span className="block font-medium text-neutral-200">
+              {row.tournament.name}
+            </span>
+            {row.tournament.slug && (
+              <span className="block font-mono text-xs text-neutral-500">
+                {row.tournament.slug}
+              </span>
+            )}
+          </Link>
+        ) : (
+          <span className="text-neutral-500">—</span>
+        ),
+    },
+    {
+      key: 'matches',
+      header: t.thMatches,
+      value: (row) => row.matches_played,
+      className: 'text-center font-medium',
+      headerClassName: 'text-center',
+    },
+    {
+      key: 'wdl',
+      header: t.thWDL,
+      className: 'text-center',
+      headerClassName: 'text-center',
+      value: (row) => `${row.wins}/${row.losses}/${row.draws}`,
+      render: (row) => (
+        <span>
+          <span className="text-emerald-400">{row.wins}</span>
+          <span className="text-neutral-500"> / </span>
+          <span className="text-red-400">{row.losses}</span>
+          <span className="text-neutral-500"> / </span>
+          <span className="text-neutral-400">{row.draws}</span>
+        </span>
+      ),
+    },
+    {
+      key: 'winrate',
+      header: t.thWinrate,
+      className: 'text-center',
+      headerClassName: 'text-center',
+      value: (row) => row.winrate ?? 0,
+      render: (row) => (
+        <span
+          className={`rounded-lg px-2 py-1 text-xs font-semibold ${
+            (row.winrate ?? 0) >= 0.6
+              ? 'bg-emerald-900/50 text-emerald-300'
+              : (row.winrate ?? 0) >= 0.4
+                ? 'bg-amber-900/50 text-amber-300'
+                : 'bg-red-900/50 text-red-300'
+          }`}
+        >
+          {formatPercent(row.winrate)}
+        </span>
+      ),
+    },
+    {
+      key: 'maps',
+      header: t.thMaps,
+      className: 'text-center',
+      headerClassName: 'text-center',
+      value: (row) => `${row.maps_won}/${row.maps_lost}`,
+      render: (row) => {
+        const diff = (row.maps_won ?? 0) - (row.maps_lost ?? 0);
+        return (
+          <span>
+            <span className="text-neutral-300">
+              {row.maps_won}/{row.maps_lost}
+            </span>{' '}
+            <span
+              className={`text-xs ${
+                diff > 0
+                  ? 'text-emerald-400'
+                  : diff < 0
+                    ? 'text-red-400'
+                    : 'text-neutral-500'
+              }`}
+            >
+              ({diff > 0 ? '+' : ''}
+              {diff})
+            </span>
+          </span>
+        );
+      },
+    },
+    {
+      key: 'map_winrate',
+      header: t.thMapWinrate,
+      className: 'text-center text-neutral-300',
+      headerClassName: 'text-center',
+      value: (row) => row.map_winrate ?? 0,
+      render: (row) => <>{formatPercent(row.map_winrate)}</>,
+    },
+    {
+      key: 'points',
+      header: t.thPoints,
+      className: 'text-center',
+      headerClassName: 'text-center',
+      value: (row) => row.points ?? 0,
+      render: (row) => (
+        <span className="font-bold text-white">
+          {row.points != null ? row.points : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'last_match',
+      header: t.thLastMatch,
+      className: 'text-xs text-neutral-400',
+      value: (row) => row.last_match_at ?? '',
+      render: (row) => <>{formatDateTime(row.last_match_at)}</>,
+    },
+  ];
 
   return (
     <>
@@ -355,265 +537,20 @@ export default function TeamStatsPanel() {
       </section>
 
       {/* Stats Table */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-          </div>
-        ) : stats.length === 0 ? (
-          <div className="text-center py-20 text-neutral-400">
-            <svg
-              className="w-12 h-12 mx-auto mb-4 text-neutral-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-              />
-            </svg>
-            {t.emptyState}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
-                <tr>
-                  <Th className="px-4 py-3 text-left">#</Th>
-                  <Th className="px-4 py-3 text-left">{t.thTeam}</Th>
-                  <Th className="px-4 py-3 text-left">{t.thTournament}</Th>
-                  <Th className="px-4 py-3 text-center">{t.thMatches}</Th>
-                  <Th className="px-4 py-3 text-center">{t.thWDL}</Th>
-                  <Th className="px-4 py-3 text-center">{t.thWinrate}</Th>
-                  <Th className="px-4 py-3 text-center">{t.thMaps}</Th>
-                  <Th className="px-4 py-3 text-center">{t.thMapWinrate}</Th>
-                  <Th className="px-4 py-3 text-center">{t.thPoints}</Th>
-                  <Th className="px-4 py-3 text-left">{t.thLastMatch}</Th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-700/50">
-                {stats.map((row, index) => {
-                  const rank = offset + index + 1;
-                  const teamName = row.team?.name || row.team_id;
-                  const short = row.team?.short_name;
-                  const diff = (row.maps_won ?? 0) - (row.maps_lost ?? 0);
-
-                  return (
-                    <tr
-                      key={`${row.team_id}-${row.tournament_id || 'global'}`}
-                      className="hover:bg-neutral-700/30 transition-colors"
-                    >
-                      {/* Rank */}
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${
-                            rank === 1
-                              ? 'bg-amber-500 text-black'
-                              : rank === 2
-                                ? 'bg-neutral-400 text-black'
-                                : rank === 3
-                                  ? 'bg-amber-700 text-white'
-                                  : 'bg-neutral-700 text-neutral-300'
-                          }`}
-                        >
-                          {rank}
-                        </span>
-                      </td>
-
-                      {/* Team */}
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/admin/teams/${row.team_id}/edit`}
-                          className="flex items-center gap-3 group"
-                        >
-                          {row.team?.logo_url ? (
-                            <Image
-                              src={row.team.logo_url}
-                              alt={teamName}
-                              width={32}
-                              height={32}
-                              className="w-8 h-8 rounded-lg object-cover border border-neutral-700"
-                            />
-                          ) : (
-                            <div className="w-8 h-8 rounded-lg bg-neutral-700/50 flex items-center justify-center border border-neutral-700">
-                              <svg
-                                className="w-4 h-4 text-neutral-500"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                                />
-                              </svg>
-                            </div>
-                          )}
-                          <div>
-                            <div className="font-semibold text-white group-hover:text-blue-400 transition-colors">
-                              {teamName}
-                            </div>
-                            {short && (
-                              <div className="text-xs text-neutral-500">
-                                {short}
-                              </div>
-                            )}
-                          </div>
-                        </Link>
-                      </td>
-
-                      {/* Tournament */}
-                      <td className="px-4 py-3">
-                        {row.tournament ? (
-                          <Link
-                            href={`/admin/tournament/${row.tournament_id}`}
-                            className="hover:text-blue-400 transition-colors"
-                          >
-                            <div className="font-medium text-neutral-200">
-                              {row.tournament.name}
-                            </div>
-                            {row.tournament.slug && (
-                              <div className="text-xs text-neutral-500 font-mono">
-                                {row.tournament.slug}
-                              </div>
-                            )}
-                          </Link>
-                        ) : (
-                          <span className="text-neutral-500">—</span>
-                        )}
-                      </td>
-
-                      {/* Matches */}
-                      <td className="px-4 py-3 text-center font-medium">
-                        {row.matches_played}
-                      </td>
-
-                      {/* W/D/L */}
-                      <td className="px-4 py-3 text-center">
-                        <span className="text-emerald-400">{row.wins}</span>
-                        <span className="text-neutral-500"> / </span>
-                        <span className="text-red-400">{row.losses}</span>
-                        <span className="text-neutral-500"> / </span>
-                        <span className="text-neutral-400">{row.draws}</span>
-                      </td>
-
-                      {/* Match winrate */}
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={`px-2 py-1 rounded-lg text-xs font-semibold ${
-                            (row.winrate ?? 0) >= 0.6
-                              ? 'bg-emerald-900/50 text-emerald-300'
-                              : (row.winrate ?? 0) >= 0.4
-                                ? 'bg-amber-900/50 text-amber-300'
-                                : 'bg-red-900/50 text-red-300'
-                          }`}
-                        >
-                          {formatPercent(row.winrate)}
-                        </span>
-                      </td>
-
-                      {/* Maps +/- */}
-                      <td className="px-4 py-3 text-center">
-                        <span className="text-neutral-300">
-                          {row.maps_won}/{row.maps_lost}
-                        </span>{' '}
-                        <span
-                          className={`text-xs ${
-                            diff > 0
-                              ? 'text-emerald-400'
-                              : diff < 0
-                                ? 'text-red-400'
-                                : 'text-neutral-500'
-                          }`}
-                        >
-                          ({diff > 0 ? '+' : ''}
-                          {diff})
-                        </span>
-                      </td>
-
-                      {/* Map winrate */}
-                      <td className="px-4 py-3 text-center text-neutral-300">
-                        {formatPercent(row.map_winrate)}
-                      </td>
-
-                      {/* Points */}
-                      <td className="px-4 py-3 text-center">
-                        <span className="font-bold text-white">
-                          {row.points != null ? row.points : '—'}
-                        </span>
-                      </td>
-
-                      {/* Last match */}
-                      <td className="px-4 py-3 text-xs text-neutral-400">
-                        {formatDateTime(row.last_match_at)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+      {/* Classement — kit partagé (lot A5). L'export CSV reste celui de
+          l'écran : il repart au serveur chercher les 10 000 lignes, là où
+          l'export du kit n'exporterait que la page affichée. */}
+      <section className="rounded-2xl border border-neutral-700/50 bg-neutral-800/50 p-4 backdrop-blur">
+        <DataTable<TeamStatsRow>
+          rows={stats}
+          columns={columns}
+          rowKey={(r) => `${r.team_id}-${r.tournament_id || 'global'}`}
+          loading={loading}
+          error={null}
+          emptyTitle={t.emptyState}
+          serverPagination={{ offset, limit, total, onOffsetChange: setOffset }}
+        />
       </section>
-
-      {/* Pagination */}
-      {stats.length > 0 && (
-        <div className="flex justify-between items-center mt-6">
-          <button
-            type="button"
-            disabled={offset === 0}
-            onClick={() => setOffset(Math.max(0, offset - limit))}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            {t.previous}
-          </button>
-
-          <span className="text-neutral-400 text-sm">
-            {offset + 1} – {offset + stats.length}
-            {total ? format(t.paginationOf, { total }) : ''}
-          </span>
-
-          <button
-            type="button"
-            disabled={total !== null && offset + limit >= total}
-            onClick={() => setOffset(offset + limit)}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {t.next}
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </button>
-        </div>
-      )}
     </>
   );
 }

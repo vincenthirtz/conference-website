@@ -25,7 +25,7 @@ import { useAdminT } from '@/lib/i18n/useAdminT';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import AlertBanner from '@/components/admin/AlertBanner';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
-import EmptyState from '@/components/admin/EmptyState';
+import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
 import ApiTokenRevealModal from '@/components/admin/ApiTokenRevealModal';
 import { ALL_SCOPES } from '@/utils/apiScopes';
 import { logger } from '@/utils/logger';
@@ -106,7 +106,9 @@ function formatDate(s: string | null, fallback: string): string {
   }
 }
 
-export const getServerSideProps = withStaffPage({ permission: 'manage_settings' });
+export const getServerSideProps = withStaffPage({
+  permission: 'manage_settings',
+});
 
 function AdminApiTokensPage({ staff }: Props) {
   // Le rôle SSR est le miroir UX du gate serveur : seul un owner peut ACTIVER
@@ -328,6 +330,166 @@ function AdminApiTokensPage({ staff }: Props) {
 
   const sortedScopes = useMemo(() => [...ALL_SCOPES].sort(), []);
 
+  // Colonnes déclaratives (lot A5). Les états de la LIGNE (révoquée) passent
+  // par `rowClassName`, pas par une classe répétée dans chaque cellule.
+  const columns: DataTableColumn<ApiTokenRow>[] = [
+    {
+      key: 'name',
+      header: t.colName,
+      value: (tk) => tk.name,
+      className: 'font-medium text-white',
+      render: (tk) => (
+        <span className="flex items-center gap-2">
+          <span>{tk.name}</span>
+          {tk.comp && (
+            <span
+              className="whitespace-nowrap rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-300"
+              title={tk.comp_note || undefined}
+              data-testid={`api-token-comp-badge-${tk.id}`}
+            >
+              {t.badgePartner}
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: 'prefix',
+      header: t.colPrefix,
+      value: (tk) => tk.token_prefix,
+      render: (tk) => (
+        <code className="font-mono text-xs text-neutral-300">
+          {tk.token_prefix}…
+        </code>
+      ),
+    },
+    {
+      key: 'scopes',
+      header: t.colScopes,
+      value: (tk) => tk.scopes.join(' '),
+      render: (tk) => (
+        <span className="flex max-w-xs flex-wrap gap-1.5">
+          {tk.scopes.map((scope) => (
+            <span
+              key={scope}
+              className="rounded-full border border-neutral-600/50 bg-neutral-700/50 px-2 py-0.5 font-mono text-[11px] text-neutral-300"
+            >
+              {scope}
+            </span>
+          ))}
+        </span>
+      ),
+    },
+    {
+      key: 'created',
+      header: t.colCreated,
+      value: (tk) => tk.created_at ?? '',
+      className: 'whitespace-nowrap text-neutral-400',
+      render: (tk) => (
+        <span>
+          <span className="block">{formatDate(tk.created_at, '—')}</span>
+          {tk.created_by_name && (
+            <span className="block text-xs text-neutral-500">
+              {t.byCreator.replace('{name}', tk.created_by_name)}
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: 'expires',
+      header: t.colExpires,
+      value: (tk) => tk.expires_at ?? '',
+      className: 'whitespace-nowrap',
+      render: (tk) =>
+        tk.expires_at ? (
+          <span
+            className={isExpired(tk) ? 'text-amber-300' : 'text-neutral-400'}
+          >
+            {formatDate(tk.expires_at, '—')}
+          </span>
+        ) : (
+          <span className="text-neutral-500">{t.expiryNever}</span>
+        ),
+    },
+    {
+      key: 'last_used',
+      header: t.colLastUsed,
+      value: (tk) => tk.last_used_at ?? '',
+      className: 'whitespace-nowrap text-neutral-400',
+      render: (tk) => <>{formatDate(tk.last_used_at, t.neverUsed)}</>,
+    },
+    {
+      key: 'status',
+      header: t.colStatus,
+      value: (tk) =>
+        tk.revoked_at
+          ? t.statusRevoked
+          : isExpired(tk)
+            ? t.statusExpired
+            : t.statusActive,
+      render: (tk) =>
+        tk.revoked_at ? (
+          <span className="rounded-full border border-neutral-500/40 bg-neutral-600/40 px-2 py-0.5 text-xs font-medium text-neutral-300">
+            {t.statusRevoked}
+          </span>
+        ) : isExpired(tk) ? (
+          <span
+            className="rounded-full border border-amber-500/30 bg-amber-600/20 px-2 py-0.5 text-xs font-medium text-amber-300"
+            data-testid={`api-token-expired-badge-${tk.id}`}
+          >
+            {t.statusExpired}
+          </span>
+        ) : (
+          <span className="rounded-full border border-emerald-500/30 bg-emerald-600/20 px-2 py-0.5 text-xs font-medium text-emerald-300">
+            {t.statusActive}
+          </span>
+        ),
+    },
+    {
+      key: 'actions',
+      header: t.colActions,
+      sortable: false,
+      headerClassName: 'text-right',
+      className: 'text-right',
+      render: (tk) =>
+        tk.revoked_at ? null : (
+          <span className="flex items-center justify-end gap-2">
+            {/* Exemption partenaire : un owner l'active ou la retire ; un admin
+                non-owner ne peut que retirer une exemption existante. */}
+            {(tk.comp || isOwner) && (
+              <button
+                type="button"
+                onClick={() => handleToggleComp(tk)}
+                disabled={togglingCompId === tk.id}
+                className={`rounded-lg border px-3 py-1.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                  tk.comp
+                    ? 'border-neutral-500/40 text-neutral-300 hover:border-neutral-400'
+                    : 'border-amber-500/40 text-amber-300 hover:border-amber-400'
+                }`}
+                data-testid={`api-token-comp-toggle-btn-${tk.id}`}
+              >
+                {togglingCompId === tk.id
+                  ? t.compUpdating
+                  : tk.comp
+                    ? t.compDisableButton
+                    : t.compEnableButton}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => handleRevoke(tk)}
+              disabled={revokingId === tk.id}
+              className="rounded-lg border border-red-500/40 px-3 py-1.5 text-sm text-red-300 transition-colors hover:border-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+              data-testid={`api-token-revoke-btn-${tk.id}`}
+            >
+              {revokingId === tk.id ? t.revoking : t.revokeButton}
+            </button>
+          </span>
+        ),
+    },
+  ];
+
   return (
     <>
       {dialog}
@@ -542,182 +704,18 @@ function AdminApiTokensPage({ staff }: Props) {
               onDismiss={() => setLoadError(null)}
             />
 
-            {tokens === null ? (
-              <LoadingSpinner label={t.loading} className="py-16" />
-            ) : tokens.length === 0 ? (
-              <EmptyState title={t.emptyState} className="py-16" />
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs uppercase tracking-wider text-neutral-500 border-b border-neutral-700/50">
-                      <th scope="col" className="px-6 py-3 font-medium">
-                        {t.colName}
-                      </th>
-                      <th scope="col" className="px-6 py-3 font-medium">
-                        {t.colPrefix}
-                      </th>
-                      <th scope="col" className="px-6 py-3 font-medium">
-                        {t.colScopes}
-                      </th>
-                      <th scope="col" className="px-6 py-3 font-medium">
-                        {t.colCreated}
-                      </th>
-                      <th scope="col" className="px-6 py-3 font-medium">
-                        {t.colExpires}
-                      </th>
-                      <th scope="col" className="px-6 py-3 font-medium">
-                        {t.colLastUsed}
-                      </th>
-                      <th scope="col" className="px-6 py-3 font-medium">
-                        {t.colStatus}
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 font-medium text-right"
-                      >
-                        {t.colActions}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-700/50">
-                    {tokens.map((token) => {
-                      const revoked = Boolean(token.revoked_at);
-                      const expired = isExpired(token);
-                      return (
-                        <tr
-                          key={token.id}
-                          className={
-                            revoked ? 'opacity-50' : 'hover:bg-neutral-700/20'
-                          }
-                          data-testid={`api-token-row-${token.id}`}
-                        >
-                          <td className="px-6 py-4 font-medium text-white">
-                            <div className="flex items-center gap-2">
-                              <span>{token.name}</span>
-                              {token.comp && (
-                                <span
-                                  className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30 whitespace-nowrap"
-                                  title={token.comp_note || undefined}
-                                  data-testid={`api-token-comp-badge-${token.id}`}
-                                >
-                                  {t.badgePartner}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <code className="text-xs font-mono text-neutral-300">
-                              {token.token_prefix}…
-                            </code>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-wrap gap-1.5 max-w-xs">
-                              {token.scopes.map((scope) => (
-                                <span
-                                  key={scope}
-                                  className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-neutral-700/50 border border-neutral-600/50 text-neutral-300"
-                                >
-                                  {scope}
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-neutral-400 whitespace-nowrap">
-                            <div>{formatDate(token.created_at, '—')}</div>
-                            {token.created_by_name && (
-                              <div className="text-xs text-neutral-500">
-                                {t.byCreator.replace(
-                                  '{name}',
-                                  token.created_by_name
-                                )}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {token.expires_at ? (
-                              <span
-                                className={
-                                  expired
-                                    ? 'text-amber-300'
-                                    : 'text-neutral-400'
-                                }
-                              >
-                                {formatDate(token.expires_at, '—')}
-                              </span>
-                            ) : (
-                              <span className="text-neutral-500">
-                                {t.expiryNever}
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-neutral-400 whitespace-nowrap">
-                            {formatDate(token.last_used_at, t.neverUsed)}
-                          </td>
-                          <td className="px-6 py-4">
-                            {revoked ? (
-                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-600/40 text-neutral-300 border border-neutral-500/40">
-                                {t.statusRevoked}
-                              </span>
-                            ) : expired ? (
-                              <span
-                                className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/20 text-amber-300 border border-amber-500/30"
-                                data-testid={`api-token-expired-badge-${token.id}`}
-                              >
-                                {t.statusExpired}
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
-                                {t.statusActive}
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            {!revoked && (
-                              <div className="flex items-center justify-end gap-2">
-                                {/* Toggle exemption partenaire : owner peut
-                                    activer/désactiver ; un admin non-owner ne
-                                    peut que retirer une exemption existante. */}
-                                {(token.comp || isOwner) && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleToggleComp(token)}
-                                    disabled={togglingCompId === token.id}
-                                    className={`px-3 py-1.5 rounded-lg border text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                                      token.comp
-                                        ? 'border-neutral-500/40 text-neutral-300 hover:border-neutral-400'
-                                        : 'border-amber-500/40 text-amber-300 hover:border-amber-400'
-                                    }`}
-                                    data-testid={`api-token-comp-toggle-btn-${token.id}`}
-                                  >
-                                    {togglingCompId === token.id
-                                      ? t.compUpdating
-                                      : token.comp
-                                        ? t.compDisableButton
-                                        : t.compEnableButton}
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleRevoke(token)}
-                                  disabled={revokingId === token.id}
-                                  className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                  data-testid={`api-token-revoke-btn-${token.id}`}
-                                >
-                                  {revokingId === token.id
-                                    ? t.revoking
-                                    : t.revokeButton}
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <DataTable<ApiTokenRow>
+              rows={tokens ?? []}
+              columns={columns}
+              rowKey={(tk) => tk.id}
+              rowTestId={(tk) => `api-token-row-${tk.id}`}
+              rowClassName={(tk) => (tk.revoked_at ? 'opacity-50' : '')}
+              loading={tokens === null}
+              error={null}
+              emptyTitle={t.emptyState}
+              searchPlaceholder
+              exportFilename="api-tokens"
+            />
           </section>
         </div>
       </div>

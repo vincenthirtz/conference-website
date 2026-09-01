@@ -72,4 +72,9 @@ export default {
   previous: 'Previous',
   next: 'Next',
   paginationTotal: ' of {total}',
+  exportCsv: 'Export as CSV',
+  selectedCount: '{n} selected',
+  selectAll: 'Select all',
+  selectRow: 'Select row',
+  pageOf: 'Page {page} / {pages}',
 };

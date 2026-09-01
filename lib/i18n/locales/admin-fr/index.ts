@@ -118,6 +118,7 @@ import nsAdminMatchEdit from './adminMatchEdit';
 import nsAdminEventDirector from './adminEventDirector';
 import nsAdminCampaigns from './adminCampaigns';
 import nsAdminCommandPalette from './adminCommandPalette';
+import nsAdminDataTable from './adminDataTable';
 import nsAdminEntityHistory from './adminEntityHistory';
 import nsAdminSiteSettings from './adminSiteSettings';
 import nsAdminSiteSettingsDiscord from './adminSiteSettingsDiscord';
@@ -306,6 +307,7 @@ export const frDict = {
   adminEventDirector: nsAdminEventDirector.fr,
   adminCampaigns: nsAdminCampaigns.fr,
   adminCommandPalette: nsAdminCommandPalette.fr,
+  adminDataTable: nsAdminDataTable.fr,
   adminEntityHistory: nsAdminEntityHistory.fr,
   adminSiteSettings: nsAdminSiteSettings.fr,
   adminSiteSettingsDiscord: nsAdminSiteSettingsDiscord.fr,

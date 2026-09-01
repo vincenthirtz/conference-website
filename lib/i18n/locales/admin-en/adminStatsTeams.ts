@@ -47,4 +47,5 @@ export default {
   previous: 'Previous',
   next: 'Next',
   paginationOf: ' of {total}',
+  pageOf: 'Page {page} / {pages}',
 };

@@ -46,4 +46,5 @@ export default adminNs('adminStatsTeams', {
   previous: 'Précédent',
   next: 'Suivant',
   paginationOf: ' sur {total}',
+  pageOf: 'Page {page} / {pages}',
 });
