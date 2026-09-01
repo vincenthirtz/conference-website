@@ -209,3 +209,64 @@ test.describe('Fil du match', () => {
     ).toBeVisible({ timeout: 10000 });
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * Persona COACH + accessibilité tactile — lot J7.
+ *
+ * Le coach est le cas qui a motivé tout le chantier de permissions : il peut
+ * composer la feuille de match et ne peut PAS rapporter le score. Un écran qui
+ * lui proposerait le report enverrait un 403 sous le doigt, un soir de match.
+ * ------------------------------------------------------------------------- */
+
+test.describe('Fil du match — coach et cibles tactiles', () => {
+  test.beforeAll(async () => {
+    await deleteTestUser(PLAYER_EMAIL);
+    if (!skipIfNoServiceRole()) {
+      await createTestPlayer(PLAYER_EMAIL, PLAYER_PASSWORD);
+    }
+  });
+
+  test.afterAll(async () => {
+    await deleteTestUser(PLAYER_EMAIL);
+  });
+
+  test('coach : la feuille de match, jamais le report', async ({ page }) => {
+    test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
+
+    await mockApiJson(
+      page,
+      PATH,
+      detail({
+        status: 'finished',
+        checkin: { alreadyCheckedIn: true, isOpen: false },
+        permissions: { validateLineup: true, reportScore: false },
+      })
+    );
+    await loginPlayer(page, PLAYER_EMAIL, `/player/match/${MATCH_ID}`);
+
+    await expect(
+      page.getByRole('heading', { name: /Feuille de match/i })
+    ).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByRole('button', { name: /Rapporter le score/i })
+    ).toHaveCount(0);
+  });
+
+  test('les gestes du jour J tiennent la cible tactile de 44 px', async ({
+    page,
+  }) => {
+    test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
+
+    await mockApiJson(
+      page,
+      PATH,
+      detail({ permissions: { validateLineup: true, reportScore: true } })
+    );
+    await loginPlayer(page, PLAYER_EMAIL, `/player/match/${MATCH_ID}`);
+
+    const cta = page.getByRole('button', { name: /Confirmer le check-in/i });
+    await expect(cta).toBeVisible({ timeout: 10000 });
+    const box = await cta.boundingBox();
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+  });
+});

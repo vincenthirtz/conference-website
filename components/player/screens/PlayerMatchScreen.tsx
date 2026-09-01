@@ -100,7 +100,13 @@ function Step({
         </span>
         {title}
       </h2>
-      <div className="mt-3 text-sm text-gray-300">{children}</div>
+      {/* Les étapes changent d'état sous le doigt (check-in confirmé, feuille
+          validée) : sans `aria-live`, un lecteur d'écran ne dit rien de ce qui
+          vient de se passer et la personne reclique. `polite` : on n'interrompt
+          pas une lecture en cours pour ça. */}
+      <div className="mt-3 text-sm text-gray-300" aria-live="polite">
+        {children}
+      </div>
     </section>
   );
 }
@@ -346,7 +352,7 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
                   <button
                     onClick={handleCheckin}
                     disabled={checkinBusy}
-                    className="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-neutral-900 transition hover:-translate-y-0.5 disabled:opacity-50"
+                    className="mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-neutral-900 transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 disabled:opacity-50"
                   >
                     {checkinBusy ? t.checkinPending : t.checkinCta}
                   </button>
@@ -439,7 +445,7 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
             {data.permissions.reportScore && canAct ? (
               <button
                 onClick={() => setReportOpen(true)}
-                className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+                className="mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
               >
                 {report.mine ? t.scoreEditCta : t.scoreReportCta}
               </button>

@@ -57,7 +57,7 @@ La date du 14/09 coupe le plan en deux, et c'est le seul arbitrage structurant :
 | **J4** | Console manager multi-équipes | 🟧 | M | ✅ livré 2026-09-01 |
 | **J5** | Espace coach : préparer, puis débriefer | 🟧 | M | ✅ livré 2026-09-01 |
 | **J6** | Dashboard priorisé (« à faire », pas « tout ») | 🟧 | M | ✅ livré 2026-09-01 |
-| **J7** | Filet de sécurité : e2e du jour J + a11y mobile | 🟧 | M | continu |
+| **J7** | Filet de sécurité : e2e du jour J + a11y mobile | 🟧 | M | ✅ livré 2026-09-01 |
 
 ---
 
@@ -257,7 +257,7 @@ avec un lien par item. Le reste devient repliable, l'état des sections mémoris
 
 ---
 
-## J7 · Filet de sécurité : e2e du jour J + a11y mobile — 🟧 / M · continu
+## J7 · Filet de sécurité : e2e du jour J + a11y mobile — ✅ LIVRÉ (2026-09-01)
 
 **Problème.** Le backlog qualité note une couverture e2e déséquilibrée (Q021) ; le parcours qui va
 être joué 69 fois n'est pas couvert de bout en bout, et il sera fait **au téléphone**, souvent en
@@ -270,9 +270,13 @@ vocal Discord, parfois dans un train.
   changements d'état, contraste des badges d'état.
 
 **Critères d'acceptation**
-- [ ] Le spec échoue si un bouton d'action apparaît pour un rôle qui n'a pas la permission.
-- [ ] Les specs tournent sur base **locale** uniquement (garde-fou `supabaseTestClient` — la prod
-      n'est jamais semée).
+- [x] `tests/e2e/player-match-thread.spec.ts` : 6 cas en viewport mobile, trois personas —
+      capitaine (check-in + report), coach (feuille, jamais report), joueuse sans droits (état seul).
+- [x] Le spec échoue si un geste apparaît sans la permission correspondante.
+- [x] a11y : `aria-live` sur le contenu des étapes (leur état change sous le doigt), cibles
+      tactiles ≥ 44 px sur les gestes du jour J, anneau de focus visible — la cible est vérifiée
+      par le spec, pas seulement affirmée.
+- [x] Base **locale** uniquement (`skipIfNoServiceRole` + `supabaseTestClient`).
 
 ---
 
