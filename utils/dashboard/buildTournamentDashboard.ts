@@ -872,6 +872,7 @@ export async function fetchDashboardData(
       supabaseAdmin
         .from('site_settings')
         .select('value, updated_at')
+        .eq('tenant_id', tenantId)
         .eq('key', 'last_cron_checkin_at')
         .maybeSingle(),
     ]);

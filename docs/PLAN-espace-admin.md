@@ -50,7 +50,7 @@
 | **A5** | Kit de listes admin (`DataTable`) | 🟧 | L | ✅ kit livré 2026-09-01 |
 | **A6** | Journal exploitable + historique contextuel | 🟧 | M | ✅ livré 2026-09-01 |
 | **A7** | Découpe des god-components (Q018) | 🟩 | L | ✅ règle en place 2026-09-01 |
-| **A8** | Réglages scopés par tenant | 🟧 | M | avant le 2e tenant |
+| **A8** | Réglages scopés par tenant | 🟧 | M | ✅ livré 2026-09-01 |
 
 ---
 
@@ -318,7 +318,7 @@ n'a suivi le JSX hors de la page — c'est ce qui rend l'extraction sûre sans t
 
 ---
 
-## A8 · Réglages scopés par tenant — 🟧 / M · avant le 2e tenant
+## A8 · Réglages scopés par tenant — ✅ LIVRÉ (2026-09-01)
 
 **Problème.** `site_settings` a pour clé primaire… `key`
 ([`create_site_settings_table.sql`](../database/migrations/create_site_settings_table.sql)),
@@ -337,10 +337,22 @@ tenant existant (migration sans perte), helper unique `getSetting(key, tenantId)
 lectures directes, et `team_roles` devient éditable par tenant — ce qui **débloque J3** côté joueur.
 
 **Critères d'acceptation**
-- [ ] Migration idempotente, valeurs actuelles rattachées au tenant existant.
-- [ ] Aucun `from('site_settings')` en dehors du helper (test de garde, sur le modèle de
-      `tests/unit/discordLinksColumnGuard.test.ts`).
-- [ ] Un réglage modifié dans un tenant est invisible depuis l'autre (test).
+- [x] Migration idempotente appliquée : colonne `tenant_id` NOT NULL (défaut = tenant existant),
+      clé primaire passée de `(key)` à `(tenant_id, key)`. Aucune valeur perdue.
+- [x] `utils/siteSettings.ts` : helper unique (get / getSettings / list / set / delete), tenant
+      obligatoire, `onConflict: 'tenant_id,key'` — sans lui, un upsert écraserait le réglage
+      d'un autre tenant.
+- [x] Les 20 accès applicatifs sont scopés, y compris les heartbeats de cron et les pages
+      publiques.
+- [x] `tests/unit/siteSettingsGuard.test.ts` lit la SOURCE et échoue si un accès n'a ni filtre
+      `tenant_id` ni valeur écrite — même famille de garde que
+      `discordLinksColumnGuard` (une colonne mal nommée, sept call sites, erreur avalée).
+- [x] `loadTeamRolesFromSupabase` accepte un `tenantId` : c'est ce qui rend les rôles d'équipe
+      configurables par tenant, et donc ce qui **débloque J3** côté joueur.
+
+**Pourquoi maintenant, alors qu'il n'y a qu'un tenant** : précisément pour ça. Le jour où le
+second arrive, il hérite silencieusement des réglages du premier, et corriger cela demanderait la
+même migration — avec des utilisateurs des deux côtés.
 
 ---
 

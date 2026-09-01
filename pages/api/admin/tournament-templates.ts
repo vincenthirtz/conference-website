@@ -9,6 +9,7 @@ import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { logger } from '@/utils/logger';
 import type { TournamentTemplate } from '@/config/tournament-templates';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 const SETTINGS_KEY = 'custom_tournament_templates';
 
@@ -45,6 +46,7 @@ async function getCustomTemplates(): Promise<TournamentTemplate[]> {
   const { data } = await supabaseAdmin!
     .from('site_settings')
     .select('value')
+    .eq('tenant_id', DEFAULT_TENANT_ID)
     .eq('key', SETTINGS_KEY)
     .maybeSingle();
 
@@ -67,6 +69,7 @@ async function saveCustomTemplates(
   const { data: existing } = await supabaseAdmin!
     .from('site_settings')
     .select('key')
+    .eq('tenant_id', DEFAULT_TENANT_ID)
     .eq('key', SETTINGS_KEY)
     .maybeSingle();
 
@@ -74,11 +77,12 @@ async function saveCustomTemplates(
     await supabaseAdmin!
       .from('site_settings')
       .update({ value, updated_at: new Date().toISOString() })
+      .eq('tenant_id', DEFAULT_TENANT_ID)
       .eq('key', SETTINGS_KEY);
   } else {
     await supabaseAdmin!
       .from('site_settings')
-      .insert({ key: SETTINGS_KEY, value });
+      .insert({ tenant_id: DEFAULT_TENANT_ID, key: SETTINGS_KEY, value });
   }
 }
 

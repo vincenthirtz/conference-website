@@ -10,6 +10,7 @@ import { processCheckinForUpcomingMatches } from '@/utils/checkin';
 import { supabaseAdmin } from '@/utils/supabase';
 
 import { logger } from '../../../utils/logger';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 export const config = {
   api: {
     // Cron jobs may run for a few seconds when there are many matches in the
@@ -69,12 +70,16 @@ export default async function handler(
         const nowIso = new Date().toISOString();
         await supabaseAdmin.from('site_settings').upsert(
           {
+            // Heartbeat rattaché au tenant par défaut (lot A8) : les crons ne
+            // sont pas encore multi-tenant, et un upsert sans `tenant_id`
+            // violerait la clé primaire `(tenant_id, key)`.
+            tenant_id: DEFAULT_TENANT_ID,
             key: 'last_cron_checkin_at',
             value: nowIso,
             description:
               'ISO timestamp du dernier passage du cron /api/cron/checkin-process (heartbeat dashboard).',
           },
-          { onConflict: 'key' }
+          { onConflict: 'tenant_id,key' }
         );
       } catch (e) {
         logger.error('[cron/checkin] heartbeat write error:', e);

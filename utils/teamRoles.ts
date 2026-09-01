@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 /* -----------------------------------------------------------
  * Catalogue des permissions team
@@ -171,12 +172,23 @@ export function serializeTeamRoles(roles: TeamRole[]): string {
   );
 }
 
+/**
+ * Config des rôles d'équipe DU TENANT (lot A8 : `site_settings` est scopé
+ * `(tenant_id, key)` depuis `scope_site_settings_by_tenant.sql`).
+ *
+ * `tenantId` est optionnel pour ne pas casser les ~10 appelants existants, qui
+ * lisent tous le tenant par défaut. Le passer explicitement est ce qui rendra
+ * les rôles configurables par tenant — et ce qui débloque le lot J3 côté
+ * joueur.
+ */
 export async function loadTeamRolesFromSupabase(
-  admin: SupabaseClient
+  admin: SupabaseClient,
+  tenantId: string = DEFAULT_TENANT_ID
 ): Promise<TeamRole[]> {
   const { data } = await admin
     .from('site_settings')
     .select('value')
+    .eq('tenant_id', tenantId)
     .eq('key', TEAM_ROLES_SETTING_KEY)
     .maybeSingle();
   return parseTeamRoles(

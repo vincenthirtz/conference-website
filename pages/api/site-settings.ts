@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { applyRateLimit } from '@/utils/rateLimit';
 
 import { logger } from '../../utils/logger';
@@ -28,6 +29,9 @@ export default async function handler(
     const { data, error } = await supabaseAdmin
       .from('site_settings')
       .select('key, value')
+      // Scopé tenant (lot A8) : la clé primaire est `(tenant_id, key)`, une
+      // lecture sans tenant rendrait N lignes et casserait `.single()`.
+      .eq('tenant_id', DEFAULT_TENANT_ID)
       .eq('key', key)
       .single();
 
@@ -48,6 +52,7 @@ export default async function handler(
   const { data, error } = await supabaseAdmin
     .from('site_settings')
     .select('key, value')
+    .eq('tenant_id', DEFAULT_TENANT_ID)
     .order('key');
 
   if (error) {

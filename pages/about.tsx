@@ -6,6 +6,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { useT, format } from '@/lib/i18n/useT';
 import nsAboutPage from '@/lib/i18n/locales/fr/aboutPage';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 type AboutDict = typeof nsAboutPage.fr;
 
@@ -22,6 +23,7 @@ export const getStaticProps: GetStaticProps<AboutPageProps> = async () => {
     const { data } = await supabaseAdmin
       .from('site_settings')
       .select('value')
+      .eq('tenant_id', DEFAULT_TENANT_ID)
       .eq('key', 'about_video_url')
       .single();
     if (data?.value) videoUrl = data.value;

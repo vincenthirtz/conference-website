@@ -19,6 +19,7 @@ import { fetchToornamentParticipants } from '@/utils/tournamentImport/toornament
 import { fetchChallongeParticipants } from '@/utils/tournamentImport/challonge';
 import { fetchStartGgParticipants } from '@/utils/tournamentImport/startgg';
 import { logger } from '../../../../utils/logger';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import {
   PlatformImportError,
   type PlatformSource,
@@ -86,6 +87,7 @@ async function handler(
   const { data: setting } = await supabaseAdmin
     .from('site_settings')
     .select('value')
+    .eq('tenant_id', DEFAULT_TENANT_ID)
     .eq('key', settingKey)
     .maybeSingle();
 

@@ -107,12 +107,15 @@ async function handler(
 
     const { error } = await supabaseAdmin.from('site_settings').upsert(
       {
+        // Les rôles d'équipe deviennent configurables PAR TENANT (lot A8) —
+        // c'est ce qui débloque la délégation par équipe côté joueur (J3).
+        tenant_id: ctx.tenantId,
         key: TEAM_ROLES_SETTING_KEY,
         value: serializeTeamRoles(cleaned),
         description: "Liste des rôles disponibles pour les membres d'équipe",
         updated_by: ctx.staff.id,
       },
-      { onConflict: 'key' }
+      { onConflict: 'tenant_id,key' }
     );
 
     if (error) {

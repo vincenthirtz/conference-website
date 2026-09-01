@@ -16,6 +16,7 @@ vi.mock('@/utils/staffLogs', () => ({
 import {
   store,
   resetSupabaseMock,
+  CONFERENCE_TENANT_ID,
   setAuthUser,
 } from './__helpers__/supabaseMock';
 import { invalidateStaffCache } from '../../utils/staff';
@@ -86,6 +87,9 @@ describe('GET /api/admin/site-settings/team-roles', () => {
   it('returns the stored roles, parsed from JSON', async () => {
     store.site_settings = [
       {
+        // Lot A8 : `site_settings` est scopé `(tenant_id, key)`. Une fixture
+        // sans tenant ne correspond plus à la ligne que lit la route.
+        tenant_id: CONFERENCE_TENANT_ID,
         key: 'team_roles',
         value: JSON.stringify([
           { value: 'tank', label: 'Tank', permissions: ['manage_roster'] },
@@ -106,7 +110,12 @@ describe('GET /api/admin/site-settings/team-roles', () => {
 
   it('falls back to defaults when stored value is invalid JSON', async () => {
     store.site_settings = [
-      { key: 'team_roles', value: 'not-json', description: null },
+      {
+        tenant_id: CONFERENCE_TENANT_ID,
+        key: 'team_roles',
+        value: 'not-json',
+        description: null,
+      },
     ] as any;
 
     const res = makeRes();
@@ -215,6 +224,9 @@ describe('PUT /api/admin/site-settings/team-roles', () => {
   it('200 updates the existing site_settings row (upsert by key)', async () => {
     store.site_settings = [
       {
+        // Lot A8 : `site_settings` est scopé `(tenant_id, key)`. Une fixture
+        // sans tenant ne correspond plus à la ligne que lit la route.
+        tenant_id: CONFERENCE_TENANT_ID,
         key: 'team_roles',
         value: JSON.stringify([{ value: 'old', label: 'Old' }]),
         description: null,

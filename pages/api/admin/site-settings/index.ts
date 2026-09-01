@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute, StaffContext } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { applyRateLimit } from '@/utils/rateLimit';
 
@@ -16,7 +16,7 @@ type SiteSetting = {
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: StaffContext
+  ctx: AuthenticatedStaffContext
 ) {
   if (
     applyRateLimit(
@@ -38,6 +38,7 @@ async function handler(
     const { data, error } = await admin
       .from('site_settings')
       .select('*')
+      .eq('tenant_id', ctx.tenantId)
       .order('key');
 
     if (error) {
@@ -59,12 +60,15 @@ async function handler(
       .from('site_settings')
       .upsert(
         {
+          // `tenant_id` explicite ET dans `onConflict` : sans lui, l'upsert
+          // écraserait le réglage d'un autre tenant (lot A8).
+          tenant_id: ctx.tenantId,
           key: key.trim(),
           value: value,
           description: description?.trim() || null,
           updated_by: ctx.staff?.id,
         },
-        { onConflict: 'key' }
+        { onConflict: 'tenant_id,key' }
       )
       .select()
       .single();

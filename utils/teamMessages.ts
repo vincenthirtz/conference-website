@@ -83,6 +83,9 @@ export async function loadRosterDeadline(): Promise<string | null> {
   const { data, error } = await supabaseAdmin
     .from('site_settings')
     .select('value')
+    // Scopé tenant (lot A8) : sans ce filtre, la lecture rendrait une ligne
+    // par tenant et `maybeSingle()` répondrait PGRST116.
+    .eq('tenant_id', DEFAULT_TENANT_ID)
     .eq('key', ROSTER_DEADLINE_SETTING_KEY)
     .maybeSingle();
   if (error) {

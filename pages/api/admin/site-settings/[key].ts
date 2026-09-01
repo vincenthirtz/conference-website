@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute, StaffContext } from '@/utils/staff';
+import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { applyRateLimit } from '@/utils/rateLimit';
 
@@ -8,7 +8,7 @@ import { logger } from '../../../../utils/logger';
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: StaffContext
+  ctx: AuthenticatedStaffContext
 ) {
   if (
     applyRateLimit(
@@ -35,6 +35,7 @@ async function handler(
     const { data, error } = await admin
       .from('site_settings')
       .select('*')
+      .eq('tenant_id', ctx.tenantId)
       .eq('key', key)
       .single();
 
@@ -64,6 +65,7 @@ async function handler(
     const { data, error } = await admin
       .from('site_settings')
       .update(updatePayload)
+      .eq('tenant_id', ctx.tenantId)
       .eq('key', key)
       .select()
       .single();
@@ -85,7 +87,11 @@ async function handler(
   }
 
   if (req.method === 'DELETE') {
-    const { error } = await admin.from('site_settings').delete().eq('key', key);
+    const { error } = await admin
+      .from('site_settings')
+      .delete()
+      .eq('tenant_id', ctx.tenantId)
+      .eq('key', key);
 
     if (error) {
       logger.error('[admin/site-settings] delete error', error);

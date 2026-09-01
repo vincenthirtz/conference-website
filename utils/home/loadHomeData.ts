@@ -9,6 +9,7 @@
 // Rappel S5d : `getStaticProps` n'a pas accès à la requête, donc on est forcés
 // sur `DEFAULT_TENANT_ID` (passé en argument par l'appelant).
 
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { type HomeNewsItem } from '@/components/News/HomeNewsSection';
 import { type Announcement } from '@/components/Ads/AnnouncementsTicker';
 import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
@@ -184,11 +185,13 @@ export async function loadPartners(): Promise<HomePartner[]> {
 }
 
 export async function loadCountdownSetting(): Promise<string | null> {
-  // `site_settings` est une table globale (NOT tenant-scoped).
+  // `site_settings` est scopé par tenant depuis le lot A8 ; la home publique
+  // lit le tenant par défaut (elle n'a pas encore de préfixe tenant).
   if (!supabaseAdmin) return null;
   const { data } = await supabaseAdmin
     .from('site_settings')
     .select('value')
+    .eq('tenant_id', DEFAULT_TENANT_ID)
     .eq('key', 'homepage_event_date')
     .maybeSingle();
   const fromSetting = (data?.value ?? '').trim();

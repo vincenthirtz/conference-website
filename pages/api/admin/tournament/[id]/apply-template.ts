@@ -54,6 +54,7 @@ async function handler(
       const { data: settingsRow } = await supabaseAdmin
         .from('site_settings')
         .select('value')
+        .eq('tenant_id', ctx.tenantId)
         .eq('key', 'custom_tournament_templates')
         .maybeSingle();
 

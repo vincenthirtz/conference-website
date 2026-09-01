@@ -10,6 +10,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { runDraftAutoPickTick } from '@/utils/draftEngine';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '../../../utils/logger';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 function isAuthorized(req: NextApiRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -53,12 +54,16 @@ export default async function handler(
       try {
         await supabaseAdmin.from('site_settings').upsert(
           {
+            // Heartbeat rattaché au tenant par défaut (lot A8) : les crons ne
+            // sont pas encore multi-tenant, et un upsert sans `tenant_id`
+            // violerait la clé primaire `(tenant_id, key)`.
+            tenant_id: DEFAULT_TENANT_ID,
             key: 'last_cron_draft_auto_pick_at',
             value: new Date().toISOString(),
             description:
               'ISO timestamp du dernier passage du cron /api/cron/draft-auto-pick (heartbeat dashboard).',
           },
-          { onConflict: 'key' }
+          { onConflict: 'tenant_id,key' }
         );
       } catch (e) {
         logger.error('[cron/draft-auto-pick] heartbeat write error:', e);

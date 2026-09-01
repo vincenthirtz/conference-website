@@ -8,6 +8,7 @@
 // rapidement sans necessiter de redeploiement.
 
 import { supabaseAdmin } from './supabase';
+import { DEFAULT_TENANT_ID } from './tenant';
 import { logger } from './logger';
 
 const CACHE_TTL_MS = 30_000;
@@ -33,6 +34,7 @@ export async function isBotMaintenanceMode(): Promise<boolean> {
     const { data } = await supabaseAdmin
       .from('site_settings')
       .select('value')
+      .eq('tenant_id', DEFAULT_TENANT_ID)
       .eq('key', SETTING_KEY)
       .maybeSingle();
     const raw = (data?.value ?? '').toString().toLowerCase();
