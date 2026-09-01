@@ -146,6 +146,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   delete_free_player: 'Retrait fiche joueuse libre',
   // Contenu éditorial
   publish_news: 'Publication actualité',
+  publish_social_post: 'Publication post multi-réseaux',
   create_announcement: 'Création annonce',
   update_announcement: 'Modification annonce',
   delete_announcement: 'Suppression annonce',

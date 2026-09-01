@@ -3069,6 +3069,32 @@ Le ciblage sur un jour exact tient lieu de deduplication (pas de table d'etat).
 Par defaut seules les equipes avec un motif reel sont notifiees
 (`only=needs_attention`).
 
+#### Event `social.post` (site → bot, via outbox/webhook)
+
+Emis par `/api/admin/social-posts` (onglet « Reseaux » de
+/admin/communications). Consomme par `services/discord-bot/social-post.js`.
+
+**Payload** : `{ postId, platform, content, imageUrl }`.
+
+- Le **salon n'est PAS dans le payload** : le bot le resout lui-meme via
+  `tenant_discord_config.news_ingest_channel_id` (override d'env
+  `SOCIAL_ANNOUNCE_CHANNEL_ID`), comme tous ses autres handlers.
+- `allowedMentions: { parse: [] }` toujours : ni `@everyone` ni `@here` ne sont
+  resolus, meme presents dans le texte. Une annonce composee dans un formulaire
+  ne doit pas pouvoir pinger tout le serveur par accident.
+- `imageUrl` est jointe en `files: [url]` si elle est en http(s). Discord
+  rapatrie l'image au POST, contrairement a Meta qui la recupere plus tard.
+- Contenu tronque a 1900 caracteres cote site ET cote bot.
+
+**Sens du flux — a ne pas confondre avec `news-forwarder.js`.** Ce dernier fait
+l'INVERSE : il surveille le meme salon et transforme chaque message en actualite
+sur le site. Les deux coexistent sans boucle parce que `forwardMessage` ignore
+les messages dont l'auteur est le bot lui-meme.
+
+> **Ne jamais poster via un webhook Discord.** Un webhook porte un autre
+> identifiant d'auteur : la garde anti-boucle ne s'y applique plus, le message
+> est re-ingere, et chaque annonce cree une seconde actualite en doublon.
+
 ### Tournaments
 
 | Route                                                                                                | Methods   | Idem. | Rate-key                 |

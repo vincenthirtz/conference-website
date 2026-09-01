@@ -142,6 +142,7 @@ export type StaffLogAction =
   | 'delete_free_player'
   // --- Contenu éditorial ---
   | 'publish_news'
+  | 'publish_social_post'
   | 'create_announcement'
   | 'update_announcement'
   | 'delete_announcement'

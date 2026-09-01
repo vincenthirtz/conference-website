@@ -17,6 +17,12 @@ export const BOT_EVENT_NAMES = [
   'match.dispute.resolved',
   'match.finished',
   'news.published',
+  // Post composé dans l'admin (Communication › Réseaux) et poussé vers le salon
+  // d'annonces. Le sens INVERSE de news-forwarder.js, qui lui remonte le salon
+  // vers le site. Poster via cet event et non via un webhook Discord est ce qui
+  // évite le doublon : le forwarder ignore les messages du bot, pas ceux d'un
+  // webhook, dont l'identifiant d'auteur est différent.
+  'social.post',
   'team.created',
   'team.dissolved',
   // Gestion des salons d'équipe DEPUIS L'ADMIN. Le cron autonome qui faisait ça

@@ -17,7 +17,7 @@ import type { StaffProps } from '@/types/admin';
 import { logger } from '@/utils/logger';
 import nsAdminCommunicationsHub from '@/lib/i18n/locales/admin-fr/adminCommunicationsHub';
 
-// Cinq panneaux, un seul monté à la fois. Seul « Actualités » (onglet par
+// Six panneaux, un seul monté à la fois. Seul « Actualités » (onglet par
 // défaut, dont les données arrivent en SSR) reste en import statique.
 const AnnouncementsListPanel = lazyPanel(
   () => import('@/components/admin/communications/AnnouncementsListPanel')
@@ -30,6 +30,9 @@ const TeamMessagesPanel = lazyPanel(
 );
 const NotificationsPanel = lazyPanel(
   () => import('@/components/admin/communications/NotificationsPanel')
+);
+const SocialPostsPanel = lazyPanel(
+  () => import('@/components/admin/communications/SocialPostsPanel')
 );
 
 const ID_BASE = 'admin-communications';
@@ -111,6 +114,7 @@ export const getServerSideProps = withStaffPage<{
  *   - Actualités    → admin+
  *   - Annonces      → admin+
  *   - Campagnes     → admin+
+ *   - Réseaux       → admin+ (post multi-cibles : site + salon d'annonces)
  *   - Équipes       → admin+ (messages vers les salons Discord d'équipe)
  */
 export default function AdminCommunicationsPage({
@@ -128,6 +132,7 @@ export default function AdminCommunicationsPage({
           { id: 'news', label: t.tabNews },
           { id: 'announcements', label: t.tabAnnouncements },
           { id: 'campaigns', label: t.tabCampaigns },
+          { id: 'social', label: t.tabSocial },
           { id: 'teams', label: t.tabTeams },
         ]
       : []),
@@ -174,6 +179,8 @@ export default function AdminCommunicationsPage({
               <AnnouncementsListPanel />
             ) : active === 'campaigns' && isAdmin ? (
               <CampaignsPanel />
+            ) : active === 'social' && isAdmin ? (
+              <SocialPostsPanel />
             ) : active === 'teams' && isAdmin ? (
               <TeamMessagesPanel />
             ) : (

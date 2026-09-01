@@ -13,11 +13,12 @@ export default {
   pageTitle: 'Admin – Communication',
   heading: 'Communication',
   subtitle:
-    'News, announcements, email campaigns and staff push notifications.',
+    'News, announcements, email campaigns, social posts and staff push notifications.',
   tabsAriaLabel: 'Communication sections',
   tabNews: 'News',
   tabAnnouncements: 'Announcements',
   tabCampaigns: 'Campaigns',
   tabNotifications: 'Notifications',
   tabTeams: 'Teams',
+  tabSocial: 'Social',
 };

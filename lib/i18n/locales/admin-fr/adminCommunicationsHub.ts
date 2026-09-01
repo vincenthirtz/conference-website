@@ -12,11 +12,12 @@ export default adminNs('adminCommunicationsHub', {
   pageTitle: 'Admin – Communication',
   heading: 'Communication',
   subtitle:
-    'Actualités, annonces, campagnes emails et notifications push du staff.',
+    'Actualités, annonces, campagnes emails, réseaux sociaux et notifications push du staff.',
   tabsAriaLabel: 'Sections communication',
   tabNews: 'Actualités',
   tabAnnouncements: 'Annonces',
   tabCampaigns: 'Campagnes',
   tabNotifications: 'Notifications',
   tabTeams: 'Équipes',
+  tabSocial: 'Réseaux',
 });

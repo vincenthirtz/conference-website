@@ -189,6 +189,7 @@ import enAdminScrimPlanningsCreate from './adminScrimPlanningsCreate';
 import enAdminScrimPlanningsDetail from './adminScrimPlanningsDetail';
 import enDeveloperHub from './developerHub';
 import enAdminTaskBoard from './adminTaskBoard';
+import enAdminSocialPosts from './adminSocialPosts';
 import enAdminTeamMessages from './adminTeamMessages';
 import enAdminCasterScenes from './adminCasterScenes';
 import enAdminMatchLineups from './adminMatchLineups';
@@ -380,6 +381,7 @@ const adminEnDict = {
   adminScrimPlanningsDetail: enAdminScrimPlanningsDetail,
   developerHub: enDeveloperHub,
   adminTaskBoard: enAdminTaskBoard,
+  adminSocialPosts: enAdminSocialPosts,
   adminTeamMessages: enAdminTeamMessages,
   adminCasterScenes: enAdminCasterScenes,
   adminMatchLineups: enAdminMatchLineups,

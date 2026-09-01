@@ -194,6 +194,7 @@ import nsAdminScrimPlanningsCreate from './adminScrimPlanningsCreate';
 import nsAdminScrimPlanningsDetail from './adminScrimPlanningsDetail';
 import nsDeveloperHub from './developerHub';
 import nsAdminTaskBoard from './adminTaskBoard';
+import nsAdminSocialPosts from './adminSocialPosts';
 import nsAdminTeamMessages from './adminTeamMessages';
 import nsAdminCasterScenes from './adminCasterScenes';
 
@@ -385,6 +386,7 @@ export const frDict = {
   adminScrimPlanningsDetail: nsAdminScrimPlanningsDetail.fr,
   developerHub: nsDeveloperHub.fr,
   adminTaskBoard: nsAdminTaskBoard.fr,
+  adminSocialPosts: nsAdminSocialPosts.fr,
   adminTeamMessages: nsAdminTeamMessages.fr,
   adminCasterScenes: nsAdminCasterScenes.fr,
 };
