@@ -17,6 +17,12 @@ import nsNavbar from '@/lib/i18n/locales/fr/navbar';
 const DEFAULT_LOGO_SRC = '/img/logos/2026-logo.png';
 
 const AdminTopBar = dynamic(() => import('./AdminTopBar'), { ssr: false });
+// Palette ⌘K (lot A4) : montée avec la barre admin, donc jamais chargée côté
+// public. `ssr:false` — elle n'existe qu'à partir d'un raccourci clavier.
+const CommandPalette = dynamic(
+  () => import('@/components/admin/CommandPalette'),
+  { ssr: false }
+);
 const PlayerTopBar = dynamic(() => import('./PlayerTopBar'), { ssr: false });
 const NavDrop = dynamic(() => import('./navDrop'), { ssr: false });
 
@@ -132,13 +138,16 @@ function Navbar(): JSX.Element {
       </a>
 
       {showAdminBar && (
-        <AdminTopBar
-          staffName={staffName}
-          staffRole={staffRole}
-          links={visibleAdminLinks}
-          height={ADMIN_BAR_HEIGHT}
-          onLogout={handleLogout}
-        />
+        <>
+          <AdminTopBar
+            staffName={staffName}
+            staffRole={staffRole}
+            links={visibleAdminLinks}
+            height={ADMIN_BAR_HEIGHT}
+            onLogout={handleLogout}
+          />
+          <CommandPalette />
+        </>
       )}
 
       {showPlayerBar && (

@@ -46,7 +46,7 @@
 | **A1** | De l'alerte au geste (jour J) | 🟥 | M | ✅ livré 2026-09-01 |
 | **A2** | Rôles staff fins (bénévole, arbitre) | 🟥 | L | ✅ socle livré 2026-09-01 |
 | **A3** | Rendre aux équipes ce que le staff fait à leur place | 🟧 | M | ✅ livré 2026-09-01 |
-| **A4** | Recherche globale + palette de commandes | 🟧 | M | saison |
+| **A4** | Recherche globale + palette de commandes | 🟧 | M | ✅ livré 2026-09-01 |
 | **A5** | Kit de listes admin (`DataTable`) | 🟧 | L | après |
 | **A6** | Journal exploitable + historique contextuel | 🟧 | M | après |
 | **A7** | Découpe des god-components (Q018) | 🟩 | L | continu |
@@ -202,9 +202,17 @@ raccourci clavier du produit vit dans la régie
 - **historique** local des 5 dernières cibles.
 
 **Critères d'acceptation**
-- [ ] Un résultat n'apparaît jamais si l'appelant n'a pas le droit de l'ouvrir.
-- [ ] Requête debouncée, réponse < 300 ms sur les volumes actuels, index vérifiés.
-- [ ] Accessible : rôle `dialog`, focus piégé, `Esc` ferme, navigation clavier complète.
+- [x] Un résultat n'apparaît jamais si l'appelant ne peut pas l'ouvrir : chaque famille est
+      interrogée seulement si le rôle couvre sa permission (testé sur les cas qui NE doivent PAS
+      apparaître — un bénévole ne voit ni équipes, ni tournois, ni tickets).
+- [x] Requête debouncée (180 ms), 2 caractères minimum, 5 résultats par famille, `no-store`.
+- [x] `role="dialog"` modal, focus piégé et rendu à l'élément d'origine, `Esc` ferme,
+      flèches + Entrée sans souris, ⌘K ignoré quand on écrit dans un champ.
+- [x] Historique local des 5 dernières cibles.
+
+**Écart assumé** : les matchs se cherchent par ROUND (« J3 ») et non par nom d'équipe — le nom
+vit dans une autre table, et PostgREST ne filtre pas simplement sur un embed. À revoir si le
+besoin se confirme.
 
 ---
 

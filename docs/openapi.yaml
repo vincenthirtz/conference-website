@@ -17467,6 +17467,43 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/search:
+    get:
+      tags:
+        - admin
+      summary: Recherche transverse de l'espace admin (palette ⌘K, lot A4).
+      description: |
+        Cherche equipes, tournois, matchs, tickets et taches en une requete.
+
+        Chaque famille n'est interrogee QUE si le role de l'appelant couvre la
+        permission correspondante (lot A2) : un resultat n'apparait jamais si la
+        personne ne peut pas l'ouvrir. La garde de la route est « etre du
+        staff » — le filtrage se fait section par section, pas a l'entree.
+
+        Bornee a 5 resultats par famille, scopee au tenant actif, jamais mise en
+        cache (`private, no-store`).
+      operationId: adminGlobalSearch
+      security:
+        - StaffSession: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: 2 caracteres minimum ; en dessous la reponse est vide.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: '{ hits[] }'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/site-settings/team-roles:
     get:
       summary: Read team role labels (captain, member, etc.).
