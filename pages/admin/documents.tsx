@@ -90,8 +90,13 @@ export default function AdminDocumentsPage(_props: StaffProps) {
         setCanStoreKey(data.canStoreKey ?? false);
         setRows(data.files ?? []);
         setBreadcrumb(data.breadcrumb ?? []);
-      } catch {
-        setError(t.loadError);
+      } catch (err) {
+        // Le serveur explique les refus qui se corrigent. Les remplacer par un
+        // message générique est exactement ce qui a rendu indiagnosticable le
+        // refus des sous-dossiers, le 2026-09-01.
+        setError(
+          err instanceof Error && err.message ? err.message : t.loadError
+        );
       } finally {
         setLoading(false);
       }
@@ -118,7 +123,8 @@ export default function AdminDocumentsPage(_props: StaffProps) {
     setTrashing(file.id);
     try {
       await adminFetchJson(
-        `/api/admin/documents?fileId=${encodeURIComponent(file.id)}`,
+        `/api/admin/documents?fileId=${encodeURIComponent(file.id)}` +
+          (folderId ? `&folderId=${encodeURIComponent(folderId)}` : ''),
         { method: 'DELETE' }
       );
       setRows((prev) => prev.filter((r) => r.id !== file.id));

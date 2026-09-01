@@ -156,41 +156,44 @@ describe('utils/googleDrive', () => {
     expect(listCall?.url).toContain('includeItemsFromAllDrives=true');
   });
 
-  it('refuse un dossier qui n’est pas un descendant de la racine', async () => {
+  it('refuse un dossier qu’on n’atteint pas en descendant depuis la racine', () => {
     // Le garde-fou qui compte : sans lui, le paramètre `folderId` de la route
     // laisserait lister n'importe quel dossier visible du compte de service.
-    mockFetch((url) => {
-      if (url.includes('/files/ailleurs')) {
-        return {
-          id: 'ailleurs',
-          name: 'Perso',
-          mimeType: 'folder',
-          parents: [],
-        };
-      }
-      return { files: [] };
-    });
+    return (async () => {
+      mockFetch((url) => {
+        if (url.includes(`/files/${ROOT}`)) {
+          return { id: ROOT, name: 'Asso', mimeType: 'folder' };
+        }
+        // La racine n'a aucun sous-dossier : « ailleurs » est hors arborescence.
+        return { files: [] };
+      });
 
-    const { listDriveFiles, DriveConfigError, resetDriveTokenCache } =
-      await import('@/utils/googleDrive');
-    resetDriveTokenCache();
-    await expect(
-      listDriveFiles({ folderId: 'ailleurs' })
-    ).rejects.toBeInstanceOf(DriveConfigError);
+      const { listDriveFiles, DriveConfigError, resetDriveTokenCache } =
+        await import('@/utils/googleDrive');
+      resetDriveTokenCache();
+      await expect(
+        listDriveFiles({ folderId: 'ailleurs' })
+      ).rejects.toBeInstanceOf(DriveConfigError);
+    })();
   });
 
   it('accepte un sous-dossier et rend le fil d’Ariane complet', async () => {
+    // RÉGRESSION du 2026-09-01 : Google n'expose PAS `parents` quand l'accès du
+    // compte de service vient d'un PARTAGE. Ce mock le reproduit — aucune
+    // réponse ne porte `parents`. La vérification doit donc DESCENDRE depuis la
+    // racine ; la version qui remontait la chaîne des parents refusait tous les
+    // sous-dossiers du Drive de l'asso.
+    let listCall = 0;
     mockFetch((url) => {
-      if (url.includes('/files/sub')) {
-        return {
-          id: 'sub',
-          name: 'AG 2026',
-          mimeType: 'folder',
-          parents: [ROOT],
-        };
-      }
       if (url.includes(`/files/${ROOT}`)) {
-        return { id: ROOT, name: 'Asso', mimeType: 'folder', parents: [] };
+        return { id: ROOT, name: 'Asso', mimeType: 'folder' };
+      }
+      if (url.includes('drive/v3/files?')) {
+        listCall += 1;
+        // 1er appel : sous-dossiers de la racine. Suivants : contenu de « sub ».
+        return listCall === 1
+          ? { files: [{ id: 'sub', name: 'AG 2026' }] }
+          : { files: [] };
       }
       return { files: [] };
     });
@@ -298,15 +301,10 @@ describe('utils/googleDrive — écriture', () => {
 
   it('refuse de déposer dans un dossier hors de la racine', async () => {
     mockFetch((url) => {
-      if (url.includes('/files/ailleurs')) {
-        return {
-          id: 'ailleurs',
-          name: 'Perso',
-          mimeType: 'folder',
-          parents: [],
-        };
+      if (url.includes(`/files/${ROOT}`)) {
+        return { id: ROOT, name: 'Asso', mimeType: 'folder' };
       }
-      return {};
+      return { files: [] };
     });
     const { uploadDriveFile, DriveConfigError, resetDriveTokenCache } =
       await import('@/utils/googleDrive');
@@ -326,11 +324,12 @@ describe('utils/googleDrive — écriture', () => {
     // Trente jours de rattrapage. Une suppression irréversible déclenchée
     // depuis une page web, sur les statuts d'une asso, n'a pas lieu d'être.
     const calls = mockFetch((url) => {
-      if (url.includes('/files/doc1')) {
-        return { id: 'doc1', name: 'PV.pdf', parents: [ROOT] };
-      }
       if (url.includes(`/files/${ROOT}`)) {
-        return { id: ROOT, name: 'Asso', mimeType: 'folder', parents: [] };
+        return { id: ROOT, name: 'Asso', mimeType: 'folder' };
+      }
+      // Enfants du dossier visé : le fichier en fait partie.
+      if (url.includes('drive/v3/files?')) {
+        return { files: [{ id: 'doc1', name: 'PV.pdf' }] };
       }
       return {};
     });
@@ -338,7 +337,7 @@ describe('utils/googleDrive — écriture', () => {
     const { trashDriveFile, resetDriveTokenCache } =
       await import('@/utils/googleDrive');
     resetDriveTokenCache();
-    await trashDriveFile('doc1');
+    await trashDriveFile({ fileId: 'doc1' });
 
     const patch = calls.find((c) => c.init?.method === 'PATCH');
     expect(patch).toBeDefined();
@@ -347,13 +346,15 @@ describe('utils/googleDrive — écriture', () => {
     expect(calls.find((c) => c.init?.method === 'DELETE')).toBeUndefined();
   });
 
-  it('refuse de jeter un fichier qui vit hors de la racine', async () => {
+  it('refuse de jeter un fichier absent du dossier affiché', async () => {
+    // Le compte de service voit peut-être ce fichier — mais il n'est pas DANS
+    // le dossier depuis lequel le geste est fait.
     mockFetch((url) => {
-      if (url.includes('/files/etranger')) {
-        return { id: 'etranger', name: 'X', parents: ['ailleurs'] };
+      if (url.includes(`/files/${ROOT}`)) {
+        return { id: ROOT, name: 'Asso', mimeType: 'folder' };
       }
-      if (url.includes('/files/ailleurs')) {
-        return { id: 'ailleurs', name: 'Perso', parents: [] };
+      if (url.includes('drive/v3/files?')) {
+        return { files: [{ id: 'un-autre', name: 'Autre.pdf' }] };
       }
       return {};
     });
@@ -361,7 +362,7 @@ describe('utils/googleDrive — écriture', () => {
       await import('@/utils/googleDrive');
     resetDriveTokenCache();
 
-    await expect(trashDriveFile('etranger')).rejects.toBeInstanceOf(
+    await expect(trashDriveFile({ fileId: 'etranger' })).rejects.toBeInstanceOf(
       DriveConfigError
     );
   });

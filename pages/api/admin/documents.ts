@@ -155,12 +155,14 @@ async function handleTrash(
   ctx: AuthenticatedStaffContext
 ) {
   const fileId = typeof req.query.fileId === 'string' ? req.query.fileId : '';
+  const folderId =
+    typeof req.query.folderId === 'string' ? req.query.folderId : null;
   if (!fileId) {
     res.status(400).json({ error: 'fileId requis.' });
     return;
   }
 
-  await trashDriveFile(fileId, ctx.tenantId);
+  await trashDriveFile({ fileId, folderId, tenantId: ctx.tenantId });
 
   await logStaffAction({
     staff_id: ctx.staff.id,
@@ -169,7 +171,7 @@ async function handleTrash(
     entity_id: fileId,
     tenant_id: ctx.tenantId,
     permission: 'manage_documents',
-    payload: null,
+    payload: folderId ? { folderId } : null,
   });
 
   // « Corbeille », pas « supprimé » : Drive garde trente jours, et le message

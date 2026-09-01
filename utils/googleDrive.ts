@@ -53,8 +53,10 @@ const SCOPE_WRITE = 'https://www.googleapis.com/auth/drive';
 
 type DriveScope = typeof SCOPE_READ | typeof SCOPE_WRITE;
 
-/** Profondeur max remontée par `assertWithinRoot`. Un Drive d'asso est plat. */
-const MAX_ANCESTOR_DEPTH = 10;
+/** Profondeur max explorée depuis la racine. Un Drive d'asso est large et plat. */
+const MAX_FOLDER_DEPTH = 6;
+/** Plafond de dossiers visités par vérification, pour borner le pire cas. */
+const MAX_FOLDERS_VISITED = 500;
 
 export const DRIVE_FOLDER_MIME = 'application/vnd.google-apps.folder';
 
@@ -357,61 +359,125 @@ function toDriveFile(f: RawFile): DriveFile {
   };
 }
 
+/** Échappe une valeur pour la syntaxe `q` de Drive (guillemets simples). */
+function escapeQuery(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
 async function getFolderMeta(
   folderId: string,
   tenantId?: string | null
-): Promise<{ id: string; name: string; parents: string[] }> {
+): Promise<{ id: string; name: string }> {
   const f = await driveGet<RawFile>(
     `${FILES_URL}/${encodeURIComponent(folderId)}`,
-    { fields: 'id,name,mimeType,parents' },
+    { fields: 'id,name,mimeType' },
     tenantId
   );
-  return { id: f.id, name: f.name, parents: f.parents ?? [] };
+  return { id: f.id, name: f.name };
+}
+
+/** Sous-dossiers DIRECTS d'un dossier. */
+async function listChildFolders(
+  parentId: string,
+  tenantId?: string | null
+): Promise<{ id: string; name: string }[]> {
+  const payload = await driveGet<{ files?: RawFile[] }>(
+    FILES_URL,
+    {
+      q: `'${escapeQuery(parentId)}' in parents and mimeType = '${DRIVE_FOLDER_MIME}' and trashed = false`,
+      orderBy: 'name',
+      pageSize: '200',
+      fields: 'files(id,name)',
+    },
+    tenantId
+  );
+  return (payload.files ?? []).map((f) => ({ id: f.id, name: f.name }));
 }
 
 /**
- * Vérifie que `folderId` est la racine ou l'un de ses descendants, et renvoie
- * le fil d'Ariane de la racine jusqu'à lui.
+ * Chemin de la racine jusqu'à `folderId`, en DESCENDANT — et donc preuve que ce
+ * dossier appartient bien à l'arborescence configurée.
  *
- * Sans ce contrôle, le paramètre `folderId` de la route laisserait lister
- * N'IMPORTE QUEL dossier visible du compte de service. Le risque est faible
- * (il ne voit que ce qu'on lui partage) mais il est gratuit à supprimer, et la
- * garantie qu'on veut afficher est « le site ne montre que CE dossier ».
+ * POURQUOI EN DESCENDANT. La première version remontait la chaîne des parents
+ * (`files.get(id).parents`). Elle ne pouvait pas marcher : **Google n'expose
+ * pas `parents` quand l'accès du compte de service vient d'un PARTAGE** et non
+ * d'une possession. La réponse est un 200 parfaitement valide, simplement sans
+ * ce champ — donc tout sous-dossier était déclaré hors arborescence, et aucun
+ * n'était navigable. Constaté sur le Drive de l'asso le 2026-09-01.
+ *
+ * Descendre depuis la racine n'a pas ce défaut : `'<parent>' in parents` est
+ * une requête de RECHERCHE, qui répond sur ce que le compte peut voir. C'est
+ * aussi la propriété qu'on veut réellement démontrer — « ce dossier est DANS
+ * l'arborescence » — plutôt que son symétrique.
+ *
+ * Coût : une requête par NIVEAU exploré, pas par dossier. Un Drive d'asso est
+ * large et plat ; le plafond de profondeur et celui de dossiers visités
+ * bornent le pire cas.
  */
-async function assertWithinRoot(
+async function resolvePathFromRoot(
   folderId: string,
   rootId: string,
   tenantId?: string | null
 ): Promise<{ id: string; name: string }[]> {
-  if (folderId === rootId) {
-    const root = await getFolderMeta(rootId, tenantId);
-    return [{ id: root.id, name: root.name }];
-  }
+  const root = await getFolderMeta(rootId, tenantId);
+  if (folderId === rootId) return [root];
 
-  const chain: { id: string; name: string }[] = [];
-  let currentId = folderId;
+  // Parcours en largeur : les sous-dossiers cherchés sont presque toujours à un
+  // niveau de la racine, et la largeur d'abord les trouve en une requête.
+  let frontier: { id: string; name: string }[][] = [[root]];
+  const seen = new Set<string>([rootId]);
+  let visited = 0;
 
-  for (let depth = 0; depth < MAX_ANCESTOR_DEPTH; depth += 1) {
-    const meta = await getFolderMeta(currentId, tenantId);
-    chain.unshift({ id: meta.id, name: meta.name });
+  for (let depth = 0; depth < MAX_FOLDER_DEPTH; depth += 1) {
+    const next: { id: string; name: string }[][] = [];
 
-    if (meta.id === rootId) return chain;
-    const parent = meta.parents[0];
-    if (!parent) break;
-    if (parent === rootId) {
-      const root = await getFolderMeta(rootId, tenantId);
-      chain.unshift({ id: root.id, name: root.name });
-      return chain;
+    for (const path of frontier) {
+      const parent = path[path.length - 1]!;
+      const children = await listChildFolders(parent.id, tenantId);
+
+      for (const child of children) {
+        if (child.id === folderId) return [...path, child];
+        if (seen.has(child.id)) continue;
+        seen.add(child.id);
+        visited += 1;
+        if (visited > MAX_FOLDERS_VISITED) {
+          throw new DriveConfigError(
+            'Arborescence trop vaste pour être vérifiée : réduire le dossier racine configuré.'
+          );
+        }
+        next.push([...path, child]);
+      }
     }
-    currentId = parent;
+
+    if (next.length === 0) break;
+    frontier = next;
   }
 
   throw new DriveConfigError('Ce dossier n’appartient pas au Drive configuré.');
 }
 
-/** Échappe une valeur pour la syntaxe `q` de Drive (guillemets simples). */
-function escapeQuery(value: string): string {
-  return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+/**
+ * `true` si `fileId` est un enfant DIRECT de `folderId`.
+ *
+ * Combiné à `resolvePathFromRoot(folderId)`, cela prouve que le fichier est
+ * dans l'arborescence — sans dépendre de `parents`, que Google n'expose pas
+ * ici (voir ci-dessus).
+ */
+async function isChildOfFolder(
+  fileId: string,
+  folderId: string,
+  tenantId?: string | null
+): Promise<boolean> {
+  const payload = await driveGet<{ files?: RawFile[] }>(
+    FILES_URL,
+    {
+      q: `'${escapeQuery(folderId)}' in parents and trashed = false`,
+      pageSize: '1000',
+      fields: 'files(id)',
+    },
+    tenantId
+  );
+  return (payload.files ?? []).some((f) => f.id === fileId);
 }
 
 export type ListDriveFilesOptions = {
@@ -430,7 +496,7 @@ export async function listDriveFiles(
   if (!rootId) throw new DriveConfigError('GOOGLE_DRIVE_FOLDER_ID absent.');
 
   const targetId = opts.folderId?.trim() || rootId;
-  const breadcrumb = await assertWithinRoot(targetId, rootId, opts.tenantId);
+  const breadcrumb = await resolvePathFromRoot(targetId, rootId, opts.tenantId);
 
   const clauses = [`'${escapeQuery(targetId)}' in parents`, 'trashed = false'];
   const search = opts.search?.trim();
@@ -530,7 +596,7 @@ export async function uploadDriveFile(
   }
 
   const targetId = args.folderId?.trim() || rootId;
-  await assertWithinRoot(targetId, rootId, args.tenantId);
+  await resolvePathFromRoot(targetId, rootId, args.tenantId);
 
   const name = args.name.replace(/[/\\]/g, '-').trim() || 'document';
   const token = await getAccessToken(SCOPE_WRITE, args.tenantId);
@@ -585,24 +651,35 @@ export async function uploadDriveFile(
  * suppression irréversible déclenchée depuis une page web, sur les statuts
  * d'une association, n'a aucune raison d'exister.
  */
-export async function trashDriveFile(
-  fileId: string,
-  tenantId?: string | null
-): Promise<void> {
+export type TrashDriveFileArgs = {
+  fileId: string;
+  /**
+   * Dossier depuis lequel le geste est fait. Nécessaire, et pas déductible :
+   * Google n'expose pas `parents` sur un accès obtenu par partage. C'est le
+   * dossier qui est vérifié comme appartenant à l'arborescence, puis le fichier
+   * comme étant l'un de ses enfants.
+   */
+  folderId?: string | null;
+  tenantId?: string | null;
+};
+
+export async function trashDriveFile({
+  fileId,
+  folderId,
+  tenantId,
+}: TrashDriveFileArgs): Promise<void> {
   const rootId = getDriveRootFolderId();
   if (!rootId) throw new DriveConfigError('GOOGLE_DRIVE_FOLDER_ID absent.');
 
-  // Le fichier doit vivre dans l'arborescence configurée : sans ce contrôle,
-  // le paramètre `fileId` permettrait de jeter n'importe quel fichier visible
-  // du compte de service.
-  const meta = await driveGet<RawFile>(
-    `${FILES_URL}/${encodeURIComponent(fileId)}`,
-    { fields: 'id,name,parents' },
-    tenantId
-  );
-  const parent = meta.parents?.[0];
-  if (!parent) throw new DriveConfigError('Fichier sans dossier parent.');
-  await assertWithinRoot(parent, rootId, tenantId);
+  // Deux vérifications, dans cet ordre : le dossier est-il dans l'arborescence
+  // configurée, et le fichier est-il bien dedans. Sans elles, le paramètre
+  // `fileId` permettrait de jeter n'importe quel fichier visible du compte de
+  // service — y compris hors du dossier de l'asso.
+  const target = folderId?.trim() || rootId;
+  await resolvePathFromRoot(target, rootId, tenantId);
+  if (!(await isChildOfFolder(fileId, target, tenantId))) {
+    throw new DriveConfigError('Ce fichier n’est pas dans le dossier affiché.');
+  }
 
   const token = await getAccessToken(SCOPE_WRITE, tenantId);
   const res = await fetch(
