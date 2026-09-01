@@ -1033,6 +1033,25 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                       message={format(tx.checkinMissingMsg, {
                         count: sig.checkinNext24h.upcoming,
                       })}
+                      // Lot A1 : le geste EST l'alerte. Relancer sur place
+                      // évite les trois écrans (page check-in → retrouver les
+                      // équipes → agir) au moment où le temps manque.
+                      action={{
+                        label: tx.nudgeAll,
+                        pendingLabel: tx.nudgePending,
+                        run: async () => {
+                          const json = await adminFetchJson<{
+                            nudged: number;
+                          }>(
+                            `/api/admin/tournament/${tournamentId}/checkin-nudge-all`,
+                            { method: 'POST' }
+                          );
+                          await fetchDashboard();
+                          return format(tx.nudgeDone, {
+                            count: json?.nudged ?? 0,
+                          });
+                        },
+                      }}
                       cta={{
                         label: tx.checkin,
                         href: `/admin/tournament/${tournamentId}/checkin`,
@@ -1143,6 +1162,20 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                           })
                         : tx.cronDownMsgNever
                     }
+                    // Le processeur de check-in se relance à la main, avec la
+                    // même logique que le cron mais bornée à ce tournoi.
+                    action={{
+                      label: tx.cronRun,
+                      pendingLabel: tx.cronRunPending,
+                      run: async () => {
+                        await adminFetchJson(
+                          `/api/admin/tournament/${tournamentId}/checkin`,
+                          { method: 'POST' }
+                        );
+                        await fetchDashboard();
+                        return tx.cronRunDone;
+                      },
+                    }}
                     cta={{
                       label: tx.checkin,
                       href: `/admin/tournament/${tournamentId}/checkin`,

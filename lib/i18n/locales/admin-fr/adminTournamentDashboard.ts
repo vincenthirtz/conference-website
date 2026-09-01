@@ -174,4 +174,12 @@ export default adminNs('adminTournamentDashboard', {
   quickAccessTitle: 'Accès rapide',
   errorLoad: 'Impossible de charger le dashboard',
   errorGeneric: 'Erreur de chargement',
+
+  // ── Gestes exécutés depuis l'alerte (lot A1) ─────────────────────────
+  nudgeAll: 'Relancer les non-checkées',
+  nudgePending: 'Relance…',
+  nudgeDone: '{count} relance(s) envoyée(s).',
+  cronRun: 'Relancer le processeur',
+  cronRunPending: 'Traitement…',
+  cronRunDone: 'Processeur relancé.',
 });

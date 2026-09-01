@@ -174,4 +174,11 @@ export default {
   quickAccessTitle: 'Quick access',
   errorLoad: "Couldn't load the dashboard",
   errorGeneric: 'Loading error',
+
+  nudgeAll: 'Nudge the missing teams',
+  nudgePending: 'Nudging…',
+  nudgeDone: '{count} nudge(s) sent.',
+  cronRun: 'Run the processor',
+  cronRunPending: 'Running…',
+  cronRunDone: 'Processor triggered.',
 };

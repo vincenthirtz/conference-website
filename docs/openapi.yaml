@@ -21135,6 +21135,44 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/tournament/{id}/checkin-nudge-all:
+    post:
+      tags:
+        - admin/tournaments
+      summary: Relancer toutes les equipes non checkees du tournoi (lot A1).
+      description: |
+        Fait le tour des matchs des 24 prochaines heures et relance CHAQUE cote
+        non checke (event `checkin.nudge` consomme par le bot), en generant les
+        jetons manquants au passage.
+
+        Existe parce que le centre de controle savait dire « 3 equipes non
+        checkees » sans savoir le corriger : le geste existait, mais un match et
+        un cote a la fois. Protege du double-clic par `withAdminIdempotency`
+        (5 min) ; une relance ratee n'annule pas les autres.
+      operationId: nudgeAllMissingCheckins
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: '{ success, nudged, matches }'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/tournament/{id}/checkin:
     parameters:
       - in: path

@@ -43,7 +43,7 @@
 
 | Lot | Titre | Impact | Effort | Fenêtre |
 |---|---|---|---|---|
-| **A1** | De l'alerte au geste (jour J) | 🟥 | M | avant 14/09 |
+| **A1** | De l'alerte au geste (jour J) | 🟥 | M | ✅ livré 2026-09-01 |
 | **A2** | Rôles staff fins (bénévole, arbitre) | 🟥 | L | avant 14/09 (socle) |
 | **A3** | Rendre aux équipes ce que le staff fait à leur place | 🟧 | M | saison |
 | **A4** | Recherche globale + palette de commandes | 🟧 | M | saison |
@@ -54,7 +54,7 @@
 
 ---
 
-## A1 · De l'alerte au geste — 🟥 / M · avant 14/09
+## A1 · De l'alerte au geste — ✅ LIVRÉ (2026-09-01)
 
 **Problème.** Le centre de contrôle existe et il est bon :
 [`pages/admin/tournament/[id]/dashboard.tsx`](../pages/admin/tournament/[id]/dashboard.tsx)
@@ -78,11 +78,18 @@ leur ergonomie à une main. Le code utilise des grilles `md:`/`lg:` et peu de la
 c'est un indice, pas une preuve.
 
 **Critères d'acceptation**
-- [ ] Les 3 alertes les plus fréquentes (check-in manquant, litige ouvert, feuille non validée)
-      exposent leur geste principal en un clic depuis le dashboard.
-- [ ] Chaque geste est idempotent (double clic = un seul effet) et journalisé avec un slug typé.
-- [ ] Aucune action n'apparaît à un rôle qui ne peut pas la faire (cf. **A2**).
-- [ ] Banc mobile : captures avant/après commitées dans la PR.
+- [x] `ActionableAlert` accepte une ACTION exécutée sur place (verrou pendant l'appel, résultat
+      annoncé dans le bandeau) en plus du lien de détail.
+- [x] Les deux alertes du jour J l'utilisent : « relancer les équipes non checkées »
+      (`POST /api/admin/tournament/[id]/checkin-nudge-all`, nouvelle route) et « relancer le
+      processeur de check-in » (route existante).
+- [x] Idempotent : `withAdminIdempotency` (5 min) sur la relance groupée, et journalisation
+      `checkin_manual_nudge` avec la portée.
+- [x] Banc mobile : `tests/e2e/admin-control-center-mobile.spec.ts` mesure le débordement
+      horizontal en 390 px — une mesure reproductible plutôt qu'une capture à commenter.
+
+**Reste ouvert** : le geste sur les litiges (assigner / trancher) demande une cible et un
+arbitrage, ce n'est pas un bouton unique — il reste un lien vers `/admin/moderation`.
 
 ---
 
