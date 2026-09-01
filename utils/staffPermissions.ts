@@ -140,8 +140,16 @@ export const STAFF_ROLE_PERMISSIONS: Record<StaffRole, StaffPermission[]> = {
   caster: ['use_cast_cockpit'],
   /** Arbitre : le jour J, sur les matchs. Ni équipes, ni réglages. */
   referee: ['run_checkin', 'arbitrate_matches'],
-  /** Bénévole : la porte d'entrée. Une tâche, une seule. */
-  helper: ['run_checkin'],
+  /**
+   * Bénévole : la porte d'entrée. Le check-in, et le tableau de tâches —
+   * décision produit du 2026-09-01. C'est là que vivent les tâches du jour, et
+   * quelqu'un qui vient tenir un poste a besoin de savoir ce qu'il y a à faire.
+   *
+   * Asymétrie ASSUMÉE : l'arbitre ne l'a pas. Ces rôles ne forment pas une
+   * échelle — un arbitre est sur les matchs, un bénévole sur le stand ; ce
+   * sont deux jeux de droits distincts, pas deux niveaux.
+   */
+  helper: ['run_checkin', 'manage_tasks'],
 };
 
 /** Permissions effectives d'un rôle (liste vide pour un rôle inconnu). */

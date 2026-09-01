@@ -203,9 +203,11 @@ hubs à onglets dont chaque onglet re-vérifie son propre minimum (modération, 
 demandes), « gérer mon équipe », les surfaces de cast déjà `caster`, et l'agrégat transverse
 `overview-summary` qu'aucune permission unique ne décrit.
 
-**Décision produit laissée ouverte** : le Kanban interne (`manage_tasks`) reste réservé à
-owner/admin, comme avant. L'ouvrir aux bénévoles et aux arbitres serait défendable — c'est là que
-vivent les tâches du jour — mais c'est un élargissement, donc un choix, pas un effet de bord.
+**Décision produit prise le 2026-09-01** : le Kanban interne (`manage_tasks`) est ouvert au
+**bénévole**, pas à l'arbitre. C'est là que vivent les tâches du jour, et quelqu'un qui vient tenir
+un poste a besoin de savoir ce qu'il y a à faire. L'asymétrie est assumée : ces rôles ne forment
+pas une échelle — un arbitre est sur les matchs, un bénévole sur le stand. La recherche ⌘K suit
+automatiquement, puisqu'elle filtre sur la permission de la page.
 
 **Risque assumé.** C'est un lot L qui touche 68 pages. On livre le **socle** (catalogue, helpers,
 tests, mapping rétrocompatible) avant le 14/09 pour pouvoir créer des bénévoles ; la migration

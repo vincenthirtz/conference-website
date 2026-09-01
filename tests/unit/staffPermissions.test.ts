@@ -67,8 +67,14 @@ describe('périmètre des rôles historiques', () => {
 });
 
 describe('rôles du lot A2', () => {
-  it('un bénévole ne peut QUE tenir le check-in', () => {
-    expect(staffPermissionsFor('helper')).toEqual(['run_checkin']);
+  it('un bénévole tient le check-in et le tableau de tâches, rien d’autre', () => {
+    // Décision produit du 2026-09-01 : le Kanban est ouvert au bénévole (c'est
+    // là que vivent les tâches du jour), pas à l'arbitre — ces deux rôles ne
+    // forment pas une échelle mais deux jeux de droits distincts.
+    expect(staffPermissionsFor('helper')).toEqual([
+      'run_checkin',
+      'manage_tasks',
+    ]);
     expect(roleHasStaffPermission('helper', 'manage_teams')).toBe(false);
     expect(roleHasStaffPermission('helper', 'manage_settings')).toBe(false);
     expect(roleHasStaffPermission('helper', 'arbitrate_matches')).toBe(false);
@@ -79,6 +85,8 @@ describe('rôles du lot A2', () => {
       ['arbitrate_matches', 'run_checkin'].sort()
     );
     expect(roleHasStaffPermission('referee', 'manage_tournaments')).toBe(false);
+    // L'asymétrie est voulue : le Kanban va au bénévole, pas à l'arbitre.
+    expect(roleHasStaffPermission('referee', 'manage_tasks')).toBe(false);
   });
 
   it('ils ne franchissent AUCUNE garde héritée par rang', () => {

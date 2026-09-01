@@ -153,11 +153,10 @@ describe('filtrage par permission — ce qui NE doit PAS apparaître', () => {
     expect(kinds.has('team')).toBe(false);
     expect(kinds.has('tournament')).toBe(false);
     expect(kinds.has('ticket')).toBe(false);
-    // Le Kanban non plus : sa page est réservée (`manage_tasks`), et une
-    // recherche qui remonte ce qu'on ne peut pas ouvrir est exactement le
-    // défaut que ce filtrage évite. Ouvrir le Kanban aux bénévoles serait une
-    // décision produit, pas un effet de bord de la recherche.
-    expect(kinds.has('task')).toBe(false);
+    // Le Kanban, si : décision produit du 2026-09-01, le bénévole l'a
+    // (`manage_tasks`). La recherche suit la permission de la page — c'est tout
+    // l'intérêt de la faire filtrer par elle et non par une liste à part.
+    expect(kinds.has('task')).toBe(true);
   });
 
   it('un caster ne voit pas les tickets support', async () => {
