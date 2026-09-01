@@ -642,7 +642,11 @@ async function runLineupReminderStep(
   const pending = sides.filter((s) => !validated.has(s.teamId as string));
   if (pending.length === 0) return;
 
-  const lineupUrl = `${SITE_URL.replace(/\/$/, '')}/player/matches`;
+  // Le rappel de feuille de match ouvre LE match concerné (fil du match, lot J1
+  // de docs/PLAN-espace-joueur.md) et non plus la liste « Mes matchs » : à 30
+  // minutes du coup d'envoi, faire chercher la bonne ligne dans une liste est
+  // exactement le geste qu'on veut éviter.
+  const lineupUrl = `${SITE_URL.replace(/\/$/, '')}/player/match/${match.id}`;
 
   await Promise.allSettled(
     pending.map((s) =>

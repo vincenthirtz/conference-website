@@ -98,8 +98,9 @@ partageable dans le fil Discord du match (le bot en ouvre déjà un — `service
       un geste que le serveur refusera (`permissions` renvoyées par la route).
 - [x] `/player/checkin`, le CTA du dashboard, `NextMatchCard` et « Mes matchs » pointent dessus ;
       aucune route supprimée.
-- [ ] Le lien part avec la notification push J-1 et dans le fil Discord du match. **Reste à faire**
-      (cron de rappel côté site + `services/discord-bot/match-thread.js` côté bot).
+- [x] Le lien part avec les notifications push de match (`playerUrlForEvent` route désormais
+      `checkin.opened` / `match.*` vers le fil), avec le rappel de feuille de match
+      (`utils/checkin.ts`) et dans l'embed du thread Discord (`embed-helpers.js`, repo bot).
 - [x] Une joueuse non capitaine y voit l'état (check-in fait, score rapporté) sans aucun bouton.
 - [x] e2e : `tests/e2e/player-match-thread.spec.ts`, viewport mobile, 4 cas.
 

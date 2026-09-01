@@ -76,9 +76,13 @@ export function isWebPushEventType(value: string): value is WebPushEventType {
  * Renvoie l'URL côté joueuse pour un event donné, ou `null` si l'event n'a
  * pas d'audience player (le dispatcher ne tente alors pas de fanout player).
  *
- * V1 : on route les events match-related vers `/player` (pas de page de
- * détail match côté joueuse). Le SW gère la navigation au clic et l'auth
- * player redirigera vers `/login` si besoin.
+ * Les events de match pointent le FIL DU MATCH (`/player/match/[id]`, lot J1
+ * de docs/PLAN-espace-joueur.md) : la notification qui dit « ton check-in est
+ * ouvert » doit ouvrir l'écran où l'on check, pas un tableau de bord où il
+ * faut ensuite chercher. Jusqu'à ce lot, cette page de détail n'existait pas
+ * et tout retombait sur `/player` — ce repli reste pour un event de match sans
+ * identifiant exploitable. Le SW gère la navigation au clic, et l'auth player
+ * redirige vers `/login` si besoin.
  */
 export function playerUrlForEvent(
   eventName: string,
@@ -88,8 +92,10 @@ export function playerUrlForEvent(
     case 'match.starting':
     case 'match.finished':
     case 'match.score_reported':
-    case 'checkin.opened':
-      return '/player';
+    case 'checkin.opened': {
+      const matchId = matchIdOf(unwrap(payload));
+      return matchId ? `/player/match/${matchId}` : '/player';
+    }
     case 'scrim.planning.opened':
     case 'scrim.planning.reminder':
     case 'scrim.planning.validated': {
@@ -261,8 +267,13 @@ function scrimPlanningLabel(payload: EventPayload): string {
   return `${scrimTeamName(payload, 'team1')} vs ${scrimTeamName(payload, 'team2')}`;
 }
 
+/** Identifiant de match porté par le payload, quelle que soit sa casse. */
+function matchIdOf(payload: EventPayload): string | null {
+  return str(payload, 'match_id') || str(payload, 'matchId');
+}
+
 function matchUrl(payload: EventPayload): string {
-  const matchId = str(payload, 'match_id') || str(payload, 'matchId');
+  const matchId = matchIdOf(payload);
   if (matchId) return `/admin/matches/${matchId}`;
   return '/admin/matches';
 }

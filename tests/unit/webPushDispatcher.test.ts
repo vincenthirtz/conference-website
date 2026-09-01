@@ -39,6 +39,7 @@ import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
 import handler, {
   runWebPushDispatcher,
 } from '../../pages/api/cron/web-push-dispatch';
+import { playerUrlForEvent } from '../../utils/webPushEvents';
 
 const TENANT_A = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const TENANT_B = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
@@ -919,5 +920,40 @@ describe('cross-tenant pole admin', () => {
     expect(targets).toContain('https://push.example/b');
     expect(targets).toContain('https://push.example/pole');
     expect(targets).not.toContain('https://push.example/a');
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * URL joueuse des events de match — lot J1 (docs/PLAN-espace-joueur.md).
+ *
+ * Avant l'existence du fil du match, TOUT event de match renvoyait `/player` :
+ * la notification « ton check-in est ouvert » ouvrait un tableau de bord où il
+ * fallait ensuite retrouver le match. Elle ouvre désormais le match lui-même —
+ * et retombe sur `/player` seulement quand le payload ne porte pas d'id, ce qui
+ * arrive avec les emitters historiques.
+ * ------------------------------------------------------------------------- */
+
+describe('playerUrlForEvent — events de match', () => {
+  const MATCH_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+
+  it('ouvre le fil du match quand le payload porte un id (forme envelope)', () => {
+    expect(
+      playerUrlForEvent('checkin.opened', { data: { match_id: MATCH_ID } })
+    ).toBe(`/player/match/${MATCH_ID}`);
+  });
+
+  it('accepte aussi la forme plate et la casse camelCase', () => {
+    expect(playerUrlForEvent('match.starting', { matchId: MATCH_ID })).toBe(
+      `/player/match/${MATCH_ID}`
+    );
+  });
+
+  it('retombe sur /player sans identifiant de match', () => {
+    expect(playerUrlForEvent('match.finished', {})).toBe('/player');
+  });
+
+  it('ne touche pas aux autres familles d’events', () => {
+    expect(playerUrlForEvent('scrim.search.matched', {})).toBe('/player/teams');
+    expect(playerUrlForEvent('team.weekly.recap', {})).toBe('/player');
   });
 });
