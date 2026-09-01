@@ -7,6 +7,7 @@ import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { useToast } from '@/components/Toast';
 import AlertBanner from '@/components/admin/AlertBanner';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
 import EmptyState from '@/components/admin/EmptyState';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -292,6 +293,40 @@ function AdminBillingPage({ staff }: Props) {
   const loading =
     tenantLoading || (tenantId !== null && data === null && error === null);
 
+  const paymentColumns: DataTableColumn<PaymentRow>[] = [
+    {
+      key: 'date',
+      header: t.colDate,
+      value: (p) => p.paidAt ?? '',
+      className: 'text-neutral-300',
+      render: (p) => <>{formatDate(p.paidAt)}</>,
+    },
+    {
+      key: 'plan',
+      header: t.colPlan,
+      value: (p) => p.plan,
+      render: (p) => (
+        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] uppercase tracking-wider text-neutral-300">
+          {p.plan}
+        </span>
+      ),
+    },
+    {
+      key: 'amount',
+      header: t.colAmount,
+      value: (p) => p.amountCents,
+      headerClassName: 'text-right',
+      className: 'text-right font-medium text-white',
+      render: (p) => <>{formatAmount(p.amountCents)}</>,
+    },
+    {
+      key: 'helloasso',
+      header: t.colHelloasso,
+      value: (p) => String(p.helloassoPaymentId),
+      className: 'font-mono text-xs text-purple-300',
+    },
+  ];
+
   return (
     <>
       <Head>
@@ -497,6 +532,102 @@ function AdminBillingPage({ staff }: Props) {
                   <h2 className="text-lg font-semibold mb-4">
                     {t.paymentsHeading}
                   </h2>
+                  <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/50 p-4 backdrop-blur">
+                    {/* Historique de paiement — kit partagé (lot A5). L'export
+                        CSV arrive avec, et c'est justement le tableau qu'on
+                        veut sortir pour la compta. */}
+                    <DataTable<PaymentRow>
+                      rows={data.payments}
+                      columns={paymentColumns}
+                      rowKey={(p) => String(p.id)}
+                      loading={false}
+                      error={null}
+                      emptyTitle={t.paymentsEmptyTitle}
+                      emptyMessage={t.paymentsEmptyDesc}
+                      exportFilename="paiements"
+                    />
+                  </div>
+                </section>
+              )}
+
+              {/* Catalog / upgrade */}
+              {canSelfServeBill && (
+                <section data-testid="billing-catalog">
+                  <h2 className="text-lg font-semibold mb-4">
+                    {t.catalogHeading}
+                  </h2>
+                  {!isOwner && (
+                    <p className="mb-4 text-sm text-neutral-400">
+                      {t.ownerOnlyNote}
+                    </p>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {data.catalog.map((item) => {
+                      const isCurrent = data.plan === item.plan;
+                      const features = getPlanFeatures(item.plan);
+                      const busy = checkoutPlan === item.plan;
+                      return (
+                        <div
+                          key={item.plan}
+                          className={`rounded-2xl border p-6 flex flex-col ${
+                            isCurrent
+                              ? 'border-emerald-500/40 bg-emerald-500/5'
+                              : 'border-neutral-700/50 bg-neutral-800/50'
+                          }`}
+                          data-testid={`billing-plan-${item.plan}`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <h3 className="text-xl font-bold">
+                                {item.label}
+                              </h3>
+                              <p className="mt-1">
+                                <span className="text-2xl font-bold">
+                                  {item.priceEur} €
+                                </span>
+                                <span className="text-sm text-neutral-400">
+                                  {' '}
+                                  {t.perYear}
+                                </span>
+                              </p>
+                            </div>
+                            {isCurrent && (
+                              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
+                                {t.currentBadge}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="mt-5 flex-1">
+                            {renderCapabilities(features, `cat-${item.plan}`)}
+                          </div>
+
+                          <div className="mt-6">
+                            <button
+                              type="button"
+                              onClick={() => handleCheckout(item.plan)}
+                              disabled={!isOwner || busy}
+                              title={!isOwner ? t.ownerOnlyNote : undefined}
+                              className="w-full px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-semibold text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
+                              data-testid={`billing-checkout-${item.plan}`}
+                            >
+                              {busy ? t.redirecting : ctaLabel(item.plan)}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
+              {/* Payment history — l'association (foundation) est hors
+                  facturation : pas d'historique commercial. */}
+              {!isAssociationPlan && (
+                <section data-testid="billing-payments">
+                  <h2 className="text-lg font-semibold mb-4">
+                    {t.paymentsHeading}
+                  </h2>
                   <div className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
                     {data.payments.length === 0 ? (
                       <EmptyState
@@ -559,6 +690,8 @@ function AdminBillingPage({ staff }: Props) {
   );
 }
 
-export const getServerSideProps = withStaffPage({ permission: 'manage_billing' });
+export const getServerSideProps = withStaffPage({
+  permission: 'manage_billing',
+});
 
 export default AdminBillingPage;

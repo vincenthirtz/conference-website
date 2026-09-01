@@ -11,6 +11,11 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import AlertBanner from '@/components/admin/AlertBanner';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import EmptyState from '@/components/admin/EmptyState';
+import DataTable from '@/components/admin/DataTable';
+import {
+  buildGuildColumns,
+  buildStaffColumns,
+} from '@/components/admin/tenants/tenantTableColumns';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import BotSecretsRevealModal from '@/components/admin/BotSecretsRevealModal';
 import Tabs, {
@@ -281,6 +286,13 @@ function AdminTenantDetailPage({ tenantId }: Props) {
       addToast((err as Error)?.message || t.errorRemoveStaff, 'error');
     }
   };
+
+  const guildColumns = buildGuildColumns({ t, tenantId, formatDate });
+  const staffColumns = buildStaffColumns({
+    t,
+    formatDate,
+    onRemove: handleRemoveStaff,
+  });
 
   return (
     <>
@@ -716,52 +728,15 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                       }
                     />
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
-                          <tr>
-                            <th scope="col" className="px-4 py-3 text-left">
-                              {t.colGuildId}
-                            </th>
-                            <th scope="col" className="px-4 py-3 text-left">
-                              {t.colGuildName}
-                            </th>
-                            <th scope="col" className="px-4 py-3 text-left">
-                              {t.colJoinedAt}
-                            </th>
-                            <th scope="col" className="px-4 py-3 text-right">
-                              {t.colActions}
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-neutral-700/50">
-                          {data.guilds.map((g) => (
-                            <tr
-                              key={g.guild_id}
-                              className="hover:bg-neutral-700/30 transition-colors"
-                            >
-                              <td className="px-4 py-3 font-mono text-xs text-purple-300">
-                                {g.guild_id}
-                              </td>
-                              <td className="px-4 py-3 text-white">
-                                {g.guild_name ?? '—'}
-                              </td>
-                              <td className="px-4 py-3 text-neutral-400 text-xs">
-                                {formatDate(g.joined_at)}
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <Link
-                                  href={`/admin/tenants/${tenantId}/discord-config/${g.guild_id}`}
-                                  className="px-3 py-1.5 rounded-lg border border-neutral-600 hover:border-neutral-500 text-sm transition-colors"
-                                >
-                                  {t.configure}
-                                </Link>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <DataTable<GuildRow>
+                      rows={data.guilds}
+                      columns={guildColumns}
+                      rowKey={(g) => g.guild_id}
+                      loading={false}
+                      error={null}
+                      emptyTitle={t.discordEmptyTitle}
+                      exportFilename="serveurs-discord"
+                    />
                   )}
                 </section>
               )}
@@ -827,61 +802,16 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                         description={t.staffEmptyDesc}
                       />
                     ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
-                            <tr>
-                              <th scope="col" className="px-4 py-3 text-left">
-                                {t.colStaffName}
-                              </th>
-                              <th scope="col" className="px-4 py-3 text-left">
-                                {t.colStaffEmail}
-                              </th>
-                              <th scope="col" className="px-4 py-3 text-left">
-                                {t.colStaffRole}
-                              </th>
-                              <th scope="col" className="px-4 py-3 text-left">
-                                {t.colAddedAt}
-                              </th>
-                              <th scope="col" className="px-4 py-3 text-right">
-                                {t.colActions}
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-neutral-700/50">
-                            {data.staff.map((s) => (
-                              <tr
-                                key={s.staff_id}
-                                className="hover:bg-neutral-700/30 transition-colors"
-                              >
-                                <td className="px-4 py-3 text-white">
-                                  {s.display_name ?? '—'}
-                                </td>
-                                <td className="px-4 py-3 text-neutral-300">
-                                  {s.email ?? '—'}
-                                </td>
-                                <td className="px-4 py-3">
-                                  <span className="px-2 py-0.5 rounded-full text-[11px] uppercase tracking-wider bg-white/5 border border-white/10 text-neutral-300">
-                                    {s.role}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 text-neutral-400 text-xs">
-                                  {formatDate(s.added_at)}
-                                </td>
-                                <td className="px-4 py-3 text-right">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveStaff(s)}
-                                    className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-sm transition-colors"
-                                  >
-                                    {t.removeStaff}
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                      <DataTable<StaffRow>
+                        rows={data.staff}
+                        columns={staffColumns}
+                        rowKey={(row) => row.staff_id}
+                        loading={false}
+                        error={null}
+                        emptyTitle={t.staffEmptyTitle}
+                        emptyMessage={t.staffEmptyDesc}
+                        exportFilename="staff-tenant"
+                      />
                     )}
                   </section>
                 </div>

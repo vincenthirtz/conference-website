@@ -23,7 +23,7 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import AlertBanner from '@/components/admin/AlertBanner';
 import EmptyState from '@/components/admin/EmptyState';
-import LoadingSpinner from '@/components/admin/LoadingSpinner';
+import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { logger } from '@/utils/logger';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -193,8 +193,6 @@ export default function TenantRequestsPanel({ currentStaffDiscordId }: Props) {
   const total = data?.total ?? 0;
   const pageStart = total === 0 ? 0 : offset + 1;
   const pageEnd = Math.min(offset + visibleRequests.length, total);
-  const hasPrev = offset > 0;
-  const hasNext = offset + visibleRequests.length < total;
 
   const openReject = useCallback(
     (row: TenantRequestRow) => {
@@ -284,6 +282,131 @@ export default function TenantRequestsPanel({ currentStaffDiscordId }: Props) {
     });
   }, [data, total, pageStart, pageEnd, t]);
 
+  const columns: DataTableColumn<TenantRequestRow>[] = [
+    {
+      key: 'status',
+      header: t.colStatus,
+      value: (row) => STATUS_BADGE[row.status].label,
+      className: 'align-top',
+      render: (row) => (
+        <span>
+          <span
+            className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[row.status].className}`}
+          >
+            {STATUS_BADGE[row.status].label}
+          </span>
+          {row.rejectionReason && (
+            <span
+              className="mt-1 block max-w-[180px] text-[11px] text-red-300/80"
+              title={row.rejectionReason}
+            >
+              {row.rejectionReason}
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: 'slug',
+      header: t.colSlug,
+      value: (row) => row.requestedSlug,
+      className: 'align-top font-mono text-xs text-purple-300',
+    },
+    {
+      key: 'name',
+      header: t.colName,
+      value: (row) => row.requestedName,
+      className: 'align-top font-medium text-white',
+    },
+    {
+      key: 'email',
+      header: t.colEmail,
+      value: (row) => row.requesterEmail ?? '',
+      className: 'align-top text-xs text-neutral-300',
+    },
+    {
+      key: 'discord',
+      header: t.colDiscord,
+      value: (row) =>
+        row.requesterDiscordDisplayName ?? row.requesterDiscordUserId ?? '',
+      className: 'align-top text-xs text-neutral-300',
+      render: (row) => {
+        const isSelf =
+          currentStaffDiscordId !== null &&
+          row.requesterDiscordUserId === currentStaffDiscordId;
+        return (
+          <span className="flex flex-col gap-0.5">
+            <span>
+              {row.requesterDiscordDisplayName ?? '—'}
+              {isSelf && (
+                <span className="ml-1.5 rounded-full border border-purple-500/40 bg-purple-600/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-purple-200">
+                  {t.selfBadge}
+                </span>
+              )}
+            </span>
+            <span className="font-mono text-[11px] text-neutral-500">
+              {row.requesterDiscordUserId}
+            </span>
+          </span>
+        );
+      },
+    },
+    {
+      key: 'created',
+      header: t.colCreated,
+      value: (row) => row.createdAt ?? '',
+      className: 'align-top text-xs text-neutral-400',
+      render: (row) => <>{formatDateTime(row.createdAt)}</>,
+    },
+    {
+      key: 'tenant',
+      header: t.colTenant,
+      sortable: false,
+      className: 'align-top',
+      render: (row) =>
+        row.createdTenantId ? (
+          <Link
+            href={`/admin/tenants/${row.createdTenantId}`}
+            className="text-xs font-medium text-emerald-300 underline decoration-dotted underline-offset-4 hover:text-emerald-200"
+          >
+            {t.viewTenant}
+          </Link>
+        ) : (
+          <span className="text-xs text-neutral-600">—</span>
+        ),
+    },
+    {
+      key: 'actions',
+      header: t.colActions,
+      sortable: false,
+      headerClassName: 'text-right',
+      className: 'align-top text-right',
+      render: (row) =>
+        isPending(row.status) ? (
+          <span className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => openReject(row)}
+              className="rounded-lg border border-red-500/40 px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/10"
+              data-testid={`reject-${row.id}`}
+            >
+              {t.reject}
+            </button>
+            <button
+              type="button"
+              onClick={() => openExpire(row)}
+              className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs font-medium text-neutral-200 transition-colors hover:bg-neutral-700"
+              data-testid={`expire-${row.id}`}
+            >
+              {t.expire}
+            </button>
+          </span>
+        ) : (
+          <span className="text-xs italic text-neutral-600">{t.readOnly}</span>
+        ),
+    },
+  ];
+
   return (
     <>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -329,177 +452,27 @@ export default function TenantRequestsPanel({ currentStaffDiscordId }: Props) {
       </section>
 
       {/* List */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-        {data === null ? (
-          <div className="py-16">
-            <LoadingSpinner label={t.loadingRequests} />
-          </div>
-        ) : visibleRequests.length === 0 ? (
-          <EmptyState
-            title={t.emptyTitle}
-            description={status === 'all' ? t.emptyDescAll : t.emptyDescFilter}
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
-                <tr>
-                  <th scope="col" className="px-4 py-3 text-left">
-                    {t.colStatus}
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left">
-                    {t.colSlug}
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left">
-                    {t.colName}
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left">
-                    {t.colEmail}
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left">
-                    {t.colDiscord}
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left">
-                    {t.colCreated}
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left">
-                    {t.colTenant}
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-right">
-                    {t.colActions}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-700/50">
-                {visibleRequests.map((row) => {
-                  const badge = STATUS_BADGE[row.status];
-                  const pending = isPending(row.status);
-                  const isSelf =
-                    currentStaffDiscordId !== null &&
-                    row.requesterDiscordUserId === currentStaffDiscordId;
-                  return (
-                    <tr
-                      key={row.id}
-                      className="hover:bg-neutral-700/30 transition-colors"
-                      data-testid={`tenant-request-row-${row.id}`}
-                    >
-                      <td className="px-4 py-3 align-top">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded-full border text-xs font-medium ${badge.className}`}
-                        >
-                          {badge.label}
-                        </span>
-                        {row.rejectionReason && (
-                          <p
-                            className="mt-1 text-[11px] text-red-300/80 max-w-[180px]"
-                            title={row.rejectionReason}
-                          >
-                            {row.rejectionReason}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-purple-300 align-top">
-                        {row.requestedSlug}
-                      </td>
-                      <td className="px-4 py-3 font-medium text-white align-top">
-                        {row.requestedName}
-                      </td>
-                      <td className="px-4 py-3 text-neutral-300 text-xs align-top">
-                        {row.requesterEmail}
-                      </td>
-                      <td className="px-4 py-3 text-neutral-300 text-xs align-top">
-                        <div className="flex flex-col gap-0.5">
-                          <span>
-                            {row.requesterDiscordDisplayName ?? '—'}
-                            {isSelf && (
-                              <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-purple-600/30 border border-purple-500/40 text-purple-200 text-[10px] font-semibold uppercase">
-                                {t.selfBadge}
-                              </span>
-                            )}
-                          </span>
-                          <span className="font-mono text-[11px] text-neutral-500">
-                            {row.requesterDiscordUserId}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-neutral-400 text-xs align-top">
-                        {formatDateTime(row.createdAt)}
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        {row.createdTenantId ? (
-                          <Link
-                            href={`/admin/tenants/${row.createdTenantId}`}
-                            className="text-emerald-300 hover:text-emerald-200 text-xs font-medium underline decoration-dotted underline-offset-4"
-                          >
-                            {t.viewTenant}
-                          </Link>
-                        ) : (
-                          <span className="text-neutral-600 text-xs">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        <div className="flex justify-end gap-2">
-                          {pending ? (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => openReject(row)}
-                                className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/10 text-xs font-medium transition-colors"
-                                data-testid={`reject-${row.id}`}
-                              >
-                                {t.reject}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => openExpire(row)}
-                                className="px-3 py-1.5 rounded-lg border border-neutral-600 text-neutral-200 hover:bg-neutral-700 text-xs font-medium transition-colors"
-                                data-testid={`expire-${row.id}`}
-                              >
-                                {t.expire}
-                              </button>
-                            </>
-                          ) : (
-                            <span className="text-neutral-600 text-xs italic">
-                              {t.readOnly}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+      {/* Demandes de tenant — kit partagé (lot A5). L'écran garde ses filtres
+          de statut ; la table apporte colonnes, export et pagination. */}
+      <section className="rounded-2xl border border-neutral-700/50 bg-neutral-800/50 p-4 backdrop-blur">
+        <DataTable<TenantRequestRow>
+          rows={visibleRequests}
+          columns={columns}
+          rowKey={(row) => row.id}
+          rowTestId={(row) => `tenant-request-row-${row.id}`}
+          loading={data === null}
+          error={null}
+          emptyTitle={t.emptyTitle}
+          emptyMessage={status === 'all' ? t.emptyDescAll : t.emptyDescFilter}
+          exportFilename="demandes-tenant"
+          serverPagination={{
+            offset,
+            limit: PAGE_SIZE,
+            total,
+            onOffsetChange: setOffset,
+          }}
+        />
       </section>
-
-      {/* Pagination */}
-      {data !== null && total > PAGE_SIZE && (
-        <div className="mt-4 flex items-center justify-between text-sm text-neutral-400">
-          <span>{summary}</span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
-              disabled={!hasPrev || refreshing}
-              className="px-3 py-1.5 rounded-lg border border-neutral-700 hover:border-neutral-500 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium transition-colors"
-              data-testid="pagination-prev"
-            >
-              {t.prev}
-            </button>
-            <button
-              type="button"
-              onClick={() => setOffset((o) => o + PAGE_SIZE)}
-              disabled={!hasNext || refreshing}
-              className="px-3 py-1.5 rounded-lg border border-neutral-700 hover:border-neutral-500 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium transition-colors"
-              data-testid="pagination-next"
-            >
-              {t.next}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Reject modal */}
       {rejectTarget && (

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
 import nsAdminStatsMaps from '@/lib/i18n/locales/admin-fr/adminStatsMaps';
 
 type MapStatsRow = {
@@ -110,6 +111,104 @@ export default function MapStatsPanel() {
 
     window.location.href = '/api/admin/stats/maps?' + params.toString();
   }
+
+  const columns: DataTableColumn<MapStatsRow>[] = [
+    {
+      key: 'rank',
+      header: '#',
+      sortable: false,
+      render: (row) => {
+        const rank = offset + stats.indexOf(row) + 1;
+        return (
+          <span
+            className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold ${rankBadge(rank)}`}
+          >
+            {rank}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'map',
+      header: t.thMap,
+      value: (row) => row.map_name,
+      className: 'font-semibold text-white',
+    },
+    {
+      key: 'played',
+      header: t.thMatchesPlayed,
+      headerClassName: 'text-center',
+      className: 'text-center',
+      value: (row) => row.matches_played,
+      render: (row) => (
+        <span className="rounded-lg bg-neutral-700/50 px-2 py-1 text-sm font-medium text-neutral-200">
+          {row.matches_played}
+        </span>
+      ),
+    },
+    {
+      key: 'wins_t1',
+      header: t.thWinsTeam1,
+      headerClassName: 'text-center',
+      className: 'text-center',
+      value: (row) => row.matches_won_attack ?? 0,
+      render: (row) => (
+        <span className="rounded-lg bg-emerald-600/20 px-2 py-1 text-sm font-medium text-emerald-300">
+          {row.matches_won_attack ?? 0}
+        </span>
+      ),
+    },
+    {
+      key: 'wins_t2',
+      header: t.thWinsTeam2,
+      headerClassName: 'text-center',
+      className: 'text-center',
+      value: (row) => row.matches_won_defense ?? 0,
+      render: (row) => (
+        <span className="rounded-lg bg-sky-600/20 px-2 py-1 text-sm font-medium text-sky-300">
+          {row.matches_won_defense ?? 0}
+        </span>
+      ),
+    },
+    {
+      key: 'winrate',
+      header: t.thWinrate,
+      headerClassName: 'text-center',
+      className: 'text-center',
+      value: (row) => row.match_winrate_attack ?? 0,
+      render: (row) => (
+        <span className="flex items-center justify-center gap-1">
+          <span className="rounded bg-emerald-600/20 px-2 py-0.5 text-xs font-medium text-emerald-300">
+            {formatPercent(row.match_winrate_attack)}
+          </span>
+          <span className="text-neutral-500">/</span>
+          <span className="rounded bg-sky-600/20 px-2 py-0.5 text-xs font-medium text-sky-300">
+            {formatPercent(row.match_winrate_defense)}
+          </span>
+        </span>
+      ),
+    },
+    {
+      key: 'rounds',
+      header: t.thRoundsTotal,
+      headerClassName: 'text-center',
+      className: 'text-center font-medium',
+      value: (row) => row.rounds_played ?? 0,
+      render: (row) => <>{row.rounds_played ?? '—'}</>,
+    },
+    {
+      key: 'avg_rounds',
+      header: t.thAvgRounds,
+      headerClassName: 'text-center',
+      className: 'text-center',
+      value: (row) => row.avg_total_rounds ?? 0,
+      render: (row) => (
+        <span className="rounded-lg bg-purple-600/20 px-2 py-1 text-sm font-medium text-purple-300">
+          {formatNumber(row.avg_total_rounds)}
+        </span>
+      ),
+    },
+  ];
 
   return (
     <>
@@ -271,219 +370,19 @@ export default function MapStatsPanel() {
       )}
 
       {/* Table */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-neutral-700/50 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <svg
-              className="w-5 h-5 text-neutral-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-              />
-            </svg>
-            <span className="font-semibold">
-              {loading
-                ? t.loading
-                : format(t.mapsCount, {
-                    count: `${stats.length}${total != null ? ` / ${total}` : ''}`,
-                  })}
-            </span>
-          </div>
-          <span className="text-xs text-neutral-500">{t.tableCaption}</span>
-        </div>
-
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-          </div>
-        ) : stats.length === 0 ? (
-          <div className="text-center py-20 text-neutral-400">
-            <svg
-              className="w-12 h-12 mx-auto mb-4 text-neutral-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-              />
-            </svg>
-            {t.emptyState}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-neutral-900/50 text-neutral-400">
-                <tr>
-                  <th scope="col" className="px-4 py-3 text-left font-medium">
-                    #
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left font-medium">
-                    {t.thMap}
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-center font-medium">
-                    {t.thMatchesPlayed}
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-center font-medium">
-                    {t.thWinsTeam1}
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-center font-medium">
-                    {t.thWinsTeam2}
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-center font-medium">
-                    {t.thWinrate}
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-center font-medium">
-                    {t.thRoundsTotal}
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-center font-medium">
-                    {t.thAvgRounds}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-700/50">
-                {stats.map((row, index) => {
-                  const rank = offset + index + 1;
-
-                  return (
-                    <tr
-                      key={`${row.map_name}-${index}`}
-                      className="hover:bg-neutral-700/30 transition-colors"
-                    >
-                      {/* Rank */}
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center justify-center w-8 h-8 rounded-lg text-sm font-bold ${rankBadge(rank)}`}
-                        >
-                          {rank}
-                        </span>
-                      </td>
-
-                      {/* Map name */}
-                      <td className="px-4 py-3">
-                        <div className="font-semibold text-white">
-                          {row.map_name}
-                        </div>
-                      </td>
-
-                      {/* Matches played */}
-                      <td className="px-4 py-3 text-center">
-                        <span className="px-2 py-1 rounded-lg bg-neutral-700/50 text-neutral-200 text-sm font-medium">
-                          {row.matches_played}
-                        </span>
-                      </td>
-
-                      {/* Wins Team 1 */}
-                      <td className="px-4 py-3 text-center">
-                        <span className="px-2 py-1 rounded-lg bg-emerald-600/20 text-emerald-300 text-sm font-medium">
-                          {row.matches_won_attack ?? 0}
-                        </span>
-                      </td>
-
-                      {/* Wins Team 2 */}
-                      <td className="px-4 py-3 text-center">
-                        <span className="px-2 py-1 rounded-lg bg-sky-600/20 text-sky-300 text-sm font-medium">
-                          {row.matches_won_defense ?? 0}
-                        </span>
-                      </td>
-
-                      {/* Winrate T1 / T2 */}
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <span className="px-2 py-0.5 rounded bg-emerald-600/20 text-emerald-300 text-xs font-medium">
-                            {formatPercent(row.match_winrate_attack)}
-                          </span>
-                          <span className="text-neutral-500">/</span>
-                          <span className="px-2 py-0.5 rounded bg-sky-600/20 text-sky-300 text-xs font-medium">
-                            {formatPercent(row.match_winrate_defense)}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Total rounds */}
-                      <td className="px-4 py-3 text-center">
-                        <span className="font-medium">
-                          {row.rounds_played ?? '—'}
-                        </span>
-                      </td>
-
-                      {/* Avg rounds per match */}
-                      <td className="px-4 py-3 text-center">
-                        <span className="px-2 py-1 rounded-lg bg-purple-600/20 text-purple-300 text-sm font-medium">
-                          {formatNumber(row.avg_total_rounds)}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+      {/* Classement des maps — kit partagé (lot A5). Même forme que le
+          classement d'équipes : pagination serveur, export maison. */}
+      <section className="rounded-2xl border border-neutral-700/50 bg-neutral-800/50 p-4 backdrop-blur">
+        <DataTable<MapStatsRow>
+          rows={stats}
+          columns={columns}
+          rowKey={(row) => row.map_name}
+          loading={loading}
+          error={null}
+          emptyTitle={t.emptyState}
+          serverPagination={{ offset, limit, total, onOffsetChange: setOffset }}
+        />
       </section>
-
-      {/* Pagination */}
-      {stats.length > 0 && (
-        <div className="flex justify-between items-center mt-6">
-          <button
-            type="button"
-            disabled={offset === 0}
-            onClick={() => setOffset(Math.max(0, offset - limit))}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            {t.previous}
-          </button>
-
-          <span className="text-neutral-400 text-sm">
-            {offset + 1} – {offset + stats.length}
-            {total ? format(t.paginationOf, { total }) : ''}
-          </span>
-
-          <button
-            type="button"
-            disabled={total !== null && offset + limit >= total}
-            onClick={() => setOffset(offset + limit)}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {t.next}
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </button>
-        </div>
-      )}
     </>
   );
 }

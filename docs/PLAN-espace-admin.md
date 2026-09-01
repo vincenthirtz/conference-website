@@ -47,7 +47,7 @@
 | **A2** | Rôles staff fins (bénévole, arbitre) | 🟥 | L | ✅ livré 2026-09-01 |
 | **A3** | Rendre aux équipes ce que le staff fait à leur place | 🟧 | M | ✅ livré 2026-09-01 |
 | **A4** | Recherche globale + palette de commandes | 🟧 | M | ✅ livré 2026-09-01 |
-| **A5** | Kit de listes admin (`DataTable`) | 🟧 | L | ✅ kit livré 2026-09-01 |
+| **A5** | Kit de listes admin (`DataTable`) | 🟧 | L | ✅ livré 2026-09-01 |
 | **A6** | Journal exploitable + historique contextuel | 🟧 | M | ✅ livré 2026-09-01 |
 | **A7** | Découpe des god-components (Q018) | 🟩 | L | ✅ règle en place 2026-09-01 |
 | **A8** | Réglages scopés par tenant | 🟧 | M | ✅ livré 2026-09-01 |
@@ -287,7 +287,7 @@ besoin se confirme.
 
 ---
 
-## A5 · Kit de listes admin — ✅ KIT LIVRÉ (2026-09-01)
+## A5 · Kit de listes admin — ✅ LIVRÉ (2026-09-01)
 
 **Problème.** [`AdminListShell`](../components/admin/AdminListShell.tsx) unifie les états
 (erreur → chargement → vide → contenu) et son propre en-tête reconnaît factoriser « ~90 pages ».
@@ -308,8 +308,8 @@ réinventées) sur les écrans migrés.
 - [x] Un filtre, un tri ou une page se retrouvent dans l'URL (`useTableQueryState`, navigation
       `shallow`) : un filtre appliqué se partage et se recharge.
 - [x] Première adoption : `/admin/free-players`.
-- [ ] Actions groupées sur un endpoint idempotent journalisé — le kit les expose, aucune liste
-      migrée n'en a encore besoin.
+- [x] Actions groupées : utilisées par les équipes d'une phase (retrait groupé), avec le compte
+      dans le libellé — cliquer sur une action groupée sans savoir sur quoi est le piège classique.
 
 **Ce que la première migration a appris (et qui corrige ce plan)** : sur une PETITE liste, le kit
 est à peu près neutre en lignes (221 → 227) — les colonnes déclaratives coûtent ce que le JSX
@@ -317,7 +317,41 @@ coûtait. Ce qu'on gagne, c'est le comportement : cette page a maintenant recher
 CSV, pagination et en-têtes accessibles, qu'elle n'avait pas. Le « −100 lignes » annoncé ne vaut
 que pour les grosses listes, qui réimplémentent ces quatre choses à la main.
 
-**Reste à faire** : les neuf autres grosses listes, une par une.
+### Les neuf listes (seconde passe, 2026-09-01)
+
+| Écran | Avant → après | Ce qu'il gagne |
+|---|---|---|
+| Joueuses libres | 221 → 227 | recherche, tri, export, pagination |
+| Adhérents | 670 → 590 | export, en-têtes accessibles |
+| Classement d'équipes | 619 → 569 | pagination partagée |
+| Classement de maps | 489 → 388 | idem |
+| Clés API | 730 → 728 | recherche, export |
+| Demandes de tenant | 564 → 537 | export |
+| Équipes d'une phase | 725 → 700 | sélection multiple + action groupée du kit |
+| Facturation | 564 → 566 | export CSV des paiements (le tableau qu'on sort pour la compta) |
+| Fiche tenant (2 tables) | 916 → 846 | export, colonnes extraites en module |
+
+**Ce que chaque adoption a appris au kit** — corrigé DANS le kit, jamais dans l'écran :
+
+1. **Pagination serveur** (adhérents, classements) : la table reçoit une page déjà découpée. En
+   ce mode elle ne trie ni ne filtre côté client — le faire n'ordonnerait que la page visible et
+   se lirait comme un tri global, c'est-à-dire mentirait.
+2. **État de ligne et point d'accroche** (clés API) : `rowClassName` pour ce qui se lit sur la
+   ligne entière, `rowTestId` parce que les suites e2e s'accrochent aux lignes — sans quoi le kit
+   serait devenu une raison de ne pas tester.
+3. **Son propre vocabulaire** : les huit libellés de chrome décrivent la table, pas le métier.
+   Les faire porter par chaque écran imposait de recopier huit clés par migration.
+
+**Écarts assumés** :
+
+- Les grosses listes du back-office (équipes, tournois, demandes, logs, partenaires) rendent des
+  **cartes**, pas des tables : le kit ne les concerne pas, et les y forcer serait une refonte
+  visuelle déguisée en refactor.
+- `discord/team-channels` a un panneau de gestion dépliant par ligne : c'est une console, pas une
+  liste. L'y faire entrer demanderait une machinerie d'expansion pour un seul cas — « une
+  abstraction qui couvre tout ne couvre rien ».
+- Le classement d'équipes garde son export maison : il repart au serveur chercher 10 000 lignes,
+  là où l'export du kit n'exporterait que la page affichée.
 
 ---
 

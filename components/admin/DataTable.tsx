@@ -420,6 +420,7 @@ export default function DataTable<T>({
               type="button"
               onClick={() => goToPage(current - 1)}
               disabled={current <= 1}
+              data-testid="pagination-prev"
               className="rounded-lg border border-white/15 px-2 py-1 transition hover:bg-white/10 disabled:opacity-40"
             >
               {labels.previous}
@@ -433,6 +434,7 @@ export default function DataTable<T>({
               type="button"
               onClick={() => goToPage(current + 1)}
               disabled={current >= pageCount}
+              data-testid="pagination-next"
               className="rounded-lg border border-white/15 px-2 py-1 transition hover:bg-white/10 disabled:opacity-40"
             >
               {labels.next}
