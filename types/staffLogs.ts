@@ -66,6 +66,18 @@ export type StaffLogAction =
    * ni un geste qu'une capitaine aurait pu faire elle-même. Un compteur qu'on
    * ne peut pas lire ne mesure rien.
    */
+  /**
+   * Régie (lot A6 de docs/PLAN-espace-admin.md). Ces 22 gestes étaient
+   * journalisés sous `other` — à eux seuls le gros des 26 % du journal qui
+   * n'étaient pas typés. Le verbe précis (`start_event_run`,
+   * `reorder_event_waves`…) reste dans `payload.action` : cinq familles
+   * suffisent au filtre, vingt-deux entrées de menu déroulant, non.
+   */
+  | 'event_run_manage'
+  | 'event_segment_manage'
+  | 'event_station_manage'
+  | 'event_wave_manage'
+  | 'event_cue_manage'
   | 'team_discord_writeback'
   | 'delete_team'
   | 'register_team'

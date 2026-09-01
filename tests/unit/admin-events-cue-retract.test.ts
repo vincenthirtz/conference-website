@@ -197,7 +197,9 @@ describe('DELETE /api/admin/events/[runId]/cues/[cueId]', () => {
     // logStaffAction called once with the right entity.
     expect(logStaffActionMock).toHaveBeenCalledTimes(1);
     const logArg = logStaffActionMock.mock.calls[0][0] as any;
-    expect(logArg.action).toBe('other');
+    // Lot A6 : les gestes de régie ont un slug typé — ils formaient à eux
+    // seuls le gros du quart de journal non typé.
+    expect(logArg.action).toBe('event_cue_manage');
     expect(logArg.entity_type).toBe('event_cue');
     expect(logArg.entity_id).toBe(CUE_ACTIVE);
     expect(logArg.tenant_id).toBe(TENANT_X);

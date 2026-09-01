@@ -48,7 +48,7 @@
 | **A3** | Rendre aux équipes ce que le staff fait à leur place | 🟧 | M | ✅ livré 2026-09-01 |
 | **A4** | Recherche globale + palette de commandes | 🟧 | M | ✅ livré 2026-09-01 |
 | **A5** | Kit de listes admin (`DataTable`) | 🟧 | L | ✅ kit livré 2026-09-01 |
-| **A6** | Journal exploitable + historique contextuel | 🟧 | M | après |
+| **A6** | Journal exploitable + historique contextuel | 🟧 | M | ✅ livré 2026-09-01 |
 | **A7** | Découpe des god-components (Q018) | 🟩 | L | continu |
 | **A8** | Réglages scopés par tenant | 🟧 | M | avant le 2e tenant |
 
@@ -250,7 +250,7 @@ que pour les grosses listes, qui réimplémentent ces quatre choses à la main.
 
 ---
 
-## A6 · Journal exploitable + historique contextuel — 🟧 / M · après
+## A6 · Journal exploitable + historique contextuel — ✅ LIVRÉ (2026-09-01)
 
 **Problème.** Deux trous distincts dans la traçabilité :
 
@@ -270,9 +270,21 @@ pour les 116 lignes existantes), puis **généraliser le tiroir** : un composant
 équipe, joueuse, tournoi et ticket.
 
 **Critères d'acceptation**
-- [ ] Plus aucun nouveau `other` écrit par la régie.
-- [ ] Le tiroir apparaît sur 4 types de fiches, avec le même rendu et la même pagination.
-- [ ] Les anciennes lignes `other` restent lisibles (aucune réécriture destructive du journal).
+- [x] Plus aucun `other` écrit par la régie : les 22 appels passent sur cinq familles
+      (`event_run_manage`, `…_segment_`, `…_station_`, `…_wave_`, `…_cue_`). Le verbe précis
+      reste dans `payload.action` — cinq familles suffisent à un filtre, vingt-deux entrées de
+      menu déroulant, non.
+- [x] `GET /api/admin/entity-history` + `EntityHistoryDrawer` : générique, sur une liste FERMÉE
+      de types d'entité. Première fiche branchée : l'édition d'équipe.
+- [x] Aucune réécriture du journal : les anciennes lignes `other` restent telles quelles et
+      restent lisibles.
+
+**Choix assumé** : `MatchHistoryDrawer` n'est PAS remplacé. Il fait davantage (rattrape les logs
+`game` reliés par `payload.match_id`, décrit les écarts de score) et n'a aucune raison d'être
+appauvri pour rentrer dans le cas générique.
+
+**Reste à faire** : brancher le tiroir sur les fiches tournoi, joueuse et ticket — le composant
+et la route les acceptent déjà.
 
 ---
 

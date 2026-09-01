@@ -134,7 +134,7 @@ async function handler(
     if (ctx.staff?.id) {
       await logStaffAction({
         staff_id: ctx.staff.id,
-        action: 'other',
+        action: 'event_wave_manage',
         entity_type: 'event_wave',
         entity_id: waveId,
         tenant_id: ctx.tenantId,
@@ -161,7 +161,7 @@ async function handler(
     if (ctx.staff?.id) {
       await logStaffAction({
         staff_id: ctx.staff.id,
-        action: 'other',
+        action: 'event_wave_manage',
         entity_type: 'event_wave',
         entity_id: waveId,
         tenant_id: ctx.tenantId,

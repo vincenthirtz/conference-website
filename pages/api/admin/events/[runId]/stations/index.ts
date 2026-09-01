@@ -129,7 +129,7 @@ async function handler(
     if (ctx.staff?.id) {
       await logStaffAction({
         staff_id: ctx.staff.id,
-        action: 'other',
+        action: 'event_station_manage',
         entity_type: 'event_station',
         entity_id: inserted.id,
         tenant_id: ctx.tenantId,

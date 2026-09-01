@@ -154,7 +154,7 @@ async function postHandler(
   if (ctx.staff?.id) {
     await logStaffAction({
       staff_id: ctx.staff.id,
-      action: 'other',
+      action: 'event_cue_manage',
       entity_type: 'event_cue',
       entity_id: inserted.id,
       tenant_id: ctx.tenantId,

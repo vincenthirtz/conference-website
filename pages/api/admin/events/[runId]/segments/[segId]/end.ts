@@ -127,7 +127,7 @@ async function handler(
   if (ctx.staff?.id) {
     await logStaffAction({
       staff_id: ctx.staff.id,
-      action: 'other',
+      action: 'event_segment_manage',
       entity_type: 'event_segment',
       entity_id: segId,
       tenant_id: ctx.tenantId,

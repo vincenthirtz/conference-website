@@ -90,7 +90,7 @@ async function deleteHandler(
   if (ctx.staff?.id) {
     await logStaffAction({
       staff_id: ctx.staff.id,
-      action: 'other',
+      action: 'event_cue_manage',
       entity_type: 'event_cue',
       entity_id: cueId,
       tenant_id: ctx.tenantId,

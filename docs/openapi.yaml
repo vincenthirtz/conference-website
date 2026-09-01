@@ -17467,6 +17467,50 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/entity-history:
+    get:
+      tags:
+        - admin
+      summary: Journal staff d'UNE fiche (equipe, tournoi, joueuse, ticket, run).
+      description: |
+        Lot A6 de docs/PLAN-espace-admin.md. Le tiroir d'historique n'existait
+        que pour les matchs ; ailleurs il fallait quitter la fiche pour aller
+        filtrer le journal global.
+
+        `type` est une liste FERMEE : `entity_type` est du texte libre en base,
+        et laisser un client choisir sa valeur ferait de cette route un lecteur
+        universel du journal. La route match reste a part : elle fait davantage
+        (logs `game` relies par payload).
+      operationId: adminEntityHistory
+      security:
+        - StaffSession: []
+      parameters:
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [team, tournament, user, support_ticket, event_run]
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: '{ entityType, entityId, logs[] }'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/search:
     get:
       tags:
