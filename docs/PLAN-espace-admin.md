@@ -49,7 +49,7 @@
 | **A4** | Recherche globale + palette de commandes | 🟧 | M | ✅ livré 2026-09-01 |
 | **A5** | Kit de listes admin (`DataTable`) | 🟧 | L | ✅ kit livré 2026-09-01 |
 | **A6** | Journal exploitable + historique contextuel | 🟧 | M | ✅ livré 2026-09-01 |
-| **A7** | Découpe des god-components (Q018) | 🟩 | L | continu |
+| **A7** | Découpe des god-components (Q018) | 🟩 | L | ✅ règle en place 2026-09-01 |
 | **A8** | Réglages scopés par tenant | 🟧 | M | avant le 2e tenant |
 
 ---
@@ -288,7 +288,7 @@ et la route les acceptent déjà.
 
 ---
 
-## A7 · Découpe des god-components — 🟩 / L · continu (Q018)
+## A7 · Découpe des god-components — ✅ RÈGLE EN PLACE (2026-09-01)
 
 **Problème.** Huit fichiers dépassent 1 400 LOC, dont
 [`tournament-simulator.tsx`](../pages/admin/tournament-simulator.tsx) (3 879),
@@ -304,8 +304,17 @@ grande refonte dédiée, pas de gel non plus. Un test de garde plafonne la taill
 nouvellement créés.
 
 **Critères d'acceptation**
-- [ ] Aucun nouveau fichier > 800 LOC dans `pages/admin` (test de garde).
-- [ ] Chaque PR touchant un god-component réduit sa taille ou l'explique dans la description.
+- [x] `tests/unit/adminFileSizeGuard.test.ts` : aucun NOUVEAU fichier > 800 lignes dans
+      `pages/admin` ni `components/admin`. Les 30 fichiers déjà au-dessus sont **gelés à leur
+      taille du jour** — ils ne peuvent que rétrécir. On arrête l'hémorragie sans imposer une
+      refonte à personne.
+- [x] La règle appliquée à ce lot même : A1 avait touché
+      `pages/admin/tournament/[id]/dashboard.tsx` ; le panneau d'alertes en est sorti
+      (`components/admin/dashboard/TournamentAlerts.tsx`), **1 909 → 1 626 lignes**.
+
+**Comment la découpe est faite** : le panneau est présentationnel, le dashboard garde ce qui
+APPELLE (fetch authentifié, rafraîchissement) et lui passe des callbacks. Aucune décision métier
+n'a suivi le JSX hors de la page — c'est ce qui rend l'extraction sûre sans test de rendu.
 
 ---
 
