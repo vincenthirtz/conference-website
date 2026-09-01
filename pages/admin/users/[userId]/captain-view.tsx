@@ -120,20 +120,25 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
     setError(null);
     setNotFound(false);
     try {
-      const json = await adminFetchJson<AdminUserProfilePayload>(
-        `/api/admin/users/${encodeURIComponent(userId)}/profile`
-      );
+      // Profil et tranche d'équipe ne dépendent tous deux que de `userId` :
+      // en parallèle. Seules les demandes ci-dessous ont besoin du résultat
+      // (l'id de l'équipe), et restent donc chaînées.
+      const [json, slice] = await Promise.all([
+        adminFetchJson<AdminUserProfilePayload>(
+          `/api/admin/users/${encodeURIComponent(userId)}/profile`
+        ),
+        // Tranche d'équipe gérée par la CIBLE — même endpoint que son écran,
+        // lu via `?as=`. Sert uniquement à alimenter les actions staff
+        // (promotion) ; l'affichage du roster, lui, vient de l'écran réel
+        // monté plus bas.
+        adminFetchJson<ManagedTeamPayload>(
+          withSubjectParam('/api/admin/teams/my', userId)
+        ).catch((err) => {
+          logger.error('[admin/captain-view] managed team error:', err);
+          return null;
+        }),
+      ]);
       setProfile(json);
-
-      // Tranche d'équipe gérée par la CIBLE — même endpoint que son écran, lu
-      // via `?as=`. Sert uniquement à alimenter les actions staff (promotion) ;
-      // l'affichage du roster, lui, vient de l'écran réel monté plus bas.
-      const slice = await adminFetchJson<ManagedTeamPayload>(
-        withSubjectParam('/api/admin/teams/my', userId)
-      ).catch((err) => {
-        logger.error('[admin/captain-view] managed team error:', err);
-        return null;
-      });
       setManaged(slice);
 
       if (slice?.team?.id) {

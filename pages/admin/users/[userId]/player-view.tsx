@@ -217,22 +217,26 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
     setError(null);
     setNotFound(false);
     try {
-      const json = await adminFetchJson<AdminUserProfilePayload>(
-        `/api/admin/users/${encodeURIComponent(userId)}/profile`
-      );
-      setProfile(json);
-
-      // Demandes en attente de CETTE joueuse — endpoint admin filtrant, pas un
-      // snapshot dédié : la modération reste un geste staff.
-      try {
-        const demandes = await adminFetchJson<{ demandes: PendingDemande[] }>(
+      // Les deux lectures ne dépendent que de `userId` : les enchaîner faisait
+      // payer deux allers-retours au chargement de la fiche. En parallèle.
+      // Les demandes restent BEST-EFFORT (leur échec ne casse pas la page),
+      // d'où le `.catch` sur la seule promesse concernée plutôt qu'un
+      // `Promise.allSettled` qui masquerait aussi un profil introuvable.
+      const [json, demandes] = await Promise.all([
+        adminFetchJson<AdminUserProfilePayload>(
+          `/api/admin/users/${encodeURIComponent(userId)}/profile`
+        ),
+        // Demandes en attente de CETTE joueuse — endpoint admin filtrant, pas
+        // un snapshot dédié : la modération reste un geste staff.
+        adminFetchJson<{ demandes: PendingDemande[] }>(
           `/api/admin/demandes?userId=${encodeURIComponent(userId)}&status=pending&includeTeam=1&limit=20`
-        );
-        setPendingDemandes(demandes.demandes || []);
-      } catch (demandeErr) {
-        logger.error('[admin/player-view] demandes load error:', demandeErr);
-        setPendingDemandes([]);
-      }
+        ).catch((demandeErr) => {
+          logger.error('[admin/player-view] demandes load error:', demandeErr);
+          return { demandes: [] as PendingDemande[] };
+        }),
+      ]);
+      setProfile(json);
+      setPendingDemandes(demandes.demandes || []);
     } catch (err) {
       logger.error('[admin/player-view] load error:', err);
       if (err instanceof AdminFetchError && err.status === 404) {

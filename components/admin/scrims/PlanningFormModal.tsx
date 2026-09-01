@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import Modal from '@/components/admin/Modal';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
@@ -112,7 +112,9 @@ export default function PlanningFormModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Repart d'un formulaire vierge et (re)charge les équipes à l'ouverture.
+  // Repart d'un formulaire vierge à l'ouverture (et quand les valeurs
+  // pré-remplies changent : ouvrir la modale depuis une AUTRE ligne doit poser
+  // les bonnes équipes).
   useEffect(() => {
     if (!open) return;
     setForm({
@@ -123,12 +125,26 @@ export default function PlanningFormModal({
     });
     setError(null);
     setSubmitting(false);
+  }, [open, initialTeam1Id, initialTeam2Id]);
+
+  // La liste des équipes, elle, n'a rien à voir avec les valeurs pré-remplies :
+  // elle était pourtant rechargée à chaque ouverture ET à chaque changement de
+  // ligne d'origine. Une seule fois par montage du panneau suffit — la modale
+  // reste montée entre deux ouvertures.
+  const teamsLoadedRef = useRef(false);
+  useEffect(() => {
+    if (!open || teamsLoadedRef.current) return;
+    teamsLoadedRef.current = true;
     adminFetchJson<{ teams: TeamOption[] }>(
       '/api/admin/teams?limit=200&isActive=true'
     )
       .then((json) => setTeams(json.teams || []))
-      .catch(() => setTeams([]));
-  }, [open, adminFetchJson, initialTeam1Id, initialTeam2Id]);
+      .catch(() => {
+        setTeams([]);
+        // Échec : nouvelle tentative autorisée à la prochaine ouverture.
+        teamsLoadedRef.current = false;
+      });
+  }, [open, adminFetchJson]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

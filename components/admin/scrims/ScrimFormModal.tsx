@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import Modal from '@/components/admin/Modal';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
@@ -61,14 +61,25 @@ export default function ScrimFormModal({
     setSubmitting(false);
   }, [open, defaults]);
 
-  // Charge les équipes à l'ouverture (sans dépendre des valeurs pré-remplies).
+  // Charge les équipes à la PREMIÈRE ouverture (sans dépendre des valeurs
+  // pré-remplies). La modale reste montée quand elle est fermée : sans ce
+  // garde, chaque réouverture refaisait la même requête pour une liste qui ne
+  // bouge pas — et l'utilisateur revoyait un menu vide le temps du trajet.
+  // Le garde est un ref, pas un state : le remettre à false n'a de sens qu'au
+  // remontage du panneau, où le ref repart naturellement à zéro.
+  const teamsLoadedRef = useRef(false);
   useEffect(() => {
-    if (!open) return;
+    if (!open || teamsLoadedRef.current) return;
+    teamsLoadedRef.current = true;
     adminFetchJson<{ teams: TeamOption[] }>(
       '/api/admin/teams?limit=200&isActive=true'
     )
       .then((json) => setTeams(json.teams || []))
-      .catch(() => setTeams([]));
+      .catch(() => {
+        setTeams([]);
+        // Échec : on autorise une nouvelle tentative à la prochaine ouverture.
+        teamsLoadedRef.current = false;
+      });
   }, [open, adminFetchJson]);
 
   async function submit(e: React.FormEvent) {
