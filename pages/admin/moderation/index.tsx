@@ -9,11 +9,15 @@ import Tabs, {
 } from '@/components/admin/Tabs';
 import CommentsPanel from '@/components/admin/moderation/CommentsPanel';
 import DisputesPanel from '@/components/admin/moderation/DisputesPanel';
-import BlacklistPanel from '@/components/admin/moderation/BlacklistPanel';
-import EntityBlacklistPanel from '@/components/admin/moderation/EntityBlacklistPanel';
-import SupportPanel from '@/components/admin/moderation/SupportPanel';
 import type { StaffProps } from '@/types/admin';
 import nsAdminModeration from '@/lib/i18n/locales/admin-fr/adminModeration';
+
+import { lazyPanel } from '@/components/admin/lazyPanel';
+
+// Onglets secondaires : chargés au clic (cf. components/admin/lazyPanel).
+const BlacklistPanel = lazyPanel(() => import('@/components/admin/moderation/BlacklistPanel'));
+const EntityBlacklistPanel = lazyPanel(() => import('@/components/admin/moderation/EntityBlacklistPanel'));
+const SupportPanel = lazyPanel(() => import('@/components/admin/moderation/SupportPanel'));
 
 const ID_BASE = 'admin-moderation';
 

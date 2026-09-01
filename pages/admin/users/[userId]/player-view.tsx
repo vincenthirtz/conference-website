@@ -47,10 +47,22 @@ import Modal from '@/components/ui/Modal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import EmptyState from '@/components/ui/EmptyState';
 import Badge, { type BadgeTone } from '@/components/ui/Badge';
+import { lazyPanel } from '@/components/admin/lazyPanel';
 import { PlayerAreaProvider } from '@/components/player/PlayerAreaContext';
-import PlayerDashboardScreen from '@/components/player/screens/PlayerDashboardScreen';
-import PlayerMatchesScreen from '@/components/player/screens/PlayerMatchesScreen';
-import PlayerNotificationsScreen from '@/components/player/screens/PlayerNotificationsScreen';
+// Les trois écrans de l'espace joueur sont montés UN À LA FOIS, et jamais sur
+// l'onglet par défaut ('profil') : les importer statiquement faisait de cette
+// page le plus gros bundle admin après /admin/logs. Chargement à l'ouverture
+// de l'onglet — `ssr:false`, ils lisent leurs données côté client de toute
+// façon (page noindex).
+const PlayerDashboardScreen = lazyPanel(
+  () => import('@/components/player/screens/PlayerDashboardScreen')
+);
+const PlayerMatchesScreen = lazyPanel(
+  () => import('@/components/player/screens/PlayerMatchesScreen')
+);
+const PlayerNotificationsScreen = lazyPanel(
+  () => import('@/components/player/screens/PlayerNotificationsScreen')
+);
 import type { AdminUserProfilePayload } from '@/pages/api/admin/users/[userId]/profile';
 
 import { logger } from '../../../../utils/logger';

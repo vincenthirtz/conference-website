@@ -7,9 +7,13 @@ import Tabs, {
   tabButtonId,
 } from '@/components/admin/Tabs';
 import TeamStatsPanel from '@/components/admin/stats/TeamStatsPanel';
-import MapStatsPanel from '@/components/admin/stats/MapStatsPanel';
 import type { StaffProps } from '@/types/admin';
 import nsAdminStats from '@/lib/i18n/locales/admin-fr/adminStats';
+
+import { lazyPanel } from '@/components/admin/lazyPanel';
+
+// Onglets secondaires : chargés au clic (cf. components/admin/lazyPanel).
+const MapStatsPanel = lazyPanel(() => import('@/components/admin/stats/MapStatsPanel'));
 
 const ID_BASE = 'admin-stats';
 

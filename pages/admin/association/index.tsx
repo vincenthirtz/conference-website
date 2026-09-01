@@ -7,10 +7,14 @@ import Tabs, {
   tabButtonId,
 } from '@/components/admin/Tabs';
 import CastMembersListPanel from '@/components/admin/association/CastMembersListPanel';
-import PoleMembersListPanel from '@/components/admin/association/PoleMembersListPanel';
-import AdherentsListPanel from '@/components/admin/association/AdherentsListPanel';
 import type { StaffProps } from '@/types/admin';
 import nsAdminAssociationHub from '@/lib/i18n/locales/admin-fr/adminAssociationHub';
+
+import { lazyPanel } from '@/components/admin/lazyPanel';
+
+// Onglets secondaires : chargés au clic (cf. components/admin/lazyPanel).
+const PoleMembersListPanel = lazyPanel(() => import('@/components/admin/association/PoleMembersListPanel'));
+const AdherentsListPanel = lazyPanel(() => import('@/components/admin/association/AdherentsListPanel'));
 
 const ID_BASE = 'admin-association';
 

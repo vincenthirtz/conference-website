@@ -8,10 +8,18 @@ import Tabs, {
   tabButtonId,
 } from '@/components/admin/Tabs';
 import StaffLogsPanel from '@/components/admin/logs/StaffLogsPanel';
-import EmailLogsPanel from '@/components/admin/logs/EmailLogsPanel';
-import DiscordLogsPanel from '@/components/admin/logs/DiscordLogsPanel';
+import { lazyPanel } from '@/components/admin/lazyPanel';
 import type { StaffProps } from '@/types/admin';
 import nsAdminJournals from '@/lib/i18n/locales/admin-fr/adminJournals';
+
+// Onglets secondaires (Emails, Discord) : chargés au clic. La page payait
+// sinon leur JS même pour un helper qui n'y a pas accès.
+const EmailLogsPanel = lazyPanel(
+  () => import('@/components/admin/logs/EmailLogsPanel')
+);
+const DiscordLogsPanel = lazyPanel(
+  () => import('@/components/admin/logs/DiscordLogsPanel')
+);
 
 const ID_BASE = 'admin-journals';
 

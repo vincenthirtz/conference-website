@@ -1,0 +1,89 @@
+// utils/botEventNames.ts
+//
+// Liste runtime des évènements bot — CONSTANTE PURE, sans dépendance serveur.
+//
+// Extraite de `utils/botEvents.ts` parce que ce module-là importe `crypto`
+// (Node) et `supabaseAdmin` : le journal Discord de `/admin/logs`, qui ne veut
+// que la liste des noms pour son filtre, embarquait de ce fait ~490 ko de
+// polyfills Node (crypto-browserify / stream-browserify / vm-browserify /
+// buffer) dans le bundle client. `utils/botEvents.ts` ré-exporte la constante
+// et le type : côté serveur, rien ne change.
+
+export const BOT_EVENT_NAMES = [
+  'match.starting',
+  'match.scheduled',
+  'match.unscheduled',
+  'match.disputed',
+  'match.dispute.resolved',
+  'match.finished',
+  'news.published',
+  'team.created',
+  'team.dissolved',
+  // Gestion des salons d'équipe DEPUIS L'ADMIN. Le cron autonome qui faisait ça
+  // tout seul a été supprimé : il a détruit les salons d'une équipe vivante,
+  // puis recréé des salons dont personne ne voulait. Chaque geste est désormais
+  // demandé par quelqu'un, depuis /admin/discord/team-channels.
+  //
+  // `snapshot.request` est une LECTURE : le bot regarde le guild et repose sa
+  // photo sur le site. Les autres sont des écritures, une par geste — pas de
+  // « réconcilie », qui est justement le mot qui a coûté des salons.
+  'team.channels.snapshot.request',
+  'team.channels.provision',
+  'team.channels.repair',
+  'team.channel.deleted',
+  // Le rôle a la même règle que les salons : jamais supprimé tout seul, mais
+  // supprimable depuis l'admin. Sans ça, un rôle créé par erreur reste à vie —
+  // c'est arrivé à deux équipes.
+  'team.role.deleted',
+  'team.channel.access.granted',
+  'team.channel.access.revoked',
+  'team.role.granted',
+  'team.role.revoked',
+  'team.message',
+  'team.member.added',
+  'team.member.removed',
+  'team.captain.changed',
+  'staff.role.changed',
+  'scrim.created',
+  'scrim.scheduled',
+  'scrim.starting',
+  'scrim.finished',
+  'scrim.cancelled',
+  'scrim.deleted',
+  'scrim.planning.opened',
+  'scrim.planning.validated',
+  'scrim.planning.reminder',
+  // R6 — une équipe annonce des créneaux ; on alerte celles dont les créneaux
+  // se recoupent. Sans ça, l'annonce attend qu'on vienne la lire.
+  'scrim.search.matched',
+  'cast.assigned',
+  'cast.unassigned',
+  'cast.briefing.rescheduled',
+  'checkin.opened',
+  'team.forfeit',
+  // Lot 1 acquisition : une joueuse s'est signalée « sans équipe » depuis le
+  // site. Sert à alerter les capitaines dont le roster est incomplet — sans
+  // ça, l'inscription attend que quelqu'un vienne la lire.
+  'free_player.registered',
+  'registration.new',
+  'registration.blacklisted',
+  'registration.entity_blacklisted',
+  'helloasso.payment.received',
+  'captain.support.opened',
+  'tournament.finalized',
+  'dispute.sla_breached',
+  'checkin.nudge',
+  'broadcast.state_changed',
+  'task.created',
+  'task.moved',
+  'task.assigned',
+  'task.board_changed',
+  'task.due_soon',
+  'task.digest',
+  // N7 — récap hebdomadaire d'une équipe. Émis par cron, au plus une fois par
+  // équipe et par semaine, et UNIQUEMENT si la semaine a quelque chose à
+  // raconter (cf. utils/teams/weeklyRecap.ts).
+  'team.weekly.recap',
+] as const;
+
+export type BotEventName = (typeof BOT_EVENT_NAMES)[number];

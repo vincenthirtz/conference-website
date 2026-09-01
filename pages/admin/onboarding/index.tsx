@@ -27,10 +27,18 @@ import Tabs, {
   tabButtonId,
 } from '@/components/admin/Tabs';
 import OnboardingQueuePanel from '@/components/admin/onboarding/OnboardingQueuePanel';
-import TenantRequestsPanel from '@/components/admin/onboarding/TenantRequestsPanel';
-import GuildLinksPanel from '@/components/admin/onboarding/GuildLinksPanel';
 import type { StaffProps } from '@/types/admin';
 import nsAdminOnboarding from '@/lib/i18n/locales/admin-fr/adminOnboarding';
+
+import { lazyPanel } from '@/components/admin/lazyPanel';
+
+// Onglets secondaires : chargés au clic (cf. components/admin/lazyPanel).
+const TenantRequestsPanel = lazyPanel(
+  () => import('@/components/admin/onboarding/TenantRequestsPanel')
+);
+const GuildLinksPanel = lazyPanel(
+  () => import('@/components/admin/onboarding/GuildLinksPanel')
+);
 
 const ID_BASE = 'admin-onboarding';
 

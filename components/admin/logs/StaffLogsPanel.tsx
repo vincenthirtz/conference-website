@@ -7,7 +7,7 @@ import { useLang } from '@/lib/i18n/LanguageProvider';
 import {
   STAFF_LOG_ACTION_LABELS,
   STAFF_LOG_ACTION_OPTIONS,
-} from '@/utils/staffLogs';
+} from '@/utils/staffLogLabels';
 import type { StaffLogAction } from '@/types/staffLogs';
 
 import { logger } from '../../../utils/logger';

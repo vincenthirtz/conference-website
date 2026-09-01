@@ -13,8 +13,11 @@
 // (export CSV, rendu serveur) et par l'UI. Le garde-fou `noHardcodedFrench` ne
 // scanne que pages/ + components/.
 
-import { PLAYER_ACTIONS, type PlayerAction } from './botPlayerLogs';
-import { BOT_EVENT_NAMES, type BotEventName } from './botEvents';
+// Import des CONSTANTES PURES (et pas de `botPlayerLogs` / `botEvents`, qui
+// importent `supabaseAdmin` et `crypto`) : ce module est consommé par le
+// panneau CLIENT `components/admin/logs/DiscordLogsPanel`.
+import { PLAYER_ACTIONS, type PlayerAction } from './botPlayerActions';
+import { BOT_EVENT_NAMES, type BotEventName } from './botEventNames';
 
 export const DISCORD_LOG_SOURCES = ['player', 'event'] as const;
 export type DiscordLogSource = (typeof DISCORD_LOG_SOURCES)[number];

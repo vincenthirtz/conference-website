@@ -14,10 +14,14 @@ import Tabs, {
   tabButtonId,
 } from '@/components/admin/Tabs';
 import ScrimsListPanel from '@/components/admin/scrims/ScrimsListPanel';
-import ScrimPlanningsListPanel from '@/components/admin/scrims/ScrimPlanningsListPanel';
-import ScrimCalendarPanel from '@/components/admin/scrims/ScrimCalendarPanel';
 import type { StaffProps } from '@/types/admin';
 import nsAdminScrimsList from '@/lib/i18n/locales/admin-fr/adminScrimsList';
+
+import { lazyPanel } from '@/components/admin/lazyPanel';
+
+// Onglets secondaires : chargés au clic (cf. components/admin/lazyPanel).
+const ScrimPlanningsListPanel = lazyPanel(() => import('@/components/admin/scrims/ScrimPlanningsListPanel'));
+const ScrimCalendarPanel = lazyPanel(() => import('@/components/admin/scrims/ScrimCalendarPanel'));
 
 const ID_BASE = 'admin-scrims';
 

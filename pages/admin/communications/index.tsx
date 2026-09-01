@@ -12,13 +12,25 @@ import Tabs, {
 import NewsListPanel, {
   type NewsRow,
 } from '@/components/admin/communications/NewsListPanel';
-import AnnouncementsListPanel from '@/components/admin/communications/AnnouncementsListPanel';
-import CampaignsPanel from '@/components/admin/communications/CampaignsPanel';
-import TeamMessagesPanel from '@/components/admin/communications/TeamMessagesPanel';
-import NotificationsPanel from '@/components/admin/communications/NotificationsPanel';
+import { lazyPanel } from '@/components/admin/lazyPanel';
 import type { StaffProps } from '@/types/admin';
 import { logger } from '@/utils/logger';
 import nsAdminCommunicationsHub from '@/lib/i18n/locales/admin-fr/adminCommunicationsHub';
+
+// Cinq panneaux, un seul monté à la fois. Seul « Actualités » (onglet par
+// défaut, dont les données arrivent en SSR) reste en import statique.
+const AnnouncementsListPanel = lazyPanel(
+  () => import('@/components/admin/communications/AnnouncementsListPanel')
+);
+const CampaignsPanel = lazyPanel(
+  () => import('@/components/admin/communications/CampaignsPanel')
+);
+const TeamMessagesPanel = lazyPanel(
+  () => import('@/components/admin/communications/TeamMessagesPanel')
+);
+const NotificationsPanel = lazyPanel(
+  () => import('@/components/admin/communications/NotificationsPanel')
+);
 
 const ID_BASE = 'admin-communications';
 const NEWS_LIMIT = 20;

@@ -7,10 +7,14 @@ import Tabs, {
   tabButtonId,
 } from '@/components/admin/Tabs';
 import GeneralSettingsPanel from '@/components/admin/site-settings/GeneralSettingsPanel';
-import DiscordWebhooksPanel from '@/components/admin/site-settings/DiscordWebhooksPanel';
-import TeamRolesPanel from '@/components/admin/site-settings/TeamRolesPanel';
 import type { StaffProps } from '@/types/admin';
 import nsAdminSiteSettings from '@/lib/i18n/locales/admin-fr/adminSiteSettings';
+
+import { lazyPanel } from '@/components/admin/lazyPanel';
+
+// Onglets secondaires : chargés au clic (cf. components/admin/lazyPanel).
+const DiscordWebhooksPanel = lazyPanel(() => import('@/components/admin/site-settings/DiscordWebhooksPanel'));
+const TeamRolesPanel = lazyPanel(() => import('@/components/admin/site-settings/TeamRolesPanel'));
 
 const ID_BASE = 'admin-site-settings';
 
