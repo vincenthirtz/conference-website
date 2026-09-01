@@ -15,6 +15,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import DriveUploadButton from '@/components/admin/documents/DriveUploadButton';
+import DrivePrivateKeyForm from '@/components/admin/documents/DrivePrivateKeyForm';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminDocuments from '@/lib/i18n/locales/admin-fr/adminDocuments';
 import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
@@ -43,6 +44,10 @@ type Payload = {
   configured: boolean;
   /** L'appelant a-t-il le droit d'ÉCRITURE ? Tranché par le serveur. */
   canWrite?: boolean;
+  /** Le compte de service est reconnu, il ne manque que sa clé privée. */
+  awaitingPrivateKey?: boolean;
+  /** Peut-on enregistrer la clé ici (droit d'écriture + SECRETS_ENC_KEY posée) ? */
+  canStoreKey?: boolean;
   files?: DriveRow[];
   folderId?: string;
   folderName?: string | null;
@@ -61,6 +66,8 @@ export default function AdminDocumentsPage(_props: StaffProps) {
   // un supplément que le serveur accorde ou non, et qu'on n'affiche pas s'il ne
   // l'a pas accordé.
   const [canWrite, setCanWrite] = useState(false);
+  const [awaitingKey, setAwaitingKey] = useState(false);
+  const [canStoreKey, setCanStoreKey] = useState(false);
   const [trashing, setTrashing] = useState<string | null>(null);
   const [rows, setRows] = useState<DriveRow[]>([]);
   const [breadcrumb, setBreadcrumb] = useState<{ id: string; name: string }[]>(
@@ -79,6 +86,8 @@ export default function AdminDocumentsPage(_props: StaffProps) {
         const data = await adminFetchJson<Payload>(`/api/admin/documents${qs}`);
         setConfigured(data.configured);
         setCanWrite(data.canWrite ?? false);
+        setAwaitingKey(data.awaitingPrivateKey ?? false);
+        setCanStoreKey(data.canStoreKey ?? false);
         setRows(data.files ?? []);
         setBreadcrumb(data.breadcrumb ?? []);
       } catch {
@@ -235,7 +244,12 @@ export default function AdminDocumentsPage(_props: StaffProps) {
             <p className="mt-2 max-w-3xl text-sm text-neutral-400">{t.intro}</p>
           </div>
 
-          {!configured ? (
+          {!configured && awaitingKey && canStoreKey ? (
+            // Le compte de service est là, seule la clé manque : proposer de la
+            // coller, plutôt que de renvoyer vers la création d'un compte que
+            // la personne a déjà faite.
+            <DrivePrivateKeyForm onStored={() => void load(folderId)} />
+          ) : !configured ? (
             <div className="max-w-3xl rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6">
               <h2 className="text-lg font-semibold text-amber-100">
                 {t.setupTitle}

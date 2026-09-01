@@ -1,7 +1,8 @@
 # Brancher le Drive de l'asso — marche à suivre
 
-*L'écran est livré ([`/admin/documents`](../pages/admin/documents.tsx)). Il reste
-deux variables d'environnement à poser. Rien à installer, rien à migrer.*
+*L'écran est livré ([`/admin/documents`](../pages/admin/documents.tsx)). Il
+reste trois petites variables à poser, puis à coller la clé privée depuis
+l'écran lui-même.*
 
 ## État au 2026-09-01 — vérifié en vrai
 
@@ -15,9 +16,8 @@ confirme la chaîne complète :
 | Dossier partagé | ✅ **« Drive Asso »**, `1CRiAwxHRaPD7vqL23x8ANOdQg6MUppLm` |
 | Contenu vu par le compte | **0 élément** — le dossier est vide, ou son contenu ne lui est pas partagé |
 
-**Reste donc uniquement l'étape 3** (les variables Netlify — lire l'encadré,
-la forme à utiliser n'est pas celle qu'on croit). Une fois posées et le site
-redéployé, `/admin/documents` affichera le dossier.
+**Reste l'étape 3** (trois petites variables Netlify) **puis l'étape 3 bis**
+(coller la clé depuis l'écran, une fois le site déployé).
 
 Le « pourquoi » de chaque choix est dans
 [`ETUDE-drive-et-chat.md`](./ETUDE-drive-et-chat.md).
@@ -57,54 +57,56 @@ page le dit en toutes lettres plutôt que de relayer le message de Google.
 Le compte de service ne voit **que** ce qu'on lui partage : il n'y a rien à
 restreindre en plus.
 
-## 3. Poser les variables (Netlify → Site configuration → Environment variables) — ⬜ à faire
+## 3. Poser les variables (Netlify → Site configuration → Environment variables)
 
-> ⚠️ **Ne PAS poser `GOOGLE_DRIVE_SA_KEY` en production.** Netlify exécute ses
-> fonctions en mode compatibilité Lambda, qui plafonne l'**ensemble** des
-> variables d'environnement à **4 Ko**. Le JSON complet en base64 pèse 3,1 Ko :
-> il fait échouer la création de TOUTES les fonctions, et le déploiement entier
-> avec. C'est arrivé le 2026-09-01 — dix-neuf crons refusés d'un coup.
+> ⚠️ **La clé privée ne se met PAS dans une variable d'environnement.** Netlify
+> exécute ses fonctions en mode compatibilité Lambda, qui plafonne
+> l'**ensemble** des variables à **4 Ko** — et ce budget était déjà presque
+> plein. La clé (1,7 Ko) fait échouer la création des dix-neuf fonctions cron,
+> et le déploiement entier avec. C'est arrivé trois fois le 2026-09-01, une par
+> forme essayée.
+>
+> Elle se colle depuis `/admin/documents`, et part **chiffrée en base**.
 
-**Forme courte, celle à utiliser en production — trois variables, ~1,75 Ko :**
+Trois variables, ~200 octets en tout :
 
 | Variable | Valeur |
 |---|---|
 | `GOOGLE_DRIVE_SA_EMAIL` | `site-owwomenscup@owwomenscup.iam.gserviceaccount.com` (champ `client_email` du JSON) |
-| `GOOGLE_DRIVE_SA_PRIVATE_KEY` | Le champ `private_key` du JSON, **valeur seule**, du `-----BEGIN` au `-----END` inclus. Les retours à la ligne réels comme échappés (`\n`) fonctionnent. |
 | `GOOGLE_DRIVE_FOLDER_ID` | `1CRiAwxHRaPD7vqL23x8ANOdQg6MUppLm` |
+| `SECRETS_ENC_KEY` | une valeur aléatoire : `openssl rand -base64 32` |
 
-Pour extraire les deux premières du fichier téléchargé, sans les recopier à la
-main :
+`SECRETS_ENC_KEY` chiffre les secrets stockés en base (table
+`integration_secrets`). **Ne jamais la changer** une fois posée : elle
+déchiffre ce qu'elle a chiffré, et la modifier rend la clé Drive illisible — il
+faudra la recoller.
+
+Si `GOOGLE_DRIVE_SA_KEY` ou `GOOGLE_DRIVE_SA_PRIVATE_KEY` traînent encore :
+**les supprimer**.
+
+## 3 bis. Coller la clé privée (une fois le site déployé)
+
+Aller sur `/admin/documents`. Le compte de service étant reconnu mais sa clé
+absente, l'écran propose un champ pour la coller — c'est l'état « en attente de
+la clé », distinct de « rien n'est configuré ».
 
 ```bash
 cd ~/Downloads
-jq -r .client_email owwomenscup-<id>.json          # → GOOGLE_DRIVE_SA_EMAIL
-jq -r .private_key  owwomenscup-<id>.json | pbcopy # → GOOGLE_DRIVE_SA_PRIVATE_KEY
+jq -r .private_key owwomenscup-<id>.json | pbcopy
 ```
 
-**`pbcopy` n'affiche rien**, par construction : il consomme la sortie pour la
-mettre dans le presse-papier. Ne rien voir est le succès, pas l'échec.
-`pbpaste | wc -c` doit répondre ~1 700.
+Coller, enregistrer. La valeur est chiffrée avant insertion : ni la base, ni les
+journaux, ni l'API ne la revoient en clair — on ne peut que la remplacer.
 
-**Forme longue (`GOOGLE_DRIVE_SA_KEY`)** : le JSON entier, en clair ou en
-base64. Réservée au développement local (`.env.local`), où le budget Lambda
-n'existe pas et où l'on colle le fichier sans le découper. Si les deux formes
-sont posées, la courte l'emporte.
+**`pbcopy` n'affiche rien**, par construction. `pbpaste | wc -c` doit répondre
+~1 700.
 
-### Si un déploiement échoue sur ce message
+### Formes réservées au développement local
 
-```
-Your environment variables exceed the 4KB limit imposed by AWS Lambda
-```
-
-Retirer `GOOGLE_DRIVE_SA_KEY` et repasser à la forme courte. Le site continue
-de servir le déploiement précédent pendant ce temps : rien n'est cassé, c'est
-la mise à jour qui ne passe pas.
-
-Puis redéployer (les variables ne sont lues qu'au build de la fonction).
-
-Tant que l'une des deux manque, la page affiche cette marche à suivre au lieu
-d'une erreur — la fonctionnalité est éteinte, elle n'est pas en panne.
+En local (`.env.local`), le budget Lambda n'existe pas : on peut poser soit
+`GOOGLE_DRIVE_SA_EMAIL` + `GOOGLE_DRIVE_SA_PRIVATE_KEY`, soit
+`GOOGLE_DRIVE_SA_KEY` (le JSON entier, en clair ou en base64). L'environnement
+l'emporte alors sur la base.
 
 ## 4. Vérifier
 

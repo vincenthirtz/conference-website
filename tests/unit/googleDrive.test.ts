@@ -106,13 +106,13 @@ describe('utils/googleDrive', () => {
   it('se déclare non configuré quand un cran manque', async () => {
     delete process.env.GOOGLE_DRIVE_FOLDER_ID;
     const { isDriveConfigured } = await import('@/utils/googleDrive');
-    expect(isDriveConfigured()).toBe(false);
+    await expect(isDriveConfigured()).resolves.toBe(false);
   });
 
   it('accepte la clé en base64 (collage sûr dans Netlify)', async () => {
     process.env.GOOGLE_DRIVE_SA_KEY = Buffer.from(saKey()).toString('base64');
     const { isDriveConfigured } = await import('@/utils/googleDrive');
-    expect(isDriveConfigured()).toBe(true);
+    await expect(isDriveConfigured()).resolves.toBe(true);
   });
 
   it('refuse une clé JSON illisible avec un message qui dit quoi corriger', async () => {
@@ -388,7 +388,7 @@ describe('utils/googleDrive — formes de configuration', () => {
     process.env.GOOGLE_DRIVE_SA_EMAIL = 'asso@projet.iam.gserviceaccount.com';
     process.env.GOOGLE_DRIVE_SA_PRIVATE_KEY = privateKey;
     const { isDriveConfigured } = await import('@/utils/googleDrive');
-    expect(isDriveConfigured()).toBe(true);
+    await expect(isDriveConfigured()).resolves.toBe(true);
   });
 
   it('la forme courte accepte un PEM aux retours à la ligne échappés', async () => {
@@ -409,13 +409,21 @@ describe('utils/googleDrive — formes de configuration', () => {
     await expect(listDriveFiles()).resolves.toBeTruthy();
   });
 
-  it('refuse une forme courte à moitié renseignée', async () => {
-    // Une seule des deux = erreur de configuration, pas absence. Traiter ça
-    // comme « non configuré » ferait chercher pourquoi rien ne se passe.
+  it('email seul sans clé : « en attente de la clé », pas « non configuré »', async () => {
+    // C'est la configuration NORMALE de production : l'adresse en environnement
+    // (52 octets), la clé privée chiffrée en base. Sans clé encore posée,
+    // l'écran doit proposer de la coller — pas renvoyer vers la création d'un
+    // compte de service déjà fait.
     process.env.GOOGLE_DRIVE_SA_EMAIL = 'asso@projet.iam.gserviceaccount.com';
-    const { listDriveFiles, DriveConfigError } =
+    const { isDriveConfigured, isDriveAwaitingPrivateKey } =
       await import('@/utils/googleDrive');
-    await expect(listDriveFiles()).rejects.toBeInstanceOf(DriveConfigError);
+    await expect(isDriveConfigured()).resolves.toBe(false);
+    await expect(isDriveAwaitingPrivateKey()).resolves.toBe(true);
+  });
+
+  it('sans même l’adresse : rien n’est configuré, on n’attend aucune clé', async () => {
+    const { isDriveAwaitingPrivateKey } = await import('@/utils/googleDrive');
+    await expect(isDriveAwaitingPrivateKey()).resolves.toBe(false);
   });
 
   it('la forme courte l’emporte sur le JSON complet', async () => {

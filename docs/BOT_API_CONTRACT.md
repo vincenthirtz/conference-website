@@ -3203,6 +3203,7 @@ le meme geste : la tresoriere depose, le reste du bureau consulte.
 | -------- | ------------------ | ------------------------------------------- |
 | `GET`    | `read_documents`   | Lister un dossier                           |
 | `POST`   | `manage_documents` | Deposer un fichier (25 Mo, types fermes)    |
+| `PUT`    | `manage_documents` | Enregistrer la cle privee, chiffree en base |
 | `DELETE` | `manage_documents` | Mettre a la CORBEILLE (pas de suppression)  |
 
 La route se garde sur `read_documents` ; les deux ecritures re-verifient
@@ -3236,6 +3237,19 @@ permission `manage_documents` la seule chose entre un PV d'AG et Internet.
 (`entity_type: 'drive_file'`). Le NOM d'un fichier divulgue autant que son
 contenu : une consultation se journalise comme n'importe quelle lecture
 sensible.
+
+**Ou vit la cle privee** : en BASE, chiffree (`integration_secrets`, AES-256-GCM
+via `utils/crypto.ts`), PAS dans les variables d'environnement. Netlify y
+plafonne l'ensemble a 4 Ko en mode compatibilite Lambda ; ce budget etait deja
+presque plein, et y ajouter la cle (1,7 Ko) a fait echouer la creation des
+dix-neuf fonctions cron — donc le deploiement entier — trois fois le
+2026-09-01. L'environnement ne garde que `GOOGLE_DRIVE_SA_EMAIL`,
+`GOOGLE_DRIVE_FOLDER_ID` et `SECRETS_ENC_KEY` : moins de 200 octets.
+
+La cle se colle depuis `/admin/documents` (methode `PUT`). Elle n'est jamais
+relue, jamais journalisee, jamais renvoyee — on ne peut que la remplacer. Les
+formes « tout en environnement » restent acceptees en developpement local, ou
+ce budget n'existe pas ; l'environnement l'emporte alors sur la base.
 
 **Acces Google** : compte de service, pas OAuth utilisateur — un token OAuth
 appartient a une personne et meurt avec son depart.

@@ -75,4 +75,20 @@ export default adminNs('adminDocuments', {
     '« {name} » part à la corbeille de Drive, d’où il reste récupérable pendant 30 jours. Rien n’est supprimé définitivement.',
   confirmTrashCta: 'Mettre à la corbeille',
   cancel: 'Annuler',
+
+  // Pose de la clé privée depuis l'écran (elle ne passe plus par l'env)
+  keyTitle: 'Coller la clé privée du compte de service',
+  keyIntro:
+    'Le compte de service est reconnu, il manque sa clé privée. Elle est chiffrée avant d’être enregistrée : ni la base ni les journaux ne la voient en clair.',
+  keyWhyHere:
+    'Pourquoi ici et pas dans une variable d’environnement : Netlify plafonne l’ensemble des variables des fonctions à 4 Ko, et cette clé en pèse 1,7 — elle faisait échouer le déploiement entier.',
+  keyHowTo:
+    'Dans le fichier JSON téléchargé chez Google, le champ « private_key » : du -----BEGIN au -----END inclus.',
+  keyPlaceholder: '-----BEGIN PRIVATE KEY-----\n…',
+  keySave: 'Enregistrer la clé',
+  keySaving: 'Enregistrement…',
+  keySaved: 'Clé enregistrée. Le Drive est branché.',
+  keyError: 'La clé n’a pas pu être enregistrée.',
+  keyNoEncryption:
+    'La variable SECRETS_ENC_KEY n’est pas posée : sans elle, impossible de chiffrer la clé. Voir docs/GUIDE-drive-asso.md.',
 });

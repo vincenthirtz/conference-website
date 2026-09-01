@@ -268,6 +268,7 @@ export type StaffLogAction =
   | 'read_association_documents'
   | 'upload_association_document'
   | 'trash_association_document'
+  | 'store_drive_credentials'
   // --- Permissions accordées à l'unité ---
   | 'update_staff_permissions'
   // --- Kanban interne (task board) ---

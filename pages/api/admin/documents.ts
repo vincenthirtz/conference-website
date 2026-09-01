@@ -29,11 +29,16 @@ import {
   DRIVE_UPLOAD_MAX_BYTES,
   DriveConfigError,
   DriveUploadError,
+  isDriveAwaitingPrivateKey,
   isDriveConfigured,
   listDriveFiles,
   trashDriveFile,
   uploadDriveFile,
 } from '@/utils/googleDrive';
+import {
+  isSecretEncryptionConfigured,
+  setIntegrationSecret,
+} from '@/utils/integrationSecrets';
 
 /** Le corps d'un dépôt. Base64, comme `/api/admin/upload.ts`. */
 type UploadBody = {
@@ -68,7 +73,11 @@ async function handleList(
     typeof req.query.folderId === 'string' ? req.query.folderId : null;
   const search = typeof req.query.search === 'string' ? req.query.search : null;
 
-  const listing = await listDriveFiles({ folderId, search });
+  const listing = await listDriveFiles({
+    folderId,
+    search,
+    tenantId: ctx.tenantId,
+  });
 
   // Le NOM des fichiers divulgue autant que leur contenu : une liste où figure
   // « Sanction-<pseudo>-2026.pdf » est déjà une information sur quelqu'un. La
@@ -119,7 +128,13 @@ async function handleUpload(
     return;
   }
 
-  const file = await uploadDriveFile({ folderId, name, mimeType, content });
+  const file = await uploadDriveFile({
+    folderId,
+    name,
+    mimeType,
+    content,
+    tenantId: ctx.tenantId,
+  });
 
   await logStaffAction({
     staff_id: ctx.staff.id,
@@ -145,7 +160,7 @@ async function handleTrash(
     return;
   }
 
-  await trashDriveFile(fileId);
+  await trashDriveFile(fileId, ctx.tenantId);
 
   await logStaffAction({
     staff_id: ctx.staff.id,
@@ -162,6 +177,61 @@ async function handleTrash(
   res.status(200).json({ trashed: true });
 }
 
+async function handleStoreKey(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
+  if (!isSecretEncryptionConfigured()) {
+    res.status(409).json({
+      error:
+        'SECRETS_ENC_KEY n’est pas posée : impossible de chiffrer la clé. Voir docs/GUIDE-drive-asso.md.',
+    });
+    return;
+  }
+
+  const body = (req.body ?? {}) as { privateKey?: unknown };
+  const pem = typeof body.privateKey === 'string' ? body.privateKey.trim() : '';
+
+  // Contrôle de forme AVANT chiffrement : une valeur mal collée serait
+  // acceptée, chiffrée, et n'échouerait qu'au premier appel à Google, avec un
+  // message d'OpenSSL incompréhensible.
+  if (!pem.includes('BEGIN') || !pem.includes('PRIVATE KEY')) {
+    res.status(400).json({
+      error:
+        'Ce n’est pas une clé privée PEM : la valeur doit contenir « -----BEGIN PRIVATE KEY----- ».',
+    });
+    return;
+  }
+
+  try {
+    await setIntegrationSecret(
+      ctx.tenantId,
+      'google_drive_sa_private_key',
+      pem,
+      ctx.staff.id
+    );
+  } catch (err) {
+    logger.error('[admin/documents] enregistrement de la clé impossible', err);
+    res.status(500).json({ error: 'La clé n’a pas pu être enregistrée.' });
+    return;
+  }
+
+  await logStaffAction({
+    staff_id: ctx.staff.id,
+    action: 'store_drive_credentials',
+    entity_type: 'integration_secret',
+    entity_id: 'google_drive_sa_private_key',
+    tenant_id: ctx.tenantId,
+    permission: 'manage_documents',
+    // Jamais la valeur, ni un extrait : un journal se relit, s'exporte en CSV
+    // et se partage. On n'y met que le fait que le geste a eu lieu.
+    payload: null,
+  });
+
+  res.status(200).json({ stored: true });
+}
+
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -170,9 +240,13 @@ async function handler(
   const isList = req.method === 'GET';
   const isUpload = req.method === 'POST';
   const isTrash = req.method === 'DELETE';
+  // PUT = enregistrer la clé privée du compte de service, chiffrée en base.
+  // Elle ne passe PAS par les variables d'environnement : Netlify y plafonne
+  // l'ensemble à 4 Ko, et 1,7 Ko de clé y font échouer tout le déploiement.
+  const isStoreKey = req.method === 'PUT';
 
-  if (!isList && !isUpload && !isTrash) {
-    res.setHeader('Allow', 'GET, POST, DELETE');
+  if (!isList && !isUpload && !isTrash && !isStoreKey) {
+    res.setHeader('Allow', 'GET, POST, PUT, DELETE');
     res.status(405).json({ error: 'Method not allowed' });
     return;
   }
@@ -188,7 +262,7 @@ async function handler(
     return;
   }
 
-  if ((isUpload || isTrash) && !canWrite(ctx)) {
+  if ((isUpload || isTrash || isStoreKey) && !canWrite(ctx)) {
     res.status(403).json({
       error: 'Droit « Déposer des documents » requis.',
     });
@@ -197,16 +271,27 @@ async function handler(
 
   // Non configuré ≠ en panne. La page affiche alors la marche à suivre, au lieu
   // d'un bandeau rouge qui laisse croire à un incident.
-  if (!isDriveConfigured()) {
+  if (!(await isDriveConfigured(ctx.tenantId))) {
     if (!isList) {
       res.status(409).json({ error: 'Le Drive n’est pas configuré.' });
       return;
     }
-    res
-      .status(200)
-      .json({ configured: false, canWrite: false, files: [], breadcrumb: [] });
+    res.status(200).json({
+      configured: false,
+      canWrite: false,
+      files: [],
+      breadcrumb: [],
+      // Distingue « il reste à coller la clé » de « rien n'est fait » : sans
+      // ça, on renvoie quelqu'un créer un compte de service qu'il a déjà.
+      awaitingPrivateKey: await isDriveAwaitingPrivateKey(ctx.tenantId),
+      canStoreKey: canWrite(ctx) && isSecretEncryptionConfigured(),
+    });
     return;
   }
+
+  // La pose de la clé doit passer AVANT le contrôle de configuration : c'est
+  // précisément le geste qui rend le Drive configuré.
+  if (isStoreKey) return await handleStoreKey(req, res, ctx);
 
   try {
     if (isList) return await handleList(req, res, ctx);

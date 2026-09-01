@@ -16578,6 +16578,51 @@ paths:
           description: Fichier trop volumineux.
         '429':
           $ref: '#/components/responses/RateLimited'
+    put:
+      summary: Enregistre la cle privee du compte de service, chiffree en base.
+      description: >
+        ECRITURE : exige `manage_documents`. La cle NE PASSE PAS par les
+        variables d'environnement — Netlify y plafonne l'ensemble a 4 Ko en
+        mode compatibilite Lambda, et 1,7 Ko de cle privee y font echouer la
+        creation de TOUTES les fonctions, donc le deploiement entier.
+
+
+        La valeur est chiffree (AES-256-GCM, cf. `utils/crypto.ts`) avant
+        insertion dans `integration_secrets`. Elle n'est jamais relue par
+        l'API, jamais journalisee, jamais renvoyee : on ne peut que la
+        remplacer.
+
+
+        409 si SECRETS_ENC_KEY n'est pas posee — sans elle, rien ne peut etre
+        chiffre.
+      operationId: adminStoreDriveCredentials
+      tags:
+        - admin/association
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - privateKey
+              properties:
+                privateKey:
+                  type: string
+                  description: La cle privee PEM, du -----BEGIN au -----END inclus.
+      responses:
+        '200':
+          description: Cle enregistree.
+        '400':
+          description: La valeur n'est pas une cle privee PEM.
+        '403':
+          description: Droit d'ecriture manquant.
+        '409':
+          description: SECRETS_ENC_KEY absente.
+        '429':
+          $ref: '#/components/responses/RateLimited'
     delete:
       summary: Met un document a la CORBEILLE Drive (pas de suppression definitive).
       description: >

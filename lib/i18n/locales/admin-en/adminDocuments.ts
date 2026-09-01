@@ -74,4 +74,20 @@ export default {
     '“{name}” goes to the Drive trash, where it stays recoverable for 30 days. Nothing is permanently deleted.',
   confirmTrashCta: 'Move to trash',
   cancel: 'Cancel',
+
+  // Storing the private key from the screen (no longer via env)
+  keyTitle: 'Paste the service account private key',
+  keyIntro:
+    'The service account is recognised, its private key is missing. It is encrypted before being stored: neither the database nor the logs ever see it in the clear.',
+  keyWhyHere:
+    'Why here rather than an environment variable: Netlify caps a function’s whole environment at 4 KB, and this key weighs 1.7 — it was failing the entire deploy.',
+  keyHowTo:
+    'In the JSON file downloaded from Google, the "private_key" field: from -----BEGIN to -----END inclusive.',
+  keyPlaceholder: '-----BEGIN PRIVATE KEY-----\n…',
+  keySave: 'Save the key',
+  keySaving: 'Saving…',
+  keySaved: 'Key stored. The Drive is connected.',
+  keyError: 'The key could not be stored.',
+  keyNoEncryption:
+    'SECRETS_ENC_KEY is not set: without it the key cannot be encrypted. See docs/GUIDE-drive-asso.md.',
 };

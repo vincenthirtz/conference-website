@@ -23,10 +23,32 @@ const ALGO = 'aes-256-gcm';
 // re-dériver la même clé au déchiffrement).
 const KEY_SALT = 'twitch-broadcaster-token-v1';
 
+/**
+ * Le secret d'environnement, sous son nom GÉNÉRAL puis son nom historique.
+ *
+ * `TWITCH_TOKEN_ENC_KEY` était le premier usage ; depuis, ce module chiffre
+ * aussi les secrets d'intégration (`integration_secrets`), et un nom de
+ * variable qui parle de Twitch pour chiffrer une clé Google est un contresens
+ * qu'on relit dix fois. `SECRETS_ENC_KEY` est le nom à utiliser.
+ *
+ * Si les DEUX sont posées, elles doivent porter la MÊME valeur : la clé est
+ * dérivée du secret, donc deux valeurs différentes rendraient illisible ce qui
+ * a été chiffré avec l'autre.
+ */
+function readEncSecret(): string | undefined {
+  return (
+    process.env.SECRETS_ENC_KEY?.trim() ||
+    process.env.TWITCH_TOKEN_ENC_KEY?.trim() ||
+    undefined
+  );
+}
+
 function getKey(): Buffer {
-  const secret = process.env.TWITCH_TOKEN_ENC_KEY?.trim();
+  const secret = readEncSecret();
   if (!secret) {
-    throw new Error('TWITCH_TOKEN_ENC_KEY is not set (token encryption key).');
+    throw new Error(
+      'SECRETS_ENC_KEY is not set (secret encryption key; TWITCH_TOKEN_ENC_KEY also accepted).'
+    );
   }
   // Dérive une clé 32 octets déterministe depuis le secret d'env.
   return crypto.scryptSync(secret, KEY_SALT, 32);
@@ -34,7 +56,7 @@ function getKey(): Buffer {
 
 /** True si la clé de chiffrement est configurée (feature dormante sinon). */
 export function isSecretEncryptionConfigured(): boolean {
-  return !!process.env.TWITCH_TOKEN_ENC_KEY?.trim();
+  return !!readEncSecret();
 }
 
 /** Chiffre `plaintext` → `v1.<iv>.<tag>.<ct>` (base64url). Throw si clé absente. */

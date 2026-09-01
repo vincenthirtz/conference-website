@@ -17,12 +17,23 @@
 // lui partage explicitement. Le dossier racine configuré est la seule porte ;
 // `assertWithinRoot` interdit de sortir de son arborescence.
 //
+// OÙ VIT LA CLÉ PRIVÉE. En BASE, chiffrée (`utils/integrationSecrets.ts`), pas
+// dans l'environnement. Netlify plafonne l'env des fonctions à 4 Ko en mode
+// compatibilité Lambda ; ce budget était déjà presque plein, et y ajouter la
+// clé (1,7 Ko) a fait échouer les dix-neuf fonctions cron d'un coup. Les
+// variables d'environnement ne gardent que l'adresse du compte, l'id du dossier
+// et la clé de chiffrement — moins de 200 octets.
+//
+// Les formes « tout en env » restent acceptées pour le développement local, où
+// ce budget n'existe pas.
+//
 // Configuration absente = fonctionnalité désactivée, pas erreur. Même posture
 // que `MATCHES_LIVE_CHANNEL_ID` côté bot : un cran de config manquant éteint sa
 // fonctionnalité sans casser ce qui l'entoure.
 
 import crypto from 'node:crypto';
 import { DRIVE_UPLOAD_MAX_BYTES } from './documents/driveLimits';
+import { getIntegrationSecret } from './integrationSecrets';
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const FILES_URL = 'https://www.googleapis.com/drive/v3/files';
@@ -102,18 +113,11 @@ export class DriveConfigError extends Error {}
  * garde que ce dont on se sert (~1,75 Ko) : le JSON contient une dizaine de
  * champs dont aucun n'est lu ici.
  */
-function readServiceAccountKey(): ServiceAccountKey | null {
+function readServiceAccountKeyFromEnv(): ServiceAccountKey | null {
   const email = process.env.GOOGLE_DRIVE_SA_EMAIL?.trim();
   const pem = process.env.GOOGLE_DRIVE_SA_PRIVATE_KEY?.trim();
   if (email && pem) {
     return { client_email: email, private_key: pem.replace(/\\n/g, '\n') };
-  }
-  // Forme courte incomplète : c'est une erreur de configuration, pas une
-  // absence. Le dire évite de chercher pourquoi « rien ne se passe ».
-  if (email || pem) {
-    throw new DriveConfigError(
-      'GOOGLE_DRIVE_SA_EMAIL et GOOGLE_DRIVE_SA_PRIVATE_KEY vont par paire : l’une des deux manque.'
-    );
   }
 
   const raw = process.env.GOOGLE_DRIVE_SA_KEY?.trim();
@@ -152,15 +156,59 @@ export function getDriveRootFolderId(): string | null {
   return process.env.GOOGLE_DRIVE_FOLDER_ID?.trim() || null;
 }
 
-/** `true` quand les deux crans de config sont présents. */
-export function isDriveConfigured(): boolean {
+/**
+ * Résout les identifiants du compte de service, dans cet ordre :
+ *   1. l'environnement (développement local — voir plus haut) ;
+ *   2. l'adresse en environnement + la clé privée CHIFFRÉE EN BASE, qui est
+ *      la configuration de production.
+ *
+ * `tenantId` absent = on s'en tient à l'environnement. Utile aux appels qui
+ * n'ont pas de contexte tenant (tests, scripts).
+ */
+async function resolveServiceAccountKey(
+  tenantId?: string | null
+): Promise<ServiceAccountKey | null> {
+  const fromEnv = readServiceAccountKeyFromEnv();
+  if (fromEnv) return fromEnv;
+
+  const email = process.env.GOOGLE_DRIVE_SA_EMAIL?.trim();
+  if (!email || !tenantId) return null;
+
+  const pem = await getIntegrationSecret(
+    tenantId,
+    'google_drive_sa_private_key'
+  );
+  if (!pem) return null;
+
+  return { client_email: email, private_key: pem.replace(/\\n/g, '\n') };
+}
+
+/** `true` quand tous les crans de config sont présents. */
+export async function isDriveConfigured(
+  tenantId?: string | null
+): Promise<boolean> {
+  if (!getDriveRootFolderId()) return false;
   try {
-    return !!readServiceAccountKey() && !!getDriveRootFolderId();
+    return !!(await resolveServiceAccountKey(tenantId));
   } catch {
     // Clé présente mais illisible : ce n'est PAS « non configuré ». On laisse
     // l'appel réel remonter l'erreur, qui dit quoi corriger.
-    return !!getDriveRootFolderId();
+    return true;
   }
+}
+
+/**
+ * `true` si l'adresse du compte est posée mais la clé privée introuvable —
+ * l'état exact de « il reste à coller la clé ». Le distinguer de « rien n'est
+ * configuré » évite de renvoyer quelqu'un vers la création d'un compte de
+ * service qu'il a déjà faite.
+ */
+export async function isDriveAwaitingPrivateKey(
+  tenantId?: string | null
+): Promise<boolean> {
+  if (!process.env.GOOGLE_DRIVE_SA_EMAIL?.trim()) return false;
+  if (readServiceAccountKeyFromEnv()) return false;
+  return !(await resolveServiceAccountKey(tenantId));
 }
 
 // ---------------------------------------------------------------------------
@@ -188,13 +236,20 @@ export function resetDriveTokenCache() {
   tokenCache.clear();
 }
 
-async function getAccessToken(scope: DriveScope): Promise<string> {
+async function getAccessToken(
+  scope: DriveScope,
+  tenantId?: string | null
+): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const cached = tokenCache.get(scope);
   if (cached && cached.expiresAt - 60 > now) return cached.token;
 
-  const key = readServiceAccountKey();
-  if (!key) throw new DriveConfigError('GOOGLE_DRIVE_SA_KEY absent.');
+  const key = await resolveServiceAccountKey(tenantId);
+  if (!key) {
+    throw new DriveConfigError(
+      'Identifiants du compte de service Drive introuvables (ni en environnement, ni en base).'
+    );
+  }
 
   const header = base64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
   const claims = base64url(
@@ -251,9 +306,10 @@ async function getAccessToken(scope: DriveScope): Promise<string> {
 
 async function driveGet<T>(
   url: string,
-  params: Record<string, string>
+  params: Record<string, string>,
+  tenantId?: string | null
 ): Promise<T> {
-  const token = await getAccessToken(SCOPE_READ);
+  const token = await getAccessToken(SCOPE_READ, tenantId);
   const qs = new URLSearchParams({
     // Un Drive partagé (Shared Drive) est invisible sans ces deux drapeaux, et
     // l'API répond alors une liste VIDE plutôt qu'une erreur — le genre de
@@ -302,13 +358,13 @@ function toDriveFile(f: RawFile): DriveFile {
 }
 
 async function getFolderMeta(
-  folderId: string
+  folderId: string,
+  tenantId?: string | null
 ): Promise<{ id: string; name: string; parents: string[] }> {
   const f = await driveGet<RawFile>(
     `${FILES_URL}/${encodeURIComponent(folderId)}`,
-    {
-      fields: 'id,name,mimeType,parents',
-    }
+    { fields: 'id,name,mimeType,parents' },
+    tenantId
   );
   return { id: f.id, name: f.name, parents: f.parents ?? [] };
 }
@@ -324,10 +380,11 @@ async function getFolderMeta(
  */
 async function assertWithinRoot(
   folderId: string,
-  rootId: string
+  rootId: string,
+  tenantId?: string | null
 ): Promise<{ id: string; name: string }[]> {
   if (folderId === rootId) {
-    const root = await getFolderMeta(rootId);
+    const root = await getFolderMeta(rootId, tenantId);
     return [{ id: root.id, name: root.name }];
   }
 
@@ -335,14 +392,14 @@ async function assertWithinRoot(
   let currentId = folderId;
 
   for (let depth = 0; depth < MAX_ANCESTOR_DEPTH; depth += 1) {
-    const meta = await getFolderMeta(currentId);
+    const meta = await getFolderMeta(currentId, tenantId);
     chain.unshift({ id: meta.id, name: meta.name });
 
     if (meta.id === rootId) return chain;
     const parent = meta.parents[0];
     if (!parent) break;
     if (parent === rootId) {
-      const root = await getFolderMeta(rootId);
+      const root = await getFolderMeta(rootId, tenantId);
       chain.unshift({ id: root.id, name: root.name });
       return chain;
     }
@@ -362,6 +419,8 @@ export type ListDriveFilesOptions = {
   folderId?: string | null;
   /** Filtre plein texte sur le nom, appliqué par Google. */
   search?: string | null;
+  /** Tenant dont on lit la clé privée en base. */
+  tenantId?: string | null;
 };
 
 export async function listDriveFiles(
@@ -371,21 +430,25 @@ export async function listDriveFiles(
   if (!rootId) throw new DriveConfigError('GOOGLE_DRIVE_FOLDER_ID absent.');
 
   const targetId = opts.folderId?.trim() || rootId;
-  const breadcrumb = await assertWithinRoot(targetId, rootId);
+  const breadcrumb = await assertWithinRoot(targetId, rootId, opts.tenantId);
 
   const clauses = [`'${escapeQuery(targetId)}' in parents`, 'trashed = false'];
   const search = opts.search?.trim();
   if (search) clauses.push(`name contains '${escapeQuery(search)}'`);
 
-  const payload = await driveGet<{ files?: RawFile[] }>(FILES_URL, {
-    q: clauses.join(' and '),
-    // Les dossiers en tête, puis l'ordre alphabétique : c'est l'ordre dans
-    // lequel Drive lui-même présente un dossier, donc celui que les gens ont
-    // en tête.
-    orderBy: 'folder,name',
-    pageSize: '200',
-    fields: `files(${FILE_FIELDS})`,
-  });
+  const payload = await driveGet<{ files?: RawFile[] }>(
+    FILES_URL,
+    {
+      q: clauses.join(' and '),
+      // Les dossiers en tête, puis l'ordre alphabétique : c'est l'ordre dans
+      // lequel Drive lui-même présente un dossier, donc celui que les gens ont
+      // en tête.
+      orderBy: 'folder,name',
+      pageSize: '200',
+      fields: `files(${FILE_FIELDS})`,
+    },
+    opts.tenantId
+  );
 
   return {
     files: (payload.files ?? []).map(toDriveFile),
@@ -440,6 +503,8 @@ export type UploadDriveFileArgs = {
   name: string;
   mimeType: string;
   content: Buffer;
+  /** Tenant dont on lit la clé privée en base. */
+  tenantId?: string | null;
 };
 
 /**
@@ -465,10 +530,10 @@ export async function uploadDriveFile(
   }
 
   const targetId = args.folderId?.trim() || rootId;
-  await assertWithinRoot(targetId, rootId);
+  await assertWithinRoot(targetId, rootId, args.tenantId);
 
   const name = args.name.replace(/[/\\]/g, '-').trim() || 'document';
-  const token = await getAccessToken(SCOPE_WRITE);
+  const token = await getAccessToken(SCOPE_WRITE, args.tenantId);
 
   // Upload multipart « à la main » : la requête est un corps en deux parties
   // (métadonnées JSON, puis octets). Une dépendance de plusieurs mégaoctets
@@ -520,7 +585,10 @@ export async function uploadDriveFile(
  * suppression irréversible déclenchée depuis une page web, sur les statuts
  * d'une association, n'a aucune raison d'exister.
  */
-export async function trashDriveFile(fileId: string): Promise<void> {
+export async function trashDriveFile(
+  fileId: string,
+  tenantId?: string | null
+): Promise<void> {
   const rootId = getDriveRootFolderId();
   if (!rootId) throw new DriveConfigError('GOOGLE_DRIVE_FOLDER_ID absent.');
 
@@ -529,13 +597,14 @@ export async function trashDriveFile(fileId: string): Promise<void> {
   // du compte de service.
   const meta = await driveGet<RawFile>(
     `${FILES_URL}/${encodeURIComponent(fileId)}`,
-    { fields: 'id,name,parents' }
+    { fields: 'id,name,parents' },
+    tenantId
   );
   const parent = meta.parents?.[0];
   if (!parent) throw new DriveConfigError('Fichier sans dossier parent.');
-  await assertWithinRoot(parent, rootId);
+  await assertWithinRoot(parent, rootId, tenantId);
 
-  const token = await getAccessToken(SCOPE_WRITE);
+  const token = await getAccessToken(SCOPE_WRITE, tenantId);
   const res = await fetch(
     `${FILES_URL}/${encodeURIComponent(fileId)}?supportsAllDrives=true`,
     {
