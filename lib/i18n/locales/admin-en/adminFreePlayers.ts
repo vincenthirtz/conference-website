@@ -47,4 +47,12 @@ export default {
   removeError: 'Removal failed.',
   selfServiceNote:
     'A player who signed up from the site can remove herself: the link is in the confirmation email she received. This table is for requests arriving through another channel.',
+  searchPlaceholder: 'Filter (name, role, contact…)',
+  exportCsv: 'Export as CSV',
+  selectedCount: '{n} selected',
+  selectAll: 'Select all',
+  selectRow: 'Select row',
+  previousPage: 'Previous',
+  nextPage: 'Next',
+  pageOf: 'Page {page} / {pages}',
 };

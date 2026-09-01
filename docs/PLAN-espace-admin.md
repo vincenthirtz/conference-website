@@ -47,7 +47,7 @@
 | **A2** | Rôles staff fins (bénévole, arbitre) | 🟥 | L | ✅ socle livré 2026-09-01 |
 | **A3** | Rendre aux équipes ce que le staff fait à leur place | 🟧 | M | ✅ livré 2026-09-01 |
 | **A4** | Recherche globale + palette de commandes | 🟧 | M | ✅ livré 2026-09-01 |
-| **A5** | Kit de listes admin (`DataTable`) | 🟧 | L | après |
+| **A5** | Kit de listes admin (`DataTable`) | 🟧 | L | ✅ kit livré 2026-09-01 |
 | **A6** | Journal exploitable + historique contextuel | 🟧 | M | après |
 | **A7** | Découpe des god-components (Q018) | 🟩 | L | continu |
 | **A8** | Réglages scopés par tenant | 🟧 | M | avant le 2e tenant |
@@ -216,7 +216,7 @@ besoin se confirme.
 
 ---
 
-## A5 · Kit de listes admin — 🟧 / L · après
+## A5 · Kit de listes admin — ✅ KIT LIVRÉ (2026-09-01)
 
 **Problème.** [`AdminListShell`](../components/admin/AdminListShell.tsx) unifie les états
 (erreur → chargement → vide → contenu) et son propre en-tête reconnaît factoriser « ~90 pages ».
@@ -231,9 +231,22 @@ staff), pagination serveur, sélection multiple + actions groupées, export CSV 
 réinventées) sur les écrans migrés.
 
 **Critères d'acceptation**
-- [ ] Une liste migrée perd 100+ lignes de JSX sans changement fonctionnel visible.
-- [ ] Un filtre appliqué se retrouve dans l'URL et se recharge à l'identique.
-- [ ] Les actions groupées passent par un endpoint idempotent, journalisé une fois par lot.
+- [x] `components/admin/DataTable.tsx` : colonnes déclaratives, tri, recherche, pagination,
+      sélection multiple + actions groupées, export CSV, en-têtes `Th` (scope), états délégués
+      à `AdminListShell`.
+- [x] Un filtre, un tri ou une page se retrouvent dans l'URL (`useTableQueryState`, navigation
+      `shallow`) : un filtre appliqué se partage et se recharge.
+- [x] Première adoption : `/admin/free-players`.
+- [ ] Actions groupées sur un endpoint idempotent journalisé — le kit les expose, aucune liste
+      migrée n'en a encore besoin.
+
+**Ce que la première migration a appris (et qui corrige ce plan)** : sur une PETITE liste, le kit
+est à peu près neutre en lignes (221 → 227) — les colonnes déclaratives coûtent ce que le JSX
+coûtait. Ce qu'on gagne, c'est le comportement : cette page a maintenant recherche, tri, export
+CSV, pagination et en-têtes accessibles, qu'elle n'avait pas. Le « −100 lignes » annoncé ne vaut
+que pour les grosses listes, qui réimplémentent ces quatre choses à la main.
+
+**Reste à faire** : les neuf autres grosses listes, une par une.
 
 ---
 

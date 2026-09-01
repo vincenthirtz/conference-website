@@ -16,6 +16,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminFreePlayers from '@/lib/i18n/locales/admin-fr/adminFreePlayers';
+import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
 import type { StaffProps } from '@/types/admin';
 
 export const getServerSideProps = withStaffPage('admin');
@@ -45,6 +46,19 @@ export default function AdminFreePlayersPage(_props: StaffProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
+
+  /** Libellés du kit de listes (lot A5) — traduits ici, pas dans le composant. */
+  const tableLabels = {
+    search: t.searchPlaceholder,
+    empty: t.empty,
+    export: t.exportCsv,
+    selected: t.selectedCount,
+    selectAll: t.selectAll,
+    selectRow: t.selectRow,
+    previous: t.previousPage,
+    next: t.nextPage,
+    page: t.pageOf,
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -93,8 +107,80 @@ export default function AdminFreePlayersPage(_props: StaffProps) {
     }
   };
 
-  const th = 'px-3 py-2 text-left text-xs font-semibold text-neutral-400';
-  const td = 'px-3 py-2 align-top text-sm text-neutral-200';
+  // Lot A5 : colonnes DÉCLARATIVES. `value` sert à la fois au tri, à la
+  // recherche et à l'export CSV — l'export cesse d'être une seconde
+  // description des mêmes données, qui dérive de la première.
+  const columns: DataTableColumn<Item>[] = [
+    {
+      key: 'name',
+      header: t.colName,
+      value: (i) => i.name || t.noName,
+      className: 'font-medium text-white',
+    },
+    {
+      key: 'roles',
+      header: t.colRoles,
+      value: (i) => (i.roles.length > 0 ? i.roles.join(', ') : ''),
+    },
+    { key: 'level', header: t.colLevel, value: (i) => i.level ?? '' },
+    {
+      key: 'availability',
+      header: t.colAvailability,
+      value: (i) => i.availability ?? '',
+      className: 'max-w-xs',
+    },
+    {
+      key: 'contact',
+      header: t.colContact,
+      value: (i) =>
+        i.contactEmail ?? (i.discordUsername ? `@${i.discordUsername}` : ''),
+      render: (i) =>
+        i.contactEmail ? (
+          <a
+            href={`mailto:${i.contactEmail}`}
+            className="text-purple-300 underline underline-offset-2"
+          >
+            {i.contactEmail}
+          </a>
+        ) : i.discordUsername ? (
+          <span className="font-mono text-xs">@{i.discordUsername}</span>
+        ) : (
+          <>{t.noContact}</>
+        ),
+    },
+    {
+      key: 'source',
+      header: t.colSource,
+      value: (i) => (i.source === 'web' ? t.sourceWeb : t.sourceDiscord),
+    },
+    {
+      key: 'since',
+      header: t.colSince,
+      // Trié sur l'ISO, affiché en date locale : trier une date affichée
+      // « 03/09 » la classerait alphabétiquement.
+      value: (i) => i.markedAt ?? '',
+      render: (i) => (
+        <>
+          {i.markedAt ? new Date(i.markedAt).toLocaleDateString('fr-FR') : '—'}
+        </>
+      ),
+    },
+    {
+      key: 'actions',
+      header: t.colActions,
+      sortable: false,
+      render: (i) => (
+        <button
+          type="button"
+          onClick={() => void handleRemove(i)}
+          disabled={removing === i.id}
+          className="rounded-lg border border-red-500/40 px-3 py-1.5 text-xs font-semibold text-red-200 transition hover:bg-red-500/10 disabled:opacity-50"
+        >
+          {removing === i.id ? t.removing : t.remove}
+        </button>
+      ),
+    },
+  ];
 
   return (
     <>
@@ -115,104 +201,24 @@ export default function AdminFreePlayersPage(_props: StaffProps) {
             </p>
           </div>
 
-          {loading && <p className="text-sm text-neutral-400">{t.loading}</p>}
-
-          {!loading && error && (
-            <div
-              role="alert"
-              className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100"
-            >
-              {t.loadError}
-              <button
-                type="button"
-                onClick={() => void load()}
-                className="ml-3 underline underline-offset-2"
-              >
-                {t.retry}
-              </button>
-            </div>
-          )}
-
-          {!loading && !error && items.length === 0 && (
-            <p className="text-sm text-neutral-400">{t.empty}</p>
-          )}
-
           {!loading && !error && items.length > 0 && (
-            <>
-              <p className="mb-3 text-sm text-neutral-400">
-                {format(t.count, { count: items.length })}
-              </p>
-              <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03]">
-                <table className="min-w-full">
-                  <thead className="border-b border-white/10">
-                    <tr>
-                      <th className={th}>{t.colName}</th>
-                      <th className={th}>{t.colRoles}</th>
-                      <th className={th}>{t.colLevel}</th>
-                      <th className={th}>{t.colAvailability}</th>
-                      <th className={th}>{t.colContact}</th>
-                      <th className={th}>{t.colSource}</th>
-                      <th className={th}>{t.colSince}</th>
-                      <th className={th}>{t.colActions}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((item) => (
-                      <tr
-                        key={item.id}
-                        className="border-b border-white/5 last:border-0"
-                      >
-                        <td className={`${td} font-medium text-white`}>
-                          {item.name || t.noName}
-                        </td>
-                        <td className={td}>
-                          {item.roles.length > 0 ? item.roles.join(', ') : '—'}
-                        </td>
-                        <td className={td}>{item.level || '—'}</td>
-                        <td className={`${td} max-w-xs`}>
-                          {item.availability || '—'}
-                        </td>
-                        <td className={td}>
-                          {item.contactEmail ? (
-                            <a
-                              href={`mailto:${item.contactEmail}`}
-                              className="text-purple-300 underline underline-offset-2"
-                            >
-                              {item.contactEmail}
-                            </a>
-                          ) : item.discordUsername ? (
-                            <span className="font-mono text-xs">
-                              @{item.discordUsername}
-                            </span>
-                          ) : (
-                            t.noContact
-                          )}
-                        </td>
-                        <td className={td}>
-                          {item.source === 'web' ? t.sourceWeb : t.sourceDiscord}
-                        </td>
-                        <td className={td}>
-                          {item.markedAt
-                            ? new Date(item.markedAt).toLocaleDateString('fr-FR')
-                            : '—'}
-                        </td>
-                        <td className={td}>
-                          <button
-                            type="button"
-                            onClick={() => void handleRemove(item)}
-                            disabled={removing === item.id}
-                            className="rounded-lg border border-red-500/40 px-3 py-1.5 text-xs font-semibold text-red-200 transition hover:bg-red-500/10 disabled:opacity-50"
-                          >
-                            {removing === item.id ? t.removing : t.remove}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
+            <p className="mb-3 text-sm text-neutral-400">
+              {format(t.count, { count: items.length })}
+            </p>
           )}
+
+          <DataTable<Item>
+            rows={items}
+            columns={columns}
+            rowKey={(i) => i.id}
+            loading={loading}
+            error={error ? t.loadError : null}
+            onRetry={() => void load()}
+            emptyTitle={t.empty}
+            searchPlaceholder={t.searchPlaceholder}
+            exportFilename="joueuses-libres"
+            labels={tableLabels}
+          />
         </div>
       </div>
       {dialog}

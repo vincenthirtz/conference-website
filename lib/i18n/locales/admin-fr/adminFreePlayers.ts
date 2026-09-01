@@ -50,4 +50,12 @@ export default adminNs('adminFreePlayers', {
 
   selfServiceNote:
     'Une joueuse inscrite depuis le site peut se retirer elle-même : le lien est dans l’email de confirmation qu’elle a reçu. Ce tableau sert aux demandes qui arrivent par un autre canal.',
+  searchPlaceholder: 'Filtrer (nom, rôle, contact…)',
+  exportCsv: 'Exporter en CSV',
+  selectedCount: '{n} sélectionnée(s)',
+  selectAll: 'Tout sélectionner',
+  selectRow: 'Sélectionner la ligne',
+  previousPage: 'Précédent',
+  nextPage: 'Suivant',
+  pageOf: 'Page {page} / {pages}',
 });
