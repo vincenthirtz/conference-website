@@ -16329,6 +16329,107 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/users/{userId}/permissions:
+    get:
+      summary: Permissions accordees a l'unite d'un membre du staff.
+      description: >
+        Renvoie ce que le ROLE couvre, ce qui est accorde EN PLUS, le total
+        effectif, et ce que l'APPELANT peut accorder. La cle est l'id du compte
+        auth, pas `staff.id` : l'ecran appelant manipule des comptes.
+      operationId: adminGetStaffPermissions
+      tags:
+        - admin/staff
+      security:
+        - StaffSession: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Etat des permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  staffId:
+                    type: string
+                  userId:
+                    type: string
+                  role:
+                    type: string
+                  rolePermissions:
+                    type: array
+                    items:
+                      type: string
+                  extraPermissions:
+                    type: array
+                    items:
+                      type: string
+                  effective:
+                    type: array
+                    items:
+                      type: string
+                  grantable:
+                    type: array
+                    items:
+                      type: string
+        '404':
+          description: Ce compte n'est pas membre du staff.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    put:
+      summary: Remplace les permissions accordees a l'unite.
+      description: >
+        Exige `manage_staff`. REGLE CENTRALE : on ne peut accorder ni retirer
+        qu'un droit qu'on detient soi-meme (403 sinon) — sans quoi un admin
+        s'accorderait `manage_tenant` et se hisserait au-dessus de son role.
+
+
+        Seul le DELTA est juge : une liste heritee peut contenir un droit que
+        l'appelant n'a pas, sans lui interdire toute modification.
+
+
+        Un droit deja couvert par le role n'est PAS stocke : il survivrait a une
+        retrogradation en donnant plus que le nouveau role.
+      operationId: adminSetStaffPermissions
+      tags:
+        - admin/staff
+      security:
+        - StaffSession: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - extraPermissions
+              properties:
+                extraPermissions:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Permissions enregistrees.
+        '400':
+          description: Corps invalide ou permission inconnue.
+        '403':
+          description: Droit non detenu par l'appelant.
+        '404':
+          description: Ce compte n'est pas membre du staff.
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /api/admin/documents:
     get:
       summary: Liste le Drive de l'association (lecture seule).

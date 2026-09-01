@@ -32,6 +32,12 @@ export type StaffShape = {
   id: string;
   role: string;
   display_name: string | null;
+  /**
+   * Permissions EFFECTIVES de l'appelant (rôle + accordées à l'unité), posées
+   * par `withStaffPage`. Optionnelle : les pages qui n'en ont pas besoin ne
+   * la lisent pas, et les fixtures de tests ne la renseignent pas.
+   */
+  permissions?: string[];
 };
 
 export type StaffProps = {

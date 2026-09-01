@@ -10,7 +10,8 @@ import type { User } from '@supabase/supabase-js';
 import { supabaseAdmin, getServerClient } from './supabase';
 import type { StaffRole } from '@/types/admin';
 import {
-  roleHasStaffPermission,
+  effectiveStaffPermissions,
+  hasStaffPermission,
   type StaffPermission,
 } from '@/utils/staffPermissions';
 import type {
@@ -428,9 +429,13 @@ export async function requireStaffPermissionFromRequest(
   // « est-ce un membre du staff authentifié ? » et résout le tenant actif.
   const ctx = await requireStaffRoleFromRequest(req, res, 'helper');
 
-  if (!roleHasStaffPermission(ctx.role, permission)) {
+  // Deux sources : le rôle, et les permissions accordées à l'unité sur la
+  // fiche staff. La seconde est ce qui permet de confier une tâche précise sans
+  // donner un rôle entier — « le Drive de l'asso à la trésorière » sans faire
+  // d'elle une administratrice du site.
+  if (!hasStaffPermission(ctx.role, ctx.staff.extra_permissions, permission)) {
     throw new StaffUnauthorizedError(
-      `Ce rôle ne couvre pas la permission « ${permission} ».`
+      `Ce compte ne couvre pas la permission « ${permission} ».`
     );
   }
   // Le contexte retient PAR QUOI l'accès a été accordé : le journal peut alors
@@ -663,6 +668,13 @@ export function withStaffPage<
           auth_user_id: staffCtx.user.id,
           role: staffCtx.role,
           display_name: staffCtx.staff.display_name,
+          // Permissions EFFECTIVES (rôle + accordées). Les pages en ont besoin
+          // pour ne pas afficher un menu qui mène en 403 — le rôle seul ne
+          // suffit plus depuis que des droits s'accordent à l'unité.
+          permissions: effectiveStaffPermissions(
+            staffCtx.role,
+            staffCtx.staff.extra_permissions
+          ),
         },
         activeTenantKind,
       };

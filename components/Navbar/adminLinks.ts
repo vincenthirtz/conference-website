@@ -1,7 +1,7 @@
 import type { AdminLink } from '@/types/components';
 import { hasAtLeastRole, type StaffRole } from '@/utils/staff';
 import {
-  roleHasStaffPermission,
+  hasStaffPermission,
   type StaffPermission,
 } from '@/utils/staffPermissions';
 import { buildAdminLinks } from '@/components/admin/navigation/adminNav';
@@ -18,13 +18,20 @@ export const ADMIN_LINKS: AdminLink[] = buildAdminLinks();
 export function filterAdminLinks(
   staffRole: StaffRole | null,
   links: AdminLink[] = ADMIN_LINKS,
-  tenantKind?: TenantKind
+  tenantKind?: TenantKind,
+  /**
+   * Permissions EFFECTIVES de l'appelant (rôle + accordées à l'unité). Absente,
+   * on retombe sur le rôle seul — c'est le comportement d'avant les
+   * attributions à l'unité, jamais un menu plus large.
+   */
+  permissions?: readonly string[]
 ): AdminLink[] {
   // Un nœud qui déclare une PERMISSION est filtré dessus (lot A2) : c'est ce
   // que sa page applique côté serveur, et filtrer autrement afficherait une
   // entrée de menu qui mène à un 403 — le « menu mort » que le lot interdit.
   const canAccess = (minRole?: StaffRole, permission?: StaffPermission) => {
-    if (permission) return roleHasStaffPermission(staffRole, permission);
+    if (permission)
+      return hasStaffPermission(staffRole, permissions, permission);
     return hasAtLeastRole(staffRole, minRole ?? 'admin');
   };
 

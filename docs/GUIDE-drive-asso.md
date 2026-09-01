@@ -98,15 +98,20 @@ d'écriture, il ne *peut* pas écrire.
 
 ---
 
-## Ce que ce lot ne fait pas encore
+## Donner le Drive à quelqu'un sans lui donner le site
 
-Les deux droits vont à `owner` et `admin` — et `admin` a déjà tout. Ils
-**gardent correctement la page et l'écriture, mais n'ouvrent à personne de
-nouveau** : donner le Drive à la trésorière sans lui donner le site suppose de
-pouvoir accorder une permission **à l'unité**, ce que le modèle actuel ne
-permet pas (les permissions dérivent du seul rôle).
+Les deux droits s'accordent **à l'unité**, sans changer le rôle :
+`/admin/users/manage` → sur la ligne d'un membre du staff, l'icône **cadenas**
+→ cocher `Lire les documents de l'asso` et/ou `Déposer des documents`.
 
-C'est le lot suivant : colonne `staff.extra_permissions`, résolution dans
-`utils/staff.ts`, attribution dans `/admin/users/manage`. La séparation
-lecture / écriture faite dès maintenant est ce qui rendra ce réglage possible
-— « la trésorière dépose, le bureau consulte » — sans nouvelle migration.
+La trésorière peut donc être `helper` et déposer les factures ; le reste du
+bureau, `helper` aussi, et seulement consulter. Aucun des deux n'est admin.
+
+Trois garde-fous à connaître :
+
+- **On ne peut accorder que ce qu'on détient soi-même.** Un droit se délègue,
+  il ne se crée pas — sinon `manage_staff` serait le seul droit qui existe.
+- **Les droits accordés ajoutent, ils ne retirent jamais.** Un droit couvert
+  par le rôle apparaît coché et verrouillé : pour le retirer, on change le rôle.
+- **Chaque modification est journalisée** (`/admin/logs`, « Permissions
+  accordées à un membre du staff ») avec ce qui a été ajouté et retiré.

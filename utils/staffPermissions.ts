@@ -183,3 +183,52 @@ export function roleHasStaffPermission(
 ): boolean {
   return staffPermissionsFor(role).includes(permission);
 }
+
+/**
+ * Permissions EFFECTIVES : celles du rôle UNION celles accordées à l'unité
+ * (`staff.extra_permissions`).
+ *
+ * Les droits accordés ne font qu'AJOUTER, jamais retirer. Une soustraction
+ * créerait un état où deux personnes du même rôle n'ont pas les mêmes droits
+ * sans que rien ne le dise, et où lire le rôle ne renseignerait plus sur rien.
+ * Pour retirer un droit, on change de rôle.
+ *
+ * Les valeurs inconnues de `extra` sont IGNORÉES : la colonne SQL n'est pas
+ * contrainte par un enum, et un droit retiré du catalogue ne doit pas faire
+ * planter la résolution des droits de qui l'avait.
+ */
+export function effectiveStaffPermissions(
+  role: StaffRole | null | undefined,
+  extra?: readonly string[] | null
+): StaffPermission[] {
+  const out = new Set<StaffPermission>(staffPermissionsFor(role));
+  for (const value of extra ?? []) {
+    if (isStaffPermission(value)) out.add(value);
+  }
+  return [...out];
+}
+
+/** `true` si le rôle OU une permission accordée couvre `permission`. */
+export function hasStaffPermission(
+  role: StaffRole | null | undefined,
+  extra: readonly string[] | null | undefined,
+  permission: StaffPermission
+): boolean {
+  if (roleHasStaffPermission(role, permission)) return true;
+  return (extra ?? []).includes(permission);
+}
+
+/**
+ * Ce qu'un acteur peut ACCORDER : uniquement ce qu'il détient lui-même.
+ *
+ * Sans cette règle, `manage_staff` serait le seul droit qui compte : un admin
+ * pourrait s'accorder `manage_tenant`, qu'aucun rôle sauf `owner` ne porte, et
+ * se hisser au-dessus de son propre rôle. Un droit ne se crée pas, il se
+ * délègue.
+ */
+export function grantableStaffPermissions(
+  actorRole: StaffRole | null | undefined,
+  actorExtra?: readonly string[] | null
+): StaffPermission[] {
+  return effectiveStaffPermissions(actorRole, actorExtra);
+}

@@ -3151,6 +3151,45 @@ sa ligne ici **et** dans la fixture.
 
 ---
 
+## Permissions accordees a l'unite
+
+`GET|PUT /api/admin/users/:userId/permissions` — accorder une permission staff
+a quelqu'un SANS lui donner un role entier. **Pas un endpoint bot.**
+
+Auth : `manage_staff`. Cle = l'id du compte auth (l'ecran appelant,
+`/admin/users/manage`, manipule des comptes, pas des `staff.id`).
+
+Modele : **permissions effectives = celles du ROLE UNION celles accordees**
+(colonne `staff.extra_permissions`, `text[]`). Les accordees n'AJOUTENT que ;
+retirer un droit se fait en changeant de role. Une valeur inconnue du catalogue
+est ignoree a la lecture — la colonne n'a volontairement pas de CHECK, sinon
+chaque nouveau droit imposerait une migration.
+
+**Regle centrale : on ne peut accorder ni retirer qu'un droit qu'on detient
+soi-meme** (403 sinon). Sans elle, `manage_staff` serait le seul droit qui
+existe : un admin s'accorderait `manage_tenant` — qu'aucun role sauf `owner` ne
+porte — et se hisserait au-dessus de son propre role. Un droit ne se cree pas,
+il se delegue. Un droit recu a l'unite est redelegable : c'est une delegation,
+pas un privilege de second rang.
+
+Deux finesses qui evitent des faux etats :
+
+- **Seul le DELTA est juge.** Une liste heritee peut contenir un droit que
+  l'appelant n'a pas ; le lui faire retirer par accident, ou lui interdire
+  toute modification a cause de lui, seraient tous deux faux.
+- **Un droit deja couvert par le role n'est pas stocke.** Il survivrait a une
+  retrogradation en donnant plus que le nouveau role.
+
+Journalisation : `update_staff_permissions` (`entity_type: 'staff'`, payload =
+cible, `added`, `removed`, `result`).
+
+Cote lecture, `/api/admin/me` renvoie `permissions` (effectives) : la navbar et
+les cartes du dashboard filtrent dessus. Le role seul ne suffit plus — sans ca,
+une personne a qui on a confie une tache ne verrait pas l'entree de menu
+correspondante.
+
+---
+
 ## Documents de l'asso (Drive)
 
 `GET /api/admin/documents` — liste le Drive de l'association (statuts, PV

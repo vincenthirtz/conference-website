@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabaseClient } from '@/utils/supabase';
 import { useSession } from '@/hooks/useSession';
 import type { StaffRole } from '@/utils/staff';
+import { staffPermissionsFor } from '@/utils/staffPermissions';
 import type { TenantKind } from '@/utils/tenantKind';
 
 export const STAFF_CACHE_TTL = 2 * 60 * 1000;
@@ -36,6 +37,12 @@ export type StaffCache = {
   isStaff: boolean;
   staffName: string | null;
   staffRole: StaffRole | null;
+  /**
+   * Permissions EFFECTIVES. OPTIONNELLE : une entrée de cache écrite par la
+   * version précédente n'en a pas, et la traiter comme invalide déconnecterait
+   * visuellement tout le staff au déploiement.
+   */
+  staffPermissions?: string[];
   activeTenantKind: TenantKind | null;
   ts: number;
 };
@@ -81,6 +88,8 @@ export type StaffSession = {
   isStaff: boolean;
   staffName: string | null;
   staffRole: StaffRole | null;
+  /** Permissions EFFECTIVES (rôle + accordées à l'unité), telles que /me les rend. */
+  staffPermissions: string[];
   activeTenantKind: TenantKind | null;
   loading: boolean;
   clear: () => void;
@@ -99,6 +108,7 @@ export function useStaffSession(): StaffSession {
   const [isStaff, setIsStaff] = useState(false);
   const [staffName, setStaffName] = useState<string | null>(null);
   const [staffRole, setStaffRole] = useState<StaffRole | null>(null);
+  const [staffPermissions, setStaffPermissions] = useState<string[]>([]);
   const [activeTenantKind, setActiveTenantKind] = useState<TenantKind | null>(
     null
   );
@@ -109,6 +119,7 @@ export function useStaffSession(): StaffSession {
     setIsStaff(false);
     setStaffName(null);
     setStaffRole(null);
+    setStaffPermissions([]);
     setActiveTenantKind(null);
     writeCache(null);
   }, []);
@@ -121,6 +132,7 @@ export function useStaffSession(): StaffSession {
           setIsStaff(cached!.isStaff === true);
           setStaffName(cached!.staffName ?? null);
           setStaffRole(cached!.staffRole ?? null);
+          setStaffPermissions(cached!.staffPermissions ?? []);
           setActiveTenantKind(cached!.activeTenantKind ?? null);
           setLoading(false);
           return;
@@ -166,12 +178,19 @@ export function useStaffSession(): StaffSession {
             me.active_tenant_kind === 'developer' ? 'developer' : 'organizer';
           setIsStaff(true);
           setStaffName(name);
+          // Repli sur les permissions du rôle si le champ est absent (API pas
+          // encore déployée) : comportement inchangé, jamais un menu vide.
+          const permissions = Array.isArray(me.permissions)
+            ? (me.permissions as string[])
+            : staffPermissionsFor(role);
           setStaffRole(role);
+          setStaffPermissions(permissions);
           setActiveTenantKind(kind);
           writeCache({
             isStaff: true,
             staffName: name,
             staffRole: role,
+            staffPermissions: permissions,
             activeTenantKind: kind,
             ts: Date.now(),
           });
@@ -210,6 +229,7 @@ export function useStaffSession(): StaffSession {
     isStaff,
     staffName,
     staffRole,
+    staffPermissions,
     activeTenantKind,
     loading,
     clear: reset,

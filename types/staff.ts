@@ -19,6 +19,15 @@ export type StaffMember = {
    * renseignent pas — traite alors comme `false`.
    */
   is_pole_admin?: boolean;
+  /**
+   * Permissions accordées À L'UNITÉ, en plus de celles du rôle. Jamais en
+   * moins : un droit se retire en changeant de rôle. Cf.
+   * `effectiveStaffPermissions()`.
+   *
+   * Optional pour compat des fixtures de tests qui ne la renseignent pas —
+   * traitée alors comme vide.
+   */
+  extra_permissions?: string[] | null;
 };
 
 export type StaffContext = {

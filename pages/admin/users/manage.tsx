@@ -19,6 +19,15 @@ import { Skeleton } from '@/components/admin/Skeleton';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 import nsAdminUsersManage from '@/lib/i18n/locales/admin-fr/adminUsersManage';
+import nsAdminStaffPermissions from '@/lib/i18n/locales/admin-fr/adminStaffPermissions';
+import StaffPermissionsDialog from '@/components/admin/users/StaffPermissionsDialog';
+import {
+  csvCell,
+  formatDate,
+  formatDateTime,
+  formatRelative,
+  isSuspended,
+} from '@/components/admin/users/manageFormat';
 
 type Dict = typeof nsAdminUsersManage.fr;
 type StaffShape = {
@@ -58,11 +67,6 @@ type SuspendDuration = (typeof SUSPEND_DURATIONS)[number];
 
 /** Vrai si le compte est suspendu À CET INSTANT (une échéance passée ne l'est
  *  plus : GoTrue laisse la date en base après expiration). */
-function isSuspended(bannedUntil: string | null | undefined): boolean {
-  if (!bannedUntil) return false;
-  const t = Date.parse(bannedUntil);
-  return Number.isFinite(t) && t > Date.now();
-}
 
 type ApiResponse = {
   items: UserLite[];
@@ -243,74 +247,9 @@ function teamRoleColor(role: string | null) {
   }
 }
 
-function formatDate(d: string | null) {
-  if (!d) return '—';
-  try {
-    return new Date(d).toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  } catch {
-    return d;
-  }
-}
-
 /** Date + heure — un journal d'audit sans l'heure ne sert à rien. */
-function formatDateTime(d: string | null) {
-  if (!d) return '—';
-  try {
-    return new Date(d).toLocaleString('fr-FR', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return d;
-  }
-}
 
 /** Date relative localisée ("il y a 3 j" / "3d ago"), null si date absente. */
-function formatRelative(d: string | null, lang: string): string | null {
-  if (!d) return null;
-  const then = new Date(d).getTime();
-  if (Number.isNaN(then)) return null;
-  const diff = then - Date.now(); // négatif = passé
-  const abs = Math.abs(diff);
-  const MIN = 60_000,
-    H = 3_600_000,
-    DAY = 86_400_000,
-    MO = 2_592_000_000,
-    YR = 31_536_000_000;
-  let value: number;
-  let unit: Intl.RelativeTimeFormatUnit;
-  if (abs < H) {
-    value = Math.round(diff / MIN);
-    unit = 'minute';
-  } else if (abs < DAY) {
-    value = Math.round(diff / H);
-    unit = 'hour';
-  } else if (abs < MO) {
-    value = Math.round(diff / DAY);
-    unit = 'day';
-  } else if (abs < YR) {
-    value = Math.round(diff / MO);
-    unit = 'month';
-  } else {
-    value = Math.round(diff / YR);
-    unit = 'year';
-  }
-  try {
-    return new Intl.RelativeTimeFormat(lang, { numeric: 'auto' }).format(
-      value,
-      unit
-    );
-  } catch {
-    return formatDate(d);
-  }
-}
 
 /**
  * Échappe une cellule CSV (RFC 4180).
@@ -321,14 +260,6 @@ function formatRelative(d: string | null, lang: string): string | null {
  * d'une regex — `/["]/` — lui ouvrait une chaîne fantôme qui avalait TOUT le
  * reste du fichier : plus aucun texte n'y était vérifié.
  */
-const CSV_SPECIALS = ['"', ',', '\r', '\n'];
-
-function csvCell(v: string): string {
-  if (CSV_SPECIALS.some((ch) => v.includes(ch))) {
-    return `"${v.split('"').join('""')}"`;
-  }
-  return v;
-}
 
 /**
  * Pill accessible « ✓ BattleTag vérifié » / « non vérifié » (texte + couleur,
@@ -536,6 +467,8 @@ type UserRowProps = {
   onSuspend: (u: UserLite) => void;
   onUnsuspend: (u: UserLite) => void;
   onOpenLogs: (u: UserLite) => void;
+  /** Permissions accordées à l'unité — staff uniquement. */
+  onOpenPermissions: (u: UserLite) => void;
   onDelete: (u: UserLite) => void;
 };
 
@@ -556,8 +489,10 @@ const UserRow = memo(function UserRow({
   onSuspend,
   onUnsuspend,
   onOpenLogs,
+  onOpenPermissions,
   onDelete,
 }: UserRowProps) {
+  const tPerms = useAdminT(nsAdminStaffPermissions);
   const name = u.display_name || u.email || t.defaultUser;
   // Deux verrous distincts : cible protégée (owner/admin vu par un non-owner)
   // et cible = soi-même (l'API renvoie 403 sur le rôle et la suppression).
@@ -858,6 +793,34 @@ const UserRow = memo(function UserRow({
           </svg>
         </button>
 
+        {/* Permissions accordées à l'unité : n'a de sens que pour un compte
+            STAFF — accorder une permission staff à un compte joueur n'ouvre
+            rien, et la route répond 404. */}
+        {isStaffRoleValue(u.role) && (
+          <button
+            type="button"
+            title={tPerms.openCta}
+            aria-label={tPerms.openCta}
+            onClick={() => onOpenPermissions(u)}
+            className="relative z-10 p-2 rounded-lg text-neutral-400 hover:text-purple-300 hover:bg-white/[0.06] transition-colors"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              />
+            </svg>
+          </button>
+        )}
+
         <button
           type="button"
           title={t.logsTitle}
@@ -1120,6 +1083,10 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   const [logsUser, setLogsUser] = useState<UserLite | null>(null);
   const [logs, setLogs] = useState<AccountLog[] | null>(null);
   const [logsError, setLogsError] = useState<string | null>(null);
+
+  // Permissions accordées à l'unité : la boîte vit dans son propre composant
+  // (lot A7), la page n'en garde que la cible ouverte.
+  const [permissionsUser, setPermissionsUser] = useState<UserLite | null>(null);
 
   const openLogs = useCallback(
     async (user: UserLite) => {
@@ -2080,6 +2047,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
                     onSuspend={openSuspend}
                     onUnsuspend={unsuspendUser}
                     onOpenLogs={openLogs}
+                    onOpenPermissions={setPermissionsUser}
                     onDelete={openDeleteUser}
                   />
                 ))}
@@ -2255,6 +2223,19 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
           placeholder={deleteConfirmValue}
         />
       </Modal>
+
+      {/* Permissions accordées à l'unité — staff uniquement. */}
+      {permissionsUser && (
+        <StaffPermissionsDialog
+          userId={permissionsUser.id}
+          userName={
+            permissionsUser.display_name ||
+            permissionsUser.email ||
+            permissionsUser.id
+          }
+          onClose={() => setPermissionsUser(null)}
+        />
+      )}
 
       {/* Account Logs Modal */}
       <Modal

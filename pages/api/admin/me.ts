@@ -3,7 +3,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { withAuthRoute } from '@/utils/staff';
+import { withAuthRoute, STAFF_ROLES, type StaffRole } from '@/utils/staff';
+import { effectiveStaffPermissions } from '@/utils/staffPermissions';
 import {
   resolveActiveTenant,
   readActiveTenantCookie,
@@ -26,6 +27,8 @@ type MeResponse =
       role: string;
       created_at: string;
       active_tenant_kind: TenantKind;
+      /** Permissions EFFECTIVES (rôle + accordées à l'unité). */
+      permissions: string[];
     }
   | { error: string };
 
@@ -43,9 +46,9 @@ export default withAuthRoute(async function handler(
 
   // Chercher l'entrée dans la table staff liée à cet utilisateur
   const selectWithAvatar =
-    'id, auth_user_id, email, display_name, avatar_url, role, created_at';
+    'id, auth_user_id, email, display_name, avatar_url, role, created_at, extra_permissions';
   const selectWithoutAvatar =
-    'id, auth_user_id, email, display_name, role, created_at';
+    'id, auth_user_id, email, display_name, role, created_at, extra_permissions';
 
   const fetchStaff = async (withAvatar = true) => {
     const columns = withAvatar ? selectWithAvatar : selectWithoutAvatar;
@@ -165,6 +168,7 @@ export default withAuthRoute(async function handler(
         role: 'captain',
         created_at: user.created_at,
         active_tenant_kind: 'organizer',
+        permissions: [],
       } as unknown as MeResponse);
     }
 
@@ -180,7 +184,9 @@ export default withAuthRoute(async function handler(
   // toute erreur retombe sur 'organizer' (ne casse jamais /me).
   const staffRow = staff as unknown as {
     id: string;
+    role?: string;
     is_pole_admin?: boolean;
+    extra_permissions?: string[] | null;
   } & Record<string, unknown>;
 
   let active_tenant_kind: TenantKind = 'organizer';
@@ -196,8 +202,23 @@ export default withAuthRoute(async function handler(
     logger.error('[/api/admin/me] active_tenant_kind resolution error:', e);
   }
 
+  // Permissions EFFECTIVES : la navbar filtre dessus. Le rôle seul ne suffit
+  // plus depuis que des droits s'accordent à l'unité — sans ça, une personne à
+  // qui on a confié une tâche ne verrait pas l'entrée de menu correspondante.
+  const role = (STAFF_ROLES as readonly string[]).includes(
+    String(staffRow.role)
+  )
+    ? (staffRow.role as StaffRole)
+    : null;
+  const permissions = effectiveStaffPermissions(
+    role,
+    staffRow.extra_permissions
+  );
+
   // OK : renvoyer les infos staff (c'est ce que tu consommeras côté front)
-  return res
-    .status(200)
-    .json({ ...staffRow, active_tenant_kind } as unknown as MeResponse);
+  return res.status(200).json({
+    ...staffRow,
+    active_tenant_kind,
+    permissions,
+  } as unknown as MeResponse);
 });

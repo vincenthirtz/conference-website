@@ -14,6 +14,9 @@ import {
   STAFF_PERMISSION_CATALOG,
   STAFF_PERMISSION_VALUES,
   STAFF_ROLE_PERMISSIONS,
+  effectiveStaffPermissions,
+  grantableStaffPermissions,
+  hasStaffPermission,
   isStaffPermission,
   roleHasStaffPermission,
   staffPermissionsFor,
@@ -146,5 +149,63 @@ describe('permission portée par le journal', () => {
       permission: 'run_checkin',
     };
     expect(ctx.permission).toBe('run_checkin');
+  });
+});
+
+describe('permissions accordées à l’unité', () => {
+  it('ajoutent au rôle sans jamais en retirer', () => {
+    // Une soustraction créerait un état où deux personnes du même rôle n'ont
+    // pas les mêmes droits sans que rien ne le dise, et où lire le rôle ne
+    // renseignerait plus sur rien. Pour retirer, on change de rôle.
+    const effective = effectiveStaffPermissions('helper', ['read_documents']);
+    expect(effective).toContain('read_documents');
+    for (const p of staffPermissionsFor('helper')) {
+      expect(effective).toContain(p);
+    }
+  });
+
+  it('ignorent une valeur inconnue plutôt que d’échouer', () => {
+    // La colonne SQL n'est pas contrainte par un enum : un droit retiré du
+    // catalogue ne doit pas casser la résolution des droits de qui l'avait.
+    expect(
+      effectiveStaffPermissions('helper', ['droit_supprime_en_2027'])
+    ).toEqual(staffPermissionsFor('helper'));
+  });
+
+  it('ouvrent la porte que le rôle seul ne couvre pas', () => {
+    // Le cas d'usage du lot : la trésorière consulte le Drive de l'asso sans
+    // devenir administratrice du site.
+    expect(roleHasStaffPermission('helper', 'read_documents')).toBe(false);
+    expect(
+      hasStaffPermission('helper', ['read_documents'], 'read_documents')
+    ).toBe(true);
+    // Et rien d'autre ne s'ouvre au passage.
+    expect(
+      hasStaffPermission('helper', ['read_documents'], 'manage_documents')
+    ).toBe(false);
+    expect(
+      hasStaffPermission('helper', ['read_documents'], 'manage_staff')
+    ).toBe(false);
+  });
+
+  it('un acteur ne peut accorder que ce qu’il détient', () => {
+    // Sans cette règle, `manage_staff` serait le seul droit qui existe : un
+    // admin s'accorderait `manage_tenant`, qu'aucun rôle sauf owner ne porte,
+    // et se hisserait au-dessus de son propre rôle.
+    expect(grantableStaffPermissions('admin')).not.toContain('manage_tenant');
+    expect(grantableStaffPermissions('owner')).toContain('manage_tenant');
+    // Un droit reçu à l'unité est redélégable : c'est une délégation, pas un
+    // privilège de second rang.
+    expect(grantableStaffPermissions('helper', ['read_documents'])).toContain(
+      'read_documents'
+    );
+  });
+
+  it('ne stocke pas deux fois le même droit', () => {
+    const effective = effectiveStaffPermissions('admin', [
+      'manage_teams',
+      'manage_teams',
+    ]);
+    expect(effective.filter((p) => p === 'manage_teams')).toHaveLength(1);
   });
 });

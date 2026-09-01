@@ -37,8 +37,15 @@ function Navbar(): JSX.Element {
   const logoSrc = branding?.logoUrl ?? DEFAULT_LOGO_SRC;
   const logoAlt = branding?.name ? `${branding.name} logo` : 'conference logo';
 
-  const { isStaff, staffName, staffRole, activeTenantKind, loading, clear } =
-    useStaffSession();
+  const {
+    isStaff,
+    staffName,
+    staffRole,
+    staffPermissions,
+    activeTenantKind,
+    loading,
+    clear,
+  } = useStaffSession();
 
   // redirect:false → the navbar must never redirect anonymous visitors; it
   // only observes the player session to decide whether to show PlayerTopBar.
@@ -75,8 +82,13 @@ function Navbar(): JSX.Element {
 
   const visibleAdminLinks = useMemo(
     () =>
-      filterAdminLinks(staffRole, ADMIN_LINKS, activeTenantKind ?? undefined),
-    [staffRole, activeTenantKind]
+      filterAdminLinks(
+        staffRole,
+        ADMIN_LINKS,
+        activeTenantKind ?? undefined,
+        staffPermissions
+      ),
+    [staffRole, activeTenantKind, staffPermissions]
   );
 
   // Staff takes precedence: never show both bars. The player bar shows only on

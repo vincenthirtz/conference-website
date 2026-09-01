@@ -31,6 +31,8 @@ type StaffShape = {
   id: string;
   role: StaffRole;
   display_name: string | null;
+  /** Permissions EFFECTIVES (rôle + accordées à l'unité), posées par withStaffPage. */
+  permissions?: string[];
 };
 
 type Props = {
@@ -397,6 +399,7 @@ function AdminDashboardPage({ staff, activeTenantKind }: Props) {
   // « console développeur » sont appliqués dans la source unique (adminNav.ts) ;
   // les groupes vides sont déjà omis.
   const navGroups: NavCardGroup[] = collectAdminNavCardGroups(staff.role, {
+    permissions: staff.permissions,
     tenantKind: activeTenantKind,
   }).map((g) => ({
     categoryId: g.categoryId,

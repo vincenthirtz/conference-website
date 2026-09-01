@@ -194,6 +194,7 @@ import enAdminCasterScenes from './adminCasterScenes';
 import enAdminMatchLineups from './adminMatchLineups';
 import enAdminDiscordLogs from './adminDiscordLogs';
 import enAdminDocuments from './adminDocuments';
+import enAdminStaffPermissions from './adminStaffPermissions';
 import enAdminFreePlayers from './adminFreePlayers';
 
 const adminEnDict = {
@@ -384,6 +385,7 @@ const adminEnDict = {
   adminMatchLineups: enAdminMatchLineups,
   adminDiscordLogs: enAdminDiscordLogs,
   adminDocuments: enAdminDocuments,
+  adminStaffPermissions: enAdminStaffPermissions,
   adminFreePlayers: enAdminFreePlayers,
 };
 

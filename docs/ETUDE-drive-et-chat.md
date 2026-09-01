@@ -121,17 +121,20 @@ Corollaire : ce droit n'a d'intérêt que **détachable du rôle**.
 
 **Correction du 2026-09-01, pendant l'implémentation.** La première version de
 cette étude affirmait que le modèle A2 permettait déjà d'accorder une
-permission à l'unité. **C'est faux** :
-[`staffPermissionsFor()`](../utils/staffPermissions.ts) dérive les permissions
-du seul rôle, et la table `staff` n'a aucune colonne de permissions accordées.
-En l'état, `manage_documents` va donc à `owner` et `admin` — et `admin` a déjà
-tout : le droit **gate correctement la page, mais n'ouvre encore à personne de
-nouveau**. « Donner le Drive à la trésorière » oblige toujours à la faire
-`admin`, c'est-à-dire à lui donner le site.
+permission à l'unité. **C'était faux** :
+[`staffPermissionsFor()`](../utils/staffPermissions.ts) dérivait les
+permissions du seul rôle, et `staff` n'avait aucune colonne pour les droits
+accordés.
 
-C'est un lot à part (colonne `staff.extra_permissions`, résolution dans
-`utils/staff.ts`, UI dans `users/manage`), pas un détail de celui-ci. Il reste
-en tête de la suite.
+**Livré le 2026-09-01**, dans la foulée : colonne `staff.extra_permissions`,
+`effectiveStaffPermissions()` (rôle ∪ accordées), résolution dans la garde de
+route, et attribution depuis `/admin/users/manage`. La règle qui tient
+l'ensemble : **on ne peut accorder que ce qu'on détient soi-même** — sinon
+`manage_staff` serait le seul droit qui existe, et un admin s'accorderait
+`manage_tenant` pour passer au-dessus de son propre rôle.
+
+« Donner le Drive à la trésorière sans lui donner le site » est donc désormais
+possible.
 
 ### Pièges repérés
 

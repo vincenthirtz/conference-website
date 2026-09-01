@@ -12,7 +12,7 @@
 import { hasAtLeastRole } from '@/utils/staff';
 import type { StaffRole } from '@/utils/staff';
 import {
-  roleHasStaffPermission,
+  hasStaffPermission,
   type StaffPermission,
 } from '@/utils/staffPermissions';
 import type { TenantKind } from '@/utils/tenantKind';
@@ -113,7 +113,14 @@ const CATEGORY_LABEL_KEYS: Record<string, string> = {
  */
 export function collectAdminNavCardGroups(
   role: StaffRole,
-  opts?: { tenantKind?: TenantKind }
+  opts?: {
+    tenantKind?: TenantKind;
+    /**
+     * Permissions EFFECTIVES de l'appelant (rôle + accordées à l'unité).
+     * Absente, on retombe sur le rôle seul — jamais une grille plus large.
+     */
+    permissions?: readonly string[];
+  }
 ): AdminNavCardGroup[] {
   const developer = opts?.tenantKind === 'developer';
   const groups: AdminNavCardGroup[] = [];
@@ -126,7 +133,8 @@ export function collectAdminNavCardGroups(
     walkAdminNavCards([top], (card) => {
       // La permission prime : c'est ce que la page applique réellement.
       if (card.permission) {
-        if (!roleHasStaffPermission(role, card.permission)) return;
+        if (!hasStaffPermission(role, opts?.permissions, card.permission))
+          return;
       } else if (!hasAtLeastRole(role, card.minRole)) return;
       if (developer && card.devConsole !== true) return;
       cards.push(card);
