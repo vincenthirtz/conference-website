@@ -45,7 +45,7 @@
 |---|---|---|---|---|
 | **A1** | De l'alerte au geste (jour J) | 🟥 | M | ✅ livré 2026-09-01 |
 | **A2** | Rôles staff fins (bénévole, arbitre) | 🟥 | L | ✅ socle livré 2026-09-01 |
-| **A3** | Rendre aux équipes ce que le staff fait à leur place | 🟧 | M | saison |
+| **A3** | Rendre aux équipes ce que le staff fait à leur place | 🟧 | M | ✅ livré 2026-09-01 |
 | **A4** | Recherche globale + palette de commandes | 🟧 | M | saison |
 | **A5** | Kit de listes admin (`DataTable`) | 🟧 | L | après |
 | **A6** | Journal exploitable + historique contextuel | 🟧 | M | après |
@@ -144,7 +144,7 @@ page par page suit pendant la saison.
 
 ---
 
-## A3 · Rendre aux équipes ce que le staff fait à leur place — 🟧 / M · saison
+## A3 · Rendre aux équipes ce que le staff fait à leur place — ✅ LIVRÉ (2026-09-01)
 
 **Problème.** `update_team` est le 3e geste staff le plus journalisé (**58 lignes**) et
 `view_player_data` le 2e (66). Autrement dit : le staff regarde beaucoup l'espace joueur, puis
@@ -162,8 +162,26 @@ ou pas osé faire elle-même. Avec 10 équipes seulement, ce volume est un signa
    `update_team`, pas une fonctionnalité de plus.
 
 **Critères d'acceptation**
-- [ ] Une note dans ce document répertorie les 3 champs, la décision prise et la mesure d'après.
-- [ ] Aucun droit élargi sans passer par `assertTeamPermission` (permission `manage_team_info`).
+- [x] Les champs réellement modifiés sont ventilés, et la décision est prise pour chacun (ci-dessous).
+- [x] Aucun droit élargi : le geste rendu visible passe par la permission `edit_public_page`
+      qui existait déjà.
+
+### Ce que la mesure a dit (2026-09-01)
+
+Le compteur brut disait « 58 `update_team` ». En diffant `before`/`after` ligne à ligne :
+
+| Champ réellement modifié | n | Décision |
+|---|---|---|
+| `discord_channel_id` · `discord_voice_channel_id` · `discord_role_id` | **64** | **Bruit de journal.** C'est le BOT qui range ses propres IDs après provisioning — ni du staff, ni un geste qu'une équipe aurait pu faire. Slug dédié `team_discord_writeback`. |
+| `logo_url` | **9** | **Le geste existait, personne ne le trouvait.** Une capitaine peut déposer un logo (`/team/[slug]/edit`, permission `edit_public_page`) — mais rien ne l'indiquait depuis l'écran de gestion. Lien ajouté. |
+| `is_active`, `captain_id`, `name`, `short_name` | 9 | **Légitimement staff** (activation, transfert de capitanat, corrections). On arrête d'en faire un problème. |
+
+**La leçon du lot** : les deux tiers du compteur n'étaient pas ce qu'il prétendait mesurer. Sans
+la ventilation, on aurait « rendu aux équipes » un geste qu'aucune équipe ne faisait, et laissé
+de côté le seul vrai (le logo).
+
+**Mesure d'après** : recompter `update_team` (hors `team_discord_writeback`) et `logo_url` après
+une journée de championnat. Le succès du lot est la BAISSE de ces deux compteurs.
 
 ---
 

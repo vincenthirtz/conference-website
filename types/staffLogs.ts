@@ -58,6 +58,15 @@ export type StaffLogAction =
   | 'manage_team'
   | 'create_team'
   | 'update_team'
+  /**
+   * Écriture des IDs Discord d'une équipe par le bot après provisioning
+   * (rôle + salons). Journalisé comme `update_team` jusqu'au lot A3 de
+   * docs/PLAN-espace-admin.md : ces 64 écritures représentaient les deux tiers
+   * du compteur « le staff édite les équipes », alors que ce n'est ni du staff
+   * ni un geste qu'une capitaine aurait pu faire elle-même. Un compteur qu'on
+   * ne peut pas lire ne mesure rien.
+   */
+  | 'team_discord_writeback'
   | 'delete_team'
   | 'register_team'
   | 'transfer_team'

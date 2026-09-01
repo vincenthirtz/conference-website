@@ -217,6 +217,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   manage_team: 'Action équipe',
   create_team: 'Création équipe',
   update_team: 'Modification équipe',
+  team_discord_writeback: 'Provisioning Discord d’équipe (bot)',
   delete_team: 'Suppression équipe',
   register_team: 'Inscription équipe',
   transfer_team: "Transfert d'équipe",

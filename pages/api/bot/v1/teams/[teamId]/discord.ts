@@ -97,9 +97,13 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     return res.status(500).json({ error: 'Échec de la mise à jour' });
   }
 
+  // Slug DÉDIÉ (lot A3) : ce writeback est le bot qui range ses propres IDs
+  // après provisioning. Le journaliser comme `update_team` mélangeait 64
+  // écritures machine avec les corrections faites par le staff À LA PLACE des
+  // équipes — et rendait cette mesure-là inexploitable.
   await logBotStaffAction({
     staffId: actor.staffId,
-    action: 'update_team',
+    action: 'team_discord_writeback',
     entity_type: 'team',
     entity_id: teamId,
     payload: {

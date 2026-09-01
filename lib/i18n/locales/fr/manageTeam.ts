@@ -207,4 +207,6 @@ export default ns('manageTeam', {
   delegateSaved: 'Droits mis à jour.',
   delegateError: 'La mise à jour des droits a échoué.',
   delegateLoadError: 'Les droits n’ont pas pu être chargés.',
+  addLogo: 'Ajouter un logo →',
+  editBranding: 'Logo et apparence →',
 });

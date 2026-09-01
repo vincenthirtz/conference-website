@@ -1020,12 +1020,26 @@ export default function PlayerManageTeamScreen() {
                 <div className="text-sm text-gray-400">{team.short_name}</div>
               )}
             </div>
-            <Link
-              href={`/team/${encodeURIComponent(team.slug || team.id)}`}
-              className="text-sm text-purple-300 hover:text-purple-200"
-            >
-              {t.publicPage}
-            </Link>
+            <div className="flex flex-col items-end gap-1">
+              <Link
+                href={`/team/${encodeURIComponent(team.slug || team.id)}`}
+                className="text-sm text-purple-300 hover:text-purple-200"
+              >
+                {t.publicPage}
+              </Link>
+              {/* Lot A3 : le staff corrigeait 9 logos à la place des équipes.
+                  Le geste existait pourtant — page publique → Éditer, permission
+                  `edit_public_page` — mais rien ne le montrait d'ici, l'écran où
+                  l'on gère son équipe. */}
+              {can('edit_public_page') && (
+                <Link
+                  href={`/team/${encodeURIComponent(team.slug || team.id)}/edit`}
+                  className="text-xs text-gray-400 hover:text-white"
+                >
+                  {team.logo_url ? t.editBranding : t.addLogo}
+                </Link>
+              )}
+            </div>
           </div>
 
           {/* Même rappel de date butoir que le dashboard, et pour la même

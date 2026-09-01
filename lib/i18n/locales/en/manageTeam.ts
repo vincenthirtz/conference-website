@@ -194,4 +194,6 @@ export default {
   delegateSaved: 'Rights updated.',
   delegateError: 'Updating the rights failed.',
   delegateLoadError: 'Rights could not be loaded.',
+  addLogo: 'Add a logo →',
+  editBranding: 'Logo and branding →',
 };
