@@ -260,13 +260,48 @@ async function handler(
     >();
 
     if (pageUserIds.length) {
-      // Toute la synchro de rôles Discord et les DM du bot dépendent de ce
-      // lien : savoir qui n'est pas lié explique la moitié des « le bot ne
-      // m'a rien envoyé ».
-      const { data: discordLinks } = await supabaseAdmin
-        .from('user_discord_links')
-        .select('auth_user_id, discord_user_id, discord_username')
-        .in('auth_user_id', pageUserIds);
+      // Les trois enrichissements de page (Discord / Battle.net / équipes) sont
+      // INDÉPENDANTS : les enchaîner en `await` successifs coûtait 3 allers-
+      // retours PostgREST sérialisés sur le chemin de LECTURE le plus chargé de
+      // l'admin. Un seul `Promise.all` → une seule latence au lieu de trois.
+      // Le mapping en mémoire reste séquentiel : `linkedTagByUser` doit être
+      // rempli AVANT le calcul de `battle_tag_mismatch` des `team_members`.
+      const [
+        { data: discordLinks },
+        { data: bnetLinks },
+        { data: teamMembers, error: tmErr },
+      ] = await Promise.all([
+        // Toute la synchro de rôles Discord et les DM du bot dépendent de ce
+        // lien : savoir qui n'est pas lié explique la moitié des « le bot ne
+        // m'a rien envoyé ».
+        supabaseAdmin
+          .from('user_discord_links')
+          .select('auth_user_id, discord_user_id, discord_username')
+          .in('auth_user_id', pageUserIds),
+        // Lien identité Battle.net vérifié des joueuses de la page (service-role).
+        // Sert à détecter un mismatch « compte vérifié ≠ tag roster » sans
+        // rejoindre la table à chaque rendu. Best-effort : en cas d'erreur on
+        // n'échoue pas la liste, on n'affiche simplement pas le flag de mismatch.
+        supabaseAdmin
+          .from('user_battlenet_links')
+          .select('auth_user_id, battle_tag')
+          .in('auth_user_id', pageUserIds),
+        supabaseAdmin
+          .from('team_members')
+          .select(
+            `
+          user_id,
+          team_id,
+          role,
+          battle_tag,
+          battle_tag_verified_at,
+          verified_battle_net_id,
+          team:teams ( id, name )
+        `
+          )
+          .in('user_id', pageUserIds),
+      ]);
+
       (discordLinks ?? []).forEach((row: any) => {
         if (row?.auth_user_id && row?.discord_user_id) {
           discordByUser.set(row.auth_user_id, {
@@ -276,35 +311,12 @@ async function handler(
         }
       });
 
-      // Lien identité Battle.net vérifié des joueuses de la page (service-role).
-      // Sert à détecter un mismatch « compte vérifié ≠ tag roster » sans
-      // rejoindre la table à chaque rendu. Best-effort : en cas d'erreur on
-      // n'échoue pas la liste, on n'affiche simplement pas le flag de mismatch.
       const linkedTagByUser = new Map<string, string>();
-      const { data: bnetLinks } = await supabaseAdmin
-        .from('user_battlenet_links')
-        .select('auth_user_id, battle_tag')
-        .in('auth_user_id', pageUserIds);
       (bnetLinks ?? []).forEach((row: any) => {
         if (row?.auth_user_id && row?.battle_tag) {
           linkedTagByUser.set(row.auth_user_id, String(row.battle_tag));
         }
       });
-
-      const { data: teamMembers, error: tmErr } = await supabaseAdmin
-        .from('team_members')
-        .select(
-          `
-          user_id,
-          team_id,
-          role,
-          battle_tag,
-          battle_tag_verified_at,
-          verified_battle_net_id,
-          team:teams ( id, name )
-        `
-        )
-        .in('user_id', pageUserIds);
 
       if (!tmErr && teamMembers) {
         teamMembers.forEach((row: any) => {

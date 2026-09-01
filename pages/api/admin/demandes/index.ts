@@ -310,56 +310,78 @@ async function handleGet(
     ? data
     : []) as unknown as DemandeWithRelations[];
 
-  // Enrich with user data from Supabase Auth when requested. The produced shape
-  // is IDENTICAL to the SSR loader (email/display_name/avatar_url/battle_tag/
-  // discord) so the page can hydrate the shared read hook without a diff. The
-  // legacy `username` field is kept for backward-compat.
-  if (withUser && safeDemandes.length > 0) {
-    const uniqueUserIds = [
-      ...new Set(safeDemandes.map((d) => d.user_id).filter(Boolean)),
-    ] as string[];
+  // Les deux enrichissements de page — profils auth (`admin_get_user_profiles`)
+  // et staff traitant (`processed_by`) — sont INDÉPENDANTS. Ils étaient
+  // enchaînés en `await` successifs : la liste des demandes, écran le plus
+  // ouvert du back-office, payait DEUX latences là où une seule suffit. On les
+  // lance ensemble ; le mapping en mémoire, lui, reste inchangé.
+  const uniqueUserIds =
+    withUser && safeDemandes.length > 0
+      ? ([
+          ...new Set(safeDemandes.map((d) => d.user_id).filter(Boolean)),
+        ] as string[])
+      : [];
+  const staffIds =
+    safeDemandes.length > 0
+      ? ([
+          ...new Set(
+            safeDemandes.map((d) => d.processed_by_staff_id).filter(Boolean)
+          ),
+        ] as string[])
+      : [];
 
-    type UserMini = NonNullable<DemandeWithRelations['user']>;
-    const userMap = new Map<string, UserMini>();
-
+  type NoQuery = { data: null; error: null };
+  const [profilesRes, staffRes] = await Promise.all([
     // Perf P6: a single batch RPC instead of N GoTrue round-trips
     // (`auth.admin.getUserById` in Promise.all). `admin_get_user_profiles`
     // reads auth.users (email + selected user_metadata) and returns one row
     // per resolved id. On RPC error we log and leave `userMap` empty — the same
     // degraded behavior as the previous per-user try/catch that skipped
     // unresolvable users.
-    if (uniqueUserIds.length > 0) {
-      type ProfileRow = {
-        id: string;
-        email: string | null;
-        display_name: string | null;
-        full_name: string | null;
-        avatar_url: string | null;
-        battle_tag: string | null;
-        discord: string | null;
-      };
-      const { data: profileRows, error: profilesError } =
-        await supabaseAdmin!.rpc('admin_get_user_profiles', {
-          p_ids: uniqueUserIds,
+    uniqueUserIds.length > 0
+      ? supabaseAdmin!.rpc('admin_get_user_profiles', { p_ids: uniqueUserIds })
+      : Promise.resolve<NoQuery>({ data: null, error: null }),
+    // Staff handler (processed_by). The SSR loader always batch-loads this, so
+    // we mirror it unconditionally (single .in query, bounded by the page).
+    staffIds.length > 0
+      ? supabaseAdmin!.from('staff').select('id, display_name').in('id', staffIds)
+      : Promise.resolve<NoQuery>({ data: null, error: null }),
+  ]);
+
+  // Enrich with user data from Supabase Auth when requested. The produced shape
+  // is IDENTICAL to the SSR loader (email/display_name/avatar_url/battle_tag/
+  // discord) so the page can hydrate the shared read hook without a diff. The
+  // legacy `username` field is kept for backward-compat.
+  if (withUser && safeDemandes.length > 0) {
+    type UserMini = NonNullable<DemandeWithRelations['user']>;
+    const userMap = new Map<string, UserMini>();
+
+    type ProfileRow = {
+      id: string;
+      email: string | null;
+      display_name: string | null;
+      full_name: string | null;
+      avatar_url: string | null;
+      battle_tag: string | null;
+      discord: string | null;
+    };
+    if (profilesRes.error) {
+      logger.error(
+        'admin GET demandes user-profiles RPC error:',
+        profilesRes.error
+      );
+    } else {
+      for (const row of (profilesRes.data ?? []) as ProfileRow[]) {
+        const email = row.email ?? null;
+        userMap.set(row.id, {
+          id: row.id,
+          email,
+          display_name: row.display_name || row.full_name || email || null,
+          avatar_url: row.avatar_url || null,
+          battle_tag: row.battle_tag || null,
+          discord: row.discord || null,
+          username: row.display_name || email || null,
         });
-      if (profilesError) {
-        logger.error(
-          'admin GET demandes user-profiles RPC error:',
-          profilesError
-        );
-      } else {
-        for (const row of (profileRows ?? []) as ProfileRow[]) {
-          const email = row.email ?? null;
-          userMap.set(row.id, {
-            id: row.id,
-            email,
-            display_name: row.display_name || row.full_name || email || null,
-            avatar_url: row.avatar_url || null,
-            battle_tag: row.battle_tag || null,
-            discord: row.discord || null,
-            username: row.display_name || email || null,
-          });
-        }
       }
     }
 
@@ -370,32 +392,18 @@ async function handleGet(
     }
   }
 
-  // Enrich with the staff handler (processed_by). The SSR loader always batch-
-  // loads this, so we mirror it unconditionally (single .in query, bounded by
-  // the current page). Every row gets `processed_by` set (null when unhandled).
+  // Every row gets `processed_by` set (null when unhandled).
   if (safeDemandes.length > 0) {
-    const staffIds = [
-      ...new Set(
-        safeDemandes.map((d) => d.processed_by_staff_id).filter(Boolean)
-      ),
-    ] as string[];
-
     const staffMap = new Map<
       string,
       { id: string; display_name: string | null }
     >();
 
-    if (staffIds.length > 0) {
-      const { data: staffRows } = await supabaseAdmin
-        .from('staff')
-        .select('id, display_name')
-        .in('id', staffIds);
-      for (const s of (staffRows ?? []) as Array<{
-        id: string;
-        display_name: string | null;
-      }>) {
-        staffMap.set(s.id, { id: s.id, display_name: s.display_name ?? null });
-      }
+    for (const s of (staffRes.data ?? []) as Array<{
+      id: string;
+      display_name: string | null;
+    }>) {
+      staffMap.set(s.id, { id: s.id, display_name: s.display_name ?? null });
     }
 
     for (const demande of safeDemandes) {
