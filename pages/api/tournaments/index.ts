@@ -7,7 +7,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { parsePagination } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
-import type { RegistrationField } from '@/utils/registrationFields';
+import {
+  validateFieldDefinitions,
+  type RegistrationField,
+} from '@/utils/registrationFields';
 
 import { logger } from '../../../utils/logger';
 export type PublicTournament = {
@@ -27,8 +30,12 @@ export type PublicTournament = {
   // Définitions (pas les réponses) des champs d'inscription personnalisés.
   // Exposées publiquement pour que le formulaire de création d'équipe
   // (pages/team/create.tsx) puisse rendre la section « Informations
-  // complémentaires ». Valeur jsonb brute : validée côté client via
-  // validateFieldDefinitions avant rendu.
+  // complémentaires ». NORMALISÉES ICI : la colonne est un jsonb libre, et
+  // c'est le serveur qui la passe par `validateFieldDefinitions` (voir plus
+  // bas). Le client reçoit donc un tableau déjà typé et nettoyé — il n'a plus
+  // à embarquer zod pour le faire lui-même, ce qui pesait ~250 ko de JS sur
+  // une page publique. Un jsonb invalide ressort en `[]`, pas en `null` :
+  // « pas de champ personnalisé » et « champs illisibles » se rendent pareil.
   registration_fields: RegistrationField[] | null;
 };
 
@@ -123,10 +130,25 @@ export default async function handler(
       }
     }
 
-    const enriched = (data || []).map((t) => ({
-      ...t,
-      team_count: teamCountMap[t.id] || 0,
-    }));
+    const enriched = (data || []).map((t) => {
+      const rawFields = (t as { registration_fields?: unknown })
+        .registration_fields;
+      const defs = validateFieldDefinitions(rawFields);
+      if (!defs.ok) {
+        // Définitions illisibles : on ne casse pas la liste des tournois pour
+        // autant, mais on veut le savoir — c'est une donnée saisie en admin.
+        logger.error(
+          '[api/tournaments] registration_fields invalides',
+          t.id,
+          defs.error
+        );
+      }
+      return {
+        ...t,
+        registration_fields: defs.ok ? defs.fields : [],
+        team_count: teamCountMap[t.id] || 0,
+      };
+    });
 
     res.setHeader(
       'Cache-Control',

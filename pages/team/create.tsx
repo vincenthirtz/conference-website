@@ -6,10 +6,11 @@ import { ANALYTICS_EVENTS, trackEvent } from '@/lib/analytics/track';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
-import {
-  validateFieldDefinitions,
-  type RegistrationField,
-} from '@/utils/registrationFields';
+// Import de TYPE uniquement (effacé à la compilation) : `utils/registrationFields`
+// importe zod, et en tirer une fonction ici embarquait ~250 ko de runtime de
+// validation dans une page PUBLIQUE. La normalisation des définitions se fait
+// désormais côté serveur, dans /api/tournaments.
+import type { RegistrationField } from '@/utils/registrationFields';
 import { ACTIVE_WOMEN_TOURNAMENT_ID } from '@/utils/activeEdition';
 import {
   BATTLE_TAG_REGEX,
@@ -287,12 +288,16 @@ export default function PublicCreateTeamPage() {
             game: found.game,
             start_date: found.start_date,
           });
-          // Les définitions jsonb sont brutes : on les passe par le validateur
-          // partagé pour obtenir un tableau typé et nettoyé (options select,
-          // maxLength borné…). On initialise ensuite les valeurs par défaut
+          // /api/tournaments renvoie des définitions DÉJÀ validées et nettoyées
+          // (options select, maxLength borné…) : le tableau est directement
+          // exploitable. On initialise ensuite les valeurs par défaut
           // (checkbox → false, autres → chaîne vide) pour un état contrôlé.
-          const defs = validateFieldDefinitions(found.registration_fields);
-          const fields = defs.ok ? defs.fields : [];
+          // `?? []` couvre une réponse d'une version antérieure de l'API.
+          const fields: RegistrationField[] = Array.isArray(
+            found.registration_fields
+          )
+            ? found.registration_fields
+            : [];
           setRegistrationFields(fields);
           setFieldValues((prev) => {
             const next: Record<string, FieldValue> = {};
