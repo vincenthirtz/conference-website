@@ -56,7 +56,7 @@ La date du 14/09 coupe le plan en deux, et c'est le seul arbitrage structurant :
 | **J3** | Délégation des droits par la capitaine | 🟥 | M | ✅ livré 2026-09-01 |
 | **J4** | Console manager multi-équipes | 🟧 | M | ✅ livré 2026-09-01 |
 | **J5** | Espace coach : préparer, puis débriefer | 🟧 | M | ✅ livré 2026-09-01 |
-| **J6** | Dashboard priorisé (« à faire », pas « tout ») | 🟧 | M | après |
+| **J6** | Dashboard priorisé (« à faire », pas « tout ») | 🟧 | M | ✅ livré 2026-09-01 |
 | **J7** | Filet de sécurité : e2e du jour J + a11y mobile | 🟧 | M | continu |
 
 ---
@@ -236,7 +236,7 @@ champs, sinon poser des objectifs avant le match les supprimerait aussitôt.
 
 ---
 
-## J6 · Dashboard priorisé — 🟧 / M · après
+## J6 · Dashboard priorisé — ✅ LIVRÉ (2026-09-01)
 
 **Problème.** [`PlayerDashboardScreen`](../components/player/screens/PlayerDashboardScreen.tsx)
 empile aujourd'hui ~15 cartes en 4 catégories. Chaque carte se masque quand elle n'a rien à dire —
@@ -248,9 +248,12 @@ validée, demande en attente, invitation non répondue, BattleTag non vérifié)
 avec un lien par item. Le reste devient repliable, l'état des sections mémorisé par personne.
 
 **Critères d'acceptation**
-- [ ] Le bandeau ne rend rien quand il n'y a rien à faire (pas de « tout va bien » permanent).
-- [ ] Les items sortent des mêmes sources que les cartes — aucune nouvelle règle métier.
-- [ ] L'ordre est stable d'un chargement à l'autre (pas de sautillement).
+- [x] Rien à faire ⇒ aucun bandeau.
+- [x] Aucune nouvelle règle métier : tout vient du payload que le dashboard chargeait déjà
+      (une seule lecture ajoutée, le compte d'invitations, que la carte faisait de son côté).
+- [x] Ordre décidé serveur, fixe (le plus périssable d'abord) et plafonné à trois items.
+- [x] Sections repliables, pli mémorisé par personne (`localStorage`), dépliées par défaut :
+      on ne cache rien à quelqu'un qui n'a rien demandé.
 
 ---
 

@@ -116,4 +116,16 @@ export default ns('playerIndex', {
   slotWeekOf: 'Semaine du {date}',
   slotMaxReached: '{max} créneaux maximum.',
   slotEmpty: 'Aucun créneau sélectionné — clique dans le calendrier.',
+
+  // ── Bandeau « à faire » (lot J6) ─────────────────────────────────────
+  todoTitle: 'À faire maintenant',
+  todoCheckin: 'Confirmer le check-in de ton prochain match',
+  todoLineup: 'Valider la feuille de match',
+  todoRoster: 'Compléter le roster : {n} joueuse(s) manquante(s)',
+  todoInvitation: 'Répondre à {n} invitation(s) d’équipe',
+  todoScrims: 'Répondre à {n} demande(s) de scrim',
+  todoMessages: 'Lire {n} message(s) d’équipe',
+  todoBattleTag: 'Vérifier ton BattleTag',
+  sectionCollapse: 'Replier la section',
+  sectionExpand: 'Déplier la section',
 });

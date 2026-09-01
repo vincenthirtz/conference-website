@@ -37,6 +37,7 @@ import QuickAction, {
 import NextMatchCard from '@/components/player/NextMatchCard';
 import MatchLineupCard from '@/components/player/MatchLineupCard';
 import { PlayerDashboardSkeleton } from '@/components/player/Skeletons';
+import TodoBanner from '@/components/player/TodoBanner';
 import ScrimNegotiationCard, {
   type PendingScrim,
   type ScrimAction,
@@ -62,6 +63,8 @@ import {
 import type { TeamPermission } from '@/utils/teamRoles';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+
+import type { TodoItem } from '@/pages/api/player/dashboard';
 
 import { logger } from '../../../utils/logger';
 import nsPlayerIndex from '@/lib/i18n/locales/fr/playerIndex';
@@ -145,6 +148,8 @@ type DashboardResponse = {
   pendingScrims?: PendingScrim[];
   unreadMessages?: number;
   nextMatch?: NextMatchData;
+  /** Gestes en attente, calculés serveur et plafonnés à trois (lot J6). */
+  todo?: TodoItem[];
   /** Équipes gérées — alimente le sélecteur (manager multi-équipes). */
   managedTeams?: ActiveTeamOption[];
 };
@@ -238,18 +243,68 @@ function buildQuickActions(args: {
 // avec un rythme vertical constant. À ne rendre QUE si la catégorie contient au
 // moins une carte visible (l'appelant décide via `visible`).
 function CategorySection({
+  id,
   label,
   children,
 }: {
+  /** Clé de mémorisation du pli — stable, jamais le libellé traduit. */
+  id: string;
   label: string;
   children: ReactNode;
 }) {
+  const t = useT(nsPlayerIndex);
+  // Pli mémorisé PAR PERSONNE et par navigateur (lot J6). Ouvert par défaut :
+  // on ne cache rien à quelqu'un qui n'a rien demandé — on lui donne le moyen
+  // de ranger ce qu'il ne regarde jamais.
+  const storageKey = `player.section.${id}.collapsed`;
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    try {
+      setCollapsed(window.localStorage.getItem(storageKey) === '1');
+    } catch {
+      /* navigation privée / stockage bloqué : on reste déplié */
+    }
+  }, [storageKey]);
+
+  const toggle = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(storageKey, next ? '1' : '0');
+      } catch {
+        /* idem : le pli reste alors le temps de la page */
+      }
+      return next;
+    });
+  };
+
+  const panelId = `section-${id}`;
   return (
     <section className="mt-10">
-      <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
-        {label}
+      <h2 className="mb-4">
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={!collapsed}
+          aria-controls={panelId}
+          className="flex w-full items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 transition hover:text-gray-300"
+        >
+          <span
+            aria-hidden
+            className={`inline-block transition-transform ${collapsed ? '' : 'rotate-90'}`}
+          >
+            ›
+          </span>
+          {label}
+          <span className="sr-only">
+            {collapsed ? t.sectionExpand : t.sectionCollapse}
+          </span>
+        </button>
       </h2>
-      <div className="space-y-6">{children}</div>
+      <div id={panelId} hidden={collapsed} className="space-y-6">
+        {children}
+      </div>
     </section>
   );
 }
@@ -369,6 +424,7 @@ export default function PlayerDashboardScreen() {
   const [togglingScrim, setTogglingScrim] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [nextMatch, setNextMatch] = useState<NextMatchData | null>(null);
+  const [todo, setTodo] = useState<TodoItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const canManage = isCaptain || isManager;
@@ -426,6 +482,7 @@ export default function PlayerDashboardScreen() {
       typeof data.unreadMessages === 'number' ? data.unreadMessages : 0
     );
     setNextMatch(data.nextMatch ?? null);
+    setTodo(Array.isArray(data.todo) ? data.todo : []);
     // La liste vient de la MÊME réponse que l'équipe affichée : le sélecteur
     // ne peut pas proposer une équipe que cet écran ne saurait pas charger.
     publishManagedTeams(data.managedTeams ?? []);
@@ -665,6 +722,11 @@ export default function PlayerDashboardScreen() {
             </div>
           </div>
 
+          {/* Ce qui attend une action, avant tout le reste : c'est la seule
+              chose de cette page qui coûte quelque chose si on la rate. Se
+              masque de lui-même quand il n'y a rien à faire. */}
+          {!isInspecting && <TodoBanner items={todo} />}
+
           {/* Date butoir des inscriptions 2026 — en tête, avant tout le reste :
               c'est la seule information de cette page qui périme. Vaut pour
               les quatre rôles qui atterrissent ici (joueuse, capitaine, coach,
@@ -729,7 +791,7 @@ export default function PlayerDashboardScreen() {
           )}
 
           {/* ─────────────  Profil & équipe  ───────────── */}
-          <CategorySection label={t.catProfileTeam}>
+          <CategorySection id="profile-team" label={t.catProfileTeam}>
             <div className="grid gap-6 md:grid-cols-2">
               {/* ProfileSummaryCard rend la session courante : en inspection ce
                   serait la fiche du staff. La page admin porte déjà l'identité
@@ -768,7 +830,7 @@ export default function PlayerDashboardScreen() {
           {/* ─────────────  Compétition  ─────────────
               NextMatchCard rend toujours un contenu (placeholder sobre s'il n'y
               a pas de match), la catégorie est donc toujours pertinente. */}
-          <CategorySection label={t.catCompetition}>
+          <CategorySection id="competition" label={t.catCompetition}>
             <NextMatchCard initialData={nextMatch} />
             <MatchReadinessCard nextMatch={nextMatch} t={t} />
             {/* Feuille de match : qui joue CE match. Se tait d'elle-même sans
@@ -793,7 +855,7 @@ export default function PlayerDashboardScreen() {
               l'en-tête permanent, les blocs de détail (négociations, grilles)
               s'affichent dessous quand ils sont non vides. */}
           {team && canManageScrims && (
-            <CategorySection label={t.catScrims}>
+            <CategorySection id="scrims" label={t.catScrims}>
               <ScrimsHubCard
                 team={team}
                 isCaptain={isCaptain}
@@ -854,7 +916,7 @@ export default function PlayerDashboardScreen() {
 
           {/* ─────────────  Actions rapides  ───────────── */}
           {team && (
-            <CategorySection label={t.catQuickActions}>
+            <CategorySection id="quick-actions" label={t.catQuickActions}>
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {buildQuickActions({
@@ -893,7 +955,7 @@ export default function PlayerDashboardScreen() {
               DemandesHistory s'auto-masque quand il n'y a aucune demande ; on
               n'affiche donc l'en-tête de catégorie que dans ce cas. */}
           {demandes.length > 0 && (
-            <CategorySection label={t.catActivity}>
+            <CategorySection id="activity" label={t.catActivity}>
               <DemandesHistory
                 demandes={demandes}
                 onCancel={readOnly ? undefined : handleCancelDemande}

@@ -120,6 +120,35 @@ export type NextMatchSection = {
   } | null;
 };
 
+/**
+ * Une chose À FAIRE, calculée serveur (lot J6 de docs/PLAN-espace-joueur.md).
+ *
+ * Le dashboard empile une quinzaine de cartes ; quand elles parlent toutes, la
+ * hiérarchie est celle du code, pas celle de l'urgence — une capitaine à J-1
+ * doit descendre pour trouver son check-in. Ce bandeau remonte les gestes en
+ * attente, plafonné à trois : au-delà, ce n'est plus une liste d'actions mais
+ * une deuxième page.
+ *
+ * Règle : AUCUNE nouvelle règle métier ici. Chaque item est dérivé d'une
+ * donnée que le payload contient déjà (ou d'une lecture que la carte
+ * correspondante faisait de son côté).
+ */
+export type TodoItem = {
+  /** Identifiant stable — l'ordre et le rendu ne doivent pas sautiller. */
+  id:
+    | 'checkin'
+    | 'lineup'
+    | 'scrims'
+    | 'messages'
+    | 'invitation'
+    | 'battletag'
+    | 'roster';
+  /** Chemin interne à ouvrir. */
+  href: string;
+  /** Compteur associé (messages non lus, scrims en attente…), sinon `null`. */
+  count: number | null;
+};
+
 export type PlayerDashboardPayload = {
   team: TeamRow | null;
   members: MemberRow[];
@@ -137,6 +166,11 @@ export type PlayerDashboardPayload = {
    * plusieurs). Vide pour une joueuse sans droits de gestion.
    */
   managedTeams: ManagedTeamSummary[];
+  /**
+   * Les trois gestes les plus urgents, dans un ordre STABLE (défini par le
+   * serveur). Vide = rien à faire, et l'écran ne rend alors aucun bandeau.
+   */
+  todo: TodoItem[];
   demandesCaptain: Demande[];
   demandesJoin: Demande[];
   pendingScrims: PendingScrim[];
@@ -510,6 +544,7 @@ export default withSubjectRoute(async function handler(
     pendingScrims,
     unreadMessages,
     nextMatch,
+    pendingInvitations,
   ] = await Promise.all([
     loadDemandes(userId, tenantId, 'captain_request'),
     loadDemandes(userId, tenantId, 'join'),
@@ -522,7 +557,22 @@ export default withSubjectRoute(async function handler(
     teamSlice.teamId
       ? loadNextMatch(teamSlice.teamId, tenantId, rosterSize)
       : Promise.resolve(EMPTY_NEXT_MATCH),
+    // Invitations reçues : la carte les chargeait déjà de son côté ; le
+    // bandeau « à faire » a besoin du seul compte, on le prend ici plutôt que
+    // d'ajouter une seconde requête côté client.
+    loadPendingInvitationCount(userId, tenantId),
   ]);
+
+  const todo = buildTodo({
+    userId,
+    nextMatch,
+    pendingScrims,
+    unreadMessages,
+    pendingInvitations,
+    members: teamSlice.members,
+    canManage,
+    permissions: teamSlice.permissions,
+  });
 
   return res.status(200).json({
     team: teamSlice.team,
@@ -531,6 +581,7 @@ export default withSubjectRoute(async function handler(
     isManager,
     permissions: teamSlice.permissions,
     managedTeams: teamSlice.managedTeams,
+    todo,
     demandesCaptain,
     demandesJoin,
     pendingScrims,
@@ -538,3 +589,119 @@ export default withSubjectRoute(async function handler(
     nextMatch,
   });
 });
+
+/* -------------------------------------------------------------------------
+ * Bandeau « à faire » (lot J6)
+ * ---------------------------------------------------------------------- */
+
+/** Combien d'invitations d'équipe attendent une réponse. */
+async function loadPendingInvitationCount(
+  userId: string,
+  tenantId: string
+): Promise<number> {
+  if (!supabaseAdmin) return 0;
+  const { count, error } = await supabaseAdmin
+    .from('demandes')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
+    .eq('user_id', userId)
+    .eq('type', 'invite')
+    .eq('status', 'pending');
+  if (error) {
+    logger.error('[player/dashboard] invitations count error:', error);
+    return 0;
+  }
+  return count ?? 0;
+}
+
+/**
+ * Les trois gestes en attente, dans un ordre FIXE : le plus périssable
+ * d'abord. Le check-in se referme tout seul, les invitations expirent, les
+ * messages attendent. Cet ordre est celui du code — donc stable d'un
+ * chargement à l'autre, ce qui est la moitié de l'intérêt d'un tel bandeau.
+ */
+export function buildTodo(input: {
+  userId: string;
+  nextMatch: NextMatchSection;
+  pendingScrims: PendingScrim[];
+  unreadMessages: number;
+  pendingInvitations: number;
+  members: {
+    user_id?: string | null;
+    battle_tag_verified_at?: string | null;
+  }[];
+  canManage: boolean;
+  permissions: TeamPermission[];
+}): TodoItem[] {
+  const items: TodoItem[] = [];
+  const match = input.nextMatch?.match ?? null;
+  const checkin = input.nextMatch?.checkin ?? null;
+  const readiness = input.nextMatch?.readiness ?? null;
+
+  // 1. Check-in ouvert et non fait : la seule échéance qui se referme seule.
+  if (match && checkin && checkin.isOpen && !checkin.alreadyCheckedIn) {
+    items.push({
+      id: 'checkin',
+      href: `/player/match/${match.id}`,
+      count: null,
+    });
+  }
+
+  // 2. Effectif sous le minimum du tournoi — ça ne se règle pas le jour même.
+  if (readiness && readiness.shortfall > 0) {
+    items.push({
+      id: 'roster',
+      href: '/player/manage-team',
+      count: readiness.shortfall,
+    });
+  }
+
+  // 3. Feuille de match : possible seulement une fois le check-in fait, et
+  //    réservée à qui peut la valider.
+  if (
+    match &&
+    checkin?.alreadyCheckedIn &&
+    input.permissions.includes('validate_lineup')
+  ) {
+    items.push({
+      id: 'lineup',
+      href: `/player/match/${match.id}`,
+      count: null,
+    });
+  }
+
+  // 4. Invitation reçue : elle expire, et c'est un geste d'une seconde.
+  if (input.pendingInvitations > 0) {
+    items.push({
+      id: 'invitation',
+      href: '/player',
+      count: input.pendingInvitations,
+    });
+  }
+
+  // 5. Scrims en attente de MA réponse.
+  if (input.pendingScrims.length > 0) {
+    items.push({
+      id: 'scrims',
+      href: '/player#scrim-plannings',
+      count: input.pendingScrims.length,
+    });
+  }
+
+  // 6. Messages d'équipe non lus.
+  if (input.unreadMessages > 0) {
+    items.push({
+      id: 'messages',
+      href: '/player/messages',
+      count: input.unreadMessages,
+    });
+  }
+
+  // 7. Mon BattleTag n'est pas vérifié — le plus patient des rappels.
+  const me = input.members.find((m) => m.user_id === input.userId);
+  if (me && !me.battle_tag_verified_at) {
+    items.push({ id: 'battletag', href: '/player/profile', count: null });
+  }
+
+  return items.slice(0, 3);
+}

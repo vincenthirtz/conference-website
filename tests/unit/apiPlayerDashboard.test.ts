@@ -387,3 +387,103 @@ describe('/api/player/dashboard', () => {
     expect((res.body as any).permissions).toEqual([]);
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * Bandeau « à faire » — lot J6 (docs/PLAN-espace-joueur.md).
+ *
+ * Deux propriétés font tout l'intérêt du bandeau, et deux tests suffisent à
+ * les tenir : il se TAIT quand il n'y a rien à faire (sinon on apprend à
+ * l'ignorer), et son ordre est STABLE et borné à trois (sinon ce n'est plus
+ * une liste d'actions mais une seconde page).
+ * ------------------------------------------------------------------------- */
+
+describe('buildTodo', () => {
+  const emptyMatch = {
+    match: null,
+    team: null,
+    opponent: null,
+    tournament: null,
+    checkin: null,
+    readiness: null,
+  } as any;
+
+  const base = {
+    userId: CAPTAIN_ID,
+    nextMatch: emptyMatch,
+    pendingScrims: [],
+    unreadMessages: 0,
+    pendingInvitations: 0,
+    members: [{ user_id: CAPTAIN_ID, battle_tag_verified_at: '2026-01-01' }],
+    canManage: true,
+    permissions: ['validate_lineup'] as any,
+  };
+
+  it('ne rend rien quand il n’y a rien à faire', async () => {
+    const { buildTodo } = await import('../../pages/api/player/dashboard');
+    expect(buildTodo(base)).toEqual([]);
+  });
+
+  it('met le check-in en tête : c’est la seule échéance qui se referme seule', async () => {
+    const { buildTodo } = await import('../../pages/api/player/dashboard');
+    const todo = buildTodo({
+      ...base,
+      unreadMessages: 4,
+      nextMatch: {
+        ...emptyMatch,
+        match: { id: 'm-1' },
+        checkin: { isOpen: true, alreadyCheckedIn: false },
+        readiness: { minPlayers: 5, rosterSize: 5, shortfall: 0 },
+      } as any,
+    });
+    expect(todo[0]).toEqual({
+      id: 'checkin',
+      href: '/player/match/m-1',
+      count: null,
+    });
+  });
+
+  it('plafonne à trois items', async () => {
+    const { buildTodo } = await import('../../pages/api/player/dashboard');
+    const todo = buildTodo({
+      ...base,
+      unreadMessages: 3,
+      pendingInvitations: 2,
+      pendingScrims: [{ id: 's1' }, { id: 's2' }] as any,
+      members: [{ user_id: CAPTAIN_ID, battle_tag_verified_at: null }],
+      nextMatch: {
+        ...emptyMatch,
+        match: { id: 'm-1' },
+        checkin: { isOpen: true, alreadyCheckedIn: false },
+        readiness: { minPlayers: 7, rosterSize: 4, shortfall: 3 },
+      } as any,
+    });
+    expect(todo).toHaveLength(3);
+    expect(todo.map((i) => i.id)).toEqual(['checkin', 'roster', 'invitation']);
+  });
+
+  it('ne propose la feuille de match qu’avec la permission ET le check-in fait', async () => {
+    const { buildTodo } = await import('../../pages/api/player/dashboard');
+    const withPermission = buildTodo({
+      ...base,
+      nextMatch: {
+        ...emptyMatch,
+        match: { id: 'm-1' },
+        checkin: { isOpen: false, alreadyCheckedIn: true },
+        readiness: null,
+      } as any,
+    });
+    const withoutPermission = buildTodo({
+      ...base,
+      permissions: [] as any,
+      nextMatch: {
+        ...emptyMatch,
+        match: { id: 'm-1' },
+        checkin: { isOpen: false, alreadyCheckedIn: true },
+        readiness: null,
+      } as any,
+    });
+
+    expect(withPermission.map((i) => i.id)).toContain('lineup');
+    expect(withoutPermission.map((i) => i.id)).not.toContain('lineup');
+  });
+});

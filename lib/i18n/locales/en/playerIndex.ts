@@ -114,4 +114,15 @@ export default {
   slotWeekOf: 'Week of {date}',
   slotMaxReached: '{max} slots maximum.',
   slotEmpty: 'No slot selected — click in the calendar.',
+
+  todoTitle: 'To do now',
+  todoCheckin: 'Confirm the check-in for your next match',
+  todoLineup: 'Validate the lineup',
+  todoRoster: 'Complete the roster: {n} player(s) missing',
+  todoInvitation: 'Answer {n} team invitation(s)',
+  todoScrims: 'Answer {n} scrim request(s)',
+  todoMessages: 'Read {n} team message(s)',
+  todoBattleTag: 'Verify your BattleTag',
+  sectionCollapse: 'Collapse section',
+  sectionExpand: 'Expand section',
 };
