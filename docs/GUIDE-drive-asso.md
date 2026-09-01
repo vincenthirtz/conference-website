@@ -15,8 +15,9 @@ confirme la chaîne complète :
 | Dossier partagé | ✅ **« Drive Asso »**, `1CRiAwxHRaPD7vqL23x8ANOdQg6MUppLm` |
 | Contenu vu par le compte | **0 élément** — le dossier est vide, ou son contenu ne lui est pas partagé |
 
-**Reste donc uniquement l'étape 3** (les deux variables Netlify). Une fois
-posées et le site redéployé, `/admin/documents` affichera le dossier.
+**Reste donc uniquement l'étape 3** (les variables Netlify — lire l'encadré,
+la forme à utiliser n'est pas celle qu'on croit). Une fois posées et le site
+redéployé, `/admin/documents` affichera le dossier.
 
 Le « pourquoi » de chaque choix est dans
 [`ETUDE-drive-et-chat.md`](./ETUDE-drive-et-chat.md).
@@ -56,30 +57,49 @@ page le dit en toutes lettres plutôt que de relayer le message de Google.
 Le compte de service ne voit **que** ce qu'on lui partage : il n'y a rien à
 restreindre en plus.
 
-## 3. Poser les deux variables (Netlify → Site configuration → Environment variables) — ⬜ à faire
+## 3. Poser les variables (Netlify → Site configuration → Environment variables) — ⬜ à faire
+
+> ⚠️ **Ne PAS poser `GOOGLE_DRIVE_SA_KEY` en production.** Netlify exécute ses
+> fonctions en mode compatibilité Lambda, qui plafonne l'**ensemble** des
+> variables d'environnement à **4 Ko**. Le JSON complet en base64 pèse 3,1 Ko :
+> il fait échouer la création de TOUTES les fonctions, et le déploiement entier
+> avec. C'est arrivé le 2026-09-01 — dix-neuf crons refusés d'un coup.
+
+**Forme courte, celle à utiliser en production — trois variables, ~1,75 Ko :**
 
 | Variable | Valeur |
 |---|---|
-| `GOOGLE_DRIVE_SA_KEY` | Le contenu du fichier JSON. **En base64 de préférence** : `base64 -i cle.json \| pbcopy`. Le collage direct d'un JSON multi-ligne mange les retours à la ligne de la clé privée, et l'erreur qui en sort est un message OpenSSL incompréhensible. Les deux formes sont acceptées. |
-| `GOOGLE_DRIVE_FOLDER_ID` | L'identifiant du dossier : le segment après `/folders/` dans son URL de partage. Ici : `1CRiAwxHRaPD7vqL23x8ANOdQg6MUppLm`. |
+| `GOOGLE_DRIVE_SA_EMAIL` | `site-owwomenscup@owwomenscup.iam.gserviceaccount.com` (champ `client_email` du JSON) |
+| `GOOGLE_DRIVE_SA_PRIVATE_KEY` | Le champ `private_key` du JSON, **valeur seule**, du `-----BEGIN` au `-----END` inclus. Les retours à la ligne réels comme échappés (`\n`) fonctionnent. |
+| `GOOGLE_DRIVE_FOLDER_ID` | `1CRiAwxHRaPD7vqL23x8ANOdQg6MUppLm` |
 
-La commande pour obtenir la valeur base64, sur le poste où se trouve le fichier
-JSON téléchargé à l'étape 1 :
+Pour extraire les deux premières du fichier téléchargé, sans les recopier à la
+main :
 
 ```bash
-base64 -i ~/Downloads/owwomenscup-<id>.json | tr -d '\n' | pbcopy
+cd ~/Downloads
+jq -r .client_email owwomenscup-<id>.json          # → GOOGLE_DRIVE_SA_EMAIL
+jq -r .private_key  owwomenscup-<id>.json | pbcopy # → GOOGLE_DRIVE_SA_PRIVATE_KEY
 ```
 
-Trois choses qui font perdre du temps ici :
+**`pbcopy` n'affiche rien**, par construction : il consomme la sortie pour la
+mettre dans le presse-papier. Ne rien voir est le succès, pas l'échec.
+`pbpaste | wc -c` doit répondre ~1 700.
 
-- **`pbcopy` n'affiche RIEN**, par construction : il consomme la sortie pour la
-  mettre dans le presse-papier. Ne rien voir est le succès, pas l'échec. Pour
-  vérifier : `pbpaste | wc -c` doit donner ~3 100 caractères.
-- **Le chemin compte** : le fichier est dans `~/Downloads`, pas dans le
-  répertoire courant. Sans chemin, `base64` échoue.
-- **`tr -d '\n'`** aplatit la sortie en une seule ligne. Le code accepte les
-  deux formes, mais un collage multi-ligne dans un champ Netlify est une source
-  d'erreur inutile.
+**Forme longue (`GOOGLE_DRIVE_SA_KEY`)** : le JSON entier, en clair ou en
+base64. Réservée au développement local (`.env.local`), où le budget Lambda
+n'existe pas et où l'on colle le fichier sans le découper. Si les deux formes
+sont posées, la courte l'emporte.
+
+### Si un déploiement échoue sur ce message
+
+```
+Your environment variables exceed the 4KB limit imposed by AWS Lambda
+```
+
+Retirer `GOOGLE_DRIVE_SA_KEY` et repasser à la forme courte. Le site continue
+de servir le déploiement précédent pendant ce temps : rien n'est cassé, c'est
+la mise à jour qui ne passe pas.
 
 Puis redéployer (les variables ne sont lues qu'au build de la fonction).
 

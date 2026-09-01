@@ -84,13 +84,38 @@ export class DriveConfigError extends Error {}
 // ---------------------------------------------------------------------------
 
 /**
- * La clé JSON du compte de service, telle que Google la télécharge.
+ * Les identifiants du compte de service. DEUX formes acceptées.
  *
- * Acceptée en clair OU en base64 : coller un JSON multi-ligne dans une variable
- * d'environnement Netlify est une source d'erreurs silencieuses (retours à la
- * ligne mangés dans la clé privée). Le base64 rend le collage sûr.
+ * 1. FORME COURTE (à préférer en production) — deux variables :
+ *      GOOGLE_DRIVE_SA_EMAIL        l'adresse …iam.gserviceaccount.com
+ *      GOOGLE_DRIVE_SA_PRIVATE_KEY  la clé privée PEM, telle quelle
+ *
+ * 2. FORME LONGUE — GOOGLE_DRIVE_SA_KEY : la clé JSON entière telle que Google
+ *    la télécharge, en clair ou en base64. Pratique en développement, où l'on
+ *    colle le fichier sans le découper.
+ *
+ * POURQUOI DEUX FORMES. Netlify exécute ses fonctions en mode compatibilité
+ * Lambda, qui plafonne l'ENSEMBLE des variables d'environnement à 4 Ko. Le JSON
+ * complet en base64 pèse ~3,1 Ko : il tient dans la limite tout seul, et fait
+ * échouer la création de TOUTES les fonctions dès qu'on l'ajoute aux autres
+ * secrets — ce qui s'est produit au premier déploiement. La forme courte ne
+ * garde que ce dont on se sert (~1,75 Ko) : le JSON contient une dizaine de
+ * champs dont aucun n'est lu ici.
  */
 function readServiceAccountKey(): ServiceAccountKey | null {
+  const email = process.env.GOOGLE_DRIVE_SA_EMAIL?.trim();
+  const pem = process.env.GOOGLE_DRIVE_SA_PRIVATE_KEY?.trim();
+  if (email && pem) {
+    return { client_email: email, private_key: pem.replace(/\\n/g, '\n') };
+  }
+  // Forme courte incomplète : c'est une erreur de configuration, pas une
+  // absence. Le dire évite de chercher pourquoi « rien ne se passe ».
+  if (email || pem) {
+    throw new DriveConfigError(
+      'GOOGLE_DRIVE_SA_EMAIL et GOOGLE_DRIVE_SA_PRIVATE_KEY vont par paire : l’une des deux manque.'
+    );
+  }
+
   const raw = process.env.GOOGLE_DRIVE_SA_KEY?.trim();
   if (!raw) return null;
 

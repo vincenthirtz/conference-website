@@ -366,3 +366,85 @@ describe('utils/googleDrive — écriture', () => {
     );
   });
 });
+
+describe('utils/googleDrive — formes de configuration', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    process.env.GOOGLE_DRIVE_FOLDER_ID = ROOT;
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.GOOGLE_DRIVE_SA_KEY;
+    delete process.env.GOOGLE_DRIVE_SA_EMAIL;
+    delete process.env.GOOGLE_DRIVE_SA_PRIVATE_KEY;
+    delete process.env.GOOGLE_DRIVE_FOLDER_ID;
+  });
+
+  it('accepte la FORME COURTE : email + PEM en deux variables', async () => {
+    // Netlify plafonne l'ensemble des variables à 4 Ko en mode compatibilité
+    // Lambda. Le JSON complet en base64 pèse ~3,1 Ko et fait échouer la
+    // création de TOUTES les fonctions — c'est arrivé au premier déploiement.
+    process.env.GOOGLE_DRIVE_SA_EMAIL = 'asso@projet.iam.gserviceaccount.com';
+    process.env.GOOGLE_DRIVE_SA_PRIVATE_KEY = privateKey;
+    const { isDriveConfigured } = await import('@/utils/googleDrive');
+    expect(isDriveConfigured()).toBe(true);
+  });
+
+  it('la forme courte accepte un PEM aux retours à la ligne échappés', async () => {
+    process.env.GOOGLE_DRIVE_SA_EMAIL = 'asso@projet.iam.gserviceaccount.com';
+    process.env.GOOGLE_DRIVE_SA_PRIVATE_KEY = privateKey.replace(/\n/g, '\\n');
+
+    mockFetch((url) => {
+      if (url.includes(`/files/${ROOT}`)) {
+        return { id: ROOT, name: 'Asso', mimeType: 'folder', parents: [] };
+      }
+      return { files: [] };
+    });
+    const { listDriveFiles, resetDriveTokenCache } =
+      await import('@/utils/googleDrive');
+    resetDriveTokenCache();
+    // Signer exige un PEM réel : si la normalisation n'avait pas lieu, OpenSSL
+    // échouerait ici avec un message incompréhensible.
+    await expect(listDriveFiles()).resolves.toBeTruthy();
+  });
+
+  it('refuse une forme courte à moitié renseignée', async () => {
+    // Une seule des deux = erreur de configuration, pas absence. Traiter ça
+    // comme « non configuré » ferait chercher pourquoi rien ne se passe.
+    process.env.GOOGLE_DRIVE_SA_EMAIL = 'asso@projet.iam.gserviceaccount.com';
+    const { listDriveFiles, DriveConfigError } =
+      await import('@/utils/googleDrive');
+    await expect(listDriveFiles()).rejects.toBeInstanceOf(DriveConfigError);
+  });
+
+  it('la forme courte l’emporte sur le JSON complet', async () => {
+    // Les deux posées, c'est une migration en cours : on prend la forme qui
+    // tient dans le budget, pas celle qui l'a fait exploser.
+    process.env.GOOGLE_DRIVE_SA_KEY = saKey();
+    process.env.GOOGLE_DRIVE_SA_EMAIL = 'court@projet.iam.gserviceaccount.com';
+    process.env.GOOGLE_DRIVE_SA_PRIVATE_KEY = privateKey;
+
+    const calls = mockFetch((url) => {
+      if (url.includes(`/files/${ROOT}`)) {
+        return { id: ROOT, name: 'Asso', mimeType: 'folder', parents: [] };
+      }
+      return { files: [] };
+    });
+    const { listDriveFiles, resetDriveTokenCache } =
+      await import('@/utils/googleDrive');
+    resetDriveTokenCache();
+    await listDriveFiles();
+
+    const tokenCall = calls.find((c) =>
+      c.url.startsWith('https://oauth2.googleapis.com/token')
+    );
+    const assertion = String(
+      new URLSearchParams(tokenCall?.init?.body as string).get('assertion')
+    );
+    const claims = JSON.parse(
+      Buffer.from(assertion.split('.')[1], 'base64url').toString('utf8')
+    );
+    expect(claims.iss).toBe('court@projet.iam.gserviceaccount.com');
+  });
+});
