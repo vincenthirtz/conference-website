@@ -85,7 +85,15 @@ export default function TeamMemoryCard() {
     }
     setOpenKey(key);
     setVodUrl(encounter.review?.vodUrl ?? '');
-    setNotes(encounter.review?.notes ?? '');
+    // Amorce de revue (lot J5) : les objectifs posés AVANT le match ouvrent la
+    // revue d'après-match. La boucle du coach se referme sans qu'on y pense —
+    // et on n'écrase jamais des notes déjà écrites.
+    const existingNotes = encounter.review?.notes ?? '';
+    const objectives = encounter.review?.objectives ?? '';
+    setNotes(
+      existingNotes ||
+        (objectives ? format(t.notesFromObjectives, { objectives }) : '')
+    );
   };
 
   const save = async (encounter: Encounter) => {
@@ -98,6 +106,9 @@ export default function TeamMemoryCard() {
           subjectId: encounter.subjectId,
           vodUrl,
           notes,
+          // On repasse les objectifs tels quels : l'API remplace la ligne
+          // entière, les omettre les effacerait.
+          objectives: encounter.review?.objectives ?? null,
         }),
       });
       addToast(t.saved, 'success');
@@ -304,6 +315,17 @@ export default function TeamMemoryCard() {
 
               {!isOpen && encounter.review && (
                 <div className="border-t border-white/10 px-4 py-3">
+                  {/* Objectifs d'avant-match : rendus même sans revue écrite —
+                      c'est justement le cas « on a préparé, on n'a pas encore
+                      débriefé ». */}
+                  {encounter.review.objectives && (
+                    <p className="mb-1 whitespace-pre-wrap text-xs text-sky-200/90">
+                      <span className="font-semibold uppercase tracking-wide">
+                        {t.objectivesLabel}
+                      </span>{' '}
+                      {encounter.review.objectives}
+                    </p>
+                  )}
                   {encounter.review.notes && (
                     <p className="line-clamp-2 whitespace-pre-wrap text-xs text-gray-300">
                       {encounter.review.notes}

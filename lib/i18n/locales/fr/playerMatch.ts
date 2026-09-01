@@ -39,7 +39,8 @@ export default ns('playerMatch', {
   prepareNoOpponent: "L'adversaire n'est pas encore désigné.",
 
   checkinOpensAt: 'Le check-in ouvre le {date}.',
-  checkinOpenNow: 'Le check-in est ouvert — confirme la présence de ton équipe.',
+  checkinOpenNow:
+    'Le check-in est ouvert — confirme la présence de ton équipe.',
   checkinDone: 'Check-in confirmé le {date}.',
   checkinMissed: 'La fenêtre de check-in est passée sans confirmation.',
   checkinCta: 'Confirmer le check-in',
@@ -74,4 +75,16 @@ export default ns('playerMatch', {
   reviewCta: 'Écrire la revue du match ↗',
   reviewBody:
     'Une revue écrite à chaud vaut trois souvenirs. Elle reste dans la mémoire de ton équipe.',
+
+  // ── Préparation (lot J5) ─────────────────────────────────────────────
+  prepObjectivesTitle: 'Objectifs du match',
+  prepObjectivesHelp:
+    "Deux ou trois intentions, écrites avant de jouer. Elles ouvriront la revue d'après-match : c'est là qu'on regarde si elles ont tenu.",
+  prepObjectivesPlaceholder:
+    'Ex. tenir le premier point · ne pas forcer les ultimates · garder la comm’ courte',
+  prepSave: 'Enregistrer',
+  prepSaving: 'Enregistrement…',
+  prepSaved: 'Objectifs enregistrés.',
+  prepUnsaved: 'Non enregistré',
+  prepError: "Les objectifs n'ont pas pu être enregistrés.",
 });

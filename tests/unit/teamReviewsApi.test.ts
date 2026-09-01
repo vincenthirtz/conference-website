@@ -342,3 +342,89 @@ describe('historique', () => {
     expect(match.review.notes).toBe('note');
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * Objectifs d'avant-match — lot J5 (docs/PLAN-espace-joueur.md).
+ *
+ * La boucle du coach : les objectifs sont posés AVANT le match, sur la même
+ * ligne que la revue. Deux invariants en découlent, et ce sont eux qui cassent
+ * si quelqu'un traite `objectives` comme un champ ordinaire :
+ *   - des objectifs SEULS font exister la revue (sinon ils sont supprimés à
+ *     l'enregistrement, la revue étant jugée « vide ») ;
+ *   - vider les notes ne doit pas emporter les objectifs.
+ * ------------------------------------------------------------------------- */
+
+describe('objectifs d’avant-match', () => {
+  it('des objectifs seuls créent la revue', async () => {
+    const res = makeRes();
+    await handler(
+      makeReq({
+        method: 'PUT',
+        body: {
+          subjectType: 'match',
+          subjectId: MATCH_1,
+          objectives: 'Tenir le premier point',
+        },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    const rows = store.team_reviews as any[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0].objectives).toBe('Tenir le premier point');
+    expect(rows[0].notes).toBeNull();
+  });
+
+  it('les objectifs survivent à une revue écrite ensuite', async () => {
+    await handler(
+      makeReq({
+        method: 'PUT',
+        body: {
+          subjectType: 'match',
+          subjectId: MATCH_1,
+          objectives: 'Tenir le premier point',
+        },
+      }),
+      makeRes()
+    );
+    await handler(
+      makeReq({
+        method: 'PUT',
+        body: {
+          subjectType: 'match',
+          subjectId: MATCH_1,
+          objectives: 'Tenir le premier point',
+          notes: 'On a tenu.',
+        },
+      }),
+      makeRes()
+    );
+
+    const rows = store.team_reviews as any[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0].objectives).toBe('Tenir le premier point');
+    expect(rows[0].notes).toBe('On a tenu.');
+  });
+
+  it('le GET rend les objectifs sur l’affrontement', async () => {
+    await handler(
+      makeReq({
+        method: 'PUT',
+        body: {
+          subjectType: 'match',
+          subjectId: MATCH_1,
+          objectives: 'Ne pas forcer les ultimates',
+        },
+      }),
+      makeRes()
+    );
+
+    const res = makeRes();
+    await handler(makeReq(), res);
+    const encounter = (res.body as any).encounters.find(
+      (e: any) => e.subjectId === MATCH_1
+    );
+    expect(encounter.review.objectives).toBe('Ne pas forcer les ultimates');
+  });
+});

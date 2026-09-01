@@ -40,4 +40,6 @@ export default {
   deleteCta: 'Delete review',
   deleted: 'Review deleted.',
   watchVod: 'Watch the VOD',
+  objectivesLabel: 'Goals:',
+  notesFromObjectives: 'Goals set:\n{objectives}\n\nWhat we take from it:\n',
 };

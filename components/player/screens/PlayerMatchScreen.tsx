@@ -31,6 +31,7 @@ import { useToast } from '@/components/Toast';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import MatchLineupCard from '@/components/player/MatchLineupCard';
+import MatchPrepCard from '@/components/player/MatchPrepCard';
 import ReportScoreModal, {
   type LocalReport,
 } from '@/components/player/ReportScoreModal';
@@ -311,6 +312,13 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
             ) : (
               <p className="text-gray-400">{t.prepareNoOpponent}</p>
             )}
+
+            {/* Objectifs du match (J5) : la moitié « avant » de la boucle du
+                coach. Lecture ouverte au roster, écriture sur `validate_lineup`. */}
+            <MatchPrepCard
+              matchId={match.id}
+              canEdit={data.permissions.validateLineup && canAct}
+            />
 
             {/* L'effectif ne vaut avertissement que sous le minimum : sur un
                 tournoi sans minimum, `readiness` est nul et on se tait. */}

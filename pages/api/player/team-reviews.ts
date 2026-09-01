@@ -228,6 +228,8 @@ export default withAuthRoute(async function handler(
       subjectId?: unknown;
       vodUrl?: unknown;
       notes?: unknown;
+      /** Intentions d'avant-match (lot J5) — même ligne que la revue. */
+      objectives?: unknown;
     };
 
     if (!isReviewSubjectType(source.subjectType)) {
@@ -296,6 +298,7 @@ export default withAuthRoute(async function handler(
         played_at: subject.playedAt,
         vod_url: normalized.content.vodUrl,
         notes: normalized.content.notes,
+        objectives: normalized.content.objectives,
         created_by: user.id,
         updated_by: user.id,
       },
@@ -316,7 +319,7 @@ export default withAuthRoute(async function handler(
     supabaseAdmin
       .from('team_reviews')
       .select(
-        'subject_type, subject_id, vod_url, notes, updated_at, updated_by'
+        'subject_type, subject_id, vod_url, notes, objectives, updated_at, updated_by'
       )
       .eq('tenant_id', tenantId)
       .eq('team_id', team.id),
@@ -332,6 +335,7 @@ export default withAuthRoute(async function handler(
     subjectId: row.subject_id as string,
     vodUrl: (row.vod_url as string | null) ?? null,
     notes: (row.notes as string | null) ?? null,
+    objectives: (row.objectives as string | null) ?? null,
     updatedAt: (row.updated_at as string | null) ?? null,
     updatedBy: (row.updated_by as string | null) ?? null,
   }));

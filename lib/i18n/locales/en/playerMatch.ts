@@ -24,7 +24,7 @@ export default {
   stepScore: 'After the match',
 
   prepareBody:
-    "The opponent dossier gathers their results, their usual time slots and what your team noted last time.",
+    'The opponent dossier gathers their results, their usual time slots and what your team noted last time.',
   prepareScouting: 'Open the opponent dossier ↗',
   prepareTeamPage: 'View the team page ↗',
   prepareNoOpponent: 'The opponent is not decided yet.',
@@ -38,7 +38,8 @@ export default {
   checkinSuccess: 'Check-in confirmed.',
   checkinAlready: 'Your team was already checked in.',
   checkinFailed: 'Check-in failed.',
-  checkinNoToken: 'Check-in for this match is not handled from the player area.',
+  checkinNoToken:
+    'Check-in for this match is not handled from the player area.',
   checkinReadOnly: 'Only your captain or staff can confirm.',
 
   rosterWarning:
@@ -63,4 +64,15 @@ export default {
   reviewCta: 'Write the match review ↗',
   reviewBody:
     'A review written while it is fresh beats three memories. It stays in your team memory.',
+
+  prepObjectivesTitle: 'Match goals',
+  prepObjectivesHelp:
+    'Two or three intentions, written before playing. They open the post-match review: that is where you check whether they held.',
+  prepObjectivesPlaceholder:
+    'e.g. hold the first point · do not force ultimates · keep comms short',
+  prepSave: 'Save',
+  prepSaving: 'Saving…',
+  prepSaved: 'Goals saved.',
+  prepUnsaved: 'Unsaved',
+  prepError: 'The goals could not be saved.',
 };

@@ -22,6 +22,8 @@
 /** Longueurs miroir des CHECK de `team_reviews`. */
 export const MAX_VOD_LENGTH = 500;
 export const MAX_NOTES_LENGTH = 4000;
+/** Miroir du CHECK `team_reviews_objectives_len`. */
+export const MAX_OBJECTIVES_LENGTH = 2000;
 
 export const REVIEW_SUBJECT_TYPES = ['match', 'scrim'] as const;
 export type ReviewSubjectType = (typeof REVIEW_SUBJECT_TYPES)[number];
@@ -38,6 +40,13 @@ export function isReviewSubjectType(
 export type ReviewContent = {
   vodUrl: string | null;
   notes: string | null;
+  /**
+   * Intentions posées AVANT le match (lot J5). Sur la même ligne que la revue,
+   * parce que c'est le même affrontement : une revue peut naître avant le match
+   * (objectifs seuls) et se compléter après. C'est la boucle du métier de
+   * coach — fixer, puis regarder si ça a tenu.
+   */
+  objectives: string | null;
 };
 
 export type NormalizeReviewResult =
@@ -89,6 +98,7 @@ export function normalizeVodUrl(
 export function normalizeReviewContent(input: {
   vodUrl?: unknown;
   notes?: unknown;
+  objectives?: unknown;
 }): NormalizeReviewResult {
   const vod = normalizeVodUrl(input.vodUrl);
   if (!vod.ok) return { ok: false, error: vod.error };
@@ -108,8 +118,30 @@ export function normalizeReviewContent(input: {
     notes = trimmed || null;
   }
 
-  const content: ReviewContent = { vodUrl: vod.url, notes };
-  return { ok: true, content, isEmpty: !content.vodUrl && !content.notes };
+  let objectives: string | null = null;
+  if (input.objectives != null) {
+    if (typeof input.objectives !== 'string') {
+      return { ok: false, error: 'Objectifs invalides.' };
+    }
+    const trimmed = input.objectives.trim();
+    if (trimmed.length > MAX_OBJECTIVES_LENGTH) {
+      return {
+        ok: false,
+        error: `Les objectifs ne peuvent pas dépasser ${MAX_OBJECTIVES_LENGTH} caractères.`,
+      };
+    }
+    objectives = trimmed || null;
+  }
+
+  const content: ReviewContent = { vodUrl: vod.url, notes, objectives };
+  // « Une revue vide n'existe pas » vaut sur les TROIS champs : des objectifs
+  // posés avant le match suffisent à faire exister la ligne, et vider les notes
+  // ne doit pas les emporter avec elles.
+  return {
+    ok: true,
+    content,
+    isEmpty: !content.vodUrl && !content.notes && !content.objectives,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -181,6 +213,7 @@ export function buildEncounterHistory(
           ? {
               vodUrl: review.vodUrl,
               notes: review.notes,
+              objectives: review.objectives,
               updatedAt: review.updatedAt,
               updatedBy: review.updatedBy,
             }

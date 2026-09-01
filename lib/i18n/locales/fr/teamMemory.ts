@@ -39,4 +39,7 @@ export default ns('teamMemory', {
   deleteCta: 'Supprimer la revue',
   deleted: 'Revue supprimée.',
   watchVod: 'Voir la VOD',
+  // ── Objectifs d'avant-match (lot J5) ─────────────────────────────────
+  objectivesLabel: 'Objectifs :',
+  notesFromObjectives: 'Objectifs fixés :\n{objectives}\n\nCe qu’on en retient :\n',
 });

@@ -55,7 +55,7 @@ La date du 14/09 coupe le plan en deux, et c'est le seul arbitrage structurant :
 | **J2** | Mon agenda (+ abonnement calendrier) | 🟥 | S | ✅ livré 2026-09-01 |
 | **J3** | Délégation des droits par la capitaine | 🟥 | M | ✅ livré 2026-09-01 |
 | **J4** | Console manager multi-équipes | 🟧 | M | ✅ livré 2026-09-01 |
-| **J5** | Espace coach : préparer, puis débriefer | 🟧 | M | saison |
+| **J5** | Espace coach : préparer, puis débriefer | 🟧 | M | ✅ livré 2026-09-01 |
 | **J6** | Dashboard priorisé (« à faire », pas « tout ») | 🟧 | M | après |
 | **J7** | Filet de sécurité : e2e du jour J + a11y mobile | 🟧 | M | continu |
 
@@ -208,7 +208,7 @@ est un lien vers **le fil du match** (J1). Un seul appel serveur pour toutes les
 
 ---
 
-## J5 · Espace coach : préparer, puis débriefer — 🟧 / M · saison
+## J5 · Espace coach : préparer, puis débriefer — ✅ LIVRÉ (2026-09-01)
 
 **Problème.** Le coach a désormais un périmètre net (scrims + feuille de match) et **7 personnes**
 l'occupent. Mais la matière de son métier est éparpillée : le dossier d'adversaire
@@ -223,9 +223,16 @@ dossier adversaire + nos revues précédentes contre lui + map pool du tournoi +
 post-match. La boucle se referme sans qu'on ait à y penser.
 
 **Critères d'acceptation**
-- [ ] Les objectifs saisis avant le match apparaissent pré-remplis dans la revue après le match.
-- [ ] Rien du privé de l'adversaire n'apparaît (la ligne de confidentialité de `scouting.ts` fait foi).
-- [ ] Le bloc est lisible par tout le roster, éditable par qui a `validate_lineup`.
+- [x] Les objectifs pré-remplissent la revue d'après-match (`notesFromObjectives`), sans jamais
+      écraser des notes déjà écrites.
+- [x] Rien du privé de l'adversaire : le dossier reste servi par `scouting.ts`, inchangé.
+- [x] Lisible par tout le roster, éditable sur `validate_lineup` — la même permission que la
+      feuille de match, parce que composer et préparer sont le même geste.
+
+**Choix d'implémentation** : les objectifs vivent sur la ligne de revue existante
+(`team_reviews.objectives`) plutôt que dans une table à part — même équipe, même affrontement,
+même clé. Conséquence assumée : « une revue vide n'existe pas » se juge désormais sur trois
+champs, sinon poser des objectifs avant le match les supprimerait aussitôt.
 
 ---
 

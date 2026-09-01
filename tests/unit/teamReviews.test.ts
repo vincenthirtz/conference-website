@@ -68,9 +68,17 @@ describe('normalizeReviewContent', () => {
     const r = normalizeReviewContent({ vodUrl: '', notes: '   ' });
     expect(r).toEqual({
       ok: true,
-      content: { vodUrl: null, notes: null },
+      content: { vodUrl: null, notes: null, objectives: null },
       isEmpty: true,
     });
+  });
+
+  // Depuis le lot J5, des OBJECTIFS seuls suffisent à faire exister la revue :
+  // ils sont posés avant le match, quand notes et VOD ne peuvent pas exister.
+  it('n’est pas vide avec des objectifs seuls', () => {
+    const r = normalizeReviewContent({ objectives: 'Tenir le point B' });
+    expect(r.ok && r.isEmpty).toBe(false);
+    expect(r.ok && r.content.objectives).toBe('Tenir le point B');
   });
 
   it('n’est pas vide dès qu’un seul des deux champs est rempli', () => {
@@ -168,6 +176,7 @@ describe('buildEncounterHistory', () => {
           subjectId: 'same',
           vodUrl: null,
           notes: 'revue du scrim',
+          objectives: null,
           updatedAt: '2026-07-20T10:00:00.000Z',
           updatedBy: 'u1',
         },
