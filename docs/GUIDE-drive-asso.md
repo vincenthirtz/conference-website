@@ -1,15 +1,29 @@
 # Brancher le Drive de l'asso — marche à suivre
 
 *L'écran est livré ([`/admin/documents`](../pages/admin/documents.tsx)). Il reste
-deux variables d'environnement à poser, et un partage à faire côté Google. Rien
-à installer, rien à migrer.*
+deux variables d'environnement à poser. Rien à installer, rien à migrer.*
+
+## État au 2026-09-01 — vérifié en vrai
+
+Les étapes 1 et 2 ci-dessous sont **faites**. Un appel réel à l'API Drive
+confirme la chaîne complète :
+
+| | |
+|---|---|
+| Compte de service | `site-owwomenscup@owwomenscup.iam.gserviceaccount.com` (projet `owwomenscup`) |
+| Jeton `drive.readonly` | ✅ obtenu |
+| Dossier partagé | ✅ **« Drive Asso »**, `1CRiAwxHRaPD7vqL23x8ANOdQg6MUppLm` |
+| Contenu vu par le compte | **0 élément** — le dossier est vide, ou son contenu ne lui est pas partagé |
+
+**Reste donc uniquement l'étape 3** (les deux variables Netlify). Une fois
+posées et le site redéployé, `/admin/documents` affichera le dossier.
 
 Le « pourquoi » de chaque choix est dans
 [`ETUDE-drive-et-chat.md`](./ETUDE-drive-et-chat.md).
 
 ---
 
-## 1. Créer le compte de service (5 min, une fois)
+## 1. Créer le compte de service (5 min, une fois) — ✅ fait
 
 1. [console.cloud.google.com](https://console.cloud.google.com/) → créer un
    projet (`owwomenscup`, par exemple).
@@ -23,7 +37,7 @@ Le « pourquoi » de chaque choix est dans
 Noter l'adresse du compte de service, de la forme
 `site-owwomenscup@<projet>.iam.gserviceaccount.com`.
 
-## 2. Partager le dossier avec lui
+## 2. Partager le dossier avec lui — ✅ fait
 
 Sur le dossier Drive de l'asso → **Partager** → coller l'adresse
 `…iam.gserviceaccount.com`. Décocher la notification par email (un compte de
@@ -42,12 +56,19 @@ page le dit en toutes lettres plutôt que de relayer le message de Google.
 Le compte de service ne voit **que** ce qu'on lui partage : il n'y a rien à
 restreindre en plus.
 
-## 3. Poser les deux variables (Netlify → Site configuration → Environment variables)
+## 3. Poser les deux variables (Netlify → Site configuration → Environment variables) — ⬜ à faire
 
 | Variable | Valeur |
 |---|---|
 | `GOOGLE_DRIVE_SA_KEY` | Le contenu du fichier JSON. **En base64 de préférence** : `base64 -i cle.json \| pbcopy`. Le collage direct d'un JSON multi-ligne mange les retours à la ligne de la clé privée, et l'erreur qui en sort est un message OpenSSL incompréhensible. Les deux formes sont acceptées. |
-| `GOOGLE_DRIVE_FOLDER_ID` | L'identifiant du dossier : le segment après `/folders/` dans son URL de partage. |
+| `GOOGLE_DRIVE_FOLDER_ID` | L'identifiant du dossier : le segment après `/folders/` dans son URL de partage. Ici : `1CRiAwxHRaPD7vqL23x8ANOdQg6MUppLm`. |
+
+La commande pour obtenir la valeur base64, sur le poste où se trouve le fichier
+JSON téléchargé à l'étape 1 :
+
+```bash
+base64 -i owwomenscup-<id>.json | pbcopy
+```
 
 Puis redéployer (les variables ne sont lues qu'au build de la fonction).
 
