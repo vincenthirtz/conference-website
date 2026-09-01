@@ -34,7 +34,8 @@ const WINDOW_HOURS = 24;
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'tournament-checkin-nudge-all' }),
-  'admin'
+  // Lot A2 : tenir le check-in est une TÂCHE, pas le back-office entier.
+  { permission: 'run_checkin' }
 );
 
 async function handler(

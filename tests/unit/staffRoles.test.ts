@@ -25,8 +25,18 @@ import {
 } from '../../utils/staff';
 
 describe('STAFF_ROLES', () => {
-  it('contains all 3 roles in hierarchy order', () => {
-    expect(STAFF_ROLES).toEqual(['owner', 'admin', 'caster']);
+  // Depuis le lot A2 (docs/PLAN-espace-admin.md), deux rôles ÉTROITS
+  // s'ajoutent : `referee` et `helper`. Ils sont listés après les trois
+  // historiques, dont l'ordre et le périmètre n'ont pas bougé — leur accès
+  // passe par les permissions (utils/staffPermissions.ts), pas par le rang.
+  it('liste les rôles, historiques d’abord', () => {
+    expect(STAFF_ROLES).toEqual([
+      'owner',
+      'admin',
+      'caster',
+      'referee',
+      'helper',
+    ]);
   });
 });
 

@@ -9,6 +9,10 @@ import type {
 import type { User } from '@supabase/supabase-js';
 import { supabaseAdmin, getServerClient } from './supabase';
 import type { StaffRole } from '@/types/admin';
+import {
+  roleHasStaffPermission,
+  type StaffPermission,
+} from '@/utils/staffPermissions';
 import type {
   StaffMember,
   StaffContext,
@@ -44,24 +48,46 @@ export class StaffUnauthenticatedError extends Error {
   }
 }
 
-export const STAFF_ROLES: StaffRole[] = ['owner', 'admin', 'caster'];
+export const STAFF_ROLES: StaffRole[] = [
+  'owner',
+  'admin',
+  'caster',
+  'referee',
+  'helper',
+];
 
 export const STAFF_ROLE_LABEL: Record<StaffRole, string> = {
   owner: 'Owner',
   admin: 'Admin',
   caster: 'Caster',
+  referee: 'Arbitre',
+  helper: 'Bénévole',
 };
 
 export const STAFF_ROLE_DESCRIPTION: Record<StaffRole, string> = {
   owner: 'Accès complet, gestion du staff, gestion des permissions',
   admin: 'Accès complet au back-office, gestion tournois & résultats',
   caster: 'Accès lecture + meta info match (pour préparation cast)',
+  referee: 'Le jour J, sur les matchs : check-in, scores, litiges',
+  helper: 'Une seule tâche : tenir le check-in',
 };
 
+/**
+ * Hiérarchie HISTORIQUE, conservée telle quelle pour les ~68 gardes existantes
+ * (`withStaffPage('admin')`, `withStaffRoute(h, 'caster')`…).
+ *
+ * Les rôles du lot A2 sont volontairement SOUS `caster` (rang négatif) : un
+ * ordre total ne sait pas exprimer « peut arbitrer mais pas caster ». Leur
+ * accès passe donc exclusivement par les permissions
+ * (`utils/staffPermissions.ts`), jamais par ce rang — dont le seul rôle ici est
+ * de garantir qu'aucune garde héritée ne les laisse entrer par erreur.
+ */
 export const STAFF_ROLE_RANK: Record<StaffRole, number> = {
   owner: 2,
   admin: 1,
   caster: 0,
+  referee: -1,
+  helper: -1,
 };
 
 /* -----------------------------------------------------------
@@ -381,6 +407,35 @@ export async function requireStaffRoleFromRequest(
   };
 }
 
+/**
+ * Variante PAR PERMISSION de `requireStaffRoleFromRequest` (lot A2 de
+ * docs/PLAN-espace-admin.md).
+ *
+ * Pourquoi une seconde garde plutôt qu'un `minRole` élargi : les rangs sont un
+ * ordre TOTAL (« au moins admin »), les droits ne le sont pas. « Peut tenir le
+ * check-in mais rien d'autre » n'a pas de place dans une échelle — il en a une
+ * dans un catalogue.
+ *
+ * Le reste (session, tenant actif, contexte renvoyé) est strictement identique :
+ * cette fonction délègue, elle ne réimplémente rien.
+ */
+export async function requireStaffPermissionFromRequest(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  permission: StaffPermission
+): Promise<AuthenticatedStaffContext> {
+  // `helper` est le rôle le plus bas : cette première passe ne fait donc que
+  // « est-ce un membre du staff authentifié ? » et résout le tenant actif.
+  const ctx = await requireStaffRoleFromRequest(req, res, 'helper');
+
+  if (!roleHasStaffPermission(ctx.role, permission)) {
+    throw new StaffUnauthorizedError(
+      `Ce rôle ne couvre pas la permission « ${permission} ».`
+    );
+  }
+  return ctx;
+}
+
 /* -----------------------------------------------------------
  * Helpers pratiques pour les API routes
  * ---------------------------------------------------------*/
@@ -424,13 +479,23 @@ export function csrfCheck(req: NextApiRequest): boolean {
   return false;
 }
 
+/**
+ * Garde d'une route admin : un RÔLE MINIMUM (forme historique) ou une
+ * PERMISSION (`{ permission: 'run_checkin' }`, lot A2).
+ *
+ * Les deux formes coexistent volontairement : migrer 68 pages d'un coup serait
+ * un big bang, et la forme par rôle reste correcte pour tout ce qui est
+ * réellement « le back-office entier ».
+ */
+export type StaffGuard = StaffRole | { permission: StaffPermission };
+
 export function withStaffRoute(
   handler: (
     req: NextApiRequest,
     res: NextApiResponse,
     ctx: AuthenticatedStaffContext
   ) => Promise<unknown>,
-  minRole: StaffRole = 'admin'
+  guard: StaffGuard = 'admin'
 ) {
   return async (req: NextApiRequest, res: NextApiResponse) => {
     try {
@@ -438,7 +503,10 @@ export function withStaffRoute(
         res.status(403).json({ error: 'Forbidden: origin mismatch' });
         return;
       }
-      const ctx = await requireStaffRoleFromRequest(req, res, minRole);
+      const ctx =
+        typeof guard === 'string'
+          ? await requireStaffRoleFromRequest(req, res, guard)
+          : await requireStaffPermissionFromRequest(req, res, guard.permission);
       await handler(req, res, ctx);
     } catch (err: unknown) {
       if (
@@ -556,18 +624,21 @@ type StaffPageLoader<P> = (
 export function withStaffPage<
   P extends Record<string, unknown> = Record<string, unknown>,
 >(
-  minRole: StaffRole = 'admin',
+  guard: StaffGuard = 'admin',
   loader?: StaffPageLoader<P>
 ): GetServerSideProps {
   return async function (ctx: GetServerSidePropsContext) {
     const { req, res } = ctx;
 
     try {
-      const staffCtx = await requireStaffRoleFromRequest(
-        req as any,
-        res as any,
-        minRole
-      );
+      const staffCtx =
+        typeof guard === 'string'
+          ? await requireStaffRoleFromRequest(req as any, res as any, guard)
+          : await requireStaffPermissionFromRequest(
+              req as any,
+              res as any,
+              guard.permission
+            );
 
       // Nature du tenant actif (organizer/developer) : sert à filtrer la nav
       // admin et les cartes du dashboard côté SSR. Fail-safe 'organizer' en cas

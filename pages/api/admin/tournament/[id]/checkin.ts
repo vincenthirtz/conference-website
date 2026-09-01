@@ -14,7 +14,7 @@ import {
 import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../../utils/logger';
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'run_checkin' });
 
 async function handler(
   req: NextApiRequest,

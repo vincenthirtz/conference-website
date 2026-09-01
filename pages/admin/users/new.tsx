@@ -50,14 +50,22 @@ type AddMemberResponse = {
   info?: string;
 };
 
-const ROLES = ['member', 'player', 'caster', 'admin', 'owner'];
+const ROLES = [
+  'member',
+  'player',
+  'helper',
+  'referee',
+  'caster',
+  'admin',
+  'owner',
+];
 
 /**
  * Rôles qui ouvrent le back-office : ils déclenchent la création d'une row
  * `staff` côté API. Copie CLIENT de `STAFF_ROLES` (utils/staff.ts) — importer
  * ce module ici embarquerait le client Supabase service-role dans le bundle.
  */
-const STAFF_LIKE_ROLES = ['caster', 'admin', 'owner'];
+const STAFF_LIKE_ROLES = ['helper', 'referee', 'caster', 'admin', 'owner'];
 
 /** Codes d'erreur stables renvoyés par POST /api/admin/users. */
 const ERROR_CODE_KEYS: Record<string, keyof Dict> = {

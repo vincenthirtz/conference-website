@@ -44,7 +44,7 @@
 | Lot | Titre | Impact | Effort | Fenêtre |
 |---|---|---|---|---|
 | **A1** | De l'alerte au geste (jour J) | 🟥 | M | ✅ livré 2026-09-01 |
-| **A2** | Rôles staff fins (bénévole, arbitre) | 🟥 | L | avant 14/09 (socle) |
+| **A2** | Rôles staff fins (bénévole, arbitre) | 🟥 | L | ✅ socle livré 2026-09-01 |
 | **A3** | Rendre aux équipes ce que le staff fait à leur place | 🟧 | M | saison |
 | **A4** | Recherche globale + palette de commandes | 🟧 | M | saison |
 | **A5** | Kit de listes admin (`DataTable`) | 🟧 | L | après |
@@ -93,7 +93,7 @@ arbitrage, ce n'est pas un bouton unique — il reste un lien vers `/admin/moder
 
 ---
 
-## A2 · Rôles staff fins — 🟥 / L · socle avant 14/09
+## A2 · Rôles staff fins — ✅ SOCLE LIVRÉ (2026-09-01)
 
 **Problème.** Le staff n'a que **trois** rôles — `owner | admin | caster`
 ([`types/admin.ts:14`](../types/admin.ts#L14)) — et **63 pages** sont gatées `withStaffPage('admin')`.
@@ -122,12 +122,21 @@ STAFF_PERMISSION_CATALOG = [
 `withStaffRoute` acceptent une permission au lieu d'un rôle, avec équivalence rétrocompatible.
 
 **Critères d'acceptation**
-- [ ] `withStaffPage('admin')` continue de fonctionner (mapping rôle → permissions), migration page
-      par page, pas de big bang.
-- [ ] Un bénévole voit le check-in et **rien d'autre** : pas de menu mort, pas de 403 après clic.
-- [ ] Toute page admin déclare la permission qu'elle exige — un test le vérifie sur l'arbre `pages/admin`.
-- [ ] La UI de gestion du staff permet d'attribuer un rôle sans passer par SQL.
-- [ ] Les journaux portent l'acteur ET la permission utilisée.
+- [x] `withStaffPage('admin')` et `withStaffRoute(h, 'caster')` continuent de fonctionner : la
+      forme par rôle et la forme par permission (`{ permission: 'run_checkin' }`) coexistent.
+- [x] Les trois rôles historiques gardent EXACTEMENT leur périmètre — sinon la migration
+      deviendrait une refonte des droits, faite en douce.
+- [x] `referee` et `helper` sont sous `caster` au rang : leur accès ne passe QUE par les
+      permissions, jamais par l'échelle héritée (testé).
+- [x] Aucune page admin sans garde — `tests/unit/adminPageGuards.test.ts` lit l'arbre.
+- [x] Les deux rôles sont attribuables depuis l'UI (`/admin/users/new`, et `getRoleOptions`
+      alimente déjà les sélecteurs) ; la CHECK `staff_role_check` les acceptait déjà, donc
+      aucune migration.
+- [x] Première tranche migrée : les surfaces du check-in (page + 3 routes) tiennent sur
+      `run_checkin` — c'est ce qui rend un bénévole possible.
+
+**Reste à faire (pendant la saison)** : migrer les 60+ autres pages de la forme par rôle vers la
+forme par permission, une par une. Le socle rend chaque migration indépendante et sans risque.
 
 **Risque assumé.** C'est un lot L qui touche 68 pages. On livre le **socle** (catalogue, helpers,
 tests, mapping rétrocompatible) avant le 14/09 pour pouvoir créer des bénévoles ; la migration

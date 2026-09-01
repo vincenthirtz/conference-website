@@ -11,7 +11,22 @@ import type { RegistrationField } from '@/utils/registrationFields';
 // NB: 'manager' a été retiré des rôles staff (tier inutilisé). NE PAS confondre
 // avec le rôle de TEAM 'manager' (utils/teamRoles.ts / team_members.role), qui
 // reste valide et n'a rien à voir avec l'accès back-office.
-export type StaffRole = 'owner' | 'admin' | 'caster';
+/**
+ * Rôles STAFF. `referee` et `helper` sont arrivés avec le lot A2
+ * (docs/PLAN-espace-admin.md) : ils existent pour accueillir quelqu'un sur UNE
+ * tâche — arbitrer, tenir le check-in — sans lui donner le back-office entier.
+ *
+ * Leur périmètre ne se lit PAS dans la hiérarchie de rangs (qui est un ordre
+ * total, alors que des droits ne le sont pas) mais dans
+ * `utils/staffPermissions.ts`. Les deux valeurs étaient déjà acceptées par la
+ * CHECK `staff_role_check` en base — aucune migration nécessaire.
+ */
+export type StaffRole =
+  | 'owner'
+  | 'admin'
+  | 'caster'
+  | 'referee'
+  | 'helper';
 
 export type StaffShape = {
   id: string;

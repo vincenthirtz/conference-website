@@ -24,7 +24,7 @@ type TeamSide = 1 | 2 | 'both';
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'match-checkin-nudge' }),
-  'admin'
+  { permission: 'run_checkin' }
 );
 
 async function handler(

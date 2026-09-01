@@ -21,7 +21,9 @@ import nsAdminTournamentNav from '@/lib/i18n/locales/admin-fr/adminTournamentNav
 
 const ID_BASE = 'admin-tournament-checkin';
 
-export const getServerSideProps = withStaffPage('admin');
+// Lot A2 : la page du check-in se garde par PERMISSION, pas par rôle — c'est
+// elle qui rend un bénévole possible (`helper` n'a que `run_checkin`).
+export const getServerSideProps = withStaffPage({ permission: 'run_checkin' });
 
 export default function AdminTournamentCheckinPage(_: StaffProps) {
   const router = useRouter();
