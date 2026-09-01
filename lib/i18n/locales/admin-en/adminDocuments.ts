@@ -90,4 +90,10 @@ export default {
   keyError: 'The key could not be stored.',
   keyNoEncryption:
     'SECRETS_ENC_KEY is not set: without it the key cannot be encrypted. See docs/GUIDE-drive-asso.md.',
+
+  // Direct download
+  download: 'Download',
+  downloadTitle: 'Download {name}',
+  downloadNote:
+    'Downloads go through the site: they work even without personal Google access to the folder, and each one is logged.',
 };

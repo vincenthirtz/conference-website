@@ -698,3 +698,120 @@ export async function trashDriveFile({
     throw new Error(`Drive a répondu ${res.status}. ${detail.slice(0, 300)}`);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Téléchargement
+//
+// COMPROMIS ASSUMÉ. La v1 ne servait que des liens Drive : c'était Google qui
+// appliquait le partage, une défense de plus. Servir le contenu fait de
+// `read_documents` la seule chose entre un PV d'AG et Internet.
+//
+// Ce qui a fait pencher : quelqu'un qui a le droit SUR LE SITE mais n'est pas
+// dans la liste de partage Google se prenait un refus en cliquant « Ouvrir dans
+// Drive ». Le site lui disait oui, Google non. Un droit qui ne donne pas accès
+// n'est pas un droit.
+//
+// Les garde-fous compensent : mêmes vérifications de confinement que la liste
+// (dossier dans l'arborescence, fichier enfant de ce dossier), jeton en LECTURE
+// SEULE, et chaque téléchargement journalisé.
+// ---------------------------------------------------------------------------
+
+/**
+ * Les formats natifs Google n'ont pas de contenu binaire à télécharger : il
+ * faut les EXPORTER. On choisit le format d'arrivée le plus proche de l'usage —
+ * un PV se lit et s'archive en PDF, un budget se retravaille en tableur.
+ */
+const GOOGLE_EXPORT_TARGETS: Record<string, { mimeType: string; ext: string }> =
+  {
+    'application/vnd.google-apps.document': {
+      mimeType: 'application/pdf',
+      ext: '.pdf',
+    },
+    'application/vnd.google-apps.presentation': {
+      mimeType: 'application/pdf',
+      ext: '.pdf',
+    },
+    'application/vnd.google-apps.spreadsheet': {
+      mimeType:
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ext: '.xlsx',
+    },
+    'application/vnd.google-apps.drawing': {
+      mimeType: 'image/png',
+      ext: '.png',
+    },
+  };
+
+export type DriveDownload = {
+  filename: string;
+  mimeType: string;
+  /** Taille en octets si Google la donne — absente sur un export. */
+  size: number | null;
+  /** Corps de la réponse, à relayer tel quel : rien n'est mis en mémoire. */
+  body: ReadableStream<Uint8Array>;
+};
+
+export type DownloadDriveFileArgs = {
+  fileId: string;
+  /** Dossier affiché — vérifié dans l'arborescence, cf. `trashDriveFile`. */
+  folderId?: string | null;
+  tenantId?: string | null;
+};
+
+export async function downloadDriveFile({
+  fileId,
+  folderId,
+  tenantId,
+}: DownloadDriveFileArgs): Promise<DriveDownload> {
+  const rootId = getDriveRootFolderId();
+  if (!rootId) throw new DriveConfigError('GOOGLE_DRIVE_FOLDER_ID absent.');
+
+  // Même confinement que la corbeille : le dossier est-il dans l'arborescence
+  // configurée, et le fichier est-il bien dedans. Sans ça, `fileId` permettrait
+  // d'aspirer n'importe quel fichier visible du compte de service.
+  const target = folderId?.trim() || rootId;
+  await resolvePathFromRoot(target, rootId, tenantId);
+  if (!(await isChildOfFolder(fileId, target, tenantId))) {
+    throw new DriveConfigError('Ce fichier n’est pas dans le dossier affiché.');
+  }
+
+  const meta = await driveGet<RawFile>(
+    `${FILES_URL}/${encodeURIComponent(fileId)}`,
+    { fields: 'id,name,mimeType,size' },
+    tenantId
+  );
+
+  const exportTarget = GOOGLE_EXPORT_TARGETS[meta.mimeType];
+  const token = await getAccessToken(SCOPE_READ, tenantId);
+
+  const url = exportTarget
+    ? `${FILES_URL}/${encodeURIComponent(fileId)}/export?mimeType=${encodeURIComponent(exportTarget.mimeType)}&supportsAllDrives=true`
+    : `${FILES_URL}/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`;
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok || !res.body) {
+    const detail = await res.text().catch(() => '');
+    if (res.status === 403 && exportTarget) {
+      // Un export dépasse 10 Mo côté Google, ou le format est refusé.
+      throw new DriveConfigError(
+        'Ce document est trop volumineux pour être exporté. L’ouvrir dans Drive.'
+      );
+    }
+    throw new Error(`Drive a répondu ${res.status}. ${detail.slice(0, 300)}`);
+  }
+
+  // Un export Google Doc s'appelle « PV.docx » côté Drive mais arrive en PDF :
+  // sans cet ajustement, le fichier téléchargé porte une extension qui ment.
+  const filename = exportTarget
+    ? `${meta.name.replace(/\.[^.]+$/, '')}${exportTarget.ext}`
+    : meta.name;
+
+  return {
+    filename,
+    mimeType: exportTarget ? exportTarget.mimeType : meta.mimeType,
+    size: meta.size ? Number(meta.size) : null,
+    body: res.body,
+  };
+}

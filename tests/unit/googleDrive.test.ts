@@ -46,9 +46,21 @@ function mockFetch(handler: (url: string) => unknown) {
           json: async () => ({ access_token: 'tok', expires_in: 3600 }),
         } as unknown as Response;
       }
-      const body = handler(url);
+      const body = handler(url) as Record<string, unknown>;
+      // Les appels de CONTENU (alt=media / export) rendent un flux, pas du
+      // JSON : le code relaie `res.body` tel quel.
+      const stream =
+        body && body.__stream
+          ? new ReadableStream({
+              start(c) {
+                c.enqueue(new Uint8Array([1, 2, 3]));
+                c.close();
+              },
+            })
+          : null;
       return {
         ok: true,
+        body: stream,
         json: async () => body,
         text: async () => JSON.stringify(body),
       } as unknown as Response;
@@ -455,5 +467,121 @@ describe('utils/googleDrive — formes de configuration', () => {
       Buffer.from(assertion.split('.')[1], 'base64url').toString('utf8')
     );
     expect(claims.iss).toBe('court@projet.iam.gserviceaccount.com');
+  });
+});
+
+describe('utils/googleDrive — téléchargement', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    process.env.GOOGLE_DRIVE_SA_KEY = saKey();
+    process.env.GOOGLE_DRIVE_FOLDER_ID = ROOT;
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.GOOGLE_DRIVE_SA_KEY;
+    delete process.env.GOOGLE_DRIVE_FOLDER_ID;
+  });
+
+  /** Mock qui répond aussi un `body` (flux) pour les appels de contenu. */
+  function mockDownload(meta: Record<string, unknown>) {
+    return mockFetch((url) => {
+      if (url.includes(`/files/${ROOT}`)) {
+        return { id: ROOT, name: 'Asso', mimeType: 'folder' };
+      }
+      if (url.includes('/export?') || url.includes('alt=media')) {
+        return { __stream: true };
+      }
+      if (url.includes('drive/v3/files?')) {
+        return { files: [{ id: 'doc1' }] };
+      }
+      return meta;
+    });
+  }
+
+  it('demande un jeton en LECTURE SEULE pour télécharger', async () => {
+    // Un chemin de téléchargement qui détiendrait un jeton d'écriture pourrait
+    // modifier ce qu'il est censé seulement lire.
+    const calls = mockDownload({
+      id: 'doc1',
+      name: 'PV.pdf',
+      mimeType: 'application/pdf',
+      size: '1024',
+    });
+    const { downloadDriveFile, resetDriveTokenCache } =
+      await import('@/utils/googleDrive');
+    resetDriveTokenCache();
+    await downloadDriveFile({ fileId: 'doc1' });
+
+    const scopes = calls
+      .filter((c) => c.url.startsWith('https://oauth2.googleapis.com/token'))
+      .map((c) => {
+        const assertion = String(
+          new URLSearchParams(c.init?.body as string).get('assertion')
+        );
+        return JSON.parse(
+          Buffer.from(assertion.split('.')[1], 'base64url').toString('utf8')
+        ).scope;
+      });
+    expect(scopes).toContain('https://www.googleapis.com/auth/drive.readonly');
+    expect(scopes).not.toContain('https://www.googleapis.com/auth/drive');
+  });
+
+  it('EXPORTE un Google Doc en PDF, et corrige l’extension', async () => {
+    // Un format natif Google n'a pas de contenu binaire : sans export, le
+    // téléchargement rendrait un fichier vide. Et le nom côté Drive ne porte
+    // pas l'extension d'arrivée — la laisser mentirait sur le contenu.
+    const calls = mockDownload({
+      id: 'doc1',
+      name: 'PV du 12 mars',
+      mimeType: 'application/vnd.google-apps.document',
+    });
+    const { downloadDriveFile, resetDriveTokenCache } =
+      await import('@/utils/googleDrive');
+    resetDriveTokenCache();
+    const file = await downloadDriveFile({ fileId: 'doc1' });
+
+    expect(file.filename).toBe('PV du 12 mars.pdf');
+    expect(file.mimeType).toBe('application/pdf');
+    expect(calls.some((c) => c.url.includes('/export?'))).toBe(true);
+  });
+
+  it('laisse un PDF tel quel, sans export', async () => {
+    const calls = mockDownload({
+      id: 'doc1',
+      name: 'RIB.pdf',
+      mimeType: 'application/pdf',
+      size: '2048',
+    });
+    const { downloadDriveFile, resetDriveTokenCache } =
+      await import('@/utils/googleDrive');
+    resetDriveTokenCache();
+    const file = await downloadDriveFile({ fileId: 'doc1' });
+
+    expect(file.filename).toBe('RIB.pdf');
+    expect(file.size).toBe(2048);
+    expect(calls.some((c) => c.url.includes('/export?'))).toBe(false);
+    expect(calls.some((c) => c.url.includes('alt=media'))).toBe(true);
+  });
+
+  it('refuse un fichier absent du dossier affiché', async () => {
+    // Même confinement que la liste et la corbeille : sans lui, `fileId`
+    // permettrait d'aspirer tout ce que le compte de service voit.
+    mockFetch((url) => {
+      if (url.includes(`/files/${ROOT}`)) {
+        return { id: ROOT, name: 'Asso', mimeType: 'folder' };
+      }
+      if (url.includes('drive/v3/files?')) {
+        return { files: [{ id: 'un-autre' }] };
+      }
+      return {};
+    });
+    const { downloadDriveFile, DriveConfigError, resetDriveTokenCache } =
+      await import('@/utils/googleDrive');
+    resetDriveTokenCache();
+
+    await expect(
+      downloadDriveFile({ fileId: 'etranger' })
+    ).rejects.toBeInstanceOf(DriveConfigError);
   });
 });

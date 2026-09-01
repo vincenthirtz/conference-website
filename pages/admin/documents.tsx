@@ -207,6 +207,22 @@ export default function AdminDocumentsPage(_props: StaffProps) {
       sortable: false,
       render: (f) => (
         <div className="flex items-center justify-end gap-2">
+          {/* Téléchargement DIRECT, servi par le site. Il fonctionne même pour
+              qui n'a pas d'accès Google personnel au dossier — c'était le trou
+              du lien sortant : le site disait oui, Google non. Un dossier n'a
+              rien à télécharger : on descend dedans. */}
+          {!f.isFolder && (
+            <a
+              href={
+                `/api/admin/documents/download?fileId=${encodeURIComponent(f.id)}` +
+                (folderId ? `&folderId=${encodeURIComponent(folderId)}` : '')
+              }
+              title={format(t.downloadTitle, { name: f.name })}
+              className="rounded-lg border border-purple-400/40 bg-purple-500/10 px-3 py-1.5 text-xs font-semibold text-purple-200 transition-colors hover:bg-purple-500/20"
+            >
+              {t.download}
+            </a>
+          )}
           {f.webViewLink && (
             <a
               href={f.webViewLink}
@@ -248,6 +264,9 @@ export default function AdminDocumentsPage(_props: StaffProps) {
               {t.heading}
             </h1>
             <p className="mt-2 max-w-3xl text-sm text-neutral-400">{t.intro}</p>
+            <p className="mt-2 max-w-3xl text-xs text-neutral-500">
+              {t.downloadNote}
+            </p>
           </div>
 
           {!configured && awaitingKey && canStoreKey ? (

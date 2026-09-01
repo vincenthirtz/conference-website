@@ -112,12 +112,14 @@ l'emporte alors sur la base.
 
 - `/admin/documents` liste le dossier ;
 - un clic sur un dossier descend dedans (fil d'Ariane pour remonter) ;
-- « Ouvrir dans Drive » ouvre le document **chez Google** — le site ne sert
-  jamais le contenu d'un fichier ;
+- « Télécharger » sert le fichier **à travers le site** : il fonctionne même
+  pour qui n'a pas d'accès Google personnel au dossier (les formats natifs
+  Google sont exportés en PDF ou XLSX au passage) ;
+- « Ouvrir dans Drive » ouvre le document chez Google, pour le modifier ;
 - avec le droit d'écriture, « Déposer un fichier » ajoute la pièce au dossier
   affiché, et « Corbeille » l'en retire (récupérable 30 jours dans Drive) ;
-- `/admin/logs` : « Consultation des documents de l'asso », « Dépôt d'un
-  document de l'asso » et « Document de l'asso mis à la corbeille » y figurent.
+- `/admin/logs` : consultations, téléchargements, dépôts et mises à la
+  corbeille y figurent, nommément.
 
 ---
 

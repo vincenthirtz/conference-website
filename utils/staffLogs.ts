@@ -411,6 +411,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   read_association_documents: 'Consultation des documents de l’asso',
   upload_association_document: 'Dépôt d’un document de l’asso',
   trash_association_document: 'Document de l’asso mis à la corbeille',
+  download_association_document: 'Téléchargement d’un document de l’asso',
   store_drive_credentials: 'Clé du compte de service Drive enregistrée',
   update_staff_permissions: 'Permissions accordées à un membre du staff',
   // Kanban interne (task board)

@@ -143,11 +143,21 @@ possible.
    exigerait d'y ajouter `https://drive.google.com` — **à ne pas faire pour la
    v1** : la liste vaut par ce qu'elle exclut. Un lien qui ouvre Drive dans un
    onglet rend le même service sans élargir la surface.
-2. **Ne pas proxifier les fichiers.** Servir le contenu d'un document à travers
-   le site (`/api/admin/documents/[id]/download`) transforme le droit
-   `manage_documents` en la seule chose entre un PV d'AG et Internet. Tant que
-   la v1 renvoie des liens Drive, c'est Google qui applique le partage — une
-   défense de plus, pas une de moins.
+2. ~~**Ne pas proxifier les fichiers.**~~ **Revu le 2026-09-01.** L'argument
+   initial tenait : servir le contenu fait de `read_documents` la seule chose
+   entre un PV d'AG et Internet, là où le lien sortant laisse Google appliquer
+   le partage.
+
+   Ce qu'il ne voyait pas : quelqu'un qui a le droit **sur le site** mais n'est
+   pas dans la liste de partage Google se prenait un refus en cliquant « Ouvrir
+   dans Drive ». Le site disait oui, Google non — et un droit qui ne donne pas
+   accès n'est pas un droit. C'est justement le cas de la personne à qui on
+   accorde `read_documents` à l'unité sans l'ajouter au Drive.
+
+   Le téléchargement direct est donc livré, avec ce qui compense : le même
+   confinement que la liste et la corbeille, un jeton Google en **lecture
+   seule** (une erreur dans ce chemin ne peut pas écrire), et une
+   journalisation nominative de chaque téléchargement.
 3. **Le nom des fichiers fuit autant que leur contenu.** Une liste de documents
    nommés `Sanction-<pseudo>-2026.pdf` est déjà une divulgation. La route de
    listing doit être journalisée (`logStaffAction`) comme n'importe quelle

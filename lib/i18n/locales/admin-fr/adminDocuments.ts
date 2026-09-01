@@ -91,4 +91,10 @@ export default adminNs('adminDocuments', {
   keyError: 'La clé n’a pas pu être enregistrée.',
   keyNoEncryption:
     'La variable SECRETS_ENC_KEY n’est pas posée : sans elle, impossible de chiffrer la clé. Voir docs/GUIDE-drive-asso.md.',
+
+  // Téléchargement direct
+  download: 'Télécharger',
+  downloadTitle: 'Télécharger {name}',
+  downloadNote:
+    'Les téléchargements passent par le site : ils fonctionnent même sans accès Google personnel au dossier, et chacun est journalisé.',
 });

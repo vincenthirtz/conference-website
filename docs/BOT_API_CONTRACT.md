@@ -3226,10 +3226,26 @@ Reponse GET : `{ configured, canWrite, files[], folderId, folderName, breadcrumb
 `GOOGLE_DRIVE_FOLDER_ID` manque — la fonctionnalite est eteinte, elle n'est
 pas en panne.
 
-**Ce que la route ne fait pas, volontairement** : servir le contenu d'un
-fichier. Elle ne renvoie que des metadonnees et un `webViewLink`, donc c'est
-Google qui applique le partage. Une route de telechargement ferait de la
-permission `manage_documents` la seule chose entre un PV d'AG et Internet.
+### Telechargement
+
+`GET /api/admin/documents/download?fileId=&folderId=` — sert le fichier a
+travers le site (flux binaire, route separee).
+
+La v1 s'y refusait : ne renvoyer que des `webViewLink` laissait Google
+appliquer le partage, une defense de plus. Ce qui a fait pencher : quelqu'un
+qui a `read_documents` mais n'est pas dans la liste de partage Google se
+prenait un refus en cliquant « Ouvrir dans Drive ». Le site disait oui, Google
+non — un droit qui ne donne pas acces n'est pas un droit.
+
+Ce que ca deplace : `read_documents` devient la seule chose entre un PV d'AG et
+Internet. Trois precautions le compensent — meme confinement que la liste et la
+corbeille, jeton Google en LECTURE SEULE, journalisation nominative
+(`download_association_document`).
+
+Les formats natifs Google (Docs, Slides, Sheets, Drawings) n'ont pas de contenu
+binaire : ils sont EXPORTES (PDF, XLSX, PNG), et le nom de fichier prend
+l'extension d'arrivee — sinon le fichier telecharge porte une extension qui
+ment.
 
 **Journalisation** : les trois gestes ecrivent dans `staff_logs` —
 `read_association_documents` (`entity_type: 'drive_folder'`),
