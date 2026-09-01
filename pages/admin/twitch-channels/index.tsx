@@ -446,6 +446,6 @@ function AdminTwitchChannelsPage({ staff }: Props) {
   );
 }
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_broadcast' });
 
 export default AdminTwitchChannelsPage;

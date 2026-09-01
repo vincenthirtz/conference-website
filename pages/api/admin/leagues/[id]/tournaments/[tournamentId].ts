@@ -63,4 +63,4 @@ async function handler(
   return res.status(204).end();
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_tournaments' });

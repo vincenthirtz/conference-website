@@ -23,7 +23,7 @@ import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { resolveStaffNames } from '@/utils/taskBoard';
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_tasks' });
 
 /** Actions « commentaire » rattachées à la carte via payload.task_id. */
 const COMMENT_ACTIONS = ['task_comment_create', 'task_comment_delete'] as const;

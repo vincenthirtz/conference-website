@@ -114,4 +114,4 @@ async function handler(
   );
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_tournaments' });

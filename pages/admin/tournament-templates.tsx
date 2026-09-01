@@ -52,7 +52,7 @@ function stageTypeBadge(type: string) {
   }
 }
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
 
 function AdminTournamentTemplatesPage({ staff }: StaffProps) {
   const t = useAdminT(nsAdminTournamentTemplates);

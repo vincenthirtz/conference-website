@@ -1369,7 +1369,7 @@ function AdminTeamsListPage({
 }
 
 export const getServerSideProps = withStaffPage(
-  'admin',
+  { permission: 'manage_teams' },
   async (ctx, staffCtx) => {
     const { query } = ctx;
     const search = sanitizeSearch(query.search);

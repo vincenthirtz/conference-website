@@ -214,4 +214,4 @@ async function handlePatch(
   return res.status(200).json({ token: updated });
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_settings' });

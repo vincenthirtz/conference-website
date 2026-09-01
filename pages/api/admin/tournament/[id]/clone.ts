@@ -18,7 +18,7 @@ type ApiResponse =
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'tournament-clone' }),
-  'admin'
+  { permission: 'manage_tournaments' }
 );
 
 async function handler(

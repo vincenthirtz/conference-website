@@ -214,4 +214,4 @@ async function handleCreate(
   return res.status(201).json({ token: plain, tokenMeta: data });
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_settings' });

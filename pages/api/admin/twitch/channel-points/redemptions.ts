@@ -6,7 +6,7 @@
 // ⚠️ Helix ne gère QUE les redemptions des rewards créés par NOTRE client_id
 //    (only_manageable_rewards). Voir le caveat dans BOT_API_CONTRACT.md.
 //
-// withStaffRoute(..., 'admin'). getValidBroadcasterToken + helixFetch.
+// withStaffRoute(..., { permission: 'manage_broadcast' }). getValidBroadcasterToken + helixFetch.
 //   409 { code:'NOT_CONNECTED' } / 403 { code:'MISSING_SCOPE' }.
 //   GET   → scope channel:read:redemptions.
 //   PATCH → scope channel:manage:redemptions.
@@ -258,4 +258,4 @@ async function handler(
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_broadcast' });

@@ -2,7 +2,7 @@
 //
 // GET : état de facturation d'un tenant pour l'UI self-serve « Régie solidaire ».
 //
-// Lecture seule. `withStaffRoute(handler, 'admin')` : un admin du tenant peut
+// Lecture seule. `withStaffRoute(handler, { permission: 'manage_settings' })` : un admin du tenant peut
 // CONSULTER l'état d'abonnement + l'historique de paiements ; l'ACHAT (génération
 // du lien HelloAsso) reste owner-only via plan-checkout.ts — on ne le duplique
 // pas ici.
@@ -146,4 +146,4 @@ async function handler(
   });
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_settings' });

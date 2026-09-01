@@ -28,7 +28,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../utils/logger';
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_tournaments' });
 
 type ScoreEntry = {
   matchId: string;

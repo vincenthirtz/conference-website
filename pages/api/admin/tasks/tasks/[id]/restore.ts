@@ -17,7 +17,7 @@ import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { restoreTaskCore } from '@/utils/taskBoard';
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_tasks' });
 
 async function handler(
   req: NextApiRequest,

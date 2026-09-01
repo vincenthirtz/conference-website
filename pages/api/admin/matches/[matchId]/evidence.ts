@@ -8,7 +8,7 @@
 //        l'arbitrage. Memes mecaniques d'upload/validation que le POST bot
 //        (utils/matches/evidence.ts).
 //
-// Auth : withStaffRoute(handler, 'admin') — meme niveau que le workflow de
+// Auth : withStaffRoute(handler, { permission: 'arbitrate_matches' }) — meme niveau que le workflow de
 // dispute (pages/api/admin/matches/[matchId]/dispute.ts).
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -58,7 +58,7 @@ const adminEvidencePostSchema = z.discriminatedUnion('kind', [
   }),
 ]);
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'arbitrate_matches' });
 
 async function handler(
   req: NextApiRequest,

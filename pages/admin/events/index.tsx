@@ -35,7 +35,7 @@ import type { StaffProps } from '@/types/admin';
 import type { EventRun, EventRunStatus } from '@/types/events';
 import nsAdminEventsList from '@/lib/i18n/locales/admin-fr/adminEventsList';
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_broadcast' });
 
 type ListResponse = {
   items: EventRun[];

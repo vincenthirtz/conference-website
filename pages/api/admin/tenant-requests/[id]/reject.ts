@@ -146,5 +146,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-tenant-requests-reject' }),
-  'owner'
+  { permission: 'manage_tenant' }
 );

@@ -131,4 +131,6 @@ export default adminNs('adminDashboard', {
   alertStagesReadyMsg: 'Tous les matchs sont terminés sur ces phases.',
   alertRosterLockTitle: 'Verrouillage des rosters imminent',
   alertRosterLockMsg: 'Le lock des effectifs intervient dans moins de 24h.',
+  navCheckinTitle: 'Check-in du jour',
+  navCheckinDesc: 'Suivre et relancer les check-ins du tournoi en cours',
 });

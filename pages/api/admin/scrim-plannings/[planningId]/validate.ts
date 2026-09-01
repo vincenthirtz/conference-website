@@ -33,7 +33,7 @@ const bodySchema = z.object({
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-scrim-plannings-validate' }),
-  'admin'
+  { permission: 'manage_teams' }
 );
 
 async function handler(

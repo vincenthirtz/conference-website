@@ -48,7 +48,7 @@ type RecycleBinResponse = {
 
 const PAGE_SIZE = 50;
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_settings' });
 
 function typeLabel(type: string, t: Dict) {
   switch (type) {

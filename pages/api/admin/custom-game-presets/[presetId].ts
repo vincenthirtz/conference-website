@@ -254,5 +254,5 @@ async function handleDelete(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-custom-game-presets-item' }),
-  'admin'
+  { permission: 'manage_tournaments' }
 );

@@ -223,4 +223,4 @@ async function handleUpsert(
   return res.status(201).json({ pool: created });
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_tournaments' });

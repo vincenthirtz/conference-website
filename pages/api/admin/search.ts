@@ -180,28 +180,31 @@ async function handler(
     );
   }
 
-  // Le Kanban interne est ouvert à tout le staff : il ne porte pas de donnée
-  // sensible, et c'est là que vivent les tâches du jour.
-  jobs.push(
-    Promise.resolve(
-      supabaseAdmin
-        .from('tasks')
-        .select('id, title, board_id, status')
-        .eq('tenant_id', tenantId)
-        .ilike('title', pattern)
-        .limit(PER_KIND)
-        .then(({ data, error }) => {
-          if (error) throw error;
-          return ((data ?? []) as Record<string, unknown>[]).map((t) => ({
-            kind: 'task' as const,
-            id: t.id as string,
-            title: (t.title as string) ?? '',
-            subtitle: (t.status as string | null) ?? null,
-            href: `/admin/tasks?task=${t.id as string}`,
-          }));
-        })
-    )
-  );
+  // Le Kanban exige la MÊME permission que sa page (`manage_tasks`) : une
+  // recherche qui remonte ce qu'on ne peut pas ouvrir est le défaut que ce
+  // filtrage existe pour éviter.
+  if (can('manage_tasks')) {
+    jobs.push(
+      Promise.resolve(
+        supabaseAdmin
+          .from('tasks')
+          .select('id, title, board_id, status')
+          .eq('tenant_id', tenantId)
+          .ilike('title', pattern)
+          .limit(PER_KIND)
+          .then(({ data, error }) => {
+            if (error) throw error;
+            return ((data ?? []) as Record<string, unknown>[]).map((t) => ({
+              kind: 'task' as const,
+              id: t.id as string,
+              title: (t.title as string) ?? '',
+              subtitle: (t.status as string | null) ?? null,
+              href: `/admin/tasks?task=${t.id as string}`,
+            }));
+          })
+      )
+    );
+  }
 
   const settled = await Promise.allSettled(jobs);
   const hits: SearchHit[] = [];

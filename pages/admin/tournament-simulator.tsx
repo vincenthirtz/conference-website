@@ -73,7 +73,7 @@ import QuizMode, {
 } from '@/components/admin/simulator/QuizMode';
 import nsAdminTournamentSimulator from '@/lib/i18n/locales/admin-fr/adminTournamentSimulator';
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
 
 /* ------------------------------------------------------------------ */
 /*  Simulation history                                                  */

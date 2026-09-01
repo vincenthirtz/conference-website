@@ -155,5 +155,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-map-pool-import' }),
-  'admin'
+  { permission: 'manage_tournaments' }
 );

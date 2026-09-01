@@ -61,7 +61,7 @@ function formatVerifiedDate(d: string | null | undefined): string {
   }
 }
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_teams' });
 
 function AdminTeamDetailPage({ staff }: StaffProps) {
   const t = useAdminT(nsAdminTeamDetail);

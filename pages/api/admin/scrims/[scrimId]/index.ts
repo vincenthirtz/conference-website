@@ -44,7 +44,7 @@ const PATCHABLE_FIELDS = [
 ] as const;
 type PatchField = (typeof PATCHABLE_FIELDS)[number];
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_teams' });
 
 async function handler(
   req: NextApiRequest,

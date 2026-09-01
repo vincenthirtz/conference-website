@@ -19,7 +19,7 @@ type ApiResponse =
   | { deleted: boolean }
   | { error: string };
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_tournaments' });
 
 async function handler(
   req: NextApiRequest,

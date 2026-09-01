@@ -32,7 +32,7 @@ type ApiResponse =
 // Header absent → comportement normal (rétro-compatible).
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-teams-bulk' }),
-  'admin'
+  { permission: 'manage_teams' }
 );
 
 async function handler(

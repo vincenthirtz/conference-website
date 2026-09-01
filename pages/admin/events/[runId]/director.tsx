@@ -60,7 +60,7 @@ import type {
 } from '@/types/events';
 import nsAdminEventDirector from '@/lib/i18n/locales/admin-fr/adminEventDirector';
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_broadcast' });
 
 const POLL_INTERVAL_MS = 30_000;
 

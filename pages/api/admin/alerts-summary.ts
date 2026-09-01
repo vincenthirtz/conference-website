@@ -16,7 +16,10 @@ import { fetchAlertsSignals } from '@/utils/dashboard/alertsSignals';
 
 type ApiResponse = AlertsSummary | { error: string };
 
-export default withStaffRoute(handler, 'caster');
+// Alimente le badge d'alertes de la barre admin, présent pour tout le staff :
+// gardé au rang le plus bas (lot A2), sinon les rôles étroits reçoivent un 403
+// à chaque chargement de page.
+export default withStaffRoute(handler, 'helper');
 
 async function handler(
   req: NextApiRequest,

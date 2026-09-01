@@ -114,5 +114,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-tenants-staff-delete' }),
-  'owner'
+  { permission: 'manage_tenant' }
 );

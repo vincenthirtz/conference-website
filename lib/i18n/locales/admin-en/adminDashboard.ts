@@ -127,4 +127,6 @@ export default {
   alertStagesReadyMsg: 'All matches are finished on these stages.',
   alertRosterLockTitle: 'Roster lock imminent',
   alertRosterLockMsg: 'Rosters lock in less than 24 hours.',
+  navCheckinTitle: "Today's check-in",
+  navCheckinDesc: 'Follow and nudge check-ins for the current tournament',
 };

@@ -151,5 +151,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-broadcast-next-match' }),
-  'admin'
+  { permission: 'manage_broadcast' }
 );

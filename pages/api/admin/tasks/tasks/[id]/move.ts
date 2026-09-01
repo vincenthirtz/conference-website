@@ -18,7 +18,7 @@ import { formatZodError } from '@/utils/validation';
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'tasks-move' }),
-  'admin'
+  { permission: 'manage_tasks' }
 );
 
 async function handler(

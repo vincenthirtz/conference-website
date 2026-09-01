@@ -319,5 +319,5 @@ async function handleCreate(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-custom-game-presets' }),
-  'admin'
+  { permission: 'manage_tournaments' }
 );

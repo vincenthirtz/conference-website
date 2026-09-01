@@ -57,7 +57,7 @@ const DURATION_DEFAULTS: Record<string, number> = {
   bo7: 95,
 };
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_tournaments' });
 
 async function handler(
   req: NextApiRequest,

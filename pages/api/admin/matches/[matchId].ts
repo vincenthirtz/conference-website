@@ -24,7 +24,7 @@ import { logger } from '../../../../utils/logger';
 // sont ignorés par le wrapper (méthode sûre).
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-match-update' }),
-  'admin'
+  { permission: 'arbitrate_matches' }
 ); // rôle min : manager
 
 async function handler(

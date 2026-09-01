@@ -134,4 +134,4 @@ async function handleDelete(
   return res.status(200).json({ ok: true });
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_settings' });

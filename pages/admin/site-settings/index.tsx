@@ -14,7 +14,7 @@ import nsAdminSiteSettings from '@/lib/i18n/locales/admin-fr/adminSiteSettings';
 
 const ID_BASE = 'admin-site-settings';
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_settings' });
 
 /**
  * Merged site-settings page. Hosts the former /admin/site-settings/discord and

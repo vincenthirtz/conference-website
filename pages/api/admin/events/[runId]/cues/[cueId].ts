@@ -16,7 +16,7 @@
 //     d'un run (correction a posteriori).
 //
 // Conventions :
-//   - withStaffRoute(handler, 'admin') (même seuil que create/start/end run).
+//   - withStaffRoute(handler, { permission: 'manage_broadcast' }) (même seuil que create/start/end run).
 //   - supabaseAdmin (bypass RLS strict default-deny de event_cues).
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -126,4 +126,4 @@ async function handler(
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_broadcast' });

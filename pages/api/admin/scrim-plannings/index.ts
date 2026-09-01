@@ -59,7 +59,7 @@ const createSchema = z
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-scrim-plannings' }),
-  'admin'
+  { permission: 'manage_teams' }
 );
 
 async function handler(

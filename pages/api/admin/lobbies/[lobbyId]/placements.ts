@@ -106,7 +106,7 @@ function resolveTiebreak(settings: unknown): FfaTiebreak {
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-lobby-placements' }),
-  'admin'
+  { permission: 'arbitrate_matches' }
 );
 
 async function handler(

@@ -118,5 +118,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-tenant-requests-expire' }),
-  'owner'
+  { permission: 'manage_tenant' }
 );

@@ -16,7 +16,7 @@ type ApiResponse = { stages: any[] } | { error: string };
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'tournament-apply-template' }),
-  'admin'
+  { permission: 'manage_tournaments' }
 );
 
 async function handler(

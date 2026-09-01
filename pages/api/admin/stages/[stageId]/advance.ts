@@ -42,7 +42,7 @@ type ApiResponse =
 // idempotency interne (donc jamais de cache pour un non-staff).
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-stage-advance' }),
-  'admin'
+  { permission: 'manage_tournaments' }
 );
 
 async function handler(

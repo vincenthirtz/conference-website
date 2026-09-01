@@ -18,7 +18,7 @@ import type { RatingCoverageResponse } from '../api/admin/ratings/coverage';
 import { logger } from '../../utils/logger';
 import nsAdminRatings from '@/lib/i18n/locales/admin-fr/adminRatings';
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
 
 type RebuildResult = { players: number; matches: number };
 type RatingCoverage = RatingCoverageResponse;

@@ -50,7 +50,7 @@ type ApiResponse =
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'stage-manual-seed' }),
-  'admin'
+  { permission: 'manage_tournaments' }
 );
 
 async function handler(

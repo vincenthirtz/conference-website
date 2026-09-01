@@ -19,7 +19,7 @@ import { deletedTasksQuerySchema } from '@/utils/taskBoardSchemas';
 import { formatZodError } from '@/utils/validation';
 import { logger } from '@/utils/logger';
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_tasks' });
 
 const DEFAULT_LIMIT = 100;
 

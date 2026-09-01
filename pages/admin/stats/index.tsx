@@ -13,7 +13,7 @@ import nsAdminStats from '@/lib/i18n/locales/admin-fr/adminStats';
 
 const ID_BASE = 'admin-stats';
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
 
 /**
  * Merged statistics page. Hosts the former /admin/stats/teams and

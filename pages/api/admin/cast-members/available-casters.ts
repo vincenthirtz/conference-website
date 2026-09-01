@@ -137,4 +137,4 @@ async function handler(
   return res.status(200).json({ items, windowHours });
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_communications' });

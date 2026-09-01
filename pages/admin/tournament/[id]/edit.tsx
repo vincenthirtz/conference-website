@@ -42,7 +42,7 @@ function toLocalInputValue(iso: string): string {
   }
 }
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
 
 function AdminTournamentEditPage({ staff }: StaffProps) {
   const router = useRouter();

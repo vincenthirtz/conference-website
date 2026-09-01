@@ -193,5 +193,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-events-waves-reorder' }),
-  'admin'
+  { permission: 'manage_broadcast' }
 );

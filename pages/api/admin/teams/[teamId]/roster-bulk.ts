@@ -57,7 +57,7 @@ type MemberRow = {
   is_substitute: boolean;
 };
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_teams' });
 
 async function handler(
   req: NextApiRequest,

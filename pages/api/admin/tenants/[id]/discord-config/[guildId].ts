@@ -246,5 +246,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-tenants-discord-config-put' }),
-  'admin'
+  { permission: 'manage_settings' }
 );

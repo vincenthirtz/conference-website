@@ -47,4 +47,4 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-export default withStaffRoute(handler, 'owner');
+export default withStaffRoute(handler, { permission: 'manage_tenant' });

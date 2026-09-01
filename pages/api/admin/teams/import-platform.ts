@@ -39,7 +39,7 @@ const SOURCE_LABELS: Record<PlatformSource, ImportSourceLabel> = {
   startgg: 'startgg_import',
 };
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_teams' });
 
 async function handler(
   req: NextApiRequest,

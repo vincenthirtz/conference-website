@@ -22,7 +22,7 @@ import nsAdminTournamentNav from '@/lib/i18n/locales/admin-fr/adminTournamentNav
 
 const ID_BASE = 'admin-tournament-stats';
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
 
 export default function AdminTournamentStatsPage(_: StaffProps) {
   const router = useRouter();

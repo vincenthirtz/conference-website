@@ -15,7 +15,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { logger } from '@/utils/logger';
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_tasks' });
 
 // Poids de tri de la priorité (plus grand = plus urgent → placé en premier).
 const PRIORITY_WEIGHT: Record<string, number> = {

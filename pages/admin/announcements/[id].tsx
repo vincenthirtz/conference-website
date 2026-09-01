@@ -54,7 +54,7 @@ function toDateTimeLocalValue(isoString: string | null | undefined): string {
   }
 }
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_communications' });
 
 function AdminAnnouncementEditPage({ staff }: Props) {
   const t = useAdminT(nsAdminAnnouncementEdit);

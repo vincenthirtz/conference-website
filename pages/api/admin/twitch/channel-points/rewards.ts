@@ -5,7 +5,7 @@
 //        voir le caveat dans BOT_API_CONTRACT.md). Scope channel:read:redemptions.
 // POST → crée un nouveau reward. Scope channel:manage:redemptions.
 //
-// withStaffRoute(..., 'admin'). getValidBroadcasterToken + helixFetch.
+// withStaffRoute(..., { permission: 'manage_broadcast' }). getValidBroadcasterToken + helixFetch.
 //   409 { code:'NOT_CONNECTED' } / 403 { code:'MISSING_SCOPE' }.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -253,4 +253,4 @@ async function handler(
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_broadcast' });

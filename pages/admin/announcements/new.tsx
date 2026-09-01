@@ -28,7 +28,7 @@ type FormState = {
   isActive: boolean;
 };
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_communications' });
 
 function AdminAnnouncementCreatePage({ staff }: Props) {
   const t = useAdminT(nsAdminAnnouncementsNew);

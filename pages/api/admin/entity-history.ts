@@ -38,7 +38,7 @@ export type HistoryEntityType = (typeof HISTORY_ENTITY_TYPES)[number];
 
 const LIMIT = 50;
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_settings' });
 
 async function handler(
   req: NextApiRequest,

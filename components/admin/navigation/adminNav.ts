@@ -1,6 +1,10 @@
 import type { AdminLink } from '@/types/components';
 import { hasAtLeastRole } from '@/utils/staff';
 import type { StaffRole } from '@/utils/staff';
+import {
+  roleHasStaffPermission,
+  type StaffPermission,
+} from '@/utils/staffPermissions';
 import type { TenantKind } from '@/utils/tenantKind';
 
 /**
@@ -72,6 +76,14 @@ export type AdminNavNode = {
   href?: string;
   /** Rôle minimum requis. Partagé par les deux surfaces (gating identique). */
   minRole?: StaffRole;
+  /**
+   * Permission exigée par la PAGE cible (lot A2). Quand elle est présente, elle
+   * l'emporte sur `minRole` : c'est elle que la page applique côté serveur, et
+   * un menu qui filtrerait autrement afficherait des entrées menant à un 403.
+   *
+   * Absente = gating historique par rôle, inchangé.
+   */
+  permission?: StaffPermission;
   /** Métadonnées de carte dashboard. Absent => pas de carte. */
   card?: AdminNavCardMeta;
   /**
@@ -108,6 +120,23 @@ export const ADMIN_NAV: AdminNavNode[] = [
     minRole: 'caster',
     children: [
       {
+        // Porte du check-in : la seule entrée de menu d'un bénévole, dont
+        // c'est l'unique permission. La cible réelle est une route dynamique
+        // (`/admin/tournament/[id]/checkin`), donc invisible du menu — d'où ce
+        // raccourci (lot A2).
+        id: 'checkin-entry',
+        topBarLabel: 'Check-in',
+        href: '/admin/checkin',
+        permission: 'run_checkin',
+        card: {
+          order: 0.5,
+          titleKey: 'navCheckinTitle',
+          descKey: 'navCheckinDesc',
+          icon: 'clock',
+          accent: 'border-amber-500/30 from-amber-500/10 text-amber-300',
+        },
+      },
+      {
         id: 'tournoi-en-cours',
         topBarLabel: 'Tournoi en cours',
         href: '/admin/tournoi-en-cours',
@@ -130,6 +159,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
             id: 'tournaments-list',
             topBarLabel: 'Tournois – liste',
             href: '/admin/tournaments',
+            permission: 'manage_tournaments',
             minRole: 'admin',
             card: {
               order: 1,
@@ -143,18 +173,21 @@ export const ADMIN_NAV: AdminNavNode[] = [
             id: 'tournaments-create',
             topBarLabel: 'Créer un tournoi',
             href: '/admin/tournaments/create',
+            permission: 'manage_tournaments',
             minRole: 'admin',
           },
           {
             id: 'tournaments-webhooks',
             topBarLabel: 'Webhooks Discord (par tournoi)',
             href: '/admin/tournaments',
+            permission: 'manage_tournaments',
             minRole: 'admin',
           },
           {
             id: 'tournaments-checkin',
             topBarLabel: 'Check-in matchs (par tournoi)',
             href: '/admin/tournaments',
+            permission: 'manage_tournaments',
             minRole: 'admin',
           },
           {
@@ -208,6 +241,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
           {
             id: 'quick-bracket',
             href: '/admin/quick-bracket',
+            permission: 'manage_tournaments',
             minRole: 'admin',
             card: {
               order: 2,
@@ -223,6 +257,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
           {
             id: 'tournament-simulator',
             href: '/admin/tournament-simulator',
+            permission: 'manage_tournaments',
             minRole: 'admin',
             card: {
               order: 17,
@@ -238,6 +273,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
           {
             id: 'map-pool',
             href: '/admin/map-pool',
+            permission: 'manage_tournaments',
             minRole: 'admin',
             card: {
               order: 18,
@@ -253,6 +289,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
           {
             id: 'custom-game-presets',
             href: '/admin/custom-game-presets',
+            permission: 'manage_tournaments',
             minRole: 'admin',
             card: {
               order: 19,
@@ -265,6 +302,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
           {
             id: 'leagues',
             href: '/admin/leagues',
+            permission: 'manage_tournaments',
             minRole: 'admin',
             card: {
               order: 11,
@@ -277,6 +315,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
           {
             id: 'ratings',
             href: '/admin/ratings',
+            permission: 'manage_tournaments',
             minRole: 'admin',
             card: {
               order: 12,
@@ -314,6 +353,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
             id: 'scrims-list',
             topBarLabel: 'Scrims – liste',
             href: '/admin/scrims',
+            permission: 'manage_teams',
             minRole: 'admin',
           },
           {
@@ -350,6 +390,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
             id: 'teams-list',
             topBarLabel: 'Équipes – liste',
             href: '/admin/teams',
+            permission: 'manage_teams',
             minRole: 'admin',
             card: {
               order: 3,
@@ -363,6 +404,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
             id: 'teams-create',
             topBarLabel: 'Créer une équipe',
             href: '/admin/teams/new',
+            permission: 'manage_teams',
             minRole: 'admin',
           },
           {
@@ -375,12 +417,14 @@ export const ADMIN_NAV: AdminNavNode[] = [
             id: 'free-players',
             topBarLabel: 'Joueuses libres',
             href: '/admin/free-players',
+            permission: 'manage_teams',
             minRole: 'admin',
           },
           {
             id: 'demandes',
             topBarLabel: 'Demandes joueurs / équipes',
             href: '/admin/demandes',
+            permission: 'manage_teams',
             minRole: 'admin',
             card: {
               order: 4,
@@ -405,6 +449,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
         id: 'twitch-channels',
         topBarLabel: 'Chaînes Twitch',
         href: '/admin/twitch-channels',
+        permission: 'manage_broadcast',
         minRole: 'admin',
       },
       {
@@ -417,6 +462,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
         id: 'partners',
         topBarLabel: 'Partenaires',
         href: '/admin/partners',
+        permission: 'manage_communications',
         minRole: 'admin',
       },
       {
@@ -489,12 +535,14 @@ export const ADMIN_NAV: AdminNavNode[] = [
         id: 'announcements-new',
         topBarLabel: 'Créer une annonce',
         href: '/admin/announcements/new',
+        permission: 'manage_communications',
         minRole: 'admin',
       },
       {
         id: 'news-new',
         topBarLabel: 'Créer une actualité',
         href: '/admin/news/new',
+        permission: 'manage_communications',
         minRole: 'admin',
       },
     ],
@@ -520,6 +568,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
         id: 'users-manage',
         topBarLabel: 'Gérer les utilisateurs',
         href: '/admin/users/manage',
+        permission: 'manage_staff',
         minRole: 'admin',
         card: {
           order: 9,
@@ -533,18 +582,21 @@ export const ADMIN_NAV: AdminNavNode[] = [
         id: 'users-new',
         topBarLabel: 'Créer un utilisateur',
         href: '/admin/users/new',
+        permission: 'manage_staff',
         minRole: 'admin',
       },
       {
         id: 'association',
         topBarLabel: 'Association',
         href: '/admin/association',
+        permission: 'manage_communications',
         minRole: 'admin',
       },
       {
         id: 'adherents-new',
         topBarLabel: 'Ajouter un adhérent',
         href: '/admin/adherents/new',
+        permission: 'manage_communications',
         minRole: 'admin',
       },
     ],
@@ -559,6 +611,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
         id: 'site-settings',
         topBarLabel: 'Paramètres du site',
         href: '/admin/site-settings',
+        permission: 'manage_settings',
         minRole: 'admin',
         card: {
           order: 13,
@@ -578,12 +631,14 @@ export const ADMIN_NAV: AdminNavNode[] = [
             id: 'logs',
             topBarLabel: 'Journaux',
             href: '/admin/logs',
+            permission: 'manage_settings',
             minRole: 'admin',
           },
           {
             id: 'stats',
             topBarLabel: 'Statistiques',
             href: '/admin/stats',
+            permission: 'manage_tournaments',
             minRole: 'admin',
             card: {
               order: 10,
@@ -606,6 +661,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
         id: 'onboarding',
         topBarLabel: 'Onboarding',
         href: '/admin/onboarding',
+        permission: 'manage_settings',
         minRole: 'admin',
       },
       // Salons Discord des équipes. Cette page EXISTE parce que le cron qui
@@ -616,6 +672,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
         id: 'discord-team-channels',
         topBarLabel: 'Salons Discord',
         href: '/admin/discord/team-channels',
+        permission: 'manage_settings',
         minRole: 'admin',
         card: {
           order: 19.5,
@@ -631,6 +688,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
       {
         id: 'tenants-list',
         href: '/admin/tenants',
+        permission: 'manage_settings',
         minRole: 'admin',
         card: {
           order: 19,
@@ -648,6 +706,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
         id: 'billing',
         topBarLabel: 'Facturation',
         href: '/admin/billing',
+        permission: 'manage_billing',
         minRole: 'admin',
         devConsole: true,
         card: {
@@ -662,6 +721,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
       {
         id: 'api-tokens',
         href: '/admin/api-tokens',
+        permission: 'manage_settings',
         minRole: 'admin',
         devConsole: true,
         card: {
@@ -680,6 +740,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
       {
         id: 'webhooks',
         href: '/admin/webhooks',
+        permission: 'manage_settings',
         minRole: 'admin',
         devConsole: true,
         card: {
@@ -731,6 +792,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
       {
         id: 'recycle-bin',
         href: '/admin/recycle-bin',
+        permission: 'manage_settings',
         minRole: 'admin',
         card: {
           order: 15,
@@ -747,6 +809,7 @@ export const ADMIN_NAV: AdminNavNode[] = [
         id: 'task-board',
         topBarLabel: 'Tâches',
         href: '/admin/tasks',
+        permission: 'manage_tasks',
         minRole: 'admin',
         card: {
           order: 21,
@@ -777,6 +840,7 @@ export function buildAdminLinks(
       title: node.topBarLabel,
       ref: node.href ?? '',
       minRole: node.minRole,
+      permission: node.permission,
       devConsole: node.devConsole,
     };
     if (children.length > 0) link.children = children;
@@ -790,6 +854,8 @@ export type AdminNavCard = {
   id: string;
   href: string;
   minRole: StaffRole;
+  /** Permission de la page cible, si elle en déclare une (lot A2). */
+  permission?: StaffPermission;
   card: AdminNavCardMeta;
   /** Copié du nœud : la carte fait partie de la « console développeur ». */
   devConsole?: boolean;
@@ -802,6 +868,7 @@ function toAdminNavCard(node: AdminNavNode): AdminNavCard | null {
     id: node.id,
     href: node.href,
     minRole: node.minRole ?? 'admin',
+    permission: node.permission,
     card: node.card,
     devConsole: node.devConsole,
   };
@@ -884,7 +951,10 @@ export function collectAdminNavCardGroups(
 
     const cards: AdminNavCard[] = [];
     walkAdminNavCards([top], (card) => {
-      if (!hasAtLeastRole(role, card.minRole)) return;
+      // La permission prime : c'est ce que la page applique réellement.
+      if (card.permission) {
+        if (!roleHasStaffPermission(role, card.permission)) return;
+      } else if (!hasAtLeastRole(role, card.minRole)) return;
       if (developer && card.devConsole !== true) return;
       cards.push(card);
     });

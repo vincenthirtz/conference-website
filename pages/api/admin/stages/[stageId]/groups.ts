@@ -19,7 +19,7 @@ type TeamInfo = {
   seed: number | null;
 };
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_tournaments' });
 
 async function handler(
   req: NextApiRequest,

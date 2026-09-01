@@ -15,7 +15,7 @@ import { createTaskCore } from '@/utils/taskBoard';
 import { createTaskBodySchema } from '@/utils/taskBoardSchemas';
 import { formatZodError } from '@/utils/validation';
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_tasks' });
 
 async function handler(
   req: NextApiRequest,

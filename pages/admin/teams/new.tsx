@@ -40,7 +40,7 @@ type MemberInput = {
 };
 
 export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
-  'admin',
+  { permission: 'manage_teams' },
   async () => {
     const teamRoles = supabaseAdmin
       ? await loadTeamRolesFromSupabase(supabaseAdmin)

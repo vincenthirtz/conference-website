@@ -153,8 +153,11 @@ describe('filtrage par permission — ce qui NE doit PAS apparaître', () => {
     expect(kinds.has('team')).toBe(false);
     expect(kinds.has('tournament')).toBe(false);
     expect(kinds.has('ticket')).toBe(false);
-    // Le Kanban interne reste ouvert : c'est là que vivent ses tâches du jour.
-    expect(kinds.has('task')).toBe(true);
+    // Le Kanban non plus : sa page est réservée (`manage_tasks`), et une
+    // recherche qui remonte ce qu'on ne peut pas ouvrir est exactement le
+    // défaut que ce filtrage évite. Ouvrir le Kanban aux bénévoles serait une
+    // décision produit, pas un effet de bord de la recherche.
+    expect(kinds.has('task')).toBe(false);
   });
 
   it('un caster ne voit pas les tickets support', async () => {

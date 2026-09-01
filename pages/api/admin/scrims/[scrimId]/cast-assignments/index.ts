@@ -16,7 +16,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { emitCastEvent } from '@/utils/castEvents';
 import { logger } from '../../../../../../utils/logger';
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_teams' });
 
 async function handler(
   req: NextApiRequest,

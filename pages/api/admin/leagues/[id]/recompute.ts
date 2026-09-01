@@ -67,5 +67,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'leagues-recompute' }),
-  'admin'
+  { permission: 'manage_tournaments' }
 );

@@ -8,7 +8,7 @@
 //    Un reward créé par le streamer ou une autre app renvoie 403/400 Helix ;
 //    on remonte l'erreur proprement. Voir le caveat dans BOT_API_CONTRACT.md.
 //
-// withStaffRoute(..., 'admin'). getValidBroadcasterToken + helixFetch.
+// withStaffRoute(..., { permission: 'manage_broadcast' }). getValidBroadcasterToken + helixFetch.
 //   409 { code:'NOT_CONNECTED' } / 403 { code:'MISSING_SCOPE' }.
 //   Scope requis : channel:manage:redemptions.
 
@@ -299,4 +299,4 @@ async function handler(
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_broadcast' });

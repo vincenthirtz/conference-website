@@ -209,4 +209,4 @@ async function handler(
   return res.status(200).json({ stats, total: count ?? null });
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_tournaments' });

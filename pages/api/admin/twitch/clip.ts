@@ -3,7 +3,7 @@
 // Capture un clip (~30 dernières secondes) sur la chaîne du broadcaster
 // connecté. Renvoie { id, edit_url }.
 //
-// withStaffRoute(..., 'admin'). getValidBroadcasterToken + helixFetch.
+// withStaffRoute(..., { permission: 'manage_broadcast' }). getValidBroadcasterToken + helixFetch.
 //   409 { code:'NOT_CONNECTED' } / 403 { code:'MISSING_SCOPE' }.
 //   Scope requis : clips:edit.
 
@@ -107,4 +107,4 @@ async function handler(
   }
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_broadcast' });

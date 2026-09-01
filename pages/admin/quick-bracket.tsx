@@ -18,7 +18,7 @@ import Breadcrumb from '@/components/admin/Breadcrumb';
 import type { StaffProps } from '@/types/admin';
 import nsAdminQuickBracket from '@/lib/i18n/locales/admin-fr/adminQuickBracket';
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
 
 type BracketFormat = 'single_elim' | 'double_elim';
 type BestOf = 1 | 3 | 5;

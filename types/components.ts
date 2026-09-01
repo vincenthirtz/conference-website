@@ -31,6 +31,13 @@ export type AdminLink = {
   ref: string;
   minRole?: StaffRole;
   /**
+   * Permission exigée par la page cible (lot A2 de docs/PLAN-espace-admin.md).
+   * Présente, elle l'emporte sur `minRole` dans le filtrage du menu : c'est
+   * elle que la page applique côté serveur, et filtrer autrement afficherait
+   * des entrées qui mènent à un 403.
+   */
+  permission?: import('@/utils/staffPermissions').StaffPermission;
+  /**
    * Marque le lien comme faisant partie de la « console développeur » (tenant
    * `kind='developer'`). Un tenant développeur ne voit que ces liens.
    */

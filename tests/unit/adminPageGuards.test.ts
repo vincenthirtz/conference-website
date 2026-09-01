@@ -32,11 +32,59 @@ function walk(dir: string, acc: string[] = []): string[] {
   return acc;
 }
 
+/**
+ * Pages gardées par RÔLE et non par permission, volontairement (lot A2).
+ * Toute autre page doit déclarer la permission qu'elle exige.
+ */
+const ROLE_GATED_ON_PURPOSE = new Set([
+  // Porte d'entrée : accessible à tout le staff, contenu filtré à l'intérieur.
+  'index.tsx',
+  // Surfaces de cast, déjà gatées `'caster'` avant le lot — inchangées.
+  'caster.tsx',
+  'broadcast/live.tsx',
+  'regie.tsx',
+  'events/[runId]/director.tsx',
+  'events/index.tsx',
+  // Documentation interne : ouverte à qui a accès au back-office.
+  'aide-tournoi.tsx',
+  // Hubs à onglets gardés au rôle le PLUS PERMISSIF de leurs onglets, chaque
+  // onglet re-vérifiant le sien à l'intérieur. Les enfermer dans une permission
+  // unique fermerait un onglet à quelqu'un qui l'avait, ou ouvrirait tout le
+  // hub — les deux violent la règle du lot.
+  'moderation/index.tsx',
+  'communications/index.tsx',
+  'demandes/[id].tsx',
+  // « Gérer mon équipe » : un membre du staff peut être capitaine, quel que
+  // soit son rôle. Le contenu vient de SON équipe, pas d'un droit d'admin.
+  'teams/my.tsx',
+]);
+
 describe('gardes des pages admin', () => {
   const files = walk(ADMIN_DIR);
 
   it('trouve bien l’arbre des pages admin', () => {
     expect(files.length).toBeGreaterThan(50);
+  });
+
+  it('chaque page admin déclare une PERMISSION (ou est listée comme gardée par rôle)', () => {
+    const roleOnly: string[] = [];
+
+    for (const file of files) {
+      const rel = path.relative(ADMIN_DIR, file);
+      if (PUBLIC_ADMIN_PAGES.has(rel) || ROLE_GATED_ON_PURPOSE.has(rel)) {
+        continue;
+      }
+      const src = fs.readFileSync(file, 'utf8');
+      if (!/withStaffPage\s*[<(]/.test(src)) continue; // shim de redirection
+      if (/withStaffPage(?:<[^>]*>)?\(\s*\{\s*permission:/.test(src)) continue;
+      roleOnly.push(rel);
+    }
+
+    expect(
+      roleOnly,
+      `Pages encore gardées par rôle :\n  ${roleOnly.join('\n  ')}\n\n` +
+        'Migre-les vers `withStaffPage({ permission: … })`, ou justifie-les dans ROLE_GATED_ON_PURPOSE.'
+    ).toEqual([]);
   });
 
   it('aucune page admin sans garde ni redirection', () => {

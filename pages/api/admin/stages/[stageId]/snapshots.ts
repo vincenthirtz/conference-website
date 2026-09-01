@@ -26,7 +26,7 @@ const MAX_LIMIT = 200;
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'stage-bracket-snapshots' }),
-  'admin'
+  { permission: 'manage_tournaments' }
 );
 
 async function handler(

@@ -18,7 +18,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { notifyVetoStep } from '@/utils/discord';
 
 import { logger } from '../../../../../utils/logger';
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'arbitrate_matches' });
 
 async function handler(
   req: NextApiRequest,

@@ -37,7 +37,7 @@ type Stage = {
 
 type ApiResponse = { stages: Stage[] } | { stage: Stage } | { error: string };
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_tournaments' });
 
 async function handler(
   req: NextApiRequest,

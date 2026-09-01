@@ -18,7 +18,7 @@ const ID_BASE = 'admin-association';
 // l'asso and Adhérents were all admin-gated, so the host is admin-gated too and
 // no per-tab role re-check is needed. The legacy list routes keep 308-redirect
 // shims into the matching tab.
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_communications' });
 
 /**
  * Merged association hub. Hosts the former /admin/cast-members,

@@ -14,7 +14,7 @@ import { logger } from '../../../../utils/logger';
 
 type ApiResponse = { success: true } | { error: string };
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'arbitrate_matches' });
 
 async function handler(
   req: NextApiRequest,

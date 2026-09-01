@@ -46,16 +46,23 @@ describe('périmètre des rôles historiques', () => {
     expect(staffPermissionsFor('owner')).toEqual(STAFF_PERMISSION_VALUES);
   });
 
-  it('admin a tout sauf la facturation et la gestion du staff', () => {
+  it('admin a tout sauf l’administration de l’organisation', () => {
+    // Miroir EXACT du périmètre actuel : `/admin/users/manage` et
+    // `/admin/billing` sont gatées `admin` aujourd'hui ; seules les 7 routes
+    // `owner` (secrets tenant, plan, pôle) lui échappent.
     const admin = staffPermissionsFor('admin');
-    expect(admin).not.toContain('manage_billing');
-    expect(admin).not.toContain('manage_staff');
+    expect(admin).not.toContain('manage_tenant');
+    expect(admin).toContain('manage_staff');
+    expect(admin).toContain('manage_billing');
     expect(admin).toContain('manage_tournaments');
     expect(admin).toContain('run_checkin');
   });
 
-  it('caster reste cantonné à la régie', () => {
-    expect(staffPermissionsFor('caster')).toEqual(['manage_broadcast']);
+  it('caster garde son périmètre — le cockpit, pas la conduite de la régie', () => {
+    // `manage_broadcast` (tops, vagues, présences, run of show) était et reste
+    // réservé à l'admin : le caster n'a jamais eu ces routes.
+    expect(staffPermissionsFor('caster')).toEqual(['use_cast_cockpit']);
+    expect(roleHasStaffPermission('caster', 'manage_broadcast')).toBe(false);
   });
 });
 

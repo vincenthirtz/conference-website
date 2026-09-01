@@ -56,7 +56,14 @@ export const STAFF_PERMISSION_CATALOG = [
   {
     value: 'manage_broadcast',
     label: 'Régie et diffusion',
-    description: 'Cockpit caster, overlays, run of show',
+    description:
+      'Run of show, tops (cues), vagues, stations, overlays — la conduite du direct',
+  },
+  {
+    value: 'use_cast_cockpit',
+    label: 'Cockpit de cast',
+    description:
+      'Consulter les infos de match nécessaires à la préparation d’un cast',
   },
   {
     value: 'manage_settings',
@@ -72,6 +79,17 @@ export const STAFF_PERMISSION_CATALOG = [
     value: 'manage_billing',
     label: 'Facturation',
     description: 'Abonnement, plan, factures',
+  },
+  {
+    value: 'manage_tasks',
+    label: 'Tableau de tâches',
+    description: 'Kanban interne du staff : cartes, colonnes, assignations',
+  },
+  {
+    value: 'manage_tenant',
+    label: 'Administrer l’organisation',
+    description:
+      'Secrets du tenant, plan et paiement, demandes de tenant, admins de pôle',
   },
 ] as const;
 
@@ -101,10 +119,25 @@ export function isStaffPermission(value: unknown): value is StaffPermission {
  */
 export const STAFF_ROLE_PERMISSIONS: Record<StaffRole, StaffPermission[]> = {
   owner: [...STAFF_PERMISSION_VALUES],
-  admin: STAFF_PERMISSION_VALUES.filter(
-    (p) => p !== 'manage_billing' && p !== 'manage_staff'
-  ),
-  caster: ['manage_broadcast'],
+  // `admin` a TOUT sauf ce qui est réellement réservé au propriétaire
+  // aujourd'hui : les 7 routes gatées `owner` (secrets du tenant, plan et
+  // paiement, demandes de tenant, admins de pôle).
+  //
+  // Correction du 2026-09-01, pendant la migration page par page : la première
+  // version retirait aussi `manage_staff` et `manage_billing` à l'admin. C'était
+  // FAUX — `/admin/users/manage` et `/admin/billing` sont gatées `admin`
+  // aujourd'hui, et le lot A2 s'interdit de changer le périmètre des rôles
+  // historiques. Aucune page n'avait encore été migrée sur ces deux
+  // permissions, donc aucun droit n'a bougé entre-temps.
+  admin: STAFF_PERMISSION_VALUES.filter((p) => p !== 'manage_tenant'),
+  // Le caster garde EXACTEMENT ce qu'il avait : les cinq pages et vingt-deux
+  // routes déjà gatées `'caster'`, pas la conduite de la régie
+  // (`manage_broadcast`), qui était et reste réservée à l'admin.
+  //
+  // Correction du 2026-09-01, pendant la migration : lui donner
+  // `manage_broadcast` lui ouvrait les tops, vagues et présences de la régie —
+  // un élargissement que trois tests ont attrapé, et que ce lot s'interdit.
+  caster: ['use_cast_cockpit'],
   /** Arbitre : le jour J, sur les matchs. Ni équipes, ni réglages. */
   referee: ['run_checkin', 'arbitrate_matches'],
   /** Bénévole : la porte d'entrée. Une tâche, une seule. */

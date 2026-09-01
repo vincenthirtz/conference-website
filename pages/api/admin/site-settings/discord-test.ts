@@ -8,7 +8,7 @@ import { withStaffRoute } from '@/utils/staff';
 import { postToDiscordWebhook } from '@/utils/discord';
 import { isDiscordChannelType } from '@/utils/discord/channels';
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_settings' });
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {

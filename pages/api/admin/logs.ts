@@ -64,7 +64,7 @@ function firstParam(v: string | string[] | undefined): string | undefined {
 }
 
 // Rôle minimum : admin (vision globale du journal d'audit)
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_settings' });
 
 async function handler(
   req: NextApiRequest,

@@ -25,7 +25,7 @@ const VALID_STATUSES = ['open', 'in_progress', 'resolved', 'closed'] as const;
 const VALID_SEVERITIES = ['low', 'medium', 'high'] as const;
 const VALID_CATEGORIES = ['dispute', 'behavior', 'technical', 'other'] as const;
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'moderate_support' });
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {

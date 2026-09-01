@@ -20,7 +20,7 @@
 //
 // Réponse : { tournamentId, slug }
 //
-// Auth : withStaffRoute(handler, 'admin') + withAdminIdempotency + rate-limit.
+// Auth : withStaffRoute(handler, { permission: 'manage_tournaments' }) + withAdminIdempotency + rate-limit.
 // Tenant-scoped via ctx.tenantId. Écritures via supabaseAdmin (bypass RLS).
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -69,7 +69,7 @@ function bracketSizeFor(n: number): 4 | 8 | 16 | 32 {
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'quick-bracket' }),
-  'admin'
+  { permission: 'manage_tournaments' }
 );
 
 async function handler(

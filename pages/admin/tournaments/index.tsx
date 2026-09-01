@@ -533,7 +533,7 @@ function AdminTournamentsPage({
 }
 
 export const getServerSideProps = withStaffPage(
-  'admin',
+  { permission: 'manage_tournaments' },
   async (ctx, staffCtx) => {
     const { query } = ctx;
     const search = typeof query.search === 'string' ? query.search.trim() : '';

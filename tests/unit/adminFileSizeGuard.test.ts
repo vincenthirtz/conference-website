@@ -51,7 +51,7 @@ const BASELINE: Record<string, number> = {
   'pages/admin/demandes/[id].tsx': 921,
   'pages/admin/tenants/[id].tsx': 917,
   'components/admin/profile/ProfileModal.tsx': 914,
-  'components/admin/navigation/adminNav.ts': 899,
+  'components/admin/navigation/adminNav.ts': 969,
   'pages/admin/stages/[stageId]/groups.tsx': 856,
   'pages/admin/broadcast/live.tsx': 837,
   'pages/admin/leagues/[id].tsx': 825,

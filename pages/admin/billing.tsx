@@ -559,6 +559,6 @@ function AdminBillingPage({ staff }: Props) {
   );
 }
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_billing' });
 
 export default AdminBillingPage;

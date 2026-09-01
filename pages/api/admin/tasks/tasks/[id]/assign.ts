@@ -23,7 +23,7 @@ const bodySchema = z.object({
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'tasks-assign' }),
-  'admin'
+  { permission: 'manage_tasks' }
 );
 
 async function handler(

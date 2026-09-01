@@ -23,7 +23,7 @@ const MAX_GRACE_MINUTES = 120;
 // Postgres "undefined column" error code (covers missing column in select/update).
 const PG_UNDEFINED_COLUMN = '42703';
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'run_checkin' });
 
 function isMissingColumnError(err: unknown): boolean {
   if (!err || typeof err !== 'object') return false;

@@ -3,7 +3,7 @@
 // Met à jour les réglages de chat (emote-only, sub-only, follower-only, slow
 // mode) de la chaîne du broadcaster connecté.
 //
-// withStaffRoute(..., 'admin'). getValidBroadcasterToken + helixFetch.
+// withStaffRoute(..., { permission: 'manage_broadcast' }). getValidBroadcasterToken + helixFetch.
 //   409 { code:'NOT_CONNECTED' } / 403 { code:'MISSING_SCOPE' }.
 //   Scope requis : moderator:manage:chat_settings.
 
@@ -153,4 +153,4 @@ async function handler(
   }
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_broadcast' });

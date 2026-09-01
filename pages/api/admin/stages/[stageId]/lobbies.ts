@@ -87,7 +87,7 @@ function normalizeTeam(team: TeamJoin | TeamJoin[] | null): TeamJoin | null {
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-stage-lobbies' }),
-  'admin'
+  { permission: 'manage_tournaments' }
 );
 
 async function handler(

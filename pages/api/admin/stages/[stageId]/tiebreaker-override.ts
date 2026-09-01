@@ -20,7 +20,7 @@ import { logger } from '../../../../../utils/logger';
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'stage-tiebreaker-override' }),
-  'admin'
+  { permission: 'manage_tournaments' }
 );
 
 async function handler(

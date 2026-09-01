@@ -29,7 +29,7 @@ type FormState = {
   publishedAt: string;
 };
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_communications' });
 
 const slugifyValue = (value: string) =>
   slugify(value, { lower: true, strict: true });

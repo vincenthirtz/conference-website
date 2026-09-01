@@ -116,7 +116,7 @@ async function loadTarget(userId: string): Promise<TargetAccount | null> {
   };
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_staff' });
 
 async function handler(
   req: NextApiRequest,

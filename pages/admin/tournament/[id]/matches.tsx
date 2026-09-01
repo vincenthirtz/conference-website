@@ -33,7 +33,7 @@ type MatchesApiResponse = {
   total: number | null;
 };
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'arbitrate_matches' });
 
 function formatDateTime(iso: string | null) {
   if (!iso) return '—';

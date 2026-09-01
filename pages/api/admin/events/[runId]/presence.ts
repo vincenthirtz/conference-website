@@ -15,7 +15,7 @@
 //        - 'offline'  si last_seen_at < now - 180s (et row presente)
 //        - 'unknown'  si pas de row caster_presence OU event_run_id !== runId
 //
-// Auth : withStaffRoute(_, 'admin') (meme seuil que start/end run / cues).
+// Auth : withStaffRoute(_, { permission: 'manage_broadcast' }) (meme seuil que start/end run / cues).
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -234,4 +234,4 @@ async function handler(
   return res.status(200).json({ presence });
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_broadcast' });

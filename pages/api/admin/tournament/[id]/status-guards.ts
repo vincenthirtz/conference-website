@@ -27,7 +27,7 @@ const STATUS_LABELS: Record<string, string> = {
   archived: 'Archivé',
 };
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_tournaments' });
 
 async function handler(
   req: NextApiRequest,

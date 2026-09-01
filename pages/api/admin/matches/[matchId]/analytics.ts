@@ -19,7 +19,7 @@ import type {
 } from '@/utils/analytics/tournamentAnalytics';
 import { logger } from '../../../../../utils/logger';
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'arbitrate_matches' });
 
 type DraftRow = { id: string; game_index: number };
 type DraftStepRow = {

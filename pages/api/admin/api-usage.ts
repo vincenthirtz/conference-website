@@ -10,7 +10,7 @@
 // see utils/billing/apiQuota.ts). No counter is created here; a missing row
 // simply means `used = 0`.
 //
-// Auth: withStaffRoute(handler, 'admin') — scoped to ctx.tenantId. GET only.
+// Auth: withStaffRoute(handler, { permission: 'manage_settings' }) — scoped to ctx.tenantId. GET only.
 // `Cache-Control: no-store` (live numbers, per-tenant, never cache).
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -144,4 +144,4 @@ async function handler(
   });
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_settings' });

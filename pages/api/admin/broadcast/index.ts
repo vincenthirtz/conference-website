@@ -64,7 +64,7 @@ type BroadcastResponse =
   | { campaign: { id: string } }
   | { error: string };
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_broadcast' });
 
 async function handler(
   req: NextApiRequest,

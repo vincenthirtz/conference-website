@@ -8,7 +8,7 @@
 // JSON (au lieu d'un 302) après avoir posé un cookie httpOnly nonce
 // (double-submit CSRF) et signé un state opaque (tenant + user + returnTo).
 //
-// - withStaffRoute(..., 'admin') : même seuil que les writes régie.
+// - withStaffRoute(..., { permission: 'manage_broadcast' }) : même seuil que les writes régie.
 // - 503 { code:'TWITCH_NOT_CONFIGURED' } si la feature est dormante.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -84,4 +84,4 @@ async function handler(
   return res.status(200).json({ url: buildBroadcasterAuthorizeUrl(state) });
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_broadcast' });

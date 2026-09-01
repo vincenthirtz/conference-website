@@ -137,4 +137,4 @@ async function handleCreate(
   return res.status(201).json({ secret, subscription: data });
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_settings' });

@@ -72,7 +72,7 @@ function typeLabel(t: Dict, type: string | null | undefined) {
   return getTypeLabels(t)[type] || type;
 }
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
 
 function AdminTournamentMapsPage(_: StaffProps) {
   const t = useAdminT(nsAdminTournamentMaps);

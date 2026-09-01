@@ -1,5 +1,9 @@
 import type { AdminLink } from '@/types/components';
 import { hasAtLeastRole, type StaffRole } from '@/utils/staff';
+import {
+  roleHasStaffPermission,
+  type StaffPermission,
+} from '@/utils/staffPermissions';
 import { buildAdminLinks } from '@/components/admin/navigation/adminNav';
 import type { TenantKind } from '@/utils/tenantKind';
 
@@ -16,8 +20,13 @@ export function filterAdminLinks(
   links: AdminLink[] = ADMIN_LINKS,
   tenantKind?: TenantKind
 ): AdminLink[] {
-  const canAccess = (minRole?: StaffRole) =>
-    hasAtLeastRole(staffRole, minRole ?? 'admin');
+  // Un nœud qui déclare une PERMISSION est filtré dessus (lot A2) : c'est ce
+  // que sa page applique côté serveur, et filtrer autrement afficherait une
+  // entrée de menu qui mène à un 403 — le « menu mort » que le lot interdit.
+  const canAccess = (minRole?: StaffRole, permission?: StaffPermission) => {
+    if (permission) return roleHasStaffPermission(staffRole, permission);
+    return hasAtLeastRole(staffRole, minRole ?? 'admin');
+  };
 
   // Console développeur : un tenant `kind='developer'` ne voit QUE les nœuds
   // marqués `devConsole`. Ce filtre s'applique EN PLUS du filtre par rôle (les
@@ -43,7 +52,8 @@ export function filterAdminLinks(
           ? filterLevel(item.children, itemMinRole)
           : [];
         const devOk = !devMode || item.devConsole === true;
-        const selfAccessible = !!item.ref && canAccess(itemMinRole) && devOk;
+        const selfAccessible =
+          !!item.ref && canAccess(itemMinRole, item.permission) && devOk;
         if (!selfAccessible && children.length === 0) return null;
         return { ...item, minRole: itemMinRole, children };
       })

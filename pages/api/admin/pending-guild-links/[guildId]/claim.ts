@@ -310,5 +310,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-pending-guild-claim' }),
-  'owner'
+  { permission: 'manage_tenant' }
 );

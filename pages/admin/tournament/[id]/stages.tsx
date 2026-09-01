@@ -29,7 +29,7 @@ type MatchesApiResponse = {
   stages: StageSummary[];
 };
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
 
 type Dict = typeof nsAdminTournamentStagesList.fr;
 

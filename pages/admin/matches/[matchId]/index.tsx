@@ -81,7 +81,7 @@ type MatchRow = {
   games?: GameRow[];
 };
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'arbitrate_matches' });
 
 function statusColor(status: MatchStatus) {
   switch (status) {

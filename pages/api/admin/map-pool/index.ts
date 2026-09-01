@@ -251,5 +251,5 @@ async function handleCreate(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-map-pool' }),
-  'admin'
+  { permission: 'manage_tournaments' }
 );

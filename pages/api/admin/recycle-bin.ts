@@ -83,7 +83,7 @@ const ALL_TYPES: DeletedType[] = [
   'scrim',
 ];
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_settings' });
 
 async function handler(
   req: NextApiRequest,

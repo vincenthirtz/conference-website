@@ -13,7 +13,7 @@ import { logger } from '@/utils/logger';
 
 const MAX_RANGE_MS = 92 * 24 * 3600 * 1000;
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_teams' });
 
 async function handler(
   req: NextApiRequest,

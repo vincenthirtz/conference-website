@@ -151,7 +151,7 @@ function isBattleTagFlagged(d: Demande): boolean {
 }
 
 export const getServerSideProps = withStaffPage(
-  'admin',
+  { permission: 'manage_teams' },
   async (ctx, staffCtx) => {
     const { query } = ctx;
     const type = typeof query.type === 'string' ? query.type : '';

@@ -316,5 +316,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-events-seg-from-tournament' }),
-  'admin'
+  { permission: 'manage_broadcast' }
 );

@@ -44,7 +44,7 @@
 | Lot | Titre | Impact | Effort | Fenêtre |
 |---|---|---|---|---|
 | **A1** | De l'alerte au geste (jour J) | 🟥 | M | ✅ livré 2026-09-01 |
-| **A2** | Rôles staff fins (bénévole, arbitre) | 🟥 | L | ✅ socle livré 2026-09-01 |
+| **A2** | Rôles staff fins (bénévole, arbitre) | 🟥 | L | ✅ livré 2026-09-01 |
 | **A3** | Rendre aux équipes ce que le staff fait à leur place | 🟧 | M | ✅ livré 2026-09-01 |
 | **A4** | Recherche globale + palette de commandes | 🟧 | M | ✅ livré 2026-09-01 |
 | **A5** | Kit de listes admin (`DataTable`) | 🟧 | L | ✅ kit livré 2026-09-01 |
@@ -93,7 +93,7 @@ arbitrage, ce n'est pas un bouton unique — il reste un lien vers `/admin/moder
 
 ---
 
-## A2 · Rôles staff fins — ✅ SOCLE LIVRÉ (2026-09-01)
+## A2 · Rôles staff fins — ✅ LIVRÉ (2026-09-01)
 
 **Problème.** Le staff n'a que **trois** rôles — `owner | admin | caster`
 ([`types/admin.ts:14`](../types/admin.ts#L14)) — et **63 pages** sont gatées `withStaffPage('admin')`.
@@ -135,8 +135,54 @@ STAFF_PERMISSION_CATALOG = [
 - [x] Première tranche migrée : les surfaces du check-in (page + 3 routes) tiennent sur
       `run_checkin` — c'est ce qui rend un bénévole possible.
 
-**Reste à faire (pendant la saison)** : migrer les 60+ autres pages de la forme par rôle vers la
-forme par permission, une par une. Le socle rend chaque migration indépendante et sans risque.
+### Migration complète (2026-09-01, seconde passe)
+
+**299 gardes migrées** — 75 pages et 224 routes — d'une table explicite chemin → permission :
+
+| Permission | gardes |
+|---|---|
+| `manage_tournaments` | 89 |
+| `manage_broadcast` | 45 |
+| `manage_settings` | 32 |
+| `manage_teams` | 30 |
+| `manage_communications` | 29 |
+| `arbitrate_matches` | 23 |
+| `manage_tasks` | 19 |
+| `moderate_support` | 9 |
+| `manage_staff` | 8 |
+| `manage_billing` / `manage_tenant` | 3 / 11 |
+
+- [x] **Le menu suit** : `AdminNavNode.permission` l'emporte sur `minRole` dans `filterAdminLinks`
+      et dans les cartes du dashboard — une entrée qui mène à un 403 est le défaut que ce lot
+      existe pour supprimer.
+- [x] **Le bénévole a une porte** : `/admin/checkin` résout le tournoi en cours et redirige vers
+      son check-in. Sans elle le rôle existait sans entrée de menu — la cible réelle est une
+      route dynamique, donc invisible du menu.
+- [x] `/admin` et `/api/admin/alerts-summary` descendent au rang le plus bas : un bénévole qui
+      atterrit sur un 403 dès la connexion n'atteint jamais ce qu'il a le droit de faire.
+- [x] `tests/unit/staffNarrowRolesReach.test.ts` croise la source des pages et la navigation :
+      aucune entrée proposée à un bénévole ou à un arbitre ne mène à une permission qu'il n'a pas.
+- [x] Le garde-fou de pages exige désormais une **permission**, pas seulement une garde.
+
+**Deux corrections que la migration a imposées, et qu'elle a attrapées elle-même** :
+
+1. `admin` s'était vu retirer `manage_staff` et `manage_billing` dans la première version du
+   catalogue. C'était faux — `/admin/users/manage` et `/admin/billing` sont gatées `admin`
+   aujourd'hui. Seul le périmètre réellement `owner` (secrets du tenant, plan, pôle) devient
+   `manage_tenant`.
+2. `caster` s'était vu donner `manage_broadcast`, ce qui lui ouvrait les tops, vagues et présences
+   de la régie — des routes qui lui étaient fermées. Trois tests l'ont attrapé. Le caster garde
+   son périmètre exact via `use_cast_cockpit` ; `manage_broadcast` reste la conduite du direct,
+   côté admin.
+
+**Volontairement gardées par rôle** (justifiées dans le test) : la porte d'entrée `/admin`, les
+hubs à onglets dont chaque onglet re-vérifie son propre minimum (modération, communications,
+demandes), « gérer mon équipe », les surfaces de cast déjà `caster`, et l'agrégat transverse
+`overview-summary` qu'aucune permission unique ne décrit.
+
+**Décision produit laissée ouverte** : le Kanban interne (`manage_tasks`) reste réservé à
+owner/admin, comme avant. L'ouvrir aux bénévoles et aux arbitres serait défendable — c'est là que
+vivent les tâches du jour — mais c'est un élargissement, donc un choix, pas un effet de bord.
 
 **Risque assumé.** C'est un lot L qui touche 68 pages. On livre le **socle** (catalogue, helpers,
 tests, mapping rétrocompatible) avant le 14/09 pour pouvoir créer des bénévoles ; la migration

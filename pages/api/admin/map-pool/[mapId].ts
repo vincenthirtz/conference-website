@@ -213,5 +213,5 @@ async function handleDelete(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-map-pool-item' }),
-  'admin'
+  { permission: 'manage_tournaments' }
 );

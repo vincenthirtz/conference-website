@@ -19,7 +19,7 @@ import nsAdminFreePlayers from '@/lib/i18n/locales/admin-fr/adminFreePlayers';
 import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
 import type { StaffProps } from '@/types/admin';
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_teams' });
 
 type Item = {
   id: string;

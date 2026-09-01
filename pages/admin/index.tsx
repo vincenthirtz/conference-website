@@ -38,7 +38,11 @@ type Props = {
   activeTenantKind: TenantKind;
 };
 
-export const getServerSideProps = withStaffPage('caster');
+// Porte d'entrée du back-office : accessible à TOUT le staff, rôles étroits du
+// lot A2 compris. Un bénévole qui atterrit sur un 403 dès la connexion n'a
+// aucun moyen d'atteindre la seule chose qu'il a le droit de faire.
+// Le contenu, lui, est filtré : cartes par permission, KPI derrière `canManage`.
+export const getServerSideProps = withStaffPage('helper');
 
 /* -----------------------------------------------------------
  * KPI globaux : un unique appel à l'endpoint d'agrégat.

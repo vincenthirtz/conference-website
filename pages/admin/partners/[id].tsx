@@ -355,6 +355,6 @@ function AdminEditPartnerPage({ staff }: Props) {
   );
 }
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_communications' });
 
 export default AdminEditPartnerPage;

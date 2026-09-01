@@ -31,7 +31,7 @@ type GroupsApiResponse = {
   unassigned: TeamInfo[];
 };
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
 
 function GroupLabel({ groupKey }: { groupKey: string }) {
   const t = useAdminT(nsAdminStageGroups);

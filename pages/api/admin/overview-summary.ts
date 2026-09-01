@@ -48,6 +48,10 @@ type ApiResponse = OverviewSummary | { error: string };
 
 // Rôle minimum : manager (mêmes droits que les endpoints sources tournaments /
 // teams / demandes / support / disputes côté hub).
+// Agrégat TRANSVERSE (tournois, équipes, demandes, support, litiges) : aucune
+// permission unique ne le décrit, et le découper en cinq appels pour respecter
+// la forme serait pire que le mal. Il reste donc gardé par rôle, et la page qui
+// le consomme ne l'appelle que pour un admin (`canManage`).
 export default withStaffRoute(handler, 'admin');
 
 /**

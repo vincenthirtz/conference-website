@@ -100,7 +100,7 @@ type SwissApiResponse = {
   rounds: SwissRound[];
 };
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
 
 function formatDateTime(iso: string | null) {
   if (!iso) return '—';

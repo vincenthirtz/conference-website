@@ -20,7 +20,7 @@ import {
 
 type ApiResponse = ImportResult | { error: string };
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_teams' });
 
 export const config = {
   api: { bodyParser: { sizeLimit: '2mb' } },

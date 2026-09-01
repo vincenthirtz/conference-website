@@ -19,7 +19,7 @@ import { createCommentBodySchema } from '@/utils/taskBoardSchemas';
 import { formatZodError } from '@/utils/validation';
 import { logger } from '@/utils/logger';
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_tasks' });
 
 function taskId(req: NextApiRequest): string | null {
   const raw = req.query.id;

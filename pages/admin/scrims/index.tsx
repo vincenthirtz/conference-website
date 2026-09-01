@@ -21,7 +21,7 @@ import nsAdminScrimsList from '@/lib/i18n/locales/admin-fr/adminScrimsList';
 
 const ID_BASE = 'admin-scrims';
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_teams' });
 
 function AdminScrimsPage(_props: StaffProps) {
   const t = useAdminT(nsAdminScrimsList);

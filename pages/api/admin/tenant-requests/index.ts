@@ -163,4 +163,4 @@ async function handler(
   });
 }
 
-export default withStaffRoute(handler, 'owner');
+export default withStaffRoute(handler, { permission: 'manage_tenant' });

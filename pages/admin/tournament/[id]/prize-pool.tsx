@@ -515,6 +515,6 @@ function AdminTournamentPrizePoolPage(_: StaffProps) {
   );
 }
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
 
 export default AdminTournamentPrizePoolPage;

@@ -24,7 +24,7 @@ type DuplicateResponse = { campaign: { id: string } } | { error: string };
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'broadcast-duplicate' }),
-  'admin'
+  { permission: 'manage_broadcast' }
 );
 
 async function handler(

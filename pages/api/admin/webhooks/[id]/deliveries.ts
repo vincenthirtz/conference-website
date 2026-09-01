@@ -76,4 +76,4 @@ async function handler(
   return res.status(200).json({ deliveries: data ?? [] });
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_settings' });

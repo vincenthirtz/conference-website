@@ -35,7 +35,7 @@ export type AdminMatchSearchResult = {
   status: string | null;
 };
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'arbitrate_matches' });
 
 async function handler(
   req: NextApiRequest,

@@ -129,4 +129,4 @@ async function handler(
   return res.status(200).json({ configs: merged });
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_settings' });

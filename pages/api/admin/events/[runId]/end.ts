@@ -134,5 +134,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'admin-events-end' }),
-  'admin'
+  { permission: 'manage_broadcast' }
 );

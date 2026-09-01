@@ -38,7 +38,7 @@ type SsrProps = {
 };
 
 export const getServerSideProps = withStaffPage<SsrProps>(
-  'admin',
+  { permission: 'manage_tournaments' },
   async (ctx, staffCtx) => {
     const rawId = ctx.params?.id ?? ctx.query.id;
     const id = Array.isArray(rawId) ? rawId[0] : rawId;

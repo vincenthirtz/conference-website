@@ -17,7 +17,7 @@ type PlayerResult = {
 
 type SearchResponse = { players: PlayerResult[] } | { error: string };
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_staff' });
 
 async function handler(
   req: NextApiRequest,

@@ -59,7 +59,7 @@ function minutesToTime(min: number): string {
   return `${hh}:${mm}`;
 }
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_teams' });
 
 function AdminScrimPlanningDetailPage(_props: StaffProps) {
   const t = useAdminT(nsAdminScrimPlanningsDetail);

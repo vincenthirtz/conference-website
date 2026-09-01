@@ -41,7 +41,7 @@ export type TeamRow = {
 };
 
 // rôle minimum : manager (gestion des équipes)
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_teams' });
 
 async function handler(
   req: NextApiRequest,

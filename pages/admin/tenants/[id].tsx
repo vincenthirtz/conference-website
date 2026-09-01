@@ -903,7 +903,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
 }
 
 export const getServerSideProps = withStaffPage<{ tenantId: string }>(
-  'admin',
+  { permission: 'manage_settings' },
   async (ctx: GetServerSidePropsContext) => {
     const id = ctx.params?.id;
     if (typeof id !== 'string') {

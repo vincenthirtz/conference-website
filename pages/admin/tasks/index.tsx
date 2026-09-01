@@ -638,7 +638,7 @@ function ActivitySection({
   );
 }
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_tasks' });
 
 function AdminTasksPage({ staff: currentStaff }: StaffProps) {
   const t = useAdminT(nsAdminTaskBoard);

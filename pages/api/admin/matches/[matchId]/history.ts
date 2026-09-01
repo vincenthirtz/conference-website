@@ -10,7 +10,7 @@ import { formatStaffLog, StaffLog } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../utils/logger';
-export default withStaffRoute(handler, 'admin'); // managers & + peuvent voir l'historique
+export default withStaffRoute(handler, { permission: 'arbitrate_matches' }); // managers & + peuvent voir l'historique
 
 type MatchHistoryResponse = {
   matchId: string;

@@ -66,5 +66,5 @@ async function handler(
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'match-draft-init' }),
-  'admin'
+  { permission: 'arbitrate_matches' }
 );

@@ -95,7 +95,7 @@ const SORT_FIELDS = [
   'last_sign_in_at',
 ] as const;
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_staff' });
 
 /**
  * État de la vue lu depuis la query string. La page est rendue côté serveur,

@@ -63,7 +63,7 @@ const MIN_PASSWORD_LENGTH = 6;
 // elle sert à renvoyer 400 « email invalide » plutôt qu'un 500 opaque.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_staff' });
 
 async function handler(
   req: NextApiRequest,

@@ -548,4 +548,4 @@ async function handleDelete(
   }
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_teams' });

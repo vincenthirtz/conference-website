@@ -82,7 +82,7 @@ function mapPoolToLines(value: unknown): string {
     : '';
 }
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
 
 function AdminCustomGamePresetsPage(_: StaffProps) {
   const t = useAdminT(nsAdminCustomGamePresets);

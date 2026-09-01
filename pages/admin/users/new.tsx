@@ -99,7 +99,7 @@ function roleLabel(t: Dict, role: string) {
 }
 
 export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
-  'admin',
+  { permission: 'manage_staff' },
   async () => {
     const teamRoles = supabaseAdmin
       ? await loadTeamRolesFromSupabase(supabaseAdmin)

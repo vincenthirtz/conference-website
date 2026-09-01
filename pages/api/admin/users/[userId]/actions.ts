@@ -44,7 +44,7 @@ type ActionResponse =
   | { success: true; info?: string; teamId?: string }
   | { error: string };
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_staff' });
 
 async function handler(
   req: NextApiRequest,

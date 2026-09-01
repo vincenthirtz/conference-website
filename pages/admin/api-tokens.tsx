@@ -106,7 +106,7 @@ function formatDate(s: string | null, fallback: string): string {
   }
 }
 
-export const getServerSideProps = withStaffPage('admin');
+export const getServerSideProps = withStaffPage({ permission: 'manage_settings' });
 
 function AdminApiTokensPage({ staff }: Props) {
   // Le rôle SSR est le miroir UX du gate serveur : seul un owner peut ACTIVER

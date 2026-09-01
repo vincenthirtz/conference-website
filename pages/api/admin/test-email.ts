@@ -17,4 +17,4 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   return res.status(result.success ? 200 : 502).json(result);
 }
 
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_communications' });
