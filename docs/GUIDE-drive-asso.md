@@ -67,8 +67,19 @@ La commande pour obtenir la valeur base64, sur le poste où se trouve le fichier
 JSON téléchargé à l'étape 1 :
 
 ```bash
-base64 -i owwomenscup-<id>.json | pbcopy
+base64 -i ~/Downloads/owwomenscup-<id>.json | tr -d '\n' | pbcopy
 ```
+
+Trois choses qui font perdre du temps ici :
+
+- **`pbcopy` n'affiche RIEN**, par construction : il consomme la sortie pour la
+  mettre dans le presse-papier. Ne rien voir est le succès, pas l'échec. Pour
+  vérifier : `pbpaste | wc -c` doit donner ~3 100 caractères.
+- **Le chemin compte** : le fichier est dans `~/Downloads`, pas dans le
+  répertoire courant. Sans chemin, `base64` échoue.
+- **`tr -d '\n'`** aplatit la sortie en une seule ligne. Le code accepte les
+  deux formes, mais un collage multi-ligne dans un champ Netlify est une source
+  d'erreur inutile.
 
 Puis redéployer (les variables ne sont lues qu'au build de la fonction).
 
