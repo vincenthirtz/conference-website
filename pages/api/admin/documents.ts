@@ -269,6 +269,13 @@ async function handler(
     return;
   }
 
+  // AVANT le contrôle de configuration, et c'est tout l'intérêt : poser la clé
+  // est précisément le geste qui rend le Drive configuré. Placé après, ce PUT
+  // se heurtait au 409 « le Drive n'est pas configuré » et ne pouvait JAMAIS
+  // aboutir — l'écran d'installation proposait un champ dont l'enregistrement
+  // échouait à tous les coups.
+  if (isStoreKey) return await handleStoreKey(req, res, ctx);
+
   // Non configuré ≠ en panne. La page affiche alors la marche à suivre, au lieu
   // d'un bandeau rouge qui laisse croire à un incident.
   if (!(await isDriveConfigured(ctx.tenantId))) {
@@ -288,10 +295,6 @@ async function handler(
     });
     return;
   }
-
-  // La pose de la clé doit passer AVANT le contrôle de configuration : c'est
-  // précisément le geste qui rend le Drive configuré.
-  if (isStoreKey) return await handleStoreKey(req, res, ctx);
 
   try {
     if (isList) return await handleList(req, res, ctx);
