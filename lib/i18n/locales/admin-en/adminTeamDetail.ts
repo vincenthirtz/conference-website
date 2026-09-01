@@ -28,7 +28,7 @@ export default {
   inactive: 'Inactive',
   countryLabel: 'Country',
   websiteLabel: 'Website',
-  twitterLabel: 'Twitter',
+  twitterLabel: 'X',
   discordLabel: 'Discord',
   description: 'Description',
   members: 'Members',

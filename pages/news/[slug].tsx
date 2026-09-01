@@ -14,6 +14,7 @@ import { useLocale } from '@/lib/i18n/useLocale';
 
 import { logger } from '../../utils/logger';
 import nsNewsDetail from '@/lib/i18n/locales/fr/newsDetail';
+import { social } from '@/config/socials';
 const SITE_NAME = "OW Women's Cup";
 
 // Idempotency-Key pour le POST de commentaire (public/anonyme). Stable par
@@ -130,8 +131,7 @@ export const getStaticProps: GetStaticProps<NewsPageProps> = async (
       tag: data.tag || 'general',
       excerpt: data.excerpt || '',
       imageUrl: resolveNewsImage(data.image_url, data.teams).url || '',
-      imageFitContain: resolveNewsImage(data.image_url, data.teams)
-        .fitContain,
+      imageFitContain: resolveNewsImage(data.image_url, data.teams).fitContain,
       publishedAt: data.published_at || null,
       createdAt: data.created_at || null,
       updatedAt: data.updated_at || null,
@@ -167,8 +167,7 @@ export default function NewsSlugPage({
   const metaTitle = title ? `${title} | ${SITE_NAME}` : `News | ${SITE_NAME}`;
   const metaDescription = excerpt || `Actualité ${SITE_NAME} : ${title}`;
   const canonical = slug && BASE_URL ? `${BASE_URL}/news/${slug}` : undefined;
-  const ogImage =
-    toAbsoluteUrl(imageUrl) || toAbsoluteUrl('/img/og-cover.png');
+  const ogImage = toAbsoluteUrl(imageUrl) || toAbsoluteUrl('/img/og-cover.png');
   const articlePublishedTime = publishedAt || createdAt || undefined;
   const articleModifiedTime = updatedAt || undefined;
 
@@ -233,7 +232,9 @@ export default function NewsSlugPage({
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:site" content="@OWWomensCup" />
+        {/* Nom de balise = spec Twitter Cards (X la lit toujours) ; le handle,
+            lui, vient de la source unique — il était faux ici. */}
+        <meta name="twitter:site" content={social('x').handle} />
         <meta name="twitter:title" content={metaTitle} />
         <meta name="twitter:description" content={metaDescription} />
         {ogImage && <meta name="twitter:image" content={ogImage} />}

@@ -25,7 +25,7 @@ export default ns('memberProfileEditor', {
   pronounsPlaceholder: 'elle, iel, she/her',
   taglineLabel: 'Phrase de profil',
   taglinePlaceholder: 'Ex: Sniper redoutée.',
-  twitterLabel: 'Twitter',
+  twitterLabel: 'X',
   twitchLabel: 'Twitch',
   updateSuccess_one: 'Profil mis à jour ({count} champ).',
   updateSuccess_other: 'Profil mis à jour ({count} champs).',

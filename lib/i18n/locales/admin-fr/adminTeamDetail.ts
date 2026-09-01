@@ -27,7 +27,7 @@ export default adminNs('adminTeamDetail', {
   inactive: 'Inactive',
   countryLabel: 'Pays',
   websiteLabel: 'Site web',
-  twitterLabel: 'Twitter',
+  twitterLabel: 'X',
   discordLabel: 'Discord',
   description: 'Description',
   members: 'Membres',

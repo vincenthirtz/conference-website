@@ -86,7 +86,7 @@ export default ns('teamEdit', {
   sponsorUrlPlaceholder: 'Site (https://...)',
   addSponsor: '+ Ajouter un sponsor',
   socialsSection: 'Réseaux & contact',
-  twitterLabel: 'Twitter / X',
+  twitterLabel: 'X',
   twitterHint: 'Handle ou URL complète',
   discordLabel: 'Discord',
   discordHint: "Lien d'invitation ou nom du serveur",

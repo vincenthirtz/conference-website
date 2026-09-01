@@ -56,7 +56,7 @@ export default adminNs('adminTeamEdit', {
   teamActive: 'Équipe active',
   descriptionLabel: 'Description',
   descriptionPlaceholder: "Présentation de l'équipe",
-  twitterLabel: 'Twitter',
+  twitterLabel: 'X',
   discordLabel: 'Discord',
   discordRoleIdLabel: 'ID rôle Discord',
   discordRoleIdHelp:

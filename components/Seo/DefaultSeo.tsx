@@ -2,7 +2,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useLang, type Lang } from '@/lib/i18n/LanguageProvider';
 import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
-import { SOCIALS } from '@/config/socials';
+import { SOCIALS, social } from '@/config/socials';
 
 /**
  * Chaîne éventuellement localisée. Une page peut fournir soit un simple
@@ -42,6 +42,8 @@ export type SeoProps = {
 };
 
 const SITE_NAME = "OW Women's Cup";
+/** Handle X de l'asso, depuis la source unique (cf. config/socials.ts). */
+const X_HANDLE = social('x').handle;
 const DEFAULT_TITLE = `${SITE_NAME} – Tournoi Overwatch féminin & esport 100% féminin`;
 const DEFAULT_DESCRIPTION =
   "Tournoi Overwatch et communauté 100% féminine : staff inclusif, matchs commentés et actions pour rendre l'esport plus accessible.";
@@ -264,8 +266,11 @@ export default function DefaultSeo({
 
       {/* Twitter Card */}
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:site" content="@OWWomensCup" />
-      <meta name="twitter:creator" content="@OWWomensCup" />
+      {/* Le NOM de ces balises reste `twitter:*` : c'est le nom de la spec des
+          Twitter Cards, que X lit toujours. Seul le HANDLE devait être corrigé
+          — « @OWWomensCup » n'est pas le compte de l'association. */}
+      <meta name="twitter:site" content={X_HANDLE} />
+      <meta name="twitter:creator" content={X_HANDLE} />
       <meta name="twitter:title" content={metaTitle} />
       <meta name="twitter:description" content={metaDescription} />
       {ogImage && <meta name="twitter:image" content={ogImage} />}

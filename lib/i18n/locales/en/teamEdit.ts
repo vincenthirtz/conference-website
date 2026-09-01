@@ -86,7 +86,7 @@ export default {
   sponsorUrlPlaceholder: 'Site (https://...)',
   addSponsor: '+ Add a sponsor',
   socialsSection: 'Socials & contact',
-  twitterLabel: 'Twitter / X',
+  twitterLabel: 'X',
   twitterHint: 'Handle or full URL',
   discordLabel: 'Discord',
   discordHint: 'Invite link or server name',

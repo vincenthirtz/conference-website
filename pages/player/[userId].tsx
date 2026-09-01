@@ -43,6 +43,7 @@ import { useLocale } from '@/lib/i18n/useLocale';
 import { useToast } from '@/components/Toast';
 import nsPlayerPublicProfile from '@/lib/i18n/locales/fr/playerPublicProfile';
 import nsPlayerDiscovery from '@/lib/i18n/locales/fr/playerDiscovery';
+import { XIcon } from '@/components/Icons';
 
 type PlayerProfileDict = typeof nsPlayerPublicProfile.fr;
 
@@ -620,7 +621,10 @@ function ShareButtons({
   const url = buildProfileUrl(player.userId);
   const encodedUrl = encodeURIComponent(url);
   const encodedText = encodeURIComponent(shareTitle);
-  const xUrl = `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`;
+  // `x.com/intent/post` est l'URL de partage actuelle. `twitter.com/intent/tweet`
+  // fonctionne encore par redirection, mais faire passer les gens par une
+  // redirection vers un domaine qui n'existe plus n'a plus de raison d'être.
+  const xUrl = `https://x.com/intent/post?text=${encodedText}&url=${encodedUrl}`;
   const blueskyUrl = `https://bsky.app/intent/compose?text=${encodeURIComponent(
     `${shareTitle} ${url}`
   )}`;
@@ -658,14 +662,7 @@ function ShareButtons({
         title={t.shareOnX}
         className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/10 bg-white/5 text-neutral-300 transition-colors hover:border-white/20 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
       >
-        <svg
-          className="h-4 w-4"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          aria-hidden="true"
-        >
-          <path d="M18.9 2H22l-7.5 8.6L23 22h-6.9l-5.4-7-6.2 7H1.4l8-9.2L1 2h7l4.9 6.5L18.9 2zm-2.4 18h1.9L7.6 3.9H5.6L16.5 20z" />
-        </svg>
+        <XIcon className="h-4 w-4" />
       </a>
       <a
         href={blueskyUrl}

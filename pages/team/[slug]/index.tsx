@@ -42,6 +42,7 @@ import {
 import { logger } from '../../../utils/logger';
 import nsTeamDetail from '@/lib/i18n/locales/fr/teamDetail';
 import nsOverwatchRank from '@/lib/i18n/locales/fr/overwatchRank';
+import { XIcon } from '@/components/Icons';
 
 type TeamDetailDict = typeof nsTeamDetail.fr;
 
@@ -73,7 +74,7 @@ function safeHref(url: string): string | undefined {
 }
 
 function socialHref(
-  platform: 'twitter' | 'youtube' | 'twitch' | 'instagram' | 'tiktok',
+  platform: 'x' | 'youtube' | 'twitch' | 'instagram' | 'tiktok',
   raw: string | null | undefined
 ): string | undefined {
   if (!raw) return undefined;
@@ -84,8 +85,11 @@ function socialHref(
   }
   const handle = value.replace(/^@/, '');
   switch (platform) {
-    case 'twitter':
-      return safeHref(`https://twitter.com/${handle}`);
+    case 'x':
+      // La colonne s'appelle encore `twitter` en base, et c'est sans
+      // importance : ce qui y est stocké est un HANDLE, qui ne change pas
+      // quand la plateforme change de nom. Seule l'URL construite compte.
+      return safeHref(`https://x.com/${handle}`);
     case 'youtube':
       // Allow either an @handle or a raw channel name
       return safeHref(`https://youtube.com/@${handle}`);
@@ -919,18 +923,13 @@ export default function TeamPage({
               {hasSocials && (
                 <div className="flex flex-wrap gap-3 mt-4">
                   <SocialLink
-                    href={socialHref('twitter', team.twitter)}
-                    label="Twitter"
-                    hover="hover:border-blue-400/50 hover:bg-blue-500/10"
-                    icon={
-                      <svg
-                        className="w-4 h-4"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                      </svg>
-                    }
+                    href={socialHref('x', team.twitter)}
+                    label="X"
+                    // X n'a pas de couleur de marque : noir sur blanc, blanc
+                    // sur noir. Le survol va donc vers le blanc, pas vers le
+                    // bleu de l'oiseau qui n'existe plus.
+                    hover="hover:border-white/40 hover:bg-white/10"
+                    icon={<XIcon className="w-4 h-4" />}
                   />
                   <SocialLink
                     href={team.discord ? safeHref(team.discord) : undefined}
@@ -1593,7 +1592,7 @@ function MemberCard({
   const name = member.display_name || member.battle_tag || t.memberFallback;
   const avatar =
     member.avatar_url && safeHref(member.avatar_url) ? member.avatar_url : null;
-  const twitterHref = socialHref('twitter', member.twitter ?? null);
+  const xHref = socialHref('x', member.twitter ?? null);
   const twitchHref = socialHref('twitch', member.twitch ?? null);
 
   const containerClasses = substitute
@@ -1689,23 +1688,17 @@ function MemberCard({
             {member.tagline}
           </p>
         )}
-        {(twitterHref || twitchHref) && (
+        {(xHref || twitchHref) && (
           <div className="flex items-center gap-2 mt-1.5">
-            {twitterHref && (
+            {xHref && (
               <a
-                href={twitterHref}
+                href={xHref}
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Twitter"
-                className="text-gray-400 hover:text-blue-300 transition-colors"
+                aria-label="X"
+                className="text-gray-400 hover:text-white transition-colors"
               >
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                </svg>
+                <XIcon className="w-3.5 h-3.5" />
               </a>
             )}
             {twitchHref && (

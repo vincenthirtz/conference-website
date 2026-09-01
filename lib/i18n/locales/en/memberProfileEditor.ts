@@ -26,7 +26,7 @@ export default {
   pronounsPlaceholder: 'she, they, she/her',
   taglineLabel: 'Profile tagline',
   taglinePlaceholder: 'E.g. Feared sniper.',
-  twitterLabel: 'Twitter',
+  twitterLabel: 'X',
   twitchLabel: 'Twitch',
   updateSuccess_one: 'Profile updated ({count} field).',
   updateSuccess_other: 'Profile updated ({count} fields).',

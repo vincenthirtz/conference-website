@@ -57,7 +57,7 @@ export default {
   teamActive: 'Team active',
   descriptionLabel: 'Description',
   descriptionPlaceholder: 'Team presentation',
-  twitterLabel: 'Twitter',
+  twitterLabel: 'X',
   discordLabel: 'Discord',
   discordRoleIdLabel: 'Discord role ID',
   discordRoleIdHelp:
