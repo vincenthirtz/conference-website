@@ -13,4 +13,5 @@ export default ns('activeTeamSwitcher', {
   hint: 'Tu encadres plusieurs équipes : choisis celle sur laquelle tu veux agir.',
   captainBadge: 'Capitaine',
   managerBadge: 'Manager',
+  overviewLink: 'Voir toutes mes équipes →',
 });

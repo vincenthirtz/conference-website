@@ -54,7 +54,7 @@ La date du 14/09 coupe le plan en deux, et c'est le seul arbitrage structurant :
 | **J1** | Le fil du match, de J-1 au débrief | 🟥 | M | ✅ livré 2026-09-01 |
 | **J2** | Mon agenda (+ abonnement calendrier) | 🟥 | S | ✅ livré 2026-09-01 |
 | **J3** | Délégation des droits par la capitaine | 🟥 | M | ✅ livré 2026-09-01 |
-| **J4** | Console manager multi-équipes | 🟧 | M | saison |
+| **J4** | Console manager multi-équipes | 🟧 | M | ✅ livré 2026-09-01 |
 | **J5** | Espace coach : préparer, puis débriefer | 🟧 | M | saison |
 | **J6** | Dashboard priorisé (« à faire », pas « tout ») | 🟧 | M | après |
 | **J7** | Filet de sécurité : e2e du jour J + a11y mobile | 🟧 | M | continu |
@@ -186,7 +186,7 @@ lot **A8** côté admin qui le débloque.
 
 ---
 
-## J4 · Console manager multi-équipes — 🟧 / M · saison
+## J4 · Console manager multi-équipes — ✅ LIVRÉ (2026-09-01)
 
 **Problème.** Un manager peut encadrer plusieurs équipes depuis le 2026-08-20
 (`allow_manager_multi_team.sql`), et l'espace lui offre un **sélecteur** :

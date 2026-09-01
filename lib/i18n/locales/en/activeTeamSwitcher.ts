@@ -14,4 +14,5 @@ export default {
   hint: 'You run several teams: pick the one you want to act on.',
   captainBadge: 'Captain',
   managerBadge: 'Manager',
+  overviewLink: 'See all my teams →',
 };

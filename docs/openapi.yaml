@@ -30361,6 +30361,34 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/ServerError'
+  /api/player/my-teams:
+    get:
+      tags:
+        - public/auth
+      summary: Console multi-equipes — une ligne par equipe encadree.
+      description: |
+        Lot J4 de docs/PLAN-espace-joueur.md. Une ligne par equipe encadree avec
+        les seules colonnes qui decident d'une journee : prochain match,
+        check-in, feuille de match, effectif contre le minimum, demandes en
+        attente. Nombre CONSTANT de requetes (pas une par equipe).
+
+        Les `permissions` sont rendues PAR EQUIPE : elles peuvent differer
+        (manager ici, coach la), et l'ecran n'affiche que les actions possibles.
+      operationId: getPlayerMyTeams
+      security:
+        - PlayerBearer: []
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
+      responses:
+        '200':
+          description: '{ teams[] }'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/player/agenda:
     get:
       tags:

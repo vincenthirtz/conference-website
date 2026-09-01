@@ -12,6 +12,7 @@
 // liste tient en quelques entrées.
 
 import { useId } from 'react';
+import Link from 'next/link';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 import { useT } from '@/lib/i18n/useT';
 import nsActiveTeamSwitcher from '@/lib/i18n/locales/fr/activeTeamSwitcher';
@@ -62,7 +63,15 @@ export default function ActiveTeamSwitcher({
         ))}
       </select>
       <p id={hintId} className="mt-1.5 text-[11px] text-gray-400">
-        {t.hint}
+        {t.hint}{' '}
+        {/* Vue d'ensemble (J4) : ce sélecteur fait passer d'une équipe à
+            l'autre ; la console les montre TOUTES d'un coup. */}
+        <Link
+          href="/player/my-teams"
+          className="text-purple-300 transition hover:text-purple-200"
+        >
+          {t.overviewLink}
+        </Link>
       </p>
     </div>
   );
