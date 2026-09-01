@@ -3151,6 +3151,71 @@ sa ligne ici **et** dans la fixture.
 
 ---
 
+## Documents de l'asso (Drive)
+
+`GET /api/admin/documents` — liste le Drive de l'association (statuts, PV
+d'AG, rapports, factures, dossier de partenariat). **Pas un endpoint bot** :
+admin uniquement.
+
+**DEUX DROITS, pas un.** Consulter les statuts et deposer une piece ne sont pas
+le meme geste : la tresoriere depose, le reste du bureau consulte.
+
+| Methode  | Droit exige        | Geste                                       |
+| -------- | ------------------ | ------------------------------------------- |
+| `GET`    | `read_documents`   | Lister un dossier                           |
+| `POST`   | `manage_documents` | Deposer un fichier (25 Mo, types fermes)    |
+| `DELETE` | `manage_documents` | Mettre a la CORBEILLE (pas de suppression)  |
+
+La route se garde sur `read_documents` ; les deux ecritures re-verifient
+`manage_documents` et repondent 403 sinon. La reponse du GET porte
+`canWrite`, que la page utilise pour afficher ou non le bouton de depot — un
+bouton masque n'est pas un controle d'acces, c'est une politesse.
+
+Aucun role etroit ne porte l'un ou l'autre — ni `caster`, ni `referee`, ni
+`helper` : un PV d'AG nomme des personnes physiques et un rapport financier
+donne des montants.
+
+| Parametre  | Type   | Methode | Notes                                                                                      |
+| ---------- | ------ | ------- | ------------------------------------------------------------------------------------------ |
+| `folderId` | string | GET     | Sous-dossier a lister. Defaut : la racine configuree. Verifie comme descendant de celle-ci. |
+| `search`   | string | GET     | Filtre plein texte sur le nom, applique par Google (`name contains`).                       |
+| `fileId`   | string | DELETE  | Fichier a jeter. Doit vivre dans l'arborescence configuree.                                 |
+
+Reponse GET : `{ configured, canWrite, files[], folderId, folderName, breadcrumb[] }`.
+`configured: false` (200, pas une erreur) quand `GOOGLE_DRIVE_SA_KEY` ou
+`GOOGLE_DRIVE_FOLDER_ID` manque — la fonctionnalite est eteinte, elle n'est
+pas en panne.
+
+**Ce que la route ne fait pas, volontairement** : servir le contenu d'un
+fichier. Elle ne renvoie que des metadonnees et un `webViewLink`, donc c'est
+Google qui applique le partage. Une route de telechargement ferait de la
+permission `manage_documents` la seule chose entre un PV d'AG et Internet.
+
+**Journalisation** : les trois gestes ecrivent dans `staff_logs` —
+`read_association_documents` (`entity_type: 'drive_folder'`),
+`upload_association_document` et `trash_association_document`
+(`entity_type: 'drive_file'`). Le NOM d'un fichier divulgue autant que son
+contenu : une consultation se journalise comme n'importe quelle lecture
+sensible.
+
+**Acces Google** : compte de service, pas OAuth utilisateur — un token OAuth
+appartient a une personne et meurt avec son depart.
+
+**Un jeton par portee** : le chemin de lecture ne detient qu'un jeton
+`drive.readonly`, le chemin d'ecriture un jeton `drive`. La separation des
+droits staff est ainsi rejouee un cran plus bas, la ou une erreur de code ne
+peut plus la contourner : le code de lecture ne PEUT pas ecrire, Google
+refuse.
+
+Cote Drive : partager le dossier en **Lecteur** suffit a la lecture ; le depot
+exige **Editeur**. Un 403 sur un depot veut presque toujours dire cela, et la
+route le dit explicitement plutot que de relayer le message de Google.
+
+Cf. [`docs/ETUDE-drive-et-chat.md`](./ETUDE-drive-et-chat.md) et
+[`docs/GUIDE-drive-asso.md`](./GUIDE-drive-asso.md).
+
+---
+
 ## Tenant management (admin)
 
 S7 — endpoints **admin** (staff dashboard, NOT bot) qui gerent la

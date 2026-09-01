@@ -9,7 +9,7 @@ chiffres viennent de la base de production le jour de la rédaction.*
 
 | Sujet | Verdict | Pourquoi |
 |---|---|---|
-| **Drive de l'asso** | ✅ **À faire**, en version étroite (lecture seule, compte de service, nouveau droit `manage_documents`) | Comble un vrai trou : aujourd'hui les documents de l'asso n'ont **aucune place** sur le site, et le seul dépôt de PDF existant atterrit dans un bucket **public** nommé `teams-images`. |
+| **Drive de l'asso** | ✅ **Livré le 2026-09-01** — lecture seule, compte de service, droit `manage_documents`. Voir [le guide d'installation](./GUIDE-drive-asso.md). | Comble un vrai trou : aujourd'hui les documents de l'asso n'ont **aucune place** sur le site, et le seul dépôt de PDF existant atterrit dans un bucket **public** nommé `teams-images`. |
 | **Chat intégré** | ❌ **À ne pas construire** | La messagerie entre capitaines **existe déjà sur le site** et compte **0 message** en un an. Le problème n'est pas le manque de canal, c'est que **27 des 70 membres d'équipe n'ont aucun Discord lié**. Un quatrième canal ne les atteindra pas davantage. |
 
 ---
@@ -95,13 +95,20 @@ Le catalogue de [`utils/staffPermissions.ts`](../utils/staffPermissions.ts) est
 une union fermée avec garde-fous : ajouter une entrée est mécaniquement peu
 coûteux depuis le lot A2.
 
+**Deux droits, pas un** (décision du 2026-09-01) : consulter les statuts et
+déposer une pièce ne sont pas le même geste. La trésorière dépose, le reste du
+bureau consulte ; un droit unique obligerait à donner l'écriture à qui ne fait
+que lire.
+
 ```ts
-{
-  value: 'manage_documents',
-  label: 'Documents de l’asso',
-  description: 'Consulter le Drive de l’association : statuts, PV, rapports, factures',
-}
+{ value: 'read_documents',   label: 'Lire les documents de l’asso' }
+{ value: 'manage_documents', label: 'Déposer des documents' }
 ```
+
+La séparation est rejouée **sous** le code applicatif : le chemin de lecture ne
+détient qu'un jeton Google `drive.readonly`, le chemin d'écriture un jeton
+`drive`. Une erreur dans le code de lecture ne peut pas écrire — Google
+refuse.
 
 Attribution : `owner` et `admin` l'ont d'office (l'`admin` a tout sauf
 `manage_tenant`). **La question qui compte** est de savoir si un rôle étroit y
@@ -110,10 +117,21 @@ a droit — et la réponse est **non par défaut** : ni `caster`, ni `referee`, 
 donne des montants ; ce sont des données que l'on ouvre à quelqu'un
 explicitement, pas par appartenance à un rôle d'exploitation.
 
-Corollaire : ce droit n'a d'intérêt que **détachable du rôle**. Il faut donc
-qu'il soit accordable à l'unité — ce que le modèle A2 permet déjà (permissions
-effectives = rôle + accordées), sans quoi « donner le Drive à la trésorière »
-obligerait à la faire `admin`, c'est-à-dire à lui donner le site entier.
+Corollaire : ce droit n'a d'intérêt que **détachable du rôle**.
+
+**Correction du 2026-09-01, pendant l'implémentation.** La première version de
+cette étude affirmait que le modèle A2 permettait déjà d'accorder une
+permission à l'unité. **C'est faux** :
+[`staffPermissionsFor()`](../utils/staffPermissions.ts) dérive les permissions
+du seul rôle, et la table `staff` n'a aucune colonne de permissions accordées.
+En l'état, `manage_documents` va donc à `owner` et `admin` — et `admin` a déjà
+tout : le droit **gate correctement la page, mais n'ouvre encore à personne de
+nouveau**. « Donner le Drive à la trésorière » oblige toujours à la faire
+`admin`, c'est-à-dire à lui donner le site.
+
+C'est un lot à part (colonne `staff.extra_permissions`, résolution dans
+`utils/staff.ts`, UI dans `users/manage`), pas un détail de celui-ci. Il reste
+en tête de la suite.
 
 ### Pièges repérés
 

@@ -134,6 +134,7 @@ describe('filterAdminLinks – owner role', () => {
       'Gérer les utilisateurs',
       'Créer un utilisateur',
       'Association',
+      'Documents de l’asso',
       'Ajouter un adhérent',
     ]);
     const hub = staff?.children?.find((c) => c.title === 'Association');

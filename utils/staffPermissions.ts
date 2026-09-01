@@ -86,6 +86,22 @@ export const STAFF_PERMISSION_CATALOG = [
     description: 'Kanban interne du staff : cartes, colonnes, assignations',
   },
   {
+    // Deux droits, pas un. Consulter les statuts de l'asso et déposer une pièce
+    // dans son Drive ne sont pas le même geste : la trésorière dépose, le reste
+    // du bureau consulte. Un droit unique obligerait à donner l'écriture à qui
+    // ne fait que lire.
+    value: 'read_documents',
+    label: 'Lire les documents de l’asso',
+    description:
+      'Consulter le Drive de l’association : statuts, PV, rapports, factures',
+  },
+  {
+    value: 'manage_documents',
+    label: 'Déposer des documents',
+    description:
+      'Ajouter une pièce au Drive de l’association, ou la mettre à la corbeille',
+  },
+  {
     value: 'manage_tenant',
     label: 'Administrer l’organisation',
     description:

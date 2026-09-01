@@ -408,6 +408,9 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   import_mvp: 'MVP importé',
   // Partenaires / paramètres
   settings_update: 'Mise à jour paramètres',
+  read_association_documents: 'Consultation des documents de l’asso',
+  upload_association_document: 'Dépôt d’un document de l’asso',
+  trash_association_document: 'Document de l’asso mis à la corbeille',
   // Kanban interne (task board)
   task_board_create: 'Création tableau Kanban',
   task_board_update: 'Modification tableau Kanban',

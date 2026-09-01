@@ -36,6 +36,7 @@ import nsAdminTournamentDiscord from './adminTournamentDiscord';
 import nsAdminTournamentVeto from './adminTournamentVeto';
 import nsAdminTournamentMaps from './adminTournamentMaps';
 import nsAdminMapPool from './adminMapPool';
+import nsAdminDocuments from './adminDocuments';
 import nsAdminFreePlayers from './adminFreePlayers';
 import nsAdminCustomGamePresets from './adminCustomGamePresets';
 import nsAdminTournamentMapDraw from './adminTournamentMapDraw';
@@ -225,6 +226,7 @@ export const frDict = {
   adminTournamentVeto: nsAdminTournamentVeto.fr,
   adminTournamentMaps: nsAdminTournamentMaps.fr,
   adminMapPool: nsAdminMapPool.fr,
+  adminDocuments: nsAdminDocuments.fr,
   adminFreePlayers: nsAdminFreePlayers.fr,
   adminCustomGamePresets: nsAdminCustomGamePresets.fr,
   adminTournamentMapDraw: nsAdminTournamentMapDraw.fr,

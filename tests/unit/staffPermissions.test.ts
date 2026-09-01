@@ -58,6 +58,29 @@ describe('périmètre des rôles historiques', () => {
     expect(admin).toContain('run_checkin');
   });
 
+  it('les documents de l’asso ne vont à aucun rôle étroit', () => {
+    // Un PV d'AG nomme des personnes physiques, un rapport financier donne des
+    // montants. Ces droits s'accordent à quelqu'un ; ils ne s'héritent pas d'un
+    // rôle d'exploitation. Cf. docs/ETUDE-drive-et-chat.md.
+    for (const role of ['caster', 'referee', 'helper'] as const) {
+      expect(roleHasStaffPermission(role, 'read_documents')).toBe(false);
+      expect(roleHasStaffPermission(role, 'manage_documents')).toBe(false);
+    }
+    for (const role of ['owner', 'admin'] as const) {
+      expect(roleHasStaffPermission(role, 'read_documents')).toBe(true);
+      expect(roleHasStaffPermission(role, 'manage_documents')).toBe(true);
+    }
+  });
+
+  it('lecture et écriture des documents restent deux droits distincts', () => {
+    // Le jour où l'attribution à l'unité existera, c'est cette séparation qui
+    // permettra « la trésorière dépose, le bureau consulte ». Les fusionner
+    // maintenant rendrait ce réglage impossible sans nouvelle migration.
+    const values = STAFF_PERMISSION_VALUES;
+    expect(values).toContain('read_documents');
+    expect(values).toContain('manage_documents');
+  });
+
   it('caster garde son périmètre — le cockpit, pas la conduite de la régie', () => {
     // `manage_broadcast` (tops, vagues, présences, run of show) était et reste
     // réservé à l'admin : le caster n'a jamais eu ces routes.

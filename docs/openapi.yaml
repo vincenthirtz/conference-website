@@ -16329,6 +16329,184 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/documents:
+    get:
+      summary: Liste le Drive de l'association (lecture seule).
+      description: >
+        Statuts, PV d'AG, rapports, factures, dossier de partenariat. Les
+        fichiers RESTENT chez Google : la route ne renvoie que des metadonnees
+        et un lien d'ouverture Drive, jamais le contenu. C'est donc Google qui
+        applique le partage, et le droit `manage_documents` n'est pas la seule
+        chose entre un PV d'AG et Internet.
+
+
+        Lecture SENSIBLE : le nom d'un fichier divulgue autant que son contenu.
+        Chaque appel est journalise (`read_association_documents`).
+
+
+        Configuration absente (GOOGLE_DRIVE_SA_KEY / GOOGLE_DRIVE_FOLDER_ID) =
+        reponse 200 `configured: false`, pas une erreur : la fonctionnalite est
+        eteinte, elle n'est pas en panne.
+      operationId: adminListAssociationDocuments
+      tags:
+        - admin/association
+      security:
+        - StaffSession: []
+      parameters:
+        - in: query
+          name: folderId
+          schema:
+            type: string
+          description: >
+            Sous-dossier a lister. Defaut : la racine configuree. Verifie comme
+            descendant de celle-ci — le parametre ne permet pas d'en sortir.
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Filtre plein texte sur le nom, applique par Google.
+      responses:
+        '200':
+          description: "Contenu du dossier, ou `configured: false`."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  configured:
+                    type: boolean
+                  folderId:
+                    type: string
+                  folderName:
+                    type: string
+                    nullable: true
+                  breadcrumb:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                  files:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        mimeType:
+                          type: string
+                        isFolder:
+                          type: boolean
+                        size:
+                          type: integer
+                          nullable: true
+                        modifiedTime:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        modifiedBy:
+                          type: string
+                          nullable: true
+                        webViewLink:
+                          type: string
+                          nullable: true
+        '400':
+          description: Dossier hors de l'arborescence configuree, ou cle illisible.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          description: Le Drive n'a pas repondu.
+    post:
+      summary: Depose un fichier dans le Drive de l'association.
+      description: >
+        ECRITURE : exige la permission `manage_documents`, distincte de la
+        lecture. Le fichier part en base64 dans le corps JSON (25 Mo max,
+        liste FERMEE de types acceptes). 403 si l'appelant n'a que la lecture,
+        409 si le Drive n'est pas configure.
+
+
+        Un 400 « Google refuse le depot » signale en general un dossier
+        partage en « Lecteur » avec le compte de service : il faut « Editeur ».
+      operationId: adminUploadAssociationDocument
+      tags:
+        - admin/association
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - mimeType
+                - contentBase64
+              properties:
+                name:
+                  type: string
+                mimeType:
+                  type: string
+                contentBase64:
+                  type: string
+                folderId:
+                  type: string
+                  nullable: true
+      responses:
+        '201':
+          description: Fichier depose.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  file:
+                    type: object
+        '400':
+          description: Corps invalide, type refuse, ou depot refuse par Google.
+        '403':
+          description: Droit d'ecriture manquant.
+        '409':
+          description: Drive non configure.
+        '413':
+          description: Fichier trop volumineux.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    delete:
+      summary: Met un document a la CORBEILLE Drive (pas de suppression definitive).
+      description: >
+        ECRITURE : exige `manage_documents`. Le fichier part a la corbeille
+        Drive, d'ou il reste recuperable 30 jours — une suppression
+        irreversible declenchee depuis une page web, sur les statuts d'une
+        association, n'a aucune raison d'exister. Le fichier doit appartenir a
+        l'arborescence configuree.
+      operationId: adminTrashAssociationDocument
+      tags:
+        - admin/association
+      security:
+        - StaffSession: []
+      parameters:
+        - in: query
+          name: fileId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Mis a la corbeille.
+        '400':
+          description: fileId manquant, ou fichier hors de l'arborescence configuree.
+        '403':
+          description: Droit d'ecriture manquant.
+        '409':
+          description: Drive non configure.
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /api/admin/free-players:
     get:
       summary: Liste staff des joueuses libres (les deux provenances).

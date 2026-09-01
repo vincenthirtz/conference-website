@@ -1,0 +1,112 @@
+# Brancher le Drive de l'asso — marche à suivre
+
+*L'écran est livré ([`/admin/documents`](../pages/admin/documents.tsx)). Il reste
+deux variables d'environnement à poser, et un partage à faire côté Google. Rien
+à installer, rien à migrer.*
+
+Le « pourquoi » de chaque choix est dans
+[`ETUDE-drive-et-chat.md`](./ETUDE-drive-et-chat.md).
+
+---
+
+## 1. Créer le compte de service (5 min, une fois)
+
+1. [console.cloud.google.com](https://console.cloud.google.com/) → créer un
+   projet (`owwomenscup`, par exemple).
+2. **APIs & Services → Library** → activer **Google Drive API**.
+3. **APIs & Services → Credentials → Create credentials → Service account**.
+   Nom libre (`site-owwomenscup`). Aucun rôle IAM à donner : les droits ne
+   viennent pas d'IAM ici, mais du partage Drive à l'étape 2.
+4. Sur le compte créé → onglet **Keys → Add key → Create new key → JSON**.
+   Le fichier se télécharge. **C'est le seul secret de l'opération.**
+
+Noter l'adresse du compte de service, de la forme
+`site-owwomenscup@<projet>.iam.gserviceaccount.com`.
+
+## 2. Partager le dossier avec lui
+
+Sur le dossier Drive de l'asso → **Partager** → coller l'adresse
+`…iam.gserviceaccount.com`. Décocher la notification par email (un compte de
+service ne lit pas ses mails).
+
+Le rôle à donner dépend de ce qu'on veut :
+
+| Rôle Drive | Ce que le site peut faire |
+|---|---|
+| **Lecteur** | Lister et ouvrir. Le bouton « Déposer » répondra 403. |
+| **Éditeur** | Lister, ouvrir, **déposer**, mettre à la corbeille. |
+
+Un 403 au dépôt veut presque toujours dire « le dossier est en Lecteur » — la
+page le dit en toutes lettres plutôt que de relayer le message de Google.
+
+Le compte de service ne voit **que** ce qu'on lui partage : il n'y a rien à
+restreindre en plus.
+
+## 3. Poser les deux variables (Netlify → Site configuration → Environment variables)
+
+| Variable | Valeur |
+|---|---|
+| `GOOGLE_DRIVE_SA_KEY` | Le contenu du fichier JSON. **En base64 de préférence** : `base64 -i cle.json \| pbcopy`. Le collage direct d'un JSON multi-ligne mange les retours à la ligne de la clé privée, et l'erreur qui en sort est un message OpenSSL incompréhensible. Les deux formes sont acceptées. |
+| `GOOGLE_DRIVE_FOLDER_ID` | L'identifiant du dossier : le segment après `/folders/` dans son URL de partage. |
+
+Puis redéployer (les variables ne sont lues qu'au build de la fonction).
+
+Tant que l'une des deux manque, la page affiche cette marche à suivre au lieu
+d'une erreur — la fonctionnalité est éteinte, elle n'est pas en panne.
+
+## 4. Vérifier
+
+- `/admin/documents` liste le dossier ;
+- un clic sur un dossier descend dedans (fil d'Ariane pour remonter) ;
+- « Ouvrir dans Drive » ouvre le document **chez Google** — le site ne sert
+  jamais le contenu d'un fichier ;
+- avec le droit d'écriture, « Déposer un fichier » ajoute la pièce au dossier
+  affiché, et « Corbeille » l'en retire (récupérable 30 jours dans Drive) ;
+- `/admin/logs` : « Consultation des documents de l'asso », « Dépôt d'un
+  document de l'asso » et « Document de l'asso mis à la corbeille » y figurent.
+
+---
+
+## Deux points de vigilance
+
+**Le partage du dossier lui-même.** Si le dossier est en « Tous les
+utilisateurs disposant du lien », alors le lien *est* l'accès, et le droit
+`manage_documents` ne protège que la page — pas les documents. Pour que le
+contrôle d'accès du site ait un sens, le dossier doit être partagé
+**nominativement** (les membres du bureau + le compte de service), pas par lien
+public. À vérifier avant d'y déposer un PV ou une facture.
+
+**L'identifiant du dossier n'est pas versionné.** Il vit en variable
+d'environnement et nulle part ailleurs : sur un dossier partagé par lien,
+l'identifiant *est* le secret.
+
+---
+
+## Les deux droits
+
+| Droit | Ce qu'il ouvre |
+|---|---|
+| `read_documents` | Lister le Drive et ouvrir un document. C'est ce droit qui garde la page. |
+| `manage_documents` | Déposer un fichier, le mettre à la corbeille. Vérifié à part, à chaque appel. |
+
+Aucun rôle étroit ne les porte : ni casteuse, ni arbitre, ni bénévole.
+
+La séparation est rejouée **un cran plus bas**, là où une erreur de code ne
+peut plus la contourner : le chemin de lecture ne détient qu'un jeton Google
+`drive.readonly`. Même bugué, même appelé par erreur depuis une route
+d'écriture, il ne *peut* pas écrire.
+
+---
+
+## Ce que ce lot ne fait pas encore
+
+Les deux droits vont à `owner` et `admin` — et `admin` a déjà tout. Ils
+**gardent correctement la page et l'écriture, mais n'ouvrent à personne de
+nouveau** : donner le Drive à la trésorière sans lui donner le site suppose de
+pouvoir accorder une permission **à l'unité**, ce que le modèle actuel ne
+permet pas (les permissions dérivent du seul rôle).
+
+C'est le lot suivant : colonne `staff.extra_permissions`, résolution dans
+`utils/staff.ts`, attribution dans `/admin/users/manage`. La séparation
+lecture / écriture faite dès maintenant est ce qui rendra ce réglage possible
+— « la trésorière dépose, le bureau consulte » — sans nouvelle migration.

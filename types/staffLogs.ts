@@ -264,6 +264,10 @@ export type StaffLogAction =
   | 'import_mvp'
   // --- Partenaires / paramètres ---
   | 'settings_update'
+  // --- Documents de l'asso (Drive) ---
+  | 'read_association_documents'
+  | 'upload_association_document'
+  | 'trash_association_document'
   // --- Kanban interne (task board) ---
   | 'task_board_create'
   | 'task_board_update'
