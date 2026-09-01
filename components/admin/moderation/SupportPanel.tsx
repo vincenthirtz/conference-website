@@ -5,6 +5,14 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useToast } from '@/components/Toast';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
+import EntityHistoryButton from '@/components/admin/EntityHistoryButton';
+import {
+  formatDateFr,
+  getCategoryLabels,
+  getStatusLabels,
+  severityBadge,
+  statusBadge,
+} from './supportLabels';
 import EmptyState from '@/components/admin/EmptyState';
 import Modal from '@/components/admin/Modal';
 import { useUrlFilters } from '@/utils/useUrlFilters';
@@ -67,62 +75,6 @@ const FILTER_KEYS = ['status', 'severity', 'category', 'search'] as const;
 const PAGE_SIZE = 50;
 
 type Dict = typeof nsAdminSupport.fr;
-
-function getCategoryLabels(tx: Dict): Record<Category, string> {
-  return {
-    dispute: tx.catDispute,
-    behavior: tx.catBehavior,
-    technical: tx.catTechnical,
-    other: tx.catOther,
-  };
-}
-
-function getStatusLabels(tx: Dict): Record<Status, string> {
-  return {
-    open: tx.statusOpen,
-    in_progress: tx.statusInProgress,
-    resolved: tx.statusResolved,
-    closed: tx.statusClosed,
-  };
-}
-
-function formatDateFr(value: string): string {
-  try {
-    return new Date(value).toLocaleString('fr-FR', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Europe/Paris',
-    });
-  } catch {
-    return value;
-  }
-}
-
-function severityBadge(severity: Severity): string {
-  switch (severity) {
-    case 'high':
-      return 'bg-red-700/30 text-red-200 border-red-500/40';
-    case 'medium':
-      return 'bg-amber-700/30 text-amber-200 border-amber-500/40';
-    default:
-      return 'bg-blue-700/30 text-blue-200 border-blue-500/40';
-  }
-}
-
-function statusBadge(status: Status): string {
-  switch (status) {
-    case 'open':
-      return 'bg-red-600/20 text-red-200 border-red-500/40';
-    case 'in_progress':
-      return 'bg-amber-600/20 text-amber-200 border-amber-500/40';
-    case 'resolved':
-      return 'bg-emerald-600/20 text-emerald-200 border-emerald-500/40';
-    case 'closed':
-      return 'bg-neutral-600/20 text-neutral-300 border-neutral-500/40';
-  }
-}
 
 type TicketsResponse = {
   tickets?: Ticket[];
@@ -753,6 +705,13 @@ export default function SupportPanel() {
               <p className="text-xs text-neutral-500 mt-0.5 font-mono">
                 {selected.id}
               </p>
+              {/* Lot A6 : « qui a touché à ce ticket, et quand » se lit sur le
+                  ticket. Un signalement passe par plusieurs mains. */}
+              <EntityHistoryButton
+                entityType="support_ticket"
+                entityId={selected.id}
+                className="mt-2 rounded-lg border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-white/10"
+              />
             </div>
           }
         >

@@ -15,6 +15,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import AlertBanner from '@/components/admin/AlertBanner';
+import EntityHistoryButton from '@/components/admin/EntityHistoryButton';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import RunStatusHeader from '@/components/admin/director/RunStatusHeader';
 import TimelineBuilder from '@/components/admin/director/TimelineBuilder';
@@ -35,6 +36,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useEventRunRealtime } from '@/hooks/useEventRunRealtime';
+import { sendOverrunAutoCue } from '@/components/admin/events/overrunAutoCue';
 import { useOverrunWatcher } from '@/hooks/useOverrunWatcher';
 import { useToast } from '@/components/Toast';
 import { withStaffPage } from '@/utils/staff';
@@ -60,7 +62,9 @@ import type {
 } from '@/types/events';
 import nsAdminEventDirector from '@/lib/i18n/locales/admin-fr/adminEventDirector';
 
-export const getServerSideProps = withStaffPage({ permission: 'manage_broadcast' });
+export const getServerSideProps = withStaffPage({
+  permission: 'manage_broadcast',
+});
 
 const POLL_INTERVAL_MS = 30_000;
 
@@ -437,46 +441,20 @@ function DirectorPage(_props: StaffProps) {
   );
 
   /* -----------------------------------------------------------
-   * Lot 6 — auto-cue overrun T+5min.
-   *
-   * Deux mecanismes complementaires, PAS redondants :
-   *   - Idempotency-Key (header) : cache 24h cote DB (admin_idempotency).
-   *     Protege contre les RETRIES RESEAU du MEME caller (ex. re-mount du
-   *     watcher dans le meme onglet, double-click). Clef stable par segment.
-   *   - dedup_key (body) : partial UNIQUE INDEX cote DB (event_cues).
-   *     Protege contre les ecritures CONCURRENTES de callers DIFFERENTS —
-   *     ici client (ce hook) vs cron server-side `overrun-watcher-cron` qui
-   *     ecrit le meme cue si l'onglet Director est ferme. Le second writer
-   *     prend un 23505 cote handler, qui retourne 200 dedupReplayed=true.
-   *     Pour nous, c'est aussi un succes (res.ok = true).
+   * Lot 6 — auto-cue overrun T+5min. Mécanique et garde-fous d'idempotence :
+   * cf. components/admin/events/overrunAutoCue.ts.
    * ---------------------------------------------------------*/
-  const sendOverrunAutoCue = useCallback(
-    async (segmentId: string, body: string) => {
-      if (!runId) return;
-      const dedupKey = `auto-overrun:${runId}:${segmentId}`;
-      const res = await adminFetch(`/api/admin/events/${runId}/cues`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Idempotency-Key': dedupKey,
-        },
-        body: JSON.stringify({
-          severity: 'urgent',
-          body,
-          dedup_key: dedupKey,
-        }),
-      });
-      if (!res.ok) {
-        let msg = format(t.autoCueFailed, { status: res.status });
-        try {
-          const payload = await res.json();
-          if (payload?.error) msg = String(payload.error);
-        } catch {
-          // ignore parse error
-        }
-        throw new Error(msg);
-      }
-    },
+  const sendAutoCue = useCallback(
+    (segmentId: string, body: string) =>
+      runId
+        ? sendOverrunAutoCue({
+            adminFetch,
+            runId,
+            segmentId,
+            body,
+            failedTemplate: t.autoCueFailed,
+          })
+        : Promise.resolve(),
     [adminFetch, runId, t.autoCueFailed]
   );
 
@@ -484,7 +462,7 @@ function DirectorPage(_props: StaffProps) {
     runId,
     schedule,
     segments,
-    sendAutoCue: sendOverrunAutoCue,
+    sendAutoCue,
     enabled: !!run && run.status === 'live',
   });
 
@@ -1131,7 +1109,17 @@ function DirectorPage(_props: StaffProps) {
             />
           ) : (
             <div className="space-y-6">
-              <div className="flex justify-end">
+              <div className="flex items-center justify-end gap-3">
+                {/* Lot A6 : la régie journalise désormais ses gestes sous des
+                    slugs typés — autant pouvoir les relire d'ici, sur le run
+                    concerné, plutôt que dans le journal global. */}
+                {runId && (
+                  <EntityHistoryButton
+                    entityType="event_run"
+                    entityId={runId}
+                    className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/10"
+                  />
+                )}
                 <RealtimeStatusBadge
                   connected={realtimeConnected}
                   connectedLabel={t.realtimeConnected}

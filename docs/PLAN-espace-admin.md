@@ -380,7 +380,13 @@ pour les 116 lignes existantes), puis **généraliser le tiroir** : un composant
       reste dans `payload.action` — cinq familles suffisent à un filtre, vingt-deux entrées de
       menu déroulant, non.
 - [x] `GET /api/admin/entity-history` + `EntityHistoryDrawer` : générique, sur une liste FERMÉE
-      de types d'entité. Première fiche branchée : l'édition d'équipe.
+      de types d'entité, dont un test vérifie que **chaque type accepté est réellement écrit**
+      par un handler — un type ouvert mais jamais journalisé donnerait un tiroir vide, ce qui se
+      lit comme « personne n'y a touché ».
+- [x] Le tiroir est branché partout où la question se pose : fiche équipe
+      (`teams/[teamId]/edit`), vue joueuse (`users/[userId]/player-view`), régie
+      (`events/[runId]/director`) et ticket de signalement (`moderation/SupportPanel`), via un
+      `EntityHistoryButton` qui ramène le branchement à une ligne.
 - [x] Aucune réécriture du journal : les anciennes lignes `other` restent telles quelles et
       restent lisibles.
 
@@ -388,8 +394,16 @@ pour les 116 lignes existantes), puis **généraliser le tiroir** : un composant
 `game` reliés par `payload.match_id`, décrit les écarts de score) et n'a aucune raison d'être
 appauvri pour rentrer dans le cas générique.
 
-**Reste à faire** : brancher le tiroir sur les fiches tournoi, joueuse et ticket — le composant
-et la route les acceptent déjà.
+**Pas de tiroir sur la fiche tournoi** : elle a déjà mieux — une page dédiée
+[`tournament/[id]/history.tsx`](../pages/admin/tournament/[id]/history.tsx) adossée à
+`/api/admin/tournament/[id]/history`, qui recoupe le journal avec les matchs du tournoi. La
+remplacer par le cas générique serait un appauvrissement, comme pour `MatchHistoryDrawer`.
+
+**Dette A7 payée au passage** : les trois branchements faisaient grossir trois god-components
+gelés. Chacun a rendu un module au lieu d'une dérogation —
+`components/admin/moderation/supportLabels.ts`, `components/admin/users/playerViewDisplay.ts`,
+`components/admin/events/overrunAutoCue.ts`. Net : SupportPanel 1 210 → 1 168, player-view
+1 103 → 1 075, director 1 289 → 1 276.
 
 ---
 

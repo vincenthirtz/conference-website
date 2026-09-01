@@ -35,6 +35,13 @@ import {
 } from '@/utils/staff';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
+import EntityHistoryButton from '@/components/admin/EntityHistoryButton';
+import {
+  formatDate,
+  getDemandeTypeLabels,
+  initials,
+  roleTone,
+} from '@/components/admin/users/playerViewDisplay';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Modal from '@/components/ui/Modal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -117,49 +124,6 @@ type PendingDemande = {
   comment?: string | null;
   team?: { id: string; name: string } | null;
 };
-
-function formatDate(d: string | null | undefined): string {
-  if (!d) return '—';
-  try {
-    return new Date(d).toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-  } catch {
-    return '—';
-  }
-}
-
-function initials(name: string | null, email: string | null): string {
-  const source = (name || email || '?').trim();
-  return source.slice(0, 2).toUpperCase();
-}
-
-function getDemandeTypeLabels(t: Dict): Record<string, string> {
-  return {
-    captain_request: t.demandeTypeCaptainRequest,
-    join: t.demandeTypeJoin,
-    leave: t.demandeTypeLeave,
-    transfer: t.demandeTypeTransfer,
-    scrim: t.demandeTypeScrim,
-  };
-}
-
-function roleTone(role: string | null): BadgeTone {
-  switch ((role || '').toLowerCase()) {
-    case 'owner':
-      return 'purple';
-    case 'admin':
-      return 'red';
-    case 'caster':
-      return 'blue';
-    case 'player':
-      return 'emerald';
-    default:
-      return 'neutral';
-  }
-}
 
 function RoleBadge({ t, role }: { t: Dict; role: string | null }) {
   return <Badge tone={roleTone(role)}>{roleLabel(t, role)}</Badge>;
@@ -774,6 +738,15 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                       {t.actionsTitle}
                     </h3>
                     <div className="flex flex-wrap gap-2">
+                      {/* Lot A6 : l'historique se lit SUR la fiche. */}
+                      {userId && (
+                        <EntityHistoryButton
+                          entityType="user"
+                          entityId={userId}
+                          className="px-3 py-2 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-sm font-medium transition-colors"
+                        />
+                      )}
+
                       <button
                         type="button"
                         onClick={() => {

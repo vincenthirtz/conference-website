@@ -4,8 +4,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
-import EntityHistoryDrawer from '@/components/admin/EntityHistoryDrawer';
-import nsAdminEntityHistory from '@/lib/i18n/locales/admin-fr/adminEntityHistory';
+import EntityHistoryButton from '@/components/admin/EntityHistoryButton';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
@@ -73,7 +72,6 @@ function AdminEditTeamPage({
   teamRoles,
 }: StaffProps & { teamRoles: TeamRole[] }) {
   const t = useAdminT(nsAdminTeamEdit);
-  const tHistory = useAdminT(nsAdminEntityHistory);
   const router = useRouter();
   const { teamId } = router.query as { teamId?: string };
 
@@ -87,7 +85,6 @@ function AdminEditTeamPage({
   const { mutate: registerTournamentMutate } = useIdempotentMutation();
 
   const [team, setTeam] = useState<TeamRow | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [members, setMembers] = useState<TeamMemberRow[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
 
@@ -1007,13 +1004,11 @@ function AdminEditTeamPage({
                   {/* Lot A6 : l'historique se lit SUR la fiche. Aller le
                       chercher dans le journal global obligeait à quitter
                       l'écran et à reconstruire le contexte de tête. */}
-                  <button
-                    type="button"
-                    onClick={() => setHistoryOpen(true)}
+                  <EntityHistoryButton
+                    entityType="team"
+                    entityId={team.id}
                     className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-white/10"
-                  >
-                    {tHistory.openHistory}
-                  </button>
+                  />
                   {team.is_active ? (
                     <span className="px-3 py-1.5 rounded-full text-sm font-semibold bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
                       {t.active}
@@ -1533,15 +1528,6 @@ function AdminEditTeamPage({
         onBuildPreview={buildImportPreview}
         onApply={applyImport}
       />
-
-      {team && (
-        <EntityHistoryDrawer
-          entityType="team"
-          entityId={team.id}
-          open={historyOpen}
-          onClose={() => setHistoryOpen(false)}
-        />
-      )}
     </>
   );
 }
