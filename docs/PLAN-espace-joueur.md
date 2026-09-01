@@ -181,8 +181,9 @@ Conséquences concrètes, avec 7 coachs et 9 managers en prod :
 - [x] On ne délègue pas ce qu'on n'a pas (403), ni à quelqu'un hors de l'équipe (404).
 - [x] `assertTeamPermission` reste le seul garde-fou : la route exige `manage_roster` par lui.
 
-**Reste ouvert** : les rôles par tenant (`team_roles` est toujours un réglage global) — c'est le
-lot **A8** côté admin qui le débloque.
+**Point levé le 2026-09-01** : les rôles par tenant existent désormais — `site_settings` est
+scopé `(tenant_id, key)` et `loadTeamRolesFromSupabase` accepte un tenant (lot **A8**). Reste à
+exposer l'édition par tenant dans l'écran de réglages, ce qui n'est plus qu'un formulaire.
 
 ---
 
