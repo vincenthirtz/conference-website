@@ -6,10 +6,13 @@ import {
   TikTokIcon,
   InstagramIcon,
   TwitchIcon,
+  XIcon,
   YouTubeIcon,
+  DiscordIcon,
   RssIcon,
   DonationIcon,
 } from '@/components/Icons';
+import { DISPLAY_SOCIALS, type SocialKey } from '@/config/socials';
 import { useT } from '@/lib/i18n/useT';
 import nsFloatingSocials from '@/lib/i18n/locales/fr/floatingSocials';
 
@@ -20,31 +23,28 @@ type SocialLink = {
   hoverColor: string;
 };
 
+// Icône par réseau. Les URL viennent de `config/socials.ts` — c'est la liste
+// qui bouge, pas les tracés SVG.
+const SOCIAL_ICONS: Record<
+  SocialKey,
+  (props: Readonly<SVGTypes>) => JSX.Element
+> = {
+  tiktok: TikTokIcon,
+  instagram: InstagramIcon,
+  x: XIcon,
+  twitch: TwitchIcon,
+  youtube: YouTubeIcon,
+  discord: DiscordIcon,
+};
+
 const SOCIALS: SocialLink[] = [
-  {
-    name: 'TikTok',
-    href: 'https://www.tiktok.com/@ow_womenscup',
-    Icon: TikTokIcon,
-    hoverColor: 'group-hover:text-[#FF0050]',
-  },
-  {
-    name: 'Instagram',
-    href: 'https://www.instagram.com/womenscup_asso',
-    Icon: InstagramIcon,
-    hoverColor: 'group-hover:text-[#E1306C]',
-  },
-  {
-    name: 'Twitch',
-    href: 'https://www.twitch.tv/womens_cup',
-    Icon: TwitchIcon,
-    hoverColor: 'group-hover:text-[#9146FF]',
-  },
-  {
-    name: 'YouTube',
-    href: 'https://www.youtube.com/@owwomenscup',
-    Icon: YouTubeIcon,
-    hoverColor: 'group-hover:text-[#FF0000]',
-  },
+  ...DISPLAY_SOCIALS.map((s) => ({
+    name: s.name,
+    href: s.href,
+    Icon: SOCIAL_ICONS[s.key],
+    hoverColor: s.hoverColor,
+  })),
+  // Le flux RSS n'est pas un compte : il vit ici, pas dans config/socials.ts.
   {
     name: 'RSS',
     href: '/api/news/rss',

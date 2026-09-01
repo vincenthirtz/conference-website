@@ -17,6 +17,7 @@ export const SOCIAL_KEYS = [
   'discord',
   'twitch',
   'youtube',
+  'x',
   'instagram',
   'tiktok',
 ] as const;
@@ -27,6 +28,7 @@ const SOCIAL_ICONS: Record<(typeof SOCIAL_KEYS)[number], string> = {
   discord: '💬',
   twitch: '🟣',
   youtube: '📺',
+  x: '✖️',
   instagram: '📷',
   tiktok: '🎵',
 };
@@ -39,6 +41,9 @@ export function normalizeSocials(raw: unknown): CasterSocials {
     discord: s.discord || '',
     twitch: s.twitch || '',
     youtube: s.youtube || '',
+    // Clé AJOUTÉE après coup : une scène écrite par l'app desktop ne la porte
+    // pas, et c'est bien pour ça que cette normalisation existe.
+    x: s.x || '',
     instagram: s.instagram || '',
     tiktok: s.tiktok || '',
   };

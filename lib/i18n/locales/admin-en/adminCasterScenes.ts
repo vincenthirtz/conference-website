@@ -86,6 +86,8 @@ export default {
   socialTwitchPlaceholder: 'twitch.tv/womens_cup',
   socialYoutubeLabel: 'YouTube',
   socialYoutubePlaceholder: '@owwomenscup',
+  socialXLabel: 'X',
+  socialXPlaceholder: '@Womens_Cup',
   socialInstagramLabel: 'Instagram',
   socialInstagramPlaceholder: '@womenscup_asso',
   socialTiktokLabel: 'TikTok',

@@ -2,7 +2,9 @@ export {
   TikTokIcon,
   InstagramIcon,
   TwitchIcon,
+  XIcon,
   YouTubeIcon,
+  DiscordIcon,
   RssIcon,
 } from './social';
 export {

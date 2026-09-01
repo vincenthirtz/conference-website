@@ -57,6 +57,7 @@ export type CasterSocials = {
   discord: string;
   twitch: string;
   youtube: string;
+  x: string;
   instagram: string;
   tiktok: string;
 };

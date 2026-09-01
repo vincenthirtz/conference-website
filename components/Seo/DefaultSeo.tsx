@@ -2,6 +2,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useLang, type Lang } from '@/lib/i18n/LanguageProvider';
 import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
+import { SOCIALS } from '@/config/socials';
 
 /**
  * Chaîne éventuellement localisée. Une page peut fournir soit un simple
@@ -81,11 +82,12 @@ const organizationSchema = {
     'Tournoi esport',
     'Inclusion dans le jeu vidéo',
   ],
-  sameAs: [
-    'https://twitter.com/OWWomensCup',
-    'https://discord.gg/gERSsjC3Vd',
-    'https://www.twitch.tv/owwomenscup',
-  ],
+  // Dérivé de config/socials.ts. Cette liste était figée et FAUSSE : elle
+  // pointait vers un compte Twitter (`OWWomensCup`) et un salon Twitch
+  // (`owwomenscup`) qui ne sont pas ceux de l'asso. Les données structurées
+  // sont lues par les moteurs pour relier le site à ses comptes : une erreur
+  // ici ne se voit sur aucune page, et se propage quand même.
+  sameAs: SOCIALS.map((s) => s.href),
   contactPoint: {
     '@type': 'ContactPoint',
     email: 'owwomenscup@gmail.com',

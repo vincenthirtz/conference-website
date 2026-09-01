@@ -23,8 +23,11 @@ import {
   AppIcon,
   CodeIcon,
   TrophyIcon,
+  XIcon,
+  DiscordIcon,
 } from '@/components/Icons';
 import nsFooter from '@/lib/i18n/locales/fr/footer';
+import { DISPLAY_SOCIALS, type SocialKey } from '@/config/socials';
 
 type FooterLink = {
   label: string;
@@ -67,27 +70,28 @@ const legalLinks = (t: FooterDict): FooterLink[] => [
   },
 ];
 
+// Icône par réseau. Les URL, elles, viennent de `config/socials.ts` : c'est la
+// liste qui bouge quand un compte s'ouvre ou se ferme, pas les tracés SVG.
+const SOCIAL_ICONS: Record<
+  SocialKey,
+  (props: Readonly<SVGTypes>) => JSX.Element
+> = {
+  tiktok: TikTokIcon,
+  instagram: InstagramIcon,
+  x: XIcon,
+  twitch: TwitchIcon,
+  youtube: YouTubeIcon,
+  discord: DiscordIcon,
+};
+
 const socials: SocialLink[] = [
-  {
-    label: 'TikTok',
-    href: 'https://www.tiktok.com/@ow_womenscup',
-    Icon: TikTokIcon,
-  },
-  {
-    label: 'Instagram',
-    href: 'https://www.instagram.com/womenscup_asso',
-    Icon: InstagramIcon,
-  },
-  {
-    label: 'Twitch',
-    href: 'https://www.twitch.tv/womens_cup',
-    Icon: TwitchIcon,
-  },
-  {
-    label: 'YouTube',
-    href: 'https://www.youtube.com/@owwomenscup',
-    Icon: YouTubeIcon,
-  },
+  ...DISPLAY_SOCIALS.map((s) => ({
+    label: s.name,
+    href: s.href,
+    Icon: SOCIAL_ICONS[s.key],
+  })),
+  // Le flux RSS n'est pas un réseau social : il n'a pas de compte, personne ne
+  // s'y « abonne » au même sens. Il reste ici, pas dans config/socials.ts.
   { label: 'RSS', href: '/api/news/rss', Icon: RssIcon },
 ];
 

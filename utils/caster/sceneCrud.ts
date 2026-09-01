@@ -6,15 +6,17 @@
 // Zéro DOM, zéro réseau : le hook `useCasterScenes` applique les résultats.
 
 import type { CasterSceneType } from '@/types/caster';
+import { social } from '@/config/socials';
 
 /** Réseaux par défaut d'une nouvelle scène — mêmes valeurs que le desktop. */
 const DEFAULT_SOCIALS = {
   site: 'owwomenscup.fr',
   discord: 'discord.gg/gERSsjC3Vd',
-  twitch: 'twitch.tv/womens_cup',
-  youtube: '@owwomenscup',
-  instagram: '@womenscup_asso',
-  tiktok: '@ow_womenscup',
+  twitch: social('twitch').handle,
+  youtube: social('youtube').handle,
+  instagram: social('instagram').handle,
+  tiktok: social('tiktok').handle,
+  x: social('x').handle,
 };
 
 const DEFAULT_HASHTAG = '#WomensCup';

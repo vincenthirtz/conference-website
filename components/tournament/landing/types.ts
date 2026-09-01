@@ -5,6 +5,7 @@
 // composants.
 
 import type { MatchStatus } from '@/types/admin';
+import { socialUrl } from '@/config/socials';
 
 export type LandingTournament = {
   id: string;
@@ -78,11 +79,17 @@ export type LandingLeague = { slug: string; name: string };
 /** Statut normalisé utilisé par toute la landing (dérivé côté serveur). */
 export type TournamentPhase = 'upcoming' | 'live' | 'finished' | 'cancelled';
 
-/** Liens communautaires (réels — miroir de FloatingSocials / Footer). */
+/**
+ * Liens communautaires. DÉRIVÉS de `config/socials.ts` : c'était auparavant une
+ * copie, qu'il fallait penser à mettre à jour en même temps que la barre
+ * flottante et le pied de page — trois listes à garder en phase, donc trois
+ * occasions de diverger.
+ */
 export const COMMUNITY_LINKS = {
-  discord: 'https://discord.gg/gERSsjC3Vd',
-  twitch: 'https://www.twitch.tv/womens_cup',
-  youtube: 'https://www.youtube.com/@owwomenscup',
-  instagram: 'https://www.instagram.com/womenscup_asso',
-  tiktok: 'https://www.tiktok.com/@ow_womenscup',
+  discord: socialUrl('discord'),
+  twitch: socialUrl('twitch'),
+  youtube: socialUrl('youtube'),
+  instagram: socialUrl('instagram'),
+  tiktok: socialUrl('tiktok'),
+  x: socialUrl('x'),
 } as const;

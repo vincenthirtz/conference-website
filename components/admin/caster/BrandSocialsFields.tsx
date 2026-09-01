@@ -55,6 +55,11 @@ export default function BrandSocialsFields({
       placeholder: t.socialYoutubePlaceholder,
     },
     {
+      key: 'x',
+      label: t.socialXLabel,
+      placeholder: t.socialXPlaceholder,
+    },
+    {
       key: 'instagram',
       label: t.socialInstagramLabel,
       placeholder: t.socialInstagramPlaceholder,

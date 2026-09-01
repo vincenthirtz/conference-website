@@ -33,6 +33,7 @@ const EMPTY_SOCIALS = {
   discord: '',
   twitch: '',
   youtube: '',
+  x: '',
   instagram: '',
   tiktok: '',
 };

@@ -72,6 +72,37 @@ export function YouTubeIcon({
   );
 }
 
+export function XIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill={fill || 'currentColor'}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* Logo X (ex-Twitter). Le tracé est celui de la marque depuis 2023 —
+          l'oiseau ne correspond plus à rien pour qui regarde la page. */}
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
+
+export function DiscordIcon({
+  className,
+  fill,
+}: Readonly<SVGTypes>): JSX.Element {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill={fill || 'currentColor'}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="M20.32 4.57A19.79 19.79 0 0 0 15.43 3l-.24.44a18.3 18.3 0 0 1 4.34 1.4A16.3 16.3 0 0 0 12 3.7a16.3 16.3 0 0 0-7.53 1.14 18.3 18.3 0 0 1 4.34-1.4L8.57 3a19.79 19.79 0 0 0-4.89 1.57C.6 9.09-.24 13.5.18 17.84A19.9 19.9 0 0 0 6.2 21l.79-1.1a13 13 0 0 1-2.05-1c.17-.13.34-.26.5-.4a14.2 14.2 0 0 0 12.12 0c.16.14.33.27.5.4a13 13 0 0 1-2.05 1L16.8 21a19.9 19.9 0 0 0 6.02-3.16c.5-5.03-.84-9.4-2.5-13.27ZM8.02 15.33c-1.18 0-2.15-1.09-2.15-2.43s.95-2.44 2.15-2.44 2.17 1.1 2.15 2.44c0 1.34-.95 2.43-2.15 2.43Zm7.96 0c-1.18 0-2.15-1.09-2.15-2.43s.95-2.44 2.15-2.44 2.17 1.1 2.15 2.44c0 1.34-.95 2.43-2.15 2.43Z" />
+    </svg>
+  );
+}
+
 export function RssIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
   return (
     <svg

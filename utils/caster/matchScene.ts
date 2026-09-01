@@ -142,6 +142,7 @@ export function defaultMatchData(): MatchSceneData {
       discord: '',
       twitch: '',
       youtube: '',
+      x: '',
       instagram: '',
       tiktok: '',
     },
