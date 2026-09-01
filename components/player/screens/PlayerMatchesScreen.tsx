@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import AgendaCard from '@/components/player/AgendaCard';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
@@ -382,6 +383,13 @@ export default function PlayerMatchesScreen() {
           ) : (
             <p className="text-sm text-gray-400 mt-2">{t.yourSchedule}</p>
           )}
+        </div>
+
+        {/* Agenda (J2) — AVANT la liste : « qu'est-ce qui m'attend ? » se pose
+            avant « qu'ai-je joué ? ». Il porte toutes les équipes, la liste en
+            dessous reste centrée sur l'équipe active. */}
+        <div className="mb-8">
+          <AgendaCard />
         </div>
 
         {error && (

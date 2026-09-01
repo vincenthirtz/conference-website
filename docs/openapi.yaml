@@ -30261,6 +30261,112 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/ServerError'
+  /api/player/agenda:
+    get:
+      tags:
+        - public/auth
+      summary: Mes echeances — matchs, scrims et date butoir de roster.
+      description: |
+        Agenda personnel (lot J2 de docs/PLAN-espace-joueur.md). Porte TOUTES
+        les equipes de l'appelante (appartenances + equipes encadrees) :
+        volontairement insensible au selecteur d'equipe, un manager qui en
+        encadre trois a UN agenda. Inspectable `?as=`.
+      operationId: getPlayerAgenda
+      security:
+        - PlayerBearer: []
+      parameters:
+        - $ref: '#/components/parameters/SubjectAs'
+      responses:
+        '200':
+          description: Entrees triees par date croissante.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/player/agenda.ics:
+    get:
+      tags:
+        - public
+      summary: Flux iCalendar personnel (jeton porteur, sans session).
+      description: |
+        Appele par Google / Apple / Outlook Calendar, qui ne presentent jamais
+        de session : l'authentification est le JETON PORTEUR `?token=`, emis et
+        revocable depuis `/api/player/agenda/subscription`.
+
+        Jeton inconnu, revoque ou malforme -> **404 identique**, sans dire
+        lequel. Reponse `private, no-store` + `X-Robots-Tag: noindex`.
+      operationId: getPlayerAgendaIcs
+      security: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Flux iCalendar (RFC 5545).
+          content:
+            text/calendar:
+              schema:
+                type: string
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/player/agenda/subscription:
+    get:
+      tags:
+        - public/auth
+      summary: Mon lien d'abonnement calendrier (ou null).
+      operationId: getPlayerAgendaSubscription
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: '{ url, webcalUrl, createdAt, lastUsedAt } — url null si aucun abonnement.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags:
+        - public/auth
+      summary: Emettre un lien neuf (revoque le precedent).
+      operationId: rotatePlayerAgendaSubscription
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Le nouveau lien.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags:
+        - public/auth
+      summary: Revoquer mon lien d'abonnement.
+      operationId: revokePlayerAgendaSubscription
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Abonnement revoque.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/player/matches/{matchId}:
     get:
       tags:

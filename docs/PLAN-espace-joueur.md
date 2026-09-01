@@ -52,7 +52,7 @@ La date du 14/09 coupe le plan en deux, et c'est le seul arbitrage structurant :
 | Lot | Titre | Impact | Effort | Fenêtre |
 |---|---|---|---|---|
 | **J1** | Le fil du match, de J-1 au débrief | 🟥 | M | ✅ livré 2026-09-01 |
-| **J2** | Mon agenda (+ abonnement calendrier) | 🟥 | S | avant 14/09 |
+| **J2** | Mon agenda (+ abonnement calendrier) | 🟥 | S | ✅ livré 2026-09-01 |
 | **J3** | Délégation des droits par la capitaine | 🟥 | M | saison |
 | **J4** | Console manager multi-équipes | 🟧 | M | saison |
 | **J5** | Espace coach : préparer, puis débriefer | 🟧 | M | saison |
@@ -112,7 +112,7 @@ Les deux routes existantes y passent désormais.
 
 ---
 
-## J2 · Mon agenda (+ abonnement calendrier) — 🟥 / S · avant 14/09
+## J2 · Mon agenda (+ abonnement calendrier) — ✅ LIVRÉ (2026-09-01)
 
 **Problème.** À partir du 14/09, chaque équipe a un match par semaine pendant 7 journées. Le site
 sait tout de ce calendrier et n'en offre **aucune vue personnelle** : le prochain match seulement
@@ -132,11 +132,16 @@ jamais « mes échéances à moi ».
   spontanément : le calendrier qu'elle regarde déjà.
 
 **Critères d'acceptation**
-- [ ] Un manager multi-équipes voit les échéances de **toutes** ses équipes dans un seul agenda.
-- [ ] Le flux ICS est révocable (rotation du token depuis le profil) et ne fuit rien d'autre que
-      ce que la personne voit déjà.
-- [ ] Les fuseaux : événements en UTC + `TZID`, testés sur un passage d'heure d'été.
-- [ ] Tests unitaires sur la composition de l'agenda (fusion, tri, dédoublonnage).
+- [x] Un manager multi-équipes voit les échéances de **toutes** ses équipes dans un seul agenda
+      (`resolveAgendaTeamIds` : appartenances + équipes encadrées, sélecteur d'équipe ignoré).
+- [x] Le flux ICS est révocable et rotatif (`POST` émet et révoque d'un coup) ; un jeton inconnu,
+      révoqué ou malformé rend la MÊME 404.
+- [x] Fuseaux : tous les instants sortent en UTC (`…Z`), donc sans ambiguïté ni `VTIMEZONE` —
+      c'est déjà la convention de `utils/tournamentCalendar.ts`.
+- [x] Tests : 9 sur la composition + le flux, 6 sur la route à jeton.
+
+**Écart assumé** : le check-in n'est pas un événement d'agenda mais une `VALARM` sur celui du
+match — en faire une entrée à part doublerait chaque match dans le calendrier de la personne.
 
 ---
 

@@ -3421,6 +3421,18 @@ sont partagées avec `/api/player/next-match` et `/api/player/matches` via
 [`utils/matches/playerMatchView.ts`](../utils/matches/playerMatchView.ts) — trois
 routes, une seule règle.
 
+### Agenda personnel (espace joueur)
+
+Lot J2 de [PLAN-espace-joueur.md](./PLAN-espace-joueur.md). L'agenda porte
+**toutes** les équipes de la personne (appartenances + équipes encadrées) : un
+manager qui en encadre trois a un seul agenda.
+
+| Route                                                                                  | Methods         | Auth                              | Notes                                                                                                                                                                                                                                                            |
+| -------------------------------------------------------------------------------------- | --------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`pages/api/player/agenda.ts`](../pages/api/player/agenda.ts)                           | GET             | Bearer joueur (`withSubjectRoute`) | `200 { teams[], entries[] }` triées par date : matchs, scrims, date butoir de roster. Le check-in est porté par l'entrée du match (`checkinOpensAt`), jamais comme entrée séparée. Rate-limit **60 / min**.                                                       |
+| [`pages/api/player/agenda.ics.ts`](../pages/api/player/agenda.ics.ts)                   | GET             | **jeton porteur** `?token=`        | Flux iCalendar pour Google/Apple/Outlook, qui ne présentent jamais de session. Jeton inconnu / révoqué / malformé → **404 identique**. `private, no-store` + `X-Robots-Tag: noindex`. Le check-in devient une `VALARM`. Rate-limit **30 / min** par IP.        |
+| [`pages/api/player/agenda/subscription.ts`](../pages/api/player/agenda/subscription.ts) | GET/POST/DELETE | Bearer joueur (`withAuthRoute`)    | `GET` le lien courant (ou `url: null`), `POST` en émet un neuf **et révoque le précédent**, `DELETE` révoque. Un seul jeton actif par (tenant, compte) — index partiel `player_calendar_tokens_active_key`. Jamais inspectable `?as=`. Rate-limit **20 / min**. |
+
 ## Where it lives
 
 - **Middleware** — [`utils/botAuth.ts`](../utils/botAuth.ts) (`withBotRoute`,
