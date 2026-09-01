@@ -182,4 +182,16 @@ export default {
   permSendCaptainMessages: 'Send team messages',
   permEditPublicPage: 'Customise the public page',
   permValidateLineup: 'Validate the lineup',
+
+  delegateTitle: 'Delegated rights',
+  delegateHelp:
+    'You can hand one specific responsibility to a teammate without changing their role. You can only delegate what you have yourself, and a delegation never removes a right granted by the role.',
+  delegateOpen: 'Rights',
+  delegateClose: 'Close',
+  delegateFromRole: 'from their role',
+  delegateGranted: 'delegated',
+  delegateNone: 'No specific rights.',
+  delegateSaved: 'Rights updated.',
+  delegateError: 'Updating the rights failed.',
+  delegateLoadError: 'Rights could not be loaded.',
 };

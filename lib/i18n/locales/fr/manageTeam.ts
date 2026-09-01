@@ -194,4 +194,17 @@ export default ns('manageTeam', {
   permSendCaptainMessages: 'Envoyer des messages équipe',
   permEditPublicPage: 'Personnaliser la page publique',
   permValidateLineup: 'Valider la feuille de match',
+
+  // ── Délégation de droits (lot J3) ────────────────────────────────────
+  delegateTitle: 'Droits délégués',
+  delegateHelp:
+    "Tu peux confier une responsabilité précise à une coéquipière sans changer son rôle. Tu ne peux déléguer que ce que tu as toi-même, et une délégation n'enlève jamais un droit donné par le rôle.",
+  delegateOpen: 'Droits',
+  delegateClose: 'Fermer',
+  delegateFromRole: 'vient de son rôle',
+  delegateGranted: 'délégué',
+  delegateNone: 'Aucun droit particulier.',
+  delegateSaved: 'Droits mis à jour.',
+  delegateError: 'La mise à jour des droits a échoué.',
+  delegateLoadError: 'Les droits n’ont pas pu être chargés.',
 });

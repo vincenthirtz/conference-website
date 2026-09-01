@@ -27801,6 +27801,106 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/teams/member-permissions:
+    get:
+      tags:
+        - public/auth
+      summary: Droits delegues dans l'equipe (lot J3), avec leur source.
+      description: |
+        Rend, par membre, ce qui vient du ROLE (non retirable ici) et ce qui a
+        ete DELEGUE (revocable), plus `delegatable` = ce que l'appelant peut
+        deleguer. Le journal (`grants`) inclut les delegations revoquees : la
+        table est aussi la trace de qui a donne quoi.
+
+        Exige la permission d'equipe `manage_roster`.
+      operationId: getTeamMemberPermissions
+      security:
+        - PlayerBearer: []
+      parameters:
+        - $ref: '#/components/parameters/TeamScope'
+      responses:
+        '200':
+          description: '{ teamId, grants[], members[], delegatable[] }'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - public/auth
+      summary: Deleguer une permission a un membre (additif).
+      description: |
+        Refuse (403) si l'appelant ne possede pas lui-meme la permission :
+        sans cette regle, un role partiel s'auto-elargirait. Idempotent.
+      operationId: grantTeamMemberPermission
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, permission]
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                permission:
+                  type: string
+      responses:
+        '200':
+          description: Permission accordee.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - public/auth
+      summary: Revoquer une delegation (soft — la ligne reste, comme journal).
+      operationId: revokeTeamMemberPermission
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, permission]
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                permission:
+                  type: string
+      responses:
+        '200':
+          description: Delegation revoquee.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/teams/toggle-joinable:
     post:
       parameters:

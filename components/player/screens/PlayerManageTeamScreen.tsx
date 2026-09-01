@@ -27,6 +27,7 @@ import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import CopyButton from '@/components/player/CopyButton';
 import FreePlayersSection from '@/components/player/FreePlayersSection';
 import TeamJoinLinkPanel from '@/components/player/TeamJoinLinkPanel';
+import MemberRightsPanel from '@/components/player/MemberRightsPanel';
 import BattlenetVerifyCard from '@/components/player/BattlenetVerifyCard';
 import RegistrationDeadlineBanner from '@/components/player/RegistrationDeadlineBanner';
 import TeamRegistrationCard from '@/components/player/TeamRegistrationCard';
@@ -279,6 +280,8 @@ export default function PlayerManageTeamScreen() {
   const [isCaptain, setIsCaptain] = useState(false);
   const [isManager, setIsManager] = useState(false);
   const [permissions, setPermissions] = useState<TeamPermission[]>([]);
+  /** Membre dont le panneau de droits est ouvert (un seul à la fois). */
+  const [rightsFor, setRightsFor] = useState<string | null>(null);
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
   const [sentInvitations, setSentInvitations] = useState<SentInvitation[]>([]);
   const [invitationsError, setInvitationsError] = useState(false);
@@ -1686,6 +1689,25 @@ export default function PlayerManageTeamScreen() {
                                     {t.roleManager}
                                   </option>
                                 </select>
+                                {/* Délégation de droits (J3) : confier une
+                                    responsabilité précise sans changer le rôle.
+                                    Réservé à qui gère le roster — c'est la
+                                    règle appliquée par la route. */}
+                                {m.user_id && (
+                                  <button
+                                    onClick={() =>
+                                      setRightsFor((cur) =>
+                                        cur === m.user_id ? null : m.user_id
+                                      )
+                                    }
+                                    className="px-2 py-1 rounded-lg border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-200 text-xs font-semibold transition"
+                                    aria-expanded={rightsFor === m.user_id}
+                                  >
+                                    {rightsFor === m.user_id
+                                      ? t.delegateClose
+                                      : t.delegateOpen}
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => confirmPromote(m)}
                                   disabled={!!actionLoading || !m.user_id}
@@ -1725,6 +1747,12 @@ export default function PlayerManageTeamScreen() {
                       </div>
                     )}
                   </div>
+                  {canEditRoster && rightsFor && rightsFor === m.user_id && (
+                    <MemberRightsPanel
+                      memberUserId={m.user_id as string}
+                      scopeUrl={(url) => withTeam(withSubject(url))}
+                    />
+                  )}
                 </Fragment>
               ))}
             </div>

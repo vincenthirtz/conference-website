@@ -53,7 +53,7 @@ La date du 14/09 coupe le plan en deux, et c'est le seul arbitrage structurant :
 |---|---|---|---|---|
 | **J1** | Le fil du match, de J-1 au débrief | 🟥 | M | ✅ livré 2026-09-01 |
 | **J2** | Mon agenda (+ abonnement calendrier) | 🟥 | S | ✅ livré 2026-09-01 |
-| **J3** | Délégation des droits par la capitaine | 🟥 | M | saison |
+| **J3** | Délégation des droits par la capitaine | 🟥 | M | ✅ livré 2026-09-01 |
 | **J4** | Console manager multi-équipes | 🟧 | M | saison |
 | **J5** | Espace coach : préparer, puis débriefer | 🟧 | M | saison |
 | **J6** | Dashboard priorisé (« à faire », pas « tout ») | 🟧 | M | après |
@@ -145,7 +145,7 @@ match — en faire une entrée à part doublerait chaque match dans le calendrie
 
 ---
 
-## J3 · Délégation des droits par la capitaine — 🟥 / M · saison
+## J3 · Délégation des droits par la capitaine — ✅ LIVRÉ (2026-09-01)
 
 **Problème.** Depuis le 31/08, l'espace joueur affiche exactement ce que chaque rôle peut faire.
 Reste la question d'après : **personne dans l'équipe ne peut changer ces droits.** La configuration
@@ -173,12 +173,16 @@ Conséquences concrètes, avec 7 coachs et 9 managers en prod :
    (dépend de **A8** côté admin).
 
 **Critères d'acceptation**
-- [ ] Une capitaine accorde `manage_scrims` à une joueuse sans changer son rôle, et le retire.
-- [ ] Toute délégation est journalisée (qui, à qui, quoi, quand) et visible dans l'équipe.
-- [ ] Une surcharge ne peut jamais **retirer** ce que le rôle accorde (additif seulement) —
-      sinon deux managers pourraient se neutraliser mutuellement.
-- [ ] La capitaine ne peut pas déléguer ce qu'elle n'a pas (elle a tout, mais un manager non).
-- [ ] `assertTeamPermission` reste le seul garde-fou serveur : aucun nouvel endroit ne décide.
+- [x] Une capitaine accorde `manage_scrims` à une joueuse sans changer son rôle, et le retire
+      (panneau « Droits » sur chaque ligne de roster).
+- [x] Journalisée : la révocation est SOFT (`revoked_at` / `revoked_by`), la table EST le journal,
+      relu par le `GET`.
+- [x] Additif seulement : `getManagedTeams` fait l'union rôle ∪ surcharge, aucun « deny ».
+- [x] On ne délègue pas ce qu'on n'a pas (403), ni à quelqu'un hors de l'équipe (404).
+- [x] `assertTeamPermission` reste le seul garde-fou : la route exige `manage_roster` par lui.
+
+**Reste ouvert** : les rôles par tenant (`team_roles` est toujours un réglage global) — c'est le
+lot **A8** côté admin qui le débloque.
 
 ---
 

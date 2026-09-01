@@ -3421,6 +3421,23 @@ sont partagées avec `/api/player/next-match` et `/api/player/matches` via
 [`utils/matches/playerMatchView.ts`](../utils/matches/playerMatchView.ts) — trois
 routes, une seule règle.
 
+### Délégation de droits d'équipe (espace joueur)
+
+Lot J3 de [PLAN-espace-joueur.md](./PLAN-espace-joueur.md). Les permissions
+d'équipe venaient uniquement du RÔLE (`site_settings.team_roles`, global et
+staff-only) : confier « les scrims » imposait de donner le rôle `coach`, qui
+porte aussi la feuille de match. Une couche **additive** décidée par l'équipe
+elle-même comble ce trou.
+
+| Route                                                                            | Methods         | Auth                               | Notes                                                                                                                                                                                                                                                                                                                       |
+| --------------------------------------------------------------------------------- | --------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`pages/api/teams/member-permissions.ts`](../pages/api/teams/member-permissions.ts) | GET/POST/DELETE | Bearer joueur (`withSubjectRoute`) | Exige `manage_roster`. `POST` refuse (403) une permission que l'appelant n'a pas lui-même (sinon un rôle partiel s'auto-élargit) et 404 si la cible n'est pas dans l'équipe. `DELETE` révoque en SOFT (`revoked_at`) : la table `team_member_permissions` est aussi le journal. Rate-limit **30 / min**. |
+
+La surcharge ne **retire** jamais ce qu'un rôle accorde : `getManagedTeams` en
+fait l'union (`permissions`) et expose la part déléguée à part
+(`grantedPermissions`). Une surcharge peut à elle seule créer un accès pour une
+joueuse sans rôle privilégié.
+
 ### Agenda personnel (espace joueur)
 
 Lot J2 de [PLAN-espace-joueur.md](./PLAN-espace-joueur.md). L'agenda porte

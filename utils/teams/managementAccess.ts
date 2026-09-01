@@ -9,6 +9,7 @@
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import {
+  isTeamPermission,
   loadTeamRolesFromSupabase,
   privilegedRoleValues,
   TEAM_PERMISSION_VALUES,
@@ -22,6 +23,16 @@ export type TeamManagementAccess = {
   isCaptain: boolean;
   /** true si l'user a un team_members.role accordant >=1 permission */
   isManager: boolean;
+  /**
+   * Permissions issues d'une SURCHARGE par membre (table
+   * `team_member_permissions`, lot J3) — c'est-à-dire déléguées par l'équipe
+   * elle-même, et non héritées du rôle. Sous-ensemble de `permissions`.
+   *
+   * Exposé séparément parce que la question « d'où vient ce droit ? » se pose :
+   * l'écran doit pouvoir dire à une capitaine ce qu'elle a délégué et le lui
+   * reprendre, sans toucher au rôle.
+   */
+  grantedPermissions: TeamPermission[];
   /**
    * Permissions EFFECTIVES de l'utilisateur sur cette équipe.
    *
@@ -122,6 +133,11 @@ export async function getManagedTeams(
 
   const onlyTeamId = options.teamId || null;
 
+  // Surcharges par membre (J3) : elles peuvent à elles seules CRÉER un accès —
+  // une joueuse ordinaire à qui l'on a délégué « les scrims » n'a ni le
+  // capitanat ni un rôle privilégié, et doit pourtant apparaître ici.
+  const overrides = await loadPermissionOverrides(userId, tenantId, onlyTeamId);
+
   // Les rôles d'équipe (site_settings) sont chargés en parallèle de la query
   // capitaine : ils ne servent qu'à la seconde, et la latence ne s'additionne
   // pas. Avant le multi-équipe, un capitaine court-circuitait tout — ce
@@ -154,12 +170,14 @@ export async function getManagedTeams(
       teamId: row.id,
       isCaptain: true,
       isManager: false,
+      // Une capitaine a déjà tout : une surcharge ne lui ajoute rien, mais on
+      // la reporte pour que l'écran puisse la lui montrer (et la retirer).
+      grantedPermissions: overrides.get(row.id) ?? [],
       permissions: [...TEAM_PERMISSION_VALUES],
     });
   }
 
   const privileged = privilegedRoleValues(roles);
-  if (privileged.length === 0) return accesses;
 
   // On lit AUSSI le rôle (pas seulement team_id) : c'est lui qui détermine les
   // permissions effectives. Aucune requête supplémentaire.
@@ -191,15 +209,94 @@ export async function getManagedTeams(
     // passerait les gardes « access non nul » des appelants.
     if (!permissions || permissions.length === 0) continue;
     seen.add(teamId);
+    const granted = overrides.get(teamId) ?? [];
     accesses.push({
       teamId,
       isCaptain: false,
       isManager: true,
-      permissions: [...permissions],
+      grantedPermissions: granted,
+      // Union rôle ∪ surcharge : la surcharge est ADDITIVE, elle ne retire
+      // jamais ce que le rôle accorde (cf. migration add_team_member_permissions).
+      permissions: mergePermissions(permissions, granted),
+    });
+  }
+
+  // Équipes où l'accès ne vient QUE d'une surcharge : ni capitanat, ni rôle
+  // privilégié. Sans cette passe, déléguer une permission à une joueuse
+  // ordinaire n'aurait aucun effet — `getManagedTeams` ne la verrait pas.
+  for (const [teamId, granted] of overrides) {
+    if (seen.has(teamId) || granted.length === 0) continue;
+    seen.add(teamId);
+    accesses.push({
+      teamId,
+      isCaptain: false,
+      // `isManager` = « ce compte a des droits de gestion sur cette équipe ».
+      // Une surcharge en donne, donc oui — c'est ce que lisent les écrans.
+      isManager: true,
+      grantedPermissions: granted,
+      permissions: [...granted],
     });
   }
 
   return accesses;
+}
+
+/** Union ordonnée sur le catalogue canonique (pas d'ordre d'insertion). */
+function mergePermissions(
+  a: readonly TeamPermission[],
+  b: readonly TeamPermission[]
+): TeamPermission[] {
+  const set = new Set<TeamPermission>([...a, ...b]);
+  return TEAM_PERMISSION_VALUES.filter((p) => set.has(p));
+}
+
+/**
+ * Surcharges ACTIVES d'un compte, groupées par équipe.
+ *
+ * Erreur DB → map vide : on dégrade vers « aucune délégation », jamais vers
+ * une élévation de droits. C'est le sens de lecture sûr.
+ */
+async function loadPermissionOverrides(
+  userId: string,
+  tenantId: string,
+  onlyTeamId: string | null
+): Promise<Map<string, TeamPermission[]>> {
+  const byTeam = new Map<string, TeamPermission[]>();
+  if (!supabaseAdmin) return byTeam;
+
+  let query = supabaseAdmin
+    .from('team_member_permissions')
+    .select('team_id, permission')
+    .eq('user_id', userId)
+    .eq('tenant_id', tenantId)
+    .is('revoked_at', null);
+  if (onlyTeamId) query = query.eq('team_id', onlyTeamId);
+
+  const { data, error } = await query;
+  if (error) {
+    logger.error('[getManagedTeams] permission overrides error', error);
+    return byTeam;
+  }
+
+  for (const row of (data as
+    | { team_id?: string | null; permission?: string | null }[]
+    | null) ?? []) {
+    const teamId = row?.team_id;
+    const permission = row?.permission;
+    if (!teamId || !isTeamPermission(permission)) continue;
+    const list = byTeam.get(teamId) ?? [];
+    if (!list.includes(permission)) list.push(permission);
+    byTeam.set(teamId, list);
+  }
+
+  // Ordre canonique, pour que deux lectures identiques rendent la même liste.
+  for (const [teamId, list] of byTeam) {
+    byTeam.set(
+      teamId,
+      TEAM_PERMISSION_VALUES.filter((p) => list.includes(p))
+    );
+  }
+  return byTeam;
 }
 
 /**
