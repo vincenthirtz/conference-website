@@ -33,7 +33,7 @@ export type TournamentMapInput = {
 };
 
 // Rôle minimum : manager (peut gérer les settings du tournoi)
-export default withStaffRoute(handler, 'admin');
+export default withStaffRoute(handler, { permission: 'manage_tournaments' });
 
 async function handler(
   req: NextApiRequest,

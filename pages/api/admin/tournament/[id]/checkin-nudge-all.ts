@@ -153,6 +153,7 @@ async function handler(
         tournament_id: tournamentId,
         payload: { scope: 'all_missing', nudged, matches: touchedMatches },
         tenant_id: ctx.tenantId,
+        permission: ctx.permission,
       });
     }
 

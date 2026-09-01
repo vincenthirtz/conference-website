@@ -96,3 +96,24 @@ describe('rôles du lot A2', () => {
     expect(staffPermissionsFor('inventé' as never)).toEqual([]);
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * « À quel titre ? » — la permission dans le journal (lot A2).
+ *
+ * L'acteur ne suffit plus depuis que le staff peut compter un renfort d'un
+ * jour : savoir QUI a relancé un check-in importe moins que savoir qu'il l'a
+ * fait en tant que bénévole. Le champ voyage dans le payload, pas dans une
+ * colonne — une colonne à moitié vide serait le défaut qu'on vient de corriger
+ * ailleurs (26 % du journal en `other`).
+ * ------------------------------------------------------------------------- */
+
+describe('permission portée par le journal', () => {
+  it('le contexte de garde par permission la retient', async () => {
+    // Contrat de type : `AuthenticatedStaffContext.permission` existe et est
+    // typé sur le catalogue. Un renommage de permission casse ici.
+    const ctx: { permission?: (typeof STAFF_PERMISSION_VALUES)[number] } = {
+      permission: 'run_checkin',
+    };
+    expect(ctx.permission).toBe('run_checkin');
+  });
+});

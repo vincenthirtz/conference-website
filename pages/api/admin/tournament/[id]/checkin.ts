@@ -43,10 +43,13 @@ async function handler(
       if (ctx?.staff?.id) {
         await logStaffAction({
           staff_id: ctx.staff.id,
-          action: 'other',
+          // Slug typé (lot A6) : ce geste EST une relance manuelle du
+          // processeur, pas un « autre ».
+          action: 'checkin_manual_nudge',
           entity_type: 'tournament',
           entity_id: tournamentId,
           tournament_id: tournamentId,
+          permission: ctx.permission,
           payload: {
             kind: 'checkin_manual_run',
             scanned: summary.scanned,

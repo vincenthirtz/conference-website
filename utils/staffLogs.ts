@@ -30,7 +30,15 @@ export async function logStaffAction(params: StaffLogInsert) {
     tournament_id = null,
     payload = null,
     tenant_id = null,
+    permission = null,
   } = params;
+
+  // La permission rejoint le payload : elle décrit le DROIT invoqué, pas
+  // l'objet touché, et n'a donc pas sa place dans une colonne dédiée tant que
+  // seules quelques routes la renseignent.
+  const finalPayload = permission
+    ? { ...(payload ?? {}), permission }
+    : payload;
 
   const { error } = await supabaseAdmin.from('staff_logs').insert({
     staff_id,
@@ -38,7 +46,7 @@ export async function logStaffAction(params: StaffLogInsert) {
     entity_type,
     entity_id,
     tournament_id,
-    payload,
+    payload: finalPayload,
     // TODO(S7): rendre obligatoire une fois le switcher tenant deploye et
     // tous les call sites adaptes. Pour l'instant on default a
     // DEFAULT_TENANT_ID — toujours mono-tenant en prod, defense-in-depth.

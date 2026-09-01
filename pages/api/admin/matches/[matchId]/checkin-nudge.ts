@@ -165,6 +165,7 @@ async function handler(
         tournament_id: match.tournament_id ?? null,
         payload: { team_sides: emitted },
         tenant_id: ctx.tenantId,
+        permission: ctx.permission,
       });
     }
 

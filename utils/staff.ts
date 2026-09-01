@@ -433,7 +433,10 @@ export async function requireStaffPermissionFromRequest(
       `Ce rôle ne couvre pas la permission « ${permission} ».`
     );
   }
-  return ctx;
+  // Le contexte retient PAR QUOI l'accès a été accordé : le journal peut alors
+  // dire « à quel titre », ce qui compte dès que l'acteur peut être un renfort
+  // d'un jour et non un administrateur.
+  return { ...ctx, permission };
 }
 
 /* -----------------------------------------------------------

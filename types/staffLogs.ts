@@ -332,6 +332,13 @@ export type StaffLogInsert = {
    * tenant deploye et tous les call sites adaptes.
    */
   tenant_id?: string | null;
+  /**
+   * Permission qui a autorisé le geste (lot A2). Écrite dans le payload sous
+   * `permission`, jamais dans une colonne : `staff_logs` n'en a pas, et en
+   * ajouter une pour un champ que seules quelques routes renseignent serait
+   * une colonne à moitié vide de plus.
+   */
+  permission?: string | null;
 };
 
 export type StaffLogsFilters = {

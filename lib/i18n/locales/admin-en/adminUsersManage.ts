@@ -192,4 +192,6 @@ export default {
     'Staff actions on the account itself (role, suspension, access, profile). Roster changes are logged on the team page.',
   errLogs: 'Failed to load the history.',
   close: 'Close',
+  roleReferee: 'Referee',
+  roleHelper: 'Volunteer',
 };

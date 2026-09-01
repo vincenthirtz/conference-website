@@ -166,7 +166,7 @@ export default adminNs('adminUsersManage', {
   unsuspendTitle: 'Lever la suspension',
   suspendModalTitle: 'Suspendre le compte',
   suspendHelp:
-    "Le compte, ses équipes et son historique sont conservés : seule la connexion est refusée. Réversible à tout moment.",
+    'Le compte, ses équipes et son historique sont conservés : seule la connexion est refusée. Réversible à tout moment.',
   suspendDurationLabel: 'Durée',
   suspendDuration24h: '24 heures',
   suspendDuration7d: '7 jours',
@@ -193,4 +193,6 @@ export default adminNs('adminUsersManage', {
   filterCommunity: 'Communauté',
   exportTruncated:
     'Export partiel : {count} ligne(s) exportée(s) avant que la limite de requêtes ne soit atteinte.',
+  roleReferee: 'Arbitre',
+  roleHelper: 'Bénévole',
 });

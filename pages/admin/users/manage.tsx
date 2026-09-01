@@ -14,6 +14,7 @@ import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Modal from '@/components/admin/Modal';
+import { roleColor, roleLabel } from '@/components/admin/users/roleDisplay';
 import { Skeleton } from '@/components/admin/Skeleton';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
@@ -145,8 +146,19 @@ function readViewState(query: Record<string, string | string[] | undefined>) {
 
 /** Rôles de compte n'ouvrant aucun accès au back-office. */
 const COMMUNITY_ROLES = ['member', 'player'];
-/** Rôles de compte qui provisionnent une entrée `staff` (ordre croissant). */
-const STAFF_ROLE_OPTIONS = ['caster', 'admin', 'owner'];
+/**
+ * Rôles de compte qui provisionnent une entrée `staff`, du plus étroit au plus
+ * large.
+ *
+ * DÉRIVÉ de `STAFF_ROLES` (utils/staff.ts) et non plus recopié à la main : la
+ * liste figée `['caster', 'admin', 'owner']` a survécu à l'arrivée de `referee`
+ * et `helper` (lot A2), et cet écran — le seul qui change le rôle d'un compte
+ * EXISTANT, c'est-à-dire le cas courant quand on enrôle un renfort — ne les
+ * proposait pas. Le rôle était créable à l'inscription, pas attribuable ensuite.
+ */
+const STAFF_ROLE_OPTIONS: string[] = [...STAFF_ROLES].sort(
+  (a, b) => STAFF_ROLE_RANK[a] - STAFF_ROLE_RANK[b]
+);
 /** Union à plat — utilisée pour le filtre et les gardes existantes. */
 const ROLES = [...COMMUNITY_ROLES, ...STAFF_ROLE_OPTIONS];
 
@@ -193,42 +205,6 @@ const BATTLE_TAG_RE = BATTLE_TAG_REGEX;
 
 function isStaffRoleValue(role: string | null): boolean {
   return STAFF_ROLE_OPTIONS.includes((role || '').toLowerCase());
-}
-
-function roleLabel(t: Dict, role: string | null) {
-  switch (role?.toLowerCase()) {
-    case 'owner':
-      return t.roleOwner;
-    case 'admin':
-      return t.roleAdmin;
-    case 'manager':
-      return t.roleManager;
-    case 'caster':
-      return t.roleCaster;
-    case 'player':
-      return t.rolePlayer;
-    case 'member':
-      return t.roleMember;
-    default:
-      return role || t.roleMember;
-  }
-}
-
-function roleColor(role: string | null) {
-  switch (role?.toLowerCase()) {
-    case 'owner':
-      return 'bg-purple-600 text-white';
-    case 'admin':
-      return 'bg-red-600 text-white';
-    case 'manager':
-      return 'bg-blue-600 text-white';
-    case 'caster':
-      return 'bg-amber-600 text-white';
-    case 'player':
-      return 'bg-emerald-600 text-white';
-    default:
-      return 'bg-neutral-600 text-neutral-100';
-  }
 }
 
 /** Libellé d'un rôle d'ÉQUIPE (team_members.role) — dimension distincte du
@@ -1218,9 +1194,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
           body: JSON.stringify({ userId: user.id, action: 'unsuspend' }),
         });
         mutate((prev) =>
-          prev.map((u) =>
-            u.id === user.id ? { ...u, banned_until: null } : u
-          )
+          prev.map((u) => (u.id === user.id ? { ...u, banned_until: null } : u))
         );
         addToast(t.toastUnsuspended, 'success');
       } catch (err: unknown) {

@@ -116,10 +116,14 @@ STAFF_PERMISSION_CATALOG = [
 ]
 ```
 
-`owner` garde tout ; `admin` reçoit le catalogue moins `manage_billing`/`manage_settings` ;
-`caster` reste tel quel ; et deux rôles nouveaux — **`arbitre`** (`arbitrate_matches`,
-`run_checkin`) et **`bénévole`** (`run_checkin`) — deviennent possibles. `withStaffPage` et
+`owner` garde tout ; `admin` reçoit le catalogue moins `manage_tenant` ; `caster` garde son
+périmètre exact (`use_cast_cockpit`) ; et deux rôles nouveaux — **`referee`** (`arbitrate_matches`,
+`run_checkin`) et **`helper`** (`run_checkin`) — deviennent possibles. `withStaffPage` et
 `withStaffRoute` acceptent une permission au lieu d'un rôle, avec équivalence rétrocompatible.
+
+> *Ce paragraphe a été corrigé le 2026-09-01 : la première rédaction annonçait « admin moins
+> `manage_billing`/`manage_settings` », ce qui aurait rétréci le périmètre de l'admin. Cf. les deux
+> corrections en fin de section.*
 
 **Critères d'acceptation**
 - [x] `withStaffPage('admin')` et `withStaffRoute(h, 'caster')` continuent de fonctionner : la
@@ -129,11 +133,24 @@ STAFF_PERMISSION_CATALOG = [
 - [x] `referee` et `helper` sont sous `caster` au rang : leur accès ne passe QUE par les
       permissions, jamais par l'échelle héritée (testé).
 - [x] Aucune page admin sans garde — `tests/unit/adminPageGuards.test.ts` lit l'arbre.
-- [x] Les deux rôles sont attribuables depuis l'UI (`/admin/users/new`, et `getRoleOptions`
-      alimente déjà les sélecteurs) ; la CHECK `staff_role_check` les acceptait déjà, donc
-      aucune migration.
+- [x] Les deux rôles sont attribuables depuis l'UI — à la création (`/admin/users/new`) **et sur
+      un compte existant** (`/admin/users/manage`). Ce second écran gardait une copie CLIENT
+      figée `['caster','admin','owner']` : le rôle était créable mais pas attribuable ensuite,
+      c'est-à-dire précisément inutilisable dans le cas courant (enrôler quelqu'un qui a déjà un
+      compte). La liste dérive désormais de `STAFF_ROLES`. La CHECK `staff_role_check` acceptait
+      déjà les deux valeurs, donc aucune migration.
 - [x] Première tranche migrée : les surfaces du check-in (page + 3 routes) tiennent sur
       `run_checkin` — c'est ce qui rend un bénévole possible.
+- [~] **Les journaux portent l'acteur ET la permission utilisée.** La plomberie est là — la garde
+      par permission la retient dans le contexte, `logStaffAction` l'écrit dans le payload — et
+      elle est câblée sur les routes atteignables par les rôles étroits (relances de check-in,
+      relance du processeur), là où « à quel titre » a une valeur : l'acteur peut être un renfort
+      d'un jour. Elle n'est PAS câblée sur les ~200 autres call sites : un champ renseigné une
+      fois sur dix est exactement le défaut corrigé en A6 (26 % du journal en `other`), et la
+      permission d'une route est déjà déductible de la route elle-même.
+
+      *Ce critère avait disparu lors d'une réécriture de cette liste le 2026-09-01. Il est remis,
+      avec son état réel.*
 
 ### Migration complète (2026-09-01, seconde passe)
 
@@ -174,6 +191,12 @@ STAFF_PERMISSION_CATALOG = [
    de la régie — des routes qui lui étaient fermées. Trois tests l'ont attrapé. Le caster garde
    son périmètre exact via `use_cast_cockpit` ; `manage_broadcast` reste la conduite du direct,
    côté admin.
+
+**Routes staff hors `/api/admin`** : quatre routes gardées par `withStaffRoute` vivent ailleurs
+(`/api/matches/[matchId]`, `/api/matches/[matchId]/games`, `/api/tournament/[id]/maps`,
+`/api/cast/[matchId]`). Le script de migration ne parcourait que `pages/admin` et
+`pages/api/admin` et les avait manquées ; les trois premières sont passées sur
+`arbitrate_matches` / `manage_tournaments`, la dernière reste `'caster'` comme avant.
 
 **Volontairement gardées par rôle** (justifiées dans le test) : la porte d'entrée `/admin`, les
 hubs à onglets dont chaque onglet re-vérifie son propre minimum (modération, communications,

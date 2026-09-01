@@ -49,4 +49,13 @@ export type AuthenticatedStaffContext = {
   role: StaffRole;
   tenantId: string;
   currentTenantSource: TenantSource;
+  /**
+   * Permission par laquelle l'accès a été accordé (lot A2 de
+   * docs/PLAN-espace-admin.md), quand la route se garde par permission plutôt
+   * que par rôle. `undefined` sur une garde par rôle.
+   *
+   * Sert au journal : « qui » ne suffit pas quand l'acteur peut être un
+   * bénévole du samedi — « à quel titre » complète la trace.
+   */
+  permission?: import('@/utils/staffPermissions').StaffPermission;
 };
