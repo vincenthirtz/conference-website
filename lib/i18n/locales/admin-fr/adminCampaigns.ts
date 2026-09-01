@@ -48,6 +48,7 @@ export default adminNs('adminCampaigns', {
   duplicateAria: 'Dupliquer la campagne « {name} »',
   edit: 'Modifier',
   delete: 'Supprimer',
+  deleteAria: 'Supprimer la campagne « {name} »',
   manage: 'Gérer',
   subjectPrefix: 'Sujet : {subject}',
   statAudience: 'Audience',

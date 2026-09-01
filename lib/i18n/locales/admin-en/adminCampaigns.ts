@@ -49,6 +49,7 @@ export default {
   duplicateAria: 'Duplicate campaign « {name} »',
   edit: 'Edit',
   delete: 'Delete',
+  deleteAria: 'Delete campaign « {name} »',
   manage: 'Manage',
   subjectPrefix: 'Subject: {subject}',
   statAudience: 'Audience',
