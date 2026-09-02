@@ -68,5 +68,6 @@ export default {
   supportLead:
     'They support the competition · they broadcast it · they talk about it',
   supportPartnersLink: 'View all partners',
+  supportBecomePartner: 'Become a partner',
   heroCtaJoin: "I'm looking for a team",
 };

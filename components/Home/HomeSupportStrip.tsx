@@ -154,13 +154,22 @@ export default function HomeSupportStrip({
           ))}
         </ul>
 
-        <div className="mt-8 flex justify-center gap-4 text-sm">
+        {/* Deux intentions différentes : consulter la liste, ou s'y ajouter.
+            « Devenir partenaire » vise /partenaires/demande — le formulaire —
+            et non la page vitrine, qui obligerait à un clic de plus. */}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm">
           <Link
             href="/partenaires"
             className="inline-flex items-center gap-1.5 text-gray-300 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded"
           >
             {t.supportPartnersLink}
             <span aria-hidden>→</span>
+          </Link>
+          <Link
+            href="/partenaires/demande"
+            className="inline-flex items-center gap-1.5 rounded-full border border-white/20 px-4 py-2 font-semibold text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
+          >
+            {t.supportBecomePartner}
           </Link>
         </div>
       </div>

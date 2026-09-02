@@ -75,4 +75,5 @@ export default ns('homeV2', {
   supportLead:
     'Ils soutiennent la compétition · ils la diffusent · ils en parlent',
   supportPartnersLink: 'Voir tous les partenaires',
+  supportBecomePartner: 'Devenir partenaire',
 });
