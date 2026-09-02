@@ -63,6 +63,7 @@ export default {
   secretLabel: 'Instagram app secret',
   secretPlaceholder: '32 hexadecimal characters',
   secretSaveCta: 'Save',
+  secretReplaceCta: 'Replace the Instagram app secret',
   secretHelp:
     'Instagram’s, not the Meta app’s: dashboard › Instagram › API setup with Instagram login › Business login settings. It is encrypted on save and never shown again.',
   secretSaved: 'App secret saved. You can now connect the account.',

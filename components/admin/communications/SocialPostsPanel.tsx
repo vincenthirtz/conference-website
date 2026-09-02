@@ -148,6 +148,7 @@ export default function SocialPostsPanel() {
   // chiffre là où la clé est déjà.
   const [setup, setSetup] = useState<SetupState | null>(null);
   const [appSecret, setAppSecret] = useState('');
+  const [editingSecret, setEditingSecret] = useState(false);
 
   const saveSecret = useCallback(async () => {
     setBusy(true);
@@ -159,6 +160,7 @@ export default function SocialPostsPanel() {
       });
       // La valeur ne sert plus à rien côté client : on l'oublie tout de suite.
       setAppSecret('');
+      setEditingSecret(false);
       setSetup((prev) => (prev ? { ...prev, secretSet: true } : prev));
       addToast(t.secretSaved, 'success');
     } catch (err) {
@@ -452,59 +454,77 @@ export default function SocialPostsPanel() {
                       </p>
                     );
                   }
-                  // Le consentement Meta ne peut pas aboutir tant que l'App
-                  // Secret n'est pas posé : on demande donc le secret AVANT
-                  // d'offrir le bouton, plutôt que de laisser l'échange échouer
-                  // avec un message de Meta qui n'accuse pas le secret.
-                  if (setup && !setup.secretSet) {
-                    return (
-                      <div className="space-y-2 pl-7">
-                        <p className="text-xs text-amber-300">
-                          {t.secretMissing}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <input
-                            type="password"
-                            value={appSecret}
-                            onChange={(e) => setAppSecret(e.target.value)}
-                            placeholder={t.secretPlaceholder}
-                            aria-label={t.secretLabel}
-                            autoComplete="off"
-                            className="w-72 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-xs text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
-                          />
-                          <button
-                            type="button"
-                            onClick={saveSecret}
-                            disabled={busy || !appSecret.trim()}
-                            className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-700 disabled:opacity-50"
-                          >
-                            {t.secretSaveCta}
-                          </button>
-                        </div>
-                        <p className="text-xs text-neutral-500">
-                          {t.secretHelp}
-                        </p>
-                      </div>
-                    );
-                  }
+                  // Le secret DOIT rester remplaçable même une fois posé. Meta
+                  // expose deux secrets de même forme (celui de l'app Meta et
+                  // celui d'Instagram) et n'indique pas lequel est en cause
+                  // quand on se trompe : masquer le champ après un premier
+                  // enregistrement enfermerait dans l'erreur.
+                  const secretSet = setup?.secretSet ?? false;
+                  const showForm = !secretSet || editingSecret;
+
                   return (
-                    <p className="pl-7 text-xs text-amber-300">
-                      {conn?.status === 'expired'
-                        ? t.connectionExpired
-                        : t.notConnected}{' '}
-                      {/* Navigation de document volontaire, pas un <Link> :
-                          cette route répond par une redirection 302 vers
-                          l'écran de consentement Meta. Une navigation côté
-                          client de Next resterait dans l'app et n'irait nulle
-                          part. */}
-                      {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-                      <a
-                        href="/api/admin/instagram/authorize"
-                        className="underline underline-offset-2"
-                      >
-                        {t.connectCta}
-                      </a>
-                    </p>
+                    <div className="space-y-2 pl-7">
+                      <p className="text-xs text-amber-300">
+                        {conn?.status === 'expired'
+                          ? t.connectionExpired
+                          : t.notConnected}{' '}
+                        {secretSet ? (
+                          <>
+                            {/* Navigation de document volontaire, pas un
+                                <Link> : cette route répond par une redirection
+                                302 vers l'écran de consentement Meta. Une
+                                navigation côté client de Next resterait dans
+                                l'app et n'irait nulle part. */}
+                            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+                            <a
+                              href="/api/admin/instagram/authorize"
+                              className="underline underline-offset-2"
+                            >
+                              {t.connectCta}
+                            </a>
+                          </>
+                        ) : (
+                          t.secretMissing
+                        )}
+                      </p>
+
+                      {secretSet && !editingSecret ? (
+                        <button
+                          type="button"
+                          onClick={() => setEditingSecret(true)}
+                          className="text-xs text-purple-300 underline underline-offset-2 hover:text-purple-200"
+                        >
+                          {t.secretReplaceCta}
+                        </button>
+                      ) : null}
+
+                      {showForm ? (
+                        <>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <input
+                              type="password"
+                              value={appSecret}
+                              onChange={(e) => setAppSecret(e.target.value)}
+                              placeholder={t.secretPlaceholder}
+                              aria-label={t.secretLabel}
+                              autoComplete="off"
+                              className="w-72 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-xs text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={saveSecret}
+                              disabled={busy || !appSecret.trim()}
+                              className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-700 disabled:opacity-50"
+                            >
+                              {t.secretSaveCta}
+                            </button>
+                          </div>
+                          <p className="text-xs text-neutral-500">
+                            {t.secretHelp}
+                          </p>
+                        </>
+                      ) : null}
+                    </div>
                   );
                 })()
               ) : null}

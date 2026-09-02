@@ -61,6 +61,7 @@ export default adminNs('adminSocialPosts', {
   secretLabel: 'Instagram App Secret',
   secretPlaceholder: '32 caractères hexadécimaux',
   secretSaveCta: 'Enregistrer',
+  secretReplaceCta: 'Remplacer l’Instagram App Secret',
   secretHelp:
     'Celui d’Instagram, pas celui de l’app Meta : tableau de bord › Instagram › API setup with Instagram login › Business login settings. Il est chiffré à l’enregistrement et jamais réaffiché.',
   secretSaved: 'App Secret enregistré. Vous pouvez connecter le compte.',
