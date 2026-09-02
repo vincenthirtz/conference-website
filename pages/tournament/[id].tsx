@@ -374,10 +374,14 @@ export default function TournamentPage({
   const registerHref = `/team/create?tournament=${tournament.id}`;
 
   const phase = computePhase(tournament.status);
-  const registrationOpen = phase === 'upcoming';
   const maxTeams = tournament.max_teams ?? null;
   const placesRemaining =
     maxTeams !== null ? Math.max(0, maxTeams - totalTeams) : null;
+  // « Ouvert » demande DEUX conditions : le tournoi n'a pas commencé, ET il
+  // reste une place. Seule la première était testée — la landing affichait donc
+  // « Complet » dans sa pastille et « Inscrire mon équipe » juste en dessous.
+  // Ce booléen pilote le hero, le bloc final et la barre collante à la fois.
+  const registrationOpen = phase === 'upcoming' && placesRemaining !== 0;
   const isCompleted = phase === 'finished';
 
   return (

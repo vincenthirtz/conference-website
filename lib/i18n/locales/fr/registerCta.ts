@@ -10,5 +10,4 @@ import { ns } from '../../ns';
 export default ns('registerCta', {
   full: 'Complet',
   fullTitle: 'Toutes les places de la prochaine édition sont prises.',
-  nextSeason: 'Créer une équipe (prochaine saison)',
 });

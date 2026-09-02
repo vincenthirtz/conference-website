@@ -9,5 +9,4 @@
 export default {
   full: 'Full',
   fullTitle: 'Every slot for the next edition has been taken.',
-  nextSeason: 'Create a team (next season)',
 };

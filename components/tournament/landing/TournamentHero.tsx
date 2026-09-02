@@ -46,6 +46,8 @@ export default function TournamentHero({
   const registerHref = `/team/create?tournament=${tournament.id}`;
   const teamsHref = `${tournamentPath}/teams`;
 
+  const isFull = placesRemaining === 0;
+
   const placesLabel =
     placesRemaining === null
       ? null
@@ -128,9 +130,22 @@ export default function TournamentHero({
                   <span className="font-medium">{tournament.format}</span>
                 </span>
               )}
-              {registrationOpen && placesLabel && (
-                <span className="inline-flex items-center gap-2 rounded-full border border-[var(--color-green)]/40 bg-[var(--color-green)]/10 px-3 py-1 text-[12px] font-semibold text-[var(--color-green-light)]">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-green)]" />
+              {/* La pastille reste visible une fois complet — c'est même là
+                  qu'elle informe le plus — mais elle passe au rouge : du vert
+                  sur « Complet » dit le contraire du mot. */}
+              {placesLabel && (
+                <span
+                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[12px] font-semibold ${
+                    isFull
+                      ? 'border-red-500/40 bg-red-500/15 text-red-300'
+                      : 'border-[var(--color-green)]/40 bg-[var(--color-green)]/10 text-[var(--color-green-light)]'
+                  }`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      isFull ? 'bg-red-400' : 'bg-[var(--color-green)]'
+                    }`}
+                  />
                   {placesLabel}
                 </span>
               )}
