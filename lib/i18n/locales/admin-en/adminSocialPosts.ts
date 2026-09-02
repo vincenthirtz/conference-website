@@ -22,6 +22,18 @@ export default {
   baseImageHelp:
     'It must stay online after publishing: some platforms fetch it afterwards.',
 
+  editorBold: 'Bold',
+  editorItalic: 'Italic',
+  editorHeading: 'Heading',
+  editorList: 'List',
+  editorQuote: 'Quote',
+  editorLink: 'Link',
+  editorPreview: 'Preview',
+  editorWrite: 'Write',
+  editorPreviewEmpty: 'Nothing to preview.',
+  markdownNote:
+    'Formatting is Markdown. Each destination gets what it can display: the site renders it, Discord keeps it, Instagram drops it.',
+
   targetsLegend: 'Destinations',
   targetInherits: 'Inherits the shared text',
   targetOverride: 'Own text',

@@ -6,6 +6,7 @@ import Paragraph from '@/components/Typography/paragraph';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import nsHomeNews from '@/lib/i18n/locales/fr/homeNews';
+import { stripMarkdown } from '@/utils/social/markdown';
 
 export type HomeNewsItem = {
   id: string;
@@ -48,8 +49,13 @@ function formatDate(item: HomeNewsItem, locale: string) {
 function getExcerpt(item: HomeNewsItem, fallback: string, max = 140) {
   if (item.excerpt) return item.excerpt;
   if (!item.content) return fallback;
-  if (item.content.length <= max) return item.content;
-  return `${item.content.slice(0, max)}…`;
+  // Le corps est du Markdown depuis que la page d'article le rend vraiment.
+  // Un aperçu doit donc être aplati AVANT d'être coupé : sinon la carte
+  // d'accueil montre des étoiles, et la coupe à 140 peut tomber au milieu d'un
+  // `**`, laissant une étoile orpheline.
+  const plain = stripMarkdown(item.content);
+  if (plain.length <= max) return plain;
+  return `${plain.slice(0, max)}…`;
 }
 
 type HomeNewsSectionProps = {

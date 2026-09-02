@@ -37,6 +37,7 @@ import {
   type SocialPlatformKey,
 } from './platforms';
 import { loadAccount, markAccount, publishImage } from './instagram';
+import { renderForFlavour, stripMarkdown } from './markdown';
 
 /* -------------------------------------------------------------------------- */
 /* 1. Résolution du contenu — pur, testable                                    */
@@ -82,11 +83,10 @@ export function deriveNewsTitle(text: string): string {
       .map((l) => l.trim())
       .find((l) => l.length > 0) ?? '';
 
-  // "## Foo" → "Foo", "**Bar**" → "Bar" : mêmes marqueurs que stripEmphasis
-  // côté bot, pour ne pas produire deux styles de titres selon le chemin.
-  let title = firstLine.replace(/^#{1,6}\s+/, '').trim();
-  const wrapped = title.match(/^([*_~`]{1,3})(.+?)\1$/);
-  if (wrapped) title = wrapped[2].trim();
+  // Le titre est du TEXTE, jamais du Markdown : il part dans <h1>, dans la
+  // balise <title>, dans l'OpenGraph et dans le flux RSS, où aucune de ces
+  // surfaces ne rend `**gras**` autrement qu'avec ses étoiles.
+  const title = stripMarkdown(firstLine);
 
   if (title.length <= NEWS_TITLE_MAX) return title;
   return `${title.slice(0, NEWS_TITLE_MAX - 1).trimEnd()}…`;
@@ -116,11 +116,16 @@ export function resolveTarget(
     };
   }
 
-  const text =
+  const source =
     target.textOverride === null || target.textOverride === undefined
       ? base.text
       : target.textOverride;
-  const trimmed = text.trim();
+
+  // Le texte est SAISI en Markdown et RENDU dans le dialecte de la destination
+  // avant toute validation. Valider la source donnerait un compteur qui ment :
+  // `**gras**` fait quatre caractères de plus que ce qu'Instagram recevra, et
+  // un texte refusé à 2 205 caractères en passerait 2 197 une fois nettoyé.
+  const trimmed = renderForFlavour(source, platform.flavour);
 
   const imageUrl =
     target.imageOverride === null || target.imageOverride === undefined

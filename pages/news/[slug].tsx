@@ -7,7 +7,9 @@ import Link from 'next/link';
 import { supabaseAdmin } from '@/utils/supabase';
 import { resolveNewsImage } from '@/utils/news/newsImage';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
-import { useEffect, useRef, useState, Fragment, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import ReactMarkdown, { type Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -30,29 +32,75 @@ function genIdempotencyKey(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-/** Turn plain-text URLs into clickable <a> links, preserving surrounding text. */
-function linkifyContent(text: string): ReactNode {
-  const urlPattern = /(https?:\/\/[^\s<>"')\]]+)/g;
-  const parts = text.split(urlPattern);
-  if (parts.length === 1) return text;
-  // split with a capturing group alternates: text, match, text, match, …
-  // odd-index parts are the captured URLs
-  return parts.map((part, i) =>
-    i % 2 === 1 ? (
-      <a
-        key={i}
-        href={part}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-[var(--color-violet-light)] underline hover:text-[var(--color-violet)] break-all"
-      >
-        {part}
-      </a>
-    ) : (
-      <Fragment key={i}>{part}</Fragment>
-    )
-  );
-}
+/**
+ * Rendu du corps d'une actualité, en Markdown.
+ *
+ * L'admin annonçait « Le contenu supporte le format Markdown » depuis toujours,
+ * mais la page l'affichait en texte brut : une actualité écrite avec du
+ * `**gras**` sortait avec ses étoiles. On rend donc vraiment le Markdown.
+ *
+ * PAS de `rehype-raw` : le HTML brut dans le contenu reste inerte. Ces
+ * actualités arrivent aussi par l'ingestion Discord (`news-forwarder.js`),
+ * c'est-à-dire de quiconque écrit dans le salon d'annonces — ce n'est pas une
+ * source à qui l'on donne le droit d'injecter des balises.
+ *
+ * Les URLs nues restent cliquables : `remark-gfm` les auto-lie, ce que faisait
+ * déjà l'ancien rendu.
+ */
+const MARKDOWN_COMPONENTS: Components = {
+  a: ({ children, href }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-[var(--color-violet-light)] underline hover:text-[var(--color-violet)] break-all"
+    >
+      {children}
+    </a>
+  ),
+  h1: ({ children }) => (
+    <h2 className="mt-8 text-2xl font-bold text-white">{children}</h2>
+  ),
+  h2: ({ children }) => (
+    <h3 className="mt-8 text-xl font-bold text-white">{children}</h3>
+  ),
+  h3: ({ children }) => (
+    <h4 className="mt-6 text-lg font-semibold text-white">{children}</h4>
+  ),
+  p: ({ children }) => <p>{children}</p>,
+  ul: ({ children }) => (
+    <ul className="list-disc space-y-1 pl-6">{children}</ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="list-decimal space-y-1 pl-6">{children}</ol>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-2 border-[var(--color-violet)] pl-4 italic text-gray-300">
+      {children}
+    </blockquote>
+  ),
+  code: ({ children }) => (
+    <code className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-base">
+      {children}
+    </code>
+  ),
+  hr: () => <hr className="border-white/15" />,
+  // Les tableaux débordent sur mobile : ils défilent dans leur propre boîte,
+  // sinon c'est la page entière qui part en travers.
+  table: ({ children }) => (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-base">{children}</table>
+    </div>
+  ),
+  th: ({ children }) => (
+    <th className="border-b border-white/20 px-3 py-2 text-left font-semibold">
+      {children}
+    </th>
+  ),
+  td: ({ children }) => (
+    <td className="border-b border-white/10 px-3 py-2">{children}</td>
+  ),
+};
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || '';
 
 function toAbsoluteUrl(path: string | null | undefined): string | undefined {
@@ -303,8 +351,17 @@ export default function NewsSlugPage({
               )}
             </div>
 
-            <div className="mt-8 space-y-4 text-lg leading-relaxed text-gray-100 whitespace-pre-wrap">
-              {content ? linkifyContent(content) : t.noContent}
+            <div className="mt-8 space-y-4 text-lg leading-relaxed text-gray-100">
+              {content ? (
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={MARKDOWN_COMPONENTS}
+                >
+                  {content}
+                </ReactMarkdown>
+              ) : (
+                t.noContent
+              )}
             </div>
 
             <div className="mt-10">

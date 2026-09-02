@@ -18,6 +18,7 @@ import { useToast } from '@/components/Toast';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import { format } from '@/lib/i18n/useT';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
+import MarkdownEditor from '@/components/admin/MarkdownEditor';
 import AlertBanner from '@/components/admin/AlertBanner';
 import { logger } from '@/utils/logger';
 import type { SocialPlatform, SocialPlatformKey } from '@/utils/social/platforms';
@@ -142,6 +143,21 @@ export default function SocialPostsPanel() {
 
   const [preview, setPreview] = useState<PreviewTarget[] | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const editorLabels = useMemo(
+    () => ({
+      bold: t.editorBold,
+      italic: t.editorItalic,
+      heading: t.editorHeading,
+      list: t.editorList,
+      quote: t.editorQuote,
+      link: t.editorLink,
+      preview: t.editorPreview,
+      write: t.editorWrite,
+      previewEmpty: t.editorPreviewEmpty,
+    }),
+    [t]
+  );
 
   // Mise en service Instagram : l'App Secret se pose ICI et pas dans un script
   // local, parce que la clé de chiffrement ne vit qu'en production. Le serveur
@@ -351,6 +367,9 @@ export default function SocialPostsPanel() {
   return (
     <div className="space-y-8">
       <p className="text-sm text-neutral-400 max-w-2xl">{t.intro}</p>
+      <p className="-mt-6 text-xs text-neutral-500 max-w-2xl">
+        {t.markdownNote}
+      </p>
 
       {/* ---- Contenu commun ------------------------------------------- */}
       <fieldset className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-5 space-y-4">
@@ -362,15 +381,16 @@ export default function SocialPostsPanel() {
           <span className="text-xs uppercase tracking-wide text-neutral-400">
             {t.baseTextLabel}
           </span>
-          <textarea
+          <MarkdownEditor
             value={baseText}
-            onChange={(e) => {
-              setBaseText(e.target.value);
+            onChange={(next) => {
+              setBaseText(next);
               invalidate();
             }}
-            rows={5}
+            rows={6}
             placeholder={t.baseTextPlaceholder}
-            className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+            ariaLabel={t.baseTextLabel}
+            labels={editorLabels}
           />
         </label>
 
@@ -542,12 +562,12 @@ export default function SocialPostsPanel() {
                   </button>
 
                   {d.text !== null ? (
-                    <textarea
+                    <MarkdownEditor
                       value={d.text}
-                      onChange={(e) => patchDraft(p.key, { text: e.target.value })}
+                      onChange={(next) => patchDraft(p.key, { text: next })}
                       rows={4}
-                      aria-label={`${p.label} — ${t.targetOverride}`}
-                      className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                      ariaLabel={`${p.label} — ${t.targetOverride}`}
+                      labels={editorLabels}
                     />
                   ) : (
                     <p className="text-xs text-neutral-500">{t.targetInherits}</p>

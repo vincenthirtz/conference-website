@@ -20,6 +20,18 @@ export default adminNs('adminSocialPosts', {
   baseImageHelp:
     'Doit rester en ligne après la publication : certaines plateformes vont la chercher après coup.',
 
+  editorBold: 'Gras',
+  editorItalic: 'Italique',
+  editorHeading: 'Titre',
+  editorList: 'Liste',
+  editorQuote: 'Citation',
+  editorLink: 'Lien',
+  editorPreview: 'Aperçu',
+  editorWrite: 'Écrire',
+  editorPreviewEmpty: 'Rien à prévisualiser.',
+  markdownNote:
+    'Mise en forme en Markdown. Chaque destination reçoit ce qu’elle sait afficher : le site la rend, Discord la garde, Instagram la retire.',
+
   targetsLegend: 'Destinations',
   targetInherits: 'Hérite du texte commun',
   targetOverride: 'Texte propre',

@@ -19,6 +19,8 @@
 // quand leur mode assisté arrive : une entrée de plus dans le tableau, et le
 // panneau les affiche.
 
+import type { TextFlavour } from './markdown';
+
 export type SocialPlatformKey =
   | 'site_news'
   | 'discord_announce'
@@ -54,6 +56,14 @@ export type SocialPlatform = {
    * plutôt que de laisser cocher une case qui échouera.
    */
   needsConnection: boolean;
+  /**
+   * Dialecte que la destination sait afficher. Le texte est écrit une fois en
+   * Markdown et rendu ici (cf. `./markdown.ts`) : une légende Instagram
+   * afficherait `**gras**` avec ses étoiles, et Discord ne rend ni tableaux ni
+   * images. C'est aussi ce qui rend le compteur de caractères honnête — il
+   * compte ce qui PART, pas ce qui est saisi.
+   */
+  flavour: TextFlavour;
 };
 
 export const SOCIAL_PLATFORMS: SocialPlatform[] = [
@@ -67,6 +77,7 @@ export const SOCIAL_PLATFORMS: SocialPlatform[] = [
     requiresImage: false,
     needsTitle: true,
     needsConnection: false,
+    flavour: 'markdown',
   },
   {
     key: 'discord_announce',
@@ -80,6 +91,7 @@ export const SOCIAL_PLATFORMS: SocialPlatform[] = [
     requiresImage: false,
     needsTitle: false,
     needsConnection: false,
+    flavour: 'discord',
   },
   {
     key: 'instagram',
@@ -93,6 +105,9 @@ export const SOCIAL_PLATFORMS: SocialPlatform[] = [
     requiresImage: true,
     needsTitle: false,
     needsConnection: true,
+    // Une légende Instagram est du texte brut : `**gras**` s'y afficherait
+    // avec ses étoiles.
+    flavour: 'plain',
   },
 ];
 
