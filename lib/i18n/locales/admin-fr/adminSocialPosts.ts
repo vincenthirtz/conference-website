@@ -18,7 +18,17 @@ export default adminNs('adminSocialPosts', {
   baseImageLabel: 'Image (URL publique)',
   baseImagePlaceholder: 'https://…',
   baseImageHelp:
-    'Doit rester en ligne après la publication : certaines plateformes vont la chercher après coup.',
+    'Recopiée chez nous à la publication du site : une pièce jointe Discord expire en 24 h.',
+  hashtagsLabel: 'Hashtags',
+  hashtagsPlaceholder: 'Chercher ou créer un tag…',
+  hashtagsHelp:
+    'Ajoutés en fin de message et comptés dans la limite de caractères. Sur Bluesky ils deviennent de vrais liens cliquables.',
+  hashtagsRemove: 'Retirer',
+  hashtagsAdd: 'Ajouter',
+  hashtagsNoMatch: 'Aucun tag connu ne correspond.',
+  hashtagsFull: 'Maximum de tags atteint.',
+  discordMentionsWarning:
+    '{count} mention(s) Discord détectée(s) (<@…>). Elles seront retirées des destinations hors Discord, qui ne savent pas les afficher : écrivez les noms si vous voulez les y voir.',
 
   editorBold: 'Gras',
   editorItalic: 'Italique',

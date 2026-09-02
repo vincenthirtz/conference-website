@@ -54,9 +54,18 @@ export function graphemeLength(text: string): number {
   return Array.from(text).length;
 }
 
+/**
+ * Une facet enrichit une TRANCHE d'octets du texte. Deux familles ici : le lien
+ * (`#link`, qui porte une `uri`) et le hashtag (`#tag`, qui porte un `tag` sans
+ * croisillon). Le champ utile dépend donc du `$type`.
+ */
+export type FacetFeature =
+  | { $type: 'app.bsky.richtext.facet#link'; uri: string }
+  | { $type: 'app.bsky.richtext.facet#tag'; tag: string };
+
 export type Facet = {
   index: { byteStart: number; byteEnd: number };
-  features: Array<{ $type: string; uri: string }>;
+  features: FacetFeature[];
 };
 
 const encoder = new TextEncoder();
@@ -86,6 +95,39 @@ export function detectLinkFacets(text: string): Facet[] {
     facets.push({
       index: { byteStart, byteEnd },
       features: [{ $type: 'app.bsky.richtext.facet#link', uri }],
+    });
+  }
+  return facets;
+}
+
+/**
+ * Les hashtags du texte, en facets `#tag`.
+ *
+ * Sur Bluesky, un `#tag` écrit dans le corps n'est QU'UN TEXTE : il n'est ni
+ * cliquable ni indexé tant qu'aucune facet ne le déclare. Poster des hashtags
+ * sans cette étape, c'est ajouter des caractères qui ne rapportent aucune
+ * portée — exactement ce que les tags sont censés apporter.
+ *
+ * Les décalages sont en OCTETS UTF-8, comme pour les liens : un accent ou un
+ * emoji dans le texte qui précède déplace le tag, et un décalage en unités
+ * JavaScript surlignerait à côté.
+ */
+export function detectTagFacets(text: string): Facet[] {
+  const facets: Facet[] = [];
+  // Un tag commence en début de texte ou après une espace : `C#` dans une
+  // phrase n'est pas un tag, et `#` seul non plus.
+  const pattern = /(^|\s)(#[\p{L}\p{N}_]{2,60})(?![\p{L}\p{N}_])/gu;
+
+  for (const match of text.matchAll(pattern)) {
+    const lead = match[1] ?? '';
+    const tag = match[2];
+    const start = (match.index ?? 0) + lead.length;
+    const byteStart = encoder.encode(text.slice(0, start)).length;
+    const byteEnd = byteStart + encoder.encode(tag).length;
+    facets.push({
+      index: { byteStart, byteEnd },
+      // La valeur est déclarée SANS le croisillon : c'est le contrat du lexique.
+      features: [{ $type: 'app.bsky.richtext.facet#tag', tag: tag.slice(1) }],
     });
   }
   return facets;
@@ -206,7 +248,12 @@ export async function publishPost(params: {
     langs: ['fr'],
   };
 
-  const facets = detectLinkFacets(params.text);
+  // Liens ET hashtags : deux familles de facets sur le même texte. Elles ne
+  // se chevauchent pas (un tag ne vit pas dans une URL), l'ordre est libre.
+  const facets = [
+    ...detectLinkFacets(params.text),
+    ...detectTagFacets(params.text),
+  ];
   if (facets.length > 0) record.facets = facets;
 
   if (params.imageUrl) {

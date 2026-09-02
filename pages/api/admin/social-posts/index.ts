@@ -48,6 +48,9 @@ const targetSchema = z.object({
   textOverride: z.string().max(8000).nullable().optional(),
   imageOverride: z.string().url().max(2000).nullable().optional(),
   titleOverride: z.string().max(200).nullable().optional(),
+  // Bornes larges : `normalizeHashtags` fait le vrai tri (forme canonique,
+  // doublons, plafond). Ce schéma n'est là que pour refuser l'absurde.
+  hashtags: z.array(z.string().max(80)).max(50).nullable().optional(),
 });
 
 const bodySchema = z.object({
@@ -143,11 +146,49 @@ async function handleGet(
     };
   }
 
+  // Les tags déjà employés, du plus fréquent au moins fréquent : c'est le
+  // corpus du champ de recherche. Sans lui, « rechercher un tag » ne
+  // proposerait qu'une liste figée dans le code, que personne ne peut enrichir.
+  const knownHashtags = await loadKnownHashtags(ctx.tenantId);
+
   return res.status(200).json({
     platforms: SOCIAL_PLATFORMS,
     connections,
     posts: data ?? [],
+    knownHashtags,
   });
+}
+
+/**
+ * Les hashtags déjà utilisés par ce tenant, triés par fréquence décroissante.
+ *
+ * Best-effort : une erreur ici prive le champ de ses suggestions, elle ne doit
+ * pas empêcher d'ouvrir le panneau.
+ */
+async function loadKnownHashtags(tenantId: string): Promise<string[]> {
+  if (!supabaseAdmin) return [];
+  const { data, error } = await supabaseAdmin
+    .from('social_post_targets')
+    .select('hashtags, post:social_posts!inner(tenant_id)')
+    .eq('post.tenant_id', tenantId)
+    .order('created_at', { ascending: false })
+    .limit(300);
+
+  if (error) {
+    logger.error('[admin/social-posts] hashtags error', error);
+    return [];
+  }
+
+  const counts = new Map<string, number>();
+  for (const row of (data ?? []) as Array<{ hashtags: string[] | null }>) {
+    for (const tag of row.hashtags ?? []) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 100)
+    .map(([tag]) => tag);
 }
 
 async function handlePost(
@@ -250,6 +291,7 @@ async function handlePost(
           text_override: t?.text ?? null,
           image_override: t?.imageUrl ?? null,
           title_override: t?.title ?? null,
+          hashtags: t?.hashtags ?? [],
           status: o.status,
           external_id: o.externalId,
           permalink: o.permalink,

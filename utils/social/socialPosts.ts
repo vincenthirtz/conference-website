@@ -41,6 +41,8 @@ import { publishPost as publishBlueskyPost } from './bluesky';
 import { getIntegrationSecret } from '@/utils/integrationSecrets';
 import { loadAccount, markAccount, publishImage } from './instagram';
 import { renderForFlavour, stripMarkdown } from './markdown';
+import { appendHashtags, normalizeHashtags } from './hashtags';
+import { rehostImage } from './rehostImage';
 
 /* -------------------------------------------------------------------------- */
 /* 1. Résolution du contenu — pur, testable                                    */
@@ -57,6 +59,8 @@ export type SocialTargetInput = {
   textOverride?: string | null;
   imageOverride?: string | null;
   titleOverride?: string | null;
+  /** Tags propres à cette destination ; ignorés par celles qui n'en portent pas. */
+  hashtags?: string[] | null;
 };
 
 export type ResolvedTarget = {
@@ -66,6 +70,8 @@ export type ResolvedTarget = {
   imageUrl: string | null;
   /** Renseigné pour les seules cibles qui veulent un titre (le site). */
   title: string | null;
+  /** Tags retenus, forme canonique — ce qui sera stocké et resuggéré. */
+  hashtags: string[];
   /** Message d'erreur bloquant, ou null si la cible est publiable. */
   error: string | null;
 };
@@ -115,6 +121,7 @@ export function resolveTarget(
       text: '',
       imageUrl: null,
       title: null,
+      hashtags: [],
       error: `Destination inconnue : ${target.platform}`,
     };
   }
@@ -128,7 +135,15 @@ export function resolveTarget(
   // avant toute validation. Valider la source donnerait un compteur qui ment :
   // `**gras**` fait quatre caractères de plus que ce qu'Instagram recevra, et
   // un texte refusé à 2 205 caractères en passerait 2 197 une fois nettoyé.
-  const trimmed = renderForFlavour(source, platform.flavour);
+  // Les tags sont ajoutés AVANT la mesure : trois tags valent une quarantaine
+  // de caractères, et sur les 300 graphèmes de Bluesky ils décident du passage.
+  const hashtags = platform.supportsHashtags
+    ? normalizeHashtags(target.hashtags ?? [])
+    : [];
+  const trimmed = appendHashtags(
+    renderForFlavour(source, platform.flavour),
+    hashtags
+  );
 
   const imageUrl =
     target.imageOverride === null || target.imageOverride === undefined
@@ -164,6 +179,7 @@ export function resolveTarget(
     text: trimmed,
     imageUrl,
     title,
+    hashtags,
     error,
   };
 }
@@ -272,6 +288,20 @@ async function publishSiteNews(
   const title = target.title ?? deriveNewsTitle(target.text);
   const slug = await uniqueNewsSlug(ctx.tenantId, title);
 
+  // L'image est RECOPIÉE chez nous avant d'être liée. Une actualité vit des
+  // mois ; l'URL qu'on colle vient presque toujours d'une pièce jointe Discord,
+  // signée et expirée sous 24 h. On refuse de publier plutôt que de créer un
+  // article dont on sait que la vignette sera vide demain (cf. rehostImage).
+  let imageUrl = target.imageUrl;
+  if (imageUrl) {
+    const hosted = await rehostImage(imageUrl);
+    if (!hosted.rehosted) {
+      out.error = hosted.error ?? "L'image n'a pas pu être récupérée.";
+      return out;
+    }
+    imageUrl = hosted.url;
+  }
+
   // Le corps garde le texte ENTIER, titre compris s'il en vient : retirer la
   // première ligne parce qu'elle a servi de titre ampute l'actualité quand le
   // titre a été saisi à la main.
@@ -284,7 +314,7 @@ async function publishSiteNews(
       tag: 'announcements',
       excerpt: null,
       content: target.text,
-      image_url: target.imageUrl,
+      image_url: imageUrl,
       status: 'published',
       published_at: new Date().toISOString(),
       author_id: ctx.staffId,
@@ -309,7 +339,7 @@ async function publishSiteNews(
       title,
       tag: 'announcements',
       excerpt: null,
-      imageUrl: target.imageUrl,
+      imageUrl,
       publishedAt: new Date().toISOString(),
       // Le handler `news.published` du bot est un stub qui journalise. S'il
       // devient un jour un miroir Discord, ce drapeau lui dit de se taire : le

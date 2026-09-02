@@ -52,6 +52,14 @@ export type SocialPlatform = {
   /** Le site veut un titre en plus du corps ; les autres non. */
   needsTitle: boolean;
   /**
+   * La destination indexe les hashtags. Vrai pour Bluesky et Instagram, où ils
+   * amènent une part réelle de la portée ; faux ailleurs, et pas par oubli :
+   * sur le site un `#tag` dans le corps ne fait rien (la table `news` a sa
+   * colonne `tag`), et sur Discord `#quelquechose` désigne un SALON — des
+   * hashtags y produiraient des liens morts en plein message.
+   */
+  supportsHashtags: boolean;
+  /**
    * La cible exige un compte connecté par OAuth (`social_accounts`). L'API le
    * renseigne au chargement pour que le panneau puisse afficher « à connecter »
    * plutôt que de laisser cocher une case qui échouera.
@@ -77,6 +85,7 @@ export const SOCIAL_PLATFORMS: SocialPlatform[] = [
     supportsImage: true,
     requiresImage: false,
     needsTitle: true,
+    supportsHashtags: false,
     needsConnection: false,
     flavour: 'markdown',
   },
@@ -91,6 +100,7 @@ export const SOCIAL_PLATFORMS: SocialPlatform[] = [
     supportsImage: true,
     requiresImage: false,
     needsTitle: false,
+    supportsHashtags: false,
     needsConnection: false,
     flavour: 'discord',
   },
@@ -105,6 +115,7 @@ export const SOCIAL_PLATFORMS: SocialPlatform[] = [
     supportsImage: true,
     requiresImage: false,
     needsTitle: false,
+    supportsHashtags: true,
     needsConnection: true,
     // Bluesky ne rend aucun Markdown : les liens passent par des `facets`, le
     // reste s'afficherait littéralement.
@@ -121,6 +132,7 @@ export const SOCIAL_PLATFORMS: SocialPlatform[] = [
     supportsImage: true,
     requiresImage: true,
     needsTitle: false,
+    supportsHashtags: true,
     needsConnection: true,
     // Une légende Instagram est du texte brut : `**gras**` s'y afficherait
     // avec ses étoiles.

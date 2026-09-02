@@ -14,6 +14,20 @@
 // compter les caractères réellement envoyés, et le publieur l'utilise pour
 // produire ce qui part. Compter sur le texte source donnerait un compteur qui
 // ment — `**gras**` fait quatre caractères de plus que ce qu'Instagram recevra.
+//
+// LE TRAFIC VA AUSSI DANS L'AUTRE SENS. Un texte rédigé pour Discord — copié
+// depuis le salon, ou simplement pensé pour lui — porte des marques qui n'ont
+// de sens QUE sur Discord : `@everyone`, `<@1234>`, `<#1234>`, `<:emoji:1234>`.
+// Publiées telles quelles sur le site, elles s'affichent en toutes lettres.
+// C'est arrivé sur « informations de l'association » : trois `<@id>` bruts au
+// milieu des phrases. Les dialectes non-Discord les retirent donc.
+//
+// POURQUOI RETIRER PLUTÔT QUE TRADUIRE une mention de personne. On pourrait
+// résoudre `<@1234>` en un nom via `user_discord_links` — mais seuls les
+// membres ayant un compte sur le site y figurent. Une résolution partielle
+// donnerait « cédée à Anrataria » suivi de « maintenue par  qui », pire que
+// l'uniformité. Le panneau signale donc les mentions à l'autrice AVANT
+// publication (cf. `discordMentionIds`), à elle d'écrire les noms.
 
 /** Ce qu'une destination sait afficher. */
 export type TextFlavour = 'markdown' | 'discord' | 'plain';
@@ -131,17 +145,84 @@ export function stripMarkdown(md: string): string {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Marques propres à Discord                                                   */
+/* -------------------------------------------------------------------------- */
+
+/** `<@123>`, `<@!123>` — mention d'une personne. */
+const USER_MENTION_RE = /<@!?(\d{5,25})>/g;
+
+/**
+ * Les ids des personnes mentionnées, dans l'ordre d'apparition et sans doublon.
+ *
+ * Sert à AVERTIR dans le panneau : une mention effacée sans être remplacée
+ * laisse « la présidence est cédée à . », et seule l'autrice peut écrire le nom.
+ */
+export function discordMentionIds(text: string): string[] {
+  const ids = new Set<string>();
+  for (const m of text.matchAll(USER_MENTION_RE)) ids.add(m[1]);
+  return [...ids];
+}
+
+/**
+ * Retire ce que seul Discord sait afficher.
+ *
+ * Ce qui part et pourquoi :
+ *   - `@everyone` / `@here` : une notification, pas du texte. Hors de Discord
+ *     ils ne notifient personne et ne veulent rien dire.
+ *   - `<@id>` / `<@&id>` / `<#id>` : mentions de personne, de rôle, de salon.
+ *     Elles s'affichent en brut ailleurs, et rien hors de Discord ne sait les
+ *     résoudre. Le panneau les signale avant publication.
+ *   - `<:nom:id>` / `<a:nom:id>` : émojis personnalisés du serveur, qui
+ *     n'existent nulle part ailleurs. On garde le NOM, entre deux-points —
+ *     effacer l'émoji d'une ligne qui n'est faite que de ça la viderait.
+ *   - `<t:1735689600:R>` : horodatage rendu par le client Discord. On le
+ *     remplace par une date lisible plutôt que de perdre l'information.
+ */
+export function stripDiscordMarkup(text: string): string {
+  let out = text;
+
+  out = out.replace(/<(a?):([\w~]{2,32}):\d{5,25}>/g, ':$2:');
+  out = out.replace(/<t:(\d{1,15})(?::[tTdDfFR])?>/g, (whole, secs: string) => {
+    const ms = Number(secs) * 1000;
+    if (!Number.isFinite(ms)) return whole;
+    const d = new Date(ms);
+    return Number.isNaN(d.getTime()) ? whole : d.toISOString().slice(0, 10);
+  });
+  out = out.replace(USER_MENTION_RE, '');
+  out = out.replace(/<@&\d{5,25}>/g, '');
+  out = out.replace(/<#\d{5,25}>/g, '');
+  out = out.replace(/@(?:everyone|here)\b/g, '');
+
+  // Le retrait laisse des traces : espaces avant ponctuation, doubles espaces,
+  // et des lignes devenues vides qui creusent le texte.
+  out = out.replace(/[ \t]{2,}/g, ' ');
+  // Seulement la virgule et le point : le français met une espace AVANT
+  // « ; : ! ? », et `:` sert aussi de délimiteur aux noms d'émojis.
+  out = out.replace(/[ \t]+([,.…])/g, '$1');
+  out = out.replace(/^[ \t]+$/gm, '');
+  out = out.replace(/\n{3,}/g, '\n\n');
+  return out.trim();
+}
+
+/* -------------------------------------------------------------------------- */
 /* Point d'entrée                                                              */
 /* -------------------------------------------------------------------------- */
 
-/** Rend `md` dans le dialecte de la destination. */
+/**
+ * Rend `md` dans le dialecte de la destination.
+ *
+ * Toute destination AUTRE que Discord passe par `stripDiscordMarkup` : c'est le
+ * seul endroit traversé à la fois par l'aperçu de l'admin, le compteur de
+ * caractères et la publication, donc le seul qui garantisse que les trois
+ * disent la même chose.
+ */
 export function renderForFlavour(md: string, flavour: TextFlavour): string {
   switch (flavour) {
     case 'discord':
       return toDiscordMarkdown(md);
     case 'plain':
-      return stripMarkdown(md);
+      return stripMarkdown(stripDiscordMarkup(md));
     default:
-      return md.trim();
+      return stripDiscordMarkup(md).trim();
   }
 }

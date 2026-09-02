@@ -20,7 +20,17 @@ export default {
   baseImageLabel: 'Image (public URL)',
   baseImagePlaceholder: 'https://…',
   baseImageHelp:
-    'It must stay online after publishing: some platforms fetch it afterwards.',
+    'Copied to our own storage when publishing to the site: a Discord attachment expires within 24h.',
+  hashtagsLabel: 'Hashtags',
+  hashtagsPlaceholder: 'Search or create a tag…',
+  hashtagsHelp:
+    'Appended to the message and counted against the character limit. On Bluesky they become real clickable links.',
+  hashtagsRemove: 'Remove',
+  hashtagsAdd: 'Add',
+  hashtagsNoMatch: 'No known tag matches.',
+  hashtagsFull: 'Maximum number of tags reached.',
+  discordMentionsWarning:
+    '{count} Discord mention(s) found (<@…>). They will be removed from non-Discord destinations, which cannot display them: write the names out if you want them there.',
 
   editorBold: 'Bold',
   editorItalic: 'Italic',

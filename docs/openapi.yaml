@@ -19384,6 +19384,10 @@ paths:
         catalogue des destinations (`utils/social/platforms.ts` : libelle,
         limite de caracteres, image supportee) et l'historique des envois avec
         le statut et le permalien de CHAQUE cible.
+
+        `knownHashtags` liste les tags deja employes par le tenant, du plus
+        frequent au moins : c'est le corpus du champ de recherche de tags, qui
+        s'enrichit donc de lui-meme au fil des publications.
       security:
         - StaffSession: []
       parameters:
@@ -19396,7 +19400,7 @@ paths:
             default: 20
       responses:
         '200':
-          description: '`{ platforms[], posts[] }`.'
+          description: '`{ platforms[], connections, posts[], knownHashtags[] }`.'
           content:
             application/json:
               schema:
@@ -19451,7 +19455,7 @@ paths:
                     properties:
                       platform:
                         type: string
-                        enum: [site_news, discord_announce]
+                        enum: [site_news, discord_announce, bluesky, instagram]
                       textOverride:
                         type: string
                         nullable: true
@@ -19464,6 +19468,18 @@ paths:
                         type: string
                         nullable: true
                         description: Cible `site_news` seulement ; deduit du texte si absent.
+                      hashtags:
+                        type: array
+                        nullable: true
+                        maxItems: 50
+                        items:
+                          type: string
+                          maxLength: 80
+                        description: >
+                          Cibles `bluesky` et `instagram` seulement (cf.
+                          `supportsHashtags`). Normalises cote serveur (sans
+                          croisillon, minuscules, dedoublonnes, 30 max) puis
+                          AJOUTES au texte avant la mesure de longueur.
                 dryRun:
                   type: boolean
                   default: true

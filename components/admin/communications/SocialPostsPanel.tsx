@@ -21,27 +21,17 @@ import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import MarkdownEditor from '@/components/admin/MarkdownEditor';
 import AlertBanner from '@/components/admin/AlertBanner';
 import { logger } from '@/utils/logger';
-import type { SocialPlatform, SocialPlatformKey } from '@/utils/social/platforms';
+import type {
+  SocialPlatform,
+  SocialPlatformKey,
+} from '@/utils/social/platforms';
+import type { TargetStatus } from '@/components/admin/communications/SocialPostsHistory';
+import { discordMentionIds } from '@/utils/social/markdown';
+import HashtagPicker from '@/components/admin/communications/HashtagPicker';
+import SocialPostsHistory, {
+  type HistoryPost,
+} from '@/components/admin/communications/SocialPostsHistory';
 import nsAdminSocialPosts from '@/lib/i18n/locales/admin-fr/adminSocialPosts';
-
-type TargetStatus = 'sent' | 'failed' | 'pending' | 'skipped';
-
-type HistoryTarget = {
-  platform: SocialPlatformKey;
-  status: TargetStatus;
-  permalink: string | null;
-  error: string | null;
-  sent_at: string | null;
-};
-
-type HistoryPost = {
-  id: string;
-  base_text: string;
-  status: string;
-  published_at: string | null;
-  created_at: string;
-  targets: HistoryTarget[];
-};
 
 type ConnectionState = {
   connected: boolean;
@@ -54,6 +44,8 @@ type StateResponse = {
   platforms: SocialPlatform[];
   connections: Record<string, ConnectionState>;
   posts: HistoryPost[];
+  /** Tags déjà employés, du plus fréquent au moins : corpus des suggestions. */
+  knownHashtags?: string[];
 };
 
 type PreviewTarget = {
@@ -93,6 +85,8 @@ type TargetDraft = {
   text: string | null;
   image: string | null;
   title: string | null;
+  /** Propres à la destination : deux réseaux n'ont pas la même audience. */
+  hashtags: string[];
 };
 
 const emptyDraft: TargetDraft = {
@@ -100,19 +94,15 @@ const emptyDraft: TargetDraft = {
   text: null,
   image: null,
   title: null,
+  hashtags: [],
 };
 
-function statusLabel(status: TargetStatus | undefined, t: Dict): string {
-  switch (status) {
-    case 'sent':
-      return t.statusSent;
-    case 'failed':
-      return t.statusFailed;
-    case 'skipped':
-      return t.statusSkipped;
-    default:
-      return t.statusPending;
-  }
+/**
+ * Un brouillon NEUF. `{ ...emptyDraft }` partagerait le même tableau de tags
+ * entre toutes les destinations : une copie superficielle copie la référence.
+ */
+function makeDraft(over: Partial<TargetDraft> = {}): TargetDraft {
+  return { ...emptyDraft, hashtags: [], ...over };
 }
 
 function statusClass(status: TargetStatus | undefined): string {
@@ -155,6 +145,19 @@ export default function SocialPostsPanel() {
       preview: t.editorPreview,
       write: t.editorWrite,
       previewEmpty: t.editorPreviewEmpty,
+    }),
+    [t]
+  );
+
+  const hashtagLabels = useMemo(
+    () => ({
+      label: t.hashtagsLabel,
+      placeholder: t.hashtagsPlaceholder,
+      help: t.hashtagsHelp,
+      remove: t.hashtagsRemove,
+      add: t.hashtagsAdd,
+      noMatch: t.hashtagsNoMatch,
+      full: t.hashtagsFull,
     }),
     [t]
   );
@@ -207,14 +210,13 @@ export default function SocialPostsPanel() {
         return Object.fromEntries(
           data.platforms.map((p) => [
             p.key,
-            {
-              ...emptyDraft,
+            makeDraft({
               // Une cible dont le compte n'est pas connecté part décochée :
               // la cocher ne mènerait qu'à un échec de publication.
               enabled:
                 !p.needsConnection ||
                 Boolean(data.connections?.[p.key]?.connected),
-            },
+            }),
           ])
         );
       });
@@ -274,6 +276,18 @@ export default function SocialPostsPanel() {
     [state, drafts]
   );
 
+  // Mentions Discord présentes dans le texte commun OU dans une surcharge : le
+  // texte d'une destination non-Discord peut en porter tout autant.
+  const discordOnlyMentions = useMemo(() => {
+    const texts = [baseText, ...Object.values(drafts).map((d) => d.text ?? '')];
+    return [...new Set(texts.flatMap(discordMentionIds))];
+  }, [baseText, drafts]);
+
+  const hasNonDiscordTarget = useMemo(
+    () => selected.some((p) => p.key !== 'discord_announce'),
+    [selected]
+  );
+
   const buildBody = useCallback(
     (dryRun: boolean) =>
       JSON.stringify({
@@ -286,6 +300,7 @@ export default function SocialPostsPanel() {
             textOverride: d.text,
             imageOverride: d.image?.trim() || null,
             titleOverride: d.title?.trim() || null,
+            hashtags: d.hashtags,
           };
         }),
         dryRun,
@@ -363,7 +378,7 @@ export default function SocialPostsPanel() {
         setBaseImage('');
         setDrafts(
           Object.fromEntries(
-            (state?.platforms ?? []).map((p) => [p.key, { ...emptyDraft }])
+            (state?.platforms ?? []).map((p) => [p.key, makeDraft()])
           )
         );
       }
@@ -420,6 +435,17 @@ export default function SocialPostsPanel() {
             labels={editorLabels}
           />
         </label>
+
+        {/* Les mentions Discord sont retirées des destinations hors Discord :
+            rien d'autre ne sait les afficher. On le DIT ici plutôt que de le
+            faire en silence — seule l'autrice peut écrire le nom à la place. */}
+        {discordOnlyMentions.length > 0 && hasNonDiscordTarget ? (
+          <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+            {format(t.discordMentionsWarning, {
+              count: discordOnlyMentions.length,
+            })}
+          </p>
+        ) : null}
 
         <label className="block space-y-1.5">
           <span className="text-xs uppercase tracking-wide text-neutral-400">
@@ -491,143 +517,149 @@ export default function SocialPostsPanel() {
                 </span>
               </div>
 
-              {p.needsConnection ? (
-                (() => {
-                  const conn = state.connections?.[p.key];
-                  if (conn?.connected) {
-                    return (
-                      <p className="pl-7 text-xs text-neutral-500">
-                        {format(t.connectedAs, { handle: conn.handle ?? '—' })}
-                      </p>
-                    );
-                  }
-                  // Le secret DOIT rester remplaçable même une fois posé. Meta
-                  // expose deux secrets de même forme (celui de l'app Meta et
-                  // celui d'Instagram) et n'indique pas lequel est en cause
-                  // quand on se trompe : masquer le champ après un premier
-                  // enregistrement enfermerait dans l'erreur.
-                  // Bluesky ne passe pas par OAuth : deux champs suffisent, et
-                  // la route les vérifie auprès de Bluesky avant de les
-                  // enregistrer.
-                  if (p.key === 'bluesky') {
-                    return (
-                      <div className="space-y-2 pl-7">
-                        <p className="text-xs text-amber-300">
-                          {t.blueskyMissing}
+              {p.needsConnection
+                ? (() => {
+                    const conn = state.connections?.[p.key];
+                    if (conn?.connected) {
+                      return (
+                        <p className="pl-7 text-xs text-neutral-500">
+                          {format(t.connectedAs, {
+                            handle: conn.handle ?? '—',
+                          })}
                         </p>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <input
-                            type="text"
-                            value={bskyHandle}
-                            onChange={(e) => setBskyHandle(e.target.value)}
-                            placeholder="womenscup.bsky.social"
-                            aria-label={t.blueskyHandleLabel}
-                            autoComplete="off"
-                            className="w-56 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-xs text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
-                          />
-                          <input
-                            type="password"
-                            value={bskyPassword}
-                            onChange={(e) => setBskyPassword(e.target.value)}
-                            placeholder="xxxx-xxxx-xxxx-xxxx"
-                            aria-label={t.blueskyPasswordLabel}
-                            autoComplete="off"
-                            className="w-52 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-xs text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
-                          />
-                          <button
-                            type="button"
-                            onClick={saveBluesky}
-                            disabled={
-                              busy || !bskyHandle.trim() || !bskyPassword.trim()
-                            }
-                            className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-700 disabled:opacity-50"
-                          >
-                            {t.secretSaveCta}
-                          </button>
-                        </div>
-                        <p className="text-xs text-neutral-500">
-                          {t.blueskyHelp}
-                        </p>
-                      </div>
-                    );
-                  }
-
-                  const secretSet = setup?.secretSet ?? false;
-                  const showForm = !secretSet || editingSecret;
-
-                  return (
-                    <div className="space-y-2 pl-7">
-                      <p className="text-xs text-amber-300">
-                        {conn?.status === 'expired'
-                          ? t.connectionExpired
-                          : t.notConnected}{' '}
-                        {secretSet ? (
-                          <>
-                            {/* Navigation de document volontaire, pas un
-                                <Link> : cette route répond par une redirection
-                                302 vers l'écran de consentement Meta. Une
-                                navigation côté client de Next resterait dans
-                                l'app et n'irait nulle part. */}
-                            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-                            <a
-                              href="/api/admin/instagram/authorize"
-                              className="underline underline-offset-2"
-                            >
-                              {t.connectCta}
-                            </a>
-                          </>
-                        ) : (
-                          t.secretMissing
-                        )}
-                      </p>
-
-                      {secretSet && !editingSecret ? (
-                        <button
-                          type="button"
-                          onClick={() => setEditingSecret(true)}
-                          className="text-xs text-purple-300 underline underline-offset-2 hover:text-purple-200"
-                        >
-                          {t.secretReplaceCta}
-                        </button>
-                      ) : null}
-
-                      {showForm ? (
-                        <>
+                      );
+                    }
+                    // Le secret DOIT rester remplaçable même une fois posé. Meta
+                    // expose deux secrets de même forme (celui de l'app Meta et
+                    // celui d'Instagram) et n'indique pas lequel est en cause
+                    // quand on se trompe : masquer le champ après un premier
+                    // enregistrement enfermerait dans l'erreur.
+                    // Bluesky ne passe pas par OAuth : deux champs suffisent, et
+                    // la route les vérifie auprès de Bluesky avant de les
+                    // enregistrer.
+                    if (p.key === 'bluesky') {
+                      return (
+                        <div className="space-y-2 pl-7">
+                          <p className="text-xs text-amber-300">
+                            {t.blueskyMissing}
+                          </p>
                           <div className="flex flex-wrap items-center gap-2">
                             <input
-                              type="password"
-                              value={appSecret}
-                              onChange={(e) => setAppSecret(e.target.value)}
-                              placeholder={t.secretPlaceholder}
-                              aria-label={t.secretLabel}
+                              type="text"
+                              value={bskyHandle}
+                              onChange={(e) => setBskyHandle(e.target.value)}
+                              placeholder="womenscup.bsky.social"
+                              aria-label={t.blueskyHandleLabel}
                               autoComplete="off"
-                              className="w-72 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-xs text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                              className="w-56 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-xs text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                            />
+                            <input
+                              type="password"
+                              value={bskyPassword}
+                              onChange={(e) => setBskyPassword(e.target.value)}
+                              placeholder="xxxx-xxxx-xxxx-xxxx"
+                              aria-label={t.blueskyPasswordLabel}
+                              autoComplete="off"
+                              className="w-52 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-xs text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
                             />
                             <button
                               type="button"
-                              onClick={saveSecret}
-                              disabled={busy || !appSecret.trim()}
+                              onClick={saveBluesky}
+                              disabled={
+                                busy ||
+                                !bskyHandle.trim() ||
+                                !bskyPassword.trim()
+                              }
                               className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-700 disabled:opacity-50"
                             >
                               {t.secretSaveCta}
                             </button>
                           </div>
                           <p className="text-xs text-neutral-500">
-                            {t.secretHelp}
+                            {t.blueskyHelp}
                           </p>
-                        </>
-                      ) : null}
-                    </div>
-                  );
-                })()
-              ) : null}
+                        </div>
+                      );
+                    }
+
+                    const secretSet = setup?.secretSet ?? false;
+                    const showForm = !secretSet || editingSecret;
+
+                    return (
+                      <div className="space-y-2 pl-7">
+                        <p className="text-xs text-amber-300">
+                          {conn?.status === 'expired'
+                            ? t.connectionExpired
+                            : t.notConnected}{' '}
+                          {secretSet ? (
+                            <>
+                              {/* Navigation de document volontaire, pas un
+                                <Link> : cette route répond par une redirection
+                                302 vers l'écran de consentement Meta. Une
+                                navigation côté client de Next resterait dans
+                                l'app et n'irait nulle part. */}
+                              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+                              <a
+                                href="/api/admin/instagram/authorize"
+                                className="underline underline-offset-2"
+                              >
+                                {t.connectCta}
+                              </a>
+                            </>
+                          ) : (
+                            t.secretMissing
+                          )}
+                        </p>
+
+                        {secretSet && !editingSecret ? (
+                          <button
+                            type="button"
+                            onClick={() => setEditingSecret(true)}
+                            className="text-xs text-purple-300 underline underline-offset-2 hover:text-purple-200"
+                          >
+                            {t.secretReplaceCta}
+                          </button>
+                        ) : null}
+
+                        {showForm ? (
+                          <>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <input
+                                type="password"
+                                value={appSecret}
+                                onChange={(e) => setAppSecret(e.target.value)}
+                                placeholder={t.secretPlaceholder}
+                                aria-label={t.secretLabel}
+                                autoComplete="off"
+                                className="w-72 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-xs text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                              />
+                              <button
+                                type="button"
+                                onClick={saveSecret}
+                                disabled={busy || !appSecret.trim()}
+                                className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-700 disabled:opacity-50"
+                              >
+                                {t.secretSaveCta}
+                              </button>
+                            </div>
+                            <p className="text-xs text-neutral-500">
+                              {t.secretHelp}
+                            </p>
+                          </>
+                        ) : null}
+                      </div>
+                    );
+                  })()
+                : null}
 
               {d.enabled ? (
                 <div className="space-y-3 pl-7">
                   <button
                     type="button"
                     onClick={() =>
-                      patchDraft(p.key, { text: d.text === null ? baseText : null })
+                      patchDraft(p.key, {
+                        text: d.text === null ? baseText : null,
+                      })
                     }
                     className="text-xs text-purple-300 underline underline-offset-2 hover:text-purple-200"
                   >
@@ -643,7 +675,9 @@ export default function SocialPostsPanel() {
                       labels={editorLabels}
                     />
                   ) : (
-                    <p className="text-xs text-neutral-500">{t.targetInherits}</p>
+                    <p className="text-xs text-neutral-500">
+                      {t.targetInherits}
+                    </p>
                   )}
 
                   {p.needsTitle ? (
@@ -661,6 +695,15 @@ export default function SocialPostsPanel() {
                         className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
                       />
                     </label>
+                  ) : null}
+
+                  {p.supportsHashtags ? (
+                    <HashtagPicker
+                      value={d.hashtags}
+                      suggestions={state.knownHashtags ?? []}
+                      labels={hashtagLabels}
+                      onChange={(next) => patchDraft(p.key, { hashtags: next })}
+                    />
                   ) : null}
 
                   {p.supportsImage ? (
@@ -743,50 +786,7 @@ export default function SocialPostsPanel() {
         </section>
       ) : null}
 
-      {/* ---- Historique -------------------------------------------------- */}
-      <section className="space-y-3">
-        <h3 className="text-sm font-semibold text-neutral-200">
-          {t.historyTitle}
-        </h3>
-        {state.posts.length === 0 ? (
-          <p className="text-sm text-neutral-500">{t.historyEmpty}</p>
-        ) : (
-          <ul className="space-y-2">
-            {state.posts.map((post) => (
-              <li
-                key={post.id}
-                className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4"
-              >
-                <p className="mb-2 line-clamp-2 text-sm text-neutral-300">
-                  {post.base_text}
-                </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  {post.targets.map((target) => (
-                    <span
-                      key={target.platform}
-                      className={`rounded border px-2 py-0.5 font-mono text-xs ${statusClass(target.status)}`}
-                      title={target.error ?? undefined}
-                    >
-                      {target.platform} · {statusLabel(target.status, t)}
-                      {target.permalink ? (
-                        <>
-                          {' '}
-                          <a
-                            href={target.permalink}
-                            className="underline underline-offset-2"
-                          >
-                            {t.seePost}
-                          </a>
-                        </>
-                      ) : null}
-                    </span>
-                  ))}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <SocialPostsHistory posts={state.posts} t={t} />
 
       {confirmDialog}
     </div>

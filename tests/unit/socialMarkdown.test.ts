@@ -12,7 +12,9 @@
 import { describe, it, expect } from 'vitest';
 
 import {
+  discordMentionIds,
   renderForFlavour,
+  stripDiscordMarkup,
   stripMarkdown,
   toDiscordMarkdown,
 } from '../../utils/social/markdown';
@@ -152,5 +154,86 @@ describe('le compteur compte ce qui part', () => {
     expect(out.title).toBe('Le J7 bouge');
     // Le corps, lui, garde sa mise en forme : c'est la page qui la rend.
     expect(out.text).toContain('##');
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Marques propres à Discord                                                   */
+/* -------------------------------------------------------------------------- */
+
+// Régression du 2 septembre 2026 : « informations de l'association » a été
+// publiée sur le site avec `@everyone` en tête et trois `<@493476…>` bruts au
+// milieu des phrases. Rien hors de Discord ne sait afficher ces marques.
+describe('stripDiscordMarkup', () => {
+  it('retire @everyone et @here', () => {
+    expect(stripDiscordMarkup('@everyone \nLes infos')).toBe('Les infos');
+    expect(stripDiscordMarkup('@here on y va')).toBe('on y va');
+    // Une adresse e-mail ou un pseudo ne doit pas y passer.
+    expect(stripDiscordMarkup('écrire à everyone@asso.fr')).toBe(
+      'écrire à everyone@asso.fr'
+    );
+  });
+
+  it('retire les mentions de personne, de rôle et de salon', () => {
+    expect(stripDiscordMarkup('cédée à <@493476887977394176>.')).toBe('cédée à.');
+    expect(stripDiscordMarkup('ping <@!123456789> ok')).toBe('ping ok');
+    expect(stripDiscordMarkup('rôle <@&987654321> ok')).toBe('rôle ok');
+    expect(stripDiscordMarkup('voir <#1430516361255321691> ok')).toBe(
+      'voir ok'
+    );
+  });
+
+  it('garde le nom des émojis personnalisés', () => {
+    // Effacer l'émoji viderait une ligne qui n'est faite que de ça.
+    expect(stripDiscordMarkup('bravo <:coeur:1234567890>')).toBe(
+      'bravo :coeur:'
+    );
+    expect(stripDiscordMarkup('<a:danse:1234567890>')).toBe(':danse:');
+  });
+
+  it('rend un horodatage Discord lisible plutôt que de le perdre', () => {
+    expect(stripDiscordMarkup('rendez-vous <t:1767225600:F>')).toBe(
+      'rendez-vous 2026-01-01'
+    );
+  });
+
+  it('ne touche pas à un texte sans marque Discord', () => {
+    const src = '## Titre\n\nUn **texte** normal avec un [lien](https://x.fr).';
+    expect(stripDiscordMarkup(src)).toBe(src);
+  });
+});
+
+describe('renderForFlavour — adaptation au canal', () => {
+  const source =
+    '@everyone \n🚨 Les infos 🚨\n\nla présidence est cédée à <@493476887977394176>.';
+
+  it('le site reçoit le texte débarrassé des marques Discord', () => {
+    const out = renderForFlavour(source, 'markdown');
+    expect(out).not.toContain('@everyone');
+    expect(out).not.toContain('<@');
+    expect(out).toContain('la présidence est cédée à');
+  });
+
+  it('Discord, lui, garde ses mentions — c’est chez lui qu’elles servent', () => {
+    const out = renderForFlavour(source, 'discord');
+    expect(out).toContain('@everyone');
+    expect(out).toContain('<@493476887977394176>');
+  });
+
+  it('Instagram reçoit du texte brut ET sans marque Discord', () => {
+    const out = renderForFlavour('@everyone **gras** <@123456789>', 'plain');
+    expect(out).toBe('gras');
+  });
+});
+
+describe('discordMentionIds', () => {
+  it('liste les ids sans doublon, pour l’avertissement du panneau', () => {
+    expect(
+      discordMentionIds('<@111111111> et <@!222222222> puis <@111111111>')
+    ).toEqual(['111111111', '222222222']);
+  });
+
+  it('ignore les rôles et les salons : seules les personnes ont un nom', () => {
+    expect(discordMentionIds('<@&111111111> <#222222222>')).toEqual([]);
   });
 });
