@@ -3069,6 +3069,31 @@ Le ciblage sur un jour exact tient lieu de deduplication (pas de table d'etat).
 Par defaut seules les equipes avec un motif reel sont notifiees
 (`only=needs_attention`).
 
+#### Cible Instagram (site → Meta, sans passer par le bot)
+
+Depuis `/api/admin/social-posts`, la cible `instagram` publie DIRECTEMENT via
+l'API Meta — le bot n'est pas dans la boucle, contrairement a la cible Discord.
+
+- **Aucune review Meta a passer** : on ne publie que sur NOTRE compte, l'app
+  reste en mode developpement et `@womenscup_asso` y a le role
+  « testeur Instagram ». La review n'est exigee que pour publier sur des comptes
+  qu'on ne possede pas.
+- Connexion : `GET /api/admin/instagram/authorize` → consentement Meta →
+  `GET /api/admin/instagram/callback`. Jeton longue duree CHIFFRE dans
+  `social_accounts`.
+- Publication en TROIS temps, le deuxieme non optionnel : conteneur media →
+  attente de `status_code = FINISHED` → `media_publish`. Publier un conteneur
+  encore `IN_PROGRESS` echoue, et l'echec est intermittent (passe avec une
+  petite image, casse avec une grande).
+- **L'image doit rester en ligne apres l'appel** : Meta la telecharge de facon
+  asynchrone. Une URL signee a duree courte donne un post sans visuel, sans
+  aucune erreur cote serveur.
+- Instagram REFUSE un post sans image : `requiresImage` dans le catalogue fait
+  echouer la validation a l'apercu, pas en pleine publication.
+- Le jeton meurt a ~60 jours et ne se rafraichit qu'avec un jeton encore
+  valide : `/api/cron/social-token-refresh` (quotidien) s'y prend 10 jours a
+  l'avance.
+
 #### Event `social.post` (site → bot, via outbox/webhook)
 
 Emis par `/api/admin/social-posts` (onglet « Reseaux » de

@@ -140,8 +140,13 @@ describe('resolveTargets', () => {
       { text: 'Texte' },
       [{ platform: 'discord_announce' }, { platform: 'site_news' }]
     );
-    expect(out.map((t) => t.platform)).toEqual(
-      SOCIAL_PLATFORMS.map((p) => p.key)
+    // On n'attend QUE les cibles demandées, mais dans l'ordre du catalogue.
+    // Comparer au catalogue entier ferait échouer ce test à chaque cible
+    // ajoutée, alors qu'il ne parle que de tri.
+    const catalogue = SOCIAL_PLATFORMS.map((p) => p.key);
+    const got = out.map((t) => t.platform);
+    expect(got).toEqual(
+      catalogue.filter((k) => k === 'site_news' || k === 'discord_announce')
     );
   });
 });

@@ -3,9 +3,15 @@
 // Cœur du post multi-cibles : un texte rédigé une fois, publié sur plusieurs
 // destinations, chacune pouvant surcharger le texte et l'image.
 //
-// Deux cibles dans ce lot, les seules qui ne dépendent de personne :
+// Trois cibles :
 //   - `site_news`        → une actualité sur owwomenscup.fr (table `news`)
 //   - `discord_announce` → un message dans notre salon d'annonces, via le bot
+//   - `instagram`        → un post sur @womenscup_asso (cf. ./instagram.ts)
+//
+// Les deux premières ne dépendent de personne. Instagram exige un compte
+// connecté par OAuth, et REFUSE un post sans image — d'où `requiresImage` dans
+// le catalogue, qui fait échouer la validation à l'APERÇU plutôt qu'en pleine
+// publication, une fois le site et Discord déjà servis.
 //
 // LE SENS DU FLUX S'INVERSE ICI. Jusqu'à présent, le pont site ↔ Discord allait
 // dans l'autre sens : `services/discord-bot/news-forwarder.js` surveille le
@@ -30,6 +36,7 @@ import {
   socialPlatform,
   type SocialPlatformKey,
 } from './platforms';
+import { loadAccount, markAccount, publishImage } from './instagram';
 
 /* -------------------------------------------------------------------------- */
 /* 1. Résolution du contenu — pur, testable                                    */
@@ -135,6 +142,10 @@ export function resolveTarget(
     error = `${platform.label} : impossible de déduire un titre, renseignez-le.`;
   } else if (imageUrl && !platform.supportsImage) {
     error = `${platform.label} : cette destination n'accepte pas d'image.`;
+  } else if (platform.requiresImage && !imageUrl) {
+    error =
+      `${platform.label} : une image est obligatoire — ` +
+      `cette destination ne publie pas de texte seul.`;
   }
 
   return {
@@ -346,6 +357,57 @@ async function publishDiscordAnnounce(
   }
 }
 
+async function publishInstagram(
+  target: ResolvedTarget,
+  ctx: { tenantId: string }
+): Promise<PublishOutcome> {
+  const out: PublishOutcome = {
+    platform: target.platform,
+    label: target.label,
+    status: 'failed',
+    externalId: null,
+    permalink: null,
+    error: null,
+  };
+
+  const account = await loadAccount(ctx.tenantId, 'instagram');
+  if (!account?.accessToken || !account.externalAccountId) {
+    out.error =
+      'Compte Instagram non connecté. Connectez-le depuis Communication › Réseaux.';
+    return out;
+  }
+  if (account.expiresAt && account.expiresAt.getTime() < Date.now()) {
+    // Passé l'échéance, le rafraîchissement lui-même est refusé : seule une
+    // ré-autorisation manuelle rétablit le service. Autant le dire ici plutôt
+    // que de laisser Meta répondre « jeton invalide ».
+    out.error =
+      'Le jeton Instagram a expiré. Reconnectez le compte depuis Communication › Réseaux.';
+    await markAccount(ctx.tenantId, { status: 'expired' });
+    return out;
+  }
+  if (!target.imageUrl) {
+    out.error = 'Instagram exige une image.';
+    return out;
+  }
+
+  try {
+    const published = await publishImage({
+      igUserId: account.externalAccountId,
+      accessToken: account.accessToken,
+      imageUrl: target.imageUrl,
+      caption: target.text,
+    });
+    out.status = 'sent';
+    out.externalId = published.mediaId;
+    out.permalink = published.permalink;
+    return out;
+  } catch (err) {
+    out.error = err instanceof Error ? err.message : String(err);
+    await markAccount(ctx.tenantId, { last_error: out.error });
+    return out;
+  }
+}
+
 /**
  * Publie chaque cible et renvoie un résultat PAR CIBLE.
  *
@@ -378,6 +440,9 @@ export async function publishTargets(
         break;
       case 'discord_announce':
         outcomes.push(await publishDiscordAnnounce(target, ctx));
+        break;
+      case 'instagram':
+        outcomes.push(await publishInstagram(target, ctx));
         break;
       default:
         outcomes.push({

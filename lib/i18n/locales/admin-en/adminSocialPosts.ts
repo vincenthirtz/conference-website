@@ -55,6 +55,10 @@ export default {
   statusSkipped: 'Skipped',
   seePost: 'View',
 
+  connectedAs: 'Connected account: {handle}',
+  notConnected: 'Account not connected.',
+  connectionExpired: 'The connection has expired.',
+  connectCta: 'Connect the account',
   historyTitle: 'Previous sends',
   historyEmpty: 'No post sent yet.',
   historyLoading: 'Loading…',

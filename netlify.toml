@@ -110,6 +110,13 @@
 # Une fois par jour à 08:00 UTC (≈ 09h/10h Paris) — le matin pour un rappel J-1.
 # Émet `task.due_soon` (outbox → push/DM Discord). Idempotent : cible exactement
 # `due_date = CURRENT_DATE + 1`. Requiert CRON_SECRET + URL (ou SITE_URL).
+# Scheduled function: rafraichit les jetons longue duree des comptes reseaux
+# (Instagram) AVANT leur echeance. Le jeton meurt a ~60 jours et ne se
+# rafraichit qu'avec un jeton encore valide : passe la date, il faut re-cliquer
+# le consentement a la main. On s'y prend dix jours a l'avance.
+[functions."social-token-refresh-cron"]
+  schedule = "0 6 * * *"
+
 [functions."task-due-reminders-cron"]
   schedule = "0 8 * * *"
 

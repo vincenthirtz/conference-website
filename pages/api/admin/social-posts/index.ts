@@ -28,6 +28,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { logStaffAction } from '@/utils/staffLogs';
 import { logger } from '@/utils/logger';
 import { SOCIAL_PLATFORMS, isSocialPlatformKey } from '@/utils/social/platforms';
+import { loadAccount } from '@/utils/social/instagram';
 import {
   aggregateStatus,
   newsRevalidatePaths,
@@ -70,6 +71,13 @@ async function handler(
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
+type ConnectionState = {
+  connected: boolean;
+  handle: string | null;
+  expiresAt: string | null;
+  status: string;
+};
+
 async function handleGet(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -95,8 +103,26 @@ async function handleGet(
     return res.status(500).json({ error: 'Chargement de l’historique impossible.' });
   }
 
+  // État de connexion des cibles qui en exigent une. Le panneau s'en sert pour
+  // afficher « à connecter » plutôt que de laisser cocher une case dont la
+  // publication échouerait — et pour prévenir AVANT que le jeton expire.
+  const connections: Record<string, ConnectionState> = {};
+  for (const platform of SOCIAL_PLATFORMS) {
+    if (!platform.needsConnection) continue;
+    const account = await loadAccount(ctx.tenantId, platform.key);
+    const expiresAt = account?.expiresAt ?? null;
+    const expired = Boolean(expiresAt && expiresAt.getTime() < Date.now());
+    connections[platform.key] = {
+      connected: Boolean(account?.accessToken) && !expired,
+      handle: account?.handle ?? null,
+      expiresAt: expiresAt ? expiresAt.toISOString() : null,
+      status: expired ? 'expired' : (account?.status ?? 'disconnected'),
+    };
+  }
+
   return res.status(200).json({
     platforms: SOCIAL_PLATFORMS,
+    connections,
     posts: data ?? [],
   });
 }

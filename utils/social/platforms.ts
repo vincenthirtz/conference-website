@@ -19,7 +19,10 @@
 // quand leur mode assisté arrive : une entrée de plus dans le tableau, et le
 // panneau les affiche.
 
-export type SocialPlatformKey = 'site_news' | 'discord_announce';
+export type SocialPlatformKey =
+  | 'site_news'
+  | 'discord_announce'
+  | 'instagram';
 
 export type SocialPlatform = {
   key: SocialPlatformKey;
@@ -36,8 +39,21 @@ export type SocialPlatform = {
    */
   textLimit: number | null;
   supportsImage: boolean;
+  /**
+   * Instagram REFUSE un post sans visuel : c'est un réseau d'images, pas de
+   * texte. Sans ce drapeau, une annonce sans image partirait sur le site et
+   * Discord puis échouerait sur Instagram, en pleine publication au lieu de
+   * l'aperçu.
+   */
+  requiresImage: boolean;
   /** Le site veut un titre en plus du corps ; les autres non. */
   needsTitle: boolean;
+  /**
+   * La cible exige un compte connecté par OAuth (`social_accounts`). L'API le
+   * renseigne au chargement pour que le panneau puisse afficher « à connecter »
+   * plutôt que de laisser cocher une case qui échouera.
+   */
+  needsConnection: boolean;
 };
 
 export const SOCIAL_PLATFORMS: SocialPlatform[] = [
@@ -48,7 +64,9 @@ export const SOCIAL_PLATFORMS: SocialPlatform[] = [
     mode: 'api',
     textLimit: null,
     supportsImage: true,
+    requiresImage: false,
     needsTitle: true,
+    needsConnection: false,
   },
   {
     key: 'discord_announce',
@@ -59,7 +77,22 @@ export const SOCIAL_PLATFORMS: SocialPlatform[] = [
     // déjà le handler bot, qui re-tronque par sécurité.
     textLimit: 1900,
     supportsImage: true,
+    requiresImage: false,
     needsTitle: false,
+    needsConnection: false,
+  },
+  {
+    key: 'instagram',
+    label: 'Instagram',
+    destination: '@womenscup_asso',
+    mode: 'api',
+    // Limite de la légende. Instagram tronque en silence au-delà — mieux vaut
+    // refuser à l'aperçu que publier un texte coupé au milieu d'un mot.
+    textLimit: 2200,
+    supportsImage: true,
+    requiresImage: true,
+    needsTitle: false,
+    needsConnection: true,
   },
 ];
 

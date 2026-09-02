@@ -53,6 +53,10 @@ export default adminNs('adminSocialPosts', {
   statusSkipped: 'Ignoré',
   seePost: 'Voir',
 
+  connectedAs: 'Compte connecté : {handle}',
+  notConnected: 'Compte non connecté.',
+  connectionExpired: 'La connexion a expiré.',
+  connectCta: 'Connecter le compte',
   historyTitle: 'Envois précédents',
   historyEmpty: 'Aucun post envoyé pour l’instant.',
   historyLoading: 'Chargement…',

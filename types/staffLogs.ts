@@ -143,6 +143,7 @@ export type StaffLogAction =
   // --- Contenu éditorial ---
   | 'publish_news'
   | 'publish_social_post'
+  | 'connect_social_account'
   | 'create_announcement'
   | 'update_announcement'
   | 'delete_announcement'

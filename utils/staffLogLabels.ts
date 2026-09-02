@@ -147,6 +147,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   // Contenu éditorial
   publish_news: 'Publication actualité',
   publish_social_post: 'Publication post multi-réseaux',
+  connect_social_account: 'Connexion compte réseau social',
   create_announcement: 'Création annonce',
   update_announcement: 'Modification annonce',
   delete_announcement: 'Suppression annonce',

@@ -42,8 +42,16 @@ type HistoryPost = {
   targets: HistoryTarget[];
 };
 
+type ConnectionState = {
+  connected: boolean;
+  handle: string | null;
+  expiresAt: string | null;
+  status: string;
+};
+
 type StateResponse = {
   platforms: SocialPlatform[];
+  connections: Record<string, ConnectionState>;
   posts: HistoryPost[];
 };
 
@@ -136,7 +144,17 @@ export default function SocialPostsPanel() {
       setDrafts((prev) => {
         if (Object.keys(prev).length > 0) return prev;
         return Object.fromEntries(
-          data.platforms.map((p) => [p.key, { ...emptyDraft }])
+          data.platforms.map((p) => [
+            p.key,
+            {
+              ...emptyDraft,
+              // Une cible dont le compte n'est pas connecté part décochée :
+              // la cocher ne mènerait qu'à un échec de publication.
+              enabled:
+                !p.needsConnection ||
+                Boolean(data.connections?.[p.key]?.connected),
+            },
+          ])
         );
       });
     } catch (err) {
@@ -382,6 +400,38 @@ export default function SocialPostsPanel() {
                     : ''}
                 </span>
               </div>
+
+              {p.needsConnection ? (
+                (() => {
+                  const conn = state.connections?.[p.key];
+                  if (conn?.connected) {
+                    return (
+                      <p className="pl-7 text-xs text-neutral-500">
+                        {format(t.connectedAs, { handle: conn.handle ?? '—' })}
+                      </p>
+                    );
+                  }
+                  return (
+                    <p className="pl-7 text-xs text-amber-300">
+                      {conn?.status === 'expired'
+                        ? t.connectionExpired
+                        : t.notConnected}{' '}
+                      {/* Navigation de document volontaire, pas un <Link> :
+                          cette route répond par une redirection 302 vers
+                          l'écran de consentement Meta. Une navigation côté
+                          client de Next resterait dans l'app et n'irait nulle
+                          part. */}
+                      {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+                      <a
+                        href="/api/admin/instagram/authorize"
+                        className="underline underline-offset-2"
+                      >
+                        {t.connectCta}
+                      </a>
+                    </p>
+                  );
+                })()
+              ) : null}
 
               {d.enabled ? (
                 <div className="space-y-3 pl-7">

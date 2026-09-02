@@ -30,7 +30,13 @@ import { logger } from '@/utils/logger';
  * frappe dans un `getIntegrationSecret('gogle_drive…')` renverrait `null`
  * silencieusement, c'est-à-dire « pas configuré » — le pire des diagnostics.
  */
-export const INTEGRATION_SECRET_KEYS = ['google_drive_sa_private_key'] as const;
+export const INTEGRATION_SECRET_KEYS = [
+  'google_drive_sa_private_key',
+  // Secret de l'app Meta qui publie sur Instagram. Ici et pas en variable
+  // d'environnement : cf. l'en-tête de ce fichier. L'App ID, lui, est public
+  // et vit dans `INSTAGRAM_APP_ID`.
+  'instagram_app_secret',
+] as const;
 
 export type IntegrationSecretKey = (typeof INTEGRATION_SECRET_KEYS)[number];
 

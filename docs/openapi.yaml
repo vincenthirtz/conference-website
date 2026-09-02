@@ -19272,6 +19272,118 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /api/admin/instagram/authorize:
+    get:
+      summary: Depart du consentement Instagram (redirection vers Meta).
+      operationId: adminInstagramAuthorize
+      tags:
+        - admin/communications
+      description: |
+        Redirige le staff vers l'ecran d'autorisation Meta avec un `state` signe
+        HMAC (CSRF + binding tenant, TTL 10 min). Scopes demandes :
+        `instagram_business_basic`, `instagram_business_content_publish`.
+
+        Repond 503 si `INSTAGRAM_APP_ID` est absent — la cible Instagram est
+        alors simplement dormante, pas en panne.
+      security:
+        - StaffSession: []
+      responses:
+        '302':
+          description: Redirection vers https://www.instagram.com/oauth/authorize.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          description: Instagram non configure (INSTAGRAM_APP_ID absent).
+  /api/admin/instagram/callback:
+    get:
+      summary: Retour du consentement Instagram — persiste le compte connecte.
+      operationId: adminInstagramCallback
+      tags:
+        - admin/communications
+      description: |
+        URL a declarer TELLE QUELLE dans les reglages de l'app Meta. Echange le
+        code contre un jeton longue duree (~60 j), lit l'identite du compte, et
+        ecrit `social_accounts` avec le jeton CHIFFRE (AES-256-GCM).
+
+        Repond toujours par une REDIRECTION vers
+        `/admin/communications?tab=social`, avec le resultat en query
+        (`instagram=connected|cancelled|error`) : on arrive ici depuis un
+        navigateur, pas depuis un fetch.
+      security:
+        - StaffSession: []
+      parameters:
+        - name: code
+          in: query
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+          description: State signe emis par /api/admin/instagram/authorize.
+        - name: error
+          in: query
+          schema:
+            type: string
+          description: Renseigne par Meta si l'utilisateur refuse.
+      responses:
+        '302':
+          description: Redirection vers le panneau, resultat en query.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/cron/social-token-refresh:
+    get:
+      summary: Rafraichit les jetons longue duree des comptes reseaux.
+      operationId: cronSocialTokenRefreshGet
+      tags:
+        - cron
+      description: |
+        Voir la variante POST : meme handler, GET et POST acceptes.
+
+        Auth : `Authorization: Bearer <CRON_SECRET>` ou `?secret=`.
+      security:
+        - CronSecret: []
+      responses:
+        '200':
+          description: '`{ refreshed, skipped, failed }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          description: CRON_SECRET absent ou invalide.
+    post:
+      summary: Rafraichit les jetons longue duree des comptes reseaux.
+      operationId: cronSocialTokenRefresh
+      tags:
+        - cron
+      security:
+        - CronSecret: []
+      description: |
+        Quotidien (Netlify, 06:00 UTC). Rafraichit les jetons dont l'echeance
+        tombe dans moins de 10 jours.
+
+        Le rafraichissement Instagram exige un jeton ENCORE VALIDE et age d'au
+        moins 24 h : passe l'echeance il n'y a plus de rattrapage automatique,
+        d'où la fenetre d'avance. Un echec isole n'ecrit PAS `status: expired` —
+        une panne reseau chez Meta marquerait un compte valide comme mort.
+
+        Auth : `Authorization: Bearer <CRON_SECRET>` ou `?secret=`.
+      responses:
+        '200':
+          description: '`{ refreshed, skipped, failed }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          description: CRON_SECRET absent ou invalide.
   /api/admin/social-posts:
     get:
       summary: Catalogue des destinations + historique des posts multi-cibles.
