@@ -6,6 +6,8 @@ import Paragraph from '@/components/Typography/paragraph';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import nsHomeNews from '@/lib/i18n/locales/fr/homeNews';
+import nsNewsTags from '@/lib/i18n/locales/fr/newsTags';
+import { newsTagLabel } from '@/utils/news/newsTag';
 import { stripMarkdown } from '@/utils/social/markdown';
 
 export type HomeNewsItem = {
@@ -29,12 +31,6 @@ export type HomeNewsItem = {
 };
 
 const DEFAULT_LIMIT = 5;
-
-const formatTagLabel = (tag?: string | null) => {
-  if (!tag) return 'General';
-  const cleaned = tag.replace(/-/g, ' ').trim() || 'General';
-  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
-};
 
 function formatDate(item: HomeNewsItem, locale: string) {
   const raw = item.publishedAt || item.createdAt;
@@ -66,6 +62,7 @@ function HomeNewsSection({
   initialNews = [],
 }: HomeNewsSectionProps): JSX.Element {
   const t = useT(nsHomeNews);
+  const tagLabels = useT(nsNewsTags);
   const [selectedTag, setSelectedTag] = useState<string>('all');
 
   const availableTags = useMemo(() => {
@@ -132,7 +129,7 @@ function HomeNewsSection({
             {availableTags.map((tag) => (
               <FilterPill
                 key={tag}
-                label={formatTagLabel(tag)}
+                label={newsTagLabel(tag, tagLabels) ?? tagLabels.general}
                 active={selectedTag === tag}
                 onClick={() => setSelectedTag(tag)}
               />
@@ -177,6 +174,7 @@ export default HomeNewsSection;
 
 function FeaturedCard({ item }: { item: HomeNewsItem }) {
   const t = useT(nsHomeNews);
+  const tagLabels = useT(nsNewsTags);
   const locale = useLocale();
   const date = formatDate(item, locale);
   return (
@@ -205,7 +203,7 @@ function FeaturedCard({ item }: { item: HomeNewsItem }) {
           </span>
           {item.tag && (
             <span className="rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-blue-100">
-              {formatTagLabel(item.tag)}
+              {newsTagLabel(item.tag, tagLabels) ?? tagLabels.general}
             </span>
           )}
           {date && <span>{date}</span>}
@@ -235,6 +233,7 @@ function FeaturedCard({ item }: { item: HomeNewsItem }) {
 }
 
 function CompactCard({ item }: { item: HomeNewsItem }) {
+  const tagLabels = useT(nsNewsTags);
   const locale = useLocale();
   const date = formatDate(item, locale);
   return (
@@ -260,7 +259,7 @@ function CompactCard({ item }: { item: HomeNewsItem }) {
         <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] text-blue-200/80">
           {item.tag && (
             <span className="rounded-full border border-white/15 bg-white/5 px-1.5 py-0.5 text-[9px] text-blue-100">
-              {formatTagLabel(item.tag)}
+              {newsTagLabel(item.tag, tagLabels) ?? tagLabels.general}
             </span>
           )}
           {date && <span className="truncate">{date}</span>}

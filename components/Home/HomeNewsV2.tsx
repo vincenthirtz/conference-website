@@ -11,15 +11,11 @@ import { type HomeNewsItem } from '@/components/News/HomeNewsSection';
 import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
+import nsNewsTags from '@/lib/i18n/locales/fr/newsTags';
+import { newsTagLabel } from '@/utils/news/newsTag';
 
 type HomeNewsV2Props = {
   news: HomeNewsItem[];
-};
-
-const formatTagLabel = (tag?: string | null) => {
-  if (!tag) return 'General';
-  const cleaned = tag.replace(/-/g, ' ').trim() || 'General';
-  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 };
 
 function formatDate(item: HomeNewsItem, locale: string) {
@@ -41,6 +37,7 @@ function getExcerpt(item: HomeNewsItem, fallback: string, max = 140) {
 
 function NewsCard({ item }: { item: HomeNewsItem }) {
   const t = useT(nsHomeV2);
+  const tagLabels = useT(nsNewsTags);
   const locale = useLocale();
   const date = formatDate(item, locale);
   return (
@@ -68,7 +65,7 @@ function NewsCard({ item }: { item: HomeNewsItem }) {
         )}
         {item.tag && (
           <span className="absolute left-3 top-3 rounded-full border border-white/10 bg-black/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-green-light)]">
-            {formatTagLabel(item.tag)}
+            {newsTagLabel(item.tag, tagLabels) ?? tagLabels.general}
           </span>
         )}
       </div>

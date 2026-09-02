@@ -17,6 +17,8 @@ import { useLocale } from '@/lib/i18n/useLocale';
 
 import { logger } from '../../utils/logger';
 import nsNewsIndex from '@/lib/i18n/locales/fr/newsIndex';
+import nsNewsTags from '@/lib/i18n/locales/fr/newsTags';
+import { newsTagLabel } from '@/utils/news/newsTag';
 
 const PAGE_SIZE = 9;
 
@@ -36,13 +38,6 @@ type NewsItem = {
 type NewsIndexProps = {
   news: NewsItem[];
   loadError: boolean;
-};
-
-const formatTagLabel = (value?: string | null) => {
-  if (!value) return null;
-  const cleaned = value.replace(/-/g, ' ').trim();
-  if (!cleaned) return null;
-  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 };
 
 export const getStaticProps: GetStaticProps<NewsIndexProps> = async () => {
@@ -95,6 +90,7 @@ export const getStaticProps: GetStaticProps<NewsIndexProps> = async () => {
 
 function NewsCard({ item }: { item: NewsItem }) {
   const t = useT(nsNewsIndex);
+  const tagLabels = useT(nsNewsTags);
   const locale = useLocale();
   const dateStr =
     item.publishedAt || item.createdAt
@@ -103,7 +99,7 @@ function NewsCard({ item }: { item: NewsItem }) {
           { day: '2-digit', month: 'short', year: 'numeric' }
         )
       : null;
-  const tagLabel = formatTagLabel(item.tag);
+  const tagLabel = newsTagLabel(item.tag, tagLabels);
 
   return (
     <Link

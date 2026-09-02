@@ -124,6 +124,7 @@ import nsTeamStats from './teamStats';
 import nsTeamMaps from './teamMaps';
 import nsActualitesPage from './actualitesPage';
 import nsNewsIndex from './newsIndex';
+import nsNewsTags from './newsTags';
 import nsNewsDetail from './newsDetail';
 import nsCheckinToken from './checkinToken';
 import nsHeroPicker from './heroPicker';
@@ -286,6 +287,7 @@ export const frDict = {
   teamMaps: nsTeamMaps.fr,
   actualitesPage: nsActualitesPage.fr,
   newsIndex: nsNewsIndex.fr,
+  newsTags: nsNewsTags.fr,
   newsDetail: nsNewsDetail.fr,
   checkinToken: nsCheckinToken.fr,
   heroPicker: nsHeroPicker.fr,

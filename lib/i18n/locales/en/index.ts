@@ -127,6 +127,7 @@ import enTeamStats from './teamStats';
 import enTeamMaps from './teamMaps';
 import enActualitesPage from './actualitesPage';
 import enNewsIndex from './newsIndex';
+import enNewsTags from './newsTags';
 import enNewsDetail from './newsDetail';
 import enCheckinToken from './checkinToken';
 import enHeroPicker from './heroPicker';
@@ -289,6 +290,7 @@ const enDict = {
   teamMaps: enTeamMaps,
   actualitesPage: enActualitesPage,
   newsIndex: enNewsIndex,
+  newsTags: enNewsTags,
   newsDetail: enNewsDetail,
   checkinToken: enCheckinToken,
   heroPicker: enHeroPicker,

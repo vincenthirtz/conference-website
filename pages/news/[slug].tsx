@@ -16,6 +16,11 @@ import { useLocale } from '@/lib/i18n/useLocale';
 
 import { logger } from '../../utils/logger';
 import nsNewsDetail from '@/lib/i18n/locales/fr/newsDetail';
+import nsNewsTags from '@/lib/i18n/locales/fr/newsTags';
+import { newsTagLabel } from '@/utils/news/newsTag';
+import ArticleHero from '@/components/News/ArticleHero';
+import ShareArticle from '@/components/News/ShareArticle';
+import RelatedNews, { type RelatedItem } from '@/components/News/RelatedNews';
 import { social } from '@/config/socials';
 const SITE_NAME = "OW Women's Cup";
 
@@ -67,7 +72,7 @@ const MARKDOWN_COMPONENTS: Components = {
   h3: ({ children }) => (
     <h4 className="mt-6 text-lg font-semibold text-white">{children}</h4>
   ),
-  p: ({ children }) => <p>{children}</p>,
+  p: ({ children }) => <p className="my-5">{children}</p>,
   ul: ({ children }) => (
     <ul className="list-disc space-y-1 pl-6">{children}</ul>
   ),
@@ -110,13 +115,6 @@ function toAbsoluteUrl(path: string | null | undefined): string | undefined {
   return `${BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
-const formatTagLabel = (value?: string | null) => {
-  if (!value) return null;
-  const cleaned = value.replace(/-/g, ' ').trim();
-  if (!cleaned) return null;
-  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
-};
-
 type NewsPageProps = {
   title: string;
   content: string;
@@ -130,6 +128,7 @@ type NewsPageProps = {
   createdAt?: string | null;
   updatedAt?: string | null;
   newsId?: string | null;
+  related?: RelatedItem[];
   error?: string | null;
 };
 
@@ -171,6 +170,28 @@ export const getStaticProps: GetStaticProps<NewsPageProps> = async (
     return { notFound: true, revalidate: 60 };
   }
 
+  // « À lire aussi » : la page était un cul-de-sac. Quelqu'un qui arrive d'un
+  // partage repartait sans savoir qu'il y a d'autres actualités.
+  const { data: relatedRows } = await supabaseAdmin
+    .from('news')
+    .select('id, slug, title, tag, image_url, published_at, teams(logo_url)')
+    .eq('tenant_id', DEFAULT_TENANT_ID)
+    .eq('status', 'published')
+    .neq('id', data.id)
+    .order('published_at', { ascending: false, nullsFirst: false })
+    .limit(3);
+
+  const related: RelatedItem[] = (relatedRows ?? []).map((row: any) => ({
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    tag: row.tag ?? null,
+    imageUrl: resolveNewsImage(row.image_url, row.teams).url,
+    publishedAt: row.published_at ?? null,
+  }));
+
+  const heroImage = resolveNewsImage(data.image_url, data.teams);
+
   return {
     props: {
       title: data.title || '',
@@ -178,12 +199,13 @@ export const getStaticProps: GetStaticProps<NewsPageProps> = async (
       slug: data.slug || null,
       tag: data.tag || 'general',
       excerpt: data.excerpt || '',
-      imageUrl: resolveNewsImage(data.image_url, data.teams).url || '',
-      imageFitContain: resolveNewsImage(data.image_url, data.teams).fitContain,
+      imageUrl: heroImage.url || '',
+      imageFitContain: heroImage.fitContain,
       publishedAt: data.published_at || null,
       createdAt: data.created_at || null,
       updatedAt: data.updated_at || null,
       newsId: data.id || null,
+      related,
     },
     revalidate: 300,
   };
@@ -201,15 +223,17 @@ export default function NewsSlugPage({
   createdAt,
   updatedAt,
   newsId,
+  related = [],
   error,
 }: NewsPageProps) {
   const t = useT(nsNewsDetail);
+  const tagLabels = useT(nsNewsTags);
   const locale = useLocale();
   const displayDate =
     publishedAt || createdAt
       ? new Date(publishedAt || createdAt || '').toLocaleDateString(locale)
       : null;
-  const formattedTag = tag ? formatTagLabel(tag) : null;
+  const formattedTag = newsTagLabel(tag, tagLabels);
 
   // SEO variables
   const metaTitle = title ? `${title} | ${SITE_NAME}` : `News | ${SITE_NAME}`;
@@ -297,7 +321,15 @@ export default function NewsSlugPage({
           />
         )}
       </Head>
-      <div className="container max-w-4xl px-4 pt-24">
+      {/* Colonne de lecture. L'article s'affichait sur 1 200 px, soit près de
+          145 caractères par ligne — bien au-delà des ~75 où l'œil retrouve
+          encore le début de la ligne suivante sans effort.
+
+          PAS de classe `container` ici : `styles/globals.css` lui impose
+          `max-width: 1200px`, qui l'emporte sur tout `max-w-*` de Tailwind
+          posé à côté. Le `max-w-4xl` qui figurait sur cette page n'a donc
+          jamais rien fait. On compose la colonne à la main. */}
+      <div className="mx-auto w-full max-w-[46rem] px-4 pt-24">
         <Link
           href="/"
           className="text-sm text-[var(--color-violet-light)] hover:text-[var(--color-violet)]"
@@ -335,23 +367,15 @@ export default function NewsSlugPage({
               </Heading>
               <span className="brand-rule mt-1" aria-hidden />
               {imageUrl && (
-                <Image
+                <ArticleHero
                   src={imageUrl}
                   alt=""
-                  width={1200}
-                  height={630}
-                  priority
-                  sizes="(max-width:768px) 100vw, 800px"
-                  className={`mt-4 aspect-[1200/630] w-full rounded-2xl border border-white/10 ${
-                    imageFitContain
-                      ? 'bg-white/[0.03] object-contain p-8'
-                      : 'object-cover'
-                  }`}
+                  forceContain={imageFitContain}
                 />
               )}
             </div>
 
-            <div className="mt-8 space-y-4 text-lg leading-relaxed text-gray-100">
+            <div className="mt-8 text-[1.0625rem] leading-[1.75] text-gray-200 sm:text-lg">
               {content ? (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
@@ -364,17 +388,26 @@ export default function NewsSlugPage({
               )}
             </div>
 
-            <div className="mt-10">
-              <Link
-                href="/api/news/rss"
-                target="_blank"
-                rel="noreferrer noopener"
-              >
-                <Button type="button" className="px-6 h-[48px]">
-                  {t.rssFeed}
-                </Button>
-              </Link>
-            </div>
+            <ShareArticle
+              url={canonical ?? null}
+              title={title}
+              labels={{
+                title: t.shareTitle,
+                onBluesky: t.shareBluesky,
+                onX: t.shareX,
+                onFacebook: t.shareFacebook,
+                copyLink: t.shareCopy,
+                copied: t.shareCopied,
+                allNews: t.allNews,
+                rss: t.rssFeed,
+              }}
+            />
+
+            <RelatedNews
+              items={related}
+              title={t.relatedTitle}
+              locale={locale}
+            />
 
             {newsId && <Comments newsId={newsId} />}
           </article>
