@@ -117,6 +117,13 @@
 [functions."social-token-refresh-cron"]
   schedule = "0 6 * * *"
 
+# Scheduled function: recopie les nouveaux posts Bluesky de l'association dans
+# le salon Discord configure (site_settings.bluesky_mirror_channel_id). Le fil
+# se lit sans authentification ; le curseur vit cote site pour qu'un
+# redemarrage du bot ne republie pas tout le fil.
+[functions."bluesky-mirror-cron"]
+  schedule = "*/15 * * * *"
+
 [functions."task-due-reminders-cron"]
   schedule = "0 8 * * *"
 

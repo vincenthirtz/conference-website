@@ -3069,6 +3069,28 @@ Le ciblage sur un jour exact tient lieu de deduplication (pas de table d'etat).
 Par defaut seules les equipes avec un motif reel sont notifiees
 (`only=needs_attention`).
 
+#### Event `social.mirror` (site → bot, via outbox/webhook)
+
+Emis par le cron `/api/cron/bluesky-mirror`. Consomme par
+`services/discord-bot/social-mirror.js`.
+
+**Payload** : `{ source, channelId, content, url, postedAt }`.
+
+- **Le salon est DANS le payload**, contrairement a tous les autres handlers qui
+  resolvent leurs canaux eux-memes. Un miroir vise un salon choisi par qui le
+  configure (`site_settings.bluesky_mirror_channel_id`) et il pourra y en avoir
+  plusieurs ; un salon d'annonces ou de logs, lui, est unique par tenant.
+- `allowedMentions: { parse: [] }` : un post public recopie ne doit pas pouvoir
+  pinger le serveur.
+- Le message se termine par le lien du post : Discord en tire une carte avec
+  texte et image, donc le bot ne joint pas l'image lui-meme.
+- Contenu tronque a 1900 caracteres cote site ET cote bot.
+
+**Sens du flux.** `social.post` va de l'admin VERS les reseaux ; `social.mirror`
+en REVIENT. Les deux coexistent, et un post compose dans l'admin qui part sur
+Bluesky sera donc aussi recopie par le miroir dans son salon — un salon
+different de `#annonces`, donc sans doublon visible au meme endroit.
+
 #### Cible Instagram (site → Meta, sans passer par le bot)
 
 Depuis `/api/admin/social-posts`, la cible `instagram` publie DIRECTEMENT via

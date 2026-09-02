@@ -23,6 +23,12 @@ export const BOT_EVENT_NAMES = [
   // évite le doublon : le forwarder ignore les messages du bot, pas ceux d'un
   // webhook, dont l'identifiant d'auteur est différent.
   'social.post',
+  // Recopie d'un post d'un de nos comptes (Bluesky) dans un salon Discord.
+  // Distinct de `social.post` : celui-ci part de l'admin vers les réseaux,
+  // celui-là revient d'un réseau vers Discord. Le salon est DANS le payload —
+  // un miroir vise un salon choisi par qui le configure, et il pourra y en
+  // avoir plusieurs, alors qu'un salon d'annonces est unique par tenant.
+  'social.mirror',
   'team.created',
   'team.dissolved',
   // Gestion des salons d'équipe DEPUIS L'ADMIN. Le cron autonome qui faisait ça

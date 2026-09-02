@@ -19467,6 +19467,64 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/cron/bluesky-mirror:
+    get:
+      summary: Recopie les nouveaux posts Bluesky dans un salon Discord.
+      operationId: cronBlueskyMirrorGet
+      tags:
+        - cron
+      security:
+        - CronSecret: []
+      description: |
+        Voir la variante POST : meme handler, GET et POST acceptes.
+      responses:
+        '200':
+          description: '`{ mirrored, checked }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          description: CRON_SECRET absent ou invalide.
+    post:
+      summary: Recopie les nouveaux posts Bluesky dans un salon Discord.
+      operationId: cronBlueskyMirror
+      tags:
+        - cron
+      security:
+        - CronSecret: []
+      description: |
+        Toutes les 15 minutes (Netlify). Lit le fil public du compte
+        (`public.api.bsky.app`, SANS authentification), garde ce qui est
+        strictement posterieur au curseur `site_settings.bluesky_mirror_last_post_at`,
+        emet un event `social.mirror` par post, puis avance le curseur.
+
+        Le curseur n'avance QUE sur les posts reellement emis : un echec au
+        troisieme post sur cinq laisse le curseur au deuxieme, et le passage
+        suivant reprend la — plutot que de perdre silencieusement trois posts.
+
+        Reposts et reponses sont ecartes. Au premier passage (curseur absent),
+        seules les 24 dernieres heures sont recopiees : sans cette borne,
+        l'activation deverserait tout l'historique dans le salon.
+
+        Sans `site_settings.bluesky_mirror_channel_id`, repond 200
+        `{ skipped: 'no_channel' }` — le miroir est desactive, ce n'est pas une
+        panne.
+
+        Auth : `Authorization: Bearer <CRON_SECRET>` ou `?secret=`.
+      responses:
+        '200':
+          description: '`{ mirrored, checked }` ou `{ skipped, mirrored: 0 }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          description: CRON_SECRET absent ou invalide.
+        '502':
+          description: Bluesky injoignable.
   /api/cron/social-token-refresh:
     get:
       summary: Rafraichit les jetons longue duree des comptes reseaux.
