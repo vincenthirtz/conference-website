@@ -144,6 +144,7 @@ export type StaffLogAction =
   | 'publish_news'
   | 'publish_social_post'
   | 'connect_social_account'
+  | 'store_social_credentials'
   | 'create_announcement'
   | 'update_announcement'
   | 'delete_announcement'

@@ -19272,6 +19272,68 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /api/admin/instagram/secret:
+    get:
+      summary: Etat de mise en service Instagram (sans jamais rendre le secret).
+      operationId: adminInstagramSecretState
+      tags:
+        - admin/communications
+      security:
+        - StaffSession: []
+      description: |
+        Dit ce qui manque encore pour publier : App ID pose (env), App Secret
+        pose (chiffre en base), et cle de chiffrement disponible. Ne renvoie
+        JAMAIS la valeur du secret, ni son debut.
+      responses:
+        '200':
+          description: '`{ appIdSet, secretSet, encryptionReady }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      summary: Enregistre l'App Secret Meta, chiffre.
+      operationId: adminInstagramSetSecret
+      tags:
+        - admin/communications
+      security:
+        - StaffSession: []
+      description: |
+        Le chiffrement se fait COTE SERVEUR, la ou `SECRETS_ENC_KEY` vit deja :
+        c'est ce qui evite de recopier une cle de production sur un poste de
+        travail. Meme mecanique que la cle Google Drive.
+
+        La forme est validee AVANT chiffrement (32 caracteres hexadecimaux) :
+        une valeur mal collee serait sinon acceptee et n'echouerait qu'au
+        premier echange OAuth, avec un message de Meta qui n'accuse pas le
+        secret.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [appSecret]
+              properties:
+                appSecret:
+                  type: string
+                  pattern: '^[a-fA-F0-9]{32}$'
+      responses:
+        '200':
+          description: '`{ ok: true, secretSet: true }`.'
+        '400':
+          description: Valeur qui n'a pas la forme d'un App Secret Meta.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          description: SECRETS_ENC_KEY absente — chiffrement impossible.
   /api/admin/instagram/authorize:
     get:
       summary: Depart du consentement Instagram (redirection vers Meta).

@@ -76,6 +76,14 @@ type PostResponse = {
 type Dict = typeof nsAdminSocialPosts.fr;
 
 const ENDPOINT = '/api/admin/social-posts';
+const SECRET_ENDPOINT = '/api/admin/instagram/secret';
+
+/** Ce qui manque encore pour qu'Instagram puisse publier. */
+type SetupState = {
+  appIdSet: boolean;
+  secretSet: boolean;
+  encryptionReady: boolean;
+};
 
 /** Réglages d'une destination dans le formulaire. */
 type TargetDraft = {
@@ -135,12 +143,45 @@ export default function SocialPostsPanel() {
   const [preview, setPreview] = useState<PreviewTarget[] | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Mise en service Instagram : l'App Secret se pose ICI et pas dans un script
+  // local, parce que la clé de chiffrement ne vit qu'en production. Le serveur
+  // chiffre là où la clé est déjà.
+  const [setup, setSetup] = useState<SetupState | null>(null);
+  const [appSecret, setAppSecret] = useState('');
+
+  const saveSecret = useCallback(async () => {
+    setBusy(true);
+    try {
+      await adminFetchJson(SECRET_ENDPOINT, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appSecret: appSecret.trim() }),
+      });
+      // La valeur ne sert plus à rien côté client : on l'oublie tout de suite.
+      setAppSecret('');
+      setSetup((prev) => (prev ? { ...prev, secretSet: true } : prev));
+      addToast(t.secretSaved, 'success');
+    } catch (err) {
+      logger.error('[admin/social-posts] secret save error', err);
+      addToast(t.secretError, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }, [adminFetchJson, addToast, appSecret, t.secretError, t.secretSaved]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const data = await adminFetchJson<StateResponse>(ENDPOINT);
       setState(data);
+      // Best-effort : l'état de mise en service ne doit pas empêcher le
+      // composeur de s'afficher pour les cibles qui, elles, marchent déjà.
+      try {
+        setSetup(await adminFetchJson<SetupState>(SECRET_ENDPOINT));
+      } catch (setupErr) {
+        logger.error('[admin/social-posts] setup state error', setupErr);
+      }
       setDrafts((prev) => {
         if (Object.keys(prev).length > 0) return prev;
         return Object.fromEntries(
@@ -409,6 +450,41 @@ export default function SocialPostsPanel() {
                       <p className="pl-7 text-xs text-neutral-500">
                         {format(t.connectedAs, { handle: conn.handle ?? '—' })}
                       </p>
+                    );
+                  }
+                  // Le consentement Meta ne peut pas aboutir tant que l'App
+                  // Secret n'est pas posé : on demande donc le secret AVANT
+                  // d'offrir le bouton, plutôt que de laisser l'échange échouer
+                  // avec un message de Meta qui n'accuse pas le secret.
+                  if (setup && !setup.secretSet) {
+                    return (
+                      <div className="space-y-2 pl-7">
+                        <p className="text-xs text-amber-300">
+                          {t.secretMissing}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <input
+                            type="password"
+                            value={appSecret}
+                            onChange={(e) => setAppSecret(e.target.value)}
+                            placeholder={t.secretPlaceholder}
+                            aria-label={t.secretLabel}
+                            autoComplete="off"
+                            className="w-72 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-xs text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={saveSecret}
+                            disabled={busy || !appSecret.trim()}
+                            className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-700 disabled:opacity-50"
+                          >
+                            {t.secretSaveCta}
+                          </button>
+                        </div>
+                        <p className="text-xs text-neutral-500">
+                          {t.secretHelp}
+                        </p>
+                      </div>
                     );
                   }
                   return (
