@@ -26,14 +26,27 @@
 // courte, ou un fichier supprimé juste après l'appel, donne un post sans visuel
 // sans aucune erreur côté serveur.
 //
+// ATTENTION — DEUX IDENTIFIANTS DIFFERENTS. `client_id` doit etre l'INSTAGRAM
+// App ID, PAS le Meta App ID affiche en haut du tableau de bord. Les deux sont
+// des nombres de meme longueur, et se tromper donne « Invalid platform app »
+// sur l'ecran de consentement — un message qui ne dit pas lequel est en cause.
+//
+//   Instagram App ID / App Secret :
+//     App Dashboard > Instagram > API setup with Instagram login
+//       > 3. Set up Instagram business login > Business login settings
+//
+// L'URI de redirection doit elle aussi etre declaree DANS CETTE SECTION, pas
+// dans les reglages OAuth generaux de l'app Meta.
+//
 // Env :
-//   INSTAGRAM_APP_ID       (public, l'App ID de l'app Meta)
+//   INSTAGRAM_APP_ID       (public, l'INSTAGRAM App ID — voir ci-dessus)
 //   INSTAGRAM_REDIRECT_URI (défaut : https://owwomenscup.fr/api/admin/instagram/callback
 //                           — doit être IDENTIQUE à l'URI déclarée chez Meta,
 //                           au caractère près, et identique entre l'authorize
 //                           et l'échange)
 //   SECRETS_ENC_KEY        (clé de chiffrement, lue par utils/crypto.ts)
-// Secret d'app : `integration_secrets.instagram_app_secret` (chiffré en base,
+// Secret d'app : l'INSTAGRAM App Secret (même section que l'Instagram App ID),
+// dans `integration_secrets.instagram_app_secret` (chiffré en base,
 // PAS en variable d'environnement — le plafond de 4 Ko de Netlify a déjà fait
 // échouer le déploiement deux fois).
 

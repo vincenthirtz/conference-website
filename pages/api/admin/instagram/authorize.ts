@@ -36,7 +36,9 @@ async function handler(
   if (!isInstagramConfigured()) {
     return res.status(503).json({
       error:
-        'Instagram non configuré : INSTAGRAM_APP_ID absent de l’environnement.',
+        'Instagram non configuré : INSTAGRAM_APP_ID absent de l’environnement. ' +
+        'Ce doit être l’INSTAGRAM App ID (Instagram › API setup with Instagram ' +
+        'login › Business login settings), pas le Meta App ID.',
     });
   }
 
