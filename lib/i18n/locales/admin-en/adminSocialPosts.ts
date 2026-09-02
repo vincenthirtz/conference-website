@@ -80,6 +80,13 @@ export default {
     'Instagram’s, not the Meta app’s: dashboard › Instagram › API setup with Instagram login › Business login settings. It is encrypted on save and never shown again.',
   secretSaved: 'App secret saved. You can now connect the account.',
   secretError: 'The secret could not be saved.',
+  blueskyMissing: 'Setup: add the Bluesky account.',
+  blueskyHandleLabel: 'Bluesky handle',
+  blueskyPasswordLabel: 'App password',
+  blueskyHelp:
+    'Create an app password in Bluesky › Settings › Privacy and security. Do not use the account password: an app password can be revoked in one click, the other cannot.',
+  blueskySaved: 'Bluesky account connected.',
+  blueskyError: 'The credentials could not be saved.',
   historyTitle: 'Previous sends',
   historyEmpty: 'No post sent yet.',
   historyLoading: 'Loading…',

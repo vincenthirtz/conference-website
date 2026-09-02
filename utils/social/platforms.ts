@@ -24,6 +24,7 @@ import type { TextFlavour } from './markdown';
 export type SocialPlatformKey =
   | 'site_news'
   | 'discord_announce'
+  | 'bluesky'
   | 'instagram';
 
 export type SocialPlatform = {
@@ -94,6 +95,22 @@ export const SOCIAL_PLATFORMS: SocialPlatform[] = [
     flavour: 'discord',
   },
   {
+    key: 'bluesky',
+    label: 'Bluesky',
+    destination: '@womenscup.bsky.social',
+    mode: 'api',
+    // 300 GRAPHÈMES, pas 300 caractères JavaScript : un emoji en vaut un, pas
+    // deux. Le compteur du panneau utilise `graphemeLength` pour la même raison.
+    textLimit: 300,
+    supportsImage: true,
+    requiresImage: false,
+    needsTitle: false,
+    needsConnection: true,
+    // Bluesky ne rend aucun Markdown : les liens passent par des `facets`, le
+    // reste s'afficherait littéralement.
+    flavour: 'plain',
+  },
+  {
     key: 'instagram',
     label: 'Instagram',
     destination: '@womenscup_asso',
@@ -110,6 +127,28 @@ export const SOCIAL_PLATFORMS: SocialPlatform[] = [
     flavour: 'plain',
   },
 ];
+
+/**
+ * Longueur du texte TELLE QUE LA DESTINATION LA COMPTE.
+ *
+ * Bluesky compte en graphèmes : `"👩‍💻"` vaut 1 pour lui et 5 pour
+ * `String.prototype.length`. Compter en `.length` refuserait des posts
+ * parfaitement valides dès qu'ils contiennent des emoji — ce qui, sur un
+ * réseau social, n'est pas un cas marginal.
+ */
+export function platformTextLength(
+  text: string,
+  platform: SocialPlatform
+): number {
+  if (platform.key !== 'bluesky') return text.length;
+  if (typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
+    const seg = new Intl.Segmenter('fr', { granularity: 'grapheme' });
+    let n = 0;
+    for (const _ of seg.segment(text)) n += 1;
+    return n;
+  }
+  return Array.from(text).length;
+}
 
 const BY_KEY = new Map(SOCIAL_PLATFORMS.map((p) => [p.key, p]));
 

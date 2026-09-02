@@ -19334,6 +19334,76 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '503':
           description: SECRETS_ENC_KEY absente — chiffrement impossible.
+  /api/admin/bluesky/credentials:
+    get:
+      summary: Etat de mise en service Bluesky (sans jamais rendre le mot de passe).
+      operationId: adminBlueskyCredentialsState
+      tags:
+        - admin/communications
+      security:
+        - StaffSession: []
+      description: |
+        Dit si le compte Bluesky est configure et sous quel handle. Le mot de
+        passe d'application n'est jamais renvoye.
+      responses:
+        '200':
+          description: '`{ configured, handle, encryptionReady }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      summary: Enregistre le handle et le mot de passe d'application Bluesky.
+      operationId: adminBlueskySetCredentials
+      tags:
+        - admin/communications
+      security:
+        - StaffSession: []
+      description: |
+        Pas d'OAuth : le protocole AT n'en propose pas pour ce cas. Un mot de
+        passe d'application se revoque d'un clic cote Bluesky, ce qui en fait
+        l'equivalent fonctionnel d'un jeton.
+
+        Le couple est VERIFIE aupres de Bluesky (createSession) avant d'etre
+        enregistre : un identifiant faux ne se manifesterait sinon qu'a la
+        premiere publication, au milieu d'un envoi multi-cibles.
+
+        Le format `xxxx-xxxx-xxxx-xxxx` est impose pour refuser le mot de passe
+        DU COMPTE, qui fonctionnerait mais donnerait un acces total et
+        irrevocable sans changement de mot de passe principal.
+
+        Chiffrement cote serveur (SECRETS_ENC_KEY), stockage dans
+        integration_secrets.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [handle, appPassword]
+              properties:
+                handle:
+                  type: string
+                  example: womenscup.bsky.social
+                appPassword:
+                  type: string
+                  pattern: '^[a-zA-Z0-9]{4}(-[a-zA-Z0-9]{4}){3}$'
+      responses:
+        '200':
+          description: '`{ ok: true, configured: true, handle }`.'
+        '400':
+          description: Handle mal forme, mot de passe hors format, ou refus de Bluesky.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          description: SECRETS_ENC_KEY absente — chiffrement impossible.
   /api/admin/instagram/authorize:
     get:
       summary: Depart du consentement Instagram (redirection vers Meta).

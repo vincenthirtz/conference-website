@@ -33,9 +33,12 @@ import { logger } from '@/utils/logger';
 import {
   NEWS_TITLE_MAX,
   SOCIAL_PLATFORMS,
+  platformTextLength,
   socialPlatform,
   type SocialPlatformKey,
 } from './platforms';
+import { publishPost as publishBlueskyPost } from './bluesky';
+import { getIntegrationSecret } from '@/utils/integrationSecrets';
 import { loadAccount, markAccount, publishImage } from './instagram';
 import { renderForFlavour, stripMarkdown } from './markdown';
 
@@ -136,13 +139,15 @@ export function resolveTarget(
     ? target.titleOverride?.trim() || deriveNewsTitle(trimmed)
     : null;
 
+  const length = platformTextLength(trimmed, platform);
+
   let error: string | null = null;
   if (!trimmed) {
     error = `${platform.label} : le texte est vide.`;
-  } else if (platform.textLimit && trimmed.length > platform.textLimit) {
+  } else if (platform.textLimit && length > platform.textLimit) {
     error =
-      `${platform.label} : ${trimmed.length} caractères pour un maximum de ` +
-      `${platform.textLimit}, soit ${trimmed.length - platform.textLimit} de trop.`;
+      `${platform.label} : ${length} caractères pour un maximum de ` +
+      `${platform.textLimit}, soit ${length - platform.textLimit} de trop.`;
   } else if (platform.needsTitle && !title) {
     error = `${platform.label} : impossible de déduire un titre, renseignez-le.`;
   } else if (imageUrl && !platform.supportsImage) {
@@ -413,6 +418,46 @@ async function publishInstagram(
   }
 }
 
+async function publishBluesky(
+  target: ResolvedTarget,
+  ctx: { tenantId: string }
+): Promise<PublishOutcome> {
+  const out: PublishOutcome = {
+    platform: target.platform,
+    label: target.label,
+    status: 'failed',
+    externalId: null,
+    permalink: null,
+    error: null,
+  };
+
+  const [handle, appPassword] = await Promise.all([
+    getIntegrationSecret(ctx.tenantId, 'bluesky_handle'),
+    getIntegrationSecret(ctx.tenantId, 'bluesky_app_password'),
+  ]);
+  if (!handle || !appPassword) {
+    out.error =
+      'Compte Bluesky non configuré. Renseignez-le depuis Communication › Réseaux.';
+    return out;
+  }
+
+  try {
+    const published = await publishBlueskyPost({
+      handle,
+      appPassword,
+      text: target.text,
+      imageUrl: target.imageUrl,
+    });
+    out.status = 'sent';
+    out.externalId = published.uri;
+    out.permalink = published.permalink;
+    return out;
+  } catch (err) {
+    out.error = err instanceof Error ? err.message : String(err);
+    return out;
+  }
+}
+
 /**
  * Publie chaque cible et renvoie un résultat PAR CIBLE.
  *
@@ -445,6 +490,9 @@ export async function publishTargets(
         break;
       case 'discord_announce':
         outcomes.push(await publishDiscordAnnounce(target, ctx));
+        break;
+      case 'bluesky':
+        outcomes.push(await publishBluesky(target, ctx));
         break;
       case 'instagram':
         outcomes.push(await publishInstagram(target, ctx));

@@ -24,6 +24,7 @@ import {
   CodeIcon,
   TrophyIcon,
   XIcon,
+  BlueskyIcon,
   DiscordIcon,
 } from '@/components/Icons';
 import nsFooter from '@/lib/i18n/locales/fr/footer';
@@ -81,6 +82,7 @@ const SOCIAL_ICONS: Record<
   x: XIcon,
   twitch: TwitchIcon,
   youtube: YouTubeIcon,
+  bluesky: BlueskyIcon,
   discord: DiscordIcon,
 };
 

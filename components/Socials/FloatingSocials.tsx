@@ -8,6 +8,7 @@ import {
   TwitchIcon,
   XIcon,
   YouTubeIcon,
+  BlueskyIcon,
   DiscordIcon,
   RssIcon,
   DonationIcon,
@@ -34,6 +35,7 @@ const SOCIAL_ICONS: Record<
   x: XIcon,
   twitch: TwitchIcon,
   youtube: YouTubeIcon,
+  bluesky: BlueskyIcon,
   discord: DiscordIcon,
 };
 

@@ -17,6 +17,7 @@ export type SocialKey =
   | 'x'
   | 'twitch'
   | 'youtube'
+  | 'bluesky'
   | 'discord';
 
 export type Social = {
@@ -72,6 +73,13 @@ export const SOCIALS: Social[] = [
     href: 'https://www.youtube.com/@owwomenscup',
     handle: '@owwomenscup',
     hoverColor: 'group-hover:text-[#FF0000]',
+  },
+  {
+    key: 'bluesky',
+    name: 'Bluesky',
+    href: 'https://bsky.app/profile/womenscup.bsky.social',
+    handle: '@womenscup.bsky.social',
+    hoverColor: 'group-hover:text-[#0285FF]',
   },
   {
     key: 'discord',

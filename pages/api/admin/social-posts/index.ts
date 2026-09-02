@@ -30,6 +30,10 @@ import { logger } from '@/utils/logger';
 import { SOCIAL_PLATFORMS, isSocialPlatformKey } from '@/utils/social/platforms';
 import { loadAccount } from '@/utils/social/instagram';
 import {
+  getIntegrationSecret,
+  hasIntegrationSecret,
+} from '@/utils/integrationSecrets';
+import {
   aggregateStatus,
   newsRevalidatePaths,
   publishTargets,
@@ -109,6 +113,25 @@ async function handleGet(
   const connections: Record<string, ConnectionState> = {};
   for (const platform of SOCIAL_PLATFORMS) {
     if (!platform.needsConnection) continue;
+
+    // Deux façons d'être « connecté », parce que les deux réseaux ne
+    // s'authentifient pas pareil : Instagram par OAuth (jeton daté dans
+    // social_accounts), Bluesky par mot de passe d'application (aucune
+    // expiration, donc rien à surveiller).
+    if (platform.key === 'bluesky') {
+      const [handle, hasPassword] = await Promise.all([
+        getIntegrationSecret(ctx.tenantId, 'bluesky_handle'),
+        hasIntegrationSecret(ctx.tenantId, 'bluesky_app_password'),
+      ]);
+      connections[platform.key] = {
+        connected: Boolean(handle && hasPassword),
+        handle: handle ? `@${handle}` : null,
+        expiresAt: null,
+        status: handle && hasPassword ? 'connected' : 'disconnected',
+      };
+      continue;
+    }
+
     const account = await loadAccount(ctx.tenantId, platform.key);
     const expiresAt = account?.expiresAt ?? null;
     const expired = Boolean(expiresAt && expiresAt.getTime() < Date.now());

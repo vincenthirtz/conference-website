@@ -78,6 +78,13 @@ export default adminNs('adminSocialPosts', {
     'Celui d’Instagram, pas celui de l’app Meta : tableau de bord › Instagram › API setup with Instagram login › Business login settings. Il est chiffré à l’enregistrement et jamais réaffiché.',
   secretSaved: 'App Secret enregistré. Vous pouvez connecter le compte.',
   secretError: 'Le secret n’a pas pu être enregistré.',
+  blueskyMissing: 'Mise en service : renseignez le compte Bluesky.',
+  blueskyHandleLabel: 'Handle Bluesky',
+  blueskyPasswordLabel: 'Mot de passe d’application',
+  blueskyHelp:
+    'Créez un mot de passe d’application dans Bluesky › Réglages › Confidentialité et sécurité. N’utilisez pas le mot de passe du compte : celui-ci se révoque d’un clic, l’autre non.',
+  blueskySaved: 'Compte Bluesky connecté.',
+  blueskyError: 'Les identifiants n’ont pas pu être enregistrés.',
   historyTitle: 'Envois précédents',
   historyEmpty: 'Aucun post envoyé pour l’instant.',
   historyLoading: 'Chargement…',

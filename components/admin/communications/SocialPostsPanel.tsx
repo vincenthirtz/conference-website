@@ -165,6 +165,8 @@ export default function SocialPostsPanel() {
   const [setup, setSetup] = useState<SetupState | null>(null);
   const [appSecret, setAppSecret] = useState('');
   const [editingSecret, setEditingSecret] = useState(false);
+  const [bskyHandle, setBskyHandle] = useState('');
+  const [bskyPassword, setBskyPassword] = useState('');
 
   const saveSecret = useCallback(async () => {
     setBusy(true);
@@ -227,6 +229,31 @@ export default function SocialPostsPanel() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const saveBluesky = useCallback(async () => {
+    setBusy(true);
+    try {
+      await adminFetchJson('/api/admin/bluesky/credentials', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          handle: bskyHandle.trim(),
+          appPassword: bskyPassword.trim(),
+        }),
+      });
+      setBskyPassword('');
+      addToast(t.blueskySaved, 'success');
+      await load();
+    } catch (err) {
+      logger.error('[admin/social-posts] bluesky save error', err);
+      // Le message de la route porte le diagnostic utile (handle mal formé,
+      // mot de passe du compte au lieu d'un mot de passe d'app, refus de
+      // Bluesky) : le remplacer par un texte générique le ferait perdre.
+      addToast(err instanceof Error ? err.message : t.blueskyError, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }, [adminFetchJson, addToast, bskyHandle, bskyPassword, load, t]);
 
   // Le contenu a changé : l'aperçu affiché ne décrit plus ce qui partirait.
   const invalidate = useCallback(() => setPreview(null), []);
@@ -479,6 +506,52 @@ export default function SocialPostsPanel() {
                   // celui d'Instagram) et n'indique pas lequel est en cause
                   // quand on se trompe : masquer le champ après un premier
                   // enregistrement enfermerait dans l'erreur.
+                  // Bluesky ne passe pas par OAuth : deux champs suffisent, et
+                  // la route les vérifie auprès de Bluesky avant de les
+                  // enregistrer.
+                  if (p.key === 'bluesky') {
+                    return (
+                      <div className="space-y-2 pl-7">
+                        <p className="text-xs text-amber-300">
+                          {t.blueskyMissing}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <input
+                            type="text"
+                            value={bskyHandle}
+                            onChange={(e) => setBskyHandle(e.target.value)}
+                            placeholder="womenscup.bsky.social"
+                            aria-label={t.blueskyHandleLabel}
+                            autoComplete="off"
+                            className="w-56 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-xs text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                          />
+                          <input
+                            type="password"
+                            value={bskyPassword}
+                            onChange={(e) => setBskyPassword(e.target.value)}
+                            placeholder="xxxx-xxxx-xxxx-xxxx"
+                            aria-label={t.blueskyPasswordLabel}
+                            autoComplete="off"
+                            className="w-52 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-xs text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={saveBluesky}
+                            disabled={
+                              busy || !bskyHandle.trim() || !bskyPassword.trim()
+                            }
+                            className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-700 disabled:opacity-50"
+                          >
+                            {t.secretSaveCta}
+                          </button>
+                        </div>
+                        <p className="text-xs text-neutral-500">
+                          {t.blueskyHelp}
+                        </p>
+                      </div>
+                    );
+                  }
+
                   const secretSet = setup?.secretSet ?? false;
                   const showForm = !secretSet || editingSecret;
 

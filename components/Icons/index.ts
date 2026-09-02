@@ -4,6 +4,7 @@ export {
   TwitchIcon,
   XIcon,
   YouTubeIcon,
+  BlueskyIcon,
   DiscordIcon,
   RssIcon,
 } from './social';

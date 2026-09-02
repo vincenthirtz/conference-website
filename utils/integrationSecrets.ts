@@ -36,6 +36,12 @@ export const INTEGRATION_SECRET_KEYS = [
   // d'environnement : cf. l'en-tête de ce fichier. L'App ID, lui, est public
   // et vit dans `INSTAGRAM_APP_ID`.
   'instagram_app_secret',
+  // Bluesky n'a pas d'OAuth : un handle et un mot de passe d'application
+  // suffisent. Le handle n'est pas secret, mais il vit ici pour que la
+  // connexion soit d'un seul tenant — un identifiant en env et un secret en
+  // base, ce sont deux endroits à garder en phase pour rien.
+  'bluesky_handle',
+  'bluesky_app_password',
 ] as const;
 
 export type IntegrationSecretKey = (typeof INTEGRATION_SECRET_KEYS)[number];
