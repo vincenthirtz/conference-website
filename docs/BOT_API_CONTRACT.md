@@ -3071,10 +3071,11 @@ Par defaut seules les equipes avec un motif reel sont notifiees
 
 #### Event `social.mirror` (site → bot, via outbox/webhook)
 
-Emis par le cron `/api/cron/bluesky-mirror`. Consomme par
-`services/discord-bot/social-mirror.js`.
+Consomme par `services/discord-bot/social-mirror.js`.
 
 **Payload** : `{ source, channelId, content, url, postedAt }`.
+
+`source` vaut `bluesky` ou `youtube`. Emis par le cron `/api/cron/social-mirror`.
 
 - **Le salon est DANS le payload**, contrairement a tous les autres handlers qui
   resolvent leurs canaux eux-memes. Un miroir vise un salon choisi par qui le
