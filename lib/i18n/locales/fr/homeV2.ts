@@ -29,21 +29,9 @@ export default ns('homeV2', {
   heroCtaJoin: 'Je cherche une équipe',
   heroCtaDiscord: 'Rejoindre le Discord',
   heroTrust: '100 % féminin · Casts FR en direct · Cash-prize communautaire',
-  stepsEyebrow: 'Participer',
-  stepsTitle: 'Rejoins la compétition en 3 étapes',
-  stepsCta: 'Inscrire mon équipe',
-  step1Title: 'Trouve ou monte ton équipe',
   // Reformulé au lot 1 : la version précédente renvoyait sur Discord pour
   // trouver un roster, c'est-à-dire hors du site — et laissait sans réponse
   // celles qui n'ont pas d'équipe, précisément le public à capter.
-  step1Desc:
-    "Pas d'équipe ? Signale-toi en deux minutes, sans compte : les capitaines qui recrutent te contactent. Tu as déjà un roster ? Monte-le directement.",
-  step2Title: 'Inscris ton équipe',
-  step2Desc:
-    'En quelques clics : nom, joueuses, disponibilités. Ta capitaine valide, et vous êtes sur la grille.',
-  step3Title: 'Joue tes matchs, en direct',
-  step3Desc:
-    'Suis le calendrier, joue tes rencontres et retrouve les temps forts castés en français sur Twitch.',
   statusLive: 'En direct maintenant',
   statusNext: 'Prochain rendez-vous dans',
   cdDays: 'jours',

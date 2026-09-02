@@ -25,18 +25,6 @@ export default {
   heroCtaCreateTeam: 'Create my team',
   heroCtaDiscord: 'Join the Discord',
   heroTrust: '100% women · Live FR casts · Community-funded prize pool',
-  stepsEyebrow: 'Take part',
-  stepsTitle: 'Join the competition in 3 steps',
-  stepsCta: 'Register my team',
-  step1Title: 'Find or build your team',
-  step1Desc:
-    'No team? Add yourself in two minutes, no account needed: recruiting captains reach out to you. Already have a roster? Build it directly.',
-  step2Title: 'Register your team',
-  step2Desc:
-    "In a few clicks: name, players, availability. Your captain confirms, and you're on the bracket.",
-  step3Title: 'Play your matches, live',
-  step3Desc:
-    'Follow the schedule, play your games and catch the highlights cast in French on Twitch.',
   statusLive: 'Live now',
   statusNext: 'Next event in',
   cdDays: 'days',

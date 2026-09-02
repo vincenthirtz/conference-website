@@ -13,9 +13,6 @@ export default {
   footerTitle: 'Newsletter',
   footerDescription:
     'Get highlights, tournament dates and announcements by email.',
-  sectionTitle: 'Never miss an announcement',
-  sectionDescription:
-    "Subscribe to the newsletter to get tournament dates, highlights and OW Women's Cup news straight to your inbox.",
   emailLabel: 'Email address',
   emailPlaceholder: 'your@email.com',
   captchaLabel: 'Anti-bot — what is {question}?',

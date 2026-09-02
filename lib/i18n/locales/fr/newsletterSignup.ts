@@ -12,9 +12,6 @@ export default ns('newsletterSignup', {
   footerTitle: 'Newsletter',
   footerDescription:
     'Reçois les temps forts, dates de tournois et annonces par email.',
-  sectionTitle: 'Ne rate aucune annonce',
-  sectionDescription:
-    "Inscris-toi à la newsletter pour recevoir les dates des tournois, les temps forts et les nouveautés de l'OW Women's Cup, directement dans ta boîte mail.",
   emailLabel: 'Adresse email',
   emailPlaceholder: 'ton@email.com',
   captchaLabel: 'Anti-bot — combien font {question} ?',

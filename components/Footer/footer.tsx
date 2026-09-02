@@ -184,7 +184,7 @@ function Footer(): JSX.Element {
                 </li>
               ))}
             </ul>
-            <NewsletterSignup variant="footer" source="footer" />
+            <NewsletterSignup source="footer" />
           </div>
 
           {/* Col 2 — Tournoi */}

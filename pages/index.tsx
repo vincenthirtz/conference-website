@@ -2,7 +2,15 @@
 //
 // Page d'accueil — refonte 2026 : structure resserrée en sections claires
 // (hero focalisé avec countdown intégré, spotlight événement live-aware,
-// « participer en 3 étapes », actus, soutiens, newsletter).
+// actus, soutiens).
+//
+// DEUX BLOCS ONT ÉTÉ RETIRÉS, pour la même raison : ils redemandaient ce que la
+// page demandait déjà.
+//   - la newsletter, dont le formulaire vit dans le pied de page, présent sur
+//     toutes les pages ;
+//   - « Participer en 3 étapes », dont le bouton d'inscription doublonnait
+//     celui du hero — et affichait « Complet » une seconde fois, le tournoi
+//     étant plein.
 //
 // Le chargement des données passe par le loader partagé `loadHomeData`
 // (+ `loadTournamentPrizeCents` pour le spotlight). Les présentateurs V2 vivent
@@ -23,10 +31,8 @@ import { useT } from '@/lib/i18n/useT';
 import { useTwitchLive } from '@/components/Home/useTwitchLive';
 import HomeHeroV2 from '@/components/Home/HomeHeroV2';
 import HomeSpotlight from '@/components/Home/HomeSpotlight';
-import HomeSteps from '@/components/Home/HomeSteps';
 import HomeNewsV2 from '@/components/Home/HomeNewsV2';
 import HomeSupportStrip from '@/components/Home/HomeSupportStrip';
-import NewsletterSignup from '@/components/NewsletterSignup';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 
 type HomeProps = {
@@ -108,15 +114,9 @@ function Home({
         teams={teams}
       />
 
-      <HomeSteps />
-
       <HomeNewsV2 news={news} />
 
       <HomeSupportStrip partners={partners} />
-
-      <div className="container mx-auto mt-16 px-4 md:mt-20 md:px-0">
-        <NewsletterSignup variant="section" source="homepage" />
-      </div>
     </div>
   );
 }
