@@ -13,7 +13,6 @@ export default {
   channelMatchAnnouncements: 'Match announcements',
   channelMatchResults: 'Results',
   channelBracketUpdates: 'Bracket',
-  channelGeneralAnnouncements: 'Announcements',
   channelVetoLive: 'Veto live',
   channelCheckinReminders: 'Check-in',
   channelSupportTickets: 'Support',

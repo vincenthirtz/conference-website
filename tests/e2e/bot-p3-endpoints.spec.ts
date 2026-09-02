@@ -3,7 +3,6 @@
  *
  *  GET/POST/DELETE /api/bot/v1/matches/[id]/veto
  *  POST            /api/bot/v1/stages/[id]/auto-byes
- *  POST            /api/bot/v1/announcements
  *  POST            /api/bot/v1/tournaments/[id]/clone
  *  PATCH           /api/bot/v1/teams/[id]/discord
  */
@@ -38,7 +37,6 @@ let teamAId: string;
 let teamBId: string;
 let matchWithBothTeamsId: string;
 let matchWithOneTeamId: string;
-let createdAnnouncementId: string | null = null;
 let createdCloneId: string | null = null;
 
 test.describe.serial('Bot P3 — setup', () => {
@@ -53,8 +51,16 @@ test.describe.serial('Bot P3 — setup', () => {
     playerAuthId = player!.id;
 
     await supabaseTestClient.from('user_discord_links').insert([
-      { auth_user_id: adminAuthId, discord_user_id: ADMIN_DISCORD, discord_username: `p3_adm_${TS}` },
-      { auth_user_id: playerAuthId, discord_user_id: PLAYER_DISCORD, discord_username: `p3_pl_${TS}` },
+      {
+        auth_user_id: adminAuthId,
+        discord_user_id: ADMIN_DISCORD,
+        discord_username: `p3_adm_${TS}`,
+      },
+      {
+        auth_user_id: playerAuthId,
+        discord_user_id: PLAYER_DISCORD,
+        discord_username: `p3_pl_${TS}`,
+      },
     ]);
 
     const { data: tour } = await supabaseTestClient
@@ -140,30 +146,50 @@ test.describe.serial('Bot P3 — setup', () => {
   test.afterAll(async () => {
     if (!supabaseTestClient) return;
     if (createdCloneId) {
-      await supabaseTestClient.from('tournament_stages').delete().eq('tournament_id', createdCloneId);
-      await supabaseTestClient.from('tournament_maps').delete().eq('tournament_id', createdCloneId);
-      await supabaseTestClient.from('tournaments').delete().eq('id', createdCloneId);
+      await supabaseTestClient
+        .from('tournament_stages')
+        .delete()
+        .eq('tournament_id', createdCloneId);
+      await supabaseTestClient
+        .from('tournament_maps')
+        .delete()
+        .eq('tournament_id', createdCloneId);
+      await supabaseTestClient
+        .from('tournaments')
+        .delete()
+        .eq('id', createdCloneId);
     }
-    if (createdAnnouncementId) {
-      await supabaseTestClient.from('announcements').delete().eq('id', createdAnnouncementId);
-    }
-    for (const mid of [matchWithBothTeamsId, matchWithOneTeamId].filter(Boolean)) {
+    for (const mid of [matchWithBothTeamsId, matchWithOneTeamId].filter(
+      Boolean
+    )) {
       await supabaseTestClient.from('games').delete().eq('match_id', mid);
-      await supabaseTestClient.from('match_map_vetos').delete().eq('match_id', mid);
+      await supabaseTestClient
+        .from('match_map_vetos')
+        .delete()
+        .eq('match_id', mid);
       await supabaseTestClient.from('matches').delete().eq('id', mid);
     }
     if (stageId) {
-      await supabaseTestClient.from('tournament_stages').delete().eq('id', stageId);
+      await supabaseTestClient
+        .from('tournament_stages')
+        .delete()
+        .eq('id', stageId);
     }
     if (tournamentId) {
-      await supabaseTestClient.from('tournaments').delete().eq('id', tournamentId);
+      await supabaseTestClient
+        .from('tournaments')
+        .delete()
+        .eq('id', tournamentId);
     }
     for (const tid of [teamAId, teamBId].filter(Boolean)) {
       await supabaseTestClient.from('team_members').delete().eq('team_id', tid);
       await supabaseTestClient.from('teams').delete().eq('id', tid);
     }
     for (const aid of [adminAuthId, playerAuthId].filter(Boolean)) {
-      await supabaseTestClient.from('user_discord_links').delete().eq('auth_user_id', aid);
+      await supabaseTestClient
+        .from('user_discord_links')
+        .delete()
+        .eq('auth_user_id', aid);
     }
     await deleteTestStaff(ADMIN_EMAIL);
     await deleteTestUser(PLAYER_EMAIL);
@@ -200,7 +226,11 @@ test.describe.serial('Bot /veto', () => {
       `/api/bot/v1/matches/${matchWithBothTeamsId}/veto`,
       {
         headers: { 'x-api-key': API_KEY! },
-        data: { actorDiscordUserId: PLAYER_DISCORD, action: 'ban', mapName: 'Ilios' },
+        data: {
+          actorDiscordUserId: PLAYER_DISCORD,
+          action: 'ban',
+          mapName: 'Ilios',
+        },
       }
     );
     expect(res.status()).toBe(403);
@@ -211,7 +241,11 @@ test.describe.serial('Bot /veto', () => {
       `/api/bot/v1/matches/${matchWithBothTeamsId}/veto`,
       {
         headers: { 'x-api-key': API_KEY! },
-        data: { actorDiscordUserId: ADMIN_DISCORD, action: 'destroy', mapName: 'Ilios' },
+        data: {
+          actorDiscordUserId: ADMIN_DISCORD,
+          action: 'destroy',
+          mapName: 'Ilios',
+        },
       }
     );
     expect(res.status()).toBe(400);
@@ -241,7 +275,11 @@ test.describe.serial('Bot /veto', () => {
       `/api/bot/v1/matches/${matchWithBothTeamsId}/veto`,
       {
         headers: { 'x-api-key': API_KEY! },
-        data: { actorDiscordUserId: ADMIN_DISCORD, action: 'ban', mapName: 'Ilios' },
+        data: {
+          actorDiscordUserId: ADMIN_DISCORD,
+          action: 'ban',
+          mapName: 'Ilios',
+        },
       }
     );
     expect(res.status()).toBe(400);
@@ -293,61 +331,6 @@ test.describe.serial('Bot /auto-byes', () => {
     expect(m!.is_bye).toBe(true);
     expect(m!.status).toBe('finished');
     expect(m!.winner_team_id).toBe(teamAId);
-  });
-});
-
-/* ------------------------------------------------------------------------- */
-/* /announcements                                                            */
-/* ------------------------------------------------------------------------- */
-
-test.describe.serial('Bot /announcements', () => {
-  test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
-
-  test('403 si actor non admin', async ({ request }) => {
-    const res = await request.post(`/api/bot/v1/announcements`, {
-      headers: { 'x-api-key': API_KEY! },
-      data: { actorDiscordUserId: PLAYER_DISCORD, title: 't', message: 'm' },
-    });
-    expect(res.status()).toBe(403);
-  });
-
-  test('400 si title manquant', async ({ request }) => {
-    const res = await request.post(`/api/bot/v1/announcements`, {
-      headers: { 'x-api-key': API_KEY! },
-      data: { actorDiscordUserId: ADMIN_DISCORD, message: 'no title' },
-    });
-    expect(res.status()).toBe(400);
-  });
-
-  test('400 si ctaUrl invalide', async ({ request }) => {
-    const res = await request.post(`/api/bot/v1/announcements`, {
-      headers: { 'x-api-key': API_KEY! },
-      data: {
-        actorDiscordUserId: ADMIN_DISCORD,
-        title: 'X',
-        message: 'Y',
-        ctaUrl: 'javascript:alert(1)',
-      },
-    });
-    expect(res.status()).toBe(400);
-  });
-
-  test('201 happy path', async ({ request }) => {
-    const res = await request.post(`/api/bot/v1/announcements`, {
-      headers: { 'x-api-key': API_KEY! },
-      data: {
-        actorDiscordUserId: ADMIN_DISCORD,
-        title: `P3 Annonce ${TS}`,
-        message: 'Test',
-        priority: 5,
-        isActive: false, // pas de Discord notify
-      },
-    });
-    expect(res.status()).toBe(201);
-    const body = await res.json();
-    expect(body.announcement.title).toContain('P3 Annonce');
-    expect(body.announcement.priority).toBe(5);
-    createdAnnouncementId = body.announcement.id;
   });
 });
 

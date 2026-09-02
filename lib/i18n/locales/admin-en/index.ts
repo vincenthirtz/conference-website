@@ -81,9 +81,6 @@ import enAdminPendingGuildLinks from './adminPendingGuildLinks';
 import enAdminNewsList from './adminNewsList';
 import enAdminNewsNew from './adminNewsNew';
 import enAdminNewsEdit from './adminNewsEdit';
-import enAdminAnnouncementsList from './adminAnnouncementsList';
-import enAdminAnnouncementsNew from './adminAnnouncementsNew';
-import enAdminAnnouncementEdit from './adminAnnouncementEdit';
 import enAdminPartnersList from './adminPartnersList';
 import enAdminPartnersNew from './adminPartnersNew';
 import enAdminPartnerEdit from './adminPartnerEdit';
@@ -273,9 +270,6 @@ const adminEnDict = {
   adminNewsList: enAdminNewsList,
   adminNewsNew: enAdminNewsNew,
   adminNewsEdit: enAdminNewsEdit,
-  adminAnnouncementsList: enAdminAnnouncementsList,
-  adminAnnouncementsNew: enAdminAnnouncementsNew,
-  adminAnnouncementEdit: enAdminAnnouncementEdit,
   adminPartnersList: enAdminPartnersList,
   adminPartnersNew: enAdminPartnersNew,
   adminPartnerEdit: enAdminPartnerEdit,

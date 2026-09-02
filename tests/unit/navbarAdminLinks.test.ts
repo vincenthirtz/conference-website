@@ -104,18 +104,14 @@ describe('filterAdminLinks – owner role', () => {
     expect(childTitles).not.toContain('Pôles de l’asso');
   });
 
-  it('collapses Annonces, Actualités, Campagnes et Notifications into the "Communications" hub under "Communication"', () => {
-    // Les quatre ex-listes sont désormais fusionnées dans le hub à onglets
-    // /admin/communications. Une seule entrée « Communications » y pointe ; les
-    // éditeurs dédiés (« Créer une annonce » / « Créer une actualité ») restent.
+  it('collapses Actualités, Campagnes et Notifications into the "Communications" hub under "Communication"', () => {
+    // Les ex-listes sont désormais fusionnées dans le hub à onglets
+    // /admin/communications. Une seule entrée « Communications » y pointe ;
+    // l'éditeur dédié (« Créer une actualité ») reste.
     const comm = findByTitle(links, 'Communication');
     expect(comm).toBeDefined();
     const childTitles = comm?.children?.map((c) => c.title) ?? [];
-    expect(childTitles).toEqual([
-      'Communications',
-      'Créer une annonce',
-      'Créer une actualité',
-    ]);
+    expect(childTitles).toEqual(['Communications', 'Créer une actualité']);
     const hub = comm?.children?.find((c) => c.title === 'Communications');
     expect(hub?.ref).toBe('/admin/communications');
     // Leaf hub entry: no sub-menu (the tabs are discovered on the page).

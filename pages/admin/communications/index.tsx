@@ -19,9 +19,6 @@ import nsAdminCommunicationsHub from '@/lib/i18n/locales/admin-fr/adminCommunica
 
 // Six panneaux, un seul monté à la fois. Seul « Actualités » (onglet par
 // défaut, dont les données arrivent en SSR) reste en import statique.
-const AnnouncementsListPanel = lazyPanel(
-  () => import('@/components/admin/communications/AnnouncementsListPanel')
-);
 const CampaignsPanel = lazyPanel(
   () => import('@/components/admin/communications/CampaignsPanel')
 );
@@ -104,15 +101,13 @@ export const getServerSideProps = withStaffPage<{
 });
 
 /**
- * Merged communication hub. Hosts the former /admin/news, /admin/announcements,
- * /admin/campaigns and /admin/notifications as deep-linkable tabs
- * (`?tab=news|announcements|campaigns|notifications`). The old routes
- * 308-redirect here (see the four shim files). The editors news/new,
- * news/[id], announcements/new and announcements/[id] remain standalone routes.
+ * Merged communication hub. Hosts the former /admin/news, /admin/campaigns and
+ * /admin/notifications as deep-linkable tabs
+ * (`?tab=news|campaigns|notifications`). The old routes 308-redirect here (see
+ * the shim files). The editors news/new and news/[id] remain standalone routes.
  * Per-tab role gating:
  *   - Notifications → caster+
  *   - Actualités    → admin+
- *   - Annonces      → admin+
  *   - Campagnes     → admin+
  *   - Réseaux       → admin+ (post multi-cibles : site + salon d'annonces)
  *   - Équipes       → admin+ (messages vers les salons Discord d'équipe)
@@ -130,7 +125,6 @@ export default function AdminCommunicationsPage({
     ...(isAdmin
       ? [
           { id: 'news', label: t.tabNews },
-          { id: 'announcements', label: t.tabAnnouncements },
           { id: 'campaigns', label: t.tabCampaigns },
           { id: 'social', label: t.tabSocial },
           { id: 'teams', label: t.tabTeams },
@@ -175,8 +169,6 @@ export default function AdminCommunicationsPage({
                 total={newsTotal}
                 errorMsg={newsError}
               />
-            ) : active === 'announcements' && isAdmin ? (
-              <AnnouncementsListPanel />
             ) : active === 'campaigns' && isAdmin ? (
               <CampaignsPanel />
             ) : active === 'social' && isAdmin ? (

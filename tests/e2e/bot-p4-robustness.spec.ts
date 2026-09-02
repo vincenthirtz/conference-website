@@ -3,7 +3,6 @@
  *
  *  Maintenance mode (site_settings.bot_maintenance_mode)
  *  Per-actor rate limit (forfeit)
- *  Idempotency Supabase-backed (bot_idempotency table)
  *  Webhook outbox (bot_event_outbox + /events/pending + /events/[id]/ack)
  *
  * Pré-requis : les 3 migrations P4 doivent être appliquées :
@@ -53,7 +52,10 @@ test.describe.serial('P4 — setup', () => {
       discord_username: `p4_adm_${TS}`,
     });
 
-    const player = await createTestPlayer(`p4-pl-${TS}@test.local`, 'TestPass123!');
+    const player = await createTestPlayer(
+      `p4-pl-${TS}@test.local`,
+      'TestPass123!'
+    );
     const { data: tour } = await supabaseTestClient
       .from('tournaments')
       .insert({
@@ -127,15 +129,27 @@ test.describe.serial('P4 — setup', () => {
     await supabaseTestClient.from('bot_idempotency').delete().gt('id', 0);
     await supabaseTestClient.from('bot_event_outbox').delete().gt('id', 0);
 
-    if (matchId) await supabaseTestClient.from('matches').delete().eq('id', matchId);
-    if (stageId) await supabaseTestClient.from('tournament_stages').delete().eq('id', stageId);
-    if (tournamentId) await supabaseTestClient.from('tournaments').delete().eq('id', tournamentId);
+    if (matchId)
+      await supabaseTestClient.from('matches').delete().eq('id', matchId);
+    if (stageId)
+      await supabaseTestClient
+        .from('tournament_stages')
+        .delete()
+        .eq('id', stageId);
+    if (tournamentId)
+      await supabaseTestClient
+        .from('tournaments')
+        .delete()
+        .eq('id', tournamentId);
     for (const tid of [teamAId, teamBId].filter(Boolean)) {
       await supabaseTestClient.from('team_members').delete().eq('team_id', tid);
       await supabaseTestClient.from('teams').delete().eq('id', tid);
     }
     if (adminAuthId) {
-      await supabaseTestClient.from('user_discord_links').delete().eq('auth_user_id', adminAuthId);
+      await supabaseTestClient
+        .from('user_discord_links')
+        .delete()
+        .eq('auth_user_id', adminAuthId);
     }
     await deleteTestStaff(ADMIN_EMAIL);
     await deleteTestUser(`p4-pl-${TS}@test.local`);
@@ -181,9 +195,12 @@ test.describe.serial('P4.1 — Maintenance mode', () => {
     // ~30s à s'activer après le upsert. On retry pendant 35s.
     let lastStatus = 0;
     for (let i = 0; i < 8; i++) {
-      const res = await request.post(`/api/bot/v1/announcements`, {
+      // La porte maintenance vit dans withBotRoute, AVANT toute validation :
+      // un body vide renvoie donc 503 sous maintenance, et un simple 400 hors
+      // maintenance — sans rien écrire.
+      const res = await request.post(`/api/bot/v1/tasks`, {
         headers: { 'x-api-key': API_KEY! },
-        data: { actorDiscordUserId: ADMIN_DISCORD, title: 'M', message: 'M' },
+        data: { actorDiscordUserId: ADMIN_DISCORD },
       });
       lastStatus = res.status();
       if (lastStatus === 503) {
@@ -193,14 +210,15 @@ test.describe.serial('P4.1 — Maintenance mode', () => {
       }
       await new Promise((r) => setTimeout(r, 5_000));
     }
-    throw new Error(`Maintenance mode jamais devenu actif (dernier status: ${lastStatus})`);
+    throw new Error(
+      `Maintenance mode jamais devenu actif (dernier status: ${lastStatus})`
+    );
   });
 
   test('GET passe quand même en maintenance', async ({ request }) => {
-    const res = await request.get(
-      `/api/bot/v1/autocomplete/tournaments?q=P4`,
-      { headers: { 'x-api-key': API_KEY! } }
-    );
+    const res = await request.get(`/api/bot/v1/autocomplete/tournaments?q=P4`, {
+      headers: { 'x-api-key': API_KEY! },
+    });
     expect(res.status()).toBe(200);
   });
 });
@@ -242,130 +260,6 @@ test.describe.serial('P4.2 — Per-actor rate limit', () => {
 });
 
 /* ------------------------------------------------------------------------- */
-/* Idempotency Supabase                                                      */
-/* ------------------------------------------------------------------------- */
-
-test.describe.serial('P4.3 — Idempotency Supabase-backed', () => {
-  test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
-
-  test('Idempotency-Key replay renvoie le même body sans recréer la row', async ({
-    request,
-  }) => {
-    const idempKey = `p4-idemp-${TS}-${Math.random().toString(36).slice(2)}`;
-
-    // Premier appel : crée une annonce
-    const res1 = await request.post(`/api/bot/v1/announcements`, {
-      headers: {
-        'x-api-key': API_KEY!,
-        'Idempotency-Key': idempKey,
-      },
-      data: {
-        actorDiscordUserId: ADMIN_DISCORD,
-        title: `P4 Idemp ${TS}`,
-        message: 'Test',
-        isActive: false,
-      },
-    });
-    expect(res1.status()).toBe(201);
-    const body1 = await res1.json();
-    const annId = body1.announcement.id;
-
-    // Vérifie qu'une row a été inscrite dans bot_idempotency
-    const { data: cacheRows } = await supabaseTestClient!
-      .from('bot_idempotency')
-      .select('cache_key')
-      .ilike('cache_key', `%${idempKey}%`);
-    expect((cacheRows ?? []).length).toBeGreaterThan(0);
-
-    // Second appel avec la même Idempotency-Key : doit replay sans créer
-    // une seconde annonce.
-    const res2 = await request.post(`/api/bot/v1/announcements`, {
-      headers: {
-        'x-api-key': API_KEY!,
-        'Idempotency-Key': idempKey,
-      },
-      data: {
-        actorDiscordUserId: ADMIN_DISCORD,
-        title: 'IGNORED',
-        message: 'IGNORED',
-      },
-    });
-    expect(res2.status()).toBe(201);
-    expect(res2.headers()['idempotency-replay']).toBe('true');
-    const body2 = await res2.json();
-    expect(body2.announcement.id).toBe(annId);
-
-    // Cleanup
-    await supabaseTestClient!.from('announcements').delete().eq('id', annId);
-  });
-
-  test("même Idempotency-Key + body différent → pas de replay, requête traitée", async ({
-    request,
-  }) => {
-    // Garde-fou contre le replay silencieux d'une correction. Si le bot
-    // renvoie un score corrigé en oubliant de régénérer la clé, le serveur
-    // doit faire passer la nouvelle requête au lieu de rendre l'ancienne
-    // réponse (et donc perdre la correction).
-    const idempKey = `p4-idemp-bodydiff-${TS}-${Math.random().toString(36).slice(2)}`;
-
-    const res1 = await request.post(`/api/bot/v1/announcements`, {
-      headers: { 'x-api-key': API_KEY!, 'Idempotency-Key': idempKey },
-      data: {
-        actorDiscordUserId: ADMIN_DISCORD,
-        title: `P4 BodyDiff A ${TS}`,
-        message: 'A',
-        isActive: false,
-      },
-    });
-    expect(res1.status()).toBe(201);
-    expect(res1.headers()['idempotency-replay']).toBeUndefined();
-    const ann1 = (await res1.json()).announcement.id;
-
-    // Même body → replay (sanity check : la clé fonctionne toujours).
-    const res2 = await request.post(`/api/bot/v1/announcements`, {
-      headers: { 'x-api-key': API_KEY!, 'Idempotency-Key': idempKey },
-      data: {
-        actorDiscordUserId: ADMIN_DISCORD,
-        title: `P4 BodyDiff A ${TS}`,
-        message: 'A',
-        isActive: false,
-      },
-    });
-    expect(res2.status()).toBe(201);
-    expect(res2.headers()['idempotency-replay']).toBe('true');
-    expect((await res2.json()).announcement.id).toBe(ann1);
-
-    // Body différent → traité comme une nouvelle requête, pas de replay.
-    const res3 = await request.post(`/api/bot/v1/announcements`, {
-      headers: { 'x-api-key': API_KEY!, 'Idempotency-Key': idempKey },
-      data: {
-        actorDiscordUserId: ADMIN_DISCORD,
-        title: `P4 BodyDiff B ${TS}`,
-        message: 'B',
-        isActive: false,
-      },
-    });
-    expect(res3.status()).toBe(201);
-    expect(res3.headers()['idempotency-replay']).toBeUndefined();
-    const ann2 = (await res3.json()).announcement.id;
-    expect(ann2).not.toBe(ann1);
-
-    // Deux annonces distinctes en DB.
-    const { data: anns } = await supabaseTestClient!
-      .from('announcements')
-      .select('id')
-      .in('id', [ann1, ann2]);
-    expect(anns?.length).toBe(2);
-
-    // Cleanup
-    await supabaseTestClient!
-      .from('announcements')
-      .delete()
-      .in('id', [ann1, ann2]);
-  });
-});
-
-/* ------------------------------------------------------------------------- */
 /* Webhook outbox                                                            */
 /* ------------------------------------------------------------------------- */
 
@@ -380,13 +274,9 @@ test.describe.serial('P4.4 — Webhook outbox', () => {
       .from('bot_event_outbox')
       .select('id', { count: 'exact', head: true });
 
-    // forfeit -> applyMatchScore -> potentiel emitBotEvent('match.finished')
-    // On déclenche un autre type d'event en alternative pour ne pas dépendre
-    // de la config du flow : on lance un /announcements qui crée
-    // 'news.published'? Non — announcements ne pas trigger d'event.
-    //
-    // Plus simple : insert direct dans l'outbox pour valider que les 2
-    // endpoints /pending et /ack fonctionnent.
+    // Plutôt que de dépendre de la config du flow (forfeit → applyMatchScore →
+    // éventuel emitBotEvent), on insère directement dans l'outbox : ce qu'on
+    // veut valider ici, ce sont les endpoints /pending et /ack.
     const ev = {
       event_id: `test-event-${TS}-${Math.random().toString(36).slice(2)}`,
       event_name: 'match.starting',

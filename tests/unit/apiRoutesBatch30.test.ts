@@ -413,21 +413,6 @@ describe('PATCH /api/admin/recycle-bin', () => {
     expect(m.deleted_at).toBeNull();
   });
 
-  it('PATCH restores a soft-deleted announcement', async () => {
-    store.announcements = [
-      { id: 'a-soft', title: 'Anc', deleted_at: '2026-04-01' },
-    ] as any;
-    const res = makeRes();
-    await recycleBinHandler(
-      makeReq({
-        method: 'PATCH',
-        body: { id: 'a-soft', type: 'announcement' },
-      }),
-      res
-    );
-    expect(res.statusCode).toBe(200);
-  });
-
   it('PATCH restores a soft-deleted partner', async () => {
     store.partners = [
       { id: 'p-soft', name: 'Sponsor', deleted_at: '2026-04-01' },
@@ -498,24 +483,6 @@ describe('PATCH /api/admin/recycle-bin', () => {
     expect(body.items.length).toBe(1);
     expect(body.items[0].type).toBe('match');
     expect(body.items[0].name).toContain('Alpha');
-  });
-
-  it('GET lists soft-deleted announcements', async () => {
-    store.announcements = [
-      {
-        id: 'a-soft',
-        title: 'Anc',
-        message: 'Hello world',
-        deleted_at: '2026-04-01',
-      },
-    ] as any;
-    const res = makeRes();
-    await recycleBinHandler(
-      makeReq({ method: 'GET', query: { type: 'announcement' } }),
-      res
-    );
-    expect(res.statusCode).toBe(200);
-    expect((res.body as any).items[0].type).toBe('announcement');
   });
 
   it('GET lists soft-deleted partners, cast_members, adherents', async () => {

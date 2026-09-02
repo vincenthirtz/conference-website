@@ -26,13 +26,6 @@ test.describe('Public API - JSON responses', () => {
     expect(Array.isArray(body)).toBe(true);
   });
 
-  test('GET /api/announcements returns JSON array', async ({ request }) => {
-    const response = await request.get('/api/announcements');
-    expect(response.status()).toBeLessThan(400);
-    const body = await response.json();
-    expect(Array.isArray(body)).toBe(true);
-  });
-
   test('GET /api/partners returns JSON array', async ({ request }) => {
     const response = await request.get('/api/partners');
     expect(response.status()).toBeLessThan(400);

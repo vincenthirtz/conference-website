@@ -1,14 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StaffMember } from '../../types/staff';
 
-const { sendWelcomeEmail, notifyAnnouncement } = vi.hoisted(() => ({
+const { sendWelcomeEmail } = vi.hoisted(() => ({
   // Contrat réel : ne lève pas, renvoie { success } (cf. utils/email.ts).
   sendWelcomeEmail: vi.fn(async () => ({ success: true })),
-  notifyAnnouncement: vi.fn(async () => undefined),
 }));
 
 vi.mock('@/utils/email', () => ({ sendWelcomeEmail }));
-vi.mock('@/utils/discord', () => ({ notifyAnnouncement }));
 
 const { authCreateUser } = vi.hoisted(() => ({
   authCreateUser: vi.fn(async (input: any) => ({
@@ -31,7 +29,6 @@ import { invalidateStaffCache } from '../../utils/staff';
 
 import adminUsersHandler from '../../pages/api/admin/users/index';
 import adminCastMembersHandler from '../../pages/api/admin/cast-members/index';
-import adminAnnouncementsHandler from '../../pages/api/admin/announcements/index';
 import publicTeamsHandler from '../../pages/api/teams/index';
 
 /* -----------------------------------------------------------
@@ -90,7 +87,6 @@ beforeEach(() => {
   resetSupabaseMock();
   invalidateStaffCache();
   sendWelcomeEmail.mockClear();
-  notifyAnnouncement.mockClear();
   authCreateUser.mockClear();
   // Default: an admin user is signed in and corresponds to staff row.
   setAuthUser({ id: 'user-1' });
@@ -395,102 +391,6 @@ describe('/api/admin/cast-members', () => {
     await adminCastMembersHandler(makeAuthedReq({ method: 'DELETE' }), res);
     expect(res.statusCode).toBe(405);
     expect(res.headers['Allow']).toBe('GET,POST');
-  });
-});
-
-/* -----------------------------------------------------------
- * /api/admin/announcements — GET + POST + Discord ping
- * ---------------------------------------------------------*/
-
-describe('/api/admin/announcements', () => {
-  it('GET 200 lists active announcements', async () => {
-    store.announcements = [
-      { id: 'a1', title: 'Ann', is_active: true, message: 'hello' },
-    ] as any;
-    const res = makeRes();
-    await adminAnnouncementsHandler(makeAuthedReq({ method: 'GET' }), res);
-    expect(res.statusCode).toBe(200);
-    expect((res.body as any).items).toHaveLength(1);
-  });
-
-  it('POST 400 when title or message is missing', async () => {
-    const res = makeRes();
-    await adminAnnouncementsHandler(
-      makeAuthedReq({ method: 'POST', body: { title: 'only-title' } }),
-      res
-    );
-    expect(res.statusCode).toBe(400);
-  });
-
-  it('POST 201 creates announcement and triggers Discord when active', async () => {
-    const res = makeRes();
-    await adminAnnouncementsHandler(
-      makeAuthedReq({
-        method: 'POST',
-        body: {
-          title: 'Hello',
-          message: 'World',
-          ctaUrl: 'https://example.com',
-          isActive: true,
-        },
-      }),
-      res
-    );
-
-    expect(res.statusCode).toBe(201);
-    await new Promise((r) => setImmediate(r));
-    expect(notifyAnnouncement).toHaveBeenCalledOnce();
-  });
-
-  it('POST does NOT trigger Discord for inactive announcements', async () => {
-    const res = makeRes();
-    await adminAnnouncementsHandler(
-      makeAuthedReq({
-        method: 'POST',
-        body: { title: 'Hi', message: 'Quiet', isActive: false },
-      }),
-      res
-    );
-
-    expect(res.statusCode).toBe(201);
-    await new Promise((r) => setImmediate(r));
-    expect(notifyAnnouncement).not.toHaveBeenCalled();
-  });
-
-  it('POST sanitizes invalid CTA url to null', async () => {
-    const res = makeRes();
-    await adminAnnouncementsHandler(
-      makeAuthedReq({
-        method: 'POST',
-        body: {
-          title: 'A',
-          message: 'B',
-          ctaUrl: 'javascript:alert(1)',
-        },
-      }),
-      res
-    );
-    const inserted = (store.announcements as any)[0];
-    expect(inserted.cta_url).toBeNull();
-  });
-
-  it('POST parses startsAt / endsAt to ISO and ignores garbage dates', async () => {
-    const res = makeRes();
-    await adminAnnouncementsHandler(
-      makeAuthedReq({
-        method: 'POST',
-        body: {
-          title: 'A',
-          message: 'B',
-          startsAt: '2026-04-01T10:00:00Z',
-          endsAt: 'not-a-date',
-        },
-      }),
-      res
-    );
-    const inserted = (store.announcements as any)[0];
-    expect(inserted.starts_at).toMatch(/2026-04-01/);
-    expect(inserted.ends_at).toBeNull();
   });
 });
 

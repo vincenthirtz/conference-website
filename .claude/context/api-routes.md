@@ -4,7 +4,6 @@
 
 | Route                           | Méthodes        | Description                                       |
 | ------------------------------- | --------------- | ------------------------------------------------- |
-| `/api/announcements`            | GET             | Annonces actives                                  |
 | `/api/blizzard-news`            | GET             | Actualités OW                                     |
 | `/api/blizzard-media`           | GET             | Médias OW (comics, stories)                       |
 | `/api/patch-notes`              | GET             | Patch notes OW                                    |
@@ -45,8 +44,6 @@ Toutes nécessitent un Bearer token + rôle staff minimum.
 | `/api/admin/logs`                                  | GET                   | admin    | Logs d'audit staff      |
 | `/api/admin/adherents`                             | GET                   | manager  | Liste adhérents         |
 | `/api/admin/adherents/[id]`                        | GET/PATCH             | manager  | CRUD adhérent           |
-| `/api/admin/announcements`                         | GET/POST              | manager  | Annonces                |
-| `/api/admin/announcements/[id]`                    | GET/PATCH/DELETE      | manager  | CRUD annonce            |
 | `/api/admin/cast-members`                          | GET/POST/PATCH/DELETE | manager  | Casteurs                |
 | `/api/admin/comments`                              | GET/PATCH             | manager  | Modération commentaires |
 | `/api/admin/demandes`                              | GET                   | manager  | Demandes joueurs        |

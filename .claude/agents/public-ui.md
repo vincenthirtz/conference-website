@@ -22,7 +22,7 @@ You are the **public-ui** specialist for the `conference-website` repo. Your sco
 | Errors / meta | `pages/403.tsx`, `pages/404.tsx`, `pages/sitemap.xml.ts`, `pages/_app.tsx`, `pages/_document.tsx` |
 | Chrome components | `components/Navbar/*`, `components/Footer/*`, `components/Seo/*`, `components/ErrorBoundary.tsx`, `components/Toast/*`, `components/CookieBanner/*` |
 | Domain components | `components/Home/*`, `components/News/*`, `components/Team/*`, `components/Live/*`, `components/Press/*`, `components/Socials/*`, `components/About/*`, `components/PastEditionCard/*`, `components/Ads/*`, `components/Popup/*` |
-| Reusable primitives | `components/Buttons/*`, `components/Dropdown/*`, `components/Form/*`, `components/Header/*`, `components/Icons/*`, `components/Typography/*`, `components/illustration/*`, `components/player/*`, `components/announcement.tsx` |
+| Reusable primitives | `components/Buttons/*`, `components/Dropdown/*`, `components/Form/*`, `components/Header/*`, `components/Icons/*`, `components/Typography/*`, `components/illustration/*`, `components/player/*` |
 | Public hooks | `hooks/usePlayerSession.ts`, `useAuthSession.ts`, `useSiteSettings.ts`, `useCookieConsent.ts`, `useDebounce.ts`, `useFocusTrap.ts`, `useRealtimeChannel.ts`, `useIdempotentMutation.ts`, `useToast.ts` |
 | E2E tests | `tests/e2e/*.spec.ts` minus `admin-*` and `bot-*` (e.g. `team-slug`, `team-management`, `team-create`, `auth`, `password-change`, `scrim-requests`, `scrim-response`, `veto-locked`, `cast-assignments`, `support-tickets`, `stage-groups`, `manual-seed`, `auto-seed`, `team-transfers`, `map-draw-page`) |
 

@@ -1,8 +1,8 @@
 // pages/index.tsx
 //
 // Page d'accueil — refonte 2026 : structure resserrée en sections claires
-// (barre d'annonce fine, hero focalisé avec countdown intégré, spotlight
-// événement live-aware, « participer en 3 étapes », actus, soutiens, newsletter).
+// (hero focalisé avec countdown intégré, spotlight événement live-aware,
+// « participer en 3 étapes », actus, soutiens, newsletter).
 //
 // Le chargement des données passe par le loader partagé `loadHomeData`
 // (+ `loadTournamentPrizeCents` pour le spotlight). Les présentateurs V2 vivent
@@ -11,7 +11,6 @@
 import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { type HomeNewsItem } from '@/components/News/HomeNewsSection';
-import { type Announcement } from '@/components/Ads/AnnouncementsTicker';
 import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
 import { type HomePartner } from '@/components/Home/HomeSponsors';
 import { type HomeTeam } from '@/utils/home/loadHomeData';
@@ -22,7 +21,6 @@ import {
 } from '@/utils/home/loadHomeData';
 import { useT } from '@/lib/i18n/useT';
 import { useTwitchLive } from '@/components/Home/useTwitchLive';
-import HomeTopAnnounce from '@/components/Home/HomeTopAnnounce';
 import HomeHeroV2 from '@/components/Home/HomeHeroV2';
 import HomeSpotlight from '@/components/Home/HomeSpotlight';
 import HomeSteps from '@/components/Home/HomeSteps';
@@ -33,7 +31,6 @@ import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 
 type HomeProps = {
   news: HomeNewsItem[];
-  announcements: Announcement[];
   upcomingTournament: UpcomingTournament | null;
   partners: HomePartner[];
   teams: HomeTeam[];
@@ -55,7 +52,6 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
   return {
     props: {
       news: data.news,
-      announcements: data.announcements,
       upcomingTournament: data.upcomingTournament,
       partners: data.partners,
       teams: data.teams,
@@ -69,7 +65,6 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
 
 function Home({
   news,
-  announcements,
   upcomingTournament,
   partners,
   teams,
@@ -79,12 +74,9 @@ function Home({
 }: HomeProps) {
   const t = useT(nsHomeV2);
   const live = useTwitchLive();
-  const topAnnouncement = announcements[0] ?? null;
 
   return (
     <div>
-      <HomeTopAnnounce announcement={topAnnouncement} />
-
       <HomeHeroV2
         countdownTarget={countdownTarget}
         isLive={live.live}

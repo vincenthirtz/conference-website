@@ -3,13 +3,13 @@ import type { ParsedUrlQuery } from 'querystring';
 
 /**
  * Builds a permanent (308) redirect to the merged /admin/communications hub for
- * the four legacy list routes (news, announcements, campaigns, notifications).
+ * the legacy list routes (news, campaigns, notifications).
  * Any incoming query params are preserved (e.g. `search`, `status`, `offset`),
  * and the `tab` param is forced to the target tab. Array-valued params keep
  * their first value — enough for the deep-links these pages actually receive.
  */
 export function communicationsRedirect(
-  tab: 'news' | 'announcements' | 'campaigns' | 'notifications',
+  tab: 'news' | 'campaigns' | 'notifications',
   query: ParsedUrlQuery
 ): GetServerSidePropsResult<never> {
   const params = new URLSearchParams();

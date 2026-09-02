@@ -59,7 +59,6 @@ const ADMIN_PAGES = [
   { path: '/admin/teams', label: 'Equipes' },
   { path: '/admin/communications?tab=news', label: 'Actualites' },
   { path: '/admin/partners', label: 'Partenaires' },
-  { path: '/admin/communications?tab=announcements', label: 'Annonces' },
   { path: '/admin/association?tab=cast', label: 'Cast' },
   { path: '/admin/association?tab=adherents', label: 'Adherents' },
   { path: '/admin/logs', label: 'Logs staff' },
@@ -81,7 +80,6 @@ const API_ENDPOINTS = [
   { path: '/api/admin/teams?limit=10', label: 'Equipes' },
   { path: '/api/admin/news?limit=10', label: 'News' },
   { path: '/api/admin/partners?limit=10', label: 'Partenaires' },
-  { path: '/api/admin/announcements?limit=10', label: 'Annonces' },
   { path: '/api/admin/cast-members?limit=10', label: 'Cast members' },
   { path: '/api/admin/logs?limit=10', label: 'Staff logs' },
 ];
@@ -477,7 +475,6 @@ test.describe.serial('Diagnostic admin', () => {
         '/admin/teams',
         '/admin/communications?tab=news',
         '/admin/partners',
-        '/admin/communications?tab=announcements',
       ];
       const start = Date.now();
 

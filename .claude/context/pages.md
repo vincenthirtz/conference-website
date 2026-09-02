@@ -60,7 +60,6 @@ Toutes protégées par `withStaffPage(minRole)`. Redirection vers `/admin/login`
 - `/admin/partnership-requests/*` — Demandes partenariat
 - `/admin/adherents/*` — Gestion adhérents
 - `/admin/cast-members/*` — Gestion casteurs
-- `/admin/announcements/*` — Bannières d'annonces
 - `/admin/twitch-channels/*` — Chaînes Twitch
 - `/admin/demandes` — Demandes joueurs
 - `/admin/site-settings` — Configuration du site

@@ -85,9 +85,6 @@ import nsAdminPendingGuildLinks from './adminPendingGuildLinks';
 import nsAdminNewsList from './adminNewsList';
 import nsAdminNewsNew from './adminNewsNew';
 import nsAdminNewsEdit from './adminNewsEdit';
-import nsAdminAnnouncementsList from './adminAnnouncementsList';
-import nsAdminAnnouncementsNew from './adminAnnouncementsNew';
-import nsAdminAnnouncementEdit from './adminAnnouncementEdit';
 import nsAdminPartnersList from './adminPartnersList';
 import nsAdminPartnersNew from './adminPartnersNew';
 import nsAdminPartnerEdit from './adminPartnerEdit';
@@ -277,9 +274,6 @@ export const frDict = {
   adminNewsList: nsAdminNewsList.fr,
   adminNewsNew: nsAdminNewsNew.fr,
   adminNewsEdit: nsAdminNewsEdit.fr,
-  adminAnnouncementsList: nsAdminAnnouncementsList.fr,
-  adminAnnouncementsNew: nsAdminAnnouncementsNew.fr,
-  adminAnnouncementEdit: nsAdminAnnouncementEdit.fr,
   adminPartnersList: nsAdminPartnersList.fr,
   adminPartnersNew: nsAdminPartnersNew.fr,
   adminPartnerEdit: nsAdminPartnerEdit.fr,

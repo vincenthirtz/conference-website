@@ -33,7 +33,6 @@ import {
   notifyMatchStarting,
   notifyMatchResult,
   notifyBracketUpdate,
-  notifyAnnouncement,
   notifyVetoStep,
   notifyCheckinReminder,
   notifyCheckinForfeit,
@@ -308,27 +307,6 @@ describe('webhook-resolved notifiers', () => {
         'Prochain adversaire',
       ])
     );
-  });
-
-  it('notifyAnnouncement adds CTA fields when both label and url are provided', async () => {
-    setNextWebhook({ webhook_url: 'https://x', role_mention: null });
-    const mockFetch = vi.fn().mockResolvedValue(jsonOk());
-    vi.stubGlobal('fetch', mockFetch);
-
-    await notifyAnnouncement({
-      title: 'Salut',
-      message: 'Hello world',
-      ctaLabel: 'Voir',
-      ctaUrl: 'https://example.com',
-    });
-
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    const fields = body.embeds[0].fields as { name: string; value: string }[];
-    expect(fields[0]).toEqual({
-      name: 'Voir',
-      value: 'https://example.com',
-      inline: false,
-    });
   });
 
   it('notifyVetoStep marks decider as Système when no team is provided', async () => {

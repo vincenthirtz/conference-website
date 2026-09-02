@@ -1,8 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import {
-  createTestStaff,
-  deleteTestStaff,
-} from '../utils/supabaseTestClient';
+import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
 
 const TEST_PASSWORD = 'TestPassw0rd!';
 const ADMIN_EMAIL = 'hirtzvincent+e2e-listings@gmail.com';
@@ -42,12 +39,6 @@ const LISTING_PAGES = [
     loadedSignal: /\d+\s+adhérent/i,
   },
   {
-    label: 'Announcements',
-    url: '/admin/communications?tab=announcements',
-    heading: /Gestion des annonces/i,
-    loadedSignal: null,
-  },
-  {
     label: 'News',
     url: '/admin/communications?tab=news',
     heading: /Gestion des news/i,
@@ -71,9 +62,9 @@ async function expectListingLoaded(
   page: Page,
   spec: (typeof LISTING_PAGES)[number]
 ) {
-  await expect(
-    page.getByRole('heading', { name: spec.heading })
-  ).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole('heading', { name: spec.heading })).toBeVisible({
+    timeout: 15000,
+  });
 
   if (spec.loadedSignal) {
     // The header shows "Chargement..." while total === null. Once the
@@ -88,8 +79,9 @@ async function expectListingLoaded(
 
   // No error toast / message about the missing staff session should be
   // visible — that is the exact symptom of the regression.
-  await expect(page.getByText(/Session staff (manquante|introuvable)/i))
-    .toHaveCount(0);
+  await expect(
+    page.getByText(/Session staff (manquante|introuvable)/i)
+  ).toHaveCount(0);
 }
 
 test.describe.serial('Admin listings load reliably', () => {
@@ -192,9 +184,7 @@ test.describe.serial('Admin listings load reliably', () => {
     ).toBeGreaterThan(0);
 
     // addCookies() overwrites existing cookies with the same name+domain+path.
-    await context.addCookies(
-      sbCookies.map((c) => ({ ...c, httpOnly: true }))
-    );
+    await context.addCookies(sbCookies.map((c) => ({ ...c, httpOnly: true })));
 
     await page.reload();
     await expectListingLoaded(page, LISTING_PAGES[0]);

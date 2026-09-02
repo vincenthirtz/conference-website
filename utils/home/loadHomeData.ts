@@ -11,7 +11,6 @@
 
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { type HomeNewsItem } from '@/components/News/HomeNewsSection';
-import { type Announcement } from '@/components/Ads/AnnouncementsTicker';
 import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
 import { type HomePartner } from '@/components/Home/HomeSponsors';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -24,7 +23,6 @@ const HOME_NEWS_CONTENT_MAX = 300;
 
 export type HomeData = {
   news: HomeNewsItem[];
-  announcements: Announcement[];
   upcomingTournament: UpcomingTournament | null;
   partners: HomePartner[];
   /** Équipes engagées dans l'édition en cours — cf. `loadContendingTeams`. */
@@ -98,17 +96,6 @@ export async function loadContendingTeams(
   // date d'inscription ferait lire un podium là où il n'y en a pas.
   teams.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
   return teams;
-}
-
-export function sanitizeAnnouncementUrl(url: string | null): string | null {
-  if (!url) return null;
-  try {
-    const parsed = new URL(url);
-    if (['http:', 'https:'].includes(parsed.protocol)) return url;
-    return null;
-  } catch {
-    return null;
-  }
 }
 
 // S5d: tenant id du build courant. `getStaticProps` n'a pas d'accès à la
@@ -204,7 +191,6 @@ export async function loadCountdownSetting(): Promise<string | null> {
  */
 export async function loadHomeData(tenantId: string): Promise<HomeData> {
   let news: HomeNewsItem[] = [];
-  let announcements: Announcement[] = [];
   let upcomingTournament: UpcomingTournament | null = null;
   let partners: HomePartner[] = [];
   let teams: HomeTeam[] = [];
@@ -216,35 +202,22 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
   if (supabaseAdmin) {
     const nowISO = new Date().toISOString();
 
-    const [
-      newsRes,
-      announcementsRes,
-      upcoming,
-      partnersList,
-      countdownSetting,
-    ] = await Promise.all([
-      supabaseAdmin
-        .from('news')
-        .select(
-          'id, title, slug, tag, excerpt, content, image_url, published_at, created_at, updated_at, news_comments(count), teams(logo_url)'
-        )
-        .eq('tenant_id', tenantId)
-        .eq('status', 'published')
-        .or(`published_at.lte.${nowISO},published_at.is.null`)
-        .order('published_at', { ascending: false, nullsFirst: false })
-        .limit(30),
-      supabaseAdmin
-        .from('announcements')
-        .select('id, title, message, cta_label, cta_url, priority, created_at')
-        .eq('tenant_id', tenantId)
-        .eq('is_active', true)
-        .order('priority', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false })
-        .limit(6),
-      loadUpcomingTournament(tenantId),
-      loadPartners(),
-      loadCountdownSetting(),
-    ]);
+    const [newsRes, upcoming, partnersList, countdownSetting] =
+      await Promise.all([
+        supabaseAdmin
+          .from('news')
+          .select(
+            'id, title, slug, tag, excerpt, content, image_url, published_at, created_at, updated_at, news_comments(count), teams(logo_url)'
+          )
+          .eq('tenant_id', tenantId)
+          .eq('status', 'published')
+          .or(`published_at.lte.${nowISO},published_at.is.null`)
+          .order('published_at', { ascending: false, nullsFirst: false })
+          .limit(30),
+        loadUpcomingTournament(tenantId),
+        loadPartners(),
+        loadCountdownSetting(),
+      ]);
 
     upcomingTournament = upcoming;
     partners = partnersList;
@@ -253,9 +226,9 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
     // partir dans le même Promise.all.
     teams = await loadContendingTeams(tenantId, upcomingTournament?.id ?? null);
 
-    // Une erreur sur les requêtes de contenu (news / annonces) signale une
-    // panne, à distinguer d'un contenu légitimement vide.
-    if (newsRes.error || announcementsRes.error) {
+    // Une erreur sur la requête de contenu signale une panne, à distinguer
+    // d'un contenu légitimement vide.
+    if (newsRes.error) {
       loadError = true;
     }
 
@@ -287,21 +260,10 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
         };
       });
     }
-
-    if (!announcementsRes.error && announcementsRes.data) {
-      announcements = announcementsRes.data.map((row: any) => ({
-        id: row.id,
-        title: row.title,
-        message: row.message,
-        ctaLabel: row.cta_label,
-        ctaUrl: sanitizeAnnouncementUrl(row.cta_url),
-      }));
-    }
   }
 
   return {
     news,
-    announcements,
     upcomingTournament,
     partners,
     teams,

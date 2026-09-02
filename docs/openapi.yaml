@@ -61,7 +61,7 @@ tags:
   - name: admin/tenants
   - name: admin/users
   - name: admin/content
-    description: News, announcements, partners, cast members, etc.
+    description: News, partners, cast members, etc.
   - name: admin/misc
   - name: cron
   - name: public/teams
@@ -2163,7 +2163,6 @@ components:
             - stage
             - team
             - match
-            - announcement
             - partner
             - cast_member
             - adherent
@@ -3095,39 +3094,6 @@ components:
         errors:
           type: integer
           minimum: 0
-    PublicAnnouncement:
-      type: object
-      required:
-        - id
-        - title
-        - message
-      properties:
-        id:
-          $ref: '#/components/schemas/Uuid'
-        title:
-          type: string
-        message:
-          type: string
-        ctaLabel:
-          type: string
-          nullable: true
-        ctaUrl:
-          type: string
-          nullable: true
-        priority:
-          type: integer
-        startsAt:
-          oneOf:
-            - $ref: '#/components/schemas/Timestamp'
-            - type: 'null'
-        endsAt:
-          oneOf:
-            - $ref: '#/components/schemas/Timestamp'
-            - type: 'null'
-        createdAt:
-          $ref: '#/components/schemas/Timestamp'
-        updatedAt:
-          $ref: '#/components/schemas/Timestamp'
     ContactFormSubmission:
       type: object
       required:
@@ -9169,61 +9135,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AutocompleteResult'
-  /api/bot/v1/announcements:
-    post:
-      tags:
-        - bot/misc
-      summary: Cree une annonce site-wide (staff admin/owner).
-      operationId: botCreateAnnouncement
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - actorDiscordUserId
-                - title
-                - message
-              properties:
-                actorDiscordUserId:
-                  $ref: '#/components/schemas/DiscordId'
-                title:
-                  type: string
-                  maxLength: 200
-                message:
-                  type: string
-                  maxLength: 5000
-                ctaLabel:
-                  type: string
-                ctaUrl:
-                  type: string
-                startsAt:
-                  type: string
-                  format: date-time
-                endsAt:
-                  type: string
-                  format: date-time
-                isActive:
-                  type: boolean
-                  default: true
-                priority:
-                  type: integer
-                  default: 0
-      responses:
-        '201':
-          description: Annonce creee.
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '403':
-          $ref: '#/components/responses/Forbidden'
   /api/bot/v1/broadcast/on-air:
     get:
       tags:
@@ -10830,123 +10741,6 @@ paths:
                         description: Fixed-window key for the current month.
                   tokensHint:
                     type: string
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-  /api/admin/announcements:
-    get:
-      summary: List announcements.
-      operationId: adminListAnnouncements
-      tags:
-        - admin/content
-      security:
-        - StaffSession: []
-      responses:
-        '200':
-          description: List.
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-    post:
-      summary: Create an announcement.
-      operationId: adminCreateAnnouncement
-      tags:
-        - admin/content
-      security:
-        - StaffSession: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
-      responses:
-        '201':
-          description: Created.
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-  /api/admin/announcements/{id}:
-    parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
-    get:
-      summary: Announcement detail.
-      operationId: adminGetAnnouncement
-      tags:
-        - admin/content
-      security:
-        - StaffSession: []
-      responses:
-        '200':
-          description: Announcement.
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    patch:
-      summary: Update an announcement.
-      operationId: adminUpdateAnnouncement
-      tags:
-        - admin/content
-      security:
-        - StaffSession: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
-      responses:
-        '200':
-          description: Updated.
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-    delete:
-      summary: Delete an announcement.
-      operationId: adminDeleteAnnouncement
-      tags:
-        - admin/content
-      security:
-        - StaffSession: []
-      responses:
-        '204':
-          description: Deleted.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -16969,7 +16763,6 @@ paths:
               - stage
               - team
               - match
-              - announcement
               - partner
               - cast_member
               - adherent
@@ -17020,7 +16813,6 @@ paths:
                     - stage
                     - team
                     - match
-                    - announcement
                     - partner
                     - cast_member
                     - adherent
@@ -25554,38 +25346,6 @@ paths:
                 $ref: '#/components/schemas/Error'
         '429':
           $ref: '#/components/responses/RateLimited'
-        '500':
-          $ref: '#/components/responses/ServerError'
-  /api/announcements:
-    get:
-      tags:
-        - public/misc
-      summary: Liste les annonces publiques actives du tenant resolu.
-      operationId: getPublicAnnouncements
-      security: []
-      parameters:
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 20
-            default: 10
-      responses:
-        '200':
-          description: Annonces actives, triees par priorite puis date.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - items
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/PublicAnnouncement'
         '500':
           $ref: '#/components/responses/ServerError'
   /api/blizzard-media:

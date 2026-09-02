@@ -270,7 +270,7 @@ describe('/api/admin/tournament/[id]/discord-webhooks', () => {
       {
         id: 'w2',
         tournament_id: null,
-        channel_type: 'general_announcements',
+        channel_type: 'mvp_polls',
         webhook_url: 'https://discord.com/api/webhooks/2/def',
       },
       {

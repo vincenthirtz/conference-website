@@ -15,7 +15,6 @@ export const DISCORD_CHANNEL_TYPES = [
   'match_announcements',
   'match_results',
   'bracket_updates',
-  'general_announcements',
   'veto_live',
   'checkin_reminders',
   'support_tickets',
@@ -54,11 +53,6 @@ export const DISCORD_CHANNEL_META: Record<
     label: 'Mise à jour bracket',
     description:
       'Annonce de progression : qui avance, prochain round, prochain adversaire.',
-  },
-  general_announcements: {
-    label: 'Annonces générales',
-    description:
-      'Crosspost automatique des annonces créées dans /admin/announcements.',
   },
   veto_live: {
     label: 'Veto en direct',

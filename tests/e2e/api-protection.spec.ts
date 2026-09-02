@@ -39,10 +39,7 @@ test.describe('Admin API protection', () => {
   }
 
   // Endpoints that return 403 when not authenticated (staff role check)
-  const endpoints403 = [
-    { method: 'GET', path: '/api/admin/news' },
-    { method: 'GET', path: '/api/admin/announcements' },
-  ];
+  const endpoints403 = [{ method: 'GET', path: '/api/admin/news' }];
 
   for (const endpoint of endpoints401) {
     test(`${endpoint.method} ${endpoint.path} returns 401 without auth`, async ({
@@ -87,15 +84,6 @@ test.describe('Admin API protection', () => {
   test('POST /api/admin/news returns 403 without auth', async ({ request }) => {
     const response = await request.post('/api/admin/news', {
       data: { title: 'Test', content: 'Test content' },
-    });
-    expect(response.status()).toBe(403);
-  });
-
-  test('POST /api/admin/announcements returns 403 without auth', async ({
-    request,
-  }) => {
-    const response = await request.post('/api/admin/announcements', {
-      data: { title: 'Test', message: 'Test announcement' },
     });
     expect(response.status()).toBe(403);
   });

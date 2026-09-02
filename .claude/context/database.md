@@ -71,13 +71,6 @@ Commentaires sur articles.
 
 ## Tables contenu
 
-### announcements
-
-Bannières promotionnelles actives.
-
-- `id`, `title`, `message`, `cta_label`, `cta_url`
-- `is_active`, `priority`, `starts_at`, `ends_at`
-
 ### partners
 
 Partenaires de l'association.

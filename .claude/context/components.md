@@ -15,7 +15,6 @@
 - `News/ActualitesPreviewSection.tsx` — Mise en avant du tournoi mixte (anciennement actu OW)
 - `News/PatchNotesSection.tsx` — Section patch notes
 - `Live/LiveTwitchSection.tsx` — Statut live Twitch
-- `Ads/AnnouncementsTicker.tsx` — Bandeau défilant d'annonces
 - `Popup/popup.tsx` — Modal/popup
 
 ## Cartes & Listes

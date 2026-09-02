@@ -37,7 +37,6 @@ import logoutHandler from '../../pages/api/admin/logout';
 import twitchChannelsHandler from '../../pages/api/twitch-channels';
 import castMembersHandler from '../../pages/api/cast-members';
 import partnersHandler from '../../pages/api/partners';
-import announcementsHandler from '../../pages/api/announcements';
 import siteSettingsHandler from '../../pages/api/site-settings';
 import teamTournamentsHandler from '../../pages/api/admin/teams/[teamId]/tournaments';
 
@@ -566,32 +565,6 @@ describe('/api/partners', () => {
   it('405 on POST', async () => {
     const res = makeRes();
     await partnersHandler(makeReq({ method: 'POST' }, false), res);
-    expect(res.statusCode).toBe(405);
-  });
-});
-
-/* -----------------------------------------------------------
- * /api/announcements
- * ---------------------------------------------------------*/
-
-describe('/api/announcements', () => {
-  it('200 returns published announcements', async () => {
-    store.announcements = [
-      {
-        id: 'a1',
-        title: 'Hi',
-        is_published: true,
-        published_at: '2026-04-01',
-      },
-    ] as any;
-    const res = makeRes();
-    await announcementsHandler(makeReq({ method: 'GET' }, false), res);
-    expect(res.statusCode).toBe(200);
-  });
-
-  it('405 on POST', async () => {
-    const res = makeRes();
-    await announcementsHandler(makeReq({ method: 'POST' }, false), res);
     expect(res.statusCode).toBe(405);
   });
 });

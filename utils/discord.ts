@@ -62,7 +62,6 @@ const COLORS = {
   matchAnnouncement: 0xb24be0, // violet (marque)
   matchResult: 0x10b981, // emerald-500
   bracket: 0xb24be0, // violet (marque)
-  announcement: 0xf0e63c, // jaune (marque)
   veto: 0xb24be0, // violet (marque)
   scrim: 0x7bc96a, // vert (marque)
   checkinReminder: 0xef4444, // red-500
@@ -625,53 +624,6 @@ export async function notifyBracketUpdate(
         fields,
         timestamp: new Date().toISOString(),
         footer: { text: data.tournamentName || 'Bracket' },
-      },
-    ],
-    allowed_mentions: buildAllowedMentions(cfg.roleMention),
-  });
-}
-
-/* -----------------------------------------------------------
- * Announcement crosspost
- * ---------------------------------------------------------*/
-
-export type AnnouncementCrosspost = {
-  tournamentId?: string | null;
-  title: string;
-  message: string;
-  ctaLabel?: string | null;
-  ctaUrl?: string | null;
-};
-
-export async function notifyAnnouncement(
-  data: AnnouncementCrosspost
-): Promise<void> {
-  const cfg = await resolveWebhook(
-    data.tournamentId ?? null,
-    'general_announcements'
-  );
-  if (!cfg) return;
-
-  const description = data.message.slice(0, 2000);
-  const fields: DiscordEmbedField[] = [];
-  if (data.ctaLabel && data.ctaUrl) {
-    fields.push({ name: data.ctaLabel, value: data.ctaUrl, inline: false });
-  } else if (data.ctaUrl) {
-    fields.push({ name: 'Lien', value: data.ctaUrl, inline: false });
-  }
-
-  const channelPing = formatRoleMention(cfg.roleMention);
-
-  await postToDiscordWebhook(cfg.url, {
-    username: "OW Women's Cup",
-    content: channelPing || undefined,
-    embeds: [
-      {
-        title: `📢 ${data.title}`,
-        description,
-        color: COLORS.announcement,
-        fields,
-        timestamp: new Date().toISOString(),
       },
     ],
     allowed_mentions: buildAllowedMentions(cfg.roleMention),

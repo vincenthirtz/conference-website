@@ -106,15 +106,15 @@ ancienne route `*/new` en shim 308 :
 - `teams/add-member` → réutilise l'`AddMemberModal` existante (`?add-member=1`)
 
 **Laissés en pages** (formulaires trop lourds) : `users/new`,
-`tournaments/create`, `stages/create`, `adherents/new`, `news/new`,
-`announcements/new`.
+`tournaments/create`, `stages/create`, `adherents/new`, `news/new`.
 
 ### Navigation
 
 - **Source unique** `adminNav.ts` alimentant top-bar + cartes dashboard.
-- Nouvelle section top-bar **Communication** regroupant Annonces, Actualités,
+- Nouvelle section top-bar **Communication** regroupant Actualités,
   Campagnes emails, Notifications (regroupement de menu — **aucune page
-  fusionnée**, les éditeurs restent des pages).
+  fusionnée**, les éditeurs restent des pages). L'onglet Annonces a disparu
+  avec le système de bandeau, retiré en septembre 2026.
 - Nouvelle section top-bar **Staff & Asso** (vague 3) regroupant Gérer les
   utilisateurs, Casteuses, Pôles de l'asso, Adhérents — écrans « People/Staff »
   auparavant dispersés entre Contenu et Configuration. Regroupement de menu pur

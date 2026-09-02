@@ -886,11 +886,10 @@ Resource paths grouped below. Click through for the actual handler — request
 body shapes live there. `Idem.` means the route honours `Idempotency-Key`.
 `Rate-key` is the bucket identifier in `utils/rateLimit`.
 
-### Announcements & moderation
+### Moderation
 
 | Route                                                                                | Methods         | Idem.  | Rate-key                   |
 | ------------------------------------------------------------------------------------ | --------------- | ------ | -------------------------- |
-| [`announcements.ts`](../pages/api/bot/v1/announcements.ts)                           | POST            | yes    | `bot-announcements`        |
 | [`broadcast/on-air.ts`](../pages/api/bot/v1/broadcast/on-air.ts) (Lot 7)             | GET             | —      | `bot-broadcast-on-air`     |
 | [`disputes.ts`](../pages/api/bot/v1/disputes.ts)                                     | GET             | —      | `bot-disputes`             |
 | [`disputes/escalations.ts`](../pages/api/bot/v1/disputes/escalations.ts) (Lot 4)     | GET             | —      | `bot-disputes-escalations` |
@@ -3208,7 +3207,6 @@ sa ligne ici **et** dans la fixture.
 | `/equipe kicker`                                                                                                                                 | captain | `DELETE /api/bot/v1/teams/:teamId/members`                                                                                            |
 | `/classement`                                                                                                                                    | public  | `GET /api/bot/v1/leaderboards/teams`                                                                                                  |
 | `/sync-roles` / `/rs`                                                                                                                            | admin   | `GET /api/bot/v1/role-sync/snapshot`                                                                                                  |
-| `/tournoi annoncer`                                                                                                                              | admin   | `POST /api/bot/v1/announcements`                                                                                                      |
 | `/repost-news`                                                                                                                                   | admin   | _(pas d'endpoint — re-poste depuis l'état interne du bot)_                                                                            |
 | `/lives`                                                                                                                                         | public  | `GET /api/bot/v1/twitch/live`                                                                                                         |
 | `/logs`                                                                                                                                          | admin   | `GET /api/bot/v1/staff-logs`                                                                                                          |

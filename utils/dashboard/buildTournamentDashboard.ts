@@ -1181,7 +1181,6 @@ export async function fetchDashboardData(
       'match_announcements',
       'match_results',
       'bracket_updates',
-      'general_announcements',
       'veto_live',
       'checkin_reminders',
       'support_tickets',
@@ -1209,7 +1208,7 @@ export async function fetchDashboardData(
         case 'mvp_polls':
           return finishedMatches > 0;
         default:
-          return false; // veto/support/general → on ne flag pas comme stale
+          return false; // veto/support → on ne flag pas comme stale
       }
     };
 

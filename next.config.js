@@ -56,6 +56,17 @@ const nextConfig = {
         destination: '/team/:teamId',
         permanent: true,
       },
+      /**
+       * Le système d'annonces (bandeau haut de home + crosspost Discord) a été
+       * retiré : l'admin publie désormais par Communication › Réseaux, qui
+       * couvre le même besoin en atteignant aussi le site et les réseaux.
+       * Les favoris du staff sur /admin/announcements* atterrissent sur le hub.
+       */
+      {
+        source: '/admin/announcements/:path*',
+        destination: '/admin/communications',
+        permanent: true,
+      },
     ];
   },
   async headers() {

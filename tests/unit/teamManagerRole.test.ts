@@ -45,7 +45,6 @@ import transferCaptainHandler from '../../pages/api/teams/transfer-captain';
 
 vi.mock('@/utils/discord', () => ({
   notifyScrimRequest: vi.fn(async () => undefined),
-  notifyAnnouncement: vi.fn(async () => undefined),
 }));
 vi.mock('@/utils/email', () => ({
   sendTeamJoinEmail: vi.fn(async () => undefined),

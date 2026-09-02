@@ -50,7 +50,6 @@ type DeletedType =
   | 'stage'
   | 'team'
   | 'match'
-  | 'announcement'
   | 'partner'
   | 'cast_member'
   | 'adherent'
@@ -75,7 +74,6 @@ const ALL_TYPES: DeletedType[] = [
   'stage',
   'team',
   'match',
-  'announcement',
   'partner',
   'cast_member',
   'adherent',
@@ -247,36 +245,6 @@ const SOURCES: Record<DeletedType, SourceDescriptor> = {
           tournament_id: m.tournament_id,
         };
       });
-    },
-  },
-
-  announcement: {
-    tenantScoped: true,
-    buildCountQuery: (ctx) =>
-      notDeleted(
-        supabaseAdmin!
-          .from('announcements')
-          .select('id', { count: 'exact', head: true })
-          .eq('tenant_id', ctx.tenantId)
-      ),
-    fetchSlice: async (ctx, limit) => {
-      const { data } = await notDeleted(
-        supabaseAdmin!
-          .from('announcements')
-          .select('id, title, message, deleted_at')
-          .eq('tenant_id', ctx.tenantId)
-      )
-        .order('deleted_at', { ascending: false })
-        .range(0, limit - 1);
-
-      return (data || []).map((a: any) => ({
-        id: a.id,
-        type: 'announcement' as const,
-        name: a.title || 'Annonce sans titre',
-        details: a.message ? a.message.slice(0, 60) : null,
-        deleted_at: a.deleted_at,
-        tournament_id: null,
-      }));
     },
   },
 
@@ -562,16 +530,6 @@ async function handleRestore(
         const { error } = await supabaseAdmin!
           .from('matches')
           .update({ status: 'pending', deleted_at: null, updated_at: nowIso })
-          .eq('id', id)
-          .eq('tenant_id', ctx.tenantId);
-
-        if (error) throw error;
-        break;
-      }
-      case 'announcement': {
-        const { error } = await supabaseAdmin!
-          .from('announcements')
-          .update({ is_active: true, deleted_at: null, updated_at: nowIso })
           .eq('id', id)
           .eq('tenant_id', ctx.tenantId);
 

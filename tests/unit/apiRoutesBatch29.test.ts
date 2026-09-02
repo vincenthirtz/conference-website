@@ -517,15 +517,6 @@ describe('/api/admin/recycle-bin', () => {
         deleted_at: '2026-04-01',
       },
     ] as any;
-    store.announcements = [
-      {
-        id: 'a1',
-        title: 'Old',
-        message: 'msg',
-        deleted_at: '2026-04-01',
-      },
-    ] as any;
-
     const res = makeRes();
     await recycleBinHandler(makeReq({ method: 'GET' }), res);
     expect(res.statusCode).toBe(200);
@@ -534,7 +525,6 @@ describe('/api/admin/recycle-bin', () => {
     expect(types.has('stage')).toBe(true);
     expect(types.has('team')).toBe(true);
     expect(types.has('match')).toBe(true);
-    expect(types.has('announcement')).toBe(true);
   });
 
   it('GET ?type=team filters by single type', async () => {

@@ -16,7 +16,6 @@ import {
 
 import { invalidateStaffCache } from '../../utils/staff';
 
-import announcementByIdHandler from '../../pages/api/admin/announcements/[id]';
 import partnerByIdHandler from '../../pages/api/admin/partners/[id]';
 // news/[id] re-imported lazily inside its describe block to isolate any module
 // load issue from other handlers.
@@ -87,104 +86,6 @@ beforeEach(() => {
 });
 
 const VALID_UUID = '550e8400-e29b-41d4-a716-446655440000';
-
-/* -----------------------------------------------------------
- * /api/admin/announcements/[id]
- * ---------------------------------------------------------*/
-
-describe('/api/admin/announcements/[id]', () => {
-  it('returns 400 for an invalid id', async () => {
-    const res = makeRes();
-    await announcementByIdHandler(
-      makeReq({ method: 'GET', query: { id: 'bogus' } }),
-      res
-    );
-    expect(res.statusCode).toBe(400);
-  });
-
-  it('GET 200 returns the row when found', async () => {
-    store.announcements = [
-      { id: VALID_UUID, title: 'A', message: 'M', is_active: true },
-    ] as any;
-    const res = makeRes();
-    await announcementByIdHandler(
-      makeReq({ method: 'GET', query: { id: VALID_UUID } }),
-      res
-    );
-    expect(res.statusCode).toBe(200);
-    expect((res.body as any).title).toBe('A');
-  });
-
-  it('GET 404 when row is missing', async () => {
-    store.announcements = [];
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const res = makeRes();
-    await announcementByIdHandler(
-      makeReq({ method: 'GET', query: { id: VALID_UUID } }),
-      res
-    );
-    consoleSpy.mockRestore();
-    expect(res.statusCode).toBe(404);
-  });
-
-  it('PATCH 200 updates trimmed fields and sanitized URL', async () => {
-    store.announcements = [
-      {
-        id: VALID_UUID,
-        title: 'old',
-        message: 'm',
-        is_active: false,
-        priority: 0,
-        cta_url: null,
-      },
-    ] as any;
-    const res = makeRes();
-    await announcementByIdHandler(
-      makeReq({
-        method: 'PATCH',
-        query: { id: VALID_UUID },
-        body: {
-          title: '  new title  ',
-          message: '  new msg  ',
-          isActive: true,
-          ctaUrl: 'javascript:alert(1)',
-          startsAt: '2026-04-01T10:00:00Z',
-          endsAt: 'not-a-date',
-          priority: 5,
-        },
-      }),
-      res
-    );
-    expect(res.statusCode).toBe(200);
-    const a = (store.announcements as any)[0];
-    expect(a.title).toBe('new title');
-    expect(a.is_active).toBe(true);
-    expect(a.cta_url).toBeNull();
-    expect(a.starts_at).toMatch(/2026-04-01/);
-    expect(a.ends_at).toBeNull();
-    expect(a.priority).toBe(5);
-  });
-
-  it('DELETE 204 removes the row', async () => {
-    store.announcements = [{ id: VALID_UUID }] as any;
-    const res = makeRes();
-    await announcementByIdHandler(
-      makeReq({ method: 'DELETE', query: { id: VALID_UUID } }),
-      res
-    );
-    expect(res.statusCode).toBe(204);
-    expect(store.announcements.length).toBe(0);
-  });
-
-  it('returns 405 on unsupported method', async () => {
-    const res = makeRes();
-    await announcementByIdHandler(
-      makeReq({ method: 'POST', query: { id: VALID_UUID } }),
-      res
-    );
-    expect(res.statusCode).toBe(405);
-  });
-});
 
 /* -----------------------------------------------------------
  * /api/admin/partners/[id]

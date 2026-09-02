@@ -23,7 +23,6 @@ function getChannelLabel(t: Dict): Record<string, string> {
     match_announcements: t.channelMatchAnnouncements,
     match_results: t.channelMatchResults,
     bracket_updates: t.channelBracketUpdates,
-    general_announcements: t.channelGeneralAnnouncements,
     veto_live: t.channelVetoLive,
     checkin_reminders: t.channelCheckinReminders,
     support_tickets: t.channelSupportTickets,

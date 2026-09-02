@@ -12,7 +12,6 @@ export default adminNs('adminDashboardDiscordHealthGrid', {
   channelMatchAnnouncements: 'Annonces match',
   channelMatchResults: 'Résultats',
   channelBracketUpdates: 'Bracket',
-  channelGeneralAnnouncements: 'Annonces',
   channelVetoLive: 'Veto live',
   channelCheckinReminders: 'Check-in',
   channelSupportTickets: 'Support',

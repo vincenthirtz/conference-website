@@ -12,7 +12,6 @@ const VALID_CHANNEL_TYPES = [
   'match_announcements',
   'match_results',
   'bracket_updates',
-  'general_announcements',
   'veto_live',
   'checkin_reminders',
   'support_tickets',

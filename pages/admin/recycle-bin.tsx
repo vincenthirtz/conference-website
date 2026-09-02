@@ -29,7 +29,6 @@ type DeletedItem = {
     | 'stage'
     | 'team'
     | 'match'
-    | 'announcement'
     | 'partner'
     | 'cast_member'
     | 'adherent'
@@ -48,7 +47,9 @@ type RecycleBinResponse = {
 
 const PAGE_SIZE = 50;
 
-export const getServerSideProps = withStaffPage({ permission: 'manage_settings' });
+export const getServerSideProps = withStaffPage({
+  permission: 'manage_settings',
+});
 
 function typeLabel(type: string, t: Dict) {
   switch (type) {
@@ -58,8 +59,6 @@ function typeLabel(type: string, t: Dict) {
       return t.typeTeam;
     case 'match':
       return t.typeMatch;
-    case 'announcement':
-      return t.typeAnnouncement;
     case 'partner':
       return t.typePartner;
     case 'cast_member':
@@ -83,8 +82,6 @@ function typeColor(type: string) {
       return 'bg-blue-600/20 text-blue-300 border-blue-500/30';
     case 'match':
       return 'bg-amber-600/20 text-amber-300 border-amber-500/30';
-    case 'announcement':
-      return 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30';
     case 'partner':
       return 'bg-pink-600/20 text-pink-300 border-pink-500/30';
     case 'cast_member':
@@ -267,7 +264,6 @@ function AdminRecycleBinPage({ staff }: StaffProps) {
               <option value="stage">{t.filterStages}</option>
               <option value="team">{t.filterTeams}</option>
               <option value="match">{t.filterMatches}</option>
-              <option value="announcement">{t.filterAnnouncements}</option>
               <option value="partner">{t.filterPartners}</option>
               <option value="cast_member">{t.filterCastMembers}</option>
               <option value="adherent">{t.filterAdherents}</option>

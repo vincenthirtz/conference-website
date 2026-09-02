@@ -202,30 +202,6 @@ test.describe.serial('Admin pages — Test Coach', () => {
     await expectPageLoaded(page);
   });
 
-  // ─── Contenu : Annonces ─────────────────────────────────────────
-
-  test('Page liste annonces (GET /admin/communications?tab=announcements)', async ({
-    page,
-  }) => {
-    test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
-    await loginAsCoach(page);
-
-    await page.goto('/admin/communications?tab=announcements');
-    await page.waitForLoadState('networkidle');
-    await expectPageLoaded(page);
-  });
-
-  test('Page nouvelle annonce (GET /admin/announcements/new)', async ({
-    page,
-  }) => {
-    test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
-    await loginAsCoach(page);
-
-    await page.goto('/admin/announcements/new');
-    await page.waitForLoadState('networkidle');
-    await expectPageLoaded(page);
-  });
-
   // ─── Contenu : News ─────────────────────────────────────────────
 
   test('Page liste news (GET /admin/communications?tab=news)', async ({

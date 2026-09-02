@@ -503,16 +503,16 @@ export const ADMIN_NAV: AdminNavNode[] = [
     ],
   },
   {
-    // Section « Communication » : REGROUPEMENT de navigation dont les quatre
-    // ex-listes (Annonces, Actualités, Campagnes, Notifications) sont désormais
+    // Section « Communication » : REGROUPEMENT de navigation dont les
+    // ex-listes (Actualités, Campagnes, Notifications) sont désormais
     // FUSIONNÉES dans le hub à onglets /admin/communications?tab=… Comme pour
     // les fusions Modération / Partenaires / Onboarding, une SEULE entrée
     // top-bar pointe vers le hub ; les onglets se découvrent sur la page. Le
     // host est caster-gated (rôle le plus permissif : Notifications) et chaque
-    // onglet re-gate son propre minRole (news/annonces/campagnes = admin,
-    // notifications = caster). Les éditeurs `announcements/new` et `news/new`
-    // restent des pages à part entière (trop lourds pour des modales/onglets) :
-    // leurs entrées « Créer » sont conservées telles quelles.
+    // onglet re-gate son propre minRole (news/campagnes = admin,
+    // notifications = caster). L'éditeur `news/new` reste une page à part
+    // entière (trop lourd pour une modale/un onglet) : son entrée « Créer »
+    // est conservée telle quelle.
     id: 'communication',
     topBarLabel: 'Communication',
     href: '',
@@ -530,13 +530,6 @@ export const ADMIN_NAV: AdminNavNode[] = [
           icon: 'mail',
           accent: 'border-blue-500/30 from-blue-500/10 text-blue-300',
         },
-      },
-      {
-        id: 'announcements-new',
-        topBarLabel: 'Créer une annonce',
-        href: '/admin/announcements/new',
-        permission: 'manage_communications',
-        minRole: 'admin',
       },
       {
         id: 'news-new',

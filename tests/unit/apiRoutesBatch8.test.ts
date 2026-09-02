@@ -10,7 +10,6 @@ import {
 import { invalidateStaffCache } from '../../utils/staff';
 
 import siteSettingsHandler from '../../pages/api/site-settings';
-import announcementsPublicHandler from '../../pages/api/announcements/index';
 import toggleJoinableHandler from '../../pages/api/teams/toggle-joinable';
 import toggleScrimOpenHandler from '../../pages/api/teams/toggle-scrim-open';
 import partnershipRequestsHandler from '../../pages/api/admin/partnership-requests/index';
@@ -128,82 +127,6 @@ describe('GET /api/site-settings', () => {
 });
 
 /* -----------------------------------------------------------
- * /api/announcements (public)
- * ---------------------------------------------------------*/
-
-describe('GET /api/announcements', () => {
-  it('405 on non-GET', async () => {
-    const res = makeRes();
-    await announcementsPublicHandler(makeReq({ method: 'POST' }), res);
-    expect(res.statusCode).toBe(405);
-  });
-
-  it('lists active announcements with sanitized URLs', async () => {
-    store.announcements = [
-      {
-        id: 'a1',
-        title: 'A',
-        message: 'M',
-        cta_label: 'Click',
-        cta_url: 'https://example.com',
-        priority: 1,
-        is_active: true,
-        starts_at: null,
-        ends_at: null,
-        created_at: '2026-04-01',
-        updated_at: '2026-04-01',
-      },
-      {
-        id: 'a2',
-        title: 'Bad',
-        message: 'M',
-        cta_label: null,
-        cta_url: 'javascript:alert(1)',
-        priority: 0,
-        is_active: true,
-        starts_at: null,
-        ends_at: null,
-        created_at: '2026-04-01',
-        updated_at: '2026-04-01',
-      },
-    ] as any;
-    const res = makeRes();
-    await announcementsPublicHandler(makeReq(), res);
-    expect(res.statusCode).toBe(200);
-    const items = (res.body as any).items;
-    expect(items).toHaveLength(2);
-    const a2 = items.find((x: any) => x.id === 'a2');
-    expect(a2.ctaUrl).toBeNull(); // unsafe URL stripped
-  });
-
-  it('hides inactive announcements', async () => {
-    store.announcements = [
-      {
-        id: 'a1',
-        is_active: true,
-        title: 'A',
-        message: 'M',
-        priority: 0,
-        created_at: '2026',
-        updated_at: '2026',
-      },
-      {
-        id: 'a2',
-        is_active: false,
-        title: 'B',
-        message: 'M',
-        priority: 0,
-        created_at: '2026',
-        updated_at: '2026',
-      },
-    ] as any;
-    const res = makeRes();
-    await announcementsPublicHandler(makeReq(), res);
-    expect((res.body as any).items.map((i: any) => i.id)).toEqual(['a1']);
-  });
-});
-
-/* -----------------------------------------------------------
  * /api/teams/toggle-joinable
  * ---------------------------------------------------------*/
 
@@ -289,7 +212,10 @@ describe('POST /api/teams/toggle-scrim-open', () => {
     setAuthUser({ id: 'user-1' });
     store.teams = [];
     const res = makeRes();
-    await toggleScrimOpenHandler(makeReq({ method: 'POST', body: {} }, true), res);
+    await toggleScrimOpenHandler(
+      makeReq({ method: 'POST', body: {} }, true),
+      res
+    );
     expect(res.statusCode).toBe(403);
   });
 
@@ -305,7 +231,10 @@ describe('POST /api/teams/toggle-scrim-open', () => {
       },
     ] as any;
     const res = makeRes();
-    await toggleScrimOpenHandler(makeReq({ method: 'POST', body: {} }, true), res);
+    await toggleScrimOpenHandler(
+      makeReq({ method: 'POST', body: {} }, true),
+      res
+    );
     expect(res.statusCode).toBe(200);
     expect((res.body as any).open_for_scrim).toBe(true);
     expect((store.teams[0] as any).open_for_scrim).toBe(true);
