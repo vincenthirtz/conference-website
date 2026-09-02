@@ -194,7 +194,7 @@ export default function TournamentHero({
           <div className="lg:justify-self-end">
             <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-md sm:p-8">
               <TournamentCountdown
-                targetDate={tournament.start_date}
+                targetDate={tournament.kickoff_at ?? tournament.start_date}
                 phase={phase}
                 size="giant"
               />

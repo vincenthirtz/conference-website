@@ -18,6 +18,15 @@ export type LandingTournament = {
   max_teams?: number | null;
   start_date?: string | null;
   end_date?: string | null;
+  /**
+   * Instant EXACT du coup d'envoi : l'horodatage du premier match programmé.
+   *
+   * `start_date` est une DATE nue, que `new Date()` interprète à minuit UTC —
+   * soit 2h du matin à Paris. Le compte à rebours de la landing tombait donc à
+   * zéro dix-sept heures avant le premier match, et affichait un décompte
+   * différent de celui de l'accueil, qui vise le bon instant.
+   */
+  kickoff_at?: string | null;
   rules_url?: string | null;
   logo_url?: string | null;
   banner_url?: string | null;

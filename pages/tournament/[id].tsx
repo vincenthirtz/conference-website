@@ -320,9 +320,30 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
     (a, b) => a.number - b.number
   );
 
+  // Coup d'envoi RÉEL : l'horodatage du premier match programmé. `start_date`
+  // est une date nue, que `new Date()` lit à minuit UTC (2h du matin à Paris) —
+  // le compte à rebours tombait donc à zéro dix-sept heures trop tôt, et
+  // affichait autre chose que celui de l'accueil, qui vise le bon instant.
+  // Se recale tout seul si le premier match est déplacé.
+  const { data: firstMatch } = await supabaseAdmin
+    .from('matches')
+    .select('scheduled_at')
+    .eq('tenant_id', tenantId)
+    .eq('tournament_id', tournament.id)
+    .is('deleted_at', null)
+    .neq('status', 'cancelled')
+    .not('scheduled_at', 'is', null)
+    .order('scheduled_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  const kickoffAt =
+    (firstMatch as { scheduled_at?: string | null } | null)?.scheduled_at ??
+    null;
+
   return {
     props: {
-      tournament,
+      tournament: { ...tournament, kickoff_at: kickoffAt },
       stages,
       rounds,
       teams,
