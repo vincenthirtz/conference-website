@@ -16,9 +16,11 @@ import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 
 import HomeTeamsStrip, {
-  teamHref,
   teamMonogram,
 } from '@/components/Home/HomeTeamsStrip';
+// Le lien vers une fiche d'équipe est maintenant un util partagé : la bande
+// d'accueil et la liste des équipes d'un tournoi pointent vers la MÊME page.
+import { publicTeamHref } from '@/utils/teams/publicTeamHref';
 import type { HomeTeam } from '@/utils/home/loadHomeData';
 
 function team(over: Partial<HomeTeam> = {}): HomeTeam {
@@ -36,18 +38,18 @@ function render(teams: HomeTeam[]): string {
   return renderToString(createElement(HomeTeamsStrip, { teams }));
 }
 
-describe('teamHref', () => {
+describe('publicTeamHref', () => {
   it('mène à la fiche par le slug', () => {
-    expect(teamHref(team())).toBe('/team/chocomates');
+    expect(publicTeamHref(team())).toBe('/team/chocomates');
   });
 
   it('retombe sur l’id quand le slug manque', () => {
     // Une équipe sans slug reste atteignable : /team/[slug] accepte les deux.
-    expect(teamHref(team({ slug: null, id: 'abc-123' }))).toBe('/team/abc-123');
+    expect(publicTeamHref(team({ slug: null, id: 'abc-123' }))).toBe('/team/abc-123');
   });
 
   it('encode les slugs à caractères spéciaux', () => {
-    expect(teamHref(team({ slug: 'shujaa angel’s' }))).toContain('%20');
+    expect(publicTeamHref(team({ slug: 'shujaa angel’s' }))).toContain('%20');
   });
 });
 

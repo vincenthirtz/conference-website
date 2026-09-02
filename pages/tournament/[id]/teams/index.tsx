@@ -1,7 +1,13 @@
 // pages/tournament/[id]/teams/index.tsx
 // Page publique : liste des equipes inscrites a un tournoi. Chaque carte mene
-// vers la fiche d'equipe du tournoi (teams/[teamId]). Complete les onglets
+// vers la FICHE GLOBALE de l'equipe (/team/<slug>). Complete les onglets
 // bracket / matches / maps / podium de la page tournoi.
+//
+// Il existait aussi une fiche d'equipe PAR TOURNOI (teams/[teamId]) : un
+// deuxieme profil, plus pauvre, pour la meme equipe. Deux URLs pour une seule
+// entite, c'est une de trop — la fiche globale porte deja le roster, les
+// stats et l'historique. Elle a ete supprimee, et les anciens liens y menant
+// sont redirigees vers la fiche globale (redirects() dans next.config.js).
 
 import { GetStaticPaths, GetStaticProps } from 'next';
 import Link from 'next/link';
@@ -13,6 +19,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
+import { publicTeamHref } from '@/utils/teams/publicTeamHref';
 import { logger } from '@/utils/logger';
 import { useT, format } from '@/lib/i18n/useT';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
@@ -189,7 +196,7 @@ export default function TournamentTeamsPage({
             {teams.map((team) => (
               <li key={team.id}>
                 <Link
-                  href={`${tournamentPath}/teams/${team.id}`}
+                  href={publicTeamHref(team)}
                   className="group card-brand flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 transition-all hover:bg-[var(--color-green)]/[0.07]"
                 >
                   {team.logo_url ? (

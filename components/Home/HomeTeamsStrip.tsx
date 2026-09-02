@@ -40,6 +40,7 @@
 import type { JSX } from 'react';
 import Link from 'next/link';
 import { type HomeTeam } from '@/utils/home/loadHomeData';
+import { publicTeamHref } from '@/utils/teams/publicTeamHref';
 import TeamAvatar from '@/components/Team/TeamAvatar';
 import { useT, format } from '@/lib/i18n/useT';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
@@ -59,15 +60,10 @@ export function teamMonogram(
   return (initials || team.name.slice(0, 2)).slice(0, 3).toUpperCase();
 }
 
-/** Lien vers la fiche d'équipe. Le slug prime, l'id est le repli. */
-export function teamHref(team: HomeTeam): string {
-  return `/team/${encodeURIComponent(team.slug || team.id)}`;
-}
-
 function TeamMedallion({ team }: { team: HomeTeam }): JSX.Element {
   return (
     <Link
-      href={teamHref(team)}
+      href={publicTeamHref(team)}
       // Le nom de l'équipe est DANS le lien : pas d'aria-label à ajouter, il
       // ferait doublon avec le texte visible.
       className="group flex w-20 shrink-0 snap-center flex-col items-center gap-2 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] sm:w-24"

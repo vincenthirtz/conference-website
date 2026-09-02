@@ -42,6 +42,22 @@ const nextConfig = {
    * Transpile them so they're bundled correctly server-side.
    */
   transpilePackages: ['@supabase/supabase-js', '@supabase/ssr'],
+  /**
+   * La fiche d'équipe PAR TOURNOI (`/tournament/<id>/teams/<uuid>`) a été
+   * supprimée : elle doublonnait la fiche globale `/team/<slug>`, en plus
+   * pauvre. Les anciens liens — pages indexées, messages Discord, partages —
+   * mènent désormais à la fiche globale, qui sait résoudre un UUID aussi bien
+   * qu'un slug. Sans cette règle, ils tomberaient en 404.
+   */
+  async redirects() {
+    return [
+      {
+        source: '/tournament/:id/teams/:teamId',
+        destination: '/team/:teamId',
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {
