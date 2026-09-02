@@ -187,6 +187,28 @@ export default withSubjectRoute(
         }
       }
 
+      // Bornes du sigle et du pays. Elles manquaient — ni ici ni à la création
+      // d'équipe — parce que ces deux champs n'étaient saisis que par le staff.
+      // Ils sont désormais offerts à l'encadrement de l'équipe : un champ libre
+      // sans borne dans un formulaire public finit toujours par recevoir un
+      // paragraphe. 16 et non 12 : un sigle existant fait déjà 13 caractères,
+      // et une validation qui refuse des données en place est un piège.
+      if (
+        'short_name' in body &&
+        body.short_name &&
+        body.short_name.trim().length > 16
+      ) {
+        return res
+          .status(400)
+          .json({ error: 'Le sigle ne peut pas dépasser 16 caractères.' });
+      }
+
+      if ('country' in body && body.country && body.country.trim().length > 56) {
+        return res
+          .status(400)
+          .json({ error: 'Le pays ne peut pas dépasser 56 caractères.' });
+      }
+
       if (
         'description' in body &&
         body.description &&

@@ -782,6 +782,72 @@ export default function PlayerManageTeamScreen() {
     }
   };
 
+  /**
+   * Identité de l'équipe : nom, sigle, pays.
+   *
+   * Même histoire que le BattleTag plus bas et que le SR juste au-dessus :
+   * `PATCH /api/admin/teams/my` accepte ces trois champs depuis toujours, sous
+   * la permission `manage_team_info` que l'encadrement possède — mais seul
+   * l'écran STAFF les offrait. Une manager qui voulait corriger le sigle de son
+   * équipe devait donc passer par le staff, pour une donnée dont elle est la
+   * seule à connaître la bonne valeur.
+   */
+  const [teamIdentityDrafts, setTeamIdentityDrafts] = useState<
+    Partial<Record<'name' | 'short_name' | 'country', string>>
+  >({});
+
+  const handleUpdateTeamIdentity = async (
+    field: 'name' | 'short_name' | 'country',
+    raw: string
+  ) => {
+    if (!team) return;
+    const trimmed = raw.trim();
+    const current = (team[field] ?? '') as string;
+
+    const forget = () =>
+      setTeamIdentityDrafts((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+
+    if (trimmed === current.trim()) {
+      forget();
+      return;
+    }
+    // Mêmes bornes que le serveur, pour que le refus arrive avant l'aller-retour.
+    if (field === 'name' && (trimmed.length < 2 || trimmed.length > 100)) {
+      setError(t.teamNameInvalid);
+      return;
+    }
+    if (field === 'short_name' && trimmed.length > 16) {
+      setError(t.teamShortNameInvalid);
+      return;
+    }
+    if (field === 'country' && trimmed.length > 56) {
+      setError(t.teamCountryInvalid);
+      return;
+    }
+
+    setActionLoading(`team-${field}`);
+    setError(null);
+    try {
+      await adminFetchJson('/api/admin/teams/my', {
+        method: 'PATCH',
+        // Le nom ne peut pas être vidé (le serveur exige 2 caractères) ; le
+        // sigle et le pays, si — une chaîne vide les efface.
+        body: JSON.stringify({ teamId: team.id, [field]: trimmed || null }),
+      });
+      forget();
+      await reloadTeam();
+      showSuccess(t.teamInfoUpdated);
+    } catch (err: unknown) {
+      setError((err as Error).message || t.teamInfoError);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   // Brouillons de BattleTag. Même motif que le SR juste en dessous : champ
   // libre, donc enregistrement au blur ou a Entree.
   //
@@ -1390,6 +1456,68 @@ export default function PlayerManageTeamScreen() {
                     <span className="text-[11px] text-gray-500">
                       {tRank.teamDeclaredHint}
                     </span>
+                  </div>
+                )}
+
+                {/* Identité de l'équipe. Ces trois champs n'existaient que sur
+                    l'écran staff, alors que l'API les accepte depuis toujours
+                    sous `manage_team_info`. */}
+                {canEditTeamInfo && (
+                  <div className="mt-3 grid grid-cols-1 gap-2 border-t border-white/10 pt-3 sm:grid-cols-3">
+                    {(
+                      [
+                        {
+                          field: 'name' as const,
+                          label: t.teamNameLabel,
+                          placeholder: t.teamNamePlaceholder,
+                          maxLength: 100,
+                        },
+                        {
+                          field: 'short_name' as const,
+                          label: t.teamShortNameLabel,
+                          placeholder: t.teamShortNamePlaceholder,
+                          maxLength: 16,
+                        },
+                        {
+                          field: 'country' as const,
+                          label: t.teamCountryLabel,
+                          placeholder: t.teamCountryPlaceholder,
+                          maxLength: 56,
+                        },
+                      ] as const
+                    ).map(({ field, label, placeholder, maxLength }) => (
+                      <label key={field} className="flex flex-col gap-1">
+                        <span className="text-[11px] text-gray-400">
+                          {label}
+                        </span>
+                        <input
+                          type="text"
+                          maxLength={maxLength}
+                          value={
+                            teamIdentityDrafts[field] ??
+                            ((team?.[field] as string | null) ?? '')
+                          }
+                          onChange={(e) =>
+                            setTeamIdentityDrafts((prev) => ({
+                              ...prev,
+                              [field]: e.target.value,
+                            }))
+                          }
+                          onBlur={(e) =>
+                            handleUpdateTeamIdentity(field, e.target.value)
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              e.currentTarget.blur();
+                            }
+                          }}
+                          disabled={!!actionLoading}
+                          placeholder={placeholder}
+                          className="bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400 disabled:opacity-50"
+                        />
+                      </label>
+                    ))}
                   </div>
                 )}
               </div>
