@@ -33,6 +33,7 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import ProductionPartner from '@/components/Production/ProductionPartner';
 import nsTimeline2026 from '@/lib/i18n/locales/fr/timeline2026';
+import RegisterTeamCta from '@/components/RegisterTeamCta';
 
 type Timeline2026Dict = typeof nsTimeline2026.fr;
 
@@ -583,12 +584,10 @@ function Timeline2026Page({ matches, tournamentSlug, teamCount }: Props) {
               </span>
             </span>
           )}
-          <Link
-            href={`/team/create?tournament=${WOMEN_TOURNAMENT_ID_2026}`}
+          <RegisterTeamCta
+            label={t.registerTeam}
             className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-green)] px-4 py-2 text-sm font-semibold text-black transition hover:bg-[var(--color-green-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green-light)]"
-          >
-            {t.registerTeam}
-          </Link>
+          />
         </div>
 
         {/* Chiffres de l'édition — la carte d'identité du planning. */}

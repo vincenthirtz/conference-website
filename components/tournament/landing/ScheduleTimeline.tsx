@@ -11,7 +11,7 @@ import { Section, SectionHeader } from './primitives';
 import type { LandingTournament, TournamentPhase } from './types';
 import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 
-type StepState = 'done' | 'live' | 'upcoming';
+type StepState = 'done' | 'live' | 'upcoming' | 'closed';
 
 function formatDay(
   iso: string | null | undefined,
@@ -47,14 +47,24 @@ const STATE_STYLES: Record<
     ring: 'border-white/15',
     badge: 'bg-white/5 text-gray-400 border-white/15',
   },
+  // Fermé n'est ni « à venir » ni « terminé » : c'est une porte close, et le
+  // rouge le dit sans qu'on ait à lire le libellé.
+  closed: {
+    dot: 'bg-red-500',
+    ring: 'border-red-500/50',
+    badge: 'bg-red-500/15 text-red-300 border-red-500/40',
+  },
 };
 
 export default function ScheduleTimeline({
   tournament,
   phase,
+  registrationClosed = false,
 }: {
   tournament: LandingTournament;
   phase: TournamentPhase;
+  /** Plus une place libre : l'étape « inscriptions » n'est plus en cours. */
+  registrationClosed?: boolean;
 }) {
   const t = useT(nsTournamentLanding);
   const locale = useLocale();
@@ -67,15 +77,17 @@ export default function ScheduleTimeline({
       return 'done';
     }
     // upcoming
-    return step === 'registration' ? 'live' : 'upcoming';
+    if (step !== 'registration') return 'upcoming';
+    // Les inscriptions ne sont « en cours » que s'il reste des places.
+    return registrationClosed ? 'closed' : 'live';
   };
 
-  const badgeLabel = (s: StepState): string =>
-    s === 'done'
-      ? t.scheduleStatusDone
-      : s === 'live'
-        ? t.scheduleStatusLive
-        : t.scheduleStatusUpcoming;
+  const badgeLabel = (s: StepState): string => {
+    if (s === 'done') return t.scheduleStatusDone;
+    if (s === 'closed') return t.scheduleStatusClosed;
+    if (s === 'live') return t.scheduleStatusLive;
+    return t.scheduleStatusUpcoming;
+  };
 
   const steps: {
     key: 'registration' | 'kickoff' | 'final';

@@ -9,6 +9,7 @@ import type { JSX } from 'react';
 import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
+import RegisterTeamCta from '@/components/RegisterTeamCta';
 
 type Step = {
   n: string;
@@ -158,7 +159,7 @@ export default function HomeSteps(): JSX.Element {
       </ol>
 
       <div className="mt-8 flex justify-center">
-        <Link href="/team/create">
+        <RegisterTeamCta label={t.stepsCta}>
           <button
             type="button"
             className="esport-cta group relative flex items-center justify-center gap-2 overflow-hidden rounded-xl px-7 py-3.5 text-base font-extrabold uppercase tracking-wider text-white shadow-2xl transition-all duration-300 hover:scale-105 motion-reduce:transform-none"
@@ -178,7 +179,7 @@ export default function HomeSteps(): JSX.Element {
               <path d="M5 12h14M13 6l6 6-6 6" />
             </svg>
           </button>
-        </Link>
+        </RegisterTeamCta>
       </div>
     </section>
   );

@@ -5,6 +5,7 @@ import { ACTIVE_WOMEN_TOURNAMENT_ID } from '@/utils/activeEdition';
 import { useT } from '@/lib/i18n/useT';
 import LanguageToggle from '@/components/Navbar/LanguageToggle';
 import nsEspaceCapitaine from '@/lib/i18n/locales/fr/espaceCapitaine';
+import RegisterTeamCta from '@/components/RegisterTeamCta';
 
 const DISCORD_INVITE = 'https://discord.gg/gERSsjC3Vd';
 const REGISTER_TEAM_HREF = `/team/create?tournament=${ACTIVE_WOMEN_TOURNAMENT_ID}`;
@@ -139,12 +140,10 @@ function EspaceCapitainePage() {
             >
               {t.heroCtaGuide}
             </Link>
-            <Link
-              href={REGISTER_TEAM_HREF}
+            <RegisterTeamCta
+              label={t.heroCtaRegister}
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
-            >
-              {t.heroCtaRegister}
-            </Link>
+            />
             <a
               href="#fonctionnalites"
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"

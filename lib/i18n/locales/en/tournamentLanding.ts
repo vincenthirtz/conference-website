@@ -76,6 +76,7 @@ export default {
   scheduleSubtitle:
     'The edition timeline, from registration opening to the grand final.',
   scheduleStatusDone: 'Done',
+  scheduleStatusClosed: 'Closed',
   scheduleStatusLive: 'Live',
   scheduleStatusUpcoming: 'Upcoming',
   scheduleEmpty: 'The detailed schedule is coming soon.',

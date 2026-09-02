@@ -76,6 +76,7 @@ export default ns('tournamentLanding', {
   scheduleSubtitle:
     "Le déroulé de l'édition, de l'ouverture des inscriptions à la grande finale.",
   scheduleStatusDone: 'Terminé',
+  scheduleStatusClosed: 'Fermé',
   scheduleStatusLive: 'En cours',
   scheduleStatusUpcoming: 'À venir',
   scheduleEmpty: 'Le calendrier détaillé arrive bientôt.',

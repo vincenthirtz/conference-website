@@ -429,7 +429,11 @@ export default function TournamentPage({
         formatDetails={tournament.format_details}
       />
 
-      <ScheduleTimeline tournament={tournament} phase={phase} />
+      <ScheduleTimeline
+        tournament={tournament}
+        phase={phase}
+        registrationClosed={placesRemaining === 0}
+      />
 
       <BracketPreview
         stages={stages}

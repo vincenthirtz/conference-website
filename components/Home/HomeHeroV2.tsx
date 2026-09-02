@@ -13,6 +13,7 @@ import { useEffect, useState, type JSX } from 'react';
 import Link from 'next/link';
 import { useT, format } from '@/lib/i18n/useT';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
+import RegisterTeamCta from '@/components/RegisterTeamCta';
 
 type HomeHeroV2Props = {
   /** ISO du prochain jalon (coup d'envoi / ouverture des matchs). */
@@ -137,7 +138,10 @@ export default function HomeHeroV2({
               {t.heroTournamentFull}
             </span>
           ) : (
-            <Link href="/team/create" className="w-full sm:w-auto">
+            <RegisterTeamCta
+              label={t.heroCtaRegister}
+              className="w-full sm:w-auto"
+            >
               <button
                 type="button"
                 className="esport-cta group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-3.5 text-base font-extrabold uppercase tracking-wider text-white shadow-2xl transition-all duration-300 hover:scale-105 sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
@@ -157,7 +161,7 @@ export default function HomeHeroV2({
                   <path d="M5 12h14M13 6l6 6-6 6" />
                 </svg>
               </button>
-            </Link>
+            </RegisterTeamCta>
           )}
           {/* Lot 1 acquisition : la porte d'entrée des joueuses SANS équipe.
               Placée juste après « Inscrire mon équipe » et avant Discord —

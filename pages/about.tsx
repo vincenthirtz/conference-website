@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { useT, format } from '@/lib/i18n/useT';
 import nsAboutPage from '@/lib/i18n/locales/fr/aboutPage';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import RegisterTeamCta from '@/components/RegisterTeamCta';
 
 type AboutDict = typeof nsAboutPage.fr;
 
@@ -242,12 +243,10 @@ function AboutPage({ videoUrl }: AboutPageProps) {
                 {t.heroSubtitle}
               </p>
               <div className="mt-8 flex flex-wrap gap-4 justify-center lg:justify-start">
-                <Link
-                  href="/register"
+                <RegisterTeamCta
+                  label={t.ctaRegister}
                   className="rounded-full bg-[var(--color-violet)] px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:bg-[var(--color-violet-deep)] hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
-                >
-                  {t.ctaRegister}
-                </Link>
+                />
                 <Link
                   href="/association"
                   className="rounded-full border border-white/15 bg-white/5 backdrop-blur-sm px-7 py-3.5 text-sm font-semibold text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"

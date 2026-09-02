@@ -4,6 +4,7 @@ import { listGames } from '@/config/games';
 import type { GameDef, GameSlug, MatchFormat } from '@/config/games';
 import { useT, format } from '@/lib/i18n/useT';
 import nsJeuxPage from '@/lib/i18n/locales/fr/jeuxPage';
+import RegisterTeamCta from '@/components/RegisterTeamCta';
 
 type JeuxDict = typeof nsJeuxPage.fr;
 
@@ -184,12 +185,10 @@ function GamesPage() {
           </p>
 
           <div className="mt-6 flex flex-wrap items-center gap-4">
-            <Link
-              href="/inscription-2026"
+            <RegisterTeamCta
+              label={t.ctaRegisterTeam}
               className="rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
-            >
-              {t.ctaRegisterTeam}
-            </Link>
+            />
             <Link
               href="/tournaments"
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
