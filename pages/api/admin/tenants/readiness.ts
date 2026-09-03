@@ -42,25 +42,14 @@ import {
   type TenantPlan,
   type PlanStatus,
 } from '@/utils/billing/planFeatures';
-
-/**
- * Salons et rôles dont la présence signale une configuration Discord
- * commencée. On ne cherche PAS l'exhaustivité : chaque clé vide vaut
- * « fonctionnalité en veille », pas « panne ». Ce qui compte est de distinguer
- * un espace jamais configuré d'un espace en service.
- */
-const CONFIG_KEYS = [
-  'staff_log_channel_id',
-  'matches_live_channel_id',
-  'disputes_forum_channel_id',
-  'news_ingest_channel_id',
-  'scrims_announce_channel_id',
-  'welcome_channel_id',
-  'member_leave_channel_id',
-  'teams_voice_category_id',
-  'captain_role_id',
-  'staff_role_admin_id',
-] as const;
+// Les critères vivent à part : la fiche d'un espace pose la même question pour
+// UN espace (cf. /api/admin/tenants/[id]/overview), et deux définitions de
+// « opérationnel » divergeraient au premier critère ajouté.
+import {
+  computeBlockers,
+  countConfiguredKeys,
+  CONFIG_KEYS,
+} from '@/utils/tenants/readinessRules';
 
 export type TenantReadiness = {
   id: string;
@@ -228,10 +217,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const nameByGuild = new Map<string, string>();
   for (const row of configRows) {
     const guildId = String(row.guild_id);
-    const filled = CONFIG_KEYS.filter((k) => {
-      const v = row[k];
-      return typeof v === 'string' && v.length > 0;
-    }).length;
+    const filled = countConfiguredKeys(row);
     keysByGuild.set(guildId, filled);
 
     // Le nom du serveur est déposé par l'auto-claim dans `extras` : c'est la
@@ -310,20 +296,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       ? Math.ceil((Date.parse(t.plan_expires_at) - nowMs) / DAY_MS)
       : null;
 
-    // Ordre volontaire : du plus bloquant (rien ne peut fonctionner) au plus
-    // secondaire (une partie fonctionne).
-    const blockers: string[] = [];
-    if (!t.is_active) blockers.push('inactive');
-    if (!botEnabled) blockers.push('plan_sans_bot');
-    if (guilds === 0) blockers.push('aucun_serveur');
-    // Critère : « quelqu'un peut-il administrer cet espace ? », donc AU MOINS
-    // une ligne `tenant_staff` — pas spécifiquement un rôle `owner`. L'espace
-    // historique n'a que des rôles `admin` en base ; exiger un `owner` l'aurait
-    // signalé en défaut à chaque chargement, et un critère qui crie à tort
-    // finit par ne plus être lu.
-    if (staff === 0) blockers.push('personne_rattache');
-    if (keys === 0 && guilds > 0) blockers.push('discord_non_configure');
-    if (!hasEmailSender) blockers.push('emails_non_configures');
+    const blockers = computeBlockers({
+      isActive: t.is_active !== false,
+      botEnabled,
+      guildCount: guilds,
+      staffCount: staff,
+      configuredKeys: keys,
+      hasEmailSender,
+    });
 
     return {
       id: t.id,

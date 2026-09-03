@@ -21595,6 +21595,47 @@ paths:
           description: Bot webhook not configured or tenant secret missing.
         '504':
           description: Bot unreachable.
+  /api/admin/tenants/{id}/overview:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Aggregated overview of one tenant (life signs, volumes, readiness).
+      description: |
+        Answers "what is going on in this space?" — the four most recent
+        activity dates (bot event, match played, staff action, API call), the
+        per-domain row counts declared in `utils/tenants/tenantScope.ts`, the
+        effective plan, and the readiness blockers computed by the same rules as
+        the onboarding hub (`utils/tenants/readinessRules.ts`).
+
+        Access mirrors the tenant detail endpoint: `admin`+ globally, or staff
+        attached to this tenant, or a pole admin. A failed aggregation degrades
+        to `null` for that line only. Rate-limited 60/min. `no-store`.
+      operationId: adminGetTenantOverview
+      tags:
+        - admin/tenants
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Tenant overview.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/tenants/{id}/rotate-secrets:
     parameters:
       - in: path

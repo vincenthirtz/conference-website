@@ -338,6 +338,8 @@ class Builder {
   private payload: Row | Row[] | null = null;
   private selectAfterMutation = false;
   private rangeFromTo: [number, number] | null = null;
+  private orderBy: Array<{ col: string; asc: boolean; nullsFirst: boolean }> =
+    [];
   private wantCount = false;
 
   constructor(private readonly table: string) {}
@@ -511,7 +513,21 @@ class Builder {
     return this;
   }
 
-  order(_col: string, _opts?: { ascending?: boolean; nullsFirst?: boolean }) {
+  /**
+   * PostgREST .order(col, { ascending }) — VRAI tri, appliqué avant .range() /
+   * .limit(), comme le fait Postgres.
+   *
+   * C'était un no-op : un handler qui prend « la ligne la plus récente » via
+   * `.order(desc).limit(1)` rendait la PREMIÈRE ligne semée, et le test passait
+   * tant que la fixture était déjà dans le bon ordre. Autrement dit, le seul
+   * cas où le tri compte n'était pas couvert.
+   */
+  order(col: string, opts?: { ascending?: boolean; nullsFirst?: boolean }) {
+    this.orderBy.push({
+      col,
+      asc: opts?.ascending !== false,
+      nullsFirst: opts?.nullsFirst === true,
+    });
     return this;
   }
 
@@ -566,6 +582,25 @@ class Builder {
 
     if (this.op === 'select') {
       let matched = rows.filter((r) => this.filters.every((f) => f(r)));
+      if (this.orderBy.length > 0) {
+        // Tri stable, clés successives, `null` en dernier par défaut (Postgres
+        // les met en premier en DESC, mais nullsFirst reste explicite ici).
+        matched = [...matched].sort((a, b) => {
+          for (const { col, asc, nullsFirst } of this.orderBy) {
+            const av = (a as Record<string, unknown>)[col];
+            const bv = (b as Record<string, unknown>)[col];
+            const an = av === null || av === undefined;
+            const bn = bv === null || bv === undefined;
+            if (an && bn) continue;
+            if (an) return nullsFirst ? -1 : 1;
+            if (bn) return nullsFirst ? 1 : -1;
+            if (av === bv) continue;
+            const cmp = (av as never) < (bv as never) ? -1 : 1;
+            return asc ? cmp : -cmp;
+          }
+          return 0;
+        });
+      }
       const total = matched.length;
       if (this.rangeFromTo) {
         const [from, to] = this.rangeFromTo;

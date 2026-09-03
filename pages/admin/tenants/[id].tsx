@@ -18,6 +18,7 @@ import {
 } from '@/components/admin/tenants/tenantTableColumns';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import BotSecretsRevealModal from '@/components/admin/BotSecretsRevealModal';
+import TenantOverviewPanel from '@/components/admin/tenants/TenantOverviewPanel';
 import Tabs, {
   tabButtonId,
   tabPanelId,
@@ -71,7 +72,9 @@ type Props = {
   tenantId: string;
 };
 
-type Tab = 'general' | 'discord' | 'staff';
+// « Vue d'ensemble » d'abord : la première question posée devant une fiche
+// d'espace est « il se passe quoi ici ? », pas « que puis-je changer ? ».
+type Tab = 'overview' | 'general' | 'discord' | 'staff';
 
 const TABS_ID_BASE = 'tenant-detail';
 
@@ -108,7 +111,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
   const { mutateJson } = useIdempotentMutation();
   const { confirm, dialog } = useConfirmDialog();
 
-  const [tab, setTab] = useState<Tab>('general');
+  const [tab, setTab] = useState<Tab>('overview');
   const [data, setData] = useState<TenantDetailResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -365,6 +368,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
               <Tabs
                 tabs={
                   [
+                    { id: 'overview', label: t.tabOverview },
                     { id: 'general', label: t.tabGeneral },
                     {
                       id: 'discord',
@@ -400,6 +404,19 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                 idBase={TABS_ID_BASE}
                 className="mb-6"
               />
+
+              {tab === 'overview' && (
+                <div
+                  role="tabpanel"
+                  id={tabPanelId(TABS_ID_BASE, 'overview')}
+                  aria-labelledby={tabButtonId(TABS_ID_BASE, 'overview')}
+                >
+                  <TenantOverviewPanel
+                    tenantId={tenantId}
+                    onOpenTab={(next) => setTab(next as Tab)}
+                  />
+                </div>
+              )}
 
               {tab === 'general' && (
                 <div
