@@ -21098,6 +21098,48 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/tenants/readiness:
+    get:
+      summary: Etat de mise en service de chaque espace (ce qui lui manque).
+      operationId: adminTenantsReadiness
+      tags:
+        - admin/tenants
+      security:
+        - StaffSession: []
+      description: |
+        La liste des espaces dit ce qu'ils SONT. Celle-ci dit ce qui leur
+        MANQUE. Un espace peut exister depuis des semaines, sembler en regle et
+        ne rien faire : plan expire donc bot en 403, aucun salon configure donc
+        fonctionnalites en veille, pas de compte d'envoi donc aucun email. Rien
+        de tout cela ne remonte spontanement — ca se manifeste le jour d'un
+        match.
+
+        Agrege en requetes groupees (pas de N+1) : serveur Discord rattache,
+        salons configures, staff rattache, secrets bot, compte d'envoi
+        d'emails, plan effectif et echeance d'essai. `blockers` liste ce qui
+        bloque, du plus bloquant au plus secondaire.
+
+        Les espaces `kind = developer` sont exclus : ils portent des cles
+        d'API, pas un tournoi.
+
+        Portee : owner de la PLATEFORME (`manage_tenant` + `scope: platform`),
+        comme tout le hub d'onboarding. Un proprietaire d'espace, qui porte
+        `manage_tenant` chez lui depuis l'elevation de role par
+        `tenant_staff`, recoit un 403.
+      responses:
+        '200':
+          description: '`{ tenants: TenantReadiness[] }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          description: Methode non geree.
   /api/admin/tenants:
     get:
       summary: List tenants visible to the current operator.

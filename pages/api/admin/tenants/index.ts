@@ -12,12 +12,14 @@ import { supabaseAdmin } from '@/utils/supabase';
 import {
   withStaffRoute,
   requireOwner,
+  hasAtLeastRole,
   type AuthenticatedStaffContext,
 } from '@/utils/staff';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { logger } from '@/utils/logger';
 import { logStaffAction } from '@/utils/staffLogs';
+import { listAccessibleTenants } from '@/utils/adminTenants';
 import { buildTrialFields } from '@/utils/billing/trial';
 import { assertOrganizerTenant } from '@/utils/tenantKind';
 
@@ -70,7 +72,27 @@ async function handler(
       return res.status(500).json({ error: 'Failed to load tenants.' });
     }
 
-    const rows = (tenants ?? []) as TenantRow[];
+    let rows = (tenants ?? []) as TenantRow[];
+
+    // Portée de la liste.
+    //
+    // Le staff de la PLATEFORME (rôle global admin+, ou pôle-admin) voit tout :
+    // c'est son travail de superviser les espaces. Un propriétaire d'espace,
+    // lui, ne voit que les siens — depuis que `tenant_staff.role` élève le rôle
+    // effectif, il porte `manage_settings` chez lui, ce qui lui aurait ouvert
+    // l'énumération de TOUS les espaces (noms, slugs, plans) sans ce filtre.
+    const isPoleAdmin =
+      (ctx.staff as { is_pole_admin?: boolean }).is_pole_admin === true;
+    const seesEveryTenant =
+      isPoleAdmin || hasAtLeastRole(ctx.globalRole, 'admin');
+
+    if (!seesEveryTenant) {
+      const accessible = await listAccessibleTenants(ctx.staff.id, {
+        isPoleAdmin: false,
+      });
+      const allowed = new Set(accessible.map((t) => t.id));
+      rows = rows.filter((t) => allowed.has(t.id));
+    }
 
     // Annote chaque tenant avec guild_count + staff_count. On fait 2 requetes
     // groupees plutot que N+1 — le volume est < 100 tenants attendu.

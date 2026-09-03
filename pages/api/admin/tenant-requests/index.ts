@@ -163,4 +163,10 @@ async function handler(
   });
 }
 
-export default withStaffRoute(handler, { permission: 'manage_tenant' });
+export default withStaffRoute(handler, {
+  // Portée PLATEFORME : depuis que `tenant_staff.role` élève le rôle effectif,
+  // le propriétaire d'un espace porte `manage_tenant` chez lui. Sans cette
+  // portée, il lirait la file d'onboarding de TOUS les espaces.
+  permission: 'manage_tenant',
+  scope: 'platform',
+});

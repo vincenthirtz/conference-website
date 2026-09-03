@@ -657,18 +657,19 @@ export const ADMIN_NAV: AdminNavNode[] = [
         ],
       },
       {
-        // Hub « Onboarding » (lot C) : fusion des ex-pages File d'onboarding
-        // (onboarding-queue), Demandes self-service (tenant-requests) et
-        // Serveurs Discord en attente (pending-guild-links) en une page à
-        // onglets (/admin/onboarding?tab=…). Une SEULE entrée top-bar pointe
-        // vers le hub ; les onglets se découvrent sur la page. Le host est
-        // manager-gated (rôle le plus permissif des 3) ; l'onglet « Demandes de
-        // tenant » reste owner-only (re-gaté côté page, données owner-only en API).
+        // Hub « Onboarding » : File d'onboarding, Demandes self-service,
+        // Serveurs Discord en attente et état de mise en service des espaces,
+        // en une page à onglets (/admin/onboarding?tab=…).
+        //
+        // OWNER-ONLY : la gestion des espaces est du ressort du propriétaire de
+        // la plateforme. `manage_tenant` n'est portée que par ce rôle, et le
+        // lien doit disparaître pour les autres — un menu qui propose une page
+        // interdite est un menu qui ment.
         id: 'onboarding',
         topBarLabel: 'Onboarding',
         href: '/admin/onboarding',
-        permission: 'manage_settings',
-        minRole: 'admin',
+        permission: 'manage_tenant',
+        minRole: 'owner',
       },
       // Salons Discord des équipes. Cette page EXISTE parce que le cron qui
       // gérait ces salons tout seul a été supprimé : il en a détruit, puis en a

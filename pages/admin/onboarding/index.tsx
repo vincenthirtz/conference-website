@@ -16,8 +16,7 @@
 
 import Head from 'next/head';
 import Breadcrumb from '@/components/admin/Breadcrumb';
-import { withStaffPage, hasAtLeastRole } from '@/utils/staff';
-import type { StaffRole } from '@/utils/staff';
+import { withStaffPage } from '@/utils/staff';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { useAdminT } from '@/lib/i18n/useAdminT';
@@ -42,21 +41,20 @@ const TenantRequestsPanel = lazyPanel(
 const GuildLinksPanel = lazyPanel(
   () => import('@/components/admin/onboarding/GuildLinksPanel')
 );
+const TenantReadinessPanel = lazyPanel(
+  () => import('@/components/admin/onboarding/TenantReadinessPanel')
+);
 
 const ID_BASE = 'admin-onboarding';
 
 type Props = StaffProps & {
-  /** Discord snowflake of the calling staff (owner only, best-effort, null otherwise). */
+  /** Snowflake Discord de l appelant (best-effort, null si non résolu). */
   currentStaffDiscordId: string | null;
 };
 
-export default function AdminOnboardingPage({
-  staff,
-  currentStaffDiscordId,
-}: Props) {
+export default function AdminOnboardingPage({ currentStaffDiscordId }: Props) {
   const t = useAdminT(nsAdminOnboarding);
   const router = useRouter();
-  const isOwner = hasAtLeastRole(staff.role as StaffRole, 'owner');
 
   // Créer un espace depuis ICI : c'est en triant cette file qu'on découvre
   // qu'un serveur en attente n'a aucun espace à rattacher. Envoyer le staff
@@ -64,10 +62,14 @@ export default function AdminOnboardingPage({
   // Même modale que `/admin/tenants` — une seule implémentation à maintenir.
   const [createOpen, setCreateOpen] = useState(false);
 
+  // Le hub entier est réservé aux owners de la plateforme (cf. la garde SSR
+  // plus bas) : plus de conditionnel par onglet, tout le monde ici a le même
+  // périmètre.
   const tabs = [
     { id: 'queue', label: t.tabQueue },
-    ...(isOwner ? [{ id: 'tenant-requests', label: t.tabTenantRequests }] : []),
+    { id: 'tenant-requests', label: t.tabTenantRequests },
     { id: 'guild-links', label: t.tabGuildLinks },
+    { id: 'readiness', label: t.tabReadiness },
   ];
   const [active, setActive] = useQueryTab(tabs);
 
@@ -117,12 +119,14 @@ export default function AdminOnboardingPage({
             id={tabPanelId(ID_BASE, active)}
             aria-labelledby={tabButtonId(ID_BASE, active)}
           >
-            {active === 'tenant-requests' && isOwner ? (
+            {active === 'tenant-requests' ? (
               <TenantRequestsPanel
                 currentStaffDiscordId={currentStaffDiscordId}
               />
             ) : active === 'guild-links' ? (
               <GuildLinksPanel />
+            ) : active === 'readiness' ? (
+              <TenantReadinessPanel />
             ) : (
               <OnboardingQueuePanel />
             )}
@@ -148,14 +152,24 @@ export default function AdminOnboardingPage({
   );
 }
 
-// SSR: manager-gated host. The "Toi" badge on the owner-only tenant-requests
-// tab needs the caller's Discord snowflake — resolve it only for owners (the
-// only role that sees that tab), best-effort, never failing the page.
+// SSR : hub réservé aux OWNERS DE LA PLATEFORME.
+//
+// La portée `platform` n'est pas décorative : depuis que `tenant_staff.role`
+// élève le rôle effectif, le propriétaire d'un espace porte `owner` chez lui.
+// Sans cette portée, il entrerait dans le hub d'onboarding — c'est-à-dire dans
+// la file des demandes et des serveurs en attente de TOUS les espaces.
+//
+// Le badge « Toi » de l'onglet des demandes a besoin du snowflake Discord de
+// l'appelant : on le résout ici, best-effort, sans jamais faire échouer la page.
+// `manage_tenant` n'est portée QUE par le rôle owner (cf.
+// utils/staffPermissions.ts) : c'est la forme « par permission » qu'impose le
+// garde-fou `adminPageGuards`, et elle dit la même chose que « owner-only ».
 export const getServerSideProps = withStaffPage<{
   currentStaffDiscordId: string | null;
-}>({ permission: 'manage_settings' }, async (_ctx, staffCtx) => {
-  let discordId: string | null = null;
-  if (staffCtx.role === 'owner') {
+}>(
+  { permission: 'manage_tenant', scope: 'platform' },
+  async (_ctx, staffCtx) => {
+    let discordId: string | null = null;
     try {
       const { data } = await supabaseAdmin.auth.admin.getUserById(
         staffCtx.user.id
@@ -175,6 +189,6 @@ export const getServerSideProps = withStaffPage<{
     } catch (err) {
       logger.error('onboarding SSR: discord id lookup failed', err);
     }
+    return { currentStaffDiscordId: discordId };
   }
-  return { currentStaffDiscordId: discordId };
-});
+);

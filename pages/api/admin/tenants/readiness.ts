@@ -1,0 +1,299 @@
+// pages/api/admin/tenants/readiness.ts
+//
+// GET : « qu'est-ce qui manque à chaque espace pour fonctionner ? »
+//
+// La liste des espaces dit ce qu'ils SONT (slug, plan, dates). Elle ne dit pas
+// ce qu'ils FONT, et c'est pourtant la seule question qui se pose après une
+// création : un espace peut exister depuis trois semaines, avoir l'air en
+// règle, et ne rien faire du tout — bot 403 parce que le plan a expiré, aucun
+// email parce que le compte d'envoi n'est pas renseigné, salons vides parce que
+// personne n'a fini la configuration. Rien de tout cela ne remonte
+// spontanément : ça se manifeste le jour d'un match, du mauvais côté.
+//
+// Cet endpoint agrège les cinq conditions qui déterminent réellement si un
+// espace tourne, en requêtes groupées (pas de N+1) :
+//
+//   1. un serveur Discord rattaché ;
+//   2. au moins un salon configuré (sinon les fonctionnalités sont en veille) ;
+//   3. quelqu'un de rattaché — sans une seule ligne `tenant_staff`, personne ne
+//      peut basculer sur l'espace pour l'administrer ;
+//   4. un compte d'envoi d'emails (sinon AUCUN email ne part) ;
+//   5. un plan qui inclut le bot, et son échéance si c'est un essai.
+//
+// Portée : owner de la PLATEFORME (`manage_tenant` + `scope: 'platform'`),
+// comme tout le hub d'onboarding. C'est une vue de supervision transverse — un
+// propriétaire d'espace n'a pas à lire l'état des autres.
+
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '@/utils/supabase';
+import { withStaffRoute } from '@/utils/staff';
+import { applyRateLimit } from '@/utils/rateLimit';
+import { logger } from '@/utils/logger';
+import {
+  effectivePlan,
+  getPlanFeatures,
+  type TenantPlan,
+  type PlanStatus,
+} from '@/utils/billing/planFeatures';
+
+/**
+ * Salons et rôles dont la présence signale une configuration Discord
+ * commencée. On ne cherche PAS l'exhaustivité : chaque clé vide vaut
+ * « fonctionnalité en veille », pas « panne ». Ce qui compte est de distinguer
+ * un espace jamais configuré d'un espace en service.
+ */
+const CONFIG_KEYS = [
+  'staff_log_channel_id',
+  'matches_live_channel_id',
+  'disputes_forum_channel_id',
+  'news_ingest_channel_id',
+  'scrims_announce_channel_id',
+  'welcome_channel_id',
+  'member_leave_channel_id',
+  'teams_voice_category_id',
+  'captain_role_id',
+  'staff_role_admin_id',
+] as const;
+
+export type TenantReadiness = {
+  id: string;
+  slug: string;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+  plan: string;
+  /** Plan réellement appliqué (un plan payant expiré retombe sur discovery). */
+  effectivePlan: string;
+  planStatus: string;
+  planExpiresAt: string | null;
+  isTrial: boolean;
+  /** Jours restants avant échéance ; null si le plan n'expire pas. */
+  daysRemaining: number | null;
+  guildCount: number;
+  /** Nombre de clés de configuration Discord renseignées (cf. CONFIG_KEYS). */
+  configuredKeys: number;
+  ownerCount: number;
+  staffCount: number;
+  hasBotSecrets: boolean;
+  hasEmailSender: boolean;
+  /** Le plan effectif inclut-il le bot Discord ? */
+  botEnabled: boolean;
+  /** Ce qui bloque, du plus bloquant au plus secondaire. */
+  blockers: string[];
+};
+
+const DAY_MS = 86_400_000;
+
+function countBy<T extends { tenant_id?: string | null }>(
+  rows: T[] | null | undefined
+): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const r of rows ?? []) {
+    const id = r.tenant_id;
+    if (!id) continue;
+    out.set(id, (out.get(id) ?? 0) + 1);
+  }
+  return out;
+}
+
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 30, windowMs: 60_000 },
+      'admin-tenants-readiness'
+    )
+  ) {
+    return;
+  }
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+  res.setHeader('Cache-Control', 'no-store');
+
+  const { data: tenantRows, error } = await supabaseAdmin
+    .from('tenants')
+    .select(
+      'id, slug, name, is_active, created_at, kind, plan, plan_status, plan_expires_at, plan_is_trial'
+    )
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    logger.error('[admin/tenants/readiness] tenants load error', error);
+    return res.status(500).json({ error: 'Failed to load tenants.' });
+  }
+
+  type Row = {
+    id: string;
+    slug: string;
+    name: string;
+    is_active: boolean;
+    created_at: string;
+    kind?: string | null;
+    plan?: string | null;
+    plan_status?: string | null;
+    plan_expires_at?: string | null;
+    plan_is_trial?: boolean | null;
+  };
+  // Les espaces `developer` portent des clés d'API, pas un tournoi : les
+  // mesurer sur « le bot répond-il ? » n'aurait aucun sens.
+  const rows = ((tenantRows ?? []) as Row[]).filter(
+    (t) => (t.kind ?? 'organizer') !== 'developer'
+  );
+  const ids = rows.map((t) => t.id);
+
+  if (ids.length === 0) {
+    return res.status(200).json({ tenants: [] });
+  }
+
+  const [guildsRes, configRes, staffRes, secretsRes, emailRes] =
+    await Promise.all([
+      supabaseAdmin
+        .from('discord_guilds')
+        .select('tenant_id, guild_id')
+        .in('tenant_id', ids),
+      supabaseAdmin
+        .from('tenant_discord_config')
+        .select(['guild_id', ...CONFIG_KEYS].join(', ') as '*'),
+      supabaseAdmin
+        .from('tenant_staff')
+        .select('tenant_id, role')
+        .in('tenant_id', ids),
+      supabaseAdmin
+        .from('tenant_secrets')
+        .select('tenant_id')
+        .in('tenant_id', ids),
+      supabaseAdmin
+        .from('integration_secrets')
+        .select('tenant_id')
+        .eq('key', 'brevo_api_key')
+        .in('tenant_id', ids),
+    ]);
+
+  for (const [label, r] of [
+    ['discord_guilds', guildsRes],
+    ['tenant_discord_config', configRes],
+    ['tenant_staff', staffRes],
+    ['tenant_secrets', secretsRes],
+    ['integration_secrets', emailRes],
+  ] as const) {
+    if (r.error) {
+      // Une agrégation qui échoue ne doit pas faire tomber la vue : on le
+      // journalise et le critère correspondant s'affichera comme absent.
+      logger.error(`[admin/tenants/readiness] ${label} load error`, r.error);
+    }
+  }
+
+  const guildRows = (guildsRes.data ?? []) as Array<{
+    tenant_id: string;
+    guild_id: string;
+  }>;
+  const guildCount = countBy(guildRows);
+  const guildToTenant = new Map(
+    guildRows.map((g) => [g.guild_id, g.tenant_id])
+  );
+
+  // Config Discord : la table est clé par `guild_id`, on la ramène au tenant.
+  const configuredKeys = new Map<string, number>();
+  const configRows = (configRes.data ?? []) as unknown as Array<
+    Record<string, unknown>
+  >;
+  for (const row of configRows) {
+    const tenantId = guildToTenant.get(String(row.guild_id));
+    if (!tenantId) continue;
+    const filled = CONFIG_KEYS.filter((k) => {
+      const v = row[k];
+      return typeof v === 'string' && v.length > 0;
+    }).length;
+    configuredKeys.set(tenantId, (configuredKeys.get(tenantId) ?? 0) + filled);
+  }
+
+  const staffRows = (staffRes.data ?? []) as Array<{
+    tenant_id: string;
+    role: string | null;
+  }>;
+  const staffCount = countBy(staffRows);
+  const ownerCount = countBy(staffRows.filter((r) => r.role === 'owner'));
+
+  const withSecrets = new Set(
+    ((secretsRes.data ?? []) as Array<{ tenant_id: string }>).map(
+      (r) => r.tenant_id
+    )
+  );
+  const withEmail = new Set(
+    ((emailRes.data ?? []) as Array<{ tenant_id: string }>).map(
+      (r) => r.tenant_id
+    )
+  );
+
+  const nowMs = Date.now();
+
+  const tenants: TenantReadiness[] = rows.map((t) => {
+    const planState = {
+      plan: (t.plan ?? 'discovery') as TenantPlan,
+      plan_status: (t.plan_status ?? 'active') as PlanStatus,
+      plan_expires_at: t.plan_expires_at ?? null,
+    };
+    const eff = effectivePlan(planState, nowMs);
+    const botEnabled = getPlanFeatures(eff).discordBot;
+
+    const guilds = guildCount.get(t.id) ?? 0;
+    const keys = configuredKeys.get(t.id) ?? 0;
+    const owners = ownerCount.get(t.id) ?? 0;
+    const staff = staffCount.get(t.id) ?? 0;
+    const hasEmailSender = withEmail.has(t.id);
+
+    const daysRemaining = t.plan_expires_at
+      ? Math.ceil((Date.parse(t.plan_expires_at) - nowMs) / DAY_MS)
+      : null;
+
+    // Ordre volontaire : du plus bloquant (rien ne peut fonctionner) au plus
+    // secondaire (une partie fonctionne).
+    const blockers: string[] = [];
+    if (!t.is_active) blockers.push('inactive');
+    if (!botEnabled) blockers.push('plan_sans_bot');
+    if (guilds === 0) blockers.push('aucun_serveur');
+    // Critère : « quelqu'un peut-il administrer cet espace ? », donc AU MOINS
+    // une ligne `tenant_staff` — pas spécifiquement un rôle `owner`. L'espace
+    // historique n'a que des rôles `admin` en base ; exiger un `owner` l'aurait
+    // signalé en défaut à chaque chargement, et un critère qui crie à tort
+    // finit par ne plus être lu.
+    if (staff === 0) blockers.push('personne_rattache');
+    if (keys === 0 && guilds > 0) blockers.push('discord_non_configure');
+    if (!hasEmailSender) blockers.push('emails_non_configures');
+
+    return {
+      id: t.id,
+      slug: t.slug,
+      name: t.name,
+      isActive: t.is_active,
+      createdAt: t.created_at,
+      plan: planState.plan,
+      effectivePlan: eff,
+      planStatus: planState.plan_status,
+      planExpiresAt: t.plan_expires_at ?? null,
+      isTrial: t.plan_is_trial === true,
+      daysRemaining,
+      guildCount: guilds,
+      configuredKeys: keys,
+      ownerCount: owners,
+      staffCount: staff,
+      hasBotSecrets: withSecrets.has(t.id),
+      hasEmailSender,
+      botEnabled,
+      blockers,
+    };
+  });
+
+  return res.status(200).json({ tenants });
+}
+
+export default withStaffRoute(handler, {
+  // Supervision transverse des espaces : c'est de l'onboarding, donc owner de
+  // la PLATEFORME. La portée compte autant que la permission — un propriétaire
+  // d'espace porte `manage_tenant` chez lui.
+  permission: 'manage_tenant',
+  scope: 'platform',
+});
