@@ -21189,6 +21189,13 @@ paths:
         Les espaces `kind = developer` sont exclus : ils portent des cles
         d'API, pas un tournoi.
 
+        La reponse porte aussi de quoi AGIR, pas seulement de quoi constater :
+        `tenants[].guilds` (les serveurs de l'espace, principal d'abord, avec
+        leur avancement de configuration — l'ecran de reglages est PAR
+        serveur) et `botInviteUrl` (URL d'invitation du bot, qui depend de
+        `DISCORD_CLIENT_ID` : `null` si non configuree, pour que l'UI ne
+        propose pas un bouton mort).
+
         Portee : owner de la PLATEFORME (`manage_tenant` + `scope: platform`),
         comme tout le hub d'onboarding. Un proprietaire d'espace, qui porte
         `manage_tenant` chez lui depuis l'elevation de role par

@@ -36,6 +36,12 @@ type TenantReadiness = {
   isTrial: boolean;
   daysRemaining: number | null;
   guildCount: number;
+  guilds: Array<{
+    guildId: string;
+    guildName: string | null;
+    isPrimary: boolean;
+    configuredKeys: number;
+  }>;
   configuredKeys: number;
   ownerCount: number;
   staffCount: number;
@@ -58,7 +64,11 @@ function blockerMeta(
   blocker: string,
   tenantId: string,
   t: Dict
-): { label: string; href?: string | null; action?: 'attach_guild' } {
+): {
+  label: string;
+  href?: string | null;
+  action?: 'attach_guild' | 'configure_channels';
+} {
   switch (blocker) {
     case 'inactive':
       return { label: t.blockerInactive, href: `/admin/tenants/${tenantId}` };
@@ -69,7 +79,9 @@ function blockerMeta(
     case 'personne_rattache':
       return { label: t.blockerNoStaff, href: `/admin/tenants/${tenantId}` };
     case 'discord_non_configure':
-      return { label: t.blockerNoConfig, href: `/admin/tenants/${tenantId}` };
+      // Renseigné par l'appelant : l'écran de réglages est par SERVEUR, donc
+      // la destination dépend du serveur principal de l'espace.
+      return { label: t.blockerNoConfig, action: 'configure_channels' };
     case 'emails_non_configures':
       return {
         label: t.blockerNoEmail,
@@ -106,6 +118,7 @@ export default function TenantReadinessPanel() {
   const { adminFetchJson } = useAdminFetch();
 
   const [rows, setRows] = useState<TenantReadiness[] | null>(null);
+  const [botInviteUrl, setBotInviteUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [onlyBlocked, setOnlyBlocked] = useState(false);
   // Espace en cours de rattachement — porte aussi l'ouverture de la modale.
@@ -117,10 +130,12 @@ export default function TenantReadinessPanel() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const data = await adminFetchJson<{ tenants: TenantReadiness[] }>(
-        '/api/admin/tenants/readiness'
-      );
+      const data = await adminFetchJson<{
+        tenants: TenantReadiness[];
+        botInviteUrl: string | null;
+      }>('/api/admin/tenants/readiness');
       setRows(data.tenants);
+      setBotInviteUrl(data.botInviteUrl ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : t.readinessLoadError);
       setRows([]);
@@ -212,6 +227,44 @@ export default function TenantReadinessPanel() {
                       )}
                     </div>
 
+                    {r.guilds.length > 0 && (
+                      <ul className="mt-2 flex flex-wrap gap-2">
+                        {r.guilds.map((g) => (
+                          <li key={g.guildId}>
+                            {/* L'écran de réglages est PAR serveur : on y va
+                                directement, plutôt que de passer par la fiche
+                                de l'espace puis de rechercher le serveur. */}
+                            <Link
+                              href={`/admin/tenants/${r.id}/discord-config/${g.guildId}`}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-600/60 bg-neutral-900/40 px-2.5 py-1 text-xs text-neutral-200 hover:border-violet-400/60 hover:text-white"
+                              data-testid="readiness-configure-guild"
+                            >
+                              <span className="font-medium">
+                                {g.guildName ?? g.guildId}
+                              </span>
+                              {g.isPrimary && (
+                                <span className="text-[10px] uppercase tracking-wide text-neutral-500">
+                                  {t.guildPrimaryTag}
+                                </span>
+                              )}
+                              <span
+                                className={
+                                  g.configuredKeys > 0
+                                    ? 'text-emerald-300'
+                                    : 'text-amber-300'
+                                }
+                              >
+                                {format(t.configureChannelsCount, {
+                                  count: g.configuredKeys,
+                                })}
+                              </span>
+                              <span aria-hidden>→</span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <Pill ok={r.botEnabled} label={t.criterionBot} />
                       <Pill
@@ -259,7 +312,9 @@ export default function TenantReadinessPanel() {
                       className="text-xs text-violet-300 underline hover:text-violet-200"
                       data-testid="readiness-attach-guild-cta"
                     >
-                      {t.attachGuildCta}
+                      {r.guilds.length === 0
+                        ? t.attachGuildInviteCta
+                        : t.attachGuildCta}
                     </button>
                   </div>
                 </div>
@@ -270,7 +325,16 @@ export default function TenantReadinessPanel() {
                       const meta = blockerMeta(b, r.id, t);
                       return (
                         <li key={b}>
-                          {meta.action === 'attach_guild' ? (
+                          {meta.action === 'configure_channels' ? (
+                            <Link
+                              href={`/admin/tenants/${r.id}/discord-config/${
+                                (r.guilds[0] ?? { guildId: '' }).guildId
+                              }`}
+                              className="inline-block rounded-lg border border-amber-500/30 bg-amber-500/5 px-2.5 py-1 text-xs text-amber-100 hover:border-amber-400/60"
+                            >
+                              {meta.label} →
+                            </Link>
+                          ) : meta.action === 'attach_guild' ? (
                             <button
                               type="button"
                               onClick={() =>
@@ -306,6 +370,7 @@ export default function TenantReadinessPanel() {
 
       <AttachGuildModal
         open={attachTo !== null}
+        botInviteUrl={botInviteUrl}
         tenant={attachTo}
         onClose={() => setAttachTo(null)}
         onAttached={() => {

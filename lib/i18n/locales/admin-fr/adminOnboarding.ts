@@ -58,4 +58,13 @@ export default adminNs('adminOnboarding', {
   attachGuildInvalid: "Identifiant de serveur invalide (15 à 25 chiffres).",
   attachGuildDone: "Serveur rattaché à « {name} ».",
   attachGuildError: "Rattachement impossible.",
+  attachGuildInviteHeading: "1. Inviter le bot sur le serveur",
+  attachGuildInviteHelp: "Ouvre Discord dans un onglet. Une fois le bot ajouté, revenez ici et rafraîchissez : le serveur apparaît dans la liste ci-dessous.",
+  attachGuildInviteCta: "Inviter le bot",
+  attachGuildRefresh: "Rafraîchir la liste",
+  attachGuildRefreshing: "Rafraîchissement…",
+  attachGuildInviteUnavailable: "Invitation indisponible : DISCORD_CLIENT_ID n’est pas configuré côté serveur.",
+  configureChannelsCta: "Configurer les salons",
+  configureChannelsCount: "{count} réglage(s)",
+  guildPrimaryTag: "principal",
 });

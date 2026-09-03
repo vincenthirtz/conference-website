@@ -59,4 +59,13 @@ export default {
   attachGuildInvalid: "Invalid server identifier (15 to 25 digits).",
   attachGuildDone: "Server attached to “{name}”.",
   attachGuildError: "Could not attach.",
+  attachGuildInviteHeading: "1. Invite the bot to the server",
+  attachGuildInviteHelp: "Opens Discord in a tab. Once the bot is added, come back here and refresh: the server shows up in the list below.",
+  attachGuildInviteCta: "Invite the bot",
+  attachGuildRefresh: "Refresh the list",
+  attachGuildRefreshing: "Refreshing…",
+  attachGuildInviteUnavailable: "Invitation unavailable: DISCORD_CLIENT_ID is not configured server-side.",
+  configureChannelsCta: "Configure the channels",
+  configureChannelsCount: "{count} setting(s)",
+  guildPrimaryTag: "primary",
 };

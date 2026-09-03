@@ -210,6 +210,65 @@ describe('diagnostic', () => {
     expect(b.blockers).toContain('plan_sans_bot');
   });
 
+  it('liste les serveurs de l’espace, le principal d’abord, avec leur avancement', async () => {
+    // L'écran de réglages Discord est PAR serveur : sans cette liste, la vue
+    // ne peut pas y renvoyer directement et renvoyait vers la fiche de
+    // l'espace, à charge de retrouver le serveur.
+    (store.discord_guilds as any[]).push({
+      tenant_id: TENANT_B,
+      guild_id: '444444444444444444',
+      is_primary: false,
+    });
+    (store.tenant_discord_config as any[]).push({
+      guild_id: '444444444444444444',
+      staff_log_channel_id: '777',
+      extras: { guild_name: 'Serveur staff' },
+    });
+
+    const res = makeRes();
+    await handler(makeReq(), res);
+    const b = (res.body as any).tenants.find(
+      (t: any) => t.slug === 'cup-estivale'
+    );
+
+    expect(b.guilds).toHaveLength(2);
+    expect(b.guilds[0].isPrimary).toBe(true);
+    expect(b.guilds[0].guildId).toBe(GUILD_B);
+    // Le serveur principal n'a rien de configuré, le second en a un.
+    expect(b.guilds[0].configuredKeys).toBe(0);
+    expect(b.guilds[1].guildId).toBe('444444444444444444');
+    expect(b.guilds[1].configuredKeys).toBe(1);
+    // Le nom vient de `extras` — seule trace côté site.
+    expect(b.guilds[1].guildName).toBe('Serveur staff');
+    expect(b.guilds[0].guildName).toBeNull();
+  });
+
+  it('expose l’URL d’invitation du bot, résolue côté serveur', async () => {
+    const ORIG = process.env.DISCORD_CLIENT_ID;
+    process.env.DISCORD_CLIENT_ID = '123456789';
+    try {
+      const res = makeRes();
+      await handler(makeReq(), res);
+      // Elle dépend de DISCORD_CLIENT_ID : le client ne peut pas la bâtir.
+      expect((res.body as any).botInviteUrl).toContain('client_id=123456789');
+    } finally {
+      if (ORIG === undefined) delete process.env.DISCORD_CLIENT_ID;
+      else process.env.DISCORD_CLIENT_ID = ORIG;
+    }
+  });
+
+  it('sans DISCORD_CLIENT_ID : null, pour que l’UI ne propose pas un bouton mort', async () => {
+    const ORIG = process.env.DISCORD_CLIENT_ID;
+    delete process.env.DISCORD_CLIENT_ID;
+    try {
+      const res = makeRes();
+      await handler(makeReq(), res);
+      expect((res.body as any).botInviteUrl).toBeNull();
+    } finally {
+      if (ORIG !== undefined) process.env.DISCORD_CLIENT_ID = ORIG;
+    }
+  });
+
   it('les espaces développeur sont hors de cette vue', async () => {
     (store.tenants as any[]).push({
       id: '33333333-3333-4333-8333-333333333333',

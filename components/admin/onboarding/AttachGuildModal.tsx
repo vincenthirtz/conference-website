@@ -14,6 +14,12 @@
 //   2. saisir l'identifiant à la main — pour un serveur dont l'attente a été
 //      purgée, ou que l'on rattache avant d'y inviter le bot.
 //
+// La modale porte aussi l'INVITATION du bot, parce que c'est le même moment :
+// quand un espace n'a aucun serveur, la première question n'est pas « lequel
+// rattacher ? » mais « le bot y est-il ? ». Inviter, rafraîchir, rattacher —
+// les trois gestes s'enchaînent ici, sans quitter l'écran. Envoyer l'opérateur
+// chercher l'URL d'invitation ailleurs, c'était le perdre entre deux étapes.
+//
 // Le bot prend le rattachement en compte au rafraîchissement de son cache
 // (~5 min) : on le dit, sinon l'absence de réaction immédiate ressemble à un
 // échec.
@@ -42,6 +48,12 @@ type AttachGuildModalProps = {
   tenant: { id: string; name: string } | null;
   /** Appelé après un rattachement réussi (rechargement de la vue). */
   onAttached: () => void;
+  /**
+   * URL d'invitation du bot (dépend de `DISCORD_CLIENT_ID`, donc résolue côté
+   * serveur). `null` = non configurée : on le dit au lieu d'afficher un
+   * bouton qui ne mène nulle part.
+   */
+  botInviteUrl: string | null;
 };
 
 export default function AttachGuildModal({
@@ -49,6 +61,7 @@ export default function AttachGuildModal({
   onClose,
   tenant,
   onAttached,
+  botInviteUrl,
 }: AttachGuildModalProps) {
   const t = useAdminT(nsAdminOnboarding);
   const { adminFetchJson } = useAdminFetch();
@@ -61,6 +74,24 @@ export default function AttachGuildModal({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadPending = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const data = await adminFetchJson<{ links: PendingLink[] }>(
+        '/api/admin/pending-guild-links'
+      );
+      setPending(data.links ?? []);
+    } catch {
+      // L'attente est une commodité : si elle ne charge pas, la saisie
+      // manuelle reste disponible et le formulaire fonctionne.
+      setPending([]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [adminFetchJson]);
+
   // Repart d'un formulaire vierge à chaque ouverture, et recharge l'attente :
   // elle a pu bouger depuis le dernier affichage.
   useEffect(() => {
@@ -69,24 +100,8 @@ export default function AttachGuildModal({
     setManualId('');
     setError(null);
     setSaving(false);
-
-    let cancelled = false;
-    void (async () => {
-      try {
-        const data = await adminFetchJson<{ links: PendingLink[] }>(
-          '/api/admin/pending-guild-links'
-        );
-        if (!cancelled) setPending(data.links ?? []);
-      } catch {
-        // L'attente est une commodité : si elle ne charge pas, la saisie
-        // manuelle reste disponible et le formulaire fonctionne.
-        if (!cancelled) setPending([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [open, adminFetchJson]);
+    void loadPending();
+  }, [open, loadPending]);
 
   const guildId = choice || manualId.trim();
 
@@ -145,6 +160,43 @@ export default function AttachGuildModal({
       }
     >
       <AlertBanner message={error} variant="error" className="mb-4" />
+
+      {/* Étape 0 : le bot est-il sur le serveur ? Tant qu'il n'y est pas, il
+          n'y a rien à rattacher — et c'est l'oubli le plus courant. */}
+      <div className="mb-4 rounded-xl border border-violet-500/30 bg-violet-500/5 p-3">
+        <p className="text-sm font-medium text-violet-100">
+          {t.attachGuildInviteHeading}
+        </p>
+        <p className="mt-1 text-xs text-neutral-300">
+          {t.attachGuildInviteHelp}
+        </p>
+        {botInviteUrl ? (
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <a
+              href={botInviteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-500"
+              data-testid="attach-guild-invite"
+            >
+              {t.attachGuildInviteCta}
+            </a>
+            <button
+              type="button"
+              onClick={() => void loadPending()}
+              disabled={refreshing}
+              className="text-xs text-violet-300 underline hover:text-violet-200 disabled:opacity-50"
+              data-testid="attach-guild-refresh"
+            >
+              {refreshing ? t.attachGuildRefreshing : t.attachGuildRefresh}
+            </button>
+          </div>
+        ) : (
+          <p className="mt-2 text-xs text-amber-200">
+            {t.attachGuildInviteUnavailable}
+          </p>
+        )}
+      </div>
 
       {pending.length > 0 ? (
         <label className="block">

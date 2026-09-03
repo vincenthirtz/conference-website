@@ -20,6 +20,12 @@
 //   4. un compte d'envoi d'emails (sinon AUCUN email ne part) ;
 //   5. un plan qui inclut le bot, et son échéance si c'est un essai.
 //
+// La réponse porte aussi de quoi AGIR, pas seulement de quoi constater :
+//   - `guilds` : les serveurs de l'espace, pour offrir un lien direct vers la
+//     configuration de chacun (l'écran de réglages est par serveur) ;
+//   - `botInviteUrl` : l'URL d'invitation du bot, qui dépend de
+//     `DISCORD_CLIENT_ID` et ne peut donc pas être construite côté client.
+//
 // Portée : owner de la PLATEFORME (`manage_tenant` + `scope: 'platform'`),
 // comme tout le hub d'onboarding. C'est une vue de supervision transverse — un
 // propriétaire d'espace n'a pas à lire l'état des autres.
@@ -27,6 +33,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
+import { buildBotInviteUrl } from '@/utils/onboard';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { logger } from '@/utils/logger';
 import {
@@ -70,6 +77,18 @@ export type TenantReadiness = {
   /** Jours restants avant échéance ; null si le plan n'expire pas. */
   daysRemaining: number | null;
   guildCount: number;
+  /**
+   * Serveurs de l'espace. L'écran de réglages Discord est PAR serveur : sans
+   * cette liste, la vue ne peut pas y renvoyer directement.
+   */
+  guilds: Array<{
+    guildId: string;
+    /** Nom du serveur si connu (stocké dans `tenant_discord_config.extras`). */
+    guildName: string | null;
+    isPrimary: boolean;
+    /** Clés de configuration renseignées POUR CE serveur. */
+    configuredKeys: number;
+  }>;
   /** Nombre de clés de configuration Discord renseignées (cf. CONFIG_KEYS). */
   configuredKeys: number;
   ownerCount: number;
@@ -145,18 +164,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const ids = rows.map((t) => t.id);
 
   if (ids.length === 0) {
-    return res.status(200).json({ tenants: [] });
+    return res
+      .status(200)
+      .json({ tenants: [], botInviteUrl: buildBotInviteUrl() });
   }
 
   const [guildsRes, configRes, staffRes, secretsRes, emailRes] =
     await Promise.all([
       supabaseAdmin
         .from('discord_guilds')
-        .select('tenant_id, guild_id')
+        .select('tenant_id, guild_id, is_primary')
         .in('tenant_id', ids),
       supabaseAdmin
         .from('tenant_discord_config')
-        .select(['guild_id', ...CONFIG_KEYS].join(', ') as '*'),
+        .select(['guild_id', 'extras', ...CONFIG_KEYS].join(', ') as '*'),
       supabaseAdmin
         .from('tenant_staff')
         .select('tenant_id, role')
@@ -189,6 +210,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const guildRows = (guildsRes.data ?? []) as Array<{
     tenant_id: string;
     guild_id: string;
+    is_primary?: boolean | null;
   }>;
   const guildCount = countBy(guildRows);
   const guildToTenant = new Map(
@@ -200,14 +222,53 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const configRows = (configRes.data ?? []) as unknown as Array<
     Record<string, unknown>
   >;
+  // Par serveur aussi : chaque serveur a son propre écran de réglages, donc
+  // son propre état d'avancement.
+  const keysByGuild = new Map<string, number>();
+  const nameByGuild = new Map<string, string>();
   for (const row of configRows) {
-    const tenantId = guildToTenant.get(String(row.guild_id));
-    if (!tenantId) continue;
+    const guildId = String(row.guild_id);
     const filled = CONFIG_KEYS.filter((k) => {
       const v = row[k];
       return typeof v === 'string' && v.length > 0;
     }).length;
+    keysByGuild.set(guildId, filled);
+
+    // Le nom du serveur est déposé par l'auto-claim dans `extras` : c'est la
+    // seule trace côté site (le site n'interroge pas Discord pour ça).
+    const extras = row.extras as { guild_name?: unknown } | null;
+    const name = extras?.guild_name;
+    if (typeof name === 'string' && name.trim()) {
+      nameByGuild.set(guildId, name.trim());
+    }
+
+    const tenantId = guildToTenant.get(guildId);
+    if (!tenantId) continue;
     configuredKeys.set(tenantId, (configuredKeys.get(tenantId) ?? 0) + filled);
+  }
+
+  // Serveurs par espace, le principal d'abord.
+  const guildsByTenant = new Map<
+    string,
+    Array<{
+      guildId: string;
+      guildName: string | null;
+      isPrimary: boolean;
+      configuredKeys: number;
+    }>
+  >();
+  for (const g of guildRows) {
+    const list = guildsByTenant.get(g.tenant_id) ?? [];
+    list.push({
+      guildId: g.guild_id,
+      guildName: nameByGuild.get(g.guild_id) ?? null,
+      isPrimary: g.is_primary !== false,
+      configuredKeys: keysByGuild.get(g.guild_id) ?? 0,
+    });
+    guildsByTenant.set(g.tenant_id, list);
+  }
+  for (const list of guildsByTenant.values()) {
+    list.sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary));
   }
 
   const staffRows = (staffRes.data ?? []) as Array<{
@@ -277,6 +338,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       isTrial: t.plan_is_trial === true,
       daysRemaining,
       guildCount: guilds,
+      guilds: guildsByTenant.get(t.id) ?? [],
       configuredKeys: keys,
       ownerCount: owners,
       staffCount: staff,
@@ -287,7 +349,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     };
   });
 
-  return res.status(200).json({ tenants });
+  return res.status(200).json({
+    tenants,
+    // `null` si `DISCORD_CLIENT_ID` n'est pas configuré : l'UI doit le dire
+    // plutôt que d'afficher un bouton qui ne mène nulle part.
+    botInviteUrl: buildBotInviteUrl(),
+  });
 }
 
 export default withStaffRoute(handler, {

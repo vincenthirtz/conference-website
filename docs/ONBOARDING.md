@@ -202,3 +202,19 @@ d'origine.
 
 Dans les deux cas, le bot prend le rattachement en compte au rafraîchissement
 de son cache `tenant-config` (~5 min). Rien à redéployer.
+
+La modale de rattachement porte aussi l'**invitation du bot** : quand un espace
+n'a aucun serveur, la première question n'est pas « lequel rattacher ? » mais
+« le bot y est-il ? ». Inviter → rafraîchir → rattacher s'enchaînent au même
+endroit. L'URL d'invitation vient du serveur (`buildBotInviteUrl`, dépendante
+de `DISCORD_CLIENT_ID`) et vaut `null` si l'environnement ne la fournit pas —
+l'écran le dit au lieu d'afficher un bouton mort.
+
+Enfin, chaque serveur d'un espace est listé avec un lien direct vers SES
+réglages (`/admin/tenants/:id/discord-config/:guildId`) et le nombre de clés
+déjà renseignées. L'écran de réglages est par serveur : y renvoyer directement
+évite le détour par la fiche de l'espace, où il fallait retrouver le bon
+serveur. Ce formulaire n'est volontairement pas dupliqué dans une modale — ses
+champs doivent rester en phase avec les colonnes DB et la whitelist du PUT, et
+une quatrième copie de cette liste serait une occasion de plus de les
+désynchroniser.
