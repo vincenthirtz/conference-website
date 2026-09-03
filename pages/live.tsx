@@ -87,12 +87,10 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
     return { props: { channels: [], loadError: true }, revalidate: 60 };
   }
 
-  // Static export -> no `req`, so we hard-code the conference tenant. Quand
-  // on switchera vers du multi-tenant via subdomain/path-prefix (S7), il
-  // faudra basculer cette page en `getServerSideProps`.
-  // TODO(multi-tenant) — passer en `getServerSideProps` puis utiliser
-  // `getTenantIdBySlug(slug)` (cf. POC `pages/[tenantSlug]/tournois.tsx`)
-  // pour servir une variante `pages/[tenantSlug]/live.tsx`.
+  // Static export -> no `req`, so we hard-code the conference tenant. C'est
+  // définitif : un espace n'a pas de site public (bot, back-office et API
+  // seulement, cf. l'en-tête de `utils/tenant.ts`), donc cette page n'a qu'un
+  // seul tenant à servir.
   const { data, error } = await supabaseAdmin
     .from('twitch_channels')
     .select('channel, label, badge, description, background_url')

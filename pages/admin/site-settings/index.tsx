@@ -13,12 +13,21 @@ import nsAdminSiteSettings from '@/lib/i18n/locales/admin-fr/adminSiteSettings';
 import { lazyPanel } from '@/components/admin/lazyPanel';
 
 // Onglets secondaires : chargés au clic (cf. components/admin/lazyPanel).
-const DiscordWebhooksPanel = lazyPanel(() => import('@/components/admin/site-settings/DiscordWebhooksPanel'));
-const TeamRolesPanel = lazyPanel(() => import('@/components/admin/site-settings/TeamRolesPanel'));
+const DiscordWebhooksPanel = lazyPanel(
+  () => import('@/components/admin/site-settings/DiscordWebhooksPanel')
+);
+const TeamRolesPanel = lazyPanel(
+  () => import('@/components/admin/site-settings/TeamRolesPanel')
+);
+const EmailSenderPanel = lazyPanel(
+  () => import('@/components/admin/site-settings/EmailSenderPanel')
+);
 
 const ID_BASE = 'admin-site-settings';
 
-export const getServerSideProps = withStaffPage({ permission: 'manage_settings' });
+export const getServerSideProps = withStaffPage({
+  permission: 'manage_settings',
+});
 
 /**
  * Merged site-settings page. Hosts the former /admin/site-settings/discord and
@@ -33,6 +42,9 @@ export default function AdminSiteSettingsPage(_: StaffProps) {
     { id: 'general', label: t.tabGeneral },
     { id: 'discord', label: t.tabDiscord },
     { id: 'team-roles', label: t.tabTeamRoles },
+    // Compte d'envoi de l'espace : sans lui, un espace tiers n'envoie aucun
+    // email (il n'emprunte pas celui de la plateforme).
+    { id: 'email-sender', label: t.tabEmailSender },
   ];
   const [active, setActive] = useQueryTab(tabs);
 
@@ -68,6 +80,7 @@ export default function AdminSiteSettingsPage(_: StaffProps) {
             {active === 'general' && <GeneralSettingsPanel />}
             {active === 'discord' && <DiscordWebhooksPanel />}
             {active === 'team-roles' && <TeamRolesPanel />}
+            {active === 'email-sender' && <EmailSenderPanel />}
           </div>
         </div>
       </div>

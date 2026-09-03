@@ -15,9 +15,9 @@
 // C'est ce qui permet de brancher les envois un par un, sans big bang sur les
 // 25 gabarits.
 //
-// Le site du tenant vient de son `custom_domain` s'il en a un, sinon du
-// préfixe de slug sur le domaine de la plateforme (`/mon-espace`), cohérent
-// avec le routage public.
+// Le lien du tenant vient de son `custom_domain` s'il en a déclaré un. À
+// défaut, celui de la plateforme : un espace n'a pas de site public, donc pas
+// d'URL propre à proposer.
 
 import { supabaseAdmin } from './supabase';
 import { logger } from './logger';
@@ -126,12 +126,10 @@ export async function resolveEmailBrand(
     if (row && row.is_active !== false) {
       const slug = typeof row.slug === 'string' ? row.slug : '';
       const domain = normalizeDomain(row.custom_domain);
-      // Sans domaine propre, l'espace vit sous son préfixe de slug.
-      const siteUrl = domain
-        ? `https://${domain}`
-        : slug
-          ? `${PLATFORM_SITE_URL}/${slug}`
-          : PLATFORM_SITE_URL;
+      // Un espace n'a PAS de site public : il n'existe pas de page
+      // `/<slug>`. Sans domaine propre déclaré, le lien pointe donc vers la
+      // plateforme — mieux vaut une page qui existe qu'un 404 en pied d'email.
+      const siteUrl = domain ? `https://${domain}` : PLATFORM_SITE_URL;
 
       const canWhiteLabel = tenantHasCapability(
         {

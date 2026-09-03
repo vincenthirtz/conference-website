@@ -27,16 +27,10 @@ export default function RelatedNews({
   items,
   title,
   locale,
-  basePath = '',
 }: {
   items: RelatedItem[];
   title: string;
   locale: string;
-  /**
-   * Préfixe d'espace (`/mon-espace`). Sans lui, « À lire aussi » ferait sortir
-   * le visiteur de son espace vers l'article homonyme de la plateforme.
-   */
-  basePath?: string;
 }): JSX.Element | null {
   if (items.length === 0) return null;
 
@@ -50,7 +44,7 @@ export default function RelatedNews({
         {items.map((item) => (
           <li key={item.id}>
             <Link
-              href={`${basePath}/news/${item.slug}`}
+              href={`/news/${item.slug}`}
               className="card-brand group flex h-full flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] transition-colors hover:border-[var(--color-violet)]/40"
             >
               <div className="relative aspect-[16/9] w-full overflow-hidden bg-white/5">

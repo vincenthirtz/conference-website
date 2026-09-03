@@ -46,4 +46,31 @@ export default {
   tabGeneral: 'Général',
   tabDiscord: 'Discord',
   tabTeamRoles: 'Rôles d’équipe',
+  emailSenderHeading: 'Email sending',
+  emailSenderIntro:
+    'This space sends its emails from ITS OWN Brevo account: the sender address, the daily quota and the sender reputation are its own. Until an account is registered, no email is sent — the bot, the site and Discord keep working normally.',
+  emailSenderPlatformNotice:
+    'This space sends through the platform account, configured via environment variables. Nothing to fill in here.',
+  emailSenderConfigured: 'Sending configured. Sender:',
+  emailSenderNotConfigured:
+    'No sending account: this space does not send any email for now.',
+  emailSenderNoEncryption:
+    'SECRETS_ENC_KEY is missing from the environment: the key cannot be encrypted, saving will fail.',
+  emailSenderApiKeyLabel: 'Brevo API key',
+  emailSenderApiKeyHelp:
+    'Brevo › SMTP & API › API keys. It is encrypted and never shown again: to replace it, type it in again.',
+  emailSenderFromEmailLabel: 'Sender address',
+  emailSenderFromEmailHelp:
+    'Must be a verified sender of this Brevo account, otherwise sending is refused.',
+  emailSenderFromNameLabel: 'Display name',
+  emailSenderFromLabel: 'Sender:',
+  emailSenderSave: 'Save',
+  emailSenderSaving: 'Checking…',
+  emailSenderSaved: 'Sending account saved.',
+  emailSenderSaveError: 'Could not save.',
+  emailSenderClear: 'Remove the account',
+  emailSenderCleared: 'Sending account removed.',
+  emailSenderLoading: 'Loading…',
+  emailSenderLoadError: 'Sending status unavailable.',
+  tabEmailSender: 'Email sending',
 };

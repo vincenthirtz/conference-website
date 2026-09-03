@@ -1,6 +1,6 @@
 import type { GetServerSideProps } from 'next';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
-import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 
 import { logger } from '../utils/logger';
 const publicRoutes = [
@@ -219,7 +219,7 @@ ${playerUrls}
 
 export const getServerSideProps: GetServerSideProps = async ({ res, req }) => {
   const baseUrl = getBaseUrl(req);
-  const tenantId = await resolveTenantIdForPublicRequestAsync(req);
+  const tenantId = resolveTenantIdForPublicRequest(req);
 
   const client = supabaseAdmin ?? getServerClient(req, res);
 

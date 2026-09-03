@@ -46,4 +46,31 @@ export default adminNs('adminSiteSettings', {
   tabGeneral: 'Général',
   tabDiscord: 'Discord',
   tabTeamRoles: 'Rôles d’équipe',
+  emailSenderHeading: "Envoi d'emails",
+  emailSenderIntro:
+    "Cet espace expédie ses emails depuis SON compte Brevo : l'adresse d'expédition, le quota quotidien et la réputation d'expéditeur lui appartiennent. Tant qu'aucun compte n'est enregistré, aucun email ne part — le bot, le site et Discord continuent de fonctionner normalement.",
+  emailSenderPlatformNotice:
+    "Cet espace envoie via le compte de la plateforme, configuré en variables d'environnement. Il n'y a rien à renseigner ici.",
+  emailSenderConfigured: 'Envoi configuré. Expéditeur :',
+  emailSenderNotConfigured:
+    "Aucun compte d'envoi : cet espace n'envoie pas d'email pour l'instant.",
+  emailSenderNoEncryption:
+    "SECRETS_ENC_KEY est absente de l'environnement : la clé ne peut pas être chiffrée, l'enregistrement échouera.",
+  emailSenderApiKeyLabel: 'Clé API Brevo',
+  emailSenderApiKeyHelp:
+    "Brevo › SMTP & API › Clés API. Elle est chiffrée et n'est jamais réaffichée : pour la remplacer, ressaisissez-la.",
+  emailSenderFromEmailLabel: "Adresse d'expédition",
+  emailSenderFromEmailHelp:
+    "Doit être un expéditeur vérifié de ce compte Brevo, sinon l'envoi sera refusé.",
+  emailSenderFromNameLabel: 'Nom affiché',
+  emailSenderFromLabel: 'Expéditeur :',
+  emailSenderSave: 'Enregistrer',
+  emailSenderSaving: 'Vérification…',
+  emailSenderSaved: "Compte d'envoi enregistré.",
+  emailSenderSaveError: 'Enregistrement impossible.',
+  emailSenderClear: 'Retirer le compte',
+  emailSenderCleared: "Compte d'envoi retiré.",
+  emailSenderLoading: 'Chargement…',
+  emailSenderLoadError: "État de l'envoi indisponible.",
+  tabEmailSender: "Envoi d'emails",
 });

@@ -4,12 +4,41 @@
 > Distincte de :
 >
 > - l'API publique **read-only anonyme** (`/api/public/v1/*` en `GET`, CORS `*`,
->   cf. `utils/publicApi.ts`) ;
+>   cf. `utils/publicApi.ts`) — voir « Quel espace ? » ci-dessous, sans token
+>   c'est `?tenant=<slug>` qui désigne l'espace ;
 > - l'API **bot** (`/api/bot/v1/*`, clé per-tenant + acteur Discord, cf.
 >   `docs/BOT_API_CONTRACT.md`).
 >
 > Cette surface-ci sert les **orgas tierces** qui automatisent (scripts de
 > résultats, overlays, intégrations). Auth par **token scopé découplé du bot**.
+
+## 0. Quel espace répond ?
+
+L'API sert plusieurs espaces, et une réponse qui se trompe d'espace n'échoue
+pas : elle est **valide et fausse**. D'où deux règles, selon la surface.
+
+**API authentifiée** (cette page) : le **token** détermine l'espace, point.
+Aucun en-tête ne peut le déplacer.
+
+**API anonyme** (`/api/public/v1/*`, `GET`) : pas de token, donc la requête doit
+le dire. `resolveTenantIdForPublicRequestAsync` reconnaît, du plus fort au plus
+explicite :
+
+| Signal                   | Exemple                                        |
+| ------------------------ | ---------------------------------------------- |
+| Domaine propre du tenant | `https://cup-estivale.fr/api/public/v1/teams`  |
+| Préfixe de chemin        | `/cup-estivale/...` (hérité, peu utilisé)      |
+| `?tenant=<slug>`         | `/api/public/v1/teams?tenant=cup-estivale`     |
+
+**`?tenant=<slug>` est le mécanisme prévu** pour une intégration tierce. Sans
+signal — le cas de owwomenscup.fr — c'est l'espace historique qui répond, à
+l'identique de toujours. Un slug inconnu ou un espace désactivé retombent sur
+ce même défaut plutôt que de renvoyer une erreur : une intégration ne doit pas
+casser sur une faute de frappe, elle doit voir qu'elle interroge le mauvais
+espace.
+
+NB : un espace n'a **pas** de site public — il dispose du bot, du back-office
+et de l'API. Le domaine propre reste reconnu ici pour l'API seule.
 
 ## 1. Authentification
 

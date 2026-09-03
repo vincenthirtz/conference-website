@@ -165,8 +165,10 @@ describe('resolveEmailBrand', () => {
     ] as any;
     const brand = await resolveEmailBrand(TENANT_B);
     expect(brand.name).toBe('Cup Estivale');
-    // Pas de domaine propre → préfixe de slug, cohérent avec le routage public.
-    expect(brand.siteUrl).toBe(`${DEFAULT_EMAIL_BRAND.siteUrl}/cup-estivale`);
+    // Pas de domaine propre déclaré → lien vers la plateforme. Un espace n'a
+    // pas de site public : `/cup-estivale` n'existe pas, et un 404 en pied
+    // d'email est pire que pas de lien personnalisé.
+    expect(brand.siteUrl).toBe(DEFAULT_EMAIL_BRAND.siteUrl);
     // Le logo, lui, est du white-label : le palier gratuit garde le nôtre.
     expect(brand.logoUrl).toBe(DEFAULT_EMAIL_BRAND.logoUrl);
   });

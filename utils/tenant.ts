@@ -1,60 +1,29 @@
 // utils/tenant.ts
 //
-// Phase 1 (multi-tenant) plumbing — V1 (S2) + path-prefix POC (S7a).
+// Phase 1 (multi-tenant) plumbing.
 //
 // ============================================================================
-// Multi-tenant strategy — public pages
+// Multi-tenant — périmètre d'un espace
 // ============================================================================
 //
-// The site is migrating from single-tenant to multi-tenant. Phase 1 (DB) is
-// done : 32 tables now carry a `tenant_id`. Phase 2 (bot) is in progress
-// and ships `x-tenant-id: <uuid>` headers. Phase 3 (public pages) follows
-// the path-prefix decision documented in
-// `MEMORY.md::multi-tenant-bot-decisions` :
+// DÉCISION PRODUIT : un espace n'a PAS de site public. Il reçoit trois
+// surfaces, et trois seulement — le bot Discord, le back-office, et l'API.
+// Le site public reste celui de l'association : owwomenscup.fr ne change pas,
+// et il n'existe pas de pages `/<espace>/...`.
 //
-//   - URLs publiques = path-prefix (`/conference/tournois`,
-//     `/esport-club/tournois`). Pas de subdomain.
-//   - Route Next.js dynamique `pages/[tenantSlug]/...`.
-//   - Le tenant est résolu via le 1er segment du path, puis lookup
-//     `tenants.slug → tenants.id` (cache mémoire 60s, voir `tenantSlugCache`
-//     plus bas).
-//   - Pages legacy (sans prefix tenant) → fallback `DEFAULT_TENANT_ID`
-//     (= conference) pour ne rien casser tant que le 2e tenant n'est pas
-//     en ligne.
+// Ce que cela implique ici :
 //
-// POC : la page `pages/[tenantSlug]/tournois.tsx` montre le pattern. Elle
-// importe `components/Tournaments/TournamentsList.tsx` (factorisé depuis
-// `pages/tournaments.tsx`) et passe `tenantId` en prop. La page legacy
-// `pages/tournaments.tsx` continue de marcher à l'identique.
-//
-// ÉTAT (site public) :
-//
-//   - Les ROUTES D'API publiques résolvent le tenant par requête
-//     (`resolveTenantIdForPublicRequestAsync`) : domaine propre, puis préfixe
-//     de chemin, puis `?tenant=`. Plus aucun `DEFAULT_TENANT_ID` figé.
-//   - Le MIDDLEWARE (`proxy.ts`) réécrit un domaine propre vers la route
-//     préfixée correspondante, pour les chemins déjà migrés
-//     (`utils/tenantHostEdge.ts` § TENANT_ROUTES).
-//   - PAGES migrées : `/tournaments` (+ alias `/tournois`), `/news`,
-//     `/news/[slug]`. Chacune a sa variante `pages/[tenantSlug]/...`, en SSR ;
-//     la route historique garde sa génération statique pour l'espace par
-//     défaut.
-//
-// RESTE à migrer (toujours mono-tenant, servent l'espace historique) :
-//   - pages/index.tsx, pages/leaderboard.tsx, pages/leagues/*
-//   - pages/tournament/[id].tsx (+ maps/mvp/stats/matches/teams/bracket/ffa)
-//   - pages/match/[id].tsx (+ games), pages/team/[slug]/* , pages/player/[userId]
-//   - pages/scrim.tsx, pages/scrims.tsx, pages/live.tsx
-//   - les pages de marque (about, association, palmares, timeline-2026,
-//     inscription-2026) restent mono-tenant PAR DESIGN : elles parlent de
-//     l'association, pas d'un espace.
-//
-// Pattern d'une migration : extraire le chargement dans
-// `utils/publicData/*` et le rendu en composant, créer la variante sous
-// `pages/[tenantSlug]/...` avec `withTenantPage` (404 si slug inconnu),
-// passer `basePath` aux liens internes, puis AJOUTER le chemin à
-// `TENANT_ROUTES` — sans quoi le domaine propre continue de servir la page
-// de la plateforme.
+//   - Les pages publiques servent l'espace historique et n'ont aucune raison
+//     de résoudre un tenant. Elles gardent leur génération statique.
+//   - Les ROUTES D'API publiques, elles, sont consommées PAR les espaces :
+//     elles résolvent le tenant par requête via
+//     `resolveTenantIdForPublicRequestAsync` — `?tenant=<slug>` est le
+//     mécanisme prévu pour ça (une clé d'API authentifiée porte déjà son
+//     tenant, cf. `utils/publicWriteApi.ts`). Le domaine et le préfixe de
+//     chemin restent reconnus, sans usage aujourd'hui.
+//   - Le back-office résout le tenant depuis la session staff (tenant actif,
+//     cf. `utils/adminTenants.ts`), et le bot depuis sa clé et le serveur
+//     d'origine (cf. `utils/botAuth.ts`).
 //
 // ============================================================================
 // Bot side (unchanged)
@@ -401,14 +370,11 @@ export function resolveTenantIdForPublicRequest(_req: RequestLike): string {
 }
 
 /**
- * Version path-prefix du résolveur public (S7a).
+ * Résolveur public ASYNCHRONE — celui qu'utilisent les routes d'API.
  *
- * - Path préfixé d'un slug connu (`/conference/tournois`) → tenant.id du
- *   slug.
- * - Path sans préfixe (`/tournois`) → `DEFAULT_TENANT_ID` (rétro-compat).
- * - Path avec slug inconnu → `DEFAULT_TENANT_ID` (les pages dynamiques
- *   `pages/[tenantSlug]/...` peuvent appeler `getTenantIdBySlug` directement
- *   pour 404).
+ * Trois signaux, du plus fort au plus explicite : domaine propre, préfixe de
+ * chemin, puis `?tenant=<slug>`. Aucun ne correspondant → espace historique,
+ * ce qui préserve le comportement du site de l'association.
  *
  * Cache mémoire 60s sur le mapping slug → tenant_id (voir
  * `tenantSlugCache`).
@@ -416,9 +382,10 @@ export function resolveTenantIdForPublicRequest(_req: RequestLike): string {
 export async function resolveTenantIdForPublicRequestAsync(
   req: RequestLike
 ): Promise<string> {
-  // 1) Domaine propre. C'est le signal le plus fort : sur cup-estivale.fr,
-  //    TOUT appartient à cet espace, y compris les routes d'API que le
-  //    middleware ne préfixe pas.
+  // 1) Domaine propre (`tenants.custom_domain`). Aucun espace n'en sert de
+  //    pages aujourd'hui — le site public reste celui de l'association — mais
+  //    une requête d'API arrivant sur un tel domaine appartient sans ambiguïté
+  //    à son espace.
   const host = (req.headers as Record<string, unknown>)?.host;
   const byHost = await resolveTenantIdByHost(
     Array.isArray(host) ? host[0] : (host as string | undefined)
@@ -427,17 +394,19 @@ export async function resolveTenantIdForPublicRequestAsync(
 
   const url = (req as { url?: string }).url;
 
-  // 2) Préfixe de chemin (`/cup-estivale/tournois`).
+  // 2) Préfixe de chemin (`/cup-estivale/...`). Reconnu par héritage ; il n'y
+  //    a pas de pages d'espace, donc ce chemin ne se présente en pratique que
+  //    sur des URL construites à la main.
   const slug = extractTenantSlugFromUrl(url);
   if (slug) {
     const tenantId = await getTenantIdBySlug(slug);
     if (tenantId) return tenantId;
   }
 
-  // 3) Paramètre `?tenant=<slug>`. Les routes d'API n'ont PAS de préfixe de
-  //    chemin — une page préfixée qui les appelle transmet donc son espace
-  //    explicitement. Sans ce relais, /cup-estivale/tournois afficherait les
-  //    tournois de la conférence dès qu'un fetch client entre en jeu.
+  // 3) Paramètre `?tenant=<slug>` — LE mécanisme prévu pour l'API publique
+  //    anonyme. Sans lui, un espace qui interroge /api/public/v1/tournaments
+  //    recevrait les tournois de l'association : la réponse serait valide, et
+  //    fausse. (L'API authentifiée, elle, tient son tenant de sa clé.)
   const tenantParam = extractTenantQueryParam(url);
   if (tenantParam) {
     const tenantId = await getTenantIdBySlug(tenantParam);

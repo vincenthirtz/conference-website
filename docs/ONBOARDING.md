@@ -41,6 +41,20 @@ bot onto their own server.
    installé mais muet. À l'échéance, le cron `plan-renewal` le repose sur
    `discovery` (cf. `utils/billing/planFeatures.ts`).
 
+## Ce que reçoit un nouvel espace
+
+Trois surfaces, et trois seulement :
+
+| Surface        | Comment le tenant est résolu                                      |
+| -------------- | ------------------------------------------------------------------ |
+| Bot Discord    | la clé d'API, arbitrée par `x-guild-id` (cf. section suivante)      |
+| Back-office    | la session staff (tenant actif, `utils/adminTenants.ts`)           |
+| API            | le token pour l'API authentifiée, `?tenant=<slug>` pour l'anonyme   |
+
+**Pas de site public.** Un espace n'a pas de pages `/<espace>/...` : le site
+public reste celui de l'association, et owwomenscup.fr ne change pas. Le champ
+`tenants.custom_domain` sert au branding et à l'API, pas à servir des pages.
+
 ## Quel bot sert le nouveau serveur ?
 
 Le bot invité est **le nôtre** : l'URL d'invitation est construite avec notre
@@ -72,10 +86,11 @@ La raison n'est pas seulement technique : un email transactionnel part d'un
 domaine, consomme un quota et construit une réputation d'expéditeur. Les
 plaintes pour spam d'un tiers retomberaient sur notre domaine.
 
-La **marque** des emails suit le tenant (nom, site, logo — cf.
+La **marque** des emails suit le tenant (nom, logo, lien — cf.
 `utils/emailBrand.ts`) : le gabarit émet des jetons `{{BRAND_*}}` que
 `sendEmail` remplace. Sans `tenantId`, le rendu est identique à l'octet près à
-l'historique.
+l'historique. Le lien pointe vers le `custom_domain` de l'espace s'il en a
+déclaré un ; à défaut, vers la plateforme.
 
 ## Storage notes
 
