@@ -280,6 +280,32 @@ describe('/api/admin/tenants', () => {
     );
     expect(ts).toBeDefined();
   });
+
+  it('POST : le tenant créé par le staff démarre avec l’essai, pas muet', async () => {
+    // Sans essai, il naîtrait en `discovery` — plan qui n'inclut pas le bot —
+    // et le staff livrerait un bot installé qui répond 403 à tout. C'est le
+    // défaut déjà corrigé côté onboarding self-service : les deux chemins de
+    // création doivent produire le même espace.
+    const res = makeRes();
+    await indexHandler(
+      makeReq({
+        method: 'POST',
+        body: { slug: 'avec-essai', name: 'Avec Essai' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    const created = (store.tenants as any[]).find(
+      (t) => t.slug === 'avec-essai'
+    );
+    expect(created.plan).toBe('regie');
+    expect(created.plan_status).toBe('active');
+    expect(created.plan_is_trial).toBe(true);
+    const days =
+      (Date.parse(created.plan_expires_at) - Date.now()) / 86_400_000;
+    expect(days).toBeGreaterThan(29);
+    expect(days).toBeLessThanOrEqual(30);
+  });
 });
 
 /* ===========================================================================

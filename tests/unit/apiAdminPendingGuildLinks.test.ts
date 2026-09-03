@@ -242,6 +242,11 @@ describe('POST /api/admin/pending-guild-links/[guildId]/claim', () => {
         (r) => r.tenant_id === newId && r.staff_id === STAFF_1
       )
     ).toBeDefined();
+    // L'espace créé en rattachant un serveur démarre avec l'essai : sans lui,
+    // le bot qu'on vient tout juste de rattacher répondrait 403 à tout.
+    const createdTenant = (store.tenants as any[]).find((t) => t.id === newId);
+    expect(createdTenant.plan).toBe('regie');
+    expect(createdTenant.plan_is_trial).toBe(true);
   });
 
   it('400 new_tenant slug invalide', async () => {

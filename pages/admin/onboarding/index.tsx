@@ -31,6 +31,9 @@ import type { StaffProps } from '@/types/admin';
 import nsAdminOnboarding from '@/lib/i18n/locales/admin-fr/adminOnboarding';
 
 import { lazyPanel } from '@/components/admin/lazyPanel';
+import TenantFormModal from '@/components/admin/tenants/TenantFormModal';
+import { useState } from 'react';
+import { useRouter } from 'next/router';
 
 // Onglets secondaires : chargés au clic (cf. components/admin/lazyPanel).
 const TenantRequestsPanel = lazyPanel(
@@ -52,7 +55,14 @@ export default function AdminOnboardingPage({
   currentStaffDiscordId,
 }: Props) {
   const t = useAdminT(nsAdminOnboarding);
+  const router = useRouter();
   const isOwner = hasAtLeastRole(staff.role as StaffRole, 'owner');
+
+  // Créer un espace depuis ICI : c'est en triant cette file qu'on découvre
+  // qu'un serveur en attente n'a aucun espace à rattacher. Envoyer le staff
+  // sur une autre page pour revenir ensuite lui faisait perdre son contexte.
+  // Même modale que `/admin/tenants` — une seule implémentation à maintenir.
+  const [createOpen, setCreateOpen] = useState(false);
 
   const tabs = [
     { id: 'queue', label: t.tabQueue },
@@ -76,11 +86,21 @@ export default function AdminOnboardingPage({
             ]}
           />
 
-          <div className="mb-6">
-            <p className="text-sm text-neutral-400">{t.subtitle}</p>
-            <h1 className="mt-1 text-3xl md:text-4xl font-bold tracking-tight">
-              {t.heading}
-            </h1>
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-sm text-neutral-400">{t.subtitle}</p>
+              <h1 className="mt-1 text-3xl md:text-4xl font-bold tracking-tight">
+                {t.heading}
+              </h1>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-violet-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+              data-testid="onboarding-create-tenant"
+            >
+              {t.createTenantCta}
+            </button>
           </div>
 
           <Tabs
@@ -109,6 +129,21 @@ export default function AdminOnboardingPage({
           </div>
         </div>
       </div>
+
+      <TenantFormModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => {
+          setCreateOpen(false);
+          // L'espace créé est immédiatement rattachable : on revient sur la
+          // file des serveurs en attente, là où le besoin est né.
+          void router.replace(
+            { pathname: '/admin/onboarding', query: { tab: 'guild-links' } },
+            undefined,
+            { shallow: true }
+          );
+        }}
+      />
     </>
   );
 }

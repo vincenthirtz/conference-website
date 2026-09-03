@@ -20,4 +20,5 @@ export default {
   tabQueue: "File d'onboarding",
   tabTenantRequests: 'Demandes de tenant',
   tabGuildLinks: 'Liens Discord',
+  createTenantCta: 'Create a space',
 };

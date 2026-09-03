@@ -19,4 +19,5 @@ export default adminNs('adminOnboarding', {
   tabQueue: "File d'onboarding",
   tabTenantRequests: 'Demandes de tenant',
   tabGuildLinks: 'Liens Discord',
+  createTenantCta: 'Créer un espace',
 });

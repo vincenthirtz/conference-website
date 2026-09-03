@@ -18,6 +18,7 @@ import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { logger } from '@/utils/logger';
 import { logStaffAction } from '@/utils/staffLogs';
+import { buildTrialFields } from '@/utils/billing/trial';
 import { assertOrganizerTenant } from '@/utils/tenantKind';
 
 const SLUG_RE = /^[a-z0-9-]+$/;
@@ -153,11 +154,24 @@ async function handler(
       });
     }
 
-    // 1) Insert tenant.
+    // 1) Insert tenant, AVEC l'essai gratuit.
+    //
+    // Sans lui, l'espace naîtrait en `discovery` — plan qui n'inclut pas le
+    // bot — et le staff livrerait un bot installé et muet, exactement le
+    // défaut corrigé côté onboarding self-service. Les deux chemins de
+    // création produisent donc le même résultat (cf. utils/billing/trial.ts).
     const { data: created, error: insertErr } = await supabaseAdmin
       .from('tenants')
-      .insert({ slug, name, default_locale: defaultLocale, is_active: true })
-      .select('id, slug, name, is_active, default_locale, created_at')
+      .insert({
+        slug,
+        name,
+        default_locale: defaultLocale,
+        is_active: true,
+        ...buildTrialFields(),
+      })
+      .select(
+        'id, slug, name, is_active, default_locale, created_at, plan, plan_status, plan_expires_at, plan_is_trial'
+      )
       .single();
 
     if (insertErr || !created) {

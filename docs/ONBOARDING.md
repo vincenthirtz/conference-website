@@ -41,6 +41,24 @@ bot onto their own server.
    installé mais muet. À l'échéance, le cron `plan-renewal` le repose sur
    `discovery` (cf. `utils/billing/planFeatures.ts`).
 
+## Trois chemins de création, un seul résultat
+
+Un espace peut naître de trois façons, et toutes trois posent le même essai de
+30 jours (`utils/billing/trial.ts`) :
+
+| Chemin                                              | Déclencheur                          |
+| --------------------------------------------------- | ------------------------------------ |
+| Auto-claim self-service                              | invitation du bot après une demande  |
+| Création par le staff                                | `/admin/onboarding` ou `/admin/tenants` |
+| Rattachement d'un serveur en attente                 | `pending_guild_links` → claim        |
+
+L'uniformité n'est pas cosmétique : sans essai, l'espace naît en `discovery`,
+plan qui n'inclut pas le bot, et le gate baseline de `withBotRoute` répond 403
+sur toute route tenant-scopée. On livrerait un bot installé et muet.
+
+Exception : les espaces `kind = developer` (portail développeur) restent en
+`discovery` — ils portent des clés d'API, pas un tournoi.
+
 ## Ce que reçoit un nouvel espace
 
 Trois surfaces, et trois seulement :

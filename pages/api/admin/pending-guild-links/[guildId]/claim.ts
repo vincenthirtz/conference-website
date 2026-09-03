@@ -25,6 +25,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
 import { logStaffAction } from '@/utils/staffLogs';
+import { buildTrialFields } from '@/utils/billing/trial';
 
 const GUILD_ID_RE = /^[0-9]{15,25}$/;
 const SLUG_RE = /^[a-z0-9-]+$/;
@@ -115,9 +116,18 @@ async function resolveTargetTenant(
       };
     }
 
+    // Essai gratuit, comme les deux autres chemins de création : un espace
+    // créé en rattachant un serveur en attente doit avoir un bot qui répond,
+    // pas un plan `discovery` qui le refuse (cf. utils/billing/trial.ts).
     const { data: created, error } = await supabaseAdmin
       .from('tenants')
-      .insert({ slug, name, default_locale: defaultLocale, is_active: true })
+      .insert({
+        slug,
+        name,
+        default_locale: defaultLocale,
+        is_active: true,
+        ...buildTrialFields(),
+      })
       .select('id, slug, name, is_active, default_locale')
       .single();
     if (error || !created) {
