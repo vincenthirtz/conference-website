@@ -43,6 +43,8 @@ type BillingResponse = {
   planStartedAt: string | null;
   planExpiresAt: string | null;
   daysRemaining: number | null;
+  /** Essai gratuit d'onboarding : jamais payé, se termine en Découverte. */
+  isTrial: boolean;
   effectivePlan: TenantPlan;
   capabilities: PlanFeatures;
   catalog: CatalogItem[];
@@ -379,6 +381,14 @@ function AdminBillingPage({ staff }: Props) {
                       >
                         {statusMeta(data.planStatus).label}
                       </span>
+                      {data.isTrial && (
+                        <span
+                          className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-500/15 text-sky-200 border border-sky-500/30"
+                          data-testid="billing-trial-badge"
+                        >
+                          {t.trialBadge}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="text-right text-sm">
@@ -411,6 +421,15 @@ function AdminBillingPage({ staff }: Props) {
                     )}
                   </div>
                 </div>
+
+                {data.isTrial && (
+                  <div
+                    className="mt-5 rounded-xl border border-sky-500/40 bg-sky-500/10 p-4"
+                    data-testid="billing-trial-notice"
+                  >
+                    <p className="text-sm text-sky-100">{t.trialNotice}</p>
+                  </div>
+                )}
 
                 {isDowngraded && (
                   <div

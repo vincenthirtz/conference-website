@@ -298,6 +298,35 @@ describe('POST /api/bot/v1/tenants/link-guild', () => {
       expect(call.revealUrl).toContain('/onboard/secrets/');
     });
 
+    it('le tenant naît avec un essai de 30 jours, pas en discovery', async () => {
+      // Sans essai, le tenant naîtrait en `discovery` — plan qui n'inclut PAS
+      // le bot : le gate baseline de withBotRoute répondrait 403 sur toute
+      // route tenant-scopée, et l'onboarding livrerait un bot muet.
+      store.discord_guilds = [];
+      seedActiveRequest();
+
+      const res = makeRes();
+      await handler(
+        makeReq({
+          guild_id: NEW_GUILD_ID,
+          guild_name: 'Fresh Guild',
+          owner_discord_id: OWNER_ID,
+        }),
+        res
+      );
+
+      expect(res.statusCode).toBe(200);
+      const tenant = (store.tenants ?? [])[0];
+      expect(tenant.plan).toBe('regie');
+      expect(tenant.plan_status).toBe('active');
+      expect(tenant.plan_is_trial).toBe(true);
+
+      const days =
+        (Date.parse(tenant.plan_expires_at as string) - Date.now()) / 86_400_000;
+      expect(days).toBeGreaterThan(29);
+      expect(days).toBeLessThanOrEqual(30);
+    });
+
     it('fallback pending_admin_link si email non vérifié', async () => {
       store.discord_guilds = [];
       seedActiveRequest({ email_verified_at: null });

@@ -2,20 +2,19 @@
 // Admin: list support tickets with filters.
 // GET: ?status=&severity=&category=&tournament_id=&search=&offset=&limit=
 //
-// MULTI-TENANT NOTE (intentional, documented decision — no migration):
-// `support_tickets` has NO `tenant_id` column, so this endpoint is deliberately
-// GLOBAL: any `manager`+ sees every tenant's tickets. On this mono-tenant
-// instance that is the desired behaviour and support is kept tenant-agnostic on
-// purpose. The day a 2nd tenant is onboarded, this MUST change: add a
-// `tenant_id` column to `support_tickets` (+ backfill migration) and scope both
-// the list query AND the aggregate counts below by `req.staffContext` tenant,
-// mirroring how the tenant-scoped admin endpoints filter. Until then, leaving it
-// global is a conscious trade-off, not an oversight.
-// See docs/BOT_API_CONTRACT.md › "Tenant identification" for the product call.
+// MULTI-TENANT : scopé par tenant actif.
+//
+// La table est restée globale tant qu'un seul tenant existait ; ce fichier
+// portait la note « le jour où un 2e tenant arrive, ceci DOIT changer ». C'est
+// fait : `support_tickets.tenant_id` existe (migration
+// add_tenant_id_to_support_tickets.sql) et la liste comme les compteurs
+// filtrent sur le tenant actif du staff. Un signalement est nominatif et
+// souvent sensible — il n'a rien à faire sous les yeux du staff d'un autre
+// espace.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { escapePostgrestValue } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../utils/logger';
@@ -27,7 +26,11 @@ const VALID_CATEGORIES = ['dispute', 'behavior', 'technical', 'other'] as const;
 
 export default withStaffRoute(handler, { permission: 'moderate_support' });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -94,7 +97,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   ): FilterBuilder => {
     let q: FilterBuilder = supabaseAdmin!
       .from('support_tickets')
-      .select(select, { count: opts.count, head: opts.head });
+      .select(select, { count: opts.count, head: opts.head })
+      .eq('tenant_id', ctx.tenantId);
     if (statusFilter) q = q.eq('status', statusFilter);
     if (severityFilter) q = q.eq('severity', severityFilter);
     if (categoryFilter) q = q.eq('category', categoryFilter);

@@ -12,6 +12,7 @@ import {
   resetSupabaseMock,
   seedBotAuth,
 } from './__helpers__/supabaseMock';
+import { __resetBotImpersonationCachesForTests } from '../../utils/botAuth';
 import handler from '../../pages/api/bot/v1/cast/upcoming';
 
 const MATCH_A = '550e8400-e29b-41d4-a716-446655440a01';
@@ -68,8 +69,13 @@ function makeRes() {
 
 beforeEach(() => {
   resetSupabaseMock();
-  // Per-tenant bot auth: x-api-key resolves to CONFERENCE_TENANT_ID.
-  seedBotAuth();
+  // La vérification de clé est cachée 60 s par hash : on purge, sinon un test
+  // hérite du drapeau plateforme du précédent.
+  __resetBotImpersonationCachesForTests();
+  // Clé du bot MUTUALISÉ : c'est lui qui poll cette route pour router les
+  // briefings vers le bon serveur, donc lui seul voit plusieurs tenants. Une
+  // clé de tenant (bot auto-hébergé) ne reçoit que ses propres assignations.
+  seedBotAuth({ platformKey: true });
   // V2 strict tenant header — withBotRoute checks existence in `tenants`.
   store.tenants = [{ id: CONFERENCE_TENANT_ID, plan: 'foundation', plan_status: 'active', plan_expires_at: null }] as any;
 

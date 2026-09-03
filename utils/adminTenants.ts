@@ -20,8 +20,13 @@ import type { StaffRole } from '@/types/admin';
 import { supabaseAdmin } from './supabase';
 import { DEFAULT_TENANT_ID } from './tenant';
 import { logger } from './logger';
-import { hasAtLeastRole } from './staff';
+import { hasAtLeastRole, STAFF_ROLES } from './staff';
 import type { TenantSource } from '@/types/staff';
+import {
+  readCachedTenantRole,
+  writeCachedTenantRole,
+  clearTenantRoleCache,
+} from './staffRoleCache';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -450,4 +455,62 @@ export function buildActiveTenantSetCookie(tenantId: string): string {
     parts.push('Secure');
   }
   return parts.join('; ');
+}
+
+/* ---------------------------------------------------------------------------
+ * Rôle d'un staff SUR un tenant donné
+ * -------------------------------------------------------------------------*/
+
+/** Purge le cache des rôles par tenant. Usage test. */
+export function __resetTenantRoleCacheForTests(): void {
+  clearTenantRoleCache();
+}
+
+/**
+ * Rôle porté par `tenant_staff` pour ce couple (staff, tenant), ou `null`.
+ *
+ * Longtemps cette colonne a été ignorée : le back-office se gardait sur le
+ * rôle GLOBAL `staff.role`, et `tenant_staff` ne servait qu'à dire « ce staff
+ * voit ce tenant ». Conséquence directe : l'onboarding self-service créait un
+ * propriétaire de tenant avec `tenant_staff.role = 'owner'` et un rôle global
+ * `caster` — c'est-à-dire quelqu'un qui ne pouvait rien administrer chez lui,
+ * pas même ouvrir sa page de facturation pour souscrire.
+ *
+ * La valeur est désormais lue et combinée au rôle global (cf.
+ * `requireStaffRoleFromRequest`) : elle ne peut qu'ÉLEVER, jamais rétrograder,
+ * et seulement sur le tenant actif. Personne ne perd de droits, un
+ * propriétaire de tenant en gagne chez lui.
+ *
+ * Une valeur inconnue (colonne libre en base) est ignorée plutôt que
+ * devinée — un rôle non reconnu n'élève rien.
+ */
+export async function readTenantStaffRole(
+  staffId: string,
+  tenantId: string
+): Promise<StaffRole | null> {
+  if (!staffId || !isValidTenantUuid(tenantId)) return null;
+
+  const cached = readCachedTenantRole(staffId, tenantId);
+  if (cached !== undefined) return cached;
+
+  const { data, error } = await supabaseAdmin
+    .from('tenant_staff')
+    .select('role')
+    .eq('staff_id', staffId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+
+  if (error) {
+    logger.error('[adminTenants] readTenantStaffRole error', error);
+    return null; // erreur transitoire → pas de mise en cache
+  }
+
+  const raw = (data as { role?: string } | null)?.role;
+  const role =
+    typeof raw === 'string' && (STAFF_ROLES as readonly string[]).includes(raw)
+      ? (raw as StaffRole)
+      : null;
+
+  writeCachedTenantRole(staffId, tenantId, role);
+  return role;
 }

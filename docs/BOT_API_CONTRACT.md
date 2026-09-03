@@ -88,39 +88,52 @@ stashes it on `req.botContext.tenantId`. The `x-tenant-id` header is now
 | `x-tenant-id` | The tenant UUID (RFC 4122, any version). Case-insensitive. |
 
 - **Format** (if sent): `^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`, case-insensitive.
-- **Informational only / ignored**: the per-tenant API key is authoritative, so
-  the `x-tenant-id` header is **no longer required or validated**. If it is
-  present and contradicts the key, a `warn` is logged but the request still
-  succeeds with the key's tenant id (the key wins). This lets the bot ship one
-  `bot_api_key` per linked guild without also having to send a coherent header.
-- **Discord guild mapping**: the bot resolves the right UUID locally from
-  `discord_guilds.guild_id` → `tenant_id`. It is not the site's job to
-  guess the tenant from a Discord context.
-- **Cross-tenant exemptions**: `/tenants/all-configs`, `/tenants/by-guild/:id`,
+- **Ordinary key (self-hosted bot)**: the per-tenant API key is authoritative.
+  `x-tenant-id` is informational; if it contradicts the key, a `warn` is logged
+  and the key wins. Such a key can never change scope.
+- **Platform key (shared bot)**: a key flagged `tenant_secrets.is_platform_key`
+  MAY act for another tenant — this is what makes the shared bot possible at
+  all, since one process serves N guilds with one key. The signal that decides
+  is `x-guild-id`, checked against `discord_guilds`:
+
+  | Header       | Value                                                        |
+  | ------------ | ------------------------------------------------------------ |
+  | `x-guild-id` | Discord snowflake of the server the interaction comes from. |
+
+  - guild known → its tenant wins, even against a contradicting `x-tenant-id`
+    (the bot's header falls back to the default tenant while its config cache
+    is cold; the guild is the only claim the site can verify);
+  - guild unknown to `discord_guilds` → warn, fall back to header/key;
+  - malformed `x-guild-id` → `400 INVALID_GUILD_HEADER`;
+  - no guild header, `x-tenant-id` naming an unknown/inactive tenant →
+    `404 UNKNOWN_TENANT`; malformed → `400 INVALID_TENANT_HEADER`.
+
+  The plan gate is evaluated on the **effective** tenant, never the key's.
+  The bot sends `x-guild-id` on every tenant-scoped call, from the ambient
+  guild of the Discord event (`services/discord-bot/request-context.js`).
+- **Discord guild mapping**: the bot also resolves the UUID locally from
+  `discord_guilds.guild_id` → `tenant_id` for its own routing.
+- **Cross-tenant resolvers**: `/tenants/all-configs`, `/tenants/by-guild/:id`,
   `/tenants/link-guild`, `/tenants/request-onboard`, `/events/pending`,
-  `/events/:id/ack` and `/cast/upcoming` are intentionally **not**
-  tenant-scoped — they are
-  global resolvers / pollers the bot needs in order to route correctly.
-  These routes are flagged `crossTenant: true` in `withBotRoute({ ... })`
-  and the middleware **skips** the header validation + existence check;
-  `req.botContext.tenantId` is left `undefined` and handlers must not
-  read it. When a cross-tenant route returns a list, every row exposes
-  its own `tenantId` so the bot can dispatch per-row. Every other
-  `/api/bot/v1/*` route enforces tenant scoping.
+  `/events/:id/ack` and `/cast/upcoming` are flagged `crossTenant: true`:
+  `req.botContext` is left `undefined` and handlers must not read it.
+
+  What they RETURN, though, depends on the caller (`req.botKey`, set on every
+  route): a **platform key** sees all tenants — that is the routing table the
+  shared bot needs, and each row carries its own `tenantId` — while an
+  **ordinary key** sees only its own tenant's guilds, events and assignments.
+  Before this scoping, any valid key could read every tenant's Discord
+  configuration and event payloads.
 - **Intentionally global tables (not yet tenant-scoped):**
   - `user_discord_links` — global by design (one Discord account ↔ one site
     account across all tenants).
-  - `support_tickets` — **intentionally global**. The table has **no
-    `tenant_id` column**, so `/api/admin/support/tickets` (and its aggregate
-    counts) returns every tenant's tickets to any `admin`+. On this
-    mono-tenant instance that is the desired behaviour and support stays
-    tenant-agnostic on purpose. The admin-hub aggregate
-    `GET /api/admin/overview-summary` reuses these global counts: its
-    `supportOpen` / `supportHigh` keys are deliberately **not** tenant-scoped
-    (every other key in that endpoint is). **Day a 2nd tenant is onboarded:**
-    add `tenant_id` to `support_tickets` (+ backfill migration) and scope the
-    list query **and** the count aggregates by the staff context tenant — this
-    includes `supportOpen` / `supportHigh` in `overview-summary`.
+  - `support_tickets` — **now tenant-scoped** (migration
+    `add_tenant_id_to_support_tickets.sql`). La liste, le détail, la conversion
+    en blacklist et les compteurs de `overview-summary` filtrent sur le tenant
+    actif ; l'ingestion (`POST /api/support/ticket`) résout le tenant depuis
+    `x-guild-id`, puis `x-tenant-id`, puis l'URL publique. Un signalement est
+    nominatif et souvent sensible : il n'a rien à faire sous les yeux du staff
+    d'un autre espace.
 
 ### Error codes
 

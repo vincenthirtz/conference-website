@@ -407,6 +407,7 @@ export async function notifyScrimRequestEmail(opts: {
     if (!recipient) return;
 
     await sendScrimRequestEmail({
+      tenantId: opts.tenantId,
       to: recipient.email,
       recipientTeamName: recipient.teamName,
       opponentName: opts.opponentName,
@@ -446,6 +447,7 @@ export async function notifyAdminScrimEmails(opts: {
       if (!recipient) return;
 
       await sendScrimRequestEmail({
+        tenantId: opts.tenantId,
         to: recipient.email,
         recipientTeamName: recipient.teamName,
         opponentName: otherName ?? "l'équipe adverse",

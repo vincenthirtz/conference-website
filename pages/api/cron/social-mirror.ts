@@ -21,7 +21,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { emitBotEvent } from '@/utils/botEvents';
 import { getIntegrationSecret } from '@/utils/integrationSecrets';
-import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import {
   buildMirrorMessage,
@@ -128,40 +128,51 @@ async function mirrorSource(
   return { mirrored, checked: posts.length };
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'POST' && req.method !== 'GET') {
-    res.setHeader('Allow', 'GET, POST');
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-  if (!isAuthorized(req)) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+/** Tenants actifs à parcourir, ou le seul demandé via `?tenant=`. */
+async function resolveTargetTenants(req: NextApiRequest): Promise<string[]> {
+  const only = req.query.tenant;
+  if (typeof only === 'string' && only) return [only];
 
-  const tenantId = DEFAULT_TENANT_ID;
+  const { data, error } = await supabaseAdmin
+    .from('tenants')
+    .select('id')
+    .eq('is_active', true);
+  if (error) {
+    logger.error('[cron/social-mirror] tenants load error', error);
+    return [];
+  }
+  return ((data ?? []) as Array<{ id: string }>).map((t) => t.id);
+}
 
+/**
+ * Un passage de miroir pour UN tenant.
+ *
+ * Chaque espace a son salon d'actualités, son compte Bluesky et sa chaîne
+ * YouTube : le miroir n'a de sens que par tenant. Non configuré = fonction en
+ * veille, pas panne.
+ */
+async function mirrorForTenant(
+  tenantId: string
+): Promise<Record<string, unknown>> {
   const channelId = await readChannelId(tenantId);
   if (!channelId) {
     // Miroir non configuré : ce n'est pas une panne, c'est une fonctionnalité
     // qu'on n'a pas activée.
-    return res.status(200).json({ skipped: 'no_channel' });
+    return { tenantId, skipped: 'no_channel' };
   }
 
   // Le handle sert d'identité du compte à suivre. Il vient des identifiants de
   // publication, mais la LECTURE n'en a pas besoin.
-  const handle =
-    (await getIntegrationSecret(tenantId, 'bluesky_handle')) ??
-    'womenscup.bsky.social';
-
-  const bluesky = await mirrorSource(
-    tenantId,
-    'bluesky',
-    channelId,
-    () => fetchAuthorFeed(handle),
-    ''
-  );
+  const handle = await getIntegrationSecret(tenantId, 'bluesky_handle');
+  const bluesky: SourceReport = handle
+    ? await mirrorSource(
+        tenantId,
+        'bluesky',
+        channelId,
+        () => fetchAuthorFeed(handle),
+        ''
+      )
+    : { mirrored: 0, checked: 0, error: 'no_handle' };
 
   const youtubeChannel = await readSetting(tenantId, YOUTUBE_CHANNEL_KEY);
   const youtube: SourceReport = youtubeChannel
@@ -174,5 +185,32 @@ export default async function handler(
       )
     : { mirrored: 0, checked: 0, error: 'no_channel_id' };
 
-  return res.status(200).json({ bluesky, youtube });
+  return { tenantId, bluesky, youtube };
+}
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== 'POST' && req.method !== 'GET') {
+    res.setHeader('Allow', 'GET, POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+  if (!isAuthorized(req)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const tenantIds = await resolveTargetTenants(req);
+  const results: Array<Record<string, unknown>> = [];
+
+  for (const tenantId of tenantIds) {
+    try {
+      results.push(await mirrorForTenant(tenantId));
+    } catch (err) {
+      logger.error('[cron/social-mirror] tenant=%s error:', tenantId, err);
+      results.push({ tenantId, error: 'internal_error' });
+    }
+  }
+
+  return res.status(200).json({ tenants: results.length, results });
 }

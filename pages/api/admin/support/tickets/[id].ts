@@ -34,6 +34,9 @@ async function handler(
       const { data, error } = await supabaseAdmin
         .from('support_tickets')
         .select('*')
+        // Borne tenant : un ticket d'un autre espace doit être introuvable,
+        // pas seulement non modifiable.
+        .eq('tenant_id', ctx.tenantId)
         .eq('id', ticketId)
         .maybeSingle();
 
@@ -83,6 +86,7 @@ async function handler(
       const { data, error } = await supabaseAdmin
         .from('support_tickets')
         .update(update)
+        .eq('tenant_id', ctx.tenantId)
         .eq('id', ticketId)
         .select('*')
         .maybeSingle();
@@ -113,6 +117,7 @@ async function handler(
       const { error } = await supabaseAdmin
         .from('support_tickets')
         .delete()
+        .eq('tenant_id', ctx.tenantId)
         .eq('id', ticketId);
 
       if (error) {

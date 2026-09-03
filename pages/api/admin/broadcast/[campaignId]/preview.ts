@@ -6,7 +6,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { withStaffRoute } from '@/utils/staff';
 import { getCampaign } from '@/utils/broadcasts';
 
-export default withStaffRoute(handler, { permission: 'manage_broadcast' });
+export default withStaffRoute(handler, {
+  permission: 'manage_broadcast',
+  // Donnée d'association, pas de tenant : garde sur le rôle global.
+  scope: 'platform',
+});
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {

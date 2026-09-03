@@ -60,15 +60,24 @@ async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
   // pas sur briefing_at. Le brief T-30 est cale par convention sur 30min
   // avant scheduled_at cote admin, mais c'est le match qui fait foi pour le
   // "upcoming".
-  // crossTenant: true — pas de filtre `tenant_id`. Le bot va router via le
-  // `tenantId` retourne par row (cf. note d'en-tete).
+  // Scoping : le bot mutualisé reçoit tous les tenants et route via le
+  // `tenantId` de chaque row ; un bot auto-hébergé ne reçoit que le sien.
   // Lot 9 : cast_assignments est polymorphe (match_id XOR scrim_id). On
   // requete les deux variantes en parallele puis on merge.
+  //
+  // `scopeToKey` n'ajoute le filtre tenant que pour un bot auto-hébergé ; le
+  // bot mutualisé garde la vue complète dont il a besoin pour router.
+  const scopeToKey = <T>(q: T): T =>
+    req.botKey.isPlatformKey
+      ? q
+      : ((q as any).eq('tenant_id', req.botKey.tenantId) as T);
+
   const [matchRes, scrimRes] = await Promise.all([
-    supabaseAdmin
-      .from('cast_assignments')
-      .select(
-        `id, tenant_id, match_id, briefing_at, acked_at, cast_member_id,
+    scopeToKey(
+      supabaseAdmin
+        .from('cast_assignments')
+        .select(
+          `id, tenant_id, match_id, briefing_at, acked_at, cast_member_id,
          cast_member:cast_member_id (id, name, title, auth_user_id),
          match:match_id (
            id, status, scheduled_at, is_bye,
@@ -76,24 +85,27 @@ async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
            team2:team2_id (id, name, short_name),
            tournament:tournament_id (id, name, slug)
          )`
-      )
-      .is('acked_at', null)
-      .not('match_id', 'is', null)
-      .order('briefing_at', { ascending: true }),
-    supabaseAdmin
-      .from('cast_assignments')
-      .select(
-        `id, tenant_id, scrim_id, briefing_at, acked_at, cast_member_id,
+        )
+        .is('acked_at', null)
+        .not('match_id', 'is', null)
+        .order('briefing_at', { ascending: true })
+    ),
+    scopeToKey(
+      supabaseAdmin
+        .from('cast_assignments')
+        .select(
+          `id, tenant_id, scrim_id, briefing_at, acked_at, cast_member_id,
          cast_member:cast_member_id (id, name, title, auth_user_id),
          scrim:scrim_id (
            id, name, slug, status, scheduled_date, stream_url,
            team1:team1_id (id, name, short_name),
            team2:team2_id (id, name, short_name)
          )`
-      )
-      .is('acked_at', null)
-      .not('scrim_id', 'is', null)
-      .order('briefing_at', { ascending: true }),
+        )
+        .is('acked_at', null)
+        .not('scrim_id', 'is', null)
+        .order('briefing_at', { ascending: true })
+    ),
   ]);
 
   if (matchRes.error) {

@@ -219,6 +219,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
   // quelqu'un qui a perdu son lien vient le récupérer.
   if (freePlayerId) {
     void sendFreePlayerPublishedEmail({
+      tenantId,
       to: email,
       displayName: body.displayName,
       removeUrl: buildFreePlayerRemovalUrl(freePlayerId),

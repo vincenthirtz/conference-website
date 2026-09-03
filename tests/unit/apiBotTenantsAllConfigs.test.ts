@@ -16,6 +16,7 @@ import {
   resetSupabaseMock,
   seedBotAuth,
 } from './__helpers__/supabaseMock';
+import { __resetBotImpersonationCachesForTests } from '../../utils/botAuth';
 import handler from '../../pages/api/bot/v1/tenants/all-configs';
 
 const CONFERENCE_TENANT_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
@@ -48,6 +49,9 @@ function makeRes() {
 
 beforeEach(() => {
   resetSupabaseMock();
+  // La vérification de clé est cachée 60 s par hash : on purge, sinon un test
+  // hérite du drapeau plateforme du précédent.
+  __resetBotImpersonationCachesForTests();
   // Per-tenant bot auth (crossTenant route still requires a valid x-api-key).
   seedBotAuth();
 });
@@ -65,6 +69,66 @@ describe('GET /api/bot/v1/tenants/all-configs', () => {
     await handler(makeReq(), res);
     expect(res.statusCode).toBe(200);
     expect((res.body as any).configs).toEqual([]);
+  });
+
+  /**
+   * Deux serveurs, deux tenants — avec la colonne `tenant_id` que porte la
+   * vraie table (le mock ne valide pas les colonnes : sans elle, le filtre
+   * serait un no-op silencieux et le test ne prouverait rien).
+   */
+  function seedTwoTenants() {
+    store.discord_guilds = [
+      {
+        guild_id: GUILD_A,
+        tenant_id: CONFERENCE_TENANT_ID,
+        is_primary: true,
+        tenant: {
+          id: CONFERENCE_TENANT_ID,
+          slug: 'conference',
+          name: 'Conférence',
+          is_active: true,
+          default_locale: 'fr',
+        },
+      },
+      {
+        guild_id: GUILD_B,
+        tenant_id: OTHER_TENANT_ID,
+        is_primary: true,
+        tenant: {
+          id: OTHER_TENANT_ID,
+          slug: 'tournoi-x',
+          name: 'Tournoi X',
+          is_active: true,
+          default_locale: 'fr',
+        },
+      },
+    ] as any;
+  }
+
+  it('clé de tenant : ne voit QUE ses propres serveurs', async () => {
+    // La clé seedée par défaut n'est pas une clé plateforme : c'est le cas du
+    // bot auto-hébergé. Avant ce filtre, toute clé valide lisait la config
+    // Discord de tous les tenants — salons, rôles, catégories.
+    seedTwoTenants();
+    const res = makeRes();
+    await handler(makeReq(), res);
+    expect(res.statusCode).toBe(200);
+    const configs = (res.body as any).configs;
+    expect(configs).toHaveLength(1);
+    expect(configs[0].guild.guild_id).toBe(GUILD_A);
+  });
+
+  it('clé plateforme : voit tous les serveurs (table de routage du bot mutualisé)', async () => {
+    resetSupabaseMock();
+    // La vérification de clé est cachée 60 s par hash : sans cette purge, la
+    // clé resterait « non plateforme » depuis le test précédent.
+    __resetBotImpersonationCachesForTests();
+    seedBotAuth({ platformKey: true });
+    seedTwoTenants();
+    const res = makeRes();
+    await handler(makeReq(), res);
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).configs).toHaveLength(2);
   });
 
   it('retourne tous les guilds + config (defauts vides si pas de row)', async () => {

@@ -299,6 +299,7 @@ export default withSubjectRoute(
     let emailSent = false;
     try {
       const sendResult = await sendTeamInviteLinkEmail({
+        tenantId,
         to: body.email,
         teamName: team.name,
         role: body.role,

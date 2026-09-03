@@ -21,7 +21,12 @@ import { supabaseAdmin } from './supabase';
 import { isBotMaintenanceMode } from './maintenance';
 import { logger } from './logger';
 import { formatZodError } from './validation';
-import { DEFAULT_TENANT_ID } from './tenant';
+import {
+  DEFAULT_TENANT_ID,
+  isActiveTenantId,
+  getTenantIdByGuildId,
+  __resetTenantLookupCachesForTests,
+} from './tenant';
 import {
   loadTenantPlanStateForBot,
   checkBotPlanCapability,
@@ -67,11 +72,166 @@ const DEFAULT_TENANT_ID_FOR_CACHE = DEFAULT_TENANT_ID;
  */
 const API_KEY_TTL_MS = 60_000;
 const API_KEY_CACHE_MAX = 50;
-const apiKeyCache = new Map<string, { tenantId: string; expiresAt: number }>();
+const apiKeyCache = new Map<
+  string,
+  { tenantId: string; isPlatformKey: boolean; expiresAt: number }
+>();
+
+/* ---------------------------------------------------------------------------
+ * Clé « plateforme » : agir pour le compte d'un autre tenant
+ * -------------------------------------------------------------------------
+ *
+ * Le bot Discord invité par un nouveau tenant est NOTRE process mutualisé
+ * (l'URL d'invitation est bâtie sur notre `DISCORD_CLIENT_ID`), et ce process
+ * ne porte qu'une seule `BOT_API_KEY`. Sans ce mécanisme, une commande lancée
+ * depuis le serveur du tenant B s'authentifiait comme le tenant propriétaire
+ * de la clé et écrivait chez lui : corruption et fuite entre tenants.
+ *
+ * Une clé marquée `tenant_secrets.is_platform_key` peut donc désigner sa cible
+ * via `x-tenant-id`. Trois garde-fous, tous obligatoires :
+ *   - le drapeau est opt-in et faux par défaut : une clé de tenant ordinaire
+ *     (bot auto-hébergé) reste strictement scopée à son propre tenant ;
+ *   - le tenant ciblé doit exister ET être actif (sinon 404) ;
+ *   - si le bot envoie `x-guild-id`, ce guild doit appartenir au tenant ciblé
+ *     (sinon 403). C'est ce qui transforme une confiance aveugle en une
+ *     vérification : le bot prouve d'où vient l'interaction.
+ *
+ * En l'absence d'en-tête `x-tenant-id`, le comportement est inchangé — la clé
+ * détermine le tenant.
+ */
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Purge les caches d'impersonation. Usage strictement test. */
+export function __resetBotImpersonationCachesForTests(): void {
+  apiKeyCache.clear();
+  __resetTenantLookupCachesForTests();
+}
+
+/** Refus normalisé émis par la résolution d'impersonation. */
+type ImpersonationDenial = { status: number; body: Record<string, unknown> };
+
+/**
+ * Résout le tenant effectif d'une requête bot tenant-scopée.
+ *
+ * Renvoie `{ tenantId }` (celui de la clé, ou la cible légitime d'une clé
+ * plateforme) ou `{ denial }` à renvoyer tel quel au bot.
+ */
+async function resolveEffectiveTenant(
+  req: NextApiRequest,
+  auth: { tenantId: string; isPlatformKey: boolean },
+  routeKey: string
+): Promise<{ tenantId: string } | { denial: ImpersonationDenial }> {
+  const rawTenant = req.headers['x-tenant-id'];
+  const headerTenant = Array.isArray(rawTenant) ? rawTenant[0] : rawTenant;
+  const requested =
+    typeof headerTenant === 'string' && headerTenant.length > 0
+      ? headerTenant.toLowerCase()
+      : null;
+
+  const keyTenant = auth.tenantId.toLowerCase();
+
+  // Clé ordinaire (bot auto-hébergé) : le scope ne bouge pas. On conserve le
+  // warn historique quand l'en-tête contredit la clé — c'est un bug côté bot.
+  if (!auth.isPlatformKey) {
+    if (requested && requested !== keyTenant) {
+      logger.warn(
+        '[bot/tenant] x-tenant-id header conflicts with per-tenant API key — key wins',
+        { header: requested, keyTenant, route: routeKey }
+      );
+    }
+    return { tenantId: auth.tenantId };
+  }
+
+  /* --- Clé plateforme -----------------------------------------------------
+   *
+   * Le guild prime sur l'en-tête tenant : c'est le seul signal que le site
+   * peut VÉRIFIER (`discord_guilds`), là où `x-tenant-id` n'est qu'une
+   * affirmation du bot — et une affirmation qui, cache tenant-config froid,
+   * retombe sur le tenant par défaut. Un guild connu tranche donc, même s'il
+   * contredit l'en-tête.
+   */
+  const rawGuild = req.headers['x-guild-id'];
+  const headerGuild = Array.isArray(rawGuild) ? rawGuild[0] : rawGuild;
+
+  if (typeof headerGuild === 'string' && headerGuild.length > 0) {
+    if (!DISCORD_ID_RE.test(headerGuild)) {
+      return {
+        denial: {
+          status: 400,
+          body: {
+            error: 'x-guild-id must be a Discord snowflake.',
+            code: 'INVALID_GUILD_HEADER',
+          },
+        },
+      };
+    }
+
+    const owner = await getTenantIdByGuildId(headerGuild);
+    if (owner) {
+      const ownerId = owner.toLowerCase();
+      if (requested && requested !== ownerId) {
+        logger.warn(
+          '[bot/tenant] platform key: x-tenant-id contradicts the guild owner — guild wins',
+          { guildId: headerGuild, requested, owner: ownerId, route: routeKey }
+        );
+      }
+      if (!(await isActiveTenantId(ownerId))) {
+        return {
+          denial: {
+            status: 404,
+            body: {
+              error: 'Unknown or inactive tenant.',
+              code: 'UNKNOWN_TENANT',
+            },
+          },
+        };
+      }
+      return { tenantId: ownerId };
+    }
+
+    // Guild inconnu de `discord_guilds` : rien à prouver ni à contredire. On
+    // retombe sur la résolution par en-tête ci-dessous (et, à défaut, sur la
+    // clé) plutôt que de refuser — un guild pas encore lié ne doit pas couper
+    // le bot.
+    logger.warn('[bot/tenant] platform key: unlinked guild', {
+      guildId: headerGuild,
+      route: routeKey,
+    });
+  }
+
+  if (!requested || requested === keyTenant) {
+    return { tenantId: auth.tenantId };
+  }
+
+  if (!UUID_RE.test(requested)) {
+    return {
+      denial: {
+        status: 400,
+        body: {
+          error: 'x-tenant-id must be a valid UUID.',
+          code: 'INVALID_TENANT_HEADER',
+        },
+      },
+    };
+  }
+
+  if (!(await isActiveTenantId(requested))) {
+    return {
+      denial: {
+        status: 404,
+        body: { error: 'Unknown or inactive tenant.', code: 'UNKNOWN_TENANT' },
+      },
+    };
+  }
+
+  return { tenantId: requested };
+}
 
 export async function verifyBotApiKeyMultiTenant(
   req: NextApiRequest
-): Promise<{ ok: false } | { ok: true; tenantId: string }> {
+): Promise<
+  { ok: false } | { ok: true; tenantId: string; isPlatformKey: boolean }
+> {
   const provided = req.headers['x-api-key'];
   if (typeof provided !== 'string' || provided.length === 0) {
     return { ok: false };
@@ -82,17 +242,26 @@ export async function verifyBotApiKeyMultiTenant(
 
   const cached = apiKeyCache.get(hash);
   if (cached && cached.expiresAt > Date.now()) {
-    return { ok: true, tenantId: cached.tenantId };
+    return {
+      ok: true,
+      tenantId: cached.tenantId,
+      isPlatformKey: cached.isPlatformKey,
+    };
   }
 
   const { data } = await supabaseAdmin
     .from('tenant_secrets')
-    .select('tenant_id')
+    .select('tenant_id, is_platform_key')
     .eq('bot_api_key_hash', hash)
     .maybeSingle();
   if (data?.tenant_id) {
     const tenantId = data.tenant_id as string;
-    apiKeyCache.set(hash, { tenantId, expiresAt: Date.now() + API_KEY_TTL_MS });
+    const isPlatformKey = data.is_platform_key === true;
+    apiKeyCache.set(hash, {
+      tenantId,
+      isPlatformKey,
+      expiresAt: Date.now() + API_KEY_TTL_MS,
+    });
     if (apiKeyCache.size > API_KEY_CACHE_MAX) {
       // Borne mémoire : une clé inventée par requête ne doit pas faire enfler
       // le cache. On repart de zéro plutôt que d'implémenter un LRU pour ce
@@ -100,7 +269,7 @@ export async function verifyBotApiKeyMultiTenant(
       const oldest = apiKeyCache.keys().next().value;
       if (oldest !== undefined) apiKeyCache.delete(oldest);
     }
-    return { ok: true, tenantId };
+    return { ok: true, tenantId, isPlatformKey };
   }
   return { ok: false };
 }
@@ -304,6 +473,8 @@ export type BotTenantRequest = NextApiRequest & {
  */
 export type BotCrossTenantRequest = NextApiRequest & {
   botContext?: undefined;
+  /** Toujours posé par le middleware : cf. types/botContext.d.ts. */
+  botKey: { tenantId: string; isPlatformKey: boolean };
 };
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
@@ -369,6 +540,14 @@ export function withBotRoute(
       return res.status(401).json({ error: 'Invalid or missing API key.' });
     }
 
+    // Identité de l'appelant, posée avant tout scoping : les résolveurs
+    // globaux (crossTenant) en ont besoin pour ne pas servir les données de
+    // tous les tenants à un bot auto-hébergé.
+    req.botKey = {
+      tenantId: authResult.tenantId,
+      isPlatformKey: authResult.isPlatformKey,
+    };
+
     // Multi-tenant scoping :
     //
     // 1. Si la route est `crossTenant: true` (global resolver type
@@ -380,26 +559,18 @@ export function withBotRoute(
     //    n'est plus requis ni validé (le fallback env legacy a été retiré) ;
     //    s'il est présent et contredit la clé, on warn (signal d'un bug bot).
     if (options.crossTenant !== true) {
-      const rawHeader = req.headers['x-tenant-id'];
-      const headerValue = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
-      if (
-        typeof headerValue === 'string' &&
-        headerValue.length > 0 &&
-        headerValue.toLowerCase() !== authResult.tenantId.toLowerCase()
-      ) {
-        logger.warn(
-          '[bot/tenant] x-tenant-id header conflicts with per-tenant API key — key wins',
-          {
-            header: headerValue,
-            keyTenant: authResult.tenantId,
-            route: options.rateLimit.key,
-          }
-        );
+      const resolved = await resolveEffectiveTenant(
+        req,
+        authResult,
+        options.rateLimit.key
+      );
+      if ('denial' in resolved) {
+        return res.status(resolved.denial.status).json(resolved.denial.body);
       }
 
       req.botContext = {
         ...(req.botContext ?? {}),
-        tenantId: authResult.tenantId,
+        tenantId: resolved.tenantId,
       };
 
       // Gate PLAN « Régie solidaire ».
@@ -410,7 +581,9 @@ export function withBotRoute(
       //  - PREMIUM : sur une route qui déclare `requireCapability` (production
       //    live, arbitrage), on gate en plus.
       // Le plan (mis en cache 60 s) est attaché à `req.botContext.plan`.
-      const planState = await loadTenantPlanStateForBot(authResult.tenantId);
+      // Le plan gaté est celui du tenant EFFECTIF : une clé plateforme agissant
+      // pour le tenant B doit se heurter au plan de B, jamais au sien.
+      const planState = await loadTenantPlanStateForBot(resolved.tenantId);
       req.botContext.plan = planState;
 
       const baselineDenial = checkBotPlanCapability(planState, 'discordBot');

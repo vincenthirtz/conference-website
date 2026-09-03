@@ -131,6 +131,12 @@ export function seedBotAuth(
      * (the per-tenant auth only needs `tenant_secrets`, not a `tenants` row).
      */
     withTenantRow?: boolean;
+    /**
+     * Marque la clé comme « clé plateforme » : celle du bot mutualisé, seule
+     * autorisée à agir pour un autre tenant (cf. utils/botAuth.ts). Faux par
+     * défaut — une clé de tenant ordinaire reste scopée à son tenant.
+     */
+    platformKey?: boolean;
   } = {}
 ): { tenantId: string; apiKey: string } {
   const s = opts.store ?? store;
@@ -142,6 +148,7 @@ export function seedBotAuth(
     tenant_id: tenantId,
     bot_api_key_hash: hashBotApiKey(apiKey),
     bot_webhook_secret: webhookSecret,
+    is_platform_key: opts.platformKey === true,
   });
   if (opts.withTenantRow !== false) {
     if (!(s.tenants ||= []).some((r) => r.id === tenantId)) {

@@ -55,7 +55,17 @@ export type TenantSource = 'cookie' | 'fallback_first' | 'fallback_default';
 export type AuthenticatedStaffContext = {
   user: User;
   staff: StaffMember;
+  /**
+   * Rôle EFFECTIF sur le tenant actif : le rôle global, élevé le cas échéant
+   * par `tenant_staff.role`. C est ce que gardent toutes les routes scopées
+   * par tenant.
+   */
   role: StaffRole;
+  /**
+   * Rôle GLOBAL (colonne `staff.role`), sans élévation par tenant. Les routes
+   * de plateforme (données d association non scopées) se gardent dessus.
+   */
+  globalRole: StaffRole;
   tenantId: string;
   currentTenantSource: TenantSource;
   /**

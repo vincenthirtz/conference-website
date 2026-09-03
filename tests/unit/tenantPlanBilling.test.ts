@@ -336,6 +336,30 @@ describe('applyTenantPlanPayment', () => {
     );
   });
 
+  it('paiement pendant un essai → un an à partir de maintenant, essai clos', async () => {
+    // L'essai est une découverte, pas un acompte : les jours restants ne
+    // s'ajoutent pas à l'année payée.
+    seedTenant({
+      plan: 'regie',
+      plan_status: 'active',
+      plan_is_trial: true,
+      plan_started_at: '2026-07-01T12:00:00.000Z',
+      plan_expires_at: '2026-08-01T12:00:00.000Z', // essai encore actif vs NOW
+    });
+    const r = await applyTenantPlanPayment({
+      helloassoPaymentId: 42,
+      tenantId: TENANT,
+      plan: 'regie',
+      amountCents: 29000,
+      checkoutIntentId: null,
+      nowMs: NOW,
+    });
+    expect(r.status).toBe('applied');
+    const t = store.tenants[0] as any;
+    expect(t.plan_expires_at).toBe('2027-07-09T12:00:00.000Z');
+    expect(t.plan_is_trial).toBe(false);
+  });
+
   it("montant insuffisant → n'active pas, pas de ledger", async () => {
     seedTenant();
     const r = await applyTenantPlanPayment({

@@ -11,6 +11,11 @@
 import { describe, it, expect } from 'vitest';
 import { buildCampaignEmailHtml, type CampaignBody } from '../../utils/email';
 import {
+  applyBrand,
+  BRAND_TOKENS,
+  DEFAULT_EMAIL_BRAND,
+} from '../../utils/emailBrand';
+import {
   campaignInputSchema,
   slugifyCampaignName,
 } from '../../utils/campaignSchema';
@@ -454,7 +459,13 @@ describe('buildCampaignEmailHtml — bodyFormat html', () => {
       }),
       null
     );
-    expect(html).toContain('https://owwomenscup.fr/img/logos/pogtv.png');
+    // Le domaine n'est plus figé dans le gabarit : il est posé en jeton et
+    // résolu à l'envoi selon l'espace (cf. utils/emailBrand.ts). Une campagne
+    // d'un autre tournoi pointerait sinon vers nos images.
+    expect(html).toContain(`${BRAND_TOKENS.siteUrl}/img/logos/pogtv.png`);
+    expect(
+      applyBrand(html, DEFAULT_EMAIL_BRAND)
+    ).toContain('https://owwomenscup.fr/img/logos/pogtv.png');
   });
 
   it('conserve le greeting, le wrapper de marque et la désinscription', () => {

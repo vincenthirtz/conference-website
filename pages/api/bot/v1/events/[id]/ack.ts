@@ -35,11 +35,16 @@ const ackQuerySchema = z.object({
 async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
   const { id } = req.botQuery as z.infer<typeof ackQuerySchema>;
 
-  const { data: row, error: fetchErr } = await supabaseAdmin
+  // Un bot auto-hébergé n'acquitte que les events de SON tenant : sinon il
+  // pourrait faire disparaître de la file un event destiné à un autre.
+  let lookup = supabaseAdmin
     .from('bot_event_outbox')
     .select('id, status')
-    .eq('id', id)
-    .maybeSingle();
+    .eq('id', id);
+  if (!req.botKey.isPlatformKey) {
+    lookup = lookup.eq('tenant_id', req.botKey.tenantId);
+  }
+  const { data: row, error: fetchErr } = await lookup.maybeSingle();
   if (fetchErr) {
     logger.error('[bot/events/ack] lookup error', fetchErr);
     return res.status(500).json({ error: 'Erreur de chargement' });

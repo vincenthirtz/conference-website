@@ -18,11 +18,9 @@
 //                         réplique le board pages/api/admin/disputes/index.ts dont
 //                         counts.total = tous les litiges ouverts du tenant)
 //
-// MULTI-TENANT NOTE : `support_tickets` n'a PAS de colonne `tenant_id` et est
-// volontairement GLOBAL (décision produit documentée dans
-// pages/api/admin/support/tickets.ts › MULTI-TENANT NOTE et docs/BOT_API_CONTRACT.md).
-// supportOpen / supportHigh ne sont donc PAS scopés tenant ; les autres comptes
-// le sont via `.eq('tenant_id', ctx.tenantId)` (leurs tables portent tenant_id).
+// MULTI-TENANT : tous les comptes sont scopés par `.eq('tenant_id', ctx.tenantId)`,
+// support compris depuis que `support_tickets` porte la colonne (migration
+// add_tenant_id_to_support_tickets.sql).
 //
 // Dégradation : on utilise Promise.allSettled + count-only. Si un count échoue
 // (erreur DB, rejet), on renvoie `null` pour CETTE clé et 200 pour le reste.
@@ -134,18 +132,20 @@ async function handler(
       .eq('tenant_id', tenantId)
       .eq('status', 'pending'),
 
-    // tickets support ouverts (GLOBAL — pas de tenant_id sur support_tickets)
+    // tickets support ouverts
     supabaseAdmin
       .from('support_tickets')
       .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', ctx.tenantId)
       .eq('status', 'open'),
 
-    // tickets support haute sévérité encore actionnables (GLOBAL).
+    // tickets support haute sévérité encore actionnables.
     // Réplique pages/api/admin/support/tickets.ts : severity=high AND
     // status != resolved AND status != closed (≡ "not in (resolved, closed)").
     supabaseAdmin
       .from('support_tickets')
       .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', ctx.tenantId)
       .eq('severity', 'high')
       .neq('status', 'resolved')
       .neq('status', 'closed'),

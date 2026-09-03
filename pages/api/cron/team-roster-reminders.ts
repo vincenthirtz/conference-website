@@ -19,6 +19,11 @@
 // un message — une équipe en règle n'est pas notifiée. `?only=all` force tout
 // le monde (usage manuel).
 //
+// Portée : TOUS les tenants actifs. Chacun a sa propre deadline, son propre
+// tournoi et ses propres équipes ; le cron les parcourt et isole les erreurs
+// par tenant (une relance qui échoue ici n'empêche pas les autres). Un
+// `?tenant=<uuid>` restreint le passage à un seul espace (usage manuel).
+//
 // Auth : Bearer CRON_SECRET (header) ou ?secret=... (query). GET + POST.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -27,7 +32,7 @@ import {
   composeTeamMessages,
   sendTeamMessages,
 } from '@/utils/teamMessages';
-import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 
 /** Jalons (en jours avant la deadline) auxquels une relance part. */
@@ -52,11 +57,107 @@ export function daysUntil(target: string, now: number = Date.now()): number {
   return startOfDay(t.getTime()) - startOfDay(now);
 }
 
+type TenantRunResult = Record<string, unknown> & { tenantId: string };
+
+/** Un passage de relance pour UN tenant. Ne jette jamais : l'erreur est une donnée. */
+async function runForTenant(
+  tenantId: string,
+  opts: {
+    force: boolean;
+    dryRun: boolean;
+    only: 'all' | 'incomplete' | 'needs_attention';
+  }
+): Promise<TenantRunResult> {
+  const { force, dryRun, only } = opts;
+
+  const ctx = await loadTeamRosterStates(null, tenantId);
+  if (!ctx) {
+    return { tenantId, skipped: 'no_active_tournament', sent: 0, teams: [] };
+  }
+
+  const reference = ctx.deadline ?? ctx.startDate;
+  if (!reference) {
+    return { tenantId, skipped: 'no_deadline_configured', sent: 0, teams: [] };
+  }
+
+  const remaining = daysUntil(reference);
+  if (!force) {
+    if (!Number.isFinite(remaining)) {
+      return { tenantId, skipped: 'unparseable_deadline', sent: 0, teams: [] };
+    }
+    if (!REMINDER_MILESTONES.includes(remaining)) {
+      return {
+        tenantId,
+        skipped: 'not_a_milestone',
+        daysRemaining: remaining,
+        milestones: REMINDER_MILESTONES,
+        sent: 0,
+        teams: [],
+      };
+    }
+  }
+
+  const messages = composeTeamMessages(ctx, {
+    preset: 'roster-reminder',
+    // Le rappel automatique PING le rôle d'équipe : sans notification, un
+    // message dans un salon peu fréquenté ne sert à rien.
+    mention: true,
+    only,
+  });
+
+  if (dryRun) {
+    return {
+      tenantId,
+      dryRun: true,
+      daysRemaining: remaining,
+      messages: messages.map((m) => ({
+        teamName: m.team.teamName,
+        kind: m.kind,
+        deliverable: m.deliverable,
+        content: m.content,
+      })),
+    };
+  }
+
+  const result = await sendTeamMessages(messages, {
+    tenantId,
+    tournamentId: ctx.tournamentId,
+    source: 'cron',
+  });
+
+  logger.info(
+    '[cron/team-roster-reminders] tenant=%s J-%s tournoi=%s envoyés=%d ignorés=%d',
+    tenantId,
+    remaining,
+    ctx.tournamentName,
+    result.sent,
+    result.skipped
+  );
+
+  return { tenantId, daysRemaining: remaining, ...result };
+}
+
+/** Tenants actifs à parcourir, ou le seul demandé via `?tenant=`. */
+async function resolveTargetTenants(req: NextApiRequest): Promise<string[]> {
+  const only = req.query.tenant;
+  if (typeof only === 'string' && only) return [only];
+
+  const { data, error } = await supabaseAdmin
+    .from('tenants')
+    .select('id')
+    .eq('is_active', true);
+  if (error) {
+    logger.error('[cron/team-roster-reminders] tenants load error', error);
+    return [];
+  }
+  return ((data ?? []) as Array<{ id: string }>).map((t) => t.id);
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (req.method !== 'GET' && req.method !== 'POST') {
+  if (req.method !== 'POST' && req.method !== 'GET') {
     res.setHeader('Allow', 'GET, POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -74,77 +175,30 @@ export default async function handler(
         ? ('incomplete' as const)
         : ('needs_attention' as const);
 
-  try {
-    const ctx = await loadTeamRosterStates(null, DEFAULT_TENANT_ID);
-    if (!ctx) {
-      return res
-        .status(200)
-        .json({ skipped: 'no_active_tournament', sent: 0, teams: [] });
+  const tenantIds = await resolveTargetTenants(req);
+  const results: TenantRunResult[] = [];
+  let sent = 0;
+  let skipped = 0;
+  let errors = 0;
+
+  for (const tenantId of tenantIds) {
+    try {
+      const r = await runForTenant(tenantId, { force, dryRun, only });
+      results.push(r);
+      if (typeof r.sent === 'number') sent += r.sent;
+      if (typeof r.skipped === 'number') skipped += r.skipped;
+    } catch (err) {
+      errors += 1;
+      logger.error(
+        '[cron/team-roster-reminders] tenant=%s error:',
+        tenantId,
+        err
+      );
+      results.push({ tenantId, error: 'internal_error' });
     }
-
-    const reference = ctx.deadline ?? ctx.startDate;
-    if (!reference) {
-      return res
-        .status(200)
-        .json({ skipped: 'no_deadline_configured', sent: 0, teams: [] });
-    }
-
-    const remaining = daysUntil(reference);
-    if (!force) {
-      if (!Number.isFinite(remaining)) {
-        return res
-          .status(200)
-          .json({ skipped: 'unparseable_deadline', sent: 0, teams: [] });
-      }
-      if (!REMINDER_MILESTONES.includes(remaining)) {
-        return res.status(200).json({
-          skipped: 'not_a_milestone',
-          daysRemaining: remaining,
-          milestones: REMINDER_MILESTONES,
-          sent: 0,
-          teams: [],
-        });
-      }
-    }
-
-    const messages = composeTeamMessages(ctx, {
-      preset: 'roster-reminder',
-      // Le rappel automatique PING le rôle d'équipe : sans notification, un
-      // message dans un salon peu fréquenté ne sert à rien.
-      mention: true,
-      only,
-    });
-
-    if (dryRun) {
-      return res.status(200).json({
-        dryRun: true,
-        daysRemaining: remaining,
-        messages: messages.map((m) => ({
-          teamName: m.team.teamName,
-          kind: m.kind,
-          deliverable: m.deliverable,
-          content: m.content,
-        })),
-      });
-    }
-
-    const result = await sendTeamMessages(messages, {
-      tenantId: DEFAULT_TENANT_ID,
-      tournamentId: ctx.tournamentId,
-      source: 'cron',
-    });
-
-    logger.info(
-      '[cron/team-roster-reminders] J-%s tournoi=%s envoyés=%d ignorés=%d',
-      remaining,
-      ctx.tournamentName,
-      result.sent,
-      result.skipped
-    );
-
-    return res.status(200).json({ daysRemaining: remaining, ...result });
-  } catch (err) {
-    logger.error('[cron/team-roster-reminders] error:', err);
-    return res.status(500).json({ error: 'internal_error' });
   }
+
+  return res
+    .status(200)
+    .json({ tenants: results.length, sent, skipped, errors, results });
 }

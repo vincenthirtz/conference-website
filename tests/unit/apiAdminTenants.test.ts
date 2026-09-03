@@ -228,6 +228,13 @@ describe('/api/admin/tenants', () => {
 
   it('GET 403 si caster (role insuffisant)', async () => {
     store.staff = [makeStaffRow('caster')] as any;
+    // Caster partout : globalement et sur ses tenants. Sans cette seconde
+    // moitié, `tenant_staff.role = 'admin'` en ferait un administrateur du
+    // tenant actif — ce que le test ne veut pas décrire.
+    store.tenant_staff = (store.tenant_staff as any[]).map((r) => ({
+      ...r,
+      role: 'caster',
+    })) as any;
     invalidateStaffCache();
     const res = makeRes();
     await indexHandler(makeReq(), res);
@@ -298,6 +305,10 @@ describe('/api/admin/tenants/[id]', () => {
 
   it('GET 403 si caster sans acces au tenant', async () => {
     store.staff = [makeStaffRow('caster')] as any;
+    store.tenant_staff = (store.tenant_staff as any[]).map((r) => ({
+      ...r,
+      role: 'caster',
+    })) as any;
     invalidateStaffCache();
     const res = makeRes();
     await detailHandler(

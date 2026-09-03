@@ -175,7 +175,8 @@ export default withAuthRoute(async function handler(
         const result = await sendTeamJoinEmail(
           resolvedEmail,
           captainTeam.name,
-          memberPayload.role
+          memberPayload.role,
+          tenantId
         );
         if (!result.success) {
           emailWarning = `Email d'invitation non envoye (${result.error ?? 'raison inconnue'}).`;

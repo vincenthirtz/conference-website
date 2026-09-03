@@ -281,10 +281,14 @@ describe('/api/admin/teams/[teamId]/members', () => {
     // mock and got back an id. emailed asynchronously — flush microtasks.
     await Promise.resolve();
     await Promise.resolve();
+    // 4e argument : l'espace au nom duquel l'email part (compte d'envoi +
+    // marque). Sans lui, une équipe d'un autre tenant recevrait un email
+    // signé de l'association et expédié depuis SON compte Brevo.
     expect(sendTeamJoinEmail).toHaveBeenCalledWith(
       'new@y.com',
       'Alpha',
-      'player'
+      'player',
+      DEFAULT_TENANT_ID
     );
   });
 

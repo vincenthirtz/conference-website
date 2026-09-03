@@ -28,6 +28,9 @@ export default adminNs('adminBilling', {
   noExpiry: 'Sans expiration',
   expireInDays: 'expire dans {days} jours',
   expired: 'Expiré',
+  trialBadge: 'Essai gratuit',
+  trialNotice:
+    "Votre espace est en essai gratuit. À la fin de l'essai, il repasse sur le palier Découverte et le bot Discord cesse de répondre — souscrivez pour le garder actif.",
   downgradeNoticeTitle: 'Accès réduit',
   downgradeNoticeMsg:
     "Ton plan « {plan} » n'est plus honoré : les capacités sont retombées sur le palier gratuit. Renouvelle pour réactiver.",

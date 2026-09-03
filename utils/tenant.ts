@@ -130,6 +130,96 @@ export function resolveTenantId(req: NextApiRequest): string {
 }
 
 /* -----------------------------------------------------------------------
+ * Existence / appartenance : tenant actif, et tenant d'un guild Discord
+ * -----------------------------------------------------------------------
+ *
+ * Deux lookups minuscules mais appelés très souvent (chaque requête du bot,
+ * chaque ouverture de ticket) : on les cache 60 s, positifs ET négatifs.
+ */
+
+const TENANT_LOOKUP_TTL_MS = 60_000;
+const activeTenantCache = new Map<
+  string,
+  { active: boolean; expiresAt: number }
+>();
+const guildTenantCache = new Map<
+  string,
+  { tenantId: string | null; expiresAt: number }
+>();
+
+/** Purge les caches d'existence. Usage strictement test. */
+export function __resetTenantLookupCachesForTests(): void {
+  activeTenantCache.clear();
+  guildTenantCache.clear();
+}
+
+/** Le tenant existe-t-il et est-il actif ? */
+export async function isActiveTenantId(tenantId: string): Promise<boolean> {
+  if (!tenantId) return false;
+  const now = Date.now();
+  const cached = activeTenantCache.get(tenantId);
+  if (cached && cached.expiresAt > now) return cached.active;
+
+  if (!supabaseAdmin) return false;
+  const { data, error } = await supabaseAdmin
+    .from('tenants')
+    .select('id, is_active')
+    .eq('id', tenantId)
+    .maybeSingle();
+
+  // Erreur transitoire : on refuse sans cacher, pour ne pas figer un faux
+  // négatif pendant une minute.
+  if (error) {
+    logger.error('[tenant] active tenant lookup failed', error);
+    return false;
+  }
+
+  const active = !!data && (data as { is_active?: boolean }).is_active !== false;
+  activeTenantCache.set(tenantId, {
+    active,
+    expiresAt: now + TENANT_LOOKUP_TTL_MS,
+  });
+  return active;
+}
+
+/**
+ * Tenant propriétaire d'un serveur Discord, ou `null` si le guild n'est lié à
+ * aucun tenant.
+ *
+ * C'est le seul signal d'appartenance VÉRIFIABLE dont dispose le site quand
+ * une requête vient du bot mutualisé : le guild est une donnée que nous
+ * possédons (`discord_guilds`), là où un en-tête de tenant n'est qu'une
+ * affirmation du client.
+ */
+export async function getTenantIdByGuildId(
+  guildId: string
+): Promise<string | null> {
+  if (!guildId) return null;
+  const now = Date.now();
+  const cached = guildTenantCache.get(guildId);
+  if (cached && cached.expiresAt > now) return cached.tenantId;
+
+  if (!supabaseAdmin) return null;
+  const { data, error } = await supabaseAdmin
+    .from('discord_guilds')
+    .select('tenant_id')
+    .eq('guild_id', guildId)
+    .maybeSingle();
+
+  if (error) {
+    logger.error('[tenant] guild → tenant lookup failed', error);
+    return null;
+  }
+
+  const tenantId = (data as { tenant_id?: string } | null)?.tenant_id ?? null;
+  guildTenantCache.set(guildId, {
+    tenantId,
+    expiresAt: now + TENANT_LOOKUP_TTL_MS,
+  });
+  return tenantId;
+}
+
+/* -----------------------------------------------------------------------
  * Public + user-level resolvers (S5c → S7a)
  * -----------------------------------------------------------------------
  *
@@ -314,12 +404,47 @@ export function resolveTenantIdForPublicRequest(_req: RequestLike): string {
 export async function resolveTenantIdForPublicRequestAsync(
   req: RequestLike
 ): Promise<string> {
-  const url = (req as { url?: string }).url;
-  const slug = extractTenantSlugFromUrl(url);
-  if (!slug) return DEFAULT_TENANT_ID;
+  // 1) Domaine propre. C'est le signal le plus fort : sur cup-estivale.fr,
+  //    TOUT appartient à cet espace, y compris les routes d'API que le
+  //    middleware ne préfixe pas.
+  const host = (req.headers as Record<string, unknown>)?.host;
+  const byHost = await resolveTenantIdByHost(
+    Array.isArray(host) ? host[0] : (host as string | undefined)
+  );
+  if (byHost) return byHost;
 
-  const tenantId = await getTenantIdBySlug(slug);
-  return tenantId ?? DEFAULT_TENANT_ID;
+  const url = (req as { url?: string }).url;
+
+  // 2) Préfixe de chemin (`/cup-estivale/tournois`).
+  const slug = extractTenantSlugFromUrl(url);
+  if (slug) {
+    const tenantId = await getTenantIdBySlug(slug);
+    if (tenantId) return tenantId;
+  }
+
+  // 3) Paramètre `?tenant=<slug>`. Les routes d'API n'ont PAS de préfixe de
+  //    chemin — une page préfixée qui les appelle transmet donc son espace
+  //    explicitement. Sans ce relais, /cup-estivale/tournois afficherait les
+  //    tournois de la conférence dès qu'un fetch client entre en jeu.
+  const tenantParam = extractTenantQueryParam(url);
+  if (tenantParam) {
+    const tenantId = await getTenantIdBySlug(tenantParam);
+    if (tenantId) return tenantId;
+  }
+
+  return DEFAULT_TENANT_ID;
+}
+
+/** Valeur de `?tenant=` dans une URL brute, si elle ressemble à un slug. */
+function extractTenantQueryParam(url: string | undefined): string | null {
+  if (!url) return null;
+  const qIndex = url.indexOf('?');
+  if (qIndex === -1) return null;
+  const params = new URLSearchParams(url.slice(qIndex + 1));
+  const raw = params.get('tenant');
+  if (!raw) return null;
+  const slug = raw.toLowerCase();
+  return SLUG_RE.test(slug) ? slug : null;
 }
 
 /**

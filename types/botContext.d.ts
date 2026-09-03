@@ -37,6 +37,22 @@ declare module 'next' {
       plan?: TenantPlanState;
     };
     /**
+     * Identité de la CLÉ qui a authentifié l'appel, posée par `withBotRoute`
+     * sur TOUTES les routes — y compris `crossTenant`, où `botContext` reste
+     * volontairement absent.
+     *
+     * `botContext.tenantId` dit « pour quel tenant cet appel agit » ;
+     * `botKey` dit « qui appelle ». La distinction compte pour les résolveurs
+     * globaux (outbox, all-configs) : le bot MUTUALISÉ a besoin de voir tous
+     * les tenants pour router, un bot auto-hébergé ne doit voir que le sien.
+     */
+    botKey?: {
+      /** Tenant propriétaire de la clé. */
+      tenantId: string;
+      /** Clé du bot mutualisé (`tenant_secrets.is_platform_key`). */
+      isPlatformKey: boolean;
+    };
+    /**
      * Parsed + typed request body, set by `withBotRoute` when a `bodySchema`
      * is provided (non-safe methods only). Handlers read it via a cast to the
      * schema's inferred type: `const input = req.botInput as z.infer<typeof s>`.

@@ -157,6 +157,12 @@ describe('GET /api/admin/tenants/[id]/discord-config/[guildId]/channels', () => 
 
   it('refuse un caster (role < manager) → 403', async () => {
     store.staff = [makeStaffRow('caster')] as any;
+    // Caster globalement ET sur le tenant : depuis que `tenant_staff.role`
+    // élève le rôle effectif, laisser 'admin' ici décrirait un administrateur
+    // du tenant, pas un caster.
+    store.tenant_staff = [
+      { tenant_id: TENANT_A, staff_id: STAFF_1, role: 'caster', created_at: '2026-01-01' },
+    ] as any;
     invalidateStaffCache();
     const res = makeRes();
     await channelsHandler(

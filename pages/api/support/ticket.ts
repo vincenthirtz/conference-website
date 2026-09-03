@@ -15,7 +15,12 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { notifySupportTicket } from '@/utils/discord';
 import { emitBotEvent } from '@/utils/botEvents';
-import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import {
+  DEFAULT_TENANT_ID,
+  getTenantIdByGuildId,
+  isActiveTenantId,
+  resolveTenantIdForPublicRequestAsync,
+} from '@/utils/tenant';
 import { logger } from '../../../utils/logger';
 import {
   sendSupportConfirmationEmail,
@@ -85,6 +90,38 @@ function applyBotUserRateLimit(
     }
   }
   return false;
+}
+
+/**
+ * Tenant auquel rattacher un signalement.
+ *
+ * Ordre : le serveur Discord d'origine (le seul signal vérifiable en base),
+ * puis l'en-tête `x-tenant-id` s'il désigne un tenant actif, puis la
+ * résolution publique par URL. Le défaut historique ferme la marche — un
+ * ticket n'est jamais perdu.
+ */
+async function resolveTicketTenantId(
+  req: NextApiRequest,
+  isBotRequest: boolean
+): Promise<string> {
+  if (isBotRequest) {
+    const rawGuild = req.headers['x-guild-id'];
+    const guildId = Array.isArray(rawGuild) ? rawGuild[0] : rawGuild;
+    if (typeof guildId === 'string' && /^[0-9]{15,25}$/.test(guildId)) {
+      const owner = await getTenantIdByGuildId(guildId);
+      if (owner) return owner;
+    }
+
+    const rawTenant = req.headers['x-tenant-id'];
+    const headerTenant = Array.isArray(rawTenant) ? rawTenant[0] : rawTenant;
+    if (typeof headerTenant === 'string' && headerTenant.length > 0) {
+      const candidate = headerTenant.toLowerCase();
+      if (await isActiveTenantId(candidate)) return candidate;
+    }
+    return DEFAULT_TENANT_ID;
+  }
+
+  return resolveTenantIdForPublicRequestAsync(req);
 }
 
 export default async function handler(
@@ -269,6 +306,15 @@ export default async function handler(
     });
   }
 
+  // Tenant du signalement.
+  //
+  // Un ticket de support est nominatif et souvent sensible : il doit être lu
+  // par le staff de SON espace, et par personne d'autre. La route porte encore
+  // l'ancienne clé globale `BOT_API_KEY`, donc la clé ne dit rien du tenant —
+  // on le résout depuis le serveur Discord d'origine (vérifiable), puis depuis
+  // l'en-tête de tenant, et enfin depuis l'URL publique côté web.
+  const tenantId = await resolveTicketTenantId(req, isBotRequest);
+
   // Privacy: when the reporter chose anonymous, drop the Discord identity
   // before persisting, even though the bot sent it.
   const storedDiscordUserId = anon ? null : cleanDiscordUserId;
@@ -278,6 +324,7 @@ export default async function handler(
   const { data: ticket, error: insertErr } = await supabaseAdmin
     .from('support_tickets')
     .insert({
+      tenant_id: tenantId,
       tournament_id: validTournamentId,
       reporter_name: cleanName,
       reporter_email: cleanEmail,
@@ -315,7 +362,7 @@ export default async function handler(
       discord_user_id: storedDiscordUserId,
       is_anonymous: anon,
     },
-    DEFAULT_TENANT_ID
+    tenantId
   ).catch((err) =>
     logger.warn('[support/ticket] captain.support.opened emit failed', err)
   );
@@ -354,6 +401,7 @@ export default async function handler(
 
   if (!anon && cleanEmail) {
     void sendSupportConfirmationEmail({
+      tenantId,
       to: cleanEmail,
       ticketId: ticket.id,
       category: ticket.category,

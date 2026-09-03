@@ -22,6 +22,7 @@ import type {
 import type { TenantKind } from './tenantKind';
 
 import { logger } from './logger';
+import { clearTenantRoleCache } from './staffRoleCache';
 export type { StaffRole } from '@/types/admin';
 export type {
   StaffMember,
@@ -180,6 +181,10 @@ export function invalidateStaffCache(userId?: string) {
   } else {
     staffCache.clear();
   }
+  // Le rôle d'un staff a désormais deux composantes : le rôle global (ci-dessus)
+  // et le rôle porté par `tenant_staff` sur le tenant actif. Invalider l'un sans
+  // l'autre laisserait servir une autorisation périmée pendant une minute.
+  clearTenantRoleCache();
 }
 
 export async function getStaffRole(userId: string): Promise<StaffRole | null> {
@@ -366,7 +371,8 @@ export async function getStaffContextFromRequest(
 export async function requireStaffRoleFromRequest(
   req: NextApiRequest,
   res: NextApiResponse,
-  minRole: StaffRole
+  minRole: StaffRole,
+  opts?: { scope?: StaffGuardScope }
 ): Promise<AuthenticatedStaffContext> {
   const ctx = await getStaffContextFromRequest(req, res);
 
@@ -374,7 +380,7 @@ export async function requireStaffRoleFromRequest(
     throw new StaffUnauthenticatedError();
   }
 
-  if (!ctx.role || !ctx.staff || !hasAtLeastRole(ctx.role, minRole)) {
+  if (!ctx.role || !ctx.staff) {
     throw new StaffUnauthorizedError('Accès non autorisé');
   }
 
@@ -389,7 +395,7 @@ export async function requireStaffRoleFromRequest(
   //
   // Import dynamique pour eviter un cycle (`utils/adminTenants` reimporte
   // `hasAtLeastRole` depuis ce module).
-  const { resolveActiveTenant, readActiveTenantCookie } =
+  const { resolveActiveTenant, readActiveTenantCookie, readTenantStaffRole } =
     await import('./adminTenants');
   const cookieTenantId = readActiveTenantCookie(req.cookies);
   const isPoleAdmin = (ctx.staff as { is_pole_admin?: boolean }).is_pole_admin === true;
@@ -399,10 +405,40 @@ export async function requireStaffRoleFromRequest(
     { isPoleAdmin }
   );
 
+  // Rôle EFFECTIF sur le tenant actif.
+  //
+  // Deux dimensions cohabitent : `staff.role` dit ce qu'on est sur la
+  // plateforme, `tenant_staff.role` ce qu'on est CHEZ un tenant. Longtemps
+  // seule la première comptait — d'où un propriétaire de tenant issu de
+  // l'onboarding self-service (`tenant_staff.role = 'owner'`, `staff.role =
+  // 'caster'`) incapable d'administrer son propre espace.
+  //
+  // La combinaison est un MAXIMUM, jamais un remplacement : le rôle de tenant
+  // ne peut qu'élever, et uniquement sur ce tenant-là. Personne ne perd de
+  // droits acquis, et un pôle-admin (accès cross-tenant sans row
+  // `tenant_staff`) garde exactement les siens.
+  const tenantRole = isPoleAdmin
+    ? null
+    : await readTenantStaffRole(ctx.staff.id, tenantId);
+  const effectiveRole: StaffRole =
+    tenantRole && STAFF_ROLE_RANK[tenantRole] > STAFF_ROLE_RANK[ctx.role]
+      ? tenantRole
+      : ctx.role;
+
+  // Les routes de PLATEFORME (données de l'association, non scopées par
+  // tenant : adhérents, partenaires, campagnes email, journaux) se gardent sur
+  // le rôle global. Sans cette distinction, l'élévation ci-dessus ouvrirait à
+  // un propriétaire de tenant tiers des données qui ne sont pas les siennes.
+  const gatedRole = opts?.scope === 'platform' ? ctx.role : effectiveRole;
+  if (!hasAtLeastRole(gatedRole, minRole)) {
+    throw new StaffUnauthorizedError('Accès non autorisé');
+  }
+
   return {
     user: ctx.user,
     staff: ctx.staff,
-    role: ctx.role,
+    role: effectiveRole,
+    globalRole: ctx.role,
     tenantId,
     currentTenantSource: source,
   };
@@ -423,17 +459,22 @@ export async function requireStaffRoleFromRequest(
 export async function requireStaffPermissionFromRequest(
   req: NextApiRequest,
   res: NextApiResponse,
-  permission: StaffPermission
+  permission: StaffPermission,
+  opts?: { scope?: StaffGuardScope }
 ): Promise<AuthenticatedStaffContext> {
   // `helper` est le rôle le plus bas : cette première passe ne fait donc que
   // « est-ce un membre du staff authentifié ? » et résout le tenant actif.
-  const ctx = await requireStaffRoleFromRequest(req, res, 'helper');
+  const ctx = await requireStaffRoleFromRequest(req, res, 'helper', opts);
 
   // Deux sources : le rôle, et les permissions accordées à l'unité sur la
   // fiche staff. La seconde est ce qui permet de confier une tâche précise sans
   // donner un rôle entier — « le Drive de l'asso à la trésorière » sans faire
   // d'elle une administratrice du site.
-  if (!hasStaffPermission(ctx.role, ctx.staff.extra_permissions, permission)) {
+  const permissionRole =
+    opts?.scope === 'platform' ? ctx.globalRole : ctx.role;
+  if (
+    !hasStaffPermission(permissionRole, ctx.staff.extra_permissions, permission)
+  ) {
     throw new StaffUnauthorizedError(
       `Ce compte ne couvre pas la permission « ${permission} ».`
     );
@@ -495,7 +536,47 @@ export function csrfCheck(req: NextApiRequest): boolean {
  * un big bang, et la forme par rôle reste correcte pour tout ce qui est
  * réellement « le back-office entier ».
  */
-export type StaffGuard = StaffRole | { permission: StaffPermission };
+/**
+ * Portée d'une garde.
+ *
+ * - `tenant` (défaut) : la garde s'applique au rôle EFFECTIF sur le tenant
+ *   actif — rôle global élevé, le cas échéant, par `tenant_staff.role`.
+ * - `platform` : la garde s'applique au rôle GLOBAL. À réserver aux routes
+ *   qui manipulent des données de l'association, non scopées par tenant
+ *   (adhérents, partenaires, campagnes email, journaux d'envoi, recherche
+ *   d'utilisateurs). Sans cette portée, un propriétaire de tenant tiers y
+ *   accéderait par l'élévation de rôle.
+ */
+export type StaffGuardScope = 'tenant' | 'platform';
+
+export type StaffGuard =
+  | StaffRole
+  | { permission: StaffPermission; scope?: StaffGuardScope }
+  | { role: StaffRole; scope: StaffGuardScope };
+
+/**
+ * Applique une garde (rôle, permission, avec ou sans portée) et renvoie le
+ * contexte staff. Point unique de traduction `StaffGuard` → vérification,
+ * partagé par `withStaffRoute` et `withStaffPage` pour qu'une garde se lise
+ * exactement pareil côté API et côté page.
+ */
+async function resolveGuard(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  guard: StaffGuard
+): Promise<AuthenticatedStaffContext> {
+  if (typeof guard === 'string') {
+    return requireStaffRoleFromRequest(req, res, guard);
+  }
+  if ('permission' in guard) {
+    return requireStaffPermissionFromRequest(req, res, guard.permission, {
+      scope: guard.scope,
+    });
+  }
+  return requireStaffRoleFromRequest(req, res, guard.role, {
+    scope: guard.scope,
+  });
+}
 
 export function withStaffRoute(
   handler: (
@@ -511,10 +592,7 @@ export function withStaffRoute(
         res.status(403).json({ error: 'Forbidden: origin mismatch' });
         return;
       }
-      const ctx =
-        typeof guard === 'string'
-          ? await requireStaffRoleFromRequest(req, res, guard)
-          : await requireStaffPermissionFromRequest(req, res, guard.permission);
+      const ctx = await resolveGuard(req, res, guard);
       await handler(req, res, ctx);
     } catch (err: unknown) {
       if (
@@ -639,14 +717,7 @@ export function withStaffPage<
     const { req, res } = ctx;
 
     try {
-      const staffCtx =
-        typeof guard === 'string'
-          ? await requireStaffRoleFromRequest(req as any, res as any, guard)
-          : await requireStaffPermissionFromRequest(
-              req as any,
-              res as any,
-              guard.permission
-            );
+      const staffCtx = await resolveGuard(req as any, res as any, guard);
 
       // Nature du tenant actif (organizer/developer) : sert à filtrer la nav
       // admin et les cartes du dashboard côté SSR. Fail-safe 'organizer' en cas

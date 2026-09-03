@@ -127,6 +127,51 @@ describe('runPlanRenewal — lifecycle', () => {
     expect(store.tenants[0].plan_last_reminder_at).toBe(iso(NOW));
   });
 
+  it('un essai expiré retombe sur discovery, pas sur past_due', async () => {
+    // Un essai n'a jamais rien dû : le marquer « past_due » afficherait un
+    // impayé fictif. Il redescend donc proprement sur le palier gratuit.
+    store.tenants = [
+      {
+        id: TENANT,
+        plan: 'regie',
+        plan_status: 'active',
+        plan_is_trial: true,
+        plan_expires_at: iso(NOW - DAY),
+        plan_last_reminder_at: null,
+      },
+    ] as any;
+
+    const c = await runPlanRenewal(NOW);
+
+    expect(c.trialsEnded).toBe(1);
+    expect(c.markedPastDue).toBe(0);
+    expect(store.tenants[0].plan).toBe('discovery');
+    expect(store.tenants[0].plan_status).toBe('active');
+    expect(store.tenants[0].plan_is_trial).toBe(false);
+    expect(store.tenants[0].plan_expires_at).toBeNull();
+  });
+
+  it('la relance d’un essai parle de fin d’essai (isTrial passé à l’email)', async () => {
+    store.tenants = [
+      {
+        id: TENANT,
+        plan: 'regie',
+        plan_status: 'active',
+        plan_is_trial: true,
+        plan_expires_at: iso(NOW + 10 * DAY),
+        plan_last_reminder_at: null,
+      },
+    ] as any;
+    seedOwner(TENANT, 'owner@example.test');
+
+    const c = await runPlanRenewal(NOW);
+
+    expect(c.remindersSent).toBe(1);
+    expect(sendPlanRenewalReminderEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ isTrial: true })
+    );
+  });
+
   it('does not re-send when already reminded this cycle', async () => {
     store.tenants = [
       {

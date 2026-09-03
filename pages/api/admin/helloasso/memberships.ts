@@ -70,4 +70,8 @@ async function handler(
   }
 }
 
-export default withStaffRoute(handler, { permission: 'manage_billing' });
+export default withStaffRoute(handler, {
+  permission: 'manage_billing',
+  // Donnée d'association, pas de tenant : garde sur le rôle global.
+  scope: 'platform',
+});

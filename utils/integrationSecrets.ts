@@ -42,6 +42,15 @@ export const INTEGRATION_SECRET_KEYS = [
   // base, ce sont deux endroits à garder en phase pour rien.
   'bluesky_handle',
   'bluesky_app_password',
+  // Compte d'envoi d'emails DU TENANT. Chaque espace expédie depuis le sien :
+  // sa réputation d'expéditeur, son quota, ses statistiques — et surtout, ses
+  // joueuses reçoivent des emails de leur organisation, pas de la nôtre.
+  // L'adresse d'expédition n'est pas secrète, mais elle vit ici pour que la
+  // configuration d'envoi soit d'un seul tenant (même raison que le handle
+  // Bluesky au-dessus).
+  'brevo_api_key',
+  'brevo_from_email',
+  'brevo_from_name',
 ] as const;
 
 export type IntegrationSecretKey = (typeof INTEGRATION_SECRET_KEYS)[number];

@@ -34,9 +34,48 @@ bot onto their own server.
    → the column `pending_secrets_reveal` is wiped + `secrets_revealed_at`
    stamped via an atomic UPDATE.
 
-5. **Status** = `completed`. The operator copies the secrets into their
-   docker-box bot service env and restarts the bot, which now authenticates
-   via the per-tenant key (see `tenant_secrets.bot_api_key_hash`).
+5. **Status** = `completed`. Le tenant est créé avec un **essai de 30 jours**
+   en plan `regie` (`plan_is_trial = true`) : sans lui, le tenant naîtrait en
+   `discovery`, plan qui n'inclut pas le bot, et le gate baseline de
+   `withBotRoute` répondrait 403 sur toutes les routes tenant-scopées — un bot
+   installé mais muet. À l'échéance, le cron `plan-renewal` le repose sur
+   `discovery` (cf. `utils/billing/planFeatures.ts`).
+
+## Quel bot sert le nouveau serveur ?
+
+Le bot invité est **le nôtre** : l'URL d'invitation est construite avec notre
+`DISCORD_CLIENT_ID`. Ce process mutualisé ne porte qu'une `BOT_API_KEY`, et le
+site résout le tenant depuis la clé — sans précaution, une commande lancée
+depuis le serveur du nouveau tenant écrirait donc chez le propriétaire de la
+clé.
+
+D'où la **clé plateforme** (`tenant_secrets.is_platform_key`, opt-in, fausse par
+défaut) : une clé ainsi marquée peut agir pour un autre tenant, et c'est le
+serveur d'origine — `x-guild-id`, vérifié contre `discord_guilds` — qui
+détermine lequel. Le bot envoie ce header sur tous ses appels tenant-scopés
+(guild ambiant, cf. `services/discord-bot/request-context.js`).
+
+Les secrets révélés à l'étape 4 restent utiles pour qui veut **auto-héberger**
+son bot : une clé ordinaire est strictement scopée à son tenant, ne peut pas
+en changer, et ne voit que ses propres serveurs et events sur les résolveurs
+globaux (`/tenants/all-configs`, `/events/pending`, `/cast/upcoming`).
+
+## Envoi d'emails : le tenant apporte son compte
+
+Un espace **n'emprunte jamais notre compte Brevo**. Tant qu'il n'a pas
+enregistré le sien (`PUT /api/admin/email/credentials` → `integration_secrets`
+`brevo_api_key` / `brevo_from_email` / `brevo_from_name`), `sendEmail` refuse
+proprement avec `email_not_configured` et journalise ; le reste de la
+plateforme (bot, site, Discord) fonctionne normalement.
+
+La raison n'est pas seulement technique : un email transactionnel part d'un
+domaine, consomme un quota et construit une réputation d'expéditeur. Les
+plaintes pour spam d'un tiers retomberaient sur notre domaine.
+
+La **marque** des emails suit le tenant (nom, site, logo — cf.
+`utils/emailBrand.ts`) : le gabarit émet des jetons `{{BRAND_*}}` que
+`sendEmail` remplace. Sans `tenantId`, le rendu est identique à l'octet près à
+l'historique.
 
 ## Storage notes
 
@@ -61,7 +100,7 @@ bot onto their own server.
 | `DISCORD_CLIENT_ID`                 | server-side | yes        | `utils/onboard.ts::buildBotInviteUrl` | Discord application client id. Without it, `/api/onboard/status/[id]` returns `botInviteUrl: null` (the UI must surface this). |
 | `DISCORD_BOT_PERMISSIONS`           | server-side | no         | `utils/onboard.ts::buildBotInviteUrl` | Bitfield string. Defaults to `1099780063312` — keep an eye on parity with `services/discord-bot/permissions.js`.               |
 | `SITE_URL` / `NEXT_PUBLIC_SITE_URL` | both        | yes        | `utils/onboard.ts::getSiteUrl`        | Used to build verify/reveal/redirect URLs in emails and redirects.                                                             |
-| `BREVO_API_KEY`                     | server-side | yes        | `utils/email.ts`                      | Existing — same Brevo account used elsewhere.                                                                                  |
+| `BREVO_API_KEY`                     | server-side | yes        | `utils/email.ts`                      | Compte de la PLATEFORME uniquement. Un tenant enregistre le sien (cf. « Envoi d'emails »).                                                                                  |
 | `EMAIL_FROM` / `EMAIL_FROM_NAME`    | server-side | yes        | `utils/email.ts`                      | Existing.                                                                                                                      |
 
 All variables above must be set on Netlify (Site settings → Environment

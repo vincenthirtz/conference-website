@@ -297,7 +297,12 @@ async function handler(
       const memberEmail =
         typeof email === 'string' ? email.trim().toLowerCase() : null;
       if (memberEmail) {
-        sendTeamJoinEmail(memberEmail, team.name, memberPayload.role).catch(
+        sendTeamJoinEmail(
+          memberEmail,
+          team.name,
+          memberPayload.role,
+          ctx.tenantId
+        ).catch(
           (err) => {
             logger.error('[members POST] team join email error:', err);
           }
@@ -311,7 +316,8 @@ async function handler(
               sendTeamJoinEmail(
                 data.user.email,
                 team.name,
-                memberPayload.role
+                memberPayload.role,
+                ctx.tenantId
               ).catch((err) => {
                 logger.error('[members POST] team join email error:', err);
               });

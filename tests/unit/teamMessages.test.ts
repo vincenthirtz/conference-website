@@ -446,6 +446,9 @@ describe('cron team-roster-reminders', () => {
     resetSupabaseMock();
     emitBotEvent.mockClear();
     process.env.CRON_SECRET = 'test-secret';
+    // Le cron parcourt désormais les tenants actifs : sans cette ligne, il
+    // n'aurait aucun espace à visiter.
+    store.tenants = [{ id: TENANT, slug: 'conf', is_active: true }];
     seedTournament();
     store.tournament_teams = [{ tournament_id: TOURNAMENT, team_id: 'team-a' }];
     store.teams = [
@@ -510,9 +513,11 @@ describe('cron team-roster-reminders', () => {
       } as never,
       res
     );
+    // Réponse agrégée : un résultat par tenant visité.
     const payload = (res as unknown as { payload: Record<string, unknown> })
       .payload;
-    expect(payload.skipped).toBe('not_a_milestone');
+    const first = (payload.results as Record<string, unknown>[])[0];
+    expect(first.skipped).toBe('not_a_milestone');
     expect(emitBotEvent).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
@@ -530,7 +535,9 @@ describe('cron team-roster-reminders', () => {
     );
     const payload = (res as unknown as { payload: Record<string, unknown> })
       .payload;
-    expect(payload.daysRemaining).toBe(7);
+    const first = (payload.results as Record<string, unknown>[])[0];
+    expect(first.daysRemaining).toBe(7);
+    expect(first.tenantId).toBe(TENANT);
     expect(payload.sent).toBe(1);
     expect(emitBotEvent).toHaveBeenCalledTimes(1);
     vi.useRealTimers();

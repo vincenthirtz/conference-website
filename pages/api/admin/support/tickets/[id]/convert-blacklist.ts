@@ -137,6 +137,7 @@ async function handler(
   const { data: ticket, error: ticketError } = await admin
     .from('support_tickets')
     .select('id, converted_player_blacklist_id, converted_entity_blacklist_id')
+    .eq('tenant_id', ctx.tenantId)
     .eq('id', ticketId)
     .maybeSingle();
 
@@ -246,6 +247,7 @@ async function handler(
       [convertedColumn]: entry.id,
       updated_at: new Date().toISOString(),
     })
+    .eq('tenant_id', ctx.tenantId)
     .eq('id', ticketId);
   if (updateError) {
     logger.error(

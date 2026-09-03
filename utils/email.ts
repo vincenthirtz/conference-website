@@ -1,10 +1,25 @@
 import { logger } from './logger';
 import { sanitizeEmailHtml } from './emailHtmlSanitizer';
+import { getIntegrationSecret } from './integrationSecrets';
+import {
+  applyBrand,
+  resolveEmailBrand,
+  BRAND_TOKENS,
+  DEFAULT_EMAIL_BRAND,
+} from './emailBrand';
+import { DEFAULT_TENANT_ID } from './tenant';
 // utils/email.ts
 // Lightweight email utility using Brevo (ex-Sendinblue) transactional API.
 // Free tier: 300 emails/day — https://brevo.com
 //
-// Required env vars:
+// Compte d'envoi : celui du TENANT quand `tenantId` est fourni et que l'espace
+// a renseigné ses identifiants Brevo (`integration_secrets`), sinon celui de
+// la plateforme (variables d'environnement ci-dessous). Un espace tiers
+// n'emprunte JAMAIS notre compte : sans identifiants, l'envoi est refusé
+// proprement (`email_not_configured`) plutôt que facturé sur notre quota et
+// signé de notre domaine. Cf. `resolveEmailSender`.
+//
+// Variables d'environnement (compte plateforme) :
 //   BREVO_API_KEY    – API key from app.brevo.com > SMTP & API > API Keys
 //   EMAIL_FROM       – Sender address (e.g. "noreply@yourdomain.com")
 //   EMAIL_FROM_NAME  – Sender display name (e.g. "Tournoi") — optional
@@ -23,6 +38,12 @@ type SendEmailOptions = {
    * le POST one-click. Sans effet quand absente (emails transactionnels).
    */
   listUnsubscribeUrl?: string;
+  /**
+   * Espace au nom duquel l'email part. Détermine DEUX choses : le compte
+   * d'envoi (identifiants Brevo du tenant) et la marque appliquée au gabarit
+   * (nom, site, logo). Absent → plateforme, rendu identique à l'historique.
+   */
+  tenantId?: string | null;
 };
 
 export type SendEmailResult = {
@@ -36,17 +57,59 @@ export type SendEmailResult = {
  * Fails silently (logs error, returns { success: false }) so it never blocks
  * the main flow (user creation, team join, etc.).
  */
+type EmailSender = { apiKey: string; fromEmail: string; fromName: string };
+
+/**
+ * Compte d'envoi à utiliser.
+ *
+ * Plateforme (pas de tenant, ou tenant historique) → variables
+ * d'environnement. Autre tenant → SES identifiants Brevo. Pas de repli sur les
+ * nôtres : un espace qui n'a pas configuré son compte n'envoie pas, il
+ * n'emprunte pas notre domaine ni notre quota quotidien.
+ */
+async function resolveEmailSender(
+  tenantId?: string | null
+): Promise<EmailSender | { error: string }> {
+  if (!tenantId || tenantId === DEFAULT_TENANT_ID) {
+    const apiKey = process.env.BREVO_API_KEY;
+    if (!apiKey) {
+      logger.warn('[email] BREVO_API_KEY not set — skipping email');
+      return { error: 'BREVO_API_KEY not configured' };
+    }
+    return {
+      apiKey,
+      fromEmail: process.env.EMAIL_FROM || 'noreply@example.com',
+      fromName: process.env.EMAIL_FROM_NAME || 'Tournoi',
+    };
+  }
+
+  const apiKey = await getIntegrationSecret(tenantId, 'brevo_api_key');
+  const fromEmail = await getIntegrationSecret(tenantId, 'brevo_from_email');
+  if (!apiKey || !fromEmail) {
+    logger.warn(
+      '[email] tenant sans identifiants Brevo — envoi ignoré (pas de repli sur le compte plateforme)',
+      { tenantId }
+    );
+    return { error: 'email_not_configured' };
+  }
+  const fromName = await getIntegrationSecret(tenantId, 'brevo_from_name');
+  return { apiKey, fromEmail, fromName: fromName || fromEmail };
+}
+
 export async function sendEmail(
   opts: SendEmailOptions
 ): Promise<SendEmailResult> {
-  const apiKey = process.env.BREVO_API_KEY;
-  const fromEmail = process.env.EMAIL_FROM || 'noreply@example.com';
-  const fromName = process.env.EMAIL_FROM_NAME || 'Tournoi';
-
-  if (!apiKey) {
-    logger.warn('[email] BREVO_API_KEY not set — skipping email');
-    return { success: false, error: 'BREVO_API_KEY not configured' };
+  const sender = await resolveEmailSender(opts.tenantId);
+  if ('error' in sender) {
+    return { success: false, error: sender.error };
   }
+  const { apiKey, fromEmail, fromName } = sender;
+
+  // Marque : jetons du gabarit + valeurs par défaut littérales remplacés ici,
+  // pour que les 25 gabarits n'aient pas à connaître le tenant.
+  const brand = await resolveEmailBrand(opts.tenantId);
+  const subject = applyBrand(opts.subject, brand);
+  const html = applyBrand(opts.html, brand);
 
   // Brevo transporte les en-têtes SMTP custom via le champ `headers` du payload
   // JSON. Pour le one-click RFC 8058, il faut List-Unsubscribe (l'URL entre
@@ -72,8 +135,8 @@ export async function sendEmail(
       body: JSON.stringify({
         sender: { name: fromName, email: fromEmail },
         to: [{ email: opts.to }],
-        subject: opts.subject,
-        htmlContent: opts.html,
+        subject,
+        htmlContent: html,
         ...(opts.tags?.length ? { tags: opts.tags } : {}),
         ...(customHeaders ? { headers: customHeaders } : {}),
       }),
@@ -93,7 +156,7 @@ export async function sendEmail(
     logger.info(
       '[email] sent to=%s subject=%s messageId=%s',
       opts.to,
-      opts.subject,
+      subject,
       data?.messageId
     );
     return { success: true, id: data?.messageId };
@@ -108,8 +171,12 @@ export async function sendEmail(
 
 // ─── Email layout ─────────────────────────────────────────────
 
-const SITE_URL = 'https://owwomenscup.fr';
-const LOGO_URL = `${SITE_URL}/img/logos/2026-logo.png`;
+// Le gabarit n'écrit PAS la marque en dur : il émet des jetons que
+// `sendEmail` remplace selon le tenant (cf. utils/emailBrand.ts). Sans tenant,
+// la substitution rend exactement les valeurs historiques.
+const SITE_URL = BRAND_TOKENS.siteUrl;
+const LOGO_URL = BRAND_TOKENS.logoUrl;
+const BRAND_NAME = BRAND_TOKENS.name;
 const DISCORD_URL = 'https://discord.gg/gERSsjC3Vd';
 
 function emailLayout(body: string): string {
@@ -123,7 +190,7 @@ function emailLayout(body: string): string {
         <!-- Logo -->
         <tr><td align="center" style="padding:0 0 24px;">
           <a href="${SITE_URL}" target="_blank">
-            <img src="${LOGO_URL}" alt="OW Women's Cup" width="180" style="display:block;border:0;height:auto;" />
+            <img src="${LOGO_URL}" alt="${BRAND_NAME}" width="180" style="display:block;border:0;height:auto;" />
           </a>
         </td></tr>
         <!-- Card -->
@@ -134,11 +201,11 @@ function emailLayout(body: string): string {
         <tr><td align="center" style="padding:24px 0 0;">
           <table role="presentation" cellpadding="0" cellspacing="0"><tr>
             <td style="padding:0 8px;"><a href="${SITE_URL}" style="color:#9081B0;font-size:12px;text-decoration:none;">Site web</a></td>
-            <td style="color:#453763;font-size:12px;">|</td>
-            <td style="padding:0 8px;"><a href="${DISCORD_URL}" style="color:#9081B0;font-size:12px;text-decoration:none;">Discord</a></td>
+            <!--BRAND_PLATFORM_ONLY--><td style="color:#453763;font-size:12px;">|</td>
+            <td style="padding:0 8px;"><a href="${DISCORD_URL}" style="color:#9081B0;font-size:12px;text-decoration:none;">Discord</a></td><!--/BRAND_PLATFORM_ONLY-->
           </tr></table>
           <p style="margin:12px 0 0;font-size:11px;color:#675788;line-height:1.4;">
-            OW Women's Cup &mdash; Cet email a &eacute;t&eacute; envoy&eacute; automatiquement.
+            ${BRAND_NAME} &mdash; Cet email a &eacute;t&eacute; envoy&eacute; automatiquement.
           </p>
         </td></tr>
       </table>
@@ -207,9 +274,12 @@ export function sendWelcomeEmail(
 export function sendTeamJoinEmail(
   to: string,
   teamName: string,
-  role: string
+  role: string,
+  /** Espace au nom duquel l'email part (compte d'envoi + marque). */
+  tenantId?: string | null
 ): Promise<SendEmailResult> {
   return sendEmail({
+    tenantId,
     to,
     subject: `Vous avez rejoint l'équipe ${teamName}`,
     tags: ['team-join'],
@@ -463,8 +533,11 @@ export function sendCampaignEmail(opts: {
   tags?: string[];
   /** Lien de désinscription broadcast (footer + header List-Unsubscribe). */
   unsubscribeUrl?: string;
+  /** Espace au nom duquel l'email part (compte d'envoi + marque). */
+  tenantId?: string | null;
 }): Promise<SendEmailResult> {
   return sendEmail({
+    tenantId: opts.tenantId,
     to: opts.to,
     subject: opts.subject,
     tags: opts.tags ?? ['campaign'],
@@ -484,7 +557,9 @@ export function sendTournamentNotificationEmail(
   to: string,
   tournamentName: string,
   startDate: string | null,
-  tournamentSlug: string | null
+  tournamentSlug: string | null,
+  /** Espace au nom duquel l'email part (compte d'envoi + marque). */
+  tenantId?: string | null
 ): Promise<SendEmailResult> {
   const dateStr = startDate
     ? new Date(startDate).toLocaleDateString('fr-FR', {
@@ -500,6 +575,7 @@ export function sendTournamentNotificationEmail(
     : `${SITE_URL}/tournaments`;
 
   return sendEmail({
+    tenantId,
     to,
     subject: `Tournoi ouvert : ${tournamentName}`,
     tags: ['tournament-notification'],
@@ -530,6 +606,8 @@ export function sendMatchCheckinEmail(opts: {
   scheduledAt: string;
   checkinUrl: string;
   tournamentName: string;
+  /** Espace au nom duquel l'email part (compte d'envoi + marque). */
+  tenantId?: string | null;
 }): Promise<SendEmailResult> {
   const dateStr = (() => {
     try {
@@ -547,6 +625,7 @@ export function sendMatchCheckinEmail(opts: {
   })();
 
   return sendEmail({
+    tenantId: opts.tenantId,
     to: opts.to,
     subject: `Check-in : ${opts.teamName} vs ${opts.opponentName}`,
     tags: ['match-checkin'],
@@ -612,6 +691,8 @@ export function sendScrimRequestEmail(opts: {
   isExternal?: boolean;
   ctaUrl: string;
   kind: 'request' | 'scheduled';
+  /** Espace au nom duquel l'email part (compte d'envoi + marque). */
+  tenantId?: string | null;
 }): Promise<SendEmailResult> {
   const isRequest = opts.kind === 'request';
 
@@ -672,6 +753,7 @@ export function sendScrimRequestEmail(opts: {
       : '';
 
   return sendEmail({
+    tenantId: opts.tenantId,
     to: opts.to,
     subject,
     tags: ['scrim-request'],
@@ -701,6 +783,8 @@ export function sendCheckinReminderEmail(opts: {
   checkinUrl: string;
   tournamentName: string;
   minutesBeforeKickoff: number;
+  /** Espace au nom duquel l'email part (compte d'envoi + marque). */
+  tenantId?: string | null;
 }): Promise<SendEmailResult> {
   const dateStr = (() => {
     try {
@@ -720,6 +804,7 @@ export function sendCheckinReminderEmail(opts: {
   const mins = opts.minutesBeforeKickoff;
 
   return sendEmail({
+    tenantId: opts.tenantId,
     to: opts.to,
     subject: `⏰ Check-in dans ${mins} min — ${opts.teamName} vs ${opts.opponentName}`,
     tags: ['match-checkin-reminder'],
@@ -775,6 +860,8 @@ export function sendCheckinForfeitEmail(opts: {
   scheduledAt: string;
   tournamentName: string;
   graceMinutes: number;
+  /** Espace au nom duquel l'email part (compte d'envoi + marque). */
+  tenantId?: string | null;
 }): Promise<SendEmailResult> {
   const dateStr = (() => {
     try {
@@ -794,6 +881,7 @@ export function sendCheckinForfeitEmail(opts: {
   const reason = `aucun check-in après ${opts.graceMinutes} min`;
 
   return sendEmail({
+    tenantId: opts.tenantId,
     to: opts.to,
     subject: `Forfait automatique — ${opts.teamName} vs ${opts.opponentName}`,
     tags: ['match-checkin-forfeit'],
@@ -848,6 +936,8 @@ export function sendSupportConfirmationEmail(opts: {
   category: 'dispute' | 'behavior' | 'technical' | 'other';
   severity: 'low' | 'medium' | 'high';
   subject: string | null;
+  /** Espace au nom duquel l'email part (compte d'envoi + marque). */
+  tenantId?: string | null;
 }): Promise<SendEmailResult> {
   const categoryLabel: Record<typeof opts.category, string> = {
     dispute: 'Litige / Contestation',
@@ -862,6 +952,7 @@ export function sendSupportConfirmationEmail(opts: {
   };
 
   return sendEmail({
+    tenantId: opts.tenantId,
     to: opts.to,
     subject: "Signalement reçu — OW Women's Cup",
     tags: ['support-confirmation'],
@@ -913,6 +1004,13 @@ export function sendPlanRenewalReminderEmail(opts: {
   expiresAt: string;
   priceEur: number;
   billingUrl: string;
+  /**
+   * Le plan courant est un essai gratuit (onboarding self-service), jamais
+   * payé. On ne parle alors pas de « renouvellement » — il n'y a rien à
+   * renouveler : l'essai se termine, et c'est le premier paiement qui prend
+   * le relais.
+   */
+  isTrial?: boolean;
 }): Promise<SendEmailResult> {
   const dateStr = (() => {
     try {
@@ -927,18 +1025,33 @@ export function sendPlanRenewalReminderEmail(opts: {
     }
   })();
 
+  const isTrial = opts.isTrial === true;
+
   return sendEmail({
     to: opts.to,
-    subject: `Renouvellement de votre abonnement ${opts.planLabel} — OW Women's Cup`,
+    subject: isTrial
+      ? `Votre essai ${opts.planLabel} se termine bientôt — OW Women's Cup`
+      : `Renouvellement de votre abonnement ${opts.planLabel} — OW Women's Cup`,
     tags: ['plan-renewal-reminder'],
     html: emailLayout(`
       ${gradientBar()}
-      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Votre abonnement arrive à échéance</h1>
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">${
+        isTrial
+          ? 'Votre essai se termine bientôt'
+          : 'Votre abonnement arrive à échéance'
+      }</h1>
       <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
-        Votre plan <strong style="color:#ffffff;">${escapeHtml(opts.planLabel)}</strong>
+        ${
+          isTrial
+            ? `Votre essai gratuit du plan <strong style="color:#ffffff;">${escapeHtml(opts.planLabel)}</strong>
+        se termine le <strong style="color:#7bc96a;">${escapeHtml(dateStr)}</strong>.
+        Pour garder votre bot Discord et vos fonctionnalités actives, souscrivez
+        avant cette date.`
+            : `Votre plan <strong style="color:#ffffff;">${escapeHtml(opts.planLabel)}</strong>
         expire le <strong style="color:#7bc96a;">${escapeHtml(dateStr)}</strong>.
         Pour conserver vos fonctionnalités sans interruption, pensez à le renouveler
-        avant cette date.
+        avant cette date.`
+        }
       </p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
         <tr>
@@ -949,7 +1062,7 @@ export function sendPlanRenewalReminderEmail(opts: {
         </tr>
         <tr>
           <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
-            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Échéance</span><br/>
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">${isTrial ? "Fin d'essai" : 'Échéance'}</span><br/>
             <span style="font-size:15px;color:#7bc96a;font-weight:500;">${escapeHtml(dateStr)}</span>
           </td>
         </tr>
@@ -961,10 +1074,13 @@ export function sendPlanRenewalReminderEmail(opts: {
         </tr>
       </table>
       <p style="margin:0 0 8px;font-size:13px;color:#f59e0b;line-height:1.5;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.15);border-radius:8px;padding:10px 14px;">
-        Sans renouvellement, votre tenant repassera automatiquement sur le palier
-        gratuit (Découverte) à l&apos;expiration.
+        ${
+          isTrial
+            ? 'Sans souscription, votre espace repassera automatiquement sur le palier gratuit (Découverte) à la fin de l&apos;essai — le bot Discord cessera alors de répondre.'
+            : 'Sans renouvellement, votre tenant repassera automatiquement sur le palier gratuit (Découverte) à l&apos;expiration.'
+        }
       </p>
-      ${ctaButton(opts.billingUrl, 'Renouveler mon abonnement')}
+      ${ctaButton(opts.billingUrl, isTrial ? 'Souscrire au plan' : 'Renouveler mon abonnement')}
       <p style="margin:24px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
         Lien direct&nbsp;: <a href="${opts.billingUrl}" style="color:#9081B0;word-break:break-all;">${escapeHtml(opts.billingUrl)}</a>
       </p>
@@ -1075,8 +1191,11 @@ export function sendFreePlayerPublishedEmail(opts: {
   to: string;
   displayName: string;
   removeUrl: string;
+  /** Espace au nom duquel l'email part (compte d'envoi + marque). */
+  tenantId?: string | null;
 }): Promise<SendEmailResult> {
   return sendEmail({
+    tenantId: opts.tenantId,
     to: opts.to,
     subject: FREE_PLAYER_PUBLISHED_SUBJECT,
     tags: ['free-player-published'],
@@ -1288,8 +1407,11 @@ export function sendTeamAccessEmail(opts: {
   to: string;
   teamName: string;
   actionLink: string;
+  /** Espace au nom duquel l'email part (compte d'envoi + marque). */
+  tenantId?: string | null;
 }): Promise<SendEmailResult> {
   return sendEmail({
+    tenantId: opts.tenantId,
     to: opts.to,
     subject: `Accédez à votre espace équipe ${opts.teamName} — OW Women's Cup`,
     tags: ['team-access'],
@@ -1335,12 +1457,15 @@ export function sendTeamInviteLinkEmail(opts: {
   role: string;
   asCaptain?: boolean;
   inviteUrl: string;
+  /** Espace au nom duquel l'email part (compte d'envoi + marque). */
+  tenantId?: string | null;
 }): Promise<SendEmailResult> {
   const roleLabel = opts.asCaptain
     ? 'capitaine'
     : TEAM_ROLE_EMAIL_LABELS[opts.role] || 'membre';
 
   return sendEmail({
+    tenantId: opts.tenantId,
     to: opts.to,
     subject: `Invitation à rejoindre ${opts.teamName} en tant que ${roleLabel} — OW Women's Cup`,
     tags: ['team-invite-link'],
@@ -1441,6 +1566,8 @@ export function sendDigestEmail(opts: {
   to: string;
   items: Array<{ heading: string; body: string; url: string }>;
   unsubscribeUrl: string;
+  /** Espace au nom duquel l'email part (compte d'envoi + marque). */
+  tenantId?: string | null;
 }): Promise<SendEmailResult> {
   const count = opts.items.length;
   const subject =
@@ -1471,6 +1598,7 @@ export function sendDigestEmail(opts: {
     .join('');
 
   return sendEmail({
+    tenantId: opts.tenantId,
     to: opts.to,
     subject,
     tags: ['digest'],

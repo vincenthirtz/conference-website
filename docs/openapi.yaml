@@ -19283,6 +19283,103 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '503':
           description: SECRETS_ENC_KEY absente — chiffrement impossible.
+  /api/admin/email/credentials:
+    get:
+      summary: Etat du compte d'envoi d'emails de l'espace (sans jamais rendre la cle).
+      operationId: adminEmailCredentialsState
+      tags:
+        - admin/communications
+      security:
+        - StaffSession: []
+      description: |
+        Dit si l'espace peut envoyer des emails, et depuis quelle adresse. La
+        cle API Brevo n'est jamais renvoyee.
+
+        L'espace historique (tenant par defaut) envoie via le compte de la
+        plateforme : la reponse porte alors `usesPlatformAccount: true` et il
+        n'y a rien a configurer.
+      responses:
+        '200':
+          description: '`{ usesPlatformAccount, configured, fromEmail, fromName, encryptionReady }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      summary: Enregistre la cle API Brevo et l'adresse d'expedition de l'espace.
+      operationId: adminEmailSetCredentials
+      tags:
+        - admin/communications
+      security:
+        - StaffSession: []
+      description: |
+        Chaque espace apporte SON compte d'envoi. Un email transactionnel part
+        d'un domaine, consomme un quota et construit une reputation
+        d'expediteur : faire transiter les emails d'un autre tournoi par le
+        compte de la plateforme reviendrait a signer de notre nom des messages
+        que nous n'ecrivons pas. Sans compte configure, l'espace n'envoie pas
+        d'email (`email_not_configured`), et le reste fonctionne.
+
+        La cle est VERIFIEE aupres de Brevo avant enregistrement, et l'adresse
+        doit etre un expediteur verifie du compte — sinon l'erreur ne se
+        manifesterait qu'au premier envoi reel.
+
+        Chiffrement cote serveur (SECRETS_ENC_KEY), stockage dans
+        integration_secrets.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [apiKey, fromEmail]
+              properties:
+                apiKey:
+                  type: string
+                fromEmail:
+                  type: string
+                  format: email
+                fromName:
+                  type: string
+                  maxLength: 70
+      responses:
+        '200':
+          description: '`{ configured: true, fromEmail, fromName }`.'
+        '400':
+          description: >-
+            Cle refusee par Brevo, adresse invalide, expediteur non verifie
+            (`SENDER_NOT_VERIFIED`), ou espace sur le compte plateforme
+            (`PLATFORM_ACCOUNT`).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          description: SECRETS_ENC_KEY absente — chiffrement impossible.
+    delete:
+      summary: Retire le compte d'envoi de l'espace.
+      operationId: adminEmailClearCredentials
+      tags:
+        - admin/communications
+      security:
+        - StaffSession: []
+      description: |
+        L'espace cesse d'envoyer des emails. Aucun repli sur le compte de la
+        plateforme.
+      responses:
+        '200':
+          description: '`{ configured: false }`.'
+        '400':
+          description: Espace sur le compte plateforme (`PLATFORM_ACCOUNT`).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/instagram/authorize:
     get:
       summary: Depart du consentement Instagram (redirection vers Meta).

@@ -328,6 +328,7 @@ async function sendReminderEmailSafely(opts: {
     const email = await getCaptainEmail(opts.tenantId, opts.teamId);
     if (!email) return;
     await sendCheckinReminderEmail({
+      tenantId: opts.tenantId,
       to: email,
       teamName: opts.teamName,
       opponentName: opts.opponentName,
@@ -515,6 +516,7 @@ async function runCheckinOpenStep(
   if (team1Email) {
     sends.push(
       sendMatchCheckinEmail({
+        tenantId: match.tenant_id,
         to: team1Email,
         teamName: team1Name,
         opponentName: team2Name,
@@ -527,6 +529,7 @@ async function runCheckinOpenStep(
   if (team2Email) {
     sends.push(
       sendMatchCheckinEmail({
+        tenantId: match.tenant_id,
         to: team2Email,
         teamName: team2Name,
         opponentName: team1Name,
@@ -825,6 +828,7 @@ async function sendForfeitEmailSafely(opts: {
     const email = await getCaptainEmail(opts.tenantId, opts.teamId);
     if (!email) return;
     await sendCheckinForfeitEmail({
+      tenantId: opts.tenantId,
       to: email,
       teamName: opts.teamName,
       opponentName: opts.opponentName,

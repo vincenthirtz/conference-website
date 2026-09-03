@@ -100,8 +100,11 @@ function seedStaff(role: 'owner' | 'admin' | 'caster' = 'admin') {
     { id: TENANT_A, slug: 'alpha', name: 'Alpha', is_active: true },
     { id: TENANT_B, slug: 'beta', name: 'Beta', is_active: true },
   ] as any;
+  // Le rôle de tenant suit le rôle demandé : depuis que `tenant_staff.role`
+  // élève le rôle effectif sur le tenant actif, seeder un caster « admin de ce
+  // tenant » décrirait un administrateur, pas un caster.
   store.tenant_staff = [
-    { tenant_id: TENANT_A, staff_id: STAFF_ID, role: 'admin' },
+    { tenant_id: TENANT_A, staff_id: STAFF_ID, role },
   ] as any;
 }
 

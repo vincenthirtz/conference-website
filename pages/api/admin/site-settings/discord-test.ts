@@ -4,13 +4,17 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute } from '@/utils/staff';
+import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { postToDiscordWebhook } from '@/utils/discord';
 import { isDiscordChannelType } from '@/utils/discord/channels';
 
 export default withStaffRoute(handler, { permission: 'manage_settings' });
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext
+) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -27,6 +31,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { data: cfg } = await supabaseAdmin
     .from('discord_webhooks')
     .select('webhook_url')
+    // `discord_webhooks` porte un tenant_id : sans ce filtre, le
+    // `maybeSingle()` ci-dessous casserait dès le deuxième tenant (deux lignes
+    // « globales » pour le même channel_type) — et pourrait poster le test
+    // dans le serveur d'à côté.
+    .eq('tenant_id', ctx.tenantId)
     .is('tournament_id', null)
     .eq('channel_type', channelType)
     .eq('is_active', true)

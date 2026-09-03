@@ -76,11 +76,14 @@ type TenantRow = {
   plan_status: string;
   plan_expires_at: string | null;
   plan_last_reminder_at: string | null;
+  plan_is_trial?: boolean | null;
 };
 
 export type PlanRenewalCounters = {
   checked: number;
   markedPastDue: number;
+  /** Essais arrivés à échéance et redescendus sur `discovery`. */
+  trialsEnded: number;
   remindersSent: number;
   errors: number;
 };
@@ -156,13 +159,16 @@ export async function runPlanRenewal(
   const counters: PlanRenewalCounters = {
     checked: 0,
     markedPastDue: 0,
+    trialsEnded: 0,
     remindersSent: 0,
     errors: 0,
   };
 
   const { data, error } = await supabaseAdmin
     .from('tenants')
-    .select('id, plan, plan_status, plan_expires_at, plan_last_reminder_at')
+    .select(
+      'id, plan, plan_status, plan_expires_at, plan_last_reminder_at, plan_is_trial'
+    )
     .in('plan', ['regie', 'circuit']);
   if (error) {
     logger.error('[cron/plan-renewal] tenants load error', error);
@@ -181,11 +187,27 @@ export async function runPlanRenewal(
       const expMs = t.plan_expires_at ? Date.parse(t.plan_expires_at) : NaN;
       if (!Number.isFinite(expMs)) continue;
 
-      // 1) Expiration → past_due.
+      // 1) Expiration.
+      //
+      // Un abonnement payé bascule en `past_due` : il y a une créance, et
+      // l'état doit le dire. Un ESSAI, lui, n'a jamais rien dû — le laisser en
+      // `past_due` afficherait un impayé fictif. Il retombe donc proprement
+      // sur le palier gratuit `discovery`, statut actif. Dans les deux cas les
+      // capacités tombent au même endroit (effectivePlan).
       if (t.plan_status === 'active' && expMs < nowMs) {
+        const isTrial = t.plan_is_trial === true;
         const { error: updErr } = await supabaseAdmin
           .from('tenants')
-          .update({ plan_status: 'past_due' })
+          .update(
+            isTrial
+              ? {
+                  plan: 'discovery',
+                  plan_status: 'active',
+                  plan_is_trial: false,
+                  plan_expires_at: null,
+                }
+              : { plan_status: 'past_due' }
+          )
           .eq('id', t.id);
         if (updErr) {
           logger.error(
@@ -194,6 +216,8 @@ export async function runPlanRenewal(
             updErr
           );
           counters.errors += 1;
+        } else if (isTrial) {
+          counters.trialsEnded += 1;
         } else {
           counters.markedPastDue += 1;
         }
@@ -237,6 +261,9 @@ export async function runPlanRenewal(
             expiresAt: t.plan_expires_at as string,
             priceEur: typeof priceEur === 'number' ? priceEur : 0,
             billingUrl,
+            // Un essai n'est pas un abonnement : la relance parle de fin
+            // d'essai et de souscription, pas de renouvellement.
+            isTrial: t.plan_is_trial === true,
           });
           if (!r.success) {
             logger.error(

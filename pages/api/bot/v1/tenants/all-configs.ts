@@ -4,8 +4,12 @@
 // par le bot au boot pour amorcer son cache in-memory `guildId -> {tenant,
 // config}` plutot que de faire N requetes /by-guild/:id.
 //
-// EXCEPTION DE SCOPING TENANT_ID : meme raison que /by-guild — c'est un
-// resolveur global, pas une requete au sein d'un tenant.
+// SCOPING : la réponse dépend de QUI appelle (`req.botKey`).
+//   - clé du bot MUTUALISÉ (`is_platform_key`) : tous les guilds liés. Ce bot
+//     sert plusieurs serveurs, il lui faut la table de routage complète.
+//   - clé d'un tenant (bot auto-hébergé) : uniquement SES guilds. Sans ce
+//     filtre, n'importe quelle clé valide lisait la configuration Discord de
+//     tous les tenants — salons, rôles, catégories.
 //
 // Auth: x-api-key. Pas de pagination V1 (peu de guilds attendus, < 100). Si
 // le volume monte, ajouter `?limit=&offset=` ici.
@@ -47,14 +51,18 @@ type DiscordConfigRow = ReturnType<typeof emptyDiscordConfig> & {
   guild_id: string;
 };
 
-async function handler(_req: BotCrossTenantRequest, res: NextApiResponse) {
-  // 1) Tous les guilds avec leur tenant.
-  const { data: guildRows, error: guildErr } = await supabaseAdmin!
+async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
+  // 1) Guilds visibles par l'appelant, avec leur tenant.
+  let guildQuery = supabaseAdmin!
     .from('discord_guilds')
     .select(
       'guild_id, is_primary, tenant:tenants!discord_guilds_tenant_id_fkey(id, slug, name, is_active, default_locale)'
     )
     .order('guild_id', { ascending: true });
+  if (!req.botKey.isPlatformKey) {
+    guildQuery = guildQuery.eq('tenant_id', req.botKey.tenantId);
+  }
+  const { data: guildRows, error: guildErr } = await guildQuery;
 
   if (guildErr) {
     logger.error('[bot/tenants/all-configs] guild list error', guildErr);

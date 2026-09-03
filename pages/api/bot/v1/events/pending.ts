@@ -8,10 +8,11 @@
 // Le bot consume ces events, fait son traitement, puis appelle
 // POST /api/bot/v1/events/[id]/ack pour marquer le succes.
 //
-// EXCEPTION DE SCOPING TENANT_ID : meme philosophie que /tenants/all-configs
-// — le bot est multi-tenant, il doit voir les events de tous les tenants
-// pour pouvoir router vers le bon guild. Le `tenantId` est inclus dans
-// chaque row pour que le handler bot puisse resoudre la cible.
+// SCOPING : dépend de la clé appelante (`req.botKey`). Le bot MUTUALISÉ voit
+// les events de tous les tenants — c'est ce qui lui permet de router vers le
+// bon serveur, et chaque row porte son `tenantId` pour ça. Un bot
+// auto-hébergé, lui, ne reçoit que les events de SON tenant : le contenu d'un
+// event (noms d'équipes, litiges, signalements) n'a rien à faire ailleurs.
 //
 // Auth : x-api-key (BOT_API_KEY). Pas d'acteur staff — c'est un endpoint
 // de service consomme par le bot lui-meme.
@@ -31,12 +32,16 @@ async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
       ? Math.min(rawLimit, MAX_LIMIT)
       : DEFAULT_LIMIT;
 
-  const { data, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from('bot_event_outbox')
     .select(
       'id, event_id, event_name, tenant_id, payload, push_attempts, last_push_error, last_push_at, created_at'
     )
-    .eq('status', 'pending')
+    .eq('status', 'pending');
+  if (!req.botKey.isPlatformKey) {
+    query = query.eq('tenant_id', req.botKey.tenantId);
+  }
+  const { data, error } = await query
     .order('created_at', { ascending: true })
     .limit(limit);
 

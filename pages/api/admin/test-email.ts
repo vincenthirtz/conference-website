@@ -17,4 +17,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   return res.status(result.success ? 200 : 502).json(result);
 }
 
-export default withStaffRoute(handler, { permission: 'manage_communications' });
+export default withStaffRoute(handler, {
+  permission: 'manage_communications',
+  // Donnée d'association, pas de tenant : garde sur le rôle global.
+  scope: 'platform',
+});

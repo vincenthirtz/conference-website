@@ -219,4 +219,8 @@ async function handler(
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
-export default withStaffRoute(handler, { permission: 'manage_communications' });
+export default withStaffRoute(handler, {
+  permission: 'manage_communications',
+  // Donnée d'association, pas de tenant : garde sur le rôle global.
+  scope: 'platform',
+});

@@ -62,13 +62,18 @@ async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
   }
 
   // 1) Lookup discord_guilds + tenant en une seule requete (embed).
-  const { data: guildRow, error: guildErr } = await supabaseAdmin!
+  // Un bot auto-hébergé ne résout que SES serveurs : sur un guild d'un autre
+  // tenant, la réponse est « non enregistré » (404 plus bas), jamais sa config.
+  let guildQuery = supabaseAdmin!
     .from('discord_guilds')
     .select(
       'guild_id, is_primary, tenant:tenants!discord_guilds_tenant_id_fkey(id, slug, name, is_active, default_locale)'
     )
-    .eq('guild_id', guildId)
-    .maybeSingle();
+    .eq('guild_id', guildId);
+  if (!req.botKey.isPlatformKey) {
+    guildQuery = guildQuery.eq('tenant_id', req.botKey.tenantId);
+  }
+  const { data: guildRow, error: guildErr } = await guildQuery.maybeSingle();
 
   if (guildErr) {
     logger.error('[bot/tenants/by-guild] guild lookup error', guildErr);

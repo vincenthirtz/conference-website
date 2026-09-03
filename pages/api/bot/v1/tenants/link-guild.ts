@@ -37,6 +37,21 @@ const GUILD_NAME_MAX = 200;
 /** Tenant requests are auto-claimable for 7 days after creation. */
 const REQUEST_TTL_DAYS = 7;
 
+/**
+ * Essai gratuit ouvert à la création du tenant.
+ *
+ * Sans lui, le tenant naît en `discovery`, plan qui n'inclut PAS le bot
+ * (`planFeatures.discordBot = false`) : le gate baseline de `withBotRoute`
+ * répondrait 403 sur toute route tenant-scopée, et l'utilisateur repartirait
+ * d'un onboarding « réussi » avec un bot muet.
+ *
+ * À l'échéance, le cron `plan-renewal` bascule le tenant en `past_due` et
+ * `effectivePlan()` retombe sur `discovery` — la dégradation est automatique,
+ * il n'y a rien à révoquer à la main.
+ */
+const TRIAL_PLAN = 'regie';
+const TRIAL_DAYS = 30;
+
 type TenantRequestRow = {
   id: string;
   requester_auth_user_id: string | null;
@@ -298,13 +313,21 @@ async function autoClaimTenant(input: {
     }
   };
 
-  // 1) tenants
+  // 1) tenants — avec l'essai gratuit (cf. TRIAL_PLAN / TRIAL_DAYS).
+  const nowMs = Date.now();
   const { data: tenantRow, error: tenantErr } = await admin
     .from('tenants')
     .insert({
       slug: request.requested_slug,
       name: request.requested_name,
       is_active: true,
+      plan: TRIAL_PLAN,
+      plan_status: 'active',
+      plan_is_trial: true,
+      plan_started_at: new Date(nowMs).toISOString(),
+      plan_expires_at: new Date(
+        nowMs + TRIAL_DAYS * 24 * 60 * 60 * 1000
+      ).toISOString(),
     })
     .select('id')
     .single();

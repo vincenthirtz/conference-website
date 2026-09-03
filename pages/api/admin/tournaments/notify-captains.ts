@@ -153,7 +153,8 @@ async function handler(
           recipientEmail,
           tournament.name,
           tournament.start_date,
-          tournament.slug
+          tournament.slug,
+          ctx.tenantId
         );
         if (emailResult.success) {
           emailsSent++;

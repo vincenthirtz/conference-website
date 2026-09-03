@@ -803,6 +803,7 @@ export default async function handler(
         // cause l'équipe déjà créée ni l'invitation déjà persistée.
         if (inviteToken && m.email) {
           sendTeamInviteLinkEmail({
+            tenantId,
             to: m.email,
             teamName: createdTeam.name,
             role: m.role,
@@ -929,7 +930,7 @@ export default async function handler(
     if (creatorUserId !== null && m.user_id === creatorUserId) continue;
     const email = userIdToEmail.get(m.user_id);
     if (email) {
-      sendTeamJoinEmail(email, createdTeam.name, m.role).catch((err) => {
+      sendTeamJoinEmail(email, createdTeam.name, m.role, tenantId).catch((err) => {
         logger.error('[create-with-member] team join email error:', err);
       });
     }
@@ -980,6 +981,7 @@ export default async function handler(
 
           // Fire-and-forget : un échec Brevo ne doit pas bloquer la création.
           sendTeamAccessEmail({
+            tenantId,
             to: creatorEmail,
             teamName: createdTeam.name,
             actionLink,

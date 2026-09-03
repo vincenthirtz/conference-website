@@ -18,7 +18,11 @@ import { logger } from '../../../../../utils/logger';
 // exécuté normalement (rétro-compatible).
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'broadcast-wave' }),
-  { permission: 'manage_broadcast' }
+  {
+    permission: 'manage_broadcast',
+    // Donnée d'association, pas de tenant : garde sur le rôle global.
+    scope: 'platform',
+  }
 );
 
 async function handler(

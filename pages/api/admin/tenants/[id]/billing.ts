@@ -37,6 +37,7 @@ type TenantRow = {
   plan_status: string;
   plan_started_at: string | null;
   plan_expires_at: string | null;
+  plan_is_trial?: boolean | null;
 };
 
 type PaymentRow = {
@@ -75,7 +76,9 @@ async function handler(
 
   const { data: tenant, error: tenantErr } = await supabaseAdmin
     .from('tenants')
-    .select('id, plan, plan_status, plan_started_at, plan_expires_at')
+    .select(
+      'id, plan, plan_status, plan_started_at, plan_expires_at, plan_is_trial'
+    )
     .eq('id', id)
     .maybeSingle();
   if (tenantErr) {
@@ -139,6 +142,9 @@ async function handler(
     planStartedAt,
     planExpiresAt,
     daysRemaining,
+    // Essai gratuit d'onboarding : l'UI doit dire « essai », pas
+    // « abonnement », et proposer de souscrire plutôt que de renouveler.
+    isTrial: t.plan_is_trial === true,
     effectivePlan: eff,
     capabilities,
     catalog,

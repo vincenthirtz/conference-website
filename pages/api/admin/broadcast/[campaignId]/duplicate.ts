@@ -24,7 +24,11 @@ type DuplicateResponse = { campaign: { id: string } } | { error: string };
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'broadcast-duplicate' }),
-  { permission: 'manage_broadcast' }
+  {
+    permission: 'manage_broadcast',
+    // Donnée d'association, pas de tenant : garde sur le rôle global.
+    scope: 'platform',
+  }
 );
 
 async function handler(

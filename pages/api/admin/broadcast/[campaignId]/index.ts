@@ -29,7 +29,11 @@ import {
 import { campaignInputSchema } from '@/utils/campaignSchema';
 
 import { logger } from '../../../../../utils/logger';
-export default withStaffRoute(handler, { permission: 'manage_broadcast' });
+export default withStaffRoute(handler, {
+  permission: 'manage_broadcast',
+  // Donnée d'association, pas de tenant : garde sur le rôle global.
+  scope: 'platform',
+});
 
 async function handler(
   req: NextApiRequest,

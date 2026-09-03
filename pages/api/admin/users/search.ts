@@ -17,7 +17,11 @@ type PlayerResult = {
 
 type SearchResponse = { players: PlayerResult[] } | { error: string };
 
-export default withStaffRoute(handler, { permission: 'manage_staff' });
+export default withStaffRoute(handler, {
+  permission: 'manage_staff',
+  // Donnée d'association, pas de tenant : garde sur le rôle global.
+  scope: 'platform',
+});
 
 async function handler(
   req: NextApiRequest,

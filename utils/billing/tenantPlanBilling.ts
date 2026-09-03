@@ -149,6 +149,7 @@ type TenantPlanRow = {
   plan_status: string;
   plan_started_at: string | null;
   plan_expires_at: string | null;
+  plan_is_trial?: boolean | null;
 };
 
 /**
@@ -201,7 +202,7 @@ export async function applyTenantPlanPayment(opts: {
   // ── État courant du tenant (pour extension vs réactivation) ───────────────
   const { data: tenant, error: tenantErr } = await supabaseAdmin
     .from('tenants')
-    .select('plan, plan_status, plan_started_at, plan_expires_at')
+    .select('plan, plan_status, plan_started_at, plan_expires_at, plan_is_trial')
     .eq('id', tenantId)
     .maybeSingle();
   if (tenantErr) {
@@ -217,8 +218,13 @@ export async function applyTenantPlanPayment(opts: {
   const t = tenant as TenantPlanRow;
 
   // Base = expiry actuel si tenant déjà actif non expiré (extension), sinon now.
+  //
+  // Exception : un ESSAI gratuit ne s'étend pas. Sinon le premier paiement
+  // offrirait l'année pleine EN PLUS des jours d'essai restants — l'essai est
+  // une découverte, pas un acompte.
+  const wasTrial = t.plan_is_trial === true;
   let baseMs = nowMs;
-  if (t.plan_status === 'active' && t.plan_expires_at) {
+  if (!wasTrial && t.plan_status === 'active' && t.plan_expires_at) {
     const expMs = Date.parse(t.plan_expires_at);
     if (Number.isFinite(expMs) && expMs > nowMs) baseMs = expMs;
   }
@@ -239,6 +245,8 @@ export async function applyTenantPlanPayment(opts: {
       plan_started_at: planStartedAt,
       plan_expires_at: planExpiresAt,
       plan_last_reminder_at: null,
+      // Le tenant paie : ce n'est plus un essai.
+      plan_is_trial: false,
     })
     .eq('id', tenantId);
   if (updErr) {

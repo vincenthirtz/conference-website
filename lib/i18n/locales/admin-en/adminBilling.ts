@@ -28,6 +28,9 @@ export default {
   noExpiry: 'No expiry',
   expireInDays: 'expires in {days} days',
   expired: 'Expired',
+  trialBadge: 'Free trial',
+  trialNotice:
+    'Your space is on a free trial. When it ends, it drops back to the Discovery tier and the Discord bot stops responding — subscribe to keep it running.',
   downgradeNoticeTitle: 'Reduced access',
   downgradeNoticeMsg:
     'Your “{plan}” plan is no longer honored: capabilities have fallen back to the free tier. Renew to reactivate.',
