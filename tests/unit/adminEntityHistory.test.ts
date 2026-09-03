@@ -100,6 +100,36 @@ describe('/api/admin/entity-history', () => {
     expect(logs[0].id).toBe('log-1');
   });
 
+  it('un espace lit SON journal, pas celui de l’espace actif', async () => {
+    // Cas T9 : l'owner de la plateforme ouvre la fiche de l'espace B alors que
+    // son espace ACTIF est A. Filtrer sur l'espace actif ne lui montrerait
+    // rien — et le staff de B ne verrait jamais ce que la plateforme fait chez
+    // lui, ce qui revient à le suspendre en secret.
+    const OTHER_TENANT = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    store.tenants = [
+      { id: CONFERENCE_TENANT_ID, slug: 'conf', name: 'Conf', is_active: true },
+      { id: OTHER_TENANT, slug: 'autre', name: 'Autre', is_active: true },
+    ] as any;
+    store.staff_logs = [
+      {
+        id: 'log-tenant',
+        tenant_id: OTHER_TENANT,
+        created_at: '2026-08-03T10:00:00.000Z',
+        staff_id: 'staff-1',
+        action: 'tenant_lifecycle',
+        entity_type: 'tenant',
+        entity_id: OTHER_TENANT,
+        tournament_id: null,
+        payload: { to: 'suspended' },
+      },
+    ] as any;
+
+    const res = makeRes();
+    await handler(makeReq({ type: 'tenant', id: OTHER_TENANT }), res);
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).logs).toHaveLength(1);
+  });
+
   it('refuse un type d’entité hors de la liste fermée', async () => {
     const res = makeRes();
     await handler(makeReq({ type: 'staff_logs', id: TEAM }), res);

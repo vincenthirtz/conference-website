@@ -82,6 +82,15 @@ async function handler(
       return res.status(405).json({ error: 'Method not allowed.' });
   }
 
+  // Motif FACULTATIF, jamais bloquant : une rotation en urgence ne doit pas
+  // attendre qu'on trouve les mots. Donné, il rejoint le journal — et six mois
+  // plus tard, « fuite suspectée » et « rotation périodique » ne se relisent
+  // pas de la même façon.
+  const reason =
+    typeof (req.body as { reason?: unknown } | undefined)?.reason === 'string'
+      ? String((req.body as { reason?: string }).reason).trim().slice(0, 500)
+      : null;
+
   const { id } = req.query;
   if (!id || typeof id !== 'string' || !isValidUUID(id)) {
     return res
@@ -132,6 +141,7 @@ async function handler(
       payload: {
         action: 'revoke_previous_bot_key',
         tenantSlug: tenantRow.slug,
+        reason: reason || null,
       },
     });
     return res.status(200).json({ tenantId: id, previousKeyRevoked: true });
@@ -190,6 +200,7 @@ async function handler(
       action: 'rotate_bot_secrets',
       tenantSlug: tenantRow.slug,
       previousKeyKeptFor: previousKeyHash ? '48h' : null,
+      reason: reason || null,
     },
   });
 

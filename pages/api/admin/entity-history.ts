@@ -16,7 +16,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
+import {
+  withStaffRoute,
+  hasAtLeastRole,
+  AuthenticatedStaffContext,
+} from '@/utils/staff';
+import { canAccessTenant } from '@/utils/adminTenants';
 import { formatStaffLog, type StaffLog } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
@@ -32,6 +37,9 @@ export const HISTORY_ENTITY_TYPES = [
   'user',
   'support_ticket',
   'event_run',
+  // L'espace lui-même (T9) : suspension, changement de plan, rotation de clé,
+  // vérification de domaine. Cas particulier assumé — voir le scope plus bas.
+  'tenant',
 ] as const;
 
 export type HistoryEntityType = (typeof HISTORY_ENTITY_TYPES)[number];
@@ -68,6 +76,28 @@ async function handler(
     return res.status(400).json({ error: 'Invalid entity id' });
   }
 
+  // Portée du journal. Pour toutes les entités, c'est l'espace ACTIF de
+  // l'appelant : on ne lit pas le journal du voisin.
+  //
+  // Pour une entité `tenant`, cet espace actif serait le mauvais filtre :
+  // l'owner de la plateforme qui ouvre la fiche de l'espace B a, lui, l'espace A
+  // en cours — il ne verrait rien. Le scope est donc l'espace REGARDÉ, et
+  // l'accès est vérifié pour lui.
+  //
+  // Effet voulu : le staff d'un espace voit les actions de la plateforme SUR
+  // son espace. On ne suspend pas quelqu'un en secret.
+  let scopeTenantId = ctx.tenantId;
+  if (type === 'tenant') {
+    if (!hasAtLeastRole(ctx.role, 'admin')) {
+      const isPoleAdmin =
+        (ctx.staff as { is_pole_admin?: boolean }).is_pole_admin === true;
+      if (!(await canAccessTenant(ctx.staff.id, id, { isPoleAdmin }))) {
+        return res.status(403).json({ error: 'No access to this tenant.' });
+      }
+    }
+    scopeTenantId = id;
+  }
+
   const { data, error } = await supabaseAdmin
     .from('staff_logs')
     .select(
@@ -77,7 +107,7 @@ async function handler(
       staff:staff!fk_staff_logs_staff(id, auth_user_id, role, display_name, avatar_url)
       `
     )
-    .eq('tenant_id', ctx.tenantId)
+    .eq('tenant_id', scopeTenantId)
     .eq('entity_type', type)
     .eq('entity_id', id)
     .order('created_at', { ascending: false })

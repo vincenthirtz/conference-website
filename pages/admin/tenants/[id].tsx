@@ -22,6 +22,7 @@ import TenantBotSecretsPanel from '@/components/admin/tenants/TenantBotSecretsPa
 import TenantInvitationsPanel from '@/components/admin/tenants/TenantInvitationsPanel';
 import TenantDomainPanel from '@/components/admin/tenants/TenantDomainPanel';
 import TenantLifecyclePanel from '@/components/admin/tenants/TenantLifecyclePanel';
+import EntityHistoryButton from '@/components/admin/EntityHistoryButton';
 import Tabs, {
   tabButtonId,
   tabPanelId,
@@ -380,6 +381,16 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                     <TenantLifecyclePanel
                       tenantId={tenantId}
                       onChanged={() => void fetchData()}
+                    />
+                  </div>
+
+                  {/* « Qui a fait quoi ici » : suspension, plan, rotation de
+                      clé, domaine. Il fallait jusqu'ici ouvrir /admin/logs et
+                      filtrer à la main, en sachant quoi chercher. */}
+                  <div className="mt-6">
+                    <EntityHistoryButton
+                      entityType="tenant"
+                      entityId={tenantId}
                     />
                   </div>
                 </div>
