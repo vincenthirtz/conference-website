@@ -60,6 +60,11 @@ export const BOT_EVENT_NAMES = [
   // event PAR destinataire (comme checkin.nudge), pour qu'un échec d'envoi
   // n'entraîne pas le renvoi des autres au retry.
   'scrim.request',
+  // Traçage dans le salon d'actions du bot : les DM sont partis, puis la
+  // décision est tombée. `resolved` est émis par le CŒUR partagé, donc une
+  // réponse donnée sur le site apparaît au même titre qu'une réponse Discord.
+  'scrim.request.dispatched',
+  'scrim.request.resolved',
   'scrim.created',
   'scrim.scheduled',
   'scrim.starting',

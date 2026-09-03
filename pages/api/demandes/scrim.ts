@@ -219,6 +219,8 @@ export default withAuthRoute(async function handler(
     const notifyArgs = {
       tenantId,
       targetTeamId: teamId,
+      demandeId: (newDemande as { id?: string } | null)?.id ?? null,
+      slots: proposedSlots,
       opponentName: myTeam.name,
       dateLabel: formatScrimDateFr(proposedSlots),
       message,

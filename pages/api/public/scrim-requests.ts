@@ -273,6 +273,8 @@ export default async function handler(
   const notifyArgs = {
     tenantId,
     targetTeamId: target.id,
+    demandeId: inserted.id as string,
+    slots: preferredDate ? [preferredDate] : [],
     opponentName: fromTeamName,
     dateLabel: formatScrimDateFr(preferredDate),
     message: message || null,

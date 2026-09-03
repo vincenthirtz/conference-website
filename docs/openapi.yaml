@@ -7915,6 +7915,66 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
+  /api/bot/v1/scrims/requests:
+    post:
+      tags:
+        - bot/scrims
+      summary: Répondre à une demande de scrim depuis Discord.
+      operationId: botAnswerScrimRequest
+      description: |
+        Pendant de `/api/teams/scrim-requests` (POST) pour le bot : même coeur
+        metier (`utils/teams/scrimRequestActions.ts`), donc accepter depuis un
+        message prive fait exactement ce qu'accepter depuis le site fait.
+
+        L'autorisation part de l'identifiant Discord : compte lie ->
+        equipes gerees -> celle qui PARTICIPE a cette demande -> permission
+        `manage_scrims`. L'equipe n'est jamais fournie par l'appelant, elle est
+        deduite de la demande.
+
+        Honore `Idempotency-Key` : un double-clic sur « Accepter » ne cree pas
+        deux scrims draft.
+      security:
+        - BotApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actorDiscordUserId, demandeId, action]
+              properties:
+                actorDiscordUserId:
+                  type: string
+                demandeId:
+                  $ref: '#/components/schemas/Uuid'
+                action:
+                  type: string
+                  enum: [accept, approve, counter, reject, report]
+                slot:
+                  type: string
+                  nullable: true
+                  description: '`accept` : ISO 8601 du creneau retenu. Facultatif si un seul en lice.'
+                slots:
+                  type: array
+                  nullable: true
+                  maxItems: 5
+                  items:
+                    type: string
+                  description: '`counter` : nouveaux creneaux proposes.'
+      responses:
+        '200':
+          description: 'Action appliquee : `{ success, demandeId, newStatus, ... }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Payload invalide, ou action impossible dans cet etat de negociation.
+        '403':
+          description: L'actrice ne gere aucune des deux equipes, ou son role ne couvre pas `manage_scrims`.
+        '404':
+          description: Compte Discord non lie, ou demande introuvable / deja traitee.
   /api/bot/v1/scrims/{scrimId}:
     parameters:
       - $ref: '#/components/parameters/ScrimId'

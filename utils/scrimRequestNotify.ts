@@ -244,6 +244,10 @@ export function formatScrimDateFr(
 async function emitScrimDm(opts: {
   tenantId: string;
   teamId: string;
+  /** Requis pour que le DM porte des boutons d'action. Absent = message seul. */
+  demandeId?: string | null;
+  /** Créneaux sur la table : un bouton d'acceptation par créneau. */
+  slots?: string[] | null;
   opponentName: string;
   dateLabel?: string | null;
   message?: string | null;
@@ -263,6 +267,8 @@ async function emitScrimDm(opts: {
           'scrim.request',
           {
             kind: opts.kind,
+            demandeId: opts.demandeId ?? null,
+            slots: opts.slots ?? [],
             captainDiscordUserId: recipient.discordUserId,
             recipientRole: recipient.role,
             recipientTeamName: resolved.teamName,
@@ -277,6 +283,28 @@ async function emitScrimDm(opts: {
         )
       )
     );
+
+    // Traçage : un seul message pour toute la volée, avec qui a été joint et
+    // sur quels créneaux. Sans lui, le staff ne sait pas si le silence d'une
+    // équipe vient d'un DM jamais parti ou d'une capitaine qui ne répond pas.
+    if (opts.demandeId) {
+      await emitBotEvent(
+        'scrim.request.dispatched',
+        {
+          kind: opts.kind,
+          demandeId: opts.demandeId,
+          teamName: resolved.teamName,
+          opponentName: opts.opponentName,
+          dateLabel: opts.dateLabel ?? null,
+          slots: opts.slots ?? [],
+          recipients: resolved.recipients.map((r) => ({
+            discordUserId: r.discordUserId,
+            role: r.role,
+          })),
+        },
+        opts.tenantId
+      );
+    }
   } catch (e) {
     logger.error('[scrimNotify] emitScrimDm error:', e);
   }
@@ -291,6 +319,8 @@ async function emitScrimDm(opts: {
 export async function notifyScrimRequestDm(opts: {
   tenantId: string;
   targetTeamId: string;
+  demandeId?: string | null;
+  slots?: string[] | null;
   opponentName: string;
   dateLabel?: string | null;
   message?: string | null;
@@ -300,6 +330,8 @@ export async function notifyScrimRequestDm(opts: {
   await emitScrimDm({
     tenantId: opts.tenantId,
     teamId: opts.targetTeamId,
+    demandeId: opts.demandeId,
+    slots: opts.slots,
     opponentName: opts.opponentName,
     dateLabel: opts.dateLabel,
     message: opts.message,
