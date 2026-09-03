@@ -7,7 +7,7 @@ import { onboardingRedirect } from '@/utils/onboardingRedirect';
  * bookmarks, preserving any incoming query params.
  */
 export const getServerSideProps: GetServerSideProps = async (ctx) =>
-  onboardingRedirect('guild-links', ctx.query);
+  onboardingRedirect('a-traiter', ctx.query);
 
 export default function PendingGuildLinksRedirect() {
   return null;

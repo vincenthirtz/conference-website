@@ -80,7 +80,6 @@ import nsAdminTenantDetail from './adminTenantDetail';
 import nsAdminTenantRequestsList from './adminTenantRequestsList';
 import nsAdminPartnershipRequestsList from './adminPartnershipRequestsList';
 import nsAdminPartnershipRequestDetail from './adminPartnershipRequestDetail';
-import nsAdminOnboardingQueue from './adminOnboardingQueue';
 import nsAdminPendingGuildLinks from './adminPendingGuildLinks';
 import nsAdminNewsList from './adminNewsList';
 import nsAdminNewsNew from './adminNewsNew';
@@ -269,7 +268,6 @@ export const frDict = {
   adminTenantRequestsList: nsAdminTenantRequestsList.fr,
   adminPartnershipRequestsList: nsAdminPartnershipRequestsList.fr,
   adminPartnershipRequestDetail: nsAdminPartnershipRequestDetail.fr,
-  adminOnboardingQueue: nsAdminOnboardingQueue.fr,
   adminPendingGuildLinks: nsAdminPendingGuildLinks.fr,
   adminNewsList: nsAdminNewsList.fr,
   adminNewsNew: nsAdminNewsNew.fr,

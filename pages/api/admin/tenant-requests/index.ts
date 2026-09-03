@@ -13,6 +13,8 @@
 //
 // Query params:
 //   - status: pending_email_verification | pending_bot_invite | completed
+//             | pending (raccourci : les deux statuts encore en vol, c'est ce
+//               que compte le badge « À traiter » du hub d'onboarding)
 //             | rejected | expired | all  (default: all)
 //   - limit:  1..100 (default 20)
 //   - offset: >= 0 (default 0)
@@ -70,8 +72,15 @@ type DbRow = {
 const SELECT_COLS =
   'id, status, requested_slug, requested_name, requester_email, requester_discord_user_id, requester_discord_display_name, created_at, created_tenant_id, created_guild_id, rejection_reason';
 
-function parseStatus(raw: unknown): TenantRequestStatus | 'all' {
+/** Les deux statuts d'une demande encore en vol (ni aboutie, ni refusée). */
+const IN_FLIGHT: TenantRequestStatus[] = [
+  'pending_email_verification',
+  'pending_bot_invite',
+];
+
+function parseStatus(raw: unknown): TenantRequestStatus | 'all' | 'pending' {
   if (typeof raw !== 'string' || raw === '' || raw === 'all') return 'all';
+  if (raw === 'pending') return 'pending';
   return (ALLOWED_STATUSES as readonly string[]).includes(raw)
     ? (raw as TenantRequestStatus)
     : 'all';
@@ -115,7 +124,9 @@ async function handler(
   let countQuery = supabaseAdmin
     .from('tenant_requests')
     .select('id', { count: 'exact' });
-  if (status !== 'all') {
+  if (status === 'pending') {
+    countQuery = countQuery.in('status', IN_FLIGHT);
+  } else if (status !== 'all') {
     countQuery = countQuery.eq('status', status);
   }
   const { count: totalCount, error: countErr } = await countQuery;
@@ -130,7 +141,9 @@ async function handler(
     .select(SELECT_COLS)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
-  if (status !== 'all') {
+  if (status === 'pending') {
+    listQuery = listQuery.in('status', IN_FLIGHT);
+  } else if (status !== 'all') {
     listQuery = listQuery.eq('status', status);
   }
   const { data: rows, error: listErr } = await listQuery;

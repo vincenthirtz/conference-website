@@ -657,9 +657,9 @@ export const ADMIN_NAV: AdminNavNode[] = [
         ],
       },
       {
-        // Hub « Onboarding » : File d'onboarding, Demandes self-service,
-        // Serveurs Discord en attente et état de mise en service des espaces,
-        // en une page à onglets (/admin/onboarding?tab=…).
+        // Hub « Onboarding » : l'état de mise en service des espaces, et ce
+        // qui attend d'être traité — demandes self-service et serveurs Discord
+        // en attente — en une page à deux onglets (/admin/onboarding?tab=…).
         //
         // OWNER-ONLY : la gestion des espaces est du ressort du propriétaire de
         // la plateforme. `manage_tenant` n'est portée que par ce rôle, et le

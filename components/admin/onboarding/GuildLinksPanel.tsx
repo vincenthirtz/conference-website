@@ -180,9 +180,7 @@ export default function GuildLinksPanel() {
   return (
     <>
       <div className="mb-6">
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-          {t.heading}
-        </h1>
+        <h2 className="text-2xl font-bold tracking-tight">{t.heading}</h2>
         <p className="mt-1 text-sm text-neutral-400">{t.subtitle}</p>
       </div>
 

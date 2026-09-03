@@ -247,7 +247,7 @@ function AdminTenantsListPage({ staff }: Props) {
                 {pending.length > 1 ? t.pendingText_other : t.pendingText_one}
               </span>
               <Link
-                href="/admin/onboarding?tab=guild-links"
+                href="/admin/onboarding?tab=a-traiter"
                 className="px-3 py-1.5 rounded-lg border border-amber-400/40 hover:border-amber-300 text-amber-100 text-xs font-medium transition-colors"
               >
                 {t.pendingViewQueue}

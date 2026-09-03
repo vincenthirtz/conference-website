@@ -73,7 +73,7 @@ Deux problèmes se cumulaient :
 | Journaux           | `/admin/logs`          | Staff · Emails                                      | `logs`, `email-logs`                                         |
 | Paramètres du site | `/admin/site-settings` | Général · Discord · Rôles d'équipe                  | `site-settings/{index,discord,team-roles}`                   |
 | Modération         | `/admin/moderation`    | Commentaires · Litiges · Blacklist · Support        | `comments`, `disputes`, `moderation/blacklist`, `support`    |
-| Onboarding         | `/admin/onboarding`    | File d'onboarding · Demandes tenant · Liens Discord | `onboarding-queue`, `tenant-requests`, `pending-guild-links` |
+| Onboarding         | `/admin/onboarding`    | Espaces · À traiter                                 | `onboarding-queue`, `tenant-requests`, `pending-guild-links` |
 | Partenaires        | `/admin/partners`      | Liste · Demandes                                    | `partners`, `partnership-requests` (vague 4)                 |
 
 Les corps de page ont été extraits en `components/admin/<domaine>/*Panel.tsx`

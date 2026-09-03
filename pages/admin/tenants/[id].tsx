@@ -720,7 +720,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                       description={t.discordEmptyDesc}
                       action={
                         <Link
-                          href="/admin/onboarding?tab=guild-links"
+                          href="/admin/onboarding?tab=a-traiter"
                           className="px-4 py-2 rounded-lg border border-neutral-600 text-sm hover:border-neutral-500 transition-colors"
                         >
                           {t.discordEmptyAction}

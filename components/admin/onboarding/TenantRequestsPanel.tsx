@@ -411,9 +411,7 @@ export default function TenantRequestsPanel({ currentStaffDiscordId }: Props) {
     <>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-            {t.heading}
-          </h1>
+          <h2 className="text-2xl font-bold tracking-tight">{t.heading}</h2>
           <p className="mt-1 text-sm text-neutral-400">
             {t.subtitle}
             {summary}

@@ -165,15 +165,15 @@ test.describe.serial('Admin tenants UI (S7)', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     await loginAsAdmin(page);
-    // Lot C: the pending guild links list is now the "Liens Discord" tab of the
-    // merged /admin/onboarding hub. The legacy /admin/pending-guild-links route
-    // 308-redirects here, but we navigate straight to the tab.
-    await page.goto('/admin/onboarding?tab=guild-links');
+    // Les serveurs en attente sont une section de l'onglet « À traiter » du hub
+    // d'onboarding, aux côtés des demandes d'espace. L'ancienne route
+    // /admin/pending-guild-links y redirige (308) ; on y va directement.
+    await page.goto('/admin/onboarding?tab=a-traiter');
 
     await expect(
       page.getByRole('heading', {
         name: /Serveurs Discord en attente/i,
-        level: 1,
+        level: 2,
       })
     ).toBeVisible({ timeout: 15000 });
 

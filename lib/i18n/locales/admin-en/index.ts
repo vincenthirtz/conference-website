@@ -76,7 +76,6 @@ import enAdminTenantDetail from './adminTenantDetail';
 import enAdminTenantRequestsList from './adminTenantRequestsList';
 import enAdminPartnershipRequestsList from './adminPartnershipRequestsList';
 import enAdminPartnershipRequestDetail from './adminPartnershipRequestDetail';
-import enAdminOnboardingQueue from './adminOnboardingQueue';
 import enAdminPendingGuildLinks from './adminPendingGuildLinks';
 import enAdminNewsList from './adminNewsList';
 import enAdminNewsNew from './adminNewsNew';
@@ -265,7 +264,6 @@ const adminEnDict = {
   adminTenantRequestsList: enAdminTenantRequestsList,
   adminPartnershipRequestsList: enAdminPartnershipRequestsList,
   adminPartnershipRequestDetail: enAdminPartnershipRequestDetail,
-  adminOnboardingQueue: enAdminOnboardingQueue,
   adminPendingGuildLinks: enAdminPendingGuildLinks,
   adminNewsList: enAdminNewsList,
   adminNewsNew: enAdminNewsNew,

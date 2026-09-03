@@ -7,7 +7,7 @@ import { onboardingRedirect } from '@/utils/onboardingRedirect';
  * (308) old bookmarks, preserving any incoming query params.
  */
 export const getServerSideProps: GetServerSideProps = async (ctx) =>
-  onboardingRedirect('queue', ctx.query);
+  onboardingRedirect('a-traiter', ctx.query);
 
 export default function OnboardingQueueRedirect() {
   return null;

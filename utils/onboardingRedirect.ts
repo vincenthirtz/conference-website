@@ -11,7 +11,7 @@ import type { ParsedUrlQuery } from 'querystring';
  * Mirrors utils/moderationRedirect.ts (Lot B).
  */
 export function onboardingRedirect(
-  tab: 'queue' | 'tenant-requests' | 'guild-links',
+  tab: 'a-traiter' | 'espaces',
   query: ParsedUrlQuery
 ): GetServerSidePropsResult<never> {
   const params = new URLSearchParams();

@@ -7,7 +7,7 @@ import { onboardingRedirect } from '@/utils/onboardingRedirect';
  * Permanent-redirect (308) old bookmarks, preserving any incoming query params.
  */
 export const getServerSideProps: GetServerSideProps = async (ctx) =>
-  onboardingRedirect('tenant-requests', ctx.query);
+  onboardingRedirect('a-traiter', ctx.query);
 
 export default function TenantRequestsRedirect() {
   return null;

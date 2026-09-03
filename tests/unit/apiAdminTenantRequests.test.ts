@@ -227,6 +227,29 @@ describe('GET /api/admin/tenant-requests', () => {
     expect(body.requests[0].id).toBe(REQ_PENDING_BOT);
   });
 
+  it('200 owner : status=pending compte les DEUX statuts encore en vol', async () => {
+    // C'est le compteur de l'onglet « À traiter » du hub d'onboarding : une
+    // demande aboutie ou refusée n'attend plus personne, elle ne doit pas
+    // gonfler le badge. Sans ce raccourci, l'écran devait faire deux appels.
+    const res = makeRes();
+    await listHandler(makeReq({ query: { status: 'pending' } }), res);
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    expect(body.total).toBe(2);
+    expect(body.requests.map((r: any) => r.id).sort()).toEqual(
+      [REQ_PENDING_EMAIL, REQ_PENDING_BOT].sort()
+    );
+  });
+
+  it('200 owner : un status inconnu retombe sur « tout », jamais sur vide', async () => {
+    // Le filtre vient de l'URL : une valeur fantaisiste ne doit pas donner
+    // l'illusion d'une file vide.
+    const res = makeRes();
+    await listHandler(makeReq({ query: { status: 'pouet' } }), res);
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).total).toBe(4);
+  });
+
   it('200 owner : filtre status=completed expose createdTenantId', async () => {
     const res = makeRes();
     await listHandler(makeReq({ query: { status: 'completed' } }), res);
