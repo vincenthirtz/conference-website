@@ -34,6 +34,7 @@ import {
 import type { StaffProps, TeamRow, TeamMemberRow } from '@/types/admin';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTeamEdit from '@/lib/i18n/locales/admin-fr/adminTeamEdit';
+import TeamRosterLockPanel from '@/components/admin/teams/TeamRosterLockPanel';
 
 type TournamentRow = {
   id: string;
@@ -1416,6 +1417,8 @@ function AdminEditTeamPage({
                     </div>
                   )}
                 </section>
+
+                <TeamRosterLockPanel teamId={String(teamId ?? '')} />
               </div>
 
               {/* Right Column - Quick Info */}

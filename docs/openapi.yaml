@@ -20062,6 +20062,137 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/teams/{teamId}/roster-lock:
+    get:
+      summary: Etat du verrou de roster d'une equipe, tournoi par tournoi.
+      operationId: adminTeamRosterLockState
+      tags:
+        - admin/teams
+      security:
+        - StaffSession: []
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      description: |
+        Pour chaque tournoi ou l'equipe est inscrite : le verrou s'applique-t-il,
+        et quelles fenetres sont ouvertes — celle du tournoi (toutes les
+        equipes) et la sienne. Les tournois qui bloquent remontent en premier.
+
+        L'ecran a besoin de distinguer les trois situations : verrouille, ouvert
+        pour cette equipe, ouvert pour tout le tournoi. Sans la troisieme,
+        l'admin rouvre ce qui est deja ouvert — ou ne comprend pas pourquoi le
+        roster passe alors qu'il n'a rien fait.
+      responses:
+        '200':
+          description: '`{ tournaments: [{ tournamentId, locks, tournamentUnlockedUntil, teamUnlockedUntil, … }] }`.'
+        '400':
+          description: Id d'equipe invalide.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Equipe inconnue dans cet espace (`UNKNOWN_TEAM`).
+    post:
+      summary: Ouvre une fenetre de deverrouillage POUR CETTE EQUIPE.
+      operationId: adminTeamRosterUnlock
+      tags:
+        - admin/teams
+      security:
+        - StaffSession: []
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      description: |
+        La fenetre du tableau de bord du tournoi ouvre pour TOUTES ses equipes :
+        c'est le bon geste quand le motif est collectif. Ce n'en est pas un
+        quand il tient a une equipe — « une joueuse s'est blessee chez les
+        Alpha » n'est pas une raison de rouvrir le roster de tout le monde la
+        veille des matchs.
+
+        La derogation vit donc sur l'inscription
+        (`tournament_teams.roster_unlocked_until`) et se cumule avec celle du
+        tournoi au sens le plus permissif.
+
+        Refuse (400 `NOT_REGISTERED`) un tournoi ou l'equipe n'est pas
+        inscrite : sinon la mise a jour ne toucherait aucune ligne et l'ecran
+        afficherait un succes pour un geste sans effet.
+
+        Bornes : 5 minutes a 24 h, defaut 60. La fenetre part de maintenant et
+        ne cumule pas avec un reste eventuel.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tournamentId]
+              properties:
+                tournamentId:
+                  type: string
+                  format: uuid
+                minutes:
+                  type: integer
+                  minimum: 5
+                  maximum: 1440
+                  default: 60
+      responses:
+        '200':
+          description: '`{ rosterUnlockedUntil, minutes, tournamentId }`.'
+        '400':
+          description: >-
+            Id invalide, equipe non inscrite (`NOT_REGISTERED`) ou duree hors
+            bornes (`INVALID_MINUTES`).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Equipe inconnue dans cet espace.
+    delete:
+      summary: Referme la fenetre de deverrouillage de cette equipe.
+      operationId: adminTeamRosterRelock
+      tags:
+        - admin/teams
+      security:
+        - StaffSession: []
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tournamentId]
+              properties:
+                tournamentId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: '`{ rosterUnlockedUntil: null, tournamentId }`.'
+        '400':
+          description: Equipe non inscrite a ce tournoi (`NOT_REGISTERED`).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Equipe inconnue dans cet espace.
   /api/admin/teams/{teamId}/history:
     parameters:
       - $ref: '#/components/parameters/TeamId'

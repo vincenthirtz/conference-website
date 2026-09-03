@@ -4,12 +4,21 @@
 //
 // Usage : appeler avant tout add/remove/swap sur team_members.
 //
-// DÉROGATION TEMPORAIRE. Un admin peut ouvrir une fenêtre par tournoi
-// (`tournaments.roster_unlocked_until`, cf. la migration du même nom) : tant
-// qu'elle est dans le futur, le verrou de CE tournoi ne s'applique pas et les
-// capitaines et managers travaillent normalement. Avant, la seule issue était
-// `force=true` côté admin — donc à l'admin de faire la manipulation à la place
-// du capitaine, en devinant qui ajouter.
+// DÉROGATION TEMPORAIRE. Un admin peut ouvrir une fenêtre : tant qu'elle est
+// dans le futur, le verrou ne s'applique pas et les capitaines et managers
+// travaillent normalement. Avant, la seule issue était `force=true` côté
+// admin — donc à l'admin de faire la manipulation à la place du capitaine, en
+// devinant qui ajouter.
+//
+// Deux portées, selon la raison :
+//   - `tournaments.roster_unlocked_until` — TOUTES les équipes du tournoi. Le
+//     bon outil quand le motif est collectif (report, format annoncé tard).
+//   - `tournament_teams.roster_unlocked_until` — UNE équipe sur CE tournoi.
+//     « Une joueuse s'est blessée chez les Alpha » n'est pas un motif pour
+//     rouvrir le roster de tout le monde.
+//
+// Elles se cumulent au sens le plus permissif : l'équipe est libre si SA
+// fenêtre est ouverte ou si celle du tournoi l'est.
 //
 // La fenêtre ne dispense QUE du tournoi qui l'ouvre : une équipe inscrite à
 // deux tournois dont un seul est déverrouillé reste verrouillée par l'autre.
@@ -58,16 +67,28 @@ export async function isTeamRosterLocked(
     return { locked: false };
   }
 
-  // 1) Lister les tournois auxquels la team est inscrite
+  // 1) Lister les tournois auxquels la team est inscrite, avec l'éventuelle
+  //    dérogation propre à CETTE inscription.
   const { data: registrations } = await supabaseAdmin
     .from('tournament_teams')
-    .select('tournament_id')
+    .select('tournament_id, roster_unlocked_until')
     .eq('tenant_id', tenantId)
     .eq('team_id', teamId);
 
   const tournamentIds = (registrations || [])
     .map((r: any) => r.tournament_id)
     .filter((x): x is string => !!x);
+
+  // Fenêtre par équipe, indexée par tournoi.
+  const teamWindowByTournament = new Map<string, string>();
+  for (const r of (registrations || []) as Array<{
+    tournament_id?: string | null;
+    roster_unlocked_until?: string | null;
+  }>) {
+    if (r.tournament_id && r.roster_unlocked_until) {
+      teamWindowByTournament.set(r.tournament_id, r.roster_unlocked_until);
+    }
+  }
 
   if (tournamentIds.length === 0) {
     return { locked: false };
@@ -99,15 +120,24 @@ export async function isTeamRosterLocked(
     const lockedAt = Date.parse(t.roster_locked_at);
     if (!Number.isFinite(lockedAt) || lockedAt > now) continue;
 
-    // Dérogation en cours pour CE tournoi : il ne verrouille pas, mais on garde
-    // l'échéance la plus PROCHE — c'est elle qui fixe la fin du répit.
-    const unlockUntil = t.roster_unlocked_until
-      ? Date.parse(t.roster_unlocked_until)
-      : NaN;
-    if (Number.isFinite(unlockUntil) && unlockUntil > now) {
-      if (!openWindow || unlockUntil < Date.parse(openWindow.until)) {
+    // Dérogation en cours pour CE tournoi — collective ou propre à l'équipe.
+    // On retient la plus LOINTAINE des deux (le répit le plus favorable), puis,
+    // entre tournois, l'échéance la plus PROCHE : c'est elle qui referme.
+    const candidates = [
+      t.roster_unlocked_until as string | null | undefined,
+      teamWindowByTournament.get(t.id),
+    ]
+      .map((iso) => (iso ? { iso, ms: Date.parse(iso) } : null))
+      .filter(
+        (c): c is { iso: string; ms: number } =>
+          c !== null && Number.isFinite(c.ms) && c.ms > now
+      );
+
+    if (candidates.length > 0) {
+      const best = candidates.reduce((a, b) => (a.ms >= b.ms ? a : b));
+      if (!openWindow || best.ms < Date.parse(openWindow.until)) {
         openWindow = {
-          until: t.roster_unlocked_until as string,
+          until: best.iso,
           tournamentId: t.id,
           tournamentName: t.name ?? null,
         };

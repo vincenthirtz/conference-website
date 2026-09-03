@@ -7,7 +7,11 @@ import {
   isTeamRosterLocked,
 } from '../../utils/teams/rosterLock';
 
-type Reg = { tournament_id: string };
+type Reg = {
+  tournament_id: string;
+  /** Dérogation propre à CETTE inscription (par équipe). */
+  roster_unlocked_until?: string | null;
+};
 type Tournament = {
   id: string;
   name: string | null;
@@ -336,5 +340,68 @@ describe('fenêtre de déverrouillage', () => {
     const status = await isTeamRosterLocked(TENANT_ID, TEAM_ID);
     expect(status.locked).toBe(false);
     if (!status.locked) expect(status.unlockedUntil).toBeUndefined();
+  });
+});
+
+describe('dérogation par équipe', () => {
+  const PAST2 = new Date(Date.now() - 3_600_000).toISOString();
+  const FUTURE2 = new Date(Date.now() + 3_600_000).toISOString();
+
+  it('la fenêtre de l’équipe lève le verrou, sans toucher au tournoi', async () => {
+    // C'est le cas qui motive cette portée : une équipe précise a une raison,
+    // les autres n'en ont pas.
+    seedRegistrations([
+      { tournament_id: 't1', roster_unlocked_until: FUTURE2 },
+    ]);
+    seedTournaments([
+      {
+        id: 't1',
+        name: 'Coupe',
+        roster_locked_at: PAST2,
+        roster_unlocked_until: null,
+        status: 'running',
+      },
+    ]);
+
+    const status = await isTeamRosterLocked(TENANT_ID, TEAM_ID);
+    expect(status.locked).toBe(false);
+    if (!status.locked) expect(status.unlockedUntil).toBe(FUTURE2);
+  });
+
+  it('expirée côté équipe, le verrou reprend', async () => {
+    seedRegistrations([{ tournament_id: 't1', roster_unlocked_until: PAST2 }]);
+    seedTournaments([
+      {
+        id: 't1',
+        name: 'Coupe',
+        roster_locked_at: PAST2,
+        roster_unlocked_until: null,
+        status: 'running',
+      },
+    ]);
+
+    const status = await isTeamRosterLocked(TENANT_ID, TEAM_ID);
+    expect(status.locked).toBe(true);
+  });
+
+  it('les deux portées se cumulent au plus permissif', async () => {
+    // Fenêtre d'équipe courte, fenêtre de tournoi longue : c'est la plus
+    // favorable qui vaut — sinon ouvrir pour tout le monde raccourcirait le
+    // répit d'une équipe qui en avait déjà un.
+    const SOON = new Date(Date.now() + 600_000).toISOString();
+    seedRegistrations([{ tournament_id: 't1', roster_unlocked_until: SOON }]);
+    seedTournaments([
+      {
+        id: 't1',
+        name: 'Coupe',
+        roster_locked_at: PAST2,
+        roster_unlocked_until: FUTURE2,
+        status: 'running',
+      },
+    ]);
+
+    const status = await isTeamRosterLocked(TENANT_ID, TEAM_ID);
+    expect(status.locked).toBe(false);
+    if (!status.locked) expect(status.unlockedUntil).toBe(FUTURE2);
   });
 });
