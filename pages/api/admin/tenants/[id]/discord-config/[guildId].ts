@@ -31,7 +31,7 @@ const NULLABLE_SNOWFLAKE_KEYS = [
   'staff_log_channel_id',
   'matches_live_channel_id',
   'disputes_forum_channel_id',
-  'lives_board_channel_id',
+  'broadcast_panel_channel_id',
   'news_ingest_channel_id',
   'scrims_announce_channel_id',
   'captain_role_id',

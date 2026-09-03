@@ -2,7 +2,7 @@
 //
 // Lot 7 Broadcast Console — bot pull endpoint. Returns the same aggregate
 // shape as /api/admin/broadcast/state minus the staff-only metadata, so
-// the bot can render the "On-air now" panel in `lives_board_channel_id`
+// the bot can render the "On-air now" panel in `broadcast_panel_channel_id`
 // without depending on a live websocket.
 //
 // Auth : x-api-key (+ x-tenant-id when using the env key, per the
