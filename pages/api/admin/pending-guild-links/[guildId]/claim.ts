@@ -245,12 +245,21 @@ async function handler(
   }
 
   // INSERT discord_guilds.
+  //
+  // `is_primary` seulement si l'espace n'a encore aucun serveur : rien ne
+  // l'impose en base, mais deux serveurs « principaux » pour un même espace
+  // n'ont pas de sens et les résolveurs du bot en choisiraient un au hasard.
+  const { count: existingGuilds } = await supabaseAdmin
+    .from('discord_guilds')
+    .select('guild_id', { count: 'exact', head: true })
+    .eq('tenant_id', resolved.tenant.id);
+
   const { error: insertErr } = await supabaseAdmin
     .from('discord_guilds')
     .insert({
       guild_id: guildId,
       tenant_id: resolved.tenant.id,
-      is_primary: true,
+      is_primary: (existingGuilds ?? 0) === 0,
     });
   if (insertErr) {
     logger.error(

@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import AlertBanner from '@/components/admin/AlertBanner';
+import AttachGuildModal from '@/components/admin/onboarding/AttachGuildModal';
 import nsAdminOnboarding from '@/lib/i18n/locales/admin-fr/adminOnboarding';
 
 type Dict = typeof nsAdminOnboarding.fr;
@@ -44,22 +45,27 @@ type TenantReadiness = {
   blockers: string[];
 };
 
-/** Libellé + destination de chaque manque. La destination compte autant que le libellé. */
+/**
+ * Libellé et destination de chaque manque. La destination compte autant que le
+ * libellé : signaler un manque sans dire où le régler laisse le lecteur
+ * chercher.
+ *
+ * `action` remplace le lien quand le geste se fait ICI même — c'est le cas du
+ * rattachement d'un serveur, qui partait auparavant vers l'onglet « Liens
+ * Discord » où le serveur n'apparaissait que s'il attendait déjà.
+ */
 function blockerMeta(
   blocker: string,
   tenantId: string,
   t: Dict
-): { label: string; href: string | null } {
+): { label: string; href?: string | null; action?: 'attach_guild' } {
   switch (blocker) {
     case 'inactive':
       return { label: t.blockerInactive, href: `/admin/tenants/${tenantId}` };
     case 'plan_sans_bot':
       return { label: t.blockerNoPlan, href: `/admin/tenants/${tenantId}` };
     case 'aucun_serveur':
-      return {
-        label: t.blockerNoGuild,
-        href: '/admin/onboarding?tab=guild-links',
-      };
+      return { label: t.blockerNoGuild, action: 'attach_guild' };
     case 'personne_rattache':
       return { label: t.blockerNoStaff, href: `/admin/tenants/${tenantId}` };
     case 'discord_non_configure':
@@ -102,6 +108,11 @@ export default function TenantReadinessPanel() {
   const [rows, setRows] = useState<TenantReadiness[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [onlyBlocked, setOnlyBlocked] = useState(false);
+  // Espace en cours de rattachement — porte aussi l'ouverture de la modale.
+  const [attachTo, setAttachTo] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -125,9 +136,7 @@ export default function TenantReadinessPanel() {
     [rows, onlyBlocked]
   );
 
-  const blockedCount = (rows ?? []).filter(
-    (r) => r.blockers.length > 0
-  ).length;
+  const blockedCount = (rows ?? []).filter((r) => r.blockers.length > 0).length;
 
   if (rows === null) {
     return <p className="text-sm text-neutral-400">{t.readinessLoading}</p>;
@@ -227,19 +236,32 @@ export default function TenantReadinessPanel() {
                     </div>
                   </div>
 
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                      r.blockers.length === 0
-                        ? 'bg-emerald-500/15 text-emerald-200'
-                        : 'bg-amber-500/15 text-amber-100'
-                    }`}
-                  >
-                    {r.blockers.length === 0
-                      ? t.readinessReady
-                      : format(t.readinessBlockers, {
-                          count: r.blockers.length,
-                        })}
-                  </span>
+                  <div className="flex flex-col items-end gap-2">
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        r.blockers.length === 0
+                          ? 'bg-emerald-500/15 text-emerald-200'
+                          : 'bg-amber-500/15 text-amber-100'
+                      }`}
+                    >
+                      {r.blockers.length === 0
+                        ? t.readinessReady
+                        : format(t.readinessBlockers, {
+                            count: r.blockers.length,
+                          })}
+                    </span>
+                    {/* Toujours accessible, pas seulement quand le serveur
+                        manque : un espace peut légitimement en piloter un
+                        second (serveur de staff, édition suivante). */}
+                    <button
+                      type="button"
+                      onClick={() => setAttachTo({ id: r.id, name: r.name })}
+                      className="text-xs text-violet-300 underline hover:text-violet-200"
+                      data-testid="readiness-attach-guild-cta"
+                    >
+                      {t.attachGuildCta}
+                    </button>
+                  </div>
                 </div>
 
                 {r.blockers.length > 0 && (
@@ -248,7 +270,18 @@ export default function TenantReadinessPanel() {
                       const meta = blockerMeta(b, r.id, t);
                       return (
                         <li key={b}>
-                          {meta.href ? (
+                          {meta.action === 'attach_guild' ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setAttachTo({ id: r.id, name: r.name })
+                              }
+                              className="inline-block rounded-lg border border-amber-500/30 bg-amber-500/5 px-2.5 py-1 text-xs text-amber-100 hover:border-amber-400/60"
+                              data-testid="readiness-attach-guild"
+                            >
+                              {meta.label} →
+                            </button>
+                          ) : meta.href ? (
                             <Link
                               href={meta.href}
                               className="inline-block rounded-lg border border-amber-500/30 bg-amber-500/5 px-2.5 py-1 text-xs text-amber-100 hover:border-amber-400/60"
@@ -270,6 +303,18 @@ export default function TenantReadinessPanel() {
           })}
         </ul>
       )}
+
+      <AttachGuildModal
+        open={attachTo !== null}
+        tenant={attachTo}
+        onClose={() => setAttachTo(null)}
+        onAttached={() => {
+          setAttachTo(null);
+          // Le rattachement change l'état affiché : on recharge plutôt que de
+          // le deviner côté client.
+          void load();
+        }}
+      />
     </div>
   );
 }

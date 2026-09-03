@@ -21098,6 +21098,73 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/tenants/{id}/guilds:
+    post:
+      summary: Rattache un serveur Discord a un espace.
+      operationId: adminTenantAttachGuild
+      tags:
+        - admin/tenants
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      description: |
+        Le seul chemin de rattachement partait du SERVEUR
+        (`POST /api/admin/pending-guild-links/{guildId}/claim`) et exigeait une
+        ligne dans `pending_guild_links`. Vu depuis l'espace — « cet espace n'a
+        aucun serveur » — il n'y avait rien : l'onglet « Espaces » du hub
+        d'onboarding signalait le manque sans moyen de le regler.
+
+        Comportement :
+          - serveur DEJA rattache a cet espace → 200 `already_linked`
+            (idempotent : un double-clic ne doit pas ressembler a un echec) ;
+          - serveur rattache a un AUTRE espace → 409 `GUILD_TAKEN`. Le deplacer
+            silencieusement couperait le bot de l'espace d'origine ;
+          - `is_primary` seulement sur le premier serveur de l'espace ;
+          - cree la ligne `tenant_discord_config` (cible du formulaire de
+            reglages) et purge l'eventuelle ligne d'attente.
+
+        Le bot prend le rattachement en compte au rafraichissement de son cache
+        `tenant-config` (~5 min). Rien a redeployer.
+
+        Portee : owner de la PLATEFORME (`manage_tenant` + `scope: platform`),
+        comme tout le hub d'onboarding.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [guild_id]
+              properties:
+                guild_id:
+                  type: string
+                  pattern: "^[0-9]{15,25}$"
+                  example: "123456789012345678"
+      responses:
+        '201':
+          description: '`{ status: "linked", guild_id, tenant, is_primary }`.'
+        '200':
+          description: '`{ status: "already_linked", … }` — deja rattache ici.'
+        '400':
+          description: >-
+            Identifiant de serveur ou d'espace invalide, ou espace `developer`
+            (`DEVELOPER_TENANT_FORBIDDEN` : le bot lui est ferme).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Espace inconnu (`UNKNOWN_TENANT`).
+        '409':
+          description: Serveur deja rattache a un autre espace (`GUILD_TAKEN`).
+        '405':
+          description: Methode non geree.
   /api/admin/tenants/readiness:
     get:
       summary: Etat de mise en service de chaque espace (ce qui lui manque).

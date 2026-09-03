@@ -51,6 +51,7 @@ Un espace peut naître de trois façons, et toutes trois posent le même essai d
 | Auto-claim self-service                              | invitation du bot après une demande  |
 | Création par le staff                                | `/admin/onboarding` ou `/admin/tenants` |
 | Rattachement d'un serveur en attente                 | `pending_guild_links` → claim        |
+| Rattachement depuis l'espace                         | `/admin/onboarding?tab=readiness`     |
 
 L'uniformité n'est pas cosmétique : sans essai, l'espace naît en `discovery`,
 plan qui n'inclut pas le bot, et le gate baseline de `withBotRoute` répond 403
@@ -180,5 +181,24 @@ prop except `/onboard` (the marketing landing is indexable).
   Postgres gives us a real atomic commit/rollback.
 - The `pending_guild_links` fallback row stays in the DB if the auto-claim
   is later attempted with a stale `owner_discord_id` (e.g. the bot is
-  re-invited after the request row has been deleted). The admin UI under
-  `/admin/tenants` is the catch-all.
+  re-invited after the request row has been deleted).
+
+## Rattacher un serveur à la main
+
+Deux chemins, selon le point de départ — et il fallait les deux :
+
+| Point de départ | Écran | Endpoint |
+| --- | --- | --- |
+| Un SERVEUR attend | `/admin/onboarding?tab=guild-links` | `POST /api/admin/pending-guild-links/:guildId/claim` |
+| Un ESPACE n'a pas de serveur | `/admin/onboarding?tab=readiness` | `POST /api/admin/tenants/:id/guilds` |
+
+Le second existe parce que le premier exige une ligne dans
+`pending_guild_links` : purgée, ou jamais créée, et il n'y avait plus aucun
+moyen de rattacher — l'onglet « Espaces » signalait « aucun serveur Discord »
+sans rien proposer. Il accepte donc aussi un identifiant de serveur saisi à la
+main, purge l'attente s'il y en avait une, et refuse (409) un serveur déjà
+rattaché ailleurs : le déplacer silencieusement couperait le bot de l'espace
+d'origine.
+
+Dans les deux cas, le bot prend le rattachement en compte au rafraîchissement
+de son cache `tenant-config` (~5 min). Rien à redéployer.
