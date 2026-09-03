@@ -90,7 +90,7 @@ describe('computeSubscriptionStats', () => {
         id: 'u1',
         email: 'a@x.com',
         email_confirmed_at: '2026-01-01',
-        user_metadata: { display_name: 'Ignored' },
+        user_metadata: { display_name: 'Ignored', battle_tag: 'Alpha#1234' },
       } as any,
       // confirmé, display_name, aucun opt-out → abonné
       {
@@ -142,8 +142,6 @@ describe('computeSubscriptionStats', () => {
         user_metadata: { display_name: 'Zed' },
       } as any,
     ]);
-
-    store.profiles = [{ id: 'u1', battle_tag: 'Alpha#1234' }] as any;
 
     store.notification_prefs = [
       {

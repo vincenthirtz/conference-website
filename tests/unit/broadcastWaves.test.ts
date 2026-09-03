@@ -111,7 +111,7 @@ describe('computeAudienceRecipients', () => {
         id: 'u1',
         email: 'a@x.com',
         email_confirmed_at: '2026-01-01',
-        user_metadata: { display_name: 'Ignored' },
+        user_metadata: { display_name: 'Ignored', battle_tag: 'Alpha#1234' },
       } as any,
       // confirmé, pas de battle_tag → fallback display_name
       {
@@ -136,7 +136,6 @@ describe('computeAudienceRecipients', () => {
       // pas d'email → ignoré
       { id: 'u5', email: null, email_confirmed_at: '2026-01-01' } as any,
     ]);
-    store.profiles = [{ id: 'u1', battle_tag: 'Alpha#1234' }] as any;
 
     const recipients = await computeAudienceRecipients('all-confirmed-users');
     expect(
@@ -972,7 +971,7 @@ describe('schedule endpoint', () => {
         id: 'u1',
         email: 'a@x.com',
         email_confirmed_at: '2026-01-01',
-        user_metadata: {},
+        user_metadata: { battle_tag: 'Alpha#1234' },
       } as any,
       {
         id: 'u2',
@@ -981,7 +980,6 @@ describe('schedule endpoint', () => {
         user_metadata: { display_name: 'Bee' },
       } as any,
     ]);
-    store.profiles = [{ id: 'u1', battle_tag: 'Alpha#1234' }] as any;
 
     const res = makeRes();
     await scheduleHandler(

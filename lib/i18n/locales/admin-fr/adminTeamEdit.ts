@@ -91,4 +91,17 @@ export default adminNs('adminTeamEdit', {
   rosterLockDays: "{n} j",
   rosterLockLoadError: "État du verrou indisponible.",
   rosterLockActionError: "L’action a échoué.",
+  // Liens rapides
+  captainViewLink: "Vue capitaine",
+  discordChannelsLink: "Salons Discord de l’équipe",
+
+  // Effectif d’un tournoi déjà rejoint
+  registeredRosterGap: "Effectif insuffisant : {count} joueuse(s) pour un minimum de {min}.",
+
+  // Historique staff
+  historyTitle: "Historique",
+  historyLoading: "Chargement…",
+  historyEmpty: "Aucune action enregistrée sur cette équipe.",
+  historyLoadError: "Historique indisponible.",
+  historyTruncated: "Seules les {count} dernières actions sont affichées.",
 });

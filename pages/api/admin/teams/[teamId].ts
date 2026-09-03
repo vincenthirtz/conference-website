@@ -17,6 +17,7 @@ import {
 } from '@/utils/overwatchRank';
 
 import { logger } from '../../../../utils/logger';
+import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
 export type TeamRow = {
   id: string;
   name: string;
@@ -112,22 +113,19 @@ async function handleGet(
     return res.status(200).json({ team: data as TeamRow });
   }
 
-  // Récupérer les membres de l'équipe (opt-in via ?withMembers=1)
+  // Récupérer les membres de l'équipe (opt-in via ?withMembers=1).
+  //
+  // Le nom affiché NE vient PAS d'un embed `profiles:user_id` : cette table
+  // n'existe dans aucun schéma. PostgREST refusait donc la requête entière, et
+  // la branche renvoyait une liste VIDE — sans erreur visible, puisque
+  // l'échec n'était que journalisé. C'est /admin/teams/my, la page d'équipe
+  // des capitaines, qui consomme ce chemin.
+  //
+  // Le profil vit dans les métadonnées des utilisateurs, lues par lot via la
+  // RPC `admin_get_user_profiles` (cf. utils/adminUserProfiles.ts).
   const { data: membersData, error: membersError } = await supabaseAdmin
     .from('team_members')
-    .select(
-      `
-      id,
-      user_id,
-      role,
-      battle_tag,
-      profiles:user_id (
-        id,
-        display_name,
-        email
-      )
-    `
-    )
+    .select('id, user_id, role, battle_tag')
     .eq('tenant_id', ctx.tenantId)
     .eq('team_id', id);
 
@@ -135,11 +133,22 @@ async function handleGet(
     logger.error('admin GET team members error:', membersError);
   }
 
+  const rows = (membersData || []) as Array<{
+    id: string;
+    user_id: string | null;
+    role: string | null;
+    battle_tag: string | null;
+  }>;
+  const profiles = await fetchAdminUserProfiles(rows.map((m) => m.user_id));
+
   // Formater les membres
-  const members = (membersData || []).map((m: any) => ({
+  const members = rows.map((m) => ({
     id: m.id,
     user_id: m.user_id,
-    display_name: m.profiles?.display_name || m.battle_tag || null,
+    display_name:
+      (m.user_id ? profiles.get(m.user_id)?.display_name : null) ||
+      m.battle_tag ||
+      null,
     role: m.role,
     battle_tag: m.battle_tag,
     is_captain: data.captain_id === m.user_id,

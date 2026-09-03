@@ -35,6 +35,8 @@ import type { StaffProps, TeamRow, TeamMemberRow } from '@/types/admin';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTeamEdit from '@/lib/i18n/locales/admin-fr/adminTeamEdit';
 import TeamRosterLockPanel from '@/components/admin/teams/TeamRosterLockPanel';
+import TeamHistoryPanel from '@/components/admin/teams/TeamHistoryPanel';
+import TeamQuickLinks from '@/components/admin/teams/TeamQuickLinks';
 
 type TournamentRow = {
   id: string;
@@ -1356,6 +1358,20 @@ function AdminEditTeamPage({
                                   <div className="text-xs text-neutral-500 mt-0.5">
                                     {tourn.game} • {tourn.status}
                                   </div>
+                                  {/* L'alerte d'effectif n'existait qu'AVANT
+                                      l'inscription. Or un roster passe sous le
+                                      minimum après coup — départ, exclusion —
+                                      et plus rien ne le disait. */}
+                                  {Number(tourn.min_players) > 0 &&
+                                    playingCount <
+                                      Number(tourn.min_players) && (
+                                      <div className="text-xs text-amber-300 mt-1">
+                                        {format(t.registeredRosterGap, {
+                                          count: playingCount,
+                                          min: Number(tourn.min_players),
+                                        })}
+                                      </div>
+                                    )}
                                 </div>
                                 <button
                                   onClick={() =>
@@ -1439,50 +1455,13 @@ function AdminEditTeamPage({
                   </div>
                 </section>
 
-                <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-                  <h2 className="text-sm font-semibold text-neutral-400 mb-3">
-                    {t.quickLinksTitle}
-                  </h2>
-                  <div className="space-y-2">
-                    <Link
-                      href={`/team/${encodeURIComponent(team.slug || team.id)}`}
-                      target="_blank"
-                      className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-neutral-900/50 hover:bg-neutral-700/50 transition-colors group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center">
-                          <svg
-                            className="w-4 h-4 text-blue-400"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                            />
-                          </svg>
-                        </div>
-                        <span className="text-sm">{t.publicPage}</span>
-                      </div>
-                      <svg
-                        className="w-4 h-4 text-neutral-500 group-hover:text-white transition-colors"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
-                    </Link>
-                  </div>
-                </section>
+                <TeamQuickLinks
+                  teamId={team.id}
+                  slug={team.slug ?? null}
+                  captainUserId={captainUserId}
+                />
+
+                <TeamHistoryPanel teamId={team.id} />
               </div>
             </div>
           )}

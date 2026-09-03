@@ -14,6 +14,7 @@
 //      exécute puis repose une photo fraîche.
 
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
@@ -155,6 +156,22 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Arrivée depuis la fiche d'une équipe (`?team=<id>`) : on ouvre sa carte et
+  // on ne montre qu'elle. Sans ça, le lien déposait l'admin en haut d'une liste
+  // de toutes les équipes, à chercher la sienne — le geste qu'on voulait éviter.
+  const router = useRouter();
+  const focusTeamId =
+    typeof router.query.team === 'string' ? router.query.team : null;
+  useEffect(() => {
+    if (!focusTeamId || teams.length === 0) return;
+    const target = teams.find((team) => team.teamId === focusTeamId);
+    if (!target) return;
+    setOpenTeamId(focusTeamId);
+    // Le filtre porte sur le nom : c'est la recherche existante, pas un
+    // second mécanisme à maintenir. L'admin peut l'effacer pour élargir.
+    setSearch(target.name || '');
+  }, [focusTeamId, teams]);
 
   const act = useCallback(
     async (body: Record<string, unknown>, key: string) => {

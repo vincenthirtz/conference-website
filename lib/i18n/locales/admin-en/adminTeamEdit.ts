@@ -92,4 +92,17 @@ export default {
   rosterLockDays: "{n} d",
   rosterLockLoadError: "Lock status unavailable.",
   rosterLockActionError: "The action failed.",
+  // Quick links
+  captainViewLink: "Captain view",
+  discordChannelsLink: "Team Discord channels",
+
+  // Roster size on an already-joined tournament
+  registeredRosterGap: "Roster too small: {count} player(s) for a minimum of {min}.",
+
+  // Staff history
+  historyTitle: "History",
+  historyLoading: "Loading…",
+  historyEmpty: "No recorded action on this team.",
+  historyLoadError: "History unavailable.",
+  historyTruncated: "Only the last {count} actions are shown.",
 };

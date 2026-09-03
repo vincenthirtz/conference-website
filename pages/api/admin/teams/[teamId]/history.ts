@@ -142,7 +142,20 @@ async function handler(
 
     rawLogs.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
 
-    const formatted = rawLogs.map((log) => formatStaffLog(log));
+    // Les deux requêtes se recouvrent : un log posé sur l'équipe ET portant
+    // `payload.team_id` remonte dans les deux. Sans dédoublonnage, l'écran
+    // affiche deux fois la même action — et le lecteur croit à deux gestes.
+    const seen = new Set<string>();
+    const unique = rawLogs.filter((log) => {
+      if (seen.has(log.id)) return false;
+      seen.add(log.id);
+      return true;
+    });
+
+    // `limit` s'applique à CHAQUE requête : sans cette coupe, demander 20
+    // pouvait en rendre 40. L'appelant compte sur le nombre qu'il a demandé
+    // pour savoir s'il y a une suite.
+    const formatted = unique.slice(0, limitNum).map((log) => formatStaffLog(log));
 
     return res.status(200).json({
       teamId: id,

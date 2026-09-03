@@ -7,6 +7,7 @@
 // à reconstruire l'historique d'envoi pour le tableau de bord admin.
 
 import { supabaseAdmin } from './supabase';
+import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
 import {
   buildIdahobitLiveEmailHtml,
   sendIdahobitLiveEmail,
@@ -422,8 +423,17 @@ async function fetchBroadcastOptOuts(): Promise<Map<string, string | null>> {
 }
 
 /**
- * Résout profiles.battle_tag pour un lot d'user ids (chunké à 500).
+ * Résout le BattleTag pour un lot d'user ids (chunké à 500).
  * Renvoie une map user_id -> battle_tag brut.
+ *
+ * La table `profiles` n'existe dans AUCUN schéma : la version précédente
+ * interrogeait un néant, PostgREST refusait la requête, et la map revenait
+ * systématiquement vide. Conséquence invisible : le prénom d'accroche des
+ * campagnes retombait toujours sur le `display_name`, jamais sur le BattleTag,
+ * sans qu'aucune alerte ne le signale.
+ *
+ * Le profil vit dans les métadonnées des utilisateurs, lues par lot via la RPC
+ * `admin_get_user_profiles`.
  */
 async function fetchBattleTags(
   userIds: string[]
@@ -435,16 +445,9 @@ async function fetchBattleTags(
   const CHUNK = 500;
   for (let i = 0; i < userIds.length; i += CHUNK) {
     const slice = userIds.slice(i, i + CHUNK);
-    const { data: profiles } = await supabaseAdmin
-      .from('profiles')
-      .select('id, battle_tag')
-      .in('id', slice);
-    if (profiles) {
-      for (const p of profiles) {
-        if (p.id && p.battle_tag) {
-          battleTagById.set(p.id as string, p.battle_tag as string);
-        }
-      }
+    const profiles = await fetchAdminUserProfiles(slice);
+    for (const [id, profile] of profiles) {
+      if (profile.battle_tag) battleTagById.set(id, profile.battle_tag);
     }
   }
   return battleTagById;
