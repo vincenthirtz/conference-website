@@ -101,6 +101,27 @@ const apiKeyCache = new Map<
  */
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/**
+ * Oublie les clés mémorisées d'un espace (ou de tous).
+ *
+ * Le cache d'authentification garde une empreinte 60 s. Sans cet appel, une clé
+ * révoquée pour cause de fuite restait acceptée jusqu'à une minute de plus —
+ * exactement le moment où l'on veut qu'elle cesse tout de suite.
+ *
+ * Portée : l'instance courante. En serverless, les autres instances gardent
+ * leur cache jusqu'au TTL ; c'est une atténuation, pas une garantie, et la
+ * seule garantie dure reste la fin du TTL.
+ */
+export function invalidateBotApiKeyCache(tenantId?: string): void {
+  if (!tenantId) {
+    apiKeyCache.clear();
+    return;
+  }
+  for (const [hash, entry] of apiKeyCache) {
+    if (entry.tenantId === tenantId) apiKeyCache.delete(hash);
+  }
+}
+
 /** Purge les caches d'impersonation. Usage strictement test. */
 export function __resetBotImpersonationCachesForTests(): void {
   apiKeyCache.clear();
@@ -249,14 +270,45 @@ export async function verifyBotApiKeyMultiTenant(
     };
   }
 
+  // Deux empreintes peuvent être valables : la courante, et la précédente
+  // pendant sa fenêtre de grâce (rotation sans coupure — cf. T8). Sans cette
+  // seconde chance, régénérer une clé coupait le bot en place à la milliseconde,
+  // jusqu'à ce que quelqu'un aille reposer la nouvelle valeur sur le serveur.
   const { data } = await supabaseAdmin
     .from('tenant_secrets')
-    .select('tenant_id, is_platform_key')
-    .eq('bot_api_key_hash', hash)
+    .select(
+      'tenant_id, is_platform_key, bot_api_key_hash, previous_key_hash, previous_key_expires_at'
+    )
+    .or(`bot_api_key_hash.eq.${hash},previous_key_hash.eq.${hash}`)
     .maybeSingle();
+
   if (data?.tenant_id) {
+    const row = data as {
+      tenant_id: string;
+      is_platform_key?: boolean | null;
+      bot_api_key_hash?: string | null;
+      previous_key_hash?: string | null;
+      previous_key_expires_at?: string | null;
+    };
+    // Clé précédente : n'est acceptée que tant que sa fenêtre court. Passé
+    // l'échéance, elle vaut une clé inconnue.
+    if (row.bot_api_key_hash !== hash) {
+      const until = row.previous_key_expires_at
+        ? Date.parse(row.previous_key_expires_at)
+        : NaN;
+      if (!Number.isFinite(until) || until <= Date.now()) {
+        return { ok: false };
+      }
+    }
     const tenantId = data.tenant_id as string;
     const isPlatformKey = data.is_platform_key === true;
+    // Trace d'usage, au plus une fois par TTL de cache (on n'arrive ici que sur
+    // un miss). Best-effort : une écriture ratée ne refuse pas l'appel.
+    void supabaseAdmin
+      .from('tenant_secrets')
+      .update({ last_used_at: new Date().toISOString() })
+      .eq('tenant_id', tenantId)
+      .then(undefined, () => undefined);
     apiKeyCache.set(hash, {
       tenantId,
       isPlatformKey,

@@ -21691,6 +21691,32 @@ paths:
           $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/RateLimited'
+    delete:
+      summary: Revoke the previous bot API key immediately.
+      description: |
+        Requires `owner` role. Rotation keeps the previous key valid for 48 h so
+        the running bot does not break; this endpoint ends that window at once —
+        the gesture for a leak, not a routine. The current key is untouched.
+      operationId: adminRevokePreviousTenantKey
+      tags:
+        - admin/tenants
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Previous key revoked.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/admin/tenants/{id}/plan-checkout:
     parameters:
       - in: path

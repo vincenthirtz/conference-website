@@ -463,7 +463,29 @@ class Builder {
   }
 
   /** PostgREST .or() — treated as a no-op. Tests should not rely on its filtering. */
-  or(_expr: string) {
+  /**
+   * PostgREST .or('a.eq.x,b.eq.y') — disjonction de conditions simples.
+   *
+   * C'était un no-op, ce qui est pire qu'une absence : un handler qui accepte
+   * « la clé courante OU la précédente » voyait TOUTE clé matcher la première
+   * ligne semée, et le test « une clé inconnue est refusée » passait au vert
+   * sans rien vérifier. On implémente `eq` et `is.null` ; toute autre forme
+   * lève, pour qu'un jour où l'on écrit plus riche, on le sache tout de suite.
+   */
+  or(expr: string) {
+    const clauses = expr.split(',').map((c) => c.trim()).filter(Boolean);
+    const preds = clauses.map((clause) => {
+      const [col, op, ...rest] = clause.split('.');
+      const raw = rest.join('.');
+      if (op === 'eq') {
+        return (row: Row) => String(row[col] ?? '') === raw;
+      }
+      if (op === 'is' && raw === 'null') {
+        return (row: Row) => row[col] === null || row[col] === undefined;
+      }
+      throw new Error(`supabaseMock: .or() ne gère pas « ${clause} »`);
+    });
+    this.filters.push((row) => preds.some((p) => p(row)));
     return this;
   }
 

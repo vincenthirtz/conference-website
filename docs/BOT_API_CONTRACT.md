@@ -43,7 +43,10 @@ endpoint so the bot side can be code-reviewed against a single page.
 
 Each tenant carries its own `bot_api_key` and `bot_webhook_secret` (HMAC
 push signing) in `tenant_secrets`. Rotate via
-`POST /api/admin/tenants/:id/rotate-secrets` (owner-only): the endpoint
+`POST /api/admin/tenants/:id/rotate-secrets` (owner-only) : la cle precedente
+reste acceptee 48 h (fenetre de grace, colonne `tenant_secrets.previous_key_hash`)
+afin de ne pas couper le bot en place ; `DELETE` sur la meme route la revoque
+immediatement. The endpoint
 returns the two plain values **once** in the response body. The operator:
 
 1. Updates the **bot side** podman secrets on the Freebox VM:

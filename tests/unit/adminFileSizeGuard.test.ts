@@ -49,7 +49,9 @@ const BASELINE: Record<string, number> = {
   'pages/admin/stages/[stageId].tsx': 950,
   'pages/admin/users/new.tsx': 930,
   'pages/admin/demandes/[id].tsx': 921,
-  'pages/admin/tenants/[id].tsx': 917,
+  // 764 écrites : la fiche a rendu ses secrets bot à un panneau (T8), et le
+  // plafond suit — un gel qui ne descend jamais finit par ne plus rien geler.
+  'pages/admin/tenants/[id].tsx': 800,
   'components/admin/profile/ProfileModal.tsx': 914,
   'components/admin/navigation/adminNav.ts': 969,
   'pages/admin/stages/[stageId]/groups.tsx': 856,

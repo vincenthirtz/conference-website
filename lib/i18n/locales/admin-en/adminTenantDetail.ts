@@ -148,4 +148,11 @@ export default {
   overviewLimitLeagues: 'Leagues (plan)',
   overviewLimitUsed: '{used} / {max}',
   overviewLimitUnlimited: '{used} — unlimited',
+  previousKeyValid: 'The previous key stays valid until {date}.',
+  revokePrev: 'Revoke now',
+  confirmRevokePrevTitle: 'Revoke the previous bot key?',
+  confirmRevokePrevSubtitle:
+    'A bot still configured with it will be refused immediately. For a leak, not as routine.',
+  toastPrevRevoked: 'Previous key revoked.',
+  errorRevokePrev: 'Revocation failed.',
 };

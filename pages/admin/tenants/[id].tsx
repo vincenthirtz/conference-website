@@ -17,8 +17,8 @@ import {
   buildStaffColumns,
 } from '@/components/admin/tenants/tenantTableColumns';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
-import BotSecretsRevealModal from '@/components/admin/BotSecretsRevealModal';
 import TenantOverviewPanel from '@/components/admin/tenants/TenantOverviewPanel';
+import TenantBotSecretsPanel from '@/components/admin/tenants/TenantBotSecretsPanel';
 import Tabs, {
   tabButtonId,
   tabPanelId,
@@ -81,15 +81,6 @@ const TABS_ID_BASE = 'tenant-detail';
 const CONFERENCE_SLUG = 'conference';
 
 // POST /api/admin/tenants/[id]/rotate-secrets is live (manager+ only).
-const ROTATE_SECRETS_API_READY = true;
-
-type RotateSecretsResponse = {
-  tenantId: string;
-  botApiKey: string;
-  botWebhookSecret: string;
-  rotatedAt: string;
-};
-
 function formatDate(s: string | null): string {
   if (!s) return '—';
   try {
@@ -134,11 +125,6 @@ function AdminTenantDetailPage({ tenantId }: Props) {
   const [addingStaff, setAddingStaff] = useState(false);
 
   // Bot secrets rotation
-  const [rotatingSecrets, setRotatingSecrets] = useState(false);
-  const [revealedSecrets, setRevealedSecrets] = useState<{
-    botApiKey: string;
-    botWebhookSecret: string;
-  } | null>(null);
 
   const fetchData = useCallback(async () => {
     setError(null);
@@ -237,35 +223,6 @@ function AdminTenantDetailPage({ tenantId }: Props) {
       addToast((err as Error)?.message || t.errorAddStaff, 'error');
     } finally {
       setAddingStaff(false);
-    }
-  };
-
-  const handleRotateSecrets = async () => {
-    if (!data) return;
-    if (!ROTATE_SECRETS_API_READY) return;
-    const ok = await confirm({
-      title: t.confirmRotateTitle,
-      subtitle: t.confirmRotateSubtitle,
-      variant: 'danger',
-      confirmLabel: t.rotate,
-    });
-    if (!ok) return;
-    setRotatingSecrets(true);
-    try {
-      const resp = await mutateJson<RotateSecretsResponse>(
-        `/api/admin/tenants/${tenantId}/rotate-secrets`,
-        { method: 'POST', body: JSON.stringify({}) }
-      );
-      // Show the secrets one-shot — never store, never log.
-      setRevealedSecrets({
-        botApiKey: resp.botApiKey,
-        botWebhookSecret: resp.botWebhookSecret,
-      });
-      addToast(t.toastRotated, 'success');
-    } catch (err) {
-      addToast((err as Error)?.message || t.errorRotate, 'error');
-    } finally {
-      setRotatingSecrets(false);
     }
   };
 
@@ -670,57 +627,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                     </div>
                   </form>
 
-                  <section
-                    className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 sm:p-8"
-                    data-testid="tenant-bot-secrets-section"
-                  >
-                    <div className="flex items-start gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-full bg-amber-900/30 flex items-center justify-center text-amber-300 flex-shrink-0">
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                          />
-                        </svg>
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-semibold text-white">
-                          {t.botSecretsHeading}
-                        </h2>
-                        <p className="mt-1 text-sm text-neutral-400">
-                          {t.botSecretsDesc}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={handleRotateSecrets}
-                        disabled={rotatingSecrets || !ROTATE_SECRETS_API_READY}
-                        className="px-4 py-2.5 rounded-xl border border-amber-500/50 text-amber-200 hover:border-amber-400 hover:bg-amber-500/10 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        title={
-                          !ROTATE_SECRETS_API_READY
-                            ? t.apiComingSoonTitle
-                            : undefined
-                        }
-                        data-testid="tenant-rotate-secrets-btn"
-                      >
-                        {rotatingSecrets ? t.rotating : t.rotateBtn}
-                      </button>
-                      {!ROTATE_SECRETS_API_READY && (
-                        <span className="text-xs text-neutral-500">
-                          {t.apiInProgress}
-                        </span>
-                      )}
-                    </div>
-                  </section>
+                  <TenantBotSecretsPanel tenantId={tenantId} />
                 </div>
               )}
 
@@ -837,13 +744,6 @@ function AdminTenantDetailPage({ tenantId }: Props) {
           )}
         </div>
         {dialog}
-        {revealedSecrets && (
-          <BotSecretsRevealModal
-            botApiKey={revealedSecrets.botApiKey}
-            botWebhookSecret={revealedSecrets.botWebhookSecret}
-            onClose={() => setRevealedSecrets(null)}
-          />
-        )}
       </div>
     </>
   );

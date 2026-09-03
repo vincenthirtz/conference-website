@@ -9,6 +9,15 @@
 // UI displays them once in a modal and prompts the operator to copy them
 // into their secret manager.
 //
+// Rotation SANS COUPURE (T8) : l'empreinte courante devient la « précédente »
+// et reste acceptée 48 h, le temps d'aller reposer la nouvelle valeur sur le
+// serveur du bot. Avant ça, régénérer coupait le bot à la milliseconde où
+// l'écran affichait la nouvelle clé — une opération à fenêtre de panne pour un
+// geste qui devrait être anodin.
+//
+// DELETE : révoque immédiatement la clé précédente, sans toucher à la courante.
+// C'est le geste d'une fuite : on ne veut alors surtout PAS attendre 48 h.
+//
 // Auth : owner-only. Rotating bot secrets revokes the bot's current API key
 // and forces a redeploy with the new value — only the owner role is allowed
 // to trigger this kind of disruptive operation.
@@ -27,6 +36,14 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logStaffAction } from '@/utils/staffLogs';
 import { logger } from '@/utils/logger';
+import { invalidateBotApiKeyCache } from '@/utils/botAuth';
+
+/**
+ * Durée pendant laquelle l'ancienne clé reste acceptée. 48 h : assez pour
+ * qu'un déploiement passe un week-end, assez court pour qu'une clé remplacée
+ * ne traîne pas.
+ */
+const GRACE_MS = 48 * 60 * 60 * 1000;
 
 function generateSecret(): string {
   return crypto.randomBytes(32).toString('hex');
@@ -53,9 +70,16 @@ async function handler(
   }
   res.setHeader('Cache-Control', 'no-store');
 
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'Method not allowed.' });
+  // Méthodes en correspondance POSITIVE : le garde-fou de dérive openapi lit ce
+  // bloc pour savoir ce que le handler accepte, et une cascade de négations ne
+  // lui dit rien.
+  switch (req.method) {
+    case 'POST':
+    case 'DELETE':
+      break;
+    default:
+      res.setHeader('Allow', 'POST, DELETE');
+      return res.status(405).json({ error: 'Method not allowed.' });
   }
 
   const { id } = req.query;
@@ -86,6 +110,44 @@ async function handler(
       .json({ error: 'Tenant not found.', code: 'UNKNOWN_TENANT' });
   }
 
+  // DELETE : révocation immédiate de la clé précédente.
+  if (req.method === 'DELETE') {
+    const { error: revokeErr } = await supabaseAdmin
+      .from('tenant_secrets')
+      .update({ previous_key_hash: null, previous_key_expires_at: null })
+      .eq('tenant_id', id);
+    if (revokeErr) {
+      logger.error('[admin/tenants/rotate-secrets] revoke error', revokeErr);
+      return res.status(500).json({ error: 'Failed to revoke previous key.' });
+    }
+    // Une clé révoquée doit cesser MAINTENANT : le cache d'authentification la
+    // garderait sinon jusqu'à une minute de plus.
+    invalidateBotApiKeyCache(id);
+    await logStaffAction({
+      staff_id: ctx.staff.id,
+      action: 'other',
+      entity_type: 'tenant',
+      entity_id: id,
+      tenant_id: id,
+      payload: {
+        action: 'revoke_previous_bot_key',
+        tenantSlug: tenantRow.slug,
+      },
+    });
+    return res.status(200).json({ tenantId: id, previousKeyRevoked: true });
+  }
+
+  // L'empreinte courante devient la précédente : c'est elle qui tient le bot
+  // en vie pendant qu'on va reposer la nouvelle valeur.
+  const { data: currentRow } = await supabaseAdmin
+    .from('tenant_secrets')
+    .select('bot_api_key_hash')
+    .eq('tenant_id', id)
+    .maybeSingle();
+  const previousKeyHash =
+    (currentRow as { bot_api_key_hash?: string | null } | null)
+      ?.bot_api_key_hash ?? null;
+
   const botApiKey = generateSecret();
   const botWebhookSecret = generateSecret();
   const botApiKeyHash = sha256Hex(botApiKey);
@@ -99,6 +161,10 @@ async function handler(
         bot_api_key_hash: botApiKeyHash,
         bot_webhook_secret: botWebhookSecret,
         rotated_at: rotatedAt,
+        previous_key_hash: previousKeyHash,
+        previous_key_expires_at: previousKeyHash
+          ? new Date(Date.now() + GRACE_MS).toISOString()
+          : null,
       },
       { onConflict: 'tenant_id' }
     );
@@ -109,6 +175,10 @@ async function handler(
     return res.status(500).json({ error: 'Failed to persist new secrets.' });
   }
 
+  // La clé qui vient d'être remplacée ne doit pas survivre dans le cache avec
+  // ses anciens droits.
+  invalidateBotApiKeyCache(id);
+
   // Audit. Pas de secret dans le payload.
   await logStaffAction({
     staff_id: ctx.staff.id,
@@ -116,7 +186,11 @@ async function handler(
     entity_type: 'tenant',
     entity_id: id,
     tenant_id: id,
-    payload: { action: 'rotate_bot_secrets', tenantSlug: tenantRow.slug },
+    payload: {
+      action: 'rotate_bot_secrets',
+      tenantSlug: tenantRow.slug,
+      previousKeyKeptFor: previousKeyHash ? '48h' : null,
+    },
   });
 
   return res.status(200).json({
@@ -124,6 +198,11 @@ async function handler(
     botApiKey,
     botWebhookSecret,
     rotatedAt,
+    // De quoi dire à l'écran « l'ancienne clé reste valable jusqu'à… », plutôt
+    // que de laisser croire à une coupure immédiate.
+    previousKeyValidUntil: previousKeyHash
+      ? new Date(Date.now() + GRACE_MS).toISOString()
+      : null,
   });
 }
 

@@ -150,4 +150,11 @@ export default adminNs('adminTenantDetail', {
   overviewLimitLeagues: 'Ligues (plan)',
   overviewLimitUsed: '{used} / {max}',
   overviewLimitUnlimited: '{used} — illimité',
+  previousKeyValid: "L'ancienne clé reste valable jusqu'au {date}.",
+  revokePrev: 'Révoquer maintenant',
+  confirmRevokePrevTitle: "Révoquer l'ancienne clé bot ?",
+  confirmRevokePrevSubtitle:
+    "Un bot encore configuré avec elle sera refusé immédiatement. À faire en cas de fuite, pas par habitude.",
+  toastPrevRevoked: 'Ancienne clé révoquée.',
+  errorRevokePrev: 'Révocation impossible.',
 });
