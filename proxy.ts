@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { sanitizeAnalyticsOrigin } from '@/lib/analytics/config';
+import {
+  resolveTenantSlugByHost,
+  hasTenantVariant,
+} from '@/utils/tenantHostEdge';
 
 // The CSP template is static except for the per-request nonce (script-src) and
 // frame-ancestors (embed vs strict). We precompute the static portions once at
@@ -114,7 +118,31 @@ const CSP_OVERLAY_MID = buildCspMid(CONNECT_SRC_OVERLAY, {
   casterMedia: true,
 });
 
-export function proxy(request: NextRequest) {
+/**
+ * Chemins jamais réécrits vers un espace : l'API, les assets, et les surfaces
+ * transverses (admin, auth, onboarding, régie, espace joueur) qui résolvent
+ * elles-mêmes leur tenant depuis la session.
+ */
+const RESERVED_PREFIXES = [
+  '/api',
+  '/_next',
+  '/admin',
+  '/auth',
+  '/caster',
+  '/player',
+  '/onboard',
+  '/overlay',
+  '/embed',
+  '/img',
+];
+
+function isReservedPath(pathname: string): boolean {
+  return RESERVED_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
+}
+
+export async function proxy(request: NextRequest) {
   // Generate a random nonce for each request
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
 
@@ -165,7 +193,35 @@ export function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
 
-  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  /* --- Domaine propre → espace ------------------------------------------
+   *
+   * Sur le domaine d'un espace, `/tournois` doit rendre SES tournois. Plutôt
+   * que de rendre chaque page consciente du domaine, on réécrit vers la route
+   * préfixée qui sait déjà le faire (`/mon-espace/tournois`).
+   *
+   * La réécriture est limitée aux chemins qui ONT une variante préfixée
+   * (cf. `hasTenantVariant`) : réécrire vers une page absente donnerait un 404
+   * là où le visiteur voit aujourd'hui le contenu de la plateforme. Tant qu'une
+   * page n'est pas migrée, le comportement actuel vaut mieux qu'une erreur.
+   *
+   * Rien de tout ceci ne se déclenche sur le domaine de la plateforme : la
+   * résolution sort avant le moindre appel réseau.
+   */
+  const pathname = request.nextUrl.pathname;
+  let rewriteUrl: URL | null = null;
+  if (!isReservedPath(pathname) && hasTenantVariant(pathname)) {
+    const tenantSlug = await resolveTenantSlugByHost(
+      request.headers.get('host')
+    );
+    if (tenantSlug && !pathname.startsWith(`/${tenantSlug}/`)) {
+      rewriteUrl = new URL(request.nextUrl);
+      rewriteUrl.pathname = `/${tenantSlug}${pathname}`;
+    }
+  }
+
+  const response = rewriteUrl
+    ? NextResponse.rewrite(rewriteUrl, { request: { headers: requestHeaders } })
+    : NextResponse.next({ request: { headers: requestHeaders } });
 
   // Set CSP header on the response
   response.headers.set('Content-Security-Policy', csp);

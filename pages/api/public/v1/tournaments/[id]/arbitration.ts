@@ -10,7 +10,7 @@ import {
   firstQuery,
   PublicApiError,
 } from '@/utils/publicApi';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { readPublicTournamentDetail } from '@/utils/public/readTournaments';
 import { readTournamentArbitrationMetrics } from '@/utils/public/readArbitration';
 import type { ArbitrationMetrics } from '@/utils/disputes/arbitrationMetrics';
@@ -28,7 +28,7 @@ export default withPublicApi<PublicArbitrationResponse>(
     if (!idOrSlug) {
       throw PublicApiError.badRequest('Missing tournament id');
     }
-    const tenantId = resolveTenantIdForPublicRequest(req);
+    const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
     // Gating : ne répond QUE pour un tournoi publiquement visible
     // (published / running / completed). Draft / archived / inconnu → 404.

@@ -60,86 +60,86 @@ describe('proxy.ts CSP — frame-ancestors scoping (T7)', () => {
     vi.clearAllMocks();
   });
 
-  it('sets frame-ancestors * for /embed/* (bracket iframe route)', () => {
-    const res = proxy(makeRequest('/embed/tournament/42/bracket') as never);
+  it('sets frame-ancestors * for /embed/* (bracket iframe route)', async () => {
+    const res = await proxy(makeRequest('/embed/tournament/42/bracket') as never);
     const csp = getCsp(res);
     expect(csp['frame-ancestors']).toBe('*');
   });
 
-  it('sets frame-ancestors * for any /embed prefix path', () => {
-    const res = proxy(makeRequest('/embed/anything/else') as never);
+  it('sets frame-ancestors * for any /embed prefix path', async () => {
+    const res = await proxy(makeRequest('/embed/anything/else') as never);
     expect(getCsp(res)['frame-ancestors']).toBe('*');
   });
 
-  it("keeps frame-ancestors 'none' on the public homepage", () => {
-    const res = proxy(makeRequest('/') as never);
+  it("keeps frame-ancestors 'none' on the public homepage", async () => {
+    const res = await proxy(makeRequest('/') as never);
     expect(getCsp(res)['frame-ancestors']).toBe("'none'");
   });
 
-  it("keeps frame-ancestors 'none' on the admin area", () => {
-    const res = proxy(makeRequest('/admin/dashboard') as never);
+  it("keeps frame-ancestors 'none' on the admin area", async () => {
+    const res = await proxy(makeRequest('/admin/dashboard') as never);
     expect(getCsp(res)['frame-ancestors']).toBe("'none'");
   });
 
-  it("keeps frame-ancestors 'none' on the player space", () => {
-    const res = proxy(makeRequest('/player/team/7') as never);
+  it("keeps frame-ancestors 'none' on the player space", async () => {
+    const res = await proxy(makeRequest('/player/team/7') as never);
     expect(getCsp(res)['frame-ancestors']).toBe("'none'");
   });
 
-  it('does not let an /embedded-but-not-embed path slip through (prefix is /embed)', () => {
+  it('does not let an /embedded-but-not-embed path slip through (prefix is /embed)', async () => {
     // /embed is the exact prefix; /embeddings would also start with /embed.
     // This documents the current (intentional) behaviour: startsWith('/embed').
-    const res = proxy(makeRequest('/embed') as never);
+    const res = await proxy(makeRequest('/embed') as never);
     expect(getCsp(res)['frame-ancestors']).toBe('*');
   });
 
   // Overlays caster : cadrables par NOTRE origine seulement (aperçu live dans
   // /admin/caster), jamais par un tiers — celui-ci passe par /embed/*.
-  it("sets frame-ancestors 'self' for /overlay/* (caster preview iframe)", () => {
-    const res = proxy(makeRequest('/overlay/caster/match') as never);
+  it("sets frame-ancestors 'self' for /overlay/* (caster preview iframe)", async () => {
+    const res = await proxy(makeRequest('/overlay/caster/match') as never);
     expect(getCsp(res)['frame-ancestors']).toBe("'self'");
   });
 
-  it("keeps frame-ancestors 'self' for the run-of-show overlay too", () => {
-    const res = proxy(makeRequest('/overlay/some-run-id') as never);
+  it("keeps frame-ancestors 'self' for the run-of-show overlay too", async () => {
+    const res = await proxy(makeRequest('/overlay/some-run-id') as never);
     expect(getCsp(res)['frame-ancestors']).toBe("'self'");
   });
 
-  it('never opens overlays to third parties (not *)', () => {
-    const csp = getCsp(proxy(makeRequest('/overlay/caster/match') as never));
+  it('never opens overlays to third parties (not *)', async () => {
+    const csp = getCsp(await proxy(makeRequest('/overlay/caster/match') as never));
     expect(csp['frame-ancestors']).not.toBe('*');
   });
 });
 
 describe('proxy.ts CSP — scène caméra (surfaces caster uniquement)', () => {
-  it('autorise vdo.ninja en frame-src sur le cockpit et les overlays', () => {
+  it('autorise vdo.ninja en frame-src sur le cockpit et les overlays', async () => {
     for (const p of ['/admin/caster', '/overlay/caster/camera']) {
-      expect(getCsp(proxy(makeRequest(p) as never))['frame-src'], p).toContain(
+      expect(getCsp(await proxy(makeRequest(p) as never))['frame-src'], p).toContain(
         'https://vdo.ninja'
       );
     }
   });
 
-  it('élargit media-src aux flux https/blob sur ces mêmes surfaces', () => {
+  it('élargit media-src aux flux https/blob sur ces mêmes surfaces', async () => {
     for (const p of ['/admin/caster', '/overlay/caster/camera']) {
-      const media = getCsp(proxy(makeRequest(p) as never))['media-src'];
+      const media = getCsp(await proxy(makeRequest(p) as never))['media-src'];
       expect(media, p).toContain('https:');
       expect(media, p).toContain('blob:');
     }
   });
 
-  it('autorise connect-src https: sur les overlays (hls.js charge en XHR)', () => {
+  it('autorise connect-src https: sur les overlays (hls.js charge en XHR)', async () => {
     // Sans ça, un .m3u8 tiers échouerait alors que media-src l'autorise :
     // hls.js passe par XHR, donc par connect-src.
     const overlay = getCsp(
-      proxy(makeRequest('/overlay/caster/camera') as never)
+      await proxy(makeRequest('/overlay/caster/camera') as never)
     );
     expect(overlay['connect-src']).toContain('https:');
   });
 
-  it('laisse le reste du site strict (ni vdo.ninja, ni media/connect élargis)', () => {
+  it('laisse le reste du site strict (ni vdo.ninja, ni media/connect élargis)', async () => {
     for (const p of ['/', '/admin/dashboard', '/embed/tournament/1/bracket']) {
-      const csp = getCsp(proxy(makeRequest(p) as never));
+      const csp = getCsp(await proxy(makeRequest(p) as never));
       expect(csp['frame-src'], p).not.toContain('vdo.ninja');
       // `https:` SEUL (source générique) est interdit ; `https://*.supabase.co`
       // reste évidemment permis — d'où la regex plutôt qu'un toContain.
@@ -148,10 +148,10 @@ describe('proxy.ts CSP — scène caméra (surfaces caster uniquement)', () => {
     }
   });
 
-  it('garde le cockpit sur son connect-src OBS/IRC sans https: générique', () => {
+  it('garde le cockpit sur son connect-src OBS/IRC sans https: générique', async () => {
     // Le cockpit n'a pas besoin de lire un flux tiers en XHR (l'aperçu se fait
     // dans une iframe /overlay/*, qui a sa propre politique).
-    const csp = getCsp(proxy(makeRequest('/admin/caster') as never));
+    const csp = getCsp(await proxy(makeRequest('/admin/caster') as never));
     expect(csp['connect-src']).toContain('ws://localhost:4455');
     expect(csp['connect-src']).not.toMatch(/(^|\s)https:(\s|$)/);
   });
@@ -162,38 +162,38 @@ describe('proxy.ts — X-Frame-Options stripping', () => {
   // (`ALLOW-FROM …`), que les navigateurs traitent comme DENY. Il doit être
   // retiré sur les préfixes cadrables, sinon l'iframe est bloquée en prod même
   // avec un frame-ancestors permissif. Absent en `next dev`, d'où ce test.
-  function proxyWithSeededXfo(pathname: string) {
-    const res = proxy(makeRequest(pathname) as never) as unknown as {
+  async function proxyWithSeededXfo(pathname: string) {
+    const res = (await proxy(makeRequest(pathname) as never)) as unknown as {
       headers: Headers;
     };
     return res;
   }
 
-  it('strips X-Frame-Options on /embed/* and /overlay/*', () => {
+  it('strips X-Frame-Options on /embed/* and /overlay/*', async () => {
     for (const p of ['/embed/tournament/1/bracket', '/overlay/caster/match']) {
-      const res = proxyWithSeededXfo(p);
+      const res = await proxyWithSeededXfo(p);
       // Le middleware appelle delete() : l'en-tête ne doit jamais être présent
       // en sortie sur ces préfixes.
       expect(res.headers.get('X-Frame-Options')).toBeNull();
     }
   });
 
-  it('leaves other routes untouched (netlify.toml header survives)', () => {
+  it('leaves other routes untouched (netlify.toml header survives)', async () => {
     // Sur les autres routes le middleware ne touche pas l'en-tête : notre mock
     // de réponse démarre vide, donc on vérifie surtout qu'aucune valeur n'est
     // AJOUTÉE par le middleware (la protection vient de frame-ancestors 'none').
-    const res = proxyWithSeededXfo('/admin/dashboard');
+    const res = await proxyWithSeededXfo('/admin/dashboard');
     expect(res.headers.get('X-Frame-Options')).toBeNull();
     expect(getCsp(res)['frame-ancestors']).toBe("'none'");
   });
 });
 
 describe('proxy.ts CSP — invariants preserved on every route', () => {
-  it('keeps the per-request nonce on script-src for both embed and normal routes', () => {
+  it('keeps the per-request nonce on script-src for both embed and normal routes', async () => {
     const embed = getCsp(
-      proxy(makeRequest('/embed/tournament/1/bracket') as never)
+      await proxy(makeRequest('/embed/tournament/1/bracket') as never)
     );
-    const normal = getCsp(proxy(makeRequest('/') as never));
+    const normal = getCsp(await proxy(makeRequest('/') as never));
     expect(embed['script-src']).toMatch(/'nonce-[^']+'/);
     expect(normal['script-src']).toMatch(/'nonce-[^']+'/);
     // never unsafe-inline on script-src (would defeat the nonce)
@@ -201,9 +201,9 @@ describe('proxy.ts CSP — invariants preserved on every route', () => {
     expect(normal['script-src']).not.toContain("'unsafe-inline'");
   });
 
-  it('forwards a fresh, unique nonce via the x-nonce request header', () => {
-    const a = proxy(makeRequest('/embed/tournament/1/bracket') as never);
-    const b = proxy(makeRequest('/embed/tournament/1/bracket') as never);
+  it('forwards a fresh, unique nonce via the x-nonce request header', async () => {
+    const a = await proxy(makeRequest('/embed/tournament/1/bracket') as never);
+    const b = await proxy(makeRequest('/embed/tournament/1/bracket') as never);
     // x-nonce is set on the *request* headers object passed to NextResponse.next;
     // here we assert the CSP nonces differ across requests.
     const nonceA = getCsp(a)['script-src'].match(/'nonce-([^']+)'/)?.[1];
@@ -213,9 +213,9 @@ describe('proxy.ts CSP — invariants preserved on every route', () => {
     expect(nonceA).not.toBe(nonceB);
   });
 
-  it('keeps default-src self, object-src none and upgrade-insecure-requests everywhere', () => {
+  it('keeps default-src self, object-src none and upgrade-insecure-requests everywhere', async () => {
     for (const p of ['/', '/admin', '/embed/tournament/1/bracket']) {
-      const csp = getCsp(proxy(makeRequest(p) as never));
+      const csp = getCsp(await proxy(makeRequest(p) as never));
       expect(csp['default-src']).toBe("'self'");
       expect(csp['object-src']).toBe("'none'");
       expect(csp['upgrade-insecure-requests']).toBe('');
@@ -230,8 +230,8 @@ describe('proxy.ts — X-Frame-Options neutralisation on /embed/*', () => {
   // attempt to re-add it. (The global X-Frame-Options is injected by Netlify at
   // the CDN edge for non-embed routes and cleared via the /embed/* header rule
   // in netlify.toml — covered separately by the netlify.toml config.)
-  it('does not emit X-Frame-Options on /embed/* responses', () => {
-    const res = proxy(makeRequest('/embed/tournament/1/bracket') as never);
+  it('does not emit X-Frame-Options on /embed/* responses', async () => {
+    const res = await proxy(makeRequest('/embed/tournament/1/bracket') as never);
     expect(res.headers.get('X-Frame-Options')).toBeNull();
   });
 });

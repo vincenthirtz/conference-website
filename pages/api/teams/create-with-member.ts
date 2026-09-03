@@ -21,7 +21,7 @@ import {
   generateInviteToken,
   hashInviteToken,
 } from '@/utils/teams/inviteLinks';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
 import { getDiscordLinkForUser } from '@/utils/discordLinks';
 import { alertIfEntityBlacklisted } from '@/utils/moderation/entityBlacklist';
@@ -242,7 +242,7 @@ export default async function handler(
     });
   }
 
-  const tenantId = resolveTenantIdForPublicRequest(req);
+  const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
   const name = (body.name || '').trim();
 

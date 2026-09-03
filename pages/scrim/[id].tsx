@@ -8,7 +8,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { supabaseAdmin } from '@/utils/supabase';
 import { isValidUUID } from '@/utils/apiHelpers';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { logger } from '../../utils/logger';
@@ -66,7 +66,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   const id = typeof rawId === 'string' ? rawId : '';
   if (!id || !supabaseAdmin) return { notFound: true };
 
-  const tenantId = resolveTenantIdForPublicRequest(ctx.req);
+  const tenantId = await resolveTenantIdForPublicRequestAsync(ctx.req);
 
   let scrimQuery = supabaseAdmin
     .from('scrims')

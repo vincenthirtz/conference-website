@@ -5,7 +5,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { logger } from '@/utils/logger';
 import { readPublicLeagues } from '@/utils/leagues/readPublicLeagues';
 
@@ -21,7 +21,7 @@ export default async function handler(
   }
 
   try {
-    const tenantId = resolveTenantIdForPublicRequest(req);
+    const tenantId = await resolveTenantIdForPublicRequestAsync(req);
     const response = await readPublicLeagues(tenantId);
 
     res.setHeader(

@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 
 import { logger } from '../../utils/logger';
 export type TwitchChannelPublic = {
@@ -30,7 +30,7 @@ export default async function handler(
   }
 
   try {
-    const tenantId = resolveTenantIdForPublicRequest(req);
+    const tenantId = await resolveTenantIdForPublicRequestAsync(req);
     const { data, error } = await supabaseAdmin
       .from('twitch_channels')
       .select('channel, label, badge, description, background_url')

@@ -4,13 +4,13 @@
 
 import { withPublicApi, list } from '@/utils/publicApi';
 import { parsePagination } from '@/utils/apiHelpers';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { readLeaderboard } from '@/utils/rating/readLeaderboard';
 import type { LeaderboardPlayer } from '@/types/rating';
 
 export default withPublicApi<LeaderboardPlayer>(
   async ({ req }) => {
-    const tenantId = resolveTenantIdForPublicRequest(req);
+    const tenantId = await resolveTenantIdForPublicRequestAsync(req);
     const { limit, offset } = parsePagination(req, {
       limit: 50,
       maxLimit: 100,

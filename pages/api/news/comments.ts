@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { verifyCaptcha } from '@/utils/captcha';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 type Comment = {
@@ -49,7 +49,7 @@ async function listComments(
     return res.status(500).json({ error: 'Supabase client unavailable' });
   }
 
-  const tenantId = resolveTenantIdForPublicRequest(req);
+  const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
   const { data, error } = await client
     .from('news_comments')
@@ -129,7 +129,7 @@ async function createComment(
       .json({ error: 'author name must be at most 50 characters' });
   }
 
-  const tenantId = resolveTenantIdForPublicRequest(req);
+  const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
   // Vérifie que l'article ciblé existe ET appartient au tenant résolu ET est
   // publié. Sans ce check, un POST pouvait attacher un commentaire à un

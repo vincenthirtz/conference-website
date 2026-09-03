@@ -9,7 +9,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { resolveCheckinToken, redeemCheckinToken } from '@/utils/checkin';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 
 export default async function handler(
   req: NextApiRequest,
@@ -24,7 +24,7 @@ export default async function handler(
     return res.status(400).json({ error: 'Token manquant' });
   }
 
-  const tenantId = resolveTenantIdForPublicRequest(req);
+  const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
   if (req.method === 'GET') {
     const result = await resolveCheckinToken(tenantId, token);

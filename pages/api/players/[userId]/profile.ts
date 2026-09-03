@@ -8,7 +8,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { logger } from '@/utils/logger';
 import { readPlayerProfile } from '@/utils/rating/readPlayerProfile';
 
@@ -32,7 +32,7 @@ export default async function handler(
   }
 
   try {
-    const tenantId = resolveTenantIdForPublicRequest(req);
+    const tenantId = await resolveTenantIdForPublicRequestAsync(req);
     const response = await readPlayerProfile(userId, tenantId);
     if (!response) {
       return res.status(404).json({ error: 'Player not found' });

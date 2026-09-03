@@ -4,7 +4,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { logger } from '../../../utils/logger';
 
@@ -53,7 +53,7 @@ export default async function handler(
     });
   }
 
-  const tenantId = resolveTenantIdForPublicRequest(req);
+  const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
   let query = supabaseAdmin
     .from('scrims')

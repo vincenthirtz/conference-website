@@ -13,7 +13,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { loadLadder, type LadderRow } from '@/utils/scrims/ladder';
 
 export default async function handler(
@@ -29,7 +29,7 @@ export default async function handler(
     return;
   }
 
-  const tenantId = resolveTenantIdForPublicRequest(req);
+  const tenantId = await resolveTenantIdForPublicRequestAsync(req);
   const ladder = await loadLadder(tenantId);
 
   res.setHeader(

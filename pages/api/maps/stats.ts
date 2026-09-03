@@ -11,7 +11,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import type { MatchStatus } from '@/types/admin';
 import { parsePagination, isValidUUID } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 /* -----------------------------------------------------------
@@ -121,7 +121,7 @@ export default async function handler(
   );
 
   try {
-    const tenantId = resolveTenantIdForPublicRequest(req);
+    const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
     // 1) Récupérer les matches du tournoi (hors annulés, hors BYE)
     const { data: matchesData, error: mErr } = await supabaseAdmin

@@ -24,7 +24,7 @@ import { z } from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { verifyCaptcha } from '@/utils/captcha';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { checkEmailQuality, normalizeEmail } from '@/utils/emailQuality';
 import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
 import { emitBotEvent } from '@/utils/botEvents';
@@ -78,7 +78,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
     return;
   }
 
-  const tenantId = resolveTenantIdForPublicRequest(req);
+  const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
   const { data, error } = await supabaseAdmin
     .from('free_players')
@@ -153,7 +153,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
       .json({ error: 'Cette adresse email ne peut pas être utilisée.', code: 'VALIDATION' });
   }
 
-  const tenantId = resolveTenantIdForPublicRequest(req);
+  const tenantId = await resolveTenantIdForPublicRequestAsync(req);
   const nowIso = new Date().toISOString();
 
   const row = {

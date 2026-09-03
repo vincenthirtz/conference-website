@@ -1,10 +1,12 @@
-// pages/[tenantSlug]/tournois.tsx
+// pages/[tenantSlug]/tournaments.tsx
 //
-// Alias francophone de `/[tenantSlug]/tournaments` — l'URL d'origine du POC
-// multi-tenant (S7a), conservée pour ne casser aucun lien déjà partagé.
+// Liste des tournois D'UN ESPACE : `/mon-espace/tournaments`.
 //
-// Le chargement et le rendu sont ceux de la route canonique : aucune logique
-// propre ici, sinon les deux URL divergeraient au premier ajustement.
+// Même chemin que la route historique, au préfixe près : c'est ce qui permet
+// au middleware de réécrire un domaine propre (`cup-estivale.fr/tournaments`)
+// vers cette page par simple préfixage, sans table de correspondance d'URL.
+//
+// SSR : deux espaces ne partagent jamais un cache de page.
 
 import TournamentsPage, {
   type TournamentsPageProps,
@@ -17,7 +19,7 @@ export const getServerSideProps = withTenantPage<TournamentsPageProps>(
   async ({ tenantId }) => loadPublicTournaments(tenantId)
 );
 
-function TenantTournoisPage(props: TournamentsPageProps) {
+function TenantTournamentsPage(props: TournamentsPageProps) {
   return <TournamentsPage {...props} />;
 }
 
@@ -29,6 +31,6 @@ const seo: SeoProps = {
   },
 };
 
-TenantTournoisPage.seo = seo;
+TenantTournamentsPage.seo = seo;
 
-export default TenantTournoisPage;
+export default TenantTournamentsPage;

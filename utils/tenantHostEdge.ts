@@ -112,10 +112,10 @@ export async function resolveTenantSlugByHost(
  * d'erreur. Chaque migration ajoute son motif ici.
  */
 const TENANT_ROUTES: RegExp[] = [
+  /^\/tournaments\/?$/,
   /^\/tournois\/?$/,
-  /^\/actualites\/?$/,
-  /^\/actualites\/[^/]+\/?$/,
-  /^\/classement\/?$/,
+  /^\/news\/?$/,
+  /^\/news\/[^/]+\/?$/,
 ];
 
 export function hasTenantVariant(pathname: string): boolean {

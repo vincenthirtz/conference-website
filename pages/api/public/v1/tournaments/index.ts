@@ -5,7 +5,7 @@
 
 import { withPublicApi, list, firstQuery } from '@/utils/publicApi';
 import { parsePagination } from '@/utils/apiHelpers';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import {
   readPublicTournaments,
   type PublicTournamentSummary,
@@ -13,7 +13,7 @@ import {
 
 export default withPublicApi<PublicTournamentSummary>(
   async ({ req }) => {
-    const tenantId = resolveTenantIdForPublicRequest(req);
+    const tenantId = await resolveTenantIdForPublicRequestAsync(req);
     const { limit, offset } = parsePagination(req, {
       limit: 50,
       maxLimit: 100,

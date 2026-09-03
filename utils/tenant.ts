@@ -27,22 +27,34 @@
 // `pages/tournaments.tsx`) et passe `tenantId` en prop. La page legacy
 // `pages/tournaments.tsx` continue de marcher à l'identique.
 //
-// TODO(S7) — migration des autres pages publiques mono-tenant :
-//   - pages/index.tsx
-//   - pages/association.tsx
-//   - pages/timeline-2026.tsx
-//   - pages/scrim.tsx
-//   - pages/scrims.tsx
-//   - pages/live.tsx (passer en getServerSideProps avant)
-//   - pages/tournament/[id].tsx (+ ses sous-pages maps/mvp/stats/matches/teams)
-//   - pages/match/[id].tsx (+ games)
-//   - pages/team/[slug]/index.tsx
-//   - pages/news/[slug].tsx
-//   - pages/actualites.tsx
-// Pattern : extraire le contenu en composant, créer une variante sous
-// `pages/[tenantSlug]/...` qui appelle `getTenantIdBySlug(slug)` (ou
-// `resolveTenantIdForPublicRequestAsync(req)`) en SSR (404 si tenant
-// inconnu), réutiliser le composant.
+// ÉTAT (site public) :
+//
+//   - Les ROUTES D'API publiques résolvent le tenant par requête
+//     (`resolveTenantIdForPublicRequestAsync`) : domaine propre, puis préfixe
+//     de chemin, puis `?tenant=`. Plus aucun `DEFAULT_TENANT_ID` figé.
+//   - Le MIDDLEWARE (`proxy.ts`) réécrit un domaine propre vers la route
+//     préfixée correspondante, pour les chemins déjà migrés
+//     (`utils/tenantHostEdge.ts` § TENANT_ROUTES).
+//   - PAGES migrées : `/tournaments` (+ alias `/tournois`), `/news`,
+//     `/news/[slug]`. Chacune a sa variante `pages/[tenantSlug]/...`, en SSR ;
+//     la route historique garde sa génération statique pour l'espace par
+//     défaut.
+//
+// RESTE à migrer (toujours mono-tenant, servent l'espace historique) :
+//   - pages/index.tsx, pages/leaderboard.tsx, pages/leagues/*
+//   - pages/tournament/[id].tsx (+ maps/mvp/stats/matches/teams/bracket/ffa)
+//   - pages/match/[id].tsx (+ games), pages/team/[slug]/* , pages/player/[userId]
+//   - pages/scrim.tsx, pages/scrims.tsx, pages/live.tsx
+//   - les pages de marque (about, association, palmares, timeline-2026,
+//     inscription-2026) restent mono-tenant PAR DESIGN : elles parlent de
+//     l'association, pas d'un espace.
+//
+// Pattern d'une migration : extraire le chargement dans
+// `utils/publicData/*` et le rendu en composant, créer la variante sous
+// `pages/[tenantSlug]/...` avec `withTenantPage` (404 si slug inconnu),
+// passer `basePath` aux liens internes, puis AJOUTER le chemin à
+// `TENANT_ROUTES` — sans quoi le domaine propre continue de servir la page
+// de la plateforme.
 //
 // ============================================================================
 // Bot side (unchanged)

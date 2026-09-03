@@ -10,7 +10,7 @@ import {
   escapePostgrestValue,
 } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { MAX_TEAM_PLAYERS } from '@/utils/constants';
 import { countPlayingMembers } from '@/utils/teams/roleKind';
 
@@ -46,7 +46,7 @@ export default async function handler(
   }
 
   try {
-    const tenantId = resolveTenantIdForPublicRequest(req);
+    const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
     const { limit: limitNum, offset: offsetNum } = parsePagination(req, {
       limit: 100,

@@ -9,7 +9,7 @@ import {
   PublicApiError,
 } from '@/utils/publicApi';
 import { isValidUUID } from '@/utils/apiHelpers';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import {
   readPublicMatchDetail,
   type PublicMatchDetail,
@@ -21,7 +21,7 @@ export default withPublicApi<PublicMatchDetail>(
     if (!id || !isValidUUID(id)) {
       throw PublicApiError.badRequest('Invalid match id');
     }
-    const tenantId = resolveTenantIdForPublicRequest(req);
+    const tenantId = await resolveTenantIdForPublicRequestAsync(req);
     const match = await readPublicMatchDetail(id, tenantId);
     if (!match) {
       throw PublicApiError.notFound('Match not found');

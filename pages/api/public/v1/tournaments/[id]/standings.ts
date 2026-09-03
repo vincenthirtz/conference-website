@@ -8,7 +8,7 @@ import {
   firstQuery,
   PublicApiError,
 } from '@/utils/publicApi';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { readPublicTournamentDetail } from '@/utils/public/readTournaments';
 import {
   readPublicTournamentStandings,
@@ -21,7 +21,7 @@ export default withPublicApi<PublicStanding>(
     if (!idOrSlug) {
       throw PublicApiError.badRequest('Missing tournament id');
     }
-    const tenantId = resolveTenantIdForPublicRequest(req);
+    const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
     const tournament = await readPublicTournamentDetail(idOrSlug, tenantId);
     if (!tournament) {

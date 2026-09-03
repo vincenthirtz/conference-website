@@ -10,7 +10,7 @@ import { applyRateLimit, getClientIp } from '@/utils/rateLimit';
 import { verifyCaptcha } from '@/utils/captcha';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { notifyScrimRequest } from '@/utils/discord';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import {
   notifyScrimRequestDm,
   notifyScrimRequestEmail,
@@ -58,7 +58,7 @@ export default async function handler(
   }
 
   const body = (req.body || {}) as Body;
-  const tenantId = resolveTenantIdForPublicRequest(req);
+  const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
   // Honeypot and captcha first: cheap rejections for obvious bots, and we
   // don't want failed-validation noise to consume the per-IP rate-limit

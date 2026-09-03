@@ -9,7 +9,7 @@ import {
   PublicApiError,
 } from '@/utils/publicApi';
 import { isValidUUID } from '@/utils/apiHelpers';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { readPlayerProfile } from '@/utils/rating/readPlayerProfile';
 import type { PlayerProfileResponse } from '@/types/rating';
 
@@ -19,7 +19,7 @@ export default withPublicApi<PlayerProfileResponse>(
     if (!userId || !isValidUUID(userId)) {
       throw PublicApiError.badRequest('Invalid user id');
     }
-    const tenantId = resolveTenantIdForPublicRequest(req);
+    const tenantId = await resolveTenantIdForPublicRequestAsync(req);
     const profile = await readPlayerProfile(userId, tenantId);
     if (!profile) {
       throw PublicApiError.notFound('Player not found');

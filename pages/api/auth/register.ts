@@ -22,7 +22,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { supabaseAnonServer, supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit, refundRateLimit } from '@/utils/rateLimit';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/addMember';
 import {
@@ -139,7 +139,7 @@ export default async function handler(
     });
   }
 
-  const tenantId = resolveTenantIdForPublicRequest(req);
+  const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
   const { error } = await supabaseAnonServer.auth.signUp({
     email,

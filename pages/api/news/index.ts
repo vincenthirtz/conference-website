@@ -7,7 +7,7 @@ import { parsePagination } from '@/utils/apiHelpers';
 import { resolveNewsImageUrl } from '@/utils/news/newsImage';
 import { emitBotEvent } from '@/utils/botEvents';
 import {
-  resolveTenantIdForPublicRequest,
+  resolveTenantIdForPublicRequestAsync,
   resolveTenantId,
 } from '@/utils/tenant';
 
@@ -61,7 +61,7 @@ export default async function handler(
   }
 
   const admin = supabaseAdmin ?? getServerClient(req, res);
-  const tenantId = resolveTenantIdForPublicRequest(req);
+  const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
   const { limit, offset } = parsePagination(req, { limit: 10, maxLimit: 100 });
   const tagFilter = normalizeTag(req.query.tag?.toString());

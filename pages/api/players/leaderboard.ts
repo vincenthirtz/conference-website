@@ -6,7 +6,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { parsePagination } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { logger } from '@/utils/logger';
 import { readLeaderboard } from '@/utils/rating/readLeaderboard';
 
@@ -35,7 +35,7 @@ export default async function handler(
   });
 
   try {
-    const tenantId = resolveTenantIdForPublicRequest(req);
+    const tenantId = await resolveTenantIdForPublicRequestAsync(req);
     const response = await readLeaderboard(tenantId, limit, offset);
 
     res.setHeader(

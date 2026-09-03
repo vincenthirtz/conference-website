@@ -5,7 +5,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { isValidUUID } from '@/utils/apiHelpers';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 
 import { logger } from '../../../../utils/logger';
 type LeaderboardEntry = {
@@ -55,7 +55,7 @@ export default async function handler(
   }
 
   const tournamentId = String(id);
-  const tenantId = resolveTenantIdForPublicRequest(req);
+  const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
   try {
     // Charger le tournoi (juste pour le nom + verifier qu'il est public).

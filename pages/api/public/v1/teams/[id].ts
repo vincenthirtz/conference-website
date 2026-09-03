@@ -8,7 +8,7 @@ import {
   firstQuery,
   PublicApiError,
 } from '@/utils/publicApi';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { readPublicTeam, type PublicTeam } from '@/utils/public/readTeam';
 
 export default withPublicApi<PublicTeam>(
@@ -17,7 +17,7 @@ export default withPublicApi<PublicTeam>(
     if (!idOrSlug) {
       throw PublicApiError.badRequest('Missing team id');
     }
-    const tenantId = resolveTenantIdForPublicRequest(req);
+    const tenantId = await resolveTenantIdForPublicRequestAsync(req);
     const team = await readPublicTeam(idOrSlug, tenantId);
     if (!team) {
       throw PublicApiError.notFound('Team not found');

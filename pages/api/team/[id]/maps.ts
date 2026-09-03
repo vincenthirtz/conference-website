@@ -8,7 +8,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import type { MatchStatus } from '@/types/admin';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 
 import { logger } from '../../../../utils/logger';
 /* -----------------------------------------------------------
@@ -78,7 +78,7 @@ export default async function handler(
 
   try {
     const teamId = id as string;
-    const tenantId = resolveTenantIdForPublicRequest(req);
+    const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
     // 1) Team
     const { data: team, error: tErr } = await supabaseAdmin

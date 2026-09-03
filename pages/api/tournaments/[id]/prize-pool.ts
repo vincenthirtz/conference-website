@@ -15,7 +15,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { logger } from '@/utils/logger';
 
 const RECENT_LIMIT = 10;
@@ -79,7 +79,7 @@ export default async function handler(
   }
 
   const tournamentId = String(id);
-  const tenantId = resolveTenantIdForPublicRequest(req);
+  const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
   try {
     const { data: pool, error: poolErr } = await supabaseAdmin

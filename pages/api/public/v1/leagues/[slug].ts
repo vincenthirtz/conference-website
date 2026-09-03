@@ -8,7 +8,7 @@ import {
   firstQuery,
   PublicApiError,
 } from '@/utils/publicApi';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { readLeagueDetail } from '@/utils/leagues/readLeagueDetail';
 import type { LeagueDetailResponse } from '@/types/leagues';
 
@@ -18,7 +18,7 @@ export default withPublicApi<LeagueDetailResponse>(
     if (!slug) {
       throw PublicApiError.badRequest('Missing league slug');
     }
-    const tenantId = resolveTenantIdForPublicRequest(req);
+    const tenantId = await resolveTenantIdForPublicRequestAsync(req);
     const detail = await readLeagueDetail(slug, tenantId);
     if (!detail) {
       throw PublicApiError.notFound('League not found');

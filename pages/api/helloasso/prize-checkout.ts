@@ -23,7 +23,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { createCheckoutIntent } from '@/utils/helloasso';
 import { formatZodError } from '@/utils/validation';
-import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
+import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { buildPrizeCheckoutMetadata } from '@/utils/billing/prizePoolFunding';
 import { logger } from '@/utils/logger';
 
@@ -93,7 +93,7 @@ export default async function handler(
   const message = parsed.data.message || null;
   const isAnonymous = parsed.data.isAnonymous ?? false;
 
-  const tenantId = resolveTenantIdForPublicRequest(req);
+  const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
   // ── Charger la cagnotte (par id explicite, sinon par tournoi) ──────────────
   let pool: PrizePoolRow | null = null;
