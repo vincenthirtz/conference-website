@@ -21910,6 +21910,70 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           description: Invitation already accepted, revoked or expired.
+  /api/admin/tenants/{id}/export:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Export every row of a tenant as a JSON archive.
+      description: |
+        Owner only, 3 requests / 5 min. Content is driven by the manifest
+        `utils/tenants/tenantTables.ts`, so a new `tenant_id` table joins the
+        export by declaration rather than by remembering. Secrets (API keys,
+        tokens, integration credentials) and technical caches are excluded by
+        construction — handing a key back to someone who is leaving would be a
+        leak with a receipt. A per-table cap is reported in `report.truncated`:
+        an archive that lies is worse than no archive.
+      operationId: adminExportTenant
+      tags:
+        - admin/tenants
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Archive.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/cron/tenant-purge:
+    post:
+      summary: Erase tenants whose scheduled purge is due.
+      description: |
+        CRON_SECRET-authenticated, and the only irreversible operation of the
+        domain. Three locks: state must be `purge_scheduled`, `purge_after` must
+        be past, and the platform tenant is excluded by query. Deletion follows
+        the tenant-tables manifest, looping while progress is made because the
+        foreign-key order is not known in advance; whatever resists is NAMED in
+        the report. Player accounts and global Discord links are never touched —
+        they are not the tenant's property.
+      operationId: cronPurgeTenants
+      tags:
+        - cron
+      security: []
+      responses:
+        '200':
+          description: Purge report.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/admin/tenants/{id}/lifecycle:
     parameters:
       - in: path

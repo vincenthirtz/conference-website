@@ -109,6 +109,13 @@
 # Scheduled function: alerte de quota d'API. Deux seuils (80 %, 100 %), une
 # seule fois chacun par fenêtre mensuelle — `api_usage_counters.alerted_threshold`
 # empêche la répétition quotidienne, qui ferait cesser de lire l'alerte.
+# Scheduled function: purge des espaces dont l'effacement était programmé et
+# l'échéance passée. Trois verrous : état `purge_scheduled`, `purge_after`
+# dépassé, espace protégé exclu. C'est la seule opération irréversible du
+# domaine, d'où l'heure creuse et le rapport détaillé dans la réponse.
+[functions."tenant-purge-cron"]
+  schedule = "0 4 * * *"
+
 [functions."quota-alerts-cron"]
   schedule = "40 5 * * *"
 
