@@ -46,4 +46,5 @@ export default adminNs('adminTenantsList', {
   generateLinkOwnerOnly: 'Réservé au rôle Owner',
   edit: 'Éditer',
   loadingTenants: 'Chargement des tenants…',
+  usageLink: "Consommation d'API",
 });

@@ -106,6 +106,12 @@
 # + CNAME de routage). Une régression repasse un domaine `verified` en `failed`
 # — il cesse alors d'être routé, ce qui vaut mieux qu'un site muet — et une
 # preuve enfin posée fait passer un `pending` en `verified` sans clic.
+# Scheduled function: alerte de quota d'API. Deux seuils (80 %, 100 %), une
+# seule fois chacun par fenêtre mensuelle — `api_usage_counters.alerted_threshold`
+# empêche la répétition quotidienne, qui ferait cesser de lire l'alerte.
+[functions."quota-alerts-cron"]
+  schedule = "40 5 * * *"
+
 [functions."domain-verify-cron"]
   schedule = "20 5 * * *"
 

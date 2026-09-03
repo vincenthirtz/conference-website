@@ -47,4 +47,5 @@ export default {
   generateLinkOwnerOnly: 'Owner role only',
   edit: 'Edit',
   loadingTenants: 'Loading tenants…',
+  usageLink: 'API usage',
 };

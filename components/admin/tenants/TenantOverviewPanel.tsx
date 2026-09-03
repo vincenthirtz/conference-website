@@ -142,7 +142,9 @@ export default function TenantOverviewPanel({
   const load = useCallback(async () => {
     try {
       setData(
-        await adminFetchJson<Overview>(`/api/admin/tenants/${tenantId}/overview`)
+        await adminFetchJson<Overview>(
+          `/api/admin/tenants/${tenantId}/overview`
+        )
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : t.overviewLoadError);

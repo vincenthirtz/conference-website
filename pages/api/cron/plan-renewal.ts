@@ -27,6 +27,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+import { resolveOwnerEmails } from '@/utils/tenants/ownerEmails';
 import { sendPlanRenewalReminderEmail } from '@/utils/email';
 import {
   PLAN_LABELS,
@@ -87,71 +88,6 @@ export type PlanRenewalCounters = {
   remindersSent: number;
   errors: number;
 };
-
-/**
- * Résout les emails des owner(s) d'un tenant : staff scopés au tenant
- * (tenant_staff) dont le rôle staff est `owner` et qui sont actifs, puis email
- * via l'API admin auth. Dédupliqué. Best-effort : une résolution qui échoue
- * renvoie [] plutôt que de jeter.
- */
-async function resolveOwnerEmails(tenantId: string): Promise<string[]> {
-  const { data: tsRows, error: tsErr } = await supabaseAdmin
-    .from('tenant_staff')
-    .select('staff_id')
-    .eq('tenant_id', tenantId);
-  if (tsErr) {
-    logger.error('[cron/plan-renewal] tenant_staff load error', tsErr);
-    return [];
-  }
-  const staffIds = ((tsRows ?? []) as Array<{ staff_id: string }>)
-    .map((r) => r.staff_id)
-    .filter((v): v is string => typeof v === 'string' && v.length > 0);
-  if (staffIds.length === 0) return [];
-
-  const { data: staffRows, error: staffErr } = await supabaseAdmin
-    .from('staff')
-    .select('auth_user_id, role, is_active, deleted_at')
-    .in('id', staffIds);
-  if (staffErr) {
-    logger.error('[cron/plan-renewal] staff load error', staffErr);
-    return [];
-  }
-
-  const owners = (
-    (staffRows ?? []) as Array<{
-      auth_user_id: string | null;
-      role: string | null;
-      is_active?: boolean | null;
-      deleted_at?: string | null;
-    }>
-  ).filter(
-    (r) =>
-      r.role === 'owner' &&
-      r.is_active !== false &&
-      !r.deleted_at &&
-      typeof r.auth_user_id === 'string' &&
-      r.auth_user_id.length > 0
-  );
-
-  const emails = new Set<string>();
-  for (const o of owners) {
-    try {
-      const { data, error } = await supabaseAdmin.auth.admin.getUserById(
-        o.auth_user_id as string
-      );
-      if (error || !data?.user) continue;
-      const email = data.user.email;
-      if (typeof email === 'string' && email.length > 0) emails.add(email);
-    } catch (err) {
-      logger.error(
-        '[cron/plan-renewal] getUserById error for %s',
-        o.auth_user_id,
-        err
-      );
-    }
-  }
-  return Array.from(emails);
-}
 
 export async function runPlanRenewal(
   nowMs: number = Date.now()

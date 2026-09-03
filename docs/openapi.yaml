@@ -21595,6 +21595,65 @@ paths:
           description: Bot webhook not configured or tenant secret missing.
         '504':
           description: Bot unreachable.
+  /api/admin/tenants/usage:
+    get:
+      summary: API usage of every tenant for the current month.
+      description: |
+        Platform owner only (`manage_tenant` + platform scope). Reads
+        `api_usage_counters` for the current month window and joins the
+        EFFECTIVE plan quota — an expired paid plan is measured against the
+        quota it actually gets, not the one it is billed for. Rows come sorted
+        by percentage consumed, closest to the wall first: that is the only
+        reason to open this screen. `monthLimit: null` means unlimited, which is
+        not the same as a quota of zero.
+      operationId: adminListTenantsUsage
+      tags:
+        - admin/tenants
+      security:
+        - StaffSession: []
+      parameters:
+        - in: query
+          name: window
+          schema:
+            type: string
+            enum: [month]
+      responses:
+        '200':
+          description: Usage rows.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/cron/quota-alerts:
+    post:
+      summary: Daily API-quota alerts (80% and 100%).
+      description: |
+        CRON_SECRET-authenticated. Emails the tenant OWNERS once per threshold
+        per monthly window — `api_usage_counters.alerted_threshold` prevents the
+        daily repetition that would make the alert stop being read. The
+        threshold is marked even when no email could be sent (a space without a
+        sender account would otherwise retry forever).
+      operationId: cronQuotaAlerts
+      tags:
+        - cron
+      security: []
+      responses:
+        '200':
+          description: Counters.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/admin/tenants/{id}/domain:
     parameters:
       - in: path

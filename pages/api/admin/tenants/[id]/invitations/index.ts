@@ -53,7 +53,12 @@ async function handler(
   ctx: AuthenticatedStaffContext
 ) {
   if (
-    applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'admin-tenant-invites')
+    applyRateLimit(
+      req,
+      res,
+      { max: 20, windowMs: 60_000 },
+      'admin-tenant-invites'
+    )
   ) {
     return;
   }

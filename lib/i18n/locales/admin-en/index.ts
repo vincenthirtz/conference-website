@@ -69,6 +69,7 @@ import enAdminAdherentsList from './adminAdherentsList';
 import enAdminAdherentsNew from './adminAdherentsNew';
 import enAdminAdherentDetail from './adminAdherentDetail';
 import enAdminTenantsList from './adminTenantsList';
+import enAdminTenantsUsage from './adminTenantsUsage';
 import enAdminTenantPlanCheckout from './adminTenantPlanCheckout';
 import enAdminTenantsNew from './adminTenantsNew';
 import enAdminBilling from './adminBilling';
@@ -257,6 +258,7 @@ const adminEnDict = {
   adminAdherentsNew: enAdminAdherentsNew,
   adminAdherentDetail: enAdminAdherentDetail,
   adminTenantsList: enAdminTenantsList,
+  adminTenantsUsage: enAdminTenantsUsage,
   adminTenantPlanCheckout: enAdminTenantPlanCheckout,
   adminTenantsNew: enAdminTenantsNew,
   adminBilling: enAdminBilling,

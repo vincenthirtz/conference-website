@@ -217,27 +217,40 @@ function AdminTenantsListPage({ staff }: Props) {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setModalOpen(true)}
-              className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors inline-flex items-center gap-2"
-              data-testid="tenants-create-cta"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            <div className="flex flex-wrap items-center gap-3">
+              {/* La consommation est une vue de plateforme : elle n'a de sens —
+                et n'est autorisée — que pour l'owner. */}
+              {isOwner && (
+                <Link
+                  href="/admin/tenants/usage"
+                  className="px-4 py-2.5 rounded-xl border border-neutral-600 hover:border-neutral-400 text-sm font-medium transition-colors"
+                  data-testid="tenants-usage-link"
+                >
+                  {t.usageLink}
+                </Link>
+              )}
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors inline-flex items-center gap-2"
+                data-testid="tenants-create-cta"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-              {t.createTenant}
-            </button>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                {t.createTenant}
+              </button>
+            </div>
           </div>
 
           {pending.length > 0 && (
@@ -410,6 +423,8 @@ function AdminTenantsListPage({ staff }: Props) {
   );
 }
 
-export const getServerSideProps = withStaffPage({ permission: 'manage_settings' });
+export const getServerSideProps = withStaffPage({
+  permission: 'manage_settings',
+});
 
 export default AdminTenantsListPage;

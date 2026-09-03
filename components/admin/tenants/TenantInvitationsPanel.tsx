@@ -91,10 +91,9 @@ export default function TenantInvitationsPanel({
 
   const revoke = async (row: Invitation) => {
     try {
-      await mutateJson(
-        `/api/admin/tenants/${tenantId}/invitations/${row.id}`,
-        { method: 'DELETE' }
-      );
+      await mutateJson(`/api/admin/tenants/${tenantId}/invitations/${row.id}`, {
+        method: 'DELETE',
+      });
       addToast(t.inviteRevoked, 'success');
       await load();
       onAccepted?.();

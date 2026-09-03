@@ -97,65 +97,63 @@ export default function TenantBotSecretsPanel({
 
   return (
     <>
-  <section
-    className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 sm:p-8"
-    data-testid="tenant-bot-secrets-section"
-  >
-    <div className="flex items-start gap-3 mb-4">
-      <div className="w-10 h-10 rounded-full bg-amber-900/30 flex items-center justify-center text-amber-300 flex-shrink-0">
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-          />
-        </svg>
-      </div>
-      <div>
-        <h2 className="text-lg font-semibold text-white">
-          {t.botSecretsHeading}
-        </h2>
-        <p className="mt-1 text-sm text-neutral-400">
-          {t.botSecretsDesc}
-        </p>
-      </div>
-    </div>
-    <div className="flex flex-wrap items-center gap-3">
-      <button
-        type="button"
-        onClick={handleRotate}
-        disabled={rotating}
-        className="px-4 py-2.5 rounded-xl border border-amber-500/50 text-amber-200 hover:border-amber-400 hover:bg-amber-500/10 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        data-testid="tenant-rotate-secrets-btn"
+      <section
+        className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 sm:p-8"
+        data-testid="tenant-bot-secrets-section"
       >
-        {rotating ? t.rotating : t.rotateBtn}
-      </button>
-      {previousKeyUntil && (
-        <span className="flex flex-wrap items-center gap-2 text-xs text-neutral-300">
-          {format(t.previousKeyValid, {
-            date: new Date(previousKeyUntil).toLocaleString(
-              'fr-FR',
-              { dateStyle: 'short', timeStyle: 'short' }
-            ),
-          })}
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-10 h-10 rounded-full bg-amber-900/30 flex items-center justify-center text-amber-300 flex-shrink-0">
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-white">
+              {t.botSecretsHeading}
+            </h2>
+            <p className="mt-1 text-sm text-neutral-400">{t.botSecretsDesc}</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
-            onClick={handleRevokePrevious}
-            className="underline hover:text-white"
-            data-testid="tenant-revoke-prev-key-btn"
+            onClick={handleRotate}
+            disabled={rotating}
+            className="px-4 py-2.5 rounded-xl border border-amber-500/50 text-amber-200 hover:border-amber-400 hover:bg-amber-500/10 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            data-testid="tenant-rotate-secrets-btn"
           >
-            {t.revokePrev}
+            {rotating ? t.rotating : t.rotateBtn}
           </button>
-        </span>
-      )}
-    </div>
-    </section>
+          {previousKeyUntil && (
+            <span className="flex flex-wrap items-center gap-2 text-xs text-neutral-300">
+              {format(t.previousKeyValid, {
+                date: new Date(previousKeyUntil).toLocaleString('fr-FR', {
+                  dateStyle: 'short',
+                  timeStyle: 'short',
+                }),
+              })}
+              <button
+                type="button"
+                onClick={handleRevokePrevious}
+                className="underline hover:text-white"
+                data-testid="tenant-revoke-prev-key-btn"
+              >
+                {t.revokePrev}
+              </button>
+            </span>
+          )}
+        </div>
+      </section>
 
       {revealed && (
         <BotSecretsRevealModal

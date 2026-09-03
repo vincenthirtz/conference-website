@@ -143,7 +143,12 @@ async function handler(
   ctx: AuthenticatedStaffContext
 ) {
   if (
-    applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-tenant-overview')
+    applyRateLimit(
+      req,
+      res,
+      { max: 60, windowMs: 60_000 },
+      'admin-tenant-overview'
+    )
   ) {
     return;
   }
@@ -211,7 +216,10 @@ async function handler(
     await Promise.all([
       Promise.all(TENANT_DOMAINS.map((d) => countDomain(d, id))),
       Promise.all(LIFE_SIGNS.map((s) => latestDate(s, id))),
-      supabaseAdmin.from('discord_guilds').select('guild_id').eq('tenant_id', id),
+      supabaseAdmin
+        .from('discord_guilds')
+        .select('guild_id')
+        .eq('tenant_id', id),
       supabaseAdmin
         .from('tenant_staff')
         .select('staff_id', { count: 'exact', head: true })
@@ -238,7 +246,9 @@ async function handler(
     if (cErr) {
       logger.error('[admin/tenant-overview] discord config error', cErr);
     }
-    for (const row of (cfg ?? []) as unknown as Array<Record<string, unknown>>) {
+    for (const row of (cfg ?? []) as unknown as Array<
+      Record<string, unknown>
+    >) {
       configuredKeys += countConfiguredKeys(row);
     }
   }
