@@ -296,6 +296,11 @@ describe('POST /api/bot/v1/tenants/link-guild', () => {
       expect(call.to).toBe('op@example.com');
       expect(call.tenantSlug).toBe('fresh-org');
       expect(call.revealUrl).toContain('/onboard/secrets/');
+      // L'email porte les deux réglages qui restent à faire. Sans le compte
+      // Brevo, l'espace n'envoie AUCUN email — et l'apprendre le jour d'un
+      // rappel de check-in manqué est trop tard.
+      expect(call.siteUrl).toBeTruthy();
+      expect(Date.parse(call.trialEndsAt)).toBeGreaterThan(Date.now());
     });
 
     it('le tenant naît avec un essai de 30 jours, pas en discovery', async () => {

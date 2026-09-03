@@ -76,6 +76,10 @@ globaux (`/tenants/all-configs`, `/events/pending`, `/cast/upcoming`).
 
 ## Envoi d'emails : le tenant apporte son compte
 
+L'email de fin d'onboarding le dit explicitement, avec le lien vers le
+réglage : sans ça, l'absence d'envoi se découvre le jour d'un rappel de
+check-in manqué.
+
 Un espace **n'emprunte jamais notre compte Brevo**. Tant qu'il n'a pas
 enregistré le sien (`PUT /api/admin/email/credentials` → `integration_secrets`
 `brevo_api_key` / `brevo_from_email` / `brevo_from_name`), `sendEmail` refuse

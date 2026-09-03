@@ -103,7 +103,26 @@ export function sendOnboardSuccessEmail(opts: {
   tenantName: string;
   tenantSlug: string;
   revealUrl: string;
+  /** Racine du site, pour construire les liens du back-office. */
+  siteUrl: string;
+  /** Fin de l'essai gratuit ouvert à la création (ISO). */
+  trialEndsAt: string | null;
 }): Promise<SendEmailResult> {
+  const settingsUrl = `${opts.siteUrl}/admin/site-settings?tab=email-sender`;
+  const discordSettingsUrl = `${opts.siteUrl}/admin/site-settings?tab=discord`;
+  const trialDate = (() => {
+    if (!opts.trialEndsAt) return null;
+    const d = new Date(opts.trialEndsAt);
+    // `toLocaleDateString` ne jette pas sur une date invalide : elle rend
+    // « Invalid Date ». Sans ce contrôle, l'email annoncerait sereinement un
+    // essai « jusqu'au Invalid Date ».
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  })();
   const hello = opts.displayName
     ? `Hello ${escapeHtml(opts.displayName)},`
     : 'Hello,';
@@ -134,6 +153,36 @@ export function sendOnboardSuccessEmail(opts: {
         Stockez ces secrets dans un coffre (1Password, Bitwarden, etc.) — ils ne pourront pas être affichés à nouveau.
         Vous pourrez les faire tourner via l'admin si besoin.
       </p>
+
+      <div style="height:1px;background:rgba(255,255,255,0.1);margin:28px 0 24px;"></div>
+
+      <h2 style="margin:0 0 12px;font-size:16px;font-weight:600;color:#ffffff;">Deux réglages à faire dans votre espace</h2>
+
+      <p style="margin:0 0 8px;font-size:14px;color:${TEXT_COLOR};line-height:1.6;">
+        <strong style="color:#ffffff;">1. Vos salons et vos rôles Discord.</strong>
+        Tant qu'un salon n'est pas renseigné, la fonctionnalité correspondante
+        reste simplement en veille — le bot ne publie rien au hasard.
+        <a href="${discordSettingsUrl}" style="color:${PRIMARY_COLOR};">Réglages Discord</a>
+      </p>
+
+      <p style="margin:0 0 16px;font-size:14px;color:${TEXT_COLOR};line-height:1.6;">
+        <strong style="color:#ffffff;">2. Votre compte d'envoi d'emails.</strong>
+        Votre espace expédie depuis <em>son</em> compte Brevo : l'adresse
+        d'expédition, le quota et la réputation vous appartiennent. Tant qu'il
+        n'est pas renseigné, <strong>aucun email ne part</strong> — ni
+        invitation d'équipe, ni rappel de check-in. Le bot, lui, fonctionne
+        normalement.
+        <a href="${settingsUrl}" style="color:${PRIMARY_COLOR};">Configurer l'envoi d'emails</a>
+      </p>
+
+      ${
+        trialDate
+          ? `<p style="margin:0;font-size:13px;color:#ffd9a0;line-height:1.5;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.15);border-radius:8px;padding:12px 14px;">
+        Votre espace démarre avec un <strong>essai gratuit jusqu'au ${escapeHtml(trialDate)}</strong>.
+        À cette date, il repasse sur le palier gratuit et le bot cesse de répondre — vous serez relancé avant.
+      </p>`
+          : ''
+      }
     `),
   });
 }

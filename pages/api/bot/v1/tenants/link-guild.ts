@@ -315,6 +315,9 @@ async function autoClaimTenant(input: {
 
   // 1) tenants — avec l'essai gratuit (cf. TRIAL_PLAN / TRIAL_DAYS).
   const nowMs = Date.now();
+  const trialExpiresAt = new Date(
+    nowMs + TRIAL_DAYS * 24 * 60 * 60 * 1000
+  ).toISOString();
   const { data: tenantRow, error: tenantErr } = await admin
     .from('tenants')
     .insert({
@@ -325,9 +328,7 @@ async function autoClaimTenant(input: {
       plan_status: 'active',
       plan_is_trial: true,
       plan_started_at: new Date(nowMs).toISOString(),
-      plan_expires_at: new Date(
-        nowMs + TRIAL_DAYS * 24 * 60 * 60 * 1000
-      ).toISOString(),
+      plan_expires_at: trialExpiresAt,
     })
     .select('id')
     .single();
@@ -492,6 +493,10 @@ async function autoClaimTenant(input: {
       tenantName: request.requested_name,
       tenantSlug: request.requested_slug,
       revealUrl,
+      siteUrl: getSiteUrl(),
+      // L'essai posé à l'étape 1 : l'email le dit, plutôt que de laisser
+      // l'échéance se découvrir le jour où le bot cesse de répondre.
+      trialEndsAt: trialExpiresAt,
     });
     if (!emailRes.success) {
       logger.warn('[bot/tenants/link-guild] auto-claim success email failed', {
