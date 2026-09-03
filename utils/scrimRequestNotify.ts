@@ -86,6 +86,16 @@ export type ScrimRecipient = {
   discordUserId: string;
   /** Sert au log et à distinguer les destinataires d'une même équipe. */
   role: 'captain' | 'manager' | 'coach';
+  /**
+   * Pseudo Discord tel que connu du site.
+   *
+   * Le salon d'actions l'affiche plutôt qu'un `<@id>` : une mention ne se rend
+   * en nom que si le client de la lectrice connaît déjà la personne. Sur une
+   * équipe dont une partie n'est pas dans le serveur, la liste sortait à moitié
+   * en identifiants bruts — illisible là où l'unique question est « qui a été
+   * prévenu ? ».
+   */
+  username: string | null;
 };
 
 /**
@@ -149,7 +159,11 @@ export async function getTeamScrimRecipients(
       // qu'un message.
       if (!discordUserId || seen.has(discordUserId)) continue;
       seen.add(discordUserId);
-      recipients.push({ discordUserId, role });
+      recipients.push({
+        discordUserId,
+        role,
+        username: links.get(userId)?.discordUsername ?? null,
+      });
     }
 
     return { recipients, teamName: (team.name as string) || 'ton équipe' };
@@ -270,6 +284,7 @@ async function emitScrimDm(opts: {
             demandeId: opts.demandeId ?? null,
             slots: opts.slots ?? [],
             captainDiscordUserId: recipient.discordUserId,
+            captainUsername: recipient.username,
             recipientRole: recipient.role,
             recipientTeamName: resolved.teamName,
             opponentName: opts.opponentName,
@@ -300,6 +315,7 @@ async function emitScrimDm(opts: {
           recipients: resolved.recipients.map((r) => ({
             discordUserId: r.discordUserId,
             role: r.role,
+            username: r.username,
           })),
         },
         opts.tenantId
