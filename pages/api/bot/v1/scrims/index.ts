@@ -19,6 +19,7 @@ import {
 } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 import {
+  notifyAdminScrimDms,
   notifyAdminScrimEmails,
   formatScrimDateFr,
 } from '@/utils/scrimRequestNotify';
@@ -174,15 +175,18 @@ async function handleCreate(req: BotTenantRequest, res: NextApiResponse) {
   });
 
   // Effet de bord best-effort : dès que les deux équipes sont connues (même en
-  // draft), on notifie par email les capitaines des DEUX équipes. S'ajoute à la
-  // notif Discord ; fire-and-forget → ne modifie jamais la réponse 201.
+  // draft), on notifie les capitaines des DEUX équipes — par email ET par
+  // message privé Discord. S'ajoute à l'annonce de salon ; fire-and-forget →
+  // ne modifie jamais la réponse 201.
   if (team1Id && team2Id) {
-    void notifyAdminScrimEmails({
+    const notifyArgs = {
       tenantId: req.botContext.tenantId,
       team1Id,
       team2Id,
       dateLabel: formatScrimDateFr(input.scheduled_date ?? null),
-    }).catch(() => {});
+    };
+    void notifyAdminScrimEmails(notifyArgs).catch(() => {});
+    void notifyAdminScrimDms(notifyArgs).catch(() => {});
   }
 
   return res.status(201).json({ scrim: data });

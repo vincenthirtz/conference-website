@@ -12,6 +12,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { notifyScrimRequest } from '@/utils/discord';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import {
+  notifyScrimRequestDm,
   notifyScrimRequestEmail,
   formatScrimDateFr,
 } from '@/utils/scrimRequestNotify';
@@ -266,9 +267,10 @@ export default async function handler(
     isExternal: true,
   });
 
-  // Email best-effort au capitaine de l'équipe CIBLE (s'ajoute au Discord).
-  // Fire-and-forget : un échec email ne doit jamais casser la réponse 201.
-  void notifyScrimRequestEmail({
+  // Email + message privé Discord au capitaine de l'équipe CIBLE (s'ajoutent
+  // à l'annonce dans le salon scrims). Fire-and-forget : un échec de
+  // notification ne doit jamais casser la réponse 201.
+  const notifyArgs = {
     tenantId,
     targetTeamId: target.id,
     opponentName: fromTeamName,
@@ -276,7 +278,9 @@ export default async function handler(
     message: message || null,
     requesterName,
     isExternal: true,
-  }).catch(() => {});
+  };
+  void notifyScrimRequestEmail(notifyArgs).catch(() => {});
+  void notifyScrimRequestDm(notifyArgs).catch(() => {});
 
   // Return a generic confirmation; don't echo back the row to limit enumeration.
   return res.status(201).json({

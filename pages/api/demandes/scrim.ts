@@ -17,6 +17,7 @@ import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { normalizeSlots } from '@/utils/teams/scrimNegotiation';
 import {
+  notifyScrimRequestDm,
   notifyScrimRequestEmail,
   formatScrimDateFr,
 } from '@/utils/scrimRequestNotify';
@@ -213,7 +214,9 @@ export default withAuthRoute(async function handler(
 
     // Email best-effort au capitaine de l'équipe CIBLE (s'ajoute au Discord).
     // Fire-and-forget : un échec email ne doit jamais casser la réponse 201.
-    void notifyScrimRequestEmail({
+    // Email ET message privé Discord partent ensemble : la capitaine est
+    // jointe là où elle est, sans dépendre d'une boîte mail relevée le soir.
+    const notifyArgs = {
       tenantId,
       targetTeamId: teamId,
       opponentName: myTeam.name,
@@ -221,7 +224,9 @@ export default withAuthRoute(async function handler(
       message,
       requesterName: myTeam.name,
       isExternal: false,
-    }).catch(() => {});
+    };
+    void notifyScrimRequestEmail(notifyArgs).catch(() => {});
+    void notifyScrimRequestDm(notifyArgs).catch(() => {});
 
     return res.status(201).json({
       success: true,

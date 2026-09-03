@@ -56,6 +56,10 @@ export const BOT_EVENT_NAMES = [
   'team.member.removed',
   'team.captain.changed',
   'staff.role.changed',
+  // Demande de scrim adressée à une équipe : DM au capitaine concerné. Un
+  // event PAR destinataire (comme checkin.nudge), pour qu'un échec d'envoi
+  // n'entraîne pas le renvoi des autres au retry.
+  'scrim.request',
   'scrim.created',
   'scrim.scheduled',
   'scrim.starting',
