@@ -155,4 +155,21 @@ export default {
     'A bot still configured with it will be refused immediately. For a leak, not as routine.',
   toastPrevRevoked: 'Previous key revoked.',
   errorRevokePrev: 'Revocation failed.',
+  inviteHeading: 'Invite someone',
+  inviteDesc:
+    'An email goes out with a link valid for 14 days. The account is created on acceptance — it does not need to exist yet.',
+  inviteEmailLabel: 'Email address',
+  inviteCta: 'Invite',
+  inviting: 'Sending…',
+  inviteSent: 'Invitation sent.',
+  inviteCreatedNoEmail:
+    'Invitation created, but the email did not go out: this space has no sender account configured.',
+  inviteError: 'Invitation failed.',
+  inviteRevoked: 'Invitation revoked.',
+  inviteRevoke: 'Revoke',
+  inviteUntil: 'until {date}',
+  inviteStatusPending: 'pending',
+  inviteStatusAccepted: 'accepted',
+  inviteStatusRevoked: 'revoked',
+  inviteStatusExpired: 'expired',
 };

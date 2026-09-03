@@ -1,344 +1,161 @@
 // pages/invitation/[token].tsx
 //
-// Page publique du « lien privé » d'invitation d'équipe.
+// La page qu'on ouvre depuis l'email d'invitation.
 //
-// Le lien n'authentifie PAS (cf. utils/teams/inviteLinks.ts) : il décrit
-// l'invitation à tout le monde (équipe, rôle proposé, adresse masquée), puis
-// exige une session pour accepter ou refuser. Un visiteur anonyme est envoyé
-// vers /login?next=/invitation/<token> et revient ici une fois connecté.
+// Elle montre d'abord CE QU'ON PROPOSE — quel espace, quel rôle, jusqu'à quand
+// — avant de demander quoi que ce soit. Un lien qui exige une connexion sans
+// dire à quoi elle sert se referme aussi vite qu'il s'ouvre.
+//
+// Trois refus possibles, tous dits en clair plutôt qu'en code : invitation
+// expirée, annulée, ou envoyée à une autre adresse que celle du compte
+// connecté. Le dernier cas est le plus fréquent (deux comptes, deux adresses) —
+// d'où l'indice d'adresse affiché, tronqué.
 
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useSession } from '@/hooks/useSession';
-import { supabaseClient } from '@/utils/supabase';
-import { useT, format } from '@/lib/i18n/useT';
-import type { SeoProps } from '@/components/Seo/DefaultSeo';
-import nsInvitationLink from '@/lib/i18n/locales/fr/invitationLink';
 
-/**
- * Même masque que le serveur (`maskEmail` dans
- * pages/api/teams/invitations/by-token.ts) : le GET ne renvoie que l'adresse
- * invitée MASQUÉE, on masque donc l'adresse de session pour pouvoir les
- * comparer sans jamais demander l'adresse invitée en clair.
- *
- * Heuristique volontairement prudente : deux adresses différentes qui
- * partagent initiale et domaine se ressemblent une fois masquées, et on
- * n'avertit pas. C'est le serveur qui tranche à l'acceptation — l'avertissement
- * n'est là que pour éviter le clic perdu, pas pour autoriser quoi que ce soit.
- */
-function maskEmail(email: string): string {
-  const [local, domain] = email.split('@');
-  if (!domain) return '***';
-  return `${local.slice(0, 1) || '*'}***@${domain}`;
-}
-
-type InvitationInfo = {
-  team_name: string | null;
-  team_slug: string | null;
-  team_logo_url: string | null;
+type Invitation = {
+  status: 'pending' | 'accepted' | 'revoked' | 'expired';
+  tenantName: string;
   role: string;
-  as_captain: boolean;
-  battle_tag: string | null;
-  specialty: string | null;
-  invited_email: string | null;
-  expires_at: string | null;
+  emailHint: string;
+  expiresAt: string;
 };
 
-function InvitationByTokenPage() {
-  const t = useT(nsInvitationLink);
+const ROLE_LABELS: Record<string, string> = {
+  owner: 'propriétaire',
+  admin: 'administration',
+  caster: 'cast et régie',
+};
+
+export default function InvitationPage() {
   const router = useRouter();
-  const { user, token: authToken, loading: authLoading } = useSession();
-  const sessionEmail = user?.email ?? null;
+  const token = typeof router.query.token === 'string' ? router.query.token : '';
 
-  const token =
-    typeof router.query.token === 'string' ? router.query.token : null;
+  const [invitation, setInvitation] = useState<Invitation | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
 
-  const [info, setInfo] = useState<InvitationInfo | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<
-    'accept' | 'reject' | null
-  >(null);
-  const [done, setDone] = useState<'accept' | 'reject' | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [promotedToCaptain, setPromotedToCaptain] = useState(false);
+  const load = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/invitations/${encodeURIComponent(token)}`);
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || 'Invitation introuvable.');
+        return;
+      }
+      setInvitation(json as Invitation);
+    } catch {
+      setError('Invitation indisponible pour le moment.');
+    }
+  }, [token]);
 
   useEffect(() => {
-    if (!router.isReady) return;
-    if (!token) {
-      setLoading(false);
-      setLoadError(t.errorNotFound);
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    fetch(`/api/teams/invitations/by-token?token=${encodeURIComponent(token)}`)
-      .then(async (res) => {
-        const json = await res.json().catch(() => null);
-        if (cancelled) return;
-        if (!res.ok) {
-          setLoadError(json?.error || t.errorNotFound);
-          return;
-        }
-        setInfo(json?.invitation ?? null);
-      })
-      .catch(() => {
-        if (!cancelled) setLoadError(t.errorNetwork);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+    void load();
+  }, [load]);
+
+  const accept = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/invitations/${encodeURIComponent(token)}`, {
+        method: 'POST',
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [router.isReady, token, t]);
-
-  const act = useCallback(
-    async (action: 'accept' | 'reject') => {
-      if (!token || !authToken) return;
-      setActionLoading(action);
-      setActionError(null);
-      try {
-        const res = await fetch('/api/teams/invitations/by-token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${authToken}`,
-          },
-          body: JSON.stringify({ token, action }),
-        });
-        const json = await res.json().catch(() => null);
-        if (!res.ok) {
-          // 403 « pas la destinataire » : on recompose le message côté client
-          // pour l'avoir traduit, et surtout pour NOMMER les deux adresses.
-          // « Cette invitation ne t'est pas destinée » seul laissait la personne
-          // relire son propre mail et conclure que le site se trompait.
-          if (json?.code === 'NOT_INVITEE' && json?.invited_email) {
-            setActionError(
-              format(t.mismatchBody, {
-                invited: json.invited_email,
-                current: json.session_email || sessionEmail || '—',
-              })
-            );
-            return;
-          }
-          setActionError(json?.error || t.errorAction);
-          return;
-        }
-        setDone(action);
-        setPromotedToCaptain(!!json?.promotedToCaptain);
-      } catch {
-        setActionError(t.errorNetwork);
-      } finally {
-        setActionLoading(null);
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || "L'acceptation a échoué.");
+        return;
       }
-    },
-    [token, authToken, sessionEmail, t]
-  );
-
-  const roleLabel = (role: string, asCaptain: boolean): string => {
-    if (asCaptain) return t.roleCaptain;
-    switch (role) {
-      case 'manager':
-        return t.roleManager;
-      case 'coach':
-        return t.roleCoach;
-      case 'substitute':
-        return t.roleSubstitute;
-      default:
-        return t.rolePlayer;
+      setDone(true);
+    } catch {
+      setError("L'acceptation a échoué.");
+    } finally {
+      setBusy(false);
     }
   };
 
-  const loginHref = `/login?next=${encodeURIComponent(
-    `/invitation/${token ?? ''}`
-  )}`;
-
-  // Compte connecté ≠ compte invité : le cas réel le plus fréquent (connexion
-  // via Discord, dont l'adresse n'est pas celle saisie par la capitaine). On
-  // prévient AVANT le clic ; les boutons restent actifs, car le masque peut
-  // se tromper dans les deux sens et c'est le serveur qui décide.
-  const emailMismatch =
-    !!info?.invited_email &&
-    !!sessionEmail &&
-    maskEmail(sessionEmail.toLowerCase()) !== info.invited_email.toLowerCase();
-
-  const switchAccount = useCallback(async () => {
-    try {
-      await supabaseClient.auth.signOut();
-    } catch {
-      // Peu importe : ce qui compte est d'arriver sur /login, qui refera une
-      // session propre par-dessus.
+  const body = () => {
+    if (error && !invitation) {
+      return <p className="text-sm text-red-300">{error}</p>;
     }
-    router.push(loginHref);
-  }, [router, loginHref]);
+    if (!invitation) {
+      return <p className="text-sm text-neutral-400">Chargement…</p>;
+    }
+    if (done || invitation.status === 'accepted') {
+      return (
+        <>
+          <p className="text-sm text-neutral-300">
+            C&apos;est fait : vous avez accès à{' '}
+            <strong className="text-white">{invitation.tenantName}</strong>.
+          </p>
+          <Link
+            href="/admin"
+            className="mt-5 inline-block rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500"
+          >
+            Ouvrir l&apos;administration
+          </Link>
+        </>
+      );
+    }
+    if (invitation.status === 'revoked' || invitation.status === 'expired') {
+      return (
+        <p className="text-sm text-neutral-300">
+          {invitation.status === 'revoked'
+            ? 'Cette invitation a été annulée.'
+            : 'Cette invitation a expiré.'}{' '}
+          Demandez-en une nouvelle à la personne qui vous a invité·e.
+        </p>
+      );
+    }
+    return (
+      <>
+        <p className="text-sm text-neutral-300">
+          On vous propose un accès{' '}
+          <strong className="text-white">
+            {ROLE_LABELS[invitation.role] ?? invitation.role}
+          </strong>{' '}
+          à l&apos;espace{' '}
+          <strong className="text-white">{invitation.tenantName}</strong>.
+        </p>
+        <p className="mt-2 text-xs text-neutral-500">
+          Invitation envoyée à {invitation.emailHint} — connectez-vous avec
+          cette adresse pour l&apos;accepter.
+        </p>
+        {error && (
+          <p className="mt-3 text-sm text-red-300" role="alert">
+            {error}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={accept}
+          disabled={busy}
+          className="mt-5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
+          data-testid="accept-invitation"
+        >
+          {busy ? 'Acceptation…' : "Accepter l'invitation"}
+        </button>
+      </>
+    );
+  };
 
   return (
     <>
       <Head>
-        <title>{t.pageTitle}</title>
-        {/* Lien privé : jamais indexé. */}
-        <meta name="robots" content="noindex, nofollow" />
+        <title>Invitation</title>
+        {/* Un lien d'invitation ne doit jamais finir dans un index. */}
+        <meta name="robots" content="noindex,nofollow" />
       </Head>
-      <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black px-4 py-16 text-white">
-        <div className="mx-auto max-w-lg">
-          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl sm:p-8">
-            {loading ? (
-              <p className="text-sm text-gray-400">{t.loading}</p>
-            ) : loadError ? (
-              <>
-                <h1 className="text-xl font-bold">{t.errorTitle}</h1>
-                <p className="mt-2 text-sm text-gray-400">{loadError}</p>
-                <Link
-                  href="/"
-                  className="mt-6 inline-flex rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-semibold transition hover:bg-purple-500"
-                >
-                  {t.backHome}
-                </Link>
-              </>
-            ) : done ? (
-              <>
-                <h1 className="text-xl font-bold">
-                  {done === 'accept' ? t.acceptedTitle : t.rejectedTitle}
-                </h1>
-                <p className="mt-2 text-sm text-gray-300">
-                  {done === 'accept'
-                    ? promotedToCaptain
-                      ? format(t.acceptedCaptainBody, {
-                          team: info?.team_name ?? '',
-                        })
-                      : format(t.acceptedBody, { team: info?.team_name ?? '' })
-                    : t.rejectedBody}
-                </p>
-                {done === 'accept' && (
-                  <Link
-                    href="/player/manage-team"
-                    className="mt-6 inline-flex rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-semibold transition hover:bg-purple-500"
-                  >
-                    {t.goToTeamSpace}
-                  </Link>
-                )}
-              </>
-            ) : (
-              <>
-                <p className="text-[11px] uppercase tracking-[0.14em] text-gray-400">
-                  {t.eyebrow}
-                </p>
-                <h1 className="mt-1 text-2xl font-black">
-                  {format(t.heading, { team: info?.team_name ?? '' })}
-                </h1>
-                <p className="mt-3 text-sm leading-relaxed text-gray-300">
-                  {format(t.body, {
-                    team: info?.team_name ?? '',
-                    role: roleLabel(info?.role ?? 'player', !!info?.as_captain),
-                  })}
-                </p>
-                {info?.as_captain && (
-                  <p className="mt-3 rounded-xl border border-[var(--color-yellow)]/30 bg-[var(--color-yellow)]/10 px-4 py-3 text-xs text-[var(--color-yellow)]">
-                    {t.captainNote}
-                  </p>
-                )}
-                {info?.invited_email && (
-                  <p className="mt-3 text-xs text-gray-500">
-                    {format(t.sentTo, { email: info.invited_email })}
-                  </p>
-                )}
-
-                {actionError && (
-                  <p className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-                    {actionError}
-                  </p>
-                )}
-
-                {!authLoading && user && emailMismatch && (
-                  <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-                    <p className="text-sm font-semibold text-amber-100">
-                      {t.mismatchTitle}
-                    </p>
-                    <p className="mt-1 text-xs leading-relaxed text-amber-100/80">
-                      {format(t.mismatchBody, {
-                        invited: info?.invited_email ?? '',
-                        current: sessionEmail ?? '',
-                      })}
-                    </p>
-                  </div>
-                )}
-
-                {authLoading ? (
-                  <p className="mt-6 text-sm text-gray-400">{t.loading}</p>
-                ) : user ? (
-                  <div className="mt-6 flex flex-wrap gap-3">
-                    <button
-                      type="button"
-                      onClick={() => act('accept')}
-                      disabled={!!actionLoading}
-                      className="inline-flex rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-semibold transition hover:bg-purple-500 disabled:opacity-50"
-                    >
-                      {actionLoading === 'accept' ? t.pending : t.accept}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => act('reject')}
-                      disabled={!!actionLoading}
-                      className="inline-flex rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold transition hover:bg-white/10 disabled:opacity-50"
-                    >
-                      {actionLoading === 'reject' ? t.pending : t.reject}
-                    </button>
-                    {/* Sortie de secours : sans elle, la personne connectée au
-                        mauvais compte n'a AUCUN moyen évident de changer — le
-                        header de la page publique n'a pas de déconnexion. */}
-                    <button
-                      type="button"
-                      onClick={switchAccount}
-                      disabled={!!actionLoading}
-                      className="inline-flex rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold transition hover:bg-white/10 disabled:opacity-50"
-                    >
-                      {t.switchAccount}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="mt-6">
-                    <p className="text-sm text-gray-300">{t.loginRequired}</p>
-                    <p className="mt-2 text-xs leading-relaxed text-amber-200/80">
-                      {t.loginDiscordWarning}
-                    </p>
-                    <Link
-                      href={loginHref}
-                      className="mt-3 inline-flex rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-semibold transition hover:bg-purple-500"
-                    >
-                      {t.loginCta}
-                    </Link>
-                  </div>
-                )}
-                {!authLoading && user && sessionEmail && (
-                  <p className="mt-3 text-xs text-gray-500">
-                    {format(t.connectedAs, { email: sessionEmail })}
-                  </p>
-                )}
-              </>
-            )}
-          </div>
+      <main className="min-h-screen bg-neutral-950 px-4 py-24 text-white">
+        <div className="mx-auto max-w-md rounded-2xl border border-neutral-800 bg-neutral-900/60 p-8">
+          <h1 className="text-xl font-bold tracking-tight">Invitation</h1>
+          <div className="mt-4">{body()}</div>
         </div>
-      </div>
+      </main>
     </>
   );
 }
-
-/** Lien privé : hors sitemap, hors index. */
-const invitationSeo: SeoProps = {
-  title: {
-    fr: 'Invitation à rejoindre une équipe',
-    en: 'Team invitation',
-  },
-  description: {
-    fr: 'Accepte ou refuse une invitation à rejoindre une équipe.',
-    en: 'Accept or decline an invitation to join a team.',
-  },
-  noindex: true,
-};
-
-InvitationByTokenPage.seo = invitationSeo;
-
-export default InvitationByTokenPage;

@@ -21595,6 +21595,179 @@ paths:
           description: Bot webhook not configured or tenant secret missing.
         '504':
           description: Bot unreachable.
+  /api/admin/tenants/{id}/invitations:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: List the invitations of a tenant.
+      description: |
+        Requires `admin`+ globally, or staff attached to this tenant. Status is
+        computed (`pending` / `accepted` / `revoked` / `expired`) rather than
+        stored: an expiry needs a date, not a cron.
+      operationId: adminListTenantInvitations
+      tags:
+        - admin/tenants
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Invitations.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      summary: Invite an email address to join a tenant.
+      description: |
+        Creates a single-use invitation (14 days) and emails it with the
+        TENANT's sender account. The token is stored hashed. Any live invitation
+        for the same address is revoked first, so a single revoke always closes
+        the door. The invited role may not exceed the inviter's own role.
+      operationId: adminCreateTenantInvitation
+      tags:
+        - admin/tenants
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, role]
+              properties:
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  enum: [owner, admin, caster]
+      responses:
+        '201':
+          description: Invitation created (email may still have failed — see `emailSent`).
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Already a member of this tenant.
+  /api/admin/tenants/{id}/invitations/{invitationId}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: invitationId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      summary: Revoke a pending invitation.
+      description: |
+        Idempotent: revoking an already-revoked, accepted or unknown invitation
+        answers 200 with `revoked: false`. The caller wanted the link dead; it
+        is dead.
+      operationId: adminRevokeTenantInvitation
+      tags:
+        - admin/tenants
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Revoked (or already not live).
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/invitations/{token}:
+    parameters:
+      - in: path
+        name: token
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Read a tenant invitation without consuming it.
+      description: |
+        PUBLIC (the invitee is, by construction, not staff yet). Returns the
+        tenant name, the offered role, the status and a masked email hint, so
+        the acceptance page can say what is on offer before asking for a login.
+      operationId: readTenantInvitation
+      tags:
+        - public
+      # Route publique : l'invité n'est pas encore staff, c'est tout l'objet.
+      security: []
+      responses:
+        '200':
+          description: Invitation summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Accept a tenant invitation as the logged-in user.
+      description: |
+        Requires a Supabase session whose email matches the invited address.
+        Creates the staff account when it does not exist yet (global role
+        `caster` — the invitation grants access to ONE space, not a platform
+        role), attaches it to the tenant, then marks the invitation accepted.
+        Single use.
+      operationId: acceptTenantInvitation
+      tags:
+        - public
+      # Route publique : l'invité n'est pas encore staff, c'est tout l'objet.
+      security: []
+      responses:
+        '200':
+          description: Accepted.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The session email does not match the invited address.
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Invitation already accepted, revoked or expired.
   /api/admin/tenants/{id}/overview:
     parameters:
       - in: path

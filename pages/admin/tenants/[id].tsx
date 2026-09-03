@@ -19,6 +19,7 @@ import {
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import TenantOverviewPanel from '@/components/admin/tenants/TenantOverviewPanel';
 import TenantBotSecretsPanel from '@/components/admin/tenants/TenantBotSecretsPanel';
+import TenantInvitationsPanel from '@/components/admin/tenants/TenantInvitationsPanel';
 import Tabs, {
   tabButtonId,
   tabPanelId,
@@ -672,6 +673,13 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                   aria-labelledby={tabButtonId(TABS_ID_BASE, 'staff')}
                   className="space-y-4"
                 >
+                  {/* Inviter d'abord : rattacher un UUID est le cas rare, et
+                      c'était pourtant le seul possible. */}
+                  <TenantInvitationsPanel
+                    tenantId={tenantId}
+                    onAccepted={() => void fetchData()}
+                  />
+
                   <form
                     onSubmit={handleAddStaff}
                     className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4 flex flex-wrap gap-3 items-end"

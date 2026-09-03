@@ -157,4 +157,21 @@ export default adminNs('adminTenantDetail', {
     "Un bot encore configuré avec elle sera refusé immédiatement. À faire en cas de fuite, pas par habitude.",
   toastPrevRevoked: 'Ancienne clé révoquée.',
   errorRevokePrev: 'Révocation impossible.',
+  inviteHeading: 'Inviter quelqu’un',
+  inviteDesc:
+    "Un email part avec un lien valable 14 jours. Le compte est créé à l’acceptation — inutile qu’il existe déjà.",
+  inviteEmailLabel: 'Adresse email',
+  inviteCta: 'Inviter',
+  inviting: 'Envoi…',
+  inviteSent: 'Invitation envoyée.',
+  inviteCreatedNoEmail:
+    "Invitation créée, mais l’email n’est pas parti : cet espace n’a pas de compte d’envoi configuré.",
+  inviteError: 'Invitation impossible.',
+  inviteRevoked: 'Invitation annulée.',
+  inviteRevoke: 'Annuler',
+  inviteUntil: 'jusqu’au {date}',
+  inviteStatusPending: 'en attente',
+  inviteStatusAccepted: 'acceptée',
+  inviteStatusRevoked: 'annulée',
+  inviteStatusExpired: 'expirée',
 });

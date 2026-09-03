@@ -669,8 +669,14 @@ class Builder {
       const inserted: Row[] = [];
       let counter = rows.length + 1;
       for (const item of items) {
+        // Un id ressemblant à ce que Postgres génère (`gen_random_uuid()`).
+        // L'ancien `gen-<table>-<n>` n'était pas un UUID : tout handler qui
+        // valide ses identifiants d'entrée refusait en test une ligne qu'il
+        // aurait acceptée en production — et le test disait « 400 » là où la
+        // prod dit « 200 ».
+        counter += 1;
         const row = {
-          id: (item.id as string) ?? `gen-${this.table}-${counter++}`,
+          id: (item.id as string) ?? crypto.randomUUID(),
           ...item,
         };
         rows.push(row);
