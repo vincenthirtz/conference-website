@@ -21910,6 +21910,63 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           description: Invitation already accepted, revoked or expired.
+  /api/admin/tenants/{id}/lifecycle:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Change the lifecycle state of a tenant.
+      description: |
+        Owner only. States: `active`, `suspended` (402 with the reason on site,
+        API and bot), `archived` (404, data kept), `purge_scheduled` (404,
+        reversible until `purge_after`). A reason of at least 10 characters is
+        required for anything that cuts the service — it is quoted back to the
+        client in the refusal and stored in the staff log. The platform's own
+        tenant cannot leave `active`.
+      operationId: adminSetTenantLifecycle
+      tags:
+        - admin/tenants
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [state]
+              properties:
+                state:
+                  type: string
+                  enum: [active, suspended, archived, purge_scheduled]
+                reason:
+                  type: string
+                purgeAfterDays:
+                  type: integer
+                  minimum: 1
+                  maximum: 365
+      responses:
+        '200':
+          description: New state.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Protected tenant.
   /api/admin/tenants/{id}/overview:
     parameters:
       - in: path

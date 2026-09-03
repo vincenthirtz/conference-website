@@ -21,6 +21,7 @@ import TenantOverviewPanel from '@/components/admin/tenants/TenantOverviewPanel'
 import TenantBotSecretsPanel from '@/components/admin/tenants/TenantBotSecretsPanel';
 import TenantInvitationsPanel from '@/components/admin/tenants/TenantInvitationsPanel';
 import TenantDomainPanel from '@/components/admin/tenants/TenantDomainPanel';
+import TenantLifecyclePanel from '@/components/admin/tenants/TenantLifecyclePanel';
 import Tabs, {
   tabButtonId,
   tabPanelId,
@@ -374,6 +375,13 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                     tenantId={tenantId}
                     onOpenTab={(next) => setTab(next as Tab)}
                   />
+
+                  <div className="mt-6">
+                    <TenantLifecyclePanel
+                      tenantId={tenantId}
+                      onChanged={() => void fetchData()}
+                    />
+                  </div>
                 </div>
               )}
 

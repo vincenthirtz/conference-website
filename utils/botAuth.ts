@@ -28,6 +28,10 @@ import {
   __resetTenantLookupCachesForTests,
 } from './tenant';
 import {
+  getTenantLifecycle,
+  lifecycleDenial,
+} from './tenants/lifecycle';
+import {
   loadTenantPlanStateForBot,
   checkBotPlanCapability,
   type BotCapabilityRequirement,
@@ -624,6 +628,19 @@ export function withBotRoute(
         ...(req.botContext ?? {}),
         tenantId: resolved.tenantId,
       };
+
+      // Cycle de vie de l'espace (T4). Avant ce contrôle, l'authentification du
+      // bot ne regardait que `tenant_secrets` : le bot d'un espace ARCHIVÉ
+      // continuait de répondre, indéfiniment, parce que rien sur ce chemin ne
+      // lisait l'état de l'espace. Un espace suspendu reçoit un 402 qui NOMME
+      // le motif — un 402 muet envoie le client au support.
+      const lifecycle = await getTenantLifecycle(resolved.tenantId);
+      const lifecycleRefusal = lifecycleDenial(lifecycle);
+      if (lifecycleRefusal) {
+        return res
+          .status(lifecycleRefusal.status)
+          .json(lifecycleRefusal.body);
+      }
 
       // Gate PLAN « Régie solidaire ».
       //  - BASELINE : le bot lui-même est réservé à la Coupe féminine

@@ -125,6 +125,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   create_tenant: 'Création tenant',
   update_tenant: 'Modification tenant',
   deactivate_tenant: 'Désactivation tenant',
+  tenant_lifecycle: "Changement d'état d'un espace",
   grant_tenant_staff: 'Ajout staff au tenant',
   revoke_tenant_staff: 'Retrait staff du tenant',
   reject_tenant_request: 'Refus demande de tenant',

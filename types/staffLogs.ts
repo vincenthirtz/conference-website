@@ -121,6 +121,10 @@ export type StaffLogAction =
   | 'create_tenant'
   | 'update_tenant'
   | 'deactivate_tenant'
+  // Changement d'état d'un espace (T4) : suspension, archivage, purge
+  // programmée, réouverture. Distinct de `deactivate_tenant`, qui ne disait que
+  // « le booléen est passé à false ».
+  | 'tenant_lifecycle'
   | 'grant_tenant_staff'
   | 'revoke_tenant_staff'
   | 'reject_tenant_request'
