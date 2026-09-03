@@ -20,7 +20,6 @@ function emptyDiscordConfig() {
     staff_log_channel_id: null as string | null,
     matches_live_channel_id: null as string | null,
     disputes_forum_channel_id: null as string | null,
-    broadcast_panel_channel_id: null as string | null,
     news_ingest_channel_id: null as string | null,
     scrims_announce_channel_id: null as string | null,
     captain_role_id: null as string | null,
@@ -72,7 +71,7 @@ async function handler(_req: BotCrossTenantRequest, res: NextApiResponse) {
   const { data: configRows, error: configErr } = await supabaseAdmin!
     .from('tenant_discord_config')
     .select(
-      'guild_id, staff_log_channel_id, matches_live_channel_id, disputes_forum_channel_id, broadcast_panel_channel_id, news_ingest_channel_id, scrims_announce_channel_id, captain_role_id, substitute_role_id, staff_role_owner_id, staff_role_admin_id, staff_role_caster_id, teams_voice_category_id, disputes_forum_tag_open_id, disputes_forum_tag_pending_id, disputes_forum_tag_resolved_id, welcome_enabled, welcome_channel_id, welcome_message, welcome_dm_message, member_leave_channel_id, extras'
+      'guild_id, staff_log_channel_id, matches_live_channel_id, disputes_forum_channel_id, news_ingest_channel_id, scrims_announce_channel_id, captain_role_id, substitute_role_id, staff_role_owner_id, staff_role_admin_id, staff_role_caster_id, teams_voice_category_id, disputes_forum_tag_open_id, disputes_forum_tag_pending_id, disputes_forum_tag_resolved_id, welcome_enabled, welcome_channel_id, welcome_message, welcome_dm_message, member_leave_channel_id, extras'
     )
     .in('guild_id', guildIds);
 

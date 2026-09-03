@@ -98,7 +98,6 @@ describe('GET /api/bot/v1/tenants/all-configs', () => {
         staff_log_channel_id: '111111111111111111',
         matches_live_channel_id: null,
         disputes_forum_channel_id: null,
-        broadcast_panel_channel_id: null,
         news_ingest_channel_id: null,
         scrims_announce_channel_id: null,
         captain_role_id: '222222222222222222',

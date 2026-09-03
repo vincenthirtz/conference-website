@@ -22,9 +22,6 @@ export default {
   fieldDisputesForumLabel: 'Disputes forum',
   fieldDisputesForumHelp:
     'Forum where the bot opens dispute threads. Fallback env DISPUTES_FORUM_CHANNEL_ID.',
-  fieldBroadcastPanelLabel: 'Broadcast panel channel',
-  fieldBroadcastPanelHelp:
-    'On-air panel kept up to date by the bot during a broadcast. Fallback env BROADCAST_PANEL_CHANNEL_ID.',
   fieldNewsIngestLabel: 'News ingest channel',
   fieldNewsIngestHelp:
     'Blizzard news ingestion. Fallback env NEWS_INGEST_CHANNEL_ID.',

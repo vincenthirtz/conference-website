@@ -180,7 +180,7 @@ future finer tiers). The baseline denial fires first for a tenant with no bot.
 | Capability              | Routes                                                                                                                                                                                         | Plan                |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
 | `discordBot` (baseline) | **toutes les routes tenant-scopées**                                                                                                                                                           | Régie+ / foundation |
-| `discordEventOps:full`  | `runs/current`, `broadcast/on-air`, `cast/assignments`, `cast/[assignmentId]/ack`, `matches/[matchId]/cast`, `matches/[matchId]/discord`, `matches/[matchId]/drafts`, `matches/[matchId]/veto` | Régie+              |
+| `discordEventOps:full`  | `runs/current`, `cast/assignments`, `cast/[assignmentId]/ack`, `matches/[matchId]/cast`, `matches/[matchId]/discord`, `matches/[matchId]/drafts`, `matches/[matchId]/veto` | Régie+              |
 | `arbitration`           | `disputes`, `disputes/escalations`, `matches/[matchId]/dispute`, `matches/[matchId]/resolve-dispute`, `moderation/blacklist-alert`                                                             | Régie+              |
 
 **Bot client (docker-box `services/discord-bot/api-client.js`) — à gérer** : traiter
@@ -893,7 +893,6 @@ body shapes live there. `Idem.` means the route honours `Idempotency-Key`.
 
 | Route                                                                                | Methods         | Idem.  | Rate-key                   |
 | ------------------------------------------------------------------------------------ | --------------- | ------ | -------------------------- |
-| [`broadcast/on-air.ts`](../pages/api/bot/v1/broadcast/on-air.ts) (Lot 7)             | GET             | —      | `bot-broadcast-on-air`     |
 | [`disputes.ts`](../pages/api/bot/v1/disputes.ts)                                     | GET             | —      | `bot-disputes`             |
 | [`disputes/escalations.ts`](../pages/api/bot/v1/disputes/escalations.ts) (Lot 4)     | GET             | —      | `bot-disputes-escalations` |
 | [`moderation/blacklist.ts`](../pages/api/bot/v1/moderation/blacklist.ts)             | GET/POST/DELETE | DELETE | `bot-moderation`           |
@@ -2416,7 +2415,6 @@ memoire.
     "staff_log_channel_id": null,
     "matches_live_channel_id": null,
     "disputes_forum_channel_id": null,
-    "broadcast_panel_channel_id": null,
     "news_ingest_channel_id": null,
     "scrims_announce_channel_id": null,
     "captain_role_id": null,

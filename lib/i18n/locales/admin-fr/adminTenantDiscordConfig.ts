@@ -21,9 +21,6 @@ export default adminNs('adminTenantDiscordConfig', {
   fieldDisputesForumLabel: 'Forum des disputes',
   fieldDisputesForumHelp:
     'Forum où le bot ouvre les threads de dispute. Fallback env DISPUTES_FORUM_CHANNEL_ID.',
-  fieldBroadcastPanelLabel: 'Channel panneau de régie',
-  fieldBroadcastPanelHelp:
-    'Panneau « on-air » maintenu par le bot pendant un direct. Fallback env BROADCAST_PANEL_CHANNEL_ID.',
   fieldNewsIngestLabel: 'Channel ingestion news',
   fieldNewsIngestHelp:
     'Ingestion des news Blizzard. Fallback env NEWS_INGEST_CHANNEL_ID.',

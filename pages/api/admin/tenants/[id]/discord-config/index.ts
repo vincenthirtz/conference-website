@@ -20,7 +20,6 @@ const EMPTY_CONFIG = {
   staff_log_channel_id: null,
   matches_live_channel_id: null,
   disputes_forum_channel_id: null,
-  broadcast_panel_channel_id: null,
   news_ingest_channel_id: null,
   scrims_announce_channel_id: null,
   captain_role_id: null,
