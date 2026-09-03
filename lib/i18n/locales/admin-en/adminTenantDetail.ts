@@ -172,4 +172,16 @@ export default {
   inviteStatusAccepted: 'accepted',
   inviteStatusRevoked: 'revoked',
   inviteStatusExpired: 'expired',
+  domainHeading: 'Custom domain',
+  domainStateVerified: 'verified',
+  domainStateFailed: 'failed',
+  domainStatePending: 'to verify',
+  domainPendingHelp:
+    'Until the proof is found, this domain is not routed: visitors keep arriving through the usual address.',
+  domainCheckCta: 'Check now',
+  domainChecking: 'Checking…',
+  domainCheckedAt: 'last check: {date}',
+  domainVerified: 'Domain verified.',
+  domainFailed: 'The DNS proof was not found.',
+  domainCheckError: 'Check failed.',
 };

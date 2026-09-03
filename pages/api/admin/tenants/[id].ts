@@ -30,6 +30,8 @@ import {
   type PlanStatus,
   type TenantPlan,
 } from '@/utils/billing/planFeatures';
+import { generateDomainToken } from '@/utils/tenants/domainVerification';
+import { invalidateTenantHostCache } from '@/utils/tenant';
 
 const NAME_MIN = 1;
 const NAME_MAX = 200;
@@ -235,6 +237,12 @@ async function handler(
           : '';
       if (!raw) {
         update.custom_domain = null;
+        // Retirer le domaine efface aussi sa preuve : garder un jeton pour un
+        // domaine absent, c'est laisser une clé sous un paillasson disparu.
+        update.custom_domain_state = null;
+        update.custom_domain_token = null;
+        update.custom_domain_checked_at = null;
+        update.custom_domain_error = null;
       } else if (!HOSTNAME_RE.test(raw)) {
         return res.status(400).json({
           error: 'custom_domain must be a valid hostname (no scheme or path).',
@@ -247,13 +255,14 @@ async function handler(
         // ne répondait pas.
         const { data: planRow } = await supabaseAdmin
           .from('tenants')
-          .select('plan, plan_status, plan_expires_at')
+          .select('plan, plan_status, plan_expires_at, custom_domain')
           .eq('id', id)
           .maybeSingle();
         const p = (planRow ?? {}) as {
           plan?: string | null;
           plan_status?: string | null;
           plan_expires_at?: string | null;
+          custom_domain?: string | null;
         };
         const allowed = tenantHasCapability(
           {
@@ -273,6 +282,14 @@ async function handler(
           });
         }
         update.custom_domain = raw;
+        // Un domaine posé n'est pas un domaine prouvé : il entre en attente,
+        // avec son jeton, et ne routera qu'une fois vérifié (T7).
+        if (raw !== (p.custom_domain ?? null)) {
+          update.custom_domain_state = 'pending';
+          update.custom_domain_token = generateDomainToken();
+          update.custom_domain_checked_at = null;
+          update.custom_domain_error = null;
+        }
       }
     }
 
@@ -322,6 +339,16 @@ async function handler(
       } catch (logErr) {
         logger.error('logStaffAction(update_tenant) error:', logErr);
       }
+    }
+
+    // Le domaine (ou son état) a pu changer : la correspondance host → espace
+    // gardée en mémoire ne vaut plus.
+    if (
+      'custom_domain' in update ||
+      'custom_domain_state' in update ||
+      'is_active' in update
+    ) {
+      invalidateTenantHostCache();
     }
 
     return res.status(200).json({ tenant: updated });

@@ -21595,6 +21595,89 @@ paths:
           description: Bot webhook not configured or tenant secret missing.
         '504':
           description: Bot unreachable.
+  /api/admin/tenants/{id}/domain:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Custom-domain state and the DNS records to create.
+      description: |
+        Requires `admin`+ globally, or staff attached to this tenant. Returns the
+        domain, its state (`pending` / `verified` / `failed`), the last check and
+        the two records: a TXT proof (which authorises) and a CNAME (which does
+        not prove anything but without which nothing arrives).
+      operationId: adminGetTenantDomain
+      tags:
+        - admin/tenants
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Domain state.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Verify the custom domain now (DNS lookup).
+      description: |
+        Resolves the TXT proof and the CNAME, then stores the verdict. Only a
+        `verified` domain is routed (see `utils/tenant.ts`); a missing CNAME is
+        reported as a warning, never as a refusal, because an apex often points
+        through A/ALIAS.
+      operationId: adminVerifyTenantDomain
+      tags:
+        - admin/tenants
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Verification result.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/cron/domain-verify:
+    post:
+      summary: Daily re-check of every custom domain.
+      description: |
+        CRON_SECRET-authenticated. A verified domain that stops pointing here
+        falls back to `failed` (and stops being routed — better the slug than an
+        illusion); a `pending` one whose proof finally landed becomes
+        `verified`. A DNS outage never degrades a tenant: exceptions skip the
+        row rather than writing a verdict.
+      operationId: cronVerifyCustomDomains
+      tags:
+        - cron
+      security: []
+      responses:
+        '200':
+          description: Counters and transitions.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/admin/tenants/{id}/invitations:
     parameters:
       - in: path

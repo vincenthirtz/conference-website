@@ -20,6 +20,7 @@ import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import TenantOverviewPanel from '@/components/admin/tenants/TenantOverviewPanel';
 import TenantBotSecretsPanel from '@/components/admin/tenants/TenantBotSecretsPanel';
 import TenantInvitationsPanel from '@/components/admin/tenants/TenantInvitationsPanel';
+import TenantDomainPanel from '@/components/admin/tenants/TenantDomainPanel';
 import Tabs, {
   tabButtonId,
   tabPanelId,
@@ -627,6 +628,8 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                       </button>
                     </div>
                   </form>
+
+                  <TenantDomainPanel tenantId={tenantId} />
 
                   <TenantBotSecretsPanel tenantId={tenantId} />
                 </div>

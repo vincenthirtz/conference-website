@@ -174,4 +174,16 @@ export default adminNs('adminTenantDetail', {
   inviteStatusAccepted: 'acceptée',
   inviteStatusRevoked: 'annulée',
   inviteStatusExpired: 'expirée',
+  domainHeading: 'Domaine propre',
+  domainStateVerified: 'vérifié',
+  domainStateFailed: 'échec',
+  domainStatePending: 'à vérifier',
+  domainPendingHelp:
+    "Tant que la preuve n'est pas trouvée, ce domaine n'est pas routé : les visiteurs continuent d'arriver par l'adresse habituelle.",
+  domainCheckCta: 'Vérifier maintenant',
+  domainChecking: 'Vérification…',
+  domainCheckedAt: 'dernière vérification : {date}',
+  domainVerified: 'Domaine vérifié.',
+  domainFailed: "La preuve DNS n'a pas été trouvée.",
+  domainCheckError: 'Vérification impossible.',
 });

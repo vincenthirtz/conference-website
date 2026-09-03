@@ -266,6 +266,20 @@ export function __resetTenantSlugCacheForTests(): void {
   tenantBrandingCache.clear();
 }
 
+/**
+ * Oublie la correspondance host → espace, en production.
+ *
+ * Appelé quand un domaine propre change d'état (vérifié, refusé, retiré) :
+ * sans ça, un domaine fraîchement vérifié resterait ignoré jusqu'à expiration
+ * du cache, et l'admin conclurait que la vérification n'a rien fait.
+ *
+ * Portée : l'instance courante — les autres attendront leur TTL.
+ */
+export function invalidateTenantHostCache(): void {
+  tenantHostCache.clear();
+  tenantBrandingCache.clear();
+}
+
 const SLUG_RE = /^[a-z0-9-]+$/;
 const RESERVED_PATH_SEGMENTS = new Set([
   'api',
@@ -668,7 +682,7 @@ export async function resolveTenantIdByHost(
     const { data, error } = await supabaseAdmin
       .from('tenants')
       .select(
-        'id, custom_domain, is_active, plan, plan_status, plan_expires_at'
+        'id, custom_domain, custom_domain_state, is_active, plan, plan_status, plan_expires_at'
       )
       .not('custom_domain', 'is', null);
 
@@ -685,6 +699,7 @@ export async function resolveTenantIdByHost(
         | {
             id?: string;
             custom_domain?: string | null;
+            custom_domain_state?: string | null;
             is_active?: boolean;
             plan?: string | null;
             plan_status?: string | null;
@@ -696,6 +711,10 @@ export async function resolveTenantIdByHost(
       (r) =>
         typeof r.custom_domain === 'string' &&
         normalizeHost(r.custom_domain) === norm &&
+        // Un domaine non VÉRIFIÉ ne route pas. Sans preuve de possession,
+        // n'importe quel espace pouvait déclarer n'importe quel nom d'hôte et
+        // se le voir router (T7).
+        r.custom_domain_state === 'verified' &&
         r.is_active !== false &&
         typeof r.id === 'string' &&
         // Même règle que le branding : le domaine propre est une capacité

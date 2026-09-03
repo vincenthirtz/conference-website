@@ -102,6 +102,13 @@
 # bascule en 'past_due' les plans actifs expirés, et envoie aux owners une
 # relance de renouvellement ~14j avant échéance (une seule / cycle, garde
 # tenants.plan_last_reminder_at). Requiert CRON_SECRET + BREVO_API_KEY + EMAIL_FROM.
+# Scheduled function: revérifie chaque jour les domaines propres (TXT de preuve
+# + CNAME de routage). Une régression repasse un domaine `verified` en `failed`
+# — il cesse alors d'être routé, ce qui vaut mieux qu'un site muet — et une
+# preuve enfin posée fait passer un `pending` en `verified` sans clic.
+[functions."domain-verify-cron"]
+  schedule = "20 5 * * *"
+
 [functions."plan-renewal-cron"]
   schedule = "0 8 * * *"
 
