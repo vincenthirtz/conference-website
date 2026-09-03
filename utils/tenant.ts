@@ -667,7 +667,9 @@ export async function resolveTenantIdByHost(
   try {
     const { data, error } = await supabaseAdmin
       .from('tenants')
-      .select('id, custom_domain, is_active')
+      .select(
+        'id, custom_domain, is_active, plan, plan_status, plan_expires_at'
+      )
       .not('custom_domain', 'is', null);
 
     if (error) {
@@ -680,14 +682,35 @@ export async function resolveTenantIdByHost(
 
     const rows =
       (data as
-        | { id?: string; custom_domain?: string | null; is_active?: boolean }[]
+        | {
+            id?: string;
+            custom_domain?: string | null;
+            is_active?: boolean;
+            plan?: string | null;
+            plan_status?: string | null;
+            plan_expires_at?: string | null;
+          }[]
         | null) ?? [];
+    const nowMs = Date.now();
     const match = rows.find(
       (r) =>
         typeof r.custom_domain === 'string' &&
         normalizeHost(r.custom_domain) === norm &&
         r.is_active !== false &&
-        typeof r.id === 'string'
+        typeof r.id === 'string' &&
+        // Même règle que le branding : le domaine propre est une capacité
+        // `whiteLabel`. Sans ce filtre, un espace au palier gratuit — ou un
+        // plan payant expiré — gardait son domaine routé indéfiniment, alors
+        // que sa marque, elle, était déjà retombée sur la marque partagée.
+        tenantHasCapability(
+          {
+            plan: (r.plan ?? 'discovery') as TenantPlan,
+            plan_status: (r.plan_status ?? 'active') as PlanStatus,
+            plan_expires_at: r.plan_expires_at ?? null,
+          },
+          'whiteLabel',
+          nowMs
+        )
     );
     tenantId = match?.id ?? null;
   } catch (err) {

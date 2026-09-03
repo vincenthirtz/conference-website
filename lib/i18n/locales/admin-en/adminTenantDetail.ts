@@ -145,4 +145,7 @@ export default {
   overviewBlockerNoStaff: 'Nobody attached to the space',
   overviewBlockerNoConfig: 'Discord not configured',
   overviewBlockerNoEmail: 'Email sending not configured',
+  overviewLimitLeagues: 'Leagues (plan)',
+  overviewLimitUsed: '{used} / {max}',
+  overviewLimitUnlimited: '{used} — unlimited',
 };

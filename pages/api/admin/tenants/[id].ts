@@ -25,6 +25,11 @@ import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { canAccessTenant, PROTECTED_TENANT_SLUGS } from '@/utils/adminTenants';
 import { logger } from '@/utils/logger';
 import { logStaffAction } from '@/utils/staffLogs';
+import {
+  tenantHasCapability,
+  type PlanStatus,
+  type TenantPlan,
+} from '@/utils/billing/planFeatures';
 
 const NAME_MIN = 1;
 const NAME_MAX = 200;
@@ -236,6 +241,37 @@ async function handler(
           code: 'INVALID_CUSTOM_DOMAIN',
         });
       } else {
+        // Poser un domaine propre est une capacité `whiteLabel`. Sans ce
+        // contrôle, un espace au palier gratuit pouvait en enregistrer un — et
+        // le voir ignoré au routage, sans jamais comprendre pourquoi son site
+        // ne répondait pas.
+        const { data: planRow } = await supabaseAdmin
+          .from('tenants')
+          .select('plan, plan_status, plan_expires_at')
+          .eq('id', id)
+          .maybeSingle();
+        const p = (planRow ?? {}) as {
+          plan?: string | null;
+          plan_status?: string | null;
+          plan_expires_at?: string | null;
+        };
+        const allowed = tenantHasCapability(
+          {
+            plan: (p.plan ?? 'discovery') as TenantPlan,
+            plan_status: (p.plan_status ?? 'active') as PlanStatus,
+            plan_expires_at: p.plan_expires_at ?? null,
+          },
+          'whiteLabel',
+          Date.now()
+        );
+        if (!allowed) {
+          return res.status(402).json({
+            error:
+              'Le domaine propre fait partie des plans « Régie » et au-dessus.',
+            code: 'PLAN_LIMIT_REACHED',
+            limit: 'customDomain',
+          });
+        }
         update.custom_domain = raw;
       }
     }

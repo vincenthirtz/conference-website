@@ -6,6 +6,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
+import { assertPlanLimit, planLimitBody } from '@/utils/billing/planLimits';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { logStaffAction } from '@/utils/staffLogs';
 import { logger } from '@/utils/logger';
@@ -59,6 +60,15 @@ async function handler(
       });
     }
     const body = parsed.data;
+
+    // Limite du plan. Elle était déclarée (`maxLeagues`) et appliquée nulle
+    // part : un espace vendu « une ligue » pouvait en créer dix. Le refus est
+    // un 402 — ce n'est pas une question de droit, mais de palier — et il nomme
+    // le plan qui lève la limite.
+    const limit = await assertPlanLimit(ctx.tenantId, 'leagues');
+    if (!limit.ok) {
+      return res.status(402).json(planLimitBody(limit));
+    }
 
     // Slug unique / tenant.
     const { data: existing } = await supabaseAdmin

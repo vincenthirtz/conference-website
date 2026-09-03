@@ -147,4 +147,7 @@ export default adminNs('adminTenantDetail', {
   overviewBlockerNoStaff: "Personne rattaché à l'espace",
   overviewBlockerNoConfig: 'Discord non configuré',
   overviewBlockerNoEmail: "Envoi d'emails non configuré",
+  overviewLimitLeagues: 'Ligues (plan)',
+  overviewLimitUsed: '{used} / {max}',
+  overviewLimitUnlimited: '{used} — illimité',
 });

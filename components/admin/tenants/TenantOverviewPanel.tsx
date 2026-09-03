@@ -44,6 +44,7 @@ type Overview = {
     configuredKeys: number;
     hasEmailSender: boolean;
   };
+  limits: Array<{ key: string; used: number; max: number | null }>;
   createdAt: string;
 };
 
@@ -268,6 +269,17 @@ export default function TenantOverviewPanel({
                   { n: data.plan.daysRemaining }
                 )}
           </Card>
+          {(data.limits ?? []).map((l) => (
+            <Card
+              key={l.key}
+              label={t.overviewLimitLeagues}
+              tone={l.max !== null && l.used >= l.max ? 'stale' : 'plain'}
+            >
+              {l.max === null
+                ? format(t.overviewLimitUnlimited, { used: l.used })
+                : format(t.overviewLimitUsed, { used: l.used, max: l.max })}
+            </Card>
+          ))}
           <Card
             label={t.overviewBlockersLabel}
             tone={data.readiness.blockers.length > 0 ? 'stale' : 'plain'}

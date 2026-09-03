@@ -57,6 +57,7 @@ import {
   type TenantDomainKey,
   type LifeSignKey,
 } from '@/utils/tenants/tenantScope';
+import { assertPlanLimit } from '@/utils/billing/planLimits';
 
 const DAY_MS = 86_400_000;
 
@@ -80,6 +81,11 @@ export type TenantOverview = {
     configuredKeys: number;
     hasEmailSender: boolean;
   };
+  /**
+   * Limites du plan et leur consommation. `max: null` = illimité. Une limite
+   * s'affiche là où on la subit, pas seulement dans la grille tarifaire.
+   */
+  limits: Array<{ key: string; used: number; max: number | null }>;
   createdAt: string;
 };
 
@@ -248,6 +254,10 @@ async function handler(
     LIFE_SIGNS.map((s, i) => [s.key, signValues[i]])
   ) as Record<LifeSignKey, string | null>;
 
+  // Les limites comptées, dans le même souffle : « 1 / 1 ligue » se lit ici,
+  // pas dans une grille tarifaire ouverte dans un autre onglet.
+  const leagues = await assertPlanLimit(id, 'leagues');
+
   const payload: TenantOverview = {
     lifeSigns,
     volumes,
@@ -276,6 +286,13 @@ async function handler(
       configuredKeys,
       hasEmailSender,
     },
+    limits: [
+      {
+        key: 'leagues',
+        used: leagues.used,
+        max: Number.isFinite(leagues.max) ? leagues.max : null,
+      },
+    ],
     createdAt: t.created_at,
   };
 
