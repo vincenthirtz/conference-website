@@ -1,4 +1,4 @@
-// pages/api/admin/demandes/[demandeId]/notify-captains.ts
+// pages/api/admin/demandes/[id]/notify-captains.ts
 //
 // POST — (re)lancer les capitaines d'une demande de scrim depuis
 // /admin/demandes?type=scrim.
@@ -16,6 +16,11 @@
 //
 // L'email n'est PAS renvoyé : relancer sur Discord est un geste ciblé, alors
 // qu'un second email à la même adresse ressemble à du spam.
+//
+// Le paramètre s'appelle `id` et non `demandeId` : `pages/api/admin/demandes/`
+// porte déjà `[id].ts`, et Next.js refuse deux noms de slug différents sur le
+// même segment dynamique. C'est une erreur de BUILD que ni tsc ni les tests ne
+// voient — seul `next build` la lève.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -45,7 +50,7 @@ async function handler(
     return res.status(500).json({ error: 'Service base de données indisponible.' });
   }
 
-  const demandeId = req.query.demandeId;
+  const demandeId = req.query.id;
   if (typeof demandeId !== 'string' || !isValidUUID(demandeId)) {
     return res.status(400).json({ error: 'demandeId invalide.' });
   }

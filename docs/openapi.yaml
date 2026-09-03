@@ -7915,7 +7915,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/admin/demandes/{demandeId}/notify-captains:
+  /api/admin/demandes/{id}/notify-captains:
     post:
       tags:
         - admin/demandes
@@ -7935,7 +7935,7 @@ paths:
       security:
         - StaffSession: []
       parameters:
-        - name: demandeId
+        - name: id
           in: path
           required: true
           schema:
