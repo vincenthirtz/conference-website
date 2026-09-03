@@ -13,6 +13,7 @@
 // métier ne l'a suivi hors du dashboard.
 
 import ActionableAlert from './ActionableAlert';
+import RosterUnlockAlert from '@/components/admin/dashboard/RosterUnlockAlert';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentDashboard from '@/lib/i18n/locales/admin-fr/adminTournamentDashboard';
 
@@ -22,7 +23,9 @@ export default function TournamentAlerts({
   sig,
   alerts,
   tournamentId,
-  liveRosterLock,
+  rosterLockedAt,
+  rosterUnlockedUntil,
+  nowMs,
   onNudgeAllCheckins,
   onRunCheckinProcessor,
   onRefresh,
@@ -32,7 +35,12 @@ export default function TournamentAlerts({
   sig: any;
   alerts: Alert[];
   tournamentId: string;
-  liveRosterLock: { passed: boolean; label: string } | null;
+  /** Date de verrouillage du roster, ou `null`. */
+  rosterLockedAt: string | null;
+  /** Fenêtre de dérogation en cours sur le roster, ou `null`. */
+  rosterUnlockedUntil: string | null;
+  /** Horloge du tableau de bord (tick 60 s) : le décompte doit vivre. */
+  nowMs: number;
   /** Relance groupée des équipes non checkées (lot A1). Renvoie le nombre. */
   onNudgeAllCheckins: () => Promise<number>;
   onRunCheckinProcessor: () => Promise<void>;
@@ -40,8 +48,32 @@ export default function TournamentAlerts({
 }) {
   const tx = useAdminT(nsAdminTournamentDashboard);
 
+  // Décompte avant verrouillage, recalculé à chaque tick. Il vit ici et non
+  // dans le tableau de bord : c'est le seul endroit qui l'affiche, et le garder
+  // là-bas faisait grossir un écran déjà trop gros.
+  const liveRosterLock = (() => {
+    if (!rosterLockedAt) return null;
+    const diffMs = new Date(rosterLockedAt).getTime() - nowMs;
+    if (diffMs <= 0) return { passed: true, label: tx.rosterLocked };
+    const minutes = Math.ceil(diffMs / 60_000);
+    if (minutes < 60) return { passed: false, label: `${minutes} min` };
+    const hours = Math.ceil(diffMs / 3_600_000);
+    if (hours < 48) return { passed: false, label: `${hours}h` };
+    const days = Math.floor(diffMs / (24 * 3_600_000));
+    return { passed: false, label: `${days}j` };
+  })();
+
   return (
     <div className="mb-6 space-y-2">
+      {/* Prend le relais de l'alerte de proximité une fois le verrou tombé :
+          c'est à ce moment-là qu'il y a un geste à faire, et l'écran était
+          jusqu'ici muet. */}
+      <RosterUnlockAlert
+        tournamentId={tournamentId}
+        locked={liveRosterLock?.passed === true}
+        unlockedUntil={rosterUnlockedUntil}
+        onRefresh={onRefresh}
+      />
       {sig.disputesOpen.count > 0 && (
         <ActionableAlert
           severity="error"

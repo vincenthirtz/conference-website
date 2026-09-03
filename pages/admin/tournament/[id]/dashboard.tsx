@@ -634,21 +634,6 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
   const sig = data?.signals;
   const now = new Date(nowMs);
 
-  // Live roster lock countdown : recalculé à chaque tick de `nowMs` (60s).
-  // Permet d'afficher minutes restantes quand on passe sous l'heure.
-  const liveRosterLock = (() => {
-    const lockedAt = t?.roster_locked_at;
-    if (!lockedAt) return null;
-    const diffMs = new Date(lockedAt).getTime() - nowMs;
-    if (diffMs <= 0) return { passed: true, label: tx.rosterLocked };
-    const minutes = Math.ceil(diffMs / 60_000);
-    if (minutes < 60) return { passed: false, label: `${minutes} min` };
-    const hours = Math.ceil(diffMs / 3_600_000);
-    if (hours < 48) return { passed: false, label: `${hours}h` };
-    const days = Math.floor(diffMs / (24 * 3_600_000));
-    return { passed: false, label: `${days}j` };
-  })();
-
   // ETA fin du tournoi : on recalcule l'écart depuis maintenant pour avoir
   // un libellé qui se rafraîchit (ex : "dans 2h" → "dans 1h" sans nouveau fetch).
   const liveEta = (() => {
@@ -922,7 +907,9 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                 sig={sig}
                 alerts={data.alerts}
                 tournamentId={String(tournamentId ?? '')}
-                liveRosterLock={liveRosterLock}
+                rosterLockedAt={t.roster_locked_at ?? null}
+                rosterUnlockedUntil={t.roster_unlocked_until ?? null}
+                nowMs={nowMs}
                 onNudgeAllCheckins={async () => {
                   const json = await adminFetchJson<{ nudged: number }>(
                     `/api/admin/tournament/${tournamentId}/checkin-nudge-all`,

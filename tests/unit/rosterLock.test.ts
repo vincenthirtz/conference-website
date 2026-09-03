@@ -13,6 +13,8 @@ type Tournament = {
   name: string | null;
   roster_locked_at: string | null;
   status: string;
+  /** Fenêtre de dérogation temporaire (cf. roster_unlocked_until). */
+  roster_unlocked_until?: string | null;
 };
 
 const TEAM_ID = 'team-1';
@@ -40,7 +42,7 @@ beforeEach(() => {
 describe('rosterLockErrorMessage', () => {
   it('returns the unlocked message when status is not locked', () => {
     expect(rosterLockErrorMessage({ locked: false })).toBe(
-      'Roster non verrouille'
+      'Roster non verrouillé'
     );
   });
 
@@ -51,8 +53,12 @@ describe('rosterLockErrorMessage', () => {
       tournamentName: 'Coupe Hiver',
       lockedAt: '2026-01-15T10:00:00.000Z',
     });
-    expect(msg).toContain('"Coupe Hiver"');
-    expect(msg).toContain('force=true');
+    expect(msg).toContain('« Coupe Hiver »');
+    // Le message est lu par des CAPITAINES : il nomme la seule action qui leur
+    // est ouverte — demander une fenêtre — et plus le drapeau interne
+    // `force=true`, qu'ils ne peuvent pas utiliser.
+    expect(msg).not.toContain('force=true');
+    expect(msg).toContain('fenêtre');
   });
 
   it('falls back to a tournament id prefix when no name is set', () => {
@@ -63,7 +69,7 @@ describe('rosterLockErrorMessage', () => {
       lockedAt: '2026-01-15T10:00:00.000Z',
     });
     // Falls back to first 8 chars of the id
-    expect(msg).toContain('"01234567"');
+    expect(msg).toContain('« 01234567 »');
   });
 
   it('formats the lock date in fr-FR locale', () => {
@@ -204,5 +210,131 @@ describe('isTeamRosterLocked', () => {
     const status = await isTeamRosterLocked(TENANT_ID, TEAM_ID);
     if (!status.locked) throw new Error('expected locked');
     expect(status.tournamentName).toBeNull();
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * Fenêtre de déverrouillage temporaire
+ * -------------------------------------------------------------------------
+ *
+ * Passé `roster_locked_at`, un capitaine ne peut plus rien. Les cas légitimes
+ * existent pourtant — blessure, remplaçante, oubli découvert la veille — et la
+ * seule issue était `force=true` côté admin : c'était donc à l'admin de faire
+ * la manipulation à la place du capitaine.
+ *
+ * La fenêtre inverse la charge. Ce qui doit rester vrai :
+ *   - elle lève le verrou tant qu'elle est ouverte ;
+ *   - elle ne lève QUE le tournoi qui l'ouvre ;
+ *   - expirée, elle ne lève plus rien — c'est tout l'intérêt d'une date.
+ */
+describe('fenêtre de déverrouillage', () => {
+  const PAST = new Date(Date.now() - 3_600_000).toISOString();
+  const FUTURE = new Date(Date.now() + 3_600_000).toISOString();
+
+  it('ouverte : le roster n’est plus verrouillé, et on sait jusqu’à quand', async () => {
+    seedRegistrations([{ tournament_id: 't1' }]);
+    seedTournaments([
+      {
+        id: 't1',
+        name: 'Coupe Hiver',
+        roster_locked_at: PAST,
+        roster_unlocked_until: FUTURE,
+        status: 'running',
+      },
+    ]);
+
+    const status = await isTeamRosterLocked(TENANT_ID, TEAM_ID);
+    expect(status.locked).toBe(false);
+    if (!status.locked) {
+      // Dire « pas de verrou » tout court laisserait croire qu'il n'y a rien à
+      // surveiller : l'appelant doit pouvoir afficher l'échéance.
+      expect(status.unlockedUntil).toBe(FUTURE);
+      expect(status.unlockedTournamentName).toBe('Coupe Hiver');
+    }
+  });
+
+  it('expirée : le verrou reprend', async () => {
+    seedRegistrations([{ tournament_id: 't1' }]);
+    seedTournaments([
+      {
+        id: 't1',
+        name: 'Coupe Hiver',
+        roster_locked_at: PAST,
+        roster_unlocked_until: PAST,
+        status: 'running',
+      },
+    ]);
+
+    const status = await isTeamRosterLocked(TENANT_ID, TEAM_ID);
+    expect(status.locked).toBe(true);
+  });
+
+  it('ne dispense QUE du tournoi qui l’ouvre', async () => {
+    // Deux tournois verrouillés, un seul déverrouillé : l'équipe reste bloquée
+    // par l'autre. Sinon une dérogation accordée pour une coupe ouvrirait le
+    // roster d'un championnat en cours.
+    seedRegistrations([{ tournament_id: 't1' }, { tournament_id: 't2' }]);
+    seedTournaments([
+      {
+        id: 't1',
+        name: 'Coupe Hiver',
+        roster_locked_at: PAST,
+        roster_unlocked_until: FUTURE,
+        status: 'running',
+      },
+      {
+        id: 't2',
+        name: 'Championnat',
+        roster_locked_at: PAST,
+        roster_unlocked_until: null,
+        status: 'running',
+      },
+    ]);
+
+    const status = await isTeamRosterLocked(TENANT_ID, TEAM_ID);
+    expect(status.locked).toBe(true);
+    if (status.locked) expect(status.tournamentName).toBe('Championnat');
+  });
+
+  it('deux fenêtres ouvertes : c’est la plus proche qui fixe la fin du répit', async () => {
+    const SOON = new Date(Date.now() + 600_000).toISOString();
+    seedRegistrations([{ tournament_id: 't1' }, { tournament_id: 't2' }]);
+    seedTournaments([
+      {
+        id: 't1',
+        name: 'A',
+        roster_locked_at: PAST,
+        roster_unlocked_until: FUTURE,
+        status: 'running',
+      },
+      {
+        id: 't2',
+        name: 'B',
+        roster_locked_at: PAST,
+        roster_unlocked_until: SOON,
+        status: 'running',
+      },
+    ]);
+
+    const status = await isTeamRosterLocked(TENANT_ID, TEAM_ID);
+    expect(status.locked).toBe(false);
+    if (!status.locked) expect(status.unlockedUntil).toBe(SOON);
+  });
+
+  it('sans verrou du tout, la fenêtre ne change rien', async () => {
+    seedRegistrations([{ tournament_id: 't1' }]);
+    seedTournaments([
+      {
+        id: 't1',
+        name: 'Coupe',
+        roster_locked_at: null,
+        roster_unlocked_until: FUTURE,
+        status: 'running',
+      },
+    ]);
+
+    const status = await isTeamRosterLocked(TENANT_ID, TEAM_ID);
+    expect(status.locked).toBe(false);
+    if (!status.locked) expect(status.unlockedUntil).toBeUndefined();
   });
 });

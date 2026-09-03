@@ -23,6 +23,7 @@ function makeData(
       min_players: null,
       max_teams: null,
       roster_locked_at: null,
+      roster_unlocked_until: null,
     },
     summary: {
       totalTeams: 0,

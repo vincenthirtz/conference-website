@@ -210,6 +210,13 @@ export type DashboardData = {
     min_players: number | null;
     max_teams: number | null;
     roster_locked_at: string | null;
+    /**
+     * Fenêtre de dérogation en cours (cf. la migration
+     * `add_roster_unlocked_until_to_tournaments.sql`). Le dashboard en a besoin
+     * pour distinguer « verrouillé » de « verrouillé, mais ouvert jusqu'à … » —
+     * deux situations que l'admin ne doit pas confondre.
+     */
+    roster_unlocked_until: string | null;
   };
   summary: {
     totalTeams: number;
@@ -570,7 +577,7 @@ export async function fetchDashboardData(
     const { data: tournament, error: tErr } = await supabaseAdmin
       .from('tournaments')
       .select(
-        'id, name, status, start_date, end_date, timezone, format, min_players, max_teams, roster_locked_at'
+        'id, name, status, start_date, end_date, timezone, format, min_players, max_teams, roster_locked_at, roster_unlocked_until'
       )
       .eq('id', tournamentId)
       .eq('tenant_id', tenantId)
@@ -1315,6 +1322,7 @@ export async function fetchDashboardData(
         min_players: tournament.min_players ?? null,
         max_teams: tournament.max_teams ?? null,
         roster_locked_at: tournament.roster_locked_at ?? null,
+        roster_unlocked_until: tournament.roster_unlocked_until ?? null,
       },
       summary: {
         totalTeams,

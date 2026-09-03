@@ -21955,6 +21955,94 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/tournament/{id}/roster-unlock:
+    post:
+      summary: Ouvre une fenetre de deverrouillage temporaire du roster.
+      operationId: adminTournamentRosterUnlock
+      tags:
+        - admin/tournaments
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      description: |
+        Passe `roster_locked_at`, plus aucune equipe inscrite au tournoi ne peut
+        toucher sa composition. C'est voulu — on ne change pas un roster la
+        veille d'un match. Mais les cas legitimes existent : une joueuse se
+        blesse, une remplacante arrive, un oubli se decouvre la veille.
+
+        La seule issue etait `force=true`, reserve a l'admin : c'etait donc a
+        l'admin de faire la manipulation A LA PLACE du capitaine, en devinant
+        qui ajouter. Cet endpoint inverse la charge — l'admin ouvre une
+        fenetre, le capitaine travaille.
+
+        La fenetre se referme SEULE (`tournaments.roster_unlocked_until`) :
+        c'est l'interet d'une date plutot que d'un booleen — un
+        deverrouillage oublie redevient un verrou, pas une porte laissee
+        ouverte. Elle part de MAINTENANT et ne cumule pas avec une fenetre
+        deja ouverte.
+
+        Bornes : 5 minutes a 24 h. Au-dela, ce n'est plus une derogation mais
+        un verrou deplace, et c'est `roster_locked_at` qu'il faut changer.
+
+        Ne dispense QUE de ce tournoi : une equipe inscrite a deux tournois
+        dont un seul est deverrouille reste verrouillee par l'autre.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                minutes:
+                  type: integer
+                  minimum: 5
+                  maximum: 1440
+                  default: 60
+      responses:
+        '200':
+          description: '`{ rosterUnlockedUntil, minutes, rosterLockedAt }`.'
+        '400':
+          description: Id invalide, ou duree hors bornes (`INVALID_MINUTES`).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Tournoi inconnu dans cet espace (`UNKNOWN_TOURNAMENT`).
+        '405':
+          description: Methode non geree.
+    delete:
+      summary: Referme la fenetre de deverrouillage du roster.
+      operationId: adminTournamentRosterRelock
+      tags:
+        - admin/tournaments
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      description: |
+        Coupe court a une fenetre en cours. Sans effet (et sans erreur) s'il n'y
+        en avait pas.
+      responses:
+        '200':
+          description: '`{ rosterUnlockedUntil: null }`.'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Tournoi inconnu dans cet espace.
   /api/admin/tournament/{id}/analytics:
     parameters:
       - in: path
