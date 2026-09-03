@@ -7915,6 +7915,47 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
+  /api/admin/demandes/{demandeId}/notify-captains:
+    post:
+      tags:
+        - admin/demandes
+      summary: Relancer les capitaines d'une demande de scrim sur Discord.
+      operationId: adminNotifyScrimCaptains
+      description: |
+        Rejoue l'envoi automatique des messages prives (capitaine, manager,
+        coach de l'equipe cible), boutons de decision compris, et trace la
+        volee dans le salon d'actions du bot (`scrim.request.dispatched`).
+
+        Refuse une demande deja traitee : les boutons envoyes ne pourraient
+        plus rien faire. L'email n'est PAS renvoye — un second email a la meme
+        adresse ressemble a du spam.
+
+        Reponse 202 : l'envoi passe par l'outbox du bot, le nombre de DM
+        reellement partis n'est pas connu a la reponse.
+      security:
+        - StaffSession: []
+      parameters:
+        - name: demandeId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+      responses:
+        '202':
+          description: 'Relance emise : `{ success, message }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Demande non-scrim, deja traitee, ou sans equipe cible.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Demande introuvable.
   /api/bot/v1/scrims/requests:
     post:
       tags:

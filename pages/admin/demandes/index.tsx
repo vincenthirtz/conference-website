@@ -15,19 +15,18 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
 import nsAdminDemandesList from '@/lib/i18n/locales/admin-fr/adminDemandesList';
+import {
+  formatDateTime,
+  statusColor,
+  statusLabel,
+  typeColor,
+  typeLabel,
+  type DemandeStatus,
+  type DemandeType,
+} from '@/components/admin/demandes/demandeChips';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
 
 type Dict = typeof nsAdminDemandesList.fr;
-
-type DemandeType =
-  | 'join'
-  | 'leave'
-  | 'captain_request'
-  | 'team_registration'
-  | 'scrim'
-  | 'other';
-
-type DemandeStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
 type TournamentMini = {
   id: string;
@@ -340,93 +339,6 @@ export const getServerSideProps = withStaffPage(
   }
 );
 
-function formatDateTime(iso: string | null) {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return iso;
-  }
-}
-
-function typeLabel(type: DemandeType | string, t: Dict) {
-  switch (type) {
-    case 'join':
-    case 'join_team':
-      return t.chipJoin;
-    case 'leave':
-    case 'leave_team':
-      return t.chipLeave;
-    case 'captain_request':
-      return t.chipCaptain;
-    case 'team_registration':
-      return t.chipTeamRegistration;
-    case 'scrim':
-      return t.chipScrim;
-    case 'other':
-      return t.chipOther;
-    default:
-      return String(type);
-  }
-}
-
-function typeColor(type: DemandeType | string) {
-  switch (type) {
-    case 'join':
-    case 'join_team':
-      return 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30';
-    case 'leave':
-    case 'leave_team':
-      return 'bg-amber-600/20 text-amber-300 border border-amber-500/30';
-    case 'captain_request':
-      return 'bg-purple-600/20 text-purple-300 border border-purple-500/30';
-    case 'team_registration':
-      return 'bg-blue-600/20 text-blue-300 border border-blue-500/30';
-    case 'scrim':
-      return 'bg-cyan-600/20 text-cyan-300 border border-cyan-500/30';
-    case 'other':
-      return 'bg-neutral-500/20 text-neutral-300 border border-neutral-500/30';
-    default:
-      return 'bg-neutral-700 text-neutral-100';
-  }
-}
-
-function statusLabel(status: DemandeStatus, t: Dict) {
-  switch (status) {
-    case 'pending':
-      return t.statusPending;
-    case 'approved':
-      return t.statusApproved;
-    case 'rejected':
-      return t.statusRejected;
-    case 'cancelled':
-      return t.statusCancelled;
-    default:
-      return status;
-  }
-}
-
-function statusColor(status: DemandeStatus) {
-  switch (status) {
-    case 'pending':
-      return 'bg-blue-600 text-white';
-    case 'approved':
-      return 'bg-emerald-600 text-white';
-    case 'rejected':
-      return 'bg-red-600 text-white';
-    case 'cancelled':
-      return 'bg-neutral-600 text-neutral-200';
-    default:
-      return 'bg-neutral-700 text-neutral-100';
-  }
-}
-
 function AdminDemandesPage({
   initialDemandes,
   initialTotal,
@@ -569,6 +481,32 @@ function AdminDemandesPage({
       setErrorMsg((err as Error)?.message ?? t.error);
     } finally {
       setBatchProcessing(false);
+    }
+  }
+
+  /**
+   * Relance les capitaines d'une demande de scrim sur Discord.
+   *
+   * Réservé au type `scrim` : c'est le seul qui déclenche des DM. Le résultat
+   * n'est pas connu ici — l'envoi passe par l'outbox du bot — d'où un message
+   * qui renvoie au salon d'actions plutôt qu'un « envoyé ✓ » qu'on ne peut pas
+   * garantir.
+   */
+  async function handleNotifyCaptains(id: string) {
+    setSingleProcessing(id);
+    setErrorMsg(null);
+    try {
+      const json = await adminFetchJson<{ message?: string }>(
+        `/api/admin/demandes/${id}/notify-captains`,
+        { method: 'POST' }
+      );
+      addToast(json?.message || t.notifyCaptainsDone, 'success');
+    } catch (err) {
+      const msg = (err as Error)?.message || t.notifyCaptainsFailed;
+      setErrorMsg(msg);
+      addToast(msg, 'error');
+    } finally {
+      setSingleProcessing(null);
     }
   }
 
@@ -1417,6 +1355,32 @@ function AdminDemandesPage({
                               />
                             </svg>
                           </button>
+                          {/* Relance Discord : seules les demandes de scrim
+                              déclenchent des DM aux capitaines. */}
+                          {d.type === 'scrim' && (
+                            <button
+                              type="button"
+                              onClick={() => handleNotifyCaptains(d.id)}
+                              disabled={isProcessing || batchProcessing}
+                              title={t.notifyCaptainsTitle}
+                              data-testid="notify-captains"
+                              className="p-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 hover:border-indigo-500 text-xs transition-colors disabled:opacity-50"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 3v-3z"
+                                />
+                              </svg>
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => handleSingleAction(d.id, 'approved')}

@@ -174,6 +174,7 @@ export type StaffLogAction =
   | 'update_support_ticket'
   | 'ticket_closed'
   | 'process_demande'
+  | 'notify_scrim_captains'
   | 'requestMoreInfo'
   | 'resend_credentials'
   // --- Blacklist ---

@@ -173,6 +173,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   update_support_ticket: 'Ticket support modifié',
   ticket_closed: 'Ticket fermé',
   process_demande: 'Traitement demande',
+  notify_scrim_captains: 'Relance capitaines (scrim)',
   requestMoreInfo: "Demande d'informations complémentaires",
   resend_credentials: 'Renvoi des identifiants',
   // Blacklist
