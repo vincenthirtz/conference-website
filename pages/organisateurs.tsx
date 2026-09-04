@@ -218,27 +218,45 @@ function OrganisateursPage() {
           })}
         </p>
 
-        <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        {/* Trois colonnes qui se lisent EN LIGNES.
+            Chaque carte était une pile indépendante : le badge « le plus
+            courant » décalait la colonne du milieu d'une hauteur de pastille,
+            un texte d'accroche plus long décalait tout ce qui le suivait, et une
+            prestation qui passait sur deux lignes désalignait les cinq
+            suivantes. On comparait donc des offres dont les prix et les lignes
+            ne se faisaient pas face.
+            `subgrid` fait porter les rangées par la grille du dessus : badge,
+            titre, accroche, prix, équivalent annuel, les six prestations une à
+            une, puis le bouton. Chaque rangée prend la hauteur de la plus haute
+            des trois, et les trois cartes s'y accrochent.
+            Repli : un navigateur sans `subgrid` ignore la déclaration et
+            retrouve la pile en `flex` — décalée, mais lisible. */}
+        <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3 lg:gap-y-0 lg:grid-rows-[repeat(12,auto)]">
           {OFFERS.map((plan) => {
             const highlighted = plan === HIGHLIGHTED;
-            const purchasable =
-              PLAN_PRICES_EUR[plan] !== null &&
-              (PLAN_PRICES_EUR[plan] ?? 0) > 0;
             return (
               <div
                 key={plan}
-                className={`flex flex-col rounded-2xl border p-6 ${
+                className={`flex flex-col rounded-2xl border p-6 lg:grid lg:row-span-12 lg:grid-rows-subgrid ${
                   highlighted
                     ? 'border-purple-400/50 bg-purple-500/[0.08]'
                     : 'border-white/10 bg-white/[0.03]'
                 }`}
                 data-test={`offer-${plan}`}
               >
-                {highlighted && (
-                  <span className="mb-3 inline-flex w-fit rounded-full bg-purple-500/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-purple-200">
-                    {t.offerHighlighted}
-                  </span>
-                )}
+                {/* Le badge occupe sa rangée dans les trois cartes : réservé et
+                    invisible ailleurs, plutôt qu'absent. Sinon la colonne mise
+                    en avant démarre une pastille plus bas que ses voisines. */}
+                <span
+                  aria-hidden={!highlighted}
+                  className={`mb-3 inline-flex w-fit rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider ${
+                    highlighted
+                      ? 'bg-purple-500/20 text-purple-200'
+                      : 'invisible'
+                  }`}
+                >
+                  {t.offerHighlighted}
+                </span>
                 <h3 className="text-xl font-bold text-white">
                   {PLAN_LABELS[plan]}
                 </h3>
@@ -266,7 +284,15 @@ function OrganisateursPage() {
                   </p>
                 ) : null}
 
-                <ul className="mt-5 flex-1 space-y-2 text-sm text-gray-200">
+                {/* La liste est elle-même une sous-grille de six rangées : les
+                    six prestations sont toujours les mêmes, dans le même ordre
+                    (bot, ligues, arbitrage, classement, marque, API), donc la
+                    ligne « arbitrage » d'une offre doit faire face à celle des
+                    deux autres — y compris quand l'une d'elles passe sur deux
+                    lignes. C'est la comparaison ligne à ligne qui rend la
+                    grille lisible ; sans elle on compare des positions, pas des
+                    prestations. */}
+                <ul className="mt-5 flex-1 space-y-2 text-sm text-gray-200 lg:row-span-6 lg:grid lg:grid-rows-subgrid lg:space-y-0 lg:content-start lg:gap-y-2">
                   {offerLines(plan, t).map((line) => (
                     <li key={line} className="flex gap-2">
                       <span aria-hidden className="text-purple-300">
