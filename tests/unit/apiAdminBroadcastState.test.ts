@@ -74,10 +74,10 @@ beforeEach(() => {
 });
 
 describe('régie vidéo — gate de palier', () => {
-  // `broadcastStudio` est ce qui sépare Circuit (79 €) de Régie (29 €) sur
-  // l'axe production. La console n'était gatée par AUCUN plan : les deux
-  // paliers y accédaient pareil, donc rien dans le code ne justifiait l'écart
-  // de prix.
+  // `broadcastStudio` est ce qui sépare Éditeur (sur devis) de Circuit : la
+  // régie vidéo va avec le logiciel Womenscup OBS, qui se déploie et
+  // s'accompagne. La console n'était gatée par AUCUN plan — tout espace y
+  // accédait, quel que soit ce qu'il payait.
   const seedTenantPlan = (plan: string) => {
     store.tenants = [
       {
@@ -89,8 +89,8 @@ describe('régie vidéo — gate de palier', () => {
     ] as any;
   };
 
-  it('refuse un espace Régie en 402 (pas 403 : question de palier)', async () => {
-    seedTenantPlan('regie');
+  it('refuse un espace Circuit en 402 (pas 403 : question de palier)', async () => {
+    seedTenantPlan('circuit');
     const res = makeRes();
     await broadcastHandler(makeReq(), res);
     expect(res.statusCode).toBe(402);
@@ -98,8 +98,8 @@ describe('régie vidéo — gate de palier', () => {
     expect((res.body as any).capability).toBe('broadcastStudio');
   });
 
-  it('laisse passer Circuit', async () => {
-    seedTenantPlan('circuit');
+  it('laisse passer Éditeur', async () => {
+    seedTenantPlan('editor');
     const res = makeRes();
     await broadcastHandler(makeReq(), res);
     expect(res.statusCode).toBe(200);

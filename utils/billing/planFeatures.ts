@@ -72,9 +72,12 @@ export type PlanFeatures = {
   ratings: boolean;
   /**
    * Régie vidéo : direction automatique (l'état de diffusion suit les matchs)
-   * et overlays OBS. C'est la marche qui manquait entre Régie et Circuit —
-   * les deux étaient à égalité sur `discordEventOps: 'full'`, donc rien dans le
-   * code ne distinguait 29 € de 79 € sur l'axe production.
+   * et overlays OBS.
+   *
+   * Réservée à `editor` (et à la Coupe elle-même). Elle va avec le logiciel
+   * Womenscup OBS, qui se vend sur devis : la donner à Circuit reviendrait à
+   * facturer 79 € une chose dont le déploiement se négocie, et à priver
+   * l'offre Éditeur de la seule ligne qui la distingue sur la grille.
    */
   broadcastStudio: boolean;
   /** Nombre de ligues/saisons simultanées (Infinity = illimité). */
@@ -125,8 +128,6 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     apiRateLimitPerMin: 0,
     apiMonthlyQuota: 0,
   },
-  // Régie garde TOUTE la production Discord (cast, veto, drafts, run-of-show).
-  // Ce qui lui manque, c'est la régie vidéo elle-même.
   regie: {
     whiteLabel: true,
     apiRead: true,
@@ -151,15 +152,17 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     discordEventOps: 'full',
     arbitration: true,
     ratings: true,
-    broadcastStudio: true,
+    broadcastStudio: false,
     maxLeagues: Infinity,
     priorityArbitration: true,
     apiRateLimitPerMin: 120,
     apiMonthlyQuota: 500_000,
   },
-  // Sur devis : tout Circuit, plus Womenscup OBS déployé chez le client.
-  // Techniquement identique au plafond ; ce qui se vend en plus est un logiciel
-  // et l'accompagnement qui va avec, pas une case du barème.
+  // Sur devis : tout Circuit, plus la régie vidéo — direction automatique et
+  // overlays OBS — et le logiciel Womenscup OBS déployé chez le client. C'est
+  // la seule ligne du barème qui sépare Éditeur de Circuit, et c'est celle qui
+  // ne se vend pas au forfait : un déploiement s'accompagne, il ne se clique
+  // pas.
   editor: {
     whiteLabel: true,
     apiRead: true,

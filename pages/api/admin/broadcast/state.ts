@@ -32,15 +32,15 @@ async function handler(
   ctx: AuthenticatedStaffContext
 ) {
   try {
-    // La régie vidéo est une capacité de palier (`broadcastStudio`). Elle
-    // n'était gatée nulle part : un espace « Régie » y accédait comme le plan
-    // au-dessus, et rien dans le code ne distinguait 29 € de 79 € sur l'axe
-    // production. Le contrôle porte sur la CONSOLE, pas sur l'overlay lui-même
-    // — celui-ci est la sortie vidéo, la couper n'apprendrait rien à personne.
+    // La régie vidéo est une capacité de palier (`broadcastStudio`), réservée à
+    // l'offre Éditeur. Elle n'était gatée nulle part : tout espace y accédait,
+    // quel que soit ce qu'il payait. Le contrôle porte sur la CONSOLE, pas sur
+    // l'overlay lui-même — celui-ci est la sortie vidéo, la couper
+    // n'apprendrait rien à personne.
     const denial = await capabilityDenial(
       ctx.tenantId,
       'broadcastStudio',
-      'La régie vidéo (direction automatique et overlays OBS) fait partie du plan Circuit et au-dessus.'
+      'La régie vidéo (direction automatique et overlays OBS) fait partie de l’offre Éditeur, sur devis.'
     );
     if (denial) return res.status(402).json(denial);
 

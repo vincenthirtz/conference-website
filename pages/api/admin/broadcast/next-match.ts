@@ -51,7 +51,7 @@ async function handler(
   const denial = await capabilityDenial(
     ctx.tenantId,
     'broadcastStudio',
-    'La régie vidéo (direction automatique et overlays OBS) fait partie du plan Circuit et au-dessus.'
+    'La régie vidéo (direction automatique et overlays OBS) fait partie de l’offre Éditeur, sur devis.'
   );
   if (denial) return res.status(402).json(denial);
 
