@@ -439,7 +439,7 @@ export function withPublicWrite<B = unknown, Q = unknown>(
 
     // Quota + rate-limit DURABLE (par plan, partagé entre instances). Une clé
     // `comp` (partenaire, accès gratuit total) n'est pas comptée. Fail-open si
-    // le compteur est indispo. Les plans illimités (foundation/editor) ne
+    // le compteur est indispo. Le plan illimité (foundation) ne
     // touchent pas la DB (cf. consumeApiQuota).
     if (!token.comp) {
       const quota = await consumeApiQuota(token.tenantId, token.plan);

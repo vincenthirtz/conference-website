@@ -75,7 +75,6 @@ const PLAN_RANK: Record<TenantPlan, number> = {
   regie: 1,
   circuit: 2,
   foundation: 3,
-  editor: 3,
 };
 
 function formatDate(s: string | null): string {
@@ -193,12 +192,11 @@ function AdminBillingPage({ staff }: Props) {
   const isDowngraded = data ? data.effectivePlan !== data.plan : false;
 
   // `foundation` = système de l'association (flagship, gratuit à vie) → hors
-  // facturation : ni catalogue, ni historique commercial. `editor` = sur-devis
-  // (pas de barème catalogue). Le self-serve (souscrire/renouveler) ne concerne
-  // que discovery/regie/circuit.
+  // La Coupe elle-même (`foundation`) n'a ni catalogue ni historique
+  // commercial : le self-serve (souscrire / renouveler) ne concerne que les
+  // trois offres facturées.
   const isAssociationPlan = data ? data.plan === 'foundation' : false;
-  const isCustomPlan = data ? data.plan === 'editor' : false;
-  const canSelfServeBill = !!data && !isAssociationPlan && !isCustomPlan;
+  const canSelfServeBill = !!data && !isAssociationPlan;
 
   const statusMeta = (status: PlanStatus) => {
     switch (status) {
@@ -476,8 +474,8 @@ function AdminBillingPage({ staff }: Props) {
                 </div>
               </section>
 
-              {/* Plans non self-serve : encart dédié au lieu du catalogue.
-                  foundation = association (hors facturation) ; editor = sur-devis. */}
+              {/* Plan non self-serve : encart dédié au lieu du catalogue.
+                  `foundation` est la Coupe elle-même, hors facturation. */}
               {!canSelfServeBill && (
                 <section
                   className="rounded-2xl border border-sky-500/40 bg-sky-500/10 p-6"

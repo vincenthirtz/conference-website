@@ -8,7 +8,7 @@
 //   - minute → rate-limit court (features.apiRateLimitPerMin),
 //   - month  → quota mensuel   (features.apiMonthlyQuota).
 //
-// Court-circuit : un plan illimité sur LES DEUX fenêtres (foundation/editor) ne
+// Court-circuit : un plan illimité sur LES DEUX fenêtres (foundation) ne
 // touche pas la DB. Fail-open : toute erreur infra (DB indispo / RPC KO) laisse
 // passer — on ne bloque JAMAIS un client payant sur une panne de compteur.
 

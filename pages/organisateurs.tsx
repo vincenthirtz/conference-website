@@ -40,7 +40,7 @@ type Dict = typeof nsOrganisateursPage.fr;
  * c'est le plan de la Coupe féminine elle-même, offert par mission — l'afficher
  * comme une offre laisserait croire qu'il se vend.
  */
-const OFFERS: TenantPlan[] = ['discovery', 'regie', 'circuit', 'editor'];
+const OFFERS: TenantPlan[] = ['discovery', 'regie', 'circuit'];
 
 /** Le palier mis en avant : celui qui répond au besoin le plus courant. */
 const HIGHLIGHTED: TenantPlan = 'regie';
@@ -75,7 +75,10 @@ function offerLines(plan: TenantPlan, t: Dict): string[] {
 
 function priceLabel(plan: TenantPlan, term: PlanTerm, t: Dict): string {
   const price = planPrice(plan, term);
-  if (price === null) return t.priceOnRequest;
+  // `null` = pas de barème catalogue. Aucune offre présentée n'est dans ce cas
+  // depuis le retrait du palier sur-devis ; on garde la branche parce que le
+  // type l'autorise, et qu'un prix manquant ne doit jamais s'afficher « 0 € ».
+  if (price === null) return t.priceFree;
   if (price === 0) return t.priceFree;
   return term === 'month'
     ? format(t.pricePerMonth, { amount: String(price) })
@@ -215,7 +218,7 @@ function OrganisateursPage() {
           })}
         </p>
 
-        <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {OFFERS.map((plan) => {
             const highlighted = plan === HIGHLIGHTED;
             const purchasable =
@@ -244,9 +247,7 @@ function OrganisateursPage() {
                     ? t.offerDiscoveryPitch
                     : plan === 'regie'
                       ? t.offerRegiePitch
-                      : plan === 'circuit'
-                        ? t.offerCircuitPitch
-                        : t.offerEditorPitch}
+                      : t.offerCircuitPitch}
                 </p>
                 <p className="mt-4 text-2xl font-bold text-white">
                   {priceLabel(plan, term, t)}
@@ -271,11 +272,7 @@ function OrganisateursPage() {
                 </ul>
 
                 <Link
-                  href={
-                    plan === 'editor'
-                      ? '/contact'
-                      : `/onboard/request?plan=${plan}&term=${term}`
-                  }
+                  href={`/onboard/request?plan=${plan}&term=${term}`}
                   className={`mt-6 rounded-lg px-4 py-2.5 text-center text-sm font-semibold transition ${
                     highlighted
                       ? 'bg-purple-500 text-white hover:bg-purple-400'
@@ -283,7 +280,7 @@ function OrganisateursPage() {
                   }`}
                   data-test={`offer-cta-${plan}`}
                 >
-                  {plan === 'editor' ? t.offerCtaContact : t.offerCtaStart}
+                  {t.offerCtaStart}
                 </Link>
               </div>
             );
@@ -312,7 +309,10 @@ function OrganisateursPage() {
         </div>
 
         <p className="mx-auto mt-8 max-w-3xl text-center text-sm text-gray-400">
-          {t.offersFootnote}
+          {t.offersFootnote}{' '}
+          <Link href="/contact" className="underline hover:text-gray-200">
+            {t.offersCustomNeed}
+          </Link>
         </p>
       </section>
 

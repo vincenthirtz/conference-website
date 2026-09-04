@@ -61,9 +61,9 @@ export function requiredCapabilityFor(
 function upgradeMessage(action: ApiAccessAction): string {
   if (action === 'write') {
     return (
-      `Cette clé API en écriture nécessite le plan ${PLAN_LABELS.circuit} ` +
-      `(ou ${PLAN_LABELS.editor}). Le plan ${PLAN_LABELS.regie} n'ouvre que la ` +
-      `lecture. Mettez à niveau votre abonnement pour écrire via l'API.`
+      `Cette clé API en écriture nécessite le plan ${PLAN_LABELS.circuit}. ` +
+      `Le plan ${PLAN_LABELS.regie} n'ouvre que la lecture. Mettez à niveau ` +
+      `votre abonnement pour écrire via l'API.`
     );
   }
   return (

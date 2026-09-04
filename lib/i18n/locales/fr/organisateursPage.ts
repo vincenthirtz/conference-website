@@ -49,15 +49,12 @@ export default ns('organisateursPage', {
     'Pour découvrir la plateforme et monter un premier tournoi.',
   offerRegiePitch: "Pour l'association ou le circuit qui tourne à l'année.",
   offerCircuitPitch: 'Pour plusieurs compétitions en parallèle.',
-  offerEditorPitch: 'Pour un éditeur ou une structure aux besoins propres.',
   offerCtaStart: 'Commencer',
-  offerCtaContact: 'Nous écrire',
   offersFootnote:
     "Les limites affichées sont appliquées par la plateforme, pas seulement annoncées : une offre « une ligue » en autorise une. Le passage à l'offre supérieure se fait depuis votre espace, sans nous écrire.",
 
   priceFree: 'Gratuit',
   pricePerYear: '{amount} € / an',
-  priceOnRequest: 'Sur devis',
 
   featBotYes: 'Bot Discord inclus',
   featBotNo: 'Sans bot Discord',
@@ -113,4 +110,6 @@ export default ns('organisateursPage', {
   ambassadorBannerBody:
     'La formule Découverte vous est offerte, aussi longtemps que dure votre engagement. Dites-le-nous à la création de votre espace.',
   ambassadorBannerCta: 'Voir le programme',
+  offersCustomNeed:
+    'Un besoin qui ne rentre dans aucune des trois ? Écrivez-nous.',
 });

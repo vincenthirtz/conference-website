@@ -11,15 +11,16 @@
 // `plan` brut.
 //
 // Règle produit : le tenant flagship (Coupe féminine) est en `foundation` —
-// tout, gratuit, sans expiration. `discovery` est le palier gratuit (marque
-// partagée) : ni API ni white-label. `regie`/`circuit`/`editor` sont payants.
+// tout, gratuit, sans expiration. `discovery`, `regie` et `circuit` sont les
+// trois offres facturées.
+//
+// Le palier `editor` (sur-devis, illimité) a été retiré : aucun espace ne l'a
+// jamais porté, et une quatrième colonne « sur devis » sur la grille tarifaire
+// occupait la place d'une offre lisible pour une porte que le formulaire de
+// contact ouvre déjà. Un besoin hors barème se traite par une conversation,
+// pas par une case à cocher.
 
-export type TenantPlan =
-  | 'foundation'
-  | 'discovery'
-  | 'regie'
-  | 'circuit'
-  | 'editor';
+export type TenantPlan = 'foundation' | 'discovery' | 'regie' | 'circuit';
 
 export type PlanStatus = 'active' | 'past_due' | 'canceled';
 
@@ -129,21 +130,6 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     apiRateLimitPerMin: 120,
     apiMonthlyQuota: 500_000,
   },
-  editor: {
-    whiteLabel: true,
-    apiRead: true,
-    apiWrite: true,
-    multiTenant: true,
-    discordBot: true,
-    discordEventOps: 'full',
-    arbitration: true,
-    ratings: true,
-    maxLeagues: Infinity,
-    priorityArbitration: true,
-    // Sur-devis / haut de gamme : illimité.
-    apiRateLimitPerMin: Infinity,
-    apiMonthlyQuota: Infinity,
-  },
 };
 
 /** Capacités brutes d'un plan (sans tenir compte de l'entitlement). */
@@ -232,7 +218,6 @@ export const PLAN_LABELS: Record<TenantPlan, string> = {
   discovery: 'Découverte',
   regie: 'Régie',
   circuit: 'Circuit',
-  editor: 'Éditeur',
 };
 
 /**
@@ -249,10 +234,9 @@ export const PLAN_LABELS: Record<TenantPlan, string> = {
  *   honoré. Le second n'encaisse rien — un espace qui cesse de payer n'est pas
  *   facturé, il perd simplement ce que son plan lui donnait en plus.
  * - `regie` : 290 €/an. `circuit` : 790 €/an.
- * - `editor` : `null` = sur-devis (pas de prix catalogue → pas de lien
- *   self-service ; un accord commercial fixe le montant hors barème).
- *
- * `null` signifie explicitement « pas de tarif catalogue » (≠ gratuit).
+ * `null` reste une valeur possible du type : elle signifie « pas de tarif
+ * catalogue » (≠ gratuit), et le code la traite déjà partout — un futur palier
+ * sur-devis n'aurait rien à réécrire.
  */
 export const PLAN_PRICES_EUR: Record<TenantPlan, number | null> = {
   foundation: 0,
@@ -261,7 +245,6 @@ export const PLAN_PRICES_EUR: Record<TenantPlan, number | null> = {
   discovery: 100,
   regie: 290,
   circuit: 790,
-  editor: null,
 };
 
 /**
@@ -306,8 +289,8 @@ export function planPrice(plan: TenantPlan, term: PlanTerm): number | null {
 
 /**
  * Plans qu'un owner peut activer/renouveler via un lien de paiement HelloAsso
- * ciblé : ceux qui ont un prix catalogue strictement positif. `editor`
- * (sur-devis) et les paliers gratuits en sont exclus.
+ * ciblé : ceux qui ont un prix catalogue strictement positif. `foundation`,
+ * offerte par mission, en est donc exclue.
  */
 // `discovery` a rejoint les plans facturés (10 €/mois) : il est donc payable en
 // self-service comme les autres. Il reste par ailleurs l'état vers lequel
@@ -316,10 +299,18 @@ export function planPrice(plan: TenantPlan, term: PlanTerm): number | null {
 export type PurchasablePlan = 'discovery' | 'regie' | 'circuit';
 
 /**
- * Un plan est-il « achetable » en self-service (prix catalogue > 0) ?
- * Narrows le type vers `PurchasablePlan` pour l'extraction typée côté API.
+ * Un plan est-il « achetable » en self-service ?
+ *
+ * La réponse se DÉDUIT du barème : un prix catalogue strictement positif, et
+ * rien d'autre. La liste était écrite en dur (`regie || circuit`), ce qui
+ * contredisait le type dès que Découverte est devenue payante : le type disait
+ * « achetable », la fonction disait non, et le lien de paiement était refusé
+ * sans que la grille tarifaire n'en dise rien.
+ *
+ * `foundation` en sort de lui-même (0 €, offerte par mission). Narrows le type
+ * pour l'extraction typée côté API.
  */
 export function isPurchasablePlan(plan: string): plan is PurchasablePlan {
   const price = PLAN_PRICES_EUR[plan as TenantPlan];
-  return (plan === 'regie' || plan === 'circuit') && typeof price === 'number';
+  return typeof price === 'number' && price > 0;
 }

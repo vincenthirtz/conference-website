@@ -57,7 +57,7 @@ export type PlanLimitVerdict =
     };
 
 /** Les paliers, du moins au plus permissif. `foundation` n'est pas vendable. */
-const UPGRADE_PATH: TenantPlan[] = ['discovery', 'regie', 'circuit', 'editor'];
+const UPGRADE_PATH: TenantPlan[] = ['discovery', 'regie', 'circuit'];
 
 function firstPlanAbove(
   current: TenantPlan,

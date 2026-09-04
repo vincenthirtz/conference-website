@@ -813,7 +813,7 @@ export async function readTenantBranding(
       // appliqué que si le tenant a la capacité `whiteLabel`. Le palier gratuit
       // `discovery` — et tout plan payant expiré / past_due, via effectivePlan —
       // retombe sur la marque partagée (branding null). Le flagship `foundation`
-      // et les plans payants actifs (regie/circuit/editor) gardent le leur.
+      // et les plans payants actifs (regie/circuit) gardent le leur.
       const canWhiteLabel = tenantHasCapability(
         {
           plan: (row.plan ?? 'discovery') as TenantPlan,

@@ -34,7 +34,6 @@ describe('planFeatures — matrice', () => {
     expect(getPlanFeatures('foundation').discordBot).toBe(true);
     expect(getPlanFeatures('regie').discordBot).toBe(true);
     expect(getPlanFeatures('circuit').discordBot).toBe(true);
-    expect(getPlanFeatures('editor').discordBot).toBe(true);
     expect(getPlanFeatures('discovery').discordBot).toBe(false);
   });
 

@@ -112,7 +112,6 @@ describe('PLAN_PRICES_EUR + isPurchasablePlan', () => {
     expect(PLAN_PRICES_EUR.discovery).toBe(100);
     expect(PLAN_PRICES_EUR.regie).toBe(290);
     expect(PLAN_PRICES_EUR.circuit).toBe(790);
-    expect(PLAN_PRICES_EUR.editor).toBeNull();
   });
 
   it('le mensuel est dérivé de l’annuel, jamais recopié', () => {
@@ -122,7 +121,6 @@ describe('PLAN_PRICES_EUR + isPurchasablePlan', () => {
     expect(PLAN_PRICES_MONTHLY_EUR.discovery).toBe(10);
     expect(PLAN_PRICES_MONTHLY_EUR.regie).toBe(29);
     expect(PLAN_PRICES_MONTHLY_EUR.circuit).toBe(79);
-    expect(PLAN_PRICES_MONTHLY_EUR.editor).toBeNull();
 
     for (const plan of ['discovery', 'regie', 'circuit'] as const) {
       const yearly = PLAN_PRICES_EUR[plan] as number;
@@ -152,7 +150,6 @@ describe('PLAN_PRICES_EUR + isPurchasablePlan', () => {
       'discovery',
       'regie',
       'circuit',
-      'editor',
     ];
     for (const p of plans) {
       expect(p in PLAN_PRICES_EUR).toBe(true);
@@ -160,12 +157,14 @@ describe('PLAN_PRICES_EUR + isPurchasablePlan', () => {
     expect(Object.keys(PLAN_PRICES_EUR).sort()).toEqual(plans.sort());
   });
 
-  it('seuls regie/circuit sont achetables en self-service', () => {
+  it('les trois offres facturées sont achetables, pas la Coupe', () => {
+    expect(isPurchasablePlan('discovery')).toBe(true);
     expect(isPurchasablePlan('regie')).toBe(true);
     expect(isPurchasablePlan('circuit')).toBe(true);
-    expect(isPurchasablePlan('editor')).toBe(false);
+    // `foundation` est offerte par mission : rien à encaisser.
     expect(isPurchasablePlan('foundation')).toBe(false);
-    expect(isPurchasablePlan('discovery')).toBe(false);
+    // Un plan retiré du barème ne redevient pas achetable par accident.
+    expect(isPurchasablePlan('editor')).toBe(false);
     expect(isPurchasablePlan('bogus')).toBe(false);
   });
 });
@@ -584,7 +583,9 @@ describe('POST /api/admin/tenants/[id]/plan-checkout', () => {
     expect(createCheckoutIntent).not.toHaveBeenCalled();
   });
 
-  it('plan non achetable (editor) → 400', async () => {
+  it('plan hors barème → 400', async () => {
+    // `editor` a été retiré du barème : un lien de paiement pour lui ne doit
+    // pas se fabriquer, et surtout pas silencieusement à 0 €.
     makeStaff('owner');
     invalidateStaffCache();
     const res = makeRes();

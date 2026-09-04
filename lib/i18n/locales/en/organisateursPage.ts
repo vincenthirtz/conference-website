@@ -42,15 +42,12 @@ export default {
   offerDiscoveryPitch: 'To explore the platform and run a first tournament.',
   offerRegiePitch: 'For the association or circuit running all year.',
   offerCircuitPitch: 'For several competitions in parallel.',
-  offerEditorPitch: 'For a publisher or a structure with its own needs.',
   offerCtaStart: 'Get started',
-  offerCtaContact: 'Contact us',
   offersFootnote:
     'The limits shown are enforced by the platform, not merely advertised: a "one league" plan allows one. Upgrading happens from your own space, without writing to us.',
 
   priceFree: 'Free',
   pricePerYear: '€{amount} / year',
-  priceOnRequest: 'On request',
 
   featBotYes: 'Discord bot included',
   featBotNo: 'No Discord bot',
@@ -106,4 +103,5 @@ export default {
   ambassadorBannerBody:
     'The Discovery plan is on us, for as long as your commitment lasts. Tell us when you create your space.',
   ambassadorBannerCta: 'See the programme',
+  offersCustomNeed: 'A need that fits none of the three? Write to us.',
 };
