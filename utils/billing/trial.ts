@@ -13,10 +13,13 @@
 // doivent produire le même résultat. La première version ne traitait que le
 // premier : un espace ouvert à la main par le staff naissait muet.
 //
-// PAS pour les espaces `kind = developer` (cf. pages/api/developers/register.ts) :
-// ils existent pour porter des clés d'API, pas pour animer un tournoi. Leur
-// ouvrir le bot n'aurait aucun sens, et l'essai leur promettrait une capacité
-// qu'ils ne demandent pas.
+// Y COMPRIS pour les espaces `kind = developer` (cf. pages/api/developers/register.ts),
+// contrairement à ce que ce fichier a longtemps dit. L'exclusion se justifiait
+// par le bot — un développeur ne vient pas animer un tournoi. Mais `regie` est
+// aussi le premier palier qui ouvre `apiRead`, c'est-à-dire exactement ce qu'un
+// espace développeur vient chercher : les exclure revenait à leur faire générer
+// des clés qui répondaient 403 à chaque appel. L'essai ne leur promet pas le
+// bot, il leur donne trente jours d'API.
 //
 // À l'échéance, le cron `plan-renewal` repose l'espace sur `discovery` (statut
 // actif, `plan_is_trial` remis à false) : la dégradation est automatique, il

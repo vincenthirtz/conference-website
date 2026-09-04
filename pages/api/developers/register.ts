@@ -32,6 +32,7 @@ import { checkEmailDomainDns } from '@/utils/emailDns';
 import { verifyTurnstileToken } from '@/utils/turnstile';
 import { slugify } from '@/utils/teamImport';
 import { isReservedSlug } from '@/utils/onboard';
+import { buildTrialFields } from '@/utils/billing/trial';
 import { logger } from '@/utils/logger';
 
 const registerSchema = z.object({
@@ -265,6 +266,12 @@ export default async function handler(
         name: orgName,
         kind: 'developer',
         is_active: true,
+        // Essai Régie de 30 jours. Sans lui, l'espace naissait sur le défaut de
+        // la colonne — `discovery` — qui n'a PAS l'API : on livrait un tunnel
+        // « self-service » au bout duquel chaque appel avec la clé fraîchement
+        // générée répondait « nécessite au minimum le plan Régie ». Une porte
+        // ouverte sur un mur.
+        ...buildTrialFields(),
       })
       .select('id')
       .single();

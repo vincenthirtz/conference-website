@@ -14,7 +14,10 @@ export default {
   badgeAction: 'Self-service account',
   title: 'Create a developer account',
   subtitle:
-    'Self-service access to the public API: generate your keys, subscribe to webhooks and track your usage. Pay-as-you-go billing based on your usage.',
+    'Self-service access to the public API: generate your keys, subscribe to webhooks and track your usage.',
+  planNoticeTitle: '{days}-day trial, then €{price}/month',
+  planNoticeBody:
+    'API access comes with the {plan} plan. Your space starts on a full {days}-day trial, no card required. When it ends it drops back to {fallback}: the keys stay, but calls are refused until you subscribe.',
   orgNameLabel: 'Organization / project name',
   orgNamePlaceholder: 'My studio, my app…',
   emailLabel: 'Email',

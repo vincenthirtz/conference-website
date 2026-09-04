@@ -13,7 +13,12 @@ export default ns('developerRegisterPage', {
   badgeAction: 'Compte self-service',
   title: 'Créer un compte développeur',
   subtitle:
-    "Accès self-service à l'API publique : génère tes clés, abonne-toi aux webhooks et suis ta consommation. Facturation à la demande selon ton usage.",
+    "Accès self-service à l'API publique : génère tes clés, abonne-toi aux webhooks et suis ta consommation.",
+  // Le prix vient du barème, jamais recopié : une grille tarifaire qui se
+  // contredit d'une page à l'autre est pire que pas de prix du tout.
+  planNoticeTitle: '{days} jours d’essai, puis {price} €/mois',
+  planNoticeBody:
+    "L'API est incluse à partir du plan {plan}. Ton espace démarre sur un essai complet de {days} jours, sans carte bancaire. À l'échéance il retombe sur {fallback} : les clés restent, mais les appels sont refusés tant que l'abonnement n'est pas pris.",
   orgNameLabel: "Nom de l'organisation / du projet",
   orgNamePlaceholder: 'Mon studio, mon app…',
   emailLabel: 'Email',

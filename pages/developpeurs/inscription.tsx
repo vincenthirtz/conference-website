@@ -21,7 +21,12 @@ import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 
 import { supabaseClient } from '@/utils/supabase';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
-import { useT } from '@/lib/i18n/useT';
+import { useT, format } from '@/lib/i18n/useT';
+import {
+  PLAN_LABELS,
+  PLAN_PRICES_MONTHLY_EUR,
+} from '@/utils/billing/planFeatures';
+import { TRIAL_DAYS } from '@/utils/billing/trial';
 import nsDeveloperRegisterPage from '@/lib/i18n/locales/fr/developerRegisterPage';
 
 type DevRegisterDict = typeof nsDeveloperRegisterPage.fr;
@@ -181,6 +186,30 @@ function DeveloperRegisterPage() {
             <p className="text-sm text-gray-300 mt-2 text-center max-w-sm">
               {COPY.subtitle}
             </p>
+
+            {/* Le prix, avant le formulaire.
+                Le tunnel se disait « self-service » et ne mentionnait ni plan
+                ni tarif ; le sous-titre annonçait même une « facturation à la
+                demande selon ton usage » qui n'a jamais existé. On créait donc
+                un espace sur le palier gratuit, où l'API est fermée : la clé se
+                générait, et chaque appel répondait « nécessite au minimum le
+                plan Régie ». Le dire ici coûte trois lignes ; le laisser
+                découvrir coûte la confiance. */}
+            <div className="mt-5 w-full max-w-sm rounded-xl border border-purple-400/30 bg-purple-500/[0.07] px-4 py-3">
+              <p className="text-sm font-semibold text-purple-100">
+                {format(COPY.planNoticeTitle, {
+                  days: String(TRIAL_DAYS),
+                  price: String(PLAN_PRICES_MONTHLY_EUR.regie),
+                })}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-gray-300">
+                {format(COPY.planNoticeBody, {
+                  plan: PLAN_LABELS.regie,
+                  days: String(TRIAL_DAYS),
+                  fallback: PLAN_LABELS.discovery,
+                })}
+              </p>
+            </div>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-2xl shadow-black/40 p-6">

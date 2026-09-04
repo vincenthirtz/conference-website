@@ -180,6 +180,28 @@ describe('/api/developers/register', () => {
     expect(ts.staff_id).toBe(staff.id);
   });
 
+  it('l’espace développeur naît sur l’essai Régie, pas sur le palier sans API', async () => {
+    // Sans plan explicite, l'insert prenait le défaut de la colonne —
+    // `discovery` — qui n'ouvre PAS l'API. Le tunnel « self-service » livrait
+    // donc une clé qui répondait 403 à chaque appel. `regie` est le premier
+    // palier avec `apiRead` : c'est exactement ce qu'un espace développeur
+    // vient chercher.
+    const res = makeRes();
+    await registerHandler(makeReq({ body: validBody }), res);
+    expect(res.statusCode).toBe(200);
+
+    const tenant = (store.tenants ?? []).find(
+      (t: any) => t.kind === 'developer'
+    ) as any;
+    expect(tenant.plan).toBe('regie');
+    expect(tenant.plan_is_trial).toBe(true);
+    expect(tenant.plan_status).toBe('active');
+    // Une échéance existe : le cron plan-renewal la relance puis la fait
+    // retomber. Un essai sans date ne finirait jamais.
+    expect(typeof tenant.plan_expires_at).toBe('string');
+    expect(Date.parse(tenant.plan_expires_at)).toBeGreaterThan(Date.now());
+  });
+
   it('email déjà pris → 200 { alreadyExists:true } sans provisioning', async () => {
     setCreateUserResult({
       data: { user: null },
