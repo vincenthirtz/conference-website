@@ -279,7 +279,12 @@ describe('runPlanRenewal — lifecycle', () => {
     expect(sendPlanRenewalReminderEmail).toHaveBeenCalledTimes(1);
   });
 
-  it('never touches foundation / discovery tenants', async () => {
+  it('ne touche pas aux plans qui ne se facturent pas', async () => {
+    // Le périmètre du cron, c'est le barème : les plans à prix catalogue > 0.
+    // `foundation` est offerte par mission, `editor` est sur devis — ni l'une
+    // ni l'autre n'a d'échéance à faire respecter. Découverte, elle, EST
+    // facturée : elle a rejoint le périmètre (cf. le test suivant), et c'est
+    // précisément ce que la liste écrite en dur `['regie','circuit']` ratait.
     store.tenants = [
       {
         id: 'f0000000-0000-4000-8000-000000000000',
@@ -289,8 +294,8 @@ describe('runPlanRenewal — lifecycle', () => {
         plan_last_reminder_at: null,
       },
       {
-        id: 'd0000000-0000-4000-8000-000000000000',
-        plan: 'discovery',
+        id: 'e0000000-0000-4000-8000-000000000000',
+        plan: 'editor',
         plan_status: 'active',
         plan_expires_at: iso(NOW + 5 * DAY),
         plan_last_reminder_at: null,
@@ -305,6 +310,31 @@ describe('runPlanRenewal — lifecycle', () => {
     // Le tenant foundation expiré reste actif (aucune bascule).
     expect(store.tenants[0].plan_status).toBe('active');
     expect(sendPlanRenewalReminderEmail).not.toHaveBeenCalled();
+  });
+
+  it('relance un espace DÉCOUVERTE — il paie, donc il expire', async () => {
+    // Découverte était exclue du cron par une liste écrite en dur : un espace
+    // qui la payait n'expirait jamais, n'était jamais relancé et ne
+    // redescendait jamais. On encaissait sans rien avoir à tenir.
+    store.tenants = [
+      {
+        id: TENANT,
+        plan: 'discovery',
+        plan_status: 'active',
+        plan_term: 'month',
+        plan_expires_at: iso(NOW + 2 * DAY),
+        plan_last_reminder_at: null,
+      },
+    ] as any;
+    seedOwner(TENANT, 'owner@example.test');
+
+    const c = await runPlanRenewal(NOW);
+
+    expect(c.checked).toBe(1);
+    expect(c.remindersSent).toBe(1);
+    expect(sendPlanRenewalReminderEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ planLabel: 'Découverte', priceEur: 10 })
+    );
   });
 
   it('skips the reminder (no stamp) when the tenant has no owner email', async () => {

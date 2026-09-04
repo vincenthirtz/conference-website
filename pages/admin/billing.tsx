@@ -81,7 +81,10 @@ const PLAN_RANK: Record<TenantPlan, number> = {
   discovery: 0,
   regie: 1,
   circuit: 2,
-  foundation: 3,
+  // Sur devis, au-dessus de Circuit : jamais proposé au paiement en ligne, mais
+  // un espace qui le porte ne doit pas se voir offrir « passer à Circuit ».
+  editor: 3,
+  foundation: 4,
 };
 
 function formatDate(s: string | null): string {
@@ -244,11 +247,7 @@ function AdminBillingPage({ staff }: Props) {
   };
 
   const eventOpsLabel = (v: PlanFeatures['discordEventOps']) =>
-    v === 'full'
-      ? t.capEventOpsFull
-      : v === 'basic'
-        ? t.capEventOpsBasic
-        : t.capEventOpsNone;
+    v === 'full' ? t.capEventOpsFull : t.capEventOpsNone;
 
   // CTA libellé selon le plan courant vs cible.
   const ctaLabel = (targetPlan: PurchasablePlan): string => {
@@ -311,6 +310,11 @@ function AdminBillingPage({ staff }: Props) {
       {capabilityRow(t.capMultiTenant, f.multiTenant, `${keyPrefix}-mt`)}
       {capabilityRow(t.capArbitration, f.arbitration, `${keyPrefix}-arb`)}
       {capabilityRow(t.capRatings, f.ratings, `${keyPrefix}-rat`)}
+      {capabilityRow(
+        t.capBroadcastStudio,
+        f.broadcastStudio,
+        `${keyPrefix}-obs`
+      )}
     </ul>
   );
 

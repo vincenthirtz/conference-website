@@ -188,6 +188,11 @@ export const PLAN_FEATURE_ENFORCEMENT: Record<
   discordEventOps: { kind: 'code', where: 'utils/billing/botPlanGate.ts' },
   arbitration: { kind: 'code', where: 'utils/billing/botPlanGate.ts' },
   ratings: { kind: 'code', where: 'utils/billing/botPlanGate.ts' },
+  broadcastStudio: {
+    kind: 'code',
+    where:
+      'utils/billing/tenantCapabilityGate.ts → POST/GET /api/admin/broadcast/state + POST /api/admin/broadcast/next-match',
+  },
   maxLeagues: {
     kind: 'code',
     where: 'utils/billing/planLimits.ts → POST /api/admin/leagues',

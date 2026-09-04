@@ -15,6 +15,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
+import { capabilityDenial } from '@/utils/billing/tenantCapabilityGate';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { logStaffAction } from '@/utils/staffLogs';
@@ -44,6 +45,15 @@ async function handler(
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Enchaîner sur le match suivant en un clic, c'est la direction automatique :
+  // même capacité de palier que la console de régie.
+  const denial = await capabilityDenial(
+    ctx.tenantId,
+    'broadcastStudio',
+    'La régie vidéo (direction automatique et overlays OBS) fait partie du plan Circuit et au-dessus.'
+  );
+  if (denial) return res.status(402).json(denial);
 
   if (!supabaseAdmin) {
     return res

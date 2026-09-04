@@ -73,6 +73,48 @@ beforeEach(() => {
   (emitBotEvent as any).mockClear();
 });
 
+describe('régie vidéo — gate de palier', () => {
+  // `broadcastStudio` est ce qui sépare Circuit (79 €) de Régie (29 €) sur
+  // l'axe production. La console n'était gatée par AUCUN plan : les deux
+  // paliers y accédaient pareil, donc rien dans le code ne justifiait l'écart
+  // de prix.
+  const seedTenantPlan = (plan: string) => {
+    store.tenants = [
+      {
+        id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', // DEFAULT_TENANT_ID
+        plan,
+        plan_status: 'active',
+        plan_expires_at: null,
+      },
+    ] as any;
+  };
+
+  it('refuse un espace Régie en 402 (pas 403 : question de palier)', async () => {
+    seedTenantPlan('regie');
+    const res = makeRes();
+    await broadcastHandler(makeReq(), res);
+    expect(res.statusCode).toBe(402);
+    expect((res.body as any).code).toBe('PLAN_CAPABILITY_REQUIRED');
+    expect((res.body as any).capability).toBe('broadcastStudio');
+  });
+
+  it('laisse passer Circuit', async () => {
+    seedTenantPlan('circuit');
+    const res = makeRes();
+    await broadcastHandler(makeReq(), res);
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('laisse passer quand le plan est illisible (fail-open)', async () => {
+    // Un contrôle de palier indisponible ne doit pas couper un client qui
+    // paie : c'est le SENS du refus qui doit être sûr, pas son absence.
+    store.tenants = [] as any;
+    const res = makeRes();
+    await broadcastHandler(makeReq(), res);
+    expect(res.statusCode).toBe(200);
+  });
+});
+
 describe('GET /api/admin/broadcast/state', () => {
   it('returns empty/default state when no live run', async () => {
     const res = makeRes();

@@ -32,12 +32,20 @@ import { sendPlanRenewalReminderEmail } from '@/utils/email';
 import {
   PLAN_LABELS,
   PLAN_GRACE_DAYS,
+  PLAN_PRICES_EUR,
+  isPurchasablePlan,
   planPrice,
   type PlanTerm,
+  type TenantPlan,
   type PurchasablePlan,
 } from '@/utils/billing/planFeatures';
 
 const DAY_MS = 86_400_000;
+
+/** Les plans qui se facturent — donc les seuls qui peuvent expirer. */
+const BILLED_PLANS = (Object.keys(PLAN_PRICES_EUR) as TenantPlan[]).filter(
+  (p) => isPurchasablePlan(p)
+);
 
 type ReminderStage = {
   offsetDays: number;
@@ -181,7 +189,13 @@ export async function runPlanRenewal(
     .select(
       'id, plan, plan_status, plan_expires_at, plan_last_reminder_at, plan_is_trial, plan_term'
     )
-    .in('plan', ['regie', 'circuit']);
+    // Tous les plans FACTURÉS, déduits du barème plutôt que listés à la main.
+    // La liste écrite en dur était `regie` + `circuit` : Découverte, devenue
+    // payante à 10 €/mois, n'y figurait pas — donc un espace qui la payait
+    // n'expirait jamais, n'était jamais relancé et ne redescendait jamais.
+    // Troisième liste de plans en dur trouvée au même endroit du barème, après
+    // `isPurchasablePlan` et le catalogue de /admin/billing.
+    .in('plan', BILLED_PLANS);
   if (error) {
     logger.error('[cron/plan-renewal] tenants load error', error);
     counters.errors += 1;

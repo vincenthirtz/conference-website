@@ -43,10 +43,14 @@ export default {
   offerRegiePitch: 'For the association or circuit running all year.',
   offerCircuitPitch: 'For several competitions in parallel.',
   offerCtaStart: 'Get started',
+  offerCtaContact: 'Talk to us',
+  offerEditorPitch:
+    'For broadcasting: our Womenscup OBS control room, deployed and supported.',
   offersFootnote:
     'The limits shown are enforced by the platform, not merely advertised: a "one league" plan allows one. Upgrading happens from your own space, without writing to us.',
 
   priceFree: 'Free',
+  priceOnRequest: 'On request',
   pricePerYear: '€{amount} / year',
 
   featBotYes: 'Discord bot included',
@@ -54,6 +58,8 @@ export default {
   featLeaguesNone: 'One-off tournaments',
   featLeaguesCount: '{n} league or season',
   featLeaguesUnlimited: 'Unlimited leagues and seasons',
+  featObsYes: 'Video control room: auto-director and OBS overlays',
+  featObsNo: 'No video control room',
   featArbitrationYes: 'Dispute arbitration',
   featArbitrationNo: 'No tooled arbitration',
   featRatingsYes: 'Player rating and ranking',

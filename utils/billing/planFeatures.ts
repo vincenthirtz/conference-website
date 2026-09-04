@@ -14,13 +14,19 @@
 // tout, gratuit, sans expiration. `discovery`, `regie` et `circuit` sont les
 // trois offres facturées.
 //
-// Le palier `editor` (sur-devis, illimité) a été retiré : aucun espace ne l'a
-// jamais porté, et une quatrième colonne « sur devis » sur la grille tarifaire
-// occupait la place d'une offre lisible pour une porte que le formulaire de
-// contact ouvre déjà. Un besoin hors barème se traite par une conversation,
-// pas par une case à cocher.
+// Le palier `editor` est sur devis (`PLAN_PRICES_EUR.editor = null`) : il ne se
+// paie pas en self-service, il se négocie. Ce qu'il ajoute à Circuit n'est pas
+// une capacité de plus dans la plateforme mais un LOGICIEL — Womenscup OBS,
+// notre régie vidéo — et son déploiement ne rentre pas dans un formulaire.
+// `null` ≠ 0 : le barème dit « pas de tarif catalogue », et `isPurchasablePlan`
+// le refuse donc au paiement en ligne sans qu'on ait à l'y lister à la main.
 
-export type TenantPlan = 'foundation' | 'discovery' | 'regie' | 'circuit';
+export type TenantPlan =
+  | 'foundation'
+  | 'discovery'
+  | 'regie'
+  | 'circuit'
+  | 'editor';
 
 export type PlanStatus = 'active' | 'past_due' | 'canceled';
 
@@ -32,7 +38,15 @@ export type TenantPlanState = {
   plan_expires_at: string | null;
 };
 
-export type DiscordEventOps = 'none' | 'basic' | 'full';
+/**
+ * Profondeur des opérations Discord.
+ *
+ * Le cran `'basic'` a existé entre les deux : aucun plan ne l'a jamais porté, et
+ * un commentaire de botPlanGate a longtemps affirmé que `discovery` y était —
+ * ce qui était faux depuis toujours. Une gradation que personne n'emprunte
+ * n'est pas une nuance, c'est une promesse que la grille ne peut pas tenir.
+ */
+export type DiscordEventOps = 'none' | 'full';
 
 export type PlanFeatures = {
   /** Tenant dédié : branding, slug/sous-domaine, custom domain, site + CMS. */
@@ -56,6 +70,13 @@ export type PlanFeatures = {
   arbitration: boolean;
   /** Rating joueur Glicko-2. */
   ratings: boolean;
+  /**
+   * Régie vidéo : direction automatique (l'état de diffusion suit les matchs)
+   * et overlays OBS. C'est la marche qui manquait entre Régie et Circuit —
+   * les deux étaient à égalité sur `discordEventOps: 'full'`, donc rien dans le
+   * code ne distinguait 29 € de 79 € sur l'axe production.
+   */
+  broadcastStudio: boolean;
   /** Nombre de ligues/saisons simultanées (Infinity = illimité). */
   maxLeagues: number;
   /** File d'arbitrage prioritaire. */
@@ -81,6 +102,7 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     discordEventOps: 'full',
     arbitration: true,
     ratings: true,
+    broadcastStudio: true,
     maxLeagues: Infinity,
     priorityArbitration: true,
     // Flagship (Coupe féminine) : illimité → compteur durable court-circuité.
@@ -96,12 +118,15 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     discordEventOps: 'none',
     arbitration: false,
     ratings: false,
+    broadcastStudio: false,
     maxLeagues: 0,
     priorityArbitration: false,
     // Pas d'API (bloqué par le gate plan avant même le quota).
     apiRateLimitPerMin: 0,
     apiMonthlyQuota: 0,
   },
+  // Régie garde TOUTE la production Discord (cast, veto, drafts, run-of-show).
+  // Ce qui lui manque, c'est la régie vidéo elle-même.
   regie: {
     whiteLabel: true,
     apiRead: true,
@@ -111,6 +136,7 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     discordEventOps: 'full',
     arbitration: true,
     ratings: true,
+    broadcastStudio: false,
     maxLeagues: 1,
     priorityArbitration: false,
     apiRateLimitPerMin: 60,
@@ -125,10 +151,29 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     discordEventOps: 'full',
     arbitration: true,
     ratings: true,
+    broadcastStudio: true,
     maxLeagues: Infinity,
     priorityArbitration: true,
     apiRateLimitPerMin: 120,
     apiMonthlyQuota: 500_000,
+  },
+  // Sur devis : tout Circuit, plus Womenscup OBS déployé chez le client.
+  // Techniquement identique au plafond ; ce qui se vend en plus est un logiciel
+  // et l'accompagnement qui va avec, pas une case du barème.
+  editor: {
+    whiteLabel: true,
+    apiRead: true,
+    apiWrite: true,
+    multiTenant: true,
+    discordBot: true,
+    discordEventOps: 'full',
+    arbitration: true,
+    ratings: true,
+    broadcastStudio: true,
+    maxLeagues: Infinity,
+    priorityArbitration: true,
+    apiRateLimitPerMin: Infinity,
+    apiMonthlyQuota: Infinity,
   },
 };
 
@@ -218,6 +263,7 @@ export const PLAN_LABELS: Record<TenantPlan, string> = {
   discovery: 'Découverte',
   regie: 'Régie',
   circuit: 'Circuit',
+  editor: 'Éditeur',
 };
 
 /**
@@ -245,6 +291,9 @@ export const PLAN_PRICES_EUR: Record<TenantPlan, number | null> = {
   discovery: 100,
   regie: 290,
   circuit: 790,
+  // Sur devis : `null` ≠ 0. Le barème dit « pas de tarif catalogue », ce qui
+  // suffit à exclure ce palier du paiement en ligne (isPurchasablePlan).
+  editor: null,
 };
 
 /**

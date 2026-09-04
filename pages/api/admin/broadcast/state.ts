@@ -18,6 +18,7 @@ import {
   updateBroadcastState,
   BROADCAST_SCENES,
 } from '@/utils/broadcast/liveState';
+import { capabilityDenial } from '@/utils/billing/tenantCapabilityGate';
 import { logger } from '../../../../utils/logger';
 
 export default withStaffRoute(
@@ -31,6 +32,18 @@ async function handler(
   ctx: AuthenticatedStaffContext
 ) {
   try {
+    // La régie vidéo est une capacité de palier (`broadcastStudio`). Elle
+    // n'était gatée nulle part : un espace « Régie » y accédait comme le plan
+    // au-dessus, et rien dans le code ne distinguait 29 € de 79 € sur l'axe
+    // production. Le contrôle porte sur la CONSOLE, pas sur l'overlay lui-même
+    // — celui-ci est la sortie vidéo, la couper n'apprendrait rien à personne.
+    const denial = await capabilityDenial(
+      ctx.tenantId,
+      'broadcastStudio',
+      'La régie vidéo (direction automatique et overlays OBS) fait partie du plan Circuit et au-dessus.'
+    );
+    if (denial) return res.status(402).json(denial);
+
     if (req.method === 'GET') {
       const data = await fetchLiveBroadcastState(ctx.tenantId);
       return res.status(200).json(data);

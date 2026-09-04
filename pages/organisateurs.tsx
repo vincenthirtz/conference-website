@@ -40,7 +40,7 @@ type Dict = typeof nsOrganisateursPage.fr;
  * c'est le plan de la Coupe féminine elle-même, offert par mission — l'afficher
  * comme une offre laisserait croire qu'il se vend.
  */
-const OFFERS: TenantPlan[] = ['discovery', 'regie', 'circuit'];
+const OFFERS: TenantPlan[] = ['discovery', 'regie', 'circuit', 'editor'];
 
 /** Le palier mis en avant : celui qui répond au besoin le plus courant. */
 const HIGHLIGHTED: TenantPlan = 'regie';
@@ -62,6 +62,7 @@ function offerLines(plan: TenantPlan, t: Dict): string[] {
     lines.push(format(t.featLeaguesCount, { n: f.maxLeagues }));
   else lines.push(t.featLeaguesNone);
 
+  lines.push(f.broadcastStudio ? t.featObsYes : t.featObsNo);
   lines.push(f.arbitration ? t.featArbitrationYes : t.featArbitrationNo);
   lines.push(f.ratings ? t.featRatingsYes : t.featRatingsNo);
   lines.push(f.whiteLabel ? t.featBrandYes : t.featBrandNo);
@@ -78,7 +79,10 @@ function priceLabel(plan: TenantPlan, term: PlanTerm, t: Dict): string {
   // `null` = pas de barème catalogue. Aucune offre présentée n'est dans ce cas
   // depuis le retrait du palier sur-devis ; on garde la branche parce que le
   // type l'autorise, et qu'un prix manquant ne doit jamais s'afficher « 0 € ».
-  if (price === null) return t.priceFree;
+  // `null` = pas de tarif catalogue (Éditeur, sur devis). À distinguer de 0,
+  // qui voudrait dire gratuit — afficher « 0 € » pour un devis serait un
+  // mensonge par arrondi.
+  if (price === null) return t.priceOnRequest;
   if (price === 0) return t.priceFree;
   return term === 'month'
     ? format(t.pricePerMonth, { amount: String(price) })
@@ -231,13 +235,13 @@ function OrganisateursPage() {
             des trois, et les trois cartes s'y accrochent.
             Repli : un navigateur sans `subgrid` ignore la déclaration et
             retrouve la pile en `flex` — décalée, mais lisible. */}
-        <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3 lg:gap-y-0 lg:grid-rows-[repeat(12,auto)]">
+        <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-4 lg:gap-y-0 lg:grid-rows-[repeat(13,auto)]">
           {OFFERS.map((plan) => {
             const highlighted = plan === HIGHLIGHTED;
             return (
               <div
                 key={plan}
-                className={`flex flex-col rounded-2xl border p-6 lg:grid lg:row-span-12 lg:grid-rows-subgrid ${
+                className={`flex flex-col rounded-2xl border p-6 lg:grid lg:row-span-13 lg:grid-rows-subgrid ${
                   highlighted
                     ? 'border-purple-400/50 bg-purple-500/[0.08]'
                     : 'border-white/10 bg-white/[0.03]'
@@ -265,7 +269,9 @@ function OrganisateursPage() {
                     ? t.offerDiscoveryPitch
                     : plan === 'regie'
                       ? t.offerRegiePitch
-                      : t.offerCircuitPitch}
+                      : plan === 'circuit'
+                        ? t.offerCircuitPitch
+                        : t.offerEditorPitch}
                 </p>
                 <p className="mt-4 text-2xl font-bold text-white">
                   {priceLabel(plan, term, t)}
@@ -275,24 +281,32 @@ function OrganisateursPage() {
                     douze mois payés au mois (29 × 12 = 348 €). Elle disait donc
                     que les deux périodicités coûtent pareil — le contraire de
                     la phrase « deux mois offerts » affichée juste au-dessus. */}
-                {term === 'month' && PLAN_PRICES_EUR[plan] ? (
+                {/* La rangée existe dans les QUATRE cartes dès qu'on est au
+                    mois, même vide : Éditeur est sur devis et n'a rien à y
+                    mettre, mais l'omettre décalerait toutes ses prestations
+                    d'une rangée par rapport aux trois autres — la sous-grille
+                    range les enfants dans l'ordre, pas par intention. */}
+                {term === 'month' ? (
                   <p className="mt-1 text-xs text-gray-400">
-                    {format(t.priceYearlyAlternative, {
-                      twelve: String((planPrice(plan, 'month') ?? 0) * 12),
-                      yearly: String(PLAN_PRICES_EUR[plan]),
-                    })}
+                    {PLAN_PRICES_EUR[plan]
+                      ? format(t.priceYearlyAlternative, {
+                          twelve: String((planPrice(plan, 'month') ?? 0) * 12),
+                          yearly: String(PLAN_PRICES_EUR[plan]),
+                        })
+                      : '\u00A0'}
                   </p>
                 ) : null}
 
-                {/* La liste est elle-même une sous-grille de six rangées : les
-                    six prestations sont toujours les mêmes, dans le même ordre
-                    (bot, ligues, arbitrage, classement, marque, API), donc la
+                {/* La liste est elle-même une sous-grille de sept rangées : les
+                    sept prestations sont toujours les mêmes, dans le même ordre
+                    (bot, ligues, régie vidéo, arbitrage, classement, marque,
+                    API), donc la
                     ligne « arbitrage » d'une offre doit faire face à celle des
                     deux autres — y compris quand l'une d'elles passe sur deux
                     lignes. C'est la comparaison ligne à ligne qui rend la
                     grille lisible ; sans elle on compare des positions, pas des
                     prestations. */}
-                <ul className="mt-5 flex-1 space-y-2 text-sm text-gray-200 lg:row-span-6 lg:grid lg:grid-rows-subgrid lg:space-y-0 lg:content-start lg:gap-y-2">
+                <ul className="mt-5 flex-1 space-y-2 text-sm text-gray-200 lg:row-span-7 lg:grid lg:grid-rows-subgrid lg:space-y-0 lg:content-start lg:gap-y-2">
                   {offerLines(plan, t).map((line) => (
                     <li key={line} className="flex gap-2">
                       <span aria-hidden className="text-purple-300">
@@ -303,8 +317,16 @@ function OrganisateursPage() {
                   ))}
                 </ul>
 
+                {/* Sur devis : la porte n'est pas le tunnel de souscription
+                    mais une conversation. Un bouton « commencer » qui mène à un
+                    formulaire de paiement pour une offre sans prix affiché
+                    promettrait une chose que la page suivante ne tient pas. */}
                 <Link
-                  href={`/onboard/request?plan=${plan}&term=${term}`}
+                  href={
+                    PLAN_PRICES_EUR[plan] === null
+                      ? '/contact'
+                      : `/onboard/request?plan=${plan}&term=${term}`
+                  }
                   className={`mt-6 rounded-lg px-4 py-2.5 text-center text-sm font-semibold transition ${
                     highlighted
                       ? 'bg-purple-500 text-white hover:bg-purple-400'
@@ -312,7 +334,9 @@ function OrganisateursPage() {
                   }`}
                   data-test={`offer-cta-${plan}`}
                 >
-                  {t.offerCtaStart}
+                  {PLAN_PRICES_EUR[plan] === null
+                    ? t.offerCtaContact
+                    : t.offerCtaStart}
                 </Link>
               </div>
             );

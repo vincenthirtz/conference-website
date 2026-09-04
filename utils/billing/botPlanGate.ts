@@ -39,7 +39,8 @@ import {
  * Exigence de capacité déclarée par une route bot premium.
  *
  * - `discordEventOps:full` : run-of-show / production (Director, cast, veto,
- *   drafts, broadcast on-air, events, runs). `discovery` est en `'basic'` → 403.
+ *   drafts, broadcast on-air, events, runs). Tout plan qui n'est pas en `'full'`
+ *   prend un 403 sur ces routes.
  * - `arbitration` : arbitrage litiges (disputes, resolve-dispute, blacklist-alert).
  * - `ratings` : rating joueur Glicko-2 (réservé pour de futurs endpoints bot).
  *

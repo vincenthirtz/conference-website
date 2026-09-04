@@ -146,12 +146,19 @@ describe('PLAN_PRICES_EUR + isPurchasablePlan', () => {
   });
 
   it('une entrée par plan (pas de plan orphelin)', () => {
-    const plans: TenantPlan[] = [
-      'foundation',
-      'discovery',
-      'regie',
-      'circuit',
-    ];
+    // La liste des plans était recopiée ici à la main : ajouter un palier au
+    // type sans l'ajouter au barème passait le compilateur et cassait ce test
+    // à l'exécution, ce qui est déjà tard. `satisfies Record<TenantPlan, true>`
+    // fait porter l'exhaustivité au compilateur — un plan manquant ou en trop
+    // ne compile plus.
+    const plans = Object.keys({
+      foundation: true,
+      discovery: true,
+      regie: true,
+      circuit: true,
+      editor: true,
+    } satisfies Record<TenantPlan, true>) as TenantPlan[];
+
     for (const p of plans) {
       expect(p in PLAN_PRICES_EUR).toBe(true);
     }
@@ -639,8 +646,9 @@ describe('POST /api/admin/tenants/[id]/plan-checkout', () => {
   });
 
   it('plan hors barème → 400', async () => {
-    // `editor` a été retiré du barème : un lien de paiement pour lui ne doit
-    // pas se fabriquer, et surtout pas silencieusement à 0 €.
+    // `editor` est SUR DEVIS (prix catalogue `null`) : un lien de paiement pour
+    // lui ne doit pas se fabriquer, et surtout pas silencieusement à 0 €. C'est
+    // toute la différence entre « pas de tarif » et « gratuit ».
     makeStaff('owner');
     invalidateStaffCache();
     const res = makeRes();

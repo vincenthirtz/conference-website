@@ -50,10 +50,14 @@ export default ns('organisateursPage', {
   offerRegiePitch: "Pour l'association ou le circuit qui tourne à l'année.",
   offerCircuitPitch: 'Pour plusieurs compétitions en parallèle.',
   offerCtaStart: 'Commencer',
+  offerCtaContact: 'Nous contacter',
+  offerEditorPitch:
+    'Pour diffuser : notre logiciel de régie Womenscup OBS, déployé et accompagné.',
   offersFootnote:
     "Les limites affichées sont appliquées par la plateforme, pas seulement annoncées : une offre « une ligue » en autorise une. Le passage à l'offre supérieure se fait depuis votre espace, sans nous écrire.",
 
   priceFree: 'Gratuit',
+  priceOnRequest: 'Sur devis',
   pricePerYear: '{amount} € / an',
 
   featBotYes: 'Bot Discord inclus',
@@ -61,6 +65,8 @@ export default ns('organisateursPage', {
   featLeaguesNone: 'Tournois à l’unité',
   featLeaguesCount: '{n} ligue ou saison',
   featLeaguesUnlimited: 'Ligues et saisons illimitées',
+  featObsYes: 'Régie vidéo : direction auto et overlays OBS',
+  featObsNo: 'Sans régie vidéo',
   featArbitrationYes: 'Arbitrage des litiges',
   featArbitrationNo: 'Sans arbitrage outillé',
   featRatingsYes: 'Classement et niveau des joueuses',
