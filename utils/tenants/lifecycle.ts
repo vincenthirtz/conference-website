@@ -33,7 +33,12 @@ export type LifecycleState = (typeof LIFECYCLE_STATES)[number];
  */
 export const LIFECYCLE_EFFECTS: Record<
   LifecycleState,
-  { serves: boolean; writable: boolean; reversible: boolean; httpStatus: number }
+  {
+    serves: boolean;
+    writable: boolean;
+    reversible: boolean;
+    httpStatus: number;
+  }
 > = {
   active: { serves: true, writable: true, reversible: true, httpStatus: 200 },
   // 402 et non 403 : ce n'est pas un droit qui manque, c'est une situation à
@@ -45,14 +50,24 @@ export const LIFECYCLE_EFFECTS: Record<
     httpStatus: 402,
   },
   // 404 : un espace archivé n'existe plus, du point de vue de qui appelle.
-  archived: { serves: false, writable: false, reversible: true, httpStatus: 404 },
+  archived: {
+    serves: false,
+    writable: false,
+    reversible: true,
+    httpStatus: 404,
+  },
   purge_scheduled: {
     serves: false,
     writable: false,
     reversible: true,
     httpStatus: 404,
   },
-  purged: { serves: false, writable: false, reversible: false, httpStatus: 404 },
+  purged: {
+    serves: false,
+    writable: false,
+    reversible: false,
+    httpStatus: 404,
+  },
 };
 
 export type TenantLifecycle = {

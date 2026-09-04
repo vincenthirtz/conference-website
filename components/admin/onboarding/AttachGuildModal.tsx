@@ -49,9 +49,11 @@ type AttachGuildModalProps = {
   /** Appelé après un rattachement réussi (rechargement de la vue). */
   onAttached: () => void;
   /**
-   * URL d'invitation du bot (dépend de `DISCORD_CLIENT_ID`, donc résolue côté
-   * serveur). `null` = non configurée : on le dit au lieu d'afficher un
-   * bouton qui ne mène nulle part.
+   * URL d'invitation GÉNÉRIQUE, en repli. Le lien porteur de l'espace est
+   * chargé par la modale elle-même (`/tenants/:id/bot-invite`) : il ne peut
+   * être fabriqué qu'une fois l'espace connu, donc pas au chargement de la
+   * liste. `null` = `DISCORD_CLIENT_ID` absent — on le dit plutôt que
+   * d'afficher un bouton qui ne mène nulle part.
    */
   botInviteUrl: string | null;
 };
@@ -75,6 +77,14 @@ export default function AttachGuildModal({
   const [saving, setSaving] = useState(false);
 
   const [refreshing, setRefreshing] = useState(false);
+
+  // Lien d'invitation PORTEUR DE L'ESPACE. En mode `direct`, Discord renvoie
+  // l'installateur chez nous et le rattachement se fait tout seul ; en mode
+  // `manual`, c'est l'ancien lien générique et il reste une étape à faire ici.
+  // On part du repli générique tant que la réponse n'est pas là : mieux vaut
+  // un lien qui marche à moitié qu'un bouton absent.
+  const [inviteUrl, setInviteUrl] = useState<string | null>(botInviteUrl);
+  const [inviteMode, setInviteMode] = useState<'direct' | 'manual'>('manual');
 
   const loadPending = useCallback(async () => {
     setRefreshing(true);
@@ -102,6 +112,34 @@ export default function AttachGuildModal({
     setSaving(false);
     void loadPending();
   }, [open, loadPending]);
+
+  // Le lien porte un state signé à durée de vie courte : on le demande à
+  // l'ouverture, jamais d'avance, et pour CET espace.
+  useEffect(() => {
+    if (!open || !tenant) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await adminFetchJson<{
+          url: string | null;
+          mode: 'direct' | 'manual';
+        }>(`/api/admin/tenants/${tenant.id}/bot-invite`);
+        if (cancelled) return;
+        setInviteUrl(data.url ?? botInviteUrl);
+        setInviteMode(data.mode ?? 'manual');
+      } catch {
+        // Repli sur le lien générique : l'invitation reste possible, seul le
+        // rattachement automatique est perdu.
+        if (!cancelled) {
+          setInviteUrl(botInviteUrl);
+          setInviteMode('manual');
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, tenant, adminFetchJson, botInviteUrl]);
 
   const guildId = choice || manualId.trim();
 
@@ -168,12 +206,14 @@ export default function AttachGuildModal({
           {t.attachGuildInviteHeading}
         </p>
         <p className="mt-1 text-xs text-neutral-300">
-          {t.attachGuildInviteHelp}
+          {inviteMode === 'direct'
+            ? t.attachGuildInviteHelpDirect
+            : t.attachGuildInviteHelp}
         </p>
-        {botInviteUrl ? (
+        {inviteUrl ? (
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <a
-              href={botInviteUrl}
+              href={inviteUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-500"
@@ -181,15 +221,20 @@ export default function AttachGuildModal({
             >
               {t.attachGuildInviteCta}
             </a>
-            <button
-              type="button"
-              onClick={() => void loadPending()}
-              disabled={refreshing}
-              className="text-xs text-violet-300 underline hover:text-violet-200 disabled:opacity-50"
-              data-testid="attach-guild-refresh"
-            >
-              {refreshing ? t.attachGuildRefreshing : t.attachGuildRefresh}
-            </button>
+            {/* En mode direct, il n'y a rien à rafraîchir : le retour de
+                Discord rattache tout seul. Laisser le bouton entretiendrait
+                l'idée qu'il reste une étape. */}
+            {inviteMode === 'manual' && (
+              <button
+                type="button"
+                onClick={() => void loadPending()}
+                disabled={refreshing}
+                className="text-xs text-violet-300 underline hover:text-violet-200 disabled:opacity-50"
+                data-testid="attach-guild-refresh"
+              >
+                {refreshing ? t.attachGuildRefreshing : t.attachGuildRefresh}
+              </button>
+            )}
           </div>
         ) : (
           <p className="mt-2 text-xs text-amber-200">

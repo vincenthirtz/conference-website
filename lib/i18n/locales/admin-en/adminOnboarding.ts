@@ -66,4 +66,6 @@ export default {
   configureChannelsCta: "Configure the channels",
   configureChannelsCount: "{count} setting(s)",
   guildPrimaryTag: "primary",
+  attachGuildInviteHelpDirect:
+    'This link carries this space: once the install is done, Discord brings you back here and the server is attached on its own. Nothing to copy, nothing to find in a queue.',
 };

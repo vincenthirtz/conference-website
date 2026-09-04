@@ -205,10 +205,38 @@ de son cache `tenant-config` (~5 min). Rien à redéployer.
 
 La modale de rattachement porte aussi l'**invitation du bot** : quand un espace
 n'a aucun serveur, la première question n'est pas « lequel rattacher ? » mais
-« le bot y est-il ? ». Inviter → rafraîchir → rattacher s'enchaînent au même
-endroit. L'URL d'invitation vient du serveur (`buildBotInviteUrl`, dépendante
-de `DISCORD_CLIENT_ID`) et vaut `null` si l'environnement ne la fournit pas —
-l'écran le dit au lieu d'afficher un bouton mort.
+« le bot y est-il ? ». L'URL vient du serveur et vaut `null` si
+`DISCORD_CLIENT_ID` manque — l'écran le dit au lieu d'afficher un bouton mort.
+
+### Le lien d'invitation porte l'espace — ou non
+
+L'URL d'invitation était la même pour tout le monde : on l'ouvrait, on
+choisissait un serveur sur Discord, puis il fallait revenir, rafraîchir la file
+d'attente, reconnaître le bon serveur et le rattacher au bon espace. Trois
+occasions de se tromper pour un geste qui se pense comme un seul.
+
+Le lien peut désormais porter l'espace, dans un `state` signé
+(`utils/tenants/botInvite.ts`). Le mode dépend d'une seule variable :
+
+| Mode | Condition | Ce qui se passe |
+| --- | --- | --- |
+| `direct` | `DISCORD_OAUTH_REDIRECT_URI` renseignée **et** déclarée dans le portail développeur Discord | Discord renvoie l'installateur sur `/api/onboard/discord-callback` avec le serveur choisi. Le rattachement se fait tout seul, sur le bon espace, et le bouton « rafraîchir » disparaît : il n'y a plus d'étape à attendre. |
+| `manual` | variable absente, invalide, ou secret de signature indisponible | Lien générique d'avant : revenir, rafraîchir, rattacher à la main. |
+
+L'écran dit toujours dans quel mode il est. Promettre un retour automatique qui
+n'aura pas lieu envoie l'opérateur sur un écran d'erreur Discord — pire que de
+ne rien promettre.
+
+Le `state` est signé (HMAC sur `DISCORD_CLIENT_SECRET`, repli `CRON_SECRET`) et
+vaut 30 minutes. C'est la seule preuve qu'un retour vient d'un lien que nous
+avons émis : sans elle, l'URL de retour permettrait de rattacher n'importe quel
+serveur à n'importe quel espace. Le rattachement lui-même passe par les mêmes
+règles que le chemin manuel (`utils/tenants/attachGuild.ts`) : un serveur déjà
+pris ailleurs est refusé de la même façon, et l'attente est purgée pareil.
+
+`?guildId=` pré-sélectionne et VERROUILLE un serveur dans la liste de Discord :
+c'est le cas de la réinstallation d'un serveur déjà rattaché (permissions
+perdues, bot expulsé).
 
 Enfin, chaque serveur d'un espace est listé avec un lien direct vers SES
 réglages (`/admin/tenants/:id/discord-config/:guildId`) et le nombre de clés

@@ -75,7 +75,9 @@ export async function checkDomain(
   let routingFound = false;
   try {
     const cname = await resolver.resolveCname(domain);
-    routingFound = cname.some((c) => c.toLowerCase().replace(/\.$/, '') === target);
+    routingFound = cname.some(
+      (c) => c.toLowerCase().replace(/\.$/, '') === target
+    );
   } catch {
     // Un domaine peut pointer par A/ALIAS plutôt que par CNAME (apex). On ne
     // sait pas le dire ici, donc on n'en fait jamais un motif de refus.

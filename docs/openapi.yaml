@@ -21654,6 +21654,73 @@ paths:
                 additionalProperties: true
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/admin/tenants/{id}/bot-invite:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Bot invite link carrying this tenant.
+      description: |
+        Platform owner only. The generic invite URL forced the operator to come
+        back, refresh the pending queue, recognise the right server and attach
+        it to the right space. This link carries the space in a signed `state`;
+        when `DISCORD_OAUTH_REDIRECT_URI` is configured (and declared in the
+        Discord developer portal) Discord returns the installer to
+        `/api/onboard/discord-callback` and the attach happens on its own.
+
+        The response always states the `mode` (`direct` / `manual`) so the UI
+        never promises an automatic return that will not happen. `?guildId=`
+        pre-selects and locks a server, for re-inviting a known one.
+      operationId: adminGetTenantBotInvite
+      tags:
+        - admin/tenants
+      security:
+        - StaffSession: []
+      parameters:
+        - in: query
+          name: guildId
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Invite link and mode.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/onboard/discord-callback:
+    get:
+      summary: Discord return after a per-tenant bot install.
+      description: |
+        PUBLIC by URL, but inert without a valid signed `state` — that signature
+        is the only proof the return comes from a link we issued. Attaches the
+        guild to the tenant carried by the state, using the same rules as the
+        admin attach endpoint (`utils/tenants/attachGuild.ts`), then REDIRECTS to
+        the tenant page with a readable flag (`linked`, `already_linked`,
+        `cancelled`, `invalid_state`, `failed`). A browser return deserves a
+        page, not raw JSON.
+      operationId: onboardDiscordCallback
+      tags:
+        - public
+      security: []
+      responses:
+        '302':
+          description: Redirect to the tenant page with a status flag.
+        '405':
+          description: Method not allowed.
   /api/admin/tenants/{id}/domain:
     parameters:
       - in: path

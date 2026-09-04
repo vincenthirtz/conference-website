@@ -65,4 +65,6 @@ export default adminNs('adminOnboarding', {
   configureChannelsCta: "Configurer les salons",
   configureChannelsCount: "{count} réglage(s)",
   guildPrimaryTag: "principal",
+  attachGuildInviteHelpDirect:
+    "Ce lien porte cet espace : à la fin de l'installation, Discord vous ramène ici et le serveur est rattaché tout seul. Rien à recopier, rien à retrouver dans une file d'attente.",
 });

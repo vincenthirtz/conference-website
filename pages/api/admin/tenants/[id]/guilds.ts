@@ -35,7 +35,7 @@ import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
-import { assertOrganizerTenant } from '@/utils/tenantKind';
+import { attachGuildToTenant } from '@/utils/tenants/attachGuild';
 import { logStaffAction } from '@/utils/staffLogs';
 import { logger } from '@/utils/logger';
 
@@ -71,118 +71,31 @@ async function handler(
   }
 
   const body = (req.body ?? {}) as Record<string, unknown>;
-  const guildId = typeof body.guild_id === 'string' ? body.guild_id.trim() : '';
-  if (!GUILD_ID_RE.test(guildId)) {
-    return res.status(400).json({
-      error: 'guild_id doit être un identifiant de serveur Discord.',
-      code: 'INVALID_GUILD_ID',
+  const guildId = typeof body.guild_id === 'string' ? body.guild_id : '';
+
+  // Les règles vivent dans `utils/tenants/attachGuild.ts` : le retour du lien
+  // d'invitation par espace les applique à l'identique. Deux copies auraient
+  // fini par diverger sur la purge de l'attente ou le drapeau « principal ».
+  const result = await attachGuildToTenant(id, guildId);
+  if (!result.ok) {
+    return res.status(result.httpStatus).json({
+      error: result.error,
+      code: result.code,
+      ...(result.otherTenantSlug
+        ? { tenant_slug: result.otherTenantSlug }
+        : {}),
     });
   }
 
-  // L'espace doit exister — et être un espace d'organisation. Un espace
-  // « développeur » porte des clés d'API, pas un tournoi : lui rattacher un
-  // serveur Discord ne lui donnerait rien (le bot lui est fermé).
-  const { data: tenant, error: tenantErr } = await supabaseAdmin
-    .from('tenants')
-    .select('id, slug, name, is_active')
-    .eq('id', id)
-    .maybeSingle();
-  if (tenantErr) {
-    logger.error('[admin/tenants/guilds] tenant lookup error', tenantErr);
-    return res.status(500).json({ error: 'Server error.' });
-  }
-  if (!tenant) {
-    return res
-      .status(404)
-      .json({ error: 'Tenant not found.', code: 'UNKNOWN_TENANT' });
-  }
-  if (!(await assertOrganizerTenant(id))) {
-    return res.status(400).json({
-      error:
-        'Un espace développeur ne pilote pas de serveur Discord : le bot lui est fermé.',
-      code: 'DEVELOPER_TENANT_FORBIDDEN',
+  if (result.status === 'already_linked') {
+    // Déjà fait : on le dit sans erreur. Un double-clic ou un retry réseau ne
+    // doit pas ressembler à un échec.
+    return res.status(200).json({
+      status: 'already_linked',
+      guild_id: result.guildId,
+      tenant: result.tenant,
+      is_primary: result.isPrimary,
     });
-  }
-
-  // Ce serveur est-il déjà rattaché quelque part ?
-  const { data: existing, error: existingErr } = await supabaseAdmin
-    .from('discord_guilds')
-    .select(
-      'guild_id, tenant_id, is_primary, tenant:tenants!discord_guilds_tenant_id_fkey(slug, name)'
-    )
-    .eq('guild_id', guildId)
-    .maybeSingle();
-  if (existingErr) {
-    logger.error('[admin/tenants/guilds] existing link error', existingErr);
-    return res.status(500).json({ error: 'Server error.' });
-  }
-
-  if (existing) {
-    if (existing.tenant_id === id) {
-      // Déjà fait : on le dit sans erreur. Un double-clic ou un retry réseau
-      // ne doit pas ressembler à un échec.
-      return res.status(200).json({
-        status: 'already_linked',
-        guild_id: guildId,
-        tenant: { id: tenant.id, slug: tenant.slug, name: tenant.name },
-        is_primary: existing.is_primary,
-      });
-    }
-    const other = Array.isArray(existing.tenant)
-      ? existing.tenant[0]
-      : existing.tenant;
-    return res.status(409).json({
-      error: `Ce serveur est déjà rattaché à l'espace « ${other?.name ?? other?.slug ?? 'inconnu'} ». Détachez-le d'abord.`,
-      code: 'GUILD_TAKEN',
-      tenant_slug: other?.slug ?? null,
-    });
-  }
-
-  // Premier serveur de l'espace → c'est le principal. Les suivants ne le sont
-  // pas : c'est ce que les résolveurs du bot attendent.
-  const { count: guildCount, error: countErr } = await supabaseAdmin
-    .from('discord_guilds')
-    .select('guild_id', { count: 'exact', head: true })
-    .eq('tenant_id', id);
-  if (countErr) {
-    logger.error('[admin/tenants/guilds] guild count error', countErr);
-    return res.status(500).json({ error: 'Server error.' });
-  }
-  const isPrimary = (guildCount ?? 0) === 0;
-
-  const { error: insertErr } = await supabaseAdmin
-    .from('discord_guilds')
-    .insert({ guild_id: guildId, tenant_id: id, is_primary: isPrimary });
-  if (insertErr) {
-    // Course : quelqu'un vient de rattacher ce serveur entre nos deux requêtes.
-    if ((insertErr as { code?: string }).code === '23505') {
-      return res.status(409).json({
-        error: 'Ce serveur vient d’être rattaché ailleurs.',
-        code: 'GUILD_TAKEN',
-      });
-    }
-    logger.error('[admin/tenants/guilds] insert error', insertErr);
-    return res.status(500).json({ error: 'Failed to link the guild.' });
-  }
-
-  // Ligne de configuration Discord : cible du formulaire de réglages. Même
-  // geste que l'auto-claim de l'onboarding. Best-effort — l'écran sait vivre
-  // sans (il fusionne avec des valeurs vides), mais autant la créer ici.
-  const { error: cfgErr } = await supabaseAdmin
-    .from('tenant_discord_config')
-    .upsert({ guild_id: guildId }, { onConflict: 'guild_id' });
-  if (cfgErr) {
-    logger.error('[admin/tenants/guilds] discord_config upsert error', cfgErr);
-  }
-
-  // L'attente est traitée : la laisser afficherait un serveur « en attente »
-  // qui est en réalité rattaché.
-  const { error: pendingErr } = await supabaseAdmin
-    .from('pending_guild_links')
-    .delete()
-    .eq('guild_id', guildId);
-  if (pendingErr) {
-    logger.error('[admin/tenants/guilds] pending delete error', pendingErr);
   }
 
   try {
@@ -193,10 +106,10 @@ async function handler(
       entity_id: id,
       tenant_id: ctx.tenantId,
       payload: {
-        guildId,
-        tenantSlug: tenant.slug,
-        tenantName: tenant.name,
-        isPrimary,
+        guildId: result.guildId,
+        tenantSlug: result.tenant.slug,
+        tenantName: result.tenant.name,
+        isPrimary: result.isPrimary,
         from: 'tenant_readiness',
       },
     });
@@ -206,9 +119,9 @@ async function handler(
 
   return res.status(201).json({
     status: 'linked',
-    guild_id: guildId,
-    tenant: { id: tenant.id, slug: tenant.slug, name: tenant.name },
-    is_primary: isPrimary,
+    guild_id: result.guildId,
+    tenant: result.tenant,
+    is_primary: result.isPrimary,
   });
 }
 
