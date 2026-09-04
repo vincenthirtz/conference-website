@@ -23,7 +23,7 @@ export default {
   installApp: 'Install the app',
   donate: 'Make a donation',
   support: 'Report / Support',
-  developers: 'API / Developers',
+  organisers: 'Run a tournament',
   contact: 'Contact us',
   legal: 'Legal notice',
   copyright: "WOMEN'S CUP association — All rights reserved — Made with ❤️ by",

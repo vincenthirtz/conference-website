@@ -59,7 +59,7 @@ const communityLinks = (t: FooterDict): FooterLink[] => [
   { label: t.installApp, href: '/app', Icon: AppIcon },
   { label: t.donate, href: '/don', Icon: DonationIcon },
   { label: t.support, href: '/support', Icon: SupportIcon },
-  { label: t.developers, href: '/developpeurs', Icon: CodeIcon },
+  { label: t.organisers, href: '/organisateurs', Icon: CodeIcon },
 ];
 
 const legalLinks = (t: FooterDict): FooterLink[] => [

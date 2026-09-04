@@ -79,6 +79,7 @@ import enPartenairesPage from './partenairesPage';
 import enLorePage from './lorePage';
 import enAboutPage from './aboutPage';
 import enInvitationPage from './invitationPage';
+import enOrganisateursPage from './organisateursPage';
 import enTeamCreate from './teamCreate';
 import enTeamAccess from './teamAccess';
 import enTeamEdit from './teamEdit';
@@ -243,6 +244,7 @@ const enDict = {
   lorePage: enLorePage,
   aboutPage: enAboutPage,
   invitationPage: enInvitationPage,
+  organisateursPage: enOrganisateursPage,
   teamCreate: enTeamCreate,
   teamAccess: enTeamAccess,
   teamEdit: enTeamEdit,

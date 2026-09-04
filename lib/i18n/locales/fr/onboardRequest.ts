@@ -66,4 +66,5 @@ export default ns('onboardRequest', {
   errorGeneric: 'Impossible de soumettre la demande pour le moment.',
   toastSuccess: 'Demande envoyée. Vérifiez vos mails pour confirmer.',
   errorNetwork: 'Erreur réseau ou serveur. Réessayez dans quelques instants.',
+  prefillPlan: 'Offre visée : {plan}.',
 });

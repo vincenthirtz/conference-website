@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
+import { PLAN_LABELS, type TenantPlan } from '@/utils/billing/planFeatures';
 import Link from 'next/link';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 
@@ -72,6 +73,30 @@ function OnboardRequestPage() {
 
   const [submit, setSubmit] = useState<SubmitState>({ kind: 'idle' });
   const submitInFlight = useRef(false);
+
+  // Pré-remplissage depuis la page des offres (`/organisateurs`) : le nom de
+  // l'organisation et l'offre visée voyagent en paramètres d'URL.
+  //
+  // L'offre n'a PAS de champ à elle : elle n'active rien toute seule (le
+  // paiement passe par un lien HelloAsso, après création de l'espace). Elle est
+  // donc écrite dans la description, là où la personne qui traite la demande la
+  // lira — plutôt que dans une colonne qui laisserait croire à un engagement.
+  const prefillDone = useRef(false);
+  useEffect(() => {
+    if (prefillDone.current || !router.isReady) return;
+    prefillDone.current = true;
+
+    const name = typeof router.query.name === 'string' ? router.query.name : '';
+    if (name.trim()) setOrgName(name.trim().slice(0, 100));
+
+    const plan = typeof router.query.plan === 'string' ? router.query.plan : '';
+    const label = PLAN_LABELS[plan as TenantPlan];
+    if (label) {
+      setDescription((current) =>
+        current ? current : format(t.prefillPlan, { plan: label })
+      );
+    }
+  }, [router.isReady, router.query.name, router.query.plan, t]);
 
   // Le user peut être signé in (email/password ou Discord OAuth) MAIS sans
   // Discord lié à son compte Supabase. On vérifie via /api/auth/discord-link.

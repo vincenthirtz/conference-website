@@ -24,7 +24,7 @@ export default ns('footer', {
   installApp: "Installer l'app",
   donate: 'Faire un don',
   support: 'Signalement / Support',
-  developers: 'API / Développeurs',
+  organisers: 'Organiser un tournoi',
   contact: 'Nous contacter',
   legal: 'Mentions légales',
   copyright:
