@@ -39,6 +39,7 @@ import {
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { canAccessTenant } from '@/utils/adminTenants';
+import { CGV_VERSION } from '@/utils/billing/cgv';
 import { logger } from '@/utils/logger';
 import {
   effectivePlan,
@@ -87,6 +88,18 @@ export type TenantOverview = {
    */
   limits: Array<{ key: string; used: number; max: number | null }>;
   createdAt: string;
+  /**
+   * Acceptation des CGV à l'ouverture de l'espace. `version: null` = jamais
+   * acceptée — espace ouvert par le staff, ou antérieur aux CGV. C'est un état
+   * qu'on AFFICHE plutôt que de le combler : antidater une acceptation vaudrait
+   * moins que de savoir qu'elle manque.
+   */
+  cgv: {
+    version: string | null;
+    acceptedAt: string | null;
+    /** La version acceptée est-elle celle en vigueur aujourd'hui ? */
+    current: boolean;
+  };
 };
 
 /** Compte les lignes d'un domaine pour un espace. `null` si la lecture échoue. */
@@ -178,7 +191,7 @@ async function handler(
   const { data: tenant, error: tErr } = await supabaseAdmin
     .from('tenants')
     .select(
-      'id, created_at, is_active, plan, plan_status, plan_expires_at, plan_is_trial'
+      'id, created_at, is_active, plan, plan_status, plan_expires_at, plan_is_trial, cgv_version, cgv_accepted_at'
     )
     .eq('id', id)
     .maybeSingle();
@@ -200,6 +213,8 @@ async function handler(
     plan_status: string | null;
     plan_expires_at: string | null;
     plan_is_trial: boolean | null;
+    cgv_version: string | null;
+    cgv_accepted_at: string | null;
   };
 
   const planState = {
@@ -304,6 +319,11 @@ async function handler(
       },
     ],
     createdAt: t.created_at,
+    cgv: {
+      version: t.cgv_version,
+      acceptedAt: t.cgv_accepted_at,
+      current: t.cgv_version === CGV_VERSION,
+    },
   };
 
   return res.status(200).json(payload);

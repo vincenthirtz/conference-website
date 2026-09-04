@@ -125,6 +125,10 @@ export default {
   overviewNeverUsed:
     'This space has never been used: no bot event, no match, no staff action, no API call since it was created {days} days ago.',
   overviewPlanLabel: 'Plan',
+  overviewCgvLabel: 'Terms of sale',
+  overviewCgvNone: 'Never accepted',
+  overviewCgvOk: 'Accepted ({version})',
+  overviewCgvStale: 'Version {version} — outdated',
   overviewPlanDowngraded: '→ applied: {plan}',
   overviewBotLabel: 'Discord bot',
   overviewBotOn: 'included',

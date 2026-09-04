@@ -33,6 +33,7 @@ import {
   setCookieUser,
   setAdminUserIdentities,
 } from './__helpers__/supabaseMock';
+import { CGV_VERSION } from '@/utils/billing/cgv';
 import handler from '../../pages/api/onboard/tenant-request';
 
 const USER_ID = '11111111-1111-1111-1111-111111111111';
@@ -71,6 +72,10 @@ function validBody(overrides: Record<string, unknown> = {}) {
     requested_email: 'op@example.com',
     description: 'We host community tournaments.',
     turnstile_token: 'cf-token-fake',
+    // Le consentement fait partie du corps NORMAL d'une demande : sans lui
+    // l'endpoint refuse, et c'est le sujet des tests dédiés plus bas.
+    cgv_version: CGV_VERSION,
+    cgv_accepted: true,
     ...overrides,
   };
 }
@@ -173,6 +178,41 @@ describe('POST /api/onboard/tenant-request', () => {
 
     // No verification email is sent anymore.
     expect(sendVerifyMock).not.toHaveBeenCalled();
+  });
+
+  it('sans acceptation des CGV → 400, aucune demande créée', async () => {
+    signIn();
+    // Ouvrir un espace, même sur l'essai gratuit, c'est entrer dans la relation
+    // que les conditions régissent. Attendre le premier paiement laisserait
+    // trente jours de service rendu sans qu'aucun texte n'ait été accepté.
+    const res = makeRes();
+    const body = validBody();
+    delete (body as Record<string, unknown>).cgv_accepted;
+    await handler(makeReq(body), res);
+    expect(res.statusCode).toBe(400);
+    expect(store.tenant_requests ?? []).toHaveLength(0);
+  });
+
+  it('version de CGV périmée → 409', async () => {
+    signIn();
+    const res = makeRes();
+    await handler(makeReq(validBody({ cgv_version: '1999-01-01' })), res);
+    expect(res.statusCode).toBe(409);
+    expect((res.body as any).code).toBe('CGV_VERSION_STALE');
+    expect(store.tenant_requests ?? []).toHaveLength(0);
+  });
+
+  it('la demande porte la version acceptée et sa date', async () => {
+    signIn();
+    // Le consentement doit VOYAGER : l'espace est créé plus tard par le
+    // rattachement du serveur Discord, une étape machine où plus personne ne
+    // peut accepter quoi que ce soit.
+    const res = makeRes();
+    await handler(makeReq(validBody()), res);
+    expect(res.statusCode).toBe(200);
+    const row = (store.tenant_requests ?? [])[0] as any;
+    expect(row.cgv_version).toBe(CGV_VERSION);
+    expect(typeof row.cgv_accepted_at).toBe('string');
   });
 
   it('409 si slug existe déjà côté tenants', async () => {

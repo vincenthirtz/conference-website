@@ -40,6 +40,9 @@ export default ns('developerRegisterPage', {
   alreadyExists: 'Un compte existe déjà avec cet email.',
   signinFailed:
     'Ton compte a bien été créé. Connecte-toi avec ton email et ton mot de passe.',
+  cgvBefore: 'J’ai lu et j’accepte les ',
+  cgvLink: 'conditions générales de vente',
+  cgvAfter: ' (version {version}).',
   linkLogin: 'Se connecter',
   linkBackToDocs: "Voir la documentation de l'API",
 });

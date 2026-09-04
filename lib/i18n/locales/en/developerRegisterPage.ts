@@ -39,6 +39,9 @@ export default {
   alreadyExists: 'An account already exists with this email.',
   signinFailed:
     'Your account was created successfully. Sign in with your email and password.',
+  cgvBefore: 'I have read and accept the ',
+  cgvLink: 'terms and conditions of sale',
+  cgvAfter: ' (version {version}).',
   linkLogin: 'Sign in',
   linkBackToDocs: 'View the API documentation',
 };

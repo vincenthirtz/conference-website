@@ -47,6 +47,9 @@ type TenantRequestRow = {
   requester_email: string;
   requested_slug: string;
   requested_name: string;
+  /** `null` pour une demande antérieure aux CGV : état légitime, pas un trou. */
+  cgv_version: string | null;
+  cgv_accepted_at: string | null;
 };
 
 async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
@@ -120,7 +123,7 @@ async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
     const { data: request, error: reqErr } = await supabaseAdmin!
       .from('tenant_requests')
       .select(
-        'id, requester_auth_user_id, requester_discord_user_id, requester_discord_display_name, requester_email, requested_slug, requested_name'
+        'id, requester_auth_user_id, requester_discord_user_id, requester_discord_display_name, requester_email, requested_slug, requested_name, cgv_version, cgv_accepted_at'
       )
       .eq('requester_discord_user_id', ownerDiscordId)
       .eq('status', 'pending_bot_invite')
@@ -310,6 +313,13 @@ async function autoClaimTenant(input: {
       name: request.requested_name,
       is_active: true,
       ...trial,
+      // Report du consentement donné sur le formulaire web. Cette étape-ci est
+      // machine : personne n'y accepte rien, on ne fait que transporter ce qui
+      // a été accepté. Une demande antérieure aux CGV laisse ces colonnes à
+      // `null`, et c'est le bon état — antidater vaudrait moins que l'aveu.
+      cgv_version: request.cgv_version ?? null,
+      cgv_accepted_at: request.cgv_accepted_at ?? null,
+      cgv_accepted_by: request.requester_auth_user_id ?? null,
     })
     .select('id')
     .single();

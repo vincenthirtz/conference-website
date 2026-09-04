@@ -57,6 +57,11 @@ export default ns('onboardRequest', {
   errorSlugInvalid: 'Slug invalide : {reason}',
   errorOrgRequired: "Le nom de l'organisation est requis.",
   errorDescTooLong: 'La description ne peut pas dépasser 1000 caractères.',
+  cgvBefore: 'J’ai lu et j’accepte les ',
+  cgvLink: 'conditions générales de vente',
+  cgvAfter: ' (version {version}).',
+  errorCgvRequired:
+    'Vous devez accepter les conditions générales de vente pour ouvrir un espace.',
   errorCaptcha: "Veuillez compléter le captcha avant d'envoyer.",
   errorSession: 'Session expirée — reconnectez-vous via Discord et réessayez.',
   errorRateLimit: 'Trop de tentatives. Réessayez dans quelques minutes.',

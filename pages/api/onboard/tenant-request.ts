@@ -16,6 +16,7 @@ import { getServerClient, supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit, getClientIp } from '@/utils/rateLimit';
 import { verifyTurnstileToken } from '@/utils/turnstile';
 import { onboardTenantRequestSchema } from '@/utils/onboard';
+import { CGV_VERSION } from '@/utils/billing/cgv';
 import { logger } from '@/utils/logger';
 
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
@@ -125,7 +126,19 @@ export default async function handler(
     requested_email,
     description,
     turnstile_token,
+    cgv_version,
   } = parsed.data;
+
+  // La version acceptée doit être celle en vigueur : un onglet ouvert depuis
+  // une modification accepterait un texte qui n'est plus le nôtre.
+  if (cgv_version !== CGV_VERSION) {
+    return res.status(409).json({
+      error:
+        'Les conditions générales de vente ont changé. Rechargez la page et relisez-les avant de continuer.',
+      code: 'CGV_VERSION_STALE',
+      currentVersion: CGV_VERSION,
+    });
+  }
 
   // ---------------------------------------------------------------------
   // 3) Cloudflare Turnstile verification.
@@ -167,6 +180,11 @@ export default async function handler(
       email_verified_at: new Date().toISOString(),
       ip_address: ip !== 'unknown' ? ip : null,
       user_agent: userAgent || null,
+      // Le consentement voyage avec la demande : l'espace sera créé plus tard
+      // par le rattachement du serveur Discord, une étape machine où plus
+      // personne ne peut accepter quoi que ce soit.
+      cgv_version: CGV_VERSION,
+      cgv_accepted_at: new Date().toISOString(),
     })
     .select('id')
     .single();

@@ -27,6 +27,7 @@ import {
   PLAN_PRICES_MONTHLY_EUR,
 } from '@/utils/billing/planFeatures';
 import { TRIAL_DAYS } from '@/utils/billing/trial';
+import { CGV_VERSION } from '@/utils/billing/cgv';
 import nsDeveloperRegisterPage from '@/lib/i18n/locales/fr/developerRegisterPage';
 
 type DevRegisterDict = typeof nsDeveloperRegisterPage.fr;
@@ -42,6 +43,7 @@ function DeveloperRegisterPage() {
   const turnstileRef = useRef<TurnstileInstance | null>(null);
 
   const [loading, setLoading] = useState(false);
+  const [cgvAccepted, setCgvAccepted] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   // On distingue le cas « email déjà pris » pour afficher un lien vers /login.
   const [alreadyExists, setAlreadyExists] = useState(false);
@@ -103,6 +105,8 @@ function DeveloperRegisterPage() {
           orgName: orgName.trim(),
           // Clé camelCase attendue par l'endpoint (PAS turnstile_token).
           turnstileToken: turnstileToken ?? 'dev-bypass',
+          cgvVersion: CGV_VERSION,
+          cgvAccepted: true,
         }),
       });
 
@@ -326,10 +330,39 @@ function DeveloperRegisterPage() {
                 </div>
               )}
 
+              {/* Acceptation des CGV, juste avant le bouton. Case vierge, et
+                  bouton bloqué tant qu'elle ne l'est pas : ouvrir l'espace
+                  déclenche l'essai, donc la relation commence ici. */}
+              <label className="flex gap-2.5 pt-2 text-xs leading-relaxed text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={cgvAccepted}
+                  onChange={(e) => setCgvAccepted(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 flex-shrink-0 accent-purple-500"
+                  data-test="dev-consent-cgv"
+                />
+                <span>
+                  {COPY.cgvBefore}
+                  <a
+                    href="/cgv"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-purple-300 underline"
+                  >
+                    {COPY.cgvLink}
+                  </a>
+                  {format(COPY.cgvAfter, { version: CGV_VERSION })}
+                </span>
+              </label>
+
               <div className="pt-2">
                 <button
                   type="submit"
-                  disabled={loading || (!turnstileToken && !turnstileMissing)}
+                  disabled={
+                    loading ||
+                    !cgvAccepted ||
+                    (!turnstileToken && !turnstileMissing)
+                  }
                   data-test="dev-register-submit"
                   className={`w-full rounded-xl py-2 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed ${
                     loading

@@ -78,6 +78,19 @@ export const tenantIdentityFields = {
 export const onboardTenantRequestSchema = z.object({
   ...tenantIdentityFields,
   turnstile_token: z.string().min(1, 'Captcha manquant.'),
+
+  // Acceptation des CGV à l'OUVERTURE de l'espace — distincte de celle qui
+  // précède chaque commande payante. Ouvrir un espace, même sur l'essai
+  // gratuit, c'est entrer dans la relation que ces conditions régissent ;
+  // attendre le premier paiement laisserait trente jours de service rendu sans
+  // qu'aucun texte n'ait été accepté.
+  //
+  // `literal(true)` : un `false` n'est pas une valeur à traiter plus loin,
+  // c'est une demande qui ne doit pas exister.
+  cgv_version: z.string().min(1, 'Version des CGV manquante.'),
+  cgv_accepted: z.literal(true, {
+    message: 'Vous devez accepter les conditions générales de vente.',
+  }),
 });
 
 export type OnboardTenantRequestInput = z.input<

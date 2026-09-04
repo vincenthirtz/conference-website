@@ -46,6 +46,11 @@ type Overview = {
   };
   limits: Array<{ key: string; used: number; max: number | null }>;
   createdAt: string;
+  cgv: {
+    version: string | null;
+    acceptedAt: string | null;
+    current: boolean;
+  };
 };
 
 /** Au-delà, la ligne passe à l'ambre : trente jours sans signe, c'est un signe. */
@@ -270,6 +275,19 @@ export default function TenantOverviewPanel({
                   data.plan.isTrial ? t.overviewTrialDays : t.overviewPlanDays,
                   { n: data.plan.daysRemaining }
                 )}
+          </Card>
+          {/* CGV : `null` s'affiche tel quel. Un espace ouvert par le staff n'a
+              accepté aucune condition, et le dire vaut mieux que de laisser
+              croire l'inverse — c'est la case à cocher avant de facturer. */}
+          <Card
+            label={t.overviewCgvLabel}
+            tone={data.cgv.version && data.cgv.current ? 'plain' : 'stale'}
+          >
+            {!data.cgv.version
+              ? t.overviewCgvNone
+              : data.cgv.current
+                ? format(t.overviewCgvOk, { version: data.cgv.version })
+                : format(t.overviewCgvStale, { version: data.cgv.version })}
           </Card>
           {(data.limits ?? []).map((l) => (
             <Card

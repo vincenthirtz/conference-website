@@ -33,6 +33,7 @@ import { verifyTurnstileToken } from '@/utils/turnstile';
 import { slugify } from '@/utils/teamImport';
 import { isReservedSlug } from '@/utils/onboard';
 import { buildTrialFields } from '@/utils/billing/trial';
+import { CGV_VERSION } from '@/utils/billing/cgv';
 import { logger } from '@/utils/logger';
 
 const registerSchema = z.object({
@@ -42,6 +43,13 @@ const registerSchema = z.object({
   orgName: z.string().trim().min(2).max(80),
   // supaAnonServer non utilisé ici — voir supabaseAdmin.auth.admin.createUser.
   turnstileToken: z.string().min(1, 'Captcha manquant.'),
+
+  // Acceptation des CGV à l'ouverture de l'espace. Ici le tenant est créé
+  // immédiatement : le consentement n'a pas à voyager, il s'inscrit dessus.
+  cgvVersion: z.string().min(1),
+  cgvAccepted: z.literal(true, {
+    message: 'Vous devez accepter les conditions générales de vente.',
+  }),
 });
 
 /**
@@ -112,7 +120,15 @@ export default async function handler(
     });
   }
 
-  const { password, orgName, turnstileToken } = parsed.data;
+  const { password, orgName, turnstileToken, cgvVersion } = parsed.data;
+  if (cgvVersion !== CGV_VERSION) {
+    return res.status(409).json({
+      error:
+        'Les conditions générales de vente ont changé. Rechargez la page et relisez-les avant de créer votre compte.',
+      code: 'CGV_VERSION_STALE',
+      currentVersion: CGV_VERSION,
+    });
+  }
   const email = normalizeEmail(parsed.data.email);
 
   // Turnstile (même utilitaire que tenant-request.ts).
@@ -266,6 +282,9 @@ export default async function handler(
         name: orgName,
         kind: 'developer',
         is_active: true,
+        cgv_version: CGV_VERSION,
+        cgv_accepted_at: new Date().toISOString(),
+        cgv_accepted_by: newUser.id,
         // Essai Régie de 30 jours. Sans lui, l'espace naissait sur le défaut de
         // la colonne — `discovery` — qui n'a PAS l'API : on livrait un tunnel
         // « self-service » au bout duquel chaque appel avec la clé fraîchement

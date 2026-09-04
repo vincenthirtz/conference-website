@@ -42,6 +42,7 @@ import {
 } from './__helpers__/supabaseMock';
 import { checkEmailDomainDns } from '@/utils/emailDns';
 
+import { CGV_VERSION } from '@/utils/billing/cgv';
 import registerHandler from '../../pages/api/developers/register';
 
 function makeReq(over: Partial<any> = {}): any {
@@ -70,6 +71,8 @@ const validBody = {
   password: 'motdepasse8',
   orgName: 'Acme Corp',
   turnstileToken: 'cf-token-fake',
+  cgvVersion: CGV_VERSION,
+  cgvAccepted: true,
 };
 
 beforeEach(() => {
@@ -200,6 +203,25 @@ describe('/api/developers/register', () => {
     // retomber. Un essai sans date ne finirait jamais.
     expect(typeof tenant.plan_expires_at).toBe('string');
     expect(Date.parse(tenant.plan_expires_at)).toBeGreaterThan(Date.now());
+  });
+
+  it('sans acceptation des CGV → 400, aucun espace créé', async () => {
+    const res = makeRes();
+    const { cgvAccepted: _drop, ...body } = validBody;
+    await registerHandler(makeReq({ body }), res);
+    expect(res.statusCode).toBe(400);
+    expect(store.tenants ?? []).toHaveLength(0);
+  });
+
+  it('l’espace porte la version de CGV acceptée', async () => {
+    const res = makeRes();
+    await registerHandler(makeReq({ body: validBody }), res);
+    expect(res.statusCode).toBe(200);
+    const tenant = (store.tenants ?? []).find(
+      (t: any) => t.kind === 'developer'
+    ) as any;
+    expect(tenant.cgv_version).toBe(CGV_VERSION);
+    expect(typeof tenant.cgv_accepted_at).toBe('string');
   });
 
   it('email déjà pris → 200 { alreadyExists:true } sans provisioning', async () => {

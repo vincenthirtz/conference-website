@@ -57,6 +57,11 @@ export default {
   errorSlugInvalid: 'Invalid slug: {reason}',
   errorOrgRequired: 'The organization name is required.',
   errorDescTooLong: 'The description cannot exceed 1000 characters.',
+  cgvBefore: 'I have read and accept the ',
+  cgvLink: 'terms and conditions of sale',
+  cgvAfter: ' (version {version}).',
+  errorCgvRequired:
+    'You must accept the terms and conditions of sale to open a workspace.',
   errorCaptcha: 'Please complete the captcha before sending.',
   errorSession: 'Session expired — sign in again via Discord and retry.',
   errorRateLimit: 'Too many attempts. Try again in a few minutes.',

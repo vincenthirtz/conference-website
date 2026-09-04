@@ -25,6 +25,7 @@ import DiscordSignInCta from '@/components/onboard/DiscordSignInCta';
 import { logger } from '@/utils/logger';
 import { useT, format } from '@/lib/i18n/useT';
 import nsOnboardRequest from '@/lib/i18n/locales/fr/onboardRequest';
+import { CGV_VERSION } from '@/utils/billing/cgv';
 
 type OnboardRequestDict = typeof nsOnboardRequest.fr;
 
@@ -71,6 +72,11 @@ function OnboardRequestPage() {
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileInstance | null>(null);
 
+  // Acceptation des CGV, vierge par défaut : ouvrir un espace, même sur
+  // l'essai gratuit, c'est entrer dans la relation que ces conditions
+  // régissent. Attendre le premier paiement laisserait trente jours de service
+  // rendu sans qu'aucun texte n'ait été accepté.
+  const [cgvAccepted, setCgvAccepted] = useState(false);
   const [submit, setSubmit] = useState<SubmitState>({ kind: 'idle' });
   const submitInFlight = useRef(false);
 
@@ -237,6 +243,10 @@ function OnboardRequestPage() {
         });
         return;
       }
+      if (!cgvAccepted) {
+        setSubmit({ kind: 'error', message: t.errorCgvRequired });
+        return;
+      }
 
       submitInFlight.current = true;
       setSubmit({ kind: 'loading' });
@@ -251,6 +261,8 @@ function OnboardRequestPage() {
             requested_email: email.trim().toLowerCase(),
             description: description.trim() || undefined,
             turnstile_token: turnstileToken ?? 'dev-bypass',
+            cgv_version: CGV_VERSION,
+            cgv_accepted: true,
           }),
         });
 
@@ -341,6 +353,7 @@ function OnboardRequestPage() {
       t,
       turnstileMissing,
       turnstileToken,
+      cgvAccepted,
     ]
   );
 
@@ -590,6 +603,32 @@ function OnboardRequestPage() {
                 {submit.message}
               </div>
             )}
+
+            {/* Acceptation des CGV, juste avant le bouton : le lecteur doit
+                l'avoir sous les yeux au moment de décider, pas trois écrans
+                plus haut. Case vierge — un consentement pré-coché n'en est
+                pas un. */}
+            <label className="flex gap-2.5 pt-2 text-xs leading-relaxed text-gray-300">
+              <input
+                type="checkbox"
+                checked={cgvAccepted}
+                onChange={(e) => setCgvAccepted(e.target.checked)}
+                className="mt-0.5 h-4 w-4 flex-shrink-0 accent-purple-500"
+                data-testid="onboard-consent-cgv"
+              />
+              <span>
+                {t.cgvBefore}
+                <a
+                  href="/cgv"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-purple-300 underline"
+                >
+                  {t.cgvLink}
+                </a>
+                {format(t.cgvAfter, { version: CGV_VERSION })}
+              </span>
+            </label>
 
             <div className="pt-2">
               <button

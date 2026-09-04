@@ -127,6 +127,10 @@ export default adminNs('adminTenantDetail', {
   overviewNeverUsed:
     "Cet espace n'a jamais servi : aucun événement bot, aucun match, aucune action staff, aucun appel API depuis sa création il y a {days} jours.",
   overviewPlanLabel: 'Plan',
+  overviewCgvLabel: 'CGV',
+  overviewCgvNone: 'Jamais acceptées',
+  overviewCgvOk: 'Acceptées ({version})',
+  overviewCgvStale: 'Version {version} — obsolète',
   overviewPlanDowngraded: '→ appliqué : {plan}',
   overviewBotLabel: 'Bot Discord',
   overviewBotOn: 'inclus',
