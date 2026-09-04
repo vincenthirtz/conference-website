@@ -91,7 +91,7 @@ test.describe('Home — participer en 3 étapes', () => {
     await expect(stepLinks).toHaveCount(3);
     await expect(section.locator('a[href="/team/create"]').first()).toBeVisible();
     await expect(section.locator('a[href="/inscription-2026"]')).toBeVisible();
-    await expect(section.locator('a[href="/live"]')).toBeVisible();
+    await expect(section.locator('a[href="/ambassadors"]')).toBeVisible();
   });
 });
 

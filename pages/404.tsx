@@ -10,7 +10,7 @@ type Error404Dict = typeof nsError404.fr;
 const suggestions = (t: Error404Dict) => [
   { label: t.sHome, href: '/', emoji: '🏠' },
   { label: t.sTournament, href: '/tournoi', emoji: '🏆' },
-  { label: t.sAmbassadors, href: '/live', emoji: '🎥' },
+  { label: t.sAmbassadors, href: '/ambassadors', emoji: '🎥' },
   { label: t.sNews, href: '/actualites', emoji: '📰' },
   { label: t.sSitemap, href: '/plan-du-site', emoji: '🗺️' },
   { label: t.sContact, href: '/contact', emoji: '✉️' },

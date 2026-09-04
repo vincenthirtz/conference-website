@@ -25,7 +25,7 @@ const publicRoutes = [
   { path: '/partenaires', priority: '0.7', changefreq: 'monthly' },
   { path: '/partenaires/demande', priority: '0.5', changefreq: 'monthly' },
   { path: '/hero-picker', priority: '0.6', changefreq: 'monthly' },
-  { path: '/live', priority: '0.7', changefreq: 'daily' },
+  { path: '/ambassadors', priority: '0.7', changefreq: 'daily' },
   { path: '/contact', priority: '0.6', changefreq: 'monthly' },
   { path: '/support', priority: '0.5', changefreq: 'monthly' },
   { path: '/don', priority: '0.6', changefreq: 'monthly' },

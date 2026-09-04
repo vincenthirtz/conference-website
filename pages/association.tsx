@@ -46,7 +46,7 @@ type CastMember = {
 
 /**
  * Ambassadeur·rice : une chaîne Twitch active de `twitch_channels`. Même source que
- * la page /live et que l'annonce Discord des passages en live — un seul endroit
+ * la page /ambassadors et que l'annonce Discord des passages en live — un seul endroit
  * à tenir à jour (/admin/twitch-channels).
  */
 type Ambassador = {

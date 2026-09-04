@@ -5,7 +5,7 @@
 // prefix). Renvoie projection safe identique a /api/events/[runIdOrSlug]/timeline
 // (pas de broadcast_message, pas de caster_checklist).
 //
-// Utilise par /live et autres surfaces publiques pour afficher un encart
+// Utilise par /ambassadors et autres surfaces publiques pour afficher un encart
 // "EN DIRECT MAINTENANT" sans connaitre l ID du run a l avance.
 
 import type { NextApiRequest, NextApiResponse } from 'next';

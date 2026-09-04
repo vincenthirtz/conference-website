@@ -1,7 +1,7 @@
 /**
  * Tests E2E — Public live banner (Run-of-show Lot 4)
  *
- * Couvre l'encart "EN DIRECT MAINTENANT" affiche sur /live :
+ * Couvre l'encart "EN DIRECT MAINTENANT" affiche sur /ambassadors :
  *  - Affichage quand un event_run est live (avec ou sans segment courant)
  *  - Absence quand aucun run live
  *  - L'API publique /api/events/current renvoie la projection safe
@@ -55,7 +55,7 @@ test.describe('Public live banner', () => {
     expect(Array.isArray(body.segments)).toBe(true);
   });
 
-  test('/live affiche le banner quand un event_run est live', async ({
+  test('/ambassadors affiche le banner quand un event_run est live', async ({
     page,
   }) => {
     if (!supabaseTestClient) return;
@@ -87,7 +87,7 @@ test.describe('Public live banner', () => {
       status: 'upcoming',
     });
 
-    await page.goto('/live');
+    await page.goto('/ambassadors');
     await page.waitForLoadState('networkidle');
 
     // Banner appears with the run name visible.
@@ -97,7 +97,7 @@ test.describe('Public live banner', () => {
     await expect(banner).toContainText(/EN DIRECT MAINTENANT/i);
   });
 
-  test('/live n affiche pas le banner sans run live', async ({ page }) => {
+  test('/ambassadors n affiche pas le banner sans run live', async ({ page }) => {
     if (!supabaseTestClient) return;
 
     // Ensure nothing live remains for our slug.
@@ -111,7 +111,7 @@ test.describe('Public live banner', () => {
       .like('slug', 'e2e-banner-%')
       .eq('status', 'live');
 
-    await page.goto('/live');
+    await page.goto('/ambassadors');
     await page.waitForLoadState('networkidle');
 
     // The banner is conditionally rendered; we accept that other tests in

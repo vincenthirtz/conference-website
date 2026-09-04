@@ -67,6 +67,21 @@ const nextConfig = {
         destination: '/admin/communications',
         permanent: true,
       },
+      /**
+       * `/live` s'appelle `/ambassadors`. L'URL disait « le direct » alors que
+       * la page présente les ambassadeur·rices — tous ses libellés le disaient
+       * déjà (`t.ambassadors`, `sAmbassadors`, `linkAmbassadors`), seule
+       * l'adresse ne suivait pas.
+       *
+       * Redirection permanente et non suppression : l'ancienne adresse est dans
+       * le sitemap depuis l'origine, donc indexée, partagée et mise en favori.
+       * La retirer sèchement transformerait chaque lien existant en 404.
+       */
+      {
+        source: '/live',
+        destination: '/ambassadors',
+        permanent: true,
+      },
     ];
   },
   async headers() {
