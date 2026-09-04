@@ -149,9 +149,12 @@ export default async function handler(
           plan: correlation.plan,
           amountCents: event.data.amount,
           checkoutIntentId: correlation.checkoutIntentId,
+          // La période payée vient de la corrélation (metadata, ou mapping en
+          // secours). Sans elle, un paiement mensuel prolongerait d'un an.
+          term: correlation.term,
         });
         logger.info(
-          `[helloasso/webhook] tenant plan payment ${event.data.id}: ${result.status} tenant=${correlation.tenantId} plan=${correlation.plan} via=${correlation.source}`
+          `[helloasso/webhook] tenant plan payment ${event.data.id}: ${result.status} tenant=${correlation.tenantId} plan=${correlation.plan} term=${correlation.term} via=${correlation.source}`
         );
       }
     } catch (err) {

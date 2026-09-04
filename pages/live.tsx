@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { GetStaticProps } from 'next';
 import dynamic from 'next/dynamic';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -74,6 +75,7 @@ const getBonuses = (t: LiveDict): Engagement[] => [
   { title: t.bonus3Title, description: t.bonus3Desc },
   { title: t.bonus4Title, description: t.bonus4Desc },
   { title: t.bonus5Title, description: t.bonus5Desc },
+  { title: t.bonus6Title, description: t.bonus6Desc },
 ];
 
 type Props = {
@@ -199,6 +201,32 @@ function LivePage({ channels, loadError }: Props) {
             items={engagements}
             accent="border-[var(--color-green)]/30 bg-[var(--color-green)]/10 text-[var(--color-green-light)]"
           />
+        </section>
+
+        {/* Formule Découverte offerte. Elle a un PRIX affiché sur
+            /organisateurs : un bonus chiffré se dit plus fort qu'une ligne de
+            liste, et se relie à la page où le tarif se lit. */}
+        <section>
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--color-yellow)]/40 bg-[var(--color-yellow)]/10 p-6">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-yellow)]">
+                {t.tenantOfferBadge}
+              </p>
+              <p className="mt-2 text-lg font-semibold text-white">
+                {t.tenantOfferTitle}
+              </p>
+              <p className="mt-1 max-w-xl text-sm text-gray-300">
+                {t.tenantOfferBody}
+              </p>
+            </div>
+            <Link
+              href="/organisateurs"
+              className="rounded-lg border border-[var(--color-yellow)]/50 px-4 py-2 text-sm font-semibold text-[var(--color-yellow)] transition hover:border-[var(--color-yellow)]"
+              data-test="ambassador-tenant-offer"
+            >
+              {t.tenantOfferCta}
+            </Link>
+          </div>
         </section>
 
         {/* ── Tes bonus ───────────────────────────────────── */}

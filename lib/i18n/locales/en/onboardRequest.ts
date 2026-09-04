@@ -67,4 +67,6 @@ export default {
   toastSuccess: 'Request sent. Check your emails to confirm.',
   errorNetwork: 'Network or server error. Try again in a moment.',
   prefillPlan: 'Plan of interest: {plan}.',
+  prefillTermMonth: ' Monthly billing.',
+  prefillTermYear: ' Yearly billing.',
 };

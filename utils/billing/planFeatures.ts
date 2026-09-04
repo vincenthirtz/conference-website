@@ -242,8 +242,12 @@ export const PLAN_LABELS: Record<TenantPlan, string> = {
  * (don ciblé tenant+plan) ; l'endpoint de génération de lien convertit en
  * centimes (`* 100`) pour l'API checkout-intents.
  *
- * - `foundation` / `discovery` : gratuit (0). La Fondation est offerte par
- *   mission ; Découverte est le palier gratuit à marque partagée.
+ * - `foundation` : offerte par mission (0), c'est la Coupe elle-même.
+ * - `discovery` : 100 €/an, soit 10 €/mois. Ce palier a DEUX rôles qu'il faut
+ *   distinguer : c'est une OFFRE d'entrée facturée, et c'est aussi l'état vers
+ *   lequel `effectivePlan()` fait retomber un plan payant qui n'est plus
+ *   honoré. Le second n'encaisse rien — un espace qui cesse de payer n'est pas
+ *   facturé, il perd simplement ce que son plan lui donnait en plus.
  * - `regie` : 290 €/an. `circuit` : 790 €/an.
  * - `editor` : `null` = sur-devis (pas de prix catalogue → pas de lien
  *   self-service ; un accord commercial fixe le montant hors barème).
@@ -252,18 +256,64 @@ export const PLAN_LABELS: Record<TenantPlan, string> = {
  */
 export const PLAN_PRICES_EUR: Record<TenantPlan, number | null> = {
   foundation: 0,
-  discovery: 0,
+  // 10 €/mois × 10 mois facturés : la règle des deux mois offerts s'applique
+  // ici comme ailleurs, plutôt qu'un prix annuel posé à côté du mensuel.
+  discovery: 100,
   regie: 290,
   circuit: 790,
   editor: null,
 };
 
 /**
+ * Périodicité d'un paiement de plan.
+ *
+ * L'année reste la référence du barème ; le mois existe parce qu'une petite
+ * association ne sort pas 290 € d'un coup en janvier, et qu'un tarif annuel
+ * seul écarte exactement les organisateurs qu'on veut servir.
+ */
+export type PlanTerm = 'month' | 'year';
+
+/**
+ * Ce que « payer à l'année » fait gagner, exprimé en mois payés.
+ *
+ * 10 mois payés pour 12 : deux mois offerts. Le chiffre est ici, seul, parce
+ * qu'un prix mensuel recopié à la main finirait par contredire l'annuel — et
+ * c'est le genre de contradiction qu'on découvre sur une facture.
+ */
+export const YEARLY_MONTHS_BILLED = 10;
+
+/**
+ * Prix MENSUEL public, dérivé de l'annuel. Arrondi à l'euro : un « 29,17 € »
+ * sur une grille tarifaire ne dit rien de plus qu'un « 29 € », et coûte une
+ * ligne de calcul mental au lecteur.
+ */
+export const PLAN_PRICES_MONTHLY_EUR: Record<TenantPlan, number | null> =
+  Object.fromEntries(
+    (Object.keys(PLAN_PRICES_EUR) as TenantPlan[]).map((plan) => {
+      const yearly = PLAN_PRICES_EUR[plan];
+      if (yearly === null) return [plan, null];
+      if (yearly === 0) return [plan, 0];
+      return [plan, Math.round(yearly / YEARLY_MONTHS_BILLED)];
+    })
+  ) as Record<TenantPlan, number | null>;
+
+/** Le prix d'un plan pour une périodicité donnée. `null` = pas de barème. */
+export function planPrice(plan: TenantPlan, term: PlanTerm): number | null {
+  return term === 'month'
+    ? PLAN_PRICES_MONTHLY_EUR[plan]
+    : PLAN_PRICES_EUR[plan];
+}
+
+/**
  * Plans qu'un owner peut activer/renouveler via un lien de paiement HelloAsso
  * ciblé : ceux qui ont un prix catalogue strictement positif. `editor`
  * (sur-devis) et les paliers gratuits en sont exclus.
  */
-export type PurchasablePlan = 'regie' | 'circuit';
+// `discovery` a rejoint les plans facturés (10 €/mois) : il est donc payable en
+// self-service comme les autres. Il reste par ailleurs l'état vers lequel
+// `effectivePlan()` fait retomber un plan non honoré — cet état-là n'encaisse
+// rien, il retire seulement ce que le plan supérieur donnait.
+export type PurchasablePlan = 'discovery' | 'regie' | 'circuit';
 
 /**
  * Un plan est-il « achetable » en self-service (prix catalogue > 0) ?

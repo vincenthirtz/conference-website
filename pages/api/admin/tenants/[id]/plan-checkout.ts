@@ -35,7 +35,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { logger } from '@/utils/logger';
 import { createCheckoutIntent } from '@/utils/helloasso';
 import {
-  PLAN_PRICES_EUR,
+  planPrice,
   PLAN_LABELS,
   isPurchasablePlan,
 } from '@/utils/billing/planFeatures';
@@ -45,7 +45,10 @@ const bodySchema = z.object({
   // Seuls les plans à barème catalogue (> 0) sont générables en self-service.
   plan: z
     .string()
-    .refine(isPurchasablePlan, 'plan doit être "regie" ou "circuit".'),
+    .refine(isPurchasablePlan, 'plan doit être un plan au barème catalogue.'),
+  // Absent = année : c'est la périodicité de référence du barème, et celle de
+  // tous les liens émis jusqu'ici.
+  term: z.enum(['month', 'year']).optional(),
 });
 
 async function handler(
@@ -101,8 +104,9 @@ async function handler(
       .json({ error: formatZodError(parsed.error), code: 'INVALID_BODY' });
   }
   const { plan } = parsed.data;
+  const term = parsed.data.term ?? 'year';
 
-  const priceEur = PLAN_PRICES_EUR[plan];
+  const priceEur = planPrice(plan, term);
   if (typeof priceEur !== 'number' || priceEur <= 0) {
     // Garde-fou : isPurchasablePlan garantit déjà un prix > 0, mais on refuse
     // explicitement tout plan sans barème (ex. editor = sur-devis).
@@ -150,8 +154,12 @@ async function handler(
       totalAmount: amountCents,
       returnUrl: `${origin}/don?status=success`,
       errorUrl: `${origin}/don?status=error`,
-      itemName: `Régie solidaire — plan ${PLAN_LABELS[plan]}`,
-      metadata: buildPlanCheckoutMetadata(id, plan),
+      // Le libellé dit la période : c'est ce que le payeur lira sur son reçu,
+      // et « plan Régie » sans durée laisse croire à un achat définitif.
+      itemName: `Régie solidaire — plan ${PLAN_LABELS[plan]} (${
+        term === 'month' ? '1 mois' : '1 an'
+      })`,
+      metadata: buildPlanCheckoutMetadata(id, plan, term),
     });
   } catch (err) {
     logger.error('[admin/tenants/plan-checkout] checkout create error', err);
@@ -168,6 +176,9 @@ async function handler(
       tenant_id: id,
       plan,
       amount_expected: amountCents,
+      // Filet si la metadata ne revient pas dans la notification : c'est ici
+      // qu'on retrouvera de combien prolonger.
+      term,
       created_by: ctx.staff.id,
     });
   if (mapErr) {
@@ -188,6 +199,7 @@ async function handler(
       action: 'generate_plan_checkout',
       plan,
       amount_eur: priceEur,
+      term,
       checkout_intent_id: checkout.id,
       tenant_slug: tenant.slug,
     },
@@ -198,6 +210,7 @@ async function handler(
     checkoutIntentId: checkout.id,
     plan,
     amountEur: priceEur,
+    term,
   });
 }
 

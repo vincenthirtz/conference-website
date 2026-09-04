@@ -92,11 +92,26 @@ function OnboardRequestPage() {
     const plan = typeof router.query.plan === 'string' ? router.query.plan : '';
     const label = PLAN_LABELS[plan as TenantPlan];
     if (label) {
+      // La périodicité compte autant que le plan : « Régie » ne dit pas si la
+      // personne compte payer 29 € par mois ou 290 € par an, et c'est
+      // exactement ce qu'on veut savoir en traitant la demande.
+      const term =
+        router.query.term === 'month'
+          ? t.prefillTermMonth
+          : router.query.term === 'year'
+            ? t.prefillTermYear
+            : '';
       setDescription((current) =>
-        current ? current : format(t.prefillPlan, { plan: label })
+        current ? current : format(t.prefillPlan, { plan: label }) + term
       );
     }
-  }, [router.isReady, router.query.name, router.query.plan, t]);
+  }, [
+    router.isReady,
+    router.query.name,
+    router.query.plan,
+    router.query.term,
+    t,
+  ]);
 
   // Le user peut être signé in (email/password ou Discord OAuth) MAIS sans
   // Discord lié à son compte Supabase. On vérifie via /api/auth/discord-link.

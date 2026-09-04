@@ -72,4 +72,12 @@ export default ns('livePage', {
     'Une fois sur le Discord, ouvre un ticket dans la catégorie « Devenir ambassadeur·rice ». Le programme est inclusif : ambassadrices, ambassadeurs',
   ctaNoteEt: 'et',
   ctaNoteAfter: 'personnes non-binaires sont les bienvenu·es.',
+  bonus6Title: 'Formule Découverte offerte',
+  bonus6Desc:
+    "Si tu organises tes propres tournois, la formule Découverte de la plateforme t'est offerte — aussi longtemps que dure ton engagement d'ambassadeur·rice.",
+  tenantOfferBadge: 'Nouveau',
+  tenantOfferTitle: 'La formule Découverte t’est offerte',
+  tenantOfferBody:
+    "Tu organises tes propres tournois ? Notre plateforme — inscriptions, brackets, check-in, bot Discord — t'est ouverte sans frais tant que tu es ambassadeur·rice. Dis-le-nous à la création de ton espace.",
+  tenantOfferCta: 'Voir la plateforme',
 });

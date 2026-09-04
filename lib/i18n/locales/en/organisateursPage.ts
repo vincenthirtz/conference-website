@@ -11,7 +11,7 @@ export default {
   heroCta: 'Create my space',
   heroSecondaryCta: 'See the plans',
   heroFinePrint:
-    'Free to start, no card required. The Discord bot comes with the paid plans.',
+    'A month of trial to start, no card required. A Cup ambassador? The Discovery plan is on us.',
 
   whatTitle: 'What you no longer do by hand',
   whatIntro:
@@ -37,7 +37,7 @@ export default {
 
   offersTitle: 'The plans',
   offersIntro:
-    'A free tier to try without commitment, then yearly plans. What you read here is exactly what the code enforces.',
+    'Monthly so you can decide alone, yearly for two months on us. What you read here is exactly what the code enforces.',
   offerHighlighted: 'Most common',
   offerDiscoveryPitch: 'To explore the platform and run a first tournament.',
   offerRegiePitch: 'For the association or circuit running all year.',
@@ -96,4 +96,14 @@ export default {
   formSubmit: 'Continue',
   formFinePrint:
     'The next step asks for a Discord sign-in — that is how the bot will join your server. No card is requested: the space is created for free, payment comes later, from your own space.',
+  termSwitchLabel: 'Billing period',
+  termMonthly: 'Monthly',
+  termYearly: 'Yearly',
+  termYearlySaving: 'Pay yearly and {months} months are on us.',
+  pricePerMonth: '€{amount} / month',
+  priceYearlyEquivalent: 'that is €{amount} a year',
+  ambassadorBannerTitle: 'A Cup ambassador?',
+  ambassadorBannerBody:
+    'The Discovery plan is on us, for as long as your commitment lasts. Tell us when you create your space.',
+  ambassadorBannerCta: 'See the programme',
 };

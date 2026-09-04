@@ -67,4 +67,6 @@ export default ns('onboardRequest', {
   toastSuccess: 'Demande envoyée. Vérifiez vos mails pour confirmer.',
   errorNetwork: 'Erreur réseau ou serveur. Réessayez dans quelques instants.',
   prefillPlan: 'Offre visée : {plan}.',
+  prefillTermMonth: ' Paiement au mois.',
+  prefillTermYear: " Paiement à l'année.",
 });

@@ -26,7 +26,7 @@
 import { z } from 'zod';
 import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
-import { PLAN_PRICES_EUR, type PurchasablePlan } from './planFeatures';
+import { planPrice, type PlanTerm, type PurchasablePlan } from './planFeatures';
 import type { HelloAssoWebhookEvent } from '../helloasso';
 
 /** Metadata qu'on attache au checkout-intent et qu'on relit dans le webhook. */
@@ -40,12 +40,17 @@ export const PLAN_METADATA_KIND = 'tenant_plan' as const;
 const planMetadataSchema = z.object({
   kind: z.literal(PLAN_METADATA_KIND),
   tenant_id: z.string().uuid(),
-  plan: z.enum(['regie', 'circuit']),
+  plan: z.enum(['discovery', 'regie', 'circuit']),
+  // Absent des liens émis avant l'ouverture du paiement mensuel : ils
+  // valaient tous une année, et c'est ce que dit le défaut.
+  term: z.enum(['month', 'year']).optional(),
 });
 
 export type PlanCorrelation = {
   tenantId: string;
   plan: PurchasablePlan;
+  /** Périodicité payée. `year` par défaut — cf. le schéma de metadata. */
+  term: PlanTerm;
   /** D'où vient la corrélation (observabilité / debug). */
   source: 'metadata' | 'checkout_mapping';
   /** Id du checkout-intent si connu (metadata fallback / mapping). */
@@ -55,9 +60,10 @@ export type PlanCorrelation = {
 /** Construit l'objet metadata à attacher au checkout-intent (source unique). */
 export function buildPlanCheckoutMetadata(
   tenantId: string,
-  plan: PurchasablePlan
+  plan: PurchasablePlan,
+  term: PlanTerm = 'year'
 ): Record<string, unknown> {
-  return { kind: PLAN_METADATA_KIND, tenant_id: tenantId, plan };
+  return { kind: PLAN_METADATA_KIND, tenant_id: tenantId, plan, term };
 }
 
 /** Lit un objet metadata candidat, quel que soit son emplacement. */
@@ -96,6 +102,9 @@ export async function resolvePlanCorrelation(
     return {
       tenantId: parsed.data.tenant_id,
       plan: parsed.data.plan,
+      // Un lien émis avant l'ouverture du mensuel ne porte pas de périodicité :
+      // il valait une année, et c'est ce qu'il doit continuer de valoir.
+      term: parsed.data.term ?? 'year',
       source: 'metadata',
       checkoutIntentId: readCheckoutIntentId(event),
     };
@@ -107,19 +116,25 @@ export async function resolvePlanCorrelation(
 
   const { data, error } = await supabaseAdmin
     .from('tenant_plan_checkouts')
-    .select('tenant_id, plan')
+    .select('tenant_id, plan, term')
     .eq('checkout_intent_id', checkoutIntentId)
     .maybeSingle();
   if (error || !data) return null;
 
   const plan = data.plan as string;
-  if (plan !== 'regie' && plan !== 'circuit') return null;
+  if (plan !== 'discovery' && plan !== 'regie' && plan !== 'circuit') {
+    return null;
+  }
   const tenantId = data.tenant_id as string;
   if (typeof tenantId !== 'string' || tenantId.length === 0) return null;
+  // Colonne posée avec un défaut `year` : une ligne antérieure au mensuel dit
+  // donc « année », ce qui est exact.
+  const term: PlanTerm = data.term === 'month' ? 'month' : 'year';
 
   return {
     tenantId,
     plan,
+    term,
     source: 'checkout_mapping',
     checkoutIntentId,
   };
@@ -129,6 +144,20 @@ export async function resolvePlanCorrelation(
 export function addOneYearIso(fromMs: number): string {
   const d = new Date(fromMs);
   d.setUTCFullYear(d.getUTCFullYear() + 1);
+  return d.toISOString();
+}
+
+/**
+ * Prolonge d'une période payée.
+ *
+ * `setUTCMonth` gère seul les fins de mois : un paiement du 31 janvier reporte
+ * au 3 mars, pas au 31 février. C'est le comportement de tous les abonnements,
+ * et le corriger « à la main » produirait des dates fausses une fois par an.
+ */
+export function addTermIso(fromMs: number, term: PlanTerm): string {
+  if (term === 'year') return addOneYearIso(fromMs);
+  const d = new Date(fromMs);
+  d.setUTCMonth(d.getUTCMonth() + 1);
   return d.toISOString();
 }
 
@@ -160,8 +189,11 @@ type TenantPlanRow = {
  *   sinon on n'active pas (`insufficient_amount`) — on ne fige rien dans le
  *   ledger pour qu'un paiement complémentaire puisse toujours activer.
  * - Extension : si le tenant est déjà `active` et non expiré, la nouvelle date
- *   d'expiration = `max(now, expiry actuel) + 1 an` (payer avant expiration
- *   prolonge). Sinon base = `now` (réactivation).
+ *   d'expiration = `max(now, expiry actuel) + la période payée` (payer avant
+ *   expiration prolonge). Sinon base = `now` (réactivation).
+ * - La période vient du paiement, pas d'une constante : un mois payé prolonge
+ *   d'un mois. Elle valait un an en dur, ce qui aurait offert onze mois à
+ *   chaque paiement mensuel.
  * - `plan_started_at` = COALESCE(existant, now).
  */
 export async function applyTenantPlanPayment(opts: {
@@ -171,10 +203,14 @@ export async function applyTenantPlanPayment(opts: {
   /** Montant payé, EN CENTIMES. */
   amountCents: number;
   checkoutIntentId: number | null;
+  /** Période payée. Absente = année : c'est ce que valaient tous les liens
+   *  émis avant l'ouverture du paiement mensuel. */
+  term?: PlanTerm;
   nowMs?: number;
 }): Promise<ApplyResult> {
   const { helloassoPaymentId, tenantId, plan, amountCents, checkoutIntentId } =
     opts;
+  const term: PlanTerm = opts.term ?? 'year';
   const nowMs = opts.nowMs ?? Date.now();
 
   // ── Idempotence : ce paiement a-t-il déjà été appliqué ? ──────────────────
@@ -188,7 +224,7 @@ export async function applyTenantPlanPayment(opts: {
   }
 
   // ── Contrôle du montant (barème = source unique) ──────────────────────────
-  const priceEur = PLAN_PRICES_EUR[plan];
+  const priceEur = planPrice(plan, term);
   if (typeof priceEur === 'number' && priceEur > 0) {
     const requiredCents = priceEur * 100;
     if (amountCents < requiredCents) {
@@ -202,7 +238,9 @@ export async function applyTenantPlanPayment(opts: {
   // ── État courant du tenant (pour extension vs réactivation) ───────────────
   const { data: tenant, error: tenantErr } = await supabaseAdmin
     .from('tenants')
-    .select('plan, plan_status, plan_started_at, plan_expires_at, plan_is_trial')
+    .select(
+      'plan, plan_status, plan_started_at, plan_expires_at, plan_is_trial'
+    )
     .eq('id', tenantId)
     .maybeSingle();
   if (tenantErr) {
@@ -229,7 +267,7 @@ export async function applyTenantPlanPayment(opts: {
     if (Number.isFinite(expMs) && expMs > nowMs) baseMs = expMs;
   }
   const nowIso = new Date(nowMs).toISOString();
-  const planExpiresAt = addOneYearIso(baseMs);
+  const planExpiresAt = addTermIso(baseMs, term);
   const planStartedAt = t.plan_started_at ?? nowIso;
 
   // Paiement frais (non-rejeu : l'idempotence a déjà court-circuité les rejeux

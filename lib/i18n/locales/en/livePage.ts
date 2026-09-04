@@ -72,4 +72,12 @@ export default {
     'Once on Discord, open a ticket in the "Become an ambassador" category. The programme is inclusive: ambassadors of all genders',
   ctaNoteEt: 'are',
   ctaNoteAfter: 'welcome.',
+  bonus6Title: 'Discovery plan on us',
+  bonus6Desc:
+    'If you run your own tournaments, the platform’s Discovery plan is on us — for as long as your ambassador commitment lasts.',
+  tenantOfferBadge: 'New',
+  tenantOfferTitle: 'The Discovery plan is on us',
+  tenantOfferBody:
+    'Running your own tournaments? Our platform — sign-ups, brackets, check-in, Discord bot — is open to you at no cost while you are an ambassador. Tell us when you create your space.',
+  tenantOfferCta: 'See the platform',
 };

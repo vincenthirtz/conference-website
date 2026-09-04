@@ -26,6 +26,9 @@ import {
   PLAN_LABELS,
   PLAN_PRICES_EUR,
   getPlanFeatures,
+  planPrice,
+  YEARLY_MONTHS_BILLED,
+  type PlanTerm,
   type TenantPlan,
 } from '@/utils/billing/planFeatures';
 import nsOrganisateursPage from '@/lib/i18n/locales/fr/organisateursPage';
@@ -70,11 +73,13 @@ function offerLines(plan: TenantPlan, t: Dict): string[] {
   return lines;
 }
 
-function priceLabel(plan: TenantPlan, t: Dict): string {
-  const price = PLAN_PRICES_EUR[plan];
+function priceLabel(plan: TenantPlan, term: PlanTerm, t: Dict): string {
+  const price = planPrice(plan, term);
   if (price === null) return t.priceOnRequest;
   if (price === 0) return t.priceFree;
-  return format(t.pricePerYear, { amount: String(price) });
+  return term === 'month'
+    ? format(t.pricePerMonth, { amount: String(price) })
+    : format(t.pricePerYear, { amount: String(price) });
 }
 
 function OrganisateursPage() {
@@ -92,9 +97,14 @@ function OrganisateursPage() {
   const [orgName, setOrgName] = useState('');
   const [plan, setPlan] = useState<TenantPlan>('regie');
 
+  // Mensuel par défaut : c'est le montant qu'on peut décider seul, sans passer
+  // par une délibération de bureau. L'annuel se choisit ensuite, pour ce qu'il
+  // fait gagner.
+  const [term, setTerm] = useState<PlanTerm>('month');
+
   const startSubscription = (e: React.FormEvent) => {
     e.preventDefault();
-    const params = new URLSearchParams({ plan });
+    const params = new URLSearchParams({ plan, term });
     if (orgName.trim()) params.set('name', orgName.trim());
     void router.push(`/onboard/request?${params.toString()}`);
   };
@@ -175,7 +185,37 @@ function OrganisateursPage() {
           {t.offersIntro}
         </p>
 
-        <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 flex justify-center">
+          <div
+            className="inline-flex rounded-xl border border-white/15 bg-white/5 p-1"
+            role="group"
+            aria-label={t.termSwitchLabel}
+          >
+            {(['month', 'year'] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setTerm(value)}
+                aria-pressed={term === value}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                  term === value
+                    ? 'bg-purple-500 text-white'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+                data-test={`term-${value}`}
+              >
+                {value === 'month' ? t.termMonthly : t.termYearly}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="mt-3 text-center text-xs text-gray-400">
+          {format(t.termYearlySaving, {
+            months: String(12 - YEARLY_MONTHS_BILLED),
+          })}
+        </p>
+
+        <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           {OFFERS.map((plan) => {
             const highlighted = plan === HIGHLIGHTED;
             const purchasable =
@@ -209,8 +249,15 @@ function OrganisateursPage() {
                         : t.offerEditorPitch}
                 </p>
                 <p className="mt-4 text-2xl font-bold text-white">
-                  {priceLabel(plan, t)}
+                  {priceLabel(plan, term, t)}
                 </p>
+                {term === 'month' && PLAN_PRICES_EUR[plan] ? (
+                  <p className="mt-1 text-xs text-gray-400">
+                    {format(t.priceYearlyEquivalent, {
+                      amount: String(PLAN_PRICES_EUR[plan]),
+                    })}
+                  </p>
+                ) : null}
 
                 <ul className="mt-5 flex-1 space-y-2 text-sm text-gray-200">
                   {offerLines(plan, t).map((line) => (
@@ -227,7 +274,7 @@ function OrganisateursPage() {
                   href={
                     plan === 'editor'
                       ? '/contact'
-                      : `/onboard/request?plan=${plan}`
+                      : `/onboard/request?plan=${plan}&term=${term}`
                   }
                   className={`mt-6 rounded-lg px-4 py-2.5 text-center text-sm font-semibold transition ${
                     highlighted
@@ -241,6 +288,27 @@ function OrganisateursPage() {
               </div>
             );
           })}
+        </div>
+
+        {/* Ambassadeur·rices : la Découverte leur est offerte. Le dire ICI,
+            sous les prix, plutôt que sur la seule page du programme — c'est
+            devant le tarif qu'on se demande s'il existe une exception. */}
+        <div className="mx-auto mt-8 flex max-w-3xl flex-wrap items-center justify-between gap-4 rounded-2xl border border-amber-400/40 bg-amber-400/[0.08] p-5">
+          <div>
+            <p className="font-semibold text-amber-100">
+              {t.ambassadorBannerTitle}
+            </p>
+            <p className="mt-1 text-sm text-amber-100/80">
+              {t.ambassadorBannerBody}
+            </p>
+          </div>
+          <Link
+            href="/live"
+            className="rounded-lg border border-amber-300/50 px-4 py-2 text-sm font-semibold text-amber-100 transition hover:border-amber-200"
+            data-test="ambassador-banner-cta"
+          >
+            {t.ambassadorBannerCta}
+          </Link>
         </div>
 
         <p className="mx-auto mt-8 max-w-3xl text-center text-sm text-gray-400">
@@ -328,7 +396,7 @@ function OrganisateursPage() {
               >
                 {OFFERS.map((p) => (
                   <option key={p} value={p}>
-                    {PLAN_LABELS[p]} — {priceLabel(p, t)}
+                    {PLAN_LABELS[p]} — {priceLabel(p, term, t)}
                   </option>
                 ))}
               </select>

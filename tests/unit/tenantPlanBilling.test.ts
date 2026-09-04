@@ -44,6 +44,8 @@ import { invalidateStaffCache } from '../../utils/staff';
 
 import {
   PLAN_PRICES_EUR,
+  PLAN_PRICES_MONTHLY_EUR,
+  YEARLY_MONTHS_BILLED,
   isPurchasablePlan,
   type TenantPlan,
 } from '../../utils/billing/planFeatures';
@@ -51,6 +53,7 @@ import {
   resolvePlanCorrelation,
   applyTenantPlanPayment,
   addOneYearIso,
+  addTermIso,
   buildPlanCheckoutMetadata,
 } from '../../utils/billing/tenantPlanBilling';
 import type { HelloAssoWebhookEvent } from '../../utils/helloasso';
@@ -101,11 +104,46 @@ afterEach(() => {
 
 describe('PLAN_PRICES_EUR + isPurchasablePlan', () => {
   it('barème cohérent avec les plans', () => {
+    // `foundation` reste à 0 : c'est la Coupe elle-même, offerte par mission.
+    // `discovery` est devenue une offre facturée (10 €/mois) tout en restant
+    // l'état vers lequel un plan non honoré retombe — cet état-là n'encaisse
+    // rien.
     expect(PLAN_PRICES_EUR.foundation).toBe(0);
-    expect(PLAN_PRICES_EUR.discovery).toBe(0);
+    expect(PLAN_PRICES_EUR.discovery).toBe(100);
     expect(PLAN_PRICES_EUR.regie).toBe(290);
     expect(PLAN_PRICES_EUR.circuit).toBe(790);
     expect(PLAN_PRICES_EUR.editor).toBeNull();
+  });
+
+  it('le mensuel est dérivé de l’annuel, jamais recopié', () => {
+    // Deux mois offerts à l'année : 10 mois facturés sur 12. Un prix mensuel
+    // saisi à la main finirait par contredire l'annuel, et c'est le genre de
+    // contradiction qu'on découvre sur une facture.
+    expect(PLAN_PRICES_MONTHLY_EUR.discovery).toBe(10);
+    expect(PLAN_PRICES_MONTHLY_EUR.regie).toBe(29);
+    expect(PLAN_PRICES_MONTHLY_EUR.circuit).toBe(79);
+    expect(PLAN_PRICES_MONTHLY_EUR.editor).toBeNull();
+
+    for (const plan of ['discovery', 'regie', 'circuit'] as const) {
+      const yearly = PLAN_PRICES_EUR[plan] as number;
+      expect(PLAN_PRICES_MONTHLY_EUR[plan]).toBe(
+        Math.round(yearly / YEARLY_MONTHS_BILLED)
+      );
+      // Payer au mois coûte plus cher sur douze mois : c'est ce qui rend
+      // l'annuel intéressant, et ça doit rester vrai après tout changement.
+      expect((PLAN_PRICES_MONTHLY_EUR[plan] as number) * 12).toBeGreaterThan(
+        yearly
+      );
+    }
+  });
+
+  it('addTermIso prolonge de la période payée', () => {
+    const base = Date.parse('2026-01-31T12:00:00.000Z');
+    expect(addTermIso(base, 'year')).toBe('2027-01-31T12:00:00.000Z');
+    // Fin de mois : un paiement du 31 janvier reporte au 3 mars. C'est le
+    // comportement de tous les abonnements ; le « corriger » produirait des
+    // dates fausses une fois par an.
+    expect(addTermIso(base, 'month').slice(0, 10)).toBe('2026-03-03');
   });
 
   it('une entrée par plan (pas de plan orphelin)', () => {

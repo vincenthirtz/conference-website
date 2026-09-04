@@ -17,7 +17,7 @@ export default ns('organisateursPage', {
   heroCta: 'Créer mon espace',
   heroSecondaryCta: 'Voir les offres',
   heroFinePrint:
-    'Gratuit pour commencer, sans carte bancaire. Le bot Discord arrive avec les offres payantes.',
+    "Un mois d'essai pour commencer, sans carte bancaire. Ambassadeur·rice de la Coupe ? La formule Découverte vous est offerte.",
 
   whatTitle: 'Ce que vous n’aurez plus à faire à la main',
   whatIntro:
@@ -43,7 +43,7 @@ export default ns('organisateursPage', {
 
   offersTitle: 'Les offres',
   offersIntro:
-    'Un palier gratuit pour essayer sans engagement, puis des offres annuelles. Ce que vous lisez ici est exactement ce que le code applique.',
+    "Au mois pour décider seul, à l'année pour deux mois offerts. Ce que vous lisez ici est exactement ce que le code applique.",
   offerHighlighted: 'Le plus courant',
   offerDiscoveryPitch:
     'Pour découvrir la plateforme et monter un premier tournoi.',
@@ -103,4 +103,14 @@ export default ns('organisateursPage', {
   formSubmit: 'Continuer',
   formFinePrint:
     "L'étape suivante demande une connexion Discord — c'est par là que le bot rejoindra votre serveur. Aucune carte bancaire n'est demandée : l'espace se crée gratuitement, le paiement vient après, depuis votre espace.",
+  termSwitchLabel: 'Périodicité',
+  termMonthly: 'Au mois',
+  termYearly: "À l'année",
+  termYearlySaving: "À l'année, {months} mois sont offerts.",
+  pricePerMonth: '{amount} € / mois',
+  priceYearlyEquivalent: "soit {amount} € à l'année",
+  ambassadorBannerTitle: 'Ambassadeur·rice de la Coupe ?',
+  ambassadorBannerBody:
+    'La formule Découverte vous est offerte, aussi longtemps que dure votre engagement. Dites-le-nous à la création de votre espace.',
+  ambassadorBannerCta: 'Voir le programme',
 });
