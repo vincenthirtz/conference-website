@@ -12,10 +12,10 @@ export default {
   heroBadge: 'Terms of sale',
   heroTitle: 'General terms and conditions of sale',
   heroSubtitle:
-    'These terms govern subscriptions to the organiser workspace offers sold by the Women’s Cup association. They cover neither tournament participation nor free use of the site.',
+    'These terms govern the opening of an organiser workspace with the Women’s Cup association and subscriptions to its offers. They cover neither tournament participation nor simply browsing the site.',
   versionLabel: 'Version in force',
   versionNote:
-    'The version you accepted when ordering is recorded with its date: that is the one that binds you, even if this text changes afterwards.',
+    'The version you accepted — when opening your workspace and before each payment — is recorded with its date: that is the one that binds you, even if this text changes afterwards.',
   backToOffers: 'See the offers',
   contactUs: 'Contact us',
 
@@ -23,9 +23,9 @@ export default {
   a1p1:
     'These terms govern the sale of organiser workspace offers (“the Service”) by the Women’s Cup association (“the Association”) to any legal entity or individual who subscribes (“the Customer”).',
   a1p2:
-    'They apply to every order placed from the Customer’s administration area. They apply neither to participation in the competitions run by the Association nor to browsing the site, both of which are free.',
+    'They apply from the opening of a workspace — including during the free trial and on the free tier, where nothing is owed — and then to every order placed from the Customer’s administration area. They apply neither to participation in the competitions run by the Association nor to browsing the site, both of which are free.',
   a1p3:
-    'Placing an order implies unreserved acceptance of these terms, expressed before payment.',
+    'Acceptance is collected twice, for two distinct things: at the opening of the workspace it makes these terms binding on the relationship; before each payment it forms the sale. Neither is presumed — both are ticked, and recorded with their date and the version accepted.',
 
   a2Title: 'Article 2 — Identity of the seller',
   a2p1:
@@ -95,7 +95,7 @@ export default {
 
   a9Title: 'Article 9 — Right of withdrawal',
   a9p1:
-    'A consumer Customer, as well as a professional employing no more than five people and subscribing outside their main line of business, has fourteen days from the conclusion of the contract to withdraw, without justification and at no cost.',
+    'A consumer Customer, as well as a professional employing no more than five people and subscribing outside their main line of business, has fourteen days from the conclusion of the PAID ORDER to withdraw, without justification and at no cost. Opening a workspace and the free trial, which call for no payment, do not start that period: there would be nothing to refund.',
   a9p2:
     'As the Service is digital content supplied on no tangible medium and performed immediately, that right lapses upon full performance, on the double condition that the Customer expressly requested that immediate performance AND acknowledged thereby losing the right of withdrawal. That is what the second tick box at ordering is for.',
   a9p3:

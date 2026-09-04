@@ -21,10 +21,10 @@ export default ns('cgvPage', {
   heroBadge: 'Conditions générales de vente',
   heroTitle: 'Conditions générales de vente',
   heroSubtitle:
-    "Elles régissent la souscription aux offres d'espace organisateur proposées par l'association Women's Cup. Elles ne concernent ni la participation aux tournois, ni l'usage gratuit du site.",
+    "Elles régissent l'ouverture d'un espace organisateur chez l'association Women's Cup et la souscription à ses offres. Elles ne concernent ni la participation aux tournois, ni la simple consultation du site.",
   versionLabel: 'Version en vigueur',
   versionNote:
-    'La version acceptée lors de votre commande est enregistrée avec sa date : c’est elle qui vous engage, même si ce texte évolue ensuite.',
+    "La version acceptée — à l'ouverture de votre espace comme avant chaque paiement — est enregistrée avec sa date : c’est elle qui vous engage, même si ce texte évolue ensuite.",
   backToOffers: 'Voir les offres',
   contactUs: 'Nous écrire',
 
@@ -32,9 +32,9 @@ export default ns('cgvPage', {
   a1p1:
     "Les présentes conditions régissent la vente des offres d'espace organisateur (« le Service ») par l'association Women's Cup (« l'Association ») à toute personne morale ou physique qui souscrit (« le Client »).",
   a1p2:
-    "Elles s'appliquent à toute commande passée depuis l'espace d'administration du Client. Elles ne s'appliquent ni à la participation aux compétitions organisées par l'Association, ni à la consultation du site, l'une et l'autre gratuites.",
+    "Elles s'appliquent dès l'ouverture d'un espace — y compris pendant l'essai gratuit et sur le palier gratuit, où aucune somme n'est due — puis à chaque commande passée depuis l'espace d'administration du Client. Elles ne s'appliquent ni à la participation aux compétitions organisées par l'Association, ni à la consultation du site, l'une et l'autre gratuites.",
   a1p3:
-    'Toute commande implique l’acceptation sans réserve des présentes, exprimée avant le paiement.',
+    "L'acceptation est recueillie deux fois, et pour deux choses distinctes : à l'ouverture de l'espace, elle rend les présentes opposables à la relation ; avant chaque paiement, elle forme la vente. Ni l'une ni l'autre n'est présumée — elles se cochent, et sont enregistrées avec leur date et la version acceptée.",
 
   a2Title: 'Article 2 — Identité du vendeur',
   a2p1:
@@ -105,7 +105,7 @@ export default ns('cgvPage', {
 
   a9Title: 'Article 9 — Droit de rétractation',
   a9p1:
-    "Le Client consommateur, ainsi que le professionnel employant cinq salariés au plus et souscrivant en dehors de son activité principale, dispose d'un délai de quatorze jours à compter de la conclusion du contrat pour se rétracter sans avoir à se justifier ni à supporter de frais.",
+    "Le Client consommateur, ainsi que le professionnel employant cinq salariés au plus et souscrivant en dehors de son activité principale, dispose d'un délai de quatorze jours à compter de la conclusion de la COMMANDE PAYANTE pour se rétracter sans avoir à se justifier ni à supporter de frais. L'ouverture d'un espace et l'essai gratuit, qui n'appellent aucun paiement, n'ouvrent pas ce délai : il n'y aurait rien à rembourser.",
   a9p2:
     "Le Service étant un contenu numérique fourni sans support matériel et exécuté immédiatement, ce droit s'éteint dès l'exécution complète, à la double condition que le Client ait expressément demandé cette exécution immédiate ET reconnu qu'il perdrait de ce fait son droit de rétractation. C'est l'objet de la seconde case cochée lors de la commande.",
   a9p3:
