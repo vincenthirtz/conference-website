@@ -26,6 +26,7 @@ export default {
   organisers: 'Run a tournament',
   contact: 'Contact us',
   legal: 'Legal notice',
+  terms: 'Terms of sale',
   copyright: "WOMEN'S CUP association — All rights reserved — Made with ❤️ by",
   leaderboard: 'Player rankings',
   palmares: 'Hall of fame',

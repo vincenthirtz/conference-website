@@ -61,6 +61,7 @@ import nsHomeEvents from './homeEvents';
 import nsHomeNews from './homeNews';
 import nsHomeSponsors from './homeSponsors';
 import nsPressSection from './pressSection';
+import nsCgvPage from './cgvPage';
 import nsLivePage from './livePage';
 import nsLiveTwitchSection from './liveTwitchSection';
 import nsLiveEventBanner from './liveEventBanner';
@@ -226,6 +227,7 @@ export const frDict = {
   homeNews: nsHomeNews.fr,
   homeSponsors: nsHomeSponsors.fr,
   pressSection: nsPressSection.fr,
+  cgvPage: nsCgvPage.fr,
   livePage: nsLivePage.fr,
   liveTwitchSection: nsLiveTwitchSection.fr,
   liveEventBanner: nsLiveEventBanner.fr,

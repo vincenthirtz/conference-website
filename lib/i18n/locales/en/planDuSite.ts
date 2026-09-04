@@ -50,6 +50,7 @@ export default {
   section4Desc: 'Key documents and references for the tournament.',
   linkRules: 'Rules',
   linkLegal: 'Legal notice',
+  linkTerms: 'Terms and conditions of sale',
   section5Title: 'Map & resources',
   section5Desc: 'Site map and links for search engines.',
   linkSitemap: 'Site map',

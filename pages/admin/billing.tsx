@@ -21,6 +21,8 @@ import {
   YEARLY_MONTHS_BILLED,
 } from '@/utils/billing/planFeatures';
 
+import PlanOrderPanel from '@/components/admin/billing/PlanOrderPanel';
+import { CGV_VERSION } from '@/utils/billing/cgv';
 import { logger } from '../../utils/logger';
 import nsAdminBilling from '@/lib/i18n/locales/admin-fr/adminBilling';
 
@@ -191,8 +193,44 @@ function AdminBillingPage({ staff }: Props) {
     if (data && !termTouched) setTerm(data.planTerm);
   }, [data, termTouched]);
 
+  /**
+   * Le « double clic » de l'article 1127-2 du code civil.
+   *
+   * Premier clic : le bouton d'une offre n'achète rien, il OUVRE le
+   * récapitulatif — offre, périodicité, montant total, durée ouverte — avec de
+   * quoi revenir en arrière. Second clic : le bouton portant la mention légale,
+   * qui n'existe qu'une fois les deux consentements donnés.
+   *
+   * Les deux cases sont séparées à dessein. L'acceptation des CGV forme le
+   * contrat ; la renonciation ne vaut que si elle est demandée pour elle-même.
+   * Une case unique « j'accepte tout » ferait perdre l'exception et laisserait
+   * courir le droit de rétractation de quatorze jours.
+   */
+  const [orderPlan, setOrderPlan] = useState<PurchasablePlan | null>(null);
+  const [cgvAccepted, setCgvAccepted] = useState(false);
+  const [waiverAccepted, setWaiverAccepted] = useState(false);
+
+  /** Les deux consentements sont-ils donnés ? Rien ne part sans eux. */
+  const ordering = cgvAccepted && waiverAccepted;
+
+  const openOrder = (plan: PurchasablePlan) => {
+    if (!isOwner) return;
+    // Cases VIERGES à chaque ouverture : un consentement pré-coché n'en est pas
+    // un, et un consentement hérité de la commande précédente non plus.
+    setCgvAccepted(false);
+    setWaiverAccepted(false);
+    setOrderPlan(plan);
+  };
+
+  const closeOrder = () => {
+    setOrderPlan(null);
+    setCgvAccepted(false);
+    setWaiverAccepted(false);
+  };
+
   const handleCheckout = async (plan: PurchasablePlan) => {
     if (!isOwner || !tenantId) return;
+    if (!cgvAccepted || !waiverAccepted) return;
     setCheckoutPlan(plan);
     try {
       const resp = await mutateJson<CheckoutResponse>(
@@ -200,9 +238,22 @@ function AdminBillingPage({ staff }: Props) {
         // La périodicité PART D'ICI. Sans elle, l'endpoint retombait sur son
         // défaut `year` : le bouton « souscrire » sous un prix mensuel générait
         // un lien de paiement annuel — 290 € demandés pour 29 € affichés.
-        { method: 'POST', body: JSON.stringify({ plan, term }) }
+        //
+        // Les deux consentements partent avec, et le serveur les exige : le
+        // contrôle côté navigateur empêche la maladresse, pas le contournement.
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            plan,
+            term,
+            cgvVersion: CGV_VERSION,
+            cgvAccepted: true,
+            immediateExecutionWaiver: true,
+          }),
+        }
       );
       addToast(t.redirecting, 'info');
+      closeOrder();
       // Ouvre HelloAsso dans un nouvel onglet — le webhook activera le plan.
       window.open(resp.redirectUrl, '_blank', 'noopener');
     } catch (err) {
@@ -622,10 +673,12 @@ function AdminBillingPage({ staff }: Props) {
                           </div>
 
                           <div className="mt-6">
+                            {/* PREMIER clic : il n'achète rien, il ouvre le
+                                récapitulatif. */}
                             <button
                               type="button"
-                              onClick={() => handleCheckout(item.plan)}
-                              disabled={!isOwner || busy}
+                              onClick={() => openOrder(item.plan)}
+                              disabled={!isOwner || busy || ordering}
                               title={!isOwner ? t.ownerOnlyNote : undefined}
                               className="w-full px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-semibold text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
                               data-testid={`billing-checkout-${item.plan}`}
@@ -633,6 +686,27 @@ function AdminBillingPage({ staff }: Props) {
                               {busy ? t.redirecting : ctaLabel(item.plan)}
                             </button>
                           </div>
+
+                          {orderPlan === item.plan && (
+                            <PlanOrderPanel
+                              plan={item.plan}
+                              label={item.label}
+                              term={term}
+                              priceEur={
+                                term === 'month'
+                                  ? item.monthlyPriceEur
+                                  : item.priceEur
+                              }
+                              busy={busy}
+                              cgvAccepted={cgvAccepted}
+                              waiverAccepted={waiverAccepted}
+                              onCgvChange={setCgvAccepted}
+                              onWaiverChange={setWaiverAccepted}
+                              onSubmit={() => handleCheckout(item.plan)}
+                              onCancel={closeOrder}
+                              t={t}
+                            />
+                          )}
                         </div>
                       );
                     })}

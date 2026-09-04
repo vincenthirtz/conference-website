@@ -53,6 +53,7 @@ export default ns('planDuSite', {
   section4Desc: 'Documents et références clés pour le tournoi.',
   linkRules: 'Règlement',
   linkLegal: 'Mentions légales',
+  linkTerms: 'Conditions générales de vente',
   section5Title: 'Plan & ressources',
   section5Desc: 'Plan du site et liens pour les moteurs de recherche.',
   linkSitemap: 'Plan du site',

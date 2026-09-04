@@ -64,6 +64,7 @@ const getSiteSections = (t: PlanDict): SiteSection[] => [
     links: [
       { label: t.linkRules, href: '/rules' },
       { label: t.linkLegal, href: '/mentions-legales' },
+      { label: t.linkTerms, href: '/cgv' },
     ],
   },
   {

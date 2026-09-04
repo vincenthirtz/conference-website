@@ -32,6 +32,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { canAccessTenant } from '@/utils/adminTenants';
 import { formatZodError } from '@/utils/validation';
 import { logStaffAction } from '@/utils/staffLogs';
+import { CGV_VERSION } from '@/utils/billing/cgv';
 import { logger } from '@/utils/logger';
 import { createCheckoutIntent } from '@/utils/helloasso';
 import {
@@ -49,6 +50,22 @@ const bodySchema = z.object({
   // Absent = année : c'est la périodicité de référence du barème, et celle de
   // tous les liens émis jusqu'ici.
   term: z.enum(['month', 'year']).optional(),
+
+  // ── Le double consentement, exigé AVANT tout lien de paiement ─────────────
+  //
+  // Deux cases distinctes, et non une seule. L'acceptation des CGV forme le
+  // contrat (art. 1127-1 c. civ.). La demande d'exécution immédiate assortie
+  // de la renonciation est ce qui, et seulement ce qui, éteint le droit de
+  // rétractation de quatorze jours sur un contenu numérique sans support
+  // matériel (art. L221-28 13° c. conso.). Les fondre ferait perdre
+  // l'exception — le droit de rétractation subsisterait intégralement.
+  //
+  // `literal(true)` plutôt que `boolean` : un `false` n'est pas une valeur
+  // acceptable qu'on traiterait plus loin, c'est une commande qui ne doit pas
+  // exister.
+  cgvVersion: z.string().min(1),
+  cgvAccepted: z.literal(true),
+  immediateExecutionWaiver: z.literal(true),
 });
 
 async function handler(
@@ -103,8 +120,21 @@ async function handler(
       .status(400)
       .json({ error: formatZodError(parsed.error), code: 'INVALID_BODY' });
   }
-  const { plan } = parsed.data;
+  const { plan, cgvVersion } = parsed.data;
   const term = parsed.data.term ?? 'year';
+
+  // La version acceptée doit être celle en vigueur. Un client dont l'onglet
+  // traîne depuis une modification des CGV accepterait un texte qui n'est plus
+  // le nôtre : on le renvoie relire plutôt que d'enregistrer un consentement
+  // portant sur autre chose que ce qui s'applique.
+  if (cgvVersion !== CGV_VERSION) {
+    return res.status(409).json({
+      error:
+        'Les conditions générales de vente ont changé. Rechargez la page et relisez-les avant de commander.',
+      code: 'CGV_VERSION_STALE',
+      currentVersion: CGV_VERSION,
+    });
+  }
 
   const priceEur = planPrice(plan, term);
   if (typeof priceEur !== 'number' || priceEur <= 0) {
@@ -148,6 +178,36 @@ async function handler(
   const origin = `${proto}://${host}`;
   const amountCents = priceEur * 100;
 
+  // ── La preuve AVANT le lien de paiement ──────────────────────────────────
+  //
+  // L'ordre compte : le consentement précède la commande, donc il s'écrit
+  // avant. Et il s'écrit de façon BLOQUANTE, contrairement à la ligne de
+  // mapping `tenant_plan_checkouts` plus bas qui, elle, se contente d'un
+  // avertissement — une acceptation qu'on ne sait pas prouver ne vaut rien, et
+  // c'est précisément le jour d'un litige qu'on s'en aperçoit.
+  const { data: acceptance, error: accErr } = await supabaseAdmin
+    .from('plan_cgv_acceptances')
+    .insert({
+      tenant_id: id,
+      staff_id: ctx.staff.id,
+      cgv_version: CGV_VERSION,
+      plan,
+      term,
+      amount_cents: amountCents,
+      cgv_accepted: true,
+      immediate_execution_waiver: true,
+    })
+    .select('id')
+    .single();
+  if (accErr || !acceptance) {
+    logger.error('[admin/tenants/plan-checkout] cgv acceptance insert', accErr);
+    return res.status(500).json({
+      error:
+        "Impossible d'enregistrer votre acceptation des conditions de vente. Aucune commande n'a été passée.",
+      code: 'CGV_NOT_RECORDED',
+    });
+  }
+
   let checkout: { id: number; redirectUrl: string };
   try {
     checkout = await createCheckoutIntent({
@@ -166,6 +226,20 @@ async function handler(
     return res.status(502).json({
       error: 'Impossible de créer le lien de paiement. Réessayez plus tard.',
     });
+  }
+
+  // Rattache la commande à sa preuve d'acceptation. Best-effort : l'acceptation
+  // est déjà enregistrée et horodatée, ce lien ne fait que rendre le
+  // rapprochement immédiat le jour où on le cherche.
+  const { error: linkErr } = await supabaseAdmin
+    .from('plan_cgv_acceptances')
+    .update({ checkout_intent_id: checkout.id })
+    .eq('id', acceptance.id);
+  if (linkErr) {
+    logger.warn(
+      '[admin/tenants/plan-checkout] cgv acceptance link failed',
+      linkErr
+    );
   }
 
   // Mapping fallback + audit : checkout_intent_id → tenant/plan.

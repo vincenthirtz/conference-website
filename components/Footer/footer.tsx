@@ -69,6 +69,11 @@ const legalLinks = (t: FooterDict): FooterLink[] => [
     href: '/mentions-legales',
     Icon: LegalShieldIcon,
   },
+  // Les CGV doivent être atteignables depuis n'importe quelle page, pas
+  // seulement depuis le tunnel de commande : c'est la condition pour qu'un
+  // client puisse les lire AVANT de décider, et pour qu'elles restent
+  // consultables après.
+  { label: t.terms, href: '/cgv', Icon: LegalShieldIcon },
 ];
 
 // Icône par réseau. Les URL, elles, viennent de `config/socials.ts` : c'est la

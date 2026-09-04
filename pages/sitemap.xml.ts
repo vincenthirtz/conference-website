@@ -39,6 +39,7 @@ const publicRoutes = [
   { path: '/palmares', priority: '0.7', changefreq: 'weekly' },
   { path: '/leagues', priority: '0.7', changefreq: 'weekly' },
   { path: '/mentions-legales', priority: '0.3', changefreq: 'yearly' },
+  { path: '/cgv', priority: '0.3', changefreq: 'yearly' },
   { path: '/plan-du-site', priority: '0.3', changefreq: 'monthly' },
 ];
 

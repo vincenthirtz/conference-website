@@ -65,6 +65,7 @@ import enHomeEvents from './homeEvents';
 import enHomeNews from './homeNews';
 import enHomeSponsors from './homeSponsors';
 import enPressSection from './pressSection';
+import enCgvPage from './cgvPage';
 import enLivePage from './livePage';
 import enLiveTwitchSection from './liveTwitchSection';
 import enLiveEventBanner from './liveEventBanner';
@@ -230,6 +231,7 @@ const enDict = {
   homeNews: enHomeNews,
   homeSponsors: enHomeSponsors,
   pressSection: enPressSection,
+  cgvPage: enCgvPage,
   livePage: enLivePage,
   liveTwitchSection: enLiveTwitchSection,
   liveEventBanner: enLiveEventBanner,

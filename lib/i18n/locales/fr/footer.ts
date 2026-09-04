@@ -27,6 +27,7 @@ export default ns('footer', {
   organisers: 'Organiser un tournoi',
   contact: 'Nous contacter',
   legal: 'Mentions légales',
+  terms: 'Conditions de vente',
   copyright:
     "Association WOMEN'S CUP — Tous droits réservés — Fait avec ❤️ par",
 });

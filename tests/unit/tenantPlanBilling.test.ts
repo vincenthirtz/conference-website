@@ -57,6 +57,7 @@ import {
   addTermIso,
   buildPlanCheckoutMetadata,
 } from '../../utils/billing/tenantPlanBilling';
+import { CGV_VERSION } from '../../utils/billing/cgv';
 import type { HelloAssoWebhookEvent } from '../../utils/helloasso';
 
 import webhookHandler from '../../pages/api/helloasso/webhook';
@@ -601,7 +602,14 @@ function adminReq(over: Partial<any> = {}): any {
     headers: { host: 'h', authorization: 'Bearer t-1' },
     cookies: { staff_active_tenant_id: TENANT },
     query: { id: TENANT },
-    body: { plan: 'regie' },
+    // Le double consentement fait partie du corps NORMAL d'une commande : sans
+    // lui l'endpoint refuse, et c'est le sujet des tests dédiés plus bas.
+    body: {
+      plan: 'regie',
+      cgvVersion: CGV_VERSION,
+      cgvAccepted: true,
+      immediateExecutionWaiver: true,
+    },
     socket: { remoteAddress: '127.0.0.1' },
     ...over,
   };
@@ -664,6 +672,82 @@ describe('POST /api/admin/tenants/[id]/plan-checkout', () => {
     const res = makeRes();
     await planCheckoutHandler(adminReq(), res);
     expect(res.statusCode).toBe(404);
+  });
+
+  it('sans acceptation des CGV → 400, aucun lien de paiement', async () => {
+    // Le contrôle côté navigateur empêche la maladresse ; celui-ci empêche la
+    // commande. Un lien de paiement émis sans consentement enregistré serait
+    // inopposable — et on ne s'en apercevrait qu'au litige.
+    makeStaff('owner');
+    invalidateStaffCache();
+    const res = makeRes();
+    await planCheckoutHandler(
+      adminReq({
+        body: {
+          plan: 'regie',
+          cgvVersion: CGV_VERSION,
+          immediateExecutionWaiver: true,
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect(createCheckoutIntent).not.toHaveBeenCalled();
+  });
+
+  it('sans renonciation au droit de rétractation → 400', async () => {
+    // Deuxième case, distincte : elle seule éteint le délai de quatorze jours
+    // sur un contenu numérique. La fondre dans l'acceptation des CGV ferait
+    // perdre l'exception.
+    makeStaff('owner');
+    invalidateStaffCache();
+    const res = makeRes();
+    await planCheckoutHandler(
+      adminReq({
+        body: { plan: 'regie', cgvVersion: CGV_VERSION, cgvAccepted: true },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect(createCheckoutIntent).not.toHaveBeenCalled();
+  });
+
+  it('version de CGV périmée → 409, aucun lien de paiement', async () => {
+    // Un onglet resté ouvert depuis une modification du texte accepterait des
+    // conditions qui ne sont plus les nôtres.
+    makeStaff('owner');
+    invalidateStaffCache();
+    const res = makeRes();
+    await planCheckoutHandler(
+      adminReq({
+        body: {
+          plan: 'regie',
+          cgvVersion: '1999-01-01',
+          cgvAccepted: true,
+          immediateExecutionWaiver: true,
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(409);
+    expect((res.body as any).code).toBe('CGV_VERSION_STALE');
+    expect(createCheckoutIntent).not.toHaveBeenCalled();
+  });
+
+  it('la commande enregistre les DEUX consentements, avec la version', async () => {
+    makeStaff('owner');
+    invalidateStaffCache();
+    const res = makeRes();
+    await planCheckoutHandler(adminReq(), res);
+    expect(res.statusCode).toBe(200);
+
+    const acc = (store.plan_cgv_acceptances ?? [])[0] as any;
+    expect(acc).toBeTruthy();
+    expect(acc.cgv_version).toBe(CGV_VERSION);
+    expect(acc.cgv_accepted).toBe(true);
+    expect(acc.immediate_execution_waiver).toBe(true);
+    expect(acc.plan).toBe('regie');
+    expect(acc.amount_cents).toBe(29000);
   });
 
   it('GET → 405', async () => {
