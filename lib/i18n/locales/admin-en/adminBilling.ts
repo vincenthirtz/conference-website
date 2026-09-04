@@ -69,4 +69,6 @@ export default {
   colHelloasso: 'HelloAsso ref.',
   paymentsEmptyTitle: 'No payments',
   paymentsEmptyDesc: 'Payments will appear here after your first subscription.',
+  graceBanner: 'Your renewal date has passed. Your features stay active for a few more days: renew to keep your Discord bot.',
+  graceBannerUntil: 'Your renewal date has passed. Your features stay active until {date}: renew before then to keep your Discord bot.',
 };

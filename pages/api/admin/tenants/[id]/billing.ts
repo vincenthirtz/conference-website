@@ -23,8 +23,10 @@ import { logger } from '@/utils/logger';
 import {
   PLAN_LABELS,
   PLAN_PRICES_EUR,
+  PLAN_GRACE_DAYS,
   effectivePlan,
   getPlanFeatures,
+  isInPlanGrace,
   type TenantPlan,
   type PlanStatus,
 } from '@/utils/billing/planFeatures';
@@ -103,10 +105,12 @@ async function handler(
       ? Math.max(0, Math.ceil((Date.parse(planExpiresAt) - nowMs) / DAY_MS))
       : null;
 
-  const eff = effectivePlan(
-    { plan, plan_status: planStatus, plan_expires_at: planExpiresAt },
-    nowMs
-  );
+  const planState = {
+    plan,
+    plan_status: planStatus,
+    plan_expires_at: planExpiresAt,
+  };
+  const eff = effectivePlan(planState, nowMs);
   const capabilities = getPlanFeatures(eff);
 
   // Historique de paiements récents (desc). Best-effort : une erreur de lecture
@@ -146,6 +150,16 @@ async function handler(
     // « abonnement », et proposer de souscrire plutôt que de renouveler.
     isTrial: t.plan_is_trial === true,
     effectivePlan: eff,
+    // Période de grâce (T10) : l'échéance est passée mais les capacités
+    // tiennent encore. C'est l'état le plus important à dire — c'est le seul
+    // où le client peut encore agir avant de perdre son bot.
+    inGrace: isInPlanGrace(planState, nowMs),
+    graceEndsAt:
+      planExpiresAt && isInPlanGrace(planState, nowMs)
+        ? new Date(
+            Date.parse(planExpiresAt) + PLAN_GRACE_DAYS * DAY_MS
+          ).toISOString()
+        : null,
     capabilities,
     catalog,
     payments,

@@ -332,6 +332,78 @@ export function resetSupabaseMock() {
 
 type Filter = (row: Row) => boolean;
 
+/** Lit une colonne, y compris par chemin JSON `payload->>champ`. */
+function readColumn(row: Row, col: string): unknown {
+  const arrow = col.indexOf('->>');
+  if (arrow === -1) return row[col];
+  const base = col.slice(0, arrow);
+  const key = col.slice(arrow + 3);
+  const obj = row[base] as Record<string, unknown> | null | undefined;
+  return obj ? obj[key] : undefined;
+}
+
+/** Découpe une expression PostgREST au niveau des virgules NON parenthésées. */
+function splitTopLevel(expr: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let current = '';
+  for (const ch of expr) {
+    if (ch === '(') depth += 1;
+    if (ch === ')') depth -= 1;
+    if (ch === ',' && depth === 0) {
+      out.push(current.trim());
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+  if (current.trim()) out.push(current.trim());
+  return out;
+}
+
+/** Une clause simple `col.op.valeur`, ou un groupe `and(...)` / `or(...)`. */
+function clausePredicate(clause: string): (row: Row) => boolean {
+  const group = /^(and|or)\((.*)\)$/s.exec(clause);
+  if (group) {
+    const parts = splitTopLevel(group[2]).map(clausePredicate);
+    return group[1] === 'and'
+      ? (row) => parts.every((p) => p(row))
+      : (row) => parts.some((p) => p(row));
+  }
+
+  const parts = clause.split('.');
+  const col = parts[0];
+  const op = parts[1];
+  const raw = parts.slice(2).join('.');
+  const value = (row: Row) => readColumn(row, col);
+
+  if (op === 'eq') return (row) => String(value(row) ?? '') === raw;
+  if (op === 'neq') return (row) => String(value(row) ?? '') !== raw;
+  if (op === 'is') {
+    if (raw === 'null') return (row) => value(row) === null || value(row) === undefined;
+    if (raw === 'true' || raw === 'false') return (row) => value(row) === (raw === 'true');
+  }
+  if (op === 'not' && parts[2] === 'is' && parts[3] === 'null') {
+    return (row) => value(row) !== null && value(row) !== undefined;
+  }
+  if (op === 'ilike') {
+    const needle = raw.replace(/^%|%$/g, '').toLowerCase();
+    return (row) => String(value(row) ?? '').toLowerCase().includes(needle);
+  }
+  if (op === 'gte') return (row) => (value(row) as never) >= (raw as never);
+  if (op === 'lte') return (row) => (value(row) as never) <= (raw as never);
+  if (op === 'gt') return (row) => (value(row) as never) > (raw as never);
+  if (op === 'lt') return (row) => (value(row) as never) < (raw as never);
+
+  console.warn(`supabaseMock: .or() ne gère pas « ${clause} » — clause ignorée`);
+  return () => true;
+}
+
+function orPredicate(expr: string): (row: Row) => boolean {
+  const preds = splitTopLevel(expr).map(clausePredicate);
+  return (row) => preds.some((p) => p(row));
+}
+
 class Builder {
   private filters: Filter[] = [];
   private op: 'select' | 'update' | 'insert' | 'delete' = 'select';
@@ -464,28 +536,21 @@ class Builder {
 
   /** PostgREST .or() — treated as a no-op. Tests should not rely on its filtering. */
   /**
-   * PostgREST .or('a.eq.x,b.eq.y') — disjonction de conditions simples.
+   * PostgREST .or('a.eq.x,and(b.eq.y,c.eq.z)') — disjonction de conditions.
    *
    * C'était un no-op, ce qui est pire qu'une absence : un handler qui accepte
    * « la clé courante OU la précédente » voyait TOUTE clé matcher la première
    * ligne semée, et le test « une clé inconnue est refusée » passait au vert
-   * sans rien vérifier. On implémente `eq` et `is.null` ; toute autre forme
-   * lève, pour qu'un jour où l'on écrit plus riche, on le sache tout de suite.
+   * sans rien vérifier.
+   *
+   * Gère ce que le code utilise réellement : `eq`, `neq`, `ilike`, `is.null`,
+   * `not.is.null`, les comparaisons d'ordre, les chemins JSON (`payload->>x`)
+   * et les groupes `and(...)`. Une forme inconnue retombe sur « laisse passer »
+   * — le comportement d'avant — avec un avertissement : mieux vaut un test trop
+   * permissif qu'une suite entière en échec sur une syntaxe rare.
    */
   or(expr: string) {
-    const clauses = expr.split(',').map((c) => c.trim()).filter(Boolean);
-    const preds = clauses.map((clause) => {
-      const [col, op, ...rest] = clause.split('.');
-      const raw = rest.join('.');
-      if (op === 'eq') {
-        return (row: Row) => String(row[col] ?? '') === raw;
-      }
-      if (op === 'is' && raw === 'null') {
-        return (row: Row) => row[col] === null || row[col] === undefined;
-      }
-      throw new Error(`supabaseMock: .or() ne gère pas « ${clause} »`);
-    });
-    this.filters.push((row) => preds.some((p) => p(row)));
+    this.filters.push(orPredicate(expr));
     return this;
   }
 

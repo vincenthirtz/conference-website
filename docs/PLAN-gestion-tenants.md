@@ -1,7 +1,9 @@
 # Gestion des espaces (tenants) — plan d'amélioration
 
-> Rédigé le 3 septembre 2026, sur l'état du code à `a9bb86de` et la base de
-> production `owwomenscup`. Rien de ce qui suit n'est livré : c'est un plan.
+> Rédigé le 3 septembre 2026 sur l'état du code à `a9bb86de`, puis **livré en
+> dix lots** les 3 et 4 septembre (T1 → T10). Ce document reste la référence du
+> POURQUOI : chaque lot y garde son constat d'origine, et le tableau ci-dessous
+> renvoie à ce qui a effectivement été fait.
 
 ## Constat
 
@@ -47,21 +49,37 @@ Deux chiffres à garder en tête pour dimensionner :
 
 ## Les dix lots
 
-| Lot | Titre | Répond à | Dépend de | Coût |
-|---|---|---|---|---|
-| T1 | Vue d'ensemble d'un espace | « il se passe quoi ici ? » | — | M |
-| T2 | Les limites du plan deviennent réelles | promesse ≠ code | — | M |
-| T3 | Consommation et alertes, côté plateforme | facturer et anticiper | T2 | M |
-| T4 | Cycle de vie : suspendre, archiver, purger | sortir proprement | T1 | L |
-| T5 | Export et effacement par espace | RGPD, réversibilité | T4 | L |
-| T6 | Inviter un membre, pas seulement le rattacher | friction quotidienne | — | M |
-| T7 | Domaine propre vérifié | sécurité, erreurs muettes | — | M |
-| T8 | Secrets : rotation sans coupure | exploitation | — | S |
-| T9 | Journal et responsabilité par espace | traçabilité | T4 | S |
-| T10 | Renouvellement et facturation self-service | revenu récurrent | T2, T3 | L |
+| Lot | Titre | État | Cœur de ce qui a été livré |
+|---|---|---|---|
+| T1 | Vue d'ensemble d'un espace | ✅ | onglet par défaut (signes de vie, volumétrie, situation) + manifeste `tenantScope` + règles de readiness partagées |
+| T2 | Les limites du plan deviennent réelles | ✅ | `assertPlanLimit` + 402 qui nomme le palier ; domaine propre gaté sur `whiteLabel` ; registre d'application de chaque capacité |
+| T3 | Consommation et alertes | ✅ | `/admin/tenants/usage` + cron d'alerte 80 % / 100 %, une fois par fenêtre |
+| T4 | Cycle de vie | ✅ | 5 états, motif obligatoire, effets appliqués **y compris au bot** ; `is_active` dérivé par trigger |
+| T5 | Export et effacement | ✅ | export JSON piloté par manifeste (secrets exclus) + cron de purge à trois verrous |
+| T6 | Inviter un membre | ✅ | `tenant_invitations` (jeton haché, 14 j) + page publique d'acceptation |
+| T7 | Domaine propre vérifié | ✅ | preuve TXT, seul `verified` est routé, revérification quotidienne |
+| T8 | Secrets sans coupure | ✅ | clé précédente valable 48 h, révocation immédiate, `last_used_at` |
+| T9 | Journal par espace | ✅ | `entity-history` accepte le type `tenant`, scope sur l'espace REGARDÉ |
+| T10 | Renouvellement | ✅ | 7 jours de grâce après échéance, séquence J-14 / J-3 / J0 / J+7, bandeau client, `plan-checkout` scopé |
 
-Ordre conseillé : **T1 → T2 → T8 → T6 → T7 → T3 → T4 → T9 → T5 → T10**. Les
-quatre premiers se livrent sans migration lourde et rendent la suite lisible.
+Ordre suivi : **T1 → T2 → T8 → T6 → T7 → T3 → T4 → T9 → T5 → T10**.
+
+### Ce que le plan n'avait pas prévu
+
+Cinq défauts trouvés en écrivant les lots, tous corrigés au passage :
+
+1. **Le bot d'un espace archivé répondait encore** — son authentification ne lit
+   que `tenant_secrets`, et rien sur ce chemin ne regardait l'état de l'espace
+   (T4).
+2. **`plan-checkout` n'était pas scopé** : depuis que `tenant_staff` élève le
+   rôle, le propriétaire de l'espace A pouvait générer un lien de paiement pour
+   l'espace B en devinant son UUID (T10).
+3. **Une clé révoquée restait acceptée jusqu'à 60 s** — le cache
+   d'authentification n'était vidé par personne (T8).
+4. **`.order()` du mock de test était un no-op** : tout handler qui prend « la
+   ligne la plus récente » était testé sur la première ligne semée (T1).
+5. **`.or()` du mock ne filtrait rien** : le test « une clé inconnue est
+   refusée » passait sans rien vérifier (T8).
 
 ---
 

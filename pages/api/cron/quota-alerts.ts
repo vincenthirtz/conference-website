@@ -123,13 +123,15 @@ export default async function handler(
     );
 
   const byId = new Map(
-    ((tenantRows ?? []) as Array<{
-      id: string;
-      name: string;
-      plan: string | null;
-      plan_status: string | null;
-      plan_expires_at: string | null;
-    }>).map((t) => [t.id, t])
+    (
+      (tenantRows ?? []) as Array<{
+        id: string;
+        name: string;
+        plan: string | null;
+        plan_status: string | null;
+        plan_expires_at: string | null;
+      }>
+    ).map((t) => [t.id, t])
   );
 
   const nowMs = Date.now();

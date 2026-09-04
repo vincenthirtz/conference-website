@@ -22,9 +22,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
-import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
+import {
+  withStaffRoute,
+  hasAtLeastRole,
+  type AuthenticatedStaffContext,
+} from '@/utils/staff';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { canAccessTenant } from '@/utils/adminTenants';
 import { formatZodError } from '@/utils/validation';
 import { logStaffAction } from '@/utils/staffLogs';
 import { logger } from '@/utils/logger';
@@ -70,6 +75,23 @@ async function handler(
     return res
       .status(400)
       .json({ error: 'Invalid tenant id.', code: 'INVALID_TENANT_ID' });
+  }
+
+  // Portée (T10). `manage_tenant` est portée par le rôle owner — mais depuis
+  // que `tenant_staff` élève le rôle effectif, le propriétaire de l'espace A
+  // porte « owner » et pouvait générer un lien de paiement pour l'espace B en
+  // devinant son UUID : rien ne comparait l'id demandé à son périmètre. Un
+  // owner de la PLATEFORME garde le droit de le faire pour n'importe quel
+  // espace ; les autres, uniquement chez eux.
+  if (!hasAtLeastRole(ctx.globalRole, 'owner')) {
+    const isPoleAdmin =
+      (ctx.staff as { is_pole_admin?: boolean }).is_pole_admin === true;
+    if (!(await canAccessTenant(ctx.staff.id, id, { isPoleAdmin }))) {
+      return res.status(403).json({
+        error: 'Cet espace ne fait pas partie de votre périmètre.',
+        code: 'TENANT_OUT_OF_SCOPE',
+      });
+    }
   }
 
   const parsed = bodySchema.safeParse(req.body);

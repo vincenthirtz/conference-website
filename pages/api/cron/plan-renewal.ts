@@ -38,6 +38,48 @@ import {
 const DAY_MS = 86_400_000;
 /** Fenêtre de relance avant expiration. */
 const REMINDER_WINDOW_DAYS = 14;
+
+/**
+ * La séquence de relance (T10), en jours par rapport à l'échéance.
+ *
+ * Une seule relance à J-14 laissait tout le reste au silence : le jour de
+ * l'échéance, et les sept jours de grâce qui suivent, ne disaient rien. Un
+ * client découvrait la rétrogradation en constatant que son bot ne répond plus.
+ *
+ * L'étape franchie se DÉDUIT de `plan_last_reminder_at` : une relance postée
+ * avant la date d'une étape signifie que cette étape reste à envoyer. Pas de
+ * colonne supplémentaire pour un état déductible d'une date.
+ */
+const REMINDER_STAGES: Array<{
+  offsetDays: number;
+  stage: 'before' | 'due' | 'grace';
+}> = [
+  { offsetDays: -14, stage: 'before' },
+  { offsetDays: -3, stage: 'before' },
+  { offsetDays: 0, stage: 'due' },
+  { offsetDays: 7, stage: 'grace' },
+];
+
+/** L'étape à envoyer maintenant, ou `null` s'il n'y a rien à dire. */
+function dueStage(
+  expMs: number,
+  lastReminderMs: number,
+  nowMs: number
+): { offsetDays: number; stage: 'before' | 'due' | 'grace' } | null {
+  // De la plus récente à la plus ancienne : on n'envoie jamais deux étapes le
+  // même jour, et jamais une étape dépassée quand une plus récente est due.
+  for (let i = REMINDER_STAGES.length - 1; i >= 0; i -= 1) {
+    const s = REMINDER_STAGES[i];
+    const at = expMs + s.offsetDays * DAY_MS;
+    if (
+      nowMs >= at &&
+      !(Number.isFinite(lastReminderMs) && lastReminderMs >= at)
+    ) {
+      return s;
+    }
+  }
+  return null;
+}
 /**
  * Recul appliqué à l'échéance pour définir « déjà relancé ce cycle » : une
  * relance dont l'horodatage est postérieur à `expiry - 30j` compte comme la
@@ -160,19 +202,24 @@ export async function runPlanRenewal(
         continue; // Plus actif → pas de relance ce run.
       }
 
-      // 2) Relance de renouvellement (plan actif, expire bientôt, pas déjà
-      //    relancé ce cycle).
-      if (t.plan_status !== 'active') continue;
-      const expiresSoon = expMs >= nowMs && expMs <= windowEndMs;
-      if (!expiresSoon) continue;
+      // 2) Séquence de relance : J-14, J-3, le jour même, puis J+7 (fin de la
+      //    période de grâce). Un plan `past_due` reste relançable — c'est même
+      //    là que la relance compte le plus.
+      if (t.plan_status !== 'active' && t.plan_status !== 'past_due') continue;
+
+      // Hors de la fenêtre utile : ni bientôt, ni récemment expiré.
+      if (expMs > windowEndMs) continue;
 
       const cycleThresholdMs = expMs - CYCLE_LOOKBACK_DAYS * DAY_MS;
-      const lastMs = t.plan_last_reminder_at
+      const lastRaw = t.plan_last_reminder_at
         ? Date.parse(t.plan_last_reminder_at)
         : NaN;
-      const alreadyReminded =
-        Number.isFinite(lastMs) && lastMs >= cycleThresholdMs;
-      if (alreadyReminded) continue;
+      // Une relance d'un cycle précédent ne compte pas pour celui-ci.
+      const lastMs =
+        Number.isFinite(lastRaw) && lastRaw >= cycleThresholdMs ? lastRaw : NaN;
+
+      const stage = dueStage(expMs, lastMs, nowMs);
+      if (!stage) continue;
 
       const emails = await resolveOwnerEmails(t.id);
       if (emails.length === 0) {
@@ -200,6 +247,7 @@ export async function runPlanRenewal(
             // Un essai n'est pas un abonnement : la relance parle de fin
             // d'essai et de souscription, pas de renouvellement.
             isTrial: t.plan_is_trial === true,
+            stage: stage.stage,
           });
           if (!r.success) {
             logger.error(

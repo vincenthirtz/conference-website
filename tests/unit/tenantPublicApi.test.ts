@@ -47,6 +47,13 @@ beforeEach(() => {
       slug: 'cup-estivale',
       is_active: true,
       custom_domain: 'cup-estivale.fr',
+      // Depuis T7, seul un domaine VÉRIFIÉ est routé…
+      custom_domain_state: 'verified',
+      // …et depuis T2, seulement si le plan inclut le white-label. Le palier
+      // gratuit garde son slug : son domaine ne répondrait de toute façon pas.
+      plan: 'regie',
+      plan_status: 'active',
+      plan_expires_at: null,
     },
   ] as any;
 });
@@ -85,6 +92,26 @@ describe('résolution du tenant sur les routes publiques', () => {
       makeReq({ host: 'CUP-Estivale.FR:443' })
     );
     expect(id).toBe(TENANT_B);
+  });
+
+  it('domaine propre NON vérifié → espace historique', async () => {
+    // T7 : sans preuve de possession, le domaine ne route pas. Servir un
+    // espace sur un nom que personne n'a prouvé tenir serait le vrai défaut.
+    (store.tenants as any[])[1].custom_domain_state = 'pending';
+    const id = await resolveTenantIdForPublicRequestAsync(
+      makeReq({ host: 'cup-estivale.fr' })
+    );
+    expect(id).toBe(DEFAULT_TENANT_ID);
+  });
+
+  it('domaine propre sur un plan sans white-label → espace historique', async () => {
+    // T2 : la capacité `whiteLabel` conditionne le domaine propre, à
+    // l'écriture comme au routage.
+    (store.tenants as any[])[1].plan = 'discovery';
+    const id = await resolveTenantIdForPublicRequestAsync(
+      makeReq({ host: 'cup-estivale.fr' })
+    );
+    expect(id).toBe(DEFAULT_TENANT_ID);
   });
 
   it('préfixe de chemin → son espace', async () => {

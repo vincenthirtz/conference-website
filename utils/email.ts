@@ -8,6 +8,7 @@ import {
   DEFAULT_EMAIL_BRAND,
 } from './emailBrand';
 import { DEFAULT_TENANT_ID } from './tenant';
+import { PLAN_GRACE_DAYS } from './billing/planFeatures';
 // utils/email.ts
 // Lightweight email utility using Brevo (ex-Sendinblue) transactional API.
 // Free tier: 300 emails/day — https://brevo.com
@@ -1011,6 +1012,15 @@ export function sendPlanRenewalReminderEmail(opts: {
    * le relais.
    */
   isTrial?: boolean;
+  /**
+   * Étape de la séquence de relance (T10). `before` = avant l'échéance,
+   * `due` = le jour même, `grace` = pendant la période de grâce.
+   *
+   * Un seul email qui dirait « pensez à renouveler » à J-14 comme à J+3 ferait
+   * mentir la moitié des envois : à J+3, le renouvellement n'est plus une
+   * prévoyance, c'est un délai qui court.
+   */
+  stage?: 'before' | 'due' | 'grace';
 }): Promise<SendEmailResult> {
   const dateStr = (() => {
     try {
@@ -1026,12 +1036,28 @@ export function sendPlanRenewalReminderEmail(opts: {
   })();
 
   const isTrial = opts.isTrial === true;
+  const stage = opts.stage ?? 'before';
+
+  // La phrase d'alerte change avec l'étape : c'est elle qui porte l'urgence.
+  const warning =
+    stage === 'grace'
+      ? `Votre échéance est passée. Vos fonctionnalités restent actives pendant ${PLAN_GRACE_DAYS} jours après l'échéance ; au-delà, votre espace repasse sur le palier gratuit (Découverte) et le bot Discord cesse de répondre.`
+      : stage === 'due'
+        ? "C'est aujourd'hui. Sans renouvellement, votre espace repassera sur le palier gratuit (Découverte) après une courte période de grâce."
+        : isTrial
+          ? "Sans souscription, votre espace repassera automatiquement sur le palier gratuit (Découverte) à la fin de l'essai — le bot Discord cessera alors de répondre."
+          : "Sans renouvellement, votre tenant repassera automatiquement sur le palier gratuit (Découverte) à l'expiration.";
 
   return sendEmail({
     to: opts.to,
-    subject: isTrial
-      ? `Votre essai ${opts.planLabel} se termine bientôt — OW Women's Cup`
-      : `Renouvellement de votre abonnement ${opts.planLabel} — OW Women's Cup`,
+    subject:
+      stage === 'grace'
+        ? `Votre abonnement ${opts.planLabel} a expiré — OW Women's Cup`
+        : stage === 'due'
+          ? `Votre abonnement ${opts.planLabel} expire aujourd'hui — OW Women's Cup`
+          : isTrial
+            ? `Votre essai ${opts.planLabel} se termine bientôt — OW Women's Cup`
+            : `Renouvellement de votre abonnement ${opts.planLabel} — OW Women's Cup`,
     tags: ['plan-renewal-reminder'],
     html: emailLayout(`
       ${gradientBar()}
@@ -1074,11 +1100,7 @@ export function sendPlanRenewalReminderEmail(opts: {
         </tr>
       </table>
       <p style="margin:0 0 8px;font-size:13px;color:#f59e0b;line-height:1.5;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.15);border-radius:8px;padding:10px 14px;">
-        ${
-          isTrial
-            ? 'Sans souscription, votre espace repassera automatiquement sur le palier gratuit (Découverte) à la fin de l&apos;essai — le bot Discord cessera alors de répondre.'
-            : 'Sans renouvellement, votre tenant repassera automatiquement sur le palier gratuit (Découverte) à l&apos;expiration.'
-        }
+        ${escapeHtml(warning)}
       </p>
       ${ctaButton(opts.billingUrl, isTrial ? 'Souscrire au plan' : 'Renouveler mon abonnement')}
       <p style="margin:24px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">

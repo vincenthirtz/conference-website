@@ -199,6 +199,11 @@ describe('diagnostic', () => {
 
   it('un plan expiré ressort comme « plan sans bot »', async () => {
     (store.tenants as any[])[1].plan_status = 'past_due';
+    // T10 : sept jours de grâce suivent l'échéance. Pour tester la perte des
+    // capacités, il faut sortir de cette fenêtre — sinon on teste la grâce.
+    (store.tenants as any[])[1].plan_expires_at = new Date(
+      Date.now() - 10 * 86_400_000
+    ).toISOString();
     const res = makeRes();
     await handler(makeReq(), res);
     const b = (res.body as any).tenants.find(

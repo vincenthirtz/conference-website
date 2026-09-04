@@ -46,7 +46,9 @@ function seedTenants() {
       slug: 'esport-club',
       name: 'Esport Club',
       is_active: true,
-      custom_domain: 'Club.Example.com', // casse mixte volontaire
+      custom_domain: 'Club.Example.com',
+      // Depuis T7, seul un domaine VÉRIFIÉ est routé.
+      custom_domain_state: 'verified', // casse mixte volontaire
       logo_url: 'https://cdn.supabase.co/logos/club.png',
       primary_color: '#123abc',
       accent_color: '#ff00aa',
@@ -62,6 +64,8 @@ function seedTenants() {
       name: 'Discovery Club',
       is_active: true,
       custom_domain: 'discovery.example.com',
+      // Depuis T7, seul un domaine VÉRIFIÉ est routé.
+      custom_domain_state: 'verified',
       logo_url: 'https://cdn.supabase.co/logos/discovery.png',
       primary_color: '#abcdef',
       accent_color: '#123456',
@@ -87,6 +91,8 @@ function seedTenants() {
       name: 'Plain Club',
       is_active: true,
       custom_domain: 'plain.example.com',
+      // Depuis T7, seul un domaine VÉRIFIÉ est routé.
+      custom_domain_state: 'verified',
       // aucun champ de branding visuel → readTenantBranding doit renvoyer null
       logo_url: null,
       primary_color: null,
@@ -98,6 +104,8 @@ function seedTenants() {
       name: 'Archived',
       is_active: false,
       custom_domain: 'archived.example.com',
+      // Depuis T7, seul un domaine VÉRIFIÉ est routé.
+      custom_domain_state: 'verified',
       primary_color: '#000000',
     },
   ];

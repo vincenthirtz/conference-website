@@ -70,4 +70,6 @@ export default adminNs('adminBilling', {
   paymentsEmptyTitle: 'Aucun paiement',
   paymentsEmptyDesc:
     'Les paiements apparaîtront ici après ta première souscription.',
+  graceBanner: "Votre échéance est passée. Vos fonctionnalités restent actives quelques jours encore : renouvelez pour ne pas perdre votre bot Discord.",
+  graceBannerUntil: "Votre échéance est passée. Vos fonctionnalités restent actives jusqu'au {date} : renouvelez avant cette date pour ne pas perdre votre bot Discord.",
 });

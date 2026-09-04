@@ -46,6 +46,9 @@ type BillingResponse = {
   /** Essai gratuit d'onboarding : jamais payé, se termine en Découverte. */
   isTrial: boolean;
   effectivePlan: TenantPlan;
+  /** L'échéance est passée mais les capacités tiennent encore (T10). */
+  inGrace?: boolean;
+  graceEndsAt?: string | null;
   capabilities: PlanFeatures;
   catalog: CatalogItem[];
   payments: PaymentRow[];
@@ -364,6 +367,26 @@ function AdminBillingPage({ staff }: Props) {
           {!loading && data && (
             <div className="space-y-8">
               {/* Current plan card */}
+              {/* Période de grâce : l'échéance est passée, les capacités
+                  tiennent encore quelques jours. C'est le seul moment où le
+                  client peut agir avant de perdre son bot — le taire, c'est le
+                  laisser découvrir la rétrogradation par la panne. */}
+              {data.inGrace && (
+                <div
+                  className="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"
+                  role="status"
+                  data-testid="billing-grace-banner"
+                >
+                  {data.graceEndsAt
+                    ? format(t.graceBannerUntil, {
+                        date: new Date(data.graceEndsAt).toLocaleDateString(
+                          'fr-FR'
+                        ),
+                      })
+                    : t.graceBanner}
+                </div>
+              )}
+
               <section
                 className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 sm:p-8"
                 data-testid="billing-current-plan"

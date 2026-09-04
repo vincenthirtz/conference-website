@@ -78,6 +78,7 @@ import enTimeline2026 from './timeline2026';
 import enPartenairesPage from './partenairesPage';
 import enLorePage from './lorePage';
 import enAboutPage from './aboutPage';
+import enInvitationPage from './invitationPage';
 import enTeamCreate from './teamCreate';
 import enTeamAccess from './teamAccess';
 import enTeamEdit from './teamEdit';
@@ -241,6 +242,7 @@ const enDict = {
   partenairesPage: enPartenairesPage,
   lorePage: enLorePage,
   aboutPage: enAboutPage,
+  invitationPage: enInvitationPage,
   teamCreate: enTeamCreate,
   teamAccess: enTeamAccess,
   teamEdit: enTeamEdit,

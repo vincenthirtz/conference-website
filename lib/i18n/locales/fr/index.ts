@@ -75,6 +75,7 @@ import nsTimeline2026 from './timeline2026';
 import nsPartenairesPage from './partenairesPage';
 import nsLorePage from './lorePage';
 import nsAboutPage from './aboutPage';
+import nsInvitationPage from './invitationPage';
 import nsTeamCreate from './teamCreate';
 import nsTeamAccess from './teamAccess';
 import nsTeamEdit from './teamEdit';
@@ -238,6 +239,7 @@ export const frDict = {
   partenairesPage: nsPartenairesPage.fr,
   lorePage: nsLorePage.fr,
   aboutPage: nsAboutPage.fr,
+  invitationPage: nsInvitationPage.fr,
   teamCreate: nsTeamCreate.fr,
   teamAccess: nsTeamAccess.fr,
   teamEdit: nsTeamEdit.fr,

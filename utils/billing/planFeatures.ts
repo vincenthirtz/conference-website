@@ -152,18 +152,49 @@ export function getPlanFeatures(plan: TenantPlan): PlanFeatures {
 }
 
 /**
+ * Période de grâce après échéance (T10).
+ *
+ * Avant, la bascule était sèche : un plan qui expirait — ou passait `past_due`
+ * — retombait IMMÉDIATEMENT sur `discovery`, c'est-à-dire sans bot Discord, du
+ * jour au lendemain, pour un retard de paiement d'une journée. Sept jours
+ * laissent le temps qu'un virement arrive et qu'un humain réponde à un email.
+ *
+ * La grâce ne s'applique QU'À l'expiration : un plan `canceled` s'arrête tout
+ * de suite, parce que quelqu'un l'a décidé.
+ */
+export const PLAN_GRACE_DAYS = 7;
+const GRACE_MS = PLAN_GRACE_DAYS * 86_400_000;
+
+/**
  * Le tenant a-t-il droit aux capacités de SON plan payant ?
  * - `foundation`/`discovery` : toujours (l'un est offert par mission, l'autre
  *   est le palier gratuit).
- * - plans payants : uniquement si `plan_status === 'active'` ET non expiré.
+ * - plans payants : `active` non expiré, ou dans la grâce post-échéance.
  */
 export function isPlanEntitled(t: TenantPlanState, nowMs: number): boolean {
   if (t.plan === 'foundation' || t.plan === 'discovery') return true;
-  if (t.plan_status !== 'active') return false;
-  if (t.plan_expires_at && new Date(t.plan_expires_at).getTime() <= nowMs) {
-    return false;
+  // Une annulation est une décision, pas un oubli : elle ne se rattrape pas.
+  if (t.plan_status === 'canceled') return false;
+  if (t.plan_status !== 'active' && t.plan_status !== 'past_due') return false;
+
+  const expiry = t.plan_expires_at
+    ? new Date(t.plan_expires_at).getTime()
+    : null;
+  if (expiry === null) {
+    // Pas d'échéance : seul un statut actif ouvre les droits.
+    return t.plan_status === 'active';
   }
-  return true;
+  return nowMs <= expiry + GRACE_MS;
+}
+
+/** Le plan est-il honoré uniquement grâce à la période de grâce ? */
+export function isInPlanGrace(t: TenantPlanState, nowMs: number): boolean {
+  if (t.plan === 'foundation' || t.plan === 'discovery') return false;
+  if (!t.plan_expires_at) return false;
+  const expiry = new Date(t.plan_expires_at).getTime();
+  return (
+    isPlanEntitled(t, nowMs) && nowMs > expiry && nowMs <= expiry + GRACE_MS
+  );
 }
 
 /**

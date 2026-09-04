@@ -122,7 +122,10 @@ beforeEach(() => {
     apiKey: KEY_REGIE_EXPIRED,
     plan: 'regie',
     plan_status: 'active',
-    plan_expires_at: new Date(NOW - HOUR).toISOString(),
+    // T10 : sept jours de grâce suivent l'échéance. « Expiré » veut donc dire
+    // au-delà de cette fenêtre — une heure après l'échéance, le plan tient
+    // encore, et c'est voulu.
+    plan_expires_at: new Date(NOW - 10 * 24 * HOUR).toISOString(),
   });
 });
 
@@ -152,7 +155,10 @@ const regieState: TenantPlanState = {
 const regieExpiredState: TenantPlanState = {
   plan: 'regie',
   plan_status: 'active',
-  plan_expires_at: new Date(NOW - HOUR).toISOString(),
+  // T10 : sept jours de grâce suivent l'échéance. « Expiré » veut donc dire
+    // au-delà de cette fenêtre — une heure après l'échéance, le plan tient
+    // encore, et c'est voulu.
+    plan_expires_at: new Date(NOW - 10 * 24 * HOUR).toISOString(),
 };
 
 describe('checkBotPlanCapability()', () => {

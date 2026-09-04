@@ -111,11 +111,13 @@ export default async function handler(
     return res.status(500).json({ error: 'Failed to load tenants.' });
   }
 
-  const due = ((data ?? []) as Array<{
-    id: string;
-    slug: string;
-    purge_after: string | null;
-  }>).filter((t) => !PROTECTED_TENANT_SLUGS.has(t.slug));
+  const due = (
+    (data ?? []) as Array<{
+      id: string;
+      slug: string;
+      purge_after: string | null;
+    }>
+  ).filter((t) => !PROTECTED_TENANT_SLUGS.has(t.slug));
 
   const purged: Array<{ slug: string; cleared: number; remaining: string[] }> =
     [];

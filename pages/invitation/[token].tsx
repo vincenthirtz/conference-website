@@ -15,6 +15,8 @@ import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useT, format } from '@/lib/i18n/useT';
+import nsInvitationPage from '@/lib/i18n/locales/fr/invitationPage';
 
 type Invitation = {
   status: 'pending' | 'accepted' | 'revoked' | 'expired';
@@ -24,14 +26,17 @@ type Invitation = {
   expiresAt: string;
 };
 
-const ROLE_LABELS: Record<string, string> = {
-  owner: 'propriétaire',
-  admin: 'administration',
-  caster: 'cast et régie',
-};
-
 export default function InvitationPage() {
+  const t = useT(nsInvitationPage);
   const router = useRouter();
+  const roleLabel = (role: string) =>
+    role === 'owner'
+      ? t.roleOwner
+      : role === 'admin'
+        ? t.roleAdmin
+        : role === 'caster'
+          ? t.roleCaster
+          : role;
   const token = typeof router.query.token === 'string' ? router.query.token : '';
 
   const [invitation, setInvitation] = useState<Invitation | null>(null);
@@ -45,14 +50,14 @@ export default function InvitationPage() {
       const res = await fetch(`/api/invitations/${encodeURIComponent(token)}`);
       const json = await res.json();
       if (!res.ok) {
-        setError(json.error || 'Invitation introuvable.');
+        setError(json.error || t.notFound);
         return;
       }
       setInvitation(json as Invitation);
     } catch {
-      setError('Invitation indisponible pour le moment.');
+      setError(t.unavailable);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     void load();
@@ -67,12 +72,12 @@ export default function InvitationPage() {
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.error || "L'acceptation a échoué.");
+        setError(json.error || t.acceptFailed);
         return;
       }
       setDone(true);
     } catch {
-      setError("L'acceptation a échoué.");
+      setError(t.acceptFailed);
     } finally {
       setBusy(false);
     }
@@ -83,20 +88,19 @@ export default function InvitationPage() {
       return <p className="text-sm text-red-300">{error}</p>;
     }
     if (!invitation) {
-      return <p className="text-sm text-neutral-400">Chargement…</p>;
+      return <p className="text-sm text-neutral-400">{t.loading}</p>;
     }
     if (done || invitation.status === 'accepted') {
       return (
         <>
           <p className="text-sm text-neutral-300">
-            C&apos;est fait : vous avez accès à{' '}
-            <strong className="text-white">{invitation.tenantName}</strong>.
+            {format(t.doneTitle, { tenant: invitation.tenantName })}
           </p>
           <Link
             href="/admin"
             className="mt-5 inline-block rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500"
           >
-            Ouvrir l&apos;administration
+            {t.openAdmin}
           </Link>
         </>
       );
@@ -104,26 +108,21 @@ export default function InvitationPage() {
     if (invitation.status === 'revoked' || invitation.status === 'expired') {
       return (
         <p className="text-sm text-neutral-300">
-          {invitation.status === 'revoked'
-            ? 'Cette invitation a été annulée.'
-            : 'Cette invitation a expiré.'}{' '}
-          Demandez-en une nouvelle à la personne qui vous a invité·e.
+          {invitation.status === 'revoked' ? t.revoked : t.expired}{' '}
+          {t.askAgain}
         </p>
       );
     }
     return (
       <>
         <p className="text-sm text-neutral-300">
-          On vous propose un accès{' '}
-          <strong className="text-white">
-            {ROLE_LABELS[invitation.role] ?? invitation.role}
-          </strong>{' '}
-          à l&apos;espace{' '}
-          <strong className="text-white">{invitation.tenantName}</strong>.
+          {format(t.offer, {
+            role: roleLabel(invitation.role),
+            tenant: invitation.tenantName,
+          })}
         </p>
         <p className="mt-2 text-xs text-neutral-500">
-          Invitation envoyée à {invitation.emailHint} — connectez-vous avec
-          cette adresse pour l&apos;accepter.
+          {format(t.emailHint, { email: invitation.emailHint })}
         </p>
         {error && (
           <p className="mt-3 text-sm text-red-300" role="alert">
@@ -137,7 +136,7 @@ export default function InvitationPage() {
           className="mt-5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
           data-testid="accept-invitation"
         >
-          {busy ? 'Acceptation…' : "Accepter l'invitation"}
+          {busy ? t.accepting : t.accept}
         </button>
       </>
     );
@@ -146,13 +145,13 @@ export default function InvitationPage() {
   return (
     <>
       <Head>
-        <title>Invitation</title>
+        <title>{t.title}</title>
         {/* Un lien d'invitation ne doit jamais finir dans un index. */}
         <meta name="robots" content="noindex,nofollow" />
       </Head>
       <main className="min-h-screen bg-neutral-950 px-4 py-24 text-white">
         <div className="mx-auto max-w-md rounded-2xl border border-neutral-800 bg-neutral-900/60 p-8">
-          <h1 className="text-xl font-bold tracking-tight">Invitation</h1>
+          <h1 className="text-xl font-bold tracking-tight">{t.title}</h1>
           <div className="mt-4">{body()}</div>
         </div>
       </main>
