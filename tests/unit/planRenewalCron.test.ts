@@ -127,6 +127,75 @@ describe('runPlanRenewal — lifecycle', () => {
     expect(store.tenants[0].plan_last_reminder_at).toBe(iso(NOW));
   });
 
+  it('un abonné MENSUEL est relancé au prix du mois, pas de l’année', async () => {
+    // La relance lisait le barème annuel sans condition : un espace à 29 €/mois
+    // recevait une échéance à 290 €. Le prix était faux d'un facteur dix, sous
+    // un libellé (« Tarif annuel ») qui rendait l'erreur crédible.
+    store.tenants = [
+      {
+        id: TENANT,
+        plan: 'regie',
+        plan_status: 'active',
+        plan_term: 'month',
+        plan_expires_at: iso(NOW + 2 * DAY),
+        plan_last_reminder_at: null,
+      },
+    ] as any;
+    seedOwner(TENANT, 'owner@example.test');
+
+    const c = await runPlanRenewal(NOW);
+
+    expect(c.remindersSent).toBe(1);
+    expect(sendPlanRenewalReminderEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ priceEur: 29, term: 'month' })
+    );
+  });
+
+  it('un abonné MENSUEL n’est pas relancé au milieu de son mois', async () => {
+    // La séquence était écrite pour l'année : première relance à J-14. Sur un
+    // cycle de trente jours, c'est le milieu de la période payée — on
+    // annonçait une échéance à quelqu'un qui venait de payer, puis trois fois
+    // encore avant la fin du mois.
+    store.tenants = [
+      {
+        id: TENANT,
+        plan: 'regie',
+        plan_status: 'active',
+        plan_term: 'month',
+        plan_expires_at: iso(NOW + 10 * DAY),
+        plan_last_reminder_at: null,
+      },
+    ] as any;
+    seedOwner(TENANT, 'owner@example.test');
+
+    const c = await runPlanRenewal(NOW);
+
+    expect(c.remindersSent).toBe(0);
+    expect(sendPlanRenewalReminderEmail).not.toHaveBeenCalled();
+  });
+
+  it('un abonné ANNUEL garde sa relance à J-14', async () => {
+    // Contre-épreuve du test précédent : la séquence annuelle ne change pas.
+    store.tenants = [
+      {
+        id: TENANT,
+        plan: 'regie',
+        plan_status: 'active',
+        plan_term: 'year',
+        plan_expires_at: iso(NOW + 10 * DAY),
+        plan_last_reminder_at: null,
+      },
+    ] as any;
+    seedOwner(TENANT, 'owner@example.test');
+
+    const c = await runPlanRenewal(NOW);
+
+    expect(c.remindersSent).toBe(1);
+    expect(sendPlanRenewalReminderEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ priceEur: 290, term: 'year' })
+    );
+  });
+
   it('un essai expiré retombe sur discovery, pas sur past_due', async () => {
     // Un essai n'a jamais rien dû : le marquer « past_due » afficherait un
     // impayé fictif. Il redescend donc proprement sur le palier gratuit.

@@ -282,6 +282,11 @@ export async function applyTenantPlanPayment(opts: {
       plan_status: 'active',
       plan_started_at: planStartedAt,
       plan_expires_at: planExpiresAt,
+      // La périodicité suit le paiement. Sans elle sur le tenant, tout ce qui
+      // parle du plan APRÈS l'encaissement — la relance d'échéance, la page de
+      // facturation — retombait sur le barème annuel et annonçait 290 € à
+      // quelqu'un qui venait d'en payer 29.
+      plan_term: term,
       plan_last_reminder_at: null,
       // Le tenant paie : ce n'est plus un essai.
       plan_is_trial: false,

@@ -1004,6 +1004,12 @@ export function sendPlanRenewalReminderEmail(opts: {
   planLabel: string;
   expiresAt: string;
   priceEur: number;
+  /**
+   * Périodicité payée. Le gabarit écrivait « / an » en dur : un abonné
+   * mensuel lisait « 29 € / an », c'est-à-dire un prix juste sous une durée
+   * fausse — la pire des deux erreurs possibles, parce qu'elle a l'air bonne.
+   */
+  term?: 'month' | 'year';
   billingUrl: string;
   /**
    * Le plan courant est un essai gratuit (onboarding self-service), jamais
@@ -1036,6 +1042,7 @@ export function sendPlanRenewalReminderEmail(opts: {
   })();
 
   const isTrial = opts.isTrial === true;
+  const isMonthly = opts.term === 'month';
   const stage = opts.stage ?? 'before';
 
   // La phrase d'alerte change avec l'étape : c'est elle qui porte l'urgence.
@@ -1094,8 +1101,8 @@ export function sendPlanRenewalReminderEmail(opts: {
         </tr>
         <tr>
           <td style="padding:14px 20px;">
-            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Tarif annuel</span><br/>
-            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(String(opts.priceEur))} € / an</span>
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">${isMonthly ? 'Tarif mensuel' : 'Tarif annuel'}</span><br/>
+            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(String(opts.priceEur))} € / ${isMonthly ? 'mois' : 'an'}</span>
           </td>
         </tr>
       </table>

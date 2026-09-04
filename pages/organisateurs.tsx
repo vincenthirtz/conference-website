@@ -252,10 +252,16 @@ function OrganisateursPage() {
                 <p className="mt-4 text-2xl font-bold text-white">
                   {priceLabel(plan, term, t)}
                 </p>
+                {/* Sous un prix mensuel, la ligne annonçait « soit 290 € à
+                    l'année » : c'est le prix du TERME ANNUEL, pas ce que coûte
+                    douze mois payés au mois (29 × 12 = 348 €). Elle disait donc
+                    que les deux périodicités coûtent pareil — le contraire de
+                    la phrase « deux mois offerts » affichée juste au-dessus. */}
                 {term === 'month' && PLAN_PRICES_EUR[plan] ? (
                   <p className="mt-1 text-xs text-gray-400">
-                    {format(t.priceYearlyEquivalent, {
-                      amount: String(PLAN_PRICES_EUR[plan]),
+                    {format(t.priceYearlyAlternative, {
+                      twelve: String((planPrice(plan, 'month') ?? 0) * 12),
+                      yearly: String(PLAN_PRICES_EUR[plan]),
                     })}
                   </p>
                 ) : null}

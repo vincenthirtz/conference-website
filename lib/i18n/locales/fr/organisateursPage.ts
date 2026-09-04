@@ -105,7 +105,8 @@ export default ns('organisateursPage', {
   termYearly: "À l'année",
   termYearlySaving: "À l'année, {months} mois sont offerts.",
   pricePerMonth: '{amount} € / mois',
-  priceYearlyEquivalent: "soit {amount} € à l'année",
+  priceYearlyAlternative:
+    "soit {twelve} € sur douze mois — ou {yearly} € en payant à l'année",
   ambassadorBannerTitle: 'Ambassadeur·rice de la Coupe ?',
   ambassadorBannerBody:
     'La formule Découverte vous est offerte, aussi longtemps que dure votre engagement. Dites-le-nous à la création de votre espace.',

@@ -17,6 +17,8 @@ import {
   type PlanStatus,
   type PlanFeatures,
   type PurchasablePlan,
+  type PlanTerm,
+  YEARLY_MONTHS_BILLED,
 } from '@/utils/billing/planFeatures';
 
 import { logger } from '../../utils/logger';
@@ -25,7 +27,10 @@ import nsAdminBilling from '@/lib/i18n/locales/admin-fr/adminBilling';
 type CatalogItem = {
   plan: PurchasablePlan;
   label: string;
+  /** Prix annuel (10 mois facturés). */
   priceEur: number;
+  /** Prix mensuel, dérivé de l'annuel par le barème. */
+  monthlyPriceEur: number;
 };
 
 type PaymentRow = {
@@ -46,6 +51,8 @@ type BillingResponse = {
   /** Essai gratuit d'onboarding : jamais payé, se termine en Découverte. */
   isTrial: boolean;
   effectivePlan: TenantPlan;
+  /** Périodicité actuellement payée par l'espace. */
+  planTerm: PlanTerm;
   /** L'échéance est passée mais les capacités tiennent encore (T10). */
   inGrace?: boolean;
   graceEndsAt?: string | null;
@@ -150,6 +157,11 @@ function AdminBillingPage({ staff }: Props) {
     null
   );
 
+  // Périodicité choisie pour le PROCHAIN paiement. Elle démarre sur celle que
+  // l'espace paie déjà : renouveler, c'est reconduire, pas rechoisir.
+  const [term, setTerm] = useState<PlanTerm>('year');
+  const [termTouched, setTermTouched] = useState(false);
+
   const tenantId = activeTenant?.id ?? null;
 
   const fetchData = useCallback(async () => {
@@ -170,13 +182,22 @@ function AdminBillingPage({ staff }: Props) {
     fetchData();
   }, [fetchData]);
 
+  // Aligne la périodicité sur celle du plan en cours, tant que personne n'a
+  // touché au sélecteur — sinon un rechargement écraserait le choix en cours.
+  useEffect(() => {
+    if (data && !termTouched) setTerm(data.planTerm);
+  }, [data, termTouched]);
+
   const handleCheckout = async (plan: PurchasablePlan) => {
     if (!isOwner || !tenantId) return;
     setCheckoutPlan(plan);
     try {
       const resp = await mutateJson<CheckoutResponse>(
         `/api/admin/tenants/${tenantId}/plan-checkout`,
-        { method: 'POST', body: JSON.stringify({ plan }) }
+        // La périodicité PART D'ICI. Sans elle, l'endpoint retombait sur son
+        // défaut `year` : le bouton « souscrire » sous un prix mensuel générait
+        // un lien de paiement annuel — 290 € demandés pour 29 € affichés.
+        { method: 'POST', body: JSON.stringify({ plan, term }) }
       );
       addToast(t.redirecting, 'info');
       // Ouvre HelloAsso dans un nouvel onglet — le webhook activera le plan.
@@ -505,6 +526,43 @@ function AdminBillingPage({ staff }: Props) {
                       {t.ownerOnlyNote}
                     </p>
                   )}
+
+                  {/* Périodicité. Le catalogue n'affichait que l'annuel, avec
+                      un « / an » écrit en dur — alors que la souscription se
+                      propose au mois sur la page publique. */}
+                  <div className="mb-4 flex flex-wrap items-center gap-3">
+                    <div
+                      className="inline-flex rounded-xl border border-neutral-700/50 bg-neutral-800/50 p-1"
+                      role="group"
+                      aria-label={t.termSwitchLabel}
+                    >
+                      {(['month', 'year'] as const).map((value) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => {
+                            setTermTouched(true);
+                            setTerm(value);
+                          }}
+                          aria-pressed={term === value}
+                          className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+                            term === value
+                              ? 'bg-purple-600 text-white'
+                              : 'text-neutral-300 hover:text-white'
+                          }`}
+                          data-testid={`billing-term-${value}`}
+                        >
+                          {value === 'month' ? t.termMonthly : t.termYearly}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-neutral-400">
+                      {data.planTerm === 'month'
+                        ? t.currentTermMonthly
+                        : t.currentTermYearly}
+                    </p>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {data.catalog.map((item) => {
                       const isCurrent = data.plan === item.plan;
@@ -527,13 +585,26 @@ function AdminBillingPage({ staff }: Props) {
                               </h3>
                               <p className="mt-1">
                                 <span className="text-2xl font-bold">
-                                  {item.priceEur} €
+                                  {term === 'month'
+                                    ? item.monthlyPriceEur
+                                    : item.priceEur}{' '}
+                                  €
                                 </span>
                                 <span className="text-sm text-neutral-400">
                                   {' '}
-                                  {t.perYear}
+                                  {term === 'month' ? t.perMonth : t.perYear}
                                 </span>
                               </p>
+                              {term === 'month' && (
+                                <p className="mt-1 text-xs text-neutral-400">
+                                  {format(t.termYearlySaving, {
+                                    months: String(12 - YEARLY_MONTHS_BILLED),
+                                    monthly: `${item.monthlyPriceEur} €`,
+                                    twelve: String(item.monthlyPriceEur * 12),
+                                    yearly: String(item.priceEur),
+                                  })}
+                                </p>
+                              )}
                             </div>
                             {isCurrent && (
                               <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
@@ -586,139 +657,6 @@ function AdminBillingPage({ staff }: Props) {
                       emptyMessage={t.paymentsEmptyDesc}
                       exportFilename="paiements"
                     />
-                  </div>
-                </section>
-              )}
-
-              {/* Catalog / upgrade */}
-              {canSelfServeBill && (
-                <section data-testid="billing-catalog">
-                  <h2 className="text-lg font-semibold mb-4">
-                    {t.catalogHeading}
-                  </h2>
-                  {!isOwner && (
-                    <p className="mb-4 text-sm text-neutral-400">
-                      {t.ownerOnlyNote}
-                    </p>
-                  )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    {data.catalog.map((item) => {
-                      const isCurrent = data.plan === item.plan;
-                      const features = getPlanFeatures(item.plan);
-                      const busy = checkoutPlan === item.plan;
-                      return (
-                        <div
-                          key={item.plan}
-                          className={`rounded-2xl border p-6 flex flex-col ${
-                            isCurrent
-                              ? 'border-emerald-500/40 bg-emerald-500/5'
-                              : 'border-neutral-700/50 bg-neutral-800/50'
-                          }`}
-                          data-testid={`billing-plan-${item.plan}`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <h3 className="text-xl font-bold">
-                                {item.label}
-                              </h3>
-                              <p className="mt-1">
-                                <span className="text-2xl font-bold">
-                                  {item.priceEur} €
-                                </span>
-                                <span className="text-sm text-neutral-400">
-                                  {' '}
-                                  {t.perYear}
-                                </span>
-                              </p>
-                            </div>
-                            {isCurrent && (
-                              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
-                                {t.currentBadge}
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="mt-5 flex-1">
-                            {renderCapabilities(features, `cat-${item.plan}`)}
-                          </div>
-
-                          <div className="mt-6">
-                            <button
-                              type="button"
-                              onClick={() => handleCheckout(item.plan)}
-                              disabled={!isOwner || busy}
-                              title={!isOwner ? t.ownerOnlyNote : undefined}
-                              className="w-full px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-semibold text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
-                              data-testid={`billing-checkout-${item.plan}`}
-                            >
-                              {busy ? t.redirecting : ctaLabel(item.plan)}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </section>
-              )}
-
-              {/* Payment history — l'association (foundation) est hors
-                  facturation : pas d'historique commercial. */}
-              {!isAssociationPlan && (
-                <section data-testid="billing-payments">
-                  <h2 className="text-lg font-semibold mb-4">
-                    {t.paymentsHeading}
-                  </h2>
-                  <div className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-                    {data.payments.length === 0 ? (
-                      <EmptyState
-                        title={t.paymentsEmptyTitle}
-                        description={t.paymentsEmptyDesc}
-                      />
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead className="bg-neutral-900/50 text-neutral-400 text-xs uppercase tracking-wider">
-                            <tr>
-                              <th scope="col" className="px-4 py-3 text-left">
-                                {t.colDate}
-                              </th>
-                              <th scope="col" className="px-4 py-3 text-left">
-                                {t.colPlan}
-                              </th>
-                              <th scope="col" className="px-4 py-3 text-right">
-                                {t.colAmount}
-                              </th>
-                              <th scope="col" className="px-4 py-3 text-left">
-                                {t.colHelloasso}
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-neutral-700/50">
-                            {data.payments.map((p) => (
-                              <tr
-                                key={String(p.id)}
-                                className="hover:bg-neutral-700/30 transition-colors"
-                              >
-                                <td className="px-4 py-3 text-neutral-300">
-                                  {formatDate(p.paidAt)}
-                                </td>
-                                <td className="px-4 py-3">
-                                  <span className="px-2 py-0.5 rounded-full text-[11px] uppercase tracking-wider bg-white/5 border border-white/10 text-neutral-300">
-                                    {p.plan}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 text-right font-medium text-white">
-                                  {formatAmount(p.amountCents)}
-                                </td>
-                                <td className="px-4 py-3 font-mono text-xs text-purple-300">
-                                  {String(p.helloassoPaymentId)}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
                   </div>
                 </section>
               )}

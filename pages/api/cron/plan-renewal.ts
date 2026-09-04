@@ -31,13 +31,18 @@ import { resolveOwnerEmails } from '@/utils/tenants/ownerEmails';
 import { sendPlanRenewalReminderEmail } from '@/utils/email';
 import {
   PLAN_LABELS,
-  PLAN_PRICES_EUR,
+  PLAN_GRACE_DAYS,
+  planPrice,
+  type PlanTerm,
   type PurchasablePlan,
 } from '@/utils/billing/planFeatures';
 
 const DAY_MS = 86_400_000;
-/** Fenêtre de relance avant expiration. */
-const REMINDER_WINDOW_DAYS = 14;
+
+type ReminderStage = {
+  offsetDays: number;
+  stage: 'before' | 'due' | 'grace';
+};
 
 /**
  * La séquence de relance (T10), en jours par rapport à l'échéance.
@@ -46,30 +51,53 @@ const REMINDER_WINDOW_DAYS = 14;
  * l'échéance, et les sept jours de grâce qui suivent, ne disaient rien. Un
  * client découvrait la rétrogradation en constatant que son bot ne répond plus.
  *
+ * La séquence DÉPEND de la périodicité. Écrite pour l'année, elle place la
+ * première relance à J-14 : sur un cycle mensuel, c'est le milieu de la
+ * période payée — on annoncerait une échéance à quelqu'un qui vient de payer,
+ * puis trois fois encore dans le même mois. Un abonné mensuel reçoit donc trois
+ * messages (J-3, le jour même, fin de grâce), pas quatre dont un prématuré.
+ *
  * L'étape franchie se DÉDUIT de `plan_last_reminder_at` : une relance postée
  * avant la date d'une étape signifie que cette étape reste à envoyer. Pas de
  * colonne supplémentaire pour un état déductible d'une date.
  */
-const REMINDER_STAGES: Array<{
-  offsetDays: number;
-  stage: 'before' | 'due' | 'grace';
-}> = [
-  { offsetDays: -14, stage: 'before' },
-  { offsetDays: -3, stage: 'before' },
-  { offsetDays: 0, stage: 'due' },
-  { offsetDays: 7, stage: 'grace' },
-];
+const REMINDER_STAGES: Record<PlanTerm, ReminderStage[]> = {
+  year: [
+    { offsetDays: -14, stage: 'before' },
+    { offsetDays: -3, stage: 'before' },
+    { offsetDays: 0, stage: 'due' },
+    { offsetDays: PLAN_GRACE_DAYS, stage: 'grace' },
+  ],
+  month: [
+    { offsetDays: -3, stage: 'before' },
+    { offsetDays: 0, stage: 'due' },
+    { offsetDays: PLAN_GRACE_DAYS, stage: 'grace' },
+  ],
+};
+
+/**
+ * Combien de jours avant l'échéance il vaut la peine de regarder un tenant.
+ *
+ * Se DÉDUIT de la première étape de sa séquence. La borne était un constante
+ * séparée (14 j) : deux nombres à tenir d'accord, dont l'un se serait tu si
+ * l'autre bougeait.
+ */
+function reminderWindowDays(term: PlanTerm): number {
+  return -REMINDER_STAGES[term][0].offsetDays;
+}
 
 /** L'étape à envoyer maintenant, ou `null` s'il n'y a rien à dire. */
 function dueStage(
   expMs: number,
   lastReminderMs: number,
-  nowMs: number
-): { offsetDays: number; stage: 'before' | 'due' | 'grace' } | null {
+  nowMs: number,
+  term: PlanTerm
+): ReminderStage | null {
+  const stages = REMINDER_STAGES[term];
   // De la plus récente à la plus ancienne : on n'envoie jamais deux étapes le
   // même jour, et jamais une étape dépassée quand une plus récente est due.
-  for (let i = REMINDER_STAGES.length - 1; i >= 0; i -= 1) {
-    const s = REMINDER_STAGES[i];
+  for (let i = stages.length - 1; i >= 0; i -= 1) {
+    const s = stages[i];
     const at = expMs + s.offsetDays * DAY_MS;
     if (
       nowMs >= at &&
@@ -82,10 +110,15 @@ function dueStage(
 }
 /**
  * Recul appliqué à l'échéance pour définir « déjà relancé ce cycle » : une
- * relance dont l'horodatage est postérieur à `expiry - 30j` compte comme la
- * relance du cycle courant (la fenêtre de relance de 14j est incluse dedans).
+ * relance dont l'horodatage est postérieur à `expiry - N j` compte comme la
+ * relance du cycle courant (la fenêtre de relance est incluse dedans).
+ *
+ * 30 jours pour l'annuel. Sur un cycle MENSUEL, 30 jours couvrent le cycle
+ * entier : la relance de fin de grâce du mois précédent (J+7, soit ~23 jours
+ * avant l'échéance suivante) serait comptée comme celle du cycle en cours.
+ * 10 jours laissent la frontière entre deux mois là où elle est.
  */
-const CYCLE_LOOKBACK_DAYS = 30;
+const CYCLE_LOOKBACK_DAYS: Record<PlanTerm, number> = { year: 30, month: 10 };
 
 const SITE_URL =
   process.env.SITE_URL ||
@@ -119,6 +152,7 @@ type TenantRow = {
   plan_status: string;
   plan_expires_at: string | null;
   plan_last_reminder_at: string | null;
+  plan_term: string | null;
   plan_is_trial?: boolean | null;
 };
 
@@ -145,7 +179,7 @@ export async function runPlanRenewal(
   const { data, error } = await supabaseAdmin
     .from('tenants')
     .select(
-      'id, plan, plan_status, plan_expires_at, plan_last_reminder_at, plan_is_trial'
+      'id, plan, plan_status, plan_expires_at, plan_last_reminder_at, plan_is_trial, plan_term'
     )
     .in('plan', ['regie', 'circuit']);
   if (error) {
@@ -158,12 +192,16 @@ export async function runPlanRenewal(
   counters.checked = tenants.length;
 
   const nowIso = new Date(nowMs).toISOString();
-  const windowEndMs = nowMs + REMINDER_WINDOW_DAYS * DAY_MS;
 
   for (const t of tenants) {
     try {
       const expMs = t.plan_expires_at ? Date.parse(t.plan_expires_at) : NaN;
       if (!Number.isFinite(expMs)) continue;
+
+      // Périodicité payée. Une ligne antérieure à la colonne, ou une valeur
+      // inattendue, vaut `year` : c'est ce que tous les espaces existants ont
+      // effectivement payé.
+      const term: PlanTerm = t.plan_term === 'month' ? 'month' : 'year';
 
       // 1) Expiration.
       //
@@ -208,9 +246,9 @@ export async function runPlanRenewal(
       if (t.plan_status !== 'active' && t.plan_status !== 'past_due') continue;
 
       // Hors de la fenêtre utile : ni bientôt, ni récemment expiré.
-      if (expMs > windowEndMs) continue;
+      if (expMs > nowMs + reminderWindowDays(term) * DAY_MS) continue;
 
-      const cycleThresholdMs = expMs - CYCLE_LOOKBACK_DAYS * DAY_MS;
+      const cycleThresholdMs = expMs - CYCLE_LOOKBACK_DAYS[term] * DAY_MS;
       const lastRaw = t.plan_last_reminder_at
         ? Date.parse(t.plan_last_reminder_at)
         : NaN;
@@ -218,7 +256,7 @@ export async function runPlanRenewal(
       const lastMs =
         Number.isFinite(lastRaw) && lastRaw >= cycleThresholdMs ? lastRaw : NaN;
 
-      const stage = dueStage(expMs, lastMs, nowMs);
+      const stage = dueStage(expMs, lastMs, nowMs, term);
       if (!stage) continue;
 
       const emails = await resolveOwnerEmails(t.id);
@@ -233,7 +271,9 @@ export async function runPlanRenewal(
       }
 
       const plan = t.plan as PurchasablePlan;
-      const priceEur = PLAN_PRICES_EUR[plan];
+      // Le prix de CE QU'IL PAIE. La relance lisait le barème annuel sans
+      // condition : un abonné mensuel à 29 € recevait une échéance à 290 €.
+      const priceEur = planPrice(plan, term);
       const billingUrl = `${SITE_URL}/admin/billing`;
 
       for (const to of emails) {
@@ -243,6 +283,7 @@ export async function runPlanRenewal(
             planLabel: PLAN_LABELS[plan] ?? plan,
             expiresAt: t.plan_expires_at as string,
             priceEur: typeof priceEur === 'number' ? priceEur : 0,
+            term,
             billingUrl,
             // Un essai n'est pas un abonnement : la relance parle de fin
             // d'essai et de souscription, pas de renouvellement.

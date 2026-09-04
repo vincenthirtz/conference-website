@@ -27,8 +27,11 @@ import {
   effectivePlan,
   getPlanFeatures,
   isInPlanGrace,
+  isPurchasablePlan,
+  planPrice,
   type TenantPlan,
   type PlanStatus,
+  type PlanTerm,
 } from '@/utils/billing/planFeatures';
 
 const DAY_MS = 86_400_000;
@@ -40,6 +43,7 @@ type TenantRow = {
   plan_started_at: string | null;
   plan_expires_at: string | null;
   plan_is_trial?: boolean | null;
+  plan_term?: string | null;
 };
 
 type PaymentRow = {
@@ -79,7 +83,7 @@ async function handler(
   const { data: tenant, error: tenantErr } = await supabaseAdmin
     .from('tenants')
     .select(
-      'id, plan, plan_status, plan_started_at, plan_expires_at, plan_is_trial'
+      'id, plan, plan_status, plan_started_at, plan_expires_at, plan_is_trial, plan_term'
     )
     .eq('id', id)
     .maybeSingle();
@@ -98,6 +102,7 @@ async function handler(
   const planStatus = t.plan_status as PlanStatus;
   const planExpiresAt = t.plan_expires_at ?? null;
   const planStartedAt = t.plan_started_at ?? null;
+  const planTerm: PlanTerm = t.plan_term === 'month' ? 'month' : 'year';
 
   const nowMs = Date.now();
   const daysRemaining =
@@ -132,12 +137,21 @@ async function handler(
     helloassoPaymentId: p.helloasso_payment_id,
   }));
 
-  // Catalogue self-service : uniquement les plans à barème catalogue (> 0).
-  const catalog = (['regie', 'circuit'] as const).map((p) => ({
-    plan: p,
-    label: PLAN_LABELS[p],
-    priceEur: PLAN_PRICES_EUR[p] as number,
-  }));
+  // Catalogue self-service : les plans à barème catalogue (> 0), DÉDUITS du
+  // barème et non listés à la main. La liste écrite en dur était `regie` +
+  // `circuit` : Découverte, devenue facturée à 10 €/mois, n'y figurait pas et
+  // restait donc impossible à payer depuis cette page.
+  //
+  // Chaque entrée porte LES DEUX prix. La page affichait l'annuel avec un
+  // « / an » en dur alors que la souscription se fait au mois par défaut.
+  const catalog = (Object.keys(PLAN_PRICES_EUR) as TenantPlan[])
+    .filter((p) => isPurchasablePlan(p))
+    .map((p) => ({
+      plan: p,
+      label: PLAN_LABELS[p],
+      priceEur: PLAN_PRICES_EUR[p] as number,
+      monthlyPriceEur: planPrice(p, 'month') as number,
+    }));
 
   return res.status(200).json({
     plan,
@@ -150,6 +164,8 @@ async function handler(
     // « abonnement », et proposer de souscrire plutôt que de renouveler.
     isTrial: t.plan_is_trial === true,
     effectivePlan: eff,
+    // Périodicité en cours : ce que l'espace paie réellement aujourd'hui.
+    planTerm: planTerm,
     // Période de grâce (T10) : l'échéance est passée mais les capacités
     // tiennent encore. C'est l'état le plus important à dire — c'est le seul
     // où le client peut encore agir avant de perdre son bot.

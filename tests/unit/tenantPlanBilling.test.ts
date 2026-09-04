@@ -47,6 +47,7 @@ import {
   PLAN_PRICES_MONTHLY_EUR,
   YEARLY_MONTHS_BILLED,
   isPurchasablePlan,
+  planPrice,
   type TenantPlan,
 } from '../../utils/billing/planFeatures';
 import {
@@ -285,7 +286,61 @@ function seedTenant(over: Record<string, unknown> = {}) {
   ] as any;
 }
 
+describe('cohérence mensuel / annuel', () => {
+  it('douze mensualités coûtent PLUS que le terme annuel', () => {
+    // C'est toute la promesse « deux mois offerts ». La page publique
+    // l'affirmait au-dessus de la grille, et écrivait juste en dessous « 29 €
+    // / mois — soit 290 € à l'année » : 290 € est le prix du TERME annuel, pas
+    // le coût de douze mensualités (348 €). La page se contredisait donc
+    // elle-même, en annonçant au passage 58 € de moins que le vrai total.
+    for (const plan of ['discovery', 'regie', 'circuit'] as const) {
+      const monthly = planPrice(plan, 'month') as number;
+      const yearly = planPrice(plan, 'year') as number;
+      expect(monthly * 12).toBeGreaterThan(yearly);
+      expect(monthly * 12 - yearly).toBe(monthly * (12 - YEARLY_MONTHS_BILLED));
+    }
+  });
+
+  it('le mensuel affiché redonne EXACTEMENT l’annuel', () => {
+    // Le mensuel est dérivé par division + arrondi. Tant que chaque prix annuel
+    // est un multiple de YEARLY_MONTHS_BILLED, l'arrondi ne coûte rien ; le
+    // jour où un prix ne l'est plus, le barème affiché cesserait discrètement
+    // de correspondre au barème encaissé.
+    for (const plan of Object.keys(PLAN_PRICES_EUR) as TenantPlan[]) {
+      const yearly = PLAN_PRICES_EUR[plan];
+      if (typeof yearly !== 'number' || yearly === 0) continue;
+      expect(PLAN_PRICES_MONTHLY_EUR[plan]! * YEARLY_MONTHS_BILLED).toBe(
+        yearly
+      );
+    }
+  });
+});
+
 describe('applyTenantPlanPayment', () => {
+  it('un paiement mensuel inscrit la périodicité SUR le tenant', async () => {
+    // Sans cette colonne, la périodicité ne survivait pas à l'encaissement :
+    // elle restait sur le checkout et le paiement. Tout ce qui parle du plan
+    // ensuite — la relance d'échéance, la page de facturation — retombait sur
+    // le barème annuel et annonçait 290 € à quelqu'un qui paie 29 €.
+    seedTenant();
+    const r = await applyTenantPlanPayment({
+      helloassoPaymentId: 42,
+      tenantId: TENANT,
+      plan: 'regie',
+      amountCents: 2900,
+      checkoutIntentId: 987,
+      nowMs: NOW,
+      term: 'month',
+    });
+    expect(r.status).toBe('applied');
+    const t = store.tenants[0] as any;
+    expect(t.plan_term).toBe('month');
+    // Un mois payé, un mois donné.
+    expect(t.plan_expires_at).toBe(
+      new Date(Date.UTC(2026, 7, 9, 12, 0, 0)).toISOString()
+    );
+  });
+
   it('active un tenant discovery → regie actif, expire ≈ now+1an', async () => {
     seedTenant();
     const r = await applyTenantPlanPayment({

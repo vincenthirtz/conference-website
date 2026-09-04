@@ -98,7 +98,8 @@ export default {
   termYearly: 'Yearly',
   termYearlySaving: 'Pay yearly and {months} months are on us.',
   pricePerMonth: '€{amount} / month',
-  priceYearlyEquivalent: 'that is €{amount} a year',
+  priceYearlyAlternative:
+    'that is €{twelve} over twelve months — or €{yearly} paid yearly',
   ambassadorBannerTitle: 'A Cup ambassador?',
   ambassadorBannerBody:
     'The Discovery plan is on us, for as long as your commitment lasts. Tell us when you create your space.',
