@@ -104,4 +104,5 @@ export default adminNs('adminDemandesList', {
     'La note est enregistrée sur la demande (note staff). Le statut reste « en attente ».',
   send: 'Envoyer',
   infoNotePlaceholder: 'Ex : peux-tu confirmer ton BattleTag et ton rôle ?',
+  systemNotification: 'Notification',
 });

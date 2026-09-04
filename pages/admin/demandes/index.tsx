@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
+import DemandeAvatar from '@/components/admin/demandes/DemandeAvatar';
+import { isSystemNotification } from '@/utils/demandes/systemNotification';
 import { useRouter } from 'next/router';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
@@ -1149,44 +1151,30 @@ function AdminDemandesPage({
                         href={`/admin/demandes/${d.id}`}
                         className="flex items-center gap-4 flex-1 min-w-0"
                       >
-                        {/* Icon / Avatar */}
-                        <div className="flex-shrink-0">
-                          {d.user?.avatar_url ? (
-                            <Image
-                              src={d.user.avatar_url}
-                              alt={d.user.display_name || 'User'}
-                              width={48}
-                              height={48}
-                              className="w-12 h-12 rounded-xl object-cover border border-neutral-700"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 rounded-xl bg-neutral-700/50 flex items-center justify-center border border-neutral-700">
-                              <svg
-                                className="w-6 h-6 text-neutral-500"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                />
-                              </svg>
-                            </div>
-                          )}
-                        </div>
+                        <DemandeAvatar
+                          avatarUrl={d.user?.avatar_url ?? null}
+                          name={d.user?.display_name ?? null}
+                          isNotification={isSystemNotification(d)}
+                        />
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <h3 className="font-semibold text-white group-hover:text-blue-400 transition-colors truncate">
-                              {d.user?.display_name ||
-                                d.user?.email ||
-                                d.user_id ||
-                                t.unknownUser}
+                              {isSystemNotification(d)
+                                ? d.payload?.from_team_name ||
+                                  d.team?.name ||
+                                  t.systemNotification
+                                : d.user?.display_name ||
+                                  d.user?.email ||
+                                  d.user_id ||
+                                  t.unknownUser}
                             </h3>
+                            {isSystemNotification(d) && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wide bg-sky-600/20 text-sky-300 border border-sky-500/40">
+                                {t.systemNotification}
+                              </span>
+                            )}
                             <span
                               className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(
                                 d.status
@@ -1230,7 +1218,7 @@ function AdminDemandesPage({
                             )}
                           </div>
                           <div className="flex items-center gap-3 text-sm text-neutral-400 flex-wrap">
-                            {d.type === 'scrim' &&
+                            {(d.type === 'scrim' || isSystemNotification(d)) &&
                               d.payload?.from_team_name && (
                                 <>
                                   <span className="flex items-center gap-1.5">

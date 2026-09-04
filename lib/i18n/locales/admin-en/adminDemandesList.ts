@@ -104,4 +104,5 @@ export default {
     'The note is saved on the request (staff note). The status stays “pending”.',
   send: 'Send',
   infoNotePlaceholder: 'e.g. can you confirm your BattleTag and your role?',
+  systemNotification: 'Notification',
 };
