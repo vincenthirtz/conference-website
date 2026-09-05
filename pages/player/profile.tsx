@@ -19,6 +19,7 @@ import { logger } from '../../utils/logger';
 import nsPlayerProfile from '@/lib/i18n/locales/fr/playerProfile';
 import nsOverwatchRank from '@/lib/i18n/locales/fr/overwatchRank';
 import nsSpecialty from '@/lib/i18n/locales/fr/specialty';
+import { TWITCH_HANDLE_MAX } from '@/utils/social/profileHandles';
 
 function PlayerProfile() {
   const router = useRouter();
@@ -44,6 +45,7 @@ function PlayerProfile() {
   const [editSkillRating, setEditSkillRating] = useState('');
   const [editSpecialty, setEditSpecialty] = useState('');
   const [editAvatarUrl, setEditAvatarUrl] = useState('');
+  const [editTwitch, setEditTwitch] = useState('');
   const [editingInitialized, setEditingInitialized] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
@@ -84,6 +86,7 @@ function PlayerProfile() {
           : ''
       );
       setEditSpecialty((user.user_metadata?.specialty as string) || '');
+      setEditTwitch((user.user_metadata?.twitch as string) || '');
       setEditAvatarUrl((user.user_metadata?.avatar_url as string) || '');
       setEditingInitialized(true);
     }
@@ -121,6 +124,7 @@ function PlayerProfile() {
           // Chaîne vide = effacer le poste ; une valeur inconnue serait
           // refusée par l'API plutôt que ramenée à null en douce.
           specialty: editSpecialty || null,
+          twitch: editTwitch.trim() || null,
           avatar_url: editAvatarUrl,
         }),
       });
@@ -518,6 +522,24 @@ function PlayerProfile() {
                   placeholder={tRank.fieldPlaceholder}
                 />
                 <p className="text-xs text-gray-500 mt-1">{tRank.fieldHint}</p>
+              </div>
+              <div>
+                <label
+                  htmlFor="player-twitch"
+                  className="block text-xs text-gray-400 mb-1"
+                >
+                  {t.twitchLabel}
+                </label>
+                <input
+                  id="player-twitch"
+                  type="text"
+                  value={editTwitch}
+                  onChange={(e) => setEditTwitch(e.target.value)}
+                  maxLength={TWITCH_HANDLE_MAX}
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
+                  placeholder={t.twitchPlaceholder}
+                />
+                <p className="text-xs text-gray-500 mt-1">{t.twitchHelp}</p>
               </div>
               <div>
                 <label

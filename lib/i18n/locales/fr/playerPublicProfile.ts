@@ -71,4 +71,5 @@ export default ns('playerPublicProfile', {
   shareError: 'Impossible de copier le lien',
   shareOnX: 'Partager sur X',
   shareOnBluesky: 'Partager sur Bluesky',
+  twitchLinkHint: '(ouvre la chaîne Twitch dans un nouvel onglet)',
 });

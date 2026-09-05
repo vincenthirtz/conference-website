@@ -42,6 +42,10 @@ export default {
   setupBattleTagTitle: 'Your BattleTag is missing',
   setupBattleTagBody:
     'Your Discord account is linked. Now add your BattleTag: it is what identifies you on your team roster and in game.',
+  twitchLabel: 'Twitch channel',
+  twitchPlaceholder: 'your_twitch_name',
+  twitchHelp:
+    'Your Twitch username or channel URL: it shows on your public profile and on your teams’ rosters. Your captain can also fill it in for you — what you enter here takes precedence. Empty = your own channel is removed.',
   avatarLabel: 'Avatar (URL)',
   avatarPlaceholder: 'https://…',
   avatarHelp: 'Leave empty to remove the avatar.',

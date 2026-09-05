@@ -71,4 +71,5 @@ export default {
   shareError: 'Could not copy the link',
   shareOnX: 'Share on X',
   shareOnBluesky: 'Share on Bluesky',
+  twitchLinkHint: '(opens the Twitch channel in a new tab)',
 };

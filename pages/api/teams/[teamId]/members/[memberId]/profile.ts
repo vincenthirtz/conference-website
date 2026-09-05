@@ -16,6 +16,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { hasTeamPermission } from '@/utils/teams/permissions';
+import { isValidTwitchValue } from '@/utils/social/profileHandles';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import {
   MEMBER_DISPLAY_NAME_MAX,
@@ -169,6 +170,17 @@ export default withAuthRoute(async function handler(
 
   const twitch = trimOrNull(body.twitch, HANDLE_MAX);
   if (!twitch.ok) return res.status(400).json({ error: twitch.error });
+  // Même contrôle de format que le chemin self-service
+  // (`/api/player/update-profile`) : le champ est étiqueté « Twitch », et les
+  // deux écrans alimentent la MÊME colonne. Sans ça, une capitaine pouvait y
+  // ranger un lien Discord que la joueuse, elle, se serait vu refuser.
+  if (twitch.value && !isValidTwitchValue(twitch.value)) {
+    return res.status(400).json({
+      error:
+        'Chaîne Twitch invalide. Attendu : un pseudo Twitch ou une URL twitch.tv.',
+      code: 'TWITCH_INVALID',
+    });
+  }
 
   // is_substitute: only updatable by team admins, not by the member herself
   // (a substitute shouldn't be able to promote herself to titulaire).

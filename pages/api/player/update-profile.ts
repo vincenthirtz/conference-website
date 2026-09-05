@@ -1,7 +1,7 @@
 // pages/api/player/update-profile.ts
 // PATCH : mise a jour du profil joueuse — display_name, battle_tag, niveau
-// Overwatch declare et poste — dans user_metadata, avec propagation sur les
-// fiches de roster.
+// Overwatch declare, poste et chaine Twitch — dans user_metadata, avec
+// propagation sur les fiches de roster.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -14,6 +14,10 @@ import {
   SKILL_RATING_MIN,
   isValidSkillRating,
 } from '@/utils/overwatchRank';
+import {
+  TWITCH_HANDLE_MAX as TWITCH_MAX,
+  isValidTwitchValue,
+} from '@/utils/social/profileHandles';
 
 import { logger } from '../../../utils/logger';
 const BATTLE_TAG_RE = /^[A-Za-z0-9\u00C0-\u024F]+#[0-9]{4,6}$/;
@@ -38,8 +42,14 @@ export default withAuthRoute(async function handler(
   )
     return;
 
-  const { display_name, battle_tag, avatar_url, skill_rating, specialty } =
-    req.body || {};
+  const {
+    display_name,
+    battle_tag,
+    avatar_url,
+    skill_rating,
+    specialty,
+    twitch,
+  } = req.body || {};
   const updates: Record<string, unknown> = {};
 
   if (typeof display_name === 'string') {
@@ -111,6 +121,42 @@ export default withAuthRoute(async function handler(
     }
   }
 
+  // Chaine Twitch. C'est SA chaine : elle la declare elle-meme, sans passer
+  // par sa capitaine — meme raisonnement que le SR et le poste juste au-dessus.
+  // La capitaine (ou une manager avec `edit_public_page`) peut toujours la
+  // renseigner de son cote via /api/teams/[teamId]/members/[memberId]/profile,
+  // pour une joueuse qui ne l'a pas fait.
+  //
+  // On accepte un handle nu, un @handle ou une URL complete : c'est
+  // `utils/social/profileHandles.ts` qui construit le lien a l'affichage, et
+  // lui seul. Normaliser ici en plus donnerait deux verites pour une valeur.
+  // `null` / chaine vide effacent ; l'absence de cle ne touche a rien.
+  if ('twitch' in (req.body || {})) {
+    if (twitch === null || twitch === '') {
+      updates.twitch = null;
+    } else if (typeof twitch !== 'string') {
+      return res.status(400).json({ error: 'twitch invalide.' });
+    } else {
+      const trimmed = twitch.trim();
+      if (!trimmed) {
+        updates.twitch = null;
+      } else if (trimmed.length > TWITCH_MAX) {
+        return res.status(400).json({
+          error: `La chaine Twitch ne peut pas depasser ${TWITCH_MAX} caracteres.`,
+          code: 'TWITCH_INVALID',
+        });
+      } else if (!isValidTwitchValue(trimmed)) {
+        return res.status(400).json({
+          error:
+            'Chaine Twitch invalide. Attendu : un pseudo Twitch ou une URL twitch.tv.',
+          code: 'TWITCH_INVALID',
+        });
+      } else {
+        updates.twitch = trimmed;
+      }
+    }
+  }
+
   if (typeof avatar_url === 'string') {
     const trimmed = avatar_url.trim();
     if (
@@ -151,6 +197,26 @@ export default withAuthRoute(async function handler(
   if ('skill_rating' in updates)
     rosterUpdates.skill_rating = updates.skill_rating;
   if ('specialty' in updates) rosterUpdates.specialty = updates.specialty;
+  // La chaine suit aussi : `team_members.twitch` est ce que lit la page
+  // publique de l'equipe. Sans propagation, une joueuse aurait declare sa
+  // chaine et ne la verrait nulle part sur le roster ou elle joue.
+  //
+  // SAUF un cas, et c'est important : un `null` alors qu'elle n'avait RIEN
+  // declare n'efface pas la fiche de roster. Sa capitaine a le droit de
+  // renseigner la chaine a sa place ; le formulaire de profil, lui, envoie le
+  // champ a CHAQUE enregistrement. Sans cette garde, une joueuse qui vient
+  // juste corriger son BattleTag effacerait au passage la chaine que sa
+  // capitaine avait saisie — sans l'avoir demande ni meme l'avoir vu.
+  //
+  // Un `null` APRES avoir declare quelque chose, lui, efface bien : la elle
+  // retire sa chaine, et c'est ce qu'elle veut.
+  if ('twitch' in updates) {
+    const hadDeclaredTwitch =
+      typeof existingMeta.twitch === 'string' && existingMeta.twitch.trim();
+    if (updates.twitch !== null || hadDeclaredTwitch) {
+      rosterUpdates.twitch = updates.twitch;
+    }
+  }
 
   if (Object.keys(rosterUpdates).length > 0) {
     const tenantId = resolveTenantIdForUserRequest(req, {

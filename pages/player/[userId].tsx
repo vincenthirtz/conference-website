@@ -43,6 +43,8 @@ import { useLocale } from '@/lib/i18n/useLocale';
 import { useToast } from '@/components/Toast';
 import nsPlayerPublicProfile from '@/lib/i18n/locales/fr/playerPublicProfile';
 import nsPlayerDiscovery from '@/lib/i18n/locales/fr/playerDiscovery';
+import { TwitchIcon } from '@/components/Icons';
+import { socialHandleLabel, socialHref } from '@/utils/social/profileHandles';
 import { XIcon } from '@/components/Icons';
 
 type PlayerProfileDict = typeof nsPlayerPublicProfile.fr;
@@ -695,6 +697,10 @@ function ProfileHeader({
   const t = useT(nsPlayerPublicProfile);
   const total = player.wins + player.losses;
   const winRate = total > 0 ? Math.round((player.wins / total) * 100) : null;
+  // Handle nu ou URL complète selon ce qui a été saisi : c'est le util partagé
+  // qui tranche, pour que le lien soit identique à celui du roster d'équipe.
+  const twitchHref = socialHref('twitch', player.twitch);
+  const twitchLabel = socialHandleLabel(player.twitch);
 
   return (
     <div className="card-brand rounded-2xl bg-neutral-900/40 p-6">
@@ -719,6 +725,18 @@ function ProfileHeader({
               <h1 className="text-2xl font-bold sm:text-3xl">{label}</h1>
               {player.displayName && player.battleTag ? (
                 <p className="text-sm text-neutral-500">{player.battleTag}</p>
+              ) : null}
+              {twitchHref ? (
+                <a
+                  href={twitchHref}
+                  target="_blank"
+                  rel="noopener noreferrer me"
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-purple-500/40 bg-purple-500/10 px-3 py-1 text-xs font-semibold text-purple-200 transition hover:border-purple-400/70 hover:bg-purple-500/20"
+                >
+                  <TwitchIcon className="h-3.5 w-3.5" />
+                  <span>{twitchLabel ?? 'Twitch'}</span>
+                  <span className="sr-only">{t.twitchLinkHint}</span>
+                </a>
               ) : null}
             </div>
             <ShareButtons player={player} label={label} />

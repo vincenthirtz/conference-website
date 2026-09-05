@@ -12,6 +12,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { hasTeamPermission } from '@/utils/teams/permissions';
+import { isValidTwitchValue } from '@/utils/social/profileHandles';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import {
   TEAM_PUBLIC_CONTENT_MAX_LENGTH,
@@ -219,6 +220,16 @@ export default withAuthRoute(async function handler(
 
   const twitch = trimOrNull(body.twitch, HANDLE_MAX);
   if (!twitch.ok) return res.status(400).json({ error: twitch.error });
+  // Même contrôle que les chaînes individuelles : un champ « Twitch » qui
+  // accepte n'importe quelle URL produit un bouton Twitch qui n'ouvre pas
+  // Twitch.
+  if (twitch.value && !isValidTwitchValue(twitch.value)) {
+    return res.status(400).json({
+      error:
+        'Chaîne Twitch invalide. Attendu : un pseudo Twitch ou une URL twitch.tv.',
+      code: 'TWITCH_INVALID',
+    });
+  }
 
   const instagram = trimOrNull(body.instagram, HANDLE_MAX);
   if (!instagram.ok) return res.status(400).json({ error: instagram.error });

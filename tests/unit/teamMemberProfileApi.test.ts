@@ -164,13 +164,19 @@ describe('method + auth', () => {
 
   it('rejects invalid teamId', async () => {
     const res = makeRes();
-    await handler(makeReq({ query: { teamId: 'bad', memberId: MEMBER_PLAYER } }), res);
+    await handler(
+      makeReq({ query: { teamId: 'bad', memberId: MEMBER_PLAYER } }),
+      res
+    );
     expect(res.statusCode).toBe(400);
   });
 
   it('rejects invalid memberId', async () => {
     const res = makeRes();
-    await handler(makeReq({ query: { teamId: TEAM_ID, memberId: 'bad' } }), res);
+    await handler(
+      makeReq({ query: { teamId: TEAM_ID, memberId: 'bad' } }),
+      res
+    );
     expect(res.statusCode).toBe(400);
   });
 
@@ -316,7 +322,8 @@ describe('field validation', () => {
     await handler(makeReq({ body: { specialty: 'Tank' } }), res);
     expect(res.statusCode).toBe(200);
     expect(
-      (store.team_members as any[]).find((m) => m.id === MEMBER_PLAYER).specialty
+      (store.team_members as any[]).find((m) => m.id === MEMBER_PLAYER)
+        .specialty
     ).toBe('tank');
   });
 
@@ -358,6 +365,45 @@ describe('field validation', () => {
     const res = makeRes();
     await handler(makeReq({ body: { tagline: 'a'.repeat(121) } }), res);
     expect(res.statusCode).toBe(400);
+  });
+
+  // Le champ twitch est alimenté par DEUX écrans — celui-ci (capitaine /
+  // manager) et le profil de la joueuse — pour une seule colonne. Les deux
+  // doivent refuser la même chose, sinon une capitaine peut ranger dans un
+  // champ « Twitch » ce que la joueuse, elle, se serait vu refuser.
+  it('accepts a Twitch handle and stores it', async () => {
+    const res = makeRes();
+    await handler(makeReq({ body: { twitch: 'ma_chaine' } }), res);
+    expect(res.statusCode).toBe(200);
+    expect(
+      (store.team_members as any[]).find((m) => m.id === MEMBER_PLAYER).twitch
+    ).toBe('ma_chaine');
+  });
+
+  it('accepts a full twitch.tv URL', async () => {
+    const res = makeRes();
+    await handler(
+      makeReq({ body: { twitch: 'https://twitch.tv/ma_chaine' } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('rejects a twitch value pointing at another domain', async () => {
+    const res = makeRes();
+    await handler(
+      makeReq({ body: { twitch: 'https://discord.gg/abcd' } }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).code).toBe('TWITCH_INVALID');
+  });
+
+  it('rejects a malformed twitch handle', async () => {
+    const res = makeRes();
+    await handler(makeReq({ body: { twitch: 'pseudo avec espaces' } }), res);
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).code).toBe('TWITCH_INVALID');
   });
 });
 

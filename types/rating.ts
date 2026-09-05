@@ -92,6 +92,13 @@ export type PlayerProfileCore = {
   displayName: string | null;
   battleTag: string | null;
   avatarUrl: string | null;
+  /**
+   * Chaîne Twitch déclarée par la joueuse (`user_metadata.twitch`), ou à
+   * défaut celle renseignée par sa capitaine sur une fiche de roster
+   * (`team_members.twitch`). Handle nu ou URL — le lien se construit à
+   * l'affichage via `utils/social/profileHandles.ts`. `null` = non déclarée.
+   */
+  twitch: string | null;
   rating: number;
   rd: number;
   volatility: number;

@@ -291,6 +291,57 @@ async function readAchievements(
 }
 
 /**
+ * Chaîne Twitch d'une joueuse, pour le profil PUBLIC.
+ *
+ * DEUX SOURCES, ET UN ORDRE. Une joueuse déclare la sienne sur son compte
+ * (`user_metadata.twitch`, self-service) ; sa capitaine ou une manager peut
+ * aussi la renseigner sur la fiche de roster (`team_members.twitch`). La
+ * déclaration de la joueuse GAGNE : c'est son compte, et si les deux
+ * divergent, celle qui a raison sur sa propre chaîne est elle.
+ *
+ * La fiche de roster sert de repli, pour le cas qui a motivé la demande — la
+ * joueuse n'a rien saisi, la capitaine remplit à sa place, et la chaîne
+ * apparaît quand même.
+ *
+ * BEST-EFFORT : un profil public ne doit pas tomber parce que le lookup d'un
+ * lien secondaire a échoué. En cas d'erreur on renvoie `null`, le bouton
+ * n'apparaît pas, le reste de la page vit sa vie.
+ */
+async function readPlayerTwitch(
+  userId: string,
+  tenantId: string
+): Promise<string | null> {
+  try {
+    const { data: authUser } =
+      await supabaseAdmin.auth.admin.getUserById(userId);
+    const declared = authUser?.user?.user_metadata?.twitch;
+    if (typeof declared === 'string' && declared.trim()) {
+      return declared.trim();
+    }
+  } catch (err) {
+    logger.error('[readPlayerProfile] twitch metadata read error', err);
+  }
+
+  try {
+    const { data: rows } = await supabaseAdmin
+      .from('team_members')
+      .select('twitch')
+      .eq('tenant_id', tenantId)
+      .eq('user_id', userId)
+      .not('twitch', 'is', null)
+      .limit(1);
+    const fromRoster = (rows ?? [])[0]?.twitch;
+    if (typeof fromRoster === 'string' && fromRoster.trim()) {
+      return fromRoster.trim();
+    }
+  } catch (err) {
+    logger.error('[readPlayerProfile] twitch roster read error', err);
+  }
+
+  return null;
+}
+
+/**
  * Lit le profil public d'une joueuse pour un tenant donné.
  *
  * @returns la réponse `PlayerProfileResponse` ou `null` si la joueuse n'a
@@ -385,12 +436,15 @@ export async function readPlayerProfile(
     rank = (ratedCount ?? 0) + 1;
   }
 
+  const twitch = await readPlayerTwitch(userId, tenantId);
+
   const player: PlayerProfileCore = {
     userId: pr.user_id,
     displayName: pr.display_name ?? null,
     // Profil PUBLIC : jamais l'identifiant numérique (cf. utils/battleTag.ts).
     battleTag: maskBattleTag(pr.battle_tag ?? null),
     avatarUrl: pr.avatar_url ?? null,
+    twitch,
     rating: pr.rating,
     rd: pr.rd,
     volatility: pr.volatility,

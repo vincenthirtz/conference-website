@@ -41,6 +41,10 @@ export default ns('playerProfile', {
   setupBattleTagTitle: 'Il te manque ton BattleTag',
   setupBattleTagBody:
     "Ton compte Discord est lié. Renseigne maintenant ton BattleTag : c'est lui qui t'identifie sur le roster de ton équipe et en jeu.",
+  twitchLabel: 'Chaîne Twitch',
+  twitchPlaceholder: 'ton_pseudo_twitch',
+  twitchHelp:
+    "Ton pseudo Twitch ou l'URL de ta chaîne : elle s'affiche sur ton profil public et sur le roster de tes équipes. Ta capitaine peut aussi la renseigner à ta place — ce que tu saisis ici a la priorité. Vide = tu retires la tienne.",
   avatarLabel: 'Avatar (URL)',
   avatarPlaceholder: 'https://…',
   avatarHelp: "Laisse vide pour retirer l'avatar.",

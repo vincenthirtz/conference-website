@@ -15,6 +15,7 @@ import {
   type TeamReliability,
 } from '@/utils/teams/reliability';
 import { maskBattleTag } from '@/utils/battleTag';
+import { safeHref, socialHref } from '@/utils/social/profileHandles';
 import { splitTeamMembers } from '@/utils/teams/roleKind';
 import SkillRatingBadge from '@/components/Team/SkillRatingBadge';
 import SpecialtyBadge from '@/components/Team/SpecialtyBadge';
@@ -60,46 +61,6 @@ function truncate(text: string, max = 155): string {
   const clean = text.replace(/\s+/g, ' ').trim();
   if (clean.length <= max) return clean;
   return `${clean.slice(0, max - 1).trimEnd()}…`;
-}
-
-function safeHref(url: string): string | undefined {
-  try {
-    const full = url.startsWith('http') ? url : `https://${url}`;
-    const parsed = new URL(full);
-    if (['http:', 'https:'].includes(parsed.protocol)) return full;
-    return undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function socialHref(
-  platform: 'x' | 'youtube' | 'twitch' | 'instagram' | 'tiktok',
-  raw: string | null | undefined
-): string | undefined {
-  if (!raw) return undefined;
-  const value = raw.trim();
-  if (!value) return undefined;
-  if (value.startsWith('http://') || value.startsWith('https://')) {
-    return safeHref(value);
-  }
-  const handle = value.replace(/^@/, '');
-  switch (platform) {
-    case 'x':
-      // La colonne s'appelle encore `twitter` en base, et c'est sans
-      // importance : ce qui y est stocké est un HANDLE, qui ne change pas
-      // quand la plateforme change de nom. Seule l'URL construite compte.
-      return safeHref(`https://x.com/${handle}`);
-    case 'youtube':
-      // Allow either an @handle or a raw channel name
-      return safeHref(`https://youtube.com/@${handle}`);
-    case 'twitch':
-      return safeHref(`https://twitch.tv/${handle}`);
-    case 'instagram':
-      return safeHref(`https://instagram.com/${handle}`);
-    case 'tiktok':
-      return safeHref(`https://tiktok.com/@${handle}`);
-  }
 }
 
 type Team = {
