@@ -342,6 +342,79 @@ async function readPlayerTwitch(
 }
 
 /**
+ * Fiche d'une joueuse SANS ligne `player_ratings` : sur un roster, mais aucun
+ * match classé à son actif.
+ *
+ * POURQUOI ELLE EXISTE. Le profil public 404ait dans ce cas — et c'était la
+ * situation de 61 joueuses sur 69. Or la page publique d'équipe, les feuilles
+ * de match et l'annuaire lient TOUS les membres d'un roster : une visiteuse qui
+ * cliquait sur une joueuse tombait neuf fois sur dix sur une page introuvable,
+ * pour quelqu'un qui est bel et bien inscrite. Le classement n'est qu'une
+ * PARTIE de la fiche ; son absence ne doit pas emporter le reste — nom, avatar,
+ * chaîne Twitch, pronoms.
+ *
+ * L'IDENTITÉ VIENT DU ROSTER, pas de `player_ratings` qui n'existe pas. Être
+ * sur un roster du tenant est aussi ce qui fait qu'une fiche est légitime :
+ * sans ça, on renvoie `null` et le 404 est mérité — un UUID au hasard ne doit
+ * pas fabriquer une page.
+ *
+ * TOUT LE RESTE EST VIDE, ET C'EST EXACT : historique, matchs récents,
+ * confrontations et palmarès se déduisent de matchs qu'elle n'a pas joués.
+ */
+async function readUnratedPlayerProfile(
+  userId: string,
+  tenantId: string
+): Promise<PlayerProfileResponse | null> {
+  const { data: rows, error } = await supabaseAdmin
+    .from('team_members')
+    .select('user_id, display_name, battle_tag, avatar_url, created_at')
+    .eq('tenant_id', tenantId)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (error) {
+    logger.error('[readPlayerProfile] roster identity read error', error);
+    throw new Error('Failed to load player');
+  }
+  const member = (rows ?? [])[0] as
+    | {
+        display_name?: string | null;
+        battle_tag?: string | null;
+        avatar_url?: string | null;
+      }
+    | undefined;
+  if (!member) return null;
+
+  const twitch = await readPlayerTwitch(userId, tenantId);
+
+  return {
+    player: {
+      userId,
+      displayName: member.display_name ?? null,
+      // Profil PUBLIC : jamais l'identifiant numérique (cf. utils/battleTag.ts).
+      battleTag: maskBattleTag(member.battle_tag ?? null),
+      avatarUrl: member.avatar_url ?? null,
+      twitch,
+      unrated: true,
+      // Zéros de remplissage, JAMAIS à afficher : `unrated` est ce qui compte.
+      rating: 0,
+      rd: 0,
+      volatility: 0,
+      peakRating: 0,
+      gamesPlayed: 0,
+      wins: 0,
+      losses: 0,
+      rank: null,
+    },
+    history: [],
+    recentMatches: [],
+    h2h: [],
+    achievements: EMPTY_ACHIEVEMENTS,
+  };
+}
+
+/**
  * Lit le profil public d'une joueuse pour un tenant donné.
  *
  * @returns la réponse `PlayerProfileResponse` ou `null` si la joueuse n'a
@@ -367,8 +440,11 @@ export async function readPlayerProfile(
     logger.error('[readPlayerProfile] player_ratings read error', prErr);
     throw new Error('Failed to load player');
   }
+  // Pas de ligne de classement : la fiche existe quand même si la joueuse est
+  // sur un roster. Voir readUnratedPlayerProfile — c'était le cas de la
+  // très grande majorité des joueuses, et leur profil public 404ait.
   if (!prRow) {
-    return null;
+    return readUnratedPlayerProfile(userId, tenantId);
   }
   const pr = prRow as Pick<
     PlayerRatingRow,
@@ -445,6 +521,7 @@ export async function readPlayerProfile(
     battleTag: maskBattleTag(pr.battle_tag ?? null),
     avatarUrl: pr.avatar_url ?? null,
     twitch,
+    unrated: false,
     rating: pr.rating,
     rd: pr.rd,
     volatility: pr.volatility,

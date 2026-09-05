@@ -72,4 +72,6 @@ export default {
   shareOnX: 'Share on X',
   shareOnBluesky: 'Share on Bluesky',
   twitchLinkHint: '(opens the Twitch channel in a new tab)',
+  unratedNotice:
+    'No ranked match yet — the rating will appear after her first official game.',
 };

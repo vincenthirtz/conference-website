@@ -99,6 +99,17 @@ export type PlayerProfileCore = {
    * l'affichage via `utils/social/profileHandles.ts`. `null` = non déclarée.
    */
   twitch: string | null;
+  /**
+   * `true` quand la joueuse n'a aucune ligne `player_ratings` : elle est sur un
+   * roster mais n'a pas encore joué de match classé.
+   *
+   * Sa fiche existe quand même — nom, avatar, Twitch, palmarès — mais les
+   * chiffres ci-dessous n'ont AUCUN sens et ne doivent pas être affichés. Ils
+   * valent 0 pour garder le type simple, pas parce qu'ils sont mesurés : lire
+   * `rating: 0` comme un vrai classement afficherait « 0 » à quelqu'un qui n'a
+   * simplement jamais joué.
+   */
+  unrated: boolean;
   rating: number;
   rd: number;
   volatility: number;
@@ -106,7 +117,8 @@ export type PlayerProfileCore = {
   gamesPlayed: number;
   wins: number;
   losses: number;
-  rank: number;
+  /** `null` pour une joueuse non classée : elle n'a pas de rang, elle n'en a pas « le dernier ». */
+  rank: number | null;
 };
 
 /** Point de courbe (history) du profil. */

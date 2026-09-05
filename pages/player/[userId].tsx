@@ -139,12 +139,16 @@ function Profile({ data }: { data: PlayerProfileResponse }) {
 
       <BadgesSection badges={achievements.badges} />
 
-      <section className="mt-8">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-brand-gradient">
-          {t.ratingProgression}
-        </h2>
-        <RatingChart history={history} />
-      </section>
+      {/* Une courbe vide n'apprend rien et occupe le haut de la fiche d'une
+          joueuse qui n'a pas encore joué. */}
+      {history.length > 0 && (
+        <section className="mt-8">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-brand-gradient">
+            {t.ratingProgression}
+          </h2>
+          <RatingChart history={history} />
+        </section>
+      )}
 
       <PalmaresSection placements={achievements.palmares} />
       <SeasonsSection seasons={achievements.seasons} />
@@ -741,54 +745,73 @@ function ProfileHeader({
             </div>
             <ShareButtons player={player} label={label} />
           </div>
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-neutral-400 sm:justify-start">
-            <span>
-              {t.rankLabel}{' '}
-              <span className="font-semibold text-white">#{player.rank}</span>
-            </span>
-            <span aria-hidden>·</span>
-            <span>
-              {format(
-                player.gamesPlayed > 1
-                  ? t.matchesCount_other
-                  : t.matchesCount_one,
-                { count: player.gamesPlayed }
+          {/* Une joueuse non classée n'a ni rang, ni rating, ni bilan : les
+              afficher à 0 la ferait passer pour dernière du classement alors
+              qu'elle n'y figure simplement pas encore. */}
+          {player.unrated ? (
+            <p className="mt-3 text-sm text-neutral-400">{t.unratedNotice}</p>
+          ) : (
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-neutral-400 sm:justify-start">
+              <span>
+                {t.rankLabel}{' '}
+                <span className="font-semibold text-white">#{player.rank}</span>
+              </span>
+              <span aria-hidden>·</span>
+              <span>
+                {format(
+                  player.gamesPlayed > 1
+                    ? t.matchesCount_other
+                    : t.matchesCount_one,
+                  { count: player.gamesPlayed }
+                )}
+              </span>
+              {winRate !== null && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>{format(t.winRatePct, { rate: winRate })}</span>
+                </>
               )}
-            </span>
-            {winRate !== null && (
-              <>
-                <span aria-hidden>·</span>
-                <span>{format(t.winRatePct, { rate: winRate })}</span>
-              </>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
-        <div className="text-center">
-          <div className="text-brand-gradient text-4xl font-bold">
-            {Math.round(player.rating)}
+        {!player.unrated && (
+          <div className="text-center">
+            <div className="text-brand-gradient text-4xl font-bold">
+              {Math.round(player.rating)}
+            </div>
+            <div
+              className="text-xs text-neutral-500"
+              title={t.ratingUncertaintyTitle}
+            >
+              {format(t.ratingDelta, {
+                rd: Math.round(player.rd),
+                peak: Math.round(player.peakRating),
+              })}
+            </div>
           </div>
-          <div
-            className="text-xs text-neutral-500"
-            title={t.ratingUncertaintyTitle}
-          >
-            {format(t.ratingDelta, {
-              rd: Math.round(player.rd),
-              peak: Math.round(player.peakRating),
-            })}
-          </div>
-        </div>
+        )}
       </div>
 
-      <div className="mt-5 grid grid-cols-3 gap-3 border-t border-neutral-800 pt-5 text-center">
-        <Stat value={player.wins} label={t.statWins} tone="text-emerald-400" />
-        <Stat value={player.losses} label={t.statLosses} tone="text-rose-400" />
-        <Stat
-          value={Math.round(player.peakRating)}
-          label={t.statPeak}
-          tone="text-amber-300"
-        />
-      </div>
+      {!player.unrated && (
+        <div className="mt-5 grid grid-cols-3 gap-3 border-t border-neutral-800 pt-5 text-center">
+          <Stat
+            value={player.wins}
+            label={t.statWins}
+            tone="text-emerald-400"
+          />
+          <Stat
+            value={player.losses}
+            label={t.statLosses}
+            tone="text-rose-400"
+          />
+          <Stat
+            value={Math.round(player.peakRating)}
+            label={t.statPeak}
+            tone="text-amber-300"
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -1141,19 +1164,26 @@ function buildPlayerSeo(profile: PlayerProfileResponse): SeoProps {
 
   const plural = player.gamesPlayed > 1;
 
-  const descriptionFr =
-    `Rang #${player.rank} · ${rating} de rating · ` +
-    `${player.wins}V-${player.losses}D` +
-    (winRate !== null ? ` (${winRate}% de victoires)` : '') +
-    ` sur ${player.gamesPlayed} match${plural ? 's' : ''}. ` +
-    `Progression, derniers matchs et face-à-face de ${label}.`;
+  // Une joueuse non classée n'a ni rang ni rating : la description générique
+  // sortait « Rang #null · 0 de rating · 0V-0D sur 0 match », et le titre
+  // « Profil de X — 0 ». C'est ce que voient un moteur de recherche et
+  // l'aperçu d'un lien partagé — le pire endroit pour afficher un zéro qui
+  // n'est pas une mesure.
+  const descriptionFr = player.unrated
+    ? `Profil de ${label} : équipe, réseaux et palmarès. Pas encore de match classé.`
+    : `Rang #${player.rank} · ${rating} de rating · ` +
+      `${player.wins}V-${player.losses}D` +
+      (winRate !== null ? ` (${winRate}% de victoires)` : '') +
+      ` sur ${player.gamesPlayed} match${plural ? 's' : ''}. ` +
+      `Progression, derniers matchs et face-à-face de ${label}.`;
 
-  const descriptionEn =
-    `Rank #${player.rank} · ${rating} rating · ` +
-    `${player.wins}W-${player.losses}L` +
-    (winRate !== null ? ` (${winRate}% win rate)` : '') +
-    ` across ${player.gamesPlayed} match${plural ? 'es' : ''}. ` +
-    `Progression, recent matches and head-to-head for ${label}.`;
+  const descriptionEn = player.unrated
+    ? `${label}'s profile: team, socials and achievements. No ranked match yet.`
+    : `Rank #${player.rank} · ${rating} rating · ` +
+      `${player.wins}W-${player.losses}L` +
+      (winRate !== null ? ` (${winRate}% win rate)` : '') +
+      ` across ${player.gamesPlayed} match${plural ? 'es' : ''}. ` +
+      `Progression, recent matches and head-to-head for ${label}.`;
 
   // JSON-LD ProfilePage → mainEntity Person.
   const jsonLd: Record<string, unknown> = {
@@ -1178,10 +1208,12 @@ function buildPlayerSeo(profile: PlayerProfileResponse): SeoProps {
   )}`;
 
   return {
-    title: {
-      fr: `Profil de ${label} — ${rating}`,
-      en: `${label}'s profile — ${rating}`,
-    },
+    title: player.unrated
+      ? { fr: `Profil de ${label}`, en: `${label}'s profile` }
+      : {
+          fr: `Profil de ${label} — ${rating}`,
+          en: `${label}'s profile — ${rating}`,
+        },
     description: { fr: descriptionFr, en: descriptionEn },
     image: ogImage,
     jsonLd,

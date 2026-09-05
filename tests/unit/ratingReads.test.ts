@@ -198,3 +198,98 @@ describe('readPlayerProfile rank (COUNT-based)', () => {
     expect(await readPlayerProfile('nope', TENANT)).toBeNull();
   });
 });
+
+// Une joueuse sans ligne `player_ratings` renvoyait `null`, donc un 404 sur sa
+// fiche publique — c'était le cas de 61 joueuses sur 69, alors que la page
+// d'équipe et les feuilles de match lient TOUS les membres d'un roster. Le
+// classement n'est qu'une partie de la fiche ; son absence ne doit pas emporter
+// le nom, l'avatar ni la chaîne Twitch.
+describe('readPlayerProfile — joueuse non classée', () => {
+  function member(over: Record<string, unknown>): Record<string, unknown> {
+    return {
+      tenant_id: TENANT,
+      team_id: 't1',
+      user_id: 'u-sans-match',
+      display_name: null,
+      battle_tag: null,
+      avatar_url: null,
+      twitch: null,
+      created_at: '2026-01-01T00:00:00.000Z',
+      ...over,
+    };
+  }
+
+  it('rend une fiche depuis le roster quand il n’y a aucun rating', async () => {
+    store.player_ratings = [];
+    store.team_members = [
+      member({ display_name: 'Nova', battle_tag: 'Nova#1234' }),
+    ];
+
+    const res = await readPlayerProfile('u-sans-match', TENANT);
+
+    expect(res).not.toBeNull();
+    expect(res?.player.displayName).toBe('Nova');
+    expect(res?.player.unrated).toBe(true);
+  });
+
+  it('n’invente ni rang ni classement', async () => {
+    store.player_ratings = [];
+    store.team_members = [member({ display_name: 'Nova' })];
+
+    const res = await readPlayerProfile('u-sans-match', TENANT);
+
+    // `rank: 0` la ferait passer pour première, `rank: n+1` pour dernière.
+    // Elle n'est ni l'une ni l'autre : elle ne figure pas au classement.
+    expect(res?.player.rank).toBeNull();
+    expect(res?.player.gamesPlayed).toBe(0);
+  });
+
+  it('ne masque pas le BattleTag derrière son identifiant numérique', async () => {
+    store.player_ratings = [];
+    store.team_members = [member({ battle_tag: 'Nova#1234' })];
+
+    const res = await readPlayerProfile('u-sans-match', TENANT);
+
+    // Fiche PUBLIQUE : même règle que pour une joueuse classée.
+    expect(res?.player.battleTag).not.toContain('1234');
+  });
+
+  it('renvoie des sections vides plutôt que des données d’une autre', async () => {
+    store.player_ratings = [];
+    store.team_members = [member({ display_name: 'Nova' })];
+
+    const res = await readPlayerProfile('u-sans-match', TENANT);
+
+    expect(res?.history).toEqual([]);
+    expect(res?.recentMatches).toEqual([]);
+    expect(res?.h2h).toEqual([]);
+    expect(res?.achievements.badges).toEqual([]);
+    expect(res?.achievements.palmares).toEqual([]);
+  });
+
+  it('404 pour un UUID qui n’est sur aucun roster', async () => {
+    // Être sur un roster est ce qui rend une fiche légitime : sans ça, un UUID
+    // au hasard fabriquerait une page.
+    store.player_ratings = [];
+    store.team_members = [member({ user_id: 'quelquun-dautre' })];
+
+    expect(await readPlayerProfile('u-sans-match', TENANT)).toBeNull();
+  });
+
+  it('ne pioche pas dans le roster d’un AUTRE tenant', async () => {
+    store.player_ratings = [];
+    store.team_members = [member({ tenant_id: 'un-autre-tenant' })];
+
+    expect(await readPlayerProfile('u-sans-match', TENANT)).toBeNull();
+  });
+
+  it('une joueuse classée reste marquée comme telle', async () => {
+    store.player_ratings = [pr({ user_id: 'r1', rating: 1600 })];
+    store.team_members = [];
+
+    const res = await readPlayerProfile('r1', TENANT);
+
+    expect(res?.player.unrated).toBe(false);
+    expect(res?.player.rank).toBe(1);
+  });
+});

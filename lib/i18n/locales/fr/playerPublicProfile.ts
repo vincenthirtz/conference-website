@@ -72,4 +72,6 @@ export default ns('playerPublicProfile', {
   shareOnX: 'Partager sur X',
   shareOnBluesky: 'Partager sur Bluesky',
   twitchLinkHint: '(ouvre la chaîne Twitch dans un nouvel onglet)',
+  unratedNotice:
+    'Pas encore de match classé — le classement apparaîtra après sa première rencontre officielle.',
 });
