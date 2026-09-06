@@ -17,8 +17,9 @@ import ScrimCalendar, {
 } from '@/components/admin/scrims/ScrimCalendar';
 import ScrimMonthCalendar from '@/components/admin/scrims/ScrimMonthCalendar';
 import AdminListShell from '@/components/admin/AdminListShell';
-import { useAdminT } from '@/lib/i18n/useAdminT';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { SlotConflict } from '@/utils/teams/scrimConflicts';
+import { summarizeConflicts } from '@/utils/teams/scrimConflictLabel';
 import {
   mondayOf,
   addDaysYmd,
@@ -274,8 +275,34 @@ export default function ScrimCalendarPanel() {
           method: 'PATCH',
           body: JSON.stringify(body),
         });
-        if (res.conflicts && res.conflicts.length > 0) {
-          addToast(t.calConflictWarning, 'warning');
+        // On nomme ce qui bloque : le détail est calculé côté serveur et
+        // transmis, il serait absurde de le remplacer par « il y a un conflit ».
+        const summary = summarizeConflicts(
+          res.conflicts,
+          (iso) =>
+            new Date(iso).toLocaleString('fr-FR', {
+              timeZone: TZ,
+              day: 'numeric',
+              month: 'short',
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+          t.calConflictUnnamed
+        );
+        if (summary) {
+          addToast(
+            summary.others > 0
+              ? format(t.calConflictWarningMore, {
+                  name: summary.name,
+                  when: summary.when,
+                  count: summary.others,
+                })
+              : format(t.calConflictWarningOne, {
+                  name: summary.name,
+                  when: summary.when,
+                }),
+            'warning'
+          );
         } else {
           addToast(
             kind === 'move' ? t.calRescheduled : t.calResized,

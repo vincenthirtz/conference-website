@@ -8,7 +8,7 @@ production**, pas d'une bonne pratique générique. Les chiffres de production
 datent du 2026-09-06 : 4 scrims (dont 2 terminés), 14 équipes, **0 grille de
 planification**, **0 disponibilité saisie**.
 
-> **État : 4 lots livrés sur 10.** Chaque section reçoit son bilan au fur et à
+> **État : 5 lots livrés sur 10.** Chaque section reçoit son bilan au fur et à
 > mesure. Rien n'est poussé : les lots sont committés en local.
 
 ---
@@ -126,6 +126,19 @@ filtre courant invisible.
 ---
 
 ## Lot 5 — « Conflit détecté » sans dire lequel
+
+> **Livré.** Le message nomme désormais ce qui bloque et quand :
+> « Créneau déjà pris : Phoenix vs Dragons — 8 sept. 20:30 », avec un compteur
+> quand il y en a plusieurs. Le conflit le PLUS PROCHE est celui qu'on nomme.
+>
+> La mise en forme vit dans `utils/teams/scrimConflictLabel.ts`, séparé de
+> `scrimConflicts.ts` qui porte la requête base : un composant client peut
+> l'importer sans tirer un client Supabase dans le bundle. Pur, horloge et
+> localisation injectées, 6 tests — dont le cas d'un match sans nom et celui
+> d'une date illisible, qui ne doit pas être masquée par un formatage.
+>
+> L'ancienne clé générique est supprimée des deux locales : une clé morte finit
+> par être réutilisée à tort.
 
 **Effort : S.**
 
