@@ -8,7 +8,7 @@ production**, pas d'une bonne pratique générique. Les chiffres de production
 datent du 2026-09-06 : 4 scrims (dont 2 terminés), 14 équipes, **0 grille de
 planification**, **0 disponibilité saisie**.
 
-> **État : 3 lots livrés sur 10.** Chaque section reçoit son bilan au fur et à
+> **État : 4 lots livrés sur 10.** Chaque section reçoit son bilan au fur et à
 > mesure. Rien n'est poussé : les lots sont committés en local.
 
 ---
@@ -100,6 +100,16 @@ l'agenda filtré.
 ---
 
 ## Lot 4 — Le filtre d'équipe dépend de la semaine affichée
+
+> **Livré.** L'équipe sélectionnée est mémorisée avec son libellé au moment du
+> choix (`stickyTeam`) et réinjectée dans les options quand elle sort de la
+> plage. Les options s'enrichissent au passage des équipes des MATCHS, pas
+> seulement des scrims — l'agenda les affiche, il est logique de pouvoir
+> filtrer dessus.
+>
+> Le symptôme était vicieux : le filtre restait actif mais son option
+> disparaissait du menu ; l'agenda paraissait vide et on ne pouvait même plus
+> désélectionner l'équipe.
 
 **Effort : S.**
 

@@ -130,17 +130,45 @@ export default function ScrimCalendarPanel() {
     setOverrides({});
   }, [rawScrims]);
 
-  // Options d'équipe dérivées des scrims de la plage.
+  // Options d'équipe dérivées des scrims ET des matchs de la plage.
+  //
+  // L'équipe SÉLECTIONNÉE est conservée même quand elle ne joue rien dans la
+  // plage affichée : sans ça, changer de semaine faisait disparaître l'option
+  // du menu alors que le filtre restait actif — l'agenda paraissait vide sans
+  // que rien ne l'explique, et on ne pouvait plus le désélectionner.
+  const [stickyTeam, setStickyTeam] = useState<{ id: string; name: string } | null>(
+    null
+  );
+
   const teamOptions = useMemo(() => {
     const map = new Map<string, string>();
     for (const s of rawScrims) {
       if (s.team1_id && s.team1Name) map.set(s.team1_id, s.team1Name);
       if (s.team2_id && s.team2Name) map.set(s.team2_id, s.team2Name);
     }
+    for (const m of rawMatches) {
+      if (m.team1_id && m.team1Name) map.set(m.team1_id, m.team1Name);
+      if (m.team2_id && m.team2Name) map.set(m.team2_id, m.team2Name);
+    }
+    if (stickyTeam && !map.has(stickyTeam.id)) {
+      map.set(stickyTeam.id, stickyTeam.name);
+    }
     return [...map.entries()]
       .map(([id, name]) => ({ id, name }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [rawScrims]);
+  }, [rawScrims, rawMatches, stickyTeam]);
+
+  // Mémorise le libellé au moment du choix : c'est ce qui permet de garder
+  // l'option affichable une fois sortie de la plage.
+  const selectTeam = useCallback(
+    (id: string) => {
+      setTeamFilter(id);
+      setStickyTeam(
+        id ? { id, name: teamOptions.find((o) => o.id === id)?.name ?? id } : null
+      );
+    },
+    [teamOptions]
+  );
 
   const activeStatuses = useMemo(() => new Set(statusFilter), [statusFilter]);
 
@@ -362,7 +390,7 @@ export default function ScrimCalendarPanel() {
           <select
             aria-label={t.calFilterTeam}
             value={teamFilter}
-            onChange={(e) => setTeamFilter(e.target.value)}
+            onChange={(e) => selectTeam(e.target.value)}
             className="rounded-lg border border-neutral-700 bg-neutral-900/60 px-2 py-1 text-neutral-200"
           >
             <option value="">{t.calFilterAllTeams}</option>
