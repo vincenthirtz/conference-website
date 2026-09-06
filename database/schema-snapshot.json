@@ -1321,6 +1321,17 @@
       "token_hash",
       "uses_count"
     ],
+    "team_map_stats": [
+      "games_played",
+      "losses",
+      "map_name",
+      "rounds_lost",
+      "rounds_won",
+      "team_id",
+      "tenant_id",
+      "win_rate",
+      "wins"
+    ],
     "team_member_permissions": [
       "created_at",
       "granted_by",

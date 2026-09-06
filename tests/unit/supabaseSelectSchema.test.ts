@@ -33,14 +33,15 @@ const snapshot: { tables: Record<string, string[]> } = JSON.parse(
 
 const scan = scanRepo(ROOTS, ROOT);
 
-// Relations citées par le code mais ABSENTES du schéma. Chacune est un bug
-// ouvert, pas une exemption : la liste ne doit que rétrécir. Elle est ici pour
-// que le garde-fou reste vert sur un défaut déjà connu, tout en faisant rougir
-// la CI dès qu'un NOUVEAU manque apparaît.
+// Relations citées par le code mais ABSENTES du schéma. Chacune serait un bug
+// ouvert, pas une exemption : la liste ne doit que rétrécir. Le loquet reste en
+// place pour qu'un manque connu n'oblige pas à désactiver tout le garde-fou —
+// mais il est VIDE, et le test ci-dessous réclame le retrait de toute entrée
+// dont la relation existe enfin.
 //
-// - team_map_stats : ni table ni vue en base. `/team/[slug]/maps` avale
-//   l'erreur et affiche donc des statistiques de cartes éternellement vides.
-const KNOWN_MISSING_RELATIONS = new Set(['team_map_stats']);
+// Vidée le 2026-09-06 : team_map_stats (la seule entrée) a été créée en vue,
+// cf. database/migrations/create_team_map_stats_view.sql.
+const KNOWN_MISSING_RELATIONS = new Set<string>([]);
 
 const known = new Map<string, Set<string>>(
   Object.entries(snapshot.tables).map(([table, cols]) => [table, new Set(cols)])
