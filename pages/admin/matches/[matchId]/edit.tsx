@@ -15,6 +15,9 @@ import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import MatchGamesPanel, {
+  type MatchGameInput,
+} from '@/components/admin/matches/MatchGamesPanel';
 import type {
   StaffProps,
   Match,
@@ -159,17 +162,15 @@ function AdminMatchEditPage({ staff }: StaffProps) {
   const [forfeitError, setForfeitError] = useState<string | null>(null);
   const [warningMsgs, setWarningMsgs] = useState<string[]>([]);
 
-  // Games (maps) state
-  type GameInput = {
-    map_name: string;
-    map_order: number;
-    team1_score: number;
-    team2_score: number;
-    is_tiebreaker: boolean;
-    went_overtime: boolean;
-  };
+  // Games (maps) state — le rendu vit dans MatchGamesPanel (lot A7).
+  type GameInput = MatchGameInput;
   const [games, setGames] = useState<GameInput[]>([]);
   const [gamesLoaded, setGamesLoaded] = useState(false);
+  // Pool de cartes applicable au match (cartes du tournoi, sinon pool du
+  // tenant, sinon catalogue du jeu). Alimente les suggestions du champ carte :
+  // il était en texte libre, et la production n'a récolté que « Map 1 »,
+  // « Map 2 »… au lieu des trente cartes du pool.
+  const [mapPool, setMapPool] = useState<string[]>([]);
 
   const [form, setForm] = useState<{
     status: MatchStatus;
@@ -263,6 +264,27 @@ function AdminMatchEditPage({ staff }: StaffProps) {
     if (!matchId) return;
     fetchMatch();
   }, [matchId, fetchMatch]);
+
+  // Best-effort : sans pool, le champ reste libre — on ne bloque jamais la
+  // saisie d'un score parce que la liste de cartes n'a pas pu être chargée.
+  useEffect(() => {
+    if (!matchId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await adminFetch(`/api/admin/matches/${matchId}/map-pool`);
+        if (!res.ok) return;
+        const json = (await res.json()) as { maps?: { name: string }[] };
+        if (cancelled) return;
+        setMapPool((json.maps ?? []).map((m) => m.name).filter(Boolean));
+      } catch {
+        /* pool indisponible : on garde la saisie libre */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [matchId, adminFetch]);
 
   const doSubmit = useCallback(async () => {
     if (!matchId || !match) return;
@@ -792,168 +814,15 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                     </section>
                   )}
 
-                {/* Games (maps) */}
-                <section className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="font-semibold text-lg">
-                      {format(t.mapsHeading, { count: games.length })}
-                    </h2>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setGames((prev) => [
-                          ...prev,
-                          {
-                            map_name: '',
-                            map_order: prev.length,
-                            team1_score: 0,
-                            team2_score: 0,
-                            is_tiebreaker: false,
-                            went_overtime: false,
-                          },
-                        ])
-                      }
-                      className="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-xs font-medium transition-colors"
-                    >
-                      {t.addMap}
-                    </button>
-                  </div>
-
-                  {games.length === 0 && (
-                    <p className="text-sm text-neutral-500">{t.mapsEmpty}</p>
-                  )}
-
-                  <div className="space-y-3">
-                    {games.map((g, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-start gap-3 p-3 rounded-lg bg-neutral-900/50 border border-neutral-700"
-                      >
-                        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3">
-                          <div className="col-span-2 md:col-span-1">
-                            <label className="block text-xs text-neutral-400 mb-1">
-                              {t.mapLabel}
-                            </label>
-                            <input
-                              type="text"
-                              className="w-full px-2 py-1.5 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              value={g.map_name}
-                              onChange={(e) => {
-                                const updated = [...games];
-                                updated[idx] = {
-                                  ...updated[idx],
-                                  map_name: e.target.value,
-                                };
-                                setGames(updated);
-                              }}
-                              placeholder={t.mapNamePlaceholder}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-neutral-400 mb-1">
-                              {team1?.short_name ||
-                                team1?.name ||
-                                t.teamShort1Fallback}
-                            </label>
-                            <input
-                              type="number"
-                              min={0}
-                              className="w-full px-2 py-1.5 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              value={g.team1_score}
-                              onChange={(e) => {
-                                const updated = [...games];
-                                updated[idx] = {
-                                  ...updated[idx],
-                                  team1_score: Number(e.target.value) || 0,
-                                };
-                                setGames(updated);
-                              }}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-neutral-400 mb-1">
-                              {team2?.short_name ||
-                                team2?.name ||
-                                t.teamShort2Fallback}
-                            </label>
-                            <input
-                              type="number"
-                              min={0}
-                              className="w-full px-2 py-1.5 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              value={g.team2_score}
-                              onChange={(e) => {
-                                const updated = [...games];
-                                updated[idx] = {
-                                  ...updated[idx],
-                                  team2_score: Number(e.target.value) || 0,
-                                };
-                                setGames(updated);
-                              }}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col items-center gap-2 pt-5">
-                          <label className="flex items-center gap-1.5 text-xs text-neutral-400 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={g.went_overtime}
-                              onChange={(e) => {
-                                const updated = [...games];
-                                updated[idx] = {
-                                  ...updated[idx],
-                                  went_overtime: e.target.checked,
-                                };
-                                setGames(updated);
-                              }}
-                              className="rounded border-neutral-600 bg-neutral-700"
-                            />
-                            {t.ot}
-                          </label>
-                          <label className="flex items-center gap-1.5 text-xs text-neutral-400 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={g.is_tiebreaker}
-                              onChange={(e) => {
-                                const updated = [...games];
-                                updated[idx] = {
-                                  ...updated[idx],
-                                  is_tiebreaker: e.target.checked,
-                                };
-                                setGames(updated);
-                              }}
-                              className="rounded border-neutral-600 bg-neutral-700"
-                            />
-                            {t.tb}
-                          </label>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setGames((prev) => prev.filter((_, i) => i !== idx))
-                          }
-                          className="mt-5 p-1.5 rounded hover:bg-red-900/50 text-neutral-500 hover:text-red-400 transition-colors"
-                          title={t.deleteMapTitle}
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </section>
+                {/* Parties (maps) — panneau extrait, cf. lot A7. */}
+                <MatchGamesPanel
+                  games={games}
+                  setGames={setGames}
+                  mapPool={mapPool}
+                  team1={team1}
+                  team2={team2}
+                  t={t as unknown as Record<string, string>}
+                />
 
                 {/* Notes internes */}
                 <section className="space-y-3">

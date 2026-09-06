@@ -59,6 +59,7 @@ export default {
     'No maps recorded. Click « Add a map » to detail the score per map.',
   mapLabel: 'Map',
   mapNamePlaceholder: 'Map name',
+  mapNameSuggestPlaceholder: 'Map name (e.g. {example})',
   teamShort1Fallback: 'T1',
   teamShort2Fallback: 'T2',
   ot: 'OT',

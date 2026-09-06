@@ -7,7 +7,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
-import { getGame, isGameSlug } from '@/config/games';
+import { resolveEffectiveMapPool } from '@/utils/maps/pool';
 
 import { logger } from '../../../../utils/logger';
 export type TournamentMapRow = {
@@ -233,58 +233,24 @@ async function handleAddDefaults(
 
   const game = (tournament as { game?: string | null }).game ?? null;
 
-  // 1) Pool tenant éditable (source prioritaire).
-  let poolMaps: DefaultPoolMap[] = [];
-  let source: 'tenant' | 'defaults' = 'tenant';
+  // Pool applicable : celui du tenant pour ce jeu, sinon le catalogue statique.
+  // `includeTournamentMaps: false` est ESSENTIEL ici : cette action ALIMENTE
+  // tournament_maps, elle ne peut pas s'en servir comme source (cf.
+  // utils/maps/pool.ts, partagé avec l'écran d'arbitrage).
+  const { maps: resolvedPool, source: resolvedSource } =
+    await resolveEffectiveMapPool(supabaseAdmin, {
+      tenantId: ctx.tenantId,
+      game,
+      includeTournamentMaps: false,
+    });
 
-  if (game) {
-    const { data: tenantPool, error: poolErr } = await supabaseAdmin
-      .from('tenant_map_pool')
-      .select('map_name, map_type, image_url, order_index, enabled')
-      .eq('tenant_id', ctx.tenantId)
-      .eq('game', game)
-      .eq('enabled', true);
-
-    if (poolErr) {
-      logger.error('add-defaults: tenant_map_pool lookup error:', poolErr);
-      return res.status(500).json({ error: 'Failed to load tenant map pool' });
-    }
-
-    const rows = (tenantPool ?? []) as Array<{
-      map_name: string;
-      map_type: string | null;
-      image_url: string | null;
-      order_index: number | null;
-    }>;
-
-    if (rows.length > 0) {
-      poolMaps = [...rows]
-        .sort((a, b) => {
-          const ai = a.order_index;
-          const bi = b.order_index;
-          if (ai == null && bi != null) return 1;
-          if (ai != null && bi == null) return -1;
-          if (ai != null && bi != null && ai !== bi) return ai - bi;
-          return a.map_name.localeCompare(b.map_name);
-        })
-        .map((r) => ({
-          name: r.map_name,
-          type: r.map_type ?? null,
-          image: r.image_url ?? null,
-        }));
-    }
-  }
-
-  // 2) Fallback catalogue statique config/games (pool tenant vide).
-  if (poolMaps.length === 0) {
-    source = 'defaults';
-    const gameDef = game && isGameSlug(game) ? getGame(game) : null;
-    poolMaps = (gameDef?.mapPool ?? []).map((m) => ({
-      name: m.name,
-      type: m.type ?? null,
-      image: m.image ?? null,
-    }));
-  }
+  const poolMaps: DefaultPoolMap[] = resolvedPool.map((m) => ({
+    name: m.name,
+    type: m.type,
+    image: m.image,
+  }));
+  const source: 'tenant' | 'defaults' =
+    resolvedSource === 'tenant' ? 'tenant' : 'defaults';
 
   // Maps déjà présentes sur le tournoi (dédup insensible à la casse).
   const { data: existing, error: exErr } = await supabaseAdmin

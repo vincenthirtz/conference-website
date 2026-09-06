@@ -14451,6 +14451,58 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/admin/matches/{matchId}/map-pool:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+    get:
+      summary: Effective map pool for a match (tournament maps, else tenant pool, else game catalogue).
+      description: >-
+        Requires `arbitrate_matches`. Feeds the map-name suggestions of the
+        refereeing screen: `games.map_name` used to be free text, and production
+        only ever recorded placeholders such as "Map 1". Writes are normalised
+        server-side against this same pool.
+      operationId: adminGetMatchMapPool
+      tags:
+        - admin/matches
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Ordered map pool.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - maps
+                  - source
+                properties:
+                  maps:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - name
+                      properties:
+                        name:
+                          type: string
+                        type:
+                          type: string
+                          nullable: true
+                        image:
+                          type: string
+                          nullable: true
+                  source:
+                    type: string
+                    enum: [tournament, tenant, defaults]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/matches/{matchId}/checkin-nudge:
     parameters:
       - $ref: '#/components/parameters/MatchId'

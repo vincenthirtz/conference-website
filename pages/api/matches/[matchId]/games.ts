@@ -4,6 +4,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { applyMatchScore } from '@/utils/matches/applyScore';
+import {
+  resolveEffectiveMapPool,
+  normalizeMapName,
+  toOne,
+} from '@/utils/maps/pool';
 import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../utils/logger';
@@ -101,6 +106,44 @@ async function handleGet(
 }
 
 /* -----------------------------------------------------------
+ * Normalisation du nom de carte
+ * ---------------------------------------------------------*/
+
+/**
+ * Pool effectif du match : cartes du tournoi, sinon pool du tenant pour le jeu,
+ * sinon catalogue statique. Sert à ramener une saisie approximative à
+ * l'orthographe canonique — « kings row » devient « King's Row ».
+ *
+ * La saisie reste LIBRE : une carte hors pool est conservée telle quelle
+ * (arène personnalisée). Ne jette jamais : un pool indisponible ne doit pas
+ * empêcher d'enregistrer un score, on écrit alors le nom tel que saisi.
+ */
+async function loadMapPool(matchId: string, tenantId: string) {
+  const { data: match } = await supabaseAdmin!
+    .from('matches')
+    .select('tournament_id, tournament:tournaments(game), scrim:scrims(game)')
+    .eq('id', matchId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+
+  type GameHolder = { game?: string | null };
+  const row = match as {
+    tournament_id?: string | null;
+    tournament?: GameHolder | GameHolder[] | null;
+    scrim?: GameHolder | GameHolder[] | null;
+  } | null;
+
+  const game = toOne(row?.tournament)?.game ?? toOne(row?.scrim)?.game ?? null;
+
+  const { maps } = await resolveEffectiveMapPool(supabaseAdmin!, {
+    tenantId,
+    tournamentId: row?.tournament_id ?? null,
+    game,
+  });
+  return maps;
+}
+
+/* -----------------------------------------------------------
  * POST : créer une nouvelle game pour le match
  * body: GameInput (sans id)
  * ---------------------------------------------------------*/
@@ -113,9 +156,11 @@ async function handlePost(
 ) {
   const body = req.body as GameInput;
 
+  const pool = await loadMapPool(matchId, ctx.tenantId);
+
   const payload = {
     match_id: matchId,
-    map_name: body.map_name ?? null,
+    map_name: normalizeMapName(body.map_name, pool),
     map_order: body.map_order ?? null,
     team1_score: body.team1_score ?? 0,
     team2_score: body.team2_score ?? 0,
@@ -193,9 +238,11 @@ async function handlePut(
   }
 
   // 2) On insère les nouvelles games
+  const pool = await loadMapPool(matchId, ctx.tenantId);
+
   const insertPayload = games.map((g, idx) => ({
     match_id: matchId,
-    map_name: g.map_name ?? null,
+    map_name: normalizeMapName(g.map_name, pool),
     map_order: typeof g.map_order === 'number' ? g.map_order : idx,
     team1_score: g.team1_score ?? 0,
     team2_score: g.team2_score ?? 0,

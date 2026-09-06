@@ -58,6 +58,7 @@ export default adminNs('adminMatchEdit', {
     'Aucune map enregistrée. Cliquez sur « Ajouter une map » pour détailler le score par map.',
   mapLabel: 'Map',
   mapNamePlaceholder: 'Nom de la map',
+  mapNameSuggestPlaceholder: 'Nom de la map (ex : {example})',
   teamShort1Fallback: 'Éq. 1',
   teamShort2Fallback: 'Éq. 2',
   ot: 'OT',
