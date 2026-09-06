@@ -171,6 +171,11 @@ function AdminMatchEditPage({ staff }: StaffProps) {
   // il était en texte libre, et la production n'a récolté que « Map 1 »,
   // « Map 2 »… au lieu des trente cartes du pool.
   const [mapPool, setMapPool] = useState<string[]>([]);
+  // Veto du match : sert à dire d'où viennent les cartes, et à proposer d'aller
+  // le faire quand il n'a pas eu lieu. Sans ce rappel ici, le veto restait un
+  // sous-onglet du tournoi que personne n'ouvrait — d'où des noms de cartes
+  // tapés à la main.
+  const [vetoComplete, setVetoComplete] = useState<boolean | null>(null);
 
   const [form, setForm] = useState<{
     status: MatchStatus;
@@ -279,6 +284,14 @@ function AdminMatchEditPage({ staff }: StaffProps) {
         setMapPool((json.maps ?? []).map((m) => m.name).filter(Boolean));
       } catch {
         /* pool indisponible : on garde la saisie libre */
+      }
+      try {
+        const res = await adminFetch(`/api/admin/matches/${matchId}/veto`);
+        if (!res.ok) return;
+        const json = (await res.json()) as { isComplete?: boolean };
+        if (!cancelled) setVetoComplete(Boolean(json.isComplete));
+      } catch {
+        /* veto indisponible : le bandeau ne s'affiche simplement pas */
       }
     })();
     return () => {
@@ -821,6 +834,12 @@ function AdminMatchEditPage({ staff }: StaffProps) {
                   mapPool={mapPool}
                   team1={team1}
                   team2={team2}
+                  vetoComplete={vetoComplete}
+                  vetoHref={
+                    match?.tournament_id
+                      ? `/admin/tournament/${match.tournament_id}/bracket?tab=veto&match=${matchId}`
+                      : null
+                  }
                   t={t as unknown as Record<string, string>}
                 />
 

@@ -12,6 +12,7 @@
 // doit rester libre. C'est le serveur qui ramène ensuite l'orthographe à celle
 // du pool (cf. utils/maps/pool.ts).
 
+import Link from 'next/link';
 import { format } from '@/lib/i18n/useAdminT';
 
 export type MatchGameInput = {
@@ -32,6 +33,10 @@ type Props = {
   mapPool: string[];
   team1: TeamMini;
   team2: TeamMini;
+  /** true = veto terminé, false = à faire, null = inconnu (on n'affiche rien). */
+  vetoComplete?: boolean | null;
+  /** Lien vers le veto du match. null pour un scrim (pas de tournoi). */
+  vetoHref?: string | null;
   t: Record<string, string>;
 };
 
@@ -41,10 +46,29 @@ export default function MatchGamesPanel({
   mapPool,
   team1,
   team2,
+  vetoComplete = null,
+  vetoHref = null,
   t,
 }: Props) {
   return (
       <section className="space-y-4">
+        {/* D'où viennent les cartes. Le veto vit dans un sous-onglet du
+            tournoi : sans ce rappel ici, l'arbitre ne sait pas qu'il existe et
+            retape les noms à la main. */}
+        {vetoComplete === true && (
+          <p className="text-xs text-emerald-300/90 bg-emerald-950/40 border border-emerald-800/60 rounded px-3 py-2">
+            {t.mapsFromVeto}
+          </p>
+        )}
+        {vetoComplete === false && vetoHref && (
+          <p className="text-xs text-neutral-400 bg-neutral-900/60 border border-neutral-700 rounded px-3 py-2">
+            {t.mapsNoVeto}{' '}
+            <Link href={vetoHref} className="text-blue-400 hover:underline">
+              {t.mapsGoToVeto}
+            </Link>
+          </p>
+        )}
+
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-lg">
             {format(t.mapsHeading, { count: games.length })}

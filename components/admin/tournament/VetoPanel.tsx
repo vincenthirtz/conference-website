@@ -6,7 +6,7 @@
 // fetches its own data (no gssp, no <Head>, no page wrapper, no
 // TournamentTabsNav — the host route provides those).
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
@@ -129,9 +129,26 @@ export default function VetoPanel() {
     t.defaultTournamentName
   );
 
-  // Match selection
+  // Match selection. Présélection par `?match=<id>` : c'est ce qui permet
+  // d'arriver ici directement depuis l'écran d'arbitrage d'un match, au lieu
+  // de rechercher le match dans la liste — le veto était invisible depuis
+  // l'endroit où l'on saisit les scores, et n'a donc jamais servi.
+  const matchFromQuery = Array.isArray(router.query.match)
+    ? router.query.match[0]
+    : router.query.match;
   const [matches, setMatches] = useState<MatchOption[]>([]);
-  const [selectedMatchId, setSelectedMatchId] = useState<string>('');
+  const [selectedMatchId, setSelectedMatchId] = useState<string>(
+    matchFromQuery ?? ''
+  );
+
+  // Le premier rendu peut précéder l'hydratation du routeur : on rattrape la
+  // présélection quand la query arrive, sans jamais écraser un choix manuel.
+  const appliedQueryMatch = useRef(false);
+  useEffect(() => {
+    if (appliedQueryMatch.current || !matchFromQuery) return;
+    appliedQueryMatch.current = true;
+    setSelectedMatchId(matchFromQuery);
+  }, [matchFromQuery]);
 
   // Veto state
   const [vetoState, setVetoState] = useState<MatchVetoState | null>(null);

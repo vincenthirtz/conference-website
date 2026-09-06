@@ -1478,6 +1478,37 @@ global, bucket `bot-reconcile-team-channels`. **Idempotency** : non.
 | [`matches/[matchId]/resolve-dispute.ts`](../pages/api/bot/v1/matches/[matchId]/resolve-dispute.ts) | POST              | yes   | `bot-match-resolve-dispute` |
 | [`matches/[matchId]/veto.ts`](../pages/api/bot/v1/matches/[matchId]/veto.ts)                       | GET, POST, DELETE | yes   | `bot-match-veto`            |
 
+#### `POST` / `DELETE /api/bot/v1/matches/:matchId/veto` — parties preparees
+
+Le veto ne se contente pas d'enregistrer des bans et des picks : au dernier
+step, il PREPARE les parties du match (`games`) a partir des cartes retenues
+(picks + decider, dans l'ordre, le decider marque `is_tiebreaker`). C'est ce
+qui evite a l'arbitre de retaper les noms de cartes a la main.
+
+Deux garanties, communes a cet endpoint et a son equivalent admin
+([`utils/matches/gamesFromVeto.ts`](../utils/matches/gamesFromVeto.ts)) :
+
+- **idempotent** : rejouer un veto REMPLACE les parties preparees au lieu de
+  les empiler. `games` n'a aucune contrainte d'unicite sur
+  `(match_id, map_order)` — sans ce remplacement, rien n'arreterait les
+  doublons ;
+- **jamais de perte de resultat** : des qu'UNE partie du match porte un score
+  (autre que 0-0), le veto s'abstient totalement. Le `DELETE` (reset) obeit a
+  la meme regle : il supprimait auparavant toutes les parties du match, scores
+  compris.
+
+Reponses concernees :
+
+| Champ                     | Sens                                                        |
+| ------------------------- | ----------------------------------------------------------- |
+| `gamesCreated` (POST)     | `true` si les parties viennent d'etre preparees              |
+| `gamesCleared` (DELETE)   | nombre de parties supprimees, ou `null` si elles sont gardees |
+| `gamesKeptReason` (DELETE)| `"scores-existants"` quand les resultats ont ete preserves   |
+
+Un `gamesKeptReason` non nul n'est pas une erreur : le veto est bien
+reinitialise, seules les parties deja arbitrees restent. Le bot doit le dire a
+l'arbitre plutot que de laisser croire a un reset complet.
+
 #### `PATCH /api/bot/v1/matches/:matchId/discord`
 
 Writeback bot → site des IDs Discord natifs lies a un match, pour assurer

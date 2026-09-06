@@ -23,6 +23,11 @@ import { uuidSchema } from '@/utils/botValidation';
 import { VETO_FLOWS } from '@/types/veto';
 import type { VetoStep, VetoAction } from '@/types/veto';
 import { logger } from '@/utils/logger';
+import {
+  syncGamesFromVeto,
+  clearGamesFromVeto,
+  type VetoStepLike,
+} from '@/utils/matches/gamesFromVeto';
 
 // Multi-méthode aux bodies divergents : POST = { actorDiscordUserId, mapName,
 // action, teamId?, mapType? } avec normalisation (action.toLowerCase(), trims),
@@ -196,6 +201,9 @@ async function handlePost(
     return res.status(500).json({ error: "Échec de l'enregistrement du step" });
   }
 
+  // Veto terminé → parties préparées à partir des cartes retenues. Logique
+  // partagée avec l'endpoint admin (utils/matches/gamesFromVeto.ts) : elle est
+  // idempotente et refuse d'écraser un score déjà saisi.
   const isComplete = currentStep >= flow.length;
   let gamesCreated = false;
 
@@ -206,28 +214,15 @@ async function handlePost(
       .eq('tenant_id', req.botContext.tenantId)
       .eq('match_id', matchId)
       .order('step_number', { ascending: true });
-    const picked = (allSteps ?? []).filter(
-      (s) => (s as any).action === 'pick' || (s as any).action === 'decider'
-    );
-    if (picked.length > 0) {
-      const gamePayloads = picked.map((s, idx) => ({
-        tenant_id: req.botContext.tenantId,
-        match_id: matchId,
-        map_name: (s as any).map_name,
-        map_order: idx,
-        team1_score: 0,
-        team2_score: 0,
-        is_tiebreaker: (s as any).action === 'decider',
-        went_overtime: false,
-      }));
-      const { error: gErr } = await supabaseAdmin
-        .from('games')
-        .insert(gamePayloads);
-      if (gErr) {
-        logger.error('[bot/veto] games create error', gErr);
-      } else {
-        gamesCreated = true;
-      }
+
+    const outcome = await syncGamesFromVeto(supabaseAdmin, {
+      tenantId: req.botContext.tenantId,
+      matchId,
+      steps: (allSteps ?? []) as VetoStepLike[],
+    });
+    gamesCreated = outcome.created;
+    if (!outcome.created && outcome.reason === 'erreur') {
+      logger.error('[bot/veto] génération des parties impossible');
     }
   }
 
@@ -275,12 +270,13 @@ async function handleDelete(
     return res.status(500).json({ error: 'Échec du reset' });
   }
 
-  // Reset games auto-creees si on est dans un cas full reset
-  await supabaseAdmin
-    .from('games')
-    .delete()
-    .eq('tenant_id', req.botContext.tenantId)
-    .eq('match_id', matchId);
+  // Les parties préparées partent avec le veto — mais JAMAIS celles qui
+  // portent un score. Cette suppression était inconditionnelle : réinitialiser
+  // un veto effaçait les résultats déjà saisis du match.
+  const cleared = await clearGamesFromVeto(supabaseAdmin, {
+    tenantId: req.botContext.tenantId,
+    matchId,
+  });
 
   const { data: match } = await supabaseAdmin
     .from('matches')
@@ -295,12 +291,21 @@ async function handleDelete(
     entity_type: 'match',
     entity_id: matchId,
     tournament_id: match?.tournament_id ?? null,
-    payload: { reset: true, steps_deleted: (stepsBefore ?? []).length },
+    payload: {
+      reset: true,
+      steps_deleted: (stepsBefore ?? []).length,
+      games_cleared: cleared.cleared,
+      games_kept_reason: cleared.cleared === null ? cleared.reason : null,
+    },
   });
 
   return res.status(200).json({
     success: true,
     stepsDeleted: (stepsBefore ?? []).length,
+    gamesCleared: cleared.cleared,
+    // Renseigné quand les parties ont été CONSERVÉES : le veto repart de zéro
+    // mais les résultats saisis restent, et le bot doit pouvoir le dire.
+    gamesKeptReason: cleared.cleared === null ? cleared.reason : null,
   });
 }
 
