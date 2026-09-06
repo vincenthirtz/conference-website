@@ -10,6 +10,12 @@ export type AdvanceStanding = {
   losses: number;
   draws: number;
   score: number;
+  /**
+   * Critère qui a départagé cette équipe des autres à égalité de points.
+   * Affiché en clair : un classement qu'on ne peut pas expliquer est un
+   * classement qu'on conteste — et c'est le staff qui doit pouvoir répondre.
+   */
+  tiebrokenBy?: string | null;
 };
 
 /**
@@ -21,10 +27,12 @@ const StandingRow = React.memo(function StandingRow({
   s,
   selected,
   onToggle,
+  tiebreakLabel,
 }: {
   s: AdvanceStanding;
   selected: boolean;
   onToggle: (teamId: string) => void;
+  tiebreakLabel: string | null;
 }) {
   return (
     <tr
@@ -49,6 +57,9 @@ const StandingRow = React.memo(function StandingRow({
       <td className="px-3 py-2 text-center text-red-400">{s.losses}</td>
       <td className="px-3 py-2 text-center text-neutral-400">{s.draws}</td>
       <td className="px-3 py-2 text-right font-semibold">{s.score}</td>
+      <td className="px-3 py-2 text-right text-xs text-neutral-500">
+        {tiebreakLabel ?? '—'}
+      </td>
     </tr>
   );
 });
@@ -61,6 +72,24 @@ type Props = {
   onToggleAll: () => void;
   t: Dict;
 };
+
+/** Slug du départage → libellé lisible. Inconnu ou absent → rien à dire. */
+function tiebreakLabel(key: string | null | undefined, t: Dict): string | null {
+  switch (key) {
+    case 'head_to_head':
+      return t.tbHeadToHead;
+    case 'score_diff':
+      return t.tbScoreDiff;
+    case 'wins':
+      return t.tbWins;
+    case 'scored':
+      return t.tbScored;
+    case 'seed':
+      return t.tbSeed;
+    default:
+      return null;
+  }
+}
 
 /** Table des standings avec cases à cocher (sélection des équipes à avancer). */
 function AdvanceStandingsTable({
@@ -102,6 +131,9 @@ function AdvanceStandingsTable({
             <th scope="col" className="px-3 py-2 text-right">
               {t.thPoints}
             </th>
+            <th scope="col" className="px-3 py-2 text-right">
+              {t.thTiebreak}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -111,6 +143,7 @@ function AdvanceStandingsTable({
               s={s}
               selected={selectedIds.has(s.teamId)}
               onToggle={onToggleTeam}
+              tiebreakLabel={tiebreakLabel(s.tiebrokenBy, t)}
             />
           ))}
         </tbody>

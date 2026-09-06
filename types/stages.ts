@@ -44,6 +44,11 @@ export type GroupSettings = CommonStageSettings & {
   group_assignments?: Record<string, string[]> | null;
   rounds?: number | null;
   home_away?: boolean | null;
+  /**
+   * Ordre de departage du classement. Absent = defaut (confrontation directe,
+   * puis difference de score, puis victoires, puis seed).
+   */
+  standings_tiebreakers?: import('@/utils/stages/tiebreakers').TiebreakerKey[] | null;
 };
 
 /**

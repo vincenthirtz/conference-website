@@ -63,6 +63,18 @@ const swissSettingsSchema = z
   })
   .passthrough();
 
+/**
+ * Ordre de departage du classement (lot 7 de docs/PLAN-plateforme-tournois.md).
+ * Applique aux stages `round_robin` et `group`, dans l'ordre donne. `seed` est
+ * ajoute d'office a la lecture s'il manque : sans dernier recours, deux equipes
+ * parfaitement a egalite sortiraient dans l'ordre de la base.
+ */
+const standingsTiebreakersSchema = z
+  .array(z.enum(['head_to_head', 'score_diff', 'wins', 'scored', 'seed']))
+  .min(1)
+  .max(5)
+  .optional();
+
 /** Round Robin */
 const roundRobinSettingsSchema = z
   .object({
@@ -71,6 +83,7 @@ const roundRobinSettingsSchema = z
     draw_points: z.number().min(0).optional(),
     loss_points: z.number().min(0).optional(),
     home_away: z.boolean().optional(),
+    standings_tiebreakers: standingsTiebreakersSchema,
     advancement_rules: advancementRulesSchema,
   })
   .passthrough();
@@ -85,6 +98,7 @@ const groupSettingsSchema = z
     win_points: z.number().min(0).optional(),
     draw_points: z.number().min(0).optional(),
     loss_points: z.number().min(0).optional(),
+    standings_tiebreakers: standingsTiebreakersSchema,
     advancement_rules: advancementRulesSchema,
   })
   .passthrough();

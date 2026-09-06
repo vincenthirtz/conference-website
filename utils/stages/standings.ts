@@ -8,6 +8,13 @@ import { computeSwissStandings } from '../swiss/standings';
 import { defaultSwissScoreConfig } from '../swiss/utils';
 import { getCachedStandings, setCachedStandings } from './standingsCache';
 import type { SwissMatchResult, SwissScoreConfig } from '../../types/swiss';
+import {
+  DEFAULT_TIEBREAKER_ORDER,
+  parseTiebreakerOrder,
+  rankWithTiebreakers,
+  type TiebreakerKey,
+  type TiebreakerMatch,
+} from './tiebreakers';
 
 export type StageStanding = {
   teamId: string;
@@ -20,6 +27,12 @@ export type StageStanding = {
   seed: number | null;
   /** Cle de poule, uniquement renseignee pour les stages de type "group" */
   groupKey?: string | null;
+  /**
+   * Le critere qui a departage cette equipe des autres a egalite de points.
+   * `null` quand elle n'etait a egalite avec personne. Affiche tel quel :
+   * un classement qu'on ne peut pas expliquer est un classement qu'on conteste.
+   */
+  tiebrokenBy?: TiebreakerKey | null;
 };
 
 export type GroupedStandings = {
@@ -123,9 +136,24 @@ export async function computeStageStandings(
       break;
     }
     case 'group':
-    case 'round_robin':
-      raw = computeGroupStandings(stageTeams, finishedMatches);
+    case 'round_robin': {
+      // L'ordre de departage vit dans les settings du stage. Absent, on prend
+      // le defaut (confrontation directe d'abord) : une regle par defaut
+      // explicite vaut mieux qu'un tri implicite que personne n'a choisi.
+      const { data: stageRow } = await supabaseAdmin
+        .from('tournament_stages')
+        .select('settings')
+        .eq('id', stageId)
+        .eq('tenant_id', tenantId)
+        .maybeSingle();
+      const order =
+        parseTiebreakerOrder(
+          (stageRow?.settings as { standings_tiebreakers?: unknown } | null)
+            ?.standings_tiebreakers
+        ) ?? DEFAULT_TIEBREAKER_ORDER;
+      raw = computeGroupStandings(stageTeams, finishedMatches, order);
       break;
+    }
     case 'bracket':
       raw = computeBracketStandings(stageTeams, finishedMatches, matches);
       break;
@@ -409,7 +437,8 @@ function computeSwissStageStandings(
 /** @internal Exported for testing */
 export function computeGroupStandings(
   stageTeams: StageTeamRow[],
-  finishedMatches: DbMatch[]
+  finishedMatches: DbMatch[],
+  tiebreakerOrder: TiebreakerKey[] = DEFAULT_TIEBREAKER_ORDER
 ): StageStanding[] {
   type Agg = {
     teamId: string;
@@ -418,6 +447,8 @@ export function computeGroupStandings(
     draws: number;
     points: number;
     scoreDiff: number;
+    /** Score total marque — sert au departage `scored`. */
+    scored: number;
     seed: number | null;
   };
 
@@ -431,6 +462,7 @@ export function computeGroupStandings(
       draws: 0,
       points: 0,
       scoreDiff: 0,
+      scored: 0,
       seed: st.seed,
     });
   }
@@ -447,6 +479,8 @@ export function computeGroupStandings(
 
     a1.scoreDiff += s1 - s2;
     a2.scoreDiff += s2 - s1;
+    a1.scored += s1;
+    a2.scored += s2;
 
     if (m.winner_team_id === m.team1_id) {
       a1.wins += 1;
@@ -465,28 +499,51 @@ export function computeGroupStandings(
     }
   }
 
-  const sorted = Array.from(map.values()).sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;
-    if (b.scoreDiff !== a.scoreDiff) return b.scoreDiff - a.scoreDiff;
-    if (b.wins !== a.wins) return b.wins - a.wins;
-    return (a.seed ?? 999) - (b.seed ?? 999);
-  });
+  // Le tri maison (points → diff → victoires → seed) est remplace par la
+  // cascade configurable : il ignorait la CONFRONTATION DIRECTE, premier
+  // departage de la quasi-totalite des reglements, et ne disait pas ce qui
+  // avait tranche.
+  const h2hMatches: TiebreakerMatch[] = finishedMatches.map((m) => ({
+    team1Id: m.team1_id,
+    team2Id: m.team2_id,
+    team1Score: m.team1_score,
+    team2Score: m.team2_score,
+    winnerTeamId: m.winner_team_id,
+  }));
 
+  const ranked = rankWithTiebreakers(
+    Array.from(map.values()).map((a) => ({
+      teamId: a.teamId,
+      points: a.points,
+      wins: a.wins,
+      scoreDiff: a.scoreDiff,
+      scored: a.scored,
+      seed: a.seed,
+    })),
+    h2hMatches,
+    tiebreakerOrder
+  );
+
+  const aggById = new Map(Array.from(map.values()).map((a) => [a.teamId, a]));
   const teamNameMap = new Map<string, string | null>();
   for (const st of stageTeams) {
     teamNameMap.set(st.team_id, st.team?.name ?? null);
   }
 
-  return sorted.map((a, idx) => ({
-    teamId: a.teamId,
-    teamName: teamNameMap.get(a.teamId) ?? null,
-    rank: idx + 1,
-    wins: a.wins,
-    losses: a.losses,
-    draws: a.draws,
-    score: a.points,
-    seed: a.seed,
-  }));
+  return ranked.map((r) => {
+    const a = aggById.get(r.teamId);
+    return {
+      teamId: r.teamId,
+      teamName: teamNameMap.get(r.teamId) ?? null,
+      rank: r.rank,
+      wins: r.wins,
+      losses: a?.losses ?? 0,
+      draws: a?.draws ?? 0,
+      score: r.points,
+      seed: r.seed,
+      tiebrokenBy: r.tiebrokenBy,
+    };
+  });
 }
 
 /* -----------------------------------------------------------

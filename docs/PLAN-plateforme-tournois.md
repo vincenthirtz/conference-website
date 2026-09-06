@@ -48,13 +48,13 @@ participants au courant** — dans cet ordre, parce que chacune s'appuie sur la 
 
 | Lot | Titre | Impact | Effort | Statut |
 |---|---|---|---|---|
-| **1** | Contraintes de disponibilité — le modèle | 🟥 | M | ⏳ |
-| **2** | Saisie des contraintes en admin | 🟥 | M | ⏳ |
-| **3** | Diagnostic de planning (« ça passe ou ça pouet ») | 🟥 | M | ⏳ |
-| **4** | Le calendrier des matchs | 🟧 | L | ⏳ |
-| **5** | Déplacer un match avec aperçu d'impact | 🟥 | M | ⏳ |
-| **6** | Auto-scheduler contraint + simulation | 🟧 | M | ⏳ |
-| **7** | Départage du classement (confrontation directe) | 🟧 | M | ⏳ |
+| **1** | Contraintes de disponibilité — le modèle | 🟥 | M | ✅ |
+| **2** | Saisie des contraintes en admin | 🟥 | M | ✅ |
+| **3** | Diagnostic de planning (« ça passe ou ça pouet ») | 🟥 | M | ✅ |
+| **4** | Le calendrier des matchs | 🟧 | L | ✅ |
+| **5** | Déplacer un match avec aperçu d'impact | 🟥 | M | ✅ |
+| **6** | Auto-scheduler contraint + simulation | 🟧 | M | ✅ |
+| **7** | Départage du classement (confrontation directe) | 🟧 | M | ✅ |
 | **8** | Rôles Discord automatiques par classement (T3) | 🟧 | S | ⏳ |
 | **9** | Prévenir les équipes quand leur match bouge | 🟥 | M | ⏳ |
 | **10** | Couverture e2e du nouveau chemin + vérification prod | 🟧 | M | ⏳ |
