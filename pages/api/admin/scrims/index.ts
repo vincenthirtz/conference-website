@@ -97,6 +97,7 @@ async function handleGet(
         scheduled_date, timezone,
         is_public, logo_url, banner_url, description, stream_url,
         source_demande_id, settings, created_at, updated_at,
+        team1_score, team2_score, winner_team_id, completed_at, ranked,
         team1:teams!scrims_team1_id_fkey(id, name, short_name, logo_url),
         team2:teams!scrims_team2_id_fkey(id, name, short_name, logo_url)
       `,
