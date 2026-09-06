@@ -8,6 +8,7 @@
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAdminResource } from '@/hooks/useAdminResource';
+import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import ScrimFormModal from '@/components/admin/scrims/ScrimFormModal';
@@ -30,6 +31,15 @@ import {
 import nsAdminScrimsList from '@/lib/i18n/locales/admin-fr/adminScrimsList';
 
 const TZ = 'Europe/Paris';
+
+// Clés d'URL préfixées `c` : la page héberge trois onglets sous la même adresse
+// (scrims `s*`, grilles `p*`, agenda `c*`).
+const CAL_FILTER_KEYS = ['cview', 'cweek', 'cmonth', 'cteam', 'cstatus'] as const;
+
+/** Un paramètre de date venu de l'URL n'est pas fiable : on le valide. */
+function isYmd(value: string | null): value is string {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
 const ALL_STATUSES = [
   'draft',
   'scheduled',
@@ -75,12 +85,31 @@ export default function ScrimCalendarPanel() {
   const { addToast } = useToast();
   const { mutateJson } = useIdempotentMutation();
 
-  const [view, setView] = useState<'week' | 'month'>('week');
-  const [weekStart, setWeekStart] = useState<string>(() =>
-    mondayOf(todayYmdInTz(TZ))
+  // État porté par l'URL : « la semaine du 8 septembre, filtrée sur telle
+  // équipe » doit avoir une adresse. Tout vivait en état local, donc un
+  // rechargement ramenait à la semaine courante, tous statuts, sans filtre.
+  const { filters, setFilters } = useUrlFilters(CAL_FILTER_KEYS);
+
+  const view: 'week' | 'month' = filters.cview === 'month' ? 'month' : 'week';
+  const setView = useCallback(
+    (next: 'week' | 'month') => setFilters({ cview: next === 'month' ? 'month' : null }),
+    [setFilters]
   );
-  const [monthAnchor, setMonthAnchor] = useState<string>(
-    () => `${todayYmdInTz(TZ).slice(0, 7)}-01`
+
+  const weekStart = isYmd(filters.cweek)
+    ? mondayOf(filters.cweek)
+    : mondayOf(todayYmdInTz(TZ));
+  const setWeekStart = useCallback(
+    (ymd: string) => setFilters({ cweek: mondayOf(ymd) }),
+    [setFilters]
+  );
+
+  const monthAnchor = isYmd(filters.cmonth)
+    ? `${filters.cmonth.slice(0, 7)}-01`
+    : `${todayYmdInTz(TZ).slice(0, 7)}-01`;
+  const setMonthAnchor = useCallback(
+    (ymd: string) => setFilters({ cmonth: `${ymd.slice(0, 7)}-01` }),
+    [setFilters]
   );
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -88,9 +117,24 @@ export default function ScrimCalendarPanel() {
     { scheduled_date: string; status: string } | undefined
   >(undefined);
 
-  // Filtres client-side.
-  const [teamFilter, setTeamFilter] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string[]>([...ALL_STATUSES]);
+  // Filtres client-side, eux aussi portés par l'URL. Les statuts sont sérialisés
+  // en liste ; l'absence du paramètre signifie « tous », ce qui garde l'URL
+  // courte dans le cas nominal.
+  const teamFilter = filters.cteam ?? '';
+  const setTeamFilter = useCallback(
+    (id: string) => setFilters({ cteam: id || null }),
+    [setFilters]
+  );
+
+  const statusFilter = useMemo(() => {
+    if (!filters.cstatus) return [...ALL_STATUSES] as string[];
+    const wanted = filters.cstatus.split(',').filter(Boolean);
+    const valid = wanted.filter((v) =>
+      (ALL_STATUSES as readonly string[]).includes(v)
+    );
+    // Un paramètre illisible ne doit pas vider l'agenda sans explication.
+    return valid.length > 0 ? valid : ([...ALL_STATUSES] as string[]);
+  }, [filters.cstatus]);
 
   // Overrides optimistes (déplacement / resize) le temps du refetch.
   const [overrides, setOverrides] = useState<Record<string, PatchBody>>({});
@@ -168,7 +212,7 @@ export default function ScrimCalendarPanel() {
         id ? { id, name: teamOptions.find((o) => o.id === id)?.name ?? id } : null
       );
     },
-    [teamOptions]
+    [teamOptions, setTeamFilter]
   );
 
   const activeStatuses = useMemo(() => new Set(statusFilter), [statusFilter]);
@@ -340,18 +384,26 @@ export default function ScrimCalendarPanel() {
     [patchScrim]
   );
 
-  const onSelectDay = useCallback((dayYmd: string) => {
-    setWeekStart(mondayOf(dayYmd));
-    setView('week');
-  }, []);
+  const onSelectDay = useCallback(
+    (dayYmd: string) => {
+      setWeekStart(mondayOf(dayYmd));
+      setView('week');
+    },
+    // `setWeekStart` et `setView` ne sont plus des setters de useState : ils
+    // écrivent dans l'URL et changent donc d'identité.
+    [setWeekStart, setView]
+  );
 
-  const toggleStatus = useCallback((status: string) => {
-    setStatusFilter((prev) =>
-      prev.includes(status)
-        ? prev.filter((s) => s !== status)
-        : [...prev, status]
-    );
-  }, []);
+  const toggleStatus = useCallback(
+    (status: string) => {
+      const next = statusFilter.includes(status)
+        ? statusFilter.filter((s) => s !== status)
+        : [...statusFilter, status];
+      const isAll = next.length === ALL_STATUSES.length;
+      setFilters({ cstatus: isAll ? null : next.join(',') });
+    },
+    [statusFilter, setFilters]
+  );
 
   const statusLabel = (status: string): string => {
     switch (status) {

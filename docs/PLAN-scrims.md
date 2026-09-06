@@ -8,7 +8,7 @@ production**, pas d'une bonne pratique générique. Les chiffres de production
 datent du 2026-09-06 : 4 scrims (dont 2 terminés), 14 équipes, **0 grille de
 planification**, **0 disponibilité saisie**.
 
-> **État : 5 lots livrés sur 10.** Chaque section reçoit son bilan au fur et à
+> **État : 6 lots livrés sur 10.** Chaque section reçoit son bilan au fur et à
 > mesure. Rien n'est poussé : les lots sont committés en local.
 
 ---
@@ -187,6 +187,17 @@ navigation mobile) ; cet écran y échappe.
 ---
 
 ## Lot 8 — L'état de l'agenda ne se partage pas
+
+> **Livré.** `cview`, `cweek`, `cmonth`, `cteam` et `cstatus` vivent dans
+> l'URL. Deux choix de forme : l'absence de `cstatus` signifie « tous les
+> statuts » (l'URL reste courte dans le cas nominal), et une valeur illisible
+> retombe sur « tous » plutôt que de vider l'agenda sans explication. Les dates
+> venues de l'URL sont validées avant usage.
+>
+> Le compilateur React a attrapé deux tableaux de dépendances devenus faux :
+> `setWeekStart`, `setView` et `setTeamFilter` ne sont plus des setters de
+> `useState` — ils écrivent dans l'URL et changent donc d'identité. C'est
+> exactement la classe de closure périmée qu'on cherche à éviter.
 
 **Effort : S.**
 
