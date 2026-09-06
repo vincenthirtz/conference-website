@@ -1,5 +1,5 @@
 {
-  "generatedFrom": "PostgREST /rest/v1/ OpenAPI",
+  "generatedFrom": "PostgREST /rest/v1/ OpenAPI + introspect_foreign_keys()",
   "tables": {
     "adherent_payments": [
       "adherent_id",
@@ -1787,5 +1787,975 @@
       "tenant_id",
       "url"
     ]
+  },
+  "foreignKeys": {
+    "adherent_payments_adherent_id_fkey": {
+      "source": "adherent_payments",
+      "target": "adherents"
+    },
+    "adherents_auth_user_id_fkey": {
+      "source": "adherents",
+      "target": "users"
+    },
+    "admin_idempotency_tenant_id_fkey": {
+      "source": "admin_idempotency",
+      "target": "tenants"
+    },
+    "announcements_tenant_id_fkey": {
+      "source": "announcements",
+      "target": "tenants"
+    },
+    "blacklist_alerts_blacklist_entry_id_fkey": {
+      "source": "blacklist_alerts",
+      "target": "player_blacklist"
+    },
+    "bot_event_outbox_tenant_id_fkey": {
+      "source": "bot_event_outbox",
+      "target": "tenants"
+    },
+    "bot_idempotency_tenant_id_fkey": {
+      "source": "bot_idempotency",
+      "target": "tenants"
+    },
+    "bot_locks_tenant_id_fkey": {
+      "source": "bot_locks",
+      "target": "tenants"
+    },
+    "bot_player_actions_actor_auth_user_id_fkey": {
+      "source": "bot_player_actions",
+      "target": "users"
+    },
+    "bot_player_actions_target_auth_user_id_fkey": {
+      "source": "bot_player_actions",
+      "target": "users"
+    },
+    "bot_player_actions_tenant_id_fkey": {
+      "source": "bot_player_actions",
+      "target": "tenants"
+    },
+    "bracket_snapshots_stage_id_fkey": {
+      "source": "bracket_snapshots",
+      "target": "tournament_stages"
+    },
+    "bracket_snapshots_taken_by_staff_id_fkey": {
+      "source": "bracket_snapshots",
+      "target": "staff"
+    },
+    "bracket_snapshots_tenant_id_fkey": {
+      "source": "bracket_snapshots",
+      "target": "tenants"
+    },
+    "broadcast_schedules_created_by_fkey": {
+      "source": "broadcast_schedules",
+      "target": "users"
+    },
+    "cast_assignments_cast_member_id_fkey": {
+      "source": "cast_assignments",
+      "target": "cast_members"
+    },
+    "cast_assignments_match_id_fkey": {
+      "source": "cast_assignments",
+      "target": "matches"
+    },
+    "cast_assignments_tenant_id_fkey": {
+      "source": "cast_assignments",
+      "target": "tenants"
+    },
+    "cast_members_auth_user_id_fkey": {
+      "source": "cast_members",
+      "target": "users"
+    },
+    "cast_members_tenant_id_fkey": {
+      "source": "cast_members",
+      "target": "tenants"
+    },
+    "caster_presence_cast_member_id_fkey": {
+      "source": "caster_presence",
+      "target": "cast_members"
+    },
+    "caster_presence_event_run_id_fkey": {
+      "source": "caster_presence",
+      "target": "event_runs"
+    },
+    "caster_presence_tenant_id_fkey": {
+      "source": "caster_presence",
+      "target": "tenants"
+    },
+    "custom_game_presets_tenant_id_fkey": {
+      "source": "custom_game_presets",
+      "target": "tenants"
+    },
+    "demandes_auth_user_id_fkey": {
+      "source": "demandes",
+      "target": "users"
+    },
+    "demandes_processed_by_staff_id_fkey": {
+      "source": "demandes",
+      "target": "staff"
+    },
+    "demandes_team_id_fkey": {
+      "source": "demandes",
+      "target": "teams"
+    },
+    "demandes_tenant_id_fkey": {
+      "source": "demandes",
+      "target": "tenants"
+    },
+    "demandes_tournament_id_fkey": {
+      "source": "demandes",
+      "target": "tournaments"
+    },
+    "demandes_user_id_fkey": {
+      "source": "demandes",
+      "target": "users"
+    },
+    "discord_guild_presence_tenant_id_fkey": {
+      "source": "discord_guild_presence",
+      "target": "tenants"
+    },
+    "discord_guilds_tenant_id_fkey": {
+      "source": "discord_guilds",
+      "target": "tenants"
+    },
+    "discord_webhooks_tenant_id_fkey": {
+      "source": "discord_webhooks",
+      "target": "tenants"
+    },
+    "discord_webhooks_tournament_id_fkey": {
+      "source": "discord_webhooks",
+      "target": "tournaments"
+    },
+    "email_campaigns_created_by_fkey": {
+      "source": "email_campaigns",
+      "target": "users"
+    },
+    "email_deliveries_tenant_id_fkey": {
+      "source": "email_deliveries",
+      "target": "tenants"
+    },
+    "email_deliveries_user_id_fkey": {
+      "source": "email_deliveries",
+      "target": "users"
+    },
+    "entity_blacklist_banned_by_fkey": {
+      "source": "entity_blacklist",
+      "target": "users"
+    },
+    "event_cue_acks_cast_member_id_fkey": {
+      "source": "event_cue_acks",
+      "target": "cast_members"
+    },
+    "event_cue_acks_cue_id_fkey": {
+      "source": "event_cue_acks",
+      "target": "event_cues"
+    },
+    "event_cue_acks_tenant_id_fkey": {
+      "source": "event_cue_acks",
+      "target": "tenants"
+    },
+    "event_cues_event_run_id_fkey": {
+      "source": "event_cues",
+      "target": "event_runs"
+    },
+    "event_cues_tenant_id_fkey": {
+      "source": "event_cues",
+      "target": "tenants"
+    },
+    "event_runs_tenant_id_fkey": {
+      "source": "event_runs",
+      "target": "tenants"
+    },
+    "event_segments_event_run_id_fkey": {
+      "source": "event_segments",
+      "target": "event_runs"
+    },
+    "event_segments_match_id_fkey": {
+      "source": "event_segments",
+      "target": "matches"
+    },
+    "event_segments_station_id_fkey": {
+      "source": "event_segments",
+      "target": "event_stations"
+    },
+    "event_segments_tenant_id_fkey": {
+      "source": "event_segments",
+      "target": "tenants"
+    },
+    "event_segments_wave_id_fkey": {
+      "source": "event_segments",
+      "target": "event_waves"
+    },
+    "event_stations_event_run_id_fkey": {
+      "source": "event_stations",
+      "target": "event_runs"
+    },
+    "event_stations_tenant_id_fkey": {
+      "source": "event_stations",
+      "target": "tenants"
+    },
+    "event_waves_event_run_id_fkey": {
+      "source": "event_waves",
+      "target": "event_runs"
+    },
+    "event_waves_tenant_id_fkey": {
+      "source": "event_waves",
+      "target": "tenants"
+    },
+    "fk_cast_assignments_scrim": {
+      "source": "cast_assignments",
+      "target": "scrims"
+    },
+    "fk_final_rankings_staff": {
+      "source": "final_rankings",
+      "target": "staff"
+    },
+    "fk_final_rankings_team": {
+      "source": "final_rankings",
+      "target": "teams"
+    },
+    "fk_final_rankings_tenant": {
+      "source": "final_rankings",
+      "target": "tenants"
+    },
+    "fk_final_rankings_tournament": {
+      "source": "final_rankings",
+      "target": "tournaments"
+    },
+    "fk_staff_logs_staff": {
+      "source": "staff_logs",
+      "target": "staff"
+    },
+    "fk_staff_logs_tournament": {
+      "source": "staff_logs",
+      "target": "tournaments"
+    },
+    "free_players_auth_user_id_fkey": {
+      "source": "free_players",
+      "target": "users"
+    },
+    "free_players_tenant_id_fkey": {
+      "source": "free_players",
+      "target": "tenants"
+    },
+    "games_match_fk": {
+      "source": "games",
+      "target": "matches"
+    },
+    "games_tenant_id_fkey": {
+      "source": "games",
+      "target": "tenants"
+    },
+    "games_winner_team_id_fkey": {
+      "source": "games",
+      "target": "teams"
+    },
+    "integration_secrets_tenant_id_fkey": {
+      "source": "integration_secrets",
+      "target": "tenants"
+    },
+    "integration_secrets_updated_by_fkey": {
+      "source": "integration_secrets",
+      "target": "staff"
+    },
+    "league_scrims_league_id_fkey": {
+      "source": "league_scrims",
+      "target": "leagues"
+    },
+    "league_scrims_scrim_id_fkey": {
+      "source": "league_scrims",
+      "target": "scrims"
+    },
+    "league_scrims_tenant_id_fkey": {
+      "source": "league_scrims",
+      "target": "tenants"
+    },
+    "league_standings_league_id_fkey": {
+      "source": "league_standings",
+      "target": "leagues"
+    },
+    "league_standings_team_id_fkey": {
+      "source": "league_standings",
+      "target": "teams"
+    },
+    "league_standings_tenant_id_fkey": {
+      "source": "league_standings",
+      "target": "tenants"
+    },
+    "league_tournaments_league_id_fkey": {
+      "source": "league_tournaments",
+      "target": "leagues"
+    },
+    "league_tournaments_tenant_id_fkey": {
+      "source": "league_tournaments",
+      "target": "tenants"
+    },
+    "league_tournaments_tournament_id_fkey": {
+      "source": "league_tournaments",
+      "target": "tournaments"
+    },
+    "leagues_tenant_id_fkey": {
+      "source": "leagues",
+      "target": "tenants"
+    },
+    "lobbies_tenant_id_fkey": {
+      "source": "lobbies",
+      "target": "tenants"
+    },
+    "lobby_placements_lobby_id_fkey": {
+      "source": "lobby_placements",
+      "target": "lobbies"
+    },
+    "lobby_placements_tenant_id_fkey": {
+      "source": "lobby_placements",
+      "target": "tenants"
+    },
+    "match_draft_steps_draft_id_fkey": {
+      "source": "match_draft_steps",
+      "target": "match_drafts"
+    },
+    "match_draft_steps_hero_id_fkey": {
+      "source": "match_draft_steps",
+      "target": "game_heroes"
+    },
+    "match_drafts_match_id_fkey": {
+      "source": "match_drafts",
+      "target": "matches"
+    },
+    "match_drafts_tenant_id_fkey": {
+      "source": "match_drafts",
+      "target": "tenants"
+    },
+    "match_evidence_match_id_fkey": {
+      "source": "match_evidence",
+      "target": "matches"
+    },
+    "match_evidence_tenant_id_fkey": {
+      "source": "match_evidence",
+      "target": "tenants"
+    },
+    "match_lineups_match_id_fkey": {
+      "source": "match_lineups",
+      "target": "matches"
+    },
+    "match_lineups_team_id_fkey": {
+      "source": "match_lineups",
+      "target": "teams"
+    },
+    "match_lineups_tenant_id_fkey": {
+      "source": "match_lineups",
+      "target": "tenants"
+    },
+    "match_lineups_validated_by_fkey": {
+      "source": "match_lineups",
+      "target": "users"
+    },
+    "match_map_vetos_match_id_fkey": {
+      "source": "match_map_vetos",
+      "target": "matches"
+    },
+    "match_map_vetos_team_id_fkey": {
+      "source": "match_map_vetos",
+      "target": "teams"
+    },
+    "match_map_vetos_tenant_id_fkey": {
+      "source": "match_map_vetos",
+      "target": "tenants"
+    },
+    "match_mvp_polls_match_id_fkey": {
+      "source": "match_mvp_polls",
+      "target": "matches"
+    },
+    "match_mvp_polls_tenant_id_fkey": {
+      "source": "match_mvp_polls",
+      "target": "tenants"
+    },
+    "match_mvp_polls_winner_imported_by_fkey": {
+      "source": "match_mvp_polls",
+      "target": "users"
+    },
+    "match_mvp_polls_winner_member_id_fkey": {
+      "source": "match_mvp_polls",
+      "target": "team_members"
+    },
+    "match_participants_match_id_fkey": {
+      "source": "match_participants",
+      "target": "matches"
+    },
+    "match_participants_team_id_fkey": {
+      "source": "match_participants",
+      "target": "teams"
+    },
+    "match_participants_tenant_id_fkey": {
+      "source": "match_participants",
+      "target": "tenants"
+    },
+    "match_participants_tournament_id_fkey": {
+      "source": "match_participants",
+      "target": "tournaments"
+    },
+    "match_score_reports_match_id_fkey": {
+      "source": "match_score_reports",
+      "target": "matches"
+    },
+    "match_score_reports_tenant_id_fkey": {
+      "source": "match_score_reports",
+      "target": "tenants"
+    },
+    "matches_forfeit_team_id_fkey": {
+      "source": "matches",
+      "target": "teams"
+    },
+    "matches_next_lose_fk": {
+      "source": "matches",
+      "target": "matches"
+    },
+    "matches_next_win_fk": {
+      "source": "matches",
+      "target": "matches"
+    },
+    "matches_parent_lose_fk": {
+      "source": "matches",
+      "target": "matches"
+    },
+    "matches_parent_win_fk": {
+      "source": "matches",
+      "target": "matches"
+    },
+    "matches_scrim_id_fkey": {
+      "source": "matches",
+      "target": "scrims"
+    },
+    "matches_stage_fk": {
+      "source": "matches",
+      "target": "tournament_stages"
+    },
+    "matches_team1_fk": {
+      "source": "matches",
+      "target": "teams"
+    },
+    "matches_team2_fk": {
+      "source": "matches",
+      "target": "teams"
+    },
+    "matches_tenant_id_fkey": {
+      "source": "matches",
+      "target": "tenants"
+    },
+    "matches_tournament_fk": {
+      "source": "matches",
+      "target": "tournaments"
+    },
+    "matches_winner_fk": {
+      "source": "matches",
+      "target": "teams"
+    },
+    "news_author_id_fkey": {
+      "source": "news",
+      "target": "staff"
+    },
+    "news_comments_news_id_fkey": {
+      "source": "news_comments",
+      "target": "news"
+    },
+    "news_comments_tenant_id_fkey": {
+      "source": "news_comments",
+      "target": "tenants"
+    },
+    "news_team_id_fkey": {
+      "source": "news",
+      "target": "teams"
+    },
+    "news_tenant_id_fkey": {
+      "source": "news",
+      "target": "tenants"
+    },
+    "notification_prefs_user_id_fkey": {
+      "source": "notification_prefs",
+      "target": "users"
+    },
+    "plan_cgv_acceptances_tenant_id_fkey": {
+      "source": "plan_cgv_acceptances",
+      "target": "tenants"
+    },
+    "player_action_snoozes_tenant_id_fkey": {
+      "source": "player_action_snoozes",
+      "target": "tenants"
+    },
+    "player_blacklist_banned_by_fkey": {
+      "source": "player_blacklist",
+      "target": "users"
+    },
+    "player_discovery_profiles_auth_user_id_fkey": {
+      "source": "player_discovery_profiles",
+      "target": "users"
+    },
+    "player_follows_followee_id_fkey": {
+      "source": "player_follows",
+      "target": "users"
+    },
+    "player_follows_follower_id_fkey": {
+      "source": "player_follows",
+      "target": "users"
+    },
+    "player_rating_history_match_id_fkey": {
+      "source": "player_rating_history",
+      "target": "matches"
+    },
+    "player_rating_history_tenant_id_fkey": {
+      "source": "player_rating_history",
+      "target": "tenants"
+    },
+    "player_rating_history_tournament_id_fkey": {
+      "source": "player_rating_history",
+      "target": "tournaments"
+    },
+    "player_ratings_tenant_id_fkey": {
+      "source": "player_ratings",
+      "target": "tenants"
+    },
+    "prize_pool_checkouts_prize_pool_id_fkey": {
+      "source": "prize_pool_checkouts",
+      "target": "tournament_prize_pools"
+    },
+    "prize_pool_checkouts_tenant_id_fkey": {
+      "source": "prize_pool_checkouts",
+      "target": "tenants"
+    },
+    "prize_pool_contributions_prize_pool_id_fkey": {
+      "source": "prize_pool_contributions",
+      "target": "tournament_prize_pools"
+    },
+    "prize_pool_contributions_tenant_id_fkey": {
+      "source": "prize_pool_contributions",
+      "target": "tenants"
+    },
+    "push_subscriptions_tenant_id_fkey": {
+      "source": "push_subscriptions",
+      "target": "tenants"
+    },
+    "push_subscriptions_user_id_fkey": {
+      "source": "push_subscriptions",
+      "target": "users"
+    },
+    "scrim_planning_availabilities_planning_id_fkey": {
+      "source": "scrim_planning_availabilities",
+      "target": "scrim_plannings"
+    },
+    "scrim_planning_availabilities_tenant_id_fkey": {
+      "source": "scrim_planning_availabilities",
+      "target": "tenants"
+    },
+    "scrim_plannings_scrim_id_fkey": {
+      "source": "scrim_plannings",
+      "target": "scrims"
+    },
+    "scrim_plannings_source_demande_id_fkey": {
+      "source": "scrim_plannings",
+      "target": "demandes"
+    },
+    "scrim_plannings_team1_id_fkey": {
+      "source": "scrim_plannings",
+      "target": "teams"
+    },
+    "scrim_plannings_team2_id_fkey": {
+      "source": "scrim_plannings",
+      "target": "teams"
+    },
+    "scrim_plannings_tenant_id_fkey": {
+      "source": "scrim_plannings",
+      "target": "tenants"
+    },
+    "scrim_score_reports_scrim_id_fkey": {
+      "source": "scrim_score_reports",
+      "target": "scrims"
+    },
+    "scrim_score_reports_tenant_id_fkey": {
+      "source": "scrim_score_reports",
+      "target": "tenants"
+    },
+    "scrim_searches_team_id_fkey": {
+      "source": "scrim_searches",
+      "target": "teams"
+    },
+    "scrim_searches_tenant_id_fkey": {
+      "source": "scrim_searches",
+      "target": "tenants"
+    },
+    "scrims_source_demande_id_fkey": {
+      "source": "scrims",
+      "target": "demandes"
+    },
+    "scrims_source_planning_id_fkey": {
+      "source": "scrims",
+      "target": "scrim_plannings"
+    },
+    "scrims_team1_id_fkey": {
+      "source": "scrims",
+      "target": "teams"
+    },
+    "scrims_team2_id_fkey": {
+      "source": "scrims",
+      "target": "teams"
+    },
+    "scrims_tenant_id_fkey": {
+      "source": "scrims",
+      "target": "tenants"
+    },
+    "scrims_winner_team_id_fkey": {
+      "source": "scrims",
+      "target": "teams"
+    },
+    "site_settings_updated_by_fkey": {
+      "source": "site_settings",
+      "target": "staff"
+    },
+    "social_accounts_connected_by_fkey": {
+      "source": "social_accounts",
+      "target": "staff"
+    },
+    "social_accounts_tenant_id_fkey": {
+      "source": "social_accounts",
+      "target": "tenants"
+    },
+    "social_post_targets_post_id_fkey": {
+      "source": "social_post_targets",
+      "target": "social_posts"
+    },
+    "social_posts_created_by_fkey": {
+      "source": "social_posts",
+      "target": "staff"
+    },
+    "social_posts_tenant_id_fkey": {
+      "source": "social_posts",
+      "target": "tenants"
+    },
+    "staff_auth_user_id_fkey": {
+      "source": "staff",
+      "target": "users"
+    },
+    "staff_logs_tenant_id_fkey": {
+      "source": "staff_logs",
+      "target": "tenants"
+    },
+    "stage_teams_stage_id_fkey": {
+      "source": "stage_teams",
+      "target": "tournament_stages"
+    },
+    "stage_teams_team_id_fkey": {
+      "source": "stage_teams",
+      "target": "teams"
+    },
+    "stage_teams_tenant_id_fkey": {
+      "source": "stage_teams",
+      "target": "tenants"
+    },
+    "stage_tiebreaker_overrides_loser_team_id_fkey": {
+      "source": "stage_tiebreaker_overrides",
+      "target": "teams"
+    },
+    "stage_tiebreaker_overrides_set_by_staff_id_fkey": {
+      "source": "stage_tiebreaker_overrides",
+      "target": "staff"
+    },
+    "stage_tiebreaker_overrides_stage_id_fkey": {
+      "source": "stage_tiebreaker_overrides",
+      "target": "tournament_stages"
+    },
+    "stage_tiebreaker_overrides_tenant_id_fkey": {
+      "source": "stage_tiebreaker_overrides",
+      "target": "tenants"
+    },
+    "stage_tiebreaker_overrides_winner_team_id_fkey": {
+      "source": "stage_tiebreaker_overrides",
+      "target": "teams"
+    },
+    "stages_tournament_fk": {
+      "source": "tournament_stages",
+      "target": "tournaments"
+    },
+    "support_tickets_converted_entity_blacklist_id_fkey": {
+      "source": "support_tickets",
+      "target": "entity_blacklist"
+    },
+    "support_tickets_converted_player_blacklist_id_fkey": {
+      "source": "support_tickets",
+      "target": "player_blacklist"
+    },
+    "support_tickets_reporter_user_id_fkey": {
+      "source": "support_tickets",
+      "target": "users"
+    },
+    "support_tickets_resolved_by_fkey": {
+      "source": "support_tickets",
+      "target": "users"
+    },
+    "support_tickets_tenant_id_fkey": {
+      "source": "support_tickets",
+      "target": "tenants"
+    },
+    "support_tickets_tournament_id_fkey": {
+      "source": "support_tickets",
+      "target": "tournaments"
+    },
+    "task_boards_created_by_fkey": {
+      "source": "task_boards",
+      "target": "staff"
+    },
+    "task_boards_tenant_id_fkey": {
+      "source": "task_boards",
+      "target": "tenants"
+    },
+    "task_checklist_items_task_id_fkey": {
+      "source": "task_checklist_items",
+      "target": "tasks"
+    },
+    "task_checklist_items_tenant_id_fkey": {
+      "source": "task_checklist_items",
+      "target": "tenants"
+    },
+    "task_columns_board_id_fkey": {
+      "source": "task_columns",
+      "target": "task_boards"
+    },
+    "task_columns_tenant_id_fkey": {
+      "source": "task_columns",
+      "target": "tenants"
+    },
+    "task_comments_author_staff_id_fkey": {
+      "source": "task_comments",
+      "target": "staff"
+    },
+    "task_comments_task_id_fkey": {
+      "source": "task_comments",
+      "target": "tasks"
+    },
+    "task_comments_tenant_id_fkey": {
+      "source": "task_comments",
+      "target": "tenants"
+    },
+    "task_labels_board_id_fkey": {
+      "source": "task_labels",
+      "target": "task_boards"
+    },
+    "task_labels_tenant_id_fkey": {
+      "source": "task_labels",
+      "target": "tenants"
+    },
+    "tasks_assignee_staff_id_fkey": {
+      "source": "tasks",
+      "target": "staff"
+    },
+    "tasks_board_id_fkey": {
+      "source": "tasks",
+      "target": "task_boards"
+    },
+    "tasks_column_id_fkey": {
+      "source": "tasks",
+      "target": "task_columns"
+    },
+    "tasks_created_by_fkey": {
+      "source": "tasks",
+      "target": "staff"
+    },
+    "tasks_tenant_id_fkey": {
+      "source": "tasks",
+      "target": "tenants"
+    },
+    "team_audit_logs_team_id_fkey": {
+      "source": "team_audit_logs",
+      "target": "teams"
+    },
+    "team_audit_logs_tenant_id_fkey": {
+      "source": "team_audit_logs",
+      "target": "tenants"
+    },
+    "team_availability_team_id_fkey": {
+      "source": "team_availability",
+      "target": "teams"
+    },
+    "team_availability_tenant_id_fkey": {
+      "source": "team_availability",
+      "target": "tenants"
+    },
+    "team_discord_channels_team_id_fkey": {
+      "source": "team_discord_channels",
+      "target": "teams"
+    },
+    "team_discord_channels_tenant_id_fkey": {
+      "source": "team_discord_channels",
+      "target": "tenants"
+    },
+    "team_invite_links_created_by_fkey": {
+      "source": "team_invite_links",
+      "target": "users"
+    },
+    "team_invite_links_team_id_fkey": {
+      "source": "team_invite_links",
+      "target": "teams"
+    },
+    "team_invite_links_tenant_id_fkey": {
+      "source": "team_invite_links",
+      "target": "tenants"
+    },
+    "team_members_team_fk": {
+      "source": "team_members",
+      "target": "teams"
+    },
+    "team_members_tenant_id_fkey": {
+      "source": "team_members",
+      "target": "tenants"
+    },
+    "team_members_user_fk": {
+      "source": "team_members",
+      "target": "users"
+    },
+    "team_ratings_team_id_fkey": {
+      "source": "team_ratings",
+      "target": "teams"
+    },
+    "team_ratings_tenant_id_fkey": {
+      "source": "team_ratings",
+      "target": "tenants"
+    },
+    "team_reviews_opponent_team_id_fkey": {
+      "source": "team_reviews",
+      "target": "teams"
+    },
+    "team_reviews_team_id_fkey": {
+      "source": "team_reviews",
+      "target": "teams"
+    },
+    "team_reviews_tenant_id_fkey": {
+      "source": "team_reviews",
+      "target": "tenants"
+    },
+    "teams_captain_fk": {
+      "source": "teams",
+      "target": "users"
+    },
+    "teams_tenant_id_fkey": {
+      "source": "teams",
+      "target": "tenants"
+    },
+    "tenant_api_tokens_tenant_id_fkey": {
+      "source": "tenant_api_tokens",
+      "target": "tenants"
+    },
+    "tenant_discord_config_guild_id_fkey": {
+      "source": "tenant_discord_config",
+      "target": "discord_guilds"
+    },
+    "tenant_invitations_accepted_staff_id_fkey": {
+      "source": "tenant_invitations",
+      "target": "staff"
+    },
+    "tenant_invitations_invited_by_fkey": {
+      "source": "tenant_invitations",
+      "target": "staff"
+    },
+    "tenant_invitations_tenant_id_fkey": {
+      "source": "tenant_invitations",
+      "target": "tenants"
+    },
+    "tenant_map_pool_tenant_id_fkey": {
+      "source": "tenant_map_pool",
+      "target": "tenants"
+    },
+    "tenant_plan_checkouts_tenant_id_fkey": {
+      "source": "tenant_plan_checkouts",
+      "target": "tenants"
+    },
+    "tenant_plan_payments_tenant_id_fkey": {
+      "source": "tenant_plan_payments",
+      "target": "tenants"
+    },
+    "tenant_requests_created_tenant_id_fkey": {
+      "source": "tenant_requests",
+      "target": "tenants"
+    },
+    "tenant_secrets_tenant_id_fkey": {
+      "source": "tenant_secrets",
+      "target": "tenants"
+    },
+    "tenant_staff_staff_id_fkey": {
+      "source": "tenant_staff",
+      "target": "staff"
+    },
+    "tenant_staff_tenant_id_fkey": {
+      "source": "tenant_staff",
+      "target": "tenants"
+    },
+    "tenants_lifecycle_changed_by_fkey": {
+      "source": "tenants",
+      "target": "staff"
+    },
+    "tournament_maps_tenant_id_fkey": {
+      "source": "tournament_maps",
+      "target": "tenants"
+    },
+    "tournament_maps_tournament_id_fkey": {
+      "source": "tournament_maps",
+      "target": "tournaments"
+    },
+    "tournament_prize_pools_tenant_id_fkey": {
+      "source": "tournament_prize_pools",
+      "target": "tenants"
+    },
+    "tournament_prize_pools_tournament_id_fkey": {
+      "source": "tournament_prize_pools",
+      "target": "tournaments"
+    },
+    "tournament_stages_tenant_id_fkey": {
+      "source": "tournament_stages",
+      "target": "tenants"
+    },
+    "tournament_teams_team_id_fkey": {
+      "source": "tournament_teams",
+      "target": "teams"
+    },
+    "tournament_teams_tenant_id_fkey": {
+      "source": "tournament_teams",
+      "target": "tenants"
+    },
+    "tournament_teams_tournament_id_fkey": {
+      "source": "tournament_teams",
+      "target": "tournaments"
+    },
+    "tournaments_tenant_id_fkey": {
+      "source": "tournaments",
+      "target": "tenants"
+    },
+    "twitch_broadcaster_connections_tenant_id_fkey": {
+      "source": "twitch_broadcaster_connections",
+      "target": "tenants"
+    },
+    "twitch_channels_tenant_id_fkey": {
+      "source": "twitch_channels",
+      "target": "tenants"
+    },
+    "user_battlenet_links_auth_user_id_fkey": {
+      "source": "user_battlenet_links",
+      "target": "users"
+    },
+    "user_discord_links_auth_user_id_fkey": {
+      "source": "user_discord_links",
+      "target": "users"
+    },
+    "web_push_deliveries_outbox_event_id_fkey": {
+      "source": "web_push_deliveries",
+      "target": "bot_event_outbox"
+    },
+    "web_push_deliveries_subscription_id_fkey": {
+      "source": "web_push_deliveries",
+      "target": "push_subscriptions"
+    },
+    "webhook_deliveries_subscription_fkey": {
+      "source": "webhook_deliveries",
+      "target": "webhook_subscriptions"
+    },
+    "webhook_subscriptions_tenant_id_fkey": {
+      "source": "webhook_subscriptions",
+      "target": "tenants"
+    }
   }
 }

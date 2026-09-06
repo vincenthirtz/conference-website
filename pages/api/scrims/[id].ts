@@ -65,8 +65,8 @@ export default async function handler(
       team1_id, team2_id, team1_score, team2_score, winner_team_id, forfeit_team_id,
       scheduled_at, started_at, completed_at,
       stream_url, replay_url, lobby_code,
-      team1:teams!matches_team1_id_fkey(id, name, short_name, logo_url),
-      team2:teams!matches_team2_id_fkey(id, name, short_name, logo_url)
+      team1:teams!matches_team1_fk(id, name, short_name, logo_url),
+      team2:teams!matches_team2_fk(id, name, short_name, logo_url)
     `
     )
     .eq('scrim_id', scrim.id)

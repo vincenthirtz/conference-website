@@ -157,8 +157,8 @@ export async function handleCasterTournamentMatches(
       `
       id, status, best_of, match_format, scheduled_at,
       team1_score, team2_score, round_name, stream_url,
-      team1:teams!matches_team1_id_fkey(id, name, short_name, logo_url),
-      team2:teams!matches_team2_id_fkey(id, name, short_name, logo_url)
+      team1:teams!matches_team1_fk(id, name, short_name, logo_url),
+      team2:teams!matches_team2_fk(id, name, short_name, logo_url)
     `
     )
     .eq('tournament_id', id)
@@ -258,8 +258,8 @@ export async function handleCasterMatchDetail(
       `
       id, status, best_of, match_format, scheduled_at,
       team1_score, team2_score, round_name, stream_url,
-      team1:teams!matches_team1_id_fkey(id, name, short_name, logo_url),
-      team2:teams!matches_team2_id_fkey(id, name, short_name, logo_url)
+      team1:teams!matches_team1_fk(id, name, short_name, logo_url),
+      team2:teams!matches_team2_fk(id, name, short_name, logo_url)
     `
     )
     .eq('id', id)

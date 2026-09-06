@@ -88,11 +88,52 @@ for (const table of tables) {
   snapshot[table] = Object.keys(definitions[table].properties || {}).sort();
 }
 
+// Clés étrangères : leur NOM est ce que citent les indices de relation
+// (`teams!matches_team1_fk`). Le document OpenAPI donne la table cible d'une
+// colonne, jamais le nom de la contrainte — d'où l'appel à la fonction
+// d'introspection (réservée au rôle de service).
+const fkRes = await fetch(`${url}/rest/v1/rpc/introspect_foreign_keys`, {
+  method: 'POST',
+  headers: {
+    apikey: key,
+    Authorization: `Bearer ${key}`,
+    'Content-Type': 'application/json',
+  },
+  body: '{}',
+});
+if (!fkRes.ok) {
+  console.error(
+    `Introspection des cles etrangeres impossible (${fkRes.status}). ` +
+      "Migration add_introspect_foreign_keys_function appliquee ? " +
+      "L'instantané n'est PAS écrit : le garde-fou deviendrait aveugle aux indices de relation."
+  );
+  process.exit(1);
+}
+const fkRows = await fkRes.json();
+const foreignKeys = {};
+for (const row of fkRows) {
+  foreignKeys[row.constraint_name] = {
+    source: row.source_table,
+    target: row.target_table,
+  };
+}
+
 writeFileSync(
   OUT,
-  `${JSON.stringify({ generatedFrom: 'PostgREST /rest/v1/ OpenAPI', tables: snapshot }, null, 2)}\n`,
+  `${JSON.stringify(
+    {
+      generatedFrom: 'PostgREST /rest/v1/ OpenAPI + introspect_foreign_keys()',
+      tables: snapshot,
+      foreignKeys,
+    },
+    null,
+    2
+  )}\n`,
   'utf8'
 );
 
 const columns = Object.values(snapshot).reduce((n, c) => n + c.length, 0);
-console.log(`database/schema-snapshot.json écrit : ${tables.length} tables, ${columns} colonnes.`);
+console.log(
+  `database/schema-snapshot.json écrit : ${tables.length} tables, ${columns} colonnes, ` +
+    `${Object.keys(foreignKeys).length} clés étrangères.`
+);

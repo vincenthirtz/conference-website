@@ -193,10 +193,20 @@ par un budget). L'analyseur vit dans `tests/unit/__helpers__/supabaseSelectScan.
 (volontairement hors de `utils/`, pour que `node:fs` et `typescript` n'entrent
 jamais dans le bundle client).
 
+Le garde-fou vérifie AUSSI les indices de relation (`teams!matches_team1_fk`) :
+un nom de contrainte inexistant fait rejeter la requête entière par PostgREST
+(`PGRST200`), exactement comme une colonne fantôme. Les noms de contraintes ne
+sont pas déductibles du document OpenAPI ; ils viennent de la fonction
+`public.introspect_foreign_keys()` (réservée au rôle de service). ⚠️ Les
+contraintes de ce schéma ne suivent PAS toutes la convention Supabase :
+`matches_team1_fk`, pas `matches_team1_id_fkey`. PostgREST accepte par ailleurs
+le nom de la COLONNE comme indice (`teams!team_id`) — les deux formes sont
+valides.
+
 Deux réflexes :
 - après une migration → `node scripts/refresh-schema-snapshot.mjs` ;
-- le test échoue sur une colonne fantôme → c'est un 500 en production, pas un
-  faux positif.
+- le test échoue sur une colonne fantôme ou un indice inconnu → c'est un 500 en
+  production, pas un faux positif.
 
 ## Shell Commands
 

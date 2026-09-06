@@ -124,8 +124,8 @@ async function handleGet(
       scheduled_at, started_at, completed_at,
       stream_url, replay_url, lobby_code, notes,
       created_at, updated_at,
-      team1:teams!matches_team1_id_fkey(id, name, short_name, logo_url),
-      team2:teams!matches_team2_id_fkey(id, name, short_name, logo_url)
+      team1:teams!matches_team1_fk(id, name, short_name, logo_url),
+      team2:teams!matches_team2_fk(id, name, short_name, logo_url)
     `
     )
     .eq('tenant_id', ctx.tenantId)

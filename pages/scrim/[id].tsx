@@ -101,8 +101,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       id, status, is_bye, match_format,
       team1_score, team2_score, winner_team_id,
       scheduled_at, stream_url, replay_url,
-      team1:teams!matches_team1_id_fkey(id, name, short_name, slug, logo_url),
-      team2:teams!matches_team2_id_fkey(id, name, short_name, slug, logo_url)
+      team1:teams!matches_team1_fk(id, name, short_name, slug, logo_url),
+      team2:teams!matches_team2_fk(id, name, short_name, slug, logo_url)
       `
     )
     .eq('tenant_id', tenantId)

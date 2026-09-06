@@ -46,8 +46,8 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       .select(
         `id, status, is_bye, scheduled_at, match_format,
          tournament_id, scrim_id, stage_id,
-         team1:teams!matches_team1_id_fkey(id, name, short_name),
-         team2:teams!matches_team2_id_fkey(id, name, short_name)`
+         team1:teams!matches_team1_fk(id, name, short_name),
+         team2:teams!matches_team2_fk(id, name, short_name)`
       )
       .eq('tenant_id', req.botContext.tenantId)
       .eq('id', matchId)

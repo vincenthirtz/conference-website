@@ -94,8 +94,8 @@ async function handler(
         scheduled_at,
         is_bye,
         status,
-        team1:teams!matches_team1_id_fkey(name),
-        team2:teams!matches_team2_id_fkey(name)
+        team1:teams!matches_team1_fk(name),
+        team2:teams!matches_team2_fk(name)
       `
       )
       .eq('tournament_id', tournamentId)

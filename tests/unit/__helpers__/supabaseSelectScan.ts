@@ -31,6 +31,23 @@ export type ColumnRef = {
   line: number;
 };
 
+/**
+ * Indice de relation d'une embarcation : `teams!matches_team1_fk(...)`.
+ *
+ * PostgREST accepte DEUX formes : le nom de la contrainte, ou le nom de la
+ * colonne de clé étrangère (`teams!team_id`). Les deux sont légitimes, d'où la
+ * table source conservée ici : elle permet de reconnaître la seconde.
+ */
+export type HintRef = {
+  hint: string;
+  /** Table embarquée, telle qu'écrite. */
+  target: string;
+  /** Table depuis laquelle on embarque. */
+  source: string;
+  file: string;
+  line: number;
+};
+
 export type SkippedSelect = {
   file: string;
   line: number;
@@ -39,6 +56,7 @@ export type SkippedSelect = {
 
 export type ScanResult = {
   refs: ColumnRef[];
+  hints: HintRef[];
   skipped: SkippedSelect[];
   /** `.select()` dont la table ET l'argument ont été résolus. */
   analysed: number;
@@ -118,15 +136,27 @@ function splitTopLevel(input: string): string[] {
  * simple : PostgREST accepte aussi une colonne de clé étrangère comme indice,
  * et on préfère alors ne rien analyser plutôt qu'inventer une table.
  */
-function embeddedTableName(head: string): string | null {
+function embeddedTableName(head: string): {
+  table: string | null;
+  hint: string | null;
+} {
   let name = head.trim();
   if (name.startsWith('...')) name = name.slice(3); // embed « spread »
   const colon = name.indexOf(':');
   if (colon !== -1) name = name.slice(colon + 1);
+
+  let hint: string | null = null;
   const bang = name.indexOf('!');
-  if (bang !== -1) name = name.slice(0, bang);
+  if (bang !== -1) {
+    hint = name.slice(bang + 1).trim();
+    name = name.slice(0, bang);
+    // `!inner` / `!left` sont des modificateurs de jointure, pas des noms de
+    // contrainte : ils ne se vérifient pas contre le schéma.
+    if (hint === 'inner' || hint === 'left') hint = null;
+  }
   name = name.trim();
-  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(name) ? name : null;
+  const table = /^[A-Za-z_][A-Za-z0-9_]*$/.test(name) ? name : null;
+  return { table, hint: hint && /^[A-Za-z_][A-Za-z0-9_]*$/.test(hint) ? hint : null };
 }
 
 /**
@@ -152,16 +182,20 @@ export function collectColumnRefs(
   table: string,
   file: string,
   line: number,
-  out: ColumnRef[]
+  out: ColumnRef[],
+  hints: HintRef[] = []
 ): void {
   for (const item of splitTopLevel(select)) {
     const open = item.indexOf('(');
     if (open !== -1 && item.endsWith(')')) {
-      const embedded = embeddedTableName(item.slice(0, open));
+      const { table: embedded, hint } = embeddedTableName(item.slice(0, open));
+      if (hint && embedded) {
+        hints.push({ hint, target: embedded, source: table, file, line });
+      }
       // Embarcation dont on ne sait pas nommer la table, ou dont la cible est
       // une clé étrangère : contenu non analysé (cf. FK_COLUMN_HINT).
       if (embedded && !FK_COLUMN_HINT.test(embedded)) {
-        collectColumnRefs(item.slice(open + 1, -1), embedded, file, line, out);
+        collectColumnRefs(item.slice(open + 1, -1), embedded, file, line, out, hints);
       }
       continue;
     }
@@ -230,6 +264,7 @@ export function scanFile(file: string, text: string, relative: string): ScanResu
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
   const localTables = indexLocalTables(source);
   const refs: ColumnRef[] = [];
+  const hints: HintRef[] = [];
   const skipped: SkippedSelect[] = [];
   let analysed = 0;
 
@@ -249,7 +284,7 @@ export function scanFile(file: string, text: string, relative: string): ScanResu
           analysed++; // `.select()` sans argument : toutes les colonnes.
         } else if (ts.isStringLiteralLike(arg)) {
           analysed++;
-          collectColumnRefs(arg.text, table, relative, line, refs);
+          collectColumnRefs(arg.text, table, relative, line, refs, hints);
         } else {
           skipped.push({ file: relative, line, reason: 'select-dynamique' });
         }
@@ -263,19 +298,21 @@ export function scanFile(file: string, text: string, relative: string): ScanResu
   };
   visit(source);
 
-  return { refs, skipped, analysed };
+  return { refs, hints, skipped, analysed };
 }
 
 export function scanRepo(roots: string[], cwd: string): ScanResult {
   const refs: ColumnRef[] = [];
+  const hints: HintRef[] = [];
   const skipped: SkippedSelect[] = [];
   let analysed = 0;
   for (const file of listSourceFiles(roots, cwd)) {
     const relative = file.slice(cwd.length + 1);
     const result = scanFile(file, readFileSync(file, 'utf8'), relative);
     refs.push(...result.refs);
+    hints.push(...result.hints);
     skipped.push(...result.skipped);
     analysed += result.analysed;
   }
-  return { refs, skipped, analysed };
+  return { refs, hints, skipped, analysed };
 }

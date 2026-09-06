@@ -94,8 +94,8 @@ async function resolveMatch(matchId: string): Promise<MatchSnapshot | null> {
     .select(
       `id, scheduled_at, status,
        team1_id, team2_id, tournament_id, stage_id, scrim_id,
-       team1:teams!matches_team1_id_fkey(id, name, short_name),
-       team2:teams!matches_team2_id_fkey(id, name, short_name),
+       team1:teams!matches_team1_fk(id, name, short_name),
+       team2:teams!matches_team2_fk(id, name, short_name),
        tournament:tournaments(id, name),
        stage:tournament_stages(id, name),
        scrim:scrims(id, name, slug)`

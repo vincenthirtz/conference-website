@@ -27,7 +27,10 @@ import {
 const ROOT = resolve(__dirname, '../..');
 const ROOTS = ['pages', 'utils', 'components', 'netlify', 'lib'];
 
-const snapshot: { tables: Record<string, string[]> } = JSON.parse(
+const snapshot: {
+  tables: Record<string, string[]>;
+  foreignKeys: Record<string, { source: string; target: string }>;
+} = JSON.parse(
   readFileSync(resolve(ROOT, 'database/schema-snapshot.json'), 'utf8')
 );
 
@@ -87,6 +90,55 @@ describe('schéma : colonnes citées dans les .select()', () => {
     ).toEqual([]);
   });
 
+  // Vérifier les COLONNES ne suffit pas : un indice de relation inexistant fait
+  // rejeter la requête ENTIÈRE par PostgREST (PGRST200), exactement comme une
+  // colonne fantôme. C'est ce qui est arrivé — la contrainte s'appelle
+  // `matches_team1_fk`, le code citait `matches_team1_id_fkey`, et 19 appels
+  // répartis dans 8 fichiers répondaient 500.
+  it('ne cite aucun indice de relation inexistant', () => {
+    // PostgREST accepte deux formes d'indice : le nom de la CONTRAINTE
+    // (`teams!matches_team1_fk`) ou celui de la COLONNE de clé étrangère
+    // (`teams!team_id`). Les deux sont valides — vérifié contre la base — donc
+    // un indice est fautif seulement s'il n'est ni l'un ni l'autre.
+    const isColumnOf = (table: string, name: string) =>
+      known.get(table)?.has(name) ?? false;
+
+    const offenders: string[] = [];
+    for (const ref of scan.hints) {
+      if (snapshot.foreignKeys[ref.hint]) continue;
+      if (isColumnOf(ref.source, ref.hint) || isColumnOf(ref.target, ref.hint)) {
+        continue;
+      }
+      offenders.push(`${ref.file}:${ref.line} — ${ref.target}!${ref.hint}`);
+    }
+    expect(
+      offenders,
+      offenders.length
+        ? `Contraintes inexistantes (PostgREST répondra PGRST200 et l'endpoint 500) :\n` +
+            `${offenders.join('\n')}\n\n` +
+            `Si la contrainte vient d'être créée, régénérez l'instantané : ` +
+            `node scripts/refresh-schema-snapshot.mjs`
+        : undefined
+    ).toEqual([]);
+  });
+
+  it('n’embarque pas une table via une contrainte qui pointe ailleurs', () => {
+    // Un indice qui existe mais relie deux autres tables est tout aussi
+    // rejeté qu'un indice inconnu.
+    const offenders: string[] = [];
+    for (const ref of scan.hints) {
+      const fk = snapshot.foreignKeys[ref.hint];
+      if (!fk) continue;
+      if (fk.target !== ref.target && fk.source !== ref.target) {
+        offenders.push(
+          `${ref.file}:${ref.line} — ${ref.target}!${ref.hint} ` +
+            `(la contrainte relie ${fk.source} → ${fk.target})`
+        );
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
   // Sans ce test, une régression de l'analyseur (import cassé, chemin changé,
   // AST qui ne matche plus) rendrait les deux tests ci-dessus vrais par vide :
   // verts, et totalement aveugles. C'est exactement le piège rencontré sur le
@@ -95,6 +147,10 @@ describe('schéma : colonnes citées dans les .select()', () => {
     expect(scan.analysed).toBeGreaterThan(500);
     expect(scan.refs.length).toBeGreaterThan(2000);
     expect(known.size).toBeGreaterThan(100);
+    // Idem pour les indices de relation : zéro indice relevé signifierait que
+    // l'extraction est cassée, pas que le dépôt n'en utilise aucun.
+    expect(scan.hints.length).toBeGreaterThan(20);
+    expect(Object.keys(snapshot.foreignKeys).length).toBeGreaterThan(100);
   });
 
   it('ne garde en manques connus que des relations réellement absentes', () => {

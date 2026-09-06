@@ -46,7 +46,7 @@ function queryString(v: unknown): string | null {
 }
 
 // Only what the page renders / sorts on. Embedded relations resolved via FKs
-// (matches_team1_id_fkey, matches_team2_id_fkey, tournament FK).
+// (matches_team1_fk, matches_team2_fk, tournament FK).
 const SELECT_COLUMNS = `
   id,
   tournament_id,
@@ -55,8 +55,8 @@ const SELECT_COLUMNS = `
   dispute_reason,
   dispute_opened_at,
   escalation_pinged_at,
-  team1:teams!matches_team1_id_fkey(id, name),
-  team2:teams!matches_team2_id_fkey(id, name),
+  team1:teams!matches_team1_fk(id, name),
+  team2:teams!matches_team2_fk(id, name),
   tournament:tournaments(id, name, slug)
 `;
 
