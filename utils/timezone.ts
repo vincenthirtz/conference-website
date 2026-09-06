@@ -244,3 +244,48 @@ export function localInputToUTC(
     return new Date(localValue).toISOString();
   }
 }
+
+/** Heure murale d'un instant dans un fuseau donné. */
+export interface WallClockParts {
+  /** Date murale au format `YYYY-MM-DD`. */
+  date: string;
+  /** Minutes écoulées depuis minuit (0 → 1439). */
+  minuteOfDay: number;
+  /** Jour ISO : 1 = lundi … 7 = dimanche. */
+  isoWeekday: number;
+}
+
+/**
+ * Décompose un instant en heure MURALE dans `timeZone` : le jour qu'affiche
+ * un calendrier posé sur place, et l'heure qu'affiche l'horloge du mur.
+ *
+ * C'est l'opération dont a besoin toute règle écrite en langage humain —
+ * « pas de match avant 21 h », « indisponible du 18 au 20 » : ces phrases ne
+ * parlent pas d'instants UTC, elles parlent de ce que lit l'équipe.
+ *
+ * Passe par `getTimeZoneOffsetMinutes` (arrondi à la minute entière) plutôt
+ * que de reparser une chaîne localisée : l'offset est exact à la bascule
+ * d'heure d'été, et le décalage ne traîne pas les millisecondes qui feraient
+ * retomber 21 h 00 sur 20 h 59.
+ */
+export function getWallClockParts(
+  date: Date,
+  timeZone: string
+): WallClockParts {
+  const shifted = new Date(
+    date.getTime() + getTimeZoneOffsetMinutes(date, timeZone) * 60_000
+  );
+  const y = shifted.getUTCFullYear();
+  const m = shifted.getUTCMonth() + 1;
+  const d = shifted.getUTCDate();
+  return {
+    date: `${y}-${pad2(m)}-${pad2(d)}`,
+    minuteOfDay: shifted.getUTCHours() * 60 + shifted.getUTCMinutes(),
+    // getUTCDay() rend 0 pour dimanche ; la norme ISO le numérote 7.
+    isoWeekday: shifted.getUTCDay() === 0 ? 7 : shifted.getUTCDay(),
+  };
+}
+
+function pad2(n: number): string {
+  return String(n).padStart(2, '0');
+}
