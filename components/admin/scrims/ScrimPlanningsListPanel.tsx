@@ -4,11 +4,12 @@
 // /admin/scrims/plannings/index.tsx pour être hébergé comme onglet de la page
 // /admin/scrims. Auto-suffisant : fetch, filtre, liste et modale de création.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
+import { useUrlFilters } from '@/utils/useUrlFilters';
 import PlanningFormModal from '@/components/admin/scrims/PlanningFormModal';
 import AdminListShell from '@/components/admin/AdminListShell';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -75,13 +76,28 @@ function formatHorizon(start: string, days: number) {
   }
 }
 
+// Filtres portés par l'URL, comme sur la liste des scrims : un état de liste
+// se partage et survit à un rechargement. Préfixe `p` pour ne pas entrer en
+// collision avec les filtres de l'onglet scrims, qui vivent sous la même page.
+const FILTER_KEYS = ['pq', 'pstatus'] as const;
+
 export default function ScrimPlanningsListPanel() {
   const t = useAdminT(nsAdminScrimPlanningsList);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
-  const [statusFilter, setStatusFilter] = useState<string>('');
   const [modalOpen, setModalOpen] = useState(false);
   const [teams, setTeams] = useState<TeamOption[]>([]);
+
+  const { filters, setFilters } = useUrlFilters(FILTER_KEYS);
+  const statusFilter = filters.pstatus ?? '';
+  const searchFilter = filters.pq ?? '';
+
+  const [searchInput, setSearchInput] = useState(searchFilter);
+  useEffect(() => {
+    setSearchInput(searchFilter);
+  }, [searchFilter]);
+
+  const hasActiveFilters = Boolean(searchFilter || statusFilter);
 
   // Préremplissage « Passer en grille » depuis une négociation de scrim :
   // /admin/scrims?tab=plannings&new=1&team1=<id>&team2=<id>&fromDemande=<id>.
@@ -122,18 +138,36 @@ export default function ScrimPlanningsListPanel() {
 
   const {
     data: plannings,
+    total,
     loading,
     error: errorMsg,
     refresh,
-  } = useAdminResource<ScrimPlanning, { plannings: ScrimPlanning[] }>(
-    '/api/admin/scrim-plannings',
-    {
-      limit: 50,
-      includeTotal: false,
-      params: { status: statusFilter },
-      select: (res) => res.plannings || [],
-    }
-  );
+    offset,
+    nextPage,
+    prevPage,
+    resetOffset,
+    hasMore,
+  } = useAdminResource<
+    ScrimPlanning,
+    { plannings: ScrimPlanning[]; total: number | null }
+  >('/api/admin/scrim-plannings', {
+    limit: 25,
+    // L'API compte TOUJOURS (`count: 'exact'`) et renvoie ce total : le
+    // panneau le jetait, et plafonnait à 50 grilles sans pagination.
+    includeTotal: false,
+    params: { search: searchFilter, status: statusFilter },
+    select: (res) => res.plannings || [],
+    selectTotal: (res) => res.total ?? null,
+  });
+
+  // Recherche soumise explicitement : `useUrlFilters` pousse une entrée
+  // d'historique à chaque écriture (cf. ScrimsListPanel).
+  const submitSearch = useCallback(() => {
+    const next = searchInput.trim();
+    if (next === searchFilter) return;
+    setFilters({ pq: next || null });
+    resetOffset();
+  }, [searchInput, searchFilter, setFilters, resetOffset]);
 
   // Résolution des noms d'équipes (l'API liste renvoie des rows brutes).
   useEffect(() => {
@@ -170,14 +204,42 @@ export default function ScrimPlanningsListPanel() {
         </button>
       </div>
 
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4 mb-6 flex gap-3 items-end">
+      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4 mb-6 flex flex-wrap gap-3 items-end">
+        <div className="flex-1 min-w-[220px]">
+          <label
+            className="block text-sm text-neutral-400 mb-1"
+            htmlFor="plannings-search"
+          >
+            {t.searchLabel}
+          </label>
+          <input
+            id="plannings-search"
+            type="search"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                submitSearch();
+              }
+            }}
+            onBlur={submitSearch}
+            placeholder={t.searchPlaceholder}
+            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600"
+          />
+        </div>
+
         <div className="min-w-[180px]">
-          <label className="block text-sm text-neutral-400 mb-1">
+          <label
+            className="block text-sm text-neutral-400 mb-1"
+            htmlFor="plannings-status"
+          >
             {t.statusFilterLabel}
           </label>
           <select
+            id="plannings-status"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => setFilters({ pstatus: e.target.value || null })}
             className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600"
           >
             <option value="">{t.filterAll}</option>
@@ -194,7 +256,7 @@ export default function ScrimPlanningsListPanel() {
         error={errorMsg}
         isEmpty={plannings.length === 0}
         loadingLabel={t.loading}
-        emptyTitle={t.empty}
+        emptyTitle={hasActiveFilters ? t.emptyFiltered : t.empty}
       >
         <div className="grid gap-3">
           {plannings.map((p) => (
@@ -242,7 +304,49 @@ export default function ScrimPlanningsListPanel() {
             </Link>
           ))}
         </div>
+
+        {(offset > 0 || hasMore) && (
+          <div className="flex items-center justify-center gap-3 mt-4">
+            <button
+              type="button"
+              onClick={prevPage}
+              disabled={offset === 0 || loading}
+              className="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              {t.pagePrev}
+            </button>
+            {typeof total === 'number' && (
+              <span className="text-xs text-neutral-500">
+                {format(t.pageInfo, {
+                  from: offset + 1,
+                  to: offset + plannings.length,
+                  total,
+                })}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={nextPage}
+              disabled={!hasMore || loading}
+              className="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              {t.pageNext}
+            </button>
+          </div>
+        )}
       </AdminListShell>
+
+      {plannings.length === 0 && hasActiveFilters && !loading && (
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            onClick={() => setFilters({ pq: null, pstatus: null })}
+            className="text-sm text-blue-400 hover:underline"
+          >
+            {t.resetFilters}
+          </button>
+        </div>
+      )}
     </>
   );
 }
