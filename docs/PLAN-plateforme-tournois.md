@@ -57,7 +57,7 @@ participants au courant** — dans cet ordre, parce que chacune s'appuie sur la 
 | **7** | Départage du classement (confrontation directe) | 🟧 | M | ✅ |
 | **8** | Rôles Discord automatiques par classement (T3) | 🟧 | S | ✅ (site) |
 | **9** | Prévenir les équipes quand leur match bouge | 🟥 | M | ✅ |
-| **10** | Couverture e2e du nouveau chemin + vérification prod | 🟧 | M | ⏳ |
+| **10** | Couverture e2e du nouveau chemin + vérification prod | 🟧 | M | ✅ |
 
 ---
 
@@ -156,9 +156,43 @@ deux équipes concernées, et l'historique des déplacements d'un match n'est pa
 
 ---
 
-## Lot 10 · Couverture e2e + vérification
+## Lot 10 · Couverture e2e + vérification — ✅ LIVRÉ
 
-Recoupe Q021 de [IMPROVEMENT_BACKLOG.md](./IMPROVEMENT_BACKLOG.md).
+**Ce qui est couvert, et par quoi.**
+
+| Niveau | Fichier | Ce qu'il garde |
+|---|---|---|
+| Pur | `tests/unit/matchAvailability.test.ts` (40) | Les quatre natures de contrainte, les bornes inclusives, l'heure murale, la bascule d'heure d'hiver du 25/10/2026 |
+| Pur | `tests/unit/scheduleDiagnostics.test.ts` (24) | Les six anomalies, la correction triviale, l'aperçu d'impact d'un échange |
+| Pur | `tests/unit/stageTiebreakers.test.ts` (18) | La cascade de départage, **et le fait que la Cup 2025 ne bouge pas** |
+| Pur | `tests/unit/placementRoles.test.ts` (20) | Les plages de rangs, le cumul de rôles, l'écart d'une règle illisible |
+| Pur | `tests/unit/autoScheduler.test.ts` (+5) | L'auto-scheduler qui refuse un créneau interdit plutôt que de le poser |
+| Pur | `tests/unit/matchRescheduledNotification.test.ts` (7) | Les trois canaux, et ce que chacun écrit |
+| Route | `tests/unit/apiAdminScheduling.test.ts` (19) | Scope tenant, validation, **et le refus 409 d'un déplacement bloquant** |
+| e2e | `tests/e2e/admin-schedule-gating.spec.ts` (5) | Que les écrans et endpoints neufs ne sont pas ouverts |
+
+**Vérifications réelles menées.**
+
+1. Le diagnostic tourné sur les **30 vrais matchs de la Cup 2026 en production** retrouve
+   les 4 matchs de Hinode hors contrainte, propose le décalage gratuit du 21/10 vers 22 h,
+   et signale la double soirée de LVN EMBERS du 16/10 — les trois constats de la simulation
+   manuelle du 06/09, à l'identique.
+2. Le départage recalculé sur la **Cup 2025** (seul classement de poule terminé en base) rend
+   exactement le classement publié : les trois équipes à 3 points forment un cycle parfait,
+   la confrontation directe ne tranche rien, la différence de score garde l'ordre.
+3. Les deux migrations sont **appliquées en production** et vérifiées (les formes invalides
+   sont refusées par le CHECK).
+4. Serveur de dev lancé : les quatre routes neuves répondent — la page redirige vers la
+   connexion, les GET rendent 401, le POST rend 403 (garde CSRF avant l'authentification).
+
+**Écart assumé.** Le parcours fonctionnel e2e (saisir une contrainte → lire le diagnostic →
+appliquer une correction) demande une Supabase **locale** : le garde-fou de
+`tests/utils/supabaseTestClient.ts` refuse en absolu de seeder la production, et c'est la
+bonne règle. Consigné en Q027 dans [IMPROVEMENT_BACKLOG.md](./IMPROVEMENT_BACKLOG.md).
+
+**Reste à faire pour que tout ceci serve la Cup 2026** : saisir les contraintes réelles de
+Hinode dans sa fiche équipe. Tant qu'elles ne sont pas en base, le diagnostic ne peut rien
+vérifier de ce côté — il dit d'ailleurs explicitement qu'aucune contrainte n'est déclarée.
 
 ---
 
