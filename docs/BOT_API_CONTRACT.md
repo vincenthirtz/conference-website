@@ -3773,6 +3773,41 @@ reste là où le podium est figé.
 `user_discord_links`, de façon idempotente, en journalisant les joueuses sans
 lien Discord plutôt qu'en échouant.
 
+### `match.rescheduled` — prévenir les équipes quand leur match bouge
+
+Lot 9 de [PLAN-plateforme-tournois.md](./PLAN-plateforme-tournois.md).
+
+**Le trou.** Un `scheduled_at` qui changeait émettait `match.scheduled`, présent
+dans `EMAIL_EVENT_TYPES` mais **ni** dans `WEB_PUSH_EVENT_TYPES` **ni** dans
+`PLAYER_PUSH_EVENT_TYPES`. L'information la plus urgente qu'une équipe puisse
+recevoir — sa soirée change — ne voyageait donc que par le digest email, en
+**opt-in**, le canal le moins susceptible d'être actif chez celles qu'il faut
+prévenir. Pendant ce temps « une actualité est publiée » partait en push opt-out.
+
+**L'événement.** `match.rescheduled` est distinct de `match.scheduled` : « ton
+match est le X » et « ton match a bougé du X au Y » n'appellent ni la même
+phrase ni la même urgence. Payload : `{ match_id, matchId, tournamentId, from,
+to, enriched }`.
+
+- Émis **des deux chemins d'écriture** — `PATCH /api/admin/matches/[matchId]` et
+  `POST /api/admin/tournament/[id]/schedule-move` — et seulement quand la date
+  précédente était **non nulle**. Sinon la notification dépendrait de l'écran
+  utilisé pour faire le changement.
+- `match.scheduled` reste émis en parallèle : c'est lui que le bot consomme pour
+  l'event Discord natif. Les deux ne servent pas le même destinataire.
+- Canaux : push staff, push joueuse, email. Audience push = les joueuses des
+  deux équipes (`loadPlayerUserIdsForMatch`).
+- Le push met la **nouvelle** date seule (une notification se lit d'un œil sur un
+  écran verrouillé) ; l'email écrit **les deux** (c'est là qu'on vérifie qu'on
+  n'a pas rêvé l'ancien créneau).
+
+**Historique.** Un déplacement décidé depuis le planning est journalisé une fois
+par GESTE — un échange est une décision, pas deux — donc attaché au tournoi. Le
+payload porte `match_ids` à plat, et
+[`/api/admin/matches/[matchId]/history`](../pages/api/admin/matches/[matchId]/history.ts)
+les remonte : la question « pourquoi ce match a-t-il changé de date ? » trouve sa
+réponse là où on se la pose.
+
 ## Where it lives
 
 - **Middleware** — [`utils/botAuth.ts`](../utils/botAuth.ts) (`withBotRoute`,

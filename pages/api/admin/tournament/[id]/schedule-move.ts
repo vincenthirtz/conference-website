@@ -175,6 +175,11 @@ async function handler(
       tenant_id: ctx.tenantId,
       tournament_id: tournamentId,
       payload: {
+        // Liste plate des matchs touchés, en plus du détail : c'est ce qui rend
+        // la ligne retrouvable depuis la fiche d'UN match, sans fouiller un
+        // tableau imbriqué. Un échange se journalise en une décision, mais se
+        // relit depuis chacun des deux matchs.
+        match_ids: moves.map((m) => m.matchId),
         moves: moves.map((m) => ({
           match_id: m.matchId,
           from: before.get(m.matchId) ?? null,
@@ -194,6 +199,7 @@ async function handler(
       if (!written.includes(move.matchId)) continue;
       if (before.get(move.matchId) === move.scheduledAt) continue;
       if (move.scheduledAt) {
+        const previous = before.get(move.matchId) ?? null;
         void (async () => {
           const enriched = await enrichMatchEvent(move.matchId);
           await emitBotEvent(
@@ -207,6 +213,25 @@ async function handler(
             },
             ctx.tenantId
           );
+          // Le match avait DÉJÀ une date : ce n'est pas une planification, c'est
+          // un déplacement, et les deux équipes doivent l'apprendre autrement
+          // qu'en relisant le calendrier. `match.scheduled` reste émis pour le
+          // bot (event Discord natif) ; `match.rescheduled` porte la
+          // notification aux joueuses.
+          if (previous) {
+            await emitBotEvent(
+              'match.rescheduled',
+              {
+                match_id: move.matchId,
+                matchId: move.matchId,
+                tournamentId,
+                from: previous,
+                to: move.scheduledAt,
+                enriched,
+              },
+              ctx.tenantId
+            );
+          }
         })().catch((e) =>
           logger.error('[botEvents] match.scheduled emit error:', e)
         );

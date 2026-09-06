@@ -56,7 +56,7 @@ participants au courant** — dans cet ordre, parce que chacune s'appuie sur la 
 | **6** | Auto-scheduler contraint + simulation | 🟧 | M | ✅ |
 | **7** | Départage du classement (confrontation directe) | 🟧 | M | ✅ |
 | **8** | Rôles Discord automatiques par classement (T3) | 🟧 | S | ✅ (site) |
-| **9** | Prévenir les équipes quand leur match bouge | 🟥 | M | ⏳ |
+| **9** | Prévenir les équipes quand leur match bouge | 🟥 | M | ✅ |
 | **10** | Couverture e2e du nouveau chemin + vérification prod | 🟧 | M | ⏳ |
 
 ---

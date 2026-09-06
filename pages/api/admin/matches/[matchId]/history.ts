@@ -99,10 +99,47 @@ async function handler(
       logger.error('match history: gameLogs error:', gameErr);
     }
 
-    // 3) Merge + tri chrono desc
+    // 3) Déplacements décidés depuis le planning du tournoi. Ils sont
+    //    journalisés une fois par GESTE (un échange = une décision), donc
+    //    attachés au tournoi et non au match — mais ils doivent se relire
+    //    depuis la fiche de chacun des matchs concernés, sinon la question
+    //    « pourquoi ce match a-t-il changé de date ? » reste sans réponse là
+    //    où on se la pose.
+    const { data: moveLogs, error: moveErr } = await supabaseAdmin
+      .from('staff_logs')
+      .select(
+        `
+        id,
+        created_at,
+        staff_id,
+        action,
+        entity_type,
+        entity_id,
+        tournament_id,
+        payload,
+        staff:staff!fk_staff_logs_staff(
+          id,
+          auth_user_id,
+          role,
+          display_name,
+          avatar_url
+        )
+      `
+      )
+      .eq('tenant_id', ctx.tenantId)
+      .eq('action', 'match_rescheduled')
+      .contains('payload', { match_ids: [id] })
+      .order('created_at', { ascending: false });
+
+    if (moveErr) {
+      logger.error('match history: moveLogs error:', moveErr);
+    }
+
+    // 4) Merge + tri chrono desc
     const rawLogs = [
       ...(((matchLogs as unknown as StaffLog[]) ?? []) as StaffLog[]),
       ...(((gameLogs as unknown as StaffLog[]) ?? []) as StaffLog[]),
+      ...(((moveLogs as unknown as StaffLog[]) ?? []) as StaffLog[]),
     ];
 
     rawLogs.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));

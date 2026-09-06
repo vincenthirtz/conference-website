@@ -582,6 +582,11 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
       event.event_name === 'match.starting' ||
       event.event_name === 'match.finished' ||
       event.event_name === 'match.score_reported' ||
+      // Un match déplacé concerne d'abord les deux équipes : c'est leur soirée
+      // qui change. Sans cette ligne, l'information ne leur parvenait que par
+      // le digest email, en opt-in — le canal le moins susceptible d'être actif
+      // chez celles qu'il faut prévenir.
+      event.event_name === 'match.rescheduled' ||
       event.event_name === 'checkin.opened'
     ) {
       const data = (event.payload ?? {}) as Record<string, unknown>;

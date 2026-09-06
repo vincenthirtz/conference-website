@@ -16,6 +16,7 @@
 // présentes pour exposer un état exhaustif au front.
 
 export const WEB_PUSH_EVENT_TYPES = [
+  'match.rescheduled',
   'match.starting',
   'match.finished',
   'match.score_reported',
@@ -92,6 +93,7 @@ export function playerUrlForEvent(
     case 'match.starting':
     case 'match.finished':
     case 'match.score_reported':
+    case 'match.rescheduled':
     case 'checkin.opened': {
       const matchId = matchIdOf(unwrap(payload));
       return matchId ? `/player/match/${matchId}` : '/player';
@@ -144,6 +146,7 @@ export function playerUrlForEvent(
  */
 export const EMAIL_EVENT_TYPES = [
   'match.scheduled',
+  'match.rescheduled',
   'match.starting',
   'match.finished',
   'checkin.opened',
@@ -177,6 +180,7 @@ export function isEmailEventType(value: string): value is EmailEventType {
 export const BROADCAST_OPT_OUT_EVENT_TYPE = 'broadcast';
 
 export const PLAYER_PUSH_EVENT_TYPES = [
+  'match.rescheduled',
   'match.starting',
   'match.finished',
   'match.score_reported',
@@ -351,6 +355,28 @@ export function shouldPushForEvent(
  * Construit (title, body, url) pour un event de l'outbox.
  * Garanti non-throw : tout payload malformé tombe sur des défauts neutres.
  */
+/**
+ * Instant ISO → « ven. 18 sept. à 20:30 », en heure de Paris.
+ *
+ * Fuseau figé plutôt que celui du tournoi : une notification est lue hors de
+ * tout contexte, et l'écrire dans le fuseau de l'association vaut mieux que de
+ * la laisser ambiguë. Le détail exact reste sur la page du match.
+ */
+function frDateTime(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString('fr-FR', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Paris',
+    });
+  } catch {
+    return iso;
+  }
+}
+
 export function renderWebPushPayload(
   eventName: string,
   payload: EventPayload
@@ -361,6 +387,20 @@ export function renderWebPushPayload(
       return {
         title: 'Match imminent',
         body: `${matchLabel(payload)} commence bientôt.`,
+        url,
+        actions: [{ action: 'view', title: 'Voir le match' }],
+      };
+    }
+    case 'match.rescheduled': {
+      const url = matchUrl(payload);
+      const to = str(payload, 'to') || str(payload, 'scheduled_at');
+      return {
+        title: 'Match déplacé',
+        // La NOUVELLE date d'abord : c'est la seule chose à retenir. L'ancienne
+        // n'apporte rien sur un écran verrouillé, et le détail est à un clic.
+        body: to
+          ? `${matchLabel(payload)} : nouvelle date le ${frDateTime(to)}.`
+          : `${matchLabel(payload)} a changé de date.`,
         url,
         actions: [{ action: 'view', title: 'Voir le match' }],
       };
@@ -658,6 +698,21 @@ export function renderEmailPayload(
       return {
         heading: 'Match planifié',
         body: `${matchLabel(data)} a été planifié. Consultez l'horaire.`,
+        url,
+      };
+    }
+    case 'match.rescheduled': {
+      const to = str(data, 'to') || str(data, 'scheduled_at');
+      const from = str(data, 'from');
+      // L'email a la place d'écrire les deux dates : c'est le canal où l'on
+      // vérifie qu'on n'a pas rêvé l'ancien créneau.
+      return {
+        heading: 'Match déplacé',
+        body: to
+          ? from
+            ? `${matchLabel(data)} passe du ${frDateTime(from)} au ${frDateTime(to)}.`
+            : `${matchLabel(data)} : nouvelle date le ${frDateTime(to)}.`
+          : `${matchLabel(data)} a changé de date.`,
         url,
       };
     }

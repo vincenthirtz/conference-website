@@ -595,6 +595,24 @@ async function handlePut(
             },
             ctx.tenantId
           );
+          // Meme regle que sur le planning : un match qui avait DEJA une date
+          // n'est pas planifie, il est deplace — et les deux equipes doivent
+          // l'apprendre. Emis d'ou que vienne le changement, sinon la
+          // notification dependrait de l'ecran utilise pour le faire.
+          if (prev) {
+            await emitBotEvent(
+              'match.rescheduled',
+              {
+                match_id: matchId,
+                matchId,
+                tournamentId: updated.tournament_id ?? null,
+                from: prev,
+                to: next,
+                enriched,
+              },
+              ctx.tenantId
+            );
+          }
         })().catch((e) =>
           logger.error('[botEvents] match.scheduled emit error:', e)
         );

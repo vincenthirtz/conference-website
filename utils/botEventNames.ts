@@ -12,6 +12,11 @@
 export const BOT_EVENT_NAMES = [
   'match.starting',
   'match.scheduled',
+  // Déplacement d'un match DÉJÀ daté. Distinct de `match.scheduled` : une
+  // équipe qui apprend « ton match est le X » et une équipe qui apprend « ton
+  // match a bougé du X au Y » n'ont pas besoin de la même phrase, ni de la
+  // même urgence.
+  'match.rescheduled',
   'match.unscheduled',
   'match.disputed',
   'match.dispute.resolved',
