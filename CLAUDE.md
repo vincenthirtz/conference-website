@@ -61,6 +61,11 @@ The site sits at the center of a small ecosystem:
 - **database/** — Postgres SQL
   - **database/migrations/** — versioned migrations (~137 files)
   - **database/seeds/** — seed data
+  - **database/schema-snapshot.json** — colonnes réellement exposées par
+    PostgREST, table par table. Sert de référence au garde-fou
+    `tests/unit/supabaseSelectSchema.test.ts`. **À régénérer après toute
+    migration qui ajoute ou retire une colonne** :
+    `node scripts/refresh-schema-snapshot.mjs`
   - Loose `*.sql` patches at root (legacy)
 - **netlify/functions/** — Netlify scheduled functions (cron entry points calling `/api/cron/*`)
 - **docs/** — [BOT_API_CONTRACT.md](docs/BOT_API_CONTRACT.md), [ONBOARDING.md](docs/ONBOARDING.md), [openapi.yaml](docs/openapi.yaml)
@@ -170,6 +175,28 @@ After fixing files, verify you haven't modified files outside scope. Run `git di
 - E2E: Playwright. Use `--grep-invert` (not `--ignore-pattern`). Watch for transparent background inheritance when asserting contrast.
 - Unit: Vitest with an in-memory Supabase mock under `tests/unit/__helpers__/testSetup.ts`. Tests cover API handlers heavily (`apiRoutesBatch*.test.ts`, `apiAdmin*.test.ts`, `apiBot*.test.ts`).
 - Coverage excludes `pages/api/blizzard-media.ts` (~1500 lines of static fallback data, drags totals), `utils/useAutoSave.ts` / `utils/useUrlFilters.ts` (would need `@testing-library/react`, forbidden by zero-dep policy).
+
+### ⚠️ Le mock Supabase ne valide pas les colonnes
+
+Le double en mémoire répond à n'importe quel `.select()`, y compris sur une
+colonne qui n'existe pas. En production, PostgREST rejette au contraire la
+requête **entière** (`42703 undefined_column`) : le handler répond 500 et
+l'écran qui en dépend n'affiche plus rien. Trois occurrences avant garde-fou
+(mvp-leaderboard ; `matches.best_of` / `started_at` qui bloquait
+`/admin/scrims/[id]` ; `cast_members.user_id` dans la régie), et quatre autres
+trouvées le jour de sa mise en place.
+
+`tests/unit/supabaseSelectSchema.test.ts` confronte donc chaque colonne citée
+dans un `.select()` à `database/schema-snapshot.json` — 1770 selects, 6213
+références, 123 tables couvertes, ~6 % d'angle mort (selects dynamiques, bornés
+par un budget). L'analyseur vit dans `tests/unit/__helpers__/supabaseSelectScan.ts`
+(volontairement hors de `utils/`, pour que `node:fs` et `typescript` n'entrent
+jamais dans le bundle client).
+
+Deux réflexes :
+- après une migration → `node scripts/refresh-schema-snapshot.mjs` ;
+- le test échoue sur une colonne fantôme → c'est un 500 en production, pas un
+  faux positif.
 
 ## Shell Commands
 

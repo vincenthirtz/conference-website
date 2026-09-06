@@ -245,7 +245,9 @@ export async function fetchLiveBroadcastState(
       if (memberIds.length > 0) {
         const { data: members } = await supabaseAdmin
           .from('cast_members')
-          .select('id, display_name, auth_user_id')
+          // La colonne est `name` : `display_name` n'existe pas et faisait
+          // échouer la requête en silence — l'overlay n'affichait aucun caster.
+          .select('id, name, auth_user_id')
           // Les fiches internes (auto-provision admin/owner) ne s'affichent pas
           // sur l'overlay de diffusion public.
           .eq('is_internal', false)
@@ -266,7 +268,7 @@ export async function fetchLiveBroadcastState(
 
         casters = ((members ?? []) as any[]).map((m2) => ({
           castMemberId: m2.id,
-          displayName: m2.display_name ?? null,
+          displayName: m2.name ?? null,
           discordUserId: m2.auth_user_id
             ? (discordByAuth.get(m2.auth_user_id) ?? null)
             : null,

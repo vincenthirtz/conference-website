@@ -288,7 +288,8 @@ const SOURCES: Record<DeletedType, SourceDescriptor> = {
       const { data } = await notDeleted(
         supabaseAdmin!
           .from('cast_members')
-          .select('id, display_name, role, deleted_at')
+          // cast_members porte `name` et `title` — ni `display_name` ni `role`.
+          .select('id, name, title, deleted_at')
           .eq('tenant_id', ctx.tenantId)
       )
         .order('deleted_at', { ascending: false })
@@ -297,8 +298,8 @@ const SOURCES: Record<DeletedType, SourceDescriptor> = {
       return (data || []).map((c: any) => ({
         id: c.id,
         type: 'cast_member' as const,
-        name: c.display_name || 'Membre sans nom',
-        details: c.role || null,
+        name: c.name || 'Membre sans nom',
+        details: c.title || null,
         deleted_at: c.deleted_at,
         tournament_id: null,
       }));

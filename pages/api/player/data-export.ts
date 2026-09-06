@@ -30,7 +30,9 @@ export default withAuthRoute(async function handler(
     // Team membership + team info
     supabaseAdmin
       .from('team_members')
-      .select('id, role, joined_at, team:teams(id, name, short_name)')
+      // La date d'entrée dans l'équipe est `created_at` ; `joined_at` n'existe
+      // pas, et la citer faisait échouer TOUT l'export (PostgREST 42703).
+      .select('id, role, created_at, team:teams(id, name, short_name)')
       .eq('user_id', userId)
       .eq('tenant_id', tenantId),
 

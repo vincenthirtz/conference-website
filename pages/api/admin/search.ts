@@ -122,7 +122,9 @@ async function handler(
               kind: 'tournament' as const,
               id: t.id as string,
               title: (t.name as string) ?? '',
-              subtitle: (t.status as string | null) ?? null,
+              subtitle:
+                ((t.column as { name?: string } | null)?.name as string | undefined) ??
+                null,
               href: `/admin/tournament/${t.id as string}/dashboard`,
             }));
           })
@@ -188,7 +190,9 @@ async function handler(
       Promise.resolve(
         supabaseAdmin
           .from('tasks')
-          .select('id, title, board_id, status')
+          // `tasks` n'a pas de colonne `status` : le statut d'une carte EST sa
+          // colonne Kanban (tasks.column_id → task_columns.name).
+          .select('id, title, board_id, column:task_columns(name)')
           .eq('tenant_id', tenantId)
           .ilike('title', pattern)
           .limit(PER_KIND)
