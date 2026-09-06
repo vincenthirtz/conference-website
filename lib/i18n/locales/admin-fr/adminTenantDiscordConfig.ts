@@ -109,4 +109,18 @@ export default adminNs('adminTenantDiscordConfig', {
   serverFallback: 'ton serveur',
   welcomeExample1: 'Bienvenue {user} sur {server} !',
   welcomeExample2: 'Salut {user}, bienvenue sur {server} !',
+  placementTitle: 'Rôles par classement',
+  placementHelp:
+    'À la finalisation d’un tournoi, chaque équipe reçoit les rôles dont elle satisfait la plage. Les plages peuvent se chevaucher : la gagnante mérite « Vainqueure » ET « Podium » ET « Participante ».',
+  placementEmpty: 'Aucun rôle attribué automatiquement.',
+  placementAdd: 'Ajouter une règle',
+  placementRemove: 'Retirer',
+  placementFrom: 'De la place',
+  placementTo: 'à la place',
+  placementToPlaceholder: 'dernier',
+  placementRole: 'ID du rôle Discord',
+  placementRolePlaceholder: '123456789012345678',
+  placementName: 'Nom (pour t’y retrouver)',
+  placementNamePlaceholder: 'Vainqueure 2026',
+  placementInvalidRole: 'Un identifiant de rôle Discord fait 15 à 25 chiffres.',
 });

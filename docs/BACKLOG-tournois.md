@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | T1 | Self-report de score joueur + escalade litige ✅ | 🟥 | M | Challonge, Dragora |
 | T2 | Auto-DQ des no-shows au check-in ✅ | 🟥 | S | start.gg, Dragora |
-| T3 | Rôles Discord auto par classement | 🟧 | S | Dragora |
+| T3 | Rôles Discord auto par classement ✅ (site) · ⏳ (bot) | 🟧 | S | Dragora |
 | T4 | Canal Discord privé par match ✅ | 🟧 | M | Dragora |
 | T5 | API lecture publique (brackets / standings / matchs) | 🟧 | M | start.gg GraphQL |
 | T6 | Inscriptions payantes 0 % commission | 🟧 | M | Toornament Community |
@@ -60,17 +60,26 @@
 
 ## P2 — fort intérêt, après P1
 
-### T3 · Rôles Discord auto par classement
+### T3 · Rôles Discord auto par classement — ✅ LIVRÉ (site) · ⏳ activation bot
 - **Impact / Effort** : 🟧 / S
 - **Réf concurrent** : Dragora (rôles Discord auto 1er / 2e / 3e / Top 8 / participant, 3-0).
 - **Problème** : pas de reconnaissance Discord automatique post-tournoi → engagement perdu.
 - **Proposition** : à la clôture d'un tournoi, attribuer via le bot des rôles Discord selon le classement final (configurables par serveur/tournoi).
 - **Critères d'acceptation** :
-  - [ ] Mapping configurable classement → rôle Discord (1er, 2e, 3e, Top 8, participant).
-  - [ ] Attribution déclenchée à la finalisation du tournoi.
-  - [ ] Idempotent (re-run sans doublon), retrait/rollback possible.
-  - [ ] Gère l'absence de lien Discord d'un joueur (skip + log).
-- **Zones touchées** : bot Discord (role-sync existant), `user_discord_links`, finalisation tournoi.
+  - [x] Mapping configurable classement → rôle Discord — **des plages, pas des rangs** :
+        « Top 8 » change de sens entre un tournoi à 8 équipes et un à 64, donc une règle
+        est `{from, to, roleId}` avec `to: null` pour « et tout le reste ».
+  - [x] Attribution déclenchée à la finalisation du tournoi : `tournament.finalized`
+        porte `placement_roles` (`[{teamId, teamName, rank, roleIds[]}]`), résolu par le
+        site au moment de l'émission — donc rejouable à l'identique.
+  - [ ] Idempotent (re-run sans doublon), retrait/rollback possible → **côté bot**.
+  - [ ] Gère l'absence de lien Discord d'un joueur (skip + log) → **côté bot**.
+- **Zones touchées** : `tenant_discord_config.placement_roles` (migration appliquée),
+  `utils/discord/placementRoles.ts` (pur, 20 tests), finalisation tournoi, éditeur admin
+  dans la config Discord du tenant, routes de lecture bot.
+- **Reste à faire (docker-box)** : consommer `placement_roles`, poser les rôles via
+  `user_discord_links`, idempotent, et journaliser les joueuses sans lien Discord plutôt
+  que d'échouer. Contrat : [BOT_API_CONTRACT.md](./BOT_API_CONTRACT.md#rôles-discord-par-classement-t3).
 - **Dépendances** : role-sync + `user_discord_links` (existants).
 
 ### T4 · Canal Discord privé par match — ✅ LIVRÉ (code) · ⏳ activation

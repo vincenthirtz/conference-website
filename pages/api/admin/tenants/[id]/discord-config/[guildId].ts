@@ -23,6 +23,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { canAccessTenant } from '@/utils/adminTenants';
 import { logger } from '@/utils/logger';
 import { logStaffAction } from '@/utils/staffLogs';
+import { parsePlacementRules } from '@/utils/discord/placementRoles';
 
 const SNOWFLAKE_RE = /^[0-9]{15,25}$/;
 const GUILD_ID_RE = /^[0-9]{15,25}$/;
@@ -145,6 +146,36 @@ async function handler(
       });
     }
     upsertPayload[key] = typeof v === 'string' && v === '' ? null : v;
+  }
+
+  // placement_roles : liste de regles rang -> role. Valide et NORMALISEE par
+  // `parsePlacementRules`, qui ecarte une regle illisible sans jeter les autres.
+  // Sans ce passage dans la whitelist, le champ serait silencieusement ignore —
+  // le piege deja rencontre sur cette route.
+  if ('placement_roles' in body) {
+    const raw = body.placement_roles;
+    if (raw === null) {
+      upsertPayload.placement_roles = null;
+    } else if (!Array.isArray(raw)) {
+      return res.status(400).json({
+        error: 'placement_roles must be an array or null.',
+        code: 'INVALID_PLACEMENT_ROLES',
+        field: 'placement_roles',
+      });
+    } else {
+      const rules = parsePlacementRules(raw);
+      // Une liste non vide qui ne rend AUCUNE regle valide est une erreur de
+      // saisie, pas une intention : la signaler vaut mieux que d'enregistrer
+      // un tableau vide que personne ne verra.
+      if (raw.length > 0 && rules.length === 0) {
+        return res.status(400).json({
+          error: 'No valid placement rule in the payload.',
+          code: 'INVALID_PLACEMENT_ROLES',
+          field: 'placement_roles',
+        });
+      }
+      upsertPayload.placement_roles = rules;
+    }
   }
 
   // welcome_enabled : boolean strict.

@@ -3743,6 +3743,36 @@ pure : [`utils/matches/scheduleDiagnostics.ts`](../utils/matches/scheduleDiagnos
 | [`pages/api/admin/tournament/[id]/auto-schedule.ts`](../pages/api/admin/tournament/[id]/auto-schedule.ts) | POST | Session staff, permission `manage_tournaments` | Respecte désormais les **contraintes de disponibilité** des équipes : le scheduler savait quand une équipe est *libre*, jamais quand elle a le *droit* de jouer. `dryRun: true` calcule et renvoie le planning **sans rien écrire** (avec `constraintCount` et les conflits) ; `ignoreTeamConstraints: true` rétablit l'ancien comportement pour comparer. Le défaut reste l'écriture, pour ne pas casser les appels existants. |
 | [`pages/api/admin/tournament/[id]/conflicts.ts`](../pages/api/admin/tournament/[id]/conflicts.ts) | GET | Session staff, permission `manage_tournaments` | Vue étroite historique (chevauchement d'équipe seul), consommée par l'onglet Outils. Partage désormais la table de durées de l'auto-scheduler. |
 
+### Rôles Discord par classement (T3)
+
+Lot 8 de [PLAN-plateforme-tournois.md](./PLAN-plateforme-tournois.md). Logique pure :
+[`utils/discord/placementRoles.ts`](../utils/discord/placementRoles.ts) ; colonne
+`tenant_discord_config.placement_roles` (jsonb).
+
+Le **site résout** qui reçoit quoi à la finalisation d'un tournoi ; le **bot pose**
+les rôles. Le bot reste seul à parler à Discord, et l'arbitrage du classement
+reste là où le podium est figé.
+
+- Une règle = `{ from, to, roleId, label }`. `to: null` = « et tout le reste » —
+  c'est ce qui permet de configurer « Participante » sans connaître le nombre
+  d'inscrites. Les plages **se chevauchent volontairement** : la gagnante mérite
+  « Vainqueure » ET « Podium » ET « Participante ».
+- `POST /api/admin/tournament/[id]/finalize` enrichit l'événement
+  `tournament.finalized` d'un champ **`placement_roles`** :
+  `[{ teamId, teamName, rank, roleIds[] }]`. Le champ est **absent** quand aucune
+  règle n'est configurée — le bot n'a alors rien à faire.
+- Les règles sont résolues **au moment de l'émission**, pas à la consommation :
+  l'événement porte une décision datée, rejouable à l'identique même si la
+  configuration change ensuite.
+- Les routes de lecture bot (`/bot/v1/tenants/all-configs`,
+  `/bot/v1/tenants/by-guild/[guildId]`) exposent la colonne, pour que le bot
+  puisse réconcilier hors événement.
+
+**Reste à faire côté bot** (docker-box) : consommer `placement_roles` de
+`tournament.finalized`, poser les rôles sur les membres des équipes via
+`user_discord_links`, de façon idempotente, en journalisant les joueuses sans
+lien Discord plutôt qu'en échouant.
+
 ## Where it lives
 
 - **Middleware** — [`utils/botAuth.ts`](../utils/botAuth.ts) (`withBotRoute`,

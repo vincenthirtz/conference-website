@@ -48,7 +48,10 @@ const BASELINE: Record<string, number> = {
   'pages/admin/users/[userId]/player-view.tsx': 1103,
   'pages/admin/tournament/[id]/edit.tsx': 991,
   'pages/admin/stages/[stageId]/seeding.tsx': 970,
-  'pages/admin/tenants/[id]/discord-config/[guildId].tsx': 967,
+  // 872 écrites : l'aperçu de la carte de bienvenue est parti dans
+  // `components/admin/tenants/WelcomeCardPreview.tsx` (lot 8), ce qui a fait la
+  // place à l'éditeur de rôles par classement.
+  'pages/admin/tenants/[id]/discord-config/[guildId].tsx': 872,
   'pages/admin/stages/[stageId].tsx': 950,
   'pages/admin/users/new.tsx': 930,
   'pages/admin/demandes/[id].tsx': 921,

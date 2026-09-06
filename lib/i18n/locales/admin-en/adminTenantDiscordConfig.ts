@@ -108,4 +108,18 @@ export default {
   serverFallback: 'your server',
   welcomeExample1: 'Welcome {user} to {server}!',
   welcomeExample2: 'Hi {user}, welcome to {server}!',
+  placementTitle: 'Roles by final ranking',
+  placementHelp:
+    'When a tournament is finalised, each team receives every role whose range it satisfies. Ranges may overlap: the winner deserves “Winner” AND “Podium” AND “Participant”.',
+  placementEmpty: 'No role granted automatically.',
+  placementAdd: 'Add a rule',
+  placementRemove: 'Remove',
+  placementFrom: 'From place',
+  placementTo: 'to place',
+  placementToPlaceholder: 'last',
+  placementRole: 'Discord role ID',
+  placementRolePlaceholder: '123456789012345678',
+  placementName: 'Name (for your own reference)',
+  placementNamePlaceholder: 'Winner 2026',
+  placementInvalidRole: 'A Discord role ID is 15 to 25 digits.',
 };

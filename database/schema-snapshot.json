@@ -1291,6 +1291,22 @@
       "updated_at",
       "user_id"
     ],
+    "team_availability_constraints": [
+      "created_at",
+      "created_by",
+      "ends_on",
+      "id",
+      "kind",
+      "note",
+      "starts_on",
+      "team_id",
+      "tenant_id",
+      "time_of_day",
+      "timezone",
+      "tournament_id",
+      "updated_at",
+      "weekdays"
+    ],
     "team_discord_channels": [
       "access",
       "captured_at",
@@ -1479,6 +1495,7 @@
       "matches_live_channel_id",
       "member_leave_channel_id",
       "news_ingest_channel_id",
+      "placement_roles",
       "scrims_announce_channel_id",
       "staff_log_channel_id",
       "staff_role_admin_id",
@@ -2568,6 +2585,22 @@
     "team_audit_logs_tenant_id_fkey": {
       "source": "team_audit_logs",
       "target": "tenants"
+    },
+    "team_availability_constraints_created_by_fkey": {
+      "source": "team_availability_constraints",
+      "target": "staff"
+    },
+    "team_availability_constraints_team_id_fkey": {
+      "source": "team_availability_constraints",
+      "target": "teams"
+    },
+    "team_availability_constraints_tenant_id_fkey": {
+      "source": "team_availability_constraints",
+      "target": "tenants"
+    },
+    "team_availability_constraints_tournament_id_fkey": {
+      "source": "team_availability_constraints",
+      "target": "tournaments"
     },
     "team_availability_team_id_fkey": {
       "source": "team_availability",

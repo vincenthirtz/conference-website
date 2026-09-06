@@ -17,6 +17,44 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { emitBotEvent } from '@/utils/botEvents';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { logger } from '../../../../../utils/logger';
+import {
+  parsePlacementRules,
+  resolvePlacementRoles,
+  type PlacementRule,
+} from '@/utils/discord/placementRoles';
+
+/**
+ * Les règles rang → rôle du tenant, prises sur la config Discord de ses guilds.
+ *
+ * Plusieurs guilds peuvent en porter : on concatène. Un tenant qui anime deux
+ * serveurs veut ses deux jeux de rôles, et les faire choisir au moment de
+ * finaliser un tournoi serait une question de trop, un soir de finale.
+ *
+ * Best-effort : une lecture qui échoue ne doit pas empêcher de figer un podium.
+ */
+async function readPlacementRules(tenantId: string): Promise<PlacementRule[]> {
+  if (!supabaseAdmin) return [];
+  try {
+    const { data: guilds } = await supabaseAdmin
+      .from('discord_guilds')
+      .select('guild_id')
+      .eq('tenant_id', tenantId);
+    const ids = (guilds ?? []).map((g) => g.guild_id as string);
+    if (ids.length === 0) return [];
+
+    const { data } = await supabaseAdmin
+      .from('tenant_discord_config')
+      .select('placement_roles')
+      .in('guild_id', ids);
+
+    return (data ?? []).flatMap((row) =>
+      parsePlacementRules((row as { placement_roles?: unknown }).placement_roles)
+    );
+  } catch (err) {
+    logger.error('[finalize] placement rules read error (non-fatal)', err);
+    return [];
+  }
+}
 
 type RankingInput = {
   team_id: string;
@@ -294,6 +332,23 @@ async function handler(
 
     const rankings = await fetchRankingsWithNames(tournamentId);
 
+    // Rôles Discord par classement (lot 8 / T3). Le site RÉSOUT « qui reçoit
+    // quoi » à partir des règles du tenant ; le bot se contente de poser. Il
+    // reste seul à parler à Discord, et l'arbitrage du classement reste ici,
+    // là où le podium est figé.
+    //
+    // Résolu au moment de l'émission plutôt qu'au moment où le bot consomme :
+    // l'événement porte alors une décision datée, rejouable à l'identique même
+    // si les règles changent entre-temps.
+    const placementRoles = resolvePlacementRoles(
+      rankings.map((r) => ({
+        teamId: r.team_id,
+        teamName: r.team_name,
+        rank: r.rank,
+      })),
+      await readPlacementRules(ctx.tenantId)
+    );
+
     // Bot event — best-effort, ne bloque pas la réponse en cas d'échec.
     try {
       await emitBotEvent(
@@ -307,6 +362,12 @@ async function handler(
             rank: r.rank,
             prize: r.prize,
           })),
+          // Absent quand aucune règle n'est configurée : le bot n'a rien à
+          // faire, et un tableau vide l'obligerait à distinguer « rien à
+          // poser » de « poser rien ».
+          ...(placementRoles.length > 0
+            ? { placement_roles: placementRoles }
+            : {}),
         },
         ctx.tenantId
       );
