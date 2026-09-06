@@ -8,6 +8,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 import type { MatchFormat } from '@/types/matches';
+import { DEFAULT_MATCH_DURATIONS_MINUTES } from '@/utils/matches/autoScheduler';
 
 import { logger } from '../../../../../utils/logger';
 type ScheduledMatch = {
@@ -49,13 +50,10 @@ type ApiResponse =
   | { conflicts: Conflict[]; total: number; checked_matches: number }
   | { error: string };
 
-const DURATION_DEFAULTS: Record<string, number> = {
-  bo1: 20,
-  bo2: 30,
-  bo3: 45,
-  bo5: 70,
-  bo7: 95,
-};
+// Durées : la table partagée avec l'auto-scheduler et le diagnostic de planning.
+// Elle vivait ici en copie — deux tables de durées, c'est un écran qui valide
+// un planning que l'autre refuse.
+const DURATION_DEFAULTS = DEFAULT_MATCH_DURATIONS_MINUTES;
 
 export default withStaffRoute(handler, { permission: 'manage_tournaments' });
 

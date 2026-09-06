@@ -3731,6 +3731,16 @@ des règles permanentes opposables au calendrier officiel.
 | [`pages/api/admin/teams/[teamId]/availability.ts`](../pages/api/admin/teams/[teamId]/availability.ts) | GET/POST/PATCH/DELETE | Session staff, permission `manage_teams` | Quatre natures : `blackout` (`starts_on`/`ends_on`, bornes **inclusives**), `earliest`/`latest` (`time_of_day`, HH:MM), `weekday` (`weekdays`, ISO 1 = lundi). `timezone` IANA (défaut `Europe/Paris`) — heures et dates sont **murales**, pas UTC. `tournament_id: null` = vaut pour tous les tournois. `GET ?tournament_id=` renvoie les contraintes du tournoi **plus** les globales. Écritures : rate-limit 60/min + `Idempotency-Key`. Journal : `team_availability_add` / `_update` / `_delete`. |
 | [`pages/api/admin/tournament/[id]/availability.ts`](../pages/api/admin/tournament/[id]/availability.ts) | GET | Session staff, permission `manage_tournaments` | `200 { tournamentId, teams[], constraints[] }`. `teams` liste les équipes **engagées** avec leurs contraintes, même vide — l'admin doit voir qui n'a rien déclaré autant que qui a déclaré. `constraints` est la liste à plat, prête pour `findAvailabilityViolations`. |
 
+### Diagnostic de planning (admin)
+
+Lot 3 de [PLAN-plateforme-tournois.md](./PLAN-plateforme-tournois.md). Logique
+pure : [`utils/matches/scheduleDiagnostics.ts`](../utils/matches/scheduleDiagnostics.ts).
+
+| Route | Methods | Auth | Notes |
+| --- | --- | --- | --- |
+| [`pages/api/admin/tournament/[id]/schedule-diagnostics.ts`](../pages/api/admin/tournament/[id]/schedule-diagnostics.ts) | GET | Session staff, permission `manage_tournaments` | Superset de `/conflicts`. Anomalies typées (`availability`, `double_booking`, `same_evening`, `outside_tournament`, `slot_collision`, `unscheduled`) + gravité, triées bloquant d'abord puis par date. `suggestion` porte la correction **triviale** quand il en existe une (créneau libre le même soir qui satisfait les deux équipes) — proposée, jamais appliquée. `?rest=` (défaut 30 min), `?concurrent=` (défaut 1), `?tz=` changent la lecture, jamais le calendrier. |
+| [`pages/api/admin/tournament/[id]/conflicts.ts`](../pages/api/admin/tournament/[id]/conflicts.ts) | GET | Session staff, permission `manage_tournaments` | Vue étroite historique (chevauchement d'équipe seul), consommée par l'onglet Outils. Partage désormais la table de durées de l'auto-scheduler. |
+
 ## Where it lives
 
 - **Middleware** — [`utils/botAuth.ts`](../utils/botAuth.ts) (`withBotRoute`,

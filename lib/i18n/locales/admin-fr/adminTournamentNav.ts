@@ -16,6 +16,7 @@ export default adminNs('adminTournamentNav', {
   tabCheckin: 'Check-in',
   tabBracket: 'Bracket',
   tabMatches: 'Matchs',
+  tabSchedule: 'Planning',
   tabStages: 'Stages',
   tabStats: 'Stats',
   tabMaps: 'Maps',

@@ -41,6 +41,7 @@ import nsAdminStaffPermissions from './adminStaffPermissions';
 import nsAdminFreePlayers from './adminFreePlayers';
 import nsAdminCustomGamePresets from './adminCustomGamePresets';
 import nsAdminTeamAvailability from './adminTeamAvailability';
+import nsAdminTournamentSchedule from './adminTournamentSchedule';
 import nsAdminTournamentMapDraw from './adminTournamentMapDraw';
 import nsAdminTournamentCheckin from './adminTournamentCheckin';
 import nsAdminTournamentCheckinLive from './adminTournamentCheckinLive';
@@ -231,6 +232,7 @@ export const frDict = {
   adminFreePlayers: nsAdminFreePlayers.fr,
   adminCustomGamePresets: nsAdminCustomGamePresets.fr,
   adminTeamAvailability: nsAdminTeamAvailability.fr,
+  adminTournamentSchedule: nsAdminTournamentSchedule.fr,
   adminTournamentMapDraw: nsAdminTournamentMapDraw.fr,
   adminTournamentCheckin: nsAdminTournamentCheckin.fr,
   adminTournamentCheckinLive: nsAdminTournamentCheckinLive.fr,

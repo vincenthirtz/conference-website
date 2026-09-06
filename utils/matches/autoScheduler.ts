@@ -516,20 +516,27 @@ function bumpTeam(
  * Durée estimée & dates
  * ---------------------------------------------------------*/
 
-function getEstimatedDurationMinutes(
+/**
+ * Durées de repli, en minutes, quand l'appelant n'en fournit pas.
+ *
+ * Exporté parce que le diagnostic de planning doit répondre EXACTEMENT la même
+ * chose que l'auto-scheduler sur « ces deux matchs se chevauchent-ils ? ». Deux
+ * tables de durées, c'est un écran qui valide un planning que l'autre refuse.
+ */
+export const DEFAULT_MATCH_DURATIONS_MINUTES: Record<MatchFormat, number> = {
+  bo1: 20,
+  bo2: 30,
+  bo3: 45,
+  bo5: 70,
+  bo7: 95,
+};
+
+export function getEstimatedDurationMinutes(
   format: MatchFormat,
   table: Partial<Record<MatchFormat, number>>
 ): number {
-  const fallback: Record<MatchFormat, number> = {
-    bo1: 20,
-    bo2: 30,
-    bo3: 45,
-    bo5: 70,
-    bo7: 95,
-  };
-
   return (
-    table[format] ?? fallback[format] ?? 45 // fallback général
+    table[format] ?? DEFAULT_MATCH_DURATIONS_MINUTES[format] ?? 45 // fallback général
   );
 }
 

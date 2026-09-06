@@ -37,6 +37,7 @@ import enAdminTournamentMaps from './adminTournamentMaps';
 import enAdminMapPool from './adminMapPool';
 import enAdminCustomGamePresets from './adminCustomGamePresets';
 import enAdminTeamAvailability from './adminTeamAvailability';
+import enAdminTournamentSchedule from './adminTournamentSchedule';
 import enAdminTournamentMapDraw from './adminTournamentMapDraw';
 import enAdminTournamentCheckin from './adminTournamentCheckin';
 import enAdminTournamentCheckinLive from './adminTournamentCheckinLive';
@@ -227,6 +228,7 @@ const adminEnDict = {
   adminMapPool: enAdminMapPool,
   adminCustomGamePresets: enAdminCustomGamePresets,
   adminTeamAvailability: enAdminTeamAvailability,
+  adminTournamentSchedule: enAdminTournamentSchedule,
   adminTournamentMapDraw: enAdminTournamentMapDraw,
   adminTournamentCheckin: enAdminTournamentCheckin,
   adminTournamentCheckinLive: enAdminTournamentCheckinLive,

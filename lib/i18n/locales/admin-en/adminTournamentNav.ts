@@ -17,6 +17,7 @@ export default {
   tabCheckin: 'Check-in',
   tabBracket: 'Bracket',
   tabMatches: 'Matches',
+  tabSchedule: 'Schedule',
   tabStages: 'Stages',
   tabStats: 'Stats',
   tabMaps: 'Maps',

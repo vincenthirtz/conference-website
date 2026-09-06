@@ -14,6 +14,7 @@ export type TournamentTabId =
   | 'checkin'
   | 'bracket'
   | 'matches'
+  | 'schedule'
   | 'stages'
   | 'stats'
   | 'maps'
@@ -30,6 +31,7 @@ const TAB_ROUTE: Record<TournamentTabId, string> = {
   checkin: 'checkin',
   bracket: 'bracket',
   matches: 'matches',
+  schedule: 'schedule',
   stages: 'stages',
   stats: 'stats',
   maps: 'maps',
@@ -53,6 +55,7 @@ const CORE_TABS: TabDef[] = [
   { id: 'checkin', labelKey: 'tabCheckin' },
   { id: 'bracket', labelKey: 'tabBracket' },
   { id: 'matches', labelKey: 'tabMatches' },
+  { id: 'schedule', labelKey: 'tabSchedule' },
   { id: 'stages', labelKey: 'tabStages' },
   { id: 'stats', labelKey: 'tabStats' },
 ];

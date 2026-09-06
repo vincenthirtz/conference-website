@@ -23023,6 +23023,75 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/tournament/{id}/schedule-diagnostics:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Everything wrong with a tournament's schedule.
+      description: >
+        Superset de `/conflicts`, qui ne voit que le chevauchement d'equipe. Ici
+        on confronte aussi le calendrier aux contraintes de disponibilite, aux
+        dates annoncees du tournoi et a la capacite de la production.
+
+
+        Anomalies typees (`availability`, `double_booking`, `same_evening`,
+        `outside_tournament`, `slot_collision`, `unscheduled`) avec leur gravite
+        (`blocking` / `warning` / `info`), triees par gravite puis par date.
+        Quand la correction est TRIVIALE (un creneau libre le meme soir qui
+        satisfait les deux equipes), elle est proposee dans `suggestion` —
+        jamais appliquee.
+
+
+        `?rest=` repos exige entre deux matchs d'une equipe (defaut 30 min),
+        `?concurrent=` matchs simultanes que la production porte (defaut 1),
+        `?tz=` fuseau de lecture (defaut : celui du tournoi). Ces parametres
+        changent la LECTURE du calendrier, jamais le calendrier.
+      operationId: adminGetTournamentScheduleDiagnostics
+      tags:
+        - admin/tournaments
+      security:
+        - StaffSession: []
+      parameters:
+        - name: rest
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 240
+        - name: concurrent
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 32
+        - name: tz
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Diagnostic du calendrier.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Identifiant invalide (`INVALID_TOURNAMENT_ID`).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Tournoi inconnu (`TOURNAMENT_NOT_FOUND`).
   /api/admin/tournament/{id}/availability:
     parameters:
       - in: path
