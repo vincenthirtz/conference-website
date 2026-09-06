@@ -26,6 +26,8 @@ export default {
   team2Label: 'Team 2',
   teamNone: '— None —',
   scheduledLabel: 'Scheduled date',
+  noDateHint: 'No date yet?',
+  openPlanning: 'Open an availability grid',
   statusLabel: 'Status',
   statusDraft: 'Draft',
   statusScheduled: 'Scheduled',

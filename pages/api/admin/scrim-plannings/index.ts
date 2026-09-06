@@ -41,6 +41,9 @@ const createSchema = z
     timezone: z.string().trim().min(1).max(64).optional(),
     staff_required: z.boolean().optional(),
     source_demande_id: z.string().uuid().optional().nullable(),
+    // Grille ouverte POUR un scrim existant (typiquement un scrim sans date).
+    // La validation replanifiera ce scrim au lieu d'en créer un second.
+    scrim_id: z.string().uuid().optional().nullable(),
   })
   .refine((v) => v.team1_id !== v.team2_id, {
     message: 'team1_id et team2_id doivent être distincts',
@@ -178,6 +181,7 @@ async function handlePost(
     day_start_min: body.day_start_min ?? 960,
     day_end_min: body.day_end_min ?? 1440,
     timezone,
+    scrim_id: body.scrim_id ?? null,
     is_public: false,
     staff_required: body.staff_required ?? false,
     source_demande_id: body.source_demande_id ?? null,

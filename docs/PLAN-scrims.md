@@ -8,7 +8,7 @@ production**, pas d'une bonne pratique générique. Les chiffres de production
 datent du 2026-09-06 : 4 scrims (dont 2 terminés), 14 équipes, **0 grille de
 planification**, **0 disponibilité saisie**.
 
-> **État : 8 lots livrés sur 10.** Chaque section reçoit son bilan au fur et à
+> **État : 9 lots livrés sur 10.** Chaque section reçoit son bilan au fur et à
 > mesure. Rien n'est poussé : les lots sont committés en local.
 
 ---
@@ -241,6 +241,18 @@ un rechargement ramène à la semaine courante, tous statuts.
 ---
 
 ## Lot 9 — La grille de planification n'a jamais servi
+
+> **Livré.** Un scrim sans date propose désormais « Ouvrir une grille de
+> disponibilités », équipes pré-remplies.
+>
+> Le point d'entrée seul aurait été un piège : la validation d'une grille
+> INSÉRAIT toujours un nouveau scrim. Suivre le lien depuis un scrim existant
+> aurait donc produit un doublon — le scrim d'origine restant là, sans date, à
+> côté de son jumeau planifié. Une grille peut maintenant être attachée à un
+> scrim (`scrim_id` accepté à la création, propagé par `?forScrim=`), et la
+> validation REPLANIFIE ce scrim au lieu d'en créer un second.
+>
+> Test ajouté puis vérifié en neutralisant la branche : sans elle, il échoue.
 
 **Effort : M.**
 

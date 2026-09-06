@@ -190,11 +190,32 @@ async function handler(
     source_demande_id: planning.source_demande_id ?? null,
   };
 
-  const { data: scrim, error: scrimErr } = await supabaseAdmin
-    .from('scrims')
-    .insert(scrimPayload)
-    .select('*')
-    .maybeSingle();
+  // Une grille ouverte POUR un scrim existant le replanifie au lieu d'en créer
+  // un second. Sans ça, proposer la grille depuis un scrim sans date produisait
+  // mécaniquement un doublon — le scrim d'origine restait là, sans date, à côté
+  // de son jumeau planifié.
+  const attachedScrimId = (planning as { scrim_id?: string | null }).scrim_id;
+
+  const { data: scrim, error: scrimErr } = attachedScrimId
+    ? await supabaseAdmin
+        .from('scrims')
+        .update({
+          status: 'scheduled',
+          scheduled_date: slotIso,
+          timezone: planning.timezone,
+          source_planning_id: id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', attachedScrimId)
+        .eq('tenant_id', ctx.tenantId)
+        .is('deleted_at', null)
+        .select('*')
+        .maybeSingle()
+    : await supabaseAdmin
+        .from('scrims')
+        .insert(scrimPayload)
+        .select('*')
+        .maybeSingle();
 
   if (scrimErr || !scrim) {
     logger.error(

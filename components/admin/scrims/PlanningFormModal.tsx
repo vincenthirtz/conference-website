@@ -21,6 +21,11 @@ type PlanningFormModalProps = {
   initialTeam2Id?: string;
   /** Lie la grille à la demande de scrim source (source_demande_id). */
   sourceDemandeId?: string;
+  /**
+   * Scrim existant pour lequel on ouvre la grille. La validation replanifiera
+   * CE scrim au lieu d'en créer un second (cf. validate.ts).
+   */
+  scrimId?: string;
 };
 
 /** Bande horaire par défaut : 18:00 → 23:00 (heures de scrim typiques). */
@@ -99,6 +104,7 @@ export default function PlanningFormModal({
   initialTeam1Id,
   initialTeam2Id,
   sourceDemandeId,
+  scrimId,
 }: PlanningFormModalProps) {
   const t = useAdminT(nsAdminScrimPlanningsCreate);
   const router = useRouter();
@@ -181,6 +187,7 @@ export default function PlanningFormModal({
         timezone: form.timezone,
         staff_required: form.staff_required,
         ...(sourceDemandeId ? { source_demande_id: sourceDemandeId } : {}),
+        ...(scrimId ? { scrim_id: scrimId } : {}),
       };
       const { planning } = await mutateJson<{ planning: ScrimPlanning }>(
         '/api/admin/scrim-plannings',

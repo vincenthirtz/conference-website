@@ -326,6 +326,41 @@ describe('/api/admin/scrim-plannings/[planningId]/validate', () => {
     expect(store.scrims).toHaveLength(1);
   });
 
+  it('replanifie le scrim attaché au lieu d’en créer un second', async () => {
+    // Une grille ouverte DEPUIS un scrim sans date porte `scrim_id`. Sans cette
+    // branche, la valider produisait un doublon : le scrim d'origine restait
+    // là, sans date, à côté de son jumeau planifié.
+    const EXISTING = '00000000-0000-4000-8000-0000000000ff';
+    store.scrims = [
+      {
+        id: EXISTING,
+        name: 'Scrim déjà là',
+        status: 'draft',
+        team1_id: TEAM_A,
+        team2_id: TEAM_B,
+        scheduled_date: null,
+        deleted_at: null,
+      },
+    ] as any;
+    store.scrim_plannings = [basePlanning({ scrim_id: EXISTING })] as any;
+
+    const res = makeRes();
+    await adminValidateHandler(
+      makeAuthedReq({
+        method: 'POST',
+        query: { planningId: PLANNING_ID },
+        body: { slot: SLOT_1 },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(201);
+    expect((res.body as any).scrim.id).toBe(EXISTING);
+    expect((res.body as any).scrim.status).toBe('scheduled');
+    expect((res.body as any).scrim.scheduled_date).toBe(SLOT_1);
+    expect(store.scrims).toHaveLength(1);
+  });
+
   it('is idempotent: second call returns the same scrim, no duplicate', async () => {
     const res1 = makeRes();
     await adminValidateHandler(

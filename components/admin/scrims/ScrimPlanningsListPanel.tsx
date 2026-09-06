@@ -105,6 +105,10 @@ export default function ScrimPlanningsListPanel() {
     typeof router.query.fromDemande === 'string'
       ? router.query.fromDemande
       : undefined;
+  // Grille ouverte depuis un scrim sans date : la validation replanifiera ce
+  // scrim au lieu d'en créer un second.
+  const prefillScrim =
+    typeof router.query.forScrim === 'string' ? router.query.forScrim : undefined;
 
   // Ouvre automatiquement la modale (une seule fois) quand `?new=1` est présent.
   useEffect(() => {
@@ -116,12 +120,19 @@ export default function ScrimPlanningsListPanel() {
     setModalOpen(false);
     // Nettoie les paramètres de préremplissage pour qu'une réouverture manuelle
     // reparte d'un formulaire vierge (et ne rouvre pas la modale au remount).
-    if (router.query.new || prefillTeam1 || prefillTeam2 || prefillDemande) {
+    if (
+      router.query.new ||
+      prefillTeam1 ||
+      prefillTeam2 ||
+      prefillDemande ||
+      prefillScrim
+    ) {
       const {
         new: _new,
         team1: _team1,
         team2: _team2,
         fromDemande: _fromDemande,
+        forScrim: _forScrim,
         ...rest
       } = router.query;
       void router.replace(
@@ -174,6 +185,7 @@ export default function ScrimPlanningsListPanel() {
         initialTeam1Id={prefillTeam1}
         initialTeam2Id={prefillTeam2}
         sourceDemandeId={prefillDemande}
+        scrimId={prefillScrim}
       />
 
       <div className="mb-6 flex justify-end">

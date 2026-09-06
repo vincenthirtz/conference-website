@@ -274,6 +274,21 @@ function AdminScrimEditPage(_props: StaffProps) {
                   }
                   className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
                 />
+                {/* La grille de disponibilités est complète (heatmap, conflits,
+                    rappels) mais vivait dans un onglet que personne n'ouvrait :
+                    zéro grille en production. On la propose là où la question
+                    « quand joue-t-on ? » se pose vraiment. */}
+                {!scrim.scheduled_date && scrim.team1_id && scrim.team2_id && (
+                  <p className="mt-2 text-xs text-neutral-400">
+                    {t.noDateHint}{' '}
+                    <Link
+                      href={`/admin/scrims?tab=plannings&new=1&team1=${scrim.team1_id}&team2=${scrim.team2_id}&forScrim=${scrim.id}`}
+                      className="text-blue-400 hover:underline"
+                    >
+                      {t.openPlanning}
+                    </Link>
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">

@@ -25,6 +25,8 @@ export default adminNs('adminScrimDetail', {
   team2Label: 'Équipe 2',
   teamNone: '— Aucune —',
   scheduledLabel: 'Date prévue',
+  noDateHint: 'Pas encore de date ?',
+  openPlanning: 'Ouvrir une grille de disponibilités',
   statusLabel: 'Statut',
   statusDraft: 'Brouillon',
   statusScheduled: 'Planifié',
