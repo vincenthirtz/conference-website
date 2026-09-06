@@ -90,6 +90,11 @@ async function handler(
       teamNames: context.teamNames,
       constraintCount: context.constraints.length,
       matchCount: context.matches.length,
+      // Le calendrier (lot 4) affiche les MÊMES matchs que la liste d'anomalies
+      // juge. Les renvoyer ici plutôt que par un second appel garantit que les
+      // deux vues montrent le même calendrier, à la même seconde.
+      matches: context.matches,
+      constraints: context.constraints,
     });
   } catch (err) {
     logger.error('[admin/schedule-diagnostics] error', err, { tournamentId });

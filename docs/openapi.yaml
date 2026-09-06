@@ -23051,6 +23051,11 @@ paths:
         `?concurrent=` matchs simultanes que la production porte (defaut 1),
         `?tz=` fuseau de lecture (defaut : celui du tournoi). Ces parametres
         changent la LECTURE du calendrier, jamais le calendrier.
+
+
+        La reponse porte aussi `matches` et `constraints` : la vue calendrier
+        affiche EXACTEMENT ce que la liste d'anomalies juge, donc les deux
+        viennent du meme appel.
       operationId: adminGetTournamentScheduleDiagnostics
       tags:
         - admin/tournaments

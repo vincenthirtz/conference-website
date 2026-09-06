@@ -42,6 +42,18 @@ export default adminNs('adminTournamentSchedule', {
   settingsHint:
     'Ces deux valeurs changent ce qui compte comme anomalie, jamais le calendrier.',
 
+  viewList: 'Liste',
+  viewMonth: 'Mois',
+  viewLabel: 'Affichage',
+  prevMonth: 'Mois précédent',
+  nextMonth: 'Mois suivant',
+  blockedDay: 'Indisponible',
+  legendBlocking: 'Anomalie bloquante',
+  legendWarning: 'À regarder',
+  legendOk: 'Rien à signaler',
+  legendBlocked: 'Jour d’indisponibilité',
+  calendarEmpty: 'Aucun match daté à afficher.',
+
   kindAvailability: 'Contrainte d’équipe',
   kindDoubleBooking: 'Deux matchs qui se chevauchent',
   kindSameEvening: 'Double soirée',

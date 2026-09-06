@@ -265,3 +265,73 @@ export function groupConstraintsByTeam(
   }
   return map;
 }
+
+/** `YYYY-MM-DD` → jour ISO (1 = lundi … 7 = dimanche), sans passer par un fuseau. */
+export function isoWeekdayOfYmd(ymd: string): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
+  if (!m) return null;
+  // Date.UTC : la date murale est traitée comme une date pure, donc le résultat
+  // ne dépend pas du fuseau de la machine qui l'évalue.
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  if (Number.isNaN(d.getTime())) return null;
+  const day = d.getUTCDay();
+  return day === 0 ? 7 : day;
+}
+
+/** Le jour suivant, en `YYYY-MM-DD`. */
+function nextYmd(ymd: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
+  if (!m) return ymd;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + 1));
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Les jours d'indisponibilité, équipe par équipe, sur une plage donnée.
+ *
+ * Sert à GRISER les jours dans un calendrier : montrer où une équipe ne peut
+ * pas jouer vaut mieux que d'attendre qu'on l'y place pour le signaler. Ne
+ * couvre que les contraintes qui portent sur des JOURS entiers (`blackout`,
+ * `weekday`) — une contrainte d'heure ne rend pas la journée indisponible, elle
+ * en rend une partie inutilisable, et grisée elle mentirait.
+ *
+ * La plage est bornée à 400 jours : au-delà, l'appelant demande à voir plus
+ * d'une saison d'un coup, ce qu'aucun calendrier n'affiche.
+ */
+export function blackoutDaysByTeam(
+  constraints: AvailabilityConstraint[],
+  fromYmd: string,
+  toYmd: string
+): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fromYmd) || !/^\d{4}-\d{2}-\d{2}$/.test(toYmd)) {
+    return out;
+  }
+
+  const push = (day: string, teamId: string) => {
+    const list = out.get(day);
+    if (!list) out.set(day, [teamId]);
+    else if (!list.includes(teamId)) list.push(teamId);
+  };
+
+  let day = fromYmd;
+  let guard = 0;
+  while (day <= toYmd && guard < 400) {
+    guard += 1;
+    const weekday = isoWeekdayOfYmd(day);
+    for (const c of constraints) {
+      if (c.kind === 'blackout') {
+        if (c.startsOn && c.endsOn && day >= c.startsOn && day <= c.endsOn) {
+          push(day, c.teamId);
+        }
+      } else if (c.kind === 'weekday') {
+        if (weekday !== null && (c.weekdays ?? []).includes(weekday)) {
+          push(day, c.teamId);
+        }
+      }
+    }
+    day = nextYmd(day);
+  }
+
+  return out;
+}

@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+  blackoutDaysByTeam,
   checkConstraint,
+  isoWeekdayOfYmd,
   constraintApplies,
   findAvailabilityViolations,
   groupConstraintsByTeam,
@@ -331,5 +333,88 @@ describe('groupConstraintsByTeam', () => {
     expect(map.get(HIN)?.map((c) => c.id)).toEqual(['a', 'b']);
     expect(map.get(SHU)?.map((c) => c.id)).toEqual(['c']);
     expect(map.get('inconnue')).toBeUndefined();
+  });
+});
+
+describe('isoWeekdayOfYmd', () => {
+  it('numérote lundi 1 et dimanche 7', () => {
+    expect(isoWeekdayOfYmd('2026-09-14')).toBe(1); // lundi
+    expect(isoWeekdayOfYmd('2026-09-18')).toBe(5); // vendredi
+    expect(isoWeekdayOfYmd('2026-09-20')).toBe(7); // dimanche
+  });
+
+  it('ne dépend pas du fuseau de la machine', () => {
+    // Un `new Date('2026-09-20')` interprété en heure locale bascule d'un jour
+    // à l'ouest de Greenwich. Le helper passe par Date.UTC exprès.
+    expect(isoWeekdayOfYmd('2026-01-01')).toBe(4); // jeudi
+  });
+
+  it('rejette ce qui n’est pas une date', () => {
+    expect(isoWeekdayOfYmd('18/09/2026')).toBeNull();
+    expect(isoWeekdayOfYmd('')).toBeNull();
+  });
+});
+
+describe('blackoutDaysByTeam', () => {
+  const blackout = makeConstraint({
+    id: 'b',
+    kind: 'blackout',
+    timeOfDay: null,
+    startsOn: '2026-09-18',
+    endsOn: '2026-09-20',
+  });
+
+  it('déplie une plage en jours, bornes comprises', () => {
+    const map = blackoutDaysByTeam([blackout], '2026-09-01', '2026-09-30');
+    expect([...map.keys()].sort()).toEqual([
+      '2026-09-18',
+      '2026-09-19',
+      '2026-09-20',
+    ]);
+    expect(map.get('2026-09-19')).toEqual([HIN]);
+  });
+
+  it('tronque à la fenêtre demandée', () => {
+    const map = blackoutDaysByTeam([blackout], '2026-09-19', '2026-09-19');
+    expect([...map.keys()]).toEqual(['2026-09-19']);
+  });
+
+  it('déplie aussi les jours de semaine', () => {
+    const map = blackoutDaysByTeam(
+      [makeConstraint({ id: 'w', kind: 'weekday', timeOfDay: null, weekdays: [1] })],
+      '2026-09-01',
+      '2026-09-30'
+    );
+    // Les lundis de septembre 2026 : 7, 14, 21, 28.
+    expect([...map.keys()].sort()).toEqual([
+      '2026-09-07',
+      '2026-09-14',
+      '2026-09-21',
+      '2026-09-28',
+    ]);
+  });
+
+  it('cumule les équipes sur un même jour sans doublon', () => {
+    const map = blackoutDaysByTeam(
+      [
+        blackout,
+        makeConstraint({ id: 'b2', teamId: SHU, kind: 'blackout', timeOfDay: null, startsOn: '2026-09-19', endsOn: '2026-09-19' }),
+        makeConstraint({ id: 'b3', kind: 'blackout', timeOfDay: null, startsOn: '2026-09-19', endsOn: '2026-09-19' }),
+      ],
+      '2026-09-18',
+      '2026-09-20'
+    );
+    expect(map.get('2026-09-19')?.sort()).toEqual([HIN, SHU].sort());
+  });
+
+  it('ignore les contraintes d’HEURE — une heure ne grise pas une journée', () => {
+    // Griser le jour entier pour « pas avant 21 h » se lirait comme une
+    // interdiction, alors que le créneau de 22 h reste jouable.
+    const map = blackoutDaysByTeam([makeConstraint()], '2026-09-01', '2026-09-30');
+    expect(map.size).toBe(0);
+  });
+
+  it('rend une carte vide sur une plage illisible', () => {
+    expect(blackoutDaysByTeam([blackout], 'hier', 'demain').size).toBe(0);
   });
 });

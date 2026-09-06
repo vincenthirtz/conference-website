@@ -40,6 +40,18 @@ export default {
   settingsHint:
     'These two values change what counts as an anomaly, never the schedule.',
 
+  viewList: 'List',
+  viewMonth: 'Month',
+  viewLabel: 'View',
+  prevMonth: 'Previous month',
+  nextMonth: 'Next month',
+  blockedDay: 'Unavailable',
+  legendBlocking: 'Blocking anomaly',
+  legendWarning: 'Worth a look',
+  legendOk: 'Nothing to report',
+  legendBlocked: 'Unavailable day',
+  calendarEmpty: 'No dated match to show.',
+
   kindAvailability: 'Team constraint',
   kindDoubleBooking: 'Overlapping matches',
   kindSameEvening: 'Two matches in one evening',

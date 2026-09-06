@@ -12,7 +12,7 @@
 // geste est le lot 5, parce qu'un déplacement mérite d'abord son aperçu
 // d'impact.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -21,6 +21,10 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import nsAdminTournamentSchedule from '@/lib/i18n/locales/admin-fr/adminTournamentSchedule';
+import ScheduleMonthCalendar, {
+  type CalendarMatch,
+} from '@/components/admin/tournament/ScheduleMonthCalendar';
+import type { AvailabilityConstraint } from '@/utils/matches/availability';
 import type {
   ScheduleAnomaly,
   ScheduleAnomalyKind,
@@ -40,6 +44,9 @@ type DiagnosticsResponse = {
   slotGrid: string[];
   constraintCount: number;
   matchCount: number;
+  matches: CalendarMatch[];
+  constraints: AvailabilityConstraint[];
+  teamNames: Record<string, string>;
 };
 
 const SEVERITIES: ScheduleAnomalySeverity[] = ['blocking', 'warning', 'info'];
@@ -72,6 +79,7 @@ export default function TournamentSchedulePage() {
   const [error, setError] = useState<string | null>(null);
   const [rest, setRest] = useState(30);
   const [concurrent, setConcurrent] = useState(1);
+  const [view, setView] = useState<'list' | 'month'>('month');
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -92,6 +100,27 @@ export default function TournamentSchedulePage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  /**
+   * La gravité la plus haute retenue contre chaque match. Le calendrier n'a pas
+   * la place d'afficher trois anomalies dans une case de 72 px : il montre la
+   * pire, la liste détaille.
+   */
+  const severityByMatch = useMemo(() => {
+    const rank: Record<ScheduleAnomalySeverity, number> = {
+      blocking: 0,
+      warning: 1,
+      info: 2,
+    };
+    const out: Record<string, ScheduleAnomalySeverity> = {};
+    for (const a of data?.anomalies ?? []) {
+      for (const id of a.matchIds) {
+        const current = out[id];
+        if (!current || rank[a.severity] < rank[current]) out[id] = a.severity;
+      }
+    }
+    return out;
+  }, [data]);
 
   const kindLabel = (k: ScheduleAnomalyKind): string =>
     ({
@@ -149,14 +178,37 @@ export default function TournamentSchedulePage() {
                 {t.subtitle}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => void load()}
-              disabled={loading}
-              className="rounded-lg border border-neutral-600 px-3 py-2 text-sm text-neutral-200 disabled:opacity-50"
-            >
-              {t.refresh}
-            </button>
+            <div className="flex items-center gap-2">
+              <div
+                role="group"
+                aria-label={t.viewLabel}
+                className="inline-flex rounded-lg border border-neutral-700 bg-neutral-800 p-0.5"
+              >
+                {(['month', 'list'] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    aria-pressed={view === v}
+                    onClick={() => setView(v)}
+                    className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                      view === v
+                        ? 'bg-neutral-700 text-white'
+                        : 'text-neutral-400'
+                    }`}
+                  >
+                    {v === 'month' ? t.viewMonth : t.viewList}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => void load()}
+                disabled={loading}
+                className="rounded-lg border border-neutral-600 px-3 py-2 text-sm text-neutral-200 disabled:opacity-50"
+              >
+                {t.refresh}
+              </button>
+            </div>
           </div>
 
           {/* Réglages : ils changent la LECTURE du calendrier, jamais le calendrier. */}
@@ -243,6 +295,28 @@ export default function TournamentSchedulePage() {
                 </p>
               )}
 
+              {view === 'month' && (
+                <div className="mb-6 rounded-xl border border-neutral-700 bg-neutral-900/40 p-3">
+                  <ScheduleMonthCalendar
+                    matches={data.matches}
+                    severityByMatch={severityByMatch}
+                    constraints={data.constraints}
+                    teamNames={data.teamNames}
+                    timezone={data.tournament.timezone}
+                    labels={{
+                      prevMonth: t.prevMonth,
+                      nextMonth: t.nextMonth,
+                      blockedDay: t.blockedDay,
+                      legendBlocking: t.legendBlocking,
+                      legendWarning: t.legendWarning,
+                      legendOk: t.legendOk,
+                      legendBlocked: t.legendBlocked,
+                      empty: t.calendarEmpty,
+                    }}
+                  />
+                </div>
+              )}
+
               {total === 0 ? (
                 <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-5">
                   <p className="font-semibold text-emerald-200">{t.allGood}</p>
@@ -251,6 +325,10 @@ export default function TournamentSchedulePage() {
                   </p>
                 </div>
               ) : (
+                // Le détail des anomalies ne s'affiche qu'en vue liste : dans une
+                // case de calendrier, une anomalie tient en une couleur, pas en
+                // une phrase. Les deux vues lisent le même diagnostic.
+                view === 'list' && (
                 <ul className="space-y-2">
                   {data.anomalies.map((a, i) => (
                     <li
@@ -298,6 +376,7 @@ export default function TournamentSchedulePage() {
                     </li>
                   ))}
                 </ul>
+                )
               )}
             </>
           ) : null}
