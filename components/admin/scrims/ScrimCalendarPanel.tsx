@@ -53,6 +53,8 @@ type RawMatch = {
   id: string;
   status: string;
   scheduled_at: string | null;
+  team1_id: string | null;
+  team2_id: string | null;
   team1Name: string | null;
   team2Name: string | null;
 };
@@ -140,11 +142,6 @@ export default function ScrimCalendarPanel() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [rawScrims]);
 
-  const selectedTeamName = useMemo(
-    () => teamOptions.find((o) => o.id === teamFilter)?.name ?? null,
-    [teamOptions, teamFilter]
-  );
-
   const activeStatuses = useMemo(() => new Set(statusFilter), [statusFilter]);
 
   const calendarScrims = useMemo<CalendarScrim[]>(
@@ -176,11 +173,14 @@ export default function ScrimCalendarPanel() {
   const calendarMatches = useMemo<CalendarMatch[]>(
     () =>
       rawMatches
+        // Filtre sur l'ID et non sur le nom : deux équipes homonymes ne se
+        // mélangent plus, et une casse différente ne fait plus disparaître un
+        // match sans explication.
         .filter(
           (m) =>
-            !selectedTeamName ||
-            m.team1Name === selectedTeamName ||
-            m.team2Name === selectedTeamName
+            !teamFilter ||
+            m.team1_id === teamFilter ||
+            m.team2_id === teamFilter
         )
         .map((m) => ({
           id: m.id,
@@ -189,7 +189,7 @@ export default function ScrimCalendarPanel() {
           team1Name: m.team1Name,
           team2Name: m.team2Name,
         })),
-    [rawMatches, selectedTeamName]
+    [rawMatches, teamFilter]
   );
 
   const weekLabels = useMemo(

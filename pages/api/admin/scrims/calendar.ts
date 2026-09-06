@@ -98,10 +98,16 @@ async function handler(
       team2Name: nm(s.team2_id),
     }));
 
+    // Les ids d'équipe sont exposés au même titre que ceux des scrims : sans
+    // eux, l'agenda ne pouvait filtrer les matchs que sur le NOM de l'équipe —
+    // deux homonymes se mélangeaient, et une différence de casse faisait
+    // rater le filtre en silence.
     const matches = matchRows.map((m) => ({
       id: m.id,
       status: m.status,
       scheduled_at: m.scheduled_at,
+      team1_id: m.team1_id,
+      team2_id: m.team2_id,
       team1Name: nm(m.team1_id),
       team2Name: nm(m.team2_id),
     }));

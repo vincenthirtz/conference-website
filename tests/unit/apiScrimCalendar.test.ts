@@ -118,5 +118,11 @@ describe('GET /api/admin/scrims/calendar', () => {
     expect(body.scrims[0].team1Name).toBe('Phoenix');
     expect(body.matches).toHaveLength(1);
     expect(body.matches[0].team2Name).toBe('Dragons');
+    // Les ids d'équipe des matchs sont exposés au même titre que ceux des
+    // scrims : l'agenda filtre dessus. Sans eux il ne pouvait comparer que des
+    // NOMS — deux homonymes se mélangeaient, et une casse différente faisait
+    // rater le filtre en silence.
+    expect(body.matches[0].team1_id).toBe(TEAM_A);
+    expect(body.matches[0].team2_id).toBeDefined();
   });
 });

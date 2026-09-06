@@ -8,7 +8,7 @@ production**, pas d'une bonne pratique générique. Les chiffres de production
 datent du 2026-09-06 : 4 scrims (dont 2 terminés), 14 équipes, **0 grille de
 planification**, **0 disponibilité saisie**.
 
-> **État : 2 lots livrés sur 10.** Chaque section reçoit son bilan au fur et à
+> **État : 3 lots livrés sur 10.** Chaque section reçoit son bilan au fur et à
 > mesure. Rien n'est poussé : les lots sont committés en local.
 
 ---
@@ -75,6 +75,14 @@ annexe des deux écrans.
 ---
 
 ## Lot 3 — L'agenda filtre les matchs sur le NOM de l'équipe
+
+> **Livré.** L'API calendrier expose `team1_id`/`team2_id` pour les matchs —
+> elle les lisait déjà et les jetait au moment de composer sa réponse. Le
+> panneau filtre désormais sur l'id, et `selectedTeamName` disparaît.
+>
+> Le test de l'API a été étendu, puis **vérifié en cassant volontairement le
+> correctif** : sans les ids, il échoue. Sans cette vérification, l'assertion
+> aurait pu être vraie par accident.
 
 **Effort : S.**
 
