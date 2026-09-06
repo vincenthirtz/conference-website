@@ -36,8 +36,6 @@ import type {
 } from '@/types/admin';
 import nsAdminScrimPlanningsDetail from '@/lib/i18n/locales/admin-fr/adminScrimPlanningsDetail';
 
-type TeamOption = { id: string; name: string };
-
 function formatDate(d: string | null) {
   if (!d) return '—';
   try {
@@ -76,7 +74,6 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
     ScrimPlanningAvailability[]
   >([]);
   const [apiHeatmap, setApiHeatmap] = useState<Heatmap | null>(null);
-  const [teams, setTeams] = useState<TeamOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -90,20 +87,16 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
     setLoading(true);
     setError(null);
     try {
-      const [detail, teamsRes] = await Promise.all([
-        adminFetchJson<{
-          planning: ScrimPlanning;
-          availabilities: ScrimPlanningAvailability[];
-          heatmap: Heatmap;
-        }>(`/api/admin/scrim-plannings/${id}`),
-        adminFetchJson<{ teams: TeamOption[] }>(
-          '/api/admin/teams?limit=200&isActive=true'
-        ),
-      ]);
+      // Les équipes sont embarquées dans la réponse (relation to-one) : plus
+      // d'appel séparé à /api/admin/teams pour traduire deux ids en noms.
+      const detail = await adminFetchJson<{
+        planning: ScrimPlanning;
+        availabilities: ScrimPlanningAvailability[];
+        heatmap: Heatmap;
+      }>(`/api/admin/scrim-plannings/${id}`);
       setPlanning(detail.planning);
       setAvailabilities(detail.availabilities || []);
       setApiHeatmap(detail.heatmap || null);
-      setTeams(teamsRes.teams || []);
       // Récupère mes propres créneaux staff (peinture perso) sur cette grille.
       try {
         const mine = await adminFetchJson<{ slots: string[] }>(
@@ -125,11 +118,6 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
     if (!router.isReady) return;
     fetchAll();
   }, [fetchAll, router.isReady]);
-
-  const teamName = useMemo(() => {
-    const map = new Map(teams.map((tm) => [tm.id, tm.name]));
-    return (teamId: string | null) => (teamId ? map.get(teamId) || '—' : '—');
-  }, [teams]);
 
   const config = useMemo(
     () => (planning ? planningConfigFromRow(planning) : null),
@@ -476,8 +464,8 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
               </h1>
               <p className="mt-1 text-sm text-neutral-300">
                 {format(t.teamsVs, {
-                  team1: teamName(planning.team1_id),
-                  team2: teamName(planning.team2_id),
+                  team1: planning.team1?.name || '—',
+                  team2: planning.team2?.name || '—',
                 })}
                 {planning.game ? (
                   <span className="ml-2 text-neutral-500">{planning.game}</span>

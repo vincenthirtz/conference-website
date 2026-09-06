@@ -8,7 +8,7 @@ production**, pas d'une bonne pratique générique. Les chiffres de production
 datent du 2026-09-06 : 4 scrims (dont 2 terminés), 14 équipes, **0 grille de
 planification**, **0 disponibilité saisie**.
 
-> **État : 1 lot livré sur 10.** Chaque section reçoit son bilan au fur et à
+> **État : 2 lots livrés sur 10.** Chaque section reçoit son bilan au fur et à
 > mesure. Rien n'est poussé : les lots sont committés en local.
 
 ---
@@ -43,6 +43,18 @@ lien vers une liste filtrée rouvre la même liste.
 ---
 
 ## Lot 2 — Deux requêtes pour afficher un nom d'équipe
+
+> **Livré.** Les deux API des grilles (liste et détail) embarquent désormais
+> `team1`/`team2` via leurs clés étrangères. La liste et la page de détail ne
+> rappellent plus `/api/admin/teams` : un aller-retour de moins sur chacune, et
+> le plafond muet de 200 équipes disparaît de ces deux chemins.
+>
+> `PlanningFormModal` garde son propre appel, et c'est justifié : il lui faut la
+> liste complète pour ses sélecteurs, pas deux noms. Il la charge déjà à
+> l'ouverture seulement.
+>
+> Le lint n'a pas signalé les imports devenus morts (`TeamOption`,
+> `useAdminFetch`, `useMemo`) — retirés à la main.
 
 **Effort : S.**
 

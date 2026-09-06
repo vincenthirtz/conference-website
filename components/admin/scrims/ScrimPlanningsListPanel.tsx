@@ -4,10 +4,9 @@
 // /admin/scrims/plannings/index.tsx pour être hébergé comme onglet de la page
 // /admin/scrims. Auto-suffisant : fetch, filtre, liste et modale de création.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import PlanningFormModal from '@/components/admin/scrims/PlanningFormModal';
@@ -17,7 +16,6 @@ import type { ScrimPlanning } from '@/types/admin';
 import nsAdminScrimPlanningsList from '@/lib/i18n/locales/admin-fr/adminScrimPlanningsList';
 
 type Dict = typeof nsAdminScrimPlanningsList.fr;
-type TeamOption = { id: string; name: string };
 
 function statusLabel(status: string, t: Dict) {
   switch (status) {
@@ -84,9 +82,7 @@ const FILTER_KEYS = ['pq', 'pstatus'] as const;
 export default function ScrimPlanningsListPanel() {
   const t = useAdminT(nsAdminScrimPlanningsList);
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch();
   const [modalOpen, setModalOpen] = useState(false);
-  const [teams, setTeams] = useState<TeamOption[]>([]);
 
   const { filters, setFilters } = useUrlFilters(FILTER_KEYS);
   const statusFilter = filters.pstatus ?? '';
@@ -168,20 +164,6 @@ export default function ScrimPlanningsListPanel() {
     setFilters({ pq: next || null });
     resetOffset();
   }, [searchInput, searchFilter, setFilters, resetOffset]);
-
-  // Résolution des noms d'équipes (l'API liste renvoie des rows brutes).
-  useEffect(() => {
-    adminFetchJson<{ teams: TeamOption[] }>(
-      '/api/admin/teams?limit=200&isActive=true'
-    )
-      .then((json) => setTeams(json.teams || []))
-      .catch(() => setTeams([]));
-  }, [adminFetchJson]);
-
-  const teamName = useMemo(() => {
-    const map = new Map(teams.map((tm) => [tm.id, tm.name]));
-    return (id: string | null) => (id ? map.get(id) || '—' : '—');
-  }, [teams]);
 
   return (
     <>
@@ -286,8 +268,8 @@ export default function ScrimPlanningsListPanel() {
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-neutral-300">
                 <span>
                   {format(t.teamsVs, {
-                    team1: teamName(p.team1_id),
-                    team2: teamName(p.team2_id),
+                    team1: p.team1?.name || '—',
+                    team2: p.team2?.name || '—',
                   })}
                 </span>
                 {p.validated_slot ? (

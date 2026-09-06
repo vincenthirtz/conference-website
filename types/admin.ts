@@ -231,6 +231,13 @@ export type ScrimPlanning = {
   created_at: string;
   updated_at: string | null;
   deleted_at: string | null;
+  /**
+   * Équipes embarquées par l'API (relation to-one). Présentes sur la liste et
+   * le détail : elles évitent aux écrans un second appel à /api/admin/teams
+   * juste pour traduire un id en nom.
+   */
+  team1?: { id: string; name: string } | null;
+  team2?: { id: string; name: string } | null;
 };
 
 export type ScrimPlanningAvailability = {

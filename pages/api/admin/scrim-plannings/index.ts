@@ -99,7 +99,14 @@ async function handleGet(
 
   let query = supabaseAdmin
     .from('scrim_plannings')
-    .select('*', { count: 'exact' })
+    // Équipes embarquées : sans elles, chaque écran rappelait
+    // /api/admin/teams?limit=200 uniquement pour traduire des ids en noms.
+    .select(
+      `*,
+       team1:teams!scrim_plannings_team1_id_fkey(id, name),
+       team2:teams!scrim_plannings_team2_id_fkey(id, name)`,
+      { count: 'exact' }
+    )
     .eq('tenant_id', ctx.tenantId)
     .is('deleted_at', null);
 

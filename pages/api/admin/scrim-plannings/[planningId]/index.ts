@@ -73,7 +73,11 @@ async function handleGet(
 ) {
   const { data: planning, error } = await supabaseAdmin!
     .from('scrim_plannings')
-    .select('*')
+    .select(
+      `*,
+       team1:teams!scrim_plannings_team1_id_fkey(id, name),
+       team2:teams!scrim_plannings_team2_id_fkey(id, name)`
+    )
     .eq('id', id)
     .eq('tenant_id', ctx.tenantId)
     .is('deleted_at', null)
