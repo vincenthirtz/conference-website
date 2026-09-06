@@ -52,6 +52,7 @@ export default {
   calThisWeek: 'This week',
   calWeekOf: 'Week of {date}',
   calCreateHint: 'Click a slot to create a scrim',
+  calKeyboardHint: 'Selected scrim: arrows to move, Shift+arrows for duration',
   calViewWeek: 'Week',
   calViewMonth: 'Month',
   calMatchTag: 'Match',

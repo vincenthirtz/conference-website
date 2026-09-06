@@ -273,6 +273,7 @@ export default function ScrimCalendarPanel() {
       thisWeek: t.calThisWeek,
       weekOf: t.calWeekOf,
       createHint: t.calCreateHint,
+      keyboardHint: t.calKeyboardHint,
       matchTag: t.calMatchTag,
     }),
     [t]

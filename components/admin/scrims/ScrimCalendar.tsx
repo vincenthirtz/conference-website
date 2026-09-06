@@ -46,6 +46,8 @@ export type ScrimCalendarLabels = {
   thisWeek: string;
   weekOf: string; // reçoit {date}
   createHint: string;
+  /** Rappel des raccourcis clavier de replanification. */
+  keyboardHint: string;
   matchTag: string;
 };
 
@@ -128,6 +130,68 @@ export default function ScrimCalendar({
   onMoveScrim: (id: string, dayYmd: string, minuteOfDay: number) => void;
   onResizeScrim: (id: string, durationMinutes: number) => void;
 }) {
+  // Replanification au CLAVIER. Le drag & drop était le seul chemin : déplacer
+  // un scrim exigeait une souris, alors que les invariants d'accessibilité du
+  // dépôt sont tenus partout ailleurs (modales, cartes, navigation mobile).
+  //
+  // Flèches = déplacer d'un cran (15 min) ou d'un jour ; Maj+flèches = changer
+  // la durée. On borne au créneau visible et à la semaine affichée : sortir de
+  // la vue en aveugle serait pire que de ne rien faire.
+  const handleScrimKeyDown = useCallback(
+    (
+      e: React.KeyboardEvent,
+      scrim: { id: string },
+      dayYmd: string,
+      minute: number,
+      duration: number,
+      bandStart: number,
+      bandEnd: number,
+      weekDays: string[]
+    ) => {
+      const { key, shiftKey } = e;
+      if (
+        key !== 'ArrowUp' &&
+        key !== 'ArrowDown' &&
+        key !== 'ArrowLeft' &&
+        key !== 'ArrowRight'
+      ) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (shiftKey && (key === 'ArrowUp' || key === 'ArrowDown')) {
+        const next = clamp(
+          duration + (key === 'ArrowDown' ? DND_SNAP_MIN : -DND_SNAP_MIN),
+          DND_SNAP_MIN,
+          bandEnd - minute
+        );
+        if (next !== duration) onResizeScrim(scrim.id, next);
+        return;
+      }
+
+      if (key === 'ArrowUp' || key === 'ArrowDown') {
+        const next = clamp(
+          minute + (key === 'ArrowDown' ? DND_SNAP_MIN : -DND_SNAP_MIN),
+          bandStart,
+          bandEnd - DND_SNAP_MIN
+        );
+        if (next !== minute) onMoveScrim(scrim.id, dayYmd, next);
+        return;
+      }
+
+      const idx = weekDays.indexOf(dayYmd);
+      if (idx === -1) return;
+      const nextIdx = clamp(
+        idx + (key === 'ArrowRight' ? 1 : -1),
+        0,
+        weekDays.length - 1
+      );
+      if (nextIdx !== idx) onMoveScrim(scrim.id, weekDays[nextIdx], minute);
+    },
+    [onMoveScrim, onResizeScrim]
+  );
+
   const days = useMemo(() => weekDaysFrom(weekStart), [weekStart]);
   const todayYmd = useMemo(() => todayYmdInTz(tz), [tz]);
 
@@ -426,6 +490,8 @@ export default function ScrimCalendar({
           </span>
         </div>
         <span className="text-xs text-neutral-500">{labels.createHint}</span>
+        {/* Un raccourci qu'on ne peut pas découvrir n'existe pas. */}
+        <span className="text-xs text-neutral-500">{labels.keyboardHint}</span>
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-neutral-800 bg-neutral-900/40 p-2">
@@ -555,7 +621,20 @@ export default function ScrimCalendar({
                           onPointerUp={endDrag}
                           onPointerCancel={cancelDrag}
                           onClick={handleScrimClick(scrim.id)}
-                          className={`absolute touch-none cursor-grab overflow-hidden rounded-md border px-1.5 py-1 text-left text-[10px] leading-tight shadow-sm hover:brightness-110 active:cursor-grabbing ${cls} ${
+                          onKeyDown={(e) =>
+                            handleScrimKeyDown(
+                              e,
+                              scrim,
+                              day,
+                              minute,
+                              duration,
+                              band.startMin,
+                              band.endMin,
+                              days
+                            )
+                          }
+                          aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Shift+ArrowUp Shift+ArrowDown"
+                          className={`absolute touch-none cursor-grab overflow-hidden rounded-md border px-1.5 py-1 text-left text-[10px] leading-tight shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 hover:brightness-110 active:cursor-grabbing ${cls} ${
                             dragging ? 'z-20 ring-2 ring-white/60' : ''
                           }`}
                           style={{

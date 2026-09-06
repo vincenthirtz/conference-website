@@ -51,6 +51,7 @@ export default adminNs('adminScrimsList', {
   calThisWeek: 'Cette semaine',
   calWeekOf: 'Semaine du {date}',
   calCreateHint: 'Clique sur un créneau pour créer un scrim',
+  calKeyboardHint: 'Scrim sélectionné : flèches pour déplacer, Maj+flèches pour la durée',
   calViewWeek: 'Semaine',
   calViewMonth: 'Mois',
   calMatchTag: 'Match',

@@ -8,7 +8,7 @@ production**, pas d'une bonne pratique générique. Les chiffres de production
 datent du 2026-09-06 : 4 scrims (dont 2 terminés), 14 équipes, **0 grille de
 planification**, **0 disponibilité saisie**.
 
-> **État : 7 lots livrés sur 10.** Chaque section reçoit son bilan au fur et à
+> **État : 8 lots livrés sur 10.** Chaque section reçoit son bilan au fur et à
 > mesure. Rien n'est poussé : les lots sont committés en local.
 
 ---
@@ -186,6 +186,20 @@ connaître l'heure d'avant.
 ---
 
 ## Lot 7 — L'agenda est inutilisable au clavier
+
+> **Livré.** Les événements de l'agenda étaient déjà des `<button>` (donc
+> focalisables, et Entrée ouvrait la fiche) : ce qui manquait, c'était de
+> pouvoir DÉPLACER sans souris. Flèches = un cran de 15 min ou un jour ;
+> Maj+flèches = la durée. Les déplacements sont bornés au créneau visible et à
+> la semaine affichée — sortir de la vue en aveugle serait pire que de ne rien
+> faire.
+>
+> Anneau de focus visible ajouté (`focus-visible:ring`), `aria-keyshortcuts`
+> posé, et surtout un rappel écrit sous la grille : un raccourci qu'on ne peut
+> pas découvrir n'existe pas.
+>
+> Le lot 6 sert de filet : un déplacement clavier malheureux s'annule comme un
+> déplacement à la souris.
 
 **Effort : M.**
 
