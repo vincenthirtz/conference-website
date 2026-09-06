@@ -8,7 +8,7 @@ production**, pas d'une bonne pratique générique. Les chiffres de production
 datent du 2026-09-06 : 4 scrims (dont 2 terminés), 14 équipes, **0 grille de
 planification**, **0 disponibilité saisie**.
 
-> **État : 6 lots livrés sur 10.** Chaque section reçoit son bilan au fur et à
+> **État : 7 lots livrés sur 10.** Chaque section reçoit son bilan au fur et à
 > mesure. Rien n'est poussé : les lots sont committés en local.
 
 ---
@@ -155,6 +155,21 @@ et QUAND.
 ---
 
 ## Lot 6 — Un déplacement à la souris ne se défait pas
+
+> **Livré.** Une barre « Annuler » apparaît après un déplacement ou un
+> redimensionnement et rejoue un PATCH vers la valeur d'avant. Elle s'efface
+> d'elle-même au bout de 12 s : un déplacement non annulé est un déplacement
+> voulu.
+>
+> Deux détails qui comptent : la valeur mémorisée est la valeur EFFECTIVE
+> (surcharge optimiste si elle existe, sinon la donnée serveur) et non celle du
+> dernier fetch ; et une annulation ne se réarme pas elle-même, sans quoi le
+> bouton ferait osciller le scrim entre deux créneaux.
+>
+> Choix assumé : pas d'action dans les toasts. Le composant Toast a 140
+> consommateurs et un rendu délibérément optimisé (actions et état séparés en
+> deux contextes) ; y ajouter une action pour un seul écran aurait fait payer
+> tout le monde. La barre reste locale à l'agenda.
 
 **Effort : M.**
 

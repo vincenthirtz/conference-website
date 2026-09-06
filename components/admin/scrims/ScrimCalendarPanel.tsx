@@ -311,8 +311,29 @@ export default function ScrimCalendarPanel() {
     [router]
   );
 
+  // Dernier déplacement annulable. Le drag & drop replanifiait sans filet : un
+  // dépôt d'un cran à côté obligeait à retrouver l'heure d'origine de mémoire.
+  // On garde donc la valeur PRÉCÉDENTE, le temps d'un repentir.
+  const [undoable, setUndoable] = useState<{
+    id: string;
+    previous: PatchBody;
+    kind: 'move' | 'resize';
+  } | null>(null);
+
+  // Passé ce délai, un déplacement non annulé est un déplacement voulu.
+  useEffect(() => {
+    if (!undoable) return;
+    const timer = setTimeout(() => setUndoable(null), 12000);
+    return () => clearTimeout(timer);
+  }, [undoable]);
+
   const patchScrim = useCallback(
-    async (id: string, body: PatchBody, kind: 'move' | 'resize') => {
+    async (
+      id: string,
+      body: PatchBody,
+      kind: 'move' | 'resize',
+      previous?: PatchBody
+    ) => {
       setOverrides((prev) => ({ ...prev, [id]: { ...prev[id], ...body } }));
       try {
         const res = await mutateJson<PatchResponse>(`/api/admin/scrims/${id}`, {
@@ -353,6 +374,9 @@ export default function ScrimCalendarPanel() {
             'success'
           );
         }
+        // `previous` absent = c'est déjà une annulation : on ne réarme pas,
+        // sinon « Annuler » ne ferait qu'osciller entre deux créneaux.
+        setUndoable(previous ? { id, previous, kind } : null);
         refresh();
       } catch {
         setOverrides((prev) => {
@@ -366,23 +390,54 @@ export default function ScrimCalendarPanel() {
     [mutateJson, addToast, refresh, t]
   );
 
+  // Valeur EFFECTIVE d'un scrim (override optimiste s'il existe, sinon la
+  // donnée serveur) : c'est elle qu'il faut mémoriser pour pouvoir revenir en
+  // arrière, pas la valeur du dernier fetch.
+  const currentValues = useCallback(
+    (id: string): PatchBody => {
+      const raw = rawScrims.find((s) => s.id === id);
+      const ov = overrides[id];
+      return {
+        scheduled_date: ov?.scheduled_date ?? raw?.scheduled_date ?? undefined,
+        duration_minutes:
+          ov?.duration_minutes ?? raw?.duration_minutes ?? undefined,
+      };
+    },
+    [rawScrims, overrides]
+  );
+
   const onMoveScrim = useCallback(
     (id: string, dayYmd: string, minute: number) => {
+      const before = currentValues(id);
       void patchScrim(
         id,
         { scheduled_date: zonedTimeToUtcIso(dayYmd, minute, TZ) },
-        'move'
+        'move',
+        before.scheduled_date ? { scheduled_date: before.scheduled_date } : undefined
       );
     },
-    [patchScrim]
+    [patchScrim, currentValues]
   );
 
   const onResizeScrim = useCallback(
     (id: string, durationMinutes: number) => {
-      void patchScrim(id, { duration_minutes: durationMinutes }, 'resize');
+      const before = currentValues(id);
+      void patchScrim(
+        id,
+        { duration_minutes: durationMinutes },
+        'resize',
+        before.duration_minutes != null
+          ? { duration_minutes: before.duration_minutes }
+          : undefined
+      );
     },
-    [patchScrim]
+    [patchScrim, currentValues]
   );
+
+  const undoLastChange = useCallback(() => {
+    if (!undoable) return;
+    void patchScrim(undoable.id, undoable.previous, undoable.kind);
+  }, [undoable, patchScrim]);
 
   const onSelectDay = useCallback(
     (dayYmd: string) => {
@@ -506,6 +561,26 @@ export default function ScrimCalendarPanel() {
           })}
         </div>
       </div>
+
+      {/* Repentir : visible sans chercher, et sans exiger de se souvenir de
+          l'heure d'avant. Disparaît de lui-même au bout de 12 s. */}
+      {undoable && (
+        <div
+          role="status"
+          className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-700 bg-neutral-800/70 px-4 py-2.5 text-sm"
+        >
+          <span className="text-neutral-300">
+            {undoable.kind === 'move' ? t.calUndoMovedHint : t.calUndoResizedHint}
+          </span>
+          <button
+            type="button"
+            onClick={undoLastChange}
+            className="rounded-lg bg-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-100 transition-colors hover:bg-neutral-600"
+          >
+            {t.calUndo}
+          </button>
+        </div>
+      )}
 
       <AdminListShell
         loading={loading}
