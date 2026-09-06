@@ -8,7 +8,8 @@ production**, pas d'une bonne pratique générique. Les chiffres de production
 datent du 2026-09-06 : 4 scrims (dont 2 terminés), 14 équipes, **0 grille de
 planification**, **0 disponibilité saisie**.
 
-> **État : 9 lots livrés sur 10.** Chaque section reçoit son bilan au fur et à
+> **État : les 10 lots sont livrés.** Rien n'est poussé : tout est committé en
+> local, un commit par lot. Chaque section reçoit son bilan au fur et à
 > mesure. Rien n'est poussé : les lots sont committés en local.
 
 ---
@@ -272,6 +273,22 @@ remplir sans ressaisir les équipes.
 ---
 
 ## Lot 10 — Aucun test ne couvre ces écrans
+
+> **Livré.** Les décisions ajoutées par les lots 4, 6, 7 et 8 vivaient dans le
+> corps des composants : invérifiables sans monter un calendrier, alors que ce
+> n'est que de la logique pure. Elles sont sorties dans
+> `utils/teams/scrimCalendarState.ts` — lecture des filtres d'URL, options
+> d'équipe, déplacement clavier, valeur effective d'un scrim — et les composants
+> s'y branchent, donc c'est bien le code qui tourne qui est testé.
+>
+> 23 tests. Avec les précédents, chaque lot a désormais sa contrepartie :
+> lot 3 (`apiScrimCalendar`), lot 5 (`scrimConflictLabel`, 6 tests), lot 9
+> (`apiScrimPlannings`), lots 4/6/7/8 (`scrimCalendarState`). Les lots 3, 5 et 9
+> ont été vérifiés en cassant volontairement leur correctif.
+>
+> Restent hors couverture, assumé : le câblage d'interface des lots 1 et 2
+> (rendu et fetch), qui demanderait un banc de rendu que ce dépôt n'utilise pas
+> pour l'admin.
 
 **Effort : M.**
 

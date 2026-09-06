@@ -20,6 +20,7 @@ import {
   assignLanes,
 } from '@/utils/teams/scrimCalendar';
 import { fmtHourOfDay as fmtHour } from '@/utils/teams/scrimTime';
+import { keyboardMove } from '@/utils/teams/scrimCalendarState';
 
 export type CalendarScrim = {
   id: string;
@@ -133,10 +134,8 @@ export default function ScrimCalendar({
   // Replanification au CLAVIER. Le drag & drop était le seul chemin : déplacer
   // un scrim exigeait une souris, alors que les invariants d'accessibilité du
   // dépôt sont tenus partout ailleurs (modales, cartes, navigation mobile).
-  //
-  // Flèches = déplacer d'un cran (15 min) ou d'un jour ; Maj+flèches = changer
-  // la durée. On borne au créneau visible et à la semaine affichée : sortir de
-  // la vue en aveugle serait pire que de ne rien faire.
+  // La décision elle-même vit dans utils/teams/scrimCalendarState.ts, testée
+  // sans monter de calendrier.
   const handleScrimKeyDown = useCallback(
     (
       e: React.KeyboardEvent,
@@ -148,46 +147,24 @@ export default function ScrimCalendar({
       bandEnd: number,
       weekDays: string[]
     ) => {
-      const { key, shiftKey } = e;
-      if (
-        key !== 'ArrowUp' &&
-        key !== 'ArrowDown' &&
-        key !== 'ArrowLeft' &&
-        key !== 'ArrowRight'
-      ) {
-        return;
-      }
+      if (!e.key.startsWith('Arrow')) return;
       e.preventDefault();
       e.stopPropagation();
 
-      if (shiftKey && (key === 'ArrowUp' || key === 'ArrowDown')) {
-        const next = clamp(
-          duration + (key === 'ArrowDown' ? DND_SNAP_MIN : -DND_SNAP_MIN),
-          DND_SNAP_MIN,
-          bandEnd - minute
-        );
-        if (next !== duration) onResizeScrim(scrim.id, next);
-        return;
-      }
-
-      if (key === 'ArrowUp' || key === 'ArrowDown') {
-        const next = clamp(
-          minute + (key === 'ArrowDown' ? DND_SNAP_MIN : -DND_SNAP_MIN),
-          bandStart,
-          bandEnd - DND_SNAP_MIN
-        );
-        if (next !== minute) onMoveScrim(scrim.id, dayYmd, next);
-        return;
-      }
-
-      const idx = weekDays.indexOf(dayYmd);
-      if (idx === -1) return;
-      const nextIdx = clamp(
-        idx + (key === 'ArrowRight' ? 1 : -1),
-        0,
-        weekDays.length - 1
-      );
-      if (nextIdx !== idx) onMoveScrim(scrim.id, weekDays[nextIdx], minute);
+      const next = keyboardMove({
+        key: e.key,
+        shiftKey: e.shiftKey,
+        dayYmd,
+        minute,
+        duration,
+        bandStart,
+        bandEnd,
+        days: weekDays,
+        snap: DND_SNAP_MIN,
+      });
+      if (!next) return;
+      if (next.type === 'resize') onResizeScrim(scrim.id, next.duration);
+      else onMoveScrim(scrim.id, next.dayYmd, next.minute);
     },
     [onMoveScrim, onResizeScrim]
   );

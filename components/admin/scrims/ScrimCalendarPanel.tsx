@@ -22,6 +22,13 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { SlotConflict } from '@/utils/teams/scrimConflicts';
 import { summarizeConflicts } from '@/utils/teams/scrimConflictLabel';
 import {
+  isYmd,
+  parseStatusFilter,
+  toggleStatusParam,
+  buildTeamOptions,
+  effectiveValues,
+} from '@/utils/teams/scrimCalendarState';
+import {
   mondayOf,
   addDaysYmd,
   todayYmdInTz,
@@ -36,10 +43,6 @@ const TZ = 'Europe/Paris';
 // (scrims `s*`, grilles `p*`, agenda `c*`).
 const CAL_FILTER_KEYS = ['cview', 'cweek', 'cmonth', 'cteam', 'cstatus'] as const;
 
-/** Un paramètre de date venu de l'URL n'est pas fiable : on le valide. */
-function isYmd(value: string | null): value is string {
-  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
-}
 const ALL_STATUSES = [
   'draft',
   'scheduled',
@@ -126,15 +129,10 @@ export default function ScrimCalendarPanel() {
     [setFilters]
   );
 
-  const statusFilter = useMemo(() => {
-    if (!filters.cstatus) return [...ALL_STATUSES] as string[];
-    const wanted = filters.cstatus.split(',').filter(Boolean);
-    const valid = wanted.filter((v) =>
-      (ALL_STATUSES as readonly string[]).includes(v)
-    );
-    // Un paramètre illisible ne doit pas vider l'agenda sans explication.
-    return valid.length > 0 ? valid : ([...ALL_STATUSES] as string[]);
-  }, [filters.cstatus]);
+  const statusFilter = useMemo(
+    () => parseStatusFilter(filters.cstatus, ALL_STATUSES),
+    [filters.cstatus]
+  );
 
   // Overrides optimistes (déplacement / resize) le temps du refetch.
   const [overrides, setOverrides] = useState<Record<string, PatchBody>>({});
@@ -185,23 +183,10 @@ export default function ScrimCalendarPanel() {
     null
   );
 
-  const teamOptions = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const s of rawScrims) {
-      if (s.team1_id && s.team1Name) map.set(s.team1_id, s.team1Name);
-      if (s.team2_id && s.team2Name) map.set(s.team2_id, s.team2Name);
-    }
-    for (const m of rawMatches) {
-      if (m.team1_id && m.team1Name) map.set(m.team1_id, m.team1Name);
-      if (m.team2_id && m.team2Name) map.set(m.team2_id, m.team2Name);
-    }
-    if (stickyTeam && !map.has(stickyTeam.id)) {
-      map.set(stickyTeam.id, stickyTeam.name);
-    }
-    return [...map.entries()]
-      .map(([id, name]) => ({ id, name }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [rawScrims, rawMatches, stickyTeam]);
+  const teamOptions = useMemo(
+    () => buildTeamOptions([...rawScrims, ...rawMatches], stickyTeam),
+    [rawScrims, rawMatches, stickyTeam]
+  );
 
   // Mémorise le libellé au moment du choix : c'est ce qui permet de garder
   // l'option affichable une fois sortie de la plage.
@@ -396,13 +381,10 @@ export default function ScrimCalendarPanel() {
   // arrière, pas la valeur du dernier fetch.
   const currentValues = useCallback(
     (id: string): PatchBody => {
-      const raw = rawScrims.find((s) => s.id === id);
-      const ov = overrides[id];
-      return {
-        scheduled_date: ov?.scheduled_date ?? raw?.scheduled_date ?? undefined,
-        duration_minutes:
-          ov?.duration_minutes ?? raw?.duration_minutes ?? undefined,
-      };
+      return effectiveValues(
+        rawScrims.find((s) => s.id === id),
+        overrides[id]
+      );
     },
     [rawScrims, overrides]
   );
@@ -452,11 +434,9 @@ export default function ScrimCalendarPanel() {
 
   const toggleStatus = useCallback(
     (status: string) => {
-      const next = statusFilter.includes(status)
-        ? statusFilter.filter((s) => s !== status)
-        : [...statusFilter, status];
-      const isAll = next.length === ALL_STATUSES.length;
-      setFilters({ cstatus: isAll ? null : next.join(',') });
+      setFilters({
+        cstatus: toggleStatusParam(statusFilter, status, ALL_STATUSES),
+      });
     },
     [statusFilter, setFilters]
   );
