@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import type { StaffProps } from '@/types/admin';
@@ -19,8 +20,6 @@ import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import Modal from '@/components/admin/Modal';
-import ConflictRow from '@/components/admin/tournament/overview/ConflictRow';
-import type { Conflict } from '@/components/admin/tournament/overview/types';
 import { logger } from '@/utils/logger';
 import nsAdminTournamentOverview from '@/lib/i18n/locales/admin-fr/adminTournamentOverview';
 import nsAdminTournamentEmbed from '@/lib/i18n/locales/admin-fr/adminTournamentEmbed';
@@ -86,9 +85,6 @@ function TournamentToolsPage({ initialTournament }: Props) {
   const [showCloneConfirm, setShowCloneConfirm] = useState(false);
 
   // Détection de conflits d'horaire
-  const [conflicts, setConflicts] = useState<Conflict[] | null>(null);
-  const [loadingConflicts, setLoadingConflicts] = useState(false);
-  const [showConflicts, setShowConflicts] = useState(false);
 
   // Conversion quick-bracket → tournoi complet
   const [convertingQuickBracket, setConvertingQuickBracket] = useState(false);
@@ -109,21 +105,6 @@ function TournamentToolsPage({ initialTournament }: Props) {
       setEmbedBase(window.location.origin);
     }
   }, [embedBase]);
-
-  const fetchConflicts = useCallback(async () => {
-    if (!tournamentId) return;
-    setLoadingConflicts(true);
-    try {
-      const json = await adminFetchJson<{ conflicts: Conflict[] }>(
-        `/api/admin/tournament/${tournamentId}/conflicts`
-      );
-      setConflicts(json.conflicts || []);
-    } catch {
-      setConflicts(null);
-    } finally {
-      setLoadingConflicts(false);
-    }
-  }, [tournamentId, adminFetchJson]);
 
   const notifyCaptains = useCallback(async () => {
     if (!tournamentId || notifyingCaptains) return;
@@ -344,12 +325,14 @@ function TournamentToolsPage({ initialTournament }: Props) {
                   {notifyingCaptains ? tov.notifying : tov.notifyCaptains}
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowConflicts(true);
-                    fetchConflicts();
-                  }}
+                {/* Le rapport de conflits vivait ici, en modale, et ne voyait
+                    que le chevauchement d'équipe. L'onglet Planning répond à la
+                    même question en mieux — contraintes d'équipe, dates hors
+                    tournoi, créneaux surchargés, et la correction quand elle est
+                    triviale. Deux écrans qui répondent différemment à « qu'est-ce
+                    qui cloche dans ce calendrier ? », c'est un de trop. */}
+                <Link
+                  href={`/admin/tournament/${tournamentId}/schedule`}
                   className="inline-flex items-center gap-2 rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-neutral-700"
                 >
                   <svg
@@ -366,7 +349,7 @@ function TournamentToolsPage({ initialTournament }: Props) {
                     />
                   </svg>
                   {tov.conflicts}
-                </button>
+                </Link>
 
                 <button
                   type="button"
@@ -550,98 +533,6 @@ function TournamentToolsPage({ initialTournament }: Props) {
         />
       )}
 
-      {/* Rapport de conflits d'horaire */}
-      <Modal
-        open={showConflicts}
-        onClose={() => {
-          setShowConflicts(false);
-          setConflicts(null);
-        }}
-        size="2xl"
-        panelClassName="max-h-[80vh]"
-        title={
-          <h3 className="flex items-center gap-2 text-lg font-semibold">
-            <svg
-              className="h-5 w-5 text-amber-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            {tov.conflictsReportTitle}
-          </h3>
-        }
-        footer={
-          <>
-            <button
-              onClick={() => {
-                setShowConflicts(false);
-                setConflicts(null);
-              }}
-              className="rounded-lg bg-neutral-700 px-4 py-2 text-sm font-medium transition-colors hover:bg-neutral-600"
-            >
-              {tov.close}
-            </button>
-            <button
-              onClick={fetchConflicts}
-              disabled={loadingConflicts}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium transition-colors hover:bg-blue-700 disabled:opacity-50"
-            >
-              {loadingConflicts ? tov.analyzing : tov.reanalyze}
-            </button>
-          </>
-        }
-      >
-        {loadingConflicts ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-600 border-t-white" />
-          </div>
-        ) : conflicts === null ? (
-          <div className="py-8 text-center text-sm text-neutral-400">
-            {tov.conflictsLoadError}
-          </div>
-        ) : conflicts.length === 0 ? (
-          <div className="flex flex-col items-center py-12 text-center">
-            <svg
-              className="mb-3 h-12 w-12 text-emerald-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <p className="font-medium text-emerald-300">{tov.noConflict}</p>
-            <p className="mt-1 text-xs text-neutral-500">
-              {tov.noConflictDesc}
-            </p>
-          </div>
-        ) : (
-          <div className="flex-1 space-y-3 overflow-y-auto pr-1">
-            <div className="mb-3 rounded-lg border border-amber-500/20 bg-amber-900/30 px-3 py-2 text-sm text-amber-300">
-              {format(
-                conflicts.length > 1
-                  ? tov.conflictsCount_other
-                  : tov.conflictsCount_one,
-                { count: conflicts.length }
-              )}
-            </div>
-            {conflicts.map((c, i) => (
-              <ConflictRow key={i} conflict={c} tx={tov} />
-            ))}
-          </div>
-        )}
-      </Modal>
     </>
   );
 }

@@ -285,7 +285,7 @@ function BulkOpsPage(_: StaffProps) {
         <div className="max-w-5xl mx-auto px-6 py-10">
           <TournamentTabsNav
             tournamentId={String(tournamentId ?? '')}
-            active="bulk-ops"
+            active="matches"
           />
 
           <div className="flex items-center justify-between gap-4 mb-6">

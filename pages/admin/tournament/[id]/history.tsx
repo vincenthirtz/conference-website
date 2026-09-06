@@ -116,7 +116,7 @@ function AdminTournamentHistoryPage({ staff }: StaffProps) {
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
-        <TournamentTabsNav tournamentId={String(id ?? '')} active="history" />
+        <TournamentTabsNav tournamentId={String(id ?? '')} active="tools" />
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
           <div>

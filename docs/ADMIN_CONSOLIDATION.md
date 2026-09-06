@@ -211,6 +211,43 @@ compilation des hôtes (307 → `/admin/login` pour un anonyme).
    éditeur, export inchangés). Specs e2e `map-draw-page` / `veto-locked` mises à
    jour vers les nouvelles URLs. Voir [§ Sous-écrans regroupés](#sous-écrans-regroupés-sous-une-barre-donglets-partagée).
 
+## Vague 5 — l'espace tournoi passe de 14 onglets à 8 groupes (2026-09-07)
+
+**Le constat.** Quatorze onglets de premier niveau, dont **huit cachés derrière un
+menu « Plus »**. Un menu déroulant est un aveu : il dit qu'on n'a pas su décider ce
+qui compte, et il coûte un clic ET une mémoire à chaque fois qu'on cherche l'écran
+qui s'y trouve. Le lot « planning » venait d'en ajouter un quinzième.
+
+**Le regroupement suit ce qu'on FAIT, pas ce que le code contient.**
+
+| Groupe | Écrans | Ce qui a été fusionné |
+|---|---|---|
+| Tableau de bord | dashboard | — |
+| Check-in | checkin (`?tab=settings\|live`) | inchangé |
+| **Matchs** | matches · schedule · bulk-ops | trois vues du **même objet** : la liste pour corriger un match, le planning pour voir la saison, les opérations en masse pour en déplacer beaucoup. Les séparer imposait un aller-retour par le menu à chaque correction. |
+| Bracket | bracket (`?tab=view\|builder\|map-draw\|veto`) | inchangé |
+| Phases | stages | — |
+| Résultats | stats (`?tab=overview\|analytics\|podium`) | renommé (« Stats » → « Résultats ») |
+| **Réglages** | edit · maps · discord · prize-pool | ce qui se configure une fois et ne se touche plus un soir de match |
+| **Outils** | tools · history | les gestes ponctuels et le journal, qu'on ouvre pour comprendre ou réparer |
+
+**Aucune URL ne change.** La structure vit dans `TournamentTabsNav` seul ; les pages
+déclarent leur GROUPE, et le membre actif se déduit de `router.pathname` — une page
+n'a pas à se décrire deux fois, et l'oubli du second appel resterait invisible
+jusqu'à ce que quelqu'un remarque un sous-onglet éteint.
+
+**Une vraie fusion de contenu, pas seulement de nav** : le *rapport de conflits*
+d'Outils (modale, chevauchement d'équipe seul) est supprimé au profit de l'onglet
+**Planning**, qui répond à la même question en mieux — contraintes d'équipe, dates
+hors tournoi, créneaux surchargés, et la correction quand elle est triviale. Le
+geste survit sous forme de lien ; le composant `ConflictRow` devenu orphelin est
+supprimé. L'endpoint `/conflicts` est conservé mais n'a plus aucun consommateur :
+candidat au retrait, signalé comme tel dans le contrat.
+
+**Garde-fou** : `tests/unit/tournamentTabGroups.test.ts` échoue si un écran est
+ajouté sous `/admin/tournament/[id]/` sans place dans un groupe — c'est
+exactement le laisser-faire qui avait produit les quatorze onglets.
+
 ## Pistes restantes
 
 - ✅ **Regrouper les listes « People/Staff »** (`adherents`, `cast-members`,

@@ -322,7 +322,7 @@ function AdminTournamentEditPage({ staff }: StaffProps) {
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           {/* Header */}
           <div className="mb-8">
-            <TournamentTabsNav tournamentId={String(id ?? '')} active="edit" />
+            <TournamentTabsNav tournamentId={String(id ?? '')} active="settings" />
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>

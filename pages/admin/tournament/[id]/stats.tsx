@@ -45,7 +45,7 @@ export default function AdminTournamentStatsPage(_: StaffProps) {
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
-          <TournamentTabsNav tournamentId={tournamentId} active="stats" />
+          <TournamentTabsNav tournamentId={tournamentId} active="results" />
 
           <Tabs
             tabs={tabs}

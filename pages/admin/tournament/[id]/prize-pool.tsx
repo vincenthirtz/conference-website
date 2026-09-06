@@ -220,7 +220,7 @@ function AdminTournamentPrizePoolPage(_: StaffProps) {
         <div className="max-w-4xl mx-auto px-6 py-10">
           <TournamentTabsNav
             tournamentId={String(tournamentId ?? '')}
-            active="prize-pool"
+            active="settings"
           />
 
           <div className="flex items-start justify-between gap-4 mb-6">
