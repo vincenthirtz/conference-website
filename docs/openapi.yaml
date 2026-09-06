@@ -23023,6 +23023,71 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/tournament/{id}/schedule-move:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Move matches, with the impact preview first.
+      description: >
+        `{ moves: [{ matchId, scheduledAt }], apply?, force?, rest?, concurrent? }`.
+
+
+        UNE LISTE de mouvements parce que l'unite utile n'est pas le deplacement
+        mais l'ECHANGE : deux matchs qui permutent leurs creneaux ne se jugent
+        qu'ensemble, chacun pris seul ecrasant l'autre. Huit au maximum — au-dela
+        ce n'est plus un geste, c'est un auto-scheduler.
+
+
+        `apply: false` (DEFAUT) rejoue tout le calendrier sans rien ecrire et
+        rend `impact` : ce que le deplacement repare (`fixed`), ce qu'il casse
+        (`broken`), ce qui reste (`remaining`), et les compteurs avant/apres.
+
+
+        `apply: true` ecrit `scheduled_at`, journalise `match_rescheduled` avec
+        ce que le staff savait en decidant, et emet `match.scheduled` /
+        `match.unscheduled` — meme contrat que le PATCH match, pour que l'event
+        Discord natif suive un deplacement d'ou qu'il vienne. Une ecriture qui
+        creerait une anomalie BLOQUANTE est refusee en 409 avec son impact ;
+        `force: true` passe outre.
+      operationId: adminMoveTournamentMatches
+      tags:
+        - admin/tournaments
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: "Apercu (`applied: false`) ou deplacement applique."
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Corps invalide (`INVALID_BODY`, `DUPLICATE_MATCH`).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Tournoi ou match inconnu (`TOURNAMENT_NOT_FOUND`, `MATCH_NOT_IN_TOURNAMENT`).
+        '409':
+          description: Le deplacement creerait une anomalie bloquante (`WOULD_CREATE_BLOCKING`).
+        '429':
+          description: Rate limit.
+        '500':
+          description: Ecriture partielle (`PARTIAL_WRITE`) ou erreur serveur.
   /api/admin/tournament/{id}/schedule-diagnostics:
     parameters:
       - in: path

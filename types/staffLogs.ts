@@ -38,6 +38,12 @@ export type StaffLogAction =
   // --- Matchs ---
   | 'create_match'
   | 'update_match'
+  /**
+   * Déplacement de match décidé depuis le planning, avec son aperçu d'impact.
+   * Distinct d'`update_match` : c'est ce qu'on relira pour savoir pourquoi la
+   * date d'un match a changé, et ce que le staff savait en la changeant.
+   */
+  | 'match_rescheduled'
   | 'delete_match'
   | 'update_scores'
   | 'batch_scores'

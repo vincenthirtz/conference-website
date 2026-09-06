@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   deriveSlotGrid,
   diagnoseSchedule,
+  previewMoves,
   type DiagnosableMatch,
 } from '../../utils/matches/scheduleDiagnostics';
 import type { AvailabilityConstraint } from '../../utils/matches/availability';
@@ -284,5 +285,75 @@ describe('diagnoseSchedule · lecture', () => {
       [pasAvant21h, indispo18au20]
     );
     expect(d.anomalies).toEqual([]);
+  });
+});
+
+describe('previewMoves', () => {
+  const cal = () => [
+    match('m1', '2026-10-21', '20:30', HIN, SHU), // viole « pas avant 21 h »
+    match('m2', '2026-10-21', '19:00', ECL, POS),
+    match('m3', '2026-10-14', '22:00', ECL, SHU), // fournit 22:00 à la grille
+  ];
+
+  it('dit ce que le déplacement répare', () => {
+    const impact = previewMoves(cal(), [pasAvant21h], [
+      { matchId: 'm1', scheduledAt: paris('2026-10-21', '22:00') },
+    ]);
+    expect(impact.fixed).toHaveLength(1);
+    expect(impact.fixed[0].kind).toBe('availability');
+    expect(impact.broken).toEqual([]);
+    expect(impact.createsBlocking).toBe(false);
+    expect(impact.before.blocking).toBe(1);
+    expect(impact.after.blocking).toBe(0);
+  });
+
+  it('dit ce qu’il casse ailleurs', () => {
+    // Déplacer m2 sur le créneau de m1 met deux matchs à 20 h 30 : la
+    // production n'en porte qu'un. Le déplacement répare zéro et casse un.
+    const impact = previewMoves(cal(), [], [
+      { matchId: 'm2', scheduledAt: paris('2026-10-21', '20:30') },
+    ]);
+    expect(impact.fixed).toEqual([]);
+    expect(impact.broken.map((a) => a.kind)).toContain('slot_collision');
+  });
+
+  it('juge un ÉCHANGE d’un seul tenant', () => {
+    // Chacun pris seul écraserait l'autre ; ensemble, la permutation est nette.
+    const impact = previewMoves(cal(), [pasAvant21h], [
+      { matchId: 'm1', scheduledAt: paris('2026-10-21', '19:00') },
+      { matchId: 'm2', scheduledAt: paris('2026-10-21', '20:30') },
+    ]);
+    expect(impact.broken.filter((a) => a.kind === 'slot_collision')).toEqual([]);
+    // Hinode passe de 20 h 30 à 19 h : toujours avant 21 h, donc l'anomalie
+    // change de message — elle est « réparée » puis « recréée », pas conservée.
+    expect(impact.fixed).toHaveLength(1);
+    expect(impact.broken).toHaveLength(1);
+    expect(impact.createsBlocking).toBe(true);
+  });
+
+  it('signale une anomalie inchangée comme restante, pas comme réparée', () => {
+    const impact = previewMoves(cal(), [pasAvant21h], [
+      { matchId: 'm3', scheduledAt: paris('2026-10-15', '22:00') },
+    ]);
+    expect(impact.fixed).toEqual([]);
+    expect(impact.remaining.map((a) => a.matchIds[0])).toContain('m1');
+  });
+
+  it('accepte de déplanifier, et le signale', () => {
+    const impact = previewMoves(cal(), [pasAvant21h], [
+      { matchId: 'm1', scheduledAt: null },
+    ]);
+    expect(impact.fixed.map((a) => a.kind)).toEqual(['availability']);
+    expect(impact.broken.map((a) => a.kind)).toEqual(['unscheduled']);
+    expect(impact.createsBlocking).toBe(false);
+  });
+
+  it('ne touche pas au calendrier d’entrée', () => {
+    const input = cal();
+    const before = input.map((m) => m.scheduledAt);
+    previewMoves(input, [pasAvant21h], [
+      { matchId: 'm1', scheduledAt: paris('2026-10-21', '22:00') },
+    ]);
+    expect(input.map((m) => m.scheduledAt)).toEqual(before);
   });
 });

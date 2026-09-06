@@ -57,6 +57,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   // Matchs
   create_match: 'Création match',
   update_match: 'Modification match',
+  match_rescheduled: 'Match déplacé depuis le planning',
   delete_match: 'Suppression match',
   update_scores: 'Mise à jour scores',
   batch_scores: 'Scores en masse',

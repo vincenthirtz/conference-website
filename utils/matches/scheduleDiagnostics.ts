@@ -437,3 +437,95 @@ function findSameEveningFix(
 
   return null;
 }
+
+/* -----------------------------------------------------------
+ * Aperçu d'impact d'un déplacement — lot 5
+ * ---------------------------------------------------------*/
+
+export interface ScheduleMove {
+  matchId: string;
+  /** Nouvel instant ISO. `null` déplanifie le match. */
+  scheduledAt: string | null;
+}
+
+export interface MoveImpact {
+  /** Anomalies que le déplacement fait DISPARAÎTRE. */
+  fixed: ScheduleAnomaly[];
+  /** Anomalies qu'il CRÉE. */
+  broken: ScheduleAnomaly[];
+  /** Celles qui étaient là avant et y restent. */
+  remaining: ScheduleAnomaly[];
+  /** Compteurs avant / après, pour la phrase de résumé. */
+  before: Record<ScheduleAnomalySeverity, number>;
+  after: Record<ScheduleAnomalySeverity, number>;
+  /** Le déplacement crée-t-il au moins une anomalie BLOQUANTE ? */
+  createsBlocking: boolean;
+}
+
+/**
+ * Identité d'une anomalie, pour comparer deux diagnostics.
+ *
+ * Le message en fait partie : « commence à 20:30 » et « commence à 19:00 » sont
+ * deux états différents du même problème, et les confondre ferait passer une
+ * correction partielle pour un statu quo.
+ */
+function anomalyKey(a: ScheduleAnomaly): string {
+  return [
+    a.kind,
+    a.severity,
+    a.teamId ?? '',
+    [...a.matchIds].sort().join('+'),
+    a.message,
+  ].join('|');
+}
+
+/**
+ * Ce qu'un déplacement RÉPARE et ce qu'il CASSE.
+ *
+ * C'est la leçon de la simulation du 06/09 : un déplacement de match n'est
+ * jamais local. Sortir Hinode du 18 septembre libérait une soirée mais en
+ * saturait une autre, et il fallait rejouer tout le calendrier pour s'en
+ * apercevoir. Ici on le rejoue pour de vrai — deux diagnostics complets, avant
+ * et après — sans rien écrire.
+ *
+ * Plusieurs mouvements d'un coup, parce que l'unité utile n'est pas le
+ * déplacement mais l'ÉCHANGE : deux matchs qui permutent leurs créneaux ne se
+ * jugent qu'ensemble, chacun pris seul écrasant l'autre.
+ */
+export function previewMoves(
+  matches: DiagnosableMatch[],
+  constraints: AvailabilityConstraint[],
+  moves: ScheduleMove[],
+  options: DiagnoseOptions = {}
+): MoveImpact {
+  const byId = new Map(moves.map((m) => [m.matchId, m.scheduledAt]));
+  const after = matches.map((m) =>
+    byId.has(m.id) ? { ...m, scheduledAt: byId.get(m.id) ?? null } : m
+  );
+
+  const dBefore = diagnoseSchedule(matches, constraints, options);
+  const dAfter = diagnoseSchedule(after, constraints, options);
+
+  const beforeKeys = new Map(dBefore.anomalies.map((a) => [anomalyKey(a), a]));
+  const afterKeys = new Map(dAfter.anomalies.map((a) => [anomalyKey(a), a]));
+
+  const fixed: ScheduleAnomaly[] = [];
+  const remaining: ScheduleAnomaly[] = [];
+  for (const [key, a] of beforeKeys) {
+    if (afterKeys.has(key)) remaining.push(a);
+    else fixed.push(a);
+  }
+  const broken: ScheduleAnomaly[] = [];
+  for (const [key, a] of afterKeys) {
+    if (!beforeKeys.has(key)) broken.push(a);
+  }
+
+  return {
+    fixed,
+    broken,
+    remaining,
+    before: dBefore.counts,
+    after: dAfter.counts,
+    createsBlocking: broken.some((a) => a.severity === 'blocking'),
+  };
+}

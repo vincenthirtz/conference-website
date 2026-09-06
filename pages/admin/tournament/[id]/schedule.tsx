@@ -18,6 +18,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import nsAdminTournamentSchedule from '@/lib/i18n/locales/admin-fr/adminTournamentSchedule';
@@ -26,9 +29,11 @@ import ScheduleMonthCalendar, {
 } from '@/components/admin/tournament/ScheduleMonthCalendar';
 import type { AvailabilityConstraint } from '@/utils/matches/availability';
 import type {
+  MoveImpact,
   ScheduleAnomaly,
   ScheduleAnomalyKind,
   ScheduleAnomalySeverity,
+  ScheduleSuggestion,
 } from '@/utils/matches/scheduleDiagnostics';
 
 type DiagnosticsResponse = {
@@ -80,6 +85,10 @@ export default function TournamentSchedulePage() {
   const [rest, setRest] = useState(30);
   const [concurrent, setConcurrent] = useState(1);
   const [view, setView] = useState<'list' | 'month'>('month');
+  const [movingId, setMovingId] = useState<string | null>(null);
+  const { mutateJson } = useIdempotentMutation();
+  const { confirm, dialog } = useConfirmDialog();
+  const { addToast } = useToast();
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -121,6 +130,89 @@ export default function TournamentSchedulePage() {
     }
     return out;
   }, [data]);
+
+  /**
+   * Appliquer une correction proposée : l'aperçu D'ABORD, l'écriture ensuite.
+   *
+   * Deux appels au même endpoint, `apply: false` puis `apply: true`. Le premier
+   * rejoue tout le calendrier sans rien écrire et rend ce que le déplacement
+   * répare et ce qu'il casse ; c'est ce qu'on met sous les yeux avant de
+   * demander confirmation. Le serveur refuse de lui-même une écriture qui
+   * créerait une anomalie bloquante — l'écran ne peut pas contourner ce
+   * garde-fou en oubliant de regarder.
+   */
+  async function applySuggestion(
+    suggestion: ScheduleSuggestion,
+    label: string
+  ) {
+    if (!id || movingId) return;
+    setMovingId(suggestion.matchId);
+    try {
+      const moves = [
+        { matchId: suggestion.matchId, scheduledAt: suggestion.moveTo },
+      ];
+      const preview = await mutateJson<{ impact: MoveImpact }>(
+        `/api/admin/tournament/${id}/schedule-move`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ moves, apply: false, rest, concurrent }),
+        }
+      );
+
+      const impact = preview.impact;
+      const ok = await confirm({
+        title: t.applyTitle,
+        subtitle: format(t.applySubtitle, {
+          label,
+          time: when(suggestion.moveTo),
+        }),
+        body: (
+          <span className="block space-y-1 text-sm">
+            <span className="block text-emerald-300">
+              {format(t.impactFixed, { count: impact.fixed.length })}
+            </span>
+            <span
+              className={`block ${impact.broken.length > 0 ? 'text-amber-300' : 'text-neutral-400'}`}
+            >
+              {impact.broken.length > 0
+                ? format(t.impactBroken, { count: impact.broken.length })
+                : t.impactNone}
+            </span>
+            {impact.broken.map((b, i) => (
+              <span key={i} className="block pl-3 text-xs text-neutral-400">
+                · {b.message}
+              </span>
+            ))}
+            {impact.createsBlocking && (
+              <span className="block pt-1 font-semibold text-red-300">
+                {t.impactBlocking}
+              </span>
+            )}
+          </span>
+        ),
+        confirmLabel: t.applyConfirm,
+        variant: impact.createsBlocking ? 'danger' : undefined,
+      });
+      if (!ok) return;
+
+      await mutateJson(`/api/admin/tournament/${id}/schedule-move`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ moves, apply: true, rest, concurrent }),
+      });
+      addToast(t.moveDone, 'success');
+      await load();
+    } catch (err) {
+      const code = (err as { code?: string })?.code;
+      addToast(
+        code === 'WOULD_CREATE_BLOCKING' ? t.moveRefused : t.moveError,
+        'error'
+      );
+    } finally {
+      setMovingId(null);
+    }
+  }
 
   const kindLabel = (k: ScheduleAnomalyKind): string =>
     ({
@@ -348,16 +440,34 @@ export default function TournamentSchedulePage() {
                           <p className="text-sm text-neutral-100">{a.message}</p>
 
                           {a.suggestion && (
-                            <p className="text-sm text-emerald-200">
-                              <span className="text-xs uppercase tracking-[0.1em] text-emerald-300/80">
-                                {t.suggestionLabel}
-                              </span>{' '}
-                              —{' '}
-                              {format(t.suggestionMove, {
-                                time: when(a.suggestion.moveTo),
-                              })}
-                              . <span className="text-neutral-300">{a.suggestion.why}</span>
-                            </p>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                              <p className="text-sm text-emerald-200">
+                                <span className="text-xs uppercase tracking-[0.1em] text-emerald-300/80">
+                                  {t.suggestionLabel}
+                                </span>{' '}
+                                —{' '}
+                                {format(t.suggestionMove, {
+                                  time: when(a.suggestion.moveTo),
+                                })}
+                                .{' '}
+                                <span className="text-neutral-300">
+                                  {a.suggestion.why}
+                                </span>
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  a.suggestion &&
+                                  void applySuggestion(a.suggestion, a.message)
+                                }
+                                disabled={movingId !== null}
+                                className="rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-100 disabled:opacity-50"
+                              >
+                                {movingId === a.suggestion.matchId
+                                  ? t.applyChecking
+                                  : t.applySuggestion}
+                              </button>
+                            </div>
                           )}
 
                           <p className="flex flex-wrap gap-3 pt-1">
@@ -382,6 +492,7 @@ export default function TournamentSchedulePage() {
           ) : null}
         </div>
       </div>
+      {dialog}
     </>
   );
 }
