@@ -30,7 +30,10 @@ const BASELINE: Record<string, number> = {
   'pages/admin/tournament-simulator.tsx': 3880,
   'pages/admin/tasks/index.tsx': 3292,
   'pages/admin/users/manage.tsx': 2451,
-  'pages/admin/tournament/[id]/matches.tsx': 2327,
+  // 2281 écrites : le flux de l'auto-scheduler est parti dans
+  // `hooks/useAutoSchedule.tsx` (lot 6), et le plafond suit — un gel qui ne
+  // descend jamais finit par ne plus rien geler.
+  'pages/admin/tournament/[id]/matches.tsx': 2281,
   'components/admin/communications/CampaignsPanel.tsx': 2283,
   'pages/admin/teams/my.tsx': 1754,
   'pages/admin/demandes/index.tsx': 1664,

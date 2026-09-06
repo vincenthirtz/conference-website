@@ -13,6 +13,10 @@ import type {
   SchedulingConflict,
   TimeWindow,
 } from '../../types/matches';
+import {
+  isSlotAllowed,
+  type AvailabilityConstraint,
+} from './availability';
 
 /* -----------------------------------------------------------
  * Fonction principale
@@ -38,6 +42,7 @@ export function autoScheduleMatches(
     teamRestMinutes = 15,
     defaultResourceId = 'default',
     slideWindowMinutes = 5,
+    teamConstraints = [],
   } = config;
 
   if (windows.length === 0) {
@@ -124,6 +129,7 @@ export function autoScheduleMatches(
     slideWindowMinutes,
     defaultResourceId,
     estimatedDurationsMinutes,
+    teamConstraints,
     scheduled,
     unscheduledMatchIds
   );
@@ -139,6 +145,7 @@ export function autoScheduleMatches(
     slideWindowMinutes,
     defaultResourceId,
     estimatedDurationsMinutes,
+    teamConstraints,
     scheduled,
     unscheduledMatchIds
   );
@@ -207,6 +214,7 @@ function scheduleGroup(
   slideWindowMinutes: number,
   defaultResourceId: SchedulerResourceId,
   estimatedDurationsMinutes: Partial<Record<MatchFormat, number>>,
+  teamConstraints: AvailabilityConstraint[],
   scheduled: ScheduledMatch[],
   unscheduledMatchIds: string[]
 ): void {
@@ -226,7 +234,8 @@ function scheduleGroup(
       teamNextFreeTime,
       resourceGapMinutes,
       teamRestMinutes,
-      slideWindowMinutes
+      slideWindowMinutes,
+      teamConstraints
     );
 
     if (!planned) {
@@ -276,7 +285,8 @@ function scheduleSingleMatch(
   teamNextFreeTime: Map<string, Date>,
   resourceGapMinutes: number,
   teamRestMinutes: number,
-  slideWindowMinutes: number
+  slideWindowMinutes: number,
+  teamConstraints: AvailabilityConstraint[] = []
 ): PlannedSlot | null {
   // Si pinnedStartAt fourni, on tente directement à cette date
   if (match.pinnedStartAt) {
@@ -315,10 +325,13 @@ function scheduleSingleMatch(
       // Si on dépasse la fenêtre, on passe à la suivante
       if (end > w.end) break;
 
-      // Check dispo finale
+      // Check dispo finale. `slotAllowedForTeams` répond à une question que les
+      // deux autres ne posent pas : les équipes sont libres, mais ont-elles le
+      // DROIT de jouer à cette heure-là ?
       if (
         isResourceAvailable(resourceId, cursor, resourceNextFreeTime) &&
-        areTeamsAvailable(match, cursor, teamNextFreeTime)
+        areTeamsAvailable(match, cursor, teamNextFreeTime) &&
+        slotAllowedForTeams(match, cursor, teamConstraints)
       ) {
         return { start: cursor, end };
       }
@@ -538,6 +551,36 @@ export function getEstimatedDurationMinutes(
   return (
     table[format] ?? DEFAULT_MATCH_DURATIONS_MINUTES[format] ?? 45 // fallback général
   );
+}
+
+/**
+ * Le créneau respecte-t-il les contraintes de disponibilité des deux équipes ?
+ *
+ * Délègue à `isSlotAllowed` — la MÊME fonction que le diagnostic de planning et
+ * que l'aperçu d'impact. Trois implémentations de « ce créneau est-il permis ? »,
+ * ce serait un auto-scheduler qui produit un planning que le diagnostic refuse.
+ *
+ * Les matchs ÉPINGLÉS ne passent pas par ici : ils décrivent une réalité déjà
+ * posée, et les rejeter les ferait disparaître du planning au lieu de les
+ * signaler. Le diagnostic s'en charge.
+ */
+function slotAllowedForTeams(
+  match: MatchToSchedule,
+  start: Date,
+  constraints: AvailabilityConstraint[]
+): boolean {
+  if (constraints.length === 0) return true;
+  return isSlotAllowed(
+    {
+      id: match.id,
+      tournamentId: match.tournamentId,
+      scheduledAt: null,
+      team1Id: match.team1Id,
+      team2Id: match.team2Id,
+    },
+    start,
+    constraints
+  ).allowed;
 }
 
 function addMinutes(date: Date, minutes: number): Date {

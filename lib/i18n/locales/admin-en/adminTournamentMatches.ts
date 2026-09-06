@@ -118,6 +118,13 @@ export default {
   confirmDeletingLabel: 'Deleting...',
   confirmCancellingLabel: 'Cancelling...',
   errorUnexpected: 'Unexpected error',
+  autoSimTitle: 'Simulation: {count} match(es) would be scheduled',
+  autoSimSubtitle: 'Nothing is written until you confirm.',
+  autoSimUnscheduled: '{count} match(es) would stay without a date.',
+  autoSimConstraints: '{count} availability constraint(s) taken into account.',
+  autoSimNoConstraints:
+    'No availability constraint declared: the computation only considers slots and rest.',
+  autoSimNothing: 'No match to schedule — they all already have a date.',
   autoConflictsTitle: '{count} scheduling conflict(s) detected',
   autoConflictsSubtitle:
     'The same team is scheduled for two overlapping slots. Apply anyway?',

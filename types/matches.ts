@@ -67,6 +67,17 @@ export interface AutoSchedulerConfig {
   teamRestMinutes?: number;
 
   /**
+   * Contraintes de disponibilité des équipes (lot 1 de
+   * docs/PLAN-plateforme-tournois.md) : quand une équipe a le DROIT de jouer.
+   *
+   * Distinctes de `teamRestMinutes`, qui dit quand une équipe est PHYSIQUEMENT
+   * libre. Une équipe peut être libre à 19 h et ne pas avoir le droit d'y
+   * jouer ; sans ces contraintes, l'auto-scheduler produisait un planning que
+   * le diagnostic refusait aussitôt.
+   */
+  teamConstraints?: import('../utils/matches/availability').AvailabilityConstraint[];
+
+  /**
    * Ressource par défaut si resourceId est absent.
    */
   defaultResourceId?: SchedulerResourceId;

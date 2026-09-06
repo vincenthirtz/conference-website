@@ -38,6 +38,12 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '../../../../../utils/logger';
+import type { AvailabilityConstraint } from '@/utils/matches/availability';
+import {
+  AVAILABILITY_COLUMNS,
+  rowToConstraint,
+  type AvailabilityRow,
+} from '@/utils/matches/availabilityRows';
 import {
   autoScheduleMatches,
   makeMultiDayWindows,
@@ -80,6 +86,20 @@ type AutoScheduleBody = {
    * confirme explicitement en renvoyant true.
    */
   acceptConflicts?: boolean;
+  /**
+   * SIMULATION. Calcule le planning et le renvoie SANS RIEN ECRIRE.
+   *
+   * Le defaut reste l'ecriture, pour ne pas casser les appels existants ; mais
+   * c'est le mode qu'un ecran devrait employer d'abord. Un auto-scheduler qui
+   * ecrit avant d'etre relu, sur une grille saturee, deplace des matchs que
+   * personne n'a decide de deplacer.
+   */
+  dryRun?: boolean;
+  /**
+   * Ignorer les contraintes de disponibilite des equipes. A n'utiliser que pour
+   * comparer « ce que ca donnerait sans » — le defaut les respecte.
+   */
+  ignoreTeamConstraints?: boolean;
 };
 
 type ScheduledEntry = {
@@ -104,6 +124,10 @@ type AutoScheduleResponse = {
   unscheduledMatchIds: string[];
   conflicts?: ConflictEntry[];
   warnings?: string[];
+  /** Present et `true` uniquement en simulation : rien n'a ete ecrit. */
+  dryRun?: boolean;
+  /** Nombre de contraintes d'equipe prises en compte par le calcul. */
+  constraintCount?: number;
 };
 
 export default withStaffRoute(
@@ -225,9 +249,40 @@ async function handler(
       })),
     ];
 
+    // 3b) Contraintes de disponibilite des equipes (lot 1). Sans elles,
+    //     l'auto-scheduler produisait un planning que le diagnostic refusait
+    //     aussitot : il savait quand une equipe est LIBRE, jamais quand elle a
+    //     le DROIT de jouer.
+    let teamConstraints: AvailabilityConstraint[] = [];
+    if (body.ignoreTeamConstraints !== true) {
+      const teamIds = [
+        ...new Set(
+          matchesToSchedule
+            .flatMap((m) => [m.team1Id, m.team2Id])
+            .filter((v): v is string => Boolean(v))
+        ),
+      ];
+      if (teamIds.length > 0) {
+        const { data: rows, error: cErr } = await supabaseAdmin
+          .from('team_availability_constraints')
+          .select(AVAILABILITY_COLUMNS)
+          .eq('tenant_id', ctx.tenantId)
+          .in('team_id', teamIds)
+          .or(`tournament_id.eq.${tournamentId},tournament_id.is.null`);
+        if (cErr) {
+          logger.error('auto-schedule: constraints fetch error', cErr);
+        } else {
+          teamConstraints = ((rows ?? []) as AvailabilityRow[]).map(
+            rowToConstraint
+          );
+        }
+      }
+    }
+
     // 4) Construire la config de scheduler
     const config: AutoSchedulerConfig = {
       windows,
+      teamConstraints,
       estimatedDurationsMinutes: body.estimatedDurationsMinutes ?? {},
       resourceGapMinutes:
         typeof body.resourceGapMinutes === 'number'
@@ -280,6 +335,21 @@ async function handler(
     //     si l'admin l'a explicitement accepte. On retourne quand meme le
     //     planning calcule + les conflits pour que l'UI puisse demander
     //     confirmation et renvoyer acceptConflicts=true.
+    // 6) SIMULATION : on rend le planning calcule et on s'arrete la. Avant le
+    //    garde-fou des conflits, parce qu'une simulation doit pouvoir MONTRER
+    //    les conflits — c'est meme sa principale raison d'etre.
+    if (body.dryRun === true) {
+      return res.status(200).json({
+        tournamentId,
+        dryRun: true,
+        scheduled: result.scheduled,
+        unscheduledMatchIds: result.unscheduledMatchIds,
+        constraintCount: teamConstraints.length,
+        ...(result.conflicts.length > 0 ? { conflicts: result.conflicts } : {}),
+        ...(warnings.length > 0 ? { warnings } : {}),
+      });
+    }
+
     if (result.conflicts.length > 0 && body.acceptConflicts !== true) {
       return res.status(409).json({
         error: `${result.conflicts.length} conflit(s) horaire(s) detecte(s) — confirme l’application en renvoyant acceptConflicts=true.`,
@@ -325,6 +395,7 @@ async function handler(
             scheduled_count: result.scheduled.length,
             unscheduled_count: result.unscheduledMatchIds.length,
             conflicts_count: result.conflicts.length,
+            team_constraints_count: teamConstraints.length,
             scheduled_match_ids: result.scheduled.map((s) => s.matchId),
             unscheduled_match_ids: result.unscheduledMatchIds,
             ...(result.conflicts.length > 0

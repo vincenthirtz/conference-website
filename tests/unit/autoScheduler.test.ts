@@ -266,3 +266,96 @@ describe('makeMultiDayWindows', () => {
     expect(windows[2].start.getDate()).toBe(12);
   });
 });
+
+describe('autoScheduleMatches · contraintes de disponibilité', () => {
+  const HIN = 'hinode';
+  const SHU = 'shujaa';
+
+  /** « Hinode ne joue pas avant 21 h » — la contrainte qui a motivé le lot. */
+  const pasAvant21h = {
+    id: 'c1',
+    teamId: HIN,
+    tournamentId: null,
+    kind: 'earliest' as const,
+    timeOfDay: '21:00',
+    timezone: 'Europe/Paris',
+  };
+
+  const match = makeMatch('m1', { team1Id: HIN, team2Id: SHU, format: 'bo3' });
+
+  it('place le match au premier créneau AUTORISÉ, pas au premier libre', () => {
+    const res = autoScheduleMatches([match], {
+      // 2026-03-10 : heure d'hiver, Paris = UTC+1.
+      windows: [makeDayWindow('2026-03-10', '18:00', '23:30')],
+      estimatedDurationsMinutes: { bo3: 45 },
+      slideWindowMinutes: 30,
+      teamConstraints: [pasAvant21h],
+    });
+    expect(res.unscheduledMatchIds).toEqual([]);
+    const start = new Date(res.scheduled[0].startAt);
+    const heureParis = start.toLocaleTimeString('fr-FR', {
+      timeZone: 'Europe/Paris',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    expect(heureParis).toBe('21:00');
+  });
+
+  it('laisse le match NON planifié plutôt que de violer la contrainte', () => {
+    // La fenêtre se ferme avant 21 h : aucun créneau légal. Poser le match
+    // quand même produirait un planning que le diagnostic refuserait aussitôt.
+    const res = autoScheduleMatches([match], {
+      windows: [makeDayWindow('2026-03-10', '18:00', '20:30')],
+      estimatedDurationsMinutes: { bo3: 45 },
+      slideWindowMinutes: 30,
+      teamConstraints: [pasAvant21h],
+    });
+    expect(res.scheduled).toEqual([]);
+    expect(res.unscheduledMatchIds).toEqual(['m1']);
+  });
+
+  it('ignore une contrainte qui vise une autre équipe', () => {
+    const res = autoScheduleMatches([match], {
+      windows: [makeDayWindow('2026-03-10', '18:00', '20:30')],
+      estimatedDurationsMinutes: { bo3: 45 },
+      teamConstraints: [{ ...pasAvant21h, teamId: 'une-autre-equipe' }],
+    });
+    expect(res.unscheduledMatchIds).toEqual([]);
+  });
+
+  it('se comporte comme avant quand aucune contrainte n’est fournie', () => {
+    const sans = autoScheduleMatches([match], {
+      windows: [makeDayWindow('2026-03-10', '18:00', '23:30')],
+      estimatedDurationsMinutes: { bo3: 45 },
+    });
+    const vide = autoScheduleMatches([match], {
+      windows: [makeDayWindow('2026-03-10', '18:00', '23:30')],
+      estimatedDurationsMinutes: { bo3: 45 },
+      teamConstraints: [],
+    });
+    expect(vide.scheduled[0].startAt).toBe(sans.scheduled[0].startAt);
+  });
+
+  it('respecte un blackout de date en sautant la journée', () => {
+    const res = autoScheduleMatches([match], {
+      windows: [
+        makeDayWindow('2026-03-10', '21:00', '23:30'),
+        makeDayWindow('2026-03-11', '21:00', '23:30'),
+      ],
+      estimatedDurationsMinutes: { bo3: 45 },
+      slideWindowMinutes: 30,
+      teamConstraints: [
+        {
+          id: 'c2',
+          teamId: SHU,
+          tournamentId: null,
+          kind: 'blackout' as const,
+          startsOn: '2026-03-10',
+          endsOn: '2026-03-10',
+          timezone: 'Europe/Paris',
+        },
+      ],
+    });
+    expect(res.scheduled[0].startAt.slice(0, 10)).toBe('2026-03-11');
+  });
+});

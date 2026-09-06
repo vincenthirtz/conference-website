@@ -23212,6 +23212,18 @@ paths:
           format: uuid
     post:
       summary: Auto-schedule matches across stages using available slots.
+      description: >
+        Respecte desormais les CONTRAINTES DE DISPONIBILITE des equipes
+        (`team_availability_constraints`) : le scheduler savait quand une equipe
+        est LIBRE, jamais quand elle a le DROIT de jouer, et produisait donc un
+        planning que le diagnostic refusait aussitot. `ignoreTeamConstraints:
+        true` retablit l'ancien comportement, pour comparer.
+
+
+        `dryRun: true` calcule le planning et le renvoie SANS RIEN ECRIRE, avec
+        `constraintCount` et les conflits eventuels — une simulation doit
+        pouvoir montrer les conflits, c'est sa raison d'etre. Le defaut reste
+        l'ecriture, pour ne pas casser les appels existants.
       operationId: adminAutoScheduleTournament
       tags:
         - admin/tournaments

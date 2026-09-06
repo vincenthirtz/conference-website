@@ -9,6 +9,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useAutoSchedule } from '@/hooks/useAutoSchedule';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
@@ -137,7 +138,6 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
   const [offset, setOffset] = useState(0);
 
   // auto-scheduler
-  const [autoSchedRunning, setAutoSchedRunning] = useState(false);
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
@@ -411,70 +411,24 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     dateToFilter,
   ]);
 
+  // Auto-scheduler : simulation, relecture, puis écriture. Le flux vit dans
+  // `useAutoSchedule` — trois échanges avec le serveur et deux confirmations
+  // n'ont pas leur place au milieu d'un écran de liste.
+  const { running: autoSchedRunning, run: handleAutoSchedule } =
+    useAutoSchedule({
+      tournamentId: id ? String(id) : undefined,
+      mutateIdempotent,
+      confirm,
+      addToast,
+      onError: setErrorMsg,
+      onDone: fetchMatches,
+      labels: t,
+    });
+
   function handleFilterSubmit(e: React.FormEvent) {
     e.preventDefault();
     setOffset(0);
     fetchMatches();
-  }
-
-  async function handleAutoSchedule() {
-    if (!id) return;
-    setAutoSchedRunning(true);
-    setErrorMsg(null);
-
-    const callAutoSchedule = (acceptConflicts: boolean) =>
-      mutateIdempotent(`/api/admin/tournament/${id}/auto-schedule`, {
-        method: 'POST',
-        body: JSON.stringify(acceptConflicts ? { acceptConflicts: true } : {}),
-      });
-
-    try {
-      let res = await callAutoSchedule(false);
-
-      // Le back refuse d'appliquer si des conflits ont ete detectes : on
-      // demande une confirmation explicite avant de renvoyer la requete.
-      if (res.status === 409) {
-        const json = await res.json().catch(() => ({}));
-        if (json.detail === 'SCHEDULE_CONFLICTS_REQUIRE_CONFIRMATION') {
-          const count = json.conflicts?.length ?? 0;
-          const ok = await confirm({
-            title: format(t.autoConflictsTitle, { count }),
-            subtitle: t.autoConflictsSubtitle,
-            variant: 'warning',
-            confirmLabel: t.autoApply,
-          });
-          if (!ok) {
-            setAutoSchedRunning(false);
-            return;
-          }
-          res = await callAutoSchedule(true);
-        }
-      }
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || t.errorAutoSchedule);
-      }
-
-      const json = await res.json();
-      const scheduledCount =
-        json.scheduled?.length ?? json.scheduledMatchesCount ?? 0;
-      const conflictCount = json.conflicts?.length ?? 0;
-      const warnings: string[] = json.warnings ?? [];
-
-      let toastMsg = format(t.autoDoneMsg, { count: scheduledCount });
-      if (conflictCount > 0)
-        toastMsg +=
-          ' ' + format(t.autoConflictsAccepted, { count: conflictCount });
-      if (warnings.length > 0) toastMsg += ` ${warnings.join(' ')}`;
-
-      addToast(toastMsg, conflictCount > 0 ? 'info' : 'success');
-      fetchMatches();
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errorAutoSchedule);
-    } finally {
-      setAutoSchedRunning(false);
-    }
   }
 
   // Toggle open/close de l'éditeur inline pour une ligne (une seule à la fois).
