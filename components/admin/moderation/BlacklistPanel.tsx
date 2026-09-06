@@ -17,6 +17,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useUrlFilters } from '@/utils/useUrlFilters';
+import AdminPagination from '@/components/admin/AdminPagination';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminModerationBlacklist from '@/lib/i18n/locales/admin-fr/adminModerationBlacklist';
 
@@ -102,16 +103,25 @@ export default function BlacklistPanel() {
   const [total, setTotal] = useState<number | null>(null);
 
   // Entrées : filtres serveur `search`/`active` réactifs (portés par l'URL).
-  // `limit: 50` réplique le défaut du handler (parsePagination limit:50 ; pas
-  // de pagination UI). `total` revient toujours dans le payload →
-  // includeTotal:false garde la requête alignée. `refresh` remplace l'ancien
-  // fetchEntries ; `mutateEntries` porte l'UI optimiste (toggle/edit/delete).
+  // `total` revient toujours dans le payload → includeTotal:false garde la
+  // requête alignée. `refresh` remplace l'ancien fetchEntries ;
+  // `mutateEntries` porte l'UI optimiste (toggle/edit/delete).
+  //
+  // La liste plafonnait à 50 sans pagination, tout en AFFICHANT le total : au
+  // 51e signalement, l'écran annonçait « 60 entrées » et n'en montrait que 50,
+  // sans le moindre moyen d'atteindre les autres. Le panneau frère (entités,
+  // même onglet) paginait déjà.
   const {
     data: entries,
     loading,
     error: errorMsg,
     refresh: fetchEntries,
     mutate: mutateEntries,
+    offset,
+    nextPage,
+    prevPage,
+    resetOffset,
+    hasMore,
   } = useAdminResource<
     BlacklistEntry,
     { items?: BlacklistEntry[]; total?: number }
@@ -189,6 +199,9 @@ export default function BlacklistPanel() {
 
   function submitSearch() {
     setFilters({ search: searchInput.trim() || null });
+    // Sans ce retour page 1, chercher depuis la page 3 renverrait une liste
+    // vide alors que des résultats existent.
+    resetOffset();
   }
 
   const hasIdentifier =
@@ -415,7 +428,10 @@ export default function BlacklistPanel() {
         <select
           className="px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
           value={activeFilter}
-          onChange={(e) => setFilters({ active: e.target.value || null })}
+          onChange={(e) => {
+            setFilters({ active: e.target.value || null });
+            resetOffset();
+          }}
         >
           <option value="">{tx.filterAllStatus}</option>
           <option value="true">{tx.filterActive}</option>
@@ -595,6 +611,16 @@ export default function BlacklistPanel() {
               })}
             </div>
           </section>
+          <AdminPagination
+            offset={offset}
+            count={entries.length}
+            total={total}
+            hasMore={hasMore}
+            loading={loading}
+            onPrev={prevPage}
+            onNext={nextPage}
+            labels={{ prev: tx.pagePrev, next: tx.pageNext, info: tx.pageInfo }}
+          />
         </>
       )}
 

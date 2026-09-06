@@ -11,6 +11,7 @@ import { useAdminResource } from '@/hooks/useAdminResource';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import ScrimFormModal from '@/components/admin/scrims/ScrimFormModal';
 import AdminListShell from '@/components/admin/AdminListShell';
+import AdminPagination from '@/components/admin/AdminPagination';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { ScrimStatus } from '@/types/admin';
 import nsAdminScrimsList from '@/lib/i18n/locales/admin-fr/adminScrimsList';
@@ -359,36 +360,16 @@ export default function ScrimsListPanel() {
             </Link>
           ))}
         </div>
-
-        {(offset > 0 || hasMore) && (
-          <div className="flex items-center justify-center gap-3 mt-4">
-            <button
-              type="button"
-              onClick={prevPage}
-              disabled={offset === 0 || loading}
-              className="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              {t.pagePrev}
-            </button>
-            {typeof total === 'number' && (
-              <span className="text-xs text-neutral-500">
-                {format(t.pageInfo, {
-                  from: offset + 1,
-                  to: offset + scrims.length,
-                  total,
-                })}
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={nextPage}
-              disabled={!hasMore || loading}
-              className="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              {t.pageNext}
-            </button>
-          </div>
-        )}
+        <AdminPagination
+          offset={offset}
+          count={scrims.length}
+          total={total}
+          hasMore={hasMore}
+          loading={loading}
+          onPrev={prevPage}
+          onNext={nextPage}
+          labels={{ prev: t.pagePrev, next: t.pageNext, info: t.pageInfo }}
+        />
       </AdminListShell>
 
       {scrims.length === 0 && hasActiveFilters && !loading && (
