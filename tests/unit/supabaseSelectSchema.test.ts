@@ -139,6 +139,30 @@ describe('schéma : colonnes citées dans les .select()', () => {
     expect(offenders).toEqual([]);
   });
 
+  // Un `.select()` n'est pas la seule façon de citer une colonne : un filtre
+  // (`.eq('user_id', …)` sur une table qui porte `auth_user_id`) ou une
+  // écriture échouent exactement pareil. Le commentaire de
+  // `utils/broadcast/liveState.ts` garde la trace d'un cas vécu : la requête
+  // partait en erreur AVALÉE, et plus aucun caster n'avait de Discord.
+  it('ne filtre ni n’écrit sur une colonne absente du schéma', () => {
+    const offenders: string[] = [];
+    for (const use of scan.usages) {
+      const columns = known.get(use.table);
+      if (!columns) continue; // table inconnue : couvert plus haut
+      if (!columns.has(use.column)) {
+        offenders.push(
+          `${use.file}:${use.line} — ${use.table}.${use.column} (.${use.method})`
+        );
+      }
+    }
+    expect(
+      offenders,
+      offenders.length
+        ? `Colonnes absentes du schéma en filtre ou en écriture :\n${offenders.join('\n')}`
+        : undefined
+    ).toEqual([]);
+  });
+
   // Sans ce test, une régression de l'analyseur (import cassé, chemin changé,
   // AST qui ne matche plus) rendrait les deux tests ci-dessus vrais par vide :
   // verts, et totalement aveugles. C'est exactement le piège rencontré sur le
@@ -150,6 +174,9 @@ describe('schéma : colonnes citées dans les .select()', () => {
     // Idem pour les indices de relation : zéro indice relevé signifierait que
     // l'extraction est cassée, pas que le dépôt n'en utilise aucun.
     expect(scan.hints.length).toBeGreaterThan(20);
+    // Filtres et écritures : même exigence de non-vacuité.
+    expect(scan.usages.filter((u) => u.kind === 'filter').length).toBeGreaterThan(1000);
+    expect(scan.usages.filter((u) => u.kind === 'write').length).toBeGreaterThan(200);
     expect(Object.keys(snapshot.foreignKeys).length).toBeGreaterThan(100);
   });
 

@@ -54,9 +54,17 @@ export type SkippedSelect = {
   reason: 'table-dynamique' | 'select-dynamique' | 'embarcation-par-cle';
 };
 
+/**
+ * Colonne citée AILLEURS que dans un `.select()` : filtre (`.eq`, `.order`…)
+ * ou charge utile d'écriture (`.insert`, `.update`). Une colonne inexistante y
+ * échoue exactement comme dans un select — PostgREST rejette la requête.
+ */
+export type UsageRef = ColumnRef & { kind: 'filter' | 'write'; method: string };
+
 export type ScanResult = {
   refs: ColumnRef[];
   hints: HintRef[];
+  usages: UsageRef[];
   skipped: SkippedSelect[];
   /** `.select()` dont la table ET l'argument ont été résolus. */
   analysed: number;
@@ -256,6 +264,27 @@ function indexLocalTables(source: ts.SourceFile): Map<string, string> {
   return map;
 }
 
+/** Méthodes de filtre PostgREST dont le 1er argument est une colonne. */
+const FILTER_METHODS = new Set([
+  'eq', 'neq', 'gt', 'gte', 'lt', 'lte',
+  'like', 'ilike', 'is', 'in', 'contains', 'containedBy', 'order',
+]);
+
+const WRITE_METHODS = new Set(['insert', 'update', 'upsert']);
+
+/**
+ * Nom de colonne d'un argument de filtre. `null` quand la référence porte sur
+ * une ressource EMBARQUÉE (`tournament_stages.tournament_id`) : la colonne
+ * appartient alors à l'autre table, qu'on ne sait pas nommer ici, et la forme
+ * est parfaitement valide — la signaler serait un faux positif.
+ */
+function filterColumnName(raw: string): string | null {
+  if (raw.includes('(') || raw.includes(',')) return null; // `or()`, agrégats
+  if (raw.includes('.')) return null; // ressource embarquée
+  const name = raw.split('->')[0].trim();
+  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(name) ? name : null;
+}
+
 /** Une liste qui « ressemble » à du PostgREST, pour ne pas confondre avec
  *  d'autres `.select()` (DOM, bibliothèques tierces). */
 const LOOKS_LIKE_POSTGREST = /^[\w\s,*():!.>-]+$/;
@@ -265,10 +294,47 @@ export function scanFile(file: string, text: string, relative: string): ScanResu
   const localTables = indexLocalTables(source);
   const refs: ColumnRef[] = [];
   const hints: HintRef[] = [];
+  const usages: UsageRef[] = [];
   const skipped: SkippedSelect[] = [];
   let analysed = 0;
 
   const visit = (node: ts.Node) => {
+    // Filtres et écritures : mêmes conséquences qu'un select fautif.
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+      const method = node.expression.name.text;
+      const arg0 = node.arguments[0];
+
+      if (FILTER_METHODS.has(method) && arg0 && ts.isStringLiteralLike(arg0)) {
+        const table = tableFromChain(node.expression.expression, localTables);
+        const column = filterColumnName(arg0.text);
+        if (table && column) {
+          const line =
+            source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
+          usages.push({ table, column, file: relative, line, kind: 'filter', method });
+        }
+      }
+
+      if (WRITE_METHODS.has(method) && arg0 && ts.isObjectLiteralExpression(arg0)) {
+        const table = tableFromChain(node.expression.expression, localTables);
+        if (table) {
+          for (const prop of arg0.properties) {
+            const nameNode = prop.name;
+            if (!nameNode) continue;
+            const column = ts.isIdentifier(nameNode)
+              ? nameNode.text
+              : ts.isStringLiteralLike(nameNode)
+                ? nameNode.text
+                : null;
+            // Un spread (`...payload`) ne dit rien de ses clés : on ne devine pas.
+            if (!column) continue;
+            const line =
+              source.getLineAndCharacterOfPosition(prop.getStart(source)).line + 1;
+            usages.push({ table, column, file: relative, line, kind: 'write', method });
+          }
+        }
+      }
+    }
+
     if (
       ts.isCallExpression(node) &&
       ts.isPropertyAccessExpression(node.expression) &&
@@ -298,12 +364,13 @@ export function scanFile(file: string, text: string, relative: string): ScanResu
   };
   visit(source);
 
-  return { refs, hints, skipped, analysed };
+  return { refs, hints, usages, skipped, analysed };
 }
 
 export function scanRepo(roots: string[], cwd: string): ScanResult {
   const refs: ColumnRef[] = [];
   const hints: HintRef[] = [];
+  const usages: UsageRef[] = [];
   const skipped: SkippedSelect[] = [];
   let analysed = 0;
   for (const file of listSourceFiles(roots, cwd)) {
@@ -311,8 +378,9 @@ export function scanRepo(roots: string[], cwd: string): ScanResult {
     const result = scanFile(file, readFileSync(file, 'utf8'), relative);
     refs.push(...result.refs);
     hints.push(...result.hints);
+    usages.push(...result.usages);
     skipped.push(...result.skipped);
     analysed += result.analysed;
   }
-  return { refs, hints, skipped, analysed };
+  return { refs, hints, usages, skipped, analysed };
 }
