@@ -9,6 +9,7 @@ import Breadcrumb from '@/components/admin/Breadcrumb';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { isNonPlayingTeamRole, splitTeamMembers } from '@/utils/teams/roleKind';
 import nsAdminTeamDetail from '@/lib/i18n/locales/admin-fr/adminTeamDetail';
+import TeamAvailabilityPanel from '@/components/admin/teams/TeamAvailabilityPanel';
 
 type StaffShape = {
   id: string;
@@ -385,6 +386,12 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
             )}
           </section>
         </div>
+
+        {teamId && (
+          <div className="mt-6">
+            <TeamAvailabilityPanel teamId={teamId} />
+          </div>
+        )}
       </div>
     </>
   );

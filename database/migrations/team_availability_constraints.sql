@@ -26,6 +26,13 @@
 -- (« indisponible pendant la Cup, semaine du 18 »). Les deux cas existent, et une
 -- contrainte permanente recopiée à chaque tournoi finirait périmée quelque part.
 --
+-- NE PAS CONFONDRE AVEC `team_availability`. Cette table-là est la grille
+-- « When2Meet » des scrims : des créneaux peints par une JOUEUSE, pour UNE
+-- négociation, jetables une fois le scrim calé. Celle-ci porte des règles
+-- PERMANENTES de l'équipe, opposables au calendrier officiel. Deux durées de
+-- vie, deux auteurs, deux usages — les fusionner ferait qu'un oubli de peinture
+-- vaudrait indisponibilité.
+--
 -- RLS : activée sans aucune policy. Service role uniquement — la lecture passe par les
 -- routes admin, qui portent déjà le contrôle de permission staff.
 --

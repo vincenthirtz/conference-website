@@ -3714,6 +3714,23 @@ manager qui en encadre trois a un seul agenda.
 | [`pages/api/player/agenda.ics.ts`](../pages/api/player/agenda.ics.ts)                   | GET             | **jeton porteur** `?token=`        | Flux iCalendar pour Google/Apple/Outlook, qui ne présentent jamais de session. Jeton inconnu / révoqué / malformé → **404 identique**. `private, no-store` + `X-Robots-Tag: noindex`. Le check-in devient une `VALARM`. Rate-limit **30 / min** par IP.        |
 | [`pages/api/player/agenda/subscription.ts`](../pages/api/player/agenda/subscription.ts) | GET/POST/DELETE | Bearer joueur (`withAuthRoute`)    | `GET` le lien courant (ou `url: null`), `POST` en émet un neuf **et révoque le précédent**, `DELETE` révoque. Un seul jeton actif par (tenant, compte) — index partiel `player_calendar_tokens_active_key`. Jamais inspectable `?as=`. Rate-limit **20 / min**. |
 
+### Disponibilités des équipes (admin)
+
+Lot 2 de [PLAN-plateforme-tournois.md](./PLAN-plateforme-tournois.md). **Quand une
+équipe a le droit de jouer** — ce que la plateforme ignorait jusqu'ici, et qui
+obligeait à re-planifier une saison à la main. Modèle :
+[`team_availability_constraints.sql`](../database/migrations/team_availability_constraints.sql) ;
+vérification pure : [`utils/matches/availability.ts`](../utils/matches/availability.ts).
+
+À ne pas confondre avec `team_availability`, la grille « When2Meet » des scrims :
+celle-là porte des créneaux peints par une joueuse pour UNE négociation, celle-ci
+des règles permanentes opposables au calendrier officiel.
+
+| Route | Methods | Auth | Notes |
+| --- | --- | --- | --- |
+| [`pages/api/admin/teams/[teamId]/availability.ts`](../pages/api/admin/teams/[teamId]/availability.ts) | GET/POST/PATCH/DELETE | Session staff, permission `manage_teams` | Quatre natures : `blackout` (`starts_on`/`ends_on`, bornes **inclusives**), `earliest`/`latest` (`time_of_day`, HH:MM), `weekday` (`weekdays`, ISO 1 = lundi). `timezone` IANA (défaut `Europe/Paris`) — heures et dates sont **murales**, pas UTC. `tournament_id: null` = vaut pour tous les tournois. `GET ?tournament_id=` renvoie les contraintes du tournoi **plus** les globales. Écritures : rate-limit 60/min + `Idempotency-Key`. Journal : `team_availability_add` / `_update` / `_delete`. |
+| [`pages/api/admin/tournament/[id]/availability.ts`](../pages/api/admin/tournament/[id]/availability.ts) | GET | Session staff, permission `manage_tournaments` | `200 { tournamentId, teams[], constraints[] }`. `teams` liste les équipes **engagées** avec leurs contraintes, même vide — l'admin doit voir qui n'a rien déclaré autant que qui a déclaré. `constraints` est la liste à plat, prête pour `findAvailabilityViolations`. |
+
 ## Where it lives
 
 - **Middleware** — [`utils/botAuth.ts`](../utils/botAuth.ts) (`withBotRoute`,

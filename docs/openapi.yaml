@@ -20245,6 +20245,152 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           description: Equipe inconnue dans cet espace.
+  /api/admin/teams/{teamId}/availability:
+    parameters:
+      - $ref: '#/components/parameters/TeamId'
+    get:
+      summary: List a team's availability constraints.
+      description: >
+        Quand l'equipe a le DROIT de jouer : quatre natures (`blackout`,
+        `earliest`, `latest`, `weekday`), portee globale ou par tournoi, heures
+        et dates MURALES dans le fuseau porte par la contrainte.
+
+
+        `?tournament_id=<uuid>` restreint aux contraintes de ce tournoi PLUS les
+        globales de l'equipe : une regle permanente pese sur ce tournoi comme
+        sur les autres, la filtrer donnerait une liste rassurante et fausse.
+      operationId: adminListTeamAvailability
+      tags:
+        - admin/teams
+      security:
+        - StaffSession: []
+      parameters:
+        - name: tournament_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Contraintes de l'equipe.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Identifiant invalide (`INVALID_TEAM_ID`, `INVALID_TOURNAMENT_ID`).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Equipe inconnue dans cet espace (`TEAM_NOT_FOUND`).
+    post:
+      summary: Add an availability constraint to a team.
+      description: >
+        Corps discrimine par `kind` : `blackout` exige `starts_on`/`ends_on`
+        (bornes INCLUSIVES), `earliest`/`latest` exigent `time_of_day` (HH:MM),
+        `weekday` exige `weekdays` (ISO, 1 = lundi). `timezone` (IANA, defaut
+        `Europe/Paris`), `tournament_id` (null = tous les tournois) et `note`
+        sont communs.
+      operationId: adminCreateTeamAvailability
+      tags:
+        - admin/teams
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '201':
+          description: Contrainte creee.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Corps invalide (`INVALID_BODY`, `INVALID_RANGE`).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Equipe ou tournoi inconnu.
+        '429':
+          description: Rate limit.
+    patch:
+      summary: Update an availability constraint.
+      description: >
+        `?id=<uuid>`. La NATURE ne change pas : on change une valeur, pas un
+        concept. Les champs d'une autre nature sont ignores.
+      operationId: adminUpdateTeamAvailability
+      tags:
+        - admin/teams
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Contrainte mise a jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Corps ou identifiant invalide.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Contrainte inconnue (`NOT_FOUND`).
+    delete:
+      summary: Delete an availability constraint.
+      description: '`?id=<uuid>`. Le calendrier cesse de la verifier ; les matchs deja places ne bougent pas.'
+      operationId: adminDeleteTeamAvailability
+      tags:
+        - admin/teams
+      security:
+        - StaffSession: []
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Supprimee.
+        '400':
+          description: Identifiant invalide (`INVALID_ID`).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Contrainte inconnue (`NOT_FOUND`).
   /api/admin/teams/{teamId}/history:
     parameters:
       - $ref: '#/components/parameters/TeamId'
@@ -22877,6 +23023,46 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/tournament/{id}/availability:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Every availability constraint weighing on a tournament.
+      description: >
+        Les equipes ENGAGEES (`tournament_teams`), chacune avec ses contraintes,
+        MEME VIDE : l'admin doit voir qui n'a rien declare autant que qui a
+        declare quelque chose. `constraints` reprend la liste a plat, prete pour
+        le diagnostic de planning.
+
+
+        Perimetre : les contraintes propres au tournoi ET les globales de ces
+        memes equipes.
+      operationId: adminGetTournamentAvailability
+      tags:
+        - admin/tournaments
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Contraintes du tournoi.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Identifiant invalide (`INVALID_TOURNAMENT_ID`).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Tournoi inconnu (`TOURNAMENT_NOT_FOUND`).
   /api/admin/tournament/{id}/auto-schedule:
     parameters:
       - in: path

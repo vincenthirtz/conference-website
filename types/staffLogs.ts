@@ -97,6 +97,14 @@ export type StaffLogAction =
   | 'kick_member'
   | 'leave_team'
   | 'send_team_message'
+  /**
+   * Contraintes de disponibilité d'une équipe (quand elle a le DROIT de jouer).
+   * Slugs dédiés et non `other` : c'est ce qu'on relira pour savoir qui a posé
+   * la règle qui a fait bouger un match.
+   */
+  | 'team_availability_add'
+  | 'team_availability_update'
+  | 'team_availability_delete'
   | 'update_player_battle_tag'
   | 'update_player_skill_rating'
   | 'update_member_profile'
