@@ -29,8 +29,15 @@ import {
 
 const FETCH_TIMEOUT_MS = 15_000;
 
-/** Champs demandés. `create_time` et `share_url` sont indispensables. */
-const VIDEO_FIELDS = 'id,title,video_description,create_time,share_url';
+/**
+ * Champs demandés. `create_time` et `share_url` sont indispensables.
+ *
+ * `cover_image_url` a une durée de vie de SIX HEURES (TikTok le documente) :
+ * elle sert à faire une copie chez nous au moment où on la lit, jamais à être
+ * stockée telle quelle. Cf. `./socialFeed.ts`.
+ */
+const VIDEO_FIELDS =
+  'id,title,video_description,create_time,share_url,cover_image_url';
 
 /** Maximum accepté par l'API (défaut : 10). */
 const MAX_COUNT = 20;
@@ -49,6 +56,7 @@ type VideoItem = {
   video_description?: string | null;
   create_time?: number | string;
   share_url?: string;
+  cover_image_url?: string | null;
 };
 
 /**
@@ -90,6 +98,7 @@ export function parseVideos(raw: unknown): MirrorPost[] {
           ? `${caption.slice(0, MAX_TEXT - 1)}…`
           : caption,
       publishedAt,
+      thumbnailUrl: video.cover_image_url || null,
     });
   }
   return out;

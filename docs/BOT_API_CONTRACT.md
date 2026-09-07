@@ -3129,6 +3129,12 @@ Consomme par `services/discord-bot/social-mirror.js`.
 `/api/cron/social-mirror` (toutes les 15 min), une passe par source et par
 tenant, chacune avec son propre curseur dans `site_settings`.
 
+**Le meme cron alimente aussi le SITE.** Depuis le mur « Nos reseaux » de la
+home (`social_feed_items`, `utils/social/socialFeed.ts`), une seule lecture des
+flux sert deux destinations. Le bot n'est pas concerne : cote Discord rien ne
+change, et l'absence de `bluesky_mirror_channel_id` n'empeche plus le site
+d'etre alimente.
+
 **Le bot est AGNOSTIQUE de la source** : `source` ne sert qu'aux journaux, et le
 message arrive deja mis en forme (prefixe compris : `📺 Nouvelle video —`,
 `📸 Instagram —`, `🎵 TikTok —` ; Bluesky n'en a pas, un post s'y lit tel quel).

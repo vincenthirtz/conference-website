@@ -19629,7 +19629,7 @@ paths:
           description: SECRETS_ENC_KEY absente — impossible de chiffrer.
   /api/cron/social-mirror:
     get:
-      summary: Recopie nos publications (Bluesky, YouTube, Instagram, TikTok) dans un salon Discord.
+      summary: Recopie nos publications (Bluesky, YouTube, Instagram, TikTok) vers Discord ET le mur du site.
       operationId: cronSocialMirrorGet
       tags:
         - cron
@@ -19639,7 +19639,7 @@ paths:
         Voir la variante POST : meme handler, GET et POST acceptes.
       responses:
         '200':
-          description: '`{ bluesky, youtube, instagram, tiktok }`.'
+          description: '`{ bluesky, youtube, instagram, tiktok }`, chacun `{ mirrored, checked, stored, error? }`.'
           content:
             application/json:
               schema:
@@ -19648,7 +19648,7 @@ paths:
         '401':
           description: CRON_SECRET absent ou invalide.
     post:
-      summary: Recopie nos publications (Bluesky, YouTube, Instagram, TikTok) dans un salon Discord.
+      summary: Recopie nos publications (Bluesky, YouTube, Instagram, TikTok) vers Discord ET le mur du site.
       operationId: cronSocialMirror
       tags:
         - cron
@@ -19677,6 +19677,19 @@ paths:
         Les deux sources authentifiees restent en veille (`not_configured`) tant
         qu'aucun compte n'est connecte : ce n'est pas une panne, et ca ne remplit
         pas le journal d'erreurs tous les quarts d'heure.
+
+        **DEUX DESTINATIONS, REGLES DIFFERENTES.** Le salon Discord ne recoit
+        que ce qui est posterieur au curseur ; la table `social_feed_items`
+        (mur « Nos reseaux » de la home) recoit TOUT ce que le flux a rendu, au
+        plus 3 nouveautes par source et par passage. La borne tient au cout des
+        vignettes : chacune est RECOPIEE dans notre bucket, parce qu'une
+        couverture TikTok expire en 6 h et qu'une URL de media Instagram est
+        signee. Le mur se remplit donc en une heure environ au premier
+        demarrage, puis au fil des publications.
+
+        Les deux destinations sont INDEPENDANTES : sans
+        `bluesky_mirror_channel_id`, le site continue d'etre alimente et seule
+        l'emission Discord est sautee (`mirrored: 0`).
 
         Un curseur PAR SOURCE (`bluesky_mirror_last_post_at`,
         `youtube_mirror_last_video_at`, `instagram_mirror_last_post_at`,

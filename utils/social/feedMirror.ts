@@ -55,6 +55,15 @@ export type MirrorPost = {
   /** Texte du post, ou titre de la vidéo. */
   text: string;
   publishedAt: string;
+  /**
+   * Vignette CHEZ LA SOURCE, telle qu'elle nous est servie — donc souvent
+   * périssable : la couverture d'une vidéo TikTok expire au bout de 6 h, une
+   * URL de média Instagram est signée. Elle n'est PAS destinée à être stockée
+   * telle quelle ; `./socialFeed.ts` en fait une copie chez nous avant de
+   * l'écrire en base. Le miroir Discord, lui, ne s'en sert pas du tout : il
+   * laisse l'aperçu du lien faire le travail.
+   */
+  thumbnailUrl?: string | null;
 };
 
 /* -------------------------------------------------------------------------- */

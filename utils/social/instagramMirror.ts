@@ -32,8 +32,16 @@ const FETCH_TIMEOUT_MS = 15_000;
  */
 export const MAX_CAPTION = 700;
 
-/** Les champs qu'on lit, et rien d'autre. */
-const MEDIA_FIELDS = 'id,caption,permalink,timestamp';
+/**
+ * Les champs qu'on lit, et rien d'autre.
+ *
+ * `media_type` n'est pas décoratif : sur une VIDEO ou un REELS, `media_url`
+ * est le fichier vidéo — l'afficher dans une balise image donnerait un cadre
+ * vide. C'est `thumbnail_url` qui porte l'image, et il n'existe QUE sur les
+ * vidéos.
+ */
+const MEDIA_FIELDS =
+  'id,caption,permalink,timestamp,media_type,media_url,thumbnail_url';
 
 /**
  * `2026-09-07T12:34:56+0000` → `2026-09-07T12:34:56+00:00`.
@@ -65,7 +73,24 @@ type MediaItem = {
   caption?: string | null;
   permalink?: string;
   timestamp?: string;
+  media_type?: string;
+  media_url?: string | null;
+  thumbnail_url?: string | null;
 };
+
+/**
+ * L'image représentative d'une publication.
+ *
+ * Ces URLs sont SIGNÉES et expirent : elles servent à faire une copie chez
+ * nous tout de suite, pas à être stockées.
+ */
+function mediaThumbnail(item: MediaItem): string | null {
+  if (item.thumbnail_url) return item.thumbnail_url;
+  // Un CAROUSEL_ALBUM expose le média de sa première image dans `media_url` :
+  // c'est bien une image, on la prend.
+  if (item.media_type === 'VIDEO' || item.media_type === 'REELS') return null;
+  return item.media_url || null;
+}
 
 /**
  * Transforme la réponse Graph en publications exploitables.
@@ -88,6 +113,7 @@ export function parseMedia(raw: unknown): MirrorPost[] {
       // alors à son lien, comme chez les autres sources.
       text: item.caption ? truncateCaption(String(item.caption)) : '',
       publishedAt: normalizeTimestamp(String(item.timestamp)),
+      thumbnailUrl: mediaThumbnail(item),
     });
   }
   return out;

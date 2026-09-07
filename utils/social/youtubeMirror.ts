@@ -32,18 +32,20 @@ export const YOUTUBE_CHANNEL_KEY = 'youtube_channel_id';
 
 /** Décode les entités XML que YouTube échappe dans les titres. */
 export function decodeEntities(text: string): string {
-  return text
-    .replace(/&#(\d+);/g, (_m, code) => String.fromCodePoint(Number(code)))
-    .replace(/&#x([0-9a-f]+);/gi, (_m, hex) =>
-      String.fromCodePoint(parseInt(hex, 16))
-    )
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    // `&amp;` en DERNIER : le décoder avant transformerait « &amp;lt; » en
-    // « < », alors que le texte d'origine disait « &lt; ».
-    .replace(/&amp;/g, '&');
+  return (
+    text
+      .replace(/&#(\d+);/g, (_m, code) => String.fromCodePoint(Number(code)))
+      .replace(/&#x([0-9a-f]+);/gi, (_m, hex) =>
+        String.fromCodePoint(parseInt(hex, 16))
+      )
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      // `&amp;` en DERNIER : le décoder avant transformerait « &amp;lt; » en
+      // « < », alors que le texte d'origine disait « &lt; ».
+      .replace(/&amp;/g, '&')
+  );
 }
 
 function tag(block: string, name: string): string | null {
@@ -78,6 +80,11 @@ export function parseYoutubeFeed(xml: string): MirrorPost[] {
       url: `https://www.youtube.com/watch?v=${videoId}`,
       text: title ?? '',
       publishedAt: published,
+      // Deduite de l'identifiant, pas lue dans le flux : YouTube sert cette
+      // URL pour toute video publique, sans signature ni expiration. Le flux
+      // Atom porte bien un `media:thumbnail`, mais rien ne garantit sa
+      // presence — et une vignette absente vaut moins qu'une vignette calculee.
+      thumbnailUrl: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
     });
   }
   return out;

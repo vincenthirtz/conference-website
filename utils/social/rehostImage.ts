@@ -27,7 +27,7 @@ import { logger } from '@/utils/logger';
 
 /** Même bucket public que les logos d'équipe (cf. pages/api/admin/upload.ts). */
 const BUCKET = 'teams-images';
-const PREFIX = 'news';
+const DEFAULT_PREFIX = 'news';
 
 /** 8 Mio : au-delà, ce n'est plus une image d'article. */
 const MAX_BYTES = 8 * 1024 * 1024;
@@ -72,7 +72,10 @@ export function isOwnImageUrl(url: string): boolean {
  * Télécharge `url` et la republie dans notre bucket. Ne lève jamais : en cas
  * d'échec, renvoie l'URL d'origine avec `rehosted: false` et le motif.
  */
-export async function rehostImage(url: string): Promise<RehostResult> {
+export async function rehostImage(
+  url: string,
+  prefix = DEFAULT_PREFIX
+): Promise<RehostResult> {
   if (!url) return { url, rehosted: false, error: null };
   if (isOwnImageUrl(url)) return { url, rehosted: true, error: null };
   if (!supabaseAdmin) {
@@ -143,7 +146,7 @@ export async function rehostImage(url: string): Promise<RehostResult> {
   // Le hash du CONTENU sert de nom : republier deux fois la même image ne
   // remplit pas le bucket de doublons.
   const hash = crypto.createHash('sha256').update(buffer).digest('hex').slice(0, 32);
-  const path = `${PREFIX}/${hash}${EXT_BY_MIME[mimeType]}`;
+  const path = `${prefix}/${hash}${EXT_BY_MIME[mimeType]}`;
 
   const { error: uploadError } = await supabaseAdmin.storage
     .from(BUCKET)

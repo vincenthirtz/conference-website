@@ -16,6 +16,7 @@ import { type HomePartner } from '@/components/Home/HomeSponsors';
 import { supabaseAdmin } from '@/utils/supabase';
 import { resolveNewsImage } from '@/utils/news/newsImage';
 import { logger } from '@/utils/logger';
+import { loadSocialFeed, type SocialFeedItem } from '@/utils/social/socialFeed';
 
 // Marge de troncature du `content` des news de la home. HomeNewsSection ne rend
 // qu'un excerpt d'au plus ~220 caractères ; on garde une marge confortable.
@@ -23,6 +24,8 @@ const HOME_NEWS_CONTENT_MAX = 300;
 
 export type HomeData = {
   news: HomeNewsItem[];
+  /** Dernières publications de nos comptes réseaux — cf. `utils/social/socialFeed`. */
+  socialFeed: SocialFeedItem[];
   upcomingTournament: UpcomingTournament | null;
   partners: HomePartner[];
   /** Équipes engagées dans l'édition en cours — cf. `loadContendingTeams`. */
@@ -191,6 +194,7 @@ export async function loadCountdownSetting(): Promise<string | null> {
  */
 export async function loadHomeData(tenantId: string): Promise<HomeData> {
   let news: HomeNewsItem[] = [];
+  let socialFeed: SocialFeedItem[] = [];
   let upcomingTournament: UpcomingTournament | null = null;
   let partners: HomePartner[] = [];
   let teams: HomeTeam[] = [];
@@ -202,7 +206,7 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
   if (supabaseAdmin) {
     const nowISO = new Date().toISOString();
 
-    const [newsRes, upcoming, partnersList, countdownSetting] =
+    const [newsRes, upcoming, partnersList, countdownSetting, feed] =
       await Promise.all([
         supabaseAdmin
           .from('news')
@@ -217,8 +221,13 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
         loadUpcomingTournament(tenantId),
         loadPartners(),
         loadCountdownSetting(),
+        // Le mur des réseaux ne conditionne rien : s'il est vide, la section
+        // ne s'affiche pas et le reste de la home est intact. Il n'entre donc
+        // PAS dans `loadError`.
+        loadSocialFeed(tenantId),
       ]);
 
+    socialFeed = feed;
     upcomingTournament = upcoming;
     partners = partnersList;
     countdownTarget = countdownSetting ?? upcomingTournament?.startDate ?? null;
@@ -264,6 +273,7 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
 
   return {
     news,
+    socialFeed,
     upcomingTournament,
     partners,
     teams,

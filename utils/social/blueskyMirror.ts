@@ -20,14 +20,40 @@ export function postUrl(uri: string, handle: string): string {
   return `https://bsky.app/profile/${handle}/post/${rkey}`;
 }
 
+type EmbedView = {
+  $type?: string;
+  images?: Array<{ thumb?: string }>;
+  thumbnail?: string;
+  external?: { thumb?: string };
+  media?: EmbedView;
+};
+
 type FeedItem = {
   post?: {
     uri?: string;
     author?: { handle?: string };
     record?: { text?: string; createdAt?: string; reply?: unknown };
+    embed?: EmbedView;
   };
   reason?: unknown;
 };
+
+/**
+ * La vignette d'un post, quel que soit le type d'embed.
+ *
+ * Bluesky en a quatre formes et rien n'oblige à les traiter toutes — mais un
+ * post de l'association sans image est l'exception, pas la règle, et les
+ * quatre cas tiennent en huit lignes. `recordWithMedia` (une citation AVEC une
+ * image) est récursif : l'image est sous `media`, pas à la racine.
+ */
+export function embedThumbnail(embed: EmbedView | undefined): string | null {
+  if (!embed) return null;
+  const fromImages = embed.images?.[0]?.thumb;
+  if (fromImages) return fromImages;
+  if (embed.thumbnail) return embed.thumbnail; // video#view
+  if (embed.external?.thumb) return embed.external.thumb;
+  return embedThumbnail(embed.media);
+}
 
 /**
  * Convertit la réponse de l'API en publications exploitables.
@@ -57,6 +83,7 @@ export function parseFeed(raw: unknown, fallbackHandle: string): MirrorPost[] {
       url: postUrl(post.uri, handle),
       text: post.record.text ?? '',
       publishedAt: createdAt,
+      thumbnailUrl: embedThumbnail(post.embed),
     });
   }
   return out;

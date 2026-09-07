@@ -33,10 +33,13 @@ import HomeHeroV2 from '@/components/Home/HomeHeroV2';
 import HomeSpotlight from '@/components/Home/HomeSpotlight';
 import HomeNewsV2 from '@/components/Home/HomeNewsV2';
 import HomeSupportStrip from '@/components/Home/HomeSupportStrip';
+import HomeSocialWall from '@/components/Home/HomeSocialWall';
+import type { SocialFeedItem } from '@/utils/social/socialFeed';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 
 type HomeProps = {
   news: HomeNewsItem[];
+  socialFeed: SocialFeedItem[];
   upcomingTournament: UpcomingTournament | null;
   partners: HomePartner[];
   teams: HomeTeam[];
@@ -58,6 +61,7 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
   return {
     props: {
       news: data.news,
+      socialFeed: data.socialFeed,
       upcomingTournament: data.upcomingTournament,
       partners: data.partners,
       teams: data.teams,
@@ -71,6 +75,7 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
 
 function Home({
   news,
+  socialFeed,
   upcomingTournament,
   partners,
   teams,
@@ -115,6 +120,10 @@ function Home({
       />
 
       <HomeNewsV2 news={news} />
+
+      {/* Après les actus, et pas avant : une annonce rédigée pour le site
+          prime sur un post recopié d'ailleurs. */}
+      <HomeSocialWall items={socialFeed} />
 
       <HomeSupportStrip partners={partners} />
     </div>

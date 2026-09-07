@@ -12,7 +12,10 @@
 //   - la date Instagram, dont le décalage arrive sans deux-points : illisible,
 //     elle ferait écarter TOUTES les publications, en silence ;
 //   - la date TikTok, qui est un epoch EN SECONDES : lue en millisecondes,
-//     chaque vidéo daterait de 1970 et le miroir resterait muet.
+//     chaque vidéo daterait de 1970 et le miroir resterait muet ;
+//   - la VIGNETTE de chaque source. Elle n'a aucun effet sur Discord (l'aperçu
+//     du lien fait le travail) mais elle porte le mur « Nos réseaux » du site,
+//     et chaque réseau la range ailleurs.
 
 import { describe, it, expect, vi } from 'vitest';
 
@@ -27,7 +30,11 @@ import {
   MAX_PER_RUN,
   type MirrorPost,
 } from '../../utils/social/feedMirror';
-import { parseFeed, postUrl } from '../../utils/social/blueskyMirror';
+import {
+  embedThumbnail,
+  parseFeed,
+  postUrl,
+} from '../../utils/social/blueskyMirror';
 import {
   decodeEntities,
   parseYoutubeFeed,
@@ -409,5 +416,124 @@ describe('TikTok', () => {
       expect(timestampFromCreateTime(undefined)).toBeNull();
       expect(timestampFromCreateTime('pas-un-nombre')).toBeNull();
     });
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Vignettes — elles alimentent le mur du site, pas le miroir Discord          */
+/* -------------------------------------------------------------------------- */
+
+describe('vignettes', () => {
+  describe('Bluesky — quatre formes d’embed', () => {
+    it('lit une image', () => {
+      expect(
+        embedThumbnail({
+          $type: 'app.bsky.embed.images#view',
+          images: [{ thumb: 'https://cdn.bsky.test/a.jpg' }],
+        })
+      ).toBe('https://cdn.bsky.test/a.jpg');
+    });
+
+    it('lit la miniature d’une vidéo', () => {
+      expect(
+        embedThumbnail({
+          $type: 'app.bsky.embed.video#view',
+          thumbnail: 'https://cdn.bsky.test/v.jpg',
+        })
+      ).toBe('https://cdn.bsky.test/v.jpg');
+    });
+
+    it('lit la vignette d’un lien externe', () => {
+      expect(
+        embedThumbnail({
+          $type: 'app.bsky.embed.external#view',
+          external: { thumb: 'https://cdn.bsky.test/e.jpg' },
+        })
+      ).toBe('https://cdn.bsky.test/e.jpg');
+    });
+
+    it('descend dans `media` d’un recordWithMedia', () => {
+      // Une citation AVEC image : l'image n'est pas à la racine de l'embed.
+      expect(
+        embedThumbnail({
+          $type: 'app.bsky.embed.recordWithMedia#view',
+          media: { images: [{ thumb: 'https://cdn.bsky.test/m.jpg' }] },
+        })
+      ).toBe('https://cdn.bsky.test/m.jpg');
+    });
+
+    it('rend null sur un post sans embed', () => {
+      expect(embedThumbnail(undefined)).toBeNull();
+      expect(embedThumbnail({})).toBeNull();
+    });
+  });
+
+  it('YouTube déduit la vignette de l’identifiant', () => {
+    // Pas lue dans le flux : cette URL vaut pour toute vidéo publique, sans
+    // signature ni expiration.
+    const feed = `<feed><entry><yt:videoId>abc123</yt:videoId><title>T</title><published>2026-09-02T10:00:00+00:00</published></entry></feed>`;
+    expect(parseYoutubeFeed(feed)[0].thumbnailUrl).toBe(
+      'https://i.ytimg.com/vi/abc123/hqdefault.jpg'
+    );
+  });
+
+  describe('Instagram', () => {
+    const item = (over: Record<string, unknown>) => ({
+      data: [
+        {
+          id: 'x',
+          permalink: 'https://instagram.test/p/x/',
+          timestamp: '2026-09-02T12:00:00+0000',
+          ...over,
+        },
+      ],
+    });
+
+    it('prend `media_url` sur une image', () => {
+      expect(
+        parseMedia(
+          item({ media_type: 'IMAGE', media_url: 'https://ig/i.jpg' })
+        )[0].thumbnailUrl
+      ).toBe('https://ig/i.jpg');
+    });
+
+    it('prend `thumbnail_url` sur une vidéo', () => {
+      // `media_url` d'une VIDEO est le FICHIER vidéo : l'afficher dans une
+      // balise image donnerait un cadre vide.
+      expect(
+        parseMedia(
+          item({
+            media_type: 'VIDEO',
+            media_url: 'https://ig/v.mp4',
+            thumbnail_url: 'https://ig/v.jpg',
+          })
+        )[0].thumbnailUrl
+      ).toBe('https://ig/v.jpg');
+    });
+
+    it('ne prend pas le fichier vidéo faute de miniature', () => {
+      expect(
+        parseMedia(
+          item({ media_type: 'VIDEO', media_url: 'https://ig/v.mp4' })
+        )[0].thumbnailUrl
+      ).toBeNull();
+    });
+  });
+
+  it('TikTok lit `cover_image_url`', () => {
+    const out = parseVideos({
+      data: {
+        videos: [
+          {
+            id: '7',
+            video_description: 'x',
+            create_time: 1789000000,
+            share_url: 'https://tt.test/7',
+            cover_image_url: 'https://tt.test/cover.jpg',
+          },
+        ],
+      },
+    });
+    expect(out[0].thumbnailUrl).toBe('https://tt.test/cover.jpg');
   });
 });

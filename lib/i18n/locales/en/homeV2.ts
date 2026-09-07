@@ -42,8 +42,7 @@ export default {
   spotProgressAria: '{pct}% of slots taken',
   spotCtaRegister: 'Register my team',
   spotChipFull: 'Full',
-  spotFullLead:
-    'Every slot is taken for this edition. In the meantime:',
+  spotFullLead: 'Every slot is taken for this edition. In the meantime:',
   spotCtaScrim: 'Propose a scrim',
   spotCtaFindTeam: 'Find a team',
   spotCtaCreateTeamNext: 'Create a team (next season)',
@@ -57,8 +56,7 @@ export default {
   spotNextLive: 'The player opens here when the channel goes live.',
   spotNextLiveHint: 'Follow on Twitch →',
   teamsStripEyebrow: '{count} teams competing',
-  teamsStripTitle:
-    'They are taking part in the second Women’s Cup',
+  teamsStripTitle: 'They are taking part in the second Women’s Cup',
   newsEyebrow: 'News',
   newsTitle: 'Latest news',
   newsAll: 'All news',
@@ -69,5 +67,9 @@ export default {
     'They support the competition · they broadcast it · they talk about it',
   supportPartnersLink: 'View all partners',
   supportBecomePartner: 'Become a partner',
+  socialEyebrow: 'Straight from our accounts',
+  socialTitle: 'Our socials',
+  socialOpen: 'View the post',
+  socialNoCaption: 'Post without a caption',
   heroCtaJoin: "I'm looking for a team",
 };

@@ -1,7 +1,19 @@
 // pages/api/cron/social-mirror.ts
 //
-// Recopie dans un salon Discord ce que l'association publie ailleurs : posts
-// Bluesky, vidéos YouTube, publications Instagram et vidéos TikTok.
+// Recopie ce que l'association publie ailleurs — posts Bluesky, vidéos
+// YouTube, publications Instagram et vidéos TikTok — vers DEUX destinations :
+// le salon Discord, et le mur « nos réseaux » du site.
+//
+// LES DEUX N'ONT PAS LES MÊMES RÈGLES. Discord ne reçoit que ce qui est
+// postérieur au curseur, sinon activer un miroir y déverserait tout
+// l'historique d'un coup ; le site enregistre TOUT ce que le flux a rendu,
+// sinon son mur resterait vide pendant des semaines. Une seule lecture des
+// flux sert les deux — c'est tout l'intérêt de les traiter ici.
+//
+// ET ELLES SONT INDÉPENDANTES. Pas de salon configuré ne veut pas dire pas de
+// mur : le site continue d'être alimenté, seule l'émission vers Discord est
+// sautée. L'inverse vaut aussi — une écriture en base en échec ne prive pas le
+// salon de son miroir.
 //
 // Un passage, par source : lire le flux public → garder ce qui est postérieur
 // au curseur → émettre un event `social.mirror` par publication → avancer le
@@ -41,6 +53,7 @@ import {
 } from '@/utils/social/youtubeMirror';
 import { fetchOwnMedia } from '@/utils/social/instagramMirror';
 import { fetchOwnVideos } from '@/utils/social/tiktokMirror';
+import { persistFeedItems } from '@/utils/social/socialFeed';
 
 function isAuthorized(req: NextApiRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -53,7 +66,13 @@ function isAuthorized(req: NextApiRequest): boolean {
   return typeof q === 'string' && q === secret;
 }
 
-type SourceReport = { mirrored: number; checked: number; error?: string };
+type SourceReport = {
+  mirrored: number;
+  checked: number;
+  /** Nouveautés écrites pour le mur du site. */
+  stored?: number;
+  error?: string;
+};
 
 /**
  * Émet les publications nouvelles d'une source et avance son curseur.
@@ -68,7 +87,8 @@ type SourceReport = { mirrored: number; checked: number; error?: string };
 async function mirrorSource(
   tenantId: string,
   source: MirrorSource,
-  channelId: string,
+  /** `null` = miroir Discord non configuré : on alimente le site, sans plus. */
+  channelId: string | null,
   fetchPosts: () => Promise<MirrorPost[] | null>,
   prefix: string
 ): Promise<SourceReport> {
@@ -83,9 +103,16 @@ async function mirrorSource(
   if (posts === null)
     return { mirrored: 0, checked: 0, error: 'not_configured' };
 
+  // AVANT le curseur, et avant toute sortie anticipée : le mur du site veut
+  // l'historique récent, pas seulement les nouveautés du quart d'heure.
+  // `persistFeedItems` ne lève jamais — le mur est un bonus, son échec ne doit
+  // pas priver Discord de son miroir.
+  const stored = await persistFeedItems(tenantId, source, posts);
+  if (!channelId) return { mirrored: 0, checked: posts.length, stored };
+
   const since = await readCursor(tenantId, source);
   const fresh = selectNew(posts, since);
-  if (fresh.length === 0) return { mirrored: 0, checked: posts.length };
+  if (fresh.length === 0) return { mirrored: 0, checked: posts.length, stored };
 
   let mirrored = 0;
   let lastAt: string | null = null;
@@ -134,7 +161,7 @@ async function mirrorSource(
     }
   }
 
-  return { mirrored, checked: posts.length };
+  return { mirrored, checked: posts.length, stored };
 }
 
 /** Tenants actifs à parcourir, ou le seul demandé via `?tenant=`. */
@@ -163,12 +190,11 @@ async function resolveTargetTenants(req: NextApiRequest): Promise<string[]> {
 async function mirrorForTenant(
   tenantId: string
 ): Promise<Record<string, unknown>> {
+  // Salon absent = miroir Discord non activé. Ce n'est PAS une raison de
+  // s'arrêter : le mur « Nos réseaux » du site se remplit quand même, et il n'a
+  // jamais eu besoin de Discord. Sortir ici, comme on le faisait quand le seul
+  // client était le salon, laisserait le site désespérément vide.
   const channelId = await readChannelId(tenantId);
-  if (!channelId) {
-    // Miroir non configuré : ce n'est pas une panne, c'est une fonctionnalité
-    // qu'on n'a pas activée.
-    return { tenantId, skipped: 'no_channel' };
-  }
 
   // Le handle sert d'identité du compte à suivre. Il vient des identifiants de
   // publication, mais la LECTURE n'en a pas besoin.

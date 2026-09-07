@@ -64,8 +64,7 @@ export default ns('homeV2', {
   spotNextLive: "Le lecteur s'ouvre ici quand la chaîne est en direct.",
   spotNextLiveHint: 'Suivre sur Twitch →',
   teamsStripEyebrow: '{count} équipes engagées',
-  teamsStripTitle:
-    'Elles participent à la seconde édition de la Women’s Cup',
+  teamsStripTitle: 'Elles participent à la seconde édition de la Women’s Cup',
   newsEyebrow: 'Actualités',
   newsTitle: 'Les dernières actus',
   newsAll: 'Toutes les actus',
@@ -76,4 +75,8 @@ export default ns('homeV2', {
     'Ils soutiennent la compétition · ils la diffusent · ils en parlent',
   supportPartnersLink: 'Voir tous les partenaires',
   supportBecomePartner: 'Devenir partenaire',
+  socialEyebrow: 'En direct de nos comptes',
+  socialTitle: 'Nos réseaux',
+  socialOpen: 'Voir la publication',
+  socialNoCaption: 'Publication sans légende',
 });
