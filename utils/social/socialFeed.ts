@@ -31,13 +31,10 @@
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { rehostImage } from './rehostImage';
-import type { MirrorPost, MirrorSource } from './feedMirror';
+import { CURSOR_KEYS, type MirrorPost, type MirrorSource } from './feedMirror';
 
 /** Sous-dossier du bucket public, à côté de `news/`. */
 const IMAGE_PREFIX = 'social';
-
-/** Ce que la home affiche par défaut. */
-export const FEED_PAGE_SIZE = 12;
 
 /**
  * Nouveautés écrites par passage et par source.
@@ -167,36 +164,69 @@ async function copyThumbnail(
 /* Lecture — appelée par le rendu public                                       */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Les dernières publications, toutes sources confondues.
- *
- * Lecture par la service role (rendu serveur) ; la table porte aussi une
- * policy de lecture publique, puisque ce contenu est déjà public là où il a
- * été publié.
- */
-export async function loadSocialFeed(
-  tenantId: string,
-  limit = FEED_PAGE_SIZE
-): Promise<SocialFeedItem[]> {
-  if (!supabaseAdmin) return [];
-  const { data, error } = await supabaseAdmin
-    .from('social_feed_items')
-    .select('id, source, url, text, thumbnail_url, published_at')
-    .eq('tenant_id', tenantId)
-    .order('published_at', { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    logger.error('[socialFeed] lecture impossible: %s', error.message);
-    return [];
-  }
-
-  return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+function mapRow(row: Record<string, unknown>): SocialFeedItem {
+  return {
     id: String(row.id),
     source: String(row.source) as MirrorSource,
     url: String(row.url),
     text: String(row.text ?? ''),
     thumbnailUrl: row.thumbnail_url ? String(row.thumbnail_url) : null,
     publishedAt: String(row.published_at),
-  }));
+  };
+}
+
+/**
+ * LA DERNIÈRE PUBLICATION DE CHAQUE RÉSEAU, de la plus récente à la plus
+ * ancienne.
+ *
+ * Une carte par compte, et pas les N plus récentes toutes sources confondues :
+ * les réseaux ne publient pas au même rythme, et une chaîne prolifique
+ * remplirait le mur à elle seule — quinze vidéos YouTube masquaient déjà les
+ * trois autres comptes. Le mur sert à montrer QUE NOUS SOMMES LÀ, sur chacun
+ * d'eux ; c'est une vitrine, pas un fil d'actualité.
+ *
+ * UNE REQUÊTE PAR SOURCE, et non une requête large qu'on dédoublonne ensuite.
+ * Un compte qui publie deux fois par an tomberait hors de n'importe quelle
+ * fenêtre récente, et disparaîtrait du mur alors qu'il a bien une dernière
+ * publication à montrer. Chaque requête tape l'index `(tenant_id,
+ * published_at DESC)` et ne rend qu'une ligne ; le tout ne s'exécute qu'à la
+ * régénération de la page, pas à chaque visite.
+ */
+export async function loadSocialFeed(
+  tenantId: string
+): Promise<SocialFeedItem[]> {
+  const client = supabaseAdmin;
+  if (!client) return [];
+
+  const sources = Object.keys(CURSOR_KEYS) as MirrorSource[];
+  const latest = await Promise.all(
+    sources.map(async (source) => {
+      const { data, error } = await client
+        .from('social_feed_items')
+        .select('id, source, url, text, thumbnail_url, published_at')
+        .eq('tenant_id', tenantId)
+        .eq('source', source)
+        .order('published_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        // Une source illisible n'en condamne pas trois autres.
+        logger.error(
+          '[socialFeed] lecture %s impossible: %s',
+          source,
+          error.message
+        );
+        return null;
+      }
+      return data ? mapRow(data as Record<string, unknown>) : null;
+    })
+  );
+
+  return latest
+    .filter((item): item is SocialFeedItem => item !== null)
+    .sort(
+      (a, b) =>
+        new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+    );
 }

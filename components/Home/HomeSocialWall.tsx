@@ -1,8 +1,14 @@
 // components/Home/HomeSocialWall.tsx
 //
-// Section « Nos réseaux » de l'accueil : les dernières publications de nos
-// comptes Bluesky, YouTube, Instagram et TikTok, dans l'ordre chronologique
-// inverse, toutes sources mêlées.
+// Section « Nos réseaux » de l'accueil : LA DERNIÈRE publication de chacun de
+// nos comptes — Bluesky, YouTube, Instagram, TikTok — de la plus récente à la
+// plus ancienne.
+//
+// UNE CARTE PAR RÉSEAU, pas un fil d'actualité. Les comptes ne publient pas au
+// même rythme : à mêler les sources, une chaîne prolifique occupe tout le mur
+// et les trois autres comptes deviennent invisibles — quinze vidéos YouTube y
+// suffisaient. Cette section dit « nous sommes là, sur chacun de ces réseaux » ;
+// le fil, il est chez eux, et chaque carte y mène.
 //
 // RENDU SSR À PARTIR DE LA BASE, pas d'embeds. Les widgets officiels de ces
 // quatre réseaux chargent chacun leur script tiers, posent leurs traceurs, et
@@ -113,7 +119,9 @@ function SocialCard({ item }: { item: SocialFeedItem }) {
             src={item.thumbnailUrl}
             alt=""
             fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            // Deux colonnes jusqu'à `lg`, quatre au-delà — la grille juste en
+            // dessous. Un `sizes` qui ment fait télécharger la mauvaise taille.
+            sizes="(max-width: 1024px) 50vw, 25vw"
             className="object-cover transition-transform duration-500 group-hover:scale-[1.04] motion-reduce:transform-none"
           />
         ) : (
@@ -176,7 +184,9 @@ export default function HomeSocialWall({
         </h2>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      {/* Deux colonnes puis quatre : avec au plus une carte par réseau, un
+          palier à trois laisserait une ligne orpheline. */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {items.map((item) => (
           <SocialCard key={item.id} item={item} />
         ))}
