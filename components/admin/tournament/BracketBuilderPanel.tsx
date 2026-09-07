@@ -69,7 +69,12 @@ export default function BracketBuilderPanel() {
     try {
       const [matchRes, teamsRes] = await Promise.all([
         adminFetch(
-          `/api/admin/tournament/${id}/matches?layout=bracket&limit=512&includeGraph=1`
+          // `includeTeams=1` : sans lui, la réponse ne porte que `team1_id` /
+          // `team2_id`, et chaque carte s'affichait SANS NOM D'ÉQUIPE — trente
+          // cartes vides sur un tournoi dont les trente matchs sont pourtant
+          // appariés. Les deux paramètres qui étaient là avant
+          // (`layout=bracket`, `includeGraph=1`) ne sont lus par aucun endpoint.
+          `/api/admin/tournament/${id}/matches?includeTeams=1&limit=512`
         ),
         adminFetch(`/api/admin/tournament/${id}/teams`),
       ]);

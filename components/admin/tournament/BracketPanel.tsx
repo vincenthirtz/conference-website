@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentBracket from '@/lib/i18n/locales/admin-fr/adminTournamentBracket';
@@ -32,6 +33,7 @@ export default function BracketPanel() {
   const [generating, setGenerating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { addToast } = useToast();
+  const { adminFetchJson } = useAdminFetch();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { mutate: generateBracket } = useIdempotentMutation();
   const t = useAdminT(nsAdminTournamentBracket);
@@ -40,17 +42,18 @@ export default function BracketPanel() {
   useEffect(() => {
     if (!tournamentId) return;
     setLoading(true);
-    fetch(
-      `/api/admin/tournament/${tournamentId}/matches?layout=bracket&limit=1`
+    // `useAdminFetch` et non un `fetch` brut : il porte le jeton et renvoie à la
+    // connexion sur 401. Le repli cookie sauvait la mise ici, mais une session
+    // expirée aurait fait répondre « aucun match » — et ce panneau propose
+    // ALORS de générer un bracket, sur un tournoi qui en a déjà un.
+    // `layout=bracket` retiré : aucun endpoint ne lit ce paramètre.
+    adminFetchJson<{ matches?: unknown[] }>(
+      `/api/admin/tournament/${tournamentId}/matches?limit=1`
     )
-      .then((r) => r.json())
-      .then((json) => {
-        const matches = json.matches || [];
-        setHasMatches(matches.length > 0);
-      })
+      .then((json) => setHasMatches((json.matches || []).length > 0))
       .catch(() => setHasMatches(false))
       .finally(() => setLoading(false));
-  }, [tournamentId]);
+  }, [tournamentId, adminFetchJson]);
 
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault();

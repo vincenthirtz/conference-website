@@ -9,6 +9,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { parseNotes } from './types';
 import InlineScoreEditor from './InlineScoreEditor';
 import type { ScheduleMatch, BracketRound } from './types';
+import { isEliminationShape } from '@/utils/bracket/shape';
 import nsAdminBracketTreeView from '@/lib/i18n/locales/admin-fr/adminBracketTreeView';
 
 type BracketTreeViewProps = {
@@ -58,11 +59,11 @@ export default function BracketTreeView({
 }: BracketTreeViewProps) {
   if (!rounds.length) return null;
 
-  const isElimination =
-    rounds.length > 1 &&
-    rounds[0].matches.length > rounds[rounds.length - 1].matches.length;
-
-  if (!isElimination) {
+  // La forme se décide sur le LIEN entre matchs, pas sur la taille des tours :
+  // un round robin suivi d'une finale a lui aussi un premier tour plus gros que
+  // le dernier, et l'ancienne règle le dessinait en arbre — avec des
+  // connecteurs entre des matchs qui ne s'enchaînent pas.
+  if (!isEliminationShape(rounds)) {
     return <SwissBracketView rounds={rounds} onScoreSaved={onScoreSaved} />;
   }
 
