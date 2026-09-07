@@ -1,7 +1,7 @@
 // pages/api/cron/social-mirror.ts
 //
-// Recopie dans un salon Discord ce que l'association publie ailleurs :
-// les posts Bluesky et les vidéos YouTube.
+// Recopie dans un salon Discord ce que l'association publie ailleurs : posts
+// Bluesky, vidéos YouTube, publications Instagram et vidéos TikTok.
 //
 // Un passage, par source : lire le flux public → garder ce qui est postérieur
 // au curseur → émettre un event `social.mirror` par publication → avancer le
@@ -12,9 +12,10 @@
 // passage suivant reprend là — plutôt que d'avancer d'office et de perdre trois
 // publications en silence.
 //
-// UNE SOURCE EN PANNE N'ARRÊTE PAS L'AUTRE. YouTube injoignable ne doit pas
-// empêcher les posts Bluesky d'arriver : chaque source est traitée dans son
-// propre try, et le rapport dit laquelle a échoué.
+// UNE SOURCE EN PANNE N'ARRÊTE PAS LES AUTRES. YouTube injoignable, ou un
+// jeton Instagram périmé, ne doit pas empêcher les posts Bluesky d'arriver :
+// chaque source est traitée dans son propre try, et le rapport dit laquelle a
+// échoué.
 //
 // Auth : Bearer CRON_SECRET (header) ou ?secret=... — comme les autres crons.
 
@@ -38,6 +39,8 @@ import {
   fetchChannelVideos,
   YOUTUBE_CHANNEL_KEY,
 } from '@/utils/social/youtubeMirror';
+import { fetchOwnMedia } from '@/utils/social/instagramMirror';
+import { fetchOwnVideos } from '@/utils/social/tiktokMirror';
 
 function isAuthorized(req: NextApiRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -57,15 +60,19 @@ type SourceReport = { mirrored: number; checked: number; error?: string };
  *
  * `prefix` distingue les sources dans le salon : sans lui, un titre de vidéo et
  * un post se ressemblent une fois le lien replié en aperçu.
+ *
+ * `fetchPosts` peut rendre `null` pour dire « source pas configurée » — un
+ * compte Instagram jamais connecté, par exemple. Ce n'est pas une panne, et ça
+ * ne doit pas remplir le journal d'erreurs toutes les quinze minutes.
  */
 async function mirrorSource(
   tenantId: string,
   source: MirrorSource,
   channelId: string,
-  fetchPosts: () => Promise<MirrorPost[]>,
+  fetchPosts: () => Promise<MirrorPost[] | null>,
   prefix: string
 ): Promise<SourceReport> {
-  let posts: MirrorPost[];
+  let posts: MirrorPost[] | null;
   try {
     posts = await fetchPosts();
   } catch (err) {
@@ -73,6 +80,8 @@ async function mirrorSource(
     logger.error('[cron/social-mirror] %s injoignable: %s', source, message);
     return { mirrored: 0, checked: 0, error: message };
   }
+  if (posts === null)
+    return { mirrored: 0, checked: 0, error: 'not_configured' };
 
   const since = await readCursor(tenantId, source);
   const fresh = selectNew(posts, since);
@@ -147,9 +156,9 @@ async function resolveTargetTenants(req: NextApiRequest): Promise<string[]> {
 /**
  * Un passage de miroir pour UN tenant.
  *
- * Chaque espace a son salon d'actualités, son compte Bluesky et sa chaîne
- * YouTube : le miroir n'a de sens que par tenant. Non configuré = fonction en
- * veille, pas panne.
+ * Chaque espace a son salon d'actualités, ses comptes Bluesky et Instagram et
+ * sa chaîne YouTube : le miroir n'a de sens que par tenant. Non configuré =
+ * fonction en veille, pas panne.
  */
 async function mirrorForTenant(
   tenantId: string
@@ -185,7 +194,29 @@ async function mirrorForTenant(
       )
     : { mirrored: 0, checked: 0, error: 'no_channel_id' };
 
-  return { tenantId, bluesky, youtube };
+  // Instagram ne sert aucun flux public : la lecture passe par le jeton du
+  // compte connecté, et `fetchOwnMedia` rend `null` quand il n'y en a pas.
+  const instagram: SourceReport = await mirrorSource(
+    tenantId,
+    'instagram',
+    channelId,
+    () => fetchOwnMedia(tenantId),
+    '📸 Instagram —'
+  );
+
+  // Même posture qu'Instagram : aucun flux public, donc lecture authentifiée,
+  // et `null` quand le compte n'est pas connecté. Le jeton TikTok ne vivant que
+  // 24 h, c'est ce passage-ci qui le rafraîchit au besoin — le cron quotidien
+  // arriverait trop tard.
+  const tiktok: SourceReport = await mirrorSource(
+    tenantId,
+    'tiktok',
+    channelId,
+    () => fetchOwnVideos(tenantId),
+    '🎵 TikTok —'
+  );
+
+  return { tenantId, bluesky, youtube, instagram, tiktok };
 }
 
 export default async function handler(

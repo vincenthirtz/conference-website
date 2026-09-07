@@ -3107,7 +3107,10 @@ kind, source, tournamentId }`.
   sinon — donc un `@everyone` glisse dans un gabarit admin reste inerte.
 - `kind` : `incomplete` / `complete_with_warnings` / `complete` / `custom`.
 - `source` : `admin` / `bot` / `cron`.
-- Contenu tronque a 1900 caracteres cote site ET cote bot.
+- Contenu tronque a 1900 caracteres cote bot — mais le site coupe DEJA le texte
+  a la source (700 caracteres pour une legende Instagram, qui peut monter a
+  2200). La troncature du bot se fait par la FIN, donc sur l'URL : s'en
+  remettre a elle donnerait un message sans lien et sans apercu.
 
 **Automatisation** — le cron `/api/cron/team-roster-reminders` (Netlify,
 quotidien 09:00 UTC) n'envoie qu'aux jalons **J-21 / J-14 / J-7 / J-3 / J-1**
@@ -3122,7 +3125,21 @@ Consomme par `services/discord-bot/social-mirror.js`.
 
 **Payload** : `{ source, channelId, content, url, postedAt }`.
 
-`source` vaut `bluesky` ou `youtube`. Emis par le cron `/api/cron/social-mirror`.
+`source` vaut `bluesky`, `youtube`, `instagram` ou `tiktok`. Emis par le cron
+`/api/cron/social-mirror` (toutes les 15 min), une passe par source et par
+tenant, chacune avec son propre curseur dans `site_settings`.
+
+**Le bot est AGNOSTIQUE de la source** : `source` ne sert qu'aux journaux, et le
+message arrive deja mis en forme (prefixe compris : `📺 Nouvelle video —`,
+`📸 Instagram —`, `🎵 TikTok —` ; Bluesky n'en a pas, un post s'y lit tel quel).
+Ajouter un reseau ne touche donc pas au bot.
+
+**Deux sources se lisent sans jeton, deux non.** Bluesky (`public.api.bsky.app`)
+et YouTube (flux Atom de la chaine) sont anonymes et gratuits. Instagram et
+TikTok n'exposent AUCUN flux public : la lecture passe par le jeton du compte
+connecte (`social_accounts`), et la source reste en veille (`not_configured`)
+tant que personne n'a connecte le compte. Le jeton TikTok ne vivant que 24 h,
+il est rafraichi A LA LECTURE, pas par le cron quotidien de jetons.
 
 - **Le salon est DANS le payload**, contrairement a tous les autres handlers qui
   resolvent leurs canaux eux-memes. Un miroir vise un salon choisi par qui le
@@ -3132,12 +3149,33 @@ Consomme par `services/discord-bot/social-mirror.js`.
   pinger le serveur.
 - Le message se termine par le lien du post : Discord en tire une carte avec
   texte et image, donc le bot ne joint pas l'image lui-meme.
-- Contenu tronque a 1900 caracteres cote site ET cote bot.
+- Contenu tronque a 1900 caracteres cote bot — mais le site coupe DEJA le texte
+  a la source (700 caracteres pour une legende Instagram, qui peut monter a
+  2200). La troncature du bot se fait par la FIN, donc sur l'URL : s'en
+  remettre a elle donnerait un message sans lien et sans apercu.
 
 **Sens du flux.** `social.post` va de l'admin VERS les reseaux ; `social.mirror`
 en REVIENT. Les deux coexistent, et un post compose dans l'admin qui part sur
 Bluesky sera donc aussi recopie par le miroir dans son salon — un salon
 different de `#annonces`, donc sans doublon visible au meme endroit.
+
+#### Miroir TikTok (site → TikTok, lecture seule)
+
+TikTok n'est PAS une cible de publication : on ne publie pas de video depuis
+l'admin. C'est une source de miroir, et le seul acces supporte a « les dernieres
+videos de ce compte » est authentifie.
+
+- Mise en service : Communications › Reseaux, carte « Miroir Discord — TikTok ».
+  Client key + client secret (chiffres dans `integration_secrets`), puis
+  `GET /api/admin/tiktok/authorize` → consentement → `.../callback`.
+- Scopes : `user.info.basic`, `video.list`. Pas de `video.upload`, qui exigerait
+  l'audit complet de l'app ; le sandbox suffit pour notre propre compte.
+- Jeton d'acces 24 h, refresh token 365 j qui **tourne** (TikTok peut en renvoyer
+  un nouveau a chaque echange) — les deux colonnes de `social_accounts` se
+  reecrivent donc ensemble, cf. la migration `social_accounts_refresh_token.sql`.
+- TikTok repond **200 sur des echecs** : le verdict est dans `error.code`, pas
+  dans le statut HTTP.
+- `create_time` est un epoch **en secondes**.
 
 #### Cible Instagram (site → Meta, sans passer par le bot)
 
@@ -3179,7 +3217,10 @@ Emis par `/api/admin/social-posts` (onglet « Reseaux » de
   ne doit pas pouvoir pinger tout le serveur par accident.
 - `imageUrl` est jointe en `files: [url]` si elle est en http(s). Discord
   rapatrie l'image au POST, contrairement a Meta qui la recupere plus tard.
-- Contenu tronque a 1900 caracteres cote site ET cote bot.
+- Contenu tronque a 1900 caracteres cote bot — mais le site coupe DEJA le texte
+  a la source (700 caracteres pour une legende Instagram, qui peut monter a
+  2200). La troncature du bot se fait par la FIN, donc sur l'URL : s'en
+  remettre a elle donnerait un message sans lien et sans apercu.
 
 **Sens du flux — a ne pas confondre avec `news-forwarder.js`.** Ce dernier fait
 l'INVERSE : il surveille le meme salon et transforme chaque message en actualite

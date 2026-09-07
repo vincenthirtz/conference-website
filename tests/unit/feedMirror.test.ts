@@ -1,4 +1,5 @@
-// Miroirs « nos comptes → un salon Discord » : socle commun, Bluesky, YouTube.
+// Miroirs « nos comptes → un salon Discord » : socle commun, Bluesky, YouTube,
+// Instagram, TikTok.
 //
 // Ce qui compte ici :
 //   - le curseur STRICT. Un `>=` reposterait indéfiniment la dernière
@@ -7,7 +8,11 @@
 //     dans l'autre sens ;
 //   - ne recopier QUE nos contenus : ni reposts, ni réponses ;
 //   - `published` et non `updated` côté YouTube : corriger une faute dans un
-//     titre ne doit pas republier une vidéo de l'an dernier.
+//     titre ne doit pas republier une vidéo de l'an dernier ;
+//   - la date Instagram, dont le décalage arrive sans deux-points : illisible,
+//     elle ferait écarter TOUTES les publications, en silence ;
+//   - la date TikTok, qui est un epoch EN SECONDES : lue en millisecondes,
+//     chaque vidéo daterait de 1970 et le miroir resterait muet.
 
 import { describe, it, expect, vi } from 'vitest';
 
@@ -27,6 +32,16 @@ import {
   decodeEntities,
   parseYoutubeFeed,
 } from '../../utils/social/youtubeMirror';
+import {
+  MAX_CAPTION,
+  normalizeTimestamp,
+  parseMedia,
+  truncateCaption,
+} from '../../utils/social/instagramMirror';
+import {
+  parseVideos,
+  timestampFromCreateTime,
+} from '../../utils/social/tiktokMirror';
 
 const HANDLE = 'womenscup.bsky.social';
 
@@ -121,7 +136,10 @@ describe('Bluesky', () => {
   });
 
   it('écarte les reposts', () => {
-    const item = { ...bskyItem('a', '2026-09-02T10:00:00Z'), reason: { by: {} } };
+    const item = {
+      ...bskyItem('a', '2026-09-02T10:00:00Z'),
+      reason: { by: {} },
+    };
     expect(parseFeed({ feed: [item] }, HANDLE)).toHaveLength(0);
   });
 
@@ -188,14 +206,208 @@ describe('YouTube', () => {
 
   describe('decodeEntities', () => {
     it('décode les entités nommées et numériques', () => {
-      expect(decodeEntities('a &amp; b &#39;c&#39; &lt;d&gt; &quot;e&quot;')).toBe(
-        `a & b 'c' <d> "e"`
-      );
+      expect(
+        decodeEntities('a &amp; b &#39;c&#39; &lt;d&gt; &quot;e&quot;')
+      ).toBe(`a & b 'c' <d> "e"`);
     });
 
     it('décode `&amp;` en dernier, sans double décodage', () => {
       // Le texte d'origine disait littéralement « &lt; ».
       expect(decodeEntities('&amp;lt;')).toBe('&lt;');
+    });
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+
+describe('Instagram', () => {
+  const media = {
+    data: [
+      {
+        id: '17900000000000000',
+        caption: 'Finale ce soir 🔥 #owwc',
+        permalink: 'https://www.instagram.com/reel/DAbCdEfGhIj/',
+        timestamp: '2026-09-02T12:00:00+0000',
+      },
+      {
+        id: '17900000000000001',
+        caption: null,
+        permalink: 'https://www.instagram.com/p/DAbCdEfGhIk/',
+        timestamp: '2026-09-01T09:30:00+0000',
+      },
+    ],
+  };
+
+  it('lit identifiant, légende, permalien et date', () => {
+    const out = parseMedia(media);
+    expect(out).toHaveLength(2);
+    expect(out[0].id).toBe('17900000000000000');
+    expect(out[0].url).toBe('https://www.instagram.com/reel/DAbCdEfGhIj/');
+    expect(out[0].text).toBe('Finale ce soir 🔥 #owwc');
+  });
+
+  it('rend une date que `selectNew` sait lire', () => {
+    // Instagram écrit `+0000` sans deux-points. Une date illisible ferait
+    // écarter la publication — miroir muet, sans la moindre erreur.
+    const out = parseMedia(media);
+    expect(out[0].publishedAt).toBe('2026-09-02T12:00:00+00:00');
+    expect(selectNew(out, new Date('2026-09-01T00:00:00Z'))).toHaveLength(2);
+  });
+
+  it('accepte une publication sans légende', () => {
+    // Une image seule se réduit à son lien, comme chez les autres sources.
+    const out = parseMedia(media);
+    expect(out[1].text).toBe('');
+    expect(buildMirrorMessage(out[1])).toBe(
+      'https://www.instagram.com/p/DAbCdEfGhIk/'
+    );
+  });
+
+  it('écarte une entrée sans permalien ou sans date', () => {
+    expect(
+      parseMedia({
+        data: [
+          { id: 'a', caption: 'x', timestamp: '2026-09-02T12:00:00+0000' },
+          { id: 'b', caption: 'x', permalink: 'https://instagram.test/p/b/' },
+        ],
+      })
+    ).toEqual([]);
+  });
+
+  it('ne casse pas sur une réponse vide ou malformée', () => {
+    expect(parseMedia(null)).toEqual([]);
+    expect(parseMedia({})).toEqual([]);
+    expect(parseMedia({ data: [{}] })).toEqual([]);
+  });
+
+  describe('truncateCaption', () => {
+    it('laisse une légende courte intacte', () => {
+      expect(truncateCaption('court')).toBe('court');
+    });
+
+    it('coupe une légende trop longue — sinon Discord emporterait le lien', () => {
+      // 2 200 caractères possibles côté Instagram, 2 000 max côté Discord : le
+      // handler du bot tronque par la FIN, c'est-à-dire sur l'URL.
+      const long = 'mot '.repeat(500);
+      const out = truncateCaption(long);
+      expect(out.length).toBeLessThanOrEqual(MAX_CAPTION + 1);
+      expect(out.endsWith('…')).toBe(true);
+    });
+
+    it('recule jusqu’à l’espace le plus proche pour ne pas couper un mot', () => {
+      const out = truncateCaption(`${'a'.repeat(20)} ${'b'.repeat(20)}`, 24);
+      expect(out).toBe(`${'a'.repeat(20)}…`);
+    });
+
+    it('ne recule pas jusqu’à un espace lointain — ce serait perdre un paragraphe', () => {
+      const out = truncateCaption(`${'a'.repeat(10)} ${'b'.repeat(20)}`, 25);
+      expect(out).toBe(`${'a'.repeat(10)} ${'b'.repeat(14)}…`);
+    });
+  });
+
+  describe('normalizeTimestamp', () => {
+    it('insère les deux-points du décalage', () => {
+      expect(normalizeTimestamp('2026-09-02T12:00:00+0000')).toBe(
+        '2026-09-02T12:00:00+00:00'
+      );
+      expect(normalizeTimestamp('2026-09-02T12:00:00-0500')).toBe(
+        '2026-09-02T12:00:00-05:00'
+      );
+    });
+
+    it('laisse une date déjà normalisée tranquille', () => {
+      expect(normalizeTimestamp('2026-09-02T12:00:00Z')).toBe(
+        '2026-09-02T12:00:00Z'
+      );
+      expect(normalizeTimestamp('2026-09-02T12:00:00+00:00')).toBe(
+        '2026-09-02T12:00:00+00:00'
+      );
+    });
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+
+describe('TikTok', () => {
+  const listing = {
+    data: {
+      videos: [
+        {
+          id: '7300000000000000000',
+          title: '',
+          video_description: 'Best of POTG #owwc',
+          create_time: 1789000000,
+          share_url:
+            'https://www.tiktok.com/@ow_womenscup/video/7300000000000000000',
+        },
+        {
+          id: '7300000000000000001',
+          title: 'Résumé de la finale',
+          video_description: '',
+          create_time: 1788000000,
+          share_url:
+            'https://www.tiktok.com/@ow_womenscup/video/7300000000000000001',
+        },
+      ],
+      cursor: 1788000000,
+      has_more: false,
+    },
+  };
+
+  it('lit identifiant, légende, lien de partage et date', () => {
+    const out = parseVideos(listing);
+    expect(out).toHaveLength(2);
+    expect(out[0].id).toBe('7300000000000000000');
+    expect(out[0].url).toContain('/video/7300000000000000000');
+    expect(out[0].text).toBe('Best of POTG #owwc');
+  });
+
+  it('retombe sur le titre quand la description est vide', () => {
+    // Sur TikTok, la légende affichée est `video_description` ; le titre est
+    // souvent vide. On prend donc l'une, puis l'autre.
+    expect(parseVideos(listing)[1].text).toBe('Résumé de la finale');
+  });
+
+  it('lit `create_time` en SECONDES', () => {
+    // En millisecondes, la vidéo daterait de 1970 : antérieure à tout curseur,
+    // elle ne serait jamais recopiée — et sans la moindre erreur.
+    const out = parseVideos(listing);
+    expect(out[0].publishedAt).toBe(new Date(1789000000 * 1000).toISOString());
+    expect(new Date(out[0].publishedAt).getUTCFullYear()).toBeGreaterThan(2020);
+  });
+
+  it('écarte une vidéo sans lien de partage ou sans date', () => {
+    expect(
+      parseVideos({
+        data: {
+          videos: [
+            { id: 'a', video_description: 'x', create_time: 1789000000 },
+            { id: 'b', video_description: 'x', share_url: 'https://tt.test/b' },
+          ],
+        },
+      })
+    ).toEqual([]);
+  });
+
+  it('ne casse pas sur une réponse vide ou malformée', () => {
+    expect(parseVideos(null)).toEqual([]);
+    expect(parseVideos({})).toEqual([]);
+    expect(parseVideos({ data: {} })).toEqual([]);
+    expect(parseVideos({ data: { videos: [{}] } })).toEqual([]);
+  });
+
+  describe('timestampFromCreateTime', () => {
+    it('convertit un epoch en secondes', () => {
+      expect(timestampFromCreateTime(1789000000)).toBe(
+        new Date(1789000000 * 1000).toISOString()
+      );
+    });
+
+    it('refuse ce qui n’est pas une date exploitable', () => {
+      expect(timestampFromCreateTime(0)).toBeNull();
+      expect(timestampFromCreateTime(-1)).toBeNull();
+      expect(timestampFromCreateTime(undefined)).toBeNull();
+      expect(timestampFromCreateTime('pas-un-nombre')).toBeNull();
     });
   });
 });

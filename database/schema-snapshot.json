@@ -1096,6 +1096,8 @@
       "id",
       "last_error",
       "platform",
+      "refresh_token_encrypted",
+      "refresh_token_expires_at",
       "scopes",
       "status",
       "tenant_id",

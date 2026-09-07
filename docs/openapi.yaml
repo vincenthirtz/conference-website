@@ -19495,9 +19495,141 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/tiktok/authorize:
+    get:
+      summary: Depart du consentement TikTok (redirection vers TikTok).
+      operationId: adminTiktokAuthorize
+      tags:
+        - admin/communications
+      description: |
+        Redirige le staff vers l'ecran d'autorisation TikTok avec un `state`
+        signe HMAC (CSRF + binding tenant, TTL 10 min, sel propre au parcours
+        TikTok). Scopes demandes : `user.info.basic`, `video.list` — LECTURE
+        SEULE, pour le miroir Discord. Pas de `video.upload`, qui exigerait
+        l'audit complet de l'app.
+
+        Repond 503 si la client key ou le client secret manquent
+        (`integration_secrets`) : le miroir TikTok est alors dormant, pas en
+        panne.
+      security:
+        - StaffSession: []
+      responses:
+        '302':
+          description: Redirection vers https://www.tiktok.com/v2/auth/authorize/.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          description: TikTok non configure (client key ou secret absents).
+  /api/admin/tiktok/callback:
+    get:
+      summary: Retour du consentement TikTok — persiste le compte connecte.
+      operationId: adminTiktokCallback
+      tags:
+        - admin/communications
+      description: |
+        URL a declarer TELLE QUELLE dans les reglages de l'app TikTok. Echange
+        le code contre un couple de jetons (acces 24 h, rafraichissement 365 j),
+        lit le nom du compte, et ecrit `social_accounts` avec les DEUX jetons
+        CHIFFRES (AES-256-GCM).
+
+        Repond toujours par une REDIRECTION vers
+        `/admin/communications?tab=social`, avec le resultat en query
+        (`tiktok=connected|cancelled|error`) : on arrive ici depuis un
+        navigateur, pas depuis un fetch.
+      security:
+        - StaffSession: []
+      parameters:
+        - name: code
+          in: query
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+          description: State signe emis par /api/admin/tiktok/authorize.
+        - name: error
+          in: query
+          schema:
+            type: string
+          description: Renseigne par TikTok si l'utilisateur refuse.
+      responses:
+        '302':
+          description: Redirection vers le panneau, resultat en query.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/tiktok/credentials:
+    get:
+      summary: Etat de la mise en service TikTok (jamais les valeurs).
+      operationId: adminTiktokCredentialsGet
+      tags:
+        - admin/communications
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: |
+            `{ clientKeySet, clientSecretSet, encryptionReady, connected,
+            handle, redirectUri }`. `redirectUri` est l'URI a recopier au
+            caractere pres dans l'app TikTok.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      summary: Pose la client key et le client secret TikTok (chiffres).
+      operationId: adminTiktokCredentialsPut
+      tags:
+        - admin/communications
+      description: |
+        Les DEUX ensemble, toujours : une paire depareillee n'a pour symptome
+        qu'un `invalid_client` au bout du parcours OAuth, qui ne dit pas lequel
+        des deux est en cause. Chiffres cote serveur (SECRETS_ENC_KEY ne vit
+        qu'en production) et jamais relus ensuite.
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - clientKey
+                - clientSecret
+              properties:
+                clientKey:
+                  type: string
+                clientSecret:
+                  type: string
+      responses:
+        '200':
+          description: '`{ ok, clientKeySet, clientSecretSet }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Client key ou secret vide, ou contenant un espace.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          description: SECRETS_ENC_KEY absente — impossible de chiffrer.
   /api/cron/social-mirror:
     get:
-      summary: Recopie posts Bluesky et videos YouTube dans un salon Discord.
+      summary: Recopie nos publications (Bluesky, YouTube, Instagram, TikTok) dans un salon Discord.
       operationId: cronSocialMirrorGet
       tags:
         - cron
@@ -19507,7 +19639,7 @@ paths:
         Voir la variante POST : meme handler, GET et POST acceptes.
       responses:
         '200':
-          description: '`{ bluesky, youtube }`.'
+          description: '`{ bluesky, youtube, instagram, tiktok }`.'
           content:
             application/json:
               schema:
@@ -19516,14 +19648,14 @@ paths:
         '401':
           description: CRON_SECRET absent ou invalide.
     post:
-      summary: Recopie posts Bluesky et videos YouTube dans un salon Discord.
+      summary: Recopie nos publications (Bluesky, YouTube, Instagram, TikTok) dans un salon Discord.
       operationId: cronSocialMirror
       tags:
         - cron
       security:
         - CronSecret: []
       description: |
-        Toutes les 15 minutes (Netlify). Deux sources, un seul salon
+        Toutes les 15 minutes (Netlify). Quatre sources, un seul salon
         (`site_settings.bluesky_mirror_channel_id`) :
 
         - **Bluesky** — fil public `public.api.bsky.app`, SANS authentification.
@@ -19532,9 +19664,23 @@ paths:
           SANS cle API ni quota, contrairement a la Data API v3. L'identifiant
           de chaine (UC…) vit dans `site_settings.youtube_channel_id` ; le
           handle @… ne fonctionne pas dans cette URL.
+        - **Instagram** — `GET /me/media` avec le jeton du compte connecte
+          (scope `instagram_business_basic`, deja acquis pour la publication).
+          Aucun flux public n'existe. Le `timestamp` arrive en `+0000` sans
+          deux-points : il est normalise, sinon la date serait illisible et
+          TOUTES les publications ecartees, en silence.
+        - **TikTok** — `POST /v2/video/list/` avec le jeton du compte connecte
+          (scopes `user.info.basic`, `video.list`). Aucun flux public non plus.
+          Jeton d'acces 24 h rafraichi ICI plutot que par le cron quotidien, et
+          `create_time` lu en SECONDES.
+
+        Les deux sources authentifiees restent en veille (`not_configured`) tant
+        qu'aucun compte n'est connecte : ce n'est pas une panne, et ca ne remplit
+        pas le journal d'erreurs tous les quarts d'heure.
 
         Un curseur PAR SOURCE (`bluesky_mirror_last_post_at`,
-        `youtube_mirror_last_video_at`) : un curseur commun ferait qu'une video
+        `youtube_mirror_last_video_at`, `instagram_mirror_last_post_at`,
+        `tiktok_mirror_last_video_at`) : un curseur commun ferait qu'une video
         recente masque un post plus ancien pas encore recopie.
 
         Le curseur n'avance QUE sur ce qui est reellement emis : un echec a la

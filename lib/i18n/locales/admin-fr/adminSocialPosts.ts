@@ -95,6 +95,25 @@ export default adminNs('adminSocialPosts', {
     'Créez un mot de passe d’application dans Bluesky › Réglages › Confidentialité et sécurité. N’utilisez pas le mot de passe du compte : celui-ci se révoque d’un clic, l’autre non.',
   blueskySaved: 'Compte Bluesky connecté.',
   blueskyError: 'Les identifiants n’ont pas pu être enregistrés.',
+
+  tiktokMirrorLegend: 'Miroir Discord — TikTok',
+  tiktokMirrorIntro:
+    'Recopie automatiquement dans le salon Discord configuré les vidéos publiées sur le compte TikTok, y compris celles postées depuis un téléphone. Lecture seule : on ne publie pas sur TikTok depuis ici.',
+  tiktokConnectedAs: 'Compte TikTok connecté : {handle}',
+  tiktokNotConnected: 'Compte TikTok non connecté.',
+  tiktokCredentialsMissing:
+    'Mise en service : renseignez la client key et le client secret de l’app TikTok.',
+  tiktokConnectCta: 'Connecter le compte TikTok',
+  tiktokReplaceCta: 'Remplacer les identifiants TikTok',
+  tiktokKeyLabel: 'Client key',
+  tiktokSecretLabel: 'Client secret',
+  tiktokHelp:
+    'Créez une app sur developers.tiktok.com, ajoutez le produit Login Kit avec les scopes user.info.basic et video.list, puis partagez le compte de l’association avec le sandbox de l’app. Les deux valeurs se lisent dans l’onglet Credentials ; elles sont chiffrées à l’enregistrement et jamais réaffichées.',
+  tiktokRedirectLabel:
+    'URI de redirection à déclarer dans l’app TikTok, au caractère près :',
+  tiktokSaved:
+    'Identifiants TikTok enregistrés. Vous pouvez connecter le compte.',
+  tiktokError: 'Les identifiants n’ont pas pu être enregistrés.',
   historyTitle: 'Envois précédents',
   historyEmpty: 'Aucun post envoyé pour l’instant.',
   historyLoading: 'Chargement…',

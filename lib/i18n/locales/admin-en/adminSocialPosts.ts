@@ -97,6 +97,24 @@ export default {
     'Create an app password in Bluesky › Settings › Privacy and security. Do not use the account password: an app password can be revoked in one click, the other cannot.',
   blueskySaved: 'Bluesky account connected.',
   blueskyError: 'The credentials could not be saved.',
+
+  tiktokMirrorLegend: 'Discord mirror — TikTok',
+  tiktokMirrorIntro:
+    'Automatically mirrors videos posted on the TikTok account into the configured Discord channel, including those posted from a phone. Read-only: you cannot publish to TikTok from here.',
+  tiktokConnectedAs: 'Connected TikTok account: {handle}',
+  tiktokNotConnected: 'TikTok account not connected.',
+  tiktokCredentialsMissing:
+    'Setup: add the TikTok app client key and client secret.',
+  tiktokConnectCta: 'Connect the TikTok account',
+  tiktokReplaceCta: 'Replace the TikTok credentials',
+  tiktokKeyLabel: 'Client key',
+  tiktokSecretLabel: 'Client secret',
+  tiktokHelp:
+    'Create an app on developers.tiktok.com, add the Login Kit product with the user.info.basic and video.list scopes, then share the association account with the app sandbox. Both values are in the Credentials tab; they are encrypted on save and never shown again.',
+  tiktokRedirectLabel:
+    'Redirect URI to declare in the TikTok app, character for character:',
+  tiktokSaved: 'TikTok credentials saved. You can now connect the account.',
+  tiktokError: 'The credentials could not be saved.',
   historyTitle: 'Previous sends',
   historyEmpty: 'No post sent yet.',
   historyLoading: 'Loading…',

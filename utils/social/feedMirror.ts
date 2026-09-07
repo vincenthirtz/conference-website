@@ -2,16 +2,22 @@
 //
 // Socle commun aux miroirs « un de nos comptes → un salon Discord ».
 //
-// Deux sources aujourd'hui — Bluesky et YouTube — et elles partagent tout sauf
-// la lecture du flux : même curseur, même sélection, même mise en forme, même
-// salon. Ce qui diffère tient dans une fonction `fetch` par source.
+// Quatre sources aujourd'hui — Bluesky, YouTube, Instagram et TikTok — et
+// elles partagent tout sauf la lecture du flux : même curseur, même sélection,
+// même mise en forme, même salon. Ce qui diffère tient dans une fonction
+// `fetch` par source.
+//
+// DEUX D'ENTRE ELLES SE LISENT SANS JETON (Bluesky, YouTube) et deux non
+// (Instagram, TikTok, qui n'exposent aucun flux public). Cette asymétrie ne
+// remonte pas jusqu'ici : le socle reçoit des `MirrorPost`, d'où qu'ils
+// viennent.
 //
 // LE CURSEUR EST UNE DATE, PAS UN IDENTIFIANT. Si trois publications arrivent
 // entre deux passages, il faut toutes les prendre, dans l'ordre — un « dernier
 // id vu » ne le permettrait pas.
 //
-// UN CURSEUR PAR SOURCE. Bluesky et YouTube ne publient pas au même rythme :
-// un curseur commun ferait qu'une vidéo récente masque un post plus ancien mais
+// UN CURSEUR PAR SOURCE. Les comptes ne publient pas au même rythme : un
+// curseur commun ferait qu'une vidéo récente masque un post plus ancien mais
 // pas encore recopié.
 
 import { supabaseAdmin } from '@/utils/supabase';
@@ -24,6 +30,8 @@ export const MIRROR_CHANNEL_KEY = 'bluesky_mirror_channel_id';
 export const CURSOR_KEYS = {
   bluesky: 'bluesky_mirror_last_post_at',
   youtube: 'youtube_mirror_last_video_at',
+  instagram: 'instagram_mirror_last_post_at',
+  tiktok: 'tiktok_mirror_last_video_at',
 } as const;
 
 export type MirrorSource = keyof typeof CURSOR_KEYS;
@@ -59,20 +67,22 @@ export function selectNew(
   since: Date,
   max = MAX_PER_RUN
 ): MirrorPost[] {
-  return posts
-    .filter((p) => {
-      const at = new Date(p.publishedAt).getTime();
-      return Number.isFinite(at) && at > since.getTime();
-    })
-    // Les deux flux rendent le plus récent en premier ; un salon se lit dans
-    // l'autre sens.
-    .sort(
-      (a, b) =>
-        new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime()
-    )
-    // En cas de rattrapage, on garde les plus RÉCENTES : mieux vaut
-    // l'actualité que le début d'un historique.
-    .slice(-max);
+  return (
+    posts
+      .filter((p) => {
+        const at = new Date(p.publishedAt).getTime();
+        return Number.isFinite(at) && at > since.getTime();
+      })
+      // Les deux flux rendent le plus récent en premier ; un salon se lit dans
+      // l'autre sens.
+      .sort(
+        (a, b) =>
+          new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime()
+      )
+      // En cas de rattrapage, on garde les plus RÉCENTES : mieux vaut
+      // l'actualité que le début d'un historique.
+      .slice(-max)
+  );
 }
 
 /**

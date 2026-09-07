@@ -51,6 +51,11 @@ export const INTEGRATION_SECRET_KEYS = [
   'brevo_api_key',
   'brevo_from_email',
   'brevo_from_name',
+  // App TikTok, pour LIRE nos vidéos et les recopier dans Discord (aucune
+  // publication). Le `client_key` n'est pas un secret — il vit ici quand même,
+  // pour que l'intégration se branche d'un seul endroit et sans redéployer.
+  'tiktok_client_key',
+  'tiktok_client_secret',
 ] as const;
 
 export type IntegrationSecretKey = (typeof INTEGRATION_SECRET_KEYS)[number];

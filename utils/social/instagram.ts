@@ -50,11 +50,15 @@
 // PAS en variable d'environnement — le plafond de 4 Ko de Netlify a déjà fait
 // échouer le déploiement deux fois).
 
-import crypto from 'crypto';
 import { supabaseAdmin } from '@/utils/supabase';
 import { encryptSecret, decryptSecret } from '@/utils/crypto';
 import { getIntegrationSecret } from '@/utils/integrationSecrets';
 import { logger } from '@/utils/logger';
+import {
+  signOauthState,
+  verifyOauthState,
+  type StatePayload,
+} from './oauthState';
 
 const FETCH_TIMEOUT_MS = 15_000;
 
@@ -103,56 +107,19 @@ async function appSecret(tenantId: string): Promise<string | null> {
 /* `state` signé — CSRF                                                        */
 /* -------------------------------------------------------------------------- */
 
-type StatePayload = { tenantId: string; nonce: string; iat: number };
-
-const STATE_TTL_MS = 10 * 60 * 1000;
-
-function stateKey(): Buffer {
-  const secret =
-    process.env.SECRETS_ENC_KEY?.trim() ||
-    process.env.TWITCH_TOKEN_ENC_KEY?.trim() ||
-    '';
-  if (!secret) throw new Error('SECRETS_ENC_KEY absente.');
-  return crypto.scryptSync(secret, 'instagram-oauth-state-v1', 32);
-}
+/**
+ * Sel du `state`. Il enferme le jeton dans le parcours Instagram : sans lui, un
+ * `state` émis ici serait accepté au callback d'un autre fournisseur.
+ */
+const STATE_SALT = 'instagram-oauth-state-v1';
 
 export function signState(tenantId: string): string {
-  const payload: StatePayload = {
-    tenantId,
-    nonce: crypto.randomBytes(12).toString('base64url'),
-    iat: Date.now(),
-  };
-  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
-  const mac = crypto
-    .createHmac('sha256', stateKey())
-    .update(body)
-    .digest('base64url');
-  return `${body}.${mac}`;
+  return signOauthState(STATE_SALT, tenantId);
 }
 
 /** Vérifie signature ET fraîcheur. Renvoie null sur tout doute. */
 export function verifyState(state: string): StatePayload | null {
-  const [body, mac] = (state || '').split('.');
-  if (!body || !mac) return null;
-
-  const expected = crypto
-    .createHmac('sha256', stateKey())
-    .update(body)
-    .digest('base64url');
-
-  const a = Buffer.from(mac);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
-
-  try {
-    const payload = JSON.parse(
-      Buffer.from(body, 'base64url').toString('utf8')
-    ) as StatePayload;
-    if (Date.now() - payload.iat > STATE_TTL_MS) return null;
-    return payload;
-  } catch {
-    return null;
-  }
+  return verifyOauthState(STATE_SALT, state);
 }
 
 export function buildAuthorizeUrl(state: string): string {

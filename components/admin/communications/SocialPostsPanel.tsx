@@ -31,6 +31,7 @@ import HashtagPicker from '@/components/admin/communications/HashtagPicker';
 import SocialPostsHistory, {
   type HistoryPost,
 } from '@/components/admin/communications/SocialPostsHistory';
+import TiktokMirrorCard from '@/components/admin/communications/TiktokMirrorCard';
 import nsAdminSocialPosts from '@/lib/i18n/locales/admin-fr/adminSocialPosts';
 
 type ConnectionState = {
@@ -787,6 +788,11 @@ export default function SocialPostsPanel() {
       ) : null}
 
       <SocialPostsHistory posts={state.posts} t={t} />
+
+      {/* En bas, et à part : TikTok va dans l'autre sens — il RECOPIE dans
+          Discord ce qu'on a publié depuis l'application, il ne reçoit rien
+          d'ici. */}
+      <TiktokMirrorCard t={t} />
 
       {confirmDialog}
     </div>

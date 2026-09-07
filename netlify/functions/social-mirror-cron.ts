@@ -1,11 +1,14 @@
 // netlify/functions/social-mirror-cron.ts
 // Netlify Scheduled Function — déclenche /api/cron/social-mirror toutes les
 // 15 minutes pour recopier dans le salon Discord configuré ce que
-// l'association publie ailleurs : posts Bluesky et vidéos YouTube.
+// l'association publie ailleurs : posts Bluesky, vidéos YouTube et
+// publications Instagram.
 //
 // Quinze minutes, et pas une : ni un post ni une vidéo d'association n'ont
-// d'urgence à la minute. Les deux flux se lisent sans authentification, donc
-// chaque passage est gratuit en euros — mais pas en secondes de fonction.
+// d'urgence à la minute. Bluesky et YouTube se lisent sans authentification ;
+// Instagram consomme le jeton du compte connecté, sans quota qui compte à ce
+// rythme. Chaque passage est donc gratuit en euros — mais pas en secondes de
+// fonction.
 //
 // Le schedule est configuré dans netlify.toml. Env vars requises :
 //   CRON_SECRET, URL (ou SITE_URL).
