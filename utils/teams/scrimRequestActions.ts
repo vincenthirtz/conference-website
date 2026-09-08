@@ -433,6 +433,16 @@ export async function applyScrimRequestAction(
         void emitScrimEvent('scrim.created', createdScrim, tenantId, {
           autoCreatedFromDemande: true,
         });
+        // Le scrim naissant deja `scheduled`, il n'y aura AUCUNE transition
+        // draft -> scheduled : `statusTransitionEvent` n'emettra donc jamais
+        // `scrim.scheduled`, et le bot n'annoncerait rien dans #scrims (il
+        // ignore volontairement `scrim.created`, juge trop bruyant). On emet
+        // donc la programmation explicitement — meme geste que la creation
+        // directe en `scheduled` cote admin (pages/api/admin/scrims/index.ts).
+        void emitScrimEvent('scrim.scheduled', createdScrim, tenantId, {
+          previousStatus: 'draft',
+          autoCreatedFromDemande: true,
+        });
       }
     }
   } catch (scrimEx) {

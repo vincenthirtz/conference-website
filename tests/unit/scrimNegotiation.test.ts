@@ -33,6 +33,7 @@ vi.mock('@/utils/scrimEvents', () => ({
   emitScrimEvent: vi.fn(async () => undefined),
 }));
 
+import { emitScrimEvent } from '@/utils/scrimEvents';
 import scrimCreateHandler from '../../pages/api/demandes/scrim';
 import scrimRequestsHandler from '../../pages/api/teams/scrim-requests';
 import dashboardHandler from '../../pages/api/player/dashboard';
@@ -328,7 +329,7 @@ describe('POST /api/teams/scrim-requests — accept', () => {
     expect(d.payload.scrim_nego.agreed_slot).toBe(SLOT_2);
     expect(d.payload.preferred_date).toBe(SLOT_2);
 
-    // draft scrim with scheduled_date = agreed_slot
+    // scrim planifie, avec scheduled_date = agreed_slot
     const scrim: any = (store.scrims || []).find(
       (s: any) => s.source_demande_id === DEMANDE_ID
     );
@@ -340,6 +341,17 @@ describe('POST /api/teams/scrim-requests — accept', () => {
     // public `/api/scrims` (drafts et non-publics exclus).
     expect(scrim.status).toBe('scheduled');
     expect(scrim.is_public).toBe(true);
+
+    // Le scrim naissant deja `scheduled`, il n'y a AUCUNE transition
+    // draft -> scheduled : `statusTransitionEvent` n'emettra donc jamais
+    // `scrim.scheduled`, et le bot n'annoncerait rien dans #scrims (il ignore
+    // volontairement `scrim.created`). La programmation doit etre emise ici,
+    // sinon l'annonce Discord disparait sans que rien ne le signale.
+    const emitted = (emitScrimEvent as unknown as { mock: { calls: unknown[][] } }).mock.calls.map(
+      (c) => c[0]
+    );
+    expect(emitted).toContain('scrim.created');
+    expect(emitted).toContain('scrim.scheduled');
 
     // notification demande (type other)
     const notif: any = store.demandes.find((x: any) => x.type === 'other');
