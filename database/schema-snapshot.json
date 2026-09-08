@@ -1653,6 +1653,7 @@
       "map_slug",
       "map_type",
       "order_index",
+      "round_number",
       "tenant_id",
       "tournament_id"
     ],

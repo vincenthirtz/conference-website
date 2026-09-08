@@ -140,6 +140,8 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     .select('map_name, map_slug, map_type, image_url, enabled, order_index')
     .eq('tenant_id', req.botContext.tenantId)
     .eq('tournament_id', sourceId)
+    // Seul le pool PAR DEFAUT est cloné (cf. la route admin équivalente).
+    .is('round_number', null)
     .order('order_index', { ascending: true });
 
   let mapsCount = 0;

@@ -205,13 +205,43 @@ export async function handleCasterTournamentMaps(
 
   const tenantId = resolveTenantId(req);
 
-  const { data, error } = await supabaseAdmin
-    .from('tournament_maps')
-    .select('id, map_name, map_type, image_url')
-    .eq('tournament_id', id)
-    .eq('tenant_id', tenantId)
-    .eq('enabled', true)
-    .order('map_name', { ascending: true });
+  // `?round=N` : pool de la journée N (matches.round_number). Le caster
+  // l'envoie pour que son menu de cartes corresponde à la journée diffusée.
+  // Journée sans pool propre, ou paramètre absent → pool par défaut du
+  // tournoi. Le filtre sur `round_number` n'est jamais omis : sans lui, les
+  // pools par journée apparaîtraient en double dans le menu.
+  const roundRaw = firstQueryValue(req.query.round);
+  const round = roundRaw !== undefined && roundRaw !== '' ? Number(roundRaw) : null;
+  if (roundRaw !== undefined && roundRaw !== '' && !Number.isInteger(round)) {
+    res.status(400).json({ error: 'Invalid round' });
+    return;
+  }
+
+  const selectMaps = (value: number | null) => {
+    const q = supabaseAdmin
+      .from('tournament_maps')
+      .select('id, map_name, map_type, image_url')
+      .eq('tournament_id', id)
+      .eq('tenant_id', tenantId)
+      .eq('enabled', true)
+      .order('map_name', { ascending: true });
+    return value === null ? q.is('round_number', null) : q.eq('round_number', value);
+  };
+
+  if (round !== null) {
+    const { data, error } = await selectMaps(round);
+    if (error) {
+      logger.error('[caster/tournaments/:id/maps] round error:', error);
+      res.status(500).json({ error: 'Failed to load maps' });
+      return;
+    }
+    if (data && data.length > 0) {
+      res.status(200).json({ maps: data, round, source: 'round' });
+      return;
+    }
+  }
+
+  const { data, error } = await selectMaps(null);
 
   if (error) {
     logger.error('[caster/tournaments/:id/maps] error:', error);
@@ -219,7 +249,7 @@ export async function handleCasterTournamentMaps(
     return;
   }
 
-  res.status(200).json({ maps: data ?? [] });
+  res.status(200).json({ maps: data ?? [], round: null, source: 'tournament' });
 }
 
 /* ------------------------------------------------------------------ *

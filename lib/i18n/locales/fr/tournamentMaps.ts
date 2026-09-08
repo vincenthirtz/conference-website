@@ -33,6 +33,12 @@ export default ns('tournamentMaps', {
   poolModePush: 'Poussée',
   poolModeFlashpoint: 'Point chaud',
   poolModeOther: 'Autres',
+  // Pool par journée : une compétition annonce souvent un pool différent par
+  // journée (« Map Pool 18/09 »). Le sélecteur n'apparaît que si au moins une
+  // journée a son propre pool.
+  poolRoundAll: 'Tout le tournoi',
+  poolRoundLabel: 'Pool par journée',
+  poolRoundFallback: 'Cette journée reprend le pool du tournoi.',
   statDistinctMaps: 'Maps distinctes',
   statGamesPlayed: 'Games joués',
   statOvertimes: 'Overtimes',

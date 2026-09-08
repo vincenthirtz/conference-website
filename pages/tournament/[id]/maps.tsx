@@ -1,5 +1,6 @@
 // pages/tournament/[id]/maps.tsx
 
+import { useState } from 'react';
 import { GetStaticPaths, GetStaticProps } from 'next';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
@@ -44,6 +45,19 @@ type VetoRow = {
 };
 
 /** Une carte du pool du tournoi (table `tournament_maps`). */
+/**
+ * Pool propre a une journee. `dates` sert d'indice au visiteur : les visuels
+ * annoncent une date (« Map Pool 18/09 ») alors que le modele indexe la journee
+ * (round_number) — une meme date pouvant porter deux journees, la date seule ne
+ * suffirait pas a identifier le pool.
+ */
+type RoundPool = {
+  round: number;
+  label: string;
+  dates: string[];
+  maps: PoolMap[];
+};
+
 type PoolMap = {
   name: string;
   type: string | null;
@@ -95,6 +109,7 @@ type Props = {
   tournament: Tournament;
   /** Pool jouable, indépendant des stats : il existe dès la publication. */
   pool: PoolMap[];
+  roundPools: RoundPool[];
   maps: MapStat[];
   hasVetoData: boolean;
   hasFfaStage: boolean;
@@ -132,6 +147,79 @@ function poolModeLabel(t: MapsDict, mode: string): string {
       flashpoint: t.poolModeFlashpoint,
     }[mode] ?? t.poolModeOther
   );
+}
+
+/**
+ * Pools par journée d'un tournoi, enrichis du libellé et des dates de la
+ * journée (lus sur `matches`). Ne jette jamais : sans pool par journée, la page
+ * se comporte exactement comme avant.
+ */
+async function loadRoundPools(
+  tenantId: string,
+  tournamentId: string
+): Promise<RoundPool[]> {
+  const [mapsRes, matchesRes] = await Promise.all([
+    supabaseAdmin
+      .from('tournament_maps')
+      .select('map_name, map_type, image_url, order_index, round_number')
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournamentId)
+      .eq('enabled', true)
+      .not('round_number', 'is', null)
+      .order('order_index', { ascending: true, nullsFirst: false }),
+    supabaseAdmin
+      .from('matches')
+      .select('round_number, round_name, scheduled_at')
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournamentId)
+      .not('round_number', 'is', null),
+  ]);
+
+  if (mapsRes.error || !mapsRes.data || mapsRes.data.length === 0) return [];
+
+  // Libellé + dates par journée, dédupliqués et triés.
+  const meta = new Map<number, { label: string; dates: Set<string> }>();
+  for (const row of (matchesRes.data ?? []) as {
+    round_number: number;
+    round_name: string | null;
+    scheduled_at: string | null;
+  }[]) {
+    const entry = meta.get(row.round_number) ?? {
+      label: row.round_name || `J${row.round_number}`,
+      dates: new Set<string>(),
+    };
+    if (row.scheduled_at) {
+      entry.dates.add(
+        new Date(row.scheduled_at).toLocaleDateString('fr-FR', {
+          day: '2-digit',
+          month: '2-digit',
+          timeZone: 'Europe/Paris',
+        })
+      );
+    }
+    meta.set(row.round_number, entry);
+  }
+
+  const byRound = new Map<number, PoolMap[]>();
+  for (const row of mapsRes.data as {
+    map_name: string;
+    map_type: string | null;
+    image_url: string | null;
+    round_number: number;
+  }[]) {
+    const bucket = byRound.get(row.round_number) ?? [];
+    bucket.push({ name: row.map_name, type: row.map_type, image: row.image_url });
+    byRound.set(row.round_number, bucket);
+  }
+
+  return [...byRound.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([round, poolMaps]) => ({
+      round,
+      label: meta.get(round)?.label ?? `J${round}`,
+      dates: [...(meta.get(round)?.dates ?? [])].sort(),
+      maps: poolMaps,
+    }));
 }
 
 /** Regroupe le pool par mode, dans l'ordre ci-dessus, « Autres » en dernier. */
@@ -188,6 +276,9 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       .eq('tenant_id', tenantId)
       .eq('tournament_id', tournamentId)
       .eq('enabled', true)
+      // Pool PAR DEFAUT du tournoi. Sans ce filtre, les cartes des pools par
+      // journee apparaitraient ici en double.
+      .is('round_number', null)
       .order('order_index', { ascending: true, nullsFirst: false })
       .order('map_name', { ascending: true }),
     supabaseAdmin
@@ -215,6 +306,11 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     type: row.map_type ?? null,
     image: row.image_url ?? null,
   }));
+
+  // Pools par journée : une requête pour les cartes, une pour les libellés et
+  // dates de journée (round_name / scheduled_at côté matches). Une journée sans
+  // pool propre n'apparaît pas — elle reprend celui du tournoi.
+  const roundPools = await loadRoundPools(tenantId, tournamentId);
 
   const hasFfaStage = (stagesRes.data || []).some(
     (s: any) => s.stage_type === 'ffa'
@@ -281,6 +377,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     props: {
       tournament: tournament as Tournament,
       pool,
+      roundPools,
       maps,
       hasVetoData,
       hasFfaStage,
@@ -293,12 +390,18 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 export default function TournamentMapsPage({
   tournament,
   pool,
+  roundPools,
   maps,
   hasVetoData,
   hasFfaStage,
 }: Props) {
   const t = useT(nsTournamentMaps);
   const { lang } = useLang();
+  // Journée sélectionnée dans le pool. `null` = pool du tournoi. Les pools sont
+  // tous chargés côté serveur : basculer ne recharge rien.
+  const [poolRound, setPoolRound] = useState<number | null>(null);
+  const selectedRoundPool = roundPools.find((r) => r.round === poolRound) ?? null;
+  const shownPool = selectedRoundPool ? selectedRoundPool.maps : pool;
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
   const isCompleted =
     tournament.status === 'finished' || tournament.status === 'completed';
@@ -380,8 +483,8 @@ export default function TournamentMapsPage({
                 </h2>
                 <span className="font-mono text-xs tabular-nums text-gray-400">
                   {format(
-                    pool.length > 1 ? t.poolCount_other : t.poolCount_one,
-                    { count: pool.length }
+                    shownPool.length > 1 ? t.poolCount_other : t.poolCount_one,
+                    { count: shownPool.length }
                   )}
                 </span>
               </div>
@@ -393,8 +496,41 @@ export default function TournamentMapsPage({
                 {t.poolSubtitle}
               </Paragraph>
 
+              {/* Sélecteur de journée — n'apparaît que si au moins une journée
+                  a son propre pool. Les dates accompagnent le libellé : les
+                  visuels annoncent une date, le modèle indexe la journée. */}
+              {roundPools.length > 0 && (
+                <div
+                  className="mt-3 flex flex-wrap items-center gap-2"
+                  role="group"
+                  aria-label={t.poolRoundLabel}
+                >
+                  {[null, ...roundPools.map((r) => r.round)].map((round) => {
+                    const entry = roundPools.find((r) => r.round === round);
+                    const active = poolRound === round;
+                    return (
+                      <button
+                        key={round ?? 'all'}
+                        type="button"
+                        onClick={() => setPoolRound(round)}
+                        aria-pressed={active}
+                        className={`rounded-full border px-3 py-1 text-xs transition ${
+                          active
+                            ? 'border-purple-400/60 bg-purple-500/20 text-white'
+                            : 'border-white/10 bg-white/[0.03] text-gray-300 hover:bg-white/[0.07]'
+                        }`}
+                      >
+                        {entry
+                          ? `${entry.label}${entry.dates.length > 0 ? ` · ${entry.dates.join(' / ')}` : ''}`
+                          : t.poolRoundAll}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               <div className="mt-4 flex flex-col gap-5">
-                {groupPoolByMode(pool).map(({ mode, maps: modeMaps }) => (
+                {groupPoolByMode(shownPool).map(({ mode, maps: modeMaps }) => (
                   <div key={mode}>
                     <h3 className="text-xs uppercase tracking-[0.18em] text-purple-200">
                       {poolModeLabel(t, mode)}

@@ -23,7 +23,7 @@ export type PoolMap = {
   image: string | null;
 };
 
-export type PoolSource = 'tournament' | 'tenant' | 'defaults';
+export type PoolSource = 'tournament' | 'tournament-round' | 'tenant' | 'defaults';
 
 type PoolRow = {
   map_name: string;
@@ -128,12 +128,47 @@ export function normalizeMapName(
   return canonical ? canonical.name : trimmed;
 }
 
+/** Colonnes lues pour construire un pool. */
+const POOL_COLUMNS = 'map_name, map_type, image_url, order_index';
+
+/**
+ * Cartes activées d'un tournoi pour une journée donnée.
+ *
+ * `round === null` cible le POOL PAR DÉFAUT (`round_number IS NULL`), pas
+ * « toutes les journées » : sans ce filtre, ajouter le pool d'une journée
+ * ferait apparaître ses cartes en double partout où le pool du tournoi est lu
+ * (page publique, menu du caster, normalisation des noms à la saisie).
+ */
+async function tournamentPoolRows(
+  client: SupabaseClient,
+  tenantId: string,
+  tournamentId: string,
+  round: number | null
+): Promise<PoolRow[] | null> {
+  let query = client
+    .from('tournament_maps')
+    .select(POOL_COLUMNS)
+    .eq('tenant_id', tenantId)
+    .eq('tournament_id', tournamentId)
+    .eq('enabled', true);
+  query = round === null ? query.is('round_number', null) : query.eq('round_number', round);
+
+  const { data, error } = await query;
+  if (error || !data || data.length === 0) return null;
+  return data as PoolRow[];
+}
+
 /**
  * Pool effectif applicable à un match.
  *
- * Priorité : les cartes déclarées SUR LE TOURNOI (`tournament_maps`, activées)
- * — c'est la sélection que le staff a faite pour cette compétition — puis le
- * pool éditable du tenant pour le jeu, puis le catalogue statique.
+ * Priorité : le pool de la JOURNÉE demandée (`roundNumber`), puis le pool par
+ * défaut du tournoi — c'est la sélection que le staff a faite pour cette
+ * compétition — puis le pool éditable du tenant pour le jeu, puis le catalogue
+ * statique.
+ *
+ * Une journée sans pool propre retombe donc sur celui du tournoi : déclarer un
+ * pool par journée reste facultatif, et les tournois qui n'en veulent pas ne
+ * changent pas de comportement.
  *
  * `includeTournamentMaps: false` sert à l'action « ajouter les maps par
  * défaut » d'un tournoi, qui ALIMENTE `tournament_maps` et ne peut donc pas
@@ -149,27 +184,29 @@ export async function resolveEffectiveMapPool(
     tournamentId?: string | null;
     game?: string | null;
     includeTournamentMaps?: boolean;
+    /** Journée (matches.round_number). Absent → pool par défaut du tournoi. */
+    roundNumber?: number | null;
   }
 ): Promise<{ maps: PoolMap[]; source: PoolSource }> {
   const { tenantId, tournamentId, includeTournamentMaps = true } = params;
   const game = normalizeGameSlug(params.game);
+  const round = Number.isFinite(params.roundNumber as number)
+    ? (params.roundNumber as number)
+    : null;
 
   if (includeTournamentMaps && tournamentId) {
-    const { data, error } = await client
-      .from('tournament_maps')
-      .select('map_name, map_type, image_url, order_index')
-      .eq('tenant_id', tenantId)
-      .eq('tournament_id', tournamentId)
-      .eq('enabled', true);
-    if (!error && data && data.length > 0) {
-      return { maps: sortPoolRows(data as PoolRow[]), source: 'tournament' };
+    if (round !== null) {
+      const rows = await tournamentPoolRows(client, tenantId, tournamentId, round);
+      if (rows) return { maps: sortPoolRows(rows), source: 'tournament-round' };
     }
+    const rows = await tournamentPoolRows(client, tenantId, tournamentId, null);
+    if (rows) return { maps: sortPoolRows(rows), source: 'tournament' };
   }
 
   if (game) {
     const { data, error } = await client
       .from('tenant_map_pool')
-      .select('map_name, map_type, image_url, order_index')
+      .select(POOL_COLUMNS)
       .eq('tenant_id', tenantId)
       .eq('game', game)
       .eq('enabled', true);

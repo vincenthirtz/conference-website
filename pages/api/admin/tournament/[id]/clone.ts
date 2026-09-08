@@ -151,6 +151,9 @@ async function handler(
       .select('map_name, map_slug, map_type, image_url, enabled, order_index')
       .eq('tournament_id', sourceId)
       .eq('tenant_id', ctx.tenantId)
+      // Seul le pool PAR DEFAUT est cloné : les pools par journée dépendent du
+      // calendrier du tournoi source, qui n'est pas celui du nouveau.
+      .is('round_number', null)
       .order('order_index', { ascending: true });
 
     let copiedMapsCount = 0;

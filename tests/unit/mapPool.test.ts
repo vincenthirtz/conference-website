@@ -120,7 +120,9 @@ function fakeClient(tables: Record<string, Row[] | { error: true }>) {
       calls.push(table);
       const builder: Record<string, unknown> = {};
       const chain = () => builder;
-      for (const method of ['select', 'eq']) {
+      // `is` sert au filtre `round_number IS NULL` (pool par défaut) — sans
+      // lui, la chaîne casse dès que le résolveur épingle le pool.
+      for (const method of ['select', 'eq', 'is']) {
         (builder as Record<string, unknown>)[method] = chain;
       }
       const result = tables[table];
@@ -148,7 +150,101 @@ const tenantRows = [
   { map_name: 'Ilios', map_type: 'control', image_url: null, order_index: 1 },
 ];
 
+/**
+ * Client qui distingue le pool PAR DÉFAUT (`.is('round_number', null)`) du pool
+ * d'une journée (`.eq('round_number', N)`), en observant le filtre appliqué.
+ * C'est la seule façon de vérifier que le résolveur épingle bien la bonne
+ * source : sans ce filtre, les deux pools se mélangeraient.
+ */
+function roundAwareClient(byRound: Record<string, Row[]>) {
+  return {
+    from() {
+      let round: number | null | undefined;
+      const builder: Record<string, unknown> = {};
+      const chain = () => builder;
+      builder.select = chain;
+      builder.eq = (col: string, value: unknown) => {
+        if (col === 'round_number') round = value as number;
+        return builder;
+      };
+      builder.is = (col: string, value: unknown) => {
+        if (col === 'round_number' && value === null) round = null;
+        return builder;
+      };
+      builder.then = (resolve: (v: unknown) => unknown) =>
+        Promise.resolve({
+          data: byRound[round === null || round === undefined ? 'default' : String(round)] ?? [],
+          error: null,
+        }).then(resolve);
+      return builder;
+    },
+  } as unknown as Parameters<typeof resolveEffectiveMapPool>[0];
+}
+
 describe('resolveEffectiveMapPool', () => {
+  // --- Pool par journée ---------------------------------------------------
+  // Une compétition annonce un pool par journée (« Map Pool 18/09 »). La clé
+  // est `round_number` et non une date : une même date peut porter deux
+  // journées, la date seule ne suffirait pas à identifier le pool.
+
+  it('sert le pool de la journée demandée quand elle en a un', async () => {
+    const client = roundAwareClient({
+      default: tournamentRows,
+      '1': [{ map_name: 'Colosseo', map_type: 'push', image_url: null, order_index: 1 }],
+    });
+    const res = await resolveEffectiveMapPool(client, {
+      tenantId: 't1',
+      tournamentId: 'trn',
+      game: 'overwatch',
+      roundNumber: 1,
+    });
+    expect(res.source).toBe('tournament-round');
+    expect(res.maps.map((m) => m.name)).toEqual(['Colosseo']);
+  });
+
+  // Déclarer un pool par journée reste facultatif : une journée sans pool
+  // propre ne doit pas se retrouver sans cartes.
+  it('retombe sur le pool du tournoi pour une journée sans pool propre', async () => {
+    const client = roundAwareClient({ default: tournamentRows });
+    const res = await resolveEffectiveMapPool(client, {
+      tenantId: 't1',
+      tournamentId: 'trn',
+      game: 'overwatch',
+      roundNumber: 7,
+    });
+    expect(res.source).toBe('tournament');
+    expect(res.maps.map((m) => m.name)).toEqual(['Busan']);
+  });
+
+  // LE point qui compte : sans journée demandée, on sert le pool par défaut et
+  // JAMAIS l'union avec les pools par journée — sinon une carte présente dans
+  // les deux apparaîtrait en double partout (page publique, menu du caster,
+  // normalisation des noms à la saisie des scores).
+  it('sans journée, sert le pool par défaut sans y mêler les journées', async () => {
+    const client = roundAwareClient({
+      default: tournamentRows,
+      '1': [{ map_name: 'Busan', map_type: 'control', image_url: null, order_index: 1 }],
+    });
+    const res = await resolveEffectiveMapPool(client, {
+      tenantId: 't1',
+      tournamentId: 'trn',
+      game: 'overwatch',
+    });
+    expect(res.source).toBe('tournament');
+    expect(res.maps.map((m) => m.name)).toEqual(['Busan']);
+  });
+
+  it('ignore une journée non numérique et sert le pool par défaut', async () => {
+    const client = roundAwareClient({ default: tournamentRows, '1': [] });
+    const res = await resolveEffectiveMapPool(client, {
+      tenantId: 't1',
+      tournamentId: 'trn',
+      game: 'overwatch',
+      roundNumber: Number.NaN,
+    });
+    expect(res.source).toBe('tournament');
+  });
+
   it('préfère les cartes déclarées sur le tournoi', async () => {
     const client = fakeClient({ tournament_maps: tournamentRows, tenant_map_pool: tenantRows });
     const res = await resolveEffectiveMapPool(client, {

@@ -200,7 +200,10 @@ export default async function handler(
         .select('map_name')
         .eq('tournament_id', tournamentId)
         .eq('tenant_id', tenantId)
-        .eq('enabled', true),
+        .eq('enabled', true)
+        // Pool de référence = celui du tournoi. Sommer les journées compterait
+        // plusieurs fois la même carte.
+        .is('round_number', null),
     ]);
 
     if (gErr) {
