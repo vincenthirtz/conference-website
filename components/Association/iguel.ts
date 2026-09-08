@@ -10,6 +10,10 @@
 // (cf. `PolePartner`).
 
 export const IGUEL_NAME = 'Iguel';
-/** Login Twitch en minuscules : c'est la clé des maps renvoyées par Helix. */
-export const IGUEL_CHANNEL = 'gf_iguel';
+/**
+ * Login Twitch en minuscules : c'est la clé des maps renvoyées par Helix.
+ * La chaîne a été renommée `gf_iguel` → `iguel` ; l'ancien login ne résout plus
+ * rien, il aurait donc laissé l'encart sans avatar et le lien en 404.
+ */
+export const IGUEL_CHANNEL = 'iguel';
 export const IGUEL_TWITCH = `https://www.twitch.tv/${IGUEL_CHANNEL}`;
