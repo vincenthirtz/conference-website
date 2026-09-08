@@ -309,7 +309,7 @@ describe('POST /api/teams/scrim-requests — counter', () => {
 
 // ── POST /api/teams/scrim-requests — accept ──────────────
 describe('POST /api/teams/scrim-requests — accept', () => {
-  it('non-proposer accepts a slot: agreed_slot set, status approved, draft scrim created', async () => {
+  it('non-proposer accepts a slot: agreed_slot set, status approved, scheduled public scrim created', async () => {
     seedScrimDemande({ proposedBy: TEAM_A, slots: [SLOT_1, SLOT_2] });
     setAuthUser({ id: CAPTAIN_B, email: 'capB@test.local' });
     const res = makeRes();
@@ -334,7 +334,12 @@ describe('POST /api/teams/scrim-requests — accept', () => {
     );
     expect(scrim).toBeTruthy();
     expect(scrim.scheduled_date).toBe(SLOT_2);
-    expect(scrim.status).toBe('draft');
+    // Les deux equipes se sont mises d'accord sur une date : le scrim est
+    // directement planifie et public. En brouillon prive, il restait invisible
+    // sur le site ET dans les scenes scrim du caster, qui lisent le contrat
+    // public `/api/scrims` (drafts et non-publics exclus).
+    expect(scrim.status).toBe('scheduled');
+    expect(scrim.is_public).toBe(true);
 
     // notification demande (type other)
     const notif: any = store.demandes.find((x: any) => x.type === 'other');

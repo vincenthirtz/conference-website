@@ -382,8 +382,18 @@ export async function applyScrimRequestAction(
     tenant_id: tenantId,
   });
 
-  // Scrim draft, idempotent sur `source_demande_id` : le créneau négocié est
-  // porté dans la session plutôt que redemandé.
+  // Scrim planifie et public, idempotent sur `source_demande_id` : le creneau
+  // negocie est porte dans la session plutot que redemande.
+  //
+  // Cree en `scheduled` + `is_public` et non en brouillon prive : les deux
+  // equipes se sont mises d'accord sur une date, il n'y a plus rien a arbitrer.
+  // Le brouillon imposait une publication manuelle que personne ne faisait, et
+  // rendait le scrim invisible partout ou il compte — page publique, et surtout
+  // les scenes scrim du caster, qui lisent le contrat public `/api/scrims`
+  // (lequel exclut deliberement `is_public = false` et `status = 'draft'`).
+  //
+  // `agreedSlot` ne peut pas etre nul ici : la fonction a deja echoue en 400
+  // faute de creneau accepte. `scheduled` est donc toujours date.
   try {
     const { data: existingScrim } = await supabaseAdmin
       .from('scrims')
@@ -406,11 +416,11 @@ export async function applyScrimRequestAction(
           tenant_id: tenantId,
           name: scrimName,
           slug: slugBase || null,
-          status: 'draft',
+          status: 'scheduled',
           team1_id: fromTeamId,
           team2_id: targetTeamId,
           scheduled_date: agreedSlot,
-          is_public: false,
+          is_public: true,
           source_demande_id: demandeId,
           description: (row.comment as string | null) ?? null,
         })
