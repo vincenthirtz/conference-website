@@ -28,6 +28,55 @@ function nowLocalInput(): string {
   )}:${pad(d.getMinutes())}`;
 }
 
+/** Message d'erreur sous un sélecteur, avec un bouton « Réessayer ». */
+function ListError({
+  message,
+  onRetry,
+  retryLabel,
+  template,
+  testId,
+}: {
+  message: string | null;
+  onRetry: () => void;
+  retryLabel: string;
+  template: string;
+  testId: string;
+}) {
+  if (!message) return null;
+  return (
+    <p
+      className="mt-1 text-[11px] text-red-300 flex items-center gap-2"
+      role="alert"
+      data-testid={testId}
+    >
+      <span>{format(template, { message })}</span>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="underline underline-offset-2 hover:text-red-200"
+      >
+        {retryLabel}
+      </button>
+    </p>
+  );
+}
+
+/**
+ * Message lisible d'un échec de chargement de liste. `AdminFetchError` porte le
+ * statut et parfois un `error` côté payload : on montre les deux, sinon on
+ * n'aurait qu'un « Chargement impossible » qui n'aide personne à trancher entre
+ * droits manquants, session expirée et panne serveur.
+ */
+function describeError(err: unknown): string {
+  const e = err as AdminFetchError;
+  const payloadError =
+    typeof e?.payload === 'object' && e.payload && 'error' in e.payload
+      ? String((e.payload as { error: string }).error)
+      : null;
+  const status = typeof e?.status === 'number' ? ` (HTTP ${e.status})` : '';
+  return `${payloadError || e?.message || 'erreur inconnue'}${status}`;
+}
+
 export default function NewRunPanel({
   onStarted,
 }: {
@@ -54,32 +103,53 @@ export default function NewRunPanel({
   const [tournamentId, setTournamentId] = useState('');
   const [scrims, setScrims] = useState<{ id: string; name: string }[]>([]);
   const [scrimId, setScrimId] = useState('');
+  // Un `catch` muet rendait un échec de chargement indiscernable d'une liste
+  // vide : « Aucun scrim disponible » s'affichait aussi bien quand l'appel
+  // avait échoué. On distingue les trois états, et on montre le message.
+  const [listState, setListState] = useState<{
+    tournament: 'idle' | 'loading' | 'ready' | 'error';
+    scrim: 'idle' | 'loading' | 'ready' | 'error';
+  }>({ tournament: 'idle', scrim: 'idle' });
+  const [listError, setListError] = useState<{
+    tournament: string | null;
+    scrim: string | null;
+  }>({ tournament: null, scrim: null });
+  // Incrémenté par « Réessayer » : relance l'effet de la liste concernée.
+  const [reloadTick, setReloadTick] = useState(0);
 
   // Charge la liste des tournois pour le sélecteur. Optionnel : en cas d'échec
   // on reste sur « run libre » sans bruit (le run 100 % libre reste possible).
   useEffect(() => {
     let cancelled = false;
+    setListState((st) => ({ ...st, tournament: 'loading' }));
     (async () => {
       try {
         const json = await adminFetchJson<{
           tournaments: { id: string; name: string }[];
         }>('/api/admin/tournaments?limit=100&orderBy=start_date&orderDir=desc');
-        if (!cancelled) setTournaments(json.tournaments ?? []);
-      } catch {
-        if (!cancelled) setTournaments([]);
+        if (cancelled) return;
+        setTournaments(json.tournaments ?? []);
+        setListError((e) => ({ ...e, tournament: null }));
+        setListState((st) => ({ ...st, tournament: 'ready' }));
+      } catch (err) {
+        if (cancelled) return;
+        setTournaments([]);
+        setListError((e) => ({ ...e, tournament: describeError(err) }));
+        setListState((st) => ({ ...st, tournament: 'error' }));
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [adminFetchJson]);
+  }, [adminFetchJson, reloadTick]);
 
   // Idem pour les scrims. On écarte les brouillons et les annulés : on ne
   // caste pas un scrim qui n'est pas au moins planifié. Même tolérance à
   // l'échec que la liste des tournois.
   useEffect(() => {
-    if (source !== 'scrim' || scrims.length > 0) return;
+    if (source !== 'scrim') return;
     let cancelled = false;
+    setListState((st) => ({ ...st, scrim: 'loading' }));
     (async () => {
       try {
         const json = await adminFetchJson<{
@@ -87,18 +157,21 @@ export default function NewRunPanel({
         }>('/api/admin/scrims?limit=100&orderBy=scheduled_date&orderDir=desc');
         if (cancelled) return;
         setScrims(
-          (json.scrims ?? []).filter(
-            (sc) => sc.status !== 'draft' && sc.status !== 'cancelled'
-          )
+          (json.scrims ?? []).filter((sc) => sc.status !== 'cancelled')
         );
-      } catch {
-        if (!cancelled) setScrims([]);
+        setListError((e) => ({ ...e, scrim: null }));
+        setListState((st) => ({ ...st, scrim: 'ready' }));
+      } catch (err) {
+        if (cancelled) return;
+        setScrims([]);
+        setListError((e) => ({ ...e, scrim: describeError(err) }));
+        setListState((st) => ({ ...st, scrim: 'error' }));
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [adminFetchJson, source, scrims.length]);
+  }, [adminFetchJson, source, reloadTick]);
 
   function resetSelection() {
     setName('');
@@ -272,17 +345,28 @@ export default function NewRunPanel({
             <select
               value={tournamentId}
               onChange={(e) => setTournamentId(e.target.value)}
-              disabled={busy}
+              disabled={busy || listState.tournament === 'loading'}
               className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-2.5 py-2 text-sm text-white disabled:opacity-50"
               data-testid="regie-new-run-tournament"
             >
-              <option value="">{t.tournamentNone}</option>
+              <option value="">
+                {listState.tournament === 'loading'
+                  ? t.listLoading
+                  : t.tournamentNone}
+              </option>
               {tournaments.map((tour) => (
                 <option key={tour.id} value={tour.id}>
                   {tour.name}
                 </option>
               ))}
             </select>
+            <ListError
+              message={listError.tournament}
+              onRetry={() => setReloadTick((n) => n + 1)}
+              retryLabel={t.listRetry}
+              template={t.listError}
+              testId="regie-new-run-tournament-error"
+            />
           </label>
         )}
 
@@ -294,12 +378,20 @@ export default function NewRunPanel({
             <select
               value={scrimId}
               onChange={(e) => setScrimId(e.target.value)}
-              disabled={busy || scrims.length === 0}
+              disabled={
+                busy ||
+                listState.scrim === 'loading' ||
+                (listState.scrim === 'ready' && scrims.length === 0)
+              }
               className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-2.5 py-2 text-sm text-white disabled:opacity-50"
               data-testid="regie-new-run-scrim"
             >
               <option value="">
-                {scrims.length === 0 ? t.scrimEmpty : t.scrimNone}
+                {listState.scrim === 'loading'
+                  ? t.listLoading
+                  : scrims.length === 0
+                    ? t.scrimEmpty
+                    : t.scrimNone}
               </option>
               {scrims.map((sc) => (
                 <option key={sc.id} value={sc.id}>
@@ -307,6 +399,13 @@ export default function NewRunPanel({
                 </option>
               ))}
             </select>
+            <ListError
+              message={listError.scrim}
+              onRetry={() => setReloadTick((n) => n + 1)}
+              retryLabel={t.listRetry}
+              template={t.listError}
+              testId="regie-new-run-scrim-error"
+            />
           </label>
         )}
       </div>
