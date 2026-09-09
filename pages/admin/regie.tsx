@@ -53,6 +53,7 @@ import {
 } from '@/utils/staff';
 
 import LiveSegmentBlock from '@/components/Caster/LiveSegmentBlock';
+import NewRunPanel from '@/components/Caster/NewRunPanel';
 import CockpitChecklist from '@/components/Caster/CockpitChecklist';
 import CockpitHotkeys from '@/components/Caster/CockpitHotkeys';
 import BriefingPanel from '@/components/Caster/BriefingPanel';
@@ -61,7 +62,6 @@ import CueBanner from '@/components/Caster/CueBanner';
 import CueFeed from '@/components/Caster/CueFeed';
 import UrgentCueModal from '@/components/Caster/UrgentCueModal';
 import nsAdminRegie from '@/lib/i18n/locales/fr/adminRegie';
-import nsRegieNewRun from '@/lib/i18n/locales/fr/regieNewRun';
 import nsRegieStartPrepared from '@/lib/i18n/locales/fr/regieStartPrepared';
 import nsCasterCockpit from '@/lib/i18n/locales/fr/casterCockpit';
 
@@ -82,15 +82,6 @@ type Connection =
   | { level: 'online'; seen: boolean }
   | { level: 'reconnecting'; seen: false }
   | { level: 'offline'; seen: false };
-
-/** Formate un Date en valeur `datetime-local` (fuseau local du navigateur). */
-function nowLocalInput(): string {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}`;
-}
 
 /**
  * Pastille de connexion (reprise de CockpitHeader) adaptée à la chrome admin :
@@ -137,195 +128,6 @@ function ConnectionIndicator({ connection }: { connection: Connection }) {
  * démarre via POST /api/admin/events/{id}/start (rôle 'admin'). Tournoi
  * optionnel : un run peut être 100 % libre, l'endpoint ne demande pas de lien.
  */
-function NewRunPanel({ onStarted }: { onStarted: () => Promise<void> }) {
-  const t = useT(nsRegieNewRun);
-  const { addToast } = useToast();
-  // Deux (ou trois) intentions successives (create → [from-tournament] →
-  // start) : la clé se régénère après chaque 2xx, chaque mutation part donc
-  // avec une clé fraîche.
-  const { mutateJson } = useIdempotentMutation();
-  const { adminFetchJson } = useAdminFetch();
-
-  const [name, setName] = useState('');
-  const [scheduledAt, setScheduledAt] = useState(() => nowLocalInput());
-  const [busy, setBusy] = useState(false);
-  // Sélecteur de tournoi optionnel : '' = run libre (comportement historique).
-  const [tournaments, setTournaments] = useState<
-    { id: string; name: string }[]
-  >([]);
-  const [tournamentId, setTournamentId] = useState('');
-
-  // Charge la liste des tournois pour le sélecteur. Optionnel : en cas d'échec
-  // on reste sur « run libre » sans bruit (le run 100 % libre reste possible).
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const json = await adminFetchJson<{
-          tournaments: { id: string; name: string }[];
-        }>('/api/admin/tournaments?limit=100&orderBy=start_date&orderDir=desc');
-        if (!cancelled) setTournaments(json.tournaments ?? []);
-      } catch {
-        if (!cancelled) setTournaments([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [adminFetchJson]);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (busy) return;
-    const trimmed = name.trim();
-    if (!trimmed) {
-      addToast(t.nameRequired, 'error');
-      return;
-    }
-    setBusy(true);
-    try {
-      const scheduledIso = new Date(scheduledAt).toISOString();
-      const created = await mutateJson<{ id: string }>('/api/admin/events', {
-        method: 'POST',
-        body: JSON.stringify({ name: trimmed, scheduled_at: scheduledIso }),
-      });
-
-      // Tournoi lié : on pré-remplit les segments match AVANT le /start (les
-      // segments sont ajoutés au draft). Si cet appel échoue, le run existe
-      // déjà en draft : on informe l'utilisateur, on refetch (le draft
-      // apparaît dans « Démarrer un run préparé ») et on NE démarre PAS —
-      // pas d'état incohérent silencieux.
-      if (tournamentId) {
-        try {
-          const res = await mutateJson<{
-            segments: unknown[];
-            created: number;
-            skipped: number;
-          }>(`/api/admin/events/${created.id}/segments/from-tournament`, {
-            method: 'POST',
-            body: JSON.stringify({ tournament_id: tournamentId }),
-          });
-          const count = res.created ?? 0;
-          addToast(
-            format(
-              count === 1 ? t.segmentsCreated_one : t.segmentsCreated_other,
-              { count }
-            ),
-            'success'
-          );
-        } catch (fromErr) {
-          const fe = fromErr as AdminFetchError;
-          const feError =
-            typeof fe.payload === 'object' &&
-            fe.payload &&
-            'error' in fe.payload
-              ? String((fe.payload as { error: string }).error)
-              : null;
-          addToast(feError || t.fromTournamentError, 'error');
-          setName('');
-          setTournamentId('');
-          await onStarted();
-          return;
-        }
-      }
-
-      await mutateJson(`/api/admin/events/${created.id}/start`, {
-        method: 'POST',
-      });
-      addToast(t.createSuccess, 'success');
-      setName('');
-      setTournamentId('');
-      // Le run live apparaît via realtime, mais on refetch immédiatement pour
-      // une transition instantanée (pas d'attente du canal).
-      await onStarted();
-    } catch (err) {
-      const e2 = err as AdminFetchError;
-      const payloadError =
-        typeof e2.payload === 'object' && e2.payload && 'error' in e2.payload
-          ? String((e2.payload as { error: string }).error)
-          : null;
-      addToast(payloadError || e2.message || t.createError, 'error');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4 space-y-4"
-      data-testid="regie-new-run"
-    >
-      <div>
-        <h2 className="text-sm font-semibold text-white">{t.title}</h2>
-        <p className="text-xs text-neutral-400 mt-1">{t.description}</p>
-        <p className="text-[11px] text-neutral-500 mt-1">{t.tournamentHint}</p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <label className="block">
-          <span className="block text-xs text-neutral-400 mb-1">
-            {t.nameLabel}
-          </span>
-          <input
-            type="text"
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={200}
-            placeholder={t.namePlaceholder}
-            disabled={busy}
-            className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-2.5 py-2 text-sm text-white placeholder:text-neutral-600 disabled:opacity-50"
-          />
-        </label>
-
-        <label className="block">
-          <span className="block text-xs text-neutral-400 mb-1">
-            {t.scheduledLabel}
-          </span>
-          <input
-            type="datetime-local"
-            value={scheduledAt}
-            onChange={(e) => setScheduledAt(e.target.value)}
-            disabled={busy}
-            className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-2.5 py-2 text-sm text-white disabled:opacity-50"
-          />
-        </label>
-      </div>
-
-      <label className="block">
-        <span className="block text-xs text-neutral-400 mb-1">
-          {t.tournamentLabel}
-        </span>
-        <select
-          value={tournamentId}
-          onChange={(e) => setTournamentId(e.target.value)}
-          disabled={busy}
-          className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-2.5 py-2 text-sm text-white disabled:opacity-50"
-          data-testid="regie-new-run-tournament"
-        >
-          <option value="">{t.tournamentNone}</option>
-          {tournaments.map((tour) => (
-            <option key={tour.id} value={tour.id}>
-              {tour.name}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <button
-        type="submit"
-        disabled={busy || !name.trim()}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        {busy && (
-          <span className="inline-block h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-        )}
-        {busy ? t.submitting : t.submit}
-      </button>
-    </form>
-  );
-}
 
 /** Un draft d'event_run tel que renvoyé par GET /api/admin/events?status=draft. */
 type DraftRun = {

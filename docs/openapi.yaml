@@ -3671,7 +3671,7 @@ components:
             recentForm:
               type: array
               nullable: true
-              description: '`null` sous le seuil d''echantillon.'
+              description: "`null` sous le seuil d'echantillon."
               items:
                 type: string
                 enum: [win, loss, draw]
@@ -13706,6 +13706,77 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/events/{runId}/segments/from-scrim:
+    parameters:
+      - $ref: '#/components/parameters/RunId'
+    post:
+      summary: Pre-fill match segments from a scrim.
+      description: |
+        Requires `manage_broadcast`. Creates one `type='match'` segment for
+        every match of the given scrim, in broadcast order (`scheduled_at` →
+        `created_at` → `id`). A scrim has neither stage nor round, hence the
+        shorter ordering than its tournament counterpart. Cancelled matches are
+        excluded. Segments are appended to the queue of the run (MAX(ord)+1, …).
+
+        Titles: both teams are the same across the series, so segments are
+        numbered (`A vs B — Match 2`) as soon as there is more than one match;
+        a single match keeps the plain `A vs B`. When the teams are not
+        resolved, the scrim name is used instead.
+
+        Anti-duplication: a match already bound to a segment of this run is
+        skipped. `Idempotency-Key` is honored (5 min cache) in addition.
+
+        Returns `409 RUN_DONE` when the run is finished, `404 SCRIM_NOT_FOUND`
+        when the scrim is missing or belongs to another tenant.
+      operationId: adminPrefillEventSegmentsFromScrim
+      tags:
+        - admin/events
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - scrim_id
+              properties:
+                scrim_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Segments created (with per-match skip accounting).
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - segments
+                  - created
+                  - skipped
+                properties:
+                  segments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EventSegment'
+                  created:
+                    type: integer
+                    minimum: 0
+                  skipped:
+                    type: integer
+                    minimum: 0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /api/admin/events/{runId}/segments/from-tournament:
     parameters:
       - $ref: '#/components/parameters/RunId'
@@ -16458,7 +16529,7 @@ paths:
           description: Filtre plein texte sur le nom, applique par Google.
       responses:
         '200':
-          description: "Contenu du dossier, ou `configured: false`."
+          description: 'Contenu du dossier, ou `configured: false`.'
           content:
             application/json:
               schema:
@@ -21632,8 +21703,8 @@ paths:
               properties:
                 guild_id:
                   type: string
-                  pattern: "^[0-9]{15,25}$"
-                  example: "123456789012345678"
+                  pattern: '^[0-9]{15,25}$'
+                  example: '123456789012345678'
       responses:
         '201':
           description: '`{ status: "linked", guild_id, tenant, is_primary }`.'
@@ -23227,7 +23298,7 @@ paths:
               additionalProperties: true
       responses:
         '200':
-          description: "Apercu (`applied: false`) ou deplacement applique."
+          description: 'Apercu (`applied: false`) ou deplacement applique.'
           content:
             application/json:
               schema:
