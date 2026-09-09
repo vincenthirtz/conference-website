@@ -23,6 +23,7 @@ import { invalidateStaffCache } from '../../utils/staff';
 
 import indexHandler from '../../pages/api/admin/broadcast/index';
 import campaignHandler from '../../pages/api/admin/broadcast/[campaignId]/index';
+import previewHandler from '../../pages/api/admin/broadcast/[campaignId]/preview';
 
 /* -----------------------------------------------------------
  * Helpers
@@ -398,5 +399,54 @@ describe('GET /api/admin/broadcast (list includes db campaigns)', () => {
     expect(builtin).toBeDefined();
     expect(builtin.source).toBe('builtin');
     expect(builtin.body).toBeNull();
+  });
+});
+
+/* -----------------------------------------------------------
+ * GET /api/admin/broadcast/{id}/preview — marque résolue
+ * ---------------------------------------------------------*/
+
+describe('GET /api/admin/broadcast/{id}/preview', () => {
+  // Régression : le gabarit porte des jetons `{{BRAND_*}}` que seul `sendEmail`
+  // résolvait. La preview servait donc `<img src="{{BRAND_LOGO_URL}}">` — logo
+  // cassé dans l'admin, alors que l'email réellement envoyé était correct.
+  it('résout les jetons de marque au lieu de les servir tels quels', async () => {
+    store.email_campaigns = [
+      {
+        id: 'ma-campagne',
+        name: 'Ma campagne',
+        description: '',
+        subject: 'Un objet',
+        audience: 'all-confirmed-users',
+        status: 'draft',
+        heading: 'Un titre',
+        greeting_enabled: true,
+        body_paragraphs: ['Un paragraphe.'],
+        body_format: 'structured',
+        body_html: null,
+        cta_label: null,
+        cta_url: null,
+        footer_note: null,
+      },
+    ] as any;
+
+    const res = makeRes();
+    await previewHandler(
+      makeReq({ method: 'GET', query: { campaignId: 'ma-campagne' } }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    const html = String(res.body);
+
+    for (const token of [
+      '{{BRAND_LOGO_URL}}',
+      '{{BRAND_SITE_URL}}',
+      '{{BRAND_NAME}}',
+    ]) {
+      expect(html).not.toContain(token);
+    }
+    expect(html).toContain('/img/logos/2026-logo.png');
+    expect(html).toContain("OW Women's Cup");
   });
 });

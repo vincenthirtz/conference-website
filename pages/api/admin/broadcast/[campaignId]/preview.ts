@@ -5,6 +5,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { withStaffRoute } from '@/utils/staff';
 import { getCampaign } from '@/utils/broadcasts';
+import { applyBrand, resolveEmailBrand } from '@/utils/emailBrand';
 
 export default withStaffRoute(handler, {
   permission: 'manage_broadcast',
@@ -30,7 +31,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       ? rawLabel.trim().slice(0, 80)
       : null;
 
-  const html = campaign.buildHtml(label);
+  // Les gabarits portent des jetons de marque (`{{BRAND_LOGO_URL}}`,
+  // `{{BRAND_SITE_URL}}`, `{{BRAND_NAME}}`) que seul `sendEmail` résolvait :
+  // la preview affichait donc `<img src="{{BRAND_LOGO_URL}}">` — logo cassé,
+  // liens morts et « {{BRAND_NAME}} » en toutes lettres dans le pied de page.
+  // On refait ici ce que fait le transport, pour que la preview montre
+  // exactement l'email envoyé. `resolveEmailBrand()` sans argument = marque
+  // plateforme, comme `sendCampaignEmail` qui ne passe pas de tenantId.
+  const brand = await resolveEmailBrand();
+  const html = applyBrand(campaign.buildHtml(label), brand);
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
