@@ -106,6 +106,14 @@ export type EventSegment = {
   planned_start_at: string | null;
   broadcast_message: EventBroadcastMessage | null;
   caster_checklist: EventCasterChecklistItem[];
+  /**
+   * Nom de la scene OBS a mettre a l'antenne au demarrage du segment. NULL ou
+   * chaine vide = pas de bascule. C'est un NOM, pas un id : obs-websocket
+   * adresse les scenes par nom, et rien ici ne peut valider qu'elle existe —
+   * renommer la scene dans OBS casse le lien (la regie journalise l'echec sans
+   * interrompre le segment). Cf. add_event_segments_obs_scene.sql.
+   */
+  obs_scene: string | null;
   created_at: string;
   updated_at: string | null;
 };

@@ -38,4 +38,24 @@ export default ns('adminRegie', {
   startingNext: 'Démarrage…',
   startNextSuccess: 'Segment suivant démarré.',
   startNextError: 'Impossible de démarrer le segment suivant.',
+  obsTitle: 'Scène OBS',
+  obsDesc:
+    "La scène liée passe à l'antenne au démarrage du segment. Sans lien, la régie ne touche pas à OBS.",
+  obsDisconnected: 'OBS non connecté',
+  obsConnecting: 'Connexion à OBS…',
+  obsConnected: 'OBS connecté',
+  obsConnect: 'Connecter OBS',
+  obsConnectHint:
+    'Réglages repris du cockpit caster (hôte, port, mot de passe).',
+  obsConnectError: 'Connexion à OBS impossible : {message}',
+  obsSceneLabel: 'Scène liée à « {segment} »',
+  obsSceneNone: 'Aucune (ne pas toucher à OBS)',
+  obsSaving: 'Enregistrement…',
+  obsSaveError: 'Impossible de lier la scène : {message}',
+  obsSwitched: 'OBS basculé sur « {scene} ».',
+  obsSwitchError:
+    'Bascule OBS vers « {scene} » impossible : {message}. Le segment continue.',
+  obsSceneMissing:
+    "« {scene} » n'existe plus dans OBS — la scène a-t-elle été renommée ?",
+  obsNoSegment: 'Aucun segment à lier.',
 });

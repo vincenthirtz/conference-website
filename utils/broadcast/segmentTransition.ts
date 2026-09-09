@@ -18,7 +18,7 @@ import { emitSegmentTransitioned } from '../eventSegmentEvents';
 type SupabaseAdminClient = NonNullable<typeof SupabaseAdminExport>;
 
 const SEGMENT_SELECT_FULL =
-  'id, ord, type, match_id, title, duration_min, status, started_at, ended_at, broadcast_message, caster_checklist, created_at, updated_at';
+  'id, ord, type, match_id, title, duration_min, status, started_at, ended_at, broadcast_message, caster_checklist, obs_scene, created_at, updated_at';
 
 const SEGMENT_SELECT_LOOKUP =
   'id, ord, type, match_id, title, duration_min, status, started_at, ended_at, broadcast_message, tenant_id';

@@ -39,4 +39,23 @@ export default {
   startingNext: 'Starting…',
   startNextSuccess: 'Next segment started.',
   startNextError: 'Could not start the next segment.',
+  obsTitle: 'OBS scene',
+  obsDesc:
+    'The linked scene goes on air when the segment starts. Without a link, the control room leaves OBS alone.',
+  obsDisconnected: 'OBS not connected',
+  obsConnecting: 'Connecting to OBS…',
+  obsConnected: 'OBS connected',
+  obsConnect: 'Connect OBS',
+  obsConnectHint:
+    'Settings reused from the caster cockpit (host, port, password).',
+  obsConnectError: 'Could not connect to OBS: {message}',
+  obsSceneLabel: 'Scene linked to “{segment}”',
+  obsSceneNone: 'None (leave OBS alone)',
+  obsSaving: 'Saving…',
+  obsSaveError: 'Could not link the scene: {message}',
+  obsSwitched: 'OBS switched to “{scene}”.',
+  obsSwitchError:
+    'Could not switch OBS to “{scene}”: {message}. The segment continues.',
+  obsSceneMissing: '“{scene}” no longer exists in OBS — was it renamed?',
+  obsNoSegment: 'No segment to link.',
 };

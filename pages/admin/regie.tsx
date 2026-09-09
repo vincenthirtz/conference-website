@@ -54,6 +54,7 @@ import {
 
 import LiveSegmentBlock from '@/components/Caster/LiveSegmentBlock';
 import NewRunPanel from '@/components/Caster/NewRunPanel';
+import ObsSegmentBridge from '@/components/Caster/ObsSegmentBridge';
 import CockpitChecklist from '@/components/Caster/CockpitChecklist';
 import CockpitHotkeys from '@/components/Caster/CockpitHotkeys';
 import BriefingPanel from '@/components/Caster/BriefingPanel';
@@ -871,6 +872,25 @@ function RegiePage({ staff }: StaffProps) {
                 onAck={cueStream.ack}
                 seenLocally={seenLocally}
                 onMarkSeen={markSeen}
+              />
+            )}
+
+            {/* Pont OBS : bascule la scène liée au démarrage du segment. */}
+            {liveRunId && (
+              <ObsSegmentBridge
+                runId={liveRunId}
+                currentSegment={currentSegment ?? null}
+                nextSegment={nextSegment ?? null}
+                canEdit={canStartRun}
+                onSegmentUpdated={(updated) => {
+                  setSegments((prev) => {
+                    const idx = prev.findIndex((sg) => sg.id === updated.id);
+                    if (idx === -1) return prev;
+                    const next = [...prev];
+                    next[idx] = updated;
+                    return next;
+                  });
+                }}
               />
             )}
 

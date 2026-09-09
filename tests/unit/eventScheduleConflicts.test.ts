@@ -31,6 +31,7 @@ function makeSegment(
     ord: overrides.ord,
     type: overrides.type ?? 'match',
     match_id: overrides.match_id ?? null,
+    obs_scene: overrides.obs_scene ?? null,
     wave_id: overrides.wave_id ?? null,
     station_id: overrides.station_id ?? null,
     title: overrides.title ?? `Segment ${overrides.ord}`,

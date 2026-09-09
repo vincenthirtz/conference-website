@@ -2,7 +2,7 @@
 //
 // Feature: Run-of-show — Lot 2.
 // GET    : segment details.
-// PATCH  : update title, duration_min, broadcast_message, caster_checklist
+// PATCH  : update title, duration_min, broadcast_message, caster_checklist, obs_scene
 //          (template). Le status, started_at, ended_at ne sont PAS modifiables
 //          ici — ils sont controles par /start /skip /end. Le ord non plus :
 //          utiliser /reorder.
@@ -46,6 +46,9 @@ const UpdateSegmentSchema = z
     station_id: z.string().uuid().nullable().optional(),
     broadcast_message: BroadcastMessageSchema.optional(),
     caster_checklist: z.array(ChecklistItemSchema).optional(),
+    // Nom de scene OBS : chaine libre (OBS n'impose rien) ou null pour
+    // detacher. Trim + max pour ne pas stocker un pave par accident.
+    obs_scene: z.string().trim().max(200).nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'Au moins un champ doit etre fourni.',
@@ -84,7 +87,7 @@ async function handler(
   const { data: segment, error: segErr } = await admin
     .from('event_segments')
     .select(
-      'id, event_run_id, tenant_id, ord, type, match_id, wave_id, station_id, title, duration_min, status, started_at, ended_at, broadcast_message, caster_checklist, created_at, updated_at'
+      'id, event_run_id, tenant_id, ord, type, match_id, wave_id, station_id, title, duration_min, status, started_at, ended_at, broadcast_message, caster_checklist, obs_scene, created_at, updated_at'
     )
     .eq('id', segId)
     .eq('event_run_id', runId)
@@ -176,7 +179,7 @@ async function handler(
       .eq('event_run_id', runId)
       .eq('tenant_id', ctx.tenantId)
       .select(
-        'id, ord, type, match_id, wave_id, station_id, title, duration_min, planned_start_at, status, started_at, ended_at, broadcast_message, caster_checklist, created_at, updated_at'
+        'id, ord, type, match_id, wave_id, station_id, title, duration_min, planned_start_at, status, started_at, ended_at, broadcast_message, caster_checklist, obs_scene, created_at, updated_at'
       )
       .single();
 

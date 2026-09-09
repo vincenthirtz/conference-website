@@ -1162,6 +1162,15 @@ components:
             - live
             - done
             - skipped
+        obs_scene:
+          type: string
+          nullable: true
+          maxLength: 200
+          description: |
+            Nom de la scène OBS mise à l'antenne au démarrage du segment.
+            `null` = pas de bascule automatique. C'est un nom, pas un
+            identifiant : obs-websocket adresse les scènes par nom, et rien
+            côté serveur ne peut valider qu'elle existe.
     EventWave:
       type: object
       required:

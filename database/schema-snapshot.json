@@ -409,6 +409,7 @@
       "event_run_id",
       "id",
       "match_id",
+      "obs_scene",
       "ord",
       "planned_start_at",
       "started_at",
