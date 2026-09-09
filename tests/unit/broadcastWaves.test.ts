@@ -347,6 +347,78 @@ describe('computeAudienceRecipients', () => {
     expect(recipients).toEqual([]);
   });
 
+  it('tournament-members: tous les rôles des équipes inscrites, et elles seules', async () => {
+    setAuthListUsers([
+      // titulaire, déjà connectée → incluse (pas de filtre de session ici)
+      {
+        id: 'u1',
+        email: 'titulaire@x.com',
+        email_confirmed_at: '2026-01-01',
+        last_sign_in_at: '2026-06-01',
+      } as any,
+      // remplaçante → incluse
+      {
+        id: 'u2',
+        email: 'sub@x.com',
+        email_confirmed_at: '2026-01-01',
+        last_sign_in_at: null,
+      } as any,
+      // encadrement (coach) → inclus
+      {
+        id: 'u3',
+        email: 'coach@x.com',
+        email_confirmed_at: '2026-01-01',
+        last_sign_in_at: '2026-06-01',
+      } as any,
+      // membre d'une équipe NON inscrite au tournoi en cours → exclue.
+      // C'est toute la différence avec `team-members`.
+      {
+        id: 'u4',
+        email: 'autre-edition@x.com',
+        email_confirmed_at: '2026-01-01',
+        last_sign_in_at: '2026-06-01',
+      } as any,
+    ]);
+    store.tournaments = [
+      {
+        id: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b',
+        status: 'published',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+      },
+    ] as any;
+    store.tournament_teams = [
+      {
+        tournament_id: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b',
+        team_id: 't1',
+      },
+    ] as any;
+    store.team_members = [
+      { team_id: 't1', user_id: 'u1', role: 'player', is_substitute: false },
+      { team_id: 't1', user_id: 'u2', role: 'player', is_substitute: true },
+      { team_id: 't1', user_id: 'u3', role: 'coach' },
+      { team_id: 't9', user_id: 'u4', role: 'player' },
+    ] as any;
+
+    const recipients = await computeAudienceRecipients('tournament-members');
+    expect(recipients.map((r) => r.user_id).sort()).toEqual(['u1', 'u2', 'u3']);
+  });
+
+  it('tournament-members: audience vide si aucun tournoi en cours', async () => {
+    setAuthListUsers([
+      {
+        id: 'u1',
+        email: 'titulaire@x.com',
+        email_confirmed_at: '2026-01-01',
+        last_sign_in_at: '2026-06-01',
+      } as any,
+    ]);
+    store.tournaments = [] as any;
+    store.team_members = [{ team_id: 't1', user_id: 'u1' }] as any;
+
+    const recipients = await computeAudienceRecipients('tournament-members');
+    expect(recipients).toEqual([]);
+  });
+
   it('tournament-captains-incomplete-roster: capitaines sous le min_players (titulaires seuls)', async () => {
     setAuthListUsers([
       { id: 'cap1', email: 'cap1@x.com', email_confirmed_at: '2026-01-01' } as any,

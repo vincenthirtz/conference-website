@@ -76,6 +76,7 @@ export function getAudienceLabels(t: Dict): Record<string, string> {
     'team-members': t.audienceTeamMembers,
     staff: t.audienceStaff,
     adherents: t.audienceAdherents,
+    'tournament-members': t.audienceTournamentMembers,
     'tournament-never-logged-in': t.audienceTournamentNeverLoggedIn,
     'tournament-captains-incomplete-roster':
       t.audienceTournamentIncompleteRoster,

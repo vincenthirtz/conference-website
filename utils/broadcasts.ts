@@ -88,6 +88,12 @@ export type CampaignAudience =
   | 'team-members'
   | 'staff'
   | 'adherents'
+  // TOUT le monde sur une équipe inscrite au tournoi en cours : joueuses
+  // titulaires, remplaçantes et encadrement (manager, coach), sans filtre de
+  // rôle. À ne pas confondre avec `team-members`, qui ratisse les équipes de
+  // TOUTES les éditions — y compris celles qui ne jouent pas cette année et
+  // qui recevraient une annonce sans objet pour elles.
+  | 'tournament-members'
   // Relance : inscrit·es au tournoi en cours qui n'ont JAMAIS ouvert de session.
   | 'tournament-never-logged-in'
   // Relance : celles et ceux qui pilotent une équipe inscrite au roster
@@ -658,9 +664,11 @@ async function listStaffAuthUserIds(): Promise<Set<string>> {
 }
 
 /**
- * Résout l'ensemble des auth user ids inscrit·es au tournoi EN COURS : membres
- * (titulaires + remplaçant·es) des équipes présentes dans tournament_teams pour
- * le tournoi résolu par `resolveCurrentTournamentId` (tenant par défaut).
+ * Résout l'ensemble des auth user ids inscrit·es au tournoi EN COURS : TOUS les
+ * `team_members` des équipes présentes dans tournament_teams pour le tournoi
+ * résolu par `resolveCurrentTournamentId` (tenant par défaut). Aucun filtre de
+ * rôle n'est appliqué : titulaires, remplaçant·es (`is_substitute`) et
+ * encadrement (manager, coach) sont tous inclus.
  * Renvoie un Set vide si aucun tournoi actif — l'audience est alors vide, ce qui
  * est le comportement voulu (pas de relance hors période de tournoi).
  */
@@ -965,6 +973,8 @@ export async function computeAudienceRecipients(
       return computeConfirmedRecipients(await listTeamMemberIds());
     case 'staff':
       return computeConfirmedRecipients(await listStaffAuthUserIds());
+    case 'tournament-members':
+      return computeConfirmedRecipients(await listCurrentTournamentMemberIds());
     case 'tournament-never-logged-in':
       return computeConfirmedRecipients(
         await listCurrentTournamentMemberIds(),

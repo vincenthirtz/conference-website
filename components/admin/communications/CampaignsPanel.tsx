@@ -65,6 +65,7 @@ function getAudienceOptions(t: Dict): { value: string; label: string }[] {
     'team-members',
     'staff',
     'adherents',
+    'tournament-members',
     'tournament-never-logged-in',
     'tournament-captains-incomplete-roster',
     'team-members-without-discord',

@@ -205,6 +205,10 @@ export default adminNs('adminCampaigns', {
   audienceTeamMembers: "Joueuses (membres d'équipe)",
   audienceStaff: 'Staff / bénévoles',
   audienceAdherents: "Adhérent·es de l'association",
+  // « du tournoi en cours » est la moitié qui compte : `team-members`
+  // ratisse toutes les éditions, celle-ci s'arrête aux équipes inscrites.
+  audienceTournamentMembers:
+    'Tournoi en cours — joueuses, remplaçantes et encadrement',
   audienceTournamentNeverLoggedIn: 'Inscrit·es au tournoi jamais connecté·es',
   audienceTournamentIncompleteRoster: 'Capitaines — roster incomplet',
   audienceTeamMembersWithoutDiscord: 'Membres d’équipe — Discord non lié',

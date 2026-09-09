@@ -257,4 +257,6 @@ export default {
   audienceTeamMembersWithoutBattleTag: 'Team members — BattleTag missing',
   audienceTeamCaptainsManagers: 'Team captains AND managers',
   audienceTeamStaff: 'Team leadership (captain, manager, coach)',
+  audienceTournamentMembers:
+    'Current tournament — players, substitutes and leadership',
 };
