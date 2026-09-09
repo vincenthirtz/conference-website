@@ -1,0 +1,42 @@
+-- database/migrations/set_team_stats_view_security_invoker.sql
+--
+-- Passe `public.team_stats_view` en `security_invoker = on`.
+--
+-- WHY:
+--   L'advisor Supabase la signale en CRITICAL « Security Definer View ». Une
+--   vue sans `security_invoker` s'exécute avec les droits de son créateur : les
+--   RLS des tables qu'elle agrège (`matches`, `games`, `teams`, `tournaments`)
+--   ne s'appliquent PAS à celui qui l'interroge. Comme la vue vit dans `public`,
+--   PostgREST l'expose, et un rôle `anon`/`authenticated` qui la lirait
+--   contournerait les politiques des tables sources — d'autant plus gênant
+--   qu'elle N'EST PAS tenant-scopée (cf. le TODO(tenant) dans
+--   replace_team_stats_view_matview_with_view.sql) : le cloisonnement repose
+--   entièrement sur les appelants, qui bornent les `tournament_id`.
+--
+--   Ce n'est pas une nouveauté de politique : la vue sœur
+--   `public.team_map_stats` est déjà créée `WITH (security_invoker = on)`, avec
+--   exactement cette justification. `team_stats_view` lui est antérieure et
+--   n'avait simplement pas été alignée.
+--
+-- SANS RISQUE POUR LES CONSOMMATEURS : les quatre lecteurs de la vue passent
+--   tous par le client service-role (`supabaseAdmin`), qui contourne les RLS
+--   par construction — le basculement ne change donc rien pour eux :
+--     - pages/api/team/[id]/stats.ts
+--     - pages/api/admin/stats/teams.ts
+--     - pages/api/bot/v1/players/by-discord/[discordUserId]/stats.ts
+--     - pages/team/[slug]/stats.tsx
+--   Ce qui change, c'est le cas non prévu : une lecture directe en anon ou
+--   authenticated, qui se voit désormais appliquer les RLS des tables sources.
+--   C'est précisément l'objet du correctif.
+--
+-- WHAT:
+--   ALTER VIEW plutôt que CREATE OR REPLACE : la définition courante vient de
+--   `fix_team_stats_view_status_to_finished.sql`, et la recopier ici créerait
+--   un second endroit à tenir à jour. On ne touche QUE l'attribut.
+--
+-- Idempotent : ré-exécuter l'ALTER sur une vue déjà en invoker est sans effet.
+
+ALTER VIEW public.team_stats_view SET (security_invoker = on);
+
+-- PostgREST doit revoir la définition.
+NOTIFY pgrst, 'reload schema';
