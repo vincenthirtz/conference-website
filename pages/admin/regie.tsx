@@ -670,13 +670,21 @@ function RegiePage({ staff }: StaffProps) {
     </div>
   );
 
-  const shell = (children: React.ReactNode) => (
+  // `wide` : le cockpit passe en deux colonnes dès qu'un run est live (voir plus
+  // bas). Une colonne de 42rem suffisait pour un formulaire ; pour conduire une
+  // antenne, empiler timer, cues, checklist et briefing impose de scroller au
+  // moment où on en a le moins le temps.
+  const shell = (children: React.ReactNode, wide = false) => (
     <>
       <Head>
         <title>{tr.docTitle}</title>
       </Head>
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-16 pb-12">
+        <div
+          className={`${
+            wide ? 'max-w-6xl' : 'max-w-2xl'
+          } mx-auto px-4 sm:px-6 pt-16 pb-12`}
+        >
           {children}
         </div>
       </div>
@@ -791,108 +799,130 @@ function RegiePage({ staff }: StaffProps) {
           </>
         )}
 
-        {/* Banniere cues : sticky, visible si un cue recent n est pas vu. */}
+        {/* Banniere cues : sticky, visible si un cue recent n est pas vu.
+            Hors grille : elle doit barrer toute la largeur. */}
         <CueBanner cues={cueStream.cues} seenLocally={seenLocally} />
 
-        {/* Bloc segment en cours / prochain */}
-        <LiveSegmentBlock
-          run={run}
-          currentSegment={currentSegment}
-          nextSegment={nextSegment}
-          schedule={schedule}
-        />
+        {/* Deux colonnes dès lg quand un run est live : à gauche ce qu'on
+            conduit (timer, transitions, cues, checklist), à droite ce qu'on
+            consulte (briefing, raccourcis, assignations). Une seule colonne
+            en dessous de lg et hors direct — `contents` neutralise la grille
+            sans dupliquer le sous-arbre. */}
+        <div
+          className={
+            liveRunId
+              ? 'grid lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] gap-4 items-start'
+              : 'contents'
+          }
+        >
+          <div className={liveRunId ? 'space-y-4 min-w-0' : 'contents'}>
+            {/* Bloc segment en cours / prochain */}
+            <LiveSegmentBlock
+              run={run}
+              currentSegment={currentSegment}
+              nextSegment={nextSegment}
+              schedule={schedule}
+            />
 
-        {/* Barre d'actions segment (admin/owner uniquement) : piloter les
+            {/* Barre d'actions segment (admin/owner uniquement) : piloter les
             transitions depuis la régie sans passer par le Director. Les
             endpoints segments exigent le rôle 'admin' → accessibles à
             admin/owner (jamais à un caster). */}
-        {liveRunId && canStartRun && (currentSegment || nextSegment) && (
-          <div
-            className="flex flex-wrap items-center gap-2"
-            data-testid="regie-segment-actions"
-          >
-            {currentSegment && (
-              <button
-                type="button"
-                onClick={handleEndSegment}
-                disabled={!!segAction}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed"
-                data-testid="regie-end-segment"
+            {liveRunId && canStartRun && (currentSegment || nextSegment) && (
+              <div
+                className="flex flex-wrap items-center gap-2"
+                data-testid="regie-segment-actions"
               >
-                {segAction === 'end' && (
-                  <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                {currentSegment && (
+                  <button
+                    type="button"
+                    onClick={handleEndSegment}
+                    disabled={!!segAction}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                    data-testid="regie-end-segment"
+                  >
+                    {segAction === 'end' && (
+                      <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                    )}
+                    {segAction === 'end' ? tr.endingSegment : tr.endSegment}
+                  </button>
                 )}
-                {segAction === 'end' ? tr.endingSegment : tr.endSegment}
-              </button>
-            )}
-            {nextSegment && (
-              <button
-                type="button"
-                onClick={handleStartNext}
-                disabled={!!segAction}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/90 hover:bg-indigo-500 border border-indigo-500/40 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
-                data-testid="regie-start-next"
-              >
-                {segAction === 'startNext' && (
-                  <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                {nextSegment && (
+                  <button
+                    type="button"
+                    onClick={handleStartNext}
+                    disabled={!!segAction}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/90 hover:bg-indigo-500 border border-indigo-500/40 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                    data-testid="regie-start-next"
+                  >
+                    {segAction === 'startNext' && (
+                      <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                    )}
+                    {segAction === 'startNext' ? tr.startingNext : tr.startNext}
+                  </button>
                 )}
-                {segAction === 'startNext' ? tr.startingNext : tr.startNext}
-              </button>
+              </div>
             )}
+
+            {/* Feed cues Director (au-dessus de la checklist : actionnable). */}
+            {liveRunId && (
+              <CueFeed
+                cues={cueStream.cues}
+                onAck={cueStream.ack}
+                seenLocally={seenLocally}
+                onMarkSeen={markSeen}
+              />
+            )}
+
+            {/* Checklist du segment courant (ou prochain si pas de courant) */}
+            {(() => {
+              const segForChecklist = currentSegment ?? nextSegment;
+              if (!segForChecklist) return null;
+              return (
+                <CockpitChecklist
+                  segment={segForChecklist}
+                  accessToken={session.accessToken}
+                  onUpdated={(updated) => {
+                    setSegments((prev) => {
+                      const idx = prev.findIndex((s) => s.id === updated.id);
+                      if (idx === -1) return prev;
+                      const next = [...prev];
+                      next[idx] = updated;
+                      return next;
+                    });
+                  }}
+                />
+              );
+            })()}
           </div>
-        )}
 
-        {/* Briefing match si pertinent */}
-        {briefingMatchId && (
-          <BriefingPanel
-            matchId={briefingMatchId}
-            accessToken={session.accessToken}
-          />
-        )}
+          <div className={liveRunId ? 'space-y-4 min-w-0' : 'contents'}>
+            {/* Briefing match si pertinent */}
+            {briefingMatchId && (
+              <BriefingPanel
+                matchId={briefingMatchId}
+                accessToken={session.accessToken}
+              />
+            )}
 
-        {/* Feed cues Director (au-dessus de la checklist : actionnable). */}
-        {liveRunId && (
-          <CueFeed
-            cues={cueStream.cues}
-            onAck={cueStream.ack}
-            seenLocally={seenLocally}
-            onMarkSeen={markSeen}
-          />
-        )}
-
-        {/* Checklist du segment courant (ou prochain si pas de courant) */}
-        {(() => {
-          const segForChecklist = currentSegment ?? nextSegment;
-          if (!segForChecklist) return null;
-          return (
-            <CockpitChecklist
-              segment={segForChecklist}
+            {/* Hotkeys (actives uniquement si segment en cours) */}
+            <CockpitHotkeys
+              segmentId={currentSegment?.id ?? nextSegment?.id ?? ''}
               accessToken={session.accessToken}
-              onUpdated={(updated) => {
-                setSegments((prev) => {
-                  const idx = prev.findIndex((s) => s.id === updated.id);
-                  if (idx === -1) return prev;
-                  const next = [...prev];
-                  next[idx] = updated;
-                  return next;
-                });
-              }}
+              disabled={!currentSegment}
             />
-          );
-        })()}
 
-        {/* Hotkeys (actives uniquement si segment en cours) */}
-        <CockpitHotkeys
-          segmentId={currentSegment?.id ?? nextSegment?.id ?? ''}
-          accessToken={session.accessToken}
-          disabled={!currentSegment}
-        />
+            {/* Prochaines assignations */}
+            <UpcomingAssignments assignments={session.upcomingAssignments} />
 
-        {/* Prochaines assignations */}
-        <UpcomingAssignments assignments={session.upcomingAssignments} />
-
-        {/* PushOptIn (audience caster) — carte autonome */}
-        <PushOptIn audience="caster" variant="card" loginPath="/admin/login" />
+            {/* PushOptIn (audience caster) — carte autonome */}
+            <PushOptIn
+              audience="caster"
+              variant="card"
+              loginPath="/admin/login"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Modal bloquante pour cue urgent non ack. FIFO si plusieurs. */}
@@ -906,7 +936,8 @@ function RegiePage({ staff }: StaffProps) {
 
       {/* Confirmation « Terminer le run ». */}
       {confirmDialog}
-    </>
+    </>,
+    !!liveRunId
   );
 }
 
