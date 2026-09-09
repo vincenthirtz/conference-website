@@ -24,7 +24,7 @@ export default {
   addMapToggle: '+ Add a map',
   addingAll: 'Adding…',
   addAllMaps: '+ Add all {game} maps ({count})',
-  deleteAllMaps: 'Delete all maps',
+  deleteAllMapsScoped: 'Clear the "{pool}" pool',
   addMapTitle: 'Add a map',
   noVetoGame: '{game} does not use map veto.',
   noPredefinedPool: 'This game has no predefined map pool.',
@@ -68,9 +68,29 @@ export default {
   errorAdd: 'Error while adding',
   confirmDeleteMap: 'Are you sure you want to delete this map?',
   errorDelete: 'Error while deleting',
-  confirmDeleteAll: 'Delete ALL maps in the pool? This action is irreversible.',
+  confirmDeleteAllScoped:
+    'Delete every map in the "{pool}" pool? This action is irreversible. Other pools are left untouched.',
   errorUpdate: 'Error while updating',
   confirmAddAll: 'Add all missing {game} maps to the pool?',
   alertAllMapsPresent: 'All maps are already in the pool.',
   errorAddAll: 'Error during bulk add',
+
+  // --- Per-round pool -----------------------------------------------------
+  roundSelectorLegend: 'Pool to edit',
+  roundDefaultPool: 'Tournament pool',
+  roundDefaultPoolHint:
+    'Default pool: it applies to any round that has none of its own.',
+  roundMapsCount: '{count} maps',
+  roundInheritsDefault: 'Falls back to the tournament pool',
+  roundNoneScheduled:
+    'No round scheduled yet: add matches to declare a per-round pool.',
+  roundScopeNotice:
+    'You are editing the pool for round {round}. Adding, editing and deleting only affect this round.',
+  emptyRoundPool:
+    'No map specific to round {round}: it will use the tournament pool.',
+  mapRoundPoolToggle: 'Tournament map',
+  selectMapFromDefaultLabel: 'Pick a map from the tournament pool',
+  fillRoundFromDefault: '+ Copy the tournament pool ({count})',
+  confirmFillRound:
+    'Add every missing map from the tournament pool to round {round}?',
 };

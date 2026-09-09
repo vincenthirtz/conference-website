@@ -64,7 +64,10 @@ const BASELINE: Record<string, number> = {
   'pages/admin/broadcast/live.tsx': 837,
   'pages/admin/leagues/[id].tsx': 825,
   'pages/admin/scrims/plannings/[planningId].tsx': 825,
-  'pages/admin/tournament/[id]/maps.tsx': 816,
+  // 576 écrites : le sélecteur de journée, la grille, le formulaire d'ajout et
+  // la modale d'édition sont partis dans `components/admin/tournament/mapPool/`
+  // (pool par journée), et le plafond suit.
+  'pages/admin/tournament/[id]/maps.tsx': 576,
 };
 
 function walk(dir: string, acc: string[] = []): string[] {

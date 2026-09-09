@@ -1,5 +1,13 @@
 // pages/api/tournament/[id]/maps.ts
 // Gestion des maps d'un tournoi (pool de maps / ordre / activation)
+//
+// POOL PAR JOURNÉE : chaque opération est scopée par `?round=`.
+//   * absent (ou `default`) → pool PAR DÉFAUT du tournoi (`round_number IS NULL`)
+//   * `?round=2`            → pool de la journée 2 (`matches.round_number`)
+//
+// Ce scope n'est pas cosmétique. Sans lui, le GET listait les journées mêlées
+// au pool par défaut, et surtout le DELETE sans `mapId` (« supprimer toutes
+// les maps ») effaçait les pools de TOUTES les journées d'un seul clic.
 
 // ⚠️ Route staff : protégée par withStaffRoute (min: manager)
 
@@ -8,6 +16,11 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { resolveEffectiveMapPool } from '@/utils/maps/pool';
+import {
+  buildRoundOptions,
+  parseRoundParam,
+  type RoundOption,
+} from '@/utils/maps/roundPools';
 
 import { logger } from '../../../../utils/logger';
 export type TournamentMapRow = {
@@ -19,6 +32,7 @@ export type TournamentMapRow = {
   image_url: string | null;
   enabled: boolean;
   order_index: number | null;
+  round_number: number | null;
   created_at: string;
 };
 
@@ -31,6 +45,16 @@ export type TournamentMapInput = {
   enabled?: boolean;
   order_index?: number | null;
 };
+
+/** Applique le scope « journée » à une requête sur `tournament_maps`. */
+function scopeToRound<T extends { is: Function; eq: Function }>(
+  query: T,
+  round: number | null
+): T {
+  return (round === null
+    ? query.is('round_number', null)
+    : query.eq('round_number', round)) as T;
+}
 
 // Rôle minimum : manager (peut gérer les settings du tournoi)
 export default withStaffRoute(handler, { permission: 'manage_tournaments' });
@@ -45,18 +69,26 @@ async function handler(
     return res.status(400).json({ error: 'Invalid tournament id' });
   }
 
+  // Journée ciblée. Résolue AVANT toute écriture : un `?round` illisible doit
+  // faire un 400, pas retomber en silence sur le pool par défaut.
+  const parsedRound = parseRoundParam(req.query.round);
+  if (!parsedRound.ok) {
+    return res.status(400).json({ error: parsedRound.error });
+  }
+  const round = parsedRound.round;
+
   try {
     switch (req.method) {
       case 'GET':
-        return await handleGet(id, res, ctx);
+        return await handleGet(id, res, ctx, round);
       case 'POST':
-        return await handlePost(id, req, res, ctx);
+        return await handlePost(id, req, res, ctx, round);
       case 'PUT':
-        return await handlePut(id, req, res, ctx);
+        return await handlePut(id, req, res, ctx, round);
       case 'PATCH':
         return await handlePatch(id, req, res, ctx);
       case 'DELETE':
-        return await handleDelete(id, req, res, ctx);
+        return await handleDelete(id, req, res, ctx, round);
       default:
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -75,13 +107,17 @@ async function handler(
 async function handleGet(
   tournamentId: string,
   res: NextApiResponse,
-  ctx: AuthenticatedStaffContext
+  ctx: AuthenticatedStaffContext,
+  round: number | null
 ) {
-  const { data, error } = await supabaseAdmin
-    .from('tournament_maps')
-    .select('*')
-    .eq('tournament_id', tournamentId)
-    .eq('tenant_id', ctx.tenantId)
+  const { data, error } = await scopeToRound(
+    supabaseAdmin
+      .from('tournament_maps')
+      .select('*')
+      .eq('tournament_id', tournamentId)
+      .eq('tenant_id', ctx.tenantId),
+    round
+  )
     .order('order_index', { ascending: true })
     .order('map_name', { ascending: true });
 
@@ -107,7 +143,60 @@ async function handleGet(
   return res.status(200).json({
     maps: (data || []) as TournamentMapRow[],
     tournament: tournamentRow ?? null,
+    round,
+    rounds: await loadRoundOptions(tournamentId, ctx.tenantId),
   });
+}
+
+/**
+ * Journées proposables à l'écran, DÉRIVÉES DU PLANNING : on ne déclare un pool
+ * que pour une journée qui existe au calendrier. Chaque entrée porte le nombre
+ * de cartes déjà déclarées, pour que l'écran distingue « journée réglée » de
+ * « journée qui retombera sur le pool par défaut ».
+ *
+ * Ne jette jamais : une liste de journées indisponible ne doit pas empêcher de
+ * gérer le pool par défaut, seul cas où l'écran fonctionnait jusqu'ici.
+ */
+async function loadRoundOptions(
+  tournamentId: string,
+  tenantId: string
+): Promise<RoundOption[]> {
+  const [matchesRes, mapsRes] = await Promise.all([
+    supabaseAdmin
+      .from('matches')
+      .select('round_number, round_name, scheduled_at')
+      .eq('tournament_id', tournamentId)
+      .eq('tenant_id', tenantId)
+      .not('round_number', 'is', null),
+    supabaseAdmin
+      .from('tournament_maps')
+      .select('round_number')
+      .eq('tournament_id', tournamentId)
+      .eq('tenant_id', tenantId)
+      .not('round_number', 'is', null),
+  ]);
+
+  if (matchesRes.error) {
+    logger.error('GET tournament rounds error:', matchesRes.error);
+  }
+  if (mapsRes.error) {
+    logger.error('GET tournament round pools error:', mapsRes.error);
+  }
+
+  const counts = new Map<number, number>();
+  for (const row of (mapsRes.data ?? []) as { round_number: number | null }[]) {
+    if (typeof row.round_number !== 'number') continue;
+    counts.set(row.round_number, (counts.get(row.round_number) ?? 0) + 1);
+  }
+
+  return buildRoundOptions(
+    (matchesRes.data ?? []) as {
+      round_number: number | null;
+      round_name: string | null;
+      scheduled_at: string | null;
+    }[],
+    counts
+  );
 }
 
 /* -----------------------------------------------------------
@@ -119,7 +208,8 @@ async function handlePost(
   tournamentId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: AuthenticatedStaffContext
+  ctx: AuthenticatedStaffContext,
+  round: number | null
 ) {
   const body = req.body as TournamentMapInput & { defaults?: boolean };
 
@@ -127,7 +217,7 @@ async function handlePost(
   // tenant éditable (tenant_map_pool), fallback sur le catalogue statique
   // config/games si le pool tenant est vide.
   if (body && body.defaults === true) {
-    return await handleAddDefaults(tournamentId, res, ctx);
+    return await handleAddDefaults(tournamentId, res, ctx, round);
   }
 
   if (!body || !body.map_name) {
@@ -137,12 +227,17 @@ async function handlePost(
   }
 
   // on calcule un order_index par défaut à la suite de ce qui existe
+  // Numéroté DANS la journée : sinon la première carte de J3 hériterait de
+  // l'index 30 laissé par le pool par défaut.
   let nextIndex: number | null = null;
-  const { data: existing, error: countErr } = await supabaseAdmin
-    .from('tournament_maps')
-    .select('order_index')
-    .eq('tournament_id', tournamentId)
-    .eq('tenant_id', ctx.tenantId);
+  const { data: existing, error: countErr } = await scopeToRound(
+    supabaseAdmin
+      .from('tournament_maps')
+      .select('order_index')
+      .eq('tournament_id', tournamentId)
+      .eq('tenant_id', ctx.tenantId),
+    round
+  );
 
   if (!countErr && existing) {
     const max = (existing as any[])
@@ -160,6 +255,7 @@ async function handlePost(
     enabled: body.enabled ?? true,
     order_index:
       typeof body.order_index === 'number' ? body.order_index : nextIndex,
+    round_number: round,
     tenant_id: ctx.tenantId,
   };
 
@@ -170,6 +266,11 @@ async function handlePost(
     .maybeSingle();
 
   if (error || !data) {
+    // L'index unique (tenant, tournoi, journée, carte) rejette un doublon. Le
+    // rendre en 500 laisserait croire à une panne alors que la carte est déjà là.
+    if ((error as { code?: string } | null)?.code === '23505') {
+      return res.status(409).json({ error: 'Map already in this pool' });
+    }
     logger.error('POST tournament_maps error:', error);
     return res.status(500).json({
       error: 'Failed to create tournament map',
@@ -187,6 +288,7 @@ async function handlePost(
       payload: {
         created: true,
         map_name: body.map_name,
+        round_number: round,
       },
     });
   }
@@ -213,7 +315,8 @@ type DefaultPoolMap = {
 async function handleAddDefaults(
   tournamentId: string,
   res: NextApiResponse,
-  ctx: AuthenticatedStaffContext
+  ctx: AuthenticatedStaffContext,
+  round: number | null
 ) {
   // Résoudre le jeu du tournoi (scopé tenant).
   const { data: tournament, error: tErr } = await supabaseAdmin
@@ -233,15 +336,21 @@ async function handleAddDefaults(
 
   const game = (tournament as { game?: string | null }).game ?? null;
 
-  // Pool applicable : celui du tenant pour ce jeu, sinon le catalogue statique.
-  // `includeTournamentMaps: false` est ESSENTIEL ici : cette action ALIMENTE
-  // tournament_maps, elle ne peut pas s'en servir comme source (cf.
-  // utils/maps/pool.ts, partagé avec l'écran d'arbitrage).
+  // Source du remplissage, selon la cible :
+  //
+  //   * pool PAR DÉFAUT (round === null) : le tenant pour ce jeu, sinon le
+  //     catalogue statique. `includeTournamentMaps: false` est ESSENTIEL — cette
+  //     action ALIMENTE le pool par défaut, elle ne peut pas s'en servir comme
+  //     source (cf. utils/maps/pool.ts, partagé avec l'écran d'arbitrage).
+  //   * pool d'une JOURNÉE : le pool par défaut du tournoi d'abord. Remplir J3
+  //     depuis le catalogue du jeu rouvrirait des cartes que le staff a
+  //     justement écartées de la compétition.
   const { maps: resolvedPool, source: resolvedSource } =
     await resolveEffectiveMapPool(supabaseAdmin, {
       tenantId: ctx.tenantId,
+      tournamentId,
       game,
-      includeTournamentMaps: false,
+      includeTournamentMaps: round !== null,
     });
 
   const poolMaps: DefaultPoolMap[] = resolvedPool.map((m) => ({
@@ -249,15 +358,19 @@ async function handleAddDefaults(
     type: m.type,
     image: m.image,
   }));
-  const source: 'tenant' | 'defaults' =
-    resolvedSource === 'tenant' ? 'tenant' : 'defaults';
+  const source = resolvedSource === 'tournament-round' ? 'tournament' : resolvedSource;
 
-  // Maps déjà présentes sur le tournoi (dédup insensible à la casse).
-  const { data: existing, error: exErr } = await supabaseAdmin
-    .from('tournament_maps')
-    .select('map_name, order_index')
-    .eq('tournament_id', tournamentId)
-    .eq('tenant_id', ctx.tenantId);
+  // Maps déjà présentes DANS CE POOL (dédup insensible à la casse). Scoper à la
+  // journée est indispensable : sinon remplir J3 sauterait toutes les cartes
+  // parce qu'elles figurent déjà dans le pool par défaut.
+  const { data: existing, error: exErr } = await scopeToRound(
+    supabaseAdmin
+      .from('tournament_maps')
+      .select('map_name, order_index')
+      .eq('tournament_id', tournamentId)
+      .eq('tenant_id', ctx.tenantId),
+    round
+  );
 
   if (exErr) {
     logger.error('add-defaults: existing maps lookup error:', exErr);
@@ -284,6 +397,7 @@ async function handleAddDefaults(
       image_url: m.image,
       enabled: true,
       order_index: nextIndex++,
+      round_number: round,
       tenant_id: ctx.tenantId,
     }));
 
@@ -313,6 +427,7 @@ async function handleAddDefaults(
         added_defaults: true,
         source,
         imported: insertedMaps.length,
+        round_number: round,
       },
     });
   }
@@ -333,7 +448,8 @@ async function handlePut(
   tournamentId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: AuthenticatedStaffContext
+  ctx: AuthenticatedStaffContext,
+  round: number | null
 ) {
   const { maps } = req.body as {
     maps: TournamentMapInput[];
@@ -345,12 +461,17 @@ async function handlePut(
     });
   }
 
-  // 1) On supprime toutes les maps existantes du tournoi
-  const { error: delErr } = await supabaseAdmin
-    .from('tournament_maps')
-    .delete()
-    .eq('tournament_id', tournamentId)
-    .eq('tenant_id', ctx.tenantId);
+  // 1) On vide le pool CIBLÉ (celui de la journée, ou le pool par défaut) — et
+  // lui seul : un remplacement du pool par défaut ne doit pas emporter les
+  // pools des journées.
+  const { error: delErr } = await scopeToRound(
+    supabaseAdmin
+      .from('tournament_maps')
+      .delete()
+      .eq('tournament_id', tournamentId)
+      .eq('tenant_id', ctx.tenantId),
+    round
+  );
 
   if (delErr) {
     logger.error('DELETE existing tournament_maps error:', delErr);
@@ -368,6 +489,7 @@ async function handlePut(
     image_url: m.image_url ?? null,
     enabled: m.enabled ?? true,
     order_index: typeof m.order_index === 'number' ? m.order_index : idx,
+    round_number: round,
     tenant_id: ctx.tenantId,
   }));
 
@@ -400,6 +522,7 @@ async function handlePut(
       payload: {
         replaced_all_maps: true,
         maps_count: insertedMaps.length,
+        round_number: round,
       },
     });
   }
@@ -495,7 +618,8 @@ async function handleDelete(
   tournamentId: string,
   req: NextApiRequest,
   res: NextApiResponse,
-  ctx: AuthenticatedStaffContext
+  ctx: AuthenticatedStaffContext,
+  round: number | null
 ) {
   const { mapId } = req.query;
 
@@ -505,15 +629,24 @@ async function handleDelete(
     });
   }
 
-  let query = supabaseAdmin
-    .from('tournament_maps')
-    .delete()
-    .eq('tournament_id', tournamentId)
-    .eq('tenant_id', ctx.tenantId);
-
-  if (mapId) {
-    query = query.eq('id', mapId);
-  }
+  // Suppression EN MASSE : bornée au pool ciblé. C'était le vrai danger de cet
+  // écran — « supprimer toutes les maps » effaçait aussi les pools de toutes
+  // les journées, sans que rien ne le laisse deviner.
+  const query = mapId
+    ? supabaseAdmin
+        .from('tournament_maps')
+        .delete()
+        .eq('tournament_id', tournamentId)
+        .eq('tenant_id', ctx.tenantId)
+        .eq('id', mapId)
+    : scopeToRound(
+        supabaseAdmin
+          .from('tournament_maps')
+          .delete()
+          .eq('tournament_id', tournamentId)
+          .eq('tenant_id', ctx.tenantId),
+        round
+      );
 
   const { error } = await query;
 
@@ -535,6 +668,7 @@ async function handleDelete(
       payload: {
         deleted_all: !mapId,
         deleted_one: !!mapId,
+        round_number: round,
       },
     });
   }

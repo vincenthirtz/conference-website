@@ -23,7 +23,7 @@ export default adminNs('adminTournamentMaps', {
   addMapToggle: '+ Ajouter une map',
   addingAll: 'Ajout en cours…',
   addAllMaps: '+ Ajouter toutes les maps {game} ({count})',
-  deleteAllMaps: 'Supprimer toutes les maps',
+  deleteAllMapsScoped: 'Vider le pool « {pool} »',
   addMapTitle: 'Ajouter une map',
   noVetoGame: "{game} n'utilise pas de veto de maps.",
   noPredefinedPool: 'Ce jeu ne dispose pas de pool de maps prédéfini.',
@@ -67,10 +67,29 @@ export default adminNs('adminTournamentMaps', {
   errorAdd: "Erreur lors de l'ajout",
   confirmDeleteMap: 'Êtes-vous sûr de vouloir supprimer cette map ?',
   errorDelete: 'Erreur lors de la suppression',
-  confirmDeleteAll:
-    'Supprimer TOUTES les maps du pool ? Cette action est irréversible.',
+  confirmDeleteAllScoped:
+    'Supprimer toutes les maps du pool « {pool} » ? Cette action est irréversible. Les autres pools ne sont pas touchés.',
   errorUpdate: 'Erreur lors de la mise à jour',
   confirmAddAll: 'Ajouter toutes les maps {game} manquantes au pool ?',
   alertAllMapsPresent: 'Toutes les maps sont déjà dans le pool.',
   errorAddAll: "Erreur lors de l'ajout groupé",
+
+  // --- Pool par journée ---------------------------------------------------
+  roundSelectorLegend: 'Pool à éditer',
+  roundDefaultPool: 'Pool du tournoi',
+  roundDefaultPoolHint:
+    "Pool par défaut : il s'applique à toute journée qui n'a pas le sien.",
+  roundMapsCount: '{count} maps',
+  roundInheritsDefault: 'Reprend le pool du tournoi',
+  roundNoneScheduled:
+    "Aucune journée au planning : ajoutez des matchs pour déclarer un pool par journée.",
+  roundScopeNotice:
+    'Vous éditez le pool de la journée {round}. Ajouts, modifications et suppressions ne concernent que cette journée.',
+  emptyRoundPool:
+    "Aucune map propre à la journée {round} : elle utilisera le pool du tournoi.",
+  mapRoundPoolToggle: 'Map du tournoi',
+  selectMapFromDefaultLabel: 'Sélectionner une map du pool du tournoi',
+  fillRoundFromDefault: '+ Reprendre le pool du tournoi ({count})',
+  confirmFillRound:
+    'Ajouter à la journée {round} toutes les maps manquantes du pool du tournoi ?',
 });
