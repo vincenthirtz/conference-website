@@ -31,6 +31,7 @@ export default {
   cdHours: 'h',
   cdMinutes: 'min',
   cdSeconds: 'sec',
+  cdSrRemaining: '{days} days, {hours} hours and {minutes} minutes',
   spotEyebrow: 'The event',
   spotTitle: 'The next event',
   spotSeeTournament: 'View the tournament',

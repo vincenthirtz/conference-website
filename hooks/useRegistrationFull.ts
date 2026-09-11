@@ -40,36 +40,53 @@ export type RegistrationFullState = {
   loading: boolean;
 };
 
-export function useRegistrationFull(): RegistrationFullState {
+// `enabled: false` saute la requête. Pour une page qui CONNAÎT déjà la réponse
+// par ses props (l'accueil, en ISR) : la redemander coûtait un aller-retour à
+// chaque visite, et faisait sauter le bouton de « S'inscrire » à « Complet »
+// quand les deux sources divergeaient. L'état reste alors celui de départ ; c'est
+// l'appelant qui fournit la vérité.
+export function useRegistrationFull({
+  enabled = true,
+}: { enabled?: boolean } = {}): RegistrationFullState {
   const [state, setState] = useState<RegistrationFullState>({
     isFull: false,
-    loading: true,
+    loading: enabled,
   });
 
   useEffect(() => {
+    if (!enabled) return undefined;
     let alive = true;
 
     fetch('/api/tournaments?limit=20')
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((json: { tournaments?: PublicTournament[]; items?: PublicTournament[] }) => {
-        if (!alive) return;
-        const list = json.tournaments ?? json.items ?? [];
+      .then((r) =>
+        r.ok ? r.json() : Promise.reject(new Error(String(r.status)))
+      )
+      .then(
+        (json: {
+          tournaments?: PublicTournament[];
+          items?: PublicTournament[];
+        }) => {
+          if (!alive) return;
+          const list = json.tournaments ?? json.items ?? [];
 
-        // On ne regarde que les tournois OUVERTS aux inscriptions : un tournoi
-        // terminé est « complet » au sens littéral, mais son bouton n'a plus
-        // lieu d'être de toute façon.
-        const upcoming = list
-          .filter((t) => t.status === 'published')
-          .sort((a, b) => (a.start_date ?? '').localeCompare(b.start_date ?? ''));
+          // On ne regarde que les tournois OUVERTS aux inscriptions : un tournoi
+          // terminé est « complet » au sens littéral, mais son bouton n'a plus
+          // lieu d'être de toute façon.
+          const upcoming = list
+            .filter((t) => t.status === 'published')
+            .sort((a, b) =>
+              (a.start_date ?? '').localeCompare(b.start_date ?? '')
+            );
 
-        const next = upcoming[0];
-        const isFull = Boolean(
-          next &&
+          const next = upcoming[0];
+          const isFull = Boolean(
+            next &&
             next.max_teams != null &&
             (next.team_count ?? 0) >= next.max_teams
-        );
-        setState({ isFull, loading: false });
-      })
+          );
+          setState({ isFull, loading: false });
+        }
+      )
       .catch((err) => {
         if (!alive) return;
         // Une API injoignable ne doit pas fermer les inscriptions.
@@ -80,7 +97,7 @@ export function useRegistrationFull(): RegistrationFullState {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [enabled]);
 
   return state;
 }

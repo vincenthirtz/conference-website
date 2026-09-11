@@ -38,6 +38,9 @@ export default ns('homeV2', {
   cdHours: 'h',
   cdMinutes: 'min',
   cdSeconds: 'sec',
+  // Lu par les lecteurs d'écran à la place des cellules (décoratives) : à la
+  // minute, sans les secondes, qui changeaient à chaque lecture.
+  cdSrRemaining: '{days} jours, {hours} heures et {minutes} minutes',
   spotEyebrow: "L'événement",
   spotTitle: 'Le prochain rendez-vous',
   spotSeeTournament: 'Voir le tournoi',

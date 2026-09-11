@@ -27,15 +27,24 @@ type Props = {
   className?: string;
   /** Contenu riche (flèche, halo…) rendu à la place du simple libellé. */
   children?: ReactNode;
+  /**
+   * La page CONNAÎT déjà la réponse (props ISR de l'accueil) : on s'en sert et
+   * on ne la redemande pas. Absent → déduit côté client, comme avant.
+   */
+  isFull?: boolean;
 };
 
 export default function RegisterTeamCta({
   label,
   className,
   children,
+  isFull: isFullProp,
 }: Props): JSX.Element {
   const t = useT(nsRegisterCta);
-  const { isFull, loading } = useRegistrationFull();
+  const known = isFullProp !== undefined;
+  const fetched = useRegistrationFull({ enabled: !known });
+  const isFull = known ? isFullProp : fetched.isFull;
+  const loading = known ? false : fetched.loading;
 
   // Tant qu'on ne sait pas, on garde le bouton normal : un faux « Complet »
   // découragerait une inscription légitime.

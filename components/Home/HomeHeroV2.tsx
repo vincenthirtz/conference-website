@@ -138,87 +138,86 @@ export default function HomeHeroV2({
               {t.heroTournamentFull}
             </span>
           ) : (
+            // Un lien, pas un <button> dans un lien : HTML invalide, et deux
+            // arrêts de tabulation pour une seule action. Les classes du
+            // bouton vivent désormais sur le <a>.
+            // `isFull` est connu par les props : RegisterTeamCta ne refait pas
+            // la requête, et le bouton ne saute plus après coup.
             <RegisterTeamCta
               label={t.heroCtaRegister}
-              className="w-full sm:w-auto"
+              isFull={tournamentFull}
+              className="esport-cta group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-3.5 text-base font-extrabold uppercase tracking-wider text-white shadow-2xl transition-all duration-300 hover:scale-105 sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
             >
-              <button
-                type="button"
-                className="esport-cta group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-3.5 text-base font-extrabold uppercase tracking-wider text-white shadow-2xl transition-all duration-300 hover:scale-105 sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
+              <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+              <span className="relative">{t.heroCtaRegister}</span>
+              <svg
+                className="relative h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 sm:h-5 sm:w-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={3}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
               >
-                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                <span className="relative">{t.heroCtaRegister}</span>
-                <svg
-                  className="relative h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 sm:h-5 sm:w-5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={3}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M5 12h14M13 6l6 6-6 6" />
-                </svg>
-              </button>
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
             </RegisterTeamCta>
           )}
           {/* Lot 1 acquisition : la porte d'entrée des joueuses SANS équipe.
               Placée juste après « Inscrire mon équipe » et avant Discord —
               c'est le plus gros gisement, il n'avait aucun CTA. */}
-          <Link href="/rejoindre" className="w-full sm:w-auto">
-            <button
-              type="button"
-              className="hero-secondary-btn hero-secondary-btn--violet group flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-medium text-white backdrop-blur transition-all duration-300 sm:w-auto sm:px-6 sm:text-base"
+          <Link
+            href="/rejoindre"
+            className="hero-secondary-btn hero-secondary-btn--violet group flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-medium text-white backdrop-blur transition-all duration-300 sm:w-auto sm:px-6 sm:text-base"
+          >
+            <svg
+              className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 sm:h-5 sm:w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
             >
-              <svg
-                className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 sm:h-5 sm:w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M19 8v6M22 11h-6" />
-              </svg>
-              {t.heroCtaJoin}
-            </button>
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M19 8v6M22 11h-6" />
+            </svg>
+            {t.heroCtaJoin}
           </Link>
           <Link
             href={DISCORD_URL}
             target="_blank"
             rel="noreferrer"
-            className="w-full sm:w-auto"
+            className="hero-secondary-btn hero-secondary-btn--violet group flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-medium text-white backdrop-blur transition-all duration-300 sm:w-auto sm:px-6 sm:text-base"
           >
-            <button
-              type="button"
-              className="hero-secondary-btn hero-secondary-btn--violet group flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-medium text-white backdrop-blur transition-all duration-300 sm:w-auto sm:px-6 sm:text-base"
+            <svg
+              className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 sm:h-5 sm:w-5"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
             >
-              <svg
-                className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 sm:h-5 sm:w-5"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
-              </svg>
-              {t.heroCtaDiscord}
-            </button>
+              <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
+            </svg>
+            {t.heroCtaDiscord}
           </Link>
         </div>
 
         <p className="mt-5 text-[13px] text-gray-400">{t.heroTrust}</p>
 
         {(isLive || showCountdown) && (
-          <div
-            className="mt-9 inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-2.5 rounded-2xl border border-white/15 bg-black/50 px-4 py-2.5 shadow-lg shadow-black/40 backdrop-blur-md"
-            aria-live="polite"
-          >
-            <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-white">
+          // Pas d'aria-live sur la pastille entière : les cellules changent à
+          // chaque seconde, et le lecteur d'écran annonçait le décompte en
+          // boucle. Seul le libellé d'état (« en direct » / « prochain ») est
+          // une région vivante ; le décompte lui-même est lu, à la demande, par
+          // une phrase à la minute — les cellules sont décoratives.
+          <div className="mt-9 inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-2.5 rounded-2xl border border-white/15 bg-black/50 px-4 py-2.5 shadow-lg shadow-black/40 backdrop-blur-md">
+            <span
+              className="inline-flex items-center gap-2 text-[13px] font-semibold text-white"
+              aria-live="polite"
+            >
               <span className="relative flex h-2 w-2" aria-hidden>
                 <span
                   className={`absolute inline-flex h-full w-full rounded-full opacity-70 motion-safe:animate-ping ${
@@ -240,7 +239,16 @@ export default function HomeHeroV2({
                   className="hidden h-6 w-px bg-white/15 sm:block"
                   aria-hidden
                 />
-                <span className="inline-flex gap-1.5">
+                {parts && (
+                  <span className="sr-only">
+                    {format(t.cdSrRemaining, {
+                      days: parts.days,
+                      hours: parts.hours,
+                      minutes: parts.minutes,
+                    })}
+                  </span>
+                )}
+                <span className="inline-flex gap-1.5" aria-hidden="true">
                   {parts
                     ? cells.map(({ value, label }) => (
                         <span
