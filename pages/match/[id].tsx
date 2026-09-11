@@ -64,6 +64,7 @@ type Tournament = {
   name: string;
   short_name?: string | null;
   game?: string | null;
+  visibility?: string | null;
 };
 
 type Stage = {
@@ -85,6 +86,7 @@ type Game = {
 type Match = {
   id: string;
   tournament_id: string;
+  scrim_id: string | null;
   stage_id: string | null;
   status: MatchStatus;
   is_bye: boolean | null;
@@ -256,6 +258,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       `
       id,
       tournament_id,
+      scrim_id,
       stage_id,
       status,
       is_bye,
@@ -274,7 +277,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       notes,
       team1:team1_id ( id, slug, name, short_name, logo_url, captain_id ),
       team2:team2_id ( id, slug, name, short_name, logo_url, captain_id ),
-      tournament:tournament_id ( id, slug, name, short_name, game ),
+      tournament:tournament_id ( id, slug, name, short_name, game, visibility ),
       stage:stage_id ( id, name, stage_type ),
       games (*)
     `
@@ -288,7 +291,34 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     return { notFound: true, revalidate: 60 };
   }
 
-  const match = data as any as Match;
+  // `data` est typé par les colonnes demandées : le tournoi embarqué peut être
+  // null (match de scrim), d'où la lecture avant le cast vers `Match`.
+  const raw = data as any as Omit<Match, 'tournament'> & {
+    tournament: Tournament | null;
+  };
+
+  // Match de scrim : `tournament_id` est NULL (contrainte matches_owner_check,
+  // tournoi XOR scrim). Le rendre ici plantait sur `match.tournament.name`
+  // (500). Sa vraie page est celle du scrim — à condition qu'elle soit
+  // publique, avec les mêmes filtres que pages/scrim/[id].tsx.
+  if (!raw.tournament) {
+    const destination = raw.scrim_id
+      ? await readPublicScrimPath(raw.scrim_id)
+      : null;
+    if (!destination) return { notFound: true, revalidate: 60 };
+    return {
+      redirect: { destination, permanent: false },
+      revalidate: 60,
+    };
+  }
+
+  // Même règle que pages/tournament/[id].tsx : un tournoi non public n'expose
+  // pas ses matchs. `visibility` vaut 'private' par défaut.
+  if (raw.tournament.visibility !== 'public') {
+    return { notFound: true, revalidate: 60 };
+  }
+
+  const match = raw as Match;
 
   // Tri des games par ordre
   match.games =
@@ -313,6 +343,30 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     revalidate: 30,
   };
 };
+
+/**
+ * Chemin de la page publique du scrim qui porte ce match, ou `null` si le
+ * scrim n'est pas visible (privé, brouillon, supprimé) — un match de scrim
+ * privé n'a pas plus de page que le scrim lui-même.
+ */
+async function readPublicScrimPath(scrimId: string): Promise<string | null> {
+  const { data, error } = await supabaseAdmin
+    .from('scrims')
+    .select('id, slug')
+    .eq('tenant_id', DEFAULT_TENANT_ID)
+    .eq('id', scrimId)
+    .eq('is_public', true)
+    .neq('status', 'draft')
+    .is('deleted_at', null)
+    .maybeSingle();
+
+  if (error) {
+    logger.error('match page scrim lookup error:', error);
+    return null;
+  }
+  if (!data) return null;
+  return `/scrim/${encodeURIComponent(data.slug || data.id)}`;
+}
 
 /**
  * Compositions des deux équipes.
@@ -434,7 +488,11 @@ export default function MatchPage({ match, lineups, mvp }: Props) {
                 </span>
               </div>
 
-              <Heading typeStyle="heading-md" className="mb-1 text-gradient">
+              <Heading
+                level="h1"
+                typeStyle="heading-md"
+                className="mb-1 text-gradient"
+              >
                 {t1Name}{' '}
                 {!isBye && <span className="text-gray-400">{t.vs}</span>}{' '}
                 {t2Name}
