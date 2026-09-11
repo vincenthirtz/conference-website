@@ -89,7 +89,11 @@ function countLines(file: string): number {
 describe('taille des écrans admin', () => {
   const files = ROOTS.flatMap((root) =>
     walk(path.join(process.cwd(), root))
-  ).map((f) => path.relative(process.cwd(), f));
+    // Séparateurs POSIX : le gel est écrit avec des `/`. Sous Windows, les `\`
+    // de path.relative faisaient échouer le garde sur TOUS les fichiers gelés —
+    // un échec permanent, donc ignoré, qui a masqué un vrai dépassement
+    // (SocialPostsPanel, 2026-09-11).
+  ).map((f) => path.relative(process.cwd(), f).split(path.sep).join('/'));
 
   it('aucun NOUVEAU fichier au-delà du plafond', () => {
     const offenders = files.filter(

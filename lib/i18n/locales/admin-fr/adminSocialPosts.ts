@@ -80,6 +80,17 @@ export default adminNs('adminSocialPosts', {
   connectionExpired: 'La connexion a expiré.',
   accountLastError: 'Dernière erreur : {error}',
   reconnectCta: 'Reconnecter',
+  oauthConnected: '{platform} connecté : {handle}.',
+  oauthCancelled: 'Connexion {platform} annulée.',
+  oauthError: 'Connexion {platform} impossible : {reason}',
+  oauthReasonNotConfigured:
+    "l'application n'est pas configurée (App ID ou secret manquant).",
+  oauthReasonMissingCode: "aucun code d'autorisation reçu en retour.",
+  oauthReasonBadState:
+    'lien de connexion expiré ou ouvert depuis une autre session. Relancez « Reconnecter » et terminez en moins de 10 minutes.',
+  oauthReasonNoAccount: 'aucun compte professionnel lié à cette autorisation.',
+  oauthReasonExchangeFailed:
+    "l'échange du jeton a été refusé. Le détail s'affiche sous le compte.",
   connectCta: 'Connecter le compte',
   secretMissing: 'Mise en service : il manque l’Instagram App Secret.',
   secretLabel: 'Instagram App Secret',

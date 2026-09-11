@@ -23,6 +23,7 @@ import { logger } from '@/utils/logger';
 import {
   exchangeCode,
   fetchDisplayName,
+  markError,
   saveConnection,
   tiktokCredentials,
   verifyState,
@@ -103,6 +104,13 @@ async function handler(
     return back(res, { tiktok: 'connected', handle: displayName ?? '' });
   } catch (err) {
     logger.error('[admin/tiktok/callback] échec', err);
+    // Même règle qu'Instagram : le motif est consigné sur le compte, où le
+    // panneau l'affiche, plutôt que de ne vivre que dans les logs Netlify.
+    const message = err instanceof Error ? err.message : String(err);
+    await markError(
+      ctx.tenantId,
+      `Connexion TikTok — ${message}`.slice(0, 500)
+    ).catch(() => undefined);
     return back(res, { tiktok: 'error', reason: 'exchange_failed' });
   }
 }

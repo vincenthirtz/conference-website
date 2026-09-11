@@ -23,6 +23,7 @@ import { logger } from '@/utils/logger';
 import {
   exchangeCode,
   isInstagramConfigured,
+  markAccount,
   saveConnection,
   verifyState,
 } from '@/utils/social/instagram';
@@ -98,6 +99,13 @@ async function handler(
     });
   } catch (err) {
     logger.error('[admin/instagram/callback] échec', err);
+    // Le motif Meta ne vivait que dans les logs Netlify : on le consigne sur le
+    // compte, où le panneau l'affiche. Une connexion réussie l'efface
+    // (saveConnection remet last_error à null).
+    const message = err instanceof Error ? err.message : String(err);
+    await markAccount(ctx.tenantId, {
+      last_error: `Connexion Instagram — ${message}`.slice(0, 500),
+    }).catch(() => undefined);
     return back(res, { instagram: 'error', reason: 'exchange_failed' });
   }
 }

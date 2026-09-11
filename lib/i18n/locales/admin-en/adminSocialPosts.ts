@@ -82,6 +82,17 @@ export default {
   connectionExpired: 'The connection has expired.',
   accountLastError: 'Last error: {error}',
   reconnectCta: 'Reconnect',
+  oauthConnected: '{platform} connected: {handle}.',
+  oauthCancelled: '{platform} connection cancelled.',
+  oauthError: 'Could not connect {platform}: {reason}',
+  oauthReasonNotConfigured:
+    'the app is not configured (missing App ID or secret).',
+  oauthReasonMissingCode: 'no authorization code came back.',
+  oauthReasonBadState:
+    'the connection link expired or was opened from another session. Click “Reconnect” again and finish within 10 minutes.',
+  oauthReasonNoAccount: 'no professional account is linked to this authorization.',
+  oauthReasonExchangeFailed:
+    'the token exchange was refused. The details are shown under the account.',
   connectCta: 'Connect the account',
   secretMissing: 'Setup: the Instagram app secret is missing.',
   secretLabel: 'Instagram app secret',

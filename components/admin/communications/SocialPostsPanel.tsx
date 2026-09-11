@@ -11,6 +11,7 @@
 // l'aperçu et re-verrouille le bouton.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -27,21 +28,20 @@ import type {
 } from '@/utils/social/platforms';
 import type { TargetStatus } from '@/components/admin/communications/SocialPostsHistory';
 import { discordMentionIds } from '@/utils/social/markdown';
+import {
+  readOauthReturn,
+  withoutOauthParams,
+} from '@/utils/social/oauthReturn';
 import HashtagPicker from '@/components/admin/communications/HashtagPicker';
 import SocialPostsHistory, {
   type HistoryPost,
 } from '@/components/admin/communications/SocialPostsHistory';
 import TiktokMirrorCard from '@/components/admin/communications/TiktokMirrorCard';
+import PlatformConnectionStatus, {
+  type ConnectionState,
+  type SetupState,
+} from '@/components/admin/communications/PlatformConnectionStatus';
 import nsAdminSocialPosts from '@/lib/i18n/locales/admin-fr/adminSocialPosts';
-
-type ConnectionState = {
-  connected: boolean;
-  handle: string | null;
-  expiresAt: string | null;
-  status: string;
-  /** Dernière erreur consignée sur le compte (lecture par le miroir, publication). */
-  lastError?: string | null;
-};
 
 type StateResponse = {
   platforms: SocialPlatform[];
@@ -75,12 +75,6 @@ const ENDPOINT = '/api/admin/social-posts';
 const SECRET_ENDPOINT = '/api/admin/instagram/secret';
 
 /** Ce qui manque encore pour qu'Instagram puisse publier. */
-type SetupState = {
-  appIdSet: boolean;
-  secretSet: boolean;
-  encryptionReady: boolean;
-};
-
 /** Réglages d'une destination dans le formulaire. */
 type TargetDraft = {
   enabled: boolean;
@@ -169,31 +163,10 @@ export default function SocialPostsPanel() {
   // local, parce que la clé de chiffrement ne vit qu'en production. Le serveur
   // chiffre là où la clé est déjà.
   const [setup, setSetup] = useState<SetupState | null>(null);
-  const [appSecret, setAppSecret] = useState('');
-  const [editingSecret, setEditingSecret] = useState(false);
-  const [bskyHandle, setBskyHandle] = useState('');
-  const [bskyPassword, setBskyPassword] = useState('');
-
-  const saveSecret = useCallback(async () => {
-    setBusy(true);
-    try {
-      await adminFetchJson(SECRET_ENDPOINT, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appSecret: appSecret.trim() }),
-      });
-      // La valeur ne sert plus à rien côté client : on l'oublie tout de suite.
-      setAppSecret('');
-      setEditingSecret(false);
-      setSetup((prev) => (prev ? { ...prev, secretSet: true } : prev));
-      addToast(t.secretSaved, 'success');
-    } catch (err) {
-      logger.error('[admin/social-posts] secret save error', err);
-      addToast(t.secretError, 'error');
-    } finally {
-      setBusy(false);
-    }
-  }, [adminFetchJson, addToast, appSecret, t.secretError, t.secretSaved]);
+  const markSecretSet = useCallback(
+    () => setSetup((prev) => (prev ? { ...prev, secretSet: true } : prev)),
+    []
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -235,30 +208,47 @@ export default function SocialPostsPanel() {
     void load();
   }, [load]);
 
-  const saveBluesky = useCallback(async () => {
-    setBusy(true);
-    try {
-      await adminFetchJson('/api/admin/bluesky/credentials', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          handle: bskyHandle.trim(),
-          appPassword: bskyPassword.trim(),
+  // Retour d'un parcours OAuth (callbacks Instagram / TikTok) : le résultat
+  // arrive dans l'URL. Personne ne le lisait — une reconnexion ratée ramenait
+  // ici sans un mot, la cause ne vivant que dans les logs Netlify (2026-09-11).
+  const router = useRouter();
+  useEffect(() => {
+    if (!router.isReady) return;
+    const ret = readOauthReturn(router.query);
+    if (!ret) return;
+    const platform = ret.platform === 'instagram' ? 'Instagram' : 'TikTok';
+    if (ret.outcome === 'connected') {
+      addToast(
+        format(t.oauthConnected, { platform, handle: ret.handle || '—' }),
+        'success'
+      );
+    } else if (ret.outcome === 'cancelled') {
+      addToast(format(t.oauthCancelled, { platform }), 'info');
+    } else {
+      const reasons: Record<string, string> = {
+        not_configured: t.oauthReasonNotConfigured,
+        missing_code: t.oauthReasonMissingCode,
+        bad_state: t.oauthReasonBadState,
+        no_account: t.oauthReasonNoAccount,
+        exchange_failed: t.oauthReasonExchangeFailed,
+      };
+      addToast(
+        format(t.oauthError, {
+          platform,
+          reason: (ret.reason && reasons[ret.reason]) || ret.reason || '?',
         }),
-      });
-      setBskyPassword('');
-      addToast(t.blueskySaved, 'success');
-      await load();
-    } catch (err) {
-      logger.error('[admin/social-posts] bluesky save error', err);
-      // Le message de la route porte le diagnostic utile (handle mal formé,
-      // mot de passe du compte au lieu d'un mot de passe d'app, refus de
-      // Bluesky) : le remplacer par un texte générique le ferait perdre.
-      addToast(err instanceof Error ? err.message : t.blueskyError, 'error');
-    } finally {
-      setBusy(false);
+        'error',
+        // Un échec se lit et se recopie : il ne doit pas filer en 4 secondes.
+        12_000
+      );
     }
-  }, [adminFetchJson, addToast, bskyHandle, bskyPassword, load, t]);
+    // On retire les paramètres : un rechargement ne doit pas rejouer le message.
+    void router.replace(
+      { pathname: router.pathname, query: withoutOauthParams(router.query) },
+      undefined,
+      { shallow: true }
+    );
+  }, [router, addToast, t]);
 
   // Le contenu a changé : l'aperçu affiché ne décrit plus ce qui partirait.
   const invalidate = useCallback(() => setPreview(null), []);
@@ -520,176 +510,16 @@ export default function SocialPostsPanel() {
                 </span>
               </div>
 
-              {p.needsConnection
-                ? (() => {
-                    const conn = state.connections?.[p.key];
-                    if (conn?.connected) {
-                      return (
-                        <div className="space-y-1 pl-7">
-                          <p className="text-xs text-neutral-500">
-                            {format(t.connectedAs, {
-                              handle: conn.handle ?? '—',
-                            })}
-                            {/* Reconnecter doit rester possible alors que le
-                                compte paraît connecté : Meta peut révoquer une
-                                session (mot de passe changé, alerte de
-                                sécurité) sans que l'échéance du jeton ne le
-                                laisse deviner. Bluesky n'a pas d'OAuth. */}
-                            {p.key === 'instagram' ? (
-                              <>
-                                {' · '}
-                                {/* Navigation de document : la route répond
-                                    par une redirection 302 vers Meta. */}
-                                {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-                                <a
-                                  href="/api/admin/instagram/authorize"
-                                  className={`underline underline-offset-2 ${
-                                    conn.lastError
-                                      ? 'text-amber-300 hover:text-amber-200'
-                                      : 'text-neutral-400 hover:text-neutral-200'
-                                  }`}
-                                >
-                                  {t.reconnectCta}
-                                </a>
-                              </>
-                            ) : null}
-                          </p>
-                          {/* « Connecté » ne dit pas « ça marche » : le miroir
-                              peut échouer à LIRE nos publications (Meta refuse,
-                              jeton illisible). Sans cette ligne, le seul
-                              symptôme était une carte absente du mur. */}
-                          {conn.lastError ? (
-                            <p className="text-xs text-amber-300">
-                              {format(t.accountLastError, {
-                                error: conn.lastError,
-                              })}
-                            </p>
-                          ) : null}
-                        </div>
-                      );
-                    }
-                    // Le secret DOIT rester remplaçable même une fois posé. Meta
-                    // expose deux secrets de même forme (celui de l'app Meta et
-                    // celui d'Instagram) et n'indique pas lequel est en cause
-                    // quand on se trompe : masquer le champ après un premier
-                    // enregistrement enfermerait dans l'erreur.
-                    // Bluesky ne passe pas par OAuth : deux champs suffisent, et
-                    // la route les vérifie auprès de Bluesky avant de les
-                    // enregistrer.
-                    if (p.key === 'bluesky') {
-                      return (
-                        <div className="space-y-2 pl-7">
-                          <p className="text-xs text-amber-300">
-                            {t.blueskyMissing}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <input
-                              type="text"
-                              value={bskyHandle}
-                              onChange={(e) => setBskyHandle(e.target.value)}
-                              placeholder="womenscup.bsky.social"
-                              aria-label={t.blueskyHandleLabel}
-                              autoComplete="off"
-                              className="w-56 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-xs text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
-                            />
-                            <input
-                              type="password"
-                              value={bskyPassword}
-                              onChange={(e) => setBskyPassword(e.target.value)}
-                              placeholder="xxxx-xxxx-xxxx-xxxx"
-                              aria-label={t.blueskyPasswordLabel}
-                              autoComplete="off"
-                              className="w-52 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-xs text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
-                            />
-                            <button
-                              type="button"
-                              onClick={saveBluesky}
-                              disabled={
-                                busy ||
-                                !bskyHandle.trim() ||
-                                !bskyPassword.trim()
-                              }
-                              className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-700 disabled:opacity-50"
-                            >
-                              {t.secretSaveCta}
-                            </button>
-                          </div>
-                          <p className="text-xs text-neutral-500">
-                            {t.blueskyHelp}
-                          </p>
-                        </div>
-                      );
-                    }
-
-                    const secretSet = setup?.secretSet ?? false;
-                    const showForm = !secretSet || editingSecret;
-
-                    return (
-                      <div className="space-y-2 pl-7">
-                        <p className="text-xs text-amber-300">
-                          {conn?.status === 'expired'
-                            ? t.connectionExpired
-                            : t.notConnected}{' '}
-                          {secretSet ? (
-                            <>
-                              {/* Navigation de document volontaire, pas un
-                                <Link> : cette route répond par une redirection
-                                302 vers l'écran de consentement Meta. Une
-                                navigation côté client de Next resterait dans
-                                l'app et n'irait nulle part. */}
-                              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-                              <a
-                                href="/api/admin/instagram/authorize"
-                                className="underline underline-offset-2"
-                              >
-                                {t.connectCta}
-                              </a>
-                            </>
-                          ) : (
-                            t.secretMissing
-                          )}
-                        </p>
-
-                        {secretSet && !editingSecret ? (
-                          <button
-                            type="button"
-                            onClick={() => setEditingSecret(true)}
-                            className="text-xs text-purple-300 underline underline-offset-2 hover:text-purple-200"
-                          >
-                            {t.secretReplaceCta}
-                          </button>
-                        ) : null}
-
-                        {showForm ? (
-                          <>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <input
-                                type="password"
-                                value={appSecret}
-                                onChange={(e) => setAppSecret(e.target.value)}
-                                placeholder={t.secretPlaceholder}
-                                aria-label={t.secretLabel}
-                                autoComplete="off"
-                                className="w-72 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-xs text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
-                              />
-                              <button
-                                type="button"
-                                onClick={saveSecret}
-                                disabled={busy || !appSecret.trim()}
-                                className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-700 disabled:opacity-50"
-                              >
-                                {t.secretSaveCta}
-                              </button>
-                            </div>
-                            <p className="text-xs text-neutral-500">
-                              {t.secretHelp}
-                            </p>
-                          </>
-                        ) : null}
-                      </div>
-                    );
-                  })()
-                : null}
+              {p.needsConnection ? (
+                <PlatformConnectionStatus
+                  platform={p}
+                  conn={state.connections?.[p.key]}
+                  setup={setup}
+                  t={t}
+                  onChanged={load}
+                  onSecretSaved={markSecretSet}
+                />
+              ) : null}
 
               {d.enabled ? (
                 <div className="space-y-3 pl-7">

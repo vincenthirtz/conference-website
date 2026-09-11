@@ -70,7 +70,9 @@ describe('gardes des pages admin', () => {
     const roleOnly: string[] = [];
 
     for (const file of files) {
-      const rel = path.relative(ADMIN_DIR, file);
+      // Séparateurs POSIX : les listes sont écrites avec des `/` (sous
+      // Windows, path.relative rend des `\` et le test échouait partout).
+      const rel = path.relative(ADMIN_DIR, file).split(path.sep).join('/');
       if (PUBLIC_ADMIN_PAGES.has(rel) || ROLE_GATED_ON_PURPOSE.has(rel)) {
         continue;
       }
@@ -91,7 +93,9 @@ describe('gardes des pages admin', () => {
     const unguarded: string[] = [];
 
     for (const file of files) {
-      const rel = path.relative(ADMIN_DIR, file);
+      // Séparateurs POSIX : les listes sont écrites avec des `/` (sous
+      // Windows, path.relative rend des `\` et le test échouait partout).
+      const rel = path.relative(ADMIN_DIR, file).split(path.sep).join('/');
       if (PUBLIC_ADMIN_PAGES.has(rel)) continue;
 
       const src = fs.readFileSync(file, 'utf8');
