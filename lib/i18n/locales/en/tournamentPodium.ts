@@ -22,4 +22,5 @@ export default {
   colTeam: 'Team',
   colPrize: 'Prize',
   colNotes: 'Notes',
+  unknownTeam: 'Unknown team',
 };

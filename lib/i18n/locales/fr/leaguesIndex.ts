@@ -22,4 +22,7 @@ export default ns('leaguesIndex', {
   errorHeading: 'Impossible de charger les ligues',
   errorBody: 'Une erreur est survenue. Réessayez dans quelques instants.',
   retry: 'Réessayer',
+  periodRange: '{start} — {end}',
+  periodFrom: 'À partir du {start}',
+  periodUntil: "Jusqu'au {end}",
 });

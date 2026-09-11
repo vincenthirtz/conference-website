@@ -1,5 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import Link from 'next/link';
 import teamsData from '@/config/teams.json';
 import resultsData from '@/config/results.json';
@@ -12,16 +12,15 @@ import Paragraph from '@/components/Typography/paragraph';
 import type { Team as TeamType } from '@/types/types';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import { formatSiteDate } from '@/utils/timezone';
 
-import { logger } from '../utils/logger';
 import nsTournoiPage from '@/lib/i18n/locales/fr/tournoiPage';
 // Types
 
 type Match = {
   id: string;
   round: number;
-  date: string; // ISO string
-  timeLabel: string;
+  date: string | null; // ISO avec offset, lu dans config/results.json
   home: TeamType;
   away: TeamType;
   bo: 3 | 5;
@@ -69,13 +68,25 @@ function ensureTeamShape(team: TeamType | undefined, name: string): TeamType {
   };
 }
 
-function pad(n: number) {
-  return n.toString().padStart(2, '0');
+/**
+ * Édition passée FIGÉE (2025) : scores ET horaires viennent de
+ * config/results.json, où les dates sont écrites en ISO avec leur offset.
+ * La page les recalculait avec l'année courante et l'heure du navigateur :
+ * l'édition 2025 s'affichait en novembre de l'année en cours, finale
+ * comprise, et à 20 h pour un visiteur de Londres.
+ */
+type EditionEntry = { home: number; away: number; date?: string };
+const EDITION = resultsData as Record<string, EditionEntry>;
+
+function editionResult(id: string): Match['result'] {
+  const v = EDITION[id];
+  return v
+    ? { home: Number(v.home) || 0, away: Number(v.away) || 0 }
+    : undefined;
 }
 
-function formatDateHuman(dateISO: string, locale: string) {
-  const d = new Date(dateISO);
-  return d.toLocaleString(locale, {
+function formatDateHuman(dateISO: string | null, locale: string) {
+  return formatSiteDate(dateISO, locale, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -83,6 +94,32 @@ function formatDateHuman(dateISO: string, locale: string) {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function buildRoundRobin(teams: TeamType[]): [TeamType, TeamType][][] {
+  const list = [...teams];
+  const n = list.length;
+  const rounds: [TeamType, TeamType][][] = [];
+  const rotating = list.slice(1);
+  const fixed = list[0];
+  const R = n - 1;
+  for (let r = 0; r < R; r++) {
+    const pairings: [TeamType, TeamType][] = [];
+    const left = [fixed, ...rotating.slice(0, Math.floor((n - 1) / 2))];
+    const right = rotating
+      .slice(Math.floor((n - 1) / 2))
+      .slice()
+      .reverse();
+    for (let i = 0; i < left.length; i++) {
+      const a = left[i];
+      const b = right[i];
+      if (!a || !b) continue;
+      pairings.push(r % 2 === 0 ? [a, b] : [b, a]);
+    }
+    rounds.push(pairings);
+    rotating.unshift(rotating.pop() as TeamType);
+  }
+  return rounds;
 }
 
 // Un score est "comptable" s'il correspond à une victoire valide (BO3 => 2, BO5 => 3) et pas d'égalité
@@ -140,113 +177,25 @@ function Tournoi() {
     return base;
   }, [t.teamPlaceholder]);
 
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [finalMatch, setFinalMatch] = useState<Match | null>(null);
-
-  function buildRoundRobin(teams: TeamType[]): [TeamType, TeamType][][] {
-    const list = [...teams];
-    const n = list.length;
-    const rounds: [TeamType, TeamType][][] = [];
-    const rotating = list.slice(1);
-    const fixed = list[0];
-    const R = n - 1;
-    for (let r = 0; r < R; r++) {
-      const pairings: [TeamType, TeamType][] = [];
-      const left = [fixed, ...rotating.slice(0, Math.floor((n - 1) / 2))];
-      const right = rotating
-        .slice(Math.floor((n - 1) / 2))
-        .slice()
-        .reverse();
-      for (let i = 0; i < left.length; i++) {
-        const a = left[i];
-        const b = right[i];
-        if (!a || !b) continue;
-        pairings.push(r % 2 === 0 ? [a, b] : [b, a]);
-      }
-      rounds.push(pairings);
-      rotating.unshift(rotating.pop() as TeamType);
-    }
-    return rounds;
-  }
-
-  // Construction du calendrier fixe + injection des résultats de poules
-  useEffect(() => {
-    if (teams.length !== 4) return;
-    const rounds = buildRoundRobin(teams);
-
-    let built: Match[] = [];
-    rounds.forEach((pairings, r) => {
-      pairings.forEach((p, i) => {
-        const [home, away] = p;
-        built.push({
-          id: `R${r + 1}-M${i + 1}`,
+  // Calendrier des poules : appariements round robin + scores et horaires de
+  // l'édition figée. Calculé au rendu et non plus dans un effet : rien ne
+  // dépend de l'horloge, le HTML serveur contient donc déjà le calendrier.
+  const matches = useMemo<Match[]>(() => {
+    if (teams.length !== 4) return [];
+    return buildRoundRobin(teams).flatMap((pairings, r) =>
+      pairings.map(([home, away], i) => {
+        const id = `R${r + 1}-M${i + 1}`;
+        return {
+          id,
           round: r + 1,
-          date: new Date().toISOString(),
-          timeLabel: '',
+          date: EDITION[id]?.date ?? null,
           home,
           away,
-          bo: 3,
-        });
-      });
-    });
-
-    // Forçage des dates/heures
-    const now = new Date();
-    const year = now.getFullYear();
-    const forced = [
-      new Date(year, 10, 17, 21, 0),
-      new Date(year, 10, 17, 22, 30),
-      new Date(year, 10, 17, 23, 30),
-      new Date(year, 10, 24, 21, 0),
-      new Date(year, 10, 24, 22, 0),
-      new Date(year, 10, 24, 23, 30),
-    ];
-
-    built = built.map((m, i) => {
-      const d = forced[i] ?? forced[forced.length - 1];
-      return {
-        ...m,
-        date: d.toISOString(),
-        timeLabel: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
-      };
-    });
-
-    // Inject results from results.json (objet ou tableau)
-    try {
-      const dict: any = resultsData;
-      if (Array.isArray(dict)) {
-        built = built.map((m) => {
-          const row = (dict as any[]).find((x: any) => x.id === m.id);
-          return row
-            ? {
-                ...m,
-                result: {
-                  home: Number(row.home) || 0,
-                  away: Number(row.away) || 0,
-                },
-              }
-            : m;
-        });
-      } else {
-        built = built.map((m) => {
-          const v = (dict as Record<string, { home: number; away: number }>)[
-            m.id
-          ];
-          return v
-            ? {
-                ...m,
-                result: {
-                  home: Number(v.home) || 0,
-                  away: Number(v.away) || 0,
-                },
-              }
-            : m;
-        });
-      }
-    } catch {}
-
-    setMatches(built);
-    setFinalMatch(null);
+          bo: 3 as const,
+          result: editionResult(id),
+        };
+      })
+    );
   }, [teams]);
 
   // Classement (ne compte que les matchs "comptables")
@@ -300,65 +249,25 @@ function Tournoi() {
   }, [matches, teams]);
 
   // Finale (affichée uniquement si les 6 matchs de poules sont joués ET comptables)
-  useEffect(() => {
+  const finalMatch = useMemo<Match | null>(() => {
     const rrDone = matches.length === 6 && matches.every(isCountable);
-    if (!rrDone) {
-      setFinalMatch(null);
-      return;
-    }
-
-    try {
-      const dict: any = resultsData;
-      let finalResult: { home: number; away: number } | null = null;
-
-      if (Array.isArray(dict)) {
-        const row = (dict as any[]).find((x: any) => x.id === 'FINAL');
-        if (row)
-          finalResult = {
-            home: Number(row.home) || 0,
-            away: Number(row.away) || 0,
-          };
-      } else if (dict['FINAL']) {
-        const v = dict['FINAL'];
-        finalResult = {
-          home: Number(v.home) || 0,
-          away: Number(v.away) || 0,
-        };
-      }
-
-      if (!standings || standings.length < 2) return;
-      const [t1, t2] = standings;
-
-      // Date de la finale : mercredi 10 décembre à 21h (année basée sur les poules)
-      const lastRRDate = matches.reduce(
-        (max, m) => Math.max(max, new Date(m.date).getTime()),
-        0
-      );
-      const rrYear = new Date(lastRRDate).getFullYear();
-      const finalDate = new Date(rrYear, 11, 10, 21, 0, 0, 0);
-
-      const homeTeam = ensureTeamShape(
+    if (!rrDone || standings.length < 2) return null;
+    const [t1, t2] = standings;
+    return {
+      id: 'FINAL',
+      round: standings.length + 1,
+      date: EDITION.FINAL?.date ?? null,
+      home: ensureTeamShape(
         teams.find((t) => t.name === t1.name),
         t1.name
-      );
-      const awayTeam = ensureTeamShape(
+      ),
+      away: ensureTeamShape(
         teams.find((t) => t.name === t2.name),
         t2.name
-      );
-
-      setFinalMatch({
-        id: 'FINAL',
-        round: standings.length + 1,
-        date: finalDate.toISOString(),
-        timeLabel: '21:00',
-        home: homeTeam,
-        away: awayTeam,
-        bo: 5,
-        result: finalResult || undefined,
-      });
-    } catch (err) {
-      logger.error('Erreur génération finale:', err);
-    }
+      ),
+      bo: 5,
+      result: editionResult('FINAL'),
+    };
   }, [matches, standings, teams]);
 
   const champion = useMemo(() => {

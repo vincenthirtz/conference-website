@@ -21,4 +21,5 @@ export default ns('tournamentPodium', {
   colTeam: 'Équipe',
   colPrize: 'Prix',
   colNotes: 'Notes',
+  unknownTeam: 'Équipe inconnue',
 });

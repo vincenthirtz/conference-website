@@ -15,6 +15,8 @@ import type { League, LeagueStatus } from '@/types/leagues';
 import { readPublicLeagues } from '@/utils/leagues/readPublicLeagues';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
+import { leaguePeriodLabel } from '@/utils/leagues/leaguePeriodLabel';
 import nsLeaguesIndex from '@/lib/i18n/locales/fr/leaguesIndex';
 
 type LeaguesIndexDict = typeof nsLeaguesIndex.fr;
@@ -35,28 +37,11 @@ const STATUS_CLASSES: Record<LeagueStatus, string> = {
   archived: 'bg-neutral-500/15 text-neutral-400',
 };
 
-function formatDate(iso: string | null): string | null {
-  if (!iso) return null;
-  return new Date(iso).toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
-function periodLabel(league: League): string | null {
-  const start = formatDate(league.start_date);
-  const end = formatDate(league.end_date);
-  if (start && end) return `${start} — ${end}`;
-  if (start) return `À partir du ${start}`;
-  if (end) return `Jusqu'au ${end}`;
-  return null;
-}
-
 export default function LeaguesPage({
   initialLeagues,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
   const t = useT(nsLeaguesIndex);
+  const locale = useLocale();
   const statusLabels = getStatusLabels(t);
   const hasInitial = initialLeagues.length > 0;
   const [leagues, setLeagues] = useState<League[]>(initialLeagues);
@@ -114,7 +99,7 @@ export default function LeaguesPage({
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2">
             {leagues.map((league) => {
-              const period = periodLabel(league);
+              const period = leaguePeriodLabel(league, t, locale);
               return (
                 <li key={league.id}>
                   <Link

@@ -13,6 +13,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
+import { formatSiteDate } from '@/utils/timezone';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
@@ -38,7 +39,9 @@ type RankingRow = {
   prize: string | null;
   notes: string | null;
   frozen_at: string;
-  team_name: string;
+  // null quand l'équipe a disparu. Le libellé de repli se traduit au rendu :
+  // calculé ici, dans getStaticProps, il restait figé en français.
+  team_name: string | null;
   team_short_name: string | null;
   team_logo_url: string | null;
   team_slug: string | null;
@@ -140,7 +143,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     prize: r.prize,
     notes: r.notes,
     frozen_at: r.frozen_at,
-    team_name: r.teams?.name ?? 'Équipe inconnue',
+    team_name: r.teams?.name ?? null,
     team_short_name: r.teams?.short_name ?? null,
     team_logo_url: r.teams?.logo_url ?? null,
     team_slug: r.teams?.slug ?? null,
@@ -188,17 +191,17 @@ export default function TournamentPodiumPage({
   const isCompleted =
     tournament.status === 'finished' || tournament.status === 'completed';
   const MEDAL = getMedal(t);
+  const teamName = ({ team_name }: RankingRow) => team_name ?? t.unknownTeam;
   const top3 = rankings.filter((r) => r.rank <= 3);
   const rest = rankings.filter((r) => r.rank > 3);
 
   const frozenAtIso = rankings[0]?.frozen_at;
-  const frozenAtLabel = frozenAtIso
-    ? new Date(frozenAtIso).toLocaleDateString(locale, {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-      })
-    : null;
+  const frozenAtLabel =
+    formatSiteDate(frozenAtIso, locale, {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    }) || null;
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
@@ -249,7 +252,7 @@ export default function TournamentPodiumPage({
                         <div className="relative w-16 h-16 mb-3">
                           <Image
                             src={r.team_logo_url}
-                            alt={r.team_name}
+                            alt={teamName(r)}
                             fill
                             sizes="64px"
                             className="object-contain"
@@ -257,7 +260,7 @@ export default function TournamentPodiumPage({
                         </div>
                       ) : (
                         <div className="w-16 h-16 mb-3 rounded-full bg-neutral-800 flex items-center justify-center text-xl font-bold">
-                          {r.team_short_name?.[0] ?? r.team_name[0]}
+                          {r.team_short_name?.[0] ?? teamName(r)[0]}
                         </div>
                       )}
                       {r.team_slug ? (
@@ -265,10 +268,10 @@ export default function TournamentPodiumPage({
                           href={`/team/${r.team_slug}`}
                           className="font-bold text-lg hover:text-[var(--color-yellow)]"
                         >
-                          {r.team_name}
+                          {teamName(r)}
                         </Link>
                       ) : (
-                        <span className="font-bold text-lg">{r.team_name}</span>
+                        <span className="font-bold text-lg">{teamName(r)}</span>
                       )}
                       {r.prize && (
                         <div className="mt-2 text-sm text-[var(--color-yellow-light)]">
@@ -319,7 +322,7 @@ export default function TournamentPodiumPage({
                       {r.team_logo_url ? (
                         <Image
                           src={r.team_logo_url}
-                          alt={r.team_name}
+                          alt={teamName(r)}
                           width={24}
                           height={24}
                           className="object-contain"
@@ -330,10 +333,10 @@ export default function TournamentPodiumPage({
                           href={`/team/${r.team_slug}`}
                           className="hover:text-[var(--color-yellow)]"
                         >
-                          {r.team_name}
+                          {teamName(r)}
                         </Link>
                       ) : (
-                        <span>{r.team_name}</span>
+                        <span>{teamName(r)}</span>
                       )}
                     </td>
                     <td className="px-4 py-2 text-neutral-300">
