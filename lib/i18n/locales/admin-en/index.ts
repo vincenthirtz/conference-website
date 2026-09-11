@@ -53,6 +53,7 @@ import enAdminUsersNew from './adminUsersNew';
 import enAdminTeamEdit from './adminTeamEdit';
 import enAdminTeamDetail from './adminTeamDetail';
 import enAdminTeamsList from './adminTeamsList';
+import enAdminTeamExport from './adminTeamExport';
 import enAdminTeamsMy from './adminTeamsMy';
 import enAdminTeamsNew from './adminTeamsNew';
 import enAdminStageNav from './adminStageNav';
@@ -244,6 +245,7 @@ const adminEnDict = {
   adminTeamEdit: enAdminTeamEdit,
   adminTeamDetail: enAdminTeamDetail,
   adminTeamsList: enAdminTeamsList,
+  adminTeamExport: enAdminTeamExport,
   adminTeamsMy: enAdminTeamsMy,
   adminTeamsNew: enAdminTeamsNew,
   adminStageNav: enAdminStageNav,

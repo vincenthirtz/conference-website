@@ -57,6 +57,7 @@ import nsAdminUsersNew from './adminUsersNew';
 import nsAdminTeamEdit from './adminTeamEdit';
 import nsAdminTeamDetail from './adminTeamDetail';
 import nsAdminTeamsList from './adminTeamsList';
+import nsAdminTeamExport from './adminTeamExport';
 import nsAdminTeamsMy from './adminTeamsMy';
 import nsAdminTeamsNew from './adminTeamsNew';
 import nsAdminStageNav from './adminStageNav';
@@ -248,6 +249,7 @@ export const frDict = {
   adminTeamEdit: nsAdminTeamEdit.fr,
   adminTeamDetail: nsAdminTeamDetail.fr,
   adminTeamsList: nsAdminTeamsList.fr,
+  adminTeamExport: nsAdminTeamExport.fr,
   adminTeamsMy: nsAdminTeamsMy.fr,
   adminTeamsNew: nsAdminTeamsNew.fr,
   adminStageNav: nsAdminStageNav.fr,

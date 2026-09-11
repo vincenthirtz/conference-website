@@ -2333,6 +2333,23 @@ a:focus-visible,
     text-decoration: none !important;
   }
 
+  /* Export des équipes (/admin/teams/print) : une équipe n'est jamais coupée
+     entre deux pages quand elle tient sur une seule. Plusieurs équipes
+     partagent une page — un saut par équipe ferait 100 pages pour 100 équipes. */
+  .team-export-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Sur une feuille d'export, seul le document compte : les widgets flottants
+     rendus à côté de la page (bannières PWA / hors-ligne, toasts, opt-in push)
+     n'ont rien à faire sur le PDF. Limité aux pages marquées, pour ne rien
+     changer à l'impression des autres écrans. */
+  body:has([data-print-sheet]) .fixed,
+  body:has([data-print-sheet]) #main-content ~ * {
+    display: none !important;
+  }
+
   /* Un texte en dégradé repose sur `-webkit-text-fill-color: transparent`, que
      `color: #000` ne suffit PAS à reprendre : la propriété de remplissage gagne
      et le texte sort blanc sur blanc. Les titres de marque étaient déjà traités

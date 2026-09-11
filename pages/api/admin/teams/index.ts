@@ -4,11 +4,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
+import { parsePagination, sanitizeSearch } from '@/utils/apiHelpers';
 import {
-  parsePagination,
-  sanitizeSearch,
-  escapePostgrestValue,
-} from '@/utils/apiHelpers';
+  applyAdminTeamsFilters,
+  fetchTournamentRegistrations,
+  parseActiveFilter,
+} from '@/utils/teams/adminTeamsFilters';
 
 import { logger } from '../../../../utils/logger';
 export type TeamRow = {
@@ -52,58 +53,46 @@ async function handleGet(
   res: NextApiResponse<TeamsApiResponse>,
   ctx: AuthenticatedStaffContext
 ) {
-  const { isActive, includeTotal, tournamentId, includeDeleted } = req.query;
+  const { includeTotal, tournamentId, includeDeleted } = req.query;
 
   const { limit: limitNum, offset: offsetNum } = parsePagination(req, {
     limit: 50,
   });
-  const search = sanitizeSearch(req.query.search);
 
-  const activeFilter =
-    isActive === 'true' ? true : isActive === 'false' ? false : undefined;
-
-  let query = supabaseAdmin
-    .from('teams')
-    .select('*', {
-      count:
-        includeTotal === '1' || includeTotal === 'true' ? 'exact' : undefined,
-    })
-    .eq('tenant_id', ctx.tenantId)
-    .order('created_at', { ascending: false })
-    .range(offsetNum, offsetNum + limitNum - 1);
-
+  // Filtres partagés avec l'export (utils/teams/adminTeamsFilters.ts) : le
+  // fichier extrait doit contenir exactement ce que la liste affiche.
+  //
   // Les équipes supprimées (soft-delete `deleted_at`) sortent du listing : elles
   // vivent dans la corbeille (/admin/recycle-bin), qui est la seule vue à les
   // lister et le seul endroit d'où on les restaure. Sans ce filtre, supprimer
   // une équipe ne faisait que la repasser `is_active=false` à l'écran — elle
   // restait dans la liste, ce qui se lit comme "la suppression ne marche pas".
   // `?includeDeleted=1` reste possible pour un diagnostic ponctuel.
-  const withDeleted = includeDeleted === '1' || includeDeleted === 'true';
-  if (!withDeleted) {
-    query = query.is('deleted_at', null);
-  }
-
-  if (typeof activeFilter === 'boolean') {
-    query = query.eq('is_active', activeFilter);
-  }
-
-  // Search across name + slug + short_name (mirrors the SSR loader in
-  // pages/admin/teams/index.tsx). Sanitised via escapePostgrestValue so user
-  // input can't alter the PostgREST `.or(...)` filter structure.
-  if (search) {
-    const s = `%${escapePostgrestValue(search)}%`;
-    query = query.or(`name.ilike.${s},slug.ilike.${s},short_name.ilike.${s}`);
-  }
+  let query = applyAdminTeamsFilters(
+    supabaseAdmin
+      .from('teams')
+      .select('*', {
+        count:
+          includeTotal === '1' || includeTotal === 'true' ? 'exact' : undefined,
+      })
+      .eq('tenant_id', ctx.tenantId)
+      .order('created_at', { ascending: false })
+      .range(offsetNum, offsetNum + limitNum - 1),
+    {
+      search: sanitizeSearch(req.query.search),
+      isActive: parseActiveFilter(req.query.isActive),
+      includeDeleted: includeDeleted === '1' || includeDeleted === 'true',
+    }
+  );
 
   // Filter by tournament: find team IDs linked via tournament_teams
   if (tournamentId && !Array.isArray(tournamentId)) {
-    const { data: ttRows } = await supabaseAdmin
-      .from('tournament_teams')
-      .select('team_id')
-      .eq('tenant_id', ctx.tenantId)
-      .eq('tournament_id', tournamentId);
+    const { registrations } = await fetchTournamentRegistrations(
+      ctx.tenantId,
+      tournamentId
+    );
 
-    const teamIds = (ttRows || []).map((r: any) => r.team_id);
+    const teamIds = [...registrations.keys()];
     if (teamIds.length > 0) {
       query = query.in('id', teamIds);
     } else {

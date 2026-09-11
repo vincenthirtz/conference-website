@@ -13,6 +13,7 @@ import {
   BgSyncQueuedError,
 } from '@/hooks/useIdempotentMutation';
 import EmptyState from '@/components/admin/EmptyState';
+import TeamExportActions from '@/components/admin/teams/TeamExportActions';
 import Modal from '@/components/admin/Modal';
 import { SkeletonListRow } from '@/components/admin/Skeleton';
 import { useUrlFilters } from '@/utils/useUrlFilters';
@@ -37,10 +38,7 @@ type AdminTeamsProps = {
   errorMsg: string | null;
 };
 
-type TeamsApiResponse = {
-  teams: TeamRow[];
-  total: number | null;
-};
+type TeamsApiResponse = { teams: TeamRow[]; total: number | null };
 
 function formatDate(d: string | null) {
   if (!d) return '—';
@@ -457,7 +455,8 @@ function AdminTeamsListPage({
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <TeamExportActions filters={filters} />
                 <button
                   type="button"
                   onClick={() => {

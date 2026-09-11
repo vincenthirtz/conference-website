@@ -2134,6 +2134,42 @@ components:
               enum:
                 - both
           description: Side(s) of the match to ping (1, 2, or 'both').
+    AdminTeamExportMember:
+      type: object
+      description: >-
+        One member in `GET /api/admin/teams/export`. Game identity only — no
+        email, phone, real name, birth date or user id.
+      required:
+        - pseudo
+        - battleTag
+        - discord
+        - role
+        - specialty
+        - isCaptain
+      properties:
+        pseudo:
+          type: string
+          nullable: true
+          description: >-
+            Team display name, else account display name, else BattleTag
+            before `#`, else Discord username.
+        battleTag:
+          type: string
+          nullable: true
+        discord:
+          type: string
+          nullable: true
+          description: user_discord_links.discord_username
+        role:
+          type: string
+          nullable: true
+          description: team_members.role (player, coach, manager…)
+        specialty:
+          type: string
+          nullable: true
+          description: tank / dps / support / flex
+        isCaptain:
+          type: boolean
     ImportCsvResult:
       type: object
       description: Common shape returned by /admin/teams/bulk, import-csv and import-platform.
@@ -20151,6 +20187,141 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/teams/export:
+    get:
+      summary: Export teams (CSV or JSON) with roster, substitutes and staff.
+      description: |
+        Requires the `manage_teams` staff permission; every read is scoped to
+        the active tenant. `teamId` exports a single team (404 `TEAM_NOT_FOUND`
+        if missing from the tenant or soft-deleted). Otherwise applies the same
+        filters as `GET /api/admin/teams` (`search`, `isActive`,
+        `tournamentId`), unpaginated but capped at 500 teams (`truncated`).
+        Soft-deleted teams are always excluded. Members are split with the
+        site rule (coach/manager = staff, `is_substitute` = subs, else roster).
+        No personal data beyond game identity (pseudo, BattleTag, Discord
+        username): no email, phone, real name, birth date or user id.
+        CSV: UTF-8 BOM, `;` separator, CRLF, formula-injection neutralised,
+        one row per member; columns
+        `equipe;tag;statut_inscription;categorie;role;pseudo;battletag;discord`.
+        Every export is logged in `staff_logs` (`view_player_data`).
+        Responses carry `Cache-Control: no-store`.
+      operationId: adminExportTeams
+      tags:
+        - admin/teams
+      security:
+        - StaffSession: []
+      parameters:
+        - in: query
+          name: teamId
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: tournamentId
+          description: Also fills `registrationStatus` (tournament_teams.status).
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: isActive
+          schema:
+            type: string
+            enum:
+              - 'true'
+              - 'false'
+        - in: query
+          name: format
+          schema:
+            type: string
+            enum:
+              - json
+              - csv
+            default: json
+      responses:
+        '200':
+          description: Export. CSV is sent as an attachment.
+          headers:
+            Content-Disposition:
+              description: >-
+                CSV only. `attachment; filename="equipes-<tournoi|toutes>-YYYY-MM-DD.csv"`,
+                or `equipe-<slug>-YYYY-MM-DD.csv` with `teamId`.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - generatedAt
+                  - tournament
+                  - truncated
+                  - teams
+                properties:
+                  generatedAt:
+                    type: string
+                    format: date-time
+                  tournament:
+                    type: object
+                    nullable: true
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      name:
+                        type: string
+                  truncated:
+                    type: boolean
+                  teams:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        shortName:
+                          type: string
+                          nullable: true
+                        logoUrl:
+                          type: string
+                          nullable: true
+                        registrationStatus:
+                          type: string
+                          nullable: true
+                        members:
+                          type: object
+                          properties:
+                            roster:
+                              type: array
+                              items:
+                                $ref: '#/components/schemas/AdminTeamExportMember'
+                            subs:
+                              type: array
+                              items:
+                                $ref: '#/components/schemas/AdminTeamExportMember'
+                            staff:
+                              type: array
+                              items:
+                                $ref: '#/components/schemas/AdminTeamExportMember'
+            text/csv:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: >-
+            `TEAM_NOT_FOUND` (teamId) or `TOURNAMENT_NOT_FOUND` (tournamentId)
+            in the active tenant.
   /api/admin/teams/import-csv:
     post:
       summary: Bulk-import teams from raw CSV text.

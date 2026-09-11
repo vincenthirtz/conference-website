@@ -10,6 +10,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { isNonPlayingTeamRole, splitTeamMembers } from '@/utils/teams/roleKind';
 import nsAdminTeamDetail from '@/lib/i18n/locales/admin-fr/adminTeamDetail';
 import TeamAvailabilityPanel from '@/components/admin/teams/TeamAvailabilityPanel';
+import TeamExportActions from '@/components/admin/teams/TeamExportActions';
 
 type StaffShape = {
   id: string;
@@ -155,6 +156,7 @@ function AdminTeamDetailPage({ staff }: StaffProps) {
           <div className="flex gap-2 flex-wrap">
             {teamId && (
               <>
+                <TeamExportActions teamId={teamId} />
                 <Link href={`/admin/teams/${teamId}/edit`}>
                   <Button type="button" size="compact" className="px-4">
                     {t.edit}
