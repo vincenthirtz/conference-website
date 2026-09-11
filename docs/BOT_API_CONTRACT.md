@@ -2870,6 +2870,56 @@ Payload :
 > bot annonce, il ne distribue pas de carnet d'adresses ; la prise de contact
 > passe par une capitaine authentifiée sur le site.
 
+### Team openings (equipes qui cherchent une joueuse)
+
+Miroir des « free players ». **Aucun endpoint bot** ici : le site ne pousse rien
+vers une table que le bot posseder ait, et le bot n'ecrit pas d'annonce. Le seul
+point de contact est un event sortant, documente ci-dessous.
+
+Surfaces cote site (non-bot, listees pour que l'inventaire reste complet) :
+
+| Route                                                                              | Methods   | Auth                     |
+| ---------------------------------------------------------------------------------- | --------- | ------------------------ |
+| [`public/team-openings/index.ts`](../pages/api/public/team-openings/index.ts)       | GET, POST | aucune (captcha + HMAC)  |
+| [`public/team-openings/remove.ts`](../pages/api/public/team-openings/remove.ts)     | GET, POST | token HMAC recu par mail |
+| [`team-openings/contact.ts`](../pages/api/team-openings/contact.ts)                 | GET       | Bearer (compte requis)   |
+
+Le GET public est **anonymise** : il ne renvoie ni email ni pseudo Discord. Les
+coordonnees ne sortent que par `/api/team-openings/contact`, derriere un compte —
+et volontairement PAS derriere une gate « capitaine », puisque la personne
+interessee par une annonce est justement celle qui n'a pas d'equipe.
+
+#### Event `team_opening.published` (site -> bot, via outbox/webhook)
+
+Emis quand une equipe **publie une annonce depuis le site**
+(`POST /api/public/team-openings`, formulaire `/recrutement`). Le bot l'annonce dans
+le salon configure par `tenant_discord_config.team_openings_channel_id` —
+distinct de `free_players_channel_id` : les deux publics ne sont pas les memes,
+une joueuse sans equipe ne suit pas le salon ou les capitaines reperent les
+nouvelles inscrites.
+
+Payload :
+
+```json
+{
+  "teamName": "Nova Esport",
+  "roles": ["tank", "support"],
+  "level": "gold",
+  "availability": "en semaine apres 20h",
+  "note": "on vise le prochain tournoi"
+}
+```
+
+- `roles` : postes **RECHERCHES** (sous-ensemble ordonne de
+  `tank | dps | support | flex`) — sens inverse de `free_player.registered`, ou
+  ils designent les postes joues.
+- `level` : niveau de l'EQUIPE, `unknown` quand il n'est pas renseigne.
+- `availability` / `note` : texte libre, `null` si non renseigne.
+
+> **Aucune donnee de contact dans cet event** — ni email, ni pseudo Discord. Le
+> bot annonce, il ne distribue pas de carnet d'adresses ; repondre a une annonce
+> passe par un compte sur le site.
+
 ### Tickets
 
 | Route                                                              | Methods | Idem. | Rate-key                |

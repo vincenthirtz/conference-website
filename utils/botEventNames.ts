@@ -91,6 +91,11 @@ export const BOT_EVENT_NAMES = [
   // site. Sert à alerter les capitaines dont le roster est incomplet — sans
   // ça, l'inscription attend que quelqu'un vienne la lire.
   'free_player.registered',
+  // Le miroir du précédent : une ÉQUIPE cherche une joueuse. Annoncé dans un
+  // salon distinct (#recherche-joueuse), parce que les deux publics ne sont pas
+  // les mêmes — une joueuse sans équipe ne suit pas le salon où les capitaines
+  // repèrent les nouvelles inscrites.
+  'team_opening.published',
   'registration.new',
   'registration.blacklisted',
   'registration.entity_blacklisted',

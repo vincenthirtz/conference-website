@@ -1249,6 +1249,77 @@ export function sendFreePlayerPublishedEmail(opts: {
   });
 }
 
+// ─── Annonce « une équipe cherche une joueuse » publiée ───────
+//
+// Miroir de l'email ci-dessus, pour le marché inverse. Mêmes rôles, même ordre
+// d'importance : le lien de RETRAIT est la raison d'être de cet email. Une
+// annonce de recrutement qui survit à la complétion du roster fait perdre son
+// temps à chaque joueuse qui y répond — la porte de sortie doit être aussi
+// facile que la publication.
+
+const TEAM_OPENING_PUBLISHED_SUBJECT =
+  'Votre annonce de recrutement est en ligne — OW Women’s Cup';
+
+/** HTML de l'email « votre annonce est publiée » + lien de retrait. */
+export function buildTeamOpeningPublishedEmailHtml(opts: {
+  teamName: string;
+  removeUrl: string;
+}): string {
+  return emailLayout(`
+    ${gradientBar()}
+    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Votre annonce est en ligne</h1>
+    <p style="margin:0 0 20px;font-size:15px;color:#C6BED9;line-height:1.6;">
+      L&apos;annonce de <strong style="color:#ffffff;">${escapeHtml(opts.teamName)}</strong> appara&icirc;t
+      d&eacute;sormais parmi les &eacute;quipes qui recrutent. Les joueuses qui cherchent une &eacute;quipe
+      peuvent vous contacter &agrave; partir de maintenant.
+    </p>
+    <p style="margin:0 0 20px;font-size:15px;color:#C6BED9;line-height:1.6;">
+      Votre adresse email n&apos;est <strong style="color:#ffffff;">jamais affich&eacute;e publiquement</strong>&nbsp;:
+      seules les personnes connect&eacute;es y ont acc&egrave;s. L&apos;annonce expire toute seule au bout
+      de 60&nbsp;jours.
+    </p>
+    <p style="margin:0 0 20px;font-size:15px;color:#C6BED9;line-height:1.6;">
+      En attendant, passez sur le
+      <a href="${DISCORD_URL}" style="color:#5865F2;text-decoration:underline;font-weight:600;">Discord de la Women&apos;s Cup</a>&nbsp;:
+      les joueuses qui cherchent une &eacute;quipe s&apos;y signalent aussi, et vous pouvez y r&eacute;pondre
+      directement.
+    </p>
+    <p style="margin:0 0 20px;font-size:15px;color:#C6BED9;line-height:1.6;">
+      Votre &eacute;quipe est au complet, ou vous changez d&apos;avis&nbsp;? Retirez l&apos;annonce quand vous voulez&nbsp;:
+    </p>
+    ${ctaButton(opts.removeUrl, 'Retirer notre annonce')}
+    <p style="margin:24px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
+      Lien direct&nbsp;: <a href="${escapeHtml(opts.removeUrl)}" style="color:#9081B0;word-break:break-all;">${escapeHtml(opts.removeUrl)}</a>
+    </p>
+    <p style="margin:16px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
+      Gardez cet email&nbsp;: c&apos;est le seul moyen de retirer l&apos;annonce vous-m&ecirc;me.
+    </p>
+  `);
+}
+
+/**
+ * Envoie l'email « votre annonce est publiée ». Transactionnel et best-effort :
+ * un échec ne doit pas faire échouer la publication, déjà enregistrée.
+ */
+export function sendTeamOpeningPublishedEmail(opts: {
+  to: string;
+  teamName: string;
+  removeUrl: string;
+  /** Espace au nom duquel l'email part (compte d'envoi + marque). */
+  tenantId?: string | null;
+}): Promise<SendEmailResult> {
+  return sendEmail({
+    tenantId: opts.tenantId,
+    to: opts.to,
+    subject: TEAM_OPENING_PUBLISHED_SUBJECT,
+    tags: ['team-opening-published'],
+    html: buildTeamOpeningPublishedEmailHtml({
+      teamName: opts.teamName,
+      removeUrl: opts.removeUrl,
+    }),
+  });
+}
+
 /**
  * Default staff inbox for inbound notifications (contact, partnerships,
  * anonymous / HIGH severity support tickets). Override via STAFF_NOTIFY_EMAIL.

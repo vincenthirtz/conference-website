@@ -4188,6 +4188,7 @@ components:
               silver,
               gold,
               platinum,
+              emerald,
               diamond,
               master,
               grandmaster,
@@ -4242,6 +4243,129 @@ components:
           type: string
           format: date-time
           nullable: true
+    PublicTeamOpeningInput:
+      type: object
+      required:
+        - teamName
+        - roles
+      description: >
+        `contactEmail` est obligatoire — `email` est accepte comme alias (c'est
+        le nom du champ cote fiches joueuses, et un client ecrit en le recopiant
+        ne doit pas etre refuse en silence). Fournir l'un des deux.
+      properties:
+        teamName:
+          type: string
+          minLength: 2
+          maxLength: 60
+        contactEmail:
+          type: string
+          format: email
+          maxLength: 200
+          description: >
+            Contact prive. N'est JAMAIS renvoye par le GET de cette route ; seules
+            les personnes connectees y accedent via /api/team-openings/contact.
+        email:
+          type: string
+          format: email
+          maxLength: 200
+          description: 'Alias historique de `contactEmail` (celui de /api/public/free-players).'
+        roles:
+          type: array
+          minItems: 1
+          maxItems: 4
+          description: Postes RECHERCHES par l'equipe (sens inverse d'une fiche joueuse).
+          items:
+            type: string
+            enum: [tank, dps, support, flex]
+        level:
+          type: string
+          enum:
+            [
+              unknown,
+              bronze,
+              silver,
+              gold,
+              platinum,
+              emerald,
+              diamond,
+              master,
+              grandmaster,
+              champion,
+            ]
+          description: Niveau de l'EQUIPE. Defaut `unknown` — aucun rang minimum requis.
+        availability:
+          type: string
+          maxLength: 200
+        note:
+          type: string
+          maxLength: 400
+        contactDiscord:
+          type: string
+          maxLength: 60
+        honeypot:
+          type: string
+          description: Doit etre vide (anti-bot).
+        captchaToken:
+          type: string
+        captchaAnswer:
+          type: string
+    PublicTeamOpening:
+      type: object
+      description: >
+        Projection ANONYMISEE d'une annonce de recrutement : aucun moyen de
+        contact (ni email, ni pseudo Discord).
+      required:
+        - id
+        - teamName
+        - roles
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        teamName:
+          type: string
+        roles:
+          type: array
+          description: Postes recherches.
+          items:
+            type: string
+            enum: [tank, dps, support, flex]
+        level:
+          type: string
+          nullable: true
+        availability:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        since:
+          type: string
+          format: date-time
+          nullable: true
+    ContactTeamOpening:
+      allOf:
+        - $ref: '#/components/schemas/PublicTeamOpening'
+        - type: object
+          description: >
+            Meme annonce, AVEC les coordonnees. Reservee aux appelants
+            authentifies — ne doit jamais transiter par une route publique.
+          required:
+            - contact
+          properties:
+            teamId:
+              type: string
+              format: uuid
+              nullable: true
+              description: Equipe du site quand l'annonce vient d'un espace capitaine.
+            contact:
+              type: object
+              properties:
+                email:
+                  type: string
+                  nullable: true
+                discord:
+                  type: string
+                  nullable: true
     PublicNewsItem:
       type: object
       required:
@@ -28367,6 +28491,49 @@ paths:
               example:
                 error: Battle.net verification is not configured.
                 code: BATTLENET_NOT_CONFIGURED
+  /api/team-openings/contact:
+    get:
+      tags:
+        - public/teams
+      summary: Coordonnees d'une annonce de recrutement (compte requis).
+      description: >
+        Pendant de /api/teams/free-players pour le marche inverse. La gate n'est
+        PAS « gerer une equipe » : la personne interessee par une annonce est
+        justement celle qui n'a pas d'equipe. Il faut simplement un compte — ce
+        qui suffit a sortir les coordonnees des pages publiques indexables et a
+        rendre un moissonneur tracable. Une annonce perimee repond 404, comme
+        une annonce inexistante.
+      operationId: getTeamOpeningContact
+      security:
+        - PlayerBearer: []
+      parameters:
+        - in: query
+          name: id
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+      responses:
+        '200':
+          description: Annonce avec ses coordonnees.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - opening
+                properties:
+                  opening:
+                    $ref: '#/components/schemas/ContactTeamOpening'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '405':
+          description: Methode non autorisee (seul GET est accepte).
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /api/teams:
     get:
       tags:
@@ -31501,6 +31668,147 @@ paths:
       responses:
         '200':
           description: Fiche retiree.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/public/team-openings:
+    get:
+      tags:
+        - public/misc
+      summary: Liste anonymisee des equipes qui cherchent une joueuse.
+      description: >
+        Miroir de /api/public/free-players : la vitrine des equipes qui
+        recrutent. Ne renvoie AUCUN moyen de contact — repondre a une annonce
+        passe par /api/team-openings/contact, derriere un compte. Les annonces
+        perimees (60 j) sont exclues. Cache CDN 60 s.
+      operationId: listPublicTeamOpenings
+      security: []
+      responses:
+        '200':
+          description: Liste anonymisee.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - openings
+                  - count
+                properties:
+                  openings:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PublicTeamOpening'
+                  count:
+                    type: integer
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    post:
+      tags:
+        - public/misc
+      summary: Publier une annonce de recrutement — SANS COMPTE. Anti-bot captcha + honeypot.
+      description: >
+        Cree (ou rafraichit) une annonce `source='web'` dans `team_openings`,
+        sans exiger de compte : une equipe qui se monte n'a souvent pas encore
+        d'existence sur le site. Une re-soumission avec le meme email met a jour
+        l'annonce et repousse sa peremption. Reponse toujours generique
+        `{ success: true }` (enumeration-safe). Un honeypot rempli est
+        silencieusement absorbe (200). Emet l'event bot `team_opening.published`
+        a la premiere publication.
+      operationId: publishPublicTeamOpening
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublicTeamOpeningInput'
+      responses:
+        '200':
+          description: Toujours renvoye tant que la requete est bien formee (succes generique).
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/public/team-openings/remove:
+    get:
+      tags:
+        - public/misc
+      summary: Decrit l'annonce visee par un lien de retrait (ne supprime rien).
+      description: >
+        Sert la page de confirmation /recrutement/retrait : elle doit montrer CE
+        qu'on s'apprete a retirer. La separation GET/POST n'est pas cosmetique —
+        les clients mail et antivirus pre-visitent les liens d'un email, un GET
+        destructeur ferait disparaitre des annonces sans clic humain. Token HMAC
+        recu par email a la publication (aucun compte requis).
+      operationId: describePublicTeamOpeningRemoval
+      security: []
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Annonce trouvee.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  teamName:
+                    type: string
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    post:
+      tags:
+        - public/misc
+      summary: Retire definitivement une annonce de recrutement.
+      description: >
+        Porte de sortie autonome du parcours : la publication se fait SANS
+        compte, donc sans cette route une equipe au complet devrait ecrire au
+        staff pour disparaitre — et en attendant, chaque joueuse qui repond perd
+        son temps. Token invalide et annonce introuvable renvoient le MEME
+        message : les distinguer transformerait la route en oracle d'existence.
+      operationId: removePublicTeamOpening
+      security: []
+      parameters:
+        - in: query
+          name: token
+          schema:
+            type: string
+          description: 'Accepte aussi dans le corps JSON : { "token": "..." }.'
+      responses:
+        '200':
+          description: Annonce retiree.
           content:
             application/json:
               schema:
