@@ -30,6 +30,7 @@ export const FREE_PLAYER_LEVELS = [
   'silver',
   'gold',
   'platinum',
+  'emerald',
   'diamond',
   'master',
   'grandmaster',

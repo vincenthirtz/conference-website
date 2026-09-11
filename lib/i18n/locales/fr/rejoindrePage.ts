@@ -51,6 +51,7 @@ export default ns('rejoindrePage', {
   levelSilver: 'Argent',
   levelGold: 'Or',
   levelPlatinum: 'Platine',
+  levelEmerald: 'Émeraude',
   levelDiamond: 'Diamant',
   levelMaster: 'Maître',
   levelGrandmaster: 'Grand maître',

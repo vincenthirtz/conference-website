@@ -48,6 +48,7 @@ const LEVEL_LABEL: Record<FreePlayerLevel, keyof Dict> = {
   silver: 'levelSilver',
   gold: 'levelGold',
   platinum: 'levelPlatinum',
+  emerald: 'levelEmerald',
   diamond: 'levelDiamond',
   master: 'levelMaster',
   grandmaster: 'levelGrandmaster',

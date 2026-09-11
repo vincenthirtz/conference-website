@@ -44,6 +44,7 @@ export default {
   levelSilver: 'Silver',
   levelGold: 'Gold',
   levelPlatinum: 'Platinum',
+  levelEmerald: 'Emerald',
   levelDiamond: 'Diamond',
   levelMaster: 'Master',
   levelGrandmaster: 'Grandmaster',
