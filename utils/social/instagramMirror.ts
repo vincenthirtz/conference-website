@@ -19,7 +19,7 @@
 
 import { logger } from '@/utils/logger';
 import type { MirrorPost } from './feedMirror';
-import { loadAccount } from './instagram';
+import { loadAccount, markReadError } from './instagram';
 
 const GRAPH_BASE = 'https://graph.instagram.com';
 const FETCH_TIMEOUT_MS = 15_000;
@@ -130,7 +130,17 @@ export async function fetchOwnMedia(
   tenantId: string
 ): Promise<MirrorPost[] | null> {
   const account = await loadAccount(tenantId, 'instagram');
-  if (!account?.accessToken) return null;
+  if (!account) return null;
+  // Un jeton PRÉSENT mais indéchiffrable n'est pas « pas configuré » : c'est une
+  // panne (rotation de SECRETS_ENC_KEY), et elle doit se voir. Rendre `null`
+  // la déguisait en absence de configuration — Instagram disparaissait du mur
+  // sans une erreur nulle part ailleurs que dans les logs de la fonction.
+  if (account.tokenUnreadable) {
+    throw new Error(
+      "jeton illisible — SECRETS_ENC_KEY a changé depuis la connexion : reconnecter le compte depuis l'admin"
+    );
+  }
+  if (!account.accessToken) return null;
 
   // L'identifiant explicite quand on l'a : le `me` implicite désigne ce que le
   // jeton désigne, ce qui n'est pas la même chose selon le parcours de
@@ -164,4 +174,39 @@ export async function fetchOwnMedia(
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * La lecture telle que le cron social-mirror l'appelle : `fetchOwnMedia`, plus
+ * la consignation du résultat sur le compte (`social_accounts.last_error`).
+ *
+ * - échec (Meta refuse, jeton illisible, réseau) → le motif est consigné, puis
+ *   l'erreur remonte au cron qui la met dans son rapport ;
+ * - liste VIDE → consignée aussi : un compte connecté dont Instagram ne rend
+ *   rien n'affichera jamais de carte, et ça doit pouvoir se lire ;
+ * - succès → l'erreur de lecture précédente est effacée ;
+ * - non configuré (`null`) → rien à consigner.
+ */
+export async function readInstagramForMirror(
+  tenantId: string
+): Promise<MirrorPost[] | null> {
+  let posts: MirrorPost[] | null;
+  try {
+    posts = await fetchOwnMedia(tenantId);
+  } catch (err) {
+    await markReadError(
+      tenantId,
+      err instanceof Error ? err.message : String(err)
+    );
+    throw err;
+  }
+  if (posts !== null) {
+    await markReadError(
+      tenantId,
+      posts.length === 0
+        ? 'Instagram ne renvoie aucune publication pour ce compte'
+        : null
+    );
+  }
+  return posts;
 }

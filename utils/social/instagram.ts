@@ -281,6 +281,10 @@ export type StoredAccount = {
   accessToken: string | null;
   expiresAt: Date | null;
   status: string;
+  /** Dernière erreur consignée (publication, ou lecture préfixée READ_ERROR_PREFIX). */
+  lastError?: string | null;
+  /** Un jeton est enregistré mais ne se déchiffre plus (rotation de clé). */
+  tokenUnreadable?: boolean;
 };
 
 export async function saveConnection(
@@ -318,7 +322,7 @@ export async function loadAccount(
   const { data, error } = await supabaseAdmin
     .from('social_accounts')
     .select(
-      'id, platform, external_account_id, handle, access_token_encrypted, token_expires_at, status'
+      'id, platform, external_account_id, handle, access_token_encrypted, token_expires_at, status, last_error'
     )
     .eq('tenant_id', tenantId)
     .eq('platform', platform)
@@ -328,10 +332,12 @@ export async function loadAccount(
   const row = data as Record<string, unknown>;
 
   let accessToken: string | null = null;
+  let tokenUnreadable = false;
   if (row.access_token_encrypted) {
     try {
       accessToken = decryptSecret(String(row.access_token_encrypted));
     } catch (err) {
+      tokenUnreadable = true;
       // Le jeton est PERDU, pas absent : le dire évite de chercher pourquoi
       // « ça ne marche plus » après une rotation de SECRETS_ENC_KEY.
       logger.error(
@@ -353,6 +359,8 @@ export async function loadAccount(
       ? new Date(String(row.token_expires_at))
       : null,
     status: String(row.status),
+    lastError: row.last_error ? String(row.last_error) : null,
+    tokenUnreadable,
   };
 }
 
@@ -366,6 +374,55 @@ export async function markAccount(
     .update({ ...patch, updated_at: new Date().toISOString() })
     .eq('tenant_id', tenantId)
     .eq('platform', 'instagram');
+}
+
+/**
+ * Préfixe des erreurs de LECTURE (le miroir), par opposition aux erreurs de
+ * PUBLICATION que `socialPosts` range dans la même colonne. C'est lui qui
+ * permet d'effacer l'une sans jamais effacer l'autre.
+ */
+export const READ_ERROR_PREFIX = 'Lecture Instagram — ';
+
+/**
+ * Consigne l'échec — ou le rétablissement — de la lecture de nos publications
+ * par le cron social-mirror.
+ *
+ * POURQUOI. Ce cron tourne en fonction Netlify : un échec n'y laissait qu'un
+ * `logger.warn`, invisible sans accès aux logs. Instagram a ainsi disparu du mur
+ * « Nos réseaux » sans une trace en base, compte pourtant « connecté ». Écrit
+ * ici, le motif Meta se lit dans l'admin et en base.
+ *
+ * `null` efface — mais seulement une erreur de LECTURE, et seulement s'il y en a
+ * une : sinon chaque passage réussi, toutes les quinze minutes, réécrirait la
+ * ligne pour rien. Ne lève jamais : consigner ne doit pas faire tomber le cron.
+ */
+export async function markReadError(
+  tenantId: string,
+  message: string | null
+): Promise<void> {
+  if (!supabaseAdmin) return;
+  try {
+    const now = new Date().toISOString();
+    if (message === null) {
+      await supabaseAdmin
+        .from('social_accounts')
+        .update({ last_error: null, updated_at: now })
+        .eq('tenant_id', tenantId)
+        .eq('platform', 'instagram')
+        .like('last_error', `${READ_ERROR_PREFIX}%`);
+      return;
+    }
+    await supabaseAdmin
+      .from('social_accounts')
+      .update({
+        last_error: `${READ_ERROR_PREFIX}${message}`.slice(0, 500),
+        updated_at: now,
+      })
+      .eq('tenant_id', tenantId)
+      .eq('platform', 'instagram');
+  } catch (err) {
+    logger.error('[instagram] consignation de l’erreur de lecture impossible', err);
+  }
 }
 
 /* -------------------------------------------------------------------------- */

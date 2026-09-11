@@ -83,6 +83,8 @@ type ConnectionState = {
   handle: string | null;
   expiresAt: string | null;
   status: string;
+  /** Dernière erreur consignée sur le compte (lecture par le miroir, publication). */
+  lastError?: string | null;
 };
 
 async function handleGet(
@@ -143,6 +145,7 @@ async function handleGet(
       handle: account?.handle ?? null,
       expiresAt: expiresAt ? expiresAt.toISOString() : null,
       status: expired ? 'expired' : (account?.status ?? 'disconnected'),
+      lastError: account?.lastError ?? null,
     };
   }
 

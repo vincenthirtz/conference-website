@@ -51,7 +51,7 @@ import {
   fetchChannelVideos,
   YOUTUBE_CHANNEL_KEY,
 } from '@/utils/social/youtubeMirror';
-import { fetchOwnMedia } from '@/utils/social/instagramMirror';
+import { readInstagramForMirror } from '@/utils/social/instagramMirror';
 import { fetchOwnVideos } from '@/utils/social/tiktokMirror';
 import { persistFeedItems } from '@/utils/social/socialFeed';
 
@@ -221,12 +221,14 @@ async function mirrorForTenant(
     : { mirrored: 0, checked: 0, error: 'no_channel_id' };
 
   // Instagram ne sert aucun flux public : la lecture passe par le jeton du
-  // compte connecté, et `fetchOwnMedia` rend `null` quand il n'y en a pas.
+  // compte connecté, et rend `null` quand il n'y en a pas. Son échec est
+  // consigné sur le compte (social_accounts.last_error) : un warn dans les logs
+  // de la fonction ne se voyait pas, et Instagram manquait au mur en silence.
   const instagram: SourceReport = await mirrorSource(
     tenantId,
     'instagram',
     channelId,
-    () => fetchOwnMedia(tenantId),
+    () => readInstagramForMirror(tenantId),
     '📸 Instagram —'
   );
 

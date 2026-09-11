@@ -78,6 +78,7 @@ export default adminNs('adminSocialPosts', {
   connectedAs: 'Compte connecté : {handle}',
   notConnected: 'Compte non connecté.',
   connectionExpired: 'La connexion a expiré.',
+  accountLastError: 'Dernière erreur : {error}',
   connectCta: 'Connecter le compte',
   secretMissing: 'Mise en service : il manque l’Instagram App Secret.',
   secretLabel: 'Instagram App Secret',

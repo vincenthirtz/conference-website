@@ -39,6 +39,8 @@ type ConnectionState = {
   handle: string | null;
   expiresAt: string | null;
   status: string;
+  /** Dernière erreur consignée sur le compte (lecture par le miroir, publication). */
+  lastError?: string | null;
 };
 
 type StateResponse = {
@@ -523,11 +525,24 @@ export default function SocialPostsPanel() {
                     const conn = state.connections?.[p.key];
                     if (conn?.connected) {
                       return (
-                        <p className="pl-7 text-xs text-neutral-500">
-                          {format(t.connectedAs, {
-                            handle: conn.handle ?? '—',
-                          })}
-                        </p>
+                        <div className="space-y-1 pl-7">
+                          <p className="text-xs text-neutral-500">
+                            {format(t.connectedAs, {
+                              handle: conn.handle ?? '—',
+                            })}
+                          </p>
+                          {/* « Connecté » ne dit pas « ça marche » : le miroir
+                              peut échouer à LIRE nos publications (Meta refuse,
+                              jeton illisible). Sans cette ligne, le seul
+                              symptôme était une carte absente du mur. */}
+                          {conn.lastError ? (
+                            <p className="text-xs text-amber-300">
+                              {format(t.accountLastError, {
+                                error: conn.lastError,
+                              })}
+                            </p>
+                          ) : null}
+                        </div>
                       );
                     }
                     // Le secret DOIT rester remplaçable même une fois posé. Meta
