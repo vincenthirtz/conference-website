@@ -66,6 +66,13 @@ type MatchItem = {
   updated_at?: string | null;
 };
 
+type ScrimItem = {
+  id: string;
+  slug?: string | null;
+  updated_at?: string | null;
+  scheduled_date?: string | null;
+};
+
 type LeagueItem = {
   slug: string;
   updated_at?: string | null;
@@ -101,6 +108,7 @@ function generateSiteMap(
   tournaments: TournamentItem[],
   teams: TeamItem[],
   matches: MatchItem[],
+  scrims: ScrimItem[],
   leagues: LeagueItem[],
   playerRatings: PlayerRatingItem[]
 ) {
@@ -180,6 +188,22 @@ function generateSiteMap(
     })
     .join('\n');
 
+  // Pages de scrim publiques — même identifiant que les liens du site.
+  const scrimUrls = scrims
+    .map((scrim) => {
+      const loc = escapeXml(
+        `${baseUrl}/scrim/${encodeURIComponent(scrim.slug || scrim.id)}`
+      );
+      const lastmod = scrim.updated_at || scrim.scheduled_date || today;
+      return `  <url>
+    <loc>${loc}</loc>
+    <lastmod>${new Date(lastmod).toISOString()}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.4</priority>
+  </url>`;
+    })
+    .join('\n');
+
   // Dynamic league pages
   const leagueUrls = leagues
     .map((league) => {
@@ -215,6 +239,7 @@ ${newsUrls}
 ${tournamentUrls}
 ${teamUrls}
 ${matchUrls}
+${scrimUrls}
 ${leagueUrls}
 ${playerUrls}
 </urlset>`;
@@ -258,7 +283,9 @@ export const getServerSideProps: GetServerSideProps = async ({ res, req }) => {
     logger.error('[sitemap] Error fetching tournaments:', err);
   }
 
-  // Fetch teams with a public slug
+  // Équipes qui ont une fiche : un slug, et actives — la fiche rend 404 sur
+  // une équipe inactive (pages/team/[slug]/index.tsx), et une équipe
+  // supprimée (soft-delete) n'a rien à faire dans l'index.
   let teams: TeamItem[] = [];
   try {
     const { data } = await client
@@ -266,6 +293,8 @@ export const getServerSideProps: GetServerSideProps = async ({ res, req }) => {
       .select('slug, updated_at')
       .eq('tenant_id', tenantId)
       .not('slug', 'is', null)
+      .eq('is_active', true)
+      .is('deleted_at', null)
       .order('updated_at', { ascending: false })
       .limit(500);
 
@@ -276,20 +305,46 @@ export const getServerSideProps: GetServerSideProps = async ({ res, req }) => {
     logger.error('[sitemap] Error fetching teams:', err);
   }
 
-  // Fetch finished matches (the only ones with stable archive value)
+  // Matchs terminés (seuls à avoir une valeur d'archive stable), et seulement
+  // ceux d'un tournoi PUBLIC : la page match rend 404 sinon. La jointure
+  // `!inner` écarte aussi les matchs de scrim (tournament_id NULL), dont la
+  // page redirige vers celle du scrim — listée plus bas.
   let matches: MatchItem[] = [];
   try {
     const { data } = await client
       .from('matches')
-      .select('id, completed_at, updated_at')
+      .select('id, completed_at, updated_at, tournaments!inner(visibility)')
       .eq('tenant_id', tenantId)
       .eq('status', 'finished')
+      .eq('tournaments.visibility', 'public')
       .order('completed_at', { ascending: false })
       .limit(500);
 
-    matches = (data || []) as MatchItem[];
+    matches = (data || []).map((m) => ({
+      id: m.id as string,
+      completed_at: m.completed_at as string | null,
+      updated_at: m.updated_at as string | null,
+    }));
   } catch (err) {
     logger.error('[sitemap] Error fetching matches:', err);
+  }
+
+  // Scrims publics, mêmes filtres que pages/scrim/[id].tsx.
+  let scrims: ScrimItem[] = [];
+  try {
+    const { data } = await client
+      .from('scrims')
+      .select('id, slug, updated_at, scheduled_date')
+      .eq('tenant_id', tenantId)
+      .eq('is_public', true)
+      .neq('status', 'draft')
+      .is('deleted_at', null)
+      .order('scheduled_date', { ascending: false })
+      .limit(500);
+
+    scrims = (data || []) as ScrimItem[];
+  } catch (err) {
+    logger.error('[sitemap] Error fetching scrims:', err);
   }
 
   // Fetch public, non-draft leagues
@@ -335,6 +390,7 @@ export const getServerSideProps: GetServerSideProps = async ({ res, req }) => {
     tournaments,
     teams,
     matches,
+    scrims,
     leagues,
     playerRatings
   );
