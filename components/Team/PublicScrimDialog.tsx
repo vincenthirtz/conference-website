@@ -3,6 +3,7 @@
 // Submits to POST /api/public/scrim-requests.
 
 import { useEffect, useState } from 'react';
+import Modal from '@/components/ui/Modal';
 import { useT, format as fmt } from '@/lib/i18n/useT';
 import nsPublicScrimDialog from '@/lib/i18n/locales/fr/publicScrimDialog';
 
@@ -118,189 +119,193 @@ export default function PublicScrimDialog({
     }
   }
 
+  // La coque est celle de `ui/Modal` : piège de focus, Échap, clic sur le fond,
+  // blocage du défilement et focus rendu au déclencheur à la fermeture. Le div
+  // fait main n'avait que `role="dialog"` : au clavier, on sortait de la modale
+  // par Tab, et rien ne la fermait. Montée seulement à l'ouverture (retour
+  // anticipé ci-dessus) : le piège de focus s'arme au montage.
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="public-scrim-title"
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+    <Modal
+      open
+      onClose={onClose}
+      size="lg"
+      showCloseButton={false}
+      labelledBy="public-scrim-title"
+      panelChromeClassName="rounded-2xl border border-white/10 bg-neutral-950 shadow-2xl"
+      panelClassName="relative"
+      backdropClassName="bg-black/70 backdrop-blur-sm"
     >
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-neutral-950 p-6 shadow-2xl">
-        <div className="flex items-start justify-between gap-3 mb-4">
-          <div>
-            <h2
-              id="public-scrim-title"
-              className="text-lg font-semibold text-white"
-            >
-              {fmt(t.title, { teamName })}
-            </h2>
-            <p className="text-xs text-gray-400 mt-1">{t.subtitle}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t.close}
-            className="text-gray-400 hover:text-white"
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <h2
+            id="public-scrim-title"
+            className="text-lg font-semibold text-white"
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
+            {fmt(t.title, { teamName })}
+          </h2>
+          <p className="text-xs text-gray-400 mt-1">{t.subtitle}</p>
         </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={t.close}
+          className="text-gray-400 hover:text-white"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+      </div>
 
-        {success ? (
-          <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-            {success}
-            <div className="mt-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-3 py-1.5 rounded-lg bg-white/10 text-xs hover:bg-white/20"
-              >
-                {t.close}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-3" noValidate>
-            {/* Honeypot — hidden from real users via aria + position */}
-            <div
-              aria-hidden="true"
-              style={{
-                position: 'absolute',
-                left: '-9999px',
-                width: '1px',
-                height: '1px',
-              }}
+      {success ? (
+        <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+          {success}
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3 py-1.5 rounded-lg bg-white/10 text-xs hover:bg-white/20"
             >
-              <label>
-                Ne pas remplir
-                <input
-                  type="text"
-                  tabIndex={-1}
-                  autoComplete="off"
-                  value={honeypot}
-                  onChange={(e) => setHoneypot(e.target.value)}
-                />
-              </label>
-            </div>
-
-            <Field
-              label={t.fromTeamLabel}
-              required
-              value={fromTeamName}
-              onChange={setFromTeamName}
-              maxLength={80}
-              placeholder={t.fromTeamPlaceholder}
-            />
-            <Field
-              label={t.nameLabel}
-              required
-              value={requesterName}
-              onChange={setRequesterName}
-              maxLength={80}
-              placeholder={t.namePlaceholder}
-            />
-            <Field
-              label={t.emailLabel}
-              required
-              type="email"
-              value={requesterEmail}
-              onChange={setRequesterEmail}
-              maxLength={200}
-              placeholder={t.emailPlaceholder}
-            />
-            <Field
-              label={t.discordLabel}
-              value={requesterDiscord}
-              onChange={setRequesterDiscord}
-              maxLength={100}
-              placeholder={t.discordPlaceholder}
-            />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field
-                label={t.dateLabel}
-                type="datetime-local"
-                value={preferredDate}
-                onChange={setPreferredDate}
-              />
-              <Field
-                label={t.formatLabel}
-                value={format}
-                onChange={setFormat}
-                maxLength={50}
-                placeholder={t.formatPlaceholder}
-              />
-            </div>
-            <div>
-              <label className="block text-xs uppercase tracking-wide text-gray-400 mb-1">
-                {t.messageLabel}
-              </label>
-              <textarea
-                rows={3}
-                maxLength={1000}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder={t.messagePlaceholder}
-                className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-sm text-white"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs uppercase tracking-wide text-gray-400 mb-1">
-                {fmt(t.captchaLabel, { question: captcha?.question || '...' })}
-              </label>
+              {t.close}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-3" noValidate>
+          {/* Honeypot — hidden from real users via aria + position */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              left: '-9999px',
+              width: '1px',
+              height: '1px',
+            }}
+          >
+            <label>
+              Ne pas remplir
               <input
                 type="text"
-                inputMode="numeric"
-                required
-                value={captchaAnswer}
-                onChange={(e) => setCaptchaAnswer(e.target.value)}
-                placeholder={t.captchaPlaceholder}
-                className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-sm text-white"
+                tabIndex={-1}
+                autoComplete="off"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
               />
-            </div>
+            </label>
+          </div>
 
-            {error && (
-              <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-100">
-                {error}
-              </div>
-            )}
+          <Field
+            label={t.fromTeamLabel}
+            required
+            value={fromTeamName}
+            onChange={setFromTeamName}
+            maxLength={80}
+            placeholder={t.fromTeamPlaceholder}
+          />
+          <Field
+            label={t.nameLabel}
+            required
+            value={requesterName}
+            onChange={setRequesterName}
+            maxLength={80}
+            placeholder={t.namePlaceholder}
+          />
+          <Field
+            label={t.emailLabel}
+            required
+            type="email"
+            value={requesterEmail}
+            onChange={setRequesterEmail}
+            maxLength={200}
+            placeholder={t.emailPlaceholder}
+          />
+          <Field
+            label={t.discordLabel}
+            value={requesterDiscord}
+            onChange={setRequesterDiscord}
+            maxLength={100}
+            placeholder={t.discordPlaceholder}
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field
+              label={t.dateLabel}
+              type="datetime-local"
+              value={preferredDate}
+              onChange={setPreferredDate}
+            />
+            <Field
+              label={t.formatLabel}
+              value={format}
+              onChange={setFormat}
+              maxLength={50}
+              placeholder={t.formatPlaceholder}
+            />
+          </div>
+          <div>
+            <label className="block text-xs uppercase tracking-wide text-gray-400 mb-1">
+              {t.messageLabel}
+            </label>
+            <textarea
+              rows={3}
+              maxLength={1000}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder={t.messagePlaceholder}
+              className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-sm text-white"
+            />
+          </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-sm hover:bg-white/10"
-              >
-                {t.cancel}
-              </button>
-              <button
-                type="submit"
-                disabled={submitting || !captcha}
-                className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-white"
-              >
-                {submitting ? t.submitting : t.submit}
-              </button>
+          <div>
+            <label className="block text-xs uppercase tracking-wide text-gray-400 mb-1">
+              {fmt(t.captchaLabel, { question: captcha?.question || '...' })}
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              required
+              value={captchaAnswer}
+              onChange={(e) => setCaptchaAnswer(e.target.value)}
+              placeholder={t.captchaPlaceholder}
+              className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-sm text-white"
+            />
+          </div>
+
+          {error && (
+            <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-100">
+              {error}
             </div>
-          </form>
-        )}
-      </div>
-    </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-sm hover:bg-white/10"
+            >
+              {t.cancel}
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || !captcha}
+              className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-white"
+            >
+              {submitting ? t.submitting : t.submit}
+            </button>
+          </div>
+        </form>
+      )}
+    </Modal>
   );
 }
 

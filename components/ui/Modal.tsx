@@ -44,6 +44,11 @@ type ModalProps = {
   zIndexClassName?: string;
   /** Optional test id applied to the dialog panel. */
   dataTestId?: string;
+  /**
+   * id of an element inside `children` that names the dialog. For callers that
+   * render their own header (no `title`) but still need aria-labelledby.
+   */
+  labelledBy?: string;
 };
 
 const SIZE_CLASSES: Record<ModalSize, string> = {
@@ -80,8 +85,8 @@ export default function Modal({
   backdropClassName = 'bg-black/60 backdrop-blur-sm',
   zIndexClassName = 'z-50',
   dataTestId,
+  labelledBy,
 }: ModalProps) {
-  const t = useAdminT(nsAdminModal);
   const trapRef = useFocusTrap<HTMLDivElement>();
   const titleId = useId();
 
@@ -121,7 +126,7 @@ export default function Modal({
         ref={trapRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={title ? titleId : undefined}
+        aria-labelledby={title ? titleId : labelledBy}
         data-testid={dataTestId}
         className={`${panelChromeClassName} w-full ${SIZE_CLASSES[size]} max-h-[90vh] flex flex-col ${panelClassName}`}
       >
@@ -140,28 +145,7 @@ export default function Modal({
                 <p className="text-sm text-neutral-400 mt-0.5">{subtitle}</p>
               )}
             </div>
-            {renderClose && (
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label={t.close}
-                className="flex-shrink-0 -mr-1 -mt-1 rounded-lg p-1.5 text-neutral-400 hover:text-white hover:bg-neutral-700 transition-colors"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            )}
+            {renderClose && <DefaultCloseButton onClose={onClose} />}
           </div>
         )}
 
@@ -178,5 +162,34 @@ export default function Modal({
         )}
       </div>
     </div>
+  );
+}
+
+// Isolé pour que `useAdminT` ne tourne QUE si le bouton est rendu : une modale
+// publique qui fournit sa propre fermeture (`showCloseButton={false}`) ne tire
+// pas le dictionnaire admin — en anglais, son chunk entier.
+function DefaultCloseButton({ onClose }: { onClose: () => void }) {
+  const t = useAdminT(nsAdminModal);
+  return (
+    <button
+      type="button"
+      onClick={onClose}
+      aria-label={t.close}
+      className="flex-shrink-0 -mr-1 -mt-1 rounded-lg p-1.5 text-neutral-400 hover:text-white hover:bg-neutral-700 transition-colors"
+    >
+      <svg
+        className="w-5 h-5"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M6 18L18 6M6 6l12 12"
+        />
+      </svg>
+    </button>
   );
 }
