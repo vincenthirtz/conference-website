@@ -152,6 +152,11 @@ export const getStaticProps: GetStaticProps<NewsPageProps> = async (
     .select('*, teams(logo_url)')
     .eq('tenant_id', DEFAULT_TENANT_ID)
     .eq('slug', slug)
+    // Un brouillon a déjà un slug : sans ce filtre, il était public et indexé
+    // (JSON-LD compris) dès qu'on devinait ou partageait son adresse. Aucun
+    // parcours admin ne prévisualise par cette page — l'éditeur n'y renvoie
+    // pas. Un article dépublié tombe en 404 à la revalidation suivante.
+    .eq('status', 'published')
     .maybeSingle();
 
   if (error) {
