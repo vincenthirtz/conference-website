@@ -37,8 +37,9 @@ function ToastItem({
 
   return (
     <div
-      role="alert"
-      aria-live="polite"
+      // Seule l'erreur interrompt (role="alert", assertif). Les autres sont
+      // annoncées poliment par la région permanente du conteneur.
+      role={toast.variant === 'error' ? 'alert' : undefined}
       className={`flex items-center gap-3 px-4 py-3 rounded-xl border shadow-lg backdrop-blur-sm transition-all duration-300 ${
         VARIANT_STYLES[toast.variant]
       } ${visible ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'}`}
@@ -48,6 +49,7 @@ function ToastItem({
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
+        aria-hidden="true"
       >
         <path
           strokeLinecap="round"
@@ -68,6 +70,7 @@ function ToastItem({
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          aria-hidden="true"
         >
           <path
             strokeLinecap="round"
@@ -85,10 +88,16 @@ export default function ToastContainer() {
   const toasts = useToasts();
   const { removeToast } = useToast();
 
-  if (toasts.length === 0) return null;
-
+  // La région existe TOUJOURS, même vide : un lecteur d'écran n'annonce que
+  // les changements d'une région déjà présente. Montée avec son premier
+  // toast, elle faisait rater l'annonce de ce toast. Vide, elle est invisible
+  // et ne capte aucun clic (pointer-events-none).
   return (
-    <div className="fixed bottom-6 right-6 z-[10000] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+    <div
+      role="status"
+      aria-live="polite"
+      className="fixed bottom-6 right-6 z-[10000] flex flex-col gap-2 max-w-sm w-full pointer-events-none"
+    >
       {toasts.map((toast) => (
         <div key={toast.id} className="pointer-events-auto">
           <ToastItem toast={toast} onDismiss={() => removeToast(toast.id)} />

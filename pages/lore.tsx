@@ -162,9 +162,11 @@ export default function LorePage({ media }: LorePageProps) {
               <span className="text-neutral-400">{item.category}</span>
             )}
           </div>
-          <h3 className="mt-4 text-lg font-semibold text-white group-hover:text-white/90 transition line-clamp-2">
+          {/* h2 : le titre de la page est le h1, les cartes viennent juste
+              en dessous — un h3 sautait un niveau. */}
+          <h2 className="mt-4 text-lg font-semibold text-white group-hover:text-white/90 transition line-clamp-2">
             {item.title}
-          </h3>
+          </h2>
           {item.description && (
             <p className="mt-3 text-sm text-neutral-300 leading-relaxed line-clamp-3">
               {item.description}
@@ -219,7 +221,11 @@ export default function LorePage({ media }: LorePageProps) {
           <div className="inline-block text-lg text-white font-semibold border-b-2 border-purple-400 mb-4">
             {t.eyebrow}
           </div>
-          <Heading typeStyle="heading-lg" className="text-brand-gradient">
+          <Heading
+            level="h1"
+            typeStyle="heading-lg"
+            className="text-brand-gradient"
+          >
             {t.title}
           </Heading>
           <span className="brand-rule mx-auto mt-4" aria-hidden />

@@ -30,4 +30,5 @@ export default {
   copyright: "WOMEN'S CUP association — All rights reserved — Made with ❤️ by",
   leaderboard: 'Player rankings',
   palmares: 'Hall of fame',
+  backToTop: 'Back to top',
 };

@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useT } from '@/lib/i18n/useT';
+import nsFooter from '@/lib/i18n/locales/fr/footer';
 
 const OVERWATCH_LOGO =
   'https://logos-world.net/wp-content/uploads/2020/05/Overwatch-Emblem.png';
 
 const BackToTopButton: React.FC = () => {
+  const t = useT(nsFooter);
   const [isVisible, setIsVisible] = useState(false);
   const [isBoosting, setIsBoosting] = useState(false);
   const boostTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -63,12 +66,16 @@ const BackToTopButton: React.FC = () => {
     <button
       onClick={scrollToTop}
       className={`back-to-top-button ${isBoosting ? 'is-boosting' : ''} print:hidden fixed right-6 bottom-6 sm:right-4 sm:bottom-4 w-12 h-12 rounded-full border-none font-semibold flex items-center justify-center cursor-pointer overflow-visible z-50 outline-none transition-all duration-300 ease-in-out transform hover:scale-95 active:scale-90`}
-      aria-label="Back to top"
+      type="button"
     >
+      {/* Pas d'aria-label : le libellé ci-dessous (visible au survol) nomme
+          déjà le bouton. L'ancien « Back to top » codé en dur masquait le
+          texte français et restait en anglais quelle que soit la langue. Le
+          logo est décoratif — son alt ajoutait « Overwatch logo » au nom. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={OVERWATCH_LOGO}
-        alt="Overwatch logo"
+        alt=""
         width={64}
         height={64}
         className="back-to-top-icon w-8 h-8 object-contain drop-shadow pointer-events-none select-none"
@@ -80,7 +87,7 @@ const BackToTopButton: React.FC = () => {
         aria-hidden
       />
       <span className="back-to-top-text absolute left-1/2 bottom-2 -translate-x-1/2 text-white text-xs opacity-0 whitespace-nowrap transition-all duration-300 ease-in-out">
-        Aller en haut
+        {t.backToTop}
       </span>
     </button>
   ) : null;

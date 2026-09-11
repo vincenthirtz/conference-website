@@ -163,9 +163,15 @@ export default function PublicNav({
                 onMouseEnter={handleSubMenuEnter}
                 onMouseLeave={handleSubMenuLeave}
                 className={`absolute left-1/2 top-[calc(100%+10px)] z-[110] -translate-x-1/2 min-w-[180px] overflow-hidden rounded-xl border border-white/10 bg-neutral-900/95 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] backdrop-blur-xl transition-all duration-200 ease-out ${
+                  // `invisible` (visibility:hidden) retire les liens de l'ordre
+                  // de tabulation : sans lui, le sous-menu fermé n'était caché
+                  // qu'à l'œil, et Tab parcourait ses liens invisibles. La
+                  // visibilité se transitionne de façon discrète — visible
+                  // pendant tout le fondu, dans les deux sens — donc
+                  // l'animation reste, et le focus clavier à l'ouverture passe.
                   isOpen
-                    ? 'pointer-events-auto translate-y-0 opacity-100'
-                    : 'pointer-events-none -translate-y-1 opacity-0'
+                    ? 'visible pointer-events-auto translate-y-0 opacity-100'
+                    : 'invisible pointer-events-none -translate-y-1 opacity-0'
                 }`}
                 role="menu"
                 aria-hidden={!isOpen}

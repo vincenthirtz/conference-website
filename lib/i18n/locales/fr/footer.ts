@@ -30,4 +30,8 @@ export default ns('footer', {
   terms: 'Conditions de vente',
   copyright:
     "Association WOMEN'S CUP — Tous droits réservés — Fait avec ❤️ par",
+  // Bouton flottant « retour en haut » (components/Buttons/BackToTopButton) :
+  // chrome global, comme le pied de page, dont le namespace est déjà chargé
+  // sur toutes les pages.
+  backToTop: 'Aller en haut',
 });

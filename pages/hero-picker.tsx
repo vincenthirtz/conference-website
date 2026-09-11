@@ -181,7 +181,7 @@ export default function HeroPickerPage() {
     <div className="min-h-screen bg-neutral-950 text-white pb-16">
       <div className="container max-w-4xl mx-auto px-4 pt-24 space-y-6">
         <div className="flex flex-wrap items-center gap-3">
-          <Heading typeStyle="heading-md" className="text-gradient">
+          <Heading level="h1" typeStyle="heading-md" className="text-gradient">
             {t.title}
           </Heading>
           {phase === 'cooldown' && (
@@ -253,11 +253,21 @@ export default function HeroPickerPage() {
           )}
 
           <div className="grid gap-3 sm:grid-cols-3">
+            {/* Des boutons, pas des div cliquables : atteignables au clavier,
+                et l'état choisi (favori, ou banni en phase de ban) est dit
+                par aria-pressed — il ne l'était que par la couleur du cadre.
+                `w-full text-left` rend au bouton l'allure du div. */}
             {filteredHeroes.map((hero) => (
-              <div
+              <button
+                type="button"
                 key={hero.name}
                 onClick={() => pickFavorite(hero)}
-                className={`rounded-xl border border-white/10 bg-black/50 p-3 text-sm flex flex-col gap-2 cursor-pointer transition ${
+                aria-pressed={
+                  phase === 'ban'
+                    ? banHero?.name === hero.name
+                    : favoriteHero?.name === hero.name
+                }
+                className={`w-full text-left rounded-xl border border-white/10 bg-black/50 p-3 text-sm flex flex-col gap-2 cursor-pointer transition ${
                   phase === 'ban'
                     ? 'hover:border-red-400/60'
                     : 'hover:border-emerald-400/60'
@@ -273,7 +283,10 @@ export default function HeroPickerPage() {
               >
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-white">{hero.name}</span>
-                  <span className="text-lg transition-transform transform">
+                  <span
+                    className="text-lg transition-transform transform"
+                    aria-hidden="true"
+                  >
                     {phase === 'ban'
                       ? banHero?.name === hero.name
                         ? '🗑️'
@@ -284,7 +297,7 @@ export default function HeroPickerPage() {
                   </span>
                 </div>
                 <span className="text-xs text-gray-400">{hero.role}</span>
-              </div>
+              </button>
             ))}
           </div>
 
