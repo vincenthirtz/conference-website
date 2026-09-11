@@ -34,6 +34,10 @@ const NULLABLE_SNOWFLAKE_KEYS = [
   'disputes_forum_channel_id',
   'news_ingest_channel_id',
   'scrims_announce_channel_id',
+  // Annonce des joueuses « sans équipe » (event free_player.registered). Le bot
+  // lisait deja cette cle ; sans la colonne NI cette ligne, l'admin pouvait
+  // choisir un salon que le PUT jetait en silence.
+  'free_players_channel_id',
   'captain_role_id',
   'substitute_role_id',
   'staff_role_owner_id',

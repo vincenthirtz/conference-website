@@ -48,10 +48,11 @@ const BASELINE: Record<string, number> = {
   'pages/admin/users/[userId]/player-view.tsx': 1103,
   'pages/admin/tournament/[id]/edit.tsx': 991,
   'pages/admin/stages/[stageId]/seeding.tsx': 970,
-  // 872 écrites : l'aperçu de la carte de bienvenue est parti dans
-  // `components/admin/tenants/WelcomeCardPreview.tsx` (lot 8), ce qui a fait la
-  // place à l'éditeur de rôles par classement.
-  'pages/admin/tenants/[id]/discord-config/[guildId].tsx': 872,
+  // 692 écrites : la liste des champs et le type de la config sont partis dans
+  // `utils/discord/discordConfigFields.ts` — non pour gagner des lignes, mais
+  // pour que le test de whitelist puisse les confronter au handler PUT sans
+  // charger un écran React.
+  'pages/admin/tenants/[id]/discord-config/[guildId].tsx': 692,
   'pages/admin/stages/[stageId].tsx': 950,
   'pages/admin/users/new.tsx': 930,
   'pages/admin/demandes/[id].tsx': 921,

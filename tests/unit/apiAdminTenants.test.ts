@@ -32,6 +32,7 @@ import {
   listAccessibleTenants,
   invalidateTenantAccessCache,
 } from '../../utils/adminTenants';
+import { DISCORD_CONFIG_FIELD_KEYS } from '../../utils/discord/discordConfigFields';
 
 const TENANT_A = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const TENANT_B = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
@@ -415,6 +416,7 @@ describe('/api/admin/tenants/[id]/discord-config', () => {
     expect(body.configs[0].staff_role_admin_id).toBeNull();
     expect(body.configs[0].staff_role_caster_id).toBeNull();
     expect(body.configs[0].staff_log_channel_id).toBeNull();
+    expect(body.configs[0].free_players_channel_id).toBeNull();
     // Accueil des nouveaux arrivants (defauts).
     expect(body.configs[0].welcome_enabled).toBe(false);
     expect(body.configs[0].welcome_channel_id).toBeNull();
@@ -574,6 +576,85 @@ describe('/api/admin/tenants/[id]/discord-config', () => {
     expect(row.welcome_message).toBe('Bienvenue !');
     // Chaine vide -> null.
     expect(row.welcome_dm_message).toBeNull();
+  });
+
+  // Garde-fou de la whitelist. Un champ que l'ecran admin propose mais que le
+  // PUT n'accepte pas est jete EN SILENCE : 200, toast « enregistre », valeur
+  // perdue. C'est arrive a free_players_channel_id — le salon d'annonce des
+  // joueuses sans equipe n'existait ni en base ni dans cette whitelist, et le
+  // bot n'a annonce personne pendant des mois sans un seul log.
+  it('accepte TOUS les champs proposes par l ecran admin (whitelist)', async () => {
+    const rejetes: string[] = [];
+    const perdus: string[] = [];
+
+    for (let i = 0; i < DISCORD_CONFIG_FIELD_KEYS.length; i++) {
+      const key = DISCORD_CONFIG_FIELD_KEYS[i] as string;
+      // Snowflake unique par champ, construit en chaine : au-dela de 2^53 les
+      // nombres perdent en precision et deux champs recevraient la meme valeur.
+      const valeur = `11111111111111${String(1000 + i)}`;
+      const res = makeRes();
+      await discordConfigPut(
+        makeReq({
+          method: 'PUT',
+          query: { id: TENANT_A, guildId: GUILD_ID },
+          body: { [key]: valeur },
+        }),
+        res
+      );
+      if (res.statusCode !== 200) {
+        rejetes.push(`${key} → HTTP ${res.statusCode}`);
+        continue;
+      }
+      const row = (store.tenant_discord_config as any[]).find(
+        (r) => r.guild_id === GUILD_ID
+      );
+      if (row?.[key] !== valeur) perdus.push(key);
+    }
+
+    expect(
+      rejetes,
+      `Champs refuses par le PUT :\n${rejetes.join('\n')}`
+    ).toEqual([]);
+    expect(
+      perdus,
+      `Champs affiches par /admin/tenants/[id]/discord-config/[guildId] mais ` +
+        `IGNORES par le PUT (enregistrement silencieusement perdu) :\n` +
+        `${perdus.join('\n')}\n\n` +
+        `Ajoute-les a NULLABLE_SNOWFLAKE_KEYS du handler — et verifie que la ` +
+        `colonne existe en base.`
+    ).toEqual([]);
+  });
+
+  it('PUT 200 enregistre le salon des joueuses sans equipe', async () => {
+    const res = makeRes();
+    await discordConfigPut(
+      makeReq({
+        method: 'PUT',
+        query: { id: TENANT_A, guildId: GUILD_ID },
+        body: { free_players_channel_id: '7777777777777777777' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const row = (store.tenant_discord_config as any[]).find(
+      (r) => r.guild_id === GUILD_ID
+    );
+    expect(row.free_players_channel_id).toBe('7777777777777777777');
+  });
+
+  it('PUT 400 si free_players_channel_id n est pas un snowflake', async () => {
+    const res = makeRes();
+    await discordConfigPut(
+      makeReq({
+        method: 'PUT',
+        query: { id: TENANT_A, guildId: GUILD_ID },
+        body: { free_players_channel_id: 'nope' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).code).toBe('INVALID_SNOWFLAKE');
+    expect((res.body as any).field).toBe('free_players_channel_id');
   });
 });
 

@@ -27,6 +27,9 @@ export default adminNs('adminTenantDiscordConfig', {
   fieldScrimsAnnounceLabel: 'Channel annonces scrims',
   fieldScrimsAnnounceHelp:
     'Annonces des scrims. Fallback env SCRIMS_ANNOUNCE_CHANNEL_ID.',
+  fieldFreePlayersLabel: 'Channel joueuses sans équipe',
+  fieldFreePlayersHelp:
+    "Les nouvelles joueuses sans équipe y sont annoncées, avec mention du rôle manager. Sans salon, l'annonce n'a pas lieu. Fallback env FREE_PLAYERS_CHANNEL_ID.",
   fieldMemberLeaveLabel: 'Channel des départs',
   fieldMemberLeaveHelp:
     'Notifie quand un membre quitte le serveur (embed de départ). Vide = désactivé. Fallback env MEMBER_LEAVE_CHANNEL_ID.',
@@ -43,8 +46,6 @@ export default adminNs('adminTenantDiscordConfig', {
   fieldStaffOwnerHelp: 'Rôle Discord mappé sur le rôle staff owner.',
   fieldStaffAdminLabel: 'Staff role — Admin',
   fieldStaffAdminHelp: 'Rôle Discord mappé sur le rôle staff admin.',
-  fieldStaffManagerLabel: 'Staff role — Manager',
-  fieldStaffManagerHelp: 'Rôle Discord mappé sur le rôle staff manager.',
   fieldStaffCasterLabel: 'Staff role — Caster',
   fieldStaffCasterHelp: 'Rôle Discord mappé sur le rôle staff caster.',
   fieldTagOpenLabel: 'Tag dispute — Ouvert',

@@ -28,6 +28,9 @@ export default {
   fieldScrimsAnnounceLabel: 'Scrims announcements channel',
   fieldScrimsAnnounceHelp:
     'Scrim announcements. Fallback env SCRIMS_ANNOUNCE_CHANNEL_ID.',
+  fieldFreePlayersLabel: 'Free agents channel',
+  fieldFreePlayersHelp:
+    'New players without a team are announced there, mentioning the manager role. Without a channel, no announcement happens. Fallback env FREE_PLAYERS_CHANNEL_ID.',
   fieldMemberLeaveLabel: 'Departures channel',
   fieldMemberLeaveHelp:
     'Notifies when a member leaves the server (departure embed). Empty = disabled. Fallback env MEMBER_LEAVE_CHANNEL_ID.',
@@ -43,8 +46,6 @@ export default {
   fieldStaffOwnerHelp: 'Discord role mapped to the staff owner role.',
   fieldStaffAdminLabel: 'Staff role — Admin',
   fieldStaffAdminHelp: 'Discord role mapped to the staff admin role.',
-  fieldStaffManagerLabel: 'Staff role — Manager',
-  fieldStaffManagerHelp: 'Discord role mapped to the staff manager role.',
   fieldStaffCasterLabel: 'Staff role — Caster',
   fieldStaffCasterHelp: 'Discord role mapped to the staff caster role.',
   fieldTagOpenLabel: 'Dispute tag — Open',

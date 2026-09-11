@@ -22,40 +22,15 @@ import WelcomeCardPreview, {
   DEFAULT_WELCOME_MESSAGE,
   renderWelcomePreview,
 } from '@/components/admin/tenants/WelcomeCardPreview';
-
-type Dict = typeof nsAdminTenantDiscordConfig.fr;
+import {
+  CHANNEL_TYPES,
+  getDiscordConfigFields,
+  type DiscordConfig,
+  type FieldDef,
+  type FieldSection,
+} from '@/utils/discord/discordConfigFields';
 
 const SNOWFLAKE_RE = /^\d{15,21}$/;
-
-
-// Aligné sur les colonnes réelles de `tenant_discord_config` (source de vérité :
-// migration create_tenant_discord_config_table.sql + whitelist du handler PUT).
-type DiscordConfig = {
-  guild_id: string;
-  guild_name?: string | null;
-  staff_log_channel_id: string | null;
-  matches_live_channel_id: string | null;
-  disputes_forum_channel_id: string | null;
-  news_ingest_channel_id: string | null;
-  scrims_announce_channel_id: string | null;
-  teams_voice_category_id: string | null;
-  captain_role_id: string | null;
-  substitute_role_id: string | null;
-  staff_role_owner_id: string | null;
-  staff_role_admin_id: string | null;
-  staff_role_manager_id: string | null;
-  staff_role_caster_id: string | null;
-  disputes_forum_tag_open_id: string | null;
-  disputes_forum_tag_pending_id: string | null;
-  disputes_forum_tag_resolved_id: string | null;
-  member_leave_channel_id: string | null;
-  welcome_enabled?: boolean | null;
-  welcome_channel_id?: string | null;
-  welcome_message?: string | null;
-  welcome_dm_message?: string | null;
-  /** Règles rang → rôle Discord posées à la finalisation d'un tournoi (lot 8). */
-  placement_roles?: PlacementRule[] | null;
-};
 
 type DiscordConfigResponse = {
   configs: DiscordConfig[];
@@ -90,161 +65,6 @@ type Inventory = {
   roles: InvRole[];
 };
 
-// Familles de salons proposées par champ (filtre les options du <select>).
-type ChannelKind = 'text' | 'voice' | 'forum' | 'category';
-const CHANNEL_TYPES: Record<ChannelKind, number[]> = {
-  text: [0, 5], // texte + annonces
-  voice: [2, 13], // vocal + stage
-  forum: [15, 16], // forum + media
-  category: [4], // catégorie
-};
-
-// Fields rendered in the form. Single snowflake or list of snowflakes.
-// channelKind (facultatif) : famille de salons proposée dans le sélecteur ;
-// absent sur les champs de rôles (section 'roles' → liste de rôles).
-type FieldSection = 'channels' | 'voice' | 'roles' | 'tags';
-type FieldDef =
-  | {
-      key: keyof DiscordConfig;
-      label: string;
-      help?: string;
-      kind: 'single';
-      section: FieldSection;
-      channelKind?: ChannelKind;
-    }
-  | {
-      key: keyof DiscordConfig;
-      label: string;
-      help?: string;
-      kind: 'list';
-      section: FieldSection;
-      channelKind?: ChannelKind;
-    };
-
-function getFields(t: Dict): FieldDef[] {
-  return [
-    {
-      key: 'staff_log_channel_id',
-      label: t.fieldStaffLogLabel,
-      help: t.fieldStaffLogHelp,
-      kind: 'single',
-      section: 'channels',
-      channelKind: 'text',
-    },
-    {
-      key: 'matches_live_channel_id',
-      label: t.fieldMatchesLiveLabel,
-      help: t.fieldMatchesLiveHelp,
-      kind: 'single',
-      section: 'channels',
-      channelKind: 'text',
-    },
-    {
-      key: 'disputes_forum_channel_id',
-      label: t.fieldDisputesForumLabel,
-      help: t.fieldDisputesForumHelp,
-      kind: 'single',
-      section: 'channels',
-      channelKind: 'forum',
-    },
-    {
-      key: 'news_ingest_channel_id',
-      label: t.fieldNewsIngestLabel,
-      help: t.fieldNewsIngestHelp,
-      kind: 'single',
-      section: 'channels',
-      channelKind: 'text',
-    },
-    {
-      key: 'scrims_announce_channel_id',
-      label: t.fieldScrimsAnnounceLabel,
-      help: t.fieldScrimsAnnounceHelp,
-      kind: 'single',
-      section: 'channels',
-      channelKind: 'text',
-    },
-    {
-      key: 'member_leave_channel_id',
-      label: t.fieldMemberLeaveLabel,
-      help: t.fieldMemberLeaveHelp,
-      kind: 'single',
-      section: 'channels',
-      channelKind: 'text',
-    },
-    {
-      key: 'teams_voice_category_id',
-      label: t.fieldTeamsVoiceLabel,
-      help: t.fieldTeamsVoiceHelp,
-      kind: 'single',
-      section: 'voice',
-      channelKind: 'category',
-    },
-    {
-      key: 'captain_role_id',
-      label: t.fieldCaptainRoleLabel,
-      help: t.fieldCaptainRoleHelp,
-      kind: 'single',
-      section: 'roles',
-    },
-    {
-      key: 'substitute_role_id',
-      label: t.fieldSubstituteRoleLabel,
-      help: t.fieldSubstituteRoleHelp,
-      kind: 'single',
-      section: 'roles',
-    },
-    {
-      key: 'staff_role_owner_id',
-      label: t.fieldStaffOwnerLabel,
-      help: t.fieldStaffOwnerHelp,
-      kind: 'single',
-      section: 'roles',
-    },
-    {
-      key: 'staff_role_admin_id',
-      label: t.fieldStaffAdminLabel,
-      help: t.fieldStaffAdminHelp,
-      kind: 'single',
-      section: 'roles',
-    },
-    {
-      key: 'staff_role_manager_id',
-      label: t.fieldStaffManagerLabel,
-      help: t.fieldStaffManagerHelp,
-      kind: 'single',
-      section: 'roles',
-    },
-    {
-      key: 'staff_role_caster_id',
-      label: t.fieldStaffCasterLabel,
-      help: t.fieldStaffCasterHelp,
-      kind: 'single',
-      section: 'roles',
-    },
-    {
-      key: 'disputes_forum_tag_open_id',
-      label: t.fieldTagOpenLabel,
-      help: t.fieldTagOpenHelp,
-      kind: 'single',
-      section: 'tags',
-    },
-    {
-      key: 'disputes_forum_tag_pending_id',
-      label: t.fieldTagPendingLabel,
-      help: t.fieldTagPendingHelp,
-      kind: 'single',
-      section: 'tags',
-    },
-    {
-      key: 'disputes_forum_tag_resolved_id',
-      label: t.fieldTagResolvedLabel,
-      help: t.fieldTagResolvedHelp,
-      kind: 'single',
-      section: 'tags',
-    },
-  ];
-}
-
 function splitList(s: string): string[] {
   return s
     .split(/[\s,]+/)
@@ -254,7 +74,7 @@ function splitList(s: string): string[] {
 
 function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
   const t = useAdminT(nsAdminTenantDiscordConfig);
-  const FIELDS = useMemo(() => getFields(t), [t]);
+  const FIELDS = useMemo(() => getDiscordConfigFields(t), [t]);
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
@@ -344,12 +164,12 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
         disputes_forum_channel_id: null,
         news_ingest_channel_id: null,
         scrims_announce_channel_id: null,
+        free_players_channel_id: null,
         teams_voice_category_id: null,
         captain_role_id: null,
         substitute_role_id: null,
         staff_role_owner_id: null,
         staff_role_admin_id: null,
-        staff_role_manager_id: null,
         staff_role_caster_id: null,
         disputes_forum_tag_open_id: null,
         disputes_forum_tag_pending_id: null,
@@ -648,7 +468,6 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
                   </div>
                 </section>
               ))}
-
               <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
                 <h2 className="text-lg font-semibold text-white mb-4">
                   {t.welcomeHeading}
@@ -809,7 +628,6 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
                   </div>
                 </div>
               </section>
-
               <div className="flex gap-3">
                 <button
                   type="submit"
@@ -824,30 +642,29 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
                 >
                   {t.backToTenant}
                 </Link>
-              </div>            <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-              <PlacementRolesEditor
-                rules={placementRules}
-                onChange={setPlacementRules}
-                disabled={saving}
-                labels={{
-                  title: t.placementTitle,
-                  help: t.placementHelp,
-                  empty: t.placementEmpty,
-                  addRule: t.placementAdd,
-                  removeRule: t.placementRemove,
-                  fromLabel: t.placementFrom,
-                  toLabel: t.placementTo,
-                  toPlaceholder: t.placementToPlaceholder,
-                  roleLabel: t.placementRole,
-                  rolePlaceholder: t.placementRolePlaceholder,
-                  nameLabel: t.placementName,
-                  namePlaceholder: t.placementNamePlaceholder,
-                  invalidRole: t.placementInvalidRole,
-                }}
-              />
-            </section>
-
-
+              </div>{' '}
+              <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+                <PlacementRolesEditor
+                  rules={placementRules}
+                  onChange={setPlacementRules}
+                  disabled={saving}
+                  labels={{
+                    title: t.placementTitle,
+                    help: t.placementHelp,
+                    empty: t.placementEmpty,
+                    addRule: t.placementAdd,
+                    removeRule: t.placementRemove,
+                    fromLabel: t.placementFrom,
+                    toLabel: t.placementTo,
+                    toPlaceholder: t.placementToPlaceholder,
+                    roleLabel: t.placementRole,
+                    rolePlaceholder: t.placementRolePlaceholder,
+                    nameLabel: t.placementName,
+                    namePlaceholder: t.placementNamePlaceholder,
+                    invalidRole: t.placementInvalidRole,
+                  }}
+                />
+              </section>
             </form>
           )}
         </div>
@@ -859,13 +676,16 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
 export const getServerSideProps = withStaffPage<{
   tenantId: string;
   guildId: string;
-}>({ permission: 'manage_settings' }, async (ctx: GetServerSidePropsContext) => {
-  const id = ctx.params?.id;
-  const guildId = ctx.params?.guildId;
-  return {
-    tenantId: typeof id === 'string' ? id : '',
-    guildId: typeof guildId === 'string' ? guildId : '',
-  };
-});
+}>(
+  { permission: 'manage_settings' },
+  async (ctx: GetServerSidePropsContext) => {
+    const id = ctx.params?.id;
+    const guildId = ctx.params?.guildId;
+    return {
+      tenantId: typeof id === 'string' ? id : '',
+      guildId: typeof guildId === 'string' ? guildId : '',
+    };
+  }
+);
 
 export default AdminDiscordConfigPage;

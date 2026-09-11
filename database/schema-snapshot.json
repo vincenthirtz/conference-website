@@ -1505,6 +1505,7 @@
       "disputes_forum_tag_pending_id",
       "disputes_forum_tag_resolved_id",
       "extras",
+      "free_players_channel_id",
       "guild_id",
       "matches_live_channel_id",
       "member_leave_channel_id",

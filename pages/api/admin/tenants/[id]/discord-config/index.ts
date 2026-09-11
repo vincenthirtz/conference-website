@@ -22,6 +22,8 @@ const EMPTY_CONFIG = {
   disputes_forum_channel_id: null,
   news_ingest_channel_id: null,
   scrims_announce_channel_id: null,
+  // Annonce des joueuses « sans équipe » (event free_player.registered).
+  free_players_channel_id: null,
   captain_role_id: null,
   substitute_role_id: null,
   // Roles staff par niveau (depuis migration drop staff_role_ids).
