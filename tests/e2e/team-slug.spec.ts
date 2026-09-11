@@ -58,9 +58,18 @@ test.describe('teams.slug column + auto-generation', () => {
     await expect(
       page.getByRole('heading', { name: TEAM_NAME })
     ).toBeVisible({ timeout: 15000 });
+
+    // Une seule vérité SEO : DefaultSeo est la seule source des meta.
+    await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      'href',
+      new RegExp(`/team/${EXPECTED_SLUG}$`)
+    );
+    await expect(page.locator('meta[property="og:type"]')).toHaveCount(1);
+    await expect(page.locator('meta[property="og:title"]')).toHaveCount(1);
   });
 
-  test('public team page still resolves by UUID (back-compat)', async ({
+  test('UUID URL redirects to the canonical slug (back-compat)', async ({
     page,
   }) => {
     test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
@@ -71,6 +80,7 @@ test.describe('teams.slug column + auto-generation', () => {
 
     await page.goto(`/team/${teamId}`);
 
+    await expect(page).toHaveURL(new RegExp(`/team/${EXPECTED_SLUG}$`));
     await expect(
       page.getByRole('heading', { name: TEAM_NAME })
     ).toBeVisible({ timeout: 15000 });

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { GetStaticPaths, GetStaticProps } from 'next';
-import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import Heading from '@/components/Typography/heading';
@@ -45,23 +44,14 @@ import nsTeamDetail from '@/lib/i18n/locales/fr/teamDetail';
 import nsOverwatchRank from '@/lib/i18n/locales/fr/overwatchRank';
 import { XIcon } from '@/components/Icons';
 
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import {
+  buildTeamSeo,
+  teamPageSeoFallback,
+  teamRedirectDestination,
+} from '@/components/Team/teamPageSeo';
+
 type TeamDetailDict = typeof nsTeamDetail.fr;
-
-const SITE_NAME = "OW Women's Cup";
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || '';
-const CANONICAL_BASE = BASE_URL || 'https://owwomenscup.fr';
-
-function toAbsoluteUrl(path: string | null | undefined): string | undefined {
-  if (!path) return undefined;
-  if (path.startsWith('http')) return path;
-  return `${CANONICAL_BASE}${path.startsWith('/') ? path : `/${path}`}`;
-}
-
-function truncate(text: string, max = 155): string {
-  const clean = text.replace(/\s+/g, ' ').trim();
-  if (clean.length <= max) return clean;
-  return `${clean.slice(0, max - 1).trimEnd()}…`;
-}
 
 type Team = {
   id: string;
@@ -181,6 +171,8 @@ type TeamPageProps = {
    * renseigné le sien.
    */
   skillAverage: ResolvedTeamSkillRating | null;
+  /** SEO par-entité, lu par `_app.tsx` → DefaultSeo (seule source des meta). */
+  seo: SeoProps;
 };
 
 export const getStaticPaths: GetStaticPaths = async () => {
@@ -251,6 +243,17 @@ export const getStaticProps: GetStaticProps<TeamPageProps> = async (ctx) => {
   // Only show active teams
   if (team.is_active === false) {
     return { notFound: true, revalidate: 60 };
+  }
+
+  // Une seule URL par équipe : UUID, nom ou short_name redirigent (308) vers
+  // le slug (l'id pour une équipe sans slug). Sinon deux URL servaient la même
+  // fiche, et DefaultSeo déclarait canonique le chemin demandé.
+  const redirectTo = teamRedirectDestination(slug, team);
+  if (redirectTo) {
+    return {
+      redirect: { destination: redirectTo, permanent: true },
+      revalidate: 60,
+    };
   }
 
   const teamId = team.id;
@@ -606,6 +609,7 @@ export const getStaticProps: GetStaticProps<TeamPageProps> = async (ctx) => {
       scrimHistory,
       reliability,
       skillAverage,
+      seo: buildTeamSeo(team),
     },
     revalidate: 60,
   };
@@ -699,23 +703,6 @@ export default function TeamPage({
   const achievements = (team.achievements ?? []).filter((a) => a && a.title);
   const sponsors = (team.sponsors ?? []).filter((s) => s && s.name);
 
-  // SEO
-  const seoDescription = description
-    ? truncate(description, 155)
-    : `Découvrez l'équipe ${team.name} sur OW Women's Cup : effectif, palmarès et actualités.`;
-  const canonicalUrl = `${CANONICAL_BASE}/team/${encodeURIComponent(
-    team.slug || team.id
-  )}`;
-  const seoImage = toAbsoluteUrl(team.banner_url || team.logo_url);
-  const teamLd = {
-    '@context': 'https://schema.org',
-    '@type': 'SportsTeam',
-    name: team.name,
-    url: canonicalUrl,
-    ...(team.logo_url && { logo: toAbsoluteUrl(team.logo_url) }),
-    ...(description && { description: truncate(description, 300) }),
-  };
-
   const embedSrc =
     team.embed_provider === 'youtube' && team.embed_id
       ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(team.embed_id)}`
@@ -725,29 +712,7 @@ export default function TeamPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <Head>
-        <title>{`${team.name} | ${SITE_NAME}`}</title>
-        <meta name="description" content={seoDescription} />
-        <link rel="canonical" href={canonicalUrl} />
-        <meta property="og:type" content="profile" />
-        <meta property="og:site_name" content={SITE_NAME} />
-        <meta property="og:title" content={`${team.name} | ${SITE_NAME}`} />
-        <meta property="og:description" content={seoDescription} />
-        <meta property="og:url" content={canonicalUrl} />
-        {seoImage && <meta property="og:image" content={seoImage} />}
-        {seoImage && <meta property="og:image:alt" content={team.name} />}
-        <meta
-          name="twitter:card"
-          content={seoImage ? 'summary_large_image' : 'summary'}
-        />
-        <meta name="twitter:title" content={`${team.name} | ${SITE_NAME}`} />
-        <meta name="twitter:description" content={seoDescription} />
-        {seoImage && <meta name="twitter:image" content={seoImage} />}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(teamLd) }}
-        />
-      </Head>
+      {/* Pas de <Head> ici : les meta viennent de `props.seo` → DefaultSeo. */}
 
       {/* Pinned announcement */}
       {announcementActive && (
@@ -1996,3 +1961,7 @@ function initials(name: string): string {
   }
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
+
+// Repli statique (cf. pages/player/[userId].tsx) : en pratique `props.seo`
+// est toujours fourni par getStaticProps et prime dans `_app.tsx`.
+TeamPage.seo = teamPageSeoFallback;
