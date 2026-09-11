@@ -2466,6 +2466,7 @@ memoire.
     "news_ingest_channel_id": null,
     "scrims_announce_channel_id": null,
     "free_players_channel_id": null,
+    "team_openings_channel_id": null,
     "captain_role_id": null,
     "substitute_role_id": null,
     "staff_role_owner_id": null,

@@ -38,6 +38,8 @@ export type DiscordConfig = {
   scrims_announce_channel_id: string | null;
   /** Salon d'annonce des joueuses « sans équipe » (event free_player.registered). */
   free_players_channel_id: string | null;
+  /** Salon d'annonce des équipes qui recrutent (event team_opening.published). */
+  team_openings_channel_id: string | null;
   teams_voice_category_id: string | null;
   captain_role_id: string | null;
   substitute_role_id: string | null;
@@ -137,6 +139,14 @@ export function getDiscordConfigFields(t: Dict): FieldDef[] {
       key: 'free_players_channel_id',
       label: t.fieldFreePlayersLabel,
       help: t.fieldFreePlayersHelp,
+      kind: 'single',
+      section: 'channels',
+      channelKind: 'text',
+    },
+    {
+      key: 'team_openings_channel_id',
+      label: t.fieldTeamOpeningsLabel,
+      help: t.fieldTeamOpeningsHelp,
       kind: 'single',
       section: 'channels',
       channelKind: 'text',

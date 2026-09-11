@@ -30,6 +30,9 @@ export default adminNs('adminTenantDiscordConfig', {
   fieldFreePlayersLabel: 'Channel joueuses sans équipe',
   fieldFreePlayersHelp:
     "Les nouvelles joueuses sans équipe y sont annoncées, avec mention du rôle manager. Sans salon, l'annonce n'a pas lieu. Fallback env FREE_PLAYERS_CHANNEL_ID.",
+  fieldTeamOpeningsLabel: 'Channel équipes qui recrutent',
+  fieldTeamOpeningsHelp:
+    "Les annonces des équipes qui cherchent une joueuse y sont publiées. Sans salon, l'annonce n'a pas lieu. Salon distinct de celui des joueuses sans équipe : les deux publics ne sont pas les mêmes.",
   fieldMemberLeaveLabel: 'Channel des départs',
   fieldMemberLeaveHelp:
     'Notifie quand un membre quitte le serveur (embed de départ). Vide = désactivé. Fallback env MEMBER_LEAVE_CHANNEL_ID.',

@@ -31,6 +31,9 @@ export default {
   fieldFreePlayersLabel: 'Free agents channel',
   fieldFreePlayersHelp:
     'New players without a team are announced there, mentioning the manager role. Without a channel, no announcement happens. Fallback env FREE_PLAYERS_CHANNEL_ID.',
+  fieldTeamOpeningsLabel: 'Recruiting teams channel',
+  fieldTeamOpeningsHelp:
+    'Postings from teams looking for a player are announced there. Without a channel, no announcement happens. Separate from the free agents channel: the two audiences are not the same.',
   fieldMemberLeaveLabel: 'Departures channel',
   fieldMemberLeaveHelp:
     'Notifies when a member leaves the server (departure embed). Empty = disabled. Fallback env MEMBER_LEAVE_CHANNEL_ID.',

@@ -1533,6 +1533,7 @@
       "staff_role_caster_id",
       "staff_role_owner_id",
       "substitute_role_id",
+      "team_openings_channel_id",
       "teams_voice_category_id",
       "updated_at",
       "welcome_channel_id",

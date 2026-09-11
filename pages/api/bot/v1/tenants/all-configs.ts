@@ -28,6 +28,8 @@ function emptyDiscordConfig() {
     scrims_announce_channel_id: null as string | null,
     // Annonce des joueuses « sans équipe » (event free_player.registered).
     free_players_channel_id: null as string | null,
+    // Annonce des équipes qui cherchent une joueuse (event team_opening.published).
+    team_openings_channel_id: null as string | null,
     captain_role_id: null as string | null,
     substitute_role_id: null as string | null,
     // Roles staff par niveau (depuis migration drop staff_role_ids).
@@ -82,7 +84,7 @@ async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
   const { data: configRows, error: configErr } = await supabaseAdmin!
     .from('tenant_discord_config')
     .select(
-      'guild_id, staff_log_channel_id, matches_live_channel_id, disputes_forum_channel_id, news_ingest_channel_id, scrims_announce_channel_id, free_players_channel_id, captain_role_id, substitute_role_id, staff_role_owner_id, staff_role_admin_id, staff_role_caster_id, teams_voice_category_id, disputes_forum_tag_open_id, disputes_forum_tag_pending_id, disputes_forum_tag_resolved_id, welcome_enabled, welcome_channel_id, welcome_message, welcome_dm_message, member_leave_channel_id, extras, placement_roles'
+      'guild_id, staff_log_channel_id, matches_live_channel_id, disputes_forum_channel_id, news_ingest_channel_id, scrims_announce_channel_id, free_players_channel_id, team_openings_channel_id, captain_role_id, substitute_role_id, staff_role_owner_id, staff_role_admin_id, staff_role_caster_id, teams_voice_category_id, disputes_forum_tag_open_id, disputes_forum_tag_pending_id, disputes_forum_tag_resolved_id, welcome_enabled, welcome_channel_id, welcome_message, welcome_dm_message, member_leave_channel_id, extras, placement_roles'
     )
     .in('guild_id', guildIds);
 

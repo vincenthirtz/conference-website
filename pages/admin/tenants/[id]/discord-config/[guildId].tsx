@@ -165,6 +165,7 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
         news_ingest_channel_id: null,
         scrims_announce_channel_id: null,
         free_players_channel_id: null,
+        team_openings_channel_id: null,
         teams_voice_category_id: null,
         captain_role_id: null,
         substitute_role_id: null,

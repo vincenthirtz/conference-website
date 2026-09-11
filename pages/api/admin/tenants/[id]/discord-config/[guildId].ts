@@ -38,6 +38,10 @@ const NULLABLE_SNOWFLAKE_KEYS = [
   // lisait deja cette cle ; sans la colonne NI cette ligne, l'admin pouvait
   // choisir un salon que le PUT jetait en silence.
   'free_players_channel_id',
+  // Miroir du precedent : annonce des equipes qui cherchent une joueuse
+  // (event team_opening.published). Meme piege a eviter — un champ affiche
+  // dans l'admin mais absent d'ici est jete EN SILENCE.
+  'team_openings_channel_id',
   'captain_role_id',
   'substitute_role_id',
   'staff_role_owner_id',

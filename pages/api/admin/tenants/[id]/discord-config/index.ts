@@ -24,6 +24,8 @@ const EMPTY_CONFIG = {
   scrims_announce_channel_id: null,
   // Annonce des joueuses « sans équipe » (event free_player.registered).
   free_players_channel_id: null,
+  // Annonce des équipes qui cherchent une joueuse (event team_opening.published).
+  team_openings_channel_id: null,
   captain_role_id: null,
   substitute_role_id: null,
   // Roles staff par niveau (depuis migration drop staff_role_ids).
