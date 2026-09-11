@@ -2,11 +2,42 @@ import { describe, it, expect } from 'vitest';
 import {
   formatDateTimeTz,
   formatDateTz,
+  formatSiteDate,
   formatTimeTz,
   getTimeZoneOffsetMinutes,
   localInputToUTC,
   TOURNAMENT_TIMEZONES,
 } from '../../utils/timezone';
+
+describe('formatSiteDate', () => {
+  const opts = { hour: '2-digit', minute: '2-digit' } as const;
+
+  it('affiche l’heure de Paris quel que soit le fuseau de la machine', () => {
+    // 19:00 UTC en septembre = 21:00 à Paris (CEST).
+    expect(formatSiteDate('2026-09-16T19:00:00Z', 'fr', opts)).toBe('21:00');
+    // 20:00 UTC en décembre = 21:00 à Paris (CET).
+    expect(formatSiteDate('2026-12-02T20:00:00Z', 'fr', opts)).toBe('21:00');
+  });
+
+  it('suit la langue de l’interface', () => {
+    const day = { day: 'numeric', month: 'long' } as const;
+    expect(formatSiteDate('2026-09-16T19:00:00Z', 'fr', day)).toBe('16 septembre');
+    expect(formatSiteDate('2026-09-16T19:00:00Z', 'en', day)).toBe('16 September');
+    expect(formatSiteDate('2026-09-16T19:00:00Z', 'en-GB', day)).toBe('16 September');
+  });
+
+  it('prend le jour calendaire de Paris près de minuit', () => {
+    // 22:30 UTC le 16 = 00:30 le 17 à Paris.
+    expect(
+      formatSiteDate('2026-09-16T22:30:00Z', 'fr', { day: 'numeric' })
+    ).toBe('17');
+  });
+
+  it('renvoie le repli pour une date absente ou invalide', () => {
+    expect(formatSiteDate(null, 'fr', opts)).toBe('');
+    expect(formatSiteDate('pas-une-date', 'fr', opts, '—')).toBe('—');
+  });
+});
 
 describe('formatDateTz', () => {
   it('returns dash for null/undefined input', () => {

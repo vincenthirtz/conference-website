@@ -35,6 +35,35 @@ export type TournamentTimezone =
   | string;
 
 /**
+ * Fuseau d'affichage du site public. Les pages ISR/SSR sont rendues sur
+ * Netlify, en UTC : un `toLocaleString` sans `timeZone` y produit une heure
+ * décalée de 1 à 2 h, que l'hydratation corrige ensuite côté navigateur
+ * (mismatch React + texte qui saute). Toute date publique passe par ici.
+ */
+export const SITE_TIMEZONE = 'Europe/Paris';
+
+/**
+ * Formate une date ISO pour le site public, dans la LANGUE de l'interface
+ * (`fr` / `en`) et toujours dans le fuseau du site — même rendu serveur et
+ * client. Renvoie `fallback` si la date est absente ou invalide.
+ */
+export function formatSiteDate(
+  iso: string | Date | null | undefined,
+  locale: string,
+  options: Intl.DateTimeFormatOptions,
+  fallback = ''
+): string {
+  if (!iso) return fallback;
+  const date = iso instanceof Date ? iso : new Date(iso);
+  if (isNaN(date.getTime())) return fallback;
+  const tag = locale === 'en' ? 'en-GB' : locale === 'fr' ? 'fr-FR' : locale;
+  return new Intl.DateTimeFormat(tag, {
+    ...options,
+    timeZone: SITE_TIMEZONE,
+  }).format(date);
+}
+
+/**
  * Formate une date ISO en tenant compte du fuseau horaire du tournoi.
  *
  * @param iso Date ISO (UTC)
