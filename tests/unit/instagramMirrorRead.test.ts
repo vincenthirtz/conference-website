@@ -16,7 +16,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 const { loadAccountMock, markReadErrorMock } = vi.hoisted(() => ({
   loadAccountMock: vi.fn(),
   markReadErrorMock: vi.fn(
-    async (_tenantId: string, _message: string | null) => undefined
+    async (
+      _tenantId: string,
+      _message: string | null,
+      _opts?: { expired?: boolean }
+    ) => undefined
   ),
 }));
 
@@ -26,7 +30,9 @@ vi.mock('@/utils/social/instagram', () => ({
 }));
 
 import {
+  describeGraphError,
   fetchOwnMedia,
+  isTokenRevoked,
   readInstagramForMirror,
 } from '../../utils/social/instagramMirror';
 
@@ -113,20 +119,40 @@ describe('readInstagramForMirror', () => {
     });
     await expect(readInstagramForMirror(T)).rejects.toThrow(/HTTP 400/);
     expect(markReadErrorMock).toHaveBeenCalledTimes(1);
-    const [tenant, msg] = markReadErrorMock.mock.calls[0];
+    const [tenant, msg, opts] = markReadErrorMock.mock.calls[0];
     expect(tenant).toBe(T);
-    expect(msg).toMatch(/Unsupported get request/);
+    expect(msg).toBe('HTTP 400 IGApiException#100: Unsupported get request.');
     expect(msg).not.toContain(TOKEN);
+    // Une erreur qui n'est pas une révocation ne fait pas basculer le compte.
+    expect(opts).toEqual({ expired: false });
   });
 
-  it('consigne un jeton illisible', async () => {
+  // Le cas réel du 2026-09-11 : session invalidée côté Meta.
+  it('jeton révoqué par Meta (190) → consigné ET compte expiré', async () => {
+    loadAccountMock.mockResolvedValue(account());
+    stubFetch(400, {
+      error: {
+        message:
+          'Error validating access token: The session has been invalidated because the user changed their password or Facebook has changed the session for security reasons.',
+        type: 'OAuthException',
+        code: 190,
+      },
+    });
+    await expect(readInstagramForMirror(T)).rejects.toThrow(/OAuthException#190/);
+    const [, msg, opts] = markReadErrorMock.mock.calls[0];
+    expect(msg).toMatch(/^HTTP 400 OAuthException#190: Error validating access token/);
+    expect(opts).toEqual({ expired: true });
+  });
+
+  it('consigne un jeton illisible, et le compte passe expiré', async () => {
     loadAccountMock.mockResolvedValue(
       account({ accessToken: null, tokenUnreadable: true })
     );
     await expect(readInstagramForMirror(T)).rejects.toThrow(/illisible/);
     expect(markReadErrorMock).toHaveBeenCalledWith(
       T,
-      expect.stringMatching(/illisible/)
+      expect.stringMatching(/illisible/),
+      { expired: true }
     );
   });
 
@@ -152,5 +178,23 @@ describe('readInstagramForMirror', () => {
     loadAccountMock.mockResolvedValue(null);
     await expect(readInstagramForMirror(T)).resolves.toBeNull();
     expect(markReadErrorMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('describeGraphError / isTokenRevoked', () => {
+  it('garde le code, que la troncature du corps brut coupait', () => {
+    const long = 'x'.repeat(400);
+    const body = JSON.stringify({
+      error: { message: long, type: 'OAuthException', code: 190 },
+    });
+    const out = describeGraphError(body);
+    expect(out.startsWith('OAuthException#190: ')).toBe(true);
+    expect(isTokenRevoked(`HTTP 400 ${out}`)).toBe(true);
+  });
+
+  it('corps non JSON → tronqué tel quel ; pas une révocation', () => {
+    expect(describeGraphError('<html>502</html>')).toBe('<html>502</html>');
+    expect(isTokenRevoked('HTTP 502 <html>502</html>')).toBe(false);
+    expect(isTokenRevoked('HTTP 400 IGApiException#100: nope')).toBe(false);
   });
 });

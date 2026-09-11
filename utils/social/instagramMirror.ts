@@ -119,6 +119,40 @@ export function parseMedia(raw: unknown): MirrorPost[] {
   return out;
 }
 
+/** Message levé quand le jeton enregistré ne se déchiffre plus. */
+export const UNREADABLE_TOKEN_ERROR =
+  "jeton illisible — SECRETS_ENC_KEY a changé depuis la connexion : reconnecter le compte depuis l'admin";
+
+/**
+ * `{"error":{"message":…,"type":"OAuthException","code":190}}` →
+ * `OAuthException#190: …`. Corps illisible → ses 200 premiers caractères.
+ */
+export function describeGraphError(body: string): string {
+  try {
+    const e = (
+      JSON.parse(body) as {
+        error?: { message?: string; type?: string; code?: number };
+      }
+    ).error;
+    if (e?.message) {
+      return `${e.type ?? 'Error'}#${e.code ?? '?'}: ${e.message}`.slice(0, 300);
+    }
+  } catch {
+    // Corps non JSON : on le rend tel quel, tronqué.
+  }
+  return body.slice(0, 200);
+}
+
+/**
+ * Meta a-t-il RÉVOQUÉ le jeton ? Code 190 : jeton invalide, expiré, ou session
+ * invalidée (changement de mot de passe, alerte de sécurité — le cas du
+ * 2026-09-11). Définitif, seule une reconnexion le répare : rien à voir avec
+ * une panne réseau ou un 5xx.
+ */
+export function isTokenRevoked(message: string): boolean {
+  return /OAuthException#190\b/.test(message);
+}
+
 /**
  * Les dernières publications du compte connecté.
  *
@@ -135,11 +169,7 @@ export async function fetchOwnMedia(
   // panne (rotation de SECRETS_ENC_KEY), et elle doit se voir. Rendre `null`
   // la déguisait en absence de configuration — Instagram disparaissait du mur
   // sans une erreur nulle part ailleurs que dans les logs de la fonction.
-  if (account.tokenUnreadable) {
-    throw new Error(
-      "jeton illisible — SECRETS_ENC_KEY a changé depuis la connexion : reconnecter le compte depuis l'admin"
-    );
-  }
+  if (account.tokenUnreadable) throw new Error(UNREADABLE_TOKEN_ERROR);
   if (!account.accessToken) return null;
 
   // L'identifiant explicite quand on l'a : le `me` implicite désigne ce que le
@@ -160,9 +190,11 @@ export async function fetchOwnMedia(
     );
     if (!res.ok) {
       // Le corps porte le motif Meta (jeton expiré, scope retiré) ; le code
-      // HTTP seul ne le dit pas.
+      // HTTP seul ne le dit pas. On en tire `type#code: message` : le corps
+      // brut, tronqué, coupait justement le code (190 = jeton révoqué) dont
+      // dépend la suite.
       const body = await res.text().catch(() => '');
-      throw new Error(`HTTP ${res.status} ${body.slice(0, 200)}`);
+      throw new Error(`HTTP ${res.status} ${describeGraphError(body)}`);
     }
     return parseMedia(await res.json());
   } catch (err) {
@@ -194,10 +226,14 @@ export async function readInstagramForMirror(
   try {
     posts = await fetchOwnMedia(tenantId);
   } catch (err) {
-    await markReadError(
-      tenantId,
-      err instanceof Error ? err.message : String(err)
-    );
+    const message = err instanceof Error ? err.message : String(err);
+    // Jeton révoqué par Meta, ou illisible chez nous : seule une reconnexion
+    // répare. Le compte passe « expiré », et l'admin propose de le reconnecter
+    // au lieu d'afficher « Compte connecté ». Une panne passagère (réseau, 5xx)
+    // ne le fait PAS basculer — même prudence que social-token-refresh.
+    const expired =
+      isTokenRevoked(message) || message === UNREADABLE_TOKEN_ERROR;
+    await markReadError(tenantId, message, { expired });
     throw err;
   }
   if (posts !== null) {

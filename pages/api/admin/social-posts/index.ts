@@ -141,7 +141,13 @@ async function handleGet(
     const expiresAt = account?.expiresAt ?? null;
     const expired = Boolean(expiresAt && expiresAt.getTime() < Date.now());
     connections[platform.key] = {
-      connected: Boolean(account?.accessToken) && !expired,
+      // `expired` en base = Meta a révoqué le jeton (constaté par le miroir ou
+      // par une publication), alors que l'échéance peut être encore lointaine.
+      // Le compter comme connecté masquait le lien de reconnexion.
+      connected:
+        Boolean(account?.accessToken) &&
+        !expired &&
+        account?.status !== 'expired',
       handle: account?.handle ?? null,
       expiresAt: expiresAt ? expiresAt.toISOString() : null,
       status: expired ? 'expired' : (account?.status ?? 'disconnected'),

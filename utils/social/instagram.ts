@@ -398,7 +398,9 @@ export const READ_ERROR_PREFIX = 'Lecture Instagram — ';
  */
 export async function markReadError(
   tenantId: string,
-  message: string | null
+  message: string | null,
+  /** `expired` : Meta a révoqué le jeton — le compte doit être reconnecté. */
+  opts: { expired?: boolean } = {}
 ): Promise<void> {
   if (!supabaseAdmin) return;
   try {
@@ -416,6 +418,7 @@ export async function markReadError(
       .from('social_accounts')
       .update({
         last_error: `${READ_ERROR_PREFIX}${message}`.slice(0, 500),
+        ...(opts.expired ? { status: 'expired' } : {}),
         updated_at: now,
       })
       .eq('tenant_id', tenantId)
