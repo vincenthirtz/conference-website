@@ -1393,6 +1393,22 @@
       "user_id",
       "verified_battle_net_id"
     ],
+    "team_openings": [
+      "availability",
+      "contact_discord",
+      "contact_email",
+      "expires_at",
+      "id",
+      "level",
+      "marked_at",
+      "note",
+      "roles",
+      "source",
+      "team_id",
+      "team_name",
+      "tenant_id",
+      "updated_at"
+    ],
     "team_ratings": [
       "created_at",
       "games_played",
