@@ -2679,6 +2679,14 @@
       "source": "team_members",
       "target": "users"
     },
+    "team_openings_team_id_fkey": {
+      "source": "team_openings",
+      "target": "teams"
+    },
+    "team_openings_tenant_id_fkey": {
+      "source": "team_openings",
+      "target": "tenants"
+    },
     "team_ratings_team_id_fkey": {
       "source": "team_ratings",
       "target": "teams"
