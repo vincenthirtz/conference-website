@@ -32,6 +32,7 @@ const LEVEL_LABEL: Record<string, keyof Dict> = {
   silver: 'levelSilver',
   gold: 'levelGold',
   platinum: 'levelPlatinum',
+  emerald: 'levelEmerald',
   diamond: 'levelDiamond',
   master: 'levelMaster',
   grandmaster: 'levelGrandmaster',
