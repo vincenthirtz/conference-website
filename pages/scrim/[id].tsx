@@ -6,7 +6,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
+import { formatSiteDate } from '@/utils/timezone';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { useT, format } from '@/lib/i18n/useT';
@@ -43,6 +45,7 @@ type ScrimDetail = {
 
 type ScrimMatch = {
   id: string;
+  created_at?: string | null;
   status: string;
   is_bye: boolean | null;
   match_format: string | null;
@@ -59,7 +62,96 @@ type ScrimMatch = {
 type Props = {
   scrim: ScrimDetail;
   matches: ScrimMatch[];
+  seo: SeoProps;
 };
+
+const SEO_BASE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
+  'https://owwomenscup.fr';
+
+/**
+ * Ordre d'affichage des matchs : horaire croissant, les non planifiés en
+ * dernier, puis ordre de création. Fait ici plutôt qu'en SQL : les matchs
+ * arrivent embarqués dans la ligne du scrim.
+ */
+function sortScrimMatches(matches: ScrimMatch[]): ScrimMatch[] {
+  const time = (iso: string | null | undefined) =>
+    iso ? new Date(iso).getTime() : Number.POSITIVE_INFINITY;
+  return matches.slice().sort((a, b) => {
+    const byDate = time(a.scheduled_at) - time(b.scheduled_at);
+    if (byDate !== 0 && !Number.isNaN(byDate)) return byDate;
+    return time(a.created_at) - time(b.created_at) || 0;
+  });
+}
+
+// SEO par-entité, même mécanisme que pages/match/[id].tsx : titre
+// « A vs B – Scrim » (noms d'équipe non traduits), description bilingue et
+// JSON-LD `SportsEvent`. Sans ça, chaque scrim héritait du titre par défaut
+// du site — des dizaines de pages indexables au titre identique.
+export function buildScrimSeo(scrim: ScrimDetail): SeoProps {
+  const name = (team: TeamMini | null, tbd: string) =>
+    team?.short_name || team?.name || tbd;
+  const versus = (tbd: string) =>
+    scrim.team1 || scrim.team2
+      ? `${name(scrim.team1, tbd)} vs ${name(scrim.team2, tbd)}`
+      : scrim.name;
+  const url = `${SEO_BASE_URL}/scrim/${encodeURIComponent(scrim.slug || scrim.id)}`;
+  const game = scrim.game || 'Overwatch';
+  const dateOpts: Intl.DateTimeFormatOptions = {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  };
+  const whenFr = formatSiteDate(scrim.scheduled_date, 'fr', dateOpts);
+  const whenEn = formatSiteDate(scrim.scheduled_date, 'en', dateOpts);
+
+  const jsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'SportsEvent',
+    name: versus('TBD'),
+    url,
+    ...(scrim.scheduled_date ? { startDate: scrim.scheduled_date } : {}),
+    eventStatus:
+      scrim.status === 'cancelled'
+        ? 'https://schema.org/EventCancelled'
+        : 'https://schema.org/EventScheduled',
+    eventAttendanceMode: 'https://schema.org/OnlineEventAttendanceMode',
+    location: { '@type': 'VirtualLocation', url: scrim.stream_url || url },
+    organizer: {
+      '@type': 'Organization',
+      name: "OW Women's Cup",
+      url: SEO_BASE_URL,
+    },
+    sport: game,
+    inLanguage: 'fr-FR',
+    ...(scrim.banner_url ? { image: scrim.banner_url } : {}),
+    ...(scrim.description ? { description: scrim.description } : {}),
+  };
+  const competitors = [scrim.team1, scrim.team2]
+    .filter((team): team is TeamMini => Boolean(team))
+    .map((team) => ({
+      '@type': 'SportsTeam',
+      name: team.name,
+      ...(team.slug
+        ? { url: `${SEO_BASE_URL}/team/${encodeURIComponent(team.slug)}` }
+        : {}),
+    }));
+  if (competitors.length > 0) jsonLd.competitor = competitors;
+
+  return {
+    title: {
+      fr: `${versus('À définir')} – Scrim`,
+      en: `${versus('TBD')} – Scrim`,
+    },
+    description: {
+      fr: `Scrim ${game} ${versus('à définir')}${whenFr ? ` le ${whenFr}` : ''} — OW Women's Cup : score, matchs joués et stream.`,
+      en: `${game} scrim ${versus('TBD')}${whenEn ? ` on ${whenEn}` : ''} — OW Women's Cup: score, matches played and stream.`,
+    },
+    ...(scrim.banner_url ? { image: scrim.banner_url } : {}),
+    type: 'website',
+    jsonLd,
+  };
+}
 
 export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   const rawId = ctx.params?.id;
@@ -68,6 +160,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
 
   const tenantId = resolveTenantIdForPublicRequest(ctx.req);
 
+  // Une seule requête : les matchs arrivent embarqués via matches.scrim_id
+  // (FK matches_scrim_id_fkey). Il y en avait deux, en série.
   let scrimQuery = supabaseAdmin
     .from('scrims')
     .select(
@@ -76,44 +170,50 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       scheduled_date, timezone, description, banner_url, logo_url, stream_url,
       team1_score, team2_score, winner_team_id,
       team1:teams!scrims_team1_id_fkey(id, name, short_name, slug, logo_url),
-      team2:teams!scrims_team2_id_fkey(id, name, short_name, slug, logo_url)
+      team2:teams!scrims_team2_id_fkey(id, name, short_name, slug, logo_url),
+      matches!matches_scrim_id_fkey(
+        id, created_at, status, is_bye, match_format,
+        team1_score, team2_score, winner_team_id,
+        scheduled_at, stream_url, replay_url,
+        team1:teams!matches_team1_fk(id, name, short_name, slug, logo_url),
+        team2:teams!matches_team2_fk(id, name, short_name, slug, logo_url)
+      )
       `
     )
     .eq('tenant_id', tenantId)
     .eq('is_public', true)
-    .neq('status', 'draft');
+    .neq('status', 'draft')
+    // Un scrim supprimé (corbeille /admin/recycle-bin) n'a plus de page.
+    .is('deleted_at', null);
 
   scrimQuery = isValidUUID(id)
     ? scrimQuery.eq('id', id)
     : scrimQuery.eq('slug', id);
 
-  const { data: scrim, error: scrimErr } = await scrimQuery.maybeSingle();
+  const { data, error: scrimErr } = await scrimQuery.maybeSingle();
   if (scrimErr) {
     logger.error('[scrim/:id] fetch error:', scrimErr);
     return { notFound: true };
   }
-  if (!scrim) return { notFound: true };
+  if (!data) return { notFound: true };
 
-  const { data: matches } = await supabaseAdmin
-    .from('matches')
-    .select(
-      `
-      id, status, is_bye, match_format,
-      team1_score, team2_score, winner_team_id,
-      scheduled_at, stream_url, replay_url,
-      team1:teams!matches_team1_fk(id, name, short_name, slug, logo_url),
-      team2:teams!matches_team2_fk(id, name, short_name, slug, logo_url)
-      `
-    )
-    .eq('tenant_id', tenantId)
-    .eq('scrim_id', scrim.id)
-    .order('scheduled_at', { ascending: true, nullsFirst: false })
-    .order('created_at', { ascending: true });
+  const { matches: embedded, ...rest } = data as unknown as ScrimDetail & {
+    matches: ScrimMatch[] | null;
+  };
+  const scrim = rest as ScrimDetail;
+
+  // Page publique sans donnée par visiteur : le CDN peut la servir une minute,
+  // puis la revalider en arrière-plan.
+  ctx.res.setHeader(
+    'Cache-Control',
+    'public, s-maxage=60, stale-while-revalidate=300'
+  );
 
   return {
     props: {
-      scrim: scrim as unknown as ScrimDetail,
-      matches: (matches || []) as unknown as ScrimMatch[],
+      scrim,
+      matches: sortScrimMatches(embedded || []),
+      seo: buildScrimSeo(scrim),
     },
   };
 };
@@ -138,8 +238,7 @@ function ScrimDetailPage({ scrim, matches }: Props) {
   const locale = useLocale();
   // Un scrim clos affiche son score, pas un « vs » : c'est le résultat qu'on
   // vient chercher. Le 0–0 est un vrai score (nul), d'où le test sur null.
-  const hasScore =
-    scrim.team1_score !== null && scrim.team2_score !== null;
+  const hasScore = scrim.team1_score !== null && scrim.team2_score !== null;
   const isDraw = hasScore && scrim.team1_score === scrim.team2_score;
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
@@ -163,8 +262,7 @@ function ScrimDetailPage({ scrim, matches }: Props) {
           <TeamBlock
             team={scrim.team1}
             winner={
-              !!scrim.winner_team_id &&
-              scrim.winner_team_id === scrim.team1?.id
+              !!scrim.winner_team_id && scrim.winner_team_id === scrim.team1?.id
             }
           />
           {hasScore ? (
@@ -184,8 +282,7 @@ function ScrimDetailPage({ scrim, matches }: Props) {
           <TeamBlock
             team={scrim.team2}
             winner={
-              !!scrim.winner_team_id &&
-              scrim.winner_team_id === scrim.team2?.id
+              !!scrim.winner_team_id && scrim.winner_team_id === scrim.team2?.id
             }
           />
         </div>
