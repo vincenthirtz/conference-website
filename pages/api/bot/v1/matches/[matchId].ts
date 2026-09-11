@@ -21,8 +21,7 @@ import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import { uuidSchema } from '@/utils/botValidation';
-import { emitBotEvent } from '@/utils/botEvents';
-import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
+import { emitScheduleEventsInBackground } from '@/utils/matches/scheduleEvents';
 import { logger } from '@/utils/logger';
 
 const NOTES_MAX = 2000;
@@ -214,40 +213,23 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     },
   });
 
-  // Scheduled event natif Discord : si /planifier vient de poser ou clearer
-  // scheduled_at, le bot doit creer/mettre a jour/supprimer son scheduled
-  // event. Mirror du comportement de pages/api/admin/matches/[matchId].ts.
+  // Scheduled event natif Discord + prévenir les équipes : si /planifier vient
+  // de poser, déplacer ou retirer scheduled_at → match.scheduled (+
+  // match.rescheduled si une date existait) / match.unscheduled. Même règle et
+  // mêmes payloads que le PATCH admin (utils/matches/scheduleEvents.ts).
   if ('scheduled_at' in updates) {
-    const prev = match.scheduled_at ?? null;
-    const next = (updates.scheduled_at ?? null) as string | null;
-    if (prev !== next) {
-      if (next) {
-        void (async () => {
-          const enriched = await enrichMatchEvent(matchId);
-          await emitBotEvent(
-            'match.scheduled',
-            {
-              matchId,
-              tournamentId: match.tournament_id ?? null,
-              scrimId: match.scrim_id ?? null,
-              scheduledAt: next,
-              enriched,
-            },
-            req.botContext.tenantId
-          );
-        })().catch((e) =>
-          logger.error('[botEvents] match.scheduled emit error:', e)
-        );
-      } else {
-        void emitBotEvent(
-          'match.unscheduled',
-          { matchId },
-          req.botContext.tenantId
-        ).catch((e) =>
-          logger.error('[botEvents] match.unscheduled emit error:', e)
-        );
-      }
-    }
+    emitScheduleEventsInBackground(
+      [
+        {
+          matchId,
+          tournamentId: match.tournament_id ?? null,
+          scrimId: match.scrim_id ?? null,
+          previous: match.scheduled_at ?? null,
+          next: (updated.scheduled_at ?? null) as string | null,
+        },
+      ],
+      req.botContext.tenantId
+    );
   }
 
   return res.status(200).json({ success: true, match: updated });

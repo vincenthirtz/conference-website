@@ -4,6 +4,18 @@
 // /bracket. Pour chaque stage, renvoie ses matchs ordonnés par round + ses
 // standings calcules a la volee si stage_type='swiss' ou 'round_robin'.
 //
+// Réponse : `{ tournament, stages: StageOut[], unstagedMatches: MatchOut[] }`.
+//
+// `unstagedMatches` : matchs du tournoi SANS phase (stage_id NULL —
+// typiquement Petite finale / Grande finale), mêmes objets que
+// `stages[].matches`, triés par round puis par date. Ils étaient auparavant
+// absents (filtre `.in('stage_id', …)`). Toujours présent : `[]` quand il n'y
+// en a pas, et `[]` avec `?stageId=` (on zoome sur une phase). Renvoyé aussi
+// quand le tournoi n'a aucune phase.
+//
+// Soft-delete : phases et matchs dont `deleted_at` est posé sont exclus. Les
+// matchs d'une phase supprimée disparaissent avec elle.
+//
 // Filtre optionnel ?stageId=<uuid> pour ne renvoyer qu'une seule phase
 // (utile si le tournoi a beaucoup de phases : evite de saturer le payload
 // Discord embed).
@@ -67,15 +79,62 @@ type StageOut = {
   standings: StandingOut[] | null;
 };
 
+type MatchRow = {
+  id: string;
+  stage_id: string | null;
+  status: string;
+  is_bye: boolean | null;
+  round_number: number | null;
+  round_name: string | null;
+  bracket_side: string | null;
+  group_key: string | null;
+  scheduled_at: string | null;
+  team1_score: number | null;
+  team2_score: number | null;
+  winner_team_id: string | null;
+  team1: unknown;
+  team2: unknown;
+};
+
+const MATCH_SELECT = `id, stage_id, status, is_bye, round_number, round_name, bracket_side,
+       group_key, scheduled_at, team1_score, team2_score, winner_team_id,
+       team1:team1_id (id, name, short_name, logo_url),
+       team2:team2_id (id, name, short_name, logo_url)`;
+
 function asTeam(rel: unknown): TeamLite | null {
   if (!rel) return null;
-  const t = Array.isArray(rel) ? rel[0] : rel;
+  const t = (Array.isArray(rel) ? rel[0] : rel) as
+    | {
+        id?: string;
+        name?: string | null;
+        short_name?: string | null;
+        logo_url?: string | null;
+      }
+    | undefined;
   if (!t?.id) return null;
   return {
     id: t.id,
     name: t.name ?? '',
     shortName: t.short_name ?? null,
     logoUrl: t.logo_url ?? null,
+  };
+}
+
+function toMatchOut(m: MatchRow): MatchOut {
+  return {
+    id: m.id,
+    status: m.status,
+    isBye: !!m.is_bye,
+    roundNumber: m.round_number ?? null,
+    roundName: m.round_name ?? null,
+    bracketSide: m.bracket_side ?? null,
+    groupKey: m.group_key ?? null,
+    scheduledAt: m.scheduled_at ?? null,
+    team1: asTeam(m.team1),
+    team2: asTeam(m.team2),
+    team1Score: m.team1_score ?? null,
+    team2Score: m.team2_score ?? null,
+    winnerTeamId: m.winner_team_id ?? null,
   };
 }
 
@@ -120,11 +179,35 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     return res.status(404).json({ error: 'Tournoi introuvable' });
   }
 
+  // Matchs du tournoi SANS phase (finales). Requête séparée plutôt qu'un
+  // `.or()` : elle ne peut pas faire perdre un match de phase dont la ligne
+  // n'aurait pas `tournament_id` renseigné. Pas quand on zoome sur une phase.
+  let unstagedMatches: MatchOut[] = [];
+  if (!stageFilter) {
+    const { data: unstaged, error: unstagedErr } = await supabaseAdmin
+      .from('matches')
+      .select(MATCH_SELECT)
+      .eq('tenant_id', req.botContext.tenantId)
+      .eq('tournament_id', tournamentId)
+      .is('stage_id', null)
+      .is('deleted_at', null)
+      .order('round_number', { ascending: true, nullsFirst: false })
+      .order('scheduled_at', { ascending: true, nullsFirst: false });
+    if (unstagedErr) {
+      logger.error('[bot/bracket] unstaged matches error', unstagedErr);
+      return res.status(500).json({ error: 'Erreur de chargement des matchs' });
+    }
+    unstagedMatches = ((unstaged ?? []) as unknown as MatchRow[]).map(
+      toMatchOut
+    );
+  }
+
   let stagesQuery = supabaseAdmin
     .from('tournament_stages')
     .select('id, name, slug, stage_type, order_index, start_date, end_date')
     .eq('tenant_id', req.botContext.tenantId)
     .eq('tournament_id', tournamentId)
+    .is('deleted_at', null)
     .order('order_index', { ascending: true });
   if (stageFilter) stagesQuery = stagesQuery.eq('id', stageFilter);
   const { data: stages, error: stagesErr } = await stagesQuery;
@@ -133,21 +216,17 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     return res.status(500).json({ error: 'Erreur de chargement des phases' });
   }
   if (!stages || stages.length === 0) {
-    return res.status(200).json({ tournament, stages: [] });
+    return res.status(200).json({ tournament, stages: [], unstagedMatches });
   }
 
   const stageIds = stages.map((s) => s.id);
 
   const { data: matches, error: matchesErr } = await supabaseAdmin
     .from('matches')
-    .select(
-      `id, stage_id, status, is_bye, round_number, round_name, bracket_side,
-       group_key, scheduled_at, team1_score, team2_score, winner_team_id,
-       team1:team1_id (id, name, short_name, logo_url),
-       team2:team2_id (id, name, short_name, logo_url)`
-    )
+    .select(MATCH_SELECT)
     .eq('tenant_id', req.botContext.tenantId)
     .in('stage_id', stageIds)
+    .is('deleted_at', null)
     .order('round_number', { ascending: true, nullsFirst: false });
   if (matchesErr) {
     logger.error('[bot/bracket] matches error', matchesErr);
@@ -155,25 +234,11 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   }
 
   const matchesByStage = new Map<string, MatchOut[]>();
-  for (const m of matches ?? []) {
-    const out: MatchOut = {
-      id: (m as any).id,
-      status: (m as any).status,
-      isBye: !!(m as any).is_bye,
-      roundNumber: (m as any).round_number ?? null,
-      roundName: (m as any).round_name ?? null,
-      bracketSide: (m as any).bracket_side ?? null,
-      groupKey: (m as any).group_key ?? null,
-      scheduledAt: (m as any).scheduled_at ?? null,
-      team1: asTeam((m as any).team1),
-      team2: asTeam((m as any).team2),
-      team1Score: (m as any).team1_score ?? null,
-      team2Score: (m as any).team2_score ?? null,
-      winnerTeamId: (m as any).winner_team_id ?? null,
-    };
-    const arr = matchesByStage.get((m as any).stage_id) ?? [];
-    arr.push(out);
-    matchesByStage.set((m as any).stage_id, arr);
+  for (const m of (matches ?? []) as unknown as MatchRow[]) {
+    if (!m.stage_id) continue;
+    const arr = matchesByStage.get(m.stage_id) ?? [];
+    arr.push(toMatchOut(m));
+    matchesByStage.set(m.stage_id, arr);
   }
 
   // For swiss/round_robin stages, also pull stage_teams so the standings
@@ -193,12 +258,15 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     if (stErr) {
       logger.error('[bot/bracket] stage_teams error', stErr);
     } else {
-      for (const r of stageTeams ?? []) {
-        const t = asTeam((r as any).team);
+      for (const r of (stageTeams ?? []) as Array<{
+        stage_id: string;
+        team: unknown;
+      }>) {
+        const t = asTeam(r.team);
         if (!t) continue;
-        const arr = stageTeamsByStage.get((r as any).stage_id) ?? [];
+        const arr = stageTeamsByStage.get(r.stage_id) ?? [];
         arr.push(t);
-        stageTeamsByStage.set((r as any).stage_id, arr);
+        stageTeamsByStage.set(r.stage_id, arr);
       }
     }
   }
@@ -265,7 +333,9 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     };
   });
 
-  return res.status(200).json({ tournament, stages: stageOut });
+  return res
+    .status(200)
+    .json({ tournament, stages: stageOut, unstagedMatches });
 }
 
 export default withBotRoute(handler, {

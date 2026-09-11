@@ -4,10 +4,22 @@
 // discreet "view on site" link, i18n via useT(nsEmbedSchedule). Renders only
 // the public, non-PII fields exposed by PublicMatch (team names, scores,
 // status, schedule). Dates localized with 'fr-FR' (embed defaults to FR).
+//
+// Days and times are read in the TOURNAMENT's time zone (tournaments.timezone,
+// fallback Europe/Paris) through utils/scheduleByDay — the same day key as the
+// admin schedule diagnostics, so a match lands on the same evening everywhere.
+// Never UTC (`toISOString().slice(0, 10)` put a 00:30 Paris match on the
+// previous day) nor the rendering machine's zone (SSR renders in UTC).
 
 import type { PublicMatch } from '@/utils/public/readMatches';
 import { useT, format } from '@/lib/i18n/useT';
 import nsEmbedSchedule from '@/lib/i18n/locales/fr/embedSchedule';
+import {
+  SCHEDULE_TZ,
+  formatTimeInTz,
+  formatYmd,
+  groupByDayInTz,
+} from '@/utils/scheduleByDay';
 
 export type EmbedTheme = 'light' | 'dark';
 
@@ -17,6 +29,8 @@ type EmbedScheduleProps = {
   tournamentName: string;
   matches: PublicMatch[];
   theme: EmbedTheme;
+  /** Validated IANA zone of the tournament. Defaults to Europe/Paris. */
+  timezone?: string;
   /** Sanitized hex accent (brand bar). Null → no accent bar. */
   accent?: string | null;
   /** Optional canonical public URL for a discreet "view on site" link. */
@@ -32,40 +46,22 @@ function statusKind(status: string): MatchStatusKind {
   return 'upcoming';
 }
 
-/** Group matches by calendar day (in the viewer's locale). Undated last. */
+/** Group matches by calendar day in the tournament's zone. Undated last. */
 function groupByDay(
-  matches: PublicMatch[]
+  matches: PublicMatch[],
+  tz: string
 ): Array<{ key: string; label: string; items: PublicMatch[] }> {
-  const groups = new Map<string, { label: string; items: PublicMatch[] }>();
-  for (const m of matches) {
-    const key = m.scheduled_at
-      ? new Date(m.scheduled_at).toISOString().slice(0, 10)
-      : '__undated__';
-    const label = m.scheduled_at
-      ? new Date(m.scheduled_at).toLocaleDateString(LOCALE, {
+  return groupByDayInTz(matches, tz).map((day) => ({
+    key: day.key,
+    label: day.ymd
+      ? formatYmd(day.ymd, LOCALE, {
           weekday: 'long',
           day: 'numeric',
           month: 'long',
         })
-      : '';
-    if (!groups.has(key)) groups.set(key, { label, items: [] });
-    groups.get(key)!.items.push(m);
-  }
-  return Array.from(groups.entries())
-    .sort(([a], [b]) => {
-      if (a === '__undated__') return 1;
-      if (b === '__undated__') return -1;
-      return a < b ? -1 : a > b ? 1 : 0;
-    })
-    .map(([key, g]) => ({ key, label: g.label, items: g.items }));
-}
-
-function formatTime(scheduledAt: string | null): string {
-  if (!scheduledAt) return '';
-  return new Date(scheduledAt).toLocaleTimeString(LOCALE, {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+      : '',
+    items: day.items,
+  }));
 }
 
 /** Up-to-2-char initials derived from a team name, for the logo fallback. */
@@ -127,6 +123,7 @@ export default function EmbedSchedule({
   tournamentName,
   matches,
   theme,
+  timezone = SCHEDULE_TZ,
   accent,
   publicUrl,
   siteLabel = 'le site',
@@ -157,7 +154,7 @@ export default function EmbedSchedule({
       : 'bg-purple-500/20 text-purple-300';
   }
 
-  const groups = groupByDay(matches);
+  const groups = groupByDay(matches, timezone);
 
   return (
     <div
@@ -242,7 +239,8 @@ export default function EmbedSchedule({
                               : 'w-12 shrink-0 tabular-nums text-neutral-400'
                           }
                         >
-                          {formatTime(m.scheduled_at)}
+                          {formatTimeInTz(m.scheduled_at, LOCALE, timezone) ??
+                            ''}
                         </span>
                         <span className="flex min-w-0 flex-1 items-center justify-center gap-2">
                           <span className="flex min-w-0 flex-1 items-center justify-end gap-1.5">

@@ -370,13 +370,15 @@ async function handleGet(
     body.stages = (stagesData || []) as unknown as StageSummary[];
   }
 
-  // tournament : entête (id, name, slug, status). Chargé quand la page admin
-  // demande stages ou total — les autres consommateurs (bracket/veto) ne le
-  // reçoivent pas, la forme `{ matches }` reste intacte pour eux.
+  // tournament : entête (id, name, slug, status, timezone). Chargé quand la
+  // page admin demande stages ou total — les autres consommateurs
+  // (bracket/veto) ne le reçoivent pas, la forme `{ matches }` reste intacte
+  // pour eux. `timezone` évite à la page un second appel à
+  // /api/admin/tournament/[id], qui répond 403 à un arbitre.
   if (withStages || withTotal) {
     const { data: tData, error: tErr } = await supabaseAdmin
       .from('tournaments')
-      .select('id, name, slug, status')
+      .select('id, name, slug, status, timezone')
       .eq('tenant_id', ctx.tenantId)
       .eq('id', tournamentId)
       .maybeSingle();

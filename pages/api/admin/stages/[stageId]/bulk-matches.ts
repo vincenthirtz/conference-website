@@ -10,6 +10,7 @@ import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { emitScheduleEvents } from '@/utils/matches/scheduleEvents';
 
 import { logger } from '../../../../../utils/logger';
 export default withStaffRoute(
@@ -199,6 +200,34 @@ async function handleBulkSchedule(
       },
     });
   }
+
+  // Événements de planification : uniquement les matchs de CETTE phase (ceux
+  // du snapshot — un id hors phase n'a rien écrit) dont le créneau a changé.
+  // Un échec après une première réussite a déjà rollback et rendu la main
+  // plus haut : ici, toutes les écritures listées sont conservées.
+  const requested = new Map<string, string | null>();
+  for (const e of schedules as Array<{
+    matchId?: unknown;
+    scheduled_at?: unknown;
+  }>) {
+    if (typeof e?.matchId !== 'string') continue;
+    requested.set(
+      e.matchId,
+      typeof e.scheduled_at === 'string' ? e.scheduled_at : null
+    );
+  }
+  await emitScheduleEvents(
+    succeeded
+      .filter((s) => snapshotMap.has(s.matchId))
+      .map((s) => ({
+        matchId: s.matchId,
+        tournamentId,
+        scrimId: null,
+        previous: s.previousScheduledAt,
+        next: requested.get(s.matchId) ?? null,
+      })),
+    ctx.tenantId
+  );
 
   // Build undo payload so the client can revert this operation
   const undoPayload = {
@@ -511,6 +540,38 @@ async function handleBulkUndo(
   const results: Array<{ matchId: string; success: boolean; error?: string }> =
     [];
 
+  // Un undo qui restaure `scheduled_at` DÉPLACE des matchs : il doit prévenir
+  // le bot comme l'écriture qu'il annule. On relit les créneaux actuels avant
+  // d'écrire, pour savoir d'où l'on part.
+  const restoredSchedule = new Map<string, string | null>();
+  for (const snap of snapshots) {
+    if (
+      snap &&
+      typeof snap.matchId === 'string' &&
+      snap.fields &&
+      typeof snap.fields === 'object' &&
+      'scheduled_at' in snap.fields
+    ) {
+      const v = snap.fields.scheduled_at;
+      restoredSchedule.set(snap.matchId, typeof v === 'string' ? v : null);
+    }
+  }
+  const currentSchedule = new Map<string, string | null>();
+  if (restoredSchedule.size > 0) {
+    const { data: rows } = await supabaseAdmin
+      .from('matches')
+      .select('id, scheduled_at')
+      .eq('tenant_id', ctx.tenantId)
+      .eq('stage_id', stageId)
+      .in('id', [...restoredSchedule.keys()]);
+    for (const r of (rows ?? []) as Array<{
+      id: string;
+      scheduled_at: string | null;
+    }>) {
+      currentSchedule.set(r.id, r.scheduled_at ?? null);
+    }
+  }
+
   for (const snap of snapshots) {
     if (!snap.matchId || typeof snap.matchId !== 'string' || !snap.fields) {
       results.push({
@@ -538,6 +599,22 @@ async function handleBulkUndo(
       results.push({ matchId: snap.matchId, success: true });
     }
   }
+
+  const restoredOk = new Set(
+    results.filter((r) => r.success).map((r) => r.matchId)
+  );
+  await emitScheduleEvents(
+    [...restoredSchedule.entries()]
+      .filter(([id]) => restoredOk.has(id) && currentSchedule.has(id))
+      .map(([id, next]) => ({
+        matchId: id,
+        tournamentId,
+        scrimId: null,
+        previous: currentSchedule.get(id) ?? null,
+        next,
+      })),
+    ctx.tenantId
+  );
 
   const successCount = results.filter((r) => r.success).length;
 

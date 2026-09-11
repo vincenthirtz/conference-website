@@ -23,6 +23,7 @@ import EmbedSchedule, {
   type EmbedTheme,
 } from '@/components/embed/EmbedSchedule';
 import { logger } from '@/utils/logger';
+import { resolveTournamentTz } from '@/utils/scheduleByDay';
 
 type TournamentLite = {
   id: string;
@@ -30,12 +31,15 @@ type TournamentLite = {
   name: string;
   visibility: string | null;
   status: string | null;
+  timezone: string | null;
 };
 
 type Props = {
   tournamentName: string;
   matches: PublicMatch[];
   theme: EmbedTheme;
+  /** Tournament's IANA zone (validated, fallback Europe/Paris). */
+  timezone: string;
   accent: string | null;
   publicUrl: string | null;
 };
@@ -51,7 +55,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   // 1) Tournament (UUID or slug) — same lookup as the public views.
   const tournament = await findTournamentByIdOrSlug<TournamentLite>(
     id,
-    'id, slug, name, visibility, status',
+    'id, slug, name, visibility, status, timezone',
     tenantId
   );
   if (!tournament) {
@@ -80,6 +84,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       tournamentName: tournament.name,
       matches,
       theme,
+      // Days/times are read in the tournament's zone, like the admin schedule.
+      timezone: resolveTournamentTz(tournament.timezone),
       accent,
       publicUrl,
     },
@@ -90,6 +96,7 @@ export default function EmbedTournamentSchedulePage({
   tournamentName,
   matches,
   theme,
+  timezone,
   accent,
   publicUrl,
 }: Props) {
@@ -107,6 +114,7 @@ export default function EmbedTournamentSchedulePage({
         tournamentName={tournamentName}
         matches={matches}
         theme={theme}
+        timezone={timezone}
         accent={accent}
         publicUrl={publicUrl}
       />

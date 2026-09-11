@@ -99,6 +99,8 @@ export type TournamentMini = {
   name: string;
   slug: string | null;
   status?: string | null;
+  /** Fuseau IANA du tournoi (ex. `Europe/Paris`), pour afficher les créneaux. */
+  timezone?: string | null;
 };
 
 /* -----------------------------------------------------------

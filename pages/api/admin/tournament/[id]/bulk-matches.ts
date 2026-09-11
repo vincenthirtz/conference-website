@@ -17,6 +17,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { emitScheduleEvents } from '@/utils/matches/scheduleEvents';
 
 import { logger } from '../../../../../utils/logger';
 type ApiResponse =
@@ -176,6 +177,20 @@ async function handleShiftRound(
 
     succeeded.push({ id: m.id, previous: m.scheduled_at as string });
   }
+
+  // Événements de planification : chaque match décalé AVAIT une date, donc
+  // match.scheduled + match.rescheduled (règle partagée, scheduleEvents.ts).
+  // Attendu : une insertion outbox pour tout le round, avant la réponse.
+  await emitScheduleEvents(
+    succeeded.map((s) => ({
+      matchId: s.id,
+      tournamentId,
+      scrimId: null,
+      previous: s.previous,
+      next: new Date(new Date(s.previous).getTime() + offsetMs).toISOString(),
+    })),
+    ctx.tenantId
+  );
 
   if (ctx?.staff?.id) {
     try {

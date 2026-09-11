@@ -478,7 +478,13 @@ describe('/api/admin/tournament/[id]/matches', () => {
       },
     ] as any;
     store.tournaments = [
-      { id: TID, name: 'My Cup', slug: 'my-cup', status: 'running' },
+      {
+        id: TID,
+        name: 'My Cup',
+        slug: 'my-cup',
+        status: 'running',
+        timezone: 'Europe/Paris',
+      },
     ] as any;
 
     // With flag: stages + tournament present
@@ -503,6 +509,9 @@ describe('/api/admin/tournament/[id]/matches', () => {
       id: TID,
       name: 'My Cup',
       slug: 'my-cup',
+      // La page admin lit le fuseau ici : sans lui, elle rappelait
+      // /api/admin/tournament/[id], qui répond 403 à un arbitre.
+      timezone: 'Europe/Paris',
     });
     expect(body.matches).toHaveLength(1);
     expect('total' in body).toBe(false);

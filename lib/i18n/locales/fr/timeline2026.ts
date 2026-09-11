@@ -12,7 +12,7 @@ export default ns('timeline2026', {
   heroEyebrow: 'Roadmap 2026',
   heroTitle: "Toutes les étapes jusqu'aux finales 2026",
   heroSubtitle:
-    "Le déroulé complet de l'édition : les journées, leurs dates, leurs affiches. Mis à jour à chaque résultat.",
+    "Le déroulé complet de l'édition : les soirées de match, leurs horaires, leurs affiches. Mis à jour à chaque résultat.",
   item1Title: 'Journée internationale contre la transphobie',
   item1Period: 'Mai 2026',
   item1Desc:
@@ -24,35 +24,36 @@ export default ns('timeline2026', {
     "Annonces progressives, recrutement staff, partenariats et teasers pour le grand événement féminin d'octobre.",
   followTwitch: 'Suivre sur Twitch ↗',
   registerTeam: 'Inscrire mon équipe ↗',
-  calEyebrow: 'Tournoi féminin 2026',
-  calTitle: 'Calendrier des matchs',
-  calSubtitle:
-    "Toutes les rencontres de l'édition féminine, mises à jour en temps réel. Clique sur un match pour ouvrir sa fiche détaillée.",
   viewAllTournament: 'Voir tous les matchs ↗',
   viewStandings: 'Classement ↗',
 
-  // ── Planning : bandes, journées, chiffres ────────────────────────────
-  // Le parcours est structuré comme la compétition l'est : des phases, et
-  // dans chacune une carte par journée. Ces libellés nomment cette structure.
+  // ── Planning : bandes, semaines, soirées, chiffres ───────────────────
+  // Le parcours se lit comme un calendrier : des phases, des semaines, et une
+  // carte par SOIRÉE de match. La journée (J1…J7) reste en pastille sur chaque
+  // match : c'est une ronde d'appariements, pas une date.
   phasePreseason: 'Avant-saison',
   phasePreseasonWhen: 'mai → août 2026',
   phaseFinals: 'Finales',
-  roundUnnamed: 'Journée',
-  roundNext: 'Prochaine',
-  roundLive: 'En cours',
-  roundDone: 'Terminée',
-  roundUpcoming: 'À venir',
-  roundProgress: '{played}/{total} joués',
+  weekLabel: 'Semaine {n}',
+  eveningNext: 'Prochaine',
+  eveningLive: 'En cours',
+  eveningDone: 'Terminée',
+  eveningUpcoming: 'À venir',
+  eveningProgress: '{played}/{total} joués',
   countdownValue: 'J-{n}',
-  countdownLabel: 'avant la {round}',
+  countdownLabel: 'avant la soirée du {date}',
+  countdownTonight: 'Ce soir',
+  countdownTonightLabel: 'premier match à {time}',
   statTeams: 'équipes engagées',
-  statRounds: 'rendez-vous au programme',
+  statEvenings: 'soirées de match',
   phaseNoteRounds:
-    '{rounds} journées, {perRound} matchs par journée, en {format}. Chaque équipe affronte toutes les autres une fois.',
+    "{rounds} journées de {perRound} matchs, en {format} : chaque équipe affronte toutes les autres une fois. Une journée est une ronde d'appariements, pas une date — ses matchs se répartissent sur plusieurs soirées.",
   phaseNoteSingle: 'En {format}.',
   statMatches: 'matchs joués',
   statMatchesValue: '{played}/{total}',
   statWindow: 'fenêtre de la saison',
+  tzNote: "Tous les horaires sont à l'heure de Paris.",
+  tzNoteOther: 'Tous les horaires sont dans le fuseau {tz}.',
   emptyTitle:
     'Le calendrier du tournoi féminin 2026 sera publié dès la fin des inscriptions.',
   emptySub: 'Reviens bientôt ou rejoins le Discord pour être prévenue.',
@@ -60,11 +61,6 @@ export default ns('timeline2026', {
   teamFallback2: 'Équipe 2',
   bye: '(bye)',
   vs: 'vs',
-  statusUpcoming: 'À venir',
-  statusOngoing: 'En cours',
-  statusFinished: 'Terminé',
   dateTbd: 'Date à définir',
   timeTbd: 'Horaire à confirmer',
-  match_one: '{count} match',
-  match_other: '{count} matchs',
 });

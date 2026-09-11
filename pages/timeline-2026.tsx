@@ -2,26 +2,34 @@
 //
 // Le PARCOURS de l'édition 2026, présenté comme un vrai planning.
 //
-// Avant : trois jalons éditoriaux (mai / été / octobre) sur un rail dégradé
-// pulsant, puis une liste de matchs groupés par jour. Deux objets sans rapport,
-// aucune structure de compétition — la page ne disait ni où on en est, ni ce
-// qui vient après. Le jalon « en cours » était même détecté en re-parsant un
-// libellé de mois traduit (`frenchMonthMap`), donc faux dès qu'on lisait en
-// anglais.
+// Structure : trois bandes temporelles — avant-saison, saison régulière,
+// finales — et dans chaque bande de compétition, les SOIRÉES de match (un jour
+// calendaire dans le fuseau du tournoi), regroupées par semaine. Chaque ligne
+// de match porte en pastille l'étiquette de sa journée (J1…J7, « Grande
+// finale »). La soirée en cours (ou la prochaine) est la seule chose mise en
+// avant, et la seule carte ouverte par défaut.
 //
-// Maintenant : la structure de la compétition EST la page. Trois bandes
-// temporelles — avant-saison, saison régulière, finales — et dans la saison,
-// une carte par JOURNÉE (round_name : J1…J7), avec sa fenêtre de dates, son
-// avancement et ses matchs dépliables. La journée en cours (ou la prochaine)
-// est la seule chose mise en avant.
+// Pourquoi par soirée et pas par journée : `round_name` (J1…J7) est une RONDE
+// D'APPARIEMENTS — c'est elle qui indexe le pool de cartes (round_number) — et
+// elle ne suit pas le calendrier. Une même soirée mêle J3, J2 et J1, et une
+// journée s'étale sur plusieurs semaines : l'ancienne carte « J2 : 23 sept →
+// 16 oct » ne répondait pas à la question du public, « on joue quand ? ». La
+// journée reste lisible (pastille + note de phase) ; la soirée structure la
+// page, comme la vue agenda de /tournament/[id]/matches.
 //
-// Deux règles tenues ici :
-//   1. L'état vient des DONNÉES, jamais de l'horloge : « prochaine journée » =
-//      première journée non terminée d'après le statut des matchs. Une dérivation
-//      basée sur `new Date()` divergerait entre le rendu ISR et le client
-//      (mismatch d'hydratation), et cette page est en `revalidate: 300`.
+// Trois règles tenues ici :
+//   1. L'état vient des DONNÉES, jamais de l'horloge : « prochaine soirée » =
+//      première soirée (chronologique) ayant un match non terminé, « en cours »
+//      = une soirée avec un match live. Une dérivation basée sur `new Date()`
+//      divergerait entre le rendu ISR et le client (mismatch d'hydratation), et
+//      cette page est en `revalidate: 300`.
 //   2. Seul le compte à rebours dépend de l'heure — il est donc rendu APRÈS
 //      montage, jamais côté serveur.
+//   3. Tout jour et tout horaire se lisent dans le fuseau DU TOURNOI
+//      (`tournaments.timezone`, repli Europe/Paris), via utils/scheduleByDay —
+//      même clé de jour que le diagnostic de planning admin. Sans fuseau
+//      explicite, le HTML ISR porte l'heure du serveur (UTC) puis l'hydratation
+//      celle du navigateur, et un match de 00:30 tombe la veille.
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -34,6 +42,19 @@ import { useLocale } from '@/lib/i18n/useLocale';
 import ProductionPartner from '@/components/Production/ProductionPartner';
 import nsTimeline2026 from '@/lib/i18n/locales/fr/timeline2026';
 import RegisterTeamCta from '@/components/RegisterTeamCta';
+import { getWallClockParts } from '@/utils/timezone';
+import {
+  SCHEDULE_TZ,
+  buildPhasedSchedule,
+  dayKeyInTz,
+  daysBetweenYmd,
+  formatTimeInTz,
+  formatYmd,
+  isFinishedStatus,
+  resolveTournamentTz,
+  type DayState,
+  type ScheduleDay,
+} from '@/utils/scheduleByDay';
 
 type Timeline2026Dict = typeof nsTimeline2026.fr;
 
@@ -60,35 +81,27 @@ type SimpleMatch = {
   stage: { name: string | null } | null;
 };
 
-/** Une JOURNÉE de compétition (round_name), avec son avancement. */
-type RoundGroup = {
-  key: string;
-  /** Libellé court, tel que saisi côté staff : « J1 », « Grande finale »… */
-  label: string;
-  /** Phase à laquelle la journée appartient (nom de `tournament_stages`). */
-  phase: string | null;
-  matches: SimpleMatch[];
-  firstAt: string | null;
-  lastAt: string | null;
-  played: number;
-  live: boolean;
-};
-
-/** Une PHASE : un groupe de journées partageant la même étape de tournoi. */
-type Phase = {
-  key: string;
-  label: string;
-  rounds: RoundGroup[];
-  firstAt: string | null;
-  lastAt: string | null;
-  /** Ce qu'il faut savoir pour LIRE la phase : son format de compétition. */
-  note: string | null;
-};
+/** Une SOIRÉE de match : un jour calendaire dans le fuseau du tournoi. */
+type Evening = ScheduleDay<SimpleMatch>;
 
 type Props = {
   matches: SimpleMatch[];
   tournamentSlug: string | null;
   teamCount: number;
+  /** Fuseau IANA du tournoi, déjà validé (repli Europe/Paris). */
+  timezone: string;
+};
+
+/** « ven. 18 sept. » — libellé d'une soirée. */
+const EVENING_LABEL: Intl.DateTimeFormatOptions = {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+};
+/** « 18 sept. » — bornes de semaine, de phase, de saison. */
+const SHORT_DAY: Intl.DateTimeFormatOptions = {
+  day: 'numeric',
+  month: 'short',
 };
 
 /**
@@ -119,6 +132,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
   let matches: SimpleMatch[] = [];
   let tournamentSlug: string | null = null;
   let teamCount = 0;
+  let timezone = SCHEDULE_TZ;
 
   if (supabaseAdmin) {
     // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
@@ -147,7 +161,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
         .order('created_at', { ascending: true }),
       supabaseAdmin
         .from('tournaments')
-        .select('slug')
+        .select('slug, timezone')
         .eq('tenant_id', DEFAULT_TENANT_ID)
         .eq('id', WOMEN_TOURNAMENT_ID_2026)
         .maybeSingle(),
@@ -161,174 +175,79 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
       matches = matchesRes.data as unknown as SimpleMatch[];
     }
     tournamentSlug = tournamentRes.data?.slug ?? null;
+    timezone = resolveTournamentTz(tournamentRes.data?.timezone);
     teamCount = teamsRes.count ?? 0;
   }
 
   return {
-    props: { matches, tournamentSlug, teamCount },
+    props: { matches, tournamentSlug, teamCount, timezone },
     revalidate: 300,
   };
 };
 
-const FINISHED = new Set(['finished', 'completed', 'finalized']);
-const LIVE = new Set(['ongoing', 'running', 'live']);
+/* ─────────────────────────────  Formatage  ──────────────────────────────── */
 
-/**
- * Journées, dans l'ordre où elles se jouent. La clé est `round_name` : c'est
- * l'unité que le staff saisit et que les équipes emploient (« la J3 »), et la
- * seule qui fasse d'un tas de matchs un calendrier.
- */
-function groupMatchesByRound(
-  matches: SimpleMatch[],
-  t: Timeline2026Dict
-): RoundGroup[] {
-  const groups = new Map<string, RoundGroup>();
-
-  for (const m of matches) {
-    const label = m.round_name?.trim() || t.roundUnnamed;
-    const key = `${m.stage?.name ?? ''}::${label}`;
-    let g = groups.get(key);
-    if (!g) {
-      g = {
-        key,
-        label,
-        phase: m.stage?.name ?? null,
-        matches: [],
-        firstAt: null,
-        lastAt: null,
-        played: 0,
-        live: false,
-      };
-      groups.set(key, g);
-    }
-    g.matches.push(m);
-    if (m.scheduled_at) {
-      if (!g.firstAt || m.scheduled_at < g.firstAt) g.firstAt = m.scheduled_at;
-      if (!g.lastAt || m.scheduled_at > g.lastAt) g.lastAt = m.scheduled_at;
-    }
-    if (FINISHED.has(m.status)) g.played += 1;
-    if (LIVE.has(m.status)) g.live = true;
-  }
-
-  return Array.from(groups.values()).sort(sortByFirstAt);
-}
-
-function sortByFirstAt(
-  a: { firstAt: string | null },
-  b: { firstAt: string | null }
-): number {
-  if (!a.firstAt) return 1;
-  if (!b.firstAt) return -1;
-  return a.firstAt.localeCompare(b.firstAt);
-}
-
-/** Phases (étapes de tournoi), dans l'ordre chronologique. */
-function groupRoundsByPhase(
-  rounds: RoundGroup[],
-  t: Timeline2026Dict
-): Phase[] {
-  const phases = new Map<string, Phase>();
-
-  for (const r of rounds) {
-    const label = r.phase?.trim() || t.phaseFinals;
-    let p = phases.get(label);
-    if (!p) {
-      // Note de format : déduite des matchs eux-mêmes (nombre d'équipes par
-      // journée, format des rencontres) plutôt qu'écrite en dur — la phrase
-      // suit le tournoi, elle ne le décrit pas de mémoire.
-      p = {
-        key: label,
-        label,
-        rounds: [],
-        firstAt: null,
-        lastAt: null,
-        note: null,
-      };
-      phases.set(label, p);
-    }
-    p.rounds.push(r);
-    if (r.firstAt && (!p.firstAt || r.firstAt < p.firstAt))
-      p.firstAt = r.firstAt;
-    if (r.lastAt && (!p.lastAt || r.lastAt > p.lastAt)) p.lastAt = r.lastAt;
-  }
-
-  const list = Array.from(phases.values()).sort(sortByFirstAt);
-  for (const p of list) {
-    const formats = Array.from(
-      new Set(
-        p.rounds.flatMap((r) =>
-          r.matches.map((m) => m.match_format?.toUpperCase()).filter(Boolean)
-        )
-      )
-    ) as string[];
-    const perRound = p.rounds[0]?.matches.length ?? 0;
-    const uniform = p.rounds.every((r) => r.matches.length === perRound);
-    if (p.rounds.length > 1 && uniform && formats.length === 1) {
-      p.note = format(t.phaseNoteRounds, {
-        rounds: p.rounds.length,
-        perRound,
-        format: formats[0],
-      });
-    } else if (formats.length === 1) {
-      p.note = format(t.phaseNoteSingle, { format: formats[0] });
-    }
-  }
-  return list;
-}
-
-function formatDay(iso: string | null, locale: string, t: Timeline2026Dict) {
-  if (!iso) return t.dateTbd;
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return t.dateTbd;
-  return d.toLocaleDateString(locale, { day: '2-digit', month: 'short' });
-}
-
-function formatRange(
+function formatYmdRange(
   from: string | null,
   to: string | null,
   locale: string,
   t: Timeline2026Dict
-) {
+): string {
   if (!from) return t.dateTbd;
-  const a = formatDay(from, locale, t);
-  const b = formatDay(to, locale, t);
+  const a = formatYmd(from, locale, SHORT_DAY);
+  const b = to ? formatYmd(to, locale, SHORT_DAY) : a;
   return a === b ? a : `${a} → ${b}`;
 }
 
-/**
- * Jour d'un match DANS sa journée : « ven. 18 ». Le mois est déjà porté par
- * l'en-tête de la journée — le répéter sur chaque ligne poussait l'horaire sur
- * une seconde ligne et cassait l'alignement de la colonne.
- */
-function formatWeekday(
-  iso: string | null,
+function formatIsoRange(
+  from: string | null,
+  to: string | null,
+  tz: string,
   locale: string,
   t: Timeline2026Dict
-) {
-  if (!iso) return t.dateTbd;
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return t.dateTbd;
-  return d.toLocaleDateString(locale, { weekday: 'short', day: '2-digit' });
+): string {
+  return formatYmdRange(dayKeyInTz(from, tz), dayKeyInTz(to, tz), locale, t);
+}
+
+/** Étiquette de journée saisie côté staff (« J3 », « Grande finale »). */
+function roundLabel(m: SimpleMatch): string | null {
+  return m.round_name?.trim() || null;
 }
 
 /**
- * Jours restants avant `iso`, ou `null` si la date est passée / absente.
- * Hors composant : lire l'horloge est impur, et ça n'a rien à faire dans un
- * rendu — l'appelant s'en sert dans un effet, après montage.
+ * Note de format d'une phase, déduite des matchs eux-mêmes (nombre de
+ * journées, matchs par journée, format) plutôt qu'écrite en dur — la phrase
+ * suit le tournoi, elle ne le décrit pas de mémoire.
  */
-function daysUntil(iso: string | null): number | null {
-  if (!iso) return null;
-  const target = new Date(iso).getTime();
-  if (isNaN(target)) return null;
-  const days = Math.ceil((target - Date.now()) / 86_400_000);
-  return days > 0 ? days : null;
-}
-
-function formatTime(iso: string | null, locale: string, t: Timeline2026Dict) {
-  if (!iso) return t.timeTbd;
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return t.timeTbd;
-  return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+function phaseNote(matches: SimpleMatch[], t: Timeline2026Dict): string | null {
+  const perRound = new Map<string, number>();
+  for (const m of matches) {
+    const label = roundLabel(m);
+    if (label) perRound.set(label, (perRound.get(label) ?? 0) + 1);
+  }
+  const formats = Array.from(
+    new Set(
+      matches
+        .map((m) => m.match_format?.toUpperCase())
+        .filter((f): f is string => !!f)
+    )
+  );
+  const counts = Array.from(perRound.values());
+  const uniform = counts.length > 0 && counts.every((n) => n === counts[0]);
+  // Une poule, c'est plusieurs journées de PLUSIEURS matchs. « Petite finale »
+  // + « Grande finale » (1 match chacune) sont deux étiquettes, pas une poule :
+  // sans le `>= 2`, les finales se voyaient décrites comme un round-robin.
+  if (counts.length > 1 && uniform && counts[0] >= 2 && formats.length === 1) {
+    return format(t.phaseNoteRounds, {
+      rounds: counts.length,
+      perRound: counts[0],
+      format: formats[0],
+    });
+  }
+  if (formats.length === 1) {
+    return format(t.phaseNoteSingle, { format: formats[0] });
+  }
+  return null;
 }
 
 /* ─────────────────────────  Primitives visuelles  ───────────────────────── */
@@ -356,7 +275,22 @@ function Chip({
   );
 }
 
-function MatchRow({ match }: { match: SimpleMatch }) {
+/**
+ * Pastille de journée. Tronquable : « Petite finale » doit tenir dans la
+ * colonne horaire sur 360 px sans pousser les noms d'équipes.
+ */
+function RoundTag({ label }: { label: string }) {
+  return (
+    <span
+      title={label}
+      className="inline-block max-w-full truncate rounded border border-white/15 bg-white/[0.04] px-1.5 py-px font-mono text-[10px] font-medium uppercase tracking-[0.06em] text-neutral-300"
+    >
+      {label}
+    </span>
+  );
+}
+
+function MatchRow({ match, tz }: { match: SimpleMatch; tz: string }) {
   const t = useT(nsTimeline2026);
   const locale = useLocale();
   const t1 = match.team1?.short_name || match.team1?.name || t.teamFallback1;
@@ -365,25 +299,33 @@ function MatchRow({ match }: { match: SimpleMatch }) {
     match.team2?.name ||
     (match.is_bye ? t.bye : t.teamFallback2);
 
-  const done = FINISHED.has(match.status);
+  const done = isFinishedStatus(match.status);
   const hasScores =
     match.team1_score !== null &&
     match.team1_score !== undefined &&
     match.team2_score !== null &&
     match.team2_score !== undefined;
+  const time = formatTimeInTz(match.scheduled_at, locale, tz);
+  const round = roundLabel(match);
 
   return (
     <Link
       href={`/match/${match.id}`}
       className="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2 transition hover:border-[color-mix(in_srgb,var(--color-violet)_45%,transparent)] hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
     >
-      <span className="flex w-[92px] shrink-0 flex-col font-mono text-[11px] tabular-nums leading-tight sm:w-[124px] sm:flex-row sm:items-baseline sm:gap-1.5">
-        <span className="uppercase tracking-[0.04em] text-neutral-500">
-          {formatWeekday(match.scheduled_at, locale, t)}
+      {/* Horaire + journée. Largeur FIXE : chaque ligne est sa propre grille,
+          c'est elle qui aligne les noms d'équipes d'une ligne à l'autre. Sous
+          `sm`, la pastille passe sous l'heure pour laisser la place aux noms. */}
+      <span className="flex w-[92px] shrink-0 flex-col items-start gap-1 sm:w-[168px] sm:flex-row sm:items-center sm:gap-2">
+        <span className="font-mono text-[11px] tabular-nums text-white">
+          {time ?? (
+            <>
+              <span aria-hidden>—</span>
+              <span className="sr-only">{t.timeTbd}</span>
+            </>
+          )}
         </span>
-        <span className="text-white">
-          {formatTime(match.scheduled_at, locale, t)}
-        </span>
+        {round && <RoundTag label={round} />}
       </span>
 
       <span className="min-w-0">
@@ -423,36 +365,48 @@ function MatchRow({ match }: { match: SimpleMatch }) {
   );
 }
 
-/** Une journée : en-tête cliquable + ses matchs. */
-function RoundCard({
-  round,
+/** Une soirée : en-tête cliquable (jour, créneaux, journées) + ses matchs. */
+function EveningCard({
+  evening,
   state,
-  defaultOpen,
+  tz,
 }: {
-  round: RoundGroup;
-  state: 'done' | 'live' | 'next' | 'upcoming';
-  defaultOpen: boolean;
+  evening: Evening;
+  state: DayState;
+  tz: string;
 }) {
   const t = useT(nsTimeline2026);
   const locale = useLocale();
-  const total = round.matches.length;
+  const total = evening.items.length;
+  const played = evening.items.filter((m) => isFinishedStatus(m.status)).length;
+  const highlighted = state === 'next' || state === 'live';
+
+  const from = formatTimeInTz(evening.firstAt, locale, tz);
+  const to = formatTimeInTz(evening.lastAt, locale, tz);
+  const slots = from && to && from !== to ? `${from} → ${to}` : from;
+
+  // Les journées jouées ce soir-là, dans l'ordre des créneaux : c'est ce qui
+  // explique, carte fermée, qu'une soirée mêle J3, J2 et J1.
+  const rounds = Array.from(
+    new Set(evening.items.map(roundLabel).filter((r): r is string => !!r))
+  );
 
   const statusChip =
     state === 'live' ? (
-      <Chip tone="live">{t.roundLive}</Chip>
+      <Chip tone="live">{t.eveningLive}</Chip>
     ) : state === 'next' ? (
-      <Chip tone="accent">{t.roundNext}</Chip>
+      <Chip tone="accent">{t.eveningNext}</Chip>
     ) : state === 'done' ? (
-      <Chip tone="done">{t.roundDone}</Chip>
+      <Chip tone="done">{t.eveningDone}</Chip>
     ) : (
-      <Chip>{t.roundUpcoming}</Chip>
+      <Chip>{t.eveningUpcoming}</Chip>
     );
 
   return (
     <details
-      open={defaultOpen}
+      open={highlighted}
       className={`group rounded-xl border bg-[var(--color-surface)] transition ${
-        state === 'next' || state === 'live'
+        highlighted
           ? 'border-[color-mix(in_srgb,var(--color-violet)_45%,transparent)]'
           : 'border-white/10'
       } ${state === 'done' ? 'opacity-70' : ''}`}
@@ -460,21 +414,33 @@ function RoundCard({
       <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]">
         <span
           className={`rounded px-2 py-[3px] font-mono text-xs font-semibold ${
-            state === 'next' || state === 'live'
+            highlighted
               ? 'bg-[color-mix(in_srgb,var(--color-violet)_22%,transparent)] text-[var(--color-violet-200)]'
               : 'bg-white/[0.06] text-neutral-300'
           }`}
         >
-          {round.label}
+          {evening.ymd
+            ? formatYmd(evening.ymd, locale, EVENING_LABEL)
+            : t.dateTbd}
         </span>
 
-        <span className="font-mono text-xs tabular-nums text-neutral-400">
-          {formatRange(round.firstAt, round.lastAt, locale, t)}
-        </span>
+        {slots && (
+          <span className="font-mono text-xs tabular-nums text-neutral-400">
+            {slots}
+          </span>
+        )}
+
+        {rounds.length > 0 && (
+          <span className="hidden items-center gap-1 md:inline-flex">
+            {rounds.map((r) => (
+              <RoundTag key={r} label={r} />
+            ))}
+          </span>
+        )}
 
         <span className="ml-auto flex items-center gap-2">
           <span className="font-mono text-[11px] tabular-nums text-neutral-500">
-            {format(t.roundProgress, { played: round.played, total })}
+            {format(t.eveningProgress, { played, total })}
           </span>
           {statusChip}
           <span
@@ -487,8 +453,8 @@ function RoundCard({
       </summary>
 
       <div className="flex flex-col gap-1.5 border-t border-white/[0.07] px-4 py-3">
-        {round.matches.map((m) => (
-          <MatchRow key={m.id} match={m} />
+        {evening.items.map((m) => (
+          <MatchRow key={m.id} match={m} tz={tz} />
         ))}
       </div>
     </details>
@@ -523,40 +489,46 @@ function BandHead({
 
 /* ─────────────────────────────  La page  ────────────────────────────────── */
 
-function Timeline2026Page({ matches, tournamentSlug, teamCount }: Props) {
+function Timeline2026Page({
+  matches,
+  tournamentSlug,
+  teamCount,
+  timezone,
+}: Props) {
   const t = useT(nsTimeline2026);
   const locale = useLocale();
+  const tz = timezone || SCHEDULE_TZ;
   const tournamentIdentifier = tournamentSlug || WOMEN_TOURNAMENT_ID_2026;
 
-  const rounds = groupMatchesByRound(matches, t);
-  const phases = groupRoundsByPhase(rounds, t);
+  // Phases → semaines → soirées. « Où en est-on ? » se lit dans les STATUTS,
+  // pas dans l'horloge — cf. règle n° 1 en tête de fichier.
+  const schedule = buildPhasedSchedule(matches, {
+    phaseOf: (m) => m.stage?.name,
+    fallbackPhase: t.phaseFinals,
+    tz,
+  });
   const preseason = getPreseason(t);
-
-  // « Où en est-on ? » se lit dans les STATUTS, pas dans l'horloge — sinon le
-  // HTML rendu par l'ISR et celui du client divergent (cf. en-tête de fichier).
-  const liveKey = rounds.find((r) => r.live)?.key ?? null;
-  const nextKey =
-    liveKey ?? rounds.find((r) => r.played < r.matches.length)?.key ?? null;
-
-  const roundState = (r: RoundGroup): 'done' | 'live' | 'next' | 'upcoming' => {
-    if (r.live) return 'live';
-    if (r.played >= r.matches.length && r.matches.length > 0) return 'done';
-    return r.key === nextKey ? 'next' : 'upcoming';
-  };
-
-  const firstMatchAt = rounds.find((r) => r.firstAt)?.firstAt ?? null;
-  const lastMatchAt =
-    [...rounds].reverse().find((r) => r.lastAt)?.lastAt ?? null;
-  const playedTotal = rounds.reduce((n, r) => n + r.played, 0);
-
-  const nextRound = rounds.find((r) => r.key === nextKey) ?? null;
+  const next = schedule.next;
+  const nextIsLive = next ? schedule.states.get(next) === 'live' : false;
+  const playedTotal = matches.filter((m) => isFinishedStatus(m.status)).length;
 
   // Compte à rebours : la seule valeur dépendante de l'heure, donc calculée
   // après montage. Rendu serveur = rien, plutôt qu'une valeur déjà périmée.
+  // Il vise le premier match de la prochaine soirée, en jours CALENDAIRES du
+  // fuseau du tournoi (« J-2 » un mercredi pour le vendredi, quelle que soit
+  // l'heure). Rien si la soirée est déjà live, ou si elle est dans le passé
+  // (statuts pas encore à jour).
+  const nextYmd = next?.ymd ?? null;
   const [countdown, setCountdown] = useState<number | null>(null);
   useEffect(() => {
-    setCountdown(daysUntil(nextRound?.firstAt ?? null));
-  }, [nextRound?.firstAt]);
+    if (!nextYmd || nextIsLive) {
+      setCountdown(null);
+      return;
+    }
+    const today = getWallClockParts(new Date(), tz).date;
+    const n = daysBetweenYmd(today, nextYmd);
+    setCountdown(n >= 0 ? n : null);
+  }, [nextYmd, nextIsLive, tz]);
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
@@ -574,13 +546,21 @@ function Timeline2026Page({ matches, tournamentSlug, teamCount }: Props) {
         </p>
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          {countdown !== null && nextRound && (
+          {countdown !== null && next?.ymd && (
             <span className="inline-flex items-baseline gap-2 rounded-full border border-[color-mix(in_srgb,var(--color-violet)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-violet)_12%,transparent)] py-1.5 pl-3 pr-4">
               <span className="font-mono text-base font-semibold tabular-nums text-[var(--color-violet-200)]">
-                {format(t.countdownValue, { n: countdown })}
+                {countdown === 0
+                  ? t.countdownTonight
+                  : format(t.countdownValue, { n: countdown })}
               </span>
               <span className="text-sm text-neutral-300">
-                {format(t.countdownLabel, { round: nextRound.label })}
+                {countdown === 0
+                  ? format(t.countdownTonightLabel, {
+                      time: formatTimeInTz(next.firstAt, locale, tz) ?? '',
+                    })
+                  : format(t.countdownLabel, {
+                      date: formatYmd(next.ymd, locale, EVENING_LABEL),
+                    })}
               </span>
             </span>
           )}
@@ -594,7 +574,7 @@ function Timeline2026Page({ matches, tournamentSlug, teamCount }: Props) {
         <dl className="mt-8 grid gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { v: String(teamCount), k: t.statTeams },
-            { v: String(rounds.length), k: t.statRounds },
+            { v: String(schedule.dayCount), k: t.statEvenings },
             {
               v: format(t.statMatchesValue, {
                 played: playedTotal,
@@ -603,7 +583,13 @@ function Timeline2026Page({ matches, tournamentSlug, teamCount }: Props) {
               k: t.statMatches,
             },
             {
-              v: formatRange(firstMatchAt, lastMatchAt, locale, t),
+              v: formatIsoRange(
+                schedule.firstAt,
+                schedule.lastAt,
+                tz,
+                locale,
+                t
+              ),
               k: t.statWindow,
             },
           ].map((s) => (
@@ -615,6 +601,11 @@ function Timeline2026Page({ matches, tournamentSlug, teamCount }: Props) {
             </div>
           ))}
         </dl>
+        {matches.length > 0 && (
+          <p className="mt-3 text-xs text-neutral-500">
+            {tz === SCHEDULE_TZ ? t.tzNote : format(t.tzNoteOther, { tz })}
+          </p>
+        )}
       </header>
 
       <div className="mx-auto max-w-5xl px-6 pb-8">
@@ -658,40 +649,63 @@ function Timeline2026Page({ matches, tournamentSlug, teamCount }: Props) {
           </div>
         </section>
 
-        {/* ── Compétition : une bande par phase, une carte par journée ───── */}
+        {/* ── Compétition : bande par phase → semaines → soirées ────────── */}
         {matches.length === 0 ? (
           <section className="mt-12 rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center">
             <p className="text-neutral-300">{t.emptyTitle}</p>
             <p className="mt-2 text-sm text-neutral-500">{t.emptySub}</p>
           </section>
         ) : (
-          phases.map((phase) => {
-            const hasCurrent = phase.rounds.some((r) => r.key === nextKey);
+          schedule.phases.map((phase) => {
+            const note = phaseNote(phase.items, t);
             return (
               <section key={phase.key} className="mt-12">
                 <BandHead
-                  title={phase.label}
-                  when={formatRange(phase.firstAt, phase.lastAt, locale, t)}
-                  accent={hasCurrent}
+                  title={phase.key}
+                  when={formatIsoRange(
+                    phase.firstAt,
+                    phase.lastAt,
+                    tz,
+                    locale,
+                    t
+                  )}
+                  accent={!!next && phase.days.includes(next)}
                 />
-                {phase.note && (
+                {note && (
                   <p className="mt-3 max-w-2xl text-sm text-neutral-400">
-                    {phase.note}
+                    {note}
                   </p>
                 )}
-                <div className="mt-4 flex flex-col gap-2">
-                  {phase.rounds.map((round) => {
-                    const state = roundState(round);
-                    return (
-                      <RoundCard
-                        key={round.key}
-                        round={round}
-                        state={state}
-                        defaultOpen={state === 'next' || state === 'live'}
-                      />
-                    );
-                  })}
-                </div>
+                {phase.weeks.map((week) => (
+                  <div key={week.key} className="mt-6">
+                    {week.index !== null && (
+                      <h3 className="mb-2 flex flex-wrap items-baseline gap-x-2 font-mono text-[11px] uppercase tracking-[0.14em] tabular-nums text-neutral-500">
+                        <span className="text-neutral-300">
+                          {format(t.weekLabel, { n: week.index })}
+                        </span>
+                        <span aria-hidden>·</span>
+                        <span>
+                          {formatYmdRange(
+                            week.firstYmd,
+                            week.lastYmd,
+                            locale,
+                            t
+                          )}
+                        </span>
+                      </h3>
+                    )}
+                    <div className="flex flex-col gap-2">
+                      {week.days.map((evening) => (
+                        <EveningCard
+                          key={`${phase.key}::${evening.key}`}
+                          evening={evening}
+                          state={schedule.states.get(evening) ?? 'upcoming'}
+                          tz={tz}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </section>
             );
           })
@@ -722,8 +736,8 @@ const timelineSeo: SeoProps = {
     en: 'Timeline 2026 — tournament schedule',
   },
   description: {
-    fr: "Feuille de route OW Women's Cup 2026 : journée contre la transphobie, préparation estivale, calendrier des matchs et grandes finales.",
-    en: "OW Women's Cup 2026 roadmap: day against transphobia, summer prep, match schedule and grand finals.",
+    fr: "Feuille de route OW Women's Cup 2026 : journée contre la transphobie, préparation estivale, calendrier des soirées de match et grandes finales.",
+    en: "OW Women's Cup 2026 roadmap: day against transphobia, summer prep, match-night schedule and grand finals.",
   },
 };
 

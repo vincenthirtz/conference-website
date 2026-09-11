@@ -14,7 +14,18 @@ const { emitBotEvent, enrichMatchEvent } = vi.hoisted(() => ({
   emitBotEvent: vi.fn(async () => undefined),
   enrichMatchEvent: vi.fn(async () => ({})),
 }));
-vi.mock('@/utils/botEvents', () => ({ emitBotEvent }));
+// `emitBotEvents` (lot) relaie vers le même espion : les assertions portent sur
+// les NOMS émis, peu importe que l'émission soit unitaire ou groupée.
+vi.mock('@/utils/botEvents', () => ({
+  emitBotEvent,
+  emitBotEvents: async (
+    items: Array<{ event: string; data: unknown }>,
+    tenantId: string
+  ) => {
+    for (const it of items) await (emitBotEvent as any)(it.event, it.data, tenantId);
+    return { persisted: items.length, delivery: Promise.resolve([]) };
+  },
+}));
 vi.mock('@/utils/matches/botEventEnrich', () => ({ enrichMatchEvent }));
 
 import {

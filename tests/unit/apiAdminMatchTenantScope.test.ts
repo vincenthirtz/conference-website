@@ -28,6 +28,10 @@ vi.mock('@/utils/matches/applyScore', () => ({
 vi.mock('@/utils/discord', () => ({ notifyMatchStarting }));
 vi.mock('@/utils/botEvents', () => ({
   emitBotEvent: vi.fn(async () => undefined),
+  emitBotEvents: vi.fn(async () => ({
+    persisted: 0,
+    delivery: Promise.resolve([]),
+  })),
 }));
 vi.mock('@/utils/matches/botEventEnrich', () => ({
   enrichMatchEvent: vi.fn(async () => null),

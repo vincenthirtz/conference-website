@@ -248,8 +248,9 @@ catalog can grow without forcing a bot deploy.
 | Event name                        | Emitted by                                                                                                                        | Payload `data` shape (high-level)                                                                                                              |
 | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | `match.starting`                  | `pages/api/admin/matches/[matchId].ts` (status → ongoing)                                                                         | `{ matchId, tournamentId?, scrimId?, team1Id, team2Id, scheduledAt, ..., enriched }`                                                           |
-| `match.scheduled`                 | Admin match meta update (`scheduled_at` set)                                                                                      | `{ matchId, scheduledAt, ..., enriched }`                                                                                                      |
-| `match.unscheduled`               | Admin match meta update (`scheduled_at` cleared)                                                                                  | `{ matchId }`                                                                                                                                  |
+| `match.scheduled`                 | **Toute** écriture de `scheduled_at` qui pose ou déplace une date — helper `utils/matches/scheduleEvents.ts` (cf. « Événements de planification ») | `{ matchId, tournamentId, scrimId, scheduledAt, enriched }`                                                                                    |
+| `match.rescheduled`               | Idem, **en plus** de `match.scheduled`, quand le match avait déjà une date                                                        | Sur-ensemble de `match.scheduled` : `{ matchId, match_id, tournamentId, scrimId, scheduledAt, previousScheduledAt, from, to, enriched }`        |
+| `match.unscheduled`               | Idem, date retirée (`scheduled_at` → `null`)                                                                                      | `{ matchId, tournamentId, scrimId, previousScheduledAt, enriched }` (était `{ matchId }` : champs ajoutés, rétro-compatible)                     |
 | `match.finished`                  | Score apply / admin                                                                                                               | `{ matchId, team1Score, team2Score, winnerTeamId }`                                                                                            |
 | `match.disputed`                  | Admin `POST .../dispute`                                                                                                          | `{ matchId, reason, openedBy }`                                                                                                                |
 | `match.dispute.resolved`          | Admin `POST .../resolve-dispute`                                                                                                  | `{ matchId, resolution, resolvedBy }`                                                                                                          |
@@ -3247,6 +3248,32 @@ les messages dont l'auteur est le bot lui-meme.
 | [`tournaments/[tournamentId]/matches.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/matches.ts) | POST      | yes   | `bot-matches`            |
 | [`tournaments/[tournamentId]/stages.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/stages.ts)   | POST      | yes   | `bot-stages`             |
 | [`tournaments/[tournamentId]/status.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/status.ts)   | POST      | yes   | `bot-tournament-status`  |
+
+**`GET tournaments/[tournamentId]/bracket`** (`/bracket`, `?stageId=` optionnel) :
+
+```jsonc
+{
+  "tournament": { "id", "name", "slug", "status", "start_date", "end_date" },
+  "stages": [
+    { "id", "name", "slug", "stageType", "orderIndex", "startDate", "endDate",
+      "matches": [MatchOut],            // triés par roundNumber
+      "standings": [StandingOut] | null // swiss / round_robin uniquement
+    }
+  ],
+  // Ajouté le 2026-09-11 — matchs du tournoi SANS phase (stage_id NULL :
+  // Petite finale, Grande finale), triés par roundNumber puis scheduledAt.
+  "unstagedMatches": [MatchOut]
+}
+// MatchOut = { id, status, isBye, roundNumber, roundName, bracketSide, groupKey,
+//              scheduledAt, team1, team2, team1Score, team2Score, winnerTeamId }
+// team = { id, name, shortName, logoUrl } | null
+```
+
+- `unstagedMatches` est **toujours présent** : `[]` s'il n'y en a pas, `[]` avec
+  `?stageId=` (on zoome sur une phase), et renvoyé aussi quand le tournoi n'a
+  aucune phase (`stages: []`). Avant, ces matchs étaient absents de la réponse.
+- Les phases et matchs soft-supprimés (`deleted_at` posé) sont exclus. Les
+  matchs d'une phase supprimée disparaissent avec elle.
 | [`tournaments/[tournamentId]/teams.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/teams.ts)     | GET, POST | yes   | `bot-tournament-teams`   |
 
 ---
@@ -3786,7 +3813,7 @@ pure : [`utils/matches/scheduleDiagnostics.ts`](../utils/matches/scheduleDiagnos
 | Route | Methods | Auth | Notes |
 | --- | --- | --- | --- |
 | [`pages/api/admin/tournament/[id]/schedule-diagnostics.ts`](../pages/api/admin/tournament/[id]/schedule-diagnostics.ts) | GET | Session staff, permission `manage_tournaments` | Superset de `/conflicts`. Anomalies typées (`availability`, `double_booking`, `same_evening`, `outside_tournament`, `slot_collision`, `unscheduled`) + gravité, triées bloquant d'abord puis par date. `suggestion` porte la correction **triviale** quand il en existe une (créneau libre le même soir qui satisfait les deux équipes) — proposée, jamais appliquée. `?rest=` (défaut 30 min), `?concurrent=` (défaut 1), `?tz=` changent la lecture, jamais le calendrier. Renvoie aussi `matches` et `constraints` : la vue calendrier affiche exactement ce que la liste juge, depuis le même appel. |
-| [`pages/api/admin/tournament/[id]/schedule-move.ts`](../pages/api/admin/tournament/[id]/schedule-move.ts) | POST | Session staff, permission `manage_tournaments` | `{ moves: [{ matchId, scheduledAt }], apply?, force? }`, 8 mouvements max. **Une liste** parce que l'unité utile est l'échange, pas le déplacement. `apply: false` (défaut) rejoue tout le calendrier sans écrire et rend `impact` (`fixed` / `broken` / `remaining` + compteurs). `apply: true` écrit, journalise `match_rescheduled` et émet `match.scheduled` / `match.unscheduled` — même contrat que le PATCH match. **409 `WOULD_CREATE_BLOCKING`** si le déplacement créerait une anomalie bloquante, sauf `force: true`. |
+| [`pages/api/admin/tournament/[id]/schedule-move.ts`](../pages/api/admin/tournament/[id]/schedule-move.ts) | POST | Session staff, permission `manage_tournaments` | `{ moves: [{ matchId, scheduledAt }], apply?, force? }`, 8 mouvements max. **Une liste** parce que l'unité utile est l'échange, pas le déplacement. `apply: false` (défaut) rejoue tout le calendrier sans écrire et rend `impact` (`fixed` / `broken` / `remaining` + compteurs). `apply: true` écrit, journalise `match_rescheduled` et émet `match.scheduled` (+ `match.rescheduled` si le match avait déjà une date) / `match.unscheduled` — même contrat que le PATCH match (cf. « Événements de planification »). **409 `WOULD_CREATE_BLOCKING`** si le déplacement créerait une anomalie bloquante, sauf `force: true`. |
 | [`pages/api/admin/tournament/[id]/auto-schedule.ts`](../pages/api/admin/tournament/[id]/auto-schedule.ts) | POST | Session staff, permission `manage_tournaments` | Respecte désormais les **contraintes de disponibilité** des équipes : le scheduler savait quand une équipe est *libre*, jamais quand elle a le *droit* de jouer. `dryRun: true` calcule et renvoie le planning **sans rien écrire** (avec `constraintCount` et les conflits) ; `ignoreTeamConstraints: true` rétablit l'ancien comportement pour comparer. Le défaut reste l'écriture, pour ne pas casser les appels existants. |
 | [`pages/api/admin/tournament/[id]/conflicts.ts`](../pages/api/admin/tournament/[id]/conflicts.ts) | GET | Session staff, permission `manage_tournaments` | Vue étroite historique (chevauchement d'équipe seul). **Plus consommée par aucun écran** depuis que l'onglet Planning répond à la même question en mieux ; conservée pour les appelants API, candidate au retrait. Partage la table de durées de l'auto-scheduler. |
 
@@ -3833,15 +3860,89 @@ prévenir. Pendant ce temps « une actualité est publiée » partait en push op
 
 **L'événement.** `match.rescheduled` est distinct de `match.scheduled` : « ton
 match est le X » et « ton match a bougé du X au Y » n'appellent ni la même
-phrase ni la même urgence. Payload : `{ match_id, matchId, tournamentId, from,
-to, enriched }`.
+phrase ni la même urgence.
 
-- Émis **des deux chemins d'écriture** — `PATCH /api/admin/matches/[matchId]` et
-  `POST /api/admin/tournament/[id]/schedule-move` — et seulement quand la date
-  précédente était **non nulle**. Sinon la notification dépendrait de l'écran
-  utilisé pour faire le changement.
-- `match.scheduled` reste émis en parallèle : c'est lui que le bot consomme pour
-  l'event Discord natif. Les deux ne servent pas le même destinataire.
+#### Événements de planification — règle et payloads (source unique)
+
+Helper : [`utils/matches/scheduleEvents.ts`](../utils/matches/scheduleEvents.ts)
+(`emitScheduleEvents`). **Toute** route qui écrit `matches.scheduled_at` passe
+par lui :
+
+| Route | Émission |
+| --- | --- |
+| `PATCH /api/admin/matches/[matchId]` (mode meta) | en fond (`void`) |
+| `POST /api/admin/tournament/[id]/schedule-move` (`apply: true`) | en fond |
+| `PATCH /api/bot/v1/matches/[matchId]` (`/planifier`) | en fond — émettait `match.scheduled` seul jusqu'au 2026-09-11 |
+| `POST /api/admin/tournament/[id]/auto-schedule` (hors `dryRun`) | attendue, en lot |
+| `POST /api/admin/tournament/[id]/bulk-matches` `shift_round` | attendue, en lot |
+| `PATCH /api/admin/stages/[stageId]/bulk-matches` + son `POST` undo | attendue, en lot |
+
+Les quatre dernières n'émettaient **rien** avant le 2026-09-11 : c'est ainsi
+que 14 matchs ont bougé le 2026-09-09 sans que l'event Discord ne suive.
+
+**Règle**, par match, entre `scheduled_at` avant et après l'écriture :
+
+| Avant → après | Événements, dans cet ordre |
+| --- | --- |
+| même **instant** (ou `null` → `null`) | aucun |
+| `null` → date | `match.scheduled` |
+| date → autre date | `match.scheduled` puis `match.rescheduled` |
+| date → `null` | `match.unscheduled` |
+
+- La comparaison porte sur l'instant, pas sur la chaîne :
+  `2026-09-18T18:30:00+00:00` et `2026-09-18T18:30:00.000Z` sont le même
+  créneau. Réécrire un créneau inchangé (l'auto-scheduler renvoie les matchs
+  verrouillés à leur heure) n'émet rien.
+- Seules les écritures **réussies** émettent ; une requête qui vise deux fois
+  le même match n'émet qu'une fois (date d'avant la 1ʳᵉ écriture → date de la
+  dernière).
+- Écritures de masse : **une** insertion `bot_event_outbox` pour tout le lot
+  (28 matchs = 1 INSERT), attendue avant la réponse. Les pushes HTTP suivent
+  en fond, 4 matchs en parallèle, et dans l'ordre pour un même match
+  (`scheduled` avant `rescheduled`).
+- `enriched` est le résultat de `enrichMatchEvent(matchId)`, lu **après**
+  l'écriture (`EnrichedMatchEvent` : équipes, `roundName`, `matchFormat`,
+  `streamUrl`, `discordThreadId`, **`discordScheduledEventId`**,
+  `discordMatchChannelId`, `preset`…), ou `null` si la relecture a échoué.
+
+**Payloads `data`** (dans l'enveloppe `{ id, event, tenantId, timestamp, data }`) :
+
+```jsonc
+// match.scheduled
+{ "matchId": "…", "tournamentId": "…|null", "scrimId": "…|null",
+  "scheduledAt": "<nouvelle date ISO>", "enriched": { … } | null }
+
+// match.rescheduled — SUR-ENSEMBLE de match.scheduled
+{ "matchId": "…", "match_id": "…",           // snake_case historique (push/email)
+  "tournamentId": "…|null", "scrimId": "…|null",
+  "scheduledAt": "<nouvelle date>",          // = to
+  "previousScheduledAt": "<ancienne date>",  // = from, jamais null ici
+  "from": "<ancienne date>", "to": "<nouvelle date>",
+  "enriched": { … } | null }
+
+// match.unscheduled — champs ajoutés le 2026-09-11 (était { matchId })
+{ "matchId": "…", "tournamentId": "…|null", "scrimId": "…|null",
+  "previousScheduledAt": "<date retirée>", "enriched": { … } | null }
+```
+
+**Consommation bot** (docker-box, les trois événements sont consommés) :
+
+- `match.scheduled` → crée ou édite l'event Discord natif.
+- `match.rescheduled` → édite l'event Discord natif. Nouvelle date lue dans
+  `scheduledAt`, puis `to`, puis `enriched.scheduledAt` ; id du match dans
+  `matchId`, puis `match_id`. Comme `match.scheduled` est **toujours** émis
+  juste avant pour le même déplacement, le bot sérialise les deux par match
+  (verrou) : la seconde édition porte la même date, elle est sans effet.
+- `match.unscheduled` → annule l'event Discord natif désigné par
+  `enriched.discordScheduledEventId`. Le site ne vide jamais
+  `matches.discord_scheduled_event_id` (c'est le writeback du bot qui le
+  fait) : l'enrichissement, relu après l'écriture de `scheduled_at`, le porte
+  donc encore.
+
+Autres canaux : le push web ne s'abonne qu'à `match.rescheduled`, donc un
+déplacement ne produit **qu'une** notification push. L'email est abonné aux
+deux événements (`EMAIL_EVENT_TYPES`) : c'est le comportement historique du
+PATCH admin, conservé à l'identique.
 - Canaux : push staff, push joueuse, email. Audience push = les joueuses des
   deux équipes (`loadPlayerUserIdsForMatch`).
 - Le push met la **nouvelle** date seule (une notification se lit d'un œil sur un

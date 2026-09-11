@@ -167,6 +167,28 @@ async function recordPushAttempt(
     .eq('id', outboxId);
 }
 
+type FullPayload = {
+  id: string;
+  event: BotEventName;
+  tenantId: string;
+  timestamp: string;
+  data: BotEventPayload;
+};
+
+function buildFullPayload(
+  event: BotEventName,
+  data: BotEventPayload,
+  tenantId: string
+): FullPayload {
+  return {
+    id: crypto.randomUUID(),
+    event,
+    tenantId,
+    timestamp: new Date().toISOString(),
+    data,
+  };
+}
+
 export async function emitBotEvent(
   event: BotEventName,
   data: BotEventPayload,
@@ -179,24 +201,146 @@ export async function emitBotEvent(
     return { delivered: false, error: 'missing_tenant_id', attempts: 0 };
   }
 
-  const eventId = crypto.randomUUID();
-  const fullPayload = {
-    id: eventId,
-    event,
-    tenantId,
-    timestamp: new Date().toISOString(),
-    data,
-  };
+  const fullPayload = buildFullPayload(event, data, tenantId);
 
   // Persist d'abord — meme si le push HTTP rate, l'outbox permettra au bot
   // de rattraper via polling.
   const outboxId = await persistOutbox({
-    eventId,
+    eventId: fullPayload.id,
     eventName: event,
     tenantId,
     payload: fullPayload,
   });
 
+  return pushToBot(event, fullPayload, outboxId, tenantId);
+}
+
+export type BotEventBatchItem = {
+  event: BotEventName;
+  data: BotEventPayload;
+  /**
+   * Les événements d'un même groupe sont poussés DANS L'ORDRE, l'un après
+   * l'autre (ex. `match.scheduled` puis `match.rescheduled` du même match).
+   * Les groupes différents partent en parallèle (concurrence bornée). Sans
+   * groupe, chaque événement est son propre groupe.
+   */
+  group?: string;
+};
+
+export type EmitBatchResult = {
+  /** Lignes effectivement écrites dans l'outbox. */
+  persisted: number;
+  /**
+   * Pushes HTTP vers le bot. Résolue quand tous sont terminés ; ne rejette
+   * jamais. L'appelant peut l'ignorer : l'outbox est déjà écrite, le bot
+   * rattrape par polling ce qu'un push aurait raté.
+   */
+  delivery: Promise<EmitResult[]>;
+};
+
+const BATCH_PUSH_CONCURRENCY = 4;
+
+/**
+ * Émission EN LOT : une seule insertion outbox pour N événements, puis push.
+ *
+ * Existe pour les écritures de masse (auto-planification, décalage d'un round) :
+ * 28 matchs × 2 événements, c'étaient 56 INSERT séquentiels et autant de pushes
+ * lancés d'un coup. Ici, la persistance est UN aller-retour, et la promesse
+ * retournée résout dès qu'elle est faite — c'est la garantie qui compte (le
+ * bot rattrape l'outbox). Les pushes continuent dans `delivery`.
+ */
+export async function emitBotEvents(
+  items: BotEventBatchItem[],
+  tenantId: string
+): Promise<EmitBatchResult> {
+  if (!tenantId) {
+    logger.error(
+      `[botEvents] batch of ${items.length} aborted: tenantId missing — multi-tenant required`
+    );
+    return { persisted: 0, delivery: Promise.resolve([]) };
+  }
+  if (items.length === 0) {
+    return { persisted: 0, delivery: Promise.resolve([]) };
+  }
+
+  const payloads = items.map((it) =>
+    buildFullPayload(it.event, it.data, tenantId)
+  );
+
+  const outboxIds = new Map<string, number>();
+  if (supabaseAdmin) {
+    const { data, error } = await supabaseAdmin
+      .from('bot_event_outbox')
+      .insert(
+        payloads.map((p) => ({
+          event_id: p.id,
+          event_name: p.event,
+          tenant_id: tenantId,
+          payload: p,
+          status: 'pending',
+        }))
+      )
+      .select('id, event_id');
+    if (error) {
+      logger.error('[botEvents] outbox batch insert error', error);
+    } else {
+      for (const row of (data ?? []) as Array<{
+        id: number;
+        event_id: string;
+      }>) {
+        outboxIds.set(row.event_id, row.id);
+      }
+    }
+  }
+
+  // Groupes ordonnés : l'ordre d'apparition est conservé dans chaque groupe.
+  const groups = new Map<string, number[]>();
+  items.forEach((it, idx) => {
+    const key = it.group ?? payloads[idx].id;
+    const list = groups.get(key) ?? [];
+    list.push(idx);
+    groups.set(key, list);
+  });
+
+  const results: EmitResult[] = new Array(items.length);
+  const queue = [...groups.values()];
+  const worker = async () => {
+    for (let g = queue.shift(); g; g = queue.shift()) {
+      for (const idx of g) {
+        const p = payloads[idx];
+        try {
+          results[idx] = await pushToBot(
+            p.event,
+            p,
+            outboxIds.get(p.id) ?? null,
+            tenantId
+          );
+        } catch (e) {
+          results[idx] = {
+            delivered: false,
+            error: e instanceof Error ? e.message : String(e),
+            attempts: 0,
+          };
+        }
+      }
+    }
+  };
+  const delivery = Promise.all(
+    Array.from(
+      { length: Math.min(BATCH_PUSH_CONCURRENCY, queue.length) },
+      worker
+    )
+  ).then(() => results);
+
+  return { persisted: outboxIds.size, delivery };
+}
+
+async function pushToBot(
+  event: BotEventName,
+  fullPayload: FullPayload,
+  outboxId: number | null,
+  tenantId: string
+): Promise<EmitResult> {
   if (!isConfigured()) {
     // Dev/staging : pas de webhook configure. L'outbox suffit ; le bot pollera.
     return { delivered: false, error: 'not_configured', attempts: 0 };

@@ -30,8 +30,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { logStaffAction } from '@/utils/staffLogs';
 import { logger } from '@/utils/logger';
 import { isValidUUID } from '@/utils/apiHelpers';
-import { emitBotEvent } from '@/utils/botEvents';
-import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
+import { emitScheduleEventsInBackground } from '@/utils/matches/scheduleEvents';
 import { loadScheduleContext } from '@/utils/matches/scheduleContext';
 import { previewMoves } from '@/utils/matches/scheduleDiagnostics';
 
@@ -193,58 +192,22 @@ async function handler(
       },
     });
 
-    // Événements bot : même contrat que le PATCH match, pour que l'event Discord
-    // natif suive un déplacement d'où qu'il vienne.
-    for (const move of moves) {
-      if (!written.includes(move.matchId)) continue;
-      if (before.get(move.matchId) === move.scheduledAt) continue;
-      if (move.scheduledAt) {
-        const previous = before.get(move.matchId) ?? null;
-        void (async () => {
-          const enriched = await enrichMatchEvent(move.matchId);
-          await emitBotEvent(
-            'match.scheduled',
-            {
-              matchId: move.matchId,
-              tournamentId,
-              scrimId: null,
-              scheduledAt: move.scheduledAt,
-              enriched,
-            },
-            ctx.tenantId
-          );
-          // Le match avait DÉJÀ une date : ce n'est pas une planification, c'est
-          // un déplacement, et les deux équipes doivent l'apprendre autrement
-          // qu'en relisant le calendrier. `match.scheduled` reste émis pour le
-          // bot (event Discord natif) ; `match.rescheduled` porte la
-          // notification aux joueuses.
-          if (previous) {
-            await emitBotEvent(
-              'match.rescheduled',
-              {
-                match_id: move.matchId,
-                matchId: move.matchId,
-                tournamentId,
-                from: previous,
-                to: move.scheduledAt,
-                enriched,
-              },
-              ctx.tenantId
-            );
-          }
-        })().catch((e) =>
-          logger.error('[botEvents] match.scheduled emit error:', e)
-        );
-      } else {
-        void emitBotEvent(
-          'match.unscheduled',
-          { matchId: move.matchId },
-          ctx.tenantId
-        ).catch((e) =>
-          logger.error('[botEvents] match.unscheduled emit error:', e)
-        );
-      }
-    }
+    // Événements bot : même contrat que le PATCH match (helper partagé), pour
+    // que l'event Discord natif suive un déplacement d'où qu'il vienne. Un match
+    // qui avait DÉJÀ une date reçoit aussi `match.rescheduled` : c'est lui qui
+    // prévient les joueuses.
+    emitScheduleEventsInBackground(
+      moves
+        .filter((m) => written.includes(m.matchId))
+        .map((m) => ({
+          matchId: m.matchId,
+          tournamentId,
+          scrimId: null,
+          previous: before.get(m.matchId) ?? null,
+          next: m.scheduledAt,
+        })),
+      ctx.tenantId
+    );
 
     if (failed.length > 0) {
       return res.status(500).json({

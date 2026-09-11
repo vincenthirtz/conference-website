@@ -14,6 +14,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { notifyMatchStarting } from '@/utils/discord';
 import { emitBotEvent } from '@/utils/botEvents';
 import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
+import { emitScheduleEventsInBackground } from '@/utils/matches/scheduleEvents';
 import { reactToMatchStatus } from '@/utils/broadcast/autoDirector';
 
 import { logger } from '../../../../utils/logger';
@@ -575,53 +576,22 @@ async function handlePut(
     );
   }
 
-  // Scheduled event Discord natif : on emit match.scheduled/unscheduled quand
-  // scheduled_at change. Le bot creera/mettra a jour/supprimera l'event natif.
+  // Scheduled event Discord natif + prévenir les équipes : match.scheduled /
+  // match.rescheduled / match.unscheduled. Règle et payloads partagés par
+  // toutes les routes qui déplacent un match (utils/matches/scheduleEvents.ts).
   if ('scheduled_at' in updatePayload) {
-    const prev = before.scheduled_at ?? null;
-    const next = updated.scheduled_at ?? null;
-    if (prev !== next) {
-      if (next) {
-        void (async () => {
-          const enriched = await enrichMatchEvent(matchId);
-          await emitBotEvent(
-            'match.scheduled',
-            {
-              matchId,
-              tournamentId: updated.tournament_id ?? null,
-              scrimId: updated.scrim_id ?? null,
-              scheduledAt: next,
-              enriched,
-            },
-            ctx.tenantId
-          );
-          // Meme regle que sur le planning : un match qui avait DEJA une date
-          // n'est pas planifie, il est deplace — et les deux equipes doivent
-          // l'apprendre. Emis d'ou que vienne le changement, sinon la
-          // notification dependrait de l'ecran utilise pour le faire.
-          if (prev) {
-            await emitBotEvent(
-              'match.rescheduled',
-              {
-                match_id: matchId,
-                matchId,
-                tournamentId: updated.tournament_id ?? null,
-                from: prev,
-                to: next,
-                enriched,
-              },
-              ctx.tenantId
-            );
-          }
-        })().catch((e) =>
-          logger.error('[botEvents] match.scheduled emit error:', e)
-        );
-      } else {
-        void emitBotEvent('match.unscheduled', { matchId }, ctx.tenantId).catch(
-          (e) => logger.error('[botEvents] match.unscheduled emit error:', e)
-        );
-      }
-    }
+    emitScheduleEventsInBackground(
+      [
+        {
+          matchId,
+          tournamentId: updated.tournament_id ?? null,
+          scrimId: updated.scrim_id ?? null,
+          previous: before.scheduled_at ?? null,
+          next: updated.scheduled_at ?? null,
+        },
+      ],
+      ctx.tenantId
+    );
   }
 
   return res.status(200).json({

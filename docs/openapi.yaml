@@ -23288,9 +23288,11 @@ paths:
 
 
         `apply: true` ecrit `scheduled_at`, journalise `match_rescheduled` avec
-        ce que le staff savait en decidant, et emet `match.scheduled` /
-        `match.unscheduled` — meme contrat que le PATCH match, pour que l'event
-        Discord natif suive un deplacement d'ou qu'il vienne. Une ecriture qui
+        ce que le staff savait en decidant, et emet `match.scheduled` (+
+        `match.rescheduled` si le match avait deja une date) /
+        `match.unscheduled` — meme contrat que le PATCH match (helper
+        utils/matches/scheduleEvents.ts), pour que l'event Discord natif suive
+        un deplacement d'ou qu'il vienne. Une ecriture qui
         creerait une anomalie BLOQUANTE est refusee en 409 avec son impact ;
         `force: true` passe outre.
       operationId: adminMoveTournamentMatches

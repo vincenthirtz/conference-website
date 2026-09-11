@@ -24,42 +24,29 @@ import type {
 } from '@/types/admin';
 import PrintExportButton from '@/components/PrintExportButton';
 import nsAdminTournamentMatches from '@/lib/i18n/locales/admin-fr/adminTournamentMatches';
+import {
+  csvDateToIso,
+  dayRangeToIsoBounds,
+  formatMatchDateTime,
+  formatMatchTime,
+  groupMatchesByTzDay,
+  isoToTzInput,
+  resolveTournamentTz,
+  tzInputToIso,
+} from '@/utils/matches/adminMatchesTz';
 
 type Dict = typeof nsAdminTournamentMatches.fr;
 
 type MatchesApiResponse = {
-  tournament: TournamentMini | null;
+  tournament: (TournamentMini & { timezone?: string | null }) | null;
   stages: StageSummary[];
   matches: Match[];
   total: number | null;
 };
 
-export const getServerSideProps = withStaffPage({ permission: 'arbitrate_matches' });
-
-function formatDateTime(iso: string | null) {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleString('fr-FR', {
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return iso;
-  }
-}
-
-function formatToInputDateTime(iso: string | null): string {
-  if (!iso) return '';
-  try {
-    const d = new Date(iso);
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  } catch {
-    return '';
-  }
-}
+export const getServerSideProps = withStaffPage({
+  permission: 'arbitrate_matches',
+});
 
 function statusLabel(t: Dict, status: MatchStatus) {
   switch (status) {
@@ -121,6 +108,21 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
   const [tournament, setTournament] =
     useState<MatchesApiResponse['tournament']>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Fuseau du tournoi pour tous les jours/heures de l'écran (cf.
+  // utils/matches/adminMatchesTz). L'API des matchs ne le renvoie pas encore :
+  // on le lit sur la fiche tournoi ; un arbitre sans `manage_tournaments` (403)
+  // reste sur le repli Europe/Paris — jamais sur le fuseau du navigateur.
+  const [tournamentTz, setTournamentTz] = useState<string | null>(null);
+  const timezone = resolveTournamentTz(tournament?.timezone ?? tournamentTz);
+  useEffect(() => {
+    if (!id) return;
+    adminFetchJson<{ tournament?: { timezone?: string | null } }>(
+      `/api/admin/tournament/${id}`
+    )
+      .then((j) => setTournamentTz(j.tournament?.timezone ?? null))
+      .catch(() => setTournamentTz(null));
+  }, [adminFetchJson, id]);
 
   // filters
   // stageFilter est hydraté depuis l'URL (?stageId=...) une fois le router
@@ -255,7 +257,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
               matchIds: [a.id, b.id],
               label: team.name,
               type: 'team',
-              time: formatDateTime(a.scheduled_at),
+              time: formatMatchDateTime(a.scheduled_at, timezone),
             });
           }
         }
@@ -277,14 +279,14 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
               matchIds: [a.id, b.id],
               label: a.stream_url,
               type: 'resource',
-              time: formatDateTime(a.scheduled_at),
+              time: formatMatchDateTime(a.scheduled_at, timezone),
             });
           }
         }
       }
     }
     return found;
-  }, [matches]);
+  }, [matches, timezone]);
 
   // Set of match IDs involved in conflicts (for highlighting)
   const conflictMatchIds = useMemo(() => {
@@ -293,43 +295,11 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     return ids;
   }, [conflicts]);
 
-  // Calendar data: group matches by date
-  const calendarDays = useMemo(() => {
-    const scheduled = matches.filter((m) => m.scheduled_at);
-    const unscheduled = matches.filter((m) => !m.scheduled_at);
-
-    const byDate = new Map<string, Match[]>();
-    for (const m of scheduled) {
-      const d = new Date(m.scheduled_at!);
-      const dateKey = d.toLocaleDateString('fr-FR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      });
-      const arr = byDate.get(dateKey) || [];
-      arr.push(m);
-      byDate.set(dateKey, arr);
-    }
-
-    // Sort matches within each day by time
-    byDate.forEach((arr) => {
-      arr.sort(
-        (a, b) =>
-          new Date(a.scheduled_at!).getTime() -
-          new Date(b.scheduled_at!).getTime()
-      );
-    });
-
-    // Sort days chronologically
-    const sortedDays = Array.from(byDate.entries()).sort((a, b) => {
-      const aTime = new Date(a[1][0].scheduled_at!).getTime();
-      const bTime = new Date(b[1][0].scheduled_at!).getTime();
-      return aTime - bTime;
-    });
-
-    return { sortedDays, unscheduled };
-  }, [matches]);
+  // Calendar data: matchs groupés par jour DU TOURNOI (pas du navigateur).
+  const calendarDays = useMemo(
+    () => groupMatchesByTzDay(matches, timezone),
+    [matches, timezone]
+  );
 
   async function fetchMatches() {
     if (!id) return;
@@ -348,13 +318,14 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       if (statusFilter) params.set('status', statusFilter);
       if (roundFilter) params.set('roundNumber', roundFilter);
       if (resultFilter) params.set('result', resultFilter);
-      if (dateFromFilter)
-        params.set('dateFrom', new Date(dateFromFilter).toISOString());
-      if (dateToFilter)
-        params.set(
-          'dateTo',
-          new Date(dateToFilter + 'T23:59:59').toISOString()
-        );
+      // Jours « du … au … » pris dans le fuseau du tournoi, bornes incluses.
+      const bounds = dayRangeToIsoBounds(
+        dateFromFilter,
+        dateToFilter,
+        timezone
+      );
+      if (bounds.dateFrom) params.set('dateFrom', bounds.dateFrom);
+      if (bounds.dateTo) params.set('dateTo', bounds.dateTo);
       if (search.trim()) params.set('search', search.trim());
 
       const json = await adminFetchJson<MatchesApiResponse>(
@@ -409,6 +380,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     resultFilter,
     dateFromFilter,
     dateToFilter,
+    timezone,
   ]);
 
   // Auto-scheduler : simulation, relecture, puis écriture. Le flux vit dans
@@ -496,7 +468,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     const inputs: Record<string, string> = {};
     matches.forEach((m) => {
       if (selectedMatchIds.has(m.id)) {
-        inputs[m.id] = formatToInputDateTime(m.scheduled_at);
+        inputs[m.id] = isoToTzInput(m.scheduled_at, timezone);
       }
     });
     bulkScheduleInitialRef.current = inputs;
@@ -533,7 +505,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
     const schedules = Object.entries(bulkScheduleValuesRef.current).map(
       ([matchId, dt]) => ({
         matchId,
-        scheduled_at: dt ? new Date(dt).toISOString() : null,
+        scheduled_at: tzInputToIso(dt, timezone),
       })
     );
 
@@ -762,7 +734,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
           team2_id: t2?.id || null,
           round_number: row.round ? parseInt(row.round, 10) || null : null,
           scheduled_at: row.scheduled_at
-            ? new Date(row.scheduled_at).toISOString()
+            ? csvDateToIso(row.scheduled_at, timezone)
             : null,
           best_of: row.best_of ? parseInt(row.best_of, 10) || null : null,
           status: 'pending' as const,
@@ -841,6 +813,9 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                         /{tournament.slug}
                       </span>
                     )}
+                    <span className="ml-2 text-xs text-neutral-500">
+                      {timezone}
+                    </span>
                     {total !== null && (
                       <span className="ml-2">
                         {format(
@@ -1315,7 +1290,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
               <div className="flex items-end gap-4 mb-4 flex-wrap">
                 <div>
                   <label className="block text-xs text-neutral-400 mb-1">
-                    {t.applySameDateTime}
+                    {t.applySameDateTime} ({timezone})
                   </label>
                   <input
                     type="datetime-local"
@@ -1594,14 +1569,14 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
           {/* Calendar View */}
           {viewMode === 'calendar' && !loading && matches.length > 0 && (
             <section className="space-y-6 mb-6">
-              {calendarDays.sortedDays.map(([dateLabel, dayMatches]) => (
+              {calendarDays.days.map(({ key, label, matches: dayMatches }) => (
                 <div
-                  key={dateLabel}
+                  key={key}
                   className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden"
                 >
                   <div className="px-5 py-3 bg-neutral-900/50 border-b border-neutral-700/50">
                     <h3 className="text-sm font-semibold capitalize">
-                      {dateLabel}
+                      {label}
                     </h3>
                     <span className="text-xs text-neutral-400">
                       {format(
@@ -1615,13 +1590,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
 
                   <div className="divide-y divide-neutral-700/30">
                     {dayMatches.map((m) => {
-                      const time = new Date(m.scheduled_at!).toLocaleTimeString(
-                        'fr-FR',
-                        {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        }
-                      );
+                      const time = formatMatchTime(m.scheduled_at, timezone);
                       const hasConflict = conflictMatchIds.has(m.id);
 
                       return (
@@ -1834,6 +1803,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
                       match={m}
                       selected={selectedMatchIds.has(m.id)}
                       hasConflict={conflictMatchIds.has(m.id)}
+                      timezone={timezone}
                       quickScoreOpen={quickScoreId === m.id}
                       qsSaving={qsSaving}
                       onToggleSelect={toggleMatchSelection}
@@ -2120,6 +2090,7 @@ type MatchRowProps = {
   match: Match;
   selected: boolean;
   hasConflict: boolean;
+  timezone: string;
   quickScoreOpen: boolean;
   qsSaving: boolean;
   onToggleSelect: (matchId: string) => void;
@@ -2133,6 +2104,7 @@ const MatchRow = memo(function MatchRow({
   match: m,
   selected,
   hasConflict,
+  timezone,
   quickScoreOpen,
   qsSaving,
   onToggleSelect,
@@ -2221,12 +2193,12 @@ const MatchRow = memo(function MatchRow({
         {/* Schedule */}
         <div className="w-32 text-right flex-shrink-0">
           <div className="text-sm text-neutral-300">
-            {formatDateTime(m.scheduled_at)}
+            {formatMatchDateTime(m.scheduled_at, timezone)}
           </div>
           {m.completed_at && (
             <div className="text-[10px] text-neutral-500">
               {format(t.finishedAt, {
-                date: formatDateTime(m.completed_at),
+                date: formatMatchDateTime(m.completed_at, timezone),
               })}
             </div>
           )}

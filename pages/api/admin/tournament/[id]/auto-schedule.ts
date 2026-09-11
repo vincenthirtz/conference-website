@@ -37,6 +37,7 @@ import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { emitScheduleEvents } from '@/utils/matches/scheduleEvents';
 import { logger } from '../../../../../utils/logger';
 import type { AvailabilityConstraint } from '@/utils/matches/availability';
 import {
@@ -369,10 +370,12 @@ async function handler(
         .eq('tenant_id', ctx.tenantId)
     );
 
+    const failedIds = new Set<string>();
     if (updates.length > 0) {
       const updateResults = await Promise.all(updates);
       updateResults.forEach((r, idx) => {
         if (r.error) {
+          failedIds.add(result.scheduled[idx].matchId);
           logger.error(
             'auto-schedule: update match scheduled_at error',
             result.scheduled[idx].matchId,
@@ -381,6 +384,26 @@ async function handler(
         }
       });
     }
+
+    // 6c) Événements de planification (bot Discord, push, email). Seulement les
+    //     écritures réussies dont le créneau a RÉELLEMENT changé : le scheduler
+    //     renvoie aussi les matchs verrouillés à leur heure inchangée, qui ne
+    //     doivent rien notifier (comparaison à l'instant, dans le helper).
+    //     Attendu : l'outbox (une insertion pour tout le lot) est écrite avant
+    //     la réponse ; les pushes HTTP continuent en fond.
+    const beforeById = new Map(allMatches.map((m) => [m.id, m.scheduled_at]));
+    await emitScheduleEvents(
+      result.scheduled
+        .filter((s) => !failedIds.has(s.matchId) && beforeById.has(s.matchId))
+        .map((s) => ({
+          matchId: s.matchId,
+          tournamentId,
+          scrimId: null,
+          previous: beforeById.get(s.matchId) ?? null,
+          next: s.startAt,
+        })),
+      ctx.tenantId
+    );
 
     // 7) Log staff (incluant la decision sur les conflits pour audit)
     if (ctx?.staff?.id) {
