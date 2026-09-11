@@ -1,4 +1,3 @@
-import Head from 'next/head';
 import Image from 'next/image';
 import { GetStaticPaths, GetStaticProps } from 'next';
 import Heading from '@/components/Typography/heading';
@@ -14,6 +13,11 @@ import { renderNewsMarkdown } from '@/utils/news/renderNewsMarkdown';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import { useLang } from '@/lib/i18n/LanguageProvider';
+import { formatSiteDate } from '@/utils/timezone';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
+// Serveur seulement, comme renderNewsMarkdown (appelé dans getStaticProps).
+import { buildNewsArticleSeo } from '@/utils/news/newsArticleSeo';
 
 import { logger } from '../../utils/logger';
 import nsNewsDetail from '@/lib/i18n/locales/fr/newsDetail';
@@ -22,8 +26,6 @@ import { newsTagLabel } from '@/utils/news/newsTag';
 import ArticleHero from '@/components/News/ArticleHero';
 import ShareArticle from '@/components/News/ShareArticle';
 import RelatedNews, { type RelatedItem } from '@/components/News/RelatedNews';
-import { social } from '@/config/socials';
-const SITE_NAME = "OW Women's Cup";
 
 // Idempotency-Key pour le POST de commentaire (public/anonyme). Stable par
 // intention tant que la publication n'a pas réussi : double-submit / retry
@@ -40,14 +42,9 @@ function genIdempotencyKey(): string {
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || '';
 
-function toAbsoluteUrl(path: string | null | undefined): string | undefined {
-  if (!path) return undefined;
-  if (path.startsWith('http')) return path;
-  if (!BASE_URL) return path;
-  return `${BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
-}
-
 type NewsPageProps = {
+  /** SEO par-article, émis par DefaultSeo (cf. utils/news/newsArticleSeo). */
+  seo: SeoProps;
   title: string;
   /**
    * Corps de l'article, Markdown déjà rendu en HTML par getStaticProps (cf.
@@ -57,13 +54,11 @@ type NewsPageProps = {
   contentHtml: string;
   slug?: string | null;
   tag?: string | null;
-  excerpt?: string | null;
   imageUrl?: string | null;
   /** `imageUrl` est un logo (équipe ou tournoi) → cadrage `contain`. */
   imageFitContain?: boolean;
   publishedAt?: string | null;
   createdAt?: string | null;
-  updatedAt?: string | null;
   newsId?: string | null;
   related?: RelatedItem[];
 };
@@ -133,16 +128,23 @@ export const getStaticProps: GetStaticProps<NewsPageProps> = async (
 
   return {
     props: {
+      seo: buildNewsArticleSeo({
+        title: data.title || '',
+        slug: data.slug || null,
+        excerpt: data.excerpt || null,
+        imageUrl: heroImage.url || null,
+        publishedAt: data.published_at || null,
+        createdAt: data.created_at || null,
+        updatedAt: data.updated_at || null,
+      }),
       title: data.title || '',
       contentHtml: renderNewsMarkdown(data.content),
       slug: data.slug || null,
       tag: data.tag || 'general',
-      excerpt: data.excerpt || '',
       imageUrl: heroImage.url || '',
       imageFitContain: heroImage.fitContain,
       publishedAt: data.published_at || null,
       createdAt: data.created_at || null,
-      updatedAt: data.updated_at || null,
       newsId: data.id || null,
       related,
     },
@@ -155,110 +157,35 @@ export default function NewsSlugPage({
   contentHtml,
   slug,
   tag,
-  excerpt,
   imageUrl,
   imageFitContain,
   publishedAt,
   createdAt,
-  updatedAt,
   newsId,
   related = [],
 }: NewsPageProps) {
   const t = useT(nsNewsDetail);
   const tagLabels = useT(nsNewsTags);
   const locale = useLocale();
-  const displayDate =
-    publishedAt || createdAt
-      ? new Date(publishedAt || createdAt || '').toLocaleDateString(locale)
-      : null;
-  const formattedTag = newsTagLabel(tag, tagLabels);
-
-  // SEO variables
-  const metaTitle = title ? `${title} | ${SITE_NAME}` : `News | ${SITE_NAME}`;
-  const metaDescription = excerpt || `Actualité ${SITE_NAME} : ${title}`;
-  const canonical = slug && BASE_URL ? `${BASE_URL}/news/${slug}` : undefined;
-  const ogImage = toAbsoluteUrl(imageUrl) || toAbsoluteUrl('/img/og-cover.png');
+  const { lang } = useLang();
+  // Pas de <Head> ici : titre, og:*, canonical et JSON-LD viennent de
+  // `props.seo`, émis une seule fois par DefaultSeo. La page posait les siens
+  // en plus, et next/head ne dédoublonne pas les balises `property`.
   const articlePublishedTime = publishedAt || createdAt || undefined;
-  const articleModifiedTime = updatedAt || undefined;
-
-  // JSON-LD Article Schema
-  const articleSchema = title
-    ? {
-        '@context': 'https://schema.org',
-        '@type': 'NewsArticle',
-        headline: title,
-        description: metaDescription,
-        image: ogImage,
-        datePublished: articlePublishedTime,
-        dateModified: articleModifiedTime || articlePublishedTime,
-        author: {
-          '@type': 'Organization',
-          name: SITE_NAME,
-          url: BASE_URL || 'https://owwomenscup.fr',
-        },
-        publisher: {
-          '@type': 'Organization',
-          name: SITE_NAME,
-          logo: {
-            '@type': 'ImageObject',
-            url: `${BASE_URL || 'https://owwomenscup.fr'}/img/logos/2026-logo.png`,
-          },
-        },
-        mainEntityOfPage: canonical,
-        inLanguage: 'fr-FR',
-      }
-    : null;
+  // Fuseau du site, pas celui du serveur : rendu en UTC sur Netlify, un
+  // article publié à 0 h 30 heure de Paris affichait la veille, puis
+  // l'hydratation corrigeait (mismatch React).
+  const displayDate =
+    formatSiteDate(articlePublishedTime, lang, {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }) || null;
+  const formattedTag = newsTagLabel(tag, tagLabels);
+  const canonical = slug && BASE_URL ? `${BASE_URL}/news/${slug}` : undefined;
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white pb-20">
-      <Head>
-        <title>{metaTitle}</title>
-        <meta name="description" content={metaDescription} />
-        {canonical && <link rel="canonical" href={canonical} />}
-
-        {/* Open Graph */}
-        <meta property="og:type" content="article" />
-        <meta property="og:locale" content="fr_FR" />
-        <meta property="og:site_name" content={SITE_NAME} />
-        <meta property="og:title" content={metaTitle} />
-        <meta property="og:description" content={metaDescription} />
-        {canonical && <meta property="og:url" content={canonical} />}
-        {ogImage && <meta property="og:image" content={ogImage} />}
-        {ogImage && <meta property="og:image:alt" content={title || 'News'} />}
-        {articlePublishedTime && (
-          <meta
-            property="article:published_time"
-            content={articlePublishedTime}
-          />
-        )}
-        {articleModifiedTime && (
-          <meta
-            property="article:modified_time"
-            content={articleModifiedTime}
-          />
-        )}
-        <meta property="article:author" content={SITE_NAME} />
-        {tag && <meta property="article:tag" content={tag} />}
-
-        {/* Twitter Card */}
-        <meta name="twitter:card" content="summary_large_image" />
-        {/* Nom de balise = spec Twitter Cards (X la lit toujours) ; le handle,
-            lui, vient de la source unique — il était faux ici. */}
-        <meta name="twitter:site" content={social('x').handle} />
-        <meta name="twitter:title" content={metaTitle} />
-        <meta name="twitter:description" content={metaDescription} />
-        {ogImage && <meta name="twitter:image" content={ogImage} />}
-
-        {/* JSON-LD Structured Data */}
-        {articleSchema && (
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify(articleSchema),
-            }}
-          />
-        )}
-      </Head>
       {/* Colonne de lecture. L'article s'affichait sur 1 200 px, soit près de
           145 caractères par ligne — bien au-delà des ~75 où l'œil retrouve
           encore le début de la ligne suivante sans effort.
@@ -346,6 +273,13 @@ export default function NewsSlugPage({
   );
 }
 
+// Repli statique (pré-rendu dégradé, avant que `_app.tsx` ait
+// `pageProps.seo`). En pratique l'ISR fournit toujours le SEO de l'article.
+NewsSlugPage.seo = {
+  title: { fr: 'Actualité', en: 'News' },
+  type: 'article',
+} satisfies SeoProps;
+
 type Comment = {
   id: string;
   author_name: string | null;
@@ -355,7 +289,7 @@ type Comment = {
 
 function Comments({ newsId }: { newsId: string }) {
   const t = useT(nsNewsDetail);
-  const locale = useLocale();
+  const { lang } = useLang();
   const [comments, setComments] = useState<Comment[]>([]);
   // La LISTE et l'ENVOI ont chacun leur état. Un seul `loading` partagé
   // affichait « Aucun commentaire » pendant le chargement comme après un
@@ -595,7 +529,7 @@ function Comments({ newsId }: { newsId: string }) {
               <span>{c.author_name || t.anonymous}</span>
               <span className="text-gray-600">·</span>
               <span>
-                {new Date(c.created_at).toLocaleString(locale, {
+                {formatSiteDate(c.created_at, lang, {
                   dateStyle: 'short',
                   timeStyle: 'short',
                 })}

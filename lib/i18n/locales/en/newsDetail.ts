@@ -12,6 +12,7 @@
 export default {
   backHome: '← Back to home',
   newsLabel: 'News',
+  seoDescriptionFallback: '{site} news: {title}',
   noContent: 'No content for this news.',
   rssFeed: 'RSS feed',
   shareTitle: 'Share this article',

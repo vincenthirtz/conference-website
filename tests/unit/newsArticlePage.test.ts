@@ -13,6 +13,8 @@
 // tournent pas, on voit exactement ce que reçoit le navigateur avant
 // hydratation.
 
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { GetStaticPropsContext } from 'next';
 import { createElement } from 'react';
@@ -134,6 +136,39 @@ describe('news/[slug] getStaticProps — corps rendu au build', () => {
       createElement(ToastProvider, null, createElement(NewsSlugPage, props))
     );
     expect(html).toContain(t.noContent);
+  });
+});
+
+describe('news/[slug] — SEO et dates', () => {
+  it('renvoie le SEO de l’article dans props.seo', async () => {
+    seedNews();
+    const { seo } = await propsFor();
+    expect(seo.type).toBe('article');
+    expect(seo.title).toBe('Annonce');
+    expect(seo.publishedTime).toBe('2026-09-01T18:30:00Z');
+    expect((seo.jsonLd as Record<string, unknown>)['@type']).toBe(
+      'NewsArticle'
+    );
+  });
+
+  it('ne pose plus son propre <Head> (doublons og:* / canonical)', () => {
+    const src = readFileSync(
+      path.join(process.cwd(), 'pages/news/[slug].tsx'),
+      'utf8'
+    );
+    expect(src).not.toMatch(/from 'next\/head'/);
+    expect(src).not.toMatch(/<meta\s+property=/);
+  });
+
+  it('date l’article dans le fuseau du site, pas celui du serveur', async () => {
+    // 22 h 30 UTC le 31 août = 0 h 30 le 1er septembre à Paris.
+    seedNews({ published_at: '2026-08-31T22:30:00Z' });
+    const props = await propsFor();
+    const html = renderToString(
+      createElement(ToastProvider, null, createElement(NewsSlugPage, props))
+    );
+    expect(html).toContain('01/09/2026');
+    expect(html).not.toContain('31/08/2026');
   });
 });
 

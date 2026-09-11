@@ -11,6 +11,7 @@ import { ns } from '../../ns';
 export default ns('newsDetail', {
   backHome: "← Retour à l'accueil",
   newsLabel: 'News',
+  seoDescriptionFallback: 'Actualité {site} : {title}',
   noContent: 'Pas de contenu pour cette news.',
   rssFeed: 'Flux RSS',
   shareTitle: 'Partager cet article',
