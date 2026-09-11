@@ -9,6 +9,7 @@ import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { emitScheduleEvents } from '@/utils/matches/scheduleEvents';
 import { logger } from '../../../../../utils/logger';
 
 const VALID_STATUSES = [
@@ -211,6 +212,21 @@ async function handlePost(
       logger.error('[admin/scrims/:id/matches] log error:', e);
     }
   }
+
+  // Un match créé DÉJÀ daté est un match planifié : match.scheduled, pour que
+  // l'event Discord natif existe dès la création (null → date). Attendu, en
+  // une insertion outbox pour tout le lot — même choix que les routes de
+  // planification en masse. Ne rejette jamais.
+  await emitScheduleEvents(
+    inserted.map((m) => ({
+      matchId: m.id as string,
+      tournamentId: null,
+      scrimId,
+      previous: null,
+      next: (m.scheduled_at ?? null) as string | null,
+    })),
+    ctx.tenantId
+  );
 
   return res.status(201).json({ matches: inserted, count: inserted.length });
 }

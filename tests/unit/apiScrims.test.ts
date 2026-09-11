@@ -7,10 +7,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StaffMember } from '../../types/staff';
 
-const { logStaffActionMock, emitScheduleEventsMock } = vi.hoisted(() => ({
-  logStaffActionMock: vi.fn(async () => undefined),
-  emitScheduleEventsMock: vi.fn(),
-}));
+const { logStaffActionMock, emitScheduleEventsMock, emitScheduleBatchMock } =
+  vi.hoisted(() => ({
+    logStaffActionMock: vi.fn(async () => undefined),
+    emitScheduleEventsMock: vi.fn(),
+    emitScheduleBatchMock: vi.fn(async () => ({
+      matches: 0,
+      events: 0,
+      delivery: Promise.resolve(),
+    })),
+  }));
 
 vi.mock('@/utils/staffLogs', () => ({
   logStaffAction: logStaffActionMock,
@@ -19,6 +25,7 @@ vi.mock('@/utils/staffLogs', () => ({
 vi.mock('@/utils/matches/scheduleEvents', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/utils/matches/scheduleEvents')>()),
   emitScheduleEventsInBackground: emitScheduleEventsMock,
+  emitScheduleEvents: emitScheduleBatchMock,
 }));
 
 import {
@@ -103,6 +110,7 @@ beforeEach(() => {
   invalidateStaffCache();
   logStaffActionMock.mockClear();
   emitScheduleEventsMock.mockClear();
+  emitScheduleBatchMock.mockClear();
   setAuthUser({ id: 'user-1' });
   store.staff = [makeStaffRow('admin')] as any;
   store.teams = [
@@ -413,6 +421,31 @@ describe('/api/admin/scrims/[scrimId]/matches', () => {
       res
     );
     expect(res.statusCode).toBe(404);
+  });
+
+  // Un match créé déjà daté est planifié : l'event Discord doit naître avec lui.
+  it('POST d’un match daté émet sa planification (null → date)', async () => {
+    const res = makeRes();
+    await adminScrimMatchesHandler(
+      makeAuthedReq({
+        method: 'POST',
+        query: { scrimId: SCRIM_ID },
+        body: { match: { scheduled_at: '2026-10-05T18:00:00.000Z' } },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    expect(emitScheduleBatchMock).toHaveBeenCalledTimes(1);
+    const [changes] = emitScheduleBatchMock.mock.calls[0] as any;
+    expect(changes).toEqual([
+      {
+        matchId: (res.body as any).matches[0].id,
+        tournamentId: null,
+        scrimId: SCRIM_ID,
+        previous: null,
+        next: '2026-10-05T18:00:00.000Z',
+      },
+    ]);
   });
 });
 
@@ -1110,5 +1143,30 @@ describe('/api/bot/scrims/[scrimId]/matches', () => {
       expect((m as any).scrim_id).toBe(SCRIM_ID);
       expect((m as any).tournament_id).toBeNull();
     }
+  });
+
+  // Un match créé déjà daté est planifié : l'event Discord doit naître avec lui.
+  // Le non daté est transmis tel quel (null → null) : le helper l'écarte.
+  it('un lot mêlant daté et non daté transmet les deux créations au helper', async () => {
+    const res = makeRes();
+    await botScrimMatchesHandler(
+      makeBotReq({
+        body: {
+          actorDiscordUserId: DISCORD_ID,
+          matches: [{ scheduled_at: '2026-10-07T17:00:00.000Z' }, {}],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    expect(emitScheduleBatchMock).toHaveBeenCalledTimes(1);
+    const [changes, tenantId] = emitScheduleBatchMock.mock.calls[0] as any;
+    expect(tenantId).toBe(CONFERENCE_TENANT_ID);
+    expect(changes).toHaveLength(2);
+    expect(changes.every((c: any) => c.previous === null && c.scrimId === SCRIM_ID)).toBe(true);
+    expect(changes.map((c: any) => c.next).sort()).toEqual([
+      '2026-10-07T17:00:00.000Z',
+      null,
+    ].sort());
   });
 });

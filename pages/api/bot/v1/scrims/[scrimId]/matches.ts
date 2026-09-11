@@ -17,6 +17,7 @@ import {
   uuidSchema,
   isoDateSchema,
 } from '@/utils/botValidation';
+import { emitScheduleEvents } from '@/utils/matches/scheduleEvents';
 import { logger } from '@/utils/logger';
 
 const VALID_STATUSES = [
@@ -176,6 +177,21 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       match_ids: inserted.map((m) => m.id),
     },
   });
+
+  // Un match créé DÉJÀ daté est un match planifié : match.scheduled, pour que
+  // l'event Discord natif existe dès la création (null → date). Attendu, en
+  // une insertion outbox pour tout le lot (jusqu'à 50) — même choix que les
+  // routes de planification en masse. Ne rejette jamais.
+  await emitScheduleEvents(
+    inserted.map((m) => ({
+      matchId: m.id as string,
+      tournamentId: null,
+      scrimId,
+      previous: null,
+      next: (m.scheduled_at ?? null) as string | null,
+    })),
+    req.botContext.tenantId
+  );
 
   return res.status(201).json({ matches: inserted, count: inserted.length });
 }

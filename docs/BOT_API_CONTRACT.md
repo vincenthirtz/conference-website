@@ -3874,6 +3874,7 @@ par lui :
 | `POST /api/admin/tournament/[id]/schedule-move` (`apply: true`) | en fond |
 | `PATCH /api/bot/v1/matches/[matchId]` (`/planifier`) | en fond — émettait `match.scheduled` seul jusqu'au 2026-09-11 |
 | `PATCH /api/bot/v1/scrims/[scrimId]/matches/[matchId]` | en fond — n'émettait rien avant le 2026-09-11 |
+| `POST /api/bot/v1/scrims/[scrimId]/matches` et `POST /api/admin/scrims/[scrimId]/matches` (création, matchs déjà datés) | attendue, en lot — `match.scheduled` (null → date) ; rien avant le 2026-09-11 |
 | `POST /api/admin/tournament/[id]/auto-schedule` (hors `dryRun`) | attendue, en lot |
 | `POST /api/admin/tournament/[id]/bulk-matches` `shift_round` | attendue, en lot |
 | `PATCH /api/admin/stages/[stageId]/bulk-matches` + son `POST` undo | attendue, en lot |
