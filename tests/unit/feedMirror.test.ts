@@ -13,9 +13,11 @@
 //     elle ferait écarter TOUTES les publications, en silence ;
 //   - la date TikTok, qui est un epoch EN SECONDES : lue en millisecondes,
 //     chaque vidéo daterait de 1970 et le miroir resterait muet ;
-//   - la VIGNETTE de chaque source. Elle n'a aucun effet sur Discord (l'aperçu
-//     du lien fait le travail) mais elle porte le mur « Nos réseaux » du site,
-//     et chaque réseau la range ailleurs.
+//   - la VIGNETTE de chaque source. Elle porte le mur « Nos réseaux » du site
+//     et, recopiée chez nous, la carte Discord ; chaque réseau la range
+//     ailleurs ;
+//   - le payload structuré de `social.mirror` : lien sans pistage, texte brut
+//     borné, vignette hébergée (jamais l'URL signée Instagram/TikTok).
 
 import { describe, it, expect, vi } from 'vitest';
 
@@ -26,8 +28,14 @@ vi.mock('@/utils/supabase', async () => {
 
 import {
   buildMirrorMessage,
+  buildMirrorPayload,
+  mirrorAccount,
+  pickMirrorThumbnail,
   selectNew,
+  stripTrackingParams,
+  truncateText,
   MAX_PER_RUN,
+  MIRROR_TEXT_MAX,
   type MirrorPost,
 } from '../../utils/social/feedMirror';
 import {
@@ -199,6 +207,30 @@ describe('YouTube', () => {
 
   it('décode les entités des titres', () => {
     expect(parseYoutubeFeed(feed)[0].text).toBe('Finale & remise des prix');
+  });
+
+  it('garde le titre dans `text` et lit la description à part', () => {
+    // `text` porte le titre : c'est ce que le salon et le mur affichent. La
+    // description ne sert qu'au champ `text` de l'event.
+    const withDesc = `<feed><entry>
+      <yt:videoId>abc</yt:videoId>
+      <title>Finale</title>
+      <published>2026-09-02T10:00:00+00:00</published>
+      <media:group>
+        <media:title>Finale</media:title>
+        <media:description>Le replay complet &amp; les temps forts.</media:description>
+      </media:group>
+    </entry></feed>`;
+    const [post] = parseYoutubeFeed(withDesc);
+    expect(post.text).toBe('Finale');
+    expect(post.title).toBe('Finale');
+    expect(post.description).toBe('Le replay complet & les temps forts.');
+  });
+
+  it('description absente ou vide → null', () => {
+    expect(parseYoutubeFeed(feed)[0].description).toBeNull();
+    const empty = `<feed><entry><yt:videoId>x</yt:videoId><title>T</title><published>2026-09-02T10:00:00+00:00</published><media:description></media:description></entry></feed>`;
+    expect(parseYoutubeFeed(empty)[0].description).toBeNull();
   });
 
   it('écarte une entrée sans date — elle paraîtrait éternellement nouvelle', () => {
@@ -535,5 +567,287 @@ describe('vignettes', () => {
       },
     });
     expect(out[0].thumbnailUrl).toBe('https://tt.test/cover.jpg');
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Payload structuré de `social.mirror` — contrat docs/BOT_API_CONTRACT.md     */
+/* -------------------------------------------------------------------------- */
+
+describe('stripTrackingParams', () => {
+  it('retire les utm_* du share_url TikTok', () => {
+    expect(
+      stripTrackingParams(
+        'https://www.tiktok.com/@ow_womenscup/video/7547?utm_campaign=tt4d_open_api&utm_source=awj0ze8i5kzfl6ic'
+      )
+    ).toBe('https://www.tiktok.com/@ow_womenscup/video/7547');
+  });
+
+  it('retire igsh / igshid d’un lien Instagram', () => {
+    expect(
+      stripTrackingParams('https://www.instagram.com/reel/DAbC/?igsh=MWx0dA==')
+    ).toBe('https://www.instagram.com/reel/DAbC/');
+    expect(
+      stripTrackingParams('https://www.instagram.com/p/DAbC/?igshid=abc')
+    ).toBe('https://www.instagram.com/p/DAbC/');
+  });
+
+  it('garde le `v=` de YouTube et retire `si`', () => {
+    expect(
+      stripTrackingParams('https://www.youtube.com/watch?v=DGN4olmhb2Q&si=xyz')
+    ).toBe('https://www.youtube.com/watch?v=DGN4olmhb2Q');
+    expect(
+      stripTrackingParams(
+        'https://www.youtube.com/watch?utm_source=x&v=DGN4olmhb2Q&t=42'
+      )
+    ).toBe('https://www.youtube.com/watch?v=DGN4olmhb2Q&t=42');
+  });
+
+  it('retire les paramètres de partage de l’app TikTok', () => {
+    expect(
+      stripTrackingParams(
+        'https://www.tiktok.com/@a/video/1?is_from_webapp=1&sender_device=pc&_r=1&_t=ZN-8x'
+      )
+    ).toBe('https://www.tiktok.com/@a/video/1');
+  });
+
+  it('ignore la casse des noms de paramètres', () => {
+    expect(stripTrackingParams('https://x.test/a?UTM_Source=b&FbClId=c')).toBe(
+      'https://x.test/a'
+    );
+  });
+
+  it('laisse les paramètres gardés octet pour octet, fragment compris', () => {
+    // URLSearchParams#toString() réencoderait `%20` en `+` : le lien changerait
+    // de forme sans raison.
+    expect(
+      stripTrackingParams('https://x.test/a?q=a%20b+c&utm_medium=x#section')
+    ).toBe('https://x.test/a?q=a%20b+c#section');
+  });
+
+  it('rend une URL propre ou sans query inchangée', () => {
+    const clean = 'https://bsky.app/profile/womenscup.bsky.social/post/3kxyz';
+    expect(stripTrackingParams(clean)).toBe(clean);
+    expect(stripTrackingParams('https://x.test/a?v=1')).toBe(
+      'https://x.test/a?v=1'
+    );
+  });
+
+  it('rend une URL invalide telle quelle', () => {
+    expect(stripTrackingParams('pas une url?utm_source=x')).toBe(
+      'pas une url?utm_source=x'
+    );
+    expect(stripTrackingParams('')).toBe('');
+  });
+});
+
+describe('truncateText', () => {
+  it('laisse un texte court intact, trim compris', () => {
+    expect(truncateText('  court  ')).toBe('court');
+  });
+
+  it('ne dépasse JAMAIS la borne, points de suspension compris', () => {
+    const out = truncateText('mot '.repeat(1000));
+    expect(out.length).toBeLessThanOrEqual(MIRROR_TEXT_MAX);
+    expect(out.endsWith('…')).toBe(true);
+  });
+
+  it('coupe sur un mot entier', () => {
+    // Espace à 20/24 : dans les 20 % de la fin, on recule jusqu'à lui.
+    expect(truncateText(`${'a'.repeat(20)} ${'b'.repeat(20)}`, 24)).toBe(
+      `${'a'.repeat(20)}…`
+    );
+  });
+
+  it('ne recule pas jusqu’à un espace lointain', () => {
+    // Espace à 10/25 : reculer perdrait la moitié du texte.
+    const out = truncateText(`${'a'.repeat(10)} ${'b'.repeat(20)}`, 25);
+    expect(out).toBe(`${'a'.repeat(10)} ${'b'.repeat(13)}…`);
+    expect(out.length).toBe(25);
+  });
+
+  it('ne coupe pas un emoji en deux', () => {
+    // '🔥' = deux unités UTF-16 : la coupe tomberait entre les deux.
+    const out = truncateText(`${'a'.repeat(8)}🔥🔥🔥`, 10);
+    expect(out).toBe(`${'a'.repeat(8)}…`);
+    expect(out.length).toBeLessThanOrEqual(10);
+  });
+});
+
+describe('pickMirrorThumbnail', () => {
+  const HOSTED = 'https://storage.example.test/teams-images/social/a.jpg';
+
+  it('préfère toujours la copie hébergée chez nous', () => {
+    for (const source of ['bluesky', 'youtube', 'instagram', 'tiktok'] as const)
+      expect(pickMirrorThumbnail(source, HOSTED, 'https://src/x.jpg')).toBe(
+        HOSTED
+      );
+  });
+
+  it('retombe sur l’originale pour Bluesky et YouTube, stables', () => {
+    expect(pickMirrorThumbnail('bluesky', null, 'https://cdn.bsky/a')).toBe(
+      'https://cdn.bsky/a'
+    );
+    expect(pickMirrorThumbnail('youtube', null, 'https://i.ytimg/a')).toBe(
+      'https://i.ytimg/a'
+    );
+  });
+
+  it('JAMAIS l’URL signée ou périssable d’Instagram ou TikTok', () => {
+    expect(
+      pickMirrorThumbnail('instagram', null, 'https://scontent/x?oh=sig')
+    ).toBeNull();
+    expect(
+      pickMirrorThumbnail('tiktok', null, 'https://p16-sign/x?x-expires=1')
+    ).toBeNull();
+  });
+
+  it('null quand il n’y a rien', () => {
+    expect(pickMirrorThumbnail('youtube', null, null)).toBeNull();
+  });
+});
+
+describe('mirrorAccount', () => {
+  it('lit le compte dans config/socials', () => {
+    expect(mirrorAccount('tiktok')).toEqual({
+      handle: '@ow_womenscup',
+      url: 'https://www.tiktok.com/@ow_womenscup',
+    });
+    expect(mirrorAccount('bluesky')?.handle).toBe('@womenscup.bsky.social');
+  });
+
+  it('null pour un réseau non déclaré', () => {
+    expect(mirrorAccount('mastodon' as never)).toBeNull();
+  });
+});
+
+describe('buildMirrorPayload', () => {
+  const tiktok: MirrorPost = {
+    id: '7547',
+    url: 'https://www.tiktok.com/@ow_womenscup/video/7547?utm_campaign=tt4d_open_api&utm_source=abc',
+    text: 'Best of POTG 🔥 #owwc — merci https://partenaire.test',
+    publishedAt: '2026-09-10T18:30:00.000Z',
+    thumbnailUrl: 'https://p16-sign.tiktokcdn.test/cover.jpg?x-expires=1',
+  };
+
+  it('rend le superset exact du contrat', () => {
+    const payload = buildMirrorPayload({
+      source: 'tiktok',
+      channelId: '1486719313116401755',
+      post: tiktok,
+      prefix: '🎵 TikTok —',
+      hostedThumbnailUrl: 'https://storage.example.test/social/c.jpg',
+    });
+    expect(payload).toEqual({
+      source: 'tiktok',
+      channelId: '1486719313116401755',
+      content:
+        '🎵 TikTok — Best of POTG 🔥 #owwc — merci https://partenaire.test\n\nhttps://www.tiktok.com/@ow_womenscup/video/7547',
+      url: 'https://www.tiktok.com/@ow_womenscup/video/7547',
+      postedAt: '2026-09-10T18:30:00.000Z',
+      text: 'Best of POTG 🔥 #owwc — merci https://partenaire.test',
+      title: null,
+      thumbnailUrl: 'https://storage.example.test/social/c.jpg',
+      account: {
+        handle: '@ow_womenscup',
+        url: 'https://www.tiktok.com/@ow_womenscup',
+      },
+    });
+  });
+
+  it('`text` est brut : ni préfixe, ni lien du post', () => {
+    const { text } = buildMirrorPayload({
+      source: 'tiktok',
+      channelId: 'c',
+      post: tiktok,
+      prefix: '🎵 TikTok —',
+    });
+    expect(text).not.toContain('🎵');
+    expect(text).not.toContain('/video/7547');
+  });
+
+  it('`content` reste l’ancien message (rétro-compat), lien nettoyé', () => {
+    const clean = { ...tiktok, url: stripTrackingParams(tiktok.url) };
+    expect(
+      buildMirrorPayload({
+        source: 'tiktok',
+        channelId: 'c',
+        post: tiktok,
+        prefix: '🎵 TikTok —',
+      }).content
+    ).toBe(buildMirrorMessage(clean, '🎵 TikTok —'));
+  });
+
+  it('TikTok sans copie hébergée → pas de vignette, pas la couverture signée', () => {
+    expect(
+      buildMirrorPayload({ source: 'tiktok', channelId: 'c', post: tiktok })
+        .thumbnailUrl
+    ).toBeNull();
+  });
+
+  it('YouTube : `title` = titre, `text` = description, repli sur l’originale', () => {
+    const [post] = parseYoutubeFeed(
+      `<feed><entry><yt:videoId>DGN4olmhb2Q</yt:videoId><title>Finale</title><published>2026-09-10T18:00:00+00:00</published><media:group><media:description>Le replay complet.</media:description></media:group></entry></feed>`
+    );
+    const payload = buildMirrorPayload({
+      source: 'youtube',
+      channelId: 'c',
+      post,
+      prefix: '📺 Nouvelle vidéo —',
+    });
+    expect(payload.title).toBe('Finale');
+    expect(payload.text).toBe('Le replay complet.');
+    expect(payload.content).toBe(
+      '📺 Nouvelle vidéo — Finale\n\nhttps://www.youtube.com/watch?v=DGN4olmhb2Q'
+    );
+    expect(payload.thumbnailUrl).toBe(
+      'https://i.ytimg.com/vi/DGN4olmhb2Q/hqdefault.jpg'
+    );
+    expect(payload.account?.url).toBe('https://www.youtube.com/@owwomenscup');
+  });
+
+  it('YouTube sans description → `text` = titre', () => {
+    const [post] = parseYoutubeFeed(
+      `<feed><entry><yt:videoId>x</yt:videoId><title>Finale</title><published>2026-09-10T18:00:00+00:00</published></entry></feed>`
+    );
+    expect(
+      buildMirrorPayload({ source: 'youtube', channelId: 'c', post }).text
+    ).toBe('Finale');
+  });
+
+  it('Bluesky : pas de titre, texte tel quel', () => {
+    const [post] = parseFeed(
+      { feed: [bskyItem('3kxyz', '2026-09-10T10:00:00Z')] },
+      HANDLE
+    );
+    const payload = buildMirrorPayload({
+      source: 'bluesky',
+      channelId: 'c',
+      post,
+    });
+    expect(payload.title).toBeNull();
+    expect(payload.text).toBe('post 3kxyz');
+    expect(payload.content).toBe(`post 3kxyz\n\n${post.url}`);
+  });
+
+  it('coupe un texte trop long à MIRROR_TEXT_MAX', () => {
+    const post = {
+      ...mk('a', '2026-09-10T10:00:00Z'),
+      text: 'mot '.repeat(800),
+    };
+    const { text } = buildMirrorPayload({
+      source: 'bluesky',
+      channelId: 'c',
+      post,
+    });
+    expect(text.length).toBeLessThanOrEqual(MIRROR_TEXT_MAX);
+    expect(text.endsWith('…')).toBe(true);
+  });
+
+  it('publication sans texte → `text` vide', () => {
+    const post = { ...mk('a', '2026-09-10T10:00:00Z'), text: '' };
+    expect(
+      buildMirrorPayload({ source: 'instagram', channelId: 'c', post }).text
+    ).toBe('');
   });
 });

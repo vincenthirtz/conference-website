@@ -3124,7 +3124,73 @@ Par defaut seules les equipes avec un motif reel sont notifiees
 
 Consomme par `services/discord-bot/social-mirror.js`.
 
-**Payload** : `{ source, channelId, content, url, postedAt }`.
+**Payload** (construit par `buildMirrorPayload`, `utils/social/feedMirror.ts`) :
+
+```ts
+{
+  source: 'bluesky' | 'youtube' | 'instagram' | 'tiktok',
+  channelId: string,
+  content: string,              // ancien format, inchange (voir ci-dessous)
+  url: string,                  // permalien NETTOYE
+  postedAt: string,             // ISO 8601
+  // ajoutes le 2026-09-11 :
+  text: string,                 // texte/legende BRUT
+  title: string | null,         // YouTube : titre de la video ; sinon null
+  thumbnailUrl: string | null,  // vignette HEBERGEE chez nous (voir regle)
+  account: { handle: string; url: string } | null
+}
+```
+
+- **Retro-compatible** : superset strict de l'ancien `{ source, channelId,
+content, url, postedAt }`. `content` reste « prefixe + texte + `\n\n` + url »
+  (Bluesky sans prefixe), a une difference pres : l'URL y est nettoyee comme
+  `url`. Un bot qui ignore les nouveaux champs poste donc exactement ce qu'il
+  postait.
+- `url` : permalien sans parametres de pistage (`stripTrackingParams`) —
+  `utm_*`, `fbclid`, `gclid`, `igsh`, `igshid`, `si`, `_r`, `_t`, `_d`,
+  `is_from_webapp`, `sender_device`, `is_copy_url`, `share_app_id`,
+  `share_link_id`, `social_sharing`, etc. Les parametres utiles restent intacts
+  (`v=` d'une URL YouTube), octet pour octet, fragment compris. Motif : le
+  `share_url` TikTok arrive en `?utm_campaign=tt4d_open_api&utm_source=…`. La
+  meme URL nettoyee est stockee dans `social_feed_items.url` (mur du site).
+- `text` : le texte SANS prefixe ni URL ajoutee, `trim`, coupe a **1500
+  caracteres au plus** (points de suspension compris), sur un mot entier quand
+  c'est possible, suivi de `…`. Peut etre vide (image Instagram sans legende).
+  YouTube : la description de la video (`media:description` du flux) si elle
+  existe, sinon le titre. TikTok : la legende (`video_description`, a defaut le
+  titre), deja coupee a 700 a la lecture ; Instagram idem.
+- `title` : YouTube uniquement (titre de la video). `null` pour les autres.
+- `thumbnailUrl` — **regle de la vignette hebergee** : c'est la
+  `thumbnail_url` de la ligne `social_feed_items` du post (copie dans le bucket
+  public `teams-images/social/…`, faite par `persistFeedItems` juste avant
+  l'emission). JAMAIS l'URL de la source pour Instagram (signee) ni TikTok
+  (couverture valable 6 h) : un embed Discord garde l'URL, l'image mourrait dans
+  le salon. Si la copie n'existe pas (echec de recopie, ou post au-dela des 3
+  nouveautes ecrites par passage) : URL d'origine pour **Bluesky/YouTube**
+  seulement (stables), sinon `null`.
+- `account` : le compte de l'association sur ce reseau (`config/socials.ts`,
+  `social(source)` → `{ handle, url }`, ex. `@ow_womenscup` /
+  `https://www.tiktok.com/@ow_womenscup`). `null` si le reseau n'y est pas
+  declare. Source globale, pas par tenant — meme posture que le mur du site.
+
+Exemple (TikTok) :
+
+```json
+{
+  "source": "tiktok",
+  "channelId": "1486719313116401755",
+  "content": "🎵 TikTok — Best of POTG de la finale 🔥 #owwc\n\nhttps://www.tiktok.com/@ow_womenscup/video/7547000000000000000",
+  "url": "https://www.tiktok.com/@ow_womenscup/video/7547000000000000000",
+  "postedAt": "2026-09-10T18:30:00.000Z",
+  "text": "Best of POTG de la finale 🔥 #owwc",
+  "title": null,
+  "thumbnailUrl": "https://yhfdhpqgmazfxyyklomp.supabase.co/storage/v1/object/public/teams-images/social/….jpg",
+  "account": {
+    "handle": "@ow_womenscup",
+    "url": "https://www.tiktok.com/@ow_womenscup"
+  }
+}
+```
 
 `source` vaut `bluesky`, `youtube`, `instagram` ou `tiktok`. Emis par le cron
 `/api/cron/social-mirror` (toutes les 15 min), une passe par source et par
@@ -3136,10 +3202,17 @@ flux sert deux destinations. Le bot n'est pas concerne : cote Discord rien ne
 change, et l'absence de `bluesky_mirror_channel_id` n'empeche plus le site
 d'etre alimente.
 
-**Le bot est AGNOSTIQUE de la source** : `source` ne sert qu'aux journaux, et le
-message arrive deja mis en forme (prefixe compris : `📺 Nouvelle video —`,
-`📸 Instagram —`, `🎵 TikTok —` ; Bluesky n'en a pas, un post s'y lit tel quel).
-Ajouter un reseau ne touche donc pas au bot.
+**`content` est agnostique de la source** : le message arrive deja mis en forme
+(prefixe compris : `📺 Nouvelle video —`, `📸 Instagram —`, `🎵 TikTok —` ;
+Bluesky n'en a pas, un post s'y lit tel quel). Un bot qui rend une CARTE a
+partir des champs structures peut, lui, se servir de `source` pour la couleur ou
+l'icone ; un reseau inconnu doit alors retomber sur un rendu neutre, pas
+echouer.
+
+**Pourquoi des champs structures.** Poster `content` tel quel donnait : sur
+Bluesky, le texte deux fois (le notre + l'apercu du lien `bsky.app` qui le
+repete) ; sur TikTok, une URL polluee et un grand apercu tire du PREMIER lien de
+la legende (un site partenaire), la video n'ayant qu'une mini-carte sans image.
 
 **Deux sources se lisent sans jeton, deux non.** Bluesky (`public.api.bsky.app`)
 et YouTube (flux Atom de la chaine) sont anonymes et gratuits. Instagram et
@@ -3154,12 +3227,15 @@ il est rafraichi A LA LECTURE, pas par le cron quotidien de jetons.
   plusieurs ; un salon d'annonces ou de logs, lui, est unique par tenant.
 - `allowedMentions: { parse: [] }` : un post public recopie ne doit pas pouvoir
   pinger le serveur.
-- Le message se termine par le lien du post : Discord en tire une carte avec
-  texte et image, donc le bot ne joint pas l'image lui-meme.
-- Contenu tronque a 1900 caracteres cote bot — mais le site coupe DEJA le texte
-  a la source (700 caracteres pour une legende Instagram, qui peut monter a
-  2200). La troncature du bot se fait par la FIN, donc sur l'URL : s'en
-  remettre a elle donnerait un message sans lien et sans apercu.
+- `content` se termine par le lien du post : un bot qui le poste tel quel
+  laisse Discord en tirer l'apercu. Un bot qui rend une carte avec
+  `thumbnailUrl` ne doit PAS poster `content` en plus — l'apercu du lien
+  referait doublon avec la carte.
+- `content` tronque a 1900 caracteres cote bot — mais le site coupe DEJA le
+  texte a la source (700 caracteres pour une legende Instagram, qui peut monter
+  a 2200). La troncature du bot se fait par la FIN, donc sur l'URL : s'en
+  remettre a elle donnerait un message sans lien et sans apercu. `text` est
+  borne a 1500, sous la limite d'une description d'embed (4096).
 
 **Sens du flux.** `social.post` va de l'admin VERS les reseaux ; `social.mirror`
 en REVIENT. Les deux coexistent, et un post compose dans l'admin qui part sur

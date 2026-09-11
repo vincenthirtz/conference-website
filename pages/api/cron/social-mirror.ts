@@ -37,7 +37,7 @@ import { getIntegrationSecret } from '@/utils/integrationSecrets';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import {
-  buildMirrorMessage,
+  buildMirrorPayload,
   readChannelId,
   readCursor,
   readSetting,
@@ -73,6 +73,45 @@ type SourceReport = {
   stored?: number;
   error?: string;
 };
+
+/**
+ * Les vignettes déjà recopiées chez nous pour ces publications, par
+ * identifiant chez la source. UNE requête pour tout le lot.
+ *
+ * Une publication sans ligne — `persistFeedItems` n'en écrit que trois par
+ * passage — ou sans vignette recopiée est simplement absente de la table :
+ * l'appelant tombe alors en repli. Ne lève jamais : une carte sans image vaut
+ * mieux qu'un miroir muet.
+ */
+async function loadHostedThumbnails(
+  tenantId: string,
+  source: MirrorSource,
+  ids: string[]
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  if (!supabaseAdmin || ids.length === 0) return out;
+  const { data, error } = await supabaseAdmin
+    .from('social_feed_items')
+    .select('external_id, thumbnail_url')
+    .eq('tenant_id', tenantId)
+    .eq('source', source)
+    .in('external_id', ids);
+  if (error) {
+    logger.warn(
+      '[cron/social-mirror] %s vignettes illisibles: %s',
+      source,
+      error.message
+    );
+    return out;
+  }
+  for (const row of (data ?? []) as Array<{
+    external_id: string;
+    thumbnail_url: string | null;
+  }>) {
+    if (row.thumbnail_url) out.set(row.external_id, row.thumbnail_url);
+  }
+  return out;
+}
 
 /**
  * Émet les publications nouvelles d'une source et avance son curseur.
@@ -114,6 +153,15 @@ async function mirrorSource(
   const fresh = selectNew(posts, since);
   if (fresh.length === 0) return { mirrored: 0, checked: posts.length, stored };
 
+  // APRÈS `persistFeedItems` : la copie de la vignette vient d'être faite, et
+  // c'est elle — pas l'URL de la source, signée ou périssable — que la carte
+  // Discord doit afficher.
+  const hosted = await loadHostedThumbnails(
+    tenantId,
+    source,
+    fresh.map((p) => p.id)
+  );
+
   let mirrored = 0;
   let lastAt: string | null = null;
 
@@ -121,13 +169,13 @@ async function mirrorSource(
     try {
       await emitBotEvent(
         'social.mirror',
-        {
+        buildMirrorPayload({
           source,
           channelId,
-          content: buildMirrorMessage(post, prefix),
-          url: post.url,
-          postedAt: post.publishedAt,
-        },
+          post,
+          prefix,
+          hostedThumbnailUrl: hosted.get(post.id) ?? null,
+        }),
         tenantId
       );
       mirrored += 1;

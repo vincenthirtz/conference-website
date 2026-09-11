@@ -74,11 +74,18 @@ export function parseYoutubeFeed(xml: string): MirrorPost[] {
     // l'an dernier parce que quelqu'un a corrigé une faute.
     const published = tag(entry, 'published');
     if (!videoId || !published) continue;
+    // Sous `<media:group>`. Absente ou vide sur bien des vidéos : le champ
+    // `text` de l'event retombe alors sur le titre.
+    const description = tag(entry, 'media:description');
 
     out.push({
       id: videoId,
       url: `https://www.youtube.com/watch?v=${videoId}`,
+      // Le TITRE, pas la description : c'est ce que le salon (`content`) et le
+      // mur du site affichent. La description ne sert qu'à la carte Discord.
       text: title ?? '',
+      title: title || null,
+      description: description || null,
       publishedAt: published,
       // Deduite de l'identifiant, pas lue dans le flux : YouTube sert cette
       // URL pour toute video publique, sans signature ni expiration. Le flux

@@ -31,7 +31,12 @@
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { rehostImage } from './rehostImage';
-import { CURSOR_KEYS, type MirrorPost, type MirrorSource } from './feedMirror';
+import {
+  CURSOR_KEYS,
+  stripTrackingParams,
+  type MirrorPost,
+  type MirrorSource,
+} from './feedMirror';
 
 /** Sous-dossier du bucket public, à côté de `news/`. */
 const IMAGE_PREFIX = 'social';
@@ -112,7 +117,9 @@ export async function persistFeedItems(
         tenant_id: tenantId,
         source,
         external_id: post.id,
-        url: post.url,
+        // Sans `utm_*` & co : le `share_url` TikTok arrive pollué, et le mur
+        // l'afficherait au survol et le copierait au partage.
+        url: stripTrackingParams(post.url),
         text: post.text ?? '',
         thumbnail_url: await copyThumbnail(post.thumbnailUrl),
         published_at: post.publishedAt,

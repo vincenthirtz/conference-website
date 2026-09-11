@@ -22,6 +22,7 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+import { social } from '@/config/socials';
 
 /** Salon cible, commun aux sources. Vider la valeur désactive tous les miroirs. */
 export const MIRROR_CHANNEL_KEY = 'bluesky_mirror_channel_id';
@@ -56,12 +57,24 @@ export type MirrorPost = {
   text: string;
   publishedAt: string;
   /**
+   * Titre distinct du texte — YouTube seulement, où `text` porte déjà le titre
+   * (c'est lui que le salon et le mur affichent depuis toujours). Absent
+   * ailleurs : un post Bluesky ou une légende n'ont pas de titre.
+   */
+  title?: string | null;
+  /**
+   * Corps long quand la source en a un à part du titre — la description d'une
+   * vidéo YouTube. Sert au champ `text` de l'event, pas au message ni au mur.
+   */
+  description?: string | null;
+  /**
    * Vignette CHEZ LA SOURCE, telle qu'elle nous est servie — donc souvent
    * périssable : la couverture d'une vidéo TikTok expire au bout de 6 h, une
    * URL de média Instagram est signée. Elle n'est PAS destinée à être stockée
    * telle quelle ; `./socialFeed.ts` en fait une copie chez nous avant de
-   * l'écrire en base. Le miroir Discord, lui, ne s'en sert pas du tout : il
-   * laisse l'aperçu du lien faire le travail.
+   * l'écrire en base. Le miroir Discord envoie cette COPIE ; l'originale ne lui
+   * sert qu'en repli, et seulement là où elle est stable (cf.
+   * `pickMirrorThumbnail`).
    */
   thumbnailUrl?: string | null;
 };
@@ -105,6 +118,217 @@ export function buildMirrorMessage(post: MirrorPost, prefix = ''): string {
   const text = post.text.trim();
   const head = prefix ? `${prefix} ${text}`.trim() : text;
   return head ? `${head}\n\n${post.url}` : post.url;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Nettoyage des liens                                                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Paramètres de pistage connus, en minuscules. `utm_*` est traité à part,
+ * par préfixe.
+ *
+ * TikTok est le cas qui a motivé cette liste : son `share_url` arrive avec
+ * `?utm_campaign=tt4d_open_api&utm_source=<client>`, que Discord affichait tel
+ * quel et que le mur du site stockait. Les autres sont les équivalents chez
+ * Meta (`fbclid`, `igsh`), YouTube (`si`) et les liens de partage TikTok
+ * copiés depuis l'app (`_r`, `_t`, `is_from_webapp`…).
+ *
+ * UNE LISTE, PAS UNE LISTE BLANCHE. Garder seulement « les paramètres utiles »
+ * supposerait de les connaître pour chaque réseau ; oublier `v=` d'une URL
+ * YouTube donnerait un lien vers la page d'accueil. Retirer ce qu'on sait être
+ * du pistage ne peut rien casser.
+ */
+const TRACKING_PARAMS = new Set([
+  'fbclid',
+  'gclid',
+  'dclid',
+  'msclkid',
+  'mc_cid',
+  'mc_eid',
+  'igsh',
+  'igshid',
+  'si',
+  '_r',
+  '_t',
+  '_d',
+  'is_from_webapp',
+  'sender_device',
+  'is_copy_url',
+  'share_app_id',
+  'share_link_id',
+  'social_sharing',
+]);
+
+function isTrackingParam(rawKey: string): boolean {
+  let key: string;
+  try {
+    key = decodeURIComponent(rawKey.replace(/\+/g, ' ')).toLowerCase();
+  } catch {
+    // Clé mal encodée : on ne sait pas ce que c'est, donc on n'y touche pas.
+    return false;
+  }
+  return key.startsWith('utm_') || TRACKING_PARAMS.has(key);
+}
+
+/**
+ * Retire d'une URL les paramètres de pistage, sans toucher au reste.
+ *
+ * TRAVAIL SUR LA CHAÎNE, PAS SUR `URLSearchParams`. Reconstruire la query avec
+ * `URLSearchParams#toString()` réencoderait les paramètres conservés (espaces
+ * en `+`, caractères réservés) : le lien changerait de forme sans raison, et
+ * une URL déjà propre ne ressortirait pas identique. Ici, les paires gardées le
+ * sont octet pour octet, et le fragment aussi.
+ *
+ * Une URL illisible, relative, ou sans query est rendue telle quelle.
+ */
+export function stripTrackingParams(url: string): string {
+  try {
+    new URL(url);
+  } catch {
+    return url;
+  }
+  const hashAt = url.indexOf('#');
+  const beforeHash = hashAt === -1 ? url : url.slice(0, hashAt);
+  const hash = hashAt === -1 ? '' : url.slice(hashAt);
+  const queryAt = beforeHash.indexOf('?');
+  if (queryAt === -1) return url;
+
+  const base = beforeHash.slice(0, queryAt);
+  const pairs = beforeHash.slice(queryAt + 1).split('&');
+  const kept = pairs.filter((pair) => {
+    if (!pair) return false;
+    const key = pair.split('=', 1)[0];
+    return !isTrackingParam(key);
+  });
+  if (kept.length === pairs.length) return url;
+  return `${base}${kept.length ? `?${kept.join('&')}` : ''}${hash}`;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Payload structuré de `social.mirror`                                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Longueur maximale du champ `text` de l'event.
+ *
+ * La description d'un embed Discord monte à 4 096 caractères, mais une carte
+ * de miroir se lit d'un coup d'œil : au-delà, c'est un article, et le lien est
+ * là pour ça. Seul YouTube (descriptions jusqu'à 5 000) atteint la borne ;
+ * Bluesky plafonne à 300, et Instagram/TikTok sont déjà coupés à 700 à la
+ * lecture.
+ */
+export const MIRROR_TEXT_MAX = 1500;
+
+/**
+ * Coupe un texte à `max` caractères AU PLUS, points de suspension compris, sur
+ * une frontière de mot quand elle est proche.
+ *
+ * Même règle que `truncateCaption` d'Instagram (on ne recule jusqu'à l'espace
+ * que s'il est dans les 20 % de la fin, sinon on perdrait un paragraphe), mais
+ * la borne est stricte : c'est un contrat avec le bot, pas un ordre de
+ * grandeur. Un emoji coupé en deux (paire de substitution) est retiré plutôt
+ * qu'envoyé à moitié — Discord l'afficherait en losange.
+ */
+export function truncateText(input: string, max = MIRROR_TEXT_MAX): string {
+  const text = input.trim();
+  if (text.length <= max) return text;
+  let cut = text.slice(0, max - 1);
+  const last = cut.charCodeAt(cut.length - 1);
+  if (last >= 0xd800 && last <= 0xdbff) cut = cut.slice(0, -1);
+  const lastSpace = cut.lastIndexOf(' ');
+  const head = lastSpace > max * 0.8 ? cut.slice(0, lastSpace) : cut;
+  return `${head.trimEnd()}…`;
+}
+
+/**
+ * Sources dont la vignette d'ORIGINE est stable : acceptable en repli quand la
+ * copie chez nous n'existe pas encore. Une vignette YouTube se déduit de
+ * l'identifiant et n'expire pas ; un thumb Bluesky est servi par leur CDN sans
+ * signature. Instagram (URL signée) et TikTok (couverture valable six heures)
+ * n'y figurent PAS : un embed Discord garde l'URL, et l'image mourrait dans le
+ * salon quelques heures après le post.
+ */
+const STABLE_THUMBNAIL_SOURCES: ReadonlySet<MirrorSource> = new Set([
+  'bluesky',
+  'youtube',
+]);
+
+/**
+ * La vignette à mettre dans l'event : la copie hébergée chez nous d'abord,
+ * sinon l'originale quand elle est stable, sinon rien.
+ */
+export function pickMirrorThumbnail(
+  source: MirrorSource,
+  hosted: string | null | undefined,
+  original: string | null | undefined
+): string | null {
+  if (hosted) return hosted;
+  if (original && STABLE_THUMBNAIL_SOURCES.has(source)) return original;
+  return null;
+}
+
+/** Le compte de l'association sur ce réseau, tel que le site l'affiche. */
+export function mirrorAccount(
+  source: MirrorSource
+): { handle: string; url: string } | null {
+  try {
+    const account = social(source);
+    return { handle: account.handle, url: account.href };
+  } catch {
+    // Source sans compte déclaré dans `config/socials.ts` : la carte s'en
+    // passe, ce n'est pas une raison de ne pas miroiter.
+    return null;
+  }
+}
+
+export type SocialMirrorPayload = {
+  source: MirrorSource;
+  channelId: string;
+  /** Ancien format (préfixe + texte + lien), pour un bot pas encore à jour. */
+  content: string;
+  url: string;
+  postedAt: string;
+  text: string;
+  title: string | null;
+  thumbnailUrl: string | null;
+  account: { handle: string; url: string } | null;
+};
+
+/**
+ * Le `data` de l'event `social.mirror`. Contrat : docs/BOT_API_CONTRACT.md.
+ *
+ * `content` reste l'ancien message, à l'identique sauf le lien nettoyé : un bot
+ * qui ne connaît pas encore les champs structurés continue de poster ce qu'il
+ * postait. `text` est le texte BRUT — sans préfixe, sans lien — pour qu'un bot
+ * qui rend une carte ne répète pas l'URL déjà portée par le titre de l'embed.
+ */
+export function buildMirrorPayload(input: {
+  source: MirrorSource;
+  channelId: string;
+  post: MirrorPost;
+  prefix?: string;
+  /** `thumbnail_url` de la ligne `social_feed_items`, si elle existe. */
+  hostedThumbnailUrl?: string | null;
+}): SocialMirrorPayload {
+  const { source, channelId, post, prefix = '' } = input;
+  const url = stripTrackingParams(post.url);
+  const title = post.title?.trim() || null;
+  return {
+    source,
+    channelId,
+    content: buildMirrorMessage({ ...post, url }, prefix),
+    url,
+    postedAt: post.publishedAt,
+    text: truncateText(post.description?.trim() || post.text || ''),
+    title,
+    thumbnailUrl: pickMirrorThumbnail(
+      source,
+      input.hostedThumbnailUrl,
+      post.thumbnailUrl
+    ),
+    account: mirrorAccount(source),
+  };
 }
 
 /* -------------------------------------------------------------------------- */
