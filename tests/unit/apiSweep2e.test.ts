@@ -564,6 +564,10 @@ describe('/api/contact (public)', () => {
       res
     );
     expect(res.statusCode).toBe(400);
+    // Message métier, pas le texte technique anglais de zod.
+    expect(res.body).toEqual({
+      error: 'Le message doit faire au moins 10 caractères.',
+    });
   });
 
   it('201 on valid body', async () => {

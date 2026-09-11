@@ -106,10 +106,7 @@ function ContactPage() {
               key={channel.title}
               className="card-brand rounded-2xl bg-white/[0.05] p-5 shadow-xl shadow-black/20"
             >
-              <p className="text-xs uppercase tracking-[0.18em] text-purple-200">
-                {channel.title}
-              </p>
-              <h2 className="mt-2 text-xl font-semibold text-white">
+              <h2 className="text-xl font-semibold text-white">
                 {channel.title}
               </h2>
               <p className="mt-2 text-sm text-gray-200">{channel.desc}</p>

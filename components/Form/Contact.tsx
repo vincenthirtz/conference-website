@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/Toast';
-import { useT } from '@/lib/i18n/useT';
+import { format, useT } from '@/lib/i18n/useT';
 import nsContactForm from '@/lib/i18n/locales/fr/contactForm';
+import {
+  CONTACT_MESSAGE_MAX_LENGTH,
+  CONTACT_MESSAGE_MIN_LENGTH,
+} from '@/utils/contactLimits';
 
 type Status = 'idle' | 'loading' | 'success' | 'error';
 
@@ -25,6 +29,7 @@ export default function Contact({ className = '' }: { className?: string }) {
   const liveRef = useRef<HTMLSpanElement | null>(null);
   const { addToast } = useToast();
   const idempotencyKeyRef = useRef<string>(genIdempotencyKey());
+  const [messageLength, setMessageLength] = useState(0);
 
   // --- Confetti (SSR-safe) ---
   const burstConfetti = useCallback(async () => {
@@ -68,6 +73,23 @@ export default function Contact({ className = '' }: { className?: string }) {
       return;
     }
 
+    // Même règle que le schéma serveur (utils/validation.ts), qui mesure le
+    // message APRÈS trim : le minLength natif compte les espaces et laisse
+    // passer « x » précédé de neuf blancs.
+    const trimmedMessage = ((data.get('message') as string) ?? '').trim();
+    const lengthError =
+      trimmedMessage.length < CONTACT_MESSAGE_MIN_LENGTH
+        ? format(t.errorMessageTooShort, { min: CONTACT_MESSAGE_MIN_LENGTH })
+        : trimmedMessage.length > CONTACT_MESSAGE_MAX_LENGTH
+          ? format(t.errorMessageTooLong, { max: CONTACT_MESSAGE_MAX_LENGTH })
+          : null;
+    if (lengthError) {
+      setStatus('error');
+      setError(lengthError);
+      addToast(lengthError, 'error');
+      return;
+    }
+
     setStatus('loading');
     try {
       const payload = {
@@ -92,6 +114,7 @@ export default function Contact({ className = '' }: { className?: string }) {
         idempotencyKeyRef.current = genIdempotencyKey();
         setStatus('success');
         form.reset();
+        setMessageLength(0);
         liveRef.current?.focus();
         addToast(t.sent, 'success');
       } else {
@@ -202,10 +225,25 @@ export default function Contact({ className = '' }: { className?: string }) {
               id="message"
               name="message"
               required
+              minLength={CONTACT_MESSAGE_MIN_LENGTH}
+              maxLength={CONTACT_MESSAGE_MAX_LENGTH}
+              aria-describedby="message-hint"
+              onChange={(e) => setMessageLength(e.currentTarget.value.length)}
               rows={6}
               className="w-full rounded-xl bg-[#0b1020] border border-white/10 px-4 py-3 text-white outline-none focus:ring-2 focus:ring-blue-400/70 focus:border-transparent"
               placeholder={t.messagePlaceholder}
             />
+            <div className="flex justify-between gap-4 text-xs text-gray-400">
+              <span id="message-hint">
+                {format(t.messageHint, { min: CONTACT_MESSAGE_MIN_LENGTH })}
+              </span>
+              <span aria-hidden="true" className="tabular-nums">
+                {format(t.messageCounter, {
+                  count: messageLength,
+                  max: CONTACT_MESSAGE_MAX_LENGTH,
+                })}
+              </span>
+            </div>
           </div>
 
           <label className="flex items-start gap-3 text-gray-300 text-sm">

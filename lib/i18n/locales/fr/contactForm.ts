@@ -25,6 +25,10 @@ export default ns('contactForm', {
   subjectOther: 'Autre question',
   messageLabel: 'Message',
   messagePlaceholder: 'Ton message…',
+  messageHint: '{min} caractères minimum',
+  messageCounter: '{count} / {max}',
+  errorMessageTooShort: 'Ton message doit faire au moins {min} caractères.',
+  errorMessageTooLong: 'Ton message ne doit pas dépasser {max} caractères.',
   consent:
     "J'accepte que mes informations soient utilisées pour traiter ma demande. (Pas de revente.)",
   submitting: 'Envoi…',

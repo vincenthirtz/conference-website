@@ -181,6 +181,78 @@ describe('captainRequestSchema', () => {
   });
 });
 
+// Régression : avec zod 4, `.describe()` n'est pas un message d'erreur —
+// formatZodError renvoyait le texte technique anglais de zod, affiché tel quel
+// par le formulaire de contact. Chaque cas vérifie le message MÉTIER exact.
+describe('messages métier des schémas publics', () => {
+  const validContact = {
+    name: 'Jean',
+    email: 'jean@gmail.com',
+    subject: 'Question',
+    message: 'Bonjour, je voudrais savoir...',
+  };
+
+  const firstMessage = (
+    schema: typeof contactSchema | typeof partnershipRequestSchema,
+    input: unknown
+  ) => {
+    const result = schema.safeParse(input);
+    expect(result.success).toBe(false);
+    return result.success ? '' : formatZodError(result.error);
+  };
+
+  it.each([
+    [
+      'message trop court',
+      { message: 'Court' },
+      'Le message doit faire au moins 10 caractères.',
+    ],
+    [
+      'message court une fois trimé',
+      { message: '         x' },
+      'Le message doit faire au moins 10 caractères.',
+    ],
+    ['message vide', { message: '   ' }, 'Le message est obligatoire.'],
+    [
+      'message trop long',
+      { message: 'a'.repeat(5001) },
+      'Le message ne doit pas dépasser 5000 caractères.',
+    ],
+    ['message absent', { message: undefined }, 'Le message est obligatoire.'],
+    ['nom vide', { name: '' }, 'Le nom est obligatoire.'],
+    ['nom absent', { name: undefined }, 'Le nom est obligatoire.'],
+    ['sujet vide', { subject: ' ' }, 'Le sujet est obligatoire.'],
+    ['email invalide', { email: 'not-an-email' }, 'Email invalide.'],
+  ])('contact — %s', (_label, patch, expected) => {
+    expect(firstMessage(contactSchema, { ...validContact, ...patch })).toBe(
+      expected
+    );
+  });
+
+  it('contact — ne renvoie jamais le texte technique de zod', () => {
+    const msg = firstMessage(contactSchema, { ...validContact, message: 'x' });
+    expect(msg).not.toMatch(/Too small|Too big|Invalid input|expected/i);
+  });
+
+  it.each([
+    ['companyName', { companyName: '' }, "Le nom de l'entreprise est requis."],
+    ['contactName', { contactName: '' }, 'Le nom du contact est requis.'],
+    ['email', { email: 'bad' }, "L'email est invalide."],
+    ['message', { message: '' }, 'Le message est requis.'],
+  ])('partenariat — %s', (_label, patch, expected) => {
+    expect(
+      firstMessage(partnershipRequestSchema, {
+        companyName: 'Acme',
+        contactName: 'Jane',
+        email: 'jane@acme.com',
+        category: 'major',
+        message: 'Intéressés par un sponsoring',
+        ...patch,
+      })
+    ).toBe(expected);
+  });
+});
+
 describe('formatZodError', () => {
   it('returns the first issue message', () => {
     const result = contactSchema.safeParse({

@@ -26,6 +26,10 @@ export default {
   subjectOther: 'Other question',
   messageLabel: 'Message',
   messagePlaceholder: 'Your message…',
+  messageHint: '{min} characters minimum',
+  messageCounter: '{count} / {max}',
+  errorMessageTooShort: 'Your message must be at least {min} characters long.',
+  errorMessageTooLong: 'Your message must not exceed {max} characters.',
   consent:
     'I agree that my information may be used to process my request. (No reselling.)',
   submitting: 'Sending…',
