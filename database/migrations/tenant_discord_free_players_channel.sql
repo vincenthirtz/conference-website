@@ -3,20 +3,26 @@
 -- Date: 2026-09-12
 --
 -- WHY:
---   Le pont existait déjà des deux côtés, sauf au milieu. Le site émet
---   `free_player.registered` (pages/api/public/free-players/index.ts) et le bot
---   sait le recevoir : `free-player-events.js` construit l'embed, mentionne le
---   rôle manager et renvoie vers l'espace équipe. Mais il résout son salon avec
---   `getChannelId(guildId, 'free_players_channel_id', 'FREE_PLAYERS_CHANNEL_ID')`,
---   et cette clé n'existait NULLE PART : pas de colonne ici, `extras` vide sur
---   les deux guilds de production, variable d'environnement absente. Résultat :
---   `getChannelId` renvoyait NULL, le handler sortait immédiatement — sans
---   erreur, sans log. Onze fiches en base, dont cinq créées depuis le site,
---   n'ont jamais été annoncées à personne.
+--   RECTIFICATION (2026-09-12, même jour) : la première version de cet en-tête
+--   affirmait que la clé n'existait NULLE PART et que l'annonce ne partait
+--   jamais. C'était FAUX, et la migration a été appliquée sur ce malentendu.
+--   Le repli `Environment=FREE_PLAYERS_CHANNEL_ID=…` est posé dans
+--   `quadlet/discord-bot.container` (docker-box) depuis le 2026-08-23, et le
+--   bot annonce bien : messages « 🔎 Une joueuse cherche une équipe » les
+--   28, 29, 30 août et 7 septembre, log `free-player-events: annonce publiée`
+--   à l'appui.
 --
---   Une inscription qui n'est annoncée nulle part n'est pas une rencontre :
---   c'est une ligne qui attend qu'une capitaine pense à aller consulter une
---   liste. L'annonce est tout l'intérêt de la fonctionnalité.
+--   CE QUI JUSTIFIE QUAND MÊME LA COLONNE : `envFallbackAllowed()`
+--   (services/discord-bot/tenant-config.js) n'autorise le repli par variable
+--   d'environnement que pour le serveur « maison ». Pour tout autre serveur
+--   rattaché — il y en a un second en production — une clé absente de la base
+--   vaut « fonction désactivée ». Sans cette colonne, l'annonce des joueuses
+--   libres était donc structurellement réservée à un seul serveur, et
+--   inconfigurable depuis l'admin.
+--
+--   Leçon de méthode, à ne pas répéter : la configuration non sensible du bot
+--   vit dans l'unité quadlet, PAS dans `services/discord-bot/.env`. Chercher
+--   dans le seul `.env` fait conclure à tort à une variable manquante.
 --
 -- WHAT:
 --   ADD COLUMN free_players_channel_id text (nullable — snowflake du salon).
