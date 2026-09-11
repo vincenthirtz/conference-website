@@ -218,19 +218,20 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   };
 };
 
+// Heure de Paris, pas celle du serveur : la page est rendue en SSR (UTC).
 function formatDate(d: string | null, locale: string, tbd: string) {
-  if (!d) return tbd;
-  try {
-    return new Date(d).toLocaleString(locale, {
+  return formatSiteDate(
+    d,
+    locale,
+    {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    });
-  } catch {
-    return '';
-  }
+    },
+    tbd
+  );
 }
 
 function ScrimDetailPage({ scrim, matches }: Props) {
@@ -339,12 +340,12 @@ function ScrimDetailPage({ scrim, matches }: Props) {
                       </span>
                     ) : (
                       <span className="text-neutral-400 text-xs">
-                        {m.scheduled_at
-                          ? new Date(m.scheduled_at).toLocaleTimeString(
-                              locale,
-                              { hour: '2-digit', minute: '2-digit' }
-                            )
-                          : '—'}
+                        {formatSiteDate(
+                          m.scheduled_at,
+                          locale,
+                          { hour: '2-digit', minute: '2-digit' },
+                          '—'
+                        )}
                       </span>
                     )}
                     <span className="px-2 py-0.5 rounded-md text-xs bg-neutral-700">

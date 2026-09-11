@@ -10,6 +10,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { maskBattleTag } from '@/utils/battleTag';
+import { formatSiteDate } from '@/utils/timezone';
 import { splitTeamMembers, isNonPlayingTeamRole } from '@/utils/teams/roleKind';
 import {
   resolveMissingDisplayNames,
@@ -1151,16 +1152,16 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
  * Utils (cohérents avec les pages tournoi)
  * ────────────────────────────────────────────*/
 
+// Heure de Paris, pas celle du serveur : la page est rendue en ISR (UTC).
 function formatMatchDate(iso: string | null, locale: string): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return null;
-  return d.toLocaleString(locale, {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return (
+    formatSiteDate(iso, locale, {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    }) || null
+  );
 }
 
 function getMatchStatusLabel(status: MatchStatus, t: MatchDict): string {

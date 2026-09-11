@@ -14,6 +14,7 @@ import Paragraph from '@/components/Typography/paragraph';
 import { getGame } from '@/config/games';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import { formatSiteDate } from '@/utils/timezone';
 import nsTournamentsList from '@/lib/i18n/locales/fr/tournamentsList';
 
 type TournamentsDict = typeof nsTournamentsList.fr;
@@ -499,7 +500,14 @@ function TournamentCard({ tournament, status }: TournamentCardProps) {
   );
 }
 
-function formatTournamentDates(
+/** Année d'un instant à Paris — pas celle du fuseau de la machine. */
+function siteYear(d: Date): number {
+  return Number(formatSiteDate(d, 'en', { year: 'numeric' }));
+}
+
+// Dates en heure de Paris (formatSiteDate) : rendue sur un serveur UTC, une
+// date posée à minuit heure de Paris s'y affichait la veille.
+export function formatTournamentDates(
   start: string | null | undefined,
   end: string | null | undefined,
   locale: string,
@@ -518,30 +526,30 @@ function formatTournamentDates(
     year: 'numeric',
   };
 
-  const currentYear = new Date().getFullYear();
+  const currentYear = siteYear(new Date());
 
   if (start && end) {
     const s = new Date(start);
     const e = new Date(end);
 
-    const useYear = s.getFullYear() !== currentYear;
+    const useYear = siteYear(s) !== currentYear;
     const fmt = useYear ? optsWithYear : opts;
 
     if (s.getTime() === e.getTime()) {
-      return s.toLocaleDateString(locale, fmt);
+      return formatSiteDate(s, locale, fmt);
     }
-    return `${s.toLocaleDateString(locale, opts)} - ${e.toLocaleDateString(locale, fmt)}`;
+    return `${formatSiteDate(s, locale, opts)} - ${formatSiteDate(e, locale, fmt)}`;
   }
 
   if (start) {
     const s = new Date(start);
-    const useYear = s.getFullYear() !== currentYear;
-    return s.toLocaleDateString(locale, useYear ? optsWithYear : opts);
+    const useYear = siteYear(s) !== currentYear;
+    return formatSiteDate(s, locale, useYear ? optsWithYear : opts);
   }
 
   const e = new Date(end!);
-  const useYear = e.getFullYear() !== currentYear;
+  const useYear = siteYear(e) !== currentYear;
   return format(untilTemplate, {
-    date: e.toLocaleDateString(locale, useYear ? optsWithYear : opts),
+    date: formatSiteDate(e, locale, useYear ? optsWithYear : opts),
   });
 }

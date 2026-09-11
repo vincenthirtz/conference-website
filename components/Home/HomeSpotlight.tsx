@@ -8,7 +8,12 @@
 
 import type { JSX } from 'react';
 import Link from 'next/link';
-import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
+import {
+  type UpcomingTournament,
+  // Même formateur que la carte tournoi : il était recopié ici, avec le même
+  // bug de fuseau. Une seule copie, corrigée une fois.
+  formatTournamentRange as formatRange,
+} from '@/components/Home/HomeUpcomingTournament';
 import { type TwitchLive } from '@/components/Home/useTwitchLive';
 import HomeTeamsStrip from '@/components/Home/HomeTeamsStrip';
 import { type HomeTeam } from '@/utils/home/loadHomeData';
@@ -28,33 +33,6 @@ type HomeSpotlightProps = {
    */
   teams: HomeTeam[];
 };
-
-function formatRange(start: string | null, end: string | null, locale: string) {
-  if (!start) return null;
-  const startDate = new Date(start);
-  const endDate = end ? new Date(end) : null;
-  const fmtFull = new Intl.DateTimeFormat(locale, {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'Europe/Paris',
-  });
-  if (!endDate || endDate.getTime() === startDate.getTime()) {
-    return fmtFull.format(startDate);
-  }
-  const sameMonth =
-    startDate.getMonth() === endDate.getMonth() &&
-    startDate.getFullYear() === endDate.getFullYear();
-  if (sameMonth) {
-    return `${startDate.getDate()} – ${fmtFull.format(endDate)}`;
-  }
-  const fmtShort = new Intl.DateTimeFormat(locale, {
-    day: 'numeric',
-    month: 'long',
-    timeZone: 'Europe/Paris',
-  });
-  return `${fmtShort.format(startDate)} → ${fmtFull.format(endDate)}`;
-}
 
 function formatPrize(cents: number, locale: string) {
   return new Intl.NumberFormat(locale, {

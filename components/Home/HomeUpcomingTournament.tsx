@@ -3,6 +3,11 @@ import type { JSX } from 'react';
 import Paragraph from '@/components/Typography/paragraph';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import {
+  formatSiteDate,
+  getWallClockParts,
+  SITE_TIMEZONE,
+} from '@/utils/timezone';
 import nsHomeEvents from '@/lib/i18n/locales/fr/homeEvents';
 
 export type UpcomingTournament = {
@@ -22,31 +27,39 @@ type TournamentCardProps = {
   tournament: UpcomingTournament;
 };
 
-function formatRange(start: string | null, end: string | null, locale: string) {
+/**
+ * Période d'un tournoi : « 18 – 20 septembre 2026 » dans un même mois,
+ * « 30 septembre → 4 octobre 2026 » sinon. Partagé avec HomeSpotlight.
+ *
+ * Tout se lit en heure de Paris, y compris le test « même mois » et le jour de
+ * début : `getDate()` / `getMonth()` dépendaient du fuseau du serveur (UTC sur
+ * Netlify) alors que la date de fin, elle, était formatée à Paris — un début
+ * posé à minuit heure de Paris affichait la veille.
+ */
+export function formatTournamentRange(
+  start: string | null,
+  end: string | null,
+  locale: string
+): string | null {
   if (!start) return null;
   const startDate = new Date(start);
+  if (isNaN(startDate.getTime())) return null;
   const endDate = end ? new Date(end) : null;
-  const fmtFull = new Intl.DateTimeFormat(locale, {
+  const full: Intl.DateTimeFormatOptions = {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-    timeZone: 'Europe/Paris',
-  });
-  if (!endDate || endDate.getTime() === startDate.getTime()) {
-    return fmtFull.format(startDate);
+  };
+  if (!endDate || isNaN(endDate.getTime())) {
+    return formatSiteDate(startDate, locale, full);
   }
-  const sameMonth =
-    startDate.getMonth() === endDate.getMonth() &&
-    startDate.getFullYear() === endDate.getFullYear();
-  if (sameMonth) {
-    return `${startDate.getDate()} – ${fmtFull.format(endDate)}`;
+  const s = getWallClockParts(startDate, SITE_TIMEZONE).date; // YYYY-MM-DD
+  const e = getWallClockParts(endDate, SITE_TIMEZONE).date;
+  if (s === e) return formatSiteDate(startDate, locale, full);
+  if (s.slice(0, 7) === e.slice(0, 7)) {
+    return `${formatSiteDate(startDate, locale, { day: 'numeric' })} – ${formatSiteDate(endDate, locale, full)}`;
   }
-  const fmtShort = new Intl.DateTimeFormat(locale, {
-    day: 'numeric',
-    month: 'long',
-    timeZone: 'Europe/Paris',
-  });
-  return `${fmtShort.format(startDate)} → ${fmtFull.format(endDate)}`;
+  return `${formatSiteDate(startDate, locale, { day: 'numeric', month: 'long' })} → ${formatSiteDate(endDate, locale, full)}`;
 }
 
 export default function TournamentCard({
@@ -55,7 +68,11 @@ export default function TournamentCard({
   const t = useT(nsHomeEvents);
   const locale = useLocale();
   const isRunning = tournament.status === 'running';
-  const range = formatRange(tournament.startDate, tournament.endDate, locale);
+  const range = formatTournamentRange(
+    tournament.startDate,
+    tournament.endDate,
+    locale
+  );
   const slotsLeft =
     tournament.maxTeams != null
       ? Math.max(0, tournament.maxTeams - tournament.teamCount)

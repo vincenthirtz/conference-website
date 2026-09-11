@@ -11,6 +11,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { loadLadder, type LadderRow } from '@/utils/scrims/ladder';
+import { formatSiteDate } from '@/utils/timezone';
 import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { logger } from '../utils/logger';
@@ -80,19 +81,20 @@ export const getStaticProps: GetStaticProps<ScrimsPageProps> = async () => {
   };
 };
 
+// Heure de Paris, pas celle du serveur : la page est rendue en ISR (UTC).
 function formatDate(d: string | null, locale: string, tbd: string) {
-  if (!d) return tbd;
-  try {
-    return new Date(d).toLocaleString(locale, {
+  return formatSiteDate(
+    d,
+    locale,
+    {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    });
-  } catch {
-    return '';
-  }
+    },
+    tbd
+  );
 }
 
 function statusLabel(status: string, t: ScrimsDict) {
