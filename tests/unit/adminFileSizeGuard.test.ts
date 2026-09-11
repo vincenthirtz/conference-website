@@ -52,7 +52,12 @@ const BASELINE: Record<string, number> = {
   // `utils/discord/discordConfigFields.ts` — non pour gagner des lignes, mais
   // pour que le test de whitelist puisse les confronter au handler PUT sans
   // charger un écran React.
-  'pages/admin/tenants/[id]/discord-config/[guildId].tsx': 692,
+  // 693 : +1 ligne pour le salon des équipes qui recrutent
+  // (team_openings_channel_id). Un salon de plus coûte une ligne dans l'objet
+  // de repli de la page — la LISTE des champs, elle, vit déjà dans
+  // `utils/discord/discordConfigFields.ts`. Le prochain qui ajoute un salon
+  // paiera pareil : c'est le prix admis, pas une dérive.
+  'pages/admin/tenants/[id]/discord-config/[guildId].tsx': 693,
   'pages/admin/stages/[stageId].tsx': 950,
   'pages/admin/users/new.tsx': 930,
   'pages/admin/demandes/[id].tsx': 921,

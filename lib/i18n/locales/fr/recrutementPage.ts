@@ -114,4 +114,25 @@ export default ns('recrutementPage', {
   discordDesc:
     'Les annonces y sont relayées, et les joueuses libres s’y signalent avec le rôle « Recherche une équipe ». Publier ici et poster là-bas ne fait pas doublon.',
   discordCta: 'Rejoindre le Discord',
+
+  // --- Retrait d'annonce (/recrutement/retrait) ----------------------------
+  // Cible du lien envoyé par email à la publication. Le retrait demande un
+  // clic : les clients mail pré-visitent les liens, un GET destructeur ferait
+  // disparaître des annonces tout seul.
+  removeLoading: 'Vérification du lien…',
+  removeTitle: 'Retirer mon annonce',
+  removeFor: 'Annonce de {team}',
+  removeIntro:
+    'Tu es sur le point de retirer ton annonce. Les joueuses ne la verront plus et ne pourront plus te contacter.',
+  removeConfirm: 'Oui, retirer mon annonce',
+  removeWorking: 'Retrait en cours…',
+  removeDoneTitle: 'C’est fait',
+  removeDoneBody:
+    'Ton annonce a été retirée. Tu peux en republier une quand tu veux, ça ne prend que deux minutes.',
+  removeBackCta: 'Retour à la page',
+  removeInvalidTitle: 'Ce lien n’est plus valide',
+  removeInvalidBody:
+    'Ton annonce a peut-être déjà été retirée, ou elle a expiré d’elle-même au bout de 60 jours. Si tu penses qu’il s’agit d’une erreur, écris au staff.',
+  removeContactStaff: 'Contacter le staff',
+  removeError: 'Le retrait a échoué. Réessaie dans un instant.',
 });

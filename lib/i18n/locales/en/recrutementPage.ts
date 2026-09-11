@@ -100,4 +100,20 @@ export default {
   discordDesc:
     'Openings are relayed there, and free players show up with the “Looking for a team” role. Posting here and there is not a duplicate.',
   discordCta: 'Join the Discord',
+  removeLoading: 'Checking the link…',
+  removeTitle: 'Remove my listing',
+  removeFor: 'Listing from {team}',
+  removeIntro:
+    'You are about to remove your listing. Players will no longer see it, and will no longer be able to contact you.',
+  removeConfirm: 'Yes, remove my listing',
+  removeWorking: 'Removing…',
+  removeDoneTitle: 'Done',
+  removeDoneBody:
+    'Your listing has been removed. You can post a new one whenever you want — it only takes two minutes.',
+  removeBackCta: 'Back to the page',
+  removeInvalidTitle: 'This link is no longer valid',
+  removeInvalidBody:
+    'Your listing may already have been removed, or it expired on its own after 60 days. If you think this is a mistake, get in touch with the staff.',
+  removeContactStaff: 'Contact the staff',
+  removeError: 'The removal failed. Please try again in a moment.',
 };
