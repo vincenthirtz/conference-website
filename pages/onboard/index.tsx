@@ -9,6 +9,7 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import DiscordSignInCta from '@/components/onboard/DiscordSignInCta';
 import { useT, format } from '@/lib/i18n/useT';
 import nsOnboardIndex from '@/lib/i18n/locales/fr/onboardIndex';
+import { socialUrl } from '@/config/socials';
 
 type OnboardIndexDict = typeof nsOnboardIndex.fr;
 
@@ -106,7 +107,7 @@ function OnboardLandingPage() {
             <p>
               {t.questionPrefix}{' '}
               <a
-                href="https://discord.gg/gERSsjC3Vd"
+                href={socialUrl('discord')}
                 target="_blank"
                 rel="noreferrer noopener"
                 className="text-purple-300 hover:text-purple-200"

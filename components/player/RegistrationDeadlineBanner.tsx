@@ -40,9 +40,10 @@ import {
 import type { NetworkStatus } from '../../pages/api/player/network-status';
 import { logger } from '../../utils/logger';
 import nsRegistrationDeadline from '@/lib/i18n/locales/fr/registrationDeadline';
+import { socialUrl } from '@/config/socials';
 
-/** Invitation publique du serveur — la même que le header et /inscription-2026. */
-const DISCORD_INVITE = 'https://discord.gg/gERSsjC3Vd';
+/** Invitation publique du serveur, depuis la source unique `config/socials`. */
+const DISCORD_INVITE = socialUrl('discord');
 
 /**
  * Clé de rejet par utilisateur ET par échéance : refermer le rappel de 2026 ne

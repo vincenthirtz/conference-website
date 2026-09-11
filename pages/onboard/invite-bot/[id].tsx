@@ -21,6 +21,7 @@ import { buildBotInviteUrl } from '@/utils/onboard';
 import { logger } from '@/utils/logger';
 import { useT } from '@/lib/i18n/useT';
 import nsOnboardInviteBot from '@/lib/i18n/locales/fr/onboardInviteBot';
+import { socialUrl } from '@/config/socials';
 
 type StatusFromApi = {
   id: string;
@@ -270,7 +271,7 @@ function OnboardInviteBotPage({
               <p className="text-xs text-emerald-100/80">
                 {t.completedContact}{' '}
                 <a
-                  href="https://discord.gg/gERSsjC3Vd"
+                  href={socialUrl('discord')}
                   target="_blank"
                   rel="noreferrer noopener"
                   className="underline hover:no-underline"

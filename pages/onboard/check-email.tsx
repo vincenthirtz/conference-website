@@ -11,6 +11,7 @@ import Link from 'next/link';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT } from '@/lib/i18n/useT';
 import nsOnboardCheckEmail from '@/lib/i18n/locales/fr/onboardCheckEmail';
+import { socialUrl } from '@/config/socials';
 
 type StatusResp = {
   id: string;
@@ -145,7 +146,7 @@ function OnboardCheckEmailPage() {
             <p className="text-xs text-gray-300">
               {t.lostEmailBody}{' '}
               <a
-                href="https://discord.gg/gERSsjC3Vd"
+                href={socialUrl('discord')}
                 target="_blank"
                 rel="noreferrer noopener"
                 className="text-purple-300 hover:text-purple-200"

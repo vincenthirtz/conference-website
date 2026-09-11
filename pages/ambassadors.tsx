@@ -13,6 +13,7 @@ import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT } from '@/lib/i18n/useT';
 import { logger } from '@/utils/logger';
 import nsLivePage from '@/lib/i18n/locales/fr/livePage';
+import { socialUrl } from '@/config/socials';
 
 type LiveDict = typeof nsLivePage.fr;
 
@@ -23,7 +24,7 @@ const LiveEventBanner = dynamic(
   { ssr: false }
 );
 
-const DISCORD_INVITE_URL = 'https://discord.gg/gERSsjC3Vd';
+const DISCORD_INVITE_URL = socialUrl('discord');
 const ASSO_TWITCH_URL = 'https://twitch.tv/owwomenscup';
 
 type Engagement = {

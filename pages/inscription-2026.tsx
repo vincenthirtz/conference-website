@@ -8,10 +8,11 @@ import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT, format } from '@/lib/i18n/useT';
 import { logger } from '../utils/logger';
 import nsInscription2026 from '@/lib/i18n/locales/fr/inscription2026';
+import { socialUrl } from '@/config/socials';
 
 type InscriptionDict = typeof nsInscription2026.fr;
 
-const DISCORD_INVITE = 'https://discord.gg/gERSsjC3Vd';
+const DISCORD_INVITE = socialUrl('discord');
 const REGISTER_HREF = `/team/create?tournament=${ACTIVE_WOMEN_TOURNAMENT_ID}`;
 
 type Prerequisite = {

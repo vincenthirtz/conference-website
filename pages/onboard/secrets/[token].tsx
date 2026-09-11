@@ -17,6 +17,7 @@ import { getSiteUrl } from '@/utils/onboard';
 import { logger } from '@/utils/logger';
 import { useT, format } from '@/lib/i18n/useT';
 import nsOnboardSecrets from '@/lib/i18n/locales/fr/onboardSecrets';
+import { socialUrl } from '@/config/socials';
 
 type SuccessProps = {
   kind: 'success';
@@ -188,7 +189,7 @@ function ErrorView({ status, message }: ErrorProps) {
             <p>
               {t.recoveryBody}{' '}
               <a
-                href="https://discord.gg/gERSsjC3Vd"
+                href={socialUrl('discord')}
                 target="_blank"
                 rel="noreferrer noopener"
                 className="text-purple-300 hover:text-purple-200"

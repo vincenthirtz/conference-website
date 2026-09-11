@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { useT, format } from '@/lib/i18n/useT';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 import RegisterTeamCta from '@/components/RegisterTeamCta';
+import { socialUrl } from '@/config/socials';
 
 type HomeHeroV2Props = {
   /** ISO du prochain jalon (coup d'envoi / ouverture des matchs). */
@@ -46,7 +47,7 @@ function pad(n: number) {
   return n.toString().padStart(2, '0');
 }
 
-const DISCORD_URL = 'https://discord.gg/gERSsjC3Vd';
+const DISCORD_URL = socialUrl('discord');
 
 export default function HomeHeroV2({
   countdownTarget,

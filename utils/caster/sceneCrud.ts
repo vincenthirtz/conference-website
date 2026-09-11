@@ -11,7 +11,7 @@ import { social } from '@/config/socials';
 /** Réseaux par défaut d'une nouvelle scène — mêmes valeurs que le desktop. */
 const DEFAULT_SOCIALS = {
   site: 'owwomenscup.fr',
-  discord: 'discord.gg/gERSsjC3Vd',
+  discord: social('discord').handle,
   twitch: social('twitch').handle,
   youtube: social('youtube').handle,
   instagram: social('instagram').handle,

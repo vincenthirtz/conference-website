@@ -7,6 +7,7 @@
 // compilation `../parity.ts` casse le typecheck sinon.
 
 import { ns } from '../../ns';
+import { socialUrl } from '@/config/socials';
 
 export default ns('rulesPage', {
   heroBadge: 'Règlement officiel',
@@ -31,7 +32,7 @@ export default ns('rulesPage', {
   section3Item3:
     "Résolution des litiges : décision finale par l'arbitrage tournoi.",
   section3Item4:
-    'Rejoindre le Discord du tournoi est obligatoire : https://discord.gg/gERSsjC3Vd',
+    `Rejoindre le Discord du tournoi est obligatoire : ${socialUrl('discord')}`,
   modesEyebrow: 'Modes de jeu',
   modesTitle: 'Conditions de victoire par mode',
   modesNote:

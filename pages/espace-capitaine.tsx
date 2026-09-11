@@ -6,8 +6,9 @@ import { useT } from '@/lib/i18n/useT';
 import LanguageToggle from '@/components/Navbar/LanguageToggle';
 import nsEspaceCapitaine from '@/lib/i18n/locales/fr/espaceCapitaine';
 import RegisterTeamCta from '@/components/RegisterTeamCta';
+import { socialUrl } from '@/config/socials';
 
-const DISCORD_INVITE = 'https://discord.gg/gERSsjC3Vd';
+const DISCORD_INVITE = socialUrl('discord');
 const REGISTER_TEAM_HREF = `/team/create?tournament=${ACTIVE_WOMEN_TOURNAMENT_ID}`;
 const GUIDE_HREF = '/guide/gerer-mon-equipe';
 

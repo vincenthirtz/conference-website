@@ -4,6 +4,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
 import { useT } from '@/lib/i18n/useT';
 import nsContactPage from '@/lib/i18n/locales/fr/contactPage';
+import { socialUrl } from '@/config/socials';
 
 type ContactChannel = {
   title: string;
@@ -32,7 +33,7 @@ function getContactChannels(
       desc: t.channelDiscordDesc,
       cta: {
         label: t.channelDiscordCta,
-        href: 'https://discord.gg/gERSsjC3Vd',
+        href: socialUrl('discord'),
       },
     },
     {

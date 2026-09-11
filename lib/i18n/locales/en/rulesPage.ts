@@ -9,6 +9,8 @@
 // Ne PAS annoter `as const` : la parite se verifie contre le francais, dont
 // les valeurs sont de type `string` — des types litteraux la feraient echouer.
 
+import { socialUrl } from '@/config/socials';
+
 export default {
   heroBadge: 'Official rules',
   heroTitle: 'Official Overwatch rules',
@@ -33,7 +35,7 @@ export default {
   section3Item3:
     'Dispute resolution: final decision by the tournament referees.',
   section3Item4:
-    'Joining the tournament Discord is mandatory: https://discord.gg/gERSsjC3Vd',
+    `Joining the tournament Discord is mandatory: ${socialUrl('discord')}`,
   modesEyebrow: 'Game modes',
   modesTitle: 'Win conditions by mode',
   modesNote: 'Applies with the « Competitive rules » preset in custom games.',
