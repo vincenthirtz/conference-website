@@ -129,7 +129,6 @@ type NewsPageProps = {
   updatedAt?: string | null;
   newsId?: string | null;
   related?: RelatedItem[];
-  error?: string | null;
 };
 
 export const getStaticPaths: GetStaticPaths = async () => {
@@ -160,15 +159,13 @@ export const getStaticProps: GetStaticProps<NewsPageProps> = async (
     .maybeSingle();
 
   if (error) {
+    // On LÈVE plutôt que de rendre une page d'erreur : une page renvoyée ici
+    // partait en cache ISR, en 200, et remplaçait la bonne version de
+    // l'article jusqu'à la revalidation suivante. Une exception, elle, laisse
+    // Next servir la dernière version valide (et un 500 non mis en cache si
+    // l'article n'a encore jamais été généré).
     logger.error('[news slug] fetch error', error);
-    return {
-      props: {
-        title: '',
-        content: '',
-        error: 'Impossible de charger cette news.',
-      },
-      revalidate: 60,
-    };
+    throw new Error(`[news slug] fetch error: ${error.message}`);
   }
 
   if (!data) {
@@ -229,7 +226,6 @@ export default function NewsSlugPage({
   updatedAt,
   newsId,
   related = [],
-  error,
 }: NewsPageProps) {
   const t = useT(nsNewsDetail);
   const tagLabels = useT(nsNewsTags);
@@ -342,81 +338,71 @@ export default function NewsSlugPage({
           {t.backHome}
         </Link>
 
-        {error ? (
-          <div className="mt-8 rounded-2xl border border-red-500/40 bg-red-500/10 p-6 text-red-100">
-            {error}
-          </div>
-        ) : (
-          <article>
-            <div className="mt-6 flex flex-col gap-3">
-              <div className="flex items-center gap-3 text-xs uppercase tracking-[0.16em] text-[var(--color-green)]/90">
-                {articlePublishedTime ? (
-                  <time dateTime={articlePublishedTime}>
-                    {displayDate || t.newsLabel}
-                  </time>
-                ) : (
-                  <span>{displayDate || t.newsLabel}</span>
-                )}
-                {formattedTag && (
-                  <span className="px-3 py-1 rounded-full border border-[var(--color-green)]/40 bg-[var(--color-green)]/10 text-[10px] tracking-[0.14em] text-[var(--color-green-light)]">
-                    {formattedTag}
-                  </span>
-                )}
-              </div>
-              <Heading
-                level="h1"
-                typeStyle="heading-md"
-                className="text-brand-gradient"
-              >
-                {title}
-              </Heading>
-              <span className="brand-rule mt-1" aria-hidden />
-              {imageUrl && (
-                <ArticleHero
-                  src={imageUrl}
-                  alt=""
-                  forceContain={imageFitContain}
-                />
-              )}
-            </div>
-
-            <div className="mt-8 text-[1.0625rem] leading-[1.75] text-gray-200 sm:text-lg">
-              {content ? (
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={MARKDOWN_COMPONENTS}
-                >
-                  {content}
-                </ReactMarkdown>
+        <article>
+          <div className="mt-6 flex flex-col gap-3">
+            <div className="flex items-center gap-3 text-xs uppercase tracking-[0.16em] text-[var(--color-green)]/90">
+              {articlePublishedTime ? (
+                <time dateTime={articlePublishedTime}>
+                  {displayDate || t.newsLabel}
+                </time>
               ) : (
-                t.noContent
+                <span>{displayDate || t.newsLabel}</span>
+              )}
+              {formattedTag && (
+                <span className="px-3 py-1 rounded-full border border-[var(--color-green)]/40 bg-[var(--color-green)]/10 text-[10px] tracking-[0.14em] text-[var(--color-green-light)]">
+                  {formattedTag}
+                </span>
               )}
             </div>
+            <Heading
+              level="h1"
+              typeStyle="heading-md"
+              className="text-brand-gradient"
+            >
+              {title}
+            </Heading>
+            <span className="brand-rule mt-1" aria-hidden />
+            {imageUrl && (
+              <ArticleHero
+                src={imageUrl}
+                alt=""
+                forceContain={imageFitContain}
+              />
+            )}
+          </div>
 
-            <ShareArticle
-              url={canonical ?? null}
-              title={title}
-              labels={{
-                title: t.shareTitle,
-                onBluesky: t.shareBluesky,
-                onX: t.shareX,
-                onFacebook: t.shareFacebook,
-                copyLink: t.shareCopy,
-                copied: t.shareCopied,
-                allNews: t.allNews,
-                rss: t.rssFeed,
-              }}
-            />
+          <div className="mt-8 text-[1.0625rem] leading-[1.75] text-gray-200 sm:text-lg">
+            {content ? (
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={MARKDOWN_COMPONENTS}
+              >
+                {content}
+              </ReactMarkdown>
+            ) : (
+              t.noContent
+            )}
+          </div>
 
-            <RelatedNews
-              items={related}
-              title={t.relatedTitle}
-              locale={locale}
-            />
+          <ShareArticle
+            url={canonical ?? null}
+            title={title}
+            labels={{
+              title: t.shareTitle,
+              onBluesky: t.shareBluesky,
+              onX: t.shareX,
+              onFacebook: t.shareFacebook,
+              copyLink: t.shareCopy,
+              copied: t.shareCopied,
+              allNews: t.allNews,
+              rss: t.rssFeed,
+            }}
+          />
 
-            {newsId && <Comments newsId={newsId} />}
-          </article>
-        )}
+          <RelatedNews items={related} title={t.relatedTitle} locale={locale} />
+
+          {newsId && <Comments newsId={newsId} />}
+        </article>
       </div>
     </div>
   );
@@ -433,8 +419,15 @@ function Comments({ newsId }: { newsId: string }) {
   const t = useT(nsNewsDetail);
   const locale = useLocale();
   const [comments, setComments] = useState<Comment[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // La LISTE et l'ENVOI ont chacun leur état. Un seul `loading` partagé
+  // affichait « Aucun commentaire » pendant le chargement comme après un
+  // échec, et désactivait le bouton Publier (« Envoi… ») dès le montage.
+  // `listLoading` part à `true` : le premier rendu (SSR compris) est un
+  // chargement, pas une liste vide.
+  const [listLoading, setListLoading] = useState(true);
+  const [listError, setListError] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [content, setContent] = useState('');
   const [author, setAuthor] = useState('');
   const [honeypot, setHoneypot] = useState('');
@@ -443,52 +436,69 @@ function Comments({ newsId }: { newsId: string }) {
   const [captchaAnswer, setCaptchaAnswer] = useState('');
   const { addToast } = useToast();
   const idempotencyKeyRef = useRef<string>(genIdempotencyKey());
+  const captchaRequestedRef = useRef(false);
 
-  const loadCaptcha = async () => {
+  const loadCaptcha = async (): Promise<boolean> => {
     try {
       const res = await fetch('/api/captcha');
-      if (res.ok) {
-        const json = await res.json();
-        setCaptchaToken(json.token);
-        setCaptchaQuestion(json.question);
-        setCaptchaAnswer('');
-      }
+      if (!res.ok) return false;
+      const json = await res.json();
+      setCaptchaToken(json.token);
+      setCaptchaQuestion(json.question);
+      setCaptchaAnswer('');
+      return true;
     } catch {
       // silent — form still works, server will reject invalid captcha
+      return false;
     }
   };
 
+  // Captcha demandé au premier focus du formulaire, pas au montage : chaque
+  // lecture de l'article coûtait une invocation /api/captcha (no-store) pour
+  // un formulaire que presque personne n'utilise. Même modèle que
+  // components/NewsletterSignup.tsx. En cas d'échec, le focus suivant retente.
+  const ensureCaptcha = () => {
+    if (captchaRequestedRef.current) return;
+    captchaRequestedRef.current = true;
+    void loadCaptcha().then((ok) => {
+      if (!ok) captchaRequestedRef.current = false;
+    });
+  };
+
   const loadComments = async () => {
-    setLoading(true);
-    setError(null);
+    setListLoading(true);
+    setListError(false);
     try {
-      const res = await fetch(`/api/news/comments?newsId=${newsId}`);
-      if (!res.ok) throw new Error(t.errFetchComments);
+      const res = await fetch(
+        `/api/news/comments?newsId=${encodeURIComponent(newsId)}`
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setComments(json.items || []);
-    } catch (err: unknown) {
-      setError((err as Error)?.message || t.errLoadComments);
+    } catch {
+      // Message traduit côté rendu : celui de l'exception (« Failed to
+      // fetch »…) n'est ni localisé ni utile au lecteur.
+      setListError(true);
     } finally {
-      setLoading(false);
+      setListLoading(false);
     }
   };
 
   useEffect(() => {
     loadComments();
-    loadCaptcha();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newsId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Garde anti double-submit.
-    if (loading) return;
+    if (submitting) return;
     if (content.trim().length < 3) {
-      setError(t.errTooShort);
+      setFormError(t.errTooShort);
       return;
     }
-    setLoading(true);
-    setError(null);
+    setSubmitting(true);
+    setFormError(null);
     try {
       const res = await fetch('/api/news/comments', {
         method: 'POST',
@@ -520,11 +530,11 @@ function Comments({ newsId }: { newsId: string }) {
       // temps que le challenge pour que le retry soit une intention propre.
       idempotencyKeyRef.current = genIdempotencyKey();
       const message = (err as Error)?.message || t.errPublishGeneric;
-      setError(message);
+      setFormError(message);
       addToast(message, 'error');
       await loadCaptcha();
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -534,7 +544,12 @@ function Comments({ newsId }: { newsId: string }) {
         {t.commentsTitle}
       </Heading>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      {/* `onFocus` remonte depuis les champs (React l'écoute en focusin). */}
+      <form
+        onSubmit={handleSubmit}
+        onFocus={ensureCaptcha}
+        className="space-y-3"
+      >
         <div className="grid gap-3 md:grid-cols-[1fr_0.6fr]">
           <div>
             <label htmlFor="comment-content" className="sr-only">
@@ -589,22 +604,51 @@ function Comments({ newsId }: { newsId: string }) {
             />
             <Button
               type="submit"
-              disabled={loading}
+              disabled={submitting}
               className="w-full h-[40px] justify-center text-sm px-3"
             >
-              {loading ? t.submitting : t.publish}
+              {submitting ? t.submitting : t.publish}
             </Button>
           </div>
         </div>
-        {error && (
-          <p className="text-sm text-red-300 border border-red-500/40 bg-red-500/10 rounded-lg px-3 py-2">
-            {error}
+        {formError && (
+          <p
+            role="alert"
+            className="text-sm text-red-300 border border-red-500/40 bg-red-500/10 rounded-lg px-3 py-2"
+          >
+            {formError}
           </p>
         )}
       </form>
 
-      <div className="divide-y divide-white/10 rounded-xl border border-white/10 bg-black/40">
-        {comments.length === 0 && (
+      <div
+        aria-busy={listLoading}
+        className="divide-y divide-white/10 rounded-xl border border-white/10 bg-black/40"
+      >
+        {/* « Aucun commentaire » seulement quand la liste est CHARGÉE sans
+            erreur. Pendant un rechargement (après publication), la liste
+            déjà affichée reste en place au lieu de clignoter. */}
+        {listLoading && comments.length === 0 && (
+          <p role="status" className="p-4 text-sm text-gray-400">
+            {t.commentsLoading}
+          </p>
+        )}
+        {!listLoading && listError && (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm text-red-200"
+          >
+            <span>{t.errFetchComments}</span>
+            <button
+              type="button"
+              onClick={() => void loadComments()}
+              className="rounded-lg border border-white/20 px-3 py-1 text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]/70"
+            >
+              {t.retryComments}
+            </button>
+          </div>
+        )}
+        {!listLoading && !listError && comments.length === 0 && (
           <p className="p-4 text-sm text-gray-400">{t.emptyComments}</p>
         )}
         {comments.map((c) => (
