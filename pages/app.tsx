@@ -544,8 +544,8 @@ function AppPage() {
 
 const appSeo: SeoProps = {
   title: {
-    fr: "Installer l'app — OW Women's Cup",
-    en: "Install the app — OW Women's Cup",
+    fr: "Installer l'app",
+    en: 'Install the app',
   },
   description: {
     fr: "Installe la PWA OW Women's Cup pour recevoir tes notifs match, scrim et check-in en temps réel, même hors-ligne. Compatible Windows, macOS, Android et iOS.",

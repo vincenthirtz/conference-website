@@ -9,7 +9,6 @@
 import { ns } from '../../ns';
 
 export default ns('error403', {
-  pageTitle: "Accès refusé | OW Women's Cup",
   heading: 'Accès refusé',
   body: "Tu n'as pas les permissions nécessaires pour accéder à cette page. Si tu penses qu'il s'agit d'une erreur, contacte l'équipe.",
   backHome: "Retour à l'accueil",

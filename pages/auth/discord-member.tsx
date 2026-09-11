@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseClient } from '@/utils/supabase';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useT } from '@/lib/i18n/useT';
@@ -180,3 +181,15 @@ export default function DiscordMemberRedirect() {
     </div>
   );
 }
+
+// Page de retour OAuth : jamais indexée (aussi forcé par _app.tsx pour
+// /auth/*). Sans seo, l'onglet affichait le titre générique de la home.
+const discordMemberSeo: SeoProps = {
+  title: {
+    fr: 'Connexion Discord',
+    en: 'Discord sign-in',
+  },
+  noindex: true,
+};
+
+DiscordMemberRedirect.seo = discordMemberSeo;

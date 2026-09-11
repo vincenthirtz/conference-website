@@ -252,8 +252,8 @@ function buildLeaguesSeo(leagues: League[]): SeoProps {
 
   return {
     title: {
-      fr: 'Ligues & saisons — OW Women’s Cup',
-      en: 'Leagues & seasons — OW Women’s Cup',
+      fr: 'Ligues & saisons',
+      en: 'Leagues & seasons',
     },
     description: { fr: descriptionFr, en: descriptionEn },
     jsonLd,
@@ -267,8 +267,8 @@ const leaguesSeoFallbackEn =
 
 const leaguesSeoFallback: SeoProps = {
   title: {
-    fr: 'Ligues & saisons — OW Women’s Cup',
-    en: 'Leagues & seasons — OW Women’s Cup',
+    fr: 'Ligues & saisons',
+    en: 'Leagues & seasons',
   },
   description: { fr: leaguesSeoFallbackFr, en: leaguesSeoFallbackEn },
 };

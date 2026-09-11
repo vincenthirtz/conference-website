@@ -7,6 +7,8 @@ Allow: /
 # Block admin and API paths
 Disallow: /admin/
 Disallow: /api/
+# Retours OAuth et liens magiques : aucune page à référencer
+Disallow: /auth/
 Disallow: /_next/
 
 # Sitemap location

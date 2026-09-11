@@ -84,13 +84,18 @@ function MyApp({ Component, pageProps, router, branding }: AppPropsWithSeo) {
   // chrome-less too: no Navbar/Footer/Toast/cookie banner. They may run for
   // hours in OBS and must composite cleanly over the video canvas.
   const isOverlay = router.pathname.startsWith('/overlay');
+  // Pages techniques : retours OAuth / liens magiques (`/auth/*`) et page
+  // d'accès refusé. Servies en 200, sans contenu à référencer — /403 était
+  // indexable avec un canonical, /auth/discord-member n'avait même pas de seo.
+  const isTechnical =
+    router.pathname.startsWith('/auth/') || router.pathname === '/403';
   // Routes "applicatives" (admin + cockpit caster + espace joueur) : pas
   // d'index. L'espace joueur est gate cote client et n'a pas de contenu
   // public a referencer — on force noindex pour eviter d'indexer des coquilles
   // vides / pages d'auth. La navbar/footer marketing restent (sauf caster qui
   // gere sa propre chrome legere — cf. /caster/cockpit).
   const effectiveSeo: SeoProps =
-    isAdmin || isCaster || isPlayer || isEmbed || isOverlay
+    isAdmin || isCaster || isPlayer || isEmbed || isOverlay || isTechnical
       ? { ...seo, noindex: true }
       : { ...seo };
 

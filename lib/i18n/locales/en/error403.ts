@@ -10,7 +10,6 @@
 // les valeurs sont de type `string` — des types litteraux la feraient echouer.
 
 export default {
-  pageTitle: "Access denied | OW Women's Cup",
   heading: 'Access denied',
   body: "You don't have the permissions required to access this page. If you think this is a mistake, contact the team.",
   backHome: 'Back to home',

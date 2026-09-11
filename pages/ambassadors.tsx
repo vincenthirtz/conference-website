@@ -370,8 +370,8 @@ function LivePage({ channels, loadError }: Props) {
 
 const liveSeo: SeoProps = {
   title: {
-    fr: "Devenir Ambassadeur·rice — Women's Cup",
-    en: "Become an ambassador — Women's Cup",
+    fr: 'Devenir Ambassadeur·rice',
+    en: 'Become an ambassador',
   },
   description: {
     fr: "Rejoins le programme d'ambassadeur·rices Twitch de l'OW Women's Cup : un partenariat gagnant-gagnant, tes engagements, tes bonus exclusifs et comment postuler.",
