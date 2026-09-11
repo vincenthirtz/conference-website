@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useLang, type Lang } from '@/lib/i18n/LanguageProvider';
 import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
 import { SOCIALS, social } from '@/config/socials';
+import { buildBreadcrumbSchema, hasBreadcrumbList } from './breadcrumb';
 
 /**
  * Chaîne éventuellement localisée. Une page peut fournir soit un simple
@@ -34,8 +35,9 @@ export type SeoProps = {
   /**
    * JSON-LD structuré par-page (par-entité). Rendu tel quel dans un
    * `<script type="application/ld+json">` par entrée. Vient en complément du
-   * BreadcrumbList (déjà émis sur toutes les pages non-home) et des schémas
-   * Organization/WebSite (homepage-only). Ex : ProfilePage/Person pour un
+   * BreadcrumbList automatique (cf. ./breadcrumb — supprimé si une entrée ici
+   * est déjà un BreadcrumbList) et des schémas Organization/WebSite
+   * (homepage-only). Ex : ProfilePage/Person pour un
    * profil joueuse, SportsEvent/ItemList pour une league.
    */
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
@@ -130,7 +132,7 @@ export default function DefaultSeo({
   noindex,
   jsonLd,
 }: SeoProps) {
-  const { asPath } = useRouter();
+  const { asPath, pathname: route } = useRouter();
   const { lang } = useLang();
   // WHITELABEL — le nom du site devient piloté par le branding du tenant quand
   // il est présent. En son absence (tenant par défaut) on retombe sur la
@@ -175,36 +177,18 @@ export default function DefaultSeo({
   const hasExplicitImage = Boolean(image);
   const ogImage = toAbsoluteUrl(image || DEFAULT_IMAGE);
 
-  // BreadcrumbList JSON-LD (all pages except homepage)
+  // BreadcrumbList JSON-LD automatique (cf. ./breadcrumb pour les règles).
+  // Rien si la page fournit déjà le sien dans `jsonLd`, ni sur une page hors
+  // index : un fil de navigation n'y sert à aucun moteur.
   const breadcrumbSchema =
-    !isHomePage && BASE_URL
-      ? {
-          '@context': 'https://schema.org',
-          '@type': 'BreadcrumbList',
-          itemListElement: [
-            {
-              '@type': 'ListItem',
-              position: 1,
-              name: 'Accueil',
-              item: BASE_URL,
-            },
-            ...pathname
-              .split('/')
-              .filter(Boolean)
-              .map((segment, i, arr) => ({
-                '@type': 'ListItem' as const,
-                position: i + 2,
-                name:
-                  i === arr.length - 1 && title
-                    ? title
-                    : decodeURIComponent(segment)
-                        .replace(/-/g, ' ')
-                        .replace(/^\w/, (c) => c.toUpperCase()),
-                item: `${BASE_URL}/${arr.slice(0, i + 1).join('/')}`,
-              })),
-          ],
-        }
-      : null;
+    noindex || hasBreadcrumbList(jsonLd)
+      ? null
+      : buildBreadcrumbSchema({
+          path: pathname,
+          route: route || pathname,
+          title,
+          baseUrl: BASE_URL,
+        });
 
   // Per-page JSON-LD (par-entité) — normalisé en tableau pour émettre un
   // <script> par entrée avec une garde de non-nullité.
