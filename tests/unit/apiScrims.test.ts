@@ -7,12 +7,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StaffMember } from '../../types/staff';
 
-const { logStaffActionMock } = vi.hoisted(() => ({
+const { logStaffActionMock, emitScheduleEventsMock } = vi.hoisted(() => ({
   logStaffActionMock: vi.fn(async () => undefined),
+  emitScheduleEventsMock: vi.fn(),
 }));
 
 vi.mock('@/utils/staffLogs', () => ({
   logStaffAction: logStaffActionMock,
+}));
+
+vi.mock('@/utils/matches/scheduleEvents', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/utils/matches/scheduleEvents')>()),
+  emitScheduleEventsInBackground: emitScheduleEventsMock,
 }));
 
 import {
@@ -96,6 +102,7 @@ beforeEach(() => {
   resetSupabaseMock();
   invalidateStaffCache();
   logStaffActionMock.mockClear();
+  emitScheduleEventsMock.mockClear();
   setAuthUser({ id: 'user-1' });
   store.staff = [makeStaffRow('admin')] as any;
   store.teams = [
@@ -930,6 +937,65 @@ describe('/api/bot/scrims/[scrimId]/matches/[matchId]', () => {
       res
     );
     expect(res.statusCode).toBe(400);
+  });
+
+  // Planification : même règle que le PATCH admin, via scheduleEvents. Sans
+  // ça, un scrim reprogrammé depuis Discord gardait son event à l'ancienne heure.
+  it('poser une date émet un changement de planification (sans date avant)', async () => {
+    const res = makeRes();
+    await botScrimMatchPatchHandler(
+      makeBotReq({
+        body: {
+          actorDiscordUserId: DISCORD_ID,
+          scheduled_at: '2026-10-01T18:00:00.000Z',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(emitScheduleEventsMock).toHaveBeenCalledTimes(1);
+    expect(emitScheduleEventsMock).toHaveBeenCalledWith(
+      [
+        {
+          matchId: MATCH_ID,
+          tournamentId: null,
+          scrimId: SCRIM_ID,
+          previous: null,
+          next: '2026-10-01T18:00:00.000Z',
+        },
+      ],
+      CONFERENCE_TENANT_ID
+    );
+  });
+
+  it('déplacer une date transmet l’ancienne et la nouvelle', async () => {
+    (store.matches as any[])[0].scheduled_at = '2026-09-30T18:00:00.000Z';
+    const res = makeRes();
+    await botScrimMatchPatchHandler(
+      makeBotReq({
+        body: {
+          actorDiscordUserId: DISCORD_ID,
+          scheduled_at: '2026-10-02T19:30:00.000Z',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const [changes] = emitScheduleEventsMock.mock.calls[0];
+    expect(changes[0].previous).toBe('2026-09-30T18:00:00.000Z');
+    expect(changes[0].next).toBe('2026-10-02T19:30:00.000Z');
+  });
+
+  it('un PATCH sans scheduled_at n’émet rien de planification', async () => {
+    const res = makeRes();
+    await botScrimMatchPatchHandler(
+      makeBotReq({
+        body: { actorDiscordUserId: DISCORD_ID, team1_score: 2 },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(emitScheduleEventsMock).not.toHaveBeenCalled();
   });
 });
 

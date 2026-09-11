@@ -24,6 +24,7 @@ import {
 } from '@/utils/botValidation';
 import { emitBotEvent } from '@/utils/botEvents';
 import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
+import { emitScheduleEventsInBackground } from '@/utils/matches/scheduleEvents';
 import { logger } from '@/utils/logger';
 
 const VALID_STATUSES = [
@@ -105,7 +106,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { data: match } = await supabaseAdmin
     .from('matches')
     .select(
-      'id, scrim_id, tournament_id, team1_id, team2_id, status, team1_score, team2_score'
+      'id, scrim_id, tournament_id, team1_id, team2_id, status, team1_score, team2_score, scheduled_at'
     )
     .eq('tenant_id', req.botContext.tenantId)
     .eq('id', matchId)
@@ -212,6 +213,25 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       changes: updatePayload,
     },
   });
+
+  // Poser, déplacer ou retirer scheduled_at → match.scheduled (+
+  // match.rescheduled si une date existait) / match.unscheduled, pour que
+  // l'event Discord natif suive. Même règle et mêmes payloads que le PATCH
+  // admin (utils/matches/scheduleEvents.ts).
+  if ('scheduled_at' in updatePayload) {
+    emitScheduleEventsInBackground(
+      [
+        {
+          matchId,
+          tournamentId: match.tournament_id ?? null,
+          scrimId,
+          previous: (match.scheduled_at ?? null) as string | null,
+          next: (after.scheduled_at ?? null) as string | null,
+        },
+      ],
+      req.botContext.tenantId
+    );
+  }
 
   if (after.status === 'ongoing' && match.status !== 'ongoing') {
     void (async () => {
