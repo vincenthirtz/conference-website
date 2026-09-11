@@ -5,7 +5,9 @@ import {
   sendTeamJoinEmail,
   sendAccountDeletedEmail,
   sendTestEmail,
+  buildFreePlayerPublishedEmailHtml,
 } from '../../utils/email';
+import { socialUrl } from '../../config/socials';
 
 // Save originals
 const origEnv = { ...process.env };
@@ -348,5 +350,55 @@ describe('email templates use branded layout', () => {
 
     expect(html).toContain('2026-logo.png');
     expect(html).toContain('Brevo fonctionne');
+  });
+});
+
+// Fiche « joueuse libre » : c'est le seul message automatique que reçoit une
+// inscription SANS COMPTE. Il doit garder sa porte de sortie (le lien de
+// retrait, seul moyen autonome de disparaître de la liste publique) tout en
+// ouvrant la porte d'entrée (le Discord, où se fait le recrutement). Les deux
+// sont testés ensemble : la tentation, en ajoutant le second, est de reléguer
+// le premier.
+describe('buildFreePlayerPublishedEmailHtml', () => {
+  const REMOVE_URL = 'https://owwomenscup.fr/rejoindre/retrait?token=abc123';
+  const build = () =>
+    buildFreePlayerPublishedEmailHtml({
+      displayName: 'Nova',
+      removeUrl: REMOVE_URL,
+    });
+
+  it('garde le lien de retrait, en bouton ET en lien direct', () => {
+    const html = build();
+
+    expect(html).toContain('Retirer ma fiche');
+    // Bouton + repli en lien cliquable : deux occurrences de l'URL.
+    expect(html.split(REMOVE_URL).length - 1).toBeGreaterThanOrEqual(2);
+  });
+
+  it('invite sur le Discord dans le CORPS, pas seulement en pied de page', () => {
+    const html = build();
+
+    // Le pied de page a déjà un lien Discord discret (#9081B0) ; ce qu'on
+    // vérifie ici, c'est l'invitation dans le corps du message.
+    expect(html).toContain(socialUrl('discord'));
+    expect(html).toContain('Discord de la Women');
+    expect(html).toContain('#5865F2');
+  });
+
+  it('laisse le retrait seul bouton : le Discord reste un lien texte', () => {
+    const html = build();
+
+    // `ctaButton` est le seul élément à porter ce dégradé à 225deg.
+    expect(html.split('linear-gradient(225deg').length - 1).toBe(1);
+  });
+
+  it('échappe le pseudo', () => {
+    const html = buildFreePlayerPublishedEmailHtml({
+      displayName: '<script>alert(1)</script>',
+      removeUrl: REMOVE_URL,
+    });
+
+    expect(html).not.toContain('<script>alert(1)</script>');
+    expect(html).toContain('&lt;script&gt;');
   });
 });

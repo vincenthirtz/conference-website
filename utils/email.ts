@@ -1,3 +1,4 @@
+import { socialUrl } from '../config/socials';
 import { logger } from './logger';
 import { sanitizeEmailHtml } from './emailHtmlSanitizer';
 import { getIntegrationSecret } from './integrationSecrets';
@@ -178,7 +179,10 @@ export async function sendEmail(
 const SITE_URL = BRAND_TOKENS.siteUrl;
 const LOGO_URL = BRAND_TOKENS.logoUrl;
 const BRAND_NAME = BRAND_TOKENS.name;
-const DISCORD_URL = 'https://discord.gg/gERSsjC3Vd';
+// Une seule source pour l'invitation Discord (config/socials) : le lien était
+// recopié ici comme dans une dizaine d'autres fichiers, et une invitation
+// régénérée aurait laissé des emails pointant vers un lien mort.
+const DISCORD_URL = socialUrl('discord');
 
 function emailLayout(body: string): string {
   return `<!DOCTYPE html>
@@ -1168,9 +1172,13 @@ export function sendNewsletterConfirmEmail(opts: {
 // ─── Fiche « joueuse libre » publiée ──────────────────────────
 //
 // Email transactionnel envoyé après une inscription sur /rejoindre (lot 1
-// acquisition). Il a DEUX rôles, et le second est le plus important :
+// acquisition). Il a TROIS rôles, et le deuxième est le plus important :
 //   1. confirmer que la fiche est bien en ligne ;
-//   2. donner le LIEN DE RETRAIT.
+//   2. donner le LIEN DE RETRAIT ;
+//   3. amener sur le Discord — la fiche seule laisse la joueuse attendre un
+//      email, alors que le recrutement se fait sur le serveur. Lien texte et
+//      non bouton : le seul bouton de cet email reste le retrait, qui est la
+//      porte de sortie et ne doit pas se faire voler la vedette.
 //
 // L'inscription se fait sans compte : sans ce lien, une joueuse qui change
 // d'avis n'aurait aucun moyen autonome de disparaître de la liste publique et
@@ -1198,6 +1206,12 @@ export function buildFreePlayerPublishedEmailHtml(opts: {
     <p style="margin:0 0 20px;font-size:15px;color:#C6BED9;line-height:1.6;">
       Ton adresse email n&apos;est <strong style="color:#ffffff;">jamais affich&eacute;e publiquement</strong>&nbsp;:
       seules les capitaines connect&eacute;es y ont acc&egrave;s. Ta fiche expire toute seule au bout de 60&nbsp;jours.
+    </p>
+    <p style="margin:0 0 20px;font-size:15px;color:#C6BED9;line-height:1.6;">
+      En attendant qu&apos;une capitaine t&apos;&eacute;crive, rejoins le
+      <a href="${DISCORD_URL}" style="color:#5865F2;text-decoration:underline;font-weight:600;">Discord de la Women&apos;s Cup</a>&nbsp;:
+      tu y prends le r&ocirc;le «&nbsp;Recherche une &eacute;quipe&nbsp;», tu vois les &eacute;quipes qui recrutent,
+      et tu peux poser tes questions.
     </p>
     <p style="margin:0 0 20px;font-size:15px;color:#C6BED9;line-height:1.6;">
       Tu as trouv&eacute; une &eacute;quipe, ou tu changes d&apos;avis&nbsp;? Retire ta fiche quand tu veux&nbsp;:
