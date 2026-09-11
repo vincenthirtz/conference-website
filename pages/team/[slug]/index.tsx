@@ -1,6 +1,6 @@
 // pages/team/[slug]/index.tsx
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { GetStaticPaths, GetStaticProps } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -28,6 +28,8 @@ import {
 } from '@/utils/teams/memberDisplayName';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import { useTeamPageAccess } from '@/components/Team/useTeamPageAccess';
+import { formatSiteDate } from '@/utils/timezone';
 import {
   renderTeamPublicMarkdown,
   normalizeAccentColor,
@@ -523,7 +525,7 @@ export const getStaticProps: GetStaticProps<TeamPageProps> = async (ctx) => {
 
   // `canEdit` depends on the viewer's auth (captain / edit_public_page
   // permission) which is NOT cacheable — it is resolved client-side after
-  // hydration (cf. useEffect in TeamPage, via /api/admin/teams/my). The
+  // hydration (cf. useTeamPageAccess, via /api/admin/teams/my). The
   // statically-generated page therefore renders with the edit affordance
   // hidden by default.
 
@@ -634,39 +636,9 @@ export default function TeamPage({
   // generated payload. We resolve it client-side after hydration: a captain
   // or manager of *this* team (per /api/admin/teams/my) may edit its public
   // page. Defaults to false so the SSG markup never leaks an edit affordance.
-  const [canEdit, setCanEdit] = useState(false);
-  // Le visiteur gère-t-il une AUTRE équipe ? Si oui, il n'a rien à faire du
-  // formulaire public : il peut proposer un scrim depuis son espace, avec cette
-  // équipe déjà sélectionnée (R3). Même résolution client-side que `canEdit`.
-  const [canProposeScrim, setCanProposeScrim] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch('/api/admin/teams/my', {
-          credentials: 'include',
-        });
-        if (!res.ok) return;
-        const data = (await res.json()) as {
-          team?: { id?: string } | null;
-          isCaptain?: boolean;
-          isManager?: boolean;
-        };
-        if (cancelled) return;
-        const managesATeam = !!(data.isCaptain || data.isManager);
-        const sameTeam = data?.team?.id === team.id;
-        if (sameTeam && managesATeam) setCanEdit(true);
-        if (!sameTeam && managesATeam && data?.team?.id) {
-          setCanProposeScrim(true);
-        }
-      } catch {
-        // Silent: an unauthenticated / failed check simply hides the edit CTA.
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [team.id]);
+  // Le visiteur gère-t-il cette équipe (édition) ou une AUTRE (scrim depuis
+  // son espace, R3) ? Appel seulement pour une session ouverte.
+  const { canEdit, canProposeScrim } = useTeamPageAccess(team.id);
 
   const winRate =
     matchStats.total > 0
@@ -1046,13 +1018,11 @@ export default function TeamPage({
                       <p className="text-xs text-gray-400 mt-0.5">
                         {a.tournament}
                         {a.tournament && a.date ? ' • ' : ''}
-                        {a.date
-                          ? new Date(a.date).toLocaleDateString(locale, {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                            })
-                          : ''}
+                        {formatSiteDate(a.date, locale, {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
                       </p>
                     )}
                   </div>
@@ -1129,9 +1099,11 @@ export default function TeamPage({
                       </span>
                       {scrim.scheduledDate && (
                         <span>
-                          {new Date(scrim.scheduledDate).toLocaleDateString(
-                            locale
-                          )}
+                          {formatSiteDate(scrim.scheduledDate, locale, {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                          })}
                         </span>
                       )}
                     </li>
@@ -1258,7 +1230,7 @@ export default function TeamPage({
                           <p className="text-xs uppercase tracking-wide text-gray-500">
                             {t.substitutesLabel}
                           </p>
-                          <span className="text-xs text-gray-600">
+                          <span className="text-xs text-gray-400">
                             {subMembers.length}
                           </span>
                         </div>
@@ -1281,7 +1253,7 @@ export default function TeamPage({
                           <p className="text-xs uppercase tracking-wide text-gray-500">
                             {t.staffLabel}
                           </p>
-                          <span className="text-xs text-gray-600">
+                          <span className="text-xs text-gray-400">
                             {staffMembers.length}
                           </span>
                         </div>
@@ -1840,7 +1812,7 @@ function MatchCard({ match, teamId }: { match: RecentMatch; teamId: string }) {
   };
 
   const dateStr = match.scheduled_at
-    ? new Date(match.scheduled_at).toLocaleDateString(locale, {
+    ? formatSiteDate(match.scheduled_at, locale, {
         day: '2-digit',
         month: '2-digit',
       })
