@@ -106,6 +106,37 @@ describe('news/[slug] getStaticProps — statut', () => {
   });
 });
 
+describe('news/[slug] getStaticProps — corps rendu au build', () => {
+  it('fournit le Markdown déjà rendu en HTML, pas le texte source', async () => {
+    seedNews({ content: 'Du **gras**' });
+    const props = await propsFor();
+    expect(props.contentHtml).toBe(
+      '<p class="my-5">Du <strong>gras</strong></p>'
+    );
+    expect(props).not.toHaveProperty('content');
+  });
+
+  it('insère ce HTML tel quel dans la page', async () => {
+    seedNews({ content: 'Du **gras**' });
+    const props = await propsFor();
+    const html = renderToString(
+      createElement(ToastProvider, null, createElement(NewsSlugPage, props))
+    );
+    expect(html).toContain('<p class="my-5">Du <strong>gras</strong></p>');
+    expect(html).not.toContain(t.noContent);
+  });
+
+  it('affiche « pas de contenu » pour un article vide', async () => {
+    seedNews({ content: '' });
+    const props = await propsFor();
+    expect(props.contentHtml).toBe('');
+    const html = renderToString(
+      createElement(ToastProvider, null, createElement(NewsSlugPage, props))
+    );
+    expect(html).toContain(t.noContent);
+  });
+});
+
 describe('news/[slug] getStaticProps — erreur Supabase', () => {
   it("lève au lieu de renvoyer une page d'erreur mise en cache", async () => {
     seedNews();
