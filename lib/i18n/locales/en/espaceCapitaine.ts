@@ -125,6 +125,11 @@ export default {
   helpDiscord: 'Discord ↗',
   helpContact: 'Contact form',
   helpGuide: 'Registration guide',
+  recruitKicker: 'One player short?',
+  recruitTitle: 'Post a recruitment opening',
+  recruitDesc:
+    'Roles wanted, team level, your practice slots: your opening is visible to every player looking for a roster — you do not even need an account.',
+  recruitCta: 'Post an opening',
   seoTitle: 'Captain hub — manage your team',
   seoDescription:
     "An overview of the OW Women's Cup captain hub: roster, recruiting, scrims, messaging and transfers to run your team throughout the tournament.",

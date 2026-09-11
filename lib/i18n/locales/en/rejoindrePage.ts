@@ -70,7 +70,7 @@ export default {
   submitting: 'Sending…',
   successTitle: "You're live!",
   successBody:
-    "Your profile is published, and the confirmation email we just sent you contains the link to remove it whenever you want. An interested captain will email you — or DM you on Discord if you filled in your handle.",
+    'Your profile is published, and the confirmation email we just sent you contains the link to remove it whenever you want. An interested captain will email you — or DM you on Discord if you filled in your handle.',
   successDiscordBody:
     'The rest happens on the server: grab the “Looking for a team” role, see who is recruiting, ask your questions.',
   successDiscordCta: 'Join the Discord',
@@ -95,6 +95,10 @@ export default {
   altTitle: 'Already have a team?',
   altDesc: 'Register it for the tournament directly.',
   altCta: 'Create my team',
+  mirrorTitle: 'Have a team and one player short?',
+  mirrorDesc:
+    'This is the other side of this page: post your team opening and it shows up in front of the players looking for a roster.',
+  mirrorCta: 'See the teams that are recruiting',
   discordTitle: 'Discord leads to the same list',
   discordDesc:
     "The “Looking for a team” role on the server is the Discord counterpart of this profile: both feed the same list. Taking the role on top of your profile isn't a duplicate — and the server is where captains recruit day to day.",

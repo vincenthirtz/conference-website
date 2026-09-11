@@ -64,5 +64,6 @@ export default {
   linkLeaderboard: 'Player rankings',
   linkLeagues: 'Leagues & seasons',
   linkFindTeam: "I'm looking for a team",
+  linkRecruit: 'My team is recruiting',
   linkPalmares: 'Player hall of fame',
 };

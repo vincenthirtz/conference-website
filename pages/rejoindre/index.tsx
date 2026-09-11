@@ -37,7 +37,7 @@ const faqSchema = {
       name: 'Peut-on participer sans avoir d’équipe ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: "Oui. Signale-toi sur la page « Rejoindre une équipe » : tu renseignes ton pseudo, les postes que tu joues et tes disponibilités, sans créer de compte. Les capitaines qui recrutent voient ta fiche et te contactent.",
+        text: 'Oui. Signale-toi sur la page « Rejoindre une équipe » : tu renseignes ton pseudo, les postes que tu joues et tes disponibilités, sans créer de compte. Les capitaines qui recrutent voient ta fiche et te contactent.',
       },
     },
     {
@@ -45,7 +45,7 @@ const faqSchema = {
       name: 'Faut-il un rang minimum pour jouer ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: "Non, aucun rang minimum. Le tournoi accueille tous les niveaux, débutantes comprises, et le format Swiss fait affronter des équipes de niveau équivalent au fil des rondes.",
+        text: 'Non, aucun rang minimum. Le tournoi accueille tous les niveaux, débutantes comprises, et le format Swiss fait affronter des équipes de niveau équivalent au fil des rondes.',
       },
     },
     {
@@ -53,7 +53,7 @@ const faqSchema = {
       name: 'Mes coordonnées sont-elles publiques ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: "Non. Ton email et ton pseudo Discord ne sont visibles que par les capitaines connectées. La liste publique n’affiche que ton pseudo, tes postes et tes disponibilités.",
+        text: 'Non. Ton email et ton pseudo Discord ne sont visibles que par les capitaines connectées. La liste publique n’affiche que ton pseudo, tes postes et tes disponibilités.',
       },
     },
   ],
@@ -150,9 +150,19 @@ function RejoindrePage() {
         <FreePlayersList refreshKey={refreshKey} />
       </div>
 
-      {/* Renvois : les deux autres portes d'entrée */}
+      {/* Renvois : les autres portes d'entrée, dont le miroir /recrutement */}
       <section className="mx-auto max-w-5xl px-6 pb-20">
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-2xl border border-white/10 bg-[var(--bg-elevated)] p-6">
+            <h2 className="font-bold text-white">{t.mirrorTitle}</h2>
+            <p className="mt-2 text-sm text-gray-300">{t.mirrorDesc}</p>
+            <Link
+              href="/recrutement"
+              className="mt-4 inline-block rounded-lg border border-white/20 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/40"
+            >
+              {t.mirrorCta}
+            </Link>
+          </div>
           <div className="rounded-2xl border border-white/10 bg-[var(--bg-elevated)] p-6">
             <h2 className="font-bold text-white">{t.altTitle}</h2>
             <p className="mt-2 text-sm text-gray-300">{t.altDesc}</p>
@@ -188,7 +198,7 @@ const rejoindreSeo: SeoProps = {
   },
   description: {
     fr: "Pas d'équipe ? Signale-toi sans créer de compte : les capitaines qui recrutent voient ta fiche et te contactent. Aucun rang minimum, tous les niveaux bienvenus.",
-    en: "No team? Add yourself without creating an account: recruiting captains see your profile and reach out. No minimum rank, all levels welcome.",
+    en: 'No team? Add yourself without creating an account: recruiting captains see your profile and reach out. No minimum rank, all levels welcome.',
   },
 };
 

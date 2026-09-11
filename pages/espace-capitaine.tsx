@@ -251,6 +251,30 @@ function EspaceCapitainePage() {
           </div>
         </section>
 
+        {/* Recrutement — le miroir de /rejoindre, vu du côté capitaine */}
+        <section className="section-brand-bg scroll-mt-24">
+          <div className="card-brand flex flex-col gap-4 rounded-3xl bg-white/[0.05] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+            <div>
+              <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-violet-light)]">
+                {t.recruitKicker}
+              </p>
+              <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
+                {t.recruitTitle}
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm text-gray-200">
+                {t.recruitDesc}
+              </p>
+            </div>
+            <Link
+              href="/recrutement"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--color-violet)]/50 bg-[var(--color-violet)]/15 px-6 py-3 text-sm font-bold text-white transition hover:border-[var(--color-violet)] hover:bg-[var(--color-violet)]/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
+            >
+              {t.recruitCta}
+              <span aria-hidden>→</span>
+            </Link>
+          </div>
+        </section>
+
         {/* Final CTA */}
         <section className="rounded-3xl border border-white/10 bg-gradient-to-r from-[#140a24] via-[#1c0f33] to-[#2a0d3d] p-6 sm:p-10 shadow-2xl">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

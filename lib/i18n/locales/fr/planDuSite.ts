@@ -40,6 +40,7 @@ export default ns('planDuSite', {
   linkRegister: 'Inscription staff / joueur',
   linkRegister2026: 'Inscription tournoi féminin 2026',
   linkFindTeam: 'Je cherche une équipe',
+  linkRecruit: 'Mon équipe recrute',
   linkCreateTeam: 'Créer une équipe',
   linkCaptainGuide: 'Guide capitaine — gérer mon équipe',
   linkCaptainSpace: 'Espace capitaine — présentation',

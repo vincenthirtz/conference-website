@@ -12,6 +12,9 @@ const publicRoutes = [
   // Page d'entrée du parcours « je joue seule » — cible SEO « trouver une
   // équipe Overwatch féminine ». Priorité haute : c'est une porte d'entrée.
   { path: '/rejoindre', priority: '0.9', changefreq: 'daily' },
+  // Le miroir de la précédente — « recruter une joueuse Overwatch ». Même
+  // priorité : les deux faces de l'appariement valent autant l'une que l'autre.
+  { path: '/recrutement', priority: '0.9', changefreq: 'daily' },
   { path: '/espace-capitaine', priority: '0.7', changefreq: 'monthly' },
   { path: '/guide/gerer-mon-equipe', priority: '0.8', changefreq: 'monthly' },
   { path: '/actualites', priority: '0.8', changefreq: 'daily' },

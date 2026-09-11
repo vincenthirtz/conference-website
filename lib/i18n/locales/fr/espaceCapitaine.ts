@@ -124,6 +124,11 @@ export default ns('espaceCapitaine', {
   helpDiscord: 'Discord ↗',
   helpContact: 'Formulaire de contact',
   helpGuide: "Guide d'inscription",
+  recruitKicker: 'Il te manque une joueuse ?',
+  recruitTitle: 'Publie une annonce de recrutement',
+  recruitDesc:
+    'Postes recherchés, niveau de l’équipe, vos créneaux : ton annonce est visible par toutes les joueuses qui cherchent un roster, sans même que tu aies besoin d’un compte.',
+  recruitCta: 'Publier une annonce',
   seoTitle: 'Espace capitaine — gérer ton équipe',
   seoDescription:
     "Présentation de l'espace capitaine OW Women's Cup : roster, recrutement, scrims, messagerie et transferts pour gérer ton équipe en tournoi.",
