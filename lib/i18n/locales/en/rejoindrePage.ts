@@ -60,6 +60,8 @@ export default {
   emailPlaceholder: 'you@email.com',
   discordLabel: 'Your Discord handle',
   discordPlaceholder: 'handle (optional)',
+  discordHint:
+    'Optional, but handy: with your handle, a captain can DM you directly instead of waiting for you to check your inbox.',
   captchaLabel: 'Anti-bot — what is {question}?',
   captchaPlaceholder: 'Answer with a number',
   honeypotLabel: 'Do not fill in',
@@ -67,7 +69,10 @@ export default {
   submitting: 'Sending…',
   successTitle: "You're live!",
   successBody:
-    "Your profile is published. Recruiting captains can contact you from now on. We're sending you a confirmation email: keep it, it contains the link to remove your profile whenever you want.",
+    "Your profile is published, and the confirmation email we just sent you contains the link to remove it whenever you want. An interested captain will email you — or DM you on Discord if you filled in your handle.",
+  successDiscordBody:
+    'The rest happens on the server: grab the “Looking for a team” role, see who is recruiting, ask your questions.',
+  successDiscordCta: 'Join the Discord',
   successAgain: 'Edit my profile',
   privacyNote:
     'Your email and Discord handle are only visible to signed-in captains. Your profile expires after 60 days, and you can remove it at any time using the link sent by email.',
@@ -89,9 +94,9 @@ export default {
   altTitle: 'Already have a team?',
   altDesc: 'Register it for the tournament directly.',
   altCta: 'Create my team',
-  discordTitle: 'Prefer Discord?',
+  discordTitle: 'Discord leads to the same list',
   discordDesc:
-    "The server is still there: take the “Looking for a team” role and you'll show up in this list too.",
+    "The “Looking for a team” role on the server is the Discord counterpart of this profile: both feed the same list. Taking the role on top of your profile isn't a duplicate — and the server is where captains recruit day to day.",
   discordCta: 'Join the Discord',
   removeTitle: 'Remove my profile',
   removeIntro:

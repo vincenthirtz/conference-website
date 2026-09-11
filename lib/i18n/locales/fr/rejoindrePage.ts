@@ -68,6 +68,8 @@ export default ns('rejoindrePage', {
   emailPlaceholder: 'ton@email.com',
   discordLabel: 'Ton pseudo Discord',
   discordPlaceholder: 'pseudo (facultatif)',
+  discordHint:
+    'Facultatif, mais utile : avec ton pseudo, une capitaine t’écrit directement en message privé au lieu d’attendre que tu ouvres tes emails.',
   captchaLabel: 'Anti-bot — combien font {question} ?',
   captchaPlaceholder: 'Réponds par un nombre',
   honeypotLabel: 'Ne pas remplir',
@@ -75,7 +77,10 @@ export default ns('rejoindrePage', {
   submitting: 'Envoi…',
   successTitle: 'C’est publié !',
   successBody:
-    "Ta fiche est en ligne. Les capitaines qui recrutent peuvent te contacter à partir de maintenant. On t'envoie un email de confirmation : garde-le, il contient le lien pour retirer ta fiche quand tu veux.",
+    "Ta fiche est en ligne, et l'email de confirmation qu'on vient de t'envoyer contient le lien pour la retirer quand tu veux. Une capitaine intéressée t'écrit par email — ou en message privé sur Discord si tu as renseigné ton pseudo.",
+  successDiscordBody:
+    'La suite se passe sur le serveur : prends le rôle « Recherche une équipe », regarde qui recrute, pose tes questions.',
+  successDiscordCta: 'Rejoindre le Discord',
   successAgain: 'Modifier ma fiche',
   privacyNote:
     "Ton email et ton pseudo Discord ne sont visibles que par les capitaines connectées. Ta fiche expire au bout de 60 jours, et tu peux la retirer à tout moment depuis le lien envoyé par email.",
@@ -118,8 +123,8 @@ export default ns('rejoindrePage', {
   altTitle: 'Tu as déjà une équipe ?',
   altDesc: 'Inscris-la directement au tournoi.',
   altCta: 'Créer mon équipe',
-  discordTitle: 'Tu préfères Discord ?',
+  discordTitle: 'Le Discord mène à la même liste',
   discordDesc:
-    'Le serveur reste ouvert : prends le rôle « Recherche une équipe » et tu apparaîtras aussi dans cette liste.',
+    'Le rôle « Recherche une équipe » sur le serveur est le pendant de cette fiche : les deux alimentent la même liste. Prendre le rôle en plus de ta fiche ne fait pas doublon — et c’est là que les capitaines recrutent au quotidien.',
   discordCta: 'Rejoindre le Discord',
 });

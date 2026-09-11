@@ -16,6 +16,7 @@
 // doit pas déclencher une requête au simple affichage de la page).
 
 import { useId, useRef, useState } from 'react';
+import { socialUrl } from '@/config/socials';
 import { useT, format as fmt } from '@/lib/i18n/useT';
 import nsRejoindrePage from '@/lib/i18n/locales/fr/rejoindrePage';
 import {
@@ -175,6 +176,12 @@ export default function JoinAsPlayerForm({
   const labelClass = 'block text-sm font-medium text-gray-200';
   const hintClass = 'mt-1 text-xs text-gray-400';
 
+  // Écran de succès. Il confirmait la publication et s'arrêtait là — un
+  // cul-de-sac : la joueuse venait de se signaler et n'avait plus rien à faire,
+  // alors que la vie de la communauté (et le recrutement des capitaines) se
+  // passe sur le Discord. On enchaîne donc sur la suite naturelle, en disant
+  // aussi COMMENT on la contactera. Deux phrases et un bouton : au-delà, plus
+  // personne ne lit.
   if (status === 'success') {
     return (
       <div
@@ -183,13 +190,24 @@ export default function JoinAsPlayerForm({
       >
         <h3 className="text-lg font-bold text-white">{t.successTitle}</h3>
         <p className="mt-2 text-sm text-gray-200">{t.successBody}</p>
-        <button
-          type="button"
-          onClick={() => setStatus('idle')}
-          className="mt-4 text-sm font-semibold text-[var(--color-green-light)] underline underline-offset-2"
+        <p className="mt-3 text-sm text-gray-200">{t.successDiscordBody}</p>
+        <a
+          href={socialUrl('discord')}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-4 inline-block rounded-lg bg-[#5865F2] px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]"
         >
-          {t.successAgain}
-        </button>
+          {t.successDiscordCta}
+        </a>
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => setStatus('idle')}
+            className="text-sm font-semibold text-[var(--color-green-light)] underline underline-offset-2"
+          >
+            {t.successAgain}
+          </button>
+        </div>
       </div>
     );
   }
@@ -321,6 +339,9 @@ export default function JoinAsPlayerForm({
             placeholder={t.discordPlaceholder}
             className={`${inputClass} mt-1`}
           />
+          {/* « Facultatif » ne dit pas à quoi ça sert : sans ce pseudo, on ne
+              peut la joindre que par email. */}
+          <p className={hintClass}>{t.discordHint}</p>
         </div>
       </div>
 

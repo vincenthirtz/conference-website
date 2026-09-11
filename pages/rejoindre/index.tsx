@@ -17,13 +17,13 @@ import { useCallback, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { socialUrl } from '@/config/socials';
 import { ACTIVE_WOMEN_TOURNAMENT_ID } from '@/utils/activeEdition';
 import { useT } from '@/lib/i18n/useT';
 import nsRejoindrePage from '@/lib/i18n/locales/fr/rejoindrePage';
 import JoinAsPlayerForm from '@/components/FreePlayers/JoinAsPlayerForm';
 import FreePlayersList from '@/components/FreePlayers/FreePlayersList';
 
-const DISCORD_INVITE = 'https://discord.gg/gERSsjC3Vd';
 const CREATE_TEAM_HREF = `/team/create?tournament=${ACTIVE_WOMEN_TOURNAMENT_ID}`;
 
 // JSON-LD : la question que se pose exactement la visiteuse cible. Reste en
@@ -167,7 +167,7 @@ function RejoindrePage() {
             <h2 className="font-bold text-white">{t.discordTitle}</h2>
             <p className="mt-2 text-sm text-gray-300">{t.discordDesc}</p>
             <a
-              href={DISCORD_INVITE}
+              href={socialUrl('discord')}
               target="_blank"
               rel="noreferrer"
               className="mt-4 inline-block rounded-lg border border-white/20 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/40"
