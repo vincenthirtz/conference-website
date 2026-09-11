@@ -104,6 +104,17 @@ export default function TiktokMirrorCard({ t }: { t: Dict }) {
       {state.connected ? (
         <p className="text-xs text-emerald-300">
           {format(t.tiktokConnectedAs, { handle: state.handle ?? '—' })}
+          {/* Reconnecter doit rester possible alors que le compte paraît
+              connecté : une session révoquée côté plateforme ne se voit pas à
+              l'échéance du jeton (cf. Instagram, 2026-09-11). */}
+          {' · '}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a
+            href="/api/admin/tiktok/authorize"
+            className="text-neutral-400 underline underline-offset-2 hover:text-neutral-200"
+          >
+            {t.reconnectCta}
+          </a>
         </p>
       ) : (
         <p className="text-xs text-amber-300">

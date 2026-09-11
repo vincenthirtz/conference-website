@@ -81,6 +81,7 @@ export default {
   notConnected: 'Account not connected.',
   connectionExpired: 'The connection has expired.',
   accountLastError: 'Last error: {error}',
+  reconnectCta: 'Reconnect',
   connectCta: 'Connect the account',
   secretMissing: 'Setup: the Instagram app secret is missing.',
   secretLabel: 'Instagram app secret',

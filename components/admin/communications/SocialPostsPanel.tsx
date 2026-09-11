@@ -530,6 +530,29 @@ export default function SocialPostsPanel() {
                             {format(t.connectedAs, {
                               handle: conn.handle ?? '—',
                             })}
+                            {/* Reconnecter doit rester possible alors que le
+                                compte paraît connecté : Meta peut révoquer une
+                                session (mot de passe changé, alerte de
+                                sécurité) sans que l'échéance du jeton ne le
+                                laisse deviner. Bluesky n'a pas d'OAuth. */}
+                            {p.key === 'instagram' ? (
+                              <>
+                                {' · '}
+                                {/* Navigation de document : la route répond
+                                    par une redirection 302 vers Meta. */}
+                                {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+                                <a
+                                  href="/api/admin/instagram/authorize"
+                                  className={`underline underline-offset-2 ${
+                                    conn.lastError
+                                      ? 'text-amber-300 hover:text-amber-200'
+                                      : 'text-neutral-400 hover:text-neutral-200'
+                                  }`}
+                                >
+                                  {t.reconnectCta}
+                                </a>
+                              </>
+                            ) : null}
                           </p>
                           {/* « Connecté » ne dit pas « ça marche » : le miroir
                               peut échouer à LIRE nos publications (Meta refuse,
