@@ -33960,6 +33960,126 @@ paths:
                     enum: [revoked]
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/player/tcg/packs:
+    get:
+      tags:
+        - public/auth
+      summary: Mes paquets TCG (ouverts et fermes) et mon solde de pieces.
+      operationId: listPlayerTcgPacks
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Paquets et solde.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  packs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        source:
+                          type: string
+                          enum: [victory, purchase]
+                        grantedAt:
+                          type: string
+                        openedAt:
+                          type: string
+                          nullable: true
+                  unopened:
+                    type: integer
+                  balance:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    post:
+      tags:
+        - public/auth
+      summary: Ouvrir un paquet — tirer ses cartes et les figer.
+      description: |
+        LE TIRAGE PRECEDE LA CONSOMMATION : les cartes sont composees d'abord,
+        le paquet n'est marque ouvert qu'ensuite. Un vivier vide ne coute donc
+        pas son paquet (409 `empty_pool`, paquet toujours fermé).
+
+        Reservation atomique (`opened_at IS NULL`) : deux clics simultanes ne
+        peuvent pas ouvrir deux fois le meme paquet. Si l'ecriture des cartes
+        echoue apres la reservation, celle-ci est RELACHEE — mieux vaut un
+        paquet encore ferme qu'un paquet ouvert et vide.
+
+        La rarete est calculee pour les 5 sujets tires seulement, jamais pour
+        tout le vivier. Une rarete illisible retombe sur `common` plutot que de
+        faire echouer l'ouverture. Rate-limit 30 / min.
+      operationId: openPlayerTcgPack
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [packId]
+              properties:
+                packId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Paquet ouvert, cartes figees.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  packId:
+                    type: string
+                  openedAt:
+                    type: string
+                  cards:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        position:
+                          type: integer
+                        kind:
+                          type: string
+                          enum: [player, team]
+                        userId:
+                          type: string
+                          nullable: true
+                        teamId:
+                          type: string
+                          nullable: true
+                        rarity:
+                          type: string
+                          enum: [common, rare, epic, legendary]
+                        isFoil:
+                          type: boolean
+        '400':
+          description: '`code: missing_pack`.'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: |
+            Paquet introuvable. 404 et non 403 : on ne confirme pas
+            l'existence d'un paquet qui n'appartient pas a l'appelante.
+        '409':
+          description: |
+            `code: already_opened` (paquet deja ouvert) ou `code: empty_pool`
+            (aucun sujet a distribuer — le paquet reste ferme).
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /api/player/tcg/booster:
     post:
       tags:
