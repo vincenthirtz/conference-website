@@ -24,13 +24,10 @@ import { formatZodError } from './validation';
 import {
   DEFAULT_TENANT_ID,
   isActiveTenantId,
-  getTenantIdByGuildId,
+  resolveGuildTenant,
   __resetTenantLookupCachesForTests,
 } from './tenant';
-import {
-  getTenantLifecycle,
-  lifecycleDenial,
-} from './tenants/lifecycle';
+import { getTenantLifecycle, lifecycleDenial } from './tenants/lifecycle';
 import {
   loadTenantPlanStateForBot,
   checkBotPlanCapability,
@@ -191,7 +188,30 @@ async function resolveEffectiveTenant(
       };
     }
 
-    const owner = await getTenantIdByGuildId(headerGuild);
+    const guild = await resolveGuildTenant(headerGuild);
+    if (!guild.ok) {
+      // Lecture IMPOSSIBLE ≠ guilde non liée. Retomber sur `x-tenant-id`
+      // inverserait la précédence que ce code pose explicitement — la guilde,
+      // donnée que nous possédons, l'emporte sur une simple affirmation du
+      // client. Une erreur de lecture transitoire suffirait alors à faire agir
+      // pour un autre espace. On refuse temporairement ; le bot réessaiera.
+      logger.error('[bot/tenant] guild → tenant illisible, requête refusée', {
+        guildId: headerGuild,
+        route: routeKey,
+        error: guild.error,
+      });
+      return {
+        denial: {
+          status: 503,
+          body: {
+            error: 'Tenant resolution temporarily unavailable.',
+            code: 'TENANT_LOOKUP_UNAVAILABLE',
+          },
+        },
+      };
+    }
+
+    const owner = guild.tenantId;
     if (owner) {
       const ownerId = owner.toLowerCase();
       if (requested && requested !== ownerId) {
@@ -637,9 +657,7 @@ export function withBotRoute(
       const lifecycle = await getTenantLifecycle(resolved.tenantId);
       const lifecycleRefusal = lifecycleDenial(lifecycle);
       if (lifecycleRefusal) {
-        return res
-          .status(lifecycleRefusal.status)
-          .json(lifecycleRefusal.body);
+        return res.status(lifecycleRefusal.status).json(lifecycleRefusal.body);
       }
 
       // Gate PLAN « Régie solidaire ».

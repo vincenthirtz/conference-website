@@ -105,29 +105,87 @@ async function resolveWebhookSecret(tenantId: string): Promise<string | null> {
   return secret;
 }
 
+/**
+ * Écriture dans l'outbox, en distinguant « pas de client » d'un ÉCHEC d'écriture.
+ *
+ * POURQUOI CE SOIN — audit du 2026-09-12. L'outbox n'est PAS un filet de
+ * secours sur ce déploiement : le push direct échoue systématiquement (HTTP 401
+ * sur toutes les lignes examinées) et le bot récupère tout par polling. Sans
+ * ligne d'outbox, l'événement n'existe donc nulle part et rien ne le rejouera —
+ * il est perdu en silence. `markDelivered`, l'enregistrement des échecs et
+ * toute reprise sont conditionnés à l'identifiant de cette ligne.
+ *
+ * D'où la reprise immédiate : l'insertion échoue surtout sur un 504 transitoire
+ * de PostgREST (~1,7 % des requêtes mesurées ce jour-là).
+ *
+ * ⚠️ UNE REPRISE N'EST SÛRE QUE GRÂCE À `UNIQUE (event_id)`. Un 504 est un
+ * *gateway timeout* : l'insertion peut avoir été validée malgré l'erreur
+ * rendue. Sans cette contrainte, réessayer créerait une SECONDE ligne pour le
+ * même événement — donc un doublon dans Discord, précisément ce qu'on corrige.
+ * La violation d'unicité (23505) est donc la preuve que la première tentative a
+ * abouti : on la traite comme un succès.
+ */
+type OutboxWrite =
+  | { ok: true; id: number | null }
+  | { ok: false; error: string };
+
+const OUTBOX_INSERT_ATTEMPTS = 2;
+const OUTBOX_RETRY_DELAY_MS = 250;
+/** Violation de contrainte unique (Postgres). */
+const PG_UNIQUE_VIOLATION = '23505';
+
 async function persistOutbox(params: {
   eventId: string;
   eventName: BotEventName;
   tenantId: string;
   payload: unknown;
-}): Promise<number | null> {
-  if (!supabaseAdmin) return null;
-  const { data, error } = await supabaseAdmin
-    .from('bot_event_outbox')
-    .insert({
-      event_id: params.eventId,
-      event_name: params.eventName,
-      tenant_id: params.tenantId,
-      payload: params.payload,
-      status: 'pending',
-    })
-    .select('id')
-    .maybeSingle();
-  if (error) {
-    logger.error('[botEvents] outbox insert error', error);
-    return null;
+}): Promise<OutboxWrite> {
+  if (!supabaseAdmin) return { ok: false, error: 'supabase_admin_unavailable' };
+
+  let lastError = 'unknown';
+  for (let attempt = 1; attempt <= OUTBOX_INSERT_ATTEMPTS; attempt++) {
+    const { data, error } = await supabaseAdmin
+      .from('bot_event_outbox')
+      .insert({
+        event_id: params.eventId,
+        event_name: params.eventName,
+        tenant_id: params.tenantId,
+        payload: params.payload,
+        status: 'pending',
+      })
+      .select('id')
+      .maybeSingle();
+
+    if (!error) {
+      return { ok: true, id: (data?.id as number | undefined) ?? null };
+    }
+
+    if ((error as { code?: string }).code === PG_UNIQUE_VIOLATION) {
+      // La tentative précédente avait bien écrit, malgré son erreur. La ligne
+      // existe : l'événement n'est pas perdu. On ne connaît pas son `id`, donc
+      // pas de `markDelivered` — la ligne reste `pending` et le bot la
+      // récupérera par polling, qui est déjà le chemin nominal ici.
+      logger.warn(
+        '[botEvents] outbox: ligne déjà écrite par la tentative précédente (%s)',
+        params.eventId
+      );
+      return { ok: true, id: null };
+    }
+
+    lastError = error.message;
+    logger.error(
+      '[botEvents] outbox insert error (tentative %s/%s): %s',
+      attempt,
+      OUTBOX_INSERT_ATTEMPTS,
+      error.message
+    );
+    if (attempt < OUTBOX_INSERT_ATTEMPTS) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, OUTBOX_RETRY_DELAY_MS)
+      );
+    }
   }
-  return (data?.id as number | undefined) ?? null;
+  return { ok: false, error: lastError };
 }
 
 async function markDelivered(outboxId: number): Promise<void> {
@@ -205,14 +263,34 @@ export async function emitBotEvent(
 
   // Persist d'abord — meme si le push HTTP rate, l'outbox permettra au bot
   // de rattraper via polling.
-  const outboxId = await persistOutbox({
+  const write = await persistOutbox({
     eventId: fullPayload.id,
     eventName: event,
     tenantId,
     payload: fullPayload,
   });
 
-  return pushToBot(event, fullPayload, outboxId, tenantId);
+  if (!write.ok) {
+    logger.error(
+      `[botEvents] ${event} NON PERSISTÉ dans l'outbox (${write.error}) — le bot ne pourra pas le rattraper par polling`
+    );
+  }
+
+  const result = await pushToBot(
+    event,
+    fullPayload,
+    write.ok ? write.id : null,
+    tenantId
+  );
+
+  // Ni ligne d'outbox, ni push abouti : l'événement est PERDU. On le dit à
+  // l'appelant plutôt que de rendre un échec de push ordinaire, qui laisserait
+  // croire au rattrapage habituel.
+  if (!write.ok && !result.delivered) {
+    return { ...result, error: `event_lost:${result.error ?? 'push_failed'}` };
+  }
+
+  return result;
 }
 
 export type BotEventBatchItem = {

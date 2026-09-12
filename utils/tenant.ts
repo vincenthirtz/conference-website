@@ -155,7 +155,8 @@ export async function isActiveTenantId(tenantId: string): Promise<boolean> {
     return false;
   }
 
-  const active = !!data && (data as { is_active?: boolean }).is_active !== false;
+  const active =
+    !!data && (data as { is_active?: boolean }).is_active !== false;
   activeTenantCache.set(tenantId, {
     active,
     expiresAt: now + TENANT_LOOKUP_TTL_MS,
@@ -164,23 +165,34 @@ export async function isActiveTenantId(tenantId: string): Promise<boolean> {
 }
 
 /**
- * Tenant propriétaire d'un serveur Discord, ou `null` si le guild n'est lié à
- * aucun tenant.
+ * Résolution guilde → tenant, en distinguant « guilde non liée » d'un ÉCHEC de
+ * lecture.
  *
- * C'est le seul signal d'appartenance VÉRIFIABLE dont dispose le site quand
- * une requête vient du bot mutualisé : le guild est une donnée que nous
- * possédons (`discord_guilds`), là où un en-tête de tenant n'est qu'une
- * affirmation du client.
+ * POURQUOI CETTE DISTINCTION — audit du 2026-09-12. Les deux cas rendaient
+ * `null`, et les appelants en concluaient « guilde inconnue », ce qui les fait
+ * retomber sur l'en-tête `x-tenant-id`. Or le principe posé ici est que la
+ * GUILDE L'EMPORTE sur l'en-tête, parce qu'elle est une donnée que nous
+ * possédons là où l'en-tête n'est qu'une affirmation du client. Une simple
+ * erreur de lecture inversait donc cette précédence, et pouvait attribuer une
+ * action au mauvais espace.
  */
-export async function getTenantIdByGuildId(
+export type GuildTenantLookup =
+  | { ok: true; tenantId: string | null }
+  | { ok: false; error: string };
+
+export async function resolveGuildTenant(
   guildId: string
-): Promise<string | null> {
-  if (!guildId) return null;
+): Promise<GuildTenantLookup> {
+  if (!guildId) return { ok: true, tenantId: null };
   const now = Date.now();
   const cached = guildTenantCache.get(guildId);
-  if (cached && cached.expiresAt > now) return cached.tenantId;
+  if (cached && cached.expiresAt > now) {
+    return { ok: true, tenantId: cached.tenantId };
+  }
 
-  if (!supabaseAdmin) return null;
+  if (!supabaseAdmin) {
+    return { ok: false, error: 'supabase_admin_unavailable' };
+  }
   const { data, error } = await supabaseAdmin
     .from('discord_guilds')
     .select('tenant_id')
@@ -189,7 +201,7 @@ export async function getTenantIdByGuildId(
 
   if (error) {
     logger.error('[tenant] guild → tenant lookup failed', error);
-    return null;
+    return { ok: false, error: error.message };
   }
 
   const tenantId = (data as { tenant_id?: string } | null)?.tenant_id ?? null;
@@ -197,7 +209,7 @@ export async function getTenantIdByGuildId(
     tenantId,
     expiresAt: now + TENANT_LOOKUP_TTL_MS,
   });
-  return tenantId;
+  return { ok: true, tenantId };
 }
 
 /* -----------------------------------------------------------------------
@@ -401,10 +413,22 @@ export async function resolveTenantIdForPublicRequestAsync(
   //    une requête d'API arrivant sur un tel domaine appartient sans ambiguïté
   //    à son espace.
   const host = (req.headers as Record<string, unknown>)?.host;
-  const byHost = await resolveTenantIdByHost(
+  const byHost = await resolveTenantByHostResult(
     Array.isArray(host) ? host[0] : (host as string | undefined)
   );
-  if (byHost) return byHost;
+  if (!byHost.ok) {
+    // ÉCHEC DE LECTURE ≠ hôte inconnu. Poursuivre la cascade la ferait finir
+    // sur `DEFAULT_TENANT_ID` : la requête d'un espace serait servie avec les
+    // données de l'association — « valide, et fausse », comme le dit le point 3
+    // ci-dessous. On préfère une erreur franche, que la route traduira en 5xx
+    // et que l'appelant réessaiera.
+    //
+    // Chemin étroit par construction : la lecture n'a lieu que pour un hôte
+    // ÉTRANGER (ni owwomenscup.fr, ni *.netlify.app, ni localhost), donc jamais
+    // pour le trafic normal ni pour les previews.
+    throw new Error(`tenant_host_lookup_failed: ${byHost.error}`);
+  }
+  if (byHost.tenantId) return byHost.tenantId;
 
   const url = (req as { url?: string }).url;
 
@@ -647,26 +671,41 @@ function isPlatformDefaultHost(host: string): boolean {
 /**
  * Résout le tenant.id à partir du host de la requête (custom domain).
  *
- * - Host vide / plateforme (owwomenscup.fr, *.netlify.app, localhost) → `null`
- *   (pas de lookup, défaut appliqué).
+ * - Host vide / plateforme (owwomenscup.fr, *.netlify.app, localhost) →
+ *   `{ ok: true, tenantId: null }` (aucun lookup, défaut appliqué).
  * - Host = `custom_domain` d'un tenant ACTIF → son tenant.id.
- * - Host inconnu → `null` (negative cache).
+ * - Host inconnu → `{ ok: true, tenantId: null }` (negative cache).
+ * - Lecture IMPOSSIBLE → `{ ok: false }`.
+ *
+ * POURQUOI CE TROISIÈME CAS — audit du 2026-09-12. La fonction rendait `null`
+ * aussi bien pour « hôte inconnu » que pour « je n'ai pas pu lire », et son
+ * appelant termine sa cascade par `DEFAULT_TENANT_ID` : une erreur de lecture
+ * transitoire faisait donc servir les données de l'association à la requête
+ * d'un autre espace. Le commentaire du point 3 de cette cascade décrit
+ * exactement le résultat : « la réponse serait valide, et fausse ».
  *
  * Comparaison case-insensitive côté JS (on récupère tous les tenants ayant un
  * `custom_domain` non nul — une poignée de lignes — puis on matche le host
  * normalisé), ce qui reste correct quelle que soit la casse stockée en base.
  * Cache mémoire 60s.
  */
-export async function resolveTenantIdByHost(
+export type HostTenantLookup =
+  | { ok: true; tenantId: string | null }
+  | { ok: false; error: string };
+
+export async function resolveTenantByHostResult(
   host: string | null | undefined
-): Promise<string | null> {
+): Promise<HostTenantLookup> {
   const norm = normalizeHost(host);
-  if (!norm || isPlatformDefaultHost(norm)) return null;
+  // Hôte de la plateforme : on sort AVANT toute lecture. C'est ce qui rend le
+  // cas d'échec ci-dessous très étroit — le trafic normal et les previews
+  // Netlify n'interrogent jamais la base ici.
+  if (!norm || isPlatformDefaultHost(norm)) return { ok: true, tenantId: null };
 
   const now = Date.now();
   const cached = tenantHostCache.get(norm);
   if (cached && cached.expiresAt > now) {
-    return cached.tenantId;
+    return { ok: true, tenantId: cached.tenantId };
   }
 
   if (!supabaseAdmin) {
@@ -674,7 +713,7 @@ export async function resolveTenantIdByHost(
       '[tenant] supabaseAdmin unavailable, cannot resolve tenant by host',
       { host: norm }
     );
-    return null;
+    return { ok: false, error: 'supabase_admin_unavailable' };
   }
 
   let tenantId: string | null = null;
@@ -691,7 +730,7 @@ export async function resolveTenantIdByHost(
         host: norm,
         error: error.message,
       });
-      return null; // erreur transitoire → ne pas cacher un faux négatif
+      return { ok: false, error: error.message };
     }
 
     const rows =
@@ -737,14 +776,34 @@ export async function resolveTenantIdByHost(
       host: norm,
       error: err instanceof Error ? err.message : String(err),
     });
-    return null;
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
   }
 
   tenantHostCache.set(norm, {
     tenantId,
     expiresAt: now + TENANT_SLUG_CACHE_TTL_MS,
   });
-  return tenantId;
+  return { ok: true, tenantId };
+}
+
+/**
+ * Variante confondante : erreur de lecture et hôte inconnu rendent tous deux
+ * `null`.
+ *
+ * LÉGITIME LÀ OÙ LA DÉCISION EST LA MÊME dans les deux cas — `pages/_document`
+ * s'en sert pour le branding, et une erreur y donne le branding par défaut,
+ * exactement comme un hôte inconnu. NE PAS l'utiliser là où l'échec de lecture
+ * changerait à QUI la requête est attribuée : c'est le rôle de
+ * `resolveTenantByHostResult`.
+ */
+export async function resolveTenantIdByHost(
+  host: string | null | undefined
+): Promise<string | null> {
+  const res = await resolveTenantByHostResult(host);
+  return res.ok ? res.tenantId : null;
 }
 
 /**

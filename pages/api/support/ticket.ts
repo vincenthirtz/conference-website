@@ -17,7 +17,7 @@ import { notifySupportTicket } from '@/utils/discord';
 import { emitBotEvent } from '@/utils/botEvents';
 import {
   DEFAULT_TENANT_ID,
-  getTenantIdByGuildId,
+  resolveGuildTenant,
   isActiveTenantId,
   resolveTenantIdForPublicRequestAsync,
 } from '@/utils/tenant';
@@ -108,8 +108,15 @@ async function resolveTicketTenantId(
     const rawGuild = req.headers['x-guild-id'];
     const guildId = Array.isArray(rawGuild) ? rawGuild[0] : rawGuild;
     if (typeof guildId === 'string' && /^[0-9]{15,25}$/.test(guildId)) {
-      const owner = await getTenantIdByGuildId(guildId);
-      if (owner) return owner;
+      const guild = await resolveGuildTenant(guildId);
+      if (!guild.ok) {
+        // Un ticket de support peut être un SIGNALEMENT DE SÉCURITÉ. Le classer
+        // dans le mauvais espace — ce que ferait le repli sur `x-tenant-id`
+        // puis sur l'espace par défaut — est pire que de le refuser. On lève :
+        // le bot réessaiera, et rien n'est déposé au mauvais endroit.
+        throw new Error(`guild_tenant_lookup_failed: ${guild.error}`);
+      }
+      if (guild.tenantId) return guild.tenantId;
     }
 
     const rawTenant = req.headers['x-tenant-id'];
