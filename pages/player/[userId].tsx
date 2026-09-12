@@ -37,6 +37,7 @@ import type {
   ProfileSeason,
 } from '@/types/rating';
 import { readPlayerProfile } from '@/utils/rating/readPlayerProfile';
+import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -1269,7 +1270,16 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
  * quand même une prop statique de repli pour les pré-rendus dégradés.
  * -------------------------------------------------------------------------*/
 
-function buildPlayerSeo(profile: PlayerProfileResponse): SeoProps {
+function buildPlayerSeo(
+  profile: PlayerProfileResponse,
+  /**
+   * La joueuse a-t-elle activé sa découverte ? C'est ce qui décide de
+   * l'INDEXATION. Une fiche reste accessible par lien dans tous les cas — un
+   * partage, le classement — mais elle n'entre dans un moteur de recherche que
+   * si sa titulaire l'a voulu (décision produit du 2026-07-13).
+   */
+  discoverable: boolean
+): SeoProps {
   const { player } = profile;
   const label = coreLabel(player);
   const total = player.wins + player.losses;
@@ -1331,6 +1341,7 @@ function buildPlayerSeo(profile: PlayerProfileResponse): SeoProps {
     description: { fr: descriptionFr, en: descriptionEn },
     image: ogImage,
     jsonLd,
+    noindex: !discoverable,
   };
 }
 
@@ -1376,8 +1387,26 @@ export const getStaticProps: GetStaticProps<{
     return { notFound: true, revalidate: 300 };
   }
 
+  // Opt-in de découverte = autorisation d'indexer. En l'absence de preuve —
+  // pas de ligne, ou lecture impossible — on n'indexe PAS : c'est le sens sûr,
+  // et le seul compatible avec « aucune page publique indexée de personne ».
+  let discoverable = false;
+  try {
+    if (supabaseAdmin) {
+      const { data } = await supabaseAdmin
+        .from('player_discovery_profiles')
+        .select('auth_user_id')
+        .eq('auth_user_id', userId)
+        .eq('discoverable', true)
+        .maybeSingle();
+      discoverable = Boolean(data);
+    }
+  } catch {
+    /* on reste sur false — ne pas indexer par défaut */
+  }
+
   return {
-    props: { profile, seo: buildPlayerSeo(profile) },
+    props: { profile, seo: buildPlayerSeo(profile, discoverable) },
     revalidate: 300,
   };
 };

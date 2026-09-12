@@ -81,11 +81,6 @@ type LeagueItem = {
   updated_at?: string | null;
 };
 
-type PlayerRatingItem = {
-  user_id: string;
-  updated_at?: string | null;
-};
-
 function getBaseUrl(req: Parameters<GetServerSideProps>[0]['req']) {
   const env = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
   if (env) return env;
@@ -112,8 +107,7 @@ function generateSiteMap(
   teams: TeamItem[],
   matches: MatchItem[],
   scrims: ScrimItem[],
-  leagues: LeagueItem[],
-  playerRatings: PlayerRatingItem[]
+  leagues: LeagueItem[]
 ) {
   const today = new Date().toISOString();
 
@@ -221,19 +215,15 @@ function generateSiteMap(
     })
     .join('\n');
 
-  // Dynamic player profile pages (ranked players only)
-  const playerUrls = playerRatings
-    .map((player) => {
-      const loc = escapeXml(`${baseUrl}/player/${player.user_id}`);
-      const lastmod = player.updated_at || today;
-      return `  <url>
-    <loc>${loc}</loc>
-    <lastmod>${new Date(lastmod).toISOString()}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>`;
-    })
-    .join('\n');
+  // PAS de profils de joueuses ici — décision produit du 2026-07-13
+  // (create_player_discovery_profiles.sql) : aucune page PUBLIQUE ni INDEXÉE de
+  // personne. Le sitemap poussait pourtant vers l'index toutes les joueuses
+  // ayant un match classé, sans qu'aucune ne l'ait demandé. Les ÉQUIPES restent
+  // publiques et indexées : ce sont des entités, pas des personnes.
+  //
+  // Les fiches restent accessibles par lien (partage, leaderboard) ; elles sont
+  // simplement en `noindex` tant que la joueuse n'a pas activé sa découverte
+  // (cf. getStaticProps de pages/player/[userId].tsx).
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -244,7 +234,6 @@ ${teamUrls}
 ${matchUrls}
 ${scrimUrls}
 ${leagueUrls}
-${playerUrls}
 </urlset>`;
 }
 
@@ -369,23 +358,8 @@ export const getServerSideProps: GetServerSideProps = async ({ res, req }) => {
     logger.error('[sitemap] Error fetching leagues:', err);
   }
 
-  // Fetch ranked player profiles (players with at least one game)
-  let playerRatings: PlayerRatingItem[] = [];
-  try {
-    const { data } = await client
-      .from('player_ratings')
-      .select('user_id, updated_at')
-      .eq('tenant_id', tenantId)
-      .gt('games_played', 0)
-      .order('rating', { ascending: false })
-      .limit(500);
-
-    playerRatings = (data || [])
-      .filter((p) => Boolean(p.user_id))
-      .map((p) => ({ user_id: p.user_id as string, updated_at: p.updated_at }));
-  } catch (err) {
-    logger.error('[sitemap] Error fetching player ratings:', err);
-  }
+  // (Plus de lecture de player_ratings : les profils de joueuses ne sont plus
+  // listés — voir le commentaire dans generateSiteMap.)
 
   const sitemap = generateSiteMap(
     baseUrl,
@@ -394,8 +368,7 @@ export const getServerSideProps: GetServerSideProps = async ({ res, req }) => {
     teams,
     matches,
     scrims,
-    leagues,
-    playerRatings
+    leagues
   );
 
   res.setHeader('Content-Type', 'application/xml');

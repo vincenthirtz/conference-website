@@ -125,6 +125,20 @@ describe('sitemap.xml — seulement des pages qui existent', () => {
     expect(xml).not.toContain('/match/m-pending');
   });
 
+  // Garde-fou de la décision produit du 2026-07-13
+  // (create_player_discovery_profiles.sql) : aucune page PUBLIQUE ni INDEXÉE de
+  // personne. Le sitemap poussait pourtant vers l'index toute joueuse ayant un
+  // match classé, sans qu'elle l'ait demandé. Ce test existe pour qu'on ne les
+  // y remette pas « parce que c'est bon pour le référencement ».
+  it('ne liste AUCUN profil de joueuse, même classée', async () => {
+    seed('player_ratings', [
+      { user_id: 'u-1', games_played: 42, rating: 1900 },
+      { user_id: 'u-2', games_played: 3, rating: 1500 },
+    ]);
+    const xml = await renderSitemap();
+    expect(xml).not.toContain('/player/');
+  });
+
   it('écarte les équipes inactives, supprimées ou sans slug', async () => {
     seed('teams', [
       { slug: 'actives', is_active: true, deleted_at: null },
