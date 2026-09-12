@@ -13,9 +13,15 @@ type Comment = {
   created_at: string;
 };
 
-type ListResponse = { items: Comment[] } | { error: string };
+/**
+ * `code` : identifiant STABLE de l'erreur, que le client traduit lui-même. Le
+ * champ `error` reste un message technique, destiné aux journaux — il ne doit
+ * plus être affiché tel quel (il l'était, en français, dans une interface
+ * pouvant être en anglais).
+ */
+type ListResponse = { items: Comment[] } | { error: string; code?: string };
 
-type CreateResponse = { comment: Comment } | { error: string };
+type CreateResponse = { comment: Comment } | { error: string; code?: string };
 
 export default async function handler(
   req: NextApiRequest,
@@ -94,7 +100,9 @@ async function createComment(
 
   // Simple anti-bot: reject if honeypot filled
   if (honeypot && `${honeypot}`.trim().length > 0) {
-    return res.status(400).json({ error: 'Bot detected' });
+    return res
+      .status(400)
+      .json({ error: 'Bot detected', code: 'BOT_DETECTED' });
   }
 
   // Verify CAPTCHA challenge-response
@@ -103,30 +111,36 @@ async function createComment(
     (captchaAnswer || '').toString()
   );
   if (!captchaResult.valid) {
-    return res
-      .status(400)
-      .json({ error: captchaResult.error || 'Invalid captcha' });
+    return res.status(400).json({
+      error: captchaResult.error || 'Invalid captcha',
+      code: 'CAPTCHA_INVALID',
+    });
   }
 
   if (!trimmedNewsId) {
-    return res.status(400).json({ error: 'newsId is required' });
-  }
-  if (!trimmedContent || trimmedContent.length < 3) {
     return res
       .status(400)
-      .json({ error: 'content must contain at least 3 characters' });
+      .json({ error: 'newsId is required', code: 'NEWS_ID_REQUIRED' });
+  }
+  if (!trimmedContent || trimmedContent.length < 3) {
+    return res.status(400).json({
+      error: 'content must contain at least 3 characters',
+      code: 'CONTENT_TOO_SHORT',
+    });
   }
 
   if (trimmedContent.length > 2000) {
-    return res
-      .status(400)
-      .json({ error: 'content must be at most 2000 characters' });
+    return res.status(400).json({
+      error: 'content must be at most 2000 characters',
+      code: 'CONTENT_TOO_LONG',
+    });
   }
 
   if (trimmedAuthor && trimmedAuthor.length > 50) {
-    return res
-      .status(400)
-      .json({ error: 'author name must be at most 50 characters' });
+    return res.status(400).json({
+      error: 'author name must be at most 50 characters',
+      code: 'AUTHOR_TOO_LONG',
+    });
   }
 
   const tenantId = await resolveTenantIdForPublicRequestAsync(req);
@@ -147,13 +161,20 @@ async function createComment(
     logger.error('[/api/news/comments] news lookup error:', newsErr);
     return res.status(500).json({ error: 'Failed to create comment' });
   }
+  // Messages TECHNIQUES en anglais + `code` stable : le client traduit le code,
+  // il n'affiche plus la chaîne du serveur. Elle était en français ici, donc
+  // une lectrice en anglais recevait « Les commentaires sont fermés sur cet
+  // article. » au milieu d'une interface traduite.
   if (!newsRow) {
-    return res.status(404).json({ error: 'Article introuvable' });
+    return res
+      .status(404)
+      .json({ error: 'News article not found', code: 'NEWS_NOT_FOUND' });
   }
   if ((newsRow as { status?: string }).status !== 'published') {
-    return res
-      .status(403)
-      .json({ error: 'Les commentaires sont fermés sur cet article.' });
+    return res.status(403).json({
+      error: 'Comments are closed on this article',
+      code: 'COMMENTS_CLOSED',
+    });
   }
 
   const { data, error } = await client

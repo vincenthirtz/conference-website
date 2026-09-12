@@ -389,7 +389,19 @@ function Comments({ newsId }: { newsId: string }) {
       });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        throw new Error(json?.error || t.errPublish);
+        // On traduit le CODE, jamais le message du serveur : celui-ci est
+        // technique (et l'était en français), donc illisible ou hors langue
+        // pour la lectrice. Code inconnu ⇒ message générique traduit.
+        const byCode: Record<string, string> = {
+          BOT_DETECTED: t.errPublish,
+          CAPTCHA_INVALID: t.errCaptcha,
+          CONTENT_TOO_SHORT: t.errTooShort,
+          CONTENT_TOO_LONG: t.errTooLong,
+          AUTHOR_TOO_LONG: t.errAuthorTooLong,
+          NEWS_NOT_FOUND: t.errArticleNotFound,
+          COMMENTS_CLOSED: t.errCommentsClosed,
+        };
+        throw new Error(byCode[json?.code as string] || t.errPublish);
       }
       // Publication réussie : nouvelle clé pour un prochain commentaire.
       idempotencyKeyRef.current = genIdempotencyKey();

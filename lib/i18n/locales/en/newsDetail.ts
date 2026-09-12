@@ -41,6 +41,11 @@ export default {
   errFetchComments: 'Unable to load comments.',
   errTooShort: 'The comment must contain at least 3 characters.',
   errPublish: 'Unable to publish the comment',
+  errTooLong: 'The comment cannot exceed 2000 characters.',
+  errAuthorTooLong: 'The name cannot exceed 50 characters.',
+  errCaptcha: 'Wrong or expired anti-bot answer. Please try again.',
+  errArticleNotFound: 'This article could not be found.',
+  errCommentsClosed: 'Comments are closed on this article.',
   errPublishGeneric: 'Error during publication',
   published: 'Comment published.',
 };

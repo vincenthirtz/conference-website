@@ -28,6 +28,17 @@ export type SeoProps = {
   title?: Localized;
   description?: Localized;
   image?: string;
+  /**
+   * Dimensions RÉELLES de `image`, en pixels.
+   *
+   * À renseigner dès que l'image n'est pas au format de la carte par défaut
+   * (1200×630). Sans elles, on n'annonce AUCUNE dimension : mieux vaut se taire
+   * que mentir. La version précédente déclarait 1200×630 pour toute image
+   * fournie, y compris un logo d'équipe carré — les réseaux réservaient donc
+   * une vignette panoramique et rognaient le logo.
+   */
+  imageWidth?: number;
+  imageHeight?: number;
   type?: 'website' | 'article';
   publishedTime?: string;
   modifiedTime?: string;
@@ -126,6 +137,8 @@ export default function DefaultSeo({
   title: rawTitle,
   description: rawDescription,
   image,
+  imageWidth,
+  imageHeight,
   type = 'website',
   publishedTime,
   modifiedTime,
@@ -225,11 +238,17 @@ export default function DefaultSeo({
       {canonical && <meta property="og:url" content={canonical} />}
       {ogImage && <meta property="og:image" content={ogImage} />}
       {ogImage && <meta property="og:image:alt" content={title || siteName} />}
+      {/* Une image fournie n'a de dimensions annoncées que si l'appelante les
+          donne. Déclarer 1200×630 « par défaut » faisait rogner tout visuel
+          d'un autre format (logo carré d'équipe, illustration d'actualité) :
+          les réseaux réservent la zone annoncée, pas la vraie. */}
       {hasExplicitImage ? (
-        <>
-          <meta property="og:image:width" content="1200" />
-          <meta property="og:image:height" content="630" />
-        </>
+        imageWidth && imageHeight ? (
+          <>
+            <meta property="og:image:width" content={String(imageWidth)} />
+            <meta property="og:image:height" content={String(imageHeight)} />
+          </>
+        ) : null
       ) : (
         <>
           <meta property="og:image:width" content={DEFAULT_IMAGE_WIDTH} />

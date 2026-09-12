@@ -87,7 +87,10 @@ export default function Modal({
   dataTestId,
   labelledBy,
 }: ModalProps) {
-  const trapRef = useFocusTrap<HTMLDivElement>();
+  // `open` transmis au piège : sans lui, une modale montée fermée puis ouverte
+  // n'en avait aucun (l'effet ne s'armait qu'au montage, quand il n'y avait
+  // encore rien à piéger).
+  const trapRef = useFocusTrap<HTMLDivElement>(open);
   const titleId = useId();
 
   // Close on Escape

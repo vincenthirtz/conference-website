@@ -5,7 +5,10 @@ import { resolveTenantIdForPublicRequest } from '@/utils/tenant';
 import { logger } from '../utils/logger';
 const publicRoutes = [
   { path: '/', priority: '1.0', changefreq: 'daily' },
-  { path: '/tournoi', priority: '0.9', changefreq: 'weekly' },
+  // Édition PASSÉE et figée (données dans config/results.json) : elle ne change
+  // plus, et la mettre au même rang que les pages vivantes envoyait les robots
+  // — et les visiteuses — vers une compétition terminée.
+  { path: '/tournoi', priority: '0.3', changefreq: 'yearly' },
   { path: '/tournaments', priority: '0.9', changefreq: 'weekly' },
   { path: '/jeux', priority: '0.8', changefreq: 'monthly' },
   { path: '/inscription-2026', priority: '0.9', changefreq: 'weekly' },

@@ -37,4 +37,6 @@ export default {
   errorHeading: 'Unable to load this league',
   errorBody: 'An error occurred. Try again in a few moments.',
   retry: 'Retry',
+  periodFrom: 'From {date}',
+  periodUntil: 'Until {date}',
 };

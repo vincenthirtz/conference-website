@@ -201,8 +201,11 @@ function RejoindrePage() {
 
 const rejoindreSeo: SeoProps = {
   title: {
-    fr: "Trouver une équipe Overwatch féminine — OW Women's Cup",
-    en: "Find a women's Overwatch team — OW Women's Cup",
+    // Pas de suffixe « — OW Women's Cup » : DefaultSeo ajoute déjà
+    // « | <nom du site> », et le titre sortait dupliqué (onglet, og:title,
+    // twitter:title).
+    fr: 'Trouver une équipe Overwatch féminine',
+    en: "Find a women's Overwatch team",
   },
   description: {
     fr: "Pas d'équipe ? Signale-toi sans créer de compte : les capitaines qui recrutent voient ta fiche et te contactent. Aucun rang minimum, tous les niveaux bienvenus.",

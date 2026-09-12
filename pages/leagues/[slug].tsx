@@ -29,9 +29,9 @@ import type {
 } from '@/types/leagues';
 import { readLeagueDetail } from '@/utils/leagues/readLeagueDetail';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
-import { useT } from '@/lib/i18n/useT';
+import { useT, format } from '@/lib/i18n/useT';
 import { useLang, type Lang } from '@/lib/i18n/LanguageProvider';
-import { localeTag } from '@/lib/i18n/useLocale';
+import { formatSiteDate } from '@/utils/timezone';
 import nsLeagueDetail from '@/lib/i18n/locales/fr/leagueDetail';
 
 type LeagueDetailDict = typeof nsLeagueDetail.fr;
@@ -78,19 +78,50 @@ const STATUS_CLASSES: Record<LeagueStatus, string> = {
 
 function formatDate(iso: string | null, lang: Lang): string | null {
   if (!iso) return null;
-  return new Date(iso).toLocaleDateString(localeTag(lang), {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
+  // Fuseau du site : la page est rendue en ISR sur un serveur UTC, où une date
+  // de début en soirée s'affichait la veille.
+  return (
+    formatSiteDate(iso, lang, {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }) || null
+  );
 }
 
-function periodLabel(league: League, lang: Lang): string | null {
+/**
+ * Gabarits « à partir du … » / « jusqu'au … », fournis par l'appelante.
+ *
+ * POURQUOI CE PARAMÈTRE plutôt qu'un `useT` ici : `periodLabel` sert AUSSI à
+ * `buildLeagueSeo`, exécutée hors composant — un hook y est impossible. Le
+ * rendu visible passe donc l'i18n, le SEO passe la version française figée,
+ * exactement comme le fichier le fait déjà pour les statuts
+ * (getStatusLabels(t) vs STATUS_LABELS).
+ */
+type PeriodTemplates = { from: string; until: string };
+
+/** Version FR figée, réservée au SEO (hors contexte de hook). */
+const PERIOD_TEMPLATES_FR: PeriodTemplates = {
+  from: 'À partir du {date}',
+  until: 'Jusqu’au {date}',
+};
+
+/** Pendant anglophone, même usage : buildLeagueSeo rend les deux langues. */
+const PERIOD_TEMPLATES_EN: PeriodTemplates = {
+  from: 'From {date}',
+  until: 'Until {date}',
+};
+
+function periodLabel(
+  league: League,
+  lang: Lang,
+  templates: PeriodTemplates
+): string | null {
   const start = formatDate(league.start_date, lang);
   const end = formatDate(league.end_date, lang);
   if (start && end) return `${start} — ${end}`;
-  if (start) return lang === 'fr' ? `À partir du ${start}` : `From ${start}`;
-  if (end) return lang === 'fr' ? `Jusqu'au ${end}` : `Until ${end}`;
+  if (start) return format(templates.from, { date: start });
+  if (end) return format(templates.until, { date: end });
   return null;
 }
 
@@ -167,7 +198,10 @@ function Detail({ data }: { data: LeagueDetailResponse }) {
   const { lang } = useLang();
   const statusLabels = getStatusLabels(t);
   const { league, standings, tournaments, scrims } = data;
-  const period = periodLabel(league, lang);
+  const period = periodLabel(league, lang, {
+    from: t.periodFrom,
+    until: t.periodUntil,
+  });
 
   return (
     <>
@@ -493,8 +527,8 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 
 function buildLeagueSeo(data: LeagueDetailResponse): SeoProps {
   const { league, standings } = data;
-  const periodFr = periodLabel(league, 'fr');
-  const periodEn = periodLabel(league, 'en');
+  const periodFr = periodLabel(league, 'fr', PERIOD_TEMPLATES_FR);
+  const periodEn = periodLabel(league, 'en', PERIOD_TEMPLATES_EN);
   const statusLabelFr = STATUS_LABELS[league.status];
   const statusLabelEn = STATUS_LABELS_EN[league.status];
   const plural = standings.length > 1;

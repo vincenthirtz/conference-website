@@ -40,6 +40,11 @@ export default ns('newsDetail', {
   errFetchComments: 'Impossible de récupérer les commentaires.',
   errTooShort: 'Le commentaire doit contenir au moins 3 caractères.',
   errPublish: 'Impossible de publier le commentaire',
+  errTooLong: 'Le commentaire ne peut pas dépasser 2000 caractères.',
+  errAuthorTooLong: 'Le nom ne peut pas dépasser 50 caractères.',
+  errCaptcha: 'Réponse anti-bot incorrecte ou expirée. Réessaie.',
+  errArticleNotFound: 'Cet article est introuvable.',
+  errCommentsClosed: 'Les commentaires sont fermés sur cet article.',
   errPublishGeneric: 'Erreur lors de la publication',
   published: 'Commentaire publié.',
 });

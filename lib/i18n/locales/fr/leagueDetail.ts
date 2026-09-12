@@ -36,4 +36,6 @@ export default ns('leagueDetail', {
   errorHeading: 'Impossible de charger cette ligue',
   errorBody: 'Une erreur est survenue. Réessayez dans quelques instants.',
   retry: 'Réessayer',
+  periodFrom: 'À partir du {date}',
+  periodUntil: 'Jusqu’au {date}',
 });

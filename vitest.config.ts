@@ -5,6 +5,14 @@ export default defineConfig({
   test: {
     include: ['tests/unit/**/*.test.ts'],
     setupFiles: ['tests/unit/__helpers__/testSetup.ts'],
+    // 20 s au lieu des 5 s par défaut. MESURÉ : `voxelMaps.test.ts` génère la
+    // géométrie complète des maquettes et passe en 7 s lancé seul, mais dépasse
+    // 5 s dès que la suite complète sature la machine (lint à froid en
+    // parallèle). Résultat : des échecs de `npm run verify` qui n'indiquaient
+    // aucune régression — le pire des signaux, celui qu'on apprend à ignorer.
+    // Ce n'est PAS une licence pour écrire des tests lents : c'est la marge
+    // qu'exigent quelques tests de calcul déjà existants.
+    testTimeout: 20_000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'json-summary'],

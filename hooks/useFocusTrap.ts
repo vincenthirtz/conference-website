@@ -7,11 +7,27 @@ const FOCUSABLE_SELECTOR =
  * Traps keyboard focus inside a container element.
  * Returns a ref to attach to the container.
  */
-export function useFocusTrap<T extends HTMLElement = HTMLDivElement>() {
+export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
+  /**
+   * Le conteneur est-il monté et visible ?
+   *
+   * POURQUOI CE PARAMÈTRE. L'effet ne s'armait qu'AU MONTAGE (`[]`), et il sort
+   * immédiatement si `ref.current` est nul. Un appelant qui monte son conteneur
+   * fermé — `<Modal open={false}>` — puis l'ouvre n'avait donc jamais de piège :
+   * au montage il n'y avait aucun élément à piéger, et l'effet ne repassait
+   * plus jamais. Le clavier s'échappait de la modale sans que rien ne le
+   * signale.
+   *
+   * Les appelants qui ne montent leur conteneur qu'à l'ouverture n'ont rien à
+   * changer : `true` par défaut reproduit exactement l'ancien comportement.
+   */
+  active: boolean = true
+) {
   const ref = useRef<T>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
+    if (!active) return;
     const container = ref.current;
     if (!container) return;
 
@@ -57,7 +73,7 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>() {
       // Restore focus on unmount
       previousFocusRef.current?.focus();
     };
-  }, []);
+  }, [active]);
 
   return ref;
 }

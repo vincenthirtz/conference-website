@@ -151,8 +151,9 @@ function RetraitPage() {
 
 const retraitSeo: SeoProps = {
   title: {
-    fr: "Retirer ma fiche — OW Women's Cup",
-    en: "Remove my profile — OW Women's Cup",
+    // DefaultSeo ajoute déjà « | <nom du site> » : pas de suffixe ici.
+    fr: 'Retirer ma fiche',
+    en: 'Remove my profile',
   },
   // Une URL qui porte un token n'a rien à faire dans un index.
   noindex: true,
