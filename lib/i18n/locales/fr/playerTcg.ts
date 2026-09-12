@@ -61,4 +61,38 @@ export default ns('playerTcg', {
   errContentMismatch:
     'Ce fichier n’est pas une image valide, malgré son extension.',
   errGeneric: 'Envoi impossible pour le moment. Réessaie dans un instant.',
+
+  /* --- Collection et paquets --- */
+
+  collectionTitle: 'Ma collection',
+  collectionEmpty:
+    'Aucune carte pour l’instant. Gagne un match pour recevoir ton premier paquet.',
+  collectionCount: '{distinct} cartes différentes · {total} exemplaires',
+
+  packsTitle: 'Mes paquets',
+  packsNone: 'Aucun paquet à ouvrir.',
+  packsUnopened_one: '{count} paquet à ouvrir',
+  packsUnopened_other: '{count} paquets à ouvrir',
+  packOpen: 'Ouvrir',
+  packOpening: 'Ouverture…',
+  packFromVictory: 'Gagné en match',
+  packFromPurchase: 'Acheté',
+
+  balance: '{count} pièces',
+  buyBooster: 'Acheter un booster ({price} pièces)',
+  buying: 'Achat…',
+  buySuccess: 'Booster acheté. Il t’attend dans tes paquets.',
+  errInsufficientFunds: 'Pièces insuffisantes : il t’en faut {price}.',
+  errBalanceChanged: 'Ton solde a changé entre-temps. Réessaie.',
+  errAlreadyOpened: 'Ce paquet est déjà ouvert.',
+  errEmptyPool:
+    'Aucune carte disponible pour l’instant — ton paquet reste intact.',
+
+  // Raretés : mêmes paliers que les badges de la fiche joueuse.
+  rarityCommon: 'Commune',
+  rarityRare: 'Rare',
+  rarityEpic: 'Épique',
+  rarityLegendary: 'Légendaire',
+  foil: 'Brillante',
+  copies: '×{count}',
 });

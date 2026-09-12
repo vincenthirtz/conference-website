@@ -33960,6 +33960,81 @@ paths:
                     enum: [revoked]
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/player/tcg/collection:
+    get:
+      tags:
+        - public/auth
+      summary: Ma collection TCG, regroupee par sujet.
+      description: |
+        LA COLLECTION SE DEDUIT, ELLE N'EST PAS STOCKEE : le socle a
+        deliberement ecarte une table `collection`, un agregat finissant par
+        diverger du detail qui le nourrit. Cette route lit les paquets OUVERTS
+        puis leurs cartes, et compte cote serveur.
+
+        Les faces (nom, image) sont RELUES a chaque appel, jamais figees au
+        tirage : c'est ce qui rend le retrait de consentement d'une joueuse
+        retroactif sur les cartes deja distribuees. Une photo n'est servie que
+        si elle est `approved` ET non revoquee.
+
+        Rarete rendue = la MEILLEURE possedee, la rarete etant figee par tirage
+        et pouvant differer d'un exemplaire a l'autre. Rate-limit 60 / min.
+      operationId: readPlayerTcgCollection
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Collection agregee, les plus rares d'abord.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cards:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind:
+                          type: string
+                          enum: [player, team]
+                        userId:
+                          type: string
+                          nullable: true
+                        teamId:
+                          type: string
+                          nullable: true
+                        displayName:
+                          type: string
+                          nullable: true
+                        name:
+                          type: string
+                          nullable: true
+                        slug:
+                          type: string
+                          nullable: true
+                        imageUrl:
+                          type: string
+                          nullable: true
+                        logoUrl:
+                          type: string
+                          nullable: true
+                        rarity:
+                          type: string
+                          enum: [common, rare, epic, legendary]
+                        isFoil:
+                          type: boolean
+                        count:
+                          type: integer
+                  distinct:
+                    type: integer
+                  total:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /api/player/tcg/packs:
     get:
       tags:
@@ -33996,6 +34071,15 @@ paths:
                     type: integer
                   balance:
                     type: integer
+                  boosterPrice:
+                    type: integer
+                    description: |
+                      Prix courant d'un booster. Rendu par l'API pour que
+                      l'interface l'AFFICHE sans le connaitre : le coder cote
+                      client ferait mentir le bouton des que le bareme
+                      bougerait, et importer `economy.ts` dans la page
+                      traînerait le moteur de rating dont il derive ce bareme
+                      dans le bundle navigateur.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '429':

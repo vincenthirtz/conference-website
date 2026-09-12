@@ -934,6 +934,23 @@ export default function PlayerDashboardScreen() {
             </CategorySection>
           )}
 
+          {/* ─────────────  Ma collection (TCG)  ─────────────
+              SANS condition sur `team`, à la différence des « Actions
+              rapides » : on reçoit un paquet dès sa première victoire, y
+              compris en scrim, et une joueuse sans équipe a donc une
+              collection. La placer dans la section précédente l'aurait rendue
+              invisible à celles-là mêmes qui débutent. */}
+          <CategorySection id="tcg" label={t.catTcg}>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <QuickAction
+                href="/player/tcg"
+                label={t.qaTcg}
+                description={t.qaTcgDesc}
+                tone="purple"
+              />
+            </div>
+          </CategorySection>
+
           {/* Rejoindre le cast — flux simple pour les joueuses SANS équipe
               (pas de catégorie forcée). */}
           {!team && (

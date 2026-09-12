@@ -51,4 +51,35 @@ export default {
   errTooLarge: 'File too large: {mo} MB maximum.',
   errContentMismatch: 'This file is not a valid image, despite its extension.',
   errGeneric: 'Upload failed for now. Try again in a moment.',
+
+  /* --- Collection and packs --- */
+
+  collectionTitle: 'My collection',
+  collectionEmpty: 'No cards yet. Win a match to receive your first pack.',
+  collectionCount: '{distinct} different cards · {total} copies',
+
+  packsTitle: 'My packs',
+  packsNone: 'No pack to open.',
+  packsUnopened_one: '{count} pack to open',
+  packsUnopened_other: '{count} packs to open',
+  packOpen: 'Open',
+  packOpening: 'Opening…',
+  packFromVictory: 'Won in a match',
+  packFromPurchase: 'Purchased',
+
+  balance: '{count} coins',
+  buyBooster: 'Buy a booster ({price} coins)',
+  buying: 'Buying…',
+  buySuccess: 'Booster purchased. It is waiting in your packs.',
+  errInsufficientFunds: 'Not enough coins: you need {price}.',
+  errBalanceChanged: 'Your balance changed in the meantime. Try again.',
+  errAlreadyOpened: 'This pack is already open.',
+  errEmptyPool: 'No card available right now — your pack is untouched.',
+
+  rarityCommon: 'Common',
+  rarityRare: 'Rare',
+  rarityEpic: 'Epic',
+  rarityLegendary: 'Legendary',
+  foil: 'Foil',
+  copies: '×{count}',
 };

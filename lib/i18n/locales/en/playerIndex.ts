@@ -125,4 +125,8 @@ export default {
   todoBattleTag: 'Verify your BattleTag',
   sectionCollapse: 'Collapse section',
   sectionExpand: 'Expand section',
+
+  catTcg: 'My collection',
+  qaTcg: 'My cards',
+  qaTcgDesc: 'Packs, coins and collection',
 };

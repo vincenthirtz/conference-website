@@ -128,4 +128,11 @@ export default ns('playerIndex', {
   todoBattleTag: 'Vérifier ton BattleTag',
   sectionCollapse: 'Replier la section',
   sectionExpand: 'Déplier la section',
+
+  // TCG — délibérément HORS des « Actions rapides », qui sont conditionnées à
+  // l'appartenance à une équipe : on a une collection dès sa première victoire
+  // en scrim, équipe ou pas.
+  catTcg: 'Ma collection',
+  qaTcg: 'Mes cartes',
+  qaTcgDesc: 'Paquets, pièces et collection',
 });

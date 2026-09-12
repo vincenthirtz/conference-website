@@ -30,6 +30,10 @@ import { readPlayerProfile } from '@/utils/rating/readPlayerProfile';
 import { cardRarity, teamCardRarity, isFoil } from '@/utils/tcg/rarity';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import { pickPackSubjects, PACK_SIZE } from '@/utils/tcg/drawPack';
+// Le prix est rendu par l'API plutôt que recopié dans la page : importer
+// `economy.ts` côté client ferait entrer le moteur de rating dont il dérive le
+// barème dans le bundle navigateur.
+import { BOOSTER_PRICE_COINS } from '@/utils/tcg/economy';
 import { logger } from '@/utils/logger';
 
 export default withAuthRoute(async function handler(
@@ -104,6 +108,8 @@ async function listPacks(
     // Pas de ligne de porte-monnaie = solde nul : état normal de quelqu'un qui
     // n'a encore rien gagné.
     balance: (walletRes.data as { balance?: number } | null)?.balance ?? 0,
+    // Source unique du prix : l'interface l'affiche, elle ne le connaît pas.
+    boosterPrice: BOOSTER_PRICE_COINS,
   });
 }
 
