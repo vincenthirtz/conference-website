@@ -43,6 +43,7 @@ import { useLocale } from '@/lib/i18n/useLocale';
 import { useToast } from '@/components/Toast';
 import nsPlayerPublicProfile from '@/lib/i18n/locales/fr/playerPublicProfile';
 import nsPlayerDiscovery from '@/lib/i18n/locales/fr/playerDiscovery';
+import FollowButton from '@/components/player/FollowButton';
 import { TwitchIcon } from '@/components/Icons';
 import { socialHandleLabel, socialHref } from '@/utils/social/profileHandles';
 import { XIcon } from '@/components/Icons';
@@ -691,6 +692,118 @@ function ShareButtons({
   );
 }
 
+// --- Couche sociale du profil (visiteuse CONNECTÉE uniquement) -------------
+//
+// Le profil public était un cul-de-sac : ni « Suivre », ni abonnées, ni équipes
+// actuelles, alors que le graphe (player_follows), le bouton (FollowButton) et
+// l'annuaire existaient déjà (lot 1 de docs/BACKLOG-reseau-social.md).
+//
+// Deux règles tenues ici :
+//   1. RIEN pour une visiteuse anonyme. La page est en ISR et indexable ; y
+//      injecter l'état d'opt-in ou un compteur d'abonnées ferait entrer des
+//      données de réseau dans le HTML servi aux robots. Le bloc se monte donc
+//      côté client, après session.
+//   2. Silence si la joueuse n'est pas découvrable. L'API répond alors
+//      `{ discoverable: false }` — même réponse que pour un compte inexistant,
+//      pour ne pas devenir un oracle d'existence de compte.
+type ProfileSocialResponse =
+  | { discoverable: false }
+  | {
+      discoverable: true;
+      isFollowing: boolean;
+      followerCount: number;
+      teams: { name: string; slug: string | null }[];
+    };
+
+function ProfileSocial({ authUserId }: { authUserId: string }) {
+  const t = useT(nsPlayerPublicProfile);
+  const { user, loading: sessionLoading } = useSession();
+  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+
+  const [data, setData] = useState<ProfileSocialResponse | null>(null);
+  // Compteur local : le bouton est optimiste, l'affichage doit suivre sans
+  // refaire un aller-retour.
+  const [followerDelta, setFollowerDelta] = useState(0);
+
+  const viewerId = user?.id ?? null;
+  const enabled = !sessionLoading && !!viewerId;
+
+  useEffect(() => {
+    if (!enabled) {
+      setData(null);
+      return;
+    }
+    let cancelled = false;
+    adminFetchJson<ProfileSocialResponse>(
+      `/api/player/discovery/profile?userId=${encodeURIComponent(authUserId)}`,
+      { skipAuthRedirect: true }
+    )
+      .then((res) => {
+        if (!cancelled) {
+          setData(res);
+          setFollowerDelta(0);
+        }
+      })
+      .catch(() => {
+        // Réseau ou session expirée : on masque, on ne signale pas — ce bloc
+        // est un bonus, pas le contenu de la page.
+        if (!cancelled) setData(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, authUserId, adminFetchJson]);
+
+  if (!data || !data.discoverable) return null;
+
+  const isSelf = viewerId === authUserId;
+  const followers = Math.max(0, data.followerCount + followerDelta);
+
+  return (
+    <div className="mt-4 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
+      {!isSelf && (
+        <FollowButton
+          authUserId={authUserId}
+          initialFollowing={data.isFollowing}
+          currentUserId={viewerId}
+          onChange={(following) =>
+            setFollowerDelta(
+              following === data.isFollowing ? 0 : following ? 1 : -1
+            )
+          }
+        />
+      )}
+      {followers > 0 && (
+        <span className="text-xs text-neutral-400">
+          {format(followers > 1 ? t.socialFollowersPlural : t.socialFollowers, {
+            count: followers,
+          })}
+        </span>
+      )}
+      {data.teams.length > 0 && (
+        <span className="text-xs text-neutral-400">
+          {t.socialTeams}{' '}
+          {data.teams.map((team, i) => (
+            <span key={`${team.name}-${i}`}>
+              {i > 0 && ', '}
+              {team.slug ? (
+                <Link
+                  href={`/team/${team.slug}`}
+                  className="text-neutral-200 underline underline-offset-2 hover:text-white"
+                >
+                  {team.name}
+                </Link>
+              ) : (
+                <span className="text-neutral-200">{team.name}</span>
+              )}
+            </span>
+          ))}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function ProfileHeader({
   player,
   label,
@@ -745,6 +858,7 @@ function ProfileHeader({
             </div>
             <ShareButtons player={player} label={label} />
           </div>
+          <ProfileSocial authUserId={player.userId} />
           {/* Une joueuse non classée n'a ni rang, ni rating, ni bilan : les
               afficher à 0 la ferait passer pour dernière du classement alors
               qu'elle n'y figure simplement pas encore. */}

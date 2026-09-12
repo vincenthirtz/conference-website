@@ -74,4 +74,11 @@ export default ns('playerPublicProfile', {
   twitchLinkHint: '(ouvre la chaîne Twitch dans un nouvel onglet)',
   unratedNotice:
     'Pas encore de match classé — le classement apparaîtra après sa première rencontre officielle.',
+
+  // --- Couche sociale (visiteuse connectée uniquement) ---------------------
+  // Rien de tout ceci n'apparaît pour une visiteuse anonyme : la page est
+  // indexable, la couche sociale ne l'est pas.
+  socialFollowers: '{count} abonnée',
+  socialFollowersPlural: '{count} abonnées',
+  socialTeams: 'Joue avec',
 });

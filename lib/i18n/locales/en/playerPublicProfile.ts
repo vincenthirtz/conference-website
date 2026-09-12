@@ -74,4 +74,7 @@ export default {
   twitchLinkHint: '(opens the Twitch channel in a new tab)',
   unratedNotice:
     'No ranked match yet — the rating will appear after her first official game.',
+  socialFollowers: '{count} follower',
+  socialFollowersPlural: '{count} followers',
+  socialTeams: 'Plays with',
 };
