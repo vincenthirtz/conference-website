@@ -21,4 +21,5 @@ export {
   AppIcon,
   CodeIcon,
   TrophyIcon,
+  LinkIcon,
 } from './ui';

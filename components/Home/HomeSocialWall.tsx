@@ -34,11 +34,12 @@ import {
   TikTokIcon,
   YouTubeIcon,
 } from '@/components/Icons';
-import { useT } from '@/lib/i18n/useT';
+import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { social, type SocialKey } from '@/config/socials';
 import type { SocialFeedItem } from '@/utils/social/socialFeed';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
+import ShareLinks from '@/components/shared/ShareLinks';
 
 type HomeSocialWallProps = {
   items: SocialFeedItem[];
@@ -105,15 +106,20 @@ function SocialCard({ item }: { item: SocialFeedItem }) {
   const meta = SOURCES[item.source];
   const date = formatDate(item.publishedAt, locale);
   const account = meta ? social(meta.key) : null;
+  const network = meta?.label ?? item.source;
+  // Ce qu'on pré-remplit dans le composeur : la légende, coupée court. Un
+  // paragraphe entier de TikTok ne rentre pas dans un post Bluesky, et la
+  // personne qui partage réécrit de toute façon. À défaut, le nom du réseau.
+  const caption = item.text.trim();
+  const shareText =
+    caption.length > 120 ? `${caption.slice(0, 120)}…` : caption || network;
 
   return (
-    <a
-      href={item.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="card-brand group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[var(--bg-elevated)] transition-all duration-300 hover:-translate-y-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)] motion-reduce:transform-none"
-    >
-      <div className="relative aspect-square w-full overflow-hidden">
+    // Même motif de « lien étiré » que les cartes d'actualité, pour la même
+    // raison : la carte était une ancre, on ne peut rien rendre d'interactif à
+    // l'intérieur. Cf. l'en-tête de `components/shared/ShareLinks.tsx`.
+    <article className="card-brand group relative flex flex-col rounded-2xl border border-white/10 bg-[var(--bg-elevated)] transition-all duration-300 focus-within:ring-2 focus-within:ring-[var(--color-yellow)] hover:-translate-y-1 motion-reduce:transform-none">
+      <div className="relative aspect-square w-full overflow-hidden rounded-t-2xl">
         {item.thumbnailUrl ? (
           <Image
             src={item.thumbnailUrl}
@@ -153,12 +159,37 @@ function SocialCard({ item }: { item: SocialFeedItem }) {
             {account ? account.handle : t.socialNoCaption}
           </p>
         )}
-        <span className="mt-auto inline-flex items-center gap-1 pt-1 text-[13px] font-semibold text-[var(--color-green-light)] transition group-hover:gap-2">
-          {t.socialOpen}
-          <span aria-hidden>→</span>
-        </span>
+        <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            // Le libellé visible reste « Voir la publication » ; le nom
+            // accessible y ajoute le réseau, sans quoi quatre liens identiques
+            // se suivent dans la liste des liens de la page. Le texte visible
+            // est contenu dans le nom accessible : critère « label in name »
+            // respecté.
+            aria-label={format(t.socialOpenAria, { network })}
+            className="inline-flex items-center gap-1 text-[13px] font-semibold text-[var(--color-green-light)] transition after:absolute after:inset-0 after:rounded-2xl focus:outline-none group-hover:gap-2"
+          >
+            {t.socialOpen}
+            <span aria-hidden>→</span>
+          </a>
+          <ShareLinks
+            url={item.url}
+            text={shareText}
+            labels={{
+              group: format(t.shareSocialGroup, { network }),
+              bluesky: t.shareOnBluesky,
+              x: t.shareOnX,
+              copy: t.shareCopyLink,
+              copied: t.shareLinkCopied,
+              copyError: t.shareCopyFailed,
+            }}
+          />
+        </div>
       </div>
-    </a>
+    </article>
   );
 }
 

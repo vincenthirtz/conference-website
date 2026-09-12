@@ -503,3 +503,32 @@ export function TrophyIcon({
     </svg>
   );
 }
+
+/** Maillon de chaîne — l'action « copier le lien ». */
+export function LinkIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
+  const stroke = fill || 'currentColor';
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M10.6 13.4a3.8 3.8 0 0 0 5.37 0l2.55-2.55a3.8 3.8 0 1 0-5.37-5.37L11.9 6.73"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M13.4 10.6a3.8 3.8 0 0 0-5.37 0L5.48 13.15a3.8 3.8 0 1 0 5.37 5.37l1.25-1.25"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

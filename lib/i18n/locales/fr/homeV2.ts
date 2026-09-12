@@ -82,4 +82,18 @@ export default ns('homeV2', {
   socialTitle: 'Nos réseaux',
   socialOpen: 'Voir la publication',
   socialNoCaption: 'Publication sans légende',
+  // La carte réseau porte le nom du réseau dans son lien : « Voir la
+  // publication » seul, répété quatre fois dans une liste de liens, n'apprend
+  // rien à qui navigue au lecteur d'écran.
+  socialOpenAria: 'Voir la publication sur {network}',
+  // Partage depuis les cartes de l'accueil. Le libellé du GROUPE porte
+  // l'intitulé de l'élément : sans lui, les sept cartes de la page annoncent
+  // toutes « Partager sur Bluesky », sans jamais dire de quoi.
+  shareNewsGroup: 'Partager : {title}',
+  shareSocialGroup: 'Partager cette publication {network}',
+  shareOnBluesky: 'Partager sur Bluesky',
+  shareOnX: 'Partager sur X',
+  shareCopyLink: 'Copier le lien',
+  shareLinkCopied: 'Lien copié',
+  shareCopyFailed: 'Impossible de copier le lien',
 });

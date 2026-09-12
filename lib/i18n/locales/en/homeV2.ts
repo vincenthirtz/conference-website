@@ -72,5 +72,13 @@ export default {
   socialTitle: 'Our socials',
   socialOpen: 'View the post',
   socialNoCaption: 'Post without a caption',
+  socialOpenAria: 'View the post on {network}',
+  shareNewsGroup: 'Share: {title}',
+  shareSocialGroup: 'Share this {network} post',
+  shareOnBluesky: 'Share on Bluesky',
+  shareOnX: 'Share on X',
+  shareCopyLink: 'Copy link',
+  shareLinkCopied: 'Link copied',
+  shareCopyFailed: "The link couldn't be copied",
   heroCtaJoin: "I'm looking for a team",
 };

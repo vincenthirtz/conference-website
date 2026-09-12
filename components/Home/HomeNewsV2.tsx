@@ -8,11 +8,13 @@ import type { JSX } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { type HomeNewsItem } from '@/components/News/HomeNewsSection';
-import { useT } from '@/lib/i18n/useT';
+import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 import nsNewsTags from '@/lib/i18n/locales/fr/newsTags';
 import { newsTagLabel } from '@/utils/news/newsTag';
+import ShareLinks from '@/components/shared/ShareLinks';
+import { absoluteUrl } from '@/utils/siteUrl';
 
 type HomeNewsV2Props = {
   news: HomeNewsItem[];
@@ -41,11 +43,21 @@ function NewsCard({ item }: { item: HomeNewsItem }) {
   const locale = useLocale();
   const date = formatDate(item, locale);
   return (
-    <Link
-      href={`/news/${item.slug}`}
-      className="card-brand group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[var(--bg-elevated)] transition-all duration-300 hover:-translate-y-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)] motion-reduce:transform-none"
-    >
-      <div className="relative aspect-[16/10] w-full overflow-hidden">
+    // CARTE = CONTENEUR, PAS LIEN. Elle l'était : un `Link` enveloppait tout.
+    // Impossible d'y poser un bouton de partage — un contrôle interactif dans
+    // une ancre est du HTML invalide, et le clavier n'y accède plus. D'où le
+    // motif du « lien étiré » : seul le titre est un lien, son pseudo-élément
+    // couvre la carte (donc toute la carte reste cliquable), et les liens de
+    // partage se posent AU-DESSUS, hors de l'ancre.
+    //
+    // Effet de bord bienvenu : le nom accessible du lien est désormais le titre
+    // de l'article, là où la carte-lien faisait lire « 3 mars 2026, <titre>,
+    // <extrait>, Lire » d'un seul tenant.
+    //
+    // `overflow-hidden` a quitté la racine pour la vignette (qui en a besoin
+    // pour son zoom au survol) : sur la racine, il rognait le halo de focus.
+    <article className="card-brand group relative flex flex-col rounded-2xl border border-white/10 bg-[var(--bg-elevated)] transition-all duration-300 focus-within:ring-2 focus-within:ring-[var(--color-yellow)] hover:-translate-y-1 motion-reduce:transform-none">
+      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-t-2xl">
         {item.imageUrl ? (
           // Un logo d'équipe n'est pas une bannière : le recadrer en `cover`
           // le décapite. On le pose entier sur le dégradé de repli.
@@ -74,16 +86,40 @@ function NewsCard({ item }: { item: HomeNewsItem }) {
           <span className="text-xs tracking-wide text-gray-500">{date}</span>
         )}
         <h3 className="text-balance text-[17px] font-bold leading-snug text-white">
-          {item.title}
+          <Link
+            href={`/news/${item.slug}`}
+            className="after:absolute after:inset-0 after:rounded-2xl focus:outline-none"
+          >
+            {item.title}
+          </Link>
         </h3>
         <p className="line-clamp-2 text-sm text-gray-400">
           {getExcerpt(item, t.newsExcerptFallback, 120)}
         </p>
-        <span className="mt-auto inline-flex items-center gap-1 pt-1 text-[13px] font-semibold text-[var(--color-green-light)] transition group-hover:gap-2">
-          {t.newsRead} <span aria-hidden>→</span>
-        </span>
+        <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+          {/* Décoratif : le lien, c'est le titre. Répéter « Lire » comme second
+              lien vers la même page ne ferait qu'allonger la liste de liens. */}
+          <span
+            aria-hidden
+            className="inline-flex items-center gap-1 text-[13px] font-semibold text-[var(--color-green-light)] transition group-hover:gap-2"
+          >
+            {t.newsRead} <span>→</span>
+          </span>
+          <ShareLinks
+            url={absoluteUrl(`/news/${item.slug}`)}
+            text={item.title}
+            labels={{
+              group: format(t.shareNewsGroup, { title: item.title }),
+              bluesky: t.shareOnBluesky,
+              x: t.shareOnX,
+              copy: t.shareCopyLink,
+              copied: t.shareLinkCopied,
+              copyError: t.shareCopyFailed,
+            }}
+          />
+        </div>
       </div>
-    </Link>
+    </article>
   );
 }
 
