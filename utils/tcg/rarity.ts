@@ -1,0 +1,175 @@
+// utils/tcg/rarity.ts
+//
+// Rareté d'une carte de joueuse. Réducteur PUR (aucune I/O), comme
+// `utils/profile/achievements.ts` dont il prolonge le vocabulaire.
+//
+// POURQUOI DÉRIVER DES BADGES EXISTANTS plutôt que d'inventer une échelle. Le
+// site affiche DÉJÀ un prestige, calculé par `computeAchievements` : champion,
+// finaliste, podium, top_cut, vainqueure de ligue, paliers de peak rating,
+// vétérane, série de victoires — chacun avec un palier
+// bronze/silver/gold/platinum. Une seconde échelle, calibrée séparément,
+// finirait par contredire la première : une joueuse « légendaire » au TCG et
+// sans badge sur sa fiche, ou l'inverse. On réutilise donc la calibration déjà
+// arbitrée.
+//
+// UN TITRE L'EMPORTE SUR UN CHIFFRE. `champion` et `league_winner` sont classés
+// `gold` par le calcul des badges, mais ils passent ici en `legendary` — au même
+// rang que le palier `platinum` du peak rating. Gagner un tournoi ou une saison
+// est un fait unique et daté ; un rating élevé est un état, qui peut redescendre.
+// Les traiter à égalité ferait valoir moins une victoire qu'un bon classement.
+//
+// PAS DE CAS PARTICULIER POUR `unrated`. Une joueuse sans ligne `player_ratings`
+// n'a mécaniquement aucun badge de rating (son `peakRating` vaut 0, donc aucun
+// `peak_*` n'est dérivé) — elle sort donc `common` d'elle-même. En revanche, si
+// elle figure au palmarès d'un tournoi, ce titre compte : il est réel, même sans
+// classement.
+
+import type { ProfileBadge, ProfileBadgeTier } from '@/types/rating';
+
+export type TcgRarity = 'common' | 'rare' | 'epic' | 'legendary';
+
+/** Du plus courant au plus rare — ordre d'affichage et de tri. */
+export const RARITY_ORDER: readonly TcgRarity[] = [
+  'common',
+  'rare',
+  'epic',
+  'legendary',
+] as const;
+
+/**
+ * Badges qui valent un titre, indépendamment de leur palier.
+ *
+ * `champion` = vainqueure d'un tournoi (placement rang 1).
+ * `league_winner` = première d'une saison de ligue.
+ */
+const TITLE_KEYS: ReadonlySet<string> = new Set(['champion', 'league_winner']);
+
+/** Palier de badge → rareté, quand aucun titre ne tranche. */
+const RARITY_BY_TIER: Record<ProfileBadgeTier, TcgRarity> = {
+  platinum: 'legendary',
+  gold: 'epic',
+  silver: 'rare',
+  bronze: 'common',
+};
+
+/**
+ * La rareté de la carte d'une joueuse, d'après ses badges.
+ *
+ * On garde la MEILLEURE rareté trouvée : une joueuse cumule les badges, et
+ * c'est son plus haut fait qui décide de sa carte.
+ *
+ * Une liste vide — joueuse sans badge, ou tableau non fourni — rend `common`.
+ * C'est un plancher, pas un échec : toute joueuse a une carte.
+ */
+export function cardRarity(badges: readonly ProfileBadge[]): TcgRarity {
+  let best: TcgRarity = 'common';
+
+  for (const badge of badges) {
+    const value: TcgRarity = TITLE_KEYS.has(badge.key)
+      ? 'legendary'
+      : badge.tier
+        ? RARITY_BY_TIER[badge.tier]
+        : 'common';
+
+    if (RARITY_ORDER.indexOf(value) > RARITY_ORDER.indexOf(best)) {
+      best = value;
+      // `legendary` est le maximum : inutile de parcourir la suite.
+      if (best === 'legendary') break;
+    }
+  }
+
+  return best;
+}
+
+/**
+ * Probabilité qu'une carte tirée soit brillante.
+ *
+ * Indépendante de la rareté : le foil est une variante d'impression, pas un
+ * degré de prestige supplémentaire. Sans cette séparation, une légendaire
+ * brillante deviendrait un cinquième palier de fait, et le barème ci-dessus
+ * cesserait de dire la vérité sur le parcours de la joueuse.
+ */
+export const FOIL_CHANCE = 0.08;
+
+/**
+ * `roll` est un tirage dans [0, 1) — fourni par l'appelant, ce qui garde cette
+ * fonction pure et donc testable sans piloter `Math.random`.
+ *
+ * Un `roll` hors bornes ou non fini rend `false` : mieux vaut une carte mate
+ * qu'un brillant distribué par accident sur une entrée aberrante.
+ */
+export function isFoil(roll: number): boolean {
+  if (!Number.isFinite(roll) || roll < 0 || roll >= 1) return false;
+  return roll < FOIL_CHANCE;
+}
+
+/* ---------------------------------------------------------------------------
+ * Cartes d'ÉQUIPE
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Seuils de rating → rareté.
+ *
+ * CE SONT LES MÊMES CHIFFRES que les paliers `peak_*` des badges joueuses
+ * (>= 2000 master/platinum, >= 1800 elite/gold, >= 1600 contender/silver), mais
+ * APPLIQUÉS AUTREMENT : une joueuse les reçoit indirectement, via le badge que
+ * `computeAchievements` en dérive ; une équipe n'ayant pas de badges, on les lui
+ * applique directement sur `team_ratings.rating`.
+ *
+ * Les recopier sans le dire créerait deux barèmes jumeaux libres de diverger —
+ * si l'un bouge, l'autre doit bouger.
+ */
+export const RATING_TIERS: ReadonlyArray<{ min: number; rarity: TcgRarity }> = [
+  { min: 2000, rarity: 'legendary' },
+  { min: 1800, rarity: 'epic' },
+  { min: 1600, rarity: 'rare' },
+] as const;
+
+/**
+ * La rareté de la carte d'une équipe.
+ *
+ * Deux dimensions, dont on garde la meilleure :
+ *   - le PALMARÈS (`bestRank`, le meilleur rang obtenu en tournoi). Rang 1 →
+ *     `legendary`, comme le titre `champion` côté joueuse ; rang 2 → `rare`,
+ *     comme le badge `finalist` (silver). Au-delà, le palmarès ne suffit pas :
+ *     `podium` et `top_cut` sont `bronze` chez les joueuses, donc `common`.
+ *   - le RATING courant, via `RATING_TIERS`.
+ *
+ * Aligner l'échelle sur celle des joueuses est délibéré : une équipe 3e et une
+ * joueuse 3e doivent valoir la même chose, sans quoi le TCG dirait deux vérités
+ * différentes sur le même tournoi.
+ *
+ * `bestRank` NULL (jamais classée) ou `rating` NULL (pas encore de roster noté)
+ * sont des états normaux, pas des erreurs : la dimension est simplement ignorée.
+ */
+export function teamCardRarity(input: {
+  bestRank: number | null;
+  rating: number | null;
+}): TcgRarity {
+  let best: TcgRarity = 'common';
+
+  const raise = (value: TcgRarity) => {
+    if (RARITY_ORDER.indexOf(value) > RARITY_ORDER.indexOf(best)) best = value;
+  };
+
+  // Palmarès. Un rang <= 0 est une donnée aberrante : on l'ignore plutôt que de
+  // la traiter comme une victoire.
+  const rank = input.bestRank;
+  if (typeof rank === 'number' && Number.isFinite(rank) && rank >= 1) {
+    if (rank === 1) raise('legendary');
+    else if (rank === 2) raise('rare');
+  }
+
+  // Rating.
+  const rating = input.rating;
+  if (typeof rating === 'number' && Number.isFinite(rating)) {
+    for (const tier of RATING_TIERS) {
+      if (rating >= tier.min) {
+        raise(tier.rarity);
+        break;
+      }
+    }
+  }
+
+  return best;
+}
