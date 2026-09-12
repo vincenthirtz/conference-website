@@ -34635,6 +34635,66 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '500':
           $ref: '#/components/responses/ServerError'
+  /api/player/discovery/profile:
+    get:
+      summary: Carte réseau d'UNE joueuse (suivi, abonnées, équipes).
+      description: |
+        Répond, pour un `userId` donné : la joueuse est-elle découvrable, le
+        caller la suit-il déjà, combien d'abonnées, quelles équipes. Alimente le
+        bloc social du profil public `/player/[userId]`, monté côté client
+        uniquement — la page est en ISR et indexable, aucune donnée d'opt-in ne
+        doit entrer dans le HTML servi aux robots.
+
+        N'est PAS un oracle : joueuse non découvrable, compte inexistant et id
+        malformé renvoient TOUS `{ discoverable: false }` en 200. Distinguer ces
+        cas permettrait d'énumérer les comptes du réseau. `withAuthRoute`.
+      operationId: playerDiscoveryProfile
+      tags:
+        - public/auth
+      security:
+        - PlayerBearer: []
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Identifiant auth de la joueuse consultée.
+      responses:
+        '200':
+          description: |
+            Carte réseau, ou `{ discoverable: false }` quand il n'y a rien à
+            montrer (invisible, inexistante, ou identifiant invalide).
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - discoverable
+                properties:
+                  discoverable:
+                    type: boolean
+                  isFollowing:
+                    type: boolean
+                  followerCount:
+                    type: integer
+                    minimum: 0
+                  teams:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - name
+                        - slug
+                      properties:
+                        name:
+                          type: string
+                        slug:
+                          type: string
+                          nullable: true
+        '405':
+          description: Méthode non autorisée.
   /api/player/discovery/search:
     get:
       summary: Annuaire des joueurs découvrables du réseau (cross-tenant).
