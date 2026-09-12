@@ -37,11 +37,13 @@ import { getIntegrationSecret } from '@/utils/integrationSecrets';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import {
+  alreadyMirrored,
   buildMirrorPayload,
   readChannelId,
   readCursor,
   readSetting,
   selectNew,
+  stripTrackingParams,
   writeCursor,
   type MirrorPost,
   type MirrorSource,
@@ -71,6 +73,8 @@ type SourceReport = {
   checked: number;
   /** Nouveautés écrites pour le mur du site. */
   stored?: number;
+  /** Publications déjà parties, écartées par le garde d'idempotence. */
+  skipped?: number;
   error?: string;
 };
 
@@ -149,7 +153,20 @@ async function mirrorSource(
   const stored = await persistFeedItems(tenantId, source, posts);
   if (!channelId) return { mirrored: 0, checked: posts.length, stored };
 
+  // Curseur ILLISIBLE (≠ absent) : on ne sait pas ce qui est déjà parti, donc
+  // on n'envoie rien de ce passage. Le suivant réessaiera dans un quart
+  // d'heure. Le 2026-09-12, faute de cette distinction, quatre lectures
+  // expirées en 504 ont fait rejouer 24 h d'historique dans le salon.
   const since = await readCursor(tenantId, source);
+  if (!since) {
+    return {
+      mirrored: 0,
+      checked: posts.length,
+      stored,
+      error: 'cursor_unreadable',
+    };
+  }
+
   const fresh = selectNew(posts, since);
   if (fresh.length === 0) return { mirrored: 0, checked: posts.length, stored };
 
@@ -163,9 +180,31 @@ async function mirrorSource(
   );
 
   let mirrored = 0;
+  let skipped = 0;
   let lastAt: string | null = null;
 
   for (const post of fresh) {
+    // Garde d'idempotence, indépendant du curseur : ce qui est déjà parti ne
+    // repart pas, quel que soit l'état du curseur.
+    const seen = await alreadyMirrored(tenantId, stripTrackingParams(post.url));
+    if (!seen.ok) {
+      // Garde illisible = on ne sait pas. On s'arrête sans avancer le curseur
+      // plutôt que de risquer un doublon ; le passage suivant reprendra ici.
+      logger.warn(
+        '[cron/social-mirror] %s garde illisible, passage écourté: %s',
+        source,
+        seen.error
+      );
+      break;
+    }
+    if (seen.already) {
+      // Déjà dans le salon : on n'émet pas, mais on FAIT AVANCER le curseur —
+      // c'est ce qui répare un curseur resté en arrière.
+      skipped += 1;
+      lastAt = post.publishedAt;
+      continue;
+    }
+
     try {
       await emitBotEvent(
         'social.mirror',

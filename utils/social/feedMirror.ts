@@ -335,11 +335,28 @@ export function buildMirrorPayload(input: {
 /* Réglages                                                                    */
 /* -------------------------------------------------------------------------- */
 
-export async function readSetting(
+/**
+ * Lecture d'un réglage, en DISTINGUANT « absent » de « pas pu lire ».
+ *
+ * POURQUOI CETTE DISTINCTION EXISTE — incident du 2026-09-12. `readSetting`
+ * renvoyait `null` dans les deux cas. `readCursor` prenait ce `null` pour un
+ * premier passage et rendait `now − 24 h` : quatre lectures de curseur ont
+ * expiré en 504 (03:01, 03:15, 06:01, 06:15) et le miroir a reposté quatre fois
+ * dans le salon des publications de la veille, déjà envoyées. Une erreur de
+ * lecture n'est pas une absence de valeur, et surtout elle n'autorise AUCUNE
+ * conclusion sur ce qui a déjà été publié.
+ */
+export type SettingRead =
+  | { ok: true; value: string | null }
+  | { ok: false; error: string };
+
+export async function readSettingResult(
   tenantId: string,
   key: string
-): Promise<string | null> {
-  if (!supabaseAdmin) return null;
+): Promise<SettingRead> {
+  if (!supabaseAdmin) {
+    return { ok: false, error: 'supabase_admin_unavailable' };
+  }
   const { data, error } = await supabaseAdmin
     .from('site_settings')
     .select('value')
@@ -348,22 +365,47 @@ export async function readSetting(
     .maybeSingle();
   if (error) {
     logger.warn('[feedMirror] lecture %s impossible: %s', key, error.message);
-    return null;
+    return { ok: false, error: error.message };
   }
   const value = (data as { value?: string } | null)?.value ?? null;
-  return value && value.trim() ? value.trim() : null;
+  return { ok: true, value: value && value.trim() ? value.trim() : null };
+}
+
+/**
+ * Confond volontairement l'erreur et l'absence, pour les réglages où les deux
+ * mènent à la même décision SÛRE : pas de salon connu = on n'envoie rien.
+ * NE PAS l'utiliser pour un curseur — cf. `readCursor`.
+ */
+export async function readSetting(
+  tenantId: string,
+  key: string
+): Promise<string | null> {
+  const res = await readSettingResult(tenantId, key);
+  return res.ok ? res.value : null;
 }
 
 export async function readChannelId(tenantId: string): Promise<string | null> {
   return readSetting(tenantId, MIRROR_CHANNEL_KEY);
 }
 
+/**
+ * Le curseur d'une source, ou `null` quand on n'a PAS PU le lire.
+ *
+ * `null` veut dire « je ne sais pas », et l'appelant doit alors ne rien émettre
+ * de ce passage : quinze minutes de retard valent mieux qu'un doublon public.
+ *
+ * Une valeur ABSENTE (premier passage) ou ILLISIBLE (valeur corrompue) rend en
+ * revanche la fenêtre de 24 h, comme avant : ces deux cas-là se réparent seuls
+ * au premier passage réussi, qui réécrit un curseur valide — alors qu'un
+ * `null` permanent condamnerait la source au silence.
+ */
 export async function readCursor(
   tenantId: string,
   source: MirrorSource
-): Promise<Date> {
-  const raw = await readSetting(tenantId, CURSOR_KEYS[source]);
-  const parsed = raw ? new Date(raw) : null;
+): Promise<Date | null> {
+  const res = await readSettingResult(tenantId, CURSOR_KEYS[source]);
+  if (!res.ok) return null;
+  const parsed = res.value ? new Date(res.value) : null;
   if (parsed && Number.isFinite(parsed.getTime())) return parsed;
   return new Date(Date.now() - FIRST_RUN_WINDOW_MS);
 }
@@ -385,4 +427,73 @@ export async function writeCursor(
     { onConflict: 'tenant_id,key' }
   );
   if (error) throw error;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Garde d'idempotence                                                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Profondeur du garde. Large devant les 24 h que peut rejouer un curseur
+ * absent, et assez courte pour que la lecture reste triviale : le salon reçoit
+ * quelques publications par mois.
+ */
+export const MIRROR_GUARD_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Borne dure sur les lignes examinées, au cas où le volume changerait. */
+export const MIRROR_GUARD_MAX_ROWS = 500;
+
+export type MirroredCheck =
+  | { ok: true; already: boolean }
+  | { ok: false; error: string };
+
+/**
+ * Cette publication a-t-elle DÉJÀ été émise vers Discord ?
+ *
+ * SECONDE LIGNE DE DÉFENSE, indépendante du curseur. Le curseur dit « quoi
+ * envoyer » ; ce garde dit « ne renvoie pas ce qui est déjà parti ». Ainsi un
+ * futur incident sur le curseur — quel qu'il soit — ne peut plus produire de
+ * doublon dans le salon.
+ *
+ * ON INTERROGE L'OUTBOX, pas `social_feed_items` : l'outbox est le registre de
+ * ce qui a RÉELLEMENT été émis, alors que le mur du site n'enregistre que trois
+ * nouveautés par passage et par source — une publication émise peut n'y avoir
+ * aucune ligne.
+ *
+ * COMPARAISON EN JAVASCRIPT, pas via un filtre PostgREST sur un chemin JSON
+ * (`payload->data->>url`) : cette syntaxe imbriquée n'est pas exercée par le
+ * mock des tests, qui la laisserait passer sans rien vérifier — et son échec en
+ * production rendrait le miroir muet, exactement ce qu'on cherche à éviter.
+ *
+ * L'URL attendue est celle qui part vraiment, donc NETTOYÉE de ses paramètres
+ * de pistage (cf. `stripTrackingParams`) : c'est sous cette forme que
+ * `buildMirrorPayload` l'écrit dans l'event.
+ */
+export async function alreadyMirrored(
+  tenantId: string,
+  cleanUrl: string
+): Promise<MirroredCheck> {
+  if (!supabaseAdmin) {
+    return { ok: false, error: 'supabase_admin_unavailable' };
+  }
+  const since = new Date(Date.now() - MIRROR_GUARD_WINDOW_MS).toISOString();
+  const { data, error } = await supabaseAdmin
+    .from('bot_event_outbox')
+    .select('payload')
+    .eq('tenant_id', tenantId)
+    .eq('event_name', 'social.mirror')
+    .gte('created_at', since)
+    .limit(MIRROR_GUARD_MAX_ROWS);
+  if (error) {
+    logger.warn(
+      '[feedMirror] garde d’idempotence illisible: %s',
+      error.message
+    );
+    return { ok: false, error: error.message };
+  }
+  const already = (data ?? []).some((row) => {
+    const payload = (row as { payload?: { data?: { url?: unknown } } }).payload;
+    return payload?.data?.url === cleanUrl;
+  });
+  return { ok: true, already };
 }

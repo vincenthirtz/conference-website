@@ -216,4 +216,50 @@ describe('cron social-mirror — payload `social.mirror`', () => {
     // Le mur du site, lui, est toujours alimenté.
     expect(persistFeedItems).toHaveBeenCalled();
   });
+
+  it('ne renvoie pas une publication déjà présente dans l’outbox', async () => {
+    // Garde d'idempotence (incident du 2026-09-12) : même si le curseur laisse
+    // repasser une publication, elle ne repart pas dans le salon. L'URL
+    // comparée est celle qui part vraiment, donc NETTOYÉE de ses `utm_*`.
+    store.bot_event_outbox = [
+      {
+        tenant_id: TENANT,
+        event_name: 'social.mirror',
+        created_at: new Date().toISOString(),
+        payload: {
+          data: { url: 'https://www.tiktok.com/@ow_womenscup/video/1' },
+        },
+      },
+    ];
+
+    await run();
+
+    const urls = emitted('tiktok').map((d) => d.url);
+    expect(urls).not.toContain('https://www.tiktok.com/@ow_womenscup/video/1');
+    expect(urls).toEqual(['https://www.tiktok.com/@ow_womenscup/video/2']);
+  });
+
+  it('avance quand même le curseur sur une publication déjà émise', async () => {
+    // C'est ce qui RÉPARE un curseur resté en arrière : sans cet avancement, la
+    // même publication serait réexaminée à chaque passage, indéfiniment.
+    store.bot_event_outbox = [
+      {
+        tenant_id: TENANT,
+        event_name: 'social.mirror',
+        created_at: new Date().toISOString(),
+        payload: {
+          data: { url: 'https://www.tiktok.com/@ow_womenscup/video/2' },
+        },
+      },
+    ];
+
+    await run();
+
+    const cursor = (store.site_settings || []).find(
+      (r) => r.key === 'tiktok_mirror_last_video_at'
+    );
+    // tt-2 est la plus récente des deux : le curseur doit la dépasser, alors
+    // même qu'elle n'a pas été réémise.
+    expect(cursor?.value).toBe(tiktokPosts[1].publishedAt);
+  });
 });
