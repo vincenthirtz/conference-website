@@ -13,6 +13,7 @@ import enAdminForgotPassword from './adminForgotPassword';
 import enAdminResetPassword from './adminResetPassword';
 import enAdminProfile from './adminProfile';
 import enAdminDashboard from './adminDashboard';
+import enAdminNetworkFunnel from './adminNetworkFunnel';
 import enAdminAideTournoi from './adminAideTournoi';
 import enAdminRatings from './adminRatings';
 import enAdminRecycleBin from './adminRecycleBin';
@@ -389,6 +390,7 @@ const adminEnDict = {
   adminDocuments: enAdminDocuments,
   adminStaffPermissions: enAdminStaffPermissions,
   adminFreePlayers: enAdminFreePlayers,
+  adminNetworkFunnel: enAdminNetworkFunnel,
 };
 
 export default adminEnDict;

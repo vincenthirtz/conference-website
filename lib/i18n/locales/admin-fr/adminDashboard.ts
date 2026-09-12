@@ -133,4 +133,6 @@ export default adminNs('adminDashboard', {
   alertRosterLockMsg: 'Le lock des effectifs intervient dans moins de 24h.',
   navCheckinTitle: 'Check-in du jour',
   navCheckinDesc: 'Suivre et relancer les check-ins du tournoi en cours',
+  navFunnelTitle: 'Entonnoir du réseau',
+  navFunnelDesc: 'Où les joueuses s’arrêtent, du compte créé au premier scrim',
 });

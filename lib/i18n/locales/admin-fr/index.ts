@@ -13,6 +13,7 @@ import nsAdminForgotPassword from './adminForgotPassword';
 import nsAdminResetPassword from './adminResetPassword';
 import nsAdminProfile from './adminProfile';
 import nsAdminDashboard from './adminDashboard';
+import nsAdminNetworkFunnel from './adminNetworkFunnel';
 import nsAdminAideTournoi from './adminAideTournoi';
 import nsAdminRatings from './adminRatings';
 import nsAdminRecycleBin from './adminRecycleBin';
@@ -389,4 +390,5 @@ export const frDict = {
   adminSocialPosts: nsAdminSocialPosts.fr,
   adminTeamMessages: nsAdminTeamMessages.fr,
   adminCasterScenes: nsAdminCasterScenes.fr,
+  adminNetworkFunnel: nsAdminNetworkFunnel.fr,
 };

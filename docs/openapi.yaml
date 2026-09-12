@@ -16162,6 +16162,74 @@ paths:
           description: Unsubscribed.
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/admin/network-funnel:
+    get:
+      summary: Entonnoir d'adoption du réseau joueuses (comptes → scrims).
+      description: >
+        Une seule requête pour savoir OÙ les joueuses décrochent : compte créé,
+        Discord lié, BattleTag vérifié, carte joueuse créée, carte VISIBLE
+        (opt-in de découverte), liens de suivi, demandes de scrim. Les deux
+        marchés sans compte (fiches « je cherche une équipe » / annonces « on
+        recrute », actives seulement) sont renvoyés à part : ce sont des portes
+        d'entrée, pas des marches. Tous les comptes sont count-only
+        (`head:true, count:'exact'`) ; le total de comptes passe par la RPC
+        `admin_list_users`, `auth.users` n'étant pas interrogeable en count-only
+        via PostgREST. Sur échec d'un comptage l'endpoint renvoie quand même 200
+        et met CETTE clé à `null` — jamais 0, qui se lirait comme « personne ».
+        Les clés suffixées `Global` ne sont pas scopées à l'espace actif : elles
+        portent sur la couche identité, qui n'a pas de tenant_id.
+      operationId: adminGetNetworkFunnel
+      tags:
+        - admin/misc
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Compteurs de l'entonnoir. `null` = comptage en échec.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  accounts:
+                    type: integer
+                    nullable: true
+                    description: Comptes existants (auth.users, via RPC).
+                  discordLinkedGlobal:
+                    type: integer
+                    nullable: true
+                    description: Comptes ayant lié Discord (GLOBAL).
+                  battlenetLinkedGlobal:
+                    type: integer
+                    nullable: true
+                    description: Comptes ayant vérifié leur BattleTag (GLOBAL).
+                  discoveryProfilesGlobal:
+                    type: integer
+                    nullable: true
+                    description: Cartes joueuses créées, visibles ou non (GLOBAL).
+                  discoverableGlobal:
+                    type: integer
+                    nullable: true
+                    description: Cartes joueuses réellement visibles (GLOBAL).
+                  followsGlobal:
+                    type: integer
+                    nullable: true
+                    description: Arêtes de suivi (GLOBAL).
+                  freePlayers:
+                    type: integer
+                    nullable: true
+                    description: Fiches « je cherche une équipe » actives (tenant).
+                  teamOpenings:
+                    type: integer
+                    nullable: true
+                    description: Annonces « on recrute » actives (tenant).
+                  scrimRequests:
+                    type: integer
+                    nullable: true
+                    description: Demandes de scrim, tous statuts (tenant).
+        '405':
+          description: Méthode non autorisée.
   /api/admin/overview-summary:
     get:
       summary: Aggregated KPI counts for the admin hub (single call).

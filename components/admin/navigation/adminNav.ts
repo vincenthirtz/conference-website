@@ -641,6 +641,24 @@ export const ADMIN_NAV: AdminNavNode[] = [
             minRole: 'admin',
           },
           {
+            // Entonnoir du réseau : compte créé → Discord lié → carte joueuse
+            // → suivi → scrim. Rangé avec les stats, parce que c'est une
+            // mesure, pas un réglage. Sans lui, savoir combien de joueuses
+            // sont découvrables demandait une requête SQL à la main — donc
+            // personne ne le savait (lot 10, docs/BACKLOG-reseau-social.md).
+            id: 'network-funnel',
+            topBarLabel: 'Réseau',
+            href: '/admin/reseau',
+            minRole: 'admin',
+            card: {
+              order: 10.5,
+              titleKey: 'navFunnelTitle',
+              descKey: 'navFunnelDesc',
+              icon: 'chart',
+              accent: 'border-pink-500/30 from-pink-500/10 text-pink-300',
+            },
+          },
+          {
             id: 'stats',
             topBarLabel: 'Statistiques',
             href: '/admin/stats',

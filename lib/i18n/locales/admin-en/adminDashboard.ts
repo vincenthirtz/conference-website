@@ -129,4 +129,6 @@ export default {
   alertRosterLockMsg: 'Rosters lock in less than 24 hours.',
   navCheckinTitle: "Today's check-in",
   navCheckinDesc: 'Follow and nudge check-ins for the current tournament',
+  navFunnelTitle: 'Network funnel',
+  navFunnelDesc: 'Where players stop, from sign-up to their first scrim',
 };
