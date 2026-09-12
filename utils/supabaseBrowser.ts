@@ -2,18 +2,23 @@
 //
 // Le client Supabase du NAVIGATEUR, et lui seul.
 //
-// POURQUOI CE FICHIER EXISTE. `utils/supabase.ts` exportait au même endroit le
+// POURQUOI CE FICHIER EXISTE. `utils/supabase.ts` exporte au même endroit le
 // client navigateur et trois clients serveur (`supabaseAdmin`,
-// `getServerClient`, `supabaseAnonServer`). Or ces derniers sont créés AU
-// CHARGEMENT DU MODULE : ce sont des effets de bord, que le tree-shaking ne
-// peut pas retirer. Toute page qui importait `supabaseClient` embarquait donc
-// aussi `createServerClient`, le paquet `cookie`, un second client Supabase et
-// le polyfill `buffer` — dans le bundle servi à chaque visiteuse, sur chaque
-// page, y compris anonyme.
+// `getServerClient`, `supabaseAnonServer`), créés AU CHARGEMENT DU MODULE. Ce
+// module-ci n'importe QUE `createBrowserClient` : le code client ne peut donc
+// plus, par accident, faire entrer du service role dans son graphe. Les 24
+// fichiers qui tournent côté client pointent ici ; `utils/supabase.ts` continue
+// de le réexporter pour le code serveur, qui n'a pas à changer d'import.
 //
-// Ce module n'importe QUE `createBrowserClient`. Les 24 fichiers qui tournent
-// côté client pointent ici ; `utils/supabase.ts` continue de le réexporter pour
-// le code serveur, qui n'a aucune raison de changer d'import.
+// ⚠️ CE N'EST PAS UN GAIN DE POIDS, contrairement à ce que ce commentaire a
+// affirmé jusqu'au 2026-09-12. Mesure faite ce jour-là en comparant deux
+// `next build` : `/_app` = 672 ko de JS, avec supabase-js UNE seule fois (chunk
+// de 238 ko), présent de toute façon puisque le client navigateur en a besoin.
+// Un bundler dédoublonne : il n'y avait pas de « second client » à retirer. Le
+// paquet `cookie` n'est PAS dans le bundle client, et le `createServerClient`
+// qu'on y trouve est un faux positif vendeur (`@supabase/ssr` l'expose même
+// quand on n'importe que `createBrowserClient`). La séparation se justifie par
+// l'hygiène du graphe d'imports, pas par des kilo-octets.
 //
 // RÈGLE : ne jamais ajouter ici quoi que ce soit qui touche au service role,
 // aux cookies serveur ou à `next` — ce fichier part dans le navigateur.
