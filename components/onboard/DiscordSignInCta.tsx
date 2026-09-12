@@ -13,7 +13,7 @@
 // `components/player/DiscordLinkCard.tsx`.
 
 import { useState } from 'react';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { logger } from '@/utils/logger';
 import { useT } from '@/lib/i18n/useT';

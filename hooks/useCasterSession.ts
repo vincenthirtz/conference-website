@@ -16,7 +16,7 @@
 // (afficher un message, rediriger vers /admin/login, etc.).
 
 import { useCallback, useEffect, useState } from 'react';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient } from '@/utils/supabaseBrowser';
 import { logger } from '@/utils/logger';
 
 export type CasterProfile = {

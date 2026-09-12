@@ -17,7 +17,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient } from '@/utils/supabaseBrowser';
 import { logger } from '@/utils/logger';
 import { logCasterAction } from '@/utils/caster/auditClient';
 import { normalizeThemeData } from '@/utils/caster/theme';

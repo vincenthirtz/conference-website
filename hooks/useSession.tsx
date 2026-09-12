@@ -15,7 +15,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient } from '@/utils/supabaseBrowser';
 import type { AuthChangeEvent, User } from '@supabase/supabase-js';
 
 export type SessionState = {

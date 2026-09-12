@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useT } from '@/lib/i18n/useT';
 import {

@@ -15,7 +15,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient } from '@/utils/supabaseBrowser';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT } from '@/lib/i18n/useT';
 import nsBattlenetLogin from '@/lib/i18n/locales/fr/battlenetLogin';

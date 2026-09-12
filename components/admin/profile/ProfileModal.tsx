@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useStaffSession } from '@/hooks/useStaffSession';

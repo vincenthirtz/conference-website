@@ -6,7 +6,7 @@ import { useRouter } from 'next/router';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
-import { supabaseClient, purgeSupabaseAuthStorage } from '@/utils/supabase';
+import { supabaseClient, purgeSupabaseAuthStorage } from '@/utils/supabaseBrowser';
 import { STAFF_CACHE_KEY } from '@/hooks/useStaffSession';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
 import { useT } from '@/lib/i18n/useT';

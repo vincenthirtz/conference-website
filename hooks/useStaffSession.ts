@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useSession } from '@/hooks/useSession';
 import type { StaffRole } from '@/utils/staff';
 import { staffPermissionsFor } from '@/utils/staffPermissions';

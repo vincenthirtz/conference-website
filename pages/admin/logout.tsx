@@ -1,7 +1,7 @@
 // pages/admin/logout.tsx
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminLogout from '@/lib/i18n/locales/admin-fr/adminLogout';
 

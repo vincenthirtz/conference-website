@@ -4,7 +4,7 @@
 // accounts that never went through Discord OAuth on signup.
 
 import { useCallback, useEffect, useState } from 'react';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useT } from '@/lib/i18n/useT';
 import { logger } from '../../utils/logger';

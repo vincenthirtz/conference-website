@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import Link from 'next/link';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient } from '@/utils/supabaseBrowser';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
 import { useT } from '@/lib/i18n/useT';
 import { ANALYTICS_EVENTS, trackEvent } from '@/lib/analytics/track';

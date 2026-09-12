@@ -17,7 +17,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient } from '@/utils/supabaseBrowser';
 import { logger } from '@/utils/logger';
 import {
   defaultOverlayFile,

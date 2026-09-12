@@ -16,7 +16,7 @@
 // mounted consumer sees fresh data.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient } from '@/utils/supabaseBrowser';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';

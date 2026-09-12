@@ -19,7 +19,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient } from '@/utils/supabaseBrowser';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT, format } from '@/lib/i18n/useT';
 import {

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState, type JSX } from 'react';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useStaffSession } from '@/hooks/useStaffSession';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useFocusTrap } from '@/hooks/useFocusTrap';

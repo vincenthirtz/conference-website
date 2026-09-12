@@ -14,7 +14,7 @@
 //   });
 
 import { useEffect } from 'react';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient } from '@/utils/supabaseBrowser';
 import type {
   RealtimePostgresChangesFilter,
   RealtimePostgresChangesPayload,

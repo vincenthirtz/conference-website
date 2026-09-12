@@ -32,7 +32,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useCallback, useEffect, useState } from 'react';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { CASTER_SCENE_TYPES, type CasterScene } from '@/types/caster';

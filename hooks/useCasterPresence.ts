@@ -20,7 +20,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient } from '@/utils/supabaseBrowser';
 import { logger } from '@/utils/logger';
 import { formatPresenceState } from '@/utils/caster/presence';
 import type { CasterPresenceUser } from '@/types/caster';

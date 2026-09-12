@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient } from '@/utils/supabaseBrowser';
 
 export type AdminFetchOptions = RequestInit & {
   /**

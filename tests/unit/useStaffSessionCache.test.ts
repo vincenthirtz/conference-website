@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/utils/supabase', () => ({
-  supabaseAdmin: {},
-  getServerClient: () => ({}),
+// Le client navigateur vit désormais dans `utils/supabaseBrowser` : c'est LUI
+// qu'il faut moquer, sinon le vrai module se charge et lève (variables
+// NEXT_PUBLIC_SUPABASE_* absentes en test).
+vi.mock('@/utils/supabaseBrowser', () => ({
   supabaseClient: {
     auth: {
       getSession: async () => ({ data: { session: null } }),
@@ -11,6 +12,7 @@ vi.mock('@/utils/supabase', () => ({
       }),
     },
   },
+  purgeSupabaseAuthStorage: () => {},
 }));
 
 import {
