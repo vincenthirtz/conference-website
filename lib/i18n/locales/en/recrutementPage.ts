@@ -96,6 +96,8 @@ export default {
   altDesc:
     'Same door, other side: add yourself and recruiting captains will reach out to you.',
   altCta: "I'm looking for a team",
+  altCountOne: '{count} player is looking for a team right now.',
+  altCountMany: '{count} players are looking for a team right now.',
   discordTitle: 'Recruiting lives on Discord',
   discordDesc:
     'Openings are relayed there, and free players show up with the “Looking for a team” role. Posting here and there is not a duplicate.',

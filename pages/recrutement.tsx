@@ -22,6 +22,7 @@ import { useT } from '@/lib/i18n/useT';
 import nsRecrutementPage from '@/lib/i18n/locales/fr/recrutementPage';
 import PostOpeningForm from '@/components/TeamOpenings/PostOpeningForm';
 import TeamOpeningsList from '@/components/TeamOpenings/TeamOpeningsList';
+import OtherMarketCount from '@/components/shared/OtherMarketCount';
 
 // JSON-LD : les questions que se pose exactement la capitaine visée. Reste en
 // français comme les autres schémas du site (cf. /rejoindre).
@@ -153,6 +154,13 @@ function RecrutementPage() {
           <div className="rounded-2xl border border-white/10 bg-[var(--bg-elevated)] p-6">
             <h2 className="font-bold text-white">{t.altTitle}</h2>
             <p className="mt-2 text-sm text-gray-300">{t.altDesc}</p>
+            {/* Pendant exact du renvoi de /rejoindre : combien de joueuses
+                cherchent, en vrai, maintenant. Muet si zéro. */}
+            <OtherMarketCount
+              market="free-players"
+              one={t.altCountOne}
+              many={t.altCountMany}
+            />
             <Link
               href="/rejoindre"
               className="mt-4 inline-block rounded-lg border border-white/20 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/40"

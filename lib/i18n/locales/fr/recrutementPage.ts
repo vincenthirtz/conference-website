@@ -110,6 +110,8 @@ export default ns('recrutementPage', {
   altDesc:
     'C’est l’autre face de la même porte : signale-toi et les capitaines qui recrutent te contactent.',
   altCta: 'Je cherche une équipe',
+  altCountOne: '{count} joueuse cherche une équipe en ce moment.',
+  altCountMany: '{count} joueuses cherchent une équipe en ce moment.',
   discordTitle: 'Le recrutement vit sur le Discord',
   discordDesc:
     'Les annonces y sont relayées, et les joueuses libres s’y signalent avec le rôle « Recherche une équipe ». Publier ici et poster là-bas ne fait pas doublon.',

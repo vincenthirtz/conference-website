@@ -23,6 +23,7 @@ import { useT } from '@/lib/i18n/useT';
 import nsRejoindrePage from '@/lib/i18n/locales/fr/rejoindrePage';
 import JoinAsPlayerForm from '@/components/FreePlayers/JoinAsPlayerForm';
 import FreePlayersList from '@/components/FreePlayers/FreePlayersList';
+import OtherMarketCount from '@/components/shared/OtherMarketCount';
 
 const CREATE_TEAM_HREF = `/team/create?tournament=${ACTIVE_WOMEN_TOURNAMENT_ID}`;
 
@@ -156,6 +157,13 @@ function RejoindrePage() {
           <div className="rounded-2xl border border-white/10 bg-[var(--bg-elevated)] p-6">
             <h2 className="font-bold text-white">{t.mirrorTitle}</h2>
             <p className="mt-2 text-sm text-gray-300">{t.mirrorDesc}</p>
+            {/* Le renvoi devient une raison de cliquer : on ne promet pas
+                « des équipes », on dit combien il y en a. Muet si zéro. */}
+            <OtherMarketCount
+              market="team-openings"
+              one={t.mirrorCountOne}
+              many={t.mirrorCountMany}
+            />
             <Link
               href="/recrutement"
               className="mt-4 inline-block rounded-lg border border-white/20 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/40"

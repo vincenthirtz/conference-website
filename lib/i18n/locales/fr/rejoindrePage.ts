@@ -90,6 +90,8 @@ export default ns('rejoindrePage', {
   listCardHint:
     'Ces fiches expirent au bout de 60 jours. Pour rester trouvable toute l’année, il y a la carte joueuse.',
   listCardCta: 'Voir le réseau des joueuses',
+  mirrorCountOne: '{count} équipe recrute en ce moment.',
+  mirrorCountMany: '{count} équipes recrutent en ce moment.',
   privacyNote:
     'Ton email et ton pseudo Discord ne sont visibles que par les capitaines connectées. Ta fiche expire au bout de 60 jours, et tu peux la retirer à tout moment depuis le lien envoyé par email.',
 

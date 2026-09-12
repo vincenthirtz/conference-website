@@ -81,6 +81,8 @@ export default {
   listCardHint:
     'These listings expire after 60 days. To stay findable all year, there is the player card.',
   listCardCta: 'See the players network',
+  mirrorCountOne: '{count} team is recruiting right now.',
+  mirrorCountMany: '{count} teams are recruiting right now.',
   privacyNote:
     'Your email and Discord handle are only visible to signed-in captains. Your profile expires after 60 days, and you can remove it at any time using the link sent by email.',
   errorName: 'Enter a nickname (2 characters minimum).',
