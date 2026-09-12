@@ -203,6 +203,11 @@ export type StaffLogAction =
   | 'entity_blacklist_update'
   | 'entity_blacklist_remove'
   | 'support_ticket_convert_blacklist'
+  // --- TCG (cartes joueuses) ---
+  // Relire la photo d'une personne réelle est un acte à tracer : on doit
+  // pouvoir dire QUI a approuvé ou refusé, et quand.
+  | 'tcg_photo_approve'
+  | 'tcg_photo_reject'
   // --- Broadcast ---
   | 'broadcast_state_update'
   | 'broadcast_next_match'

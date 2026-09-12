@@ -1286,6 +1286,36 @@
       "title",
       "updated_at"
     ],
+    "tcg_pack_cards": [
+      "card_team_id",
+      "card_user_id",
+      "is_foil",
+      "pack_id",
+      "position",
+      "rarity",
+      "subject_kind"
+    ],
+    "tcg_packs": [
+      "granted_at",
+      "id",
+      "opened_at",
+      "source_match_id",
+      "tenant_id",
+      "user_id"
+    ],
+    "tcg_player_cards": [
+      "created_at",
+      "opted_in_at",
+      "photo_path",
+      "photo_rejected_reason",
+      "photo_reviewed_at",
+      "photo_reviewed_by",
+      "photo_status",
+      "revoked_at",
+      "tenant_id",
+      "updated_at",
+      "user_id"
+    ],
     "team_audit_logs": [
       "action",
       "created_at",
@@ -2613,6 +2643,30 @@
     },
     "tasks_tenant_id_fkey": {
       "source": "tasks",
+      "target": "tenants"
+    },
+    "tcg_pack_cards_card_team_id_fkey": {
+      "source": "tcg_pack_cards",
+      "target": "teams"
+    },
+    "tcg_pack_cards_pack_id_fkey": {
+      "source": "tcg_pack_cards",
+      "target": "tcg_packs"
+    },
+    "tcg_packs_source_match_id_fkey": {
+      "source": "tcg_packs",
+      "target": "matches"
+    },
+    "tcg_packs_tenant_id_fkey": {
+      "source": "tcg_packs",
+      "target": "tenants"
+    },
+    "tcg_player_cards_photo_reviewed_by_fkey": {
+      "source": "tcg_player_cards",
+      "target": "staff"
+    },
+    "tcg_player_cards_tenant_id_fkey": {
+      "source": "tcg_player_cards",
       "target": "tenants"
     },
     "team_audit_logs_team_id_fkey": {

@@ -3869,6 +3869,30 @@ protège le flux contre le CSRF/replay.
 
 ---
 
+### Carte TCG (espace joueur)
+
+La photo qui illustre la carte d'une joueuse dans le TCG. Trois garde-fous
+portés par la route elle-même :
+
+- **opt-in explicite** — aucune photo n'entre dans le TCG sans un `POST` ; une
+  joueuse qui n'a jamais déposé n'a aucune image en circulation ;
+- **modération avant publication** — toute photo est `pending`, y compris en
+  remplacement d'une photo déjà approuvée (sinon il suffirait de substituer un
+  cliché validé) ;
+- **retrait rétroactif** — `tcg_pack_cards` ne référence que la joueuse, jamais
+  son image : le `DELETE` vide `photo_path`, supprime le fichier du bucket, et
+  la photo disparaît donc aussi des cartes **déjà distribuées**.
+
+Le contenu du fichier est vérifié par ses *magic bytes*, pas seulement par le
+`mimeType` déclaré : le bucket est public, et un type déclaré est une
+affirmation du client. Pas de SVG (document scriptable), pas de PDF.
+
+| Route | Methods | Auth | Notes |
+| --- | --- | --- | --- |
+| [`pages/api/player/tcg/photo.ts`](../pages/api/player/tcg/photo.ts) | GET, POST, DELETE | Bearer joueur (`withAuthRoute`) | `GET 200 { status, photoUrl, optedIn, rejectedReason }` — la joueuse voit sa propre photo même `pending`/`rejected`, le filtrage public appartient au lecteur des cartes. `POST { data, mimeType }` (base64, 2 Mio, PNG/JPEG/WebP) → `200 { status:'pending' }` ; `400 { code }` parmi `missing_data`, `unsupported_type`, `invalid_base64`, `too_large`, `content_mismatch`. `DELETE` → `200 { status:'revoked' }`. Rate-limit **5 / min** (POST), **10 / min** (DELETE). |
+
+---
+
 ### Fil du match (espace joueur)
 
 Route **web** (pas bot), ajoutée avec le lot J1 de

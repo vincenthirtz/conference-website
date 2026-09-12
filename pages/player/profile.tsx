@@ -13,6 +13,7 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import DiscoveryCard from '@/components/player/DiscoveryCard';
 import BattlenetVerifyCard from '@/components/player/BattlenetVerifyCard';
+import TcgPhotoCard from '@/components/player/TcgPhotoCard';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
@@ -575,6 +576,12 @@ function PlayerProfile() {
               l'état (statut, toast de retour) et ne rend rien si la feature est
               dormante. Même composant que l'onboarding post-création d'équipe. */}
           <BattlenetVerifyCard variant="section" />
+
+          {/* Ma carte à collectionner (TCG) — la carte porte son propre état et
+              ne rend RIEN tant qu'elle n'a pas pu lire celui-ci : mieux vaut
+              une section absente qu'un « aucune photo » affiché à tort à une
+              joueuse qui en a déposé une. */}
+          <TcgPhotoCard />
 
           {/* Changer mon email */}
           <section className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">

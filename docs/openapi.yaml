@@ -33848,6 +33848,220 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/player/tcg/photo:
+    get:
+      tags:
+        - public/auth
+      summary: Etat de ma carte TCG (photo, statut de moderation, consentement).
+      operationId: getPlayerTcgPhoto
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: |
+            Etat courant. La joueuse voit sa propre photo meme `pending` ou
+            `rejected` : c'est son ecran. Le filtrage public (n'afficher que
+            `approved`) appartient au lecteur public des cartes.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [none, pending, approved, rejected]
+                  photoUrl:
+                    type: string
+                    nullable: true
+                  optedIn:
+                    type: boolean
+                  rejectedReason:
+                    type: string
+                    nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags:
+        - public/auth
+      summary: Depose une photo de carte TCG (vaut consentement).
+      description: |
+        Le premier depot VAUT accord explicite. Toute photo, y compris en
+        remplacement d'une photo deja approuvee, repasse par la moderation
+        (`pending`) : sans cela il suffirait de substituer un cliche valide.
+        Rate-limit 5 / min.
+      operationId: submitPlayerTcgPhoto
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data, mimeType]
+              properties:
+                data:
+                  type: string
+                  description: Image en base64 (prefixe `data:` accepte), 2 Mio max.
+                mimeType:
+                  type: string
+                  enum: [image/png, image/jpeg, image/webp]
+      responses:
+        '200':
+          description: Photo enregistree, en attente de relecture.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [pending]
+        '400':
+          description: |
+            Photo refusee. `code` : `missing_data`, `unsupported_type`,
+            `invalid_base64`, `too_large` ou `content_mismatch` (le contenu ne
+            correspond pas au type declare : le bucket est public, les magic
+            bytes sont verifies).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  maxBytes:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags:
+        - public/auth
+      summary: Retire la photo et le consentement.
+      description: |
+        Retrait RETROACTIF : `tcg_pack_cards` ne reference que la joueuse,
+        jamais son image, donc la photo disparait aussi des cartes deja
+        distribuees. Le fichier est supprime du bucket. Rate-limit 10 / min.
+      operationId: revokePlayerTcgPhoto
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Photo retiree.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [revoked]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/admin/tcg/photos:
+    get:
+      summary: File des photos de cartes TCG en attente de relecture.
+      description: |
+        `withStaffRoute(handler, { permission: 'moderate_support' })`.
+        Les plus anciennes d'abord (une photo ne doit pas attendre derriere une
+        plus recente). Le pseudo n'est pas resolu : la file rend `userId` et le
+        panneau renvoie vers la fiche publique. Rate-limit 60 / min.
+      operationId: adminTcgPhotosList
+      tags:
+        - admin/misc
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: File d'attente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  photos:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        userId:
+                          type: string
+                          format: uuid
+                        photoUrl:
+                          type: string
+                          nullable: true
+                        submittedAt:
+                          type: string
+                          nullable: true
+                  total:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    patch:
+      summary: Approuver ou refuser une photo de carte TCG.
+      description: |
+        Un REFUS supprime le fichier du bucket, qui est public : un cliche
+        refuse — precisement parce qu'il pose probleme — y resterait sinon
+        atteignable par son URL. La joueuse garde le motif et peut redeposer.
+        Journalise (`tcg_photo_approve` / `tcg_photo_reject`).
+        Rate-limit 30 / min.
+      operationId: adminTcgPhotosDecide
+      tags:
+        - admin/misc
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, decision]
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                decision:
+                  type: string
+                  enum: [approve, reject]
+                reason:
+                  type: string
+                  nullable: true
+                  maxLength: 500
+      responses:
+        '200':
+          description: Decision enregistree.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [approved, rejected]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: |
+            La photo n'est plus en attente — la joueuse l'a peut-etre retiree
+            pendant la relecture. Sa decision prime : le panneau rafraichit au
+            lieu d'ecraser. `code: NOT_PENDING`.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /api/admin/notifications/ack-all:
     post:
       summary: Acquitter toutes les notifications Web Push non-lues du staff courant.

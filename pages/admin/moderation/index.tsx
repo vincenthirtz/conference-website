@@ -11,13 +11,25 @@ import CommentsPanel from '@/components/admin/moderation/CommentsPanel';
 import DisputesPanel from '@/components/admin/moderation/DisputesPanel';
 import type { StaffProps } from '@/types/admin';
 import nsAdminModeration from '@/lib/i18n/locales/admin-fr/adminModeration';
+// Namespace propre à l'onglet TCG : y ajouter une clé dans `adminModeration`
+// aurait touché deux fichiers de plus et leur parité, pour un seul intitulé.
+import nsAdminTcgPhotos from '@/lib/i18n/locales/admin-fr/adminTcgPhotos';
 
 import { lazyPanel } from '@/components/admin/lazyPanel';
 
 // Onglets secondaires : chargés au clic (cf. components/admin/lazyPanel).
-const BlacklistPanel = lazyPanel(() => import('@/components/admin/moderation/BlacklistPanel'));
-const EntityBlacklistPanel = lazyPanel(() => import('@/components/admin/moderation/EntityBlacklistPanel'));
-const SupportPanel = lazyPanel(() => import('@/components/admin/moderation/SupportPanel'));
+const BlacklistPanel = lazyPanel(
+  () => import('@/components/admin/moderation/BlacklistPanel')
+);
+const EntityBlacklistPanel = lazyPanel(
+  () => import('@/components/admin/moderation/EntityBlacklistPanel')
+);
+const SupportPanel = lazyPanel(
+  () => import('@/components/admin/moderation/SupportPanel')
+);
+const TcgPhotosPanel = lazyPanel(
+  () => import('@/components/admin/moderation/TcgPhotosPanel')
+);
 
 const ID_BASE = 'admin-moderation';
 
@@ -40,6 +52,7 @@ export const getServerSideProps = withStaffPage('caster');
  */
 export default function AdminModerationPage({ staff }: StaffProps) {
   const t = useAdminT(nsAdminModeration);
+  const tTcg = useAdminT(nsAdminTcgPhotos);
   const isManager = hasAtLeastRole(staff.role as StaffRole, 'admin');
 
   const tabs = [
@@ -49,6 +62,9 @@ export default function AdminModerationPage({ staff }: StaffProps) {
       ? [
           { id: 'blacklist', label: t.tabBlacklist },
           { id: 'support', label: t.tabSupport },
+          // Relire la photo d'une personne réelle n'est pas un geste de
+          // caster : même palier que Blacklist et Support.
+          { id: 'tcg-photos', label: tTcg.tabLabel },
         ]
       : []),
   ];
@@ -118,6 +134,8 @@ export default function AdminModerationPage({ staff }: StaffProps) {
               </>
             ) : active === 'support' && isManager ? (
               <SupportPanel />
+            ) : active === 'tcg-photos' && isManager ? (
+              <TcgPhotosPanel />
             ) : (
               <DisputesPanel />
             )}

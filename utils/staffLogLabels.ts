@@ -189,6 +189,9 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   entity_blacklist_update: 'Modification blacklist entité',
   entity_blacklist_remove: 'Suppression blacklist entité',
   support_ticket_convert_blacklist: 'Conversion signalement → blacklist',
+  // TCG (cartes joueuses)
+  tcg_photo_approve: 'Photo de carte TCG approuvée',
+  tcg_photo_reject: 'Photo de carte TCG refusée',
   // Broadcast
   broadcast_state_update: 'Mise à jour état broadcast',
   broadcast_next_match: 'Passage au match suivant (broadcast)',

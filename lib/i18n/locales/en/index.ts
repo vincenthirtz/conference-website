@@ -14,6 +14,7 @@
 // declenchee par un clic.
 
 import enProfileSummary from './profileSummary';
+import enPlayerTcg from './playerTcg';
 import enPlayerIndex from './playerIndex';
 import enSupportAssoCard from './supportAssoCard';
 import enCopyButton from './copyButton';
@@ -345,6 +346,7 @@ const enDict = {
   productionPartner: enProductionPartner,
   palmaresPage: enPalmaresPage,
   mapsVoxelPage: enMapsVoxelPage,
+  playerTcg: enPlayerTcg,
 };
 
 export default enDict;

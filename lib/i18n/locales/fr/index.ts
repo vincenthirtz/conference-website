@@ -8,6 +8,7 @@
 // Un composant importe le SEUL namespace dont il a besoin.
 
 import nsProfileSummary from './profileSummary';
+import nsPlayerTcg from './playerTcg';
 import nsPlayerIndex from './playerIndex';
 import nsSupportAssoCard from './supportAssoCard';
 import nsCopyButton from './copyButton';
@@ -339,4 +340,5 @@ export const frDict = {
   playerAgenda: nsPlayerAgenda.fr,
   playerMyTeams: nsPlayerMyTeams.fr,
   productionPartner: nsProductionPartner.fr,
+  playerTcg: nsPlayerTcg.fr,
 };

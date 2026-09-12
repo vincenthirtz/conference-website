@@ -8,6 +8,7 @@
 // Un composant importe le SEUL namespace dont il a besoin.
 
 import nsAdminQuickBracket from './adminQuickBracket';
+import nsAdminTcgPhotos from './adminTcgPhotos';
 import nsAdminLogout from './adminLogout';
 import nsAdminForgotPassword from './adminForgotPassword';
 import nsAdminResetPassword from './adminResetPassword';
@@ -391,4 +392,5 @@ export const frDict = {
   adminTeamMessages: nsAdminTeamMessages.fr,
   adminCasterScenes: nsAdminCasterScenes.fr,
   adminNetworkFunnel: nsAdminNetworkFunnel.fr,
+  adminTcgPhotos: nsAdminTcgPhotos.fr,
 };
