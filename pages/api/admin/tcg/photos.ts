@@ -29,6 +29,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { formatZodError } from '@/utils/validation';
 import { isValidUUID } from '@/utils/apiHelpers';
+import { revalidatePlayerCard } from '@/utils/tcg/revalidatePlayerCard';
 import { logger } from '@/utils/logger';
 
 /** Même bucket public que les logos d'équipe (cf. l'endpoint joueuse). */
@@ -203,6 +204,11 @@ async function decide(
     tenant_id: ctx.tenantId,
     payload: approving ? {} : { reason: reason ?? null },
   });
+
+  // La décision change ce que voient les visiteuses de la fiche publique : une
+  // approbation y fait apparaître la photo, un refus l'en retire. Régénérer
+  // maintenant évite qu'une photo refusée reste visible le temps de l'ISR.
+  await revalidatePlayerCard(res, userId);
 
   return res.status(200).json({ status: approving ? 'approved' : 'rejected' });
 }

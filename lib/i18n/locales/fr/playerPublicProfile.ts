@@ -81,4 +81,14 @@ export default ns('playerPublicProfile', {
   socialFollowers: '{count} abonnée',
   socialFollowersPlural: '{count} abonnées',
   socialTeams: 'Joue avec',
+
+  // --- Carte à collectionner (TCG) -----------------------------------------
+  // Visible de tout le monde, y compris d'une visiteuse anonyme : c'est la
+  // vitrine du TCG. Les libellés de rareté ne sont PAS redéfinis ici, ils
+  // viennent du namespace `playerTcg` — deux sources diraient tôt ou tard deux
+  // choses différentes du même palier.
+  tcgTitle: 'Sa carte',
+  tcgIntro:
+    'Sa rareté suit ses badges : c’est le même barème, pas une seconde échelle.',
+  tcgOwnCta: 'Gérer ma photo de carte',
 });

@@ -46,8 +46,12 @@ export default ns('playerTcg', {
     'Retirer ta photo ? Elle disparaîtra aussi des cartes déjà distribuées.',
 
   formatsHint: 'JPEG, PNG ou WebP, {mo} Mo maximum.',
+  // Cette phrase disait l'inverse de ce que fait le code : remplacer une photo
+  // repasse le statut à `pending`, et le lecteur public ne sert QUE l'`approved`
+  // — l'ancienne disparaît donc pendant la relecture. Le comportement est le bon
+  // (le sens prudent) ; c'était la phrase qui mentait, au sujet de sa photo.
   replaceWarning:
-    'Une nouvelle photo repasse par la relecture : la précédente reste affichée jusqu’à validation.',
+    'Une nouvelle photo repasse par la relecture : le temps de la validation, ta carte n’affiche plus l’ancienne.',
 
   // Retours
   uploadSuccess: 'Photo envoyée. Elle sera relue avant publication.',

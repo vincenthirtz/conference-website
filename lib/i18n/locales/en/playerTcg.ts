@@ -40,7 +40,7 @@ export default {
 
   formatsHint: 'JPEG, PNG or WebP, {mo} MB maximum.',
   replaceWarning:
-    'A new photo goes back through review: the current one stays visible until it is approved.',
+    'A new photo goes back through review: while it is pending, your card no longer shows the previous one.',
 
   uploadSuccess: 'Photo uploaded. It will be reviewed before publication.',
   removeSuccess: 'Photo removed.',

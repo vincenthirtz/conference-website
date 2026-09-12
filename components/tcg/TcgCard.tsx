@@ -62,6 +62,14 @@ export type TcgCardProps = {
   isFoil?: boolean;
   /** Nombre d'exemplaires possédés ; masqué si absent ou égal à 1. */
   count?: number;
+  /**
+   * Rend la carte SANS lien vers son sujet.
+   *
+   * Utile quand la carte est déjà affichée sur la page de ce sujet — la fiche
+   * publique d'une joueuse montre sa propre carte : un lien vers la page en
+   * cours n'apprend rien et ajoute une cible de tabulation de plus.
+   */
+  noLink?: boolean;
   /** Libellés traduits, fournis par la page hôte. */
   labels: {
     rarity: Record<TcgRarity, string>;
@@ -80,14 +88,16 @@ export default function TcgCard({
   rarity,
   isFoil = false,
   count,
+  noLink = false,
   labels,
 }: TcgCardProps): JSX.Element {
   const name =
     subject.kind === 'player' ? subject.displayName : (subject.name ?? null);
   const imageUrl =
     subject.kind === 'player' ? subject.imageUrl : subject.logoUrl;
-  const href =
-    subject.kind === 'player'
+  const href = noLink
+    ? null
+    : subject.kind === 'player'
       ? `/player/${subject.userId}`
       : subject.slug
         ? // `/team/` au SINGULIER : c'est la route publique réelle

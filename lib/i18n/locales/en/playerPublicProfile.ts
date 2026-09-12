@@ -77,4 +77,9 @@ export default {
   socialFollowers: '{count} follower',
   socialFollowersPlural: '{count} followers',
   socialTeams: 'Plays with',
+
+  tcgTitle: 'Her card',
+  tcgIntro:
+    'Its rarity follows her badges: the very same scale, not a second one.',
+  tcgOwnCta: 'Manage my card photo',
 };

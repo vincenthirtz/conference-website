@@ -35,6 +35,7 @@ import {
   IMAGE_MAX_BYTES,
   decodeImagePayload,
 } from '@/utils/uploads/imageBytes';
+import { revalidatePlayerCard } from '@/utils/tcg/revalidatePlayerCard';
 import { logger } from '@/utils/logger';
 
 /** Même bucket public que les logos d'équipe, sous un préfixe dédié. */
@@ -230,6 +231,10 @@ async function submitPhoto(
     }
   }
 
+  // La fiche publique montre la carte : le passage à `pending` retire la photo
+  // précédente de la vue de tout le monde, il faut donc régénérer tout de suite.
+  await revalidatePlayerCard(res, userId);
+
   return res.status(200).json({ status: 'pending' });
 }
 
@@ -295,6 +300,11 @@ async function revoke(
       );
     }
   }
+
+  // LE POINT LE PLUS IMPORTANT DE CE FICHIER. Sans cette régénération, la photo
+  // resterait affichée sur la fiche publique jusqu'à cinq minutes après le
+  // retrait (ISR à 300 s) — et « retrait rétroactif » deviendrait une formule.
+  await revalidatePlayerCard(res, userId);
 
   return res.status(200).json({ status: 'revoked' });
 }

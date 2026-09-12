@@ -326,6 +326,8 @@ export function resetSupabaseMock() {
     error: null,
   };
   storageUploads.length = 0;
+  storageRemovals.length = 0;
+  _storageRemoveResult = { data: null, error: null };
   _rpcResults.clear();
   rpcCalls.length = 0;
 }
@@ -786,6 +788,28 @@ export function setStorageSignedUrlResult(
 export const storageUploads: Array<{ bucket: string; path: string }> = [];
 
 /**
+ * Captures every `storage.from(bucket).remove([paths])` call for assertions.
+ *
+ * POURQUOI CETTE CAPTURE EXISTE. Deux endpoints du TCG suppriment un fichier du
+ * bucket PUBLIC — le refus d'une photo par la modération, et le retrait de son
+ * accord par la joueuse. Dans les deux cas, la suppression EST la garantie :
+ * une photo refusée qui resterait joignable par son URL rendrait le refus
+ * décoratif. Sans capture, un test ne pourrait vérifier que la ligne en base,
+ * c'est-à-dire précisément la moitié qui n'est pas le problème.
+ */
+export const storageRemovals: Array<{ bucket: string; paths: string[] }> = [];
+
+/** State for `supabaseAdmin.storage.from(bucket).remove()`. */
+let _storageRemoveResult: {
+  data: unknown;
+  error: { message: string } | null;
+} = { data: null, error: null };
+
+export function setStorageRemoveResult(result: typeof _storageRemoveResult) {
+  _storageRemoveResult = result;
+}
+
+/**
  * Responses returned by `supabaseAdmin.rpc(fn, params)`, keyed by function name.
  * Tests seed a per-function `{ data, error }` via `setRpcResult`; unseeded
  * functions resolve to `{ data: null, error: null }`. Also captures every call
@@ -817,6 +841,10 @@ export const supabaseAdmin = {
           publicUrl: `https://storage.example.test/${bucket}/${path}`,
         },
       }),
+      remove: (paths: string[]) => {
+        storageRemovals.push({ bucket, paths: [...paths] });
+        return Promise.resolve(_storageRemoveResult);
+      },
       createSignedUrl: (_path: string, _ttl?: number) =>
         Promise.resolve(_storageSignedUrlResult),
     }),

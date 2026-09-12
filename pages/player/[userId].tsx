@@ -48,6 +48,10 @@ import FollowButton from '@/components/player/FollowButton';
 import { TwitchIcon } from '@/components/Icons';
 import { socialHandleLabel, socialHref } from '@/utils/social/profileHandles';
 import { XIcon } from '@/components/Icons';
+import TcgCard from '@/components/tcg/TcgCard';
+import { cardRarity } from '@/utils/tcg/rarity';
+import { readPlayerFaces } from '@/utils/tcg/readCardFaces';
+import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
 
 type PlayerProfileDict = typeof nsPlayerPublicProfile.fr;
 
@@ -71,6 +75,7 @@ function formatDate(iso: string, locale: string): string {
 
 export default function PlayerProfilePage({
   profile,
+  tcgPhotoUrl,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
   const t = useT(nsPlayerPublicProfile);
   const router = useRouter();
@@ -124,13 +129,21 @@ export default function PlayerProfilePage({
         {state.status === 'loading' && <LoadingState />}
         {state.status === 'notfound' && <NotFoundState />}
         {state.status === 'error' && <ErrorState onRetry={refresh} />}
-        {state.status === 'ok' && <Profile data={state.data} />}
+        {state.status === 'ok' && (
+          <Profile data={state.data} tcgPhotoUrl={tcgPhotoUrl ?? null} />
+        )}
       </main>
     </div>
   );
 }
 
-function Profile({ data }: { data: PlayerProfileResponse }) {
+function Profile({
+  data,
+  tcgPhotoUrl,
+}: {
+  data: PlayerProfileResponse;
+  tcgPhotoUrl: string | null;
+}) {
   const t = useT(nsPlayerPublicProfile);
   const { player, history, recentMatches, h2h, achievements } = data;
   const label = coreLabel(player);
@@ -140,6 +153,13 @@ function Profile({ data }: { data: PlayerProfileResponse }) {
       <ProfileHeader player={player} label={label} />
 
       <BadgesSection badges={achievements.badges} />
+
+      <TcgCardSection
+        player={player}
+        label={label}
+        badges={achievements.badges}
+        tcgPhotoUrl={tcgPhotoUrl}
+      />
 
       {/* Une courbe vide n'apprend rien et occupe le haut de la fiche d'une
           joueuse qui n'a pas encore joué. */}
@@ -382,6 +402,89 @@ function BadgesSection({ badges }: { badges: ProfileBadge[] }) {
           );
         })}
       </ul>
+    </section>
+  );
+}
+
+// --- Carte à collectionner (TCG) --------------------------------------------
+//
+// LA VITRINE PUBLIQUE DU TCG, et le moment où la garantie de consentement du
+// lot 2 devient visible des autres plutôt que des seules propriétaires de
+// cartes. La photo affichée ici a été lue par `readPlayerFaces` dans
+// `getStaticProps` : approuvée ET non révoquée, sinon rien. Un retrait
+// régénère la page immédiatement (`utils/tcg/revalidatePlayerCard.ts`) au lieu
+// d'attendre les 300 s de l'ISR.
+//
+// LA RARETÉ SE CALCULE DANS LE NAVIGATEUR, à partir des badges déjà chargés.
+// `cardRarity` est un réducteur pur qui n'importe qu'un type : aucun octet
+// ajouté au bundle, et aucun aller-retour réseau pour une valeur déjà en main.
+//
+// TOUTE JOUEUSE A UNE CARTE, avec ou sans photo — c'est la règle posée dans
+// `utils/tcg/rarity.ts`. La section s'affiche donc toujours, y compris pour une
+// joueuse non classée : c'est aussi ce qui fait découvrir le dispositif à
+// celles qui n'en ont jamais entendu parler.
+function TcgCardSection({
+  player,
+  label,
+  badges,
+  tcgPhotoUrl,
+}: {
+  player: PlayerProfileCore;
+  label: string;
+  badges: ProfileBadge[];
+  tcgPhotoUrl: string | null;
+}) {
+  const t = useT(nsPlayerPublicProfile);
+  const tTcg = useT(nsPlayerTcg);
+  const { user } = useSession();
+
+  return (
+    <section className="mt-8">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-brand-gradient">
+        {t.tcgTitle}
+      </h2>
+      <div className="flex flex-wrap items-start gap-5 rounded-2xl border border-neutral-800 bg-neutral-900/40 p-5">
+        <div className="w-36 shrink-0 sm:w-40">
+          <TcgCard
+            subject={{
+              kind: 'player',
+              userId: player.userId,
+              displayName: label,
+              // La photo CONSENTIE d'abord ; à défaut l'avatar public de la
+              // fiche — celui du roster pour une joueuse non classée, que
+              // `readPlayerFaces` n'aurait pas. Jamais un portrait inventé.
+              imageUrl: tcgPhotoUrl ?? player.avatarUrl,
+            }}
+            rarity={cardRarity(badges)}
+            // La carte est déjà sur la page de son sujet : pas de lien vers
+            // soi-même.
+            noLink
+            labels={{
+              rarity: {
+                common: tTcg.rarityCommon,
+                rare: tTcg.rarityRare,
+                epic: tTcg.rarityEpic,
+                legendary: tTcg.rarityLegendary,
+              },
+              foil: tTcg.foil,
+              copies: tTcg.copies,
+            }}
+          />
+        </div>
+        <div className="min-w-[12rem] flex-1">
+          <p className="text-sm text-neutral-400">{t.tcgIntro}</p>
+          {/* Visible seulement pour la joueuse elle-même : c'est un raccourci
+              vers son espace, pas une information pour les visiteuses. */}
+          {user?.id === player.userId && (
+            <Link
+              href="/player/tcg"
+              className="mt-3 inline-flex rounded-full border border-neutral-700 px-3 py-1.5 text-xs font-semibold text-neutral-200 transition hover:border-[var(--color-violet)]/60 hover:text-white"
+            >
+              {t.tcgOwnCta}
+            </Link>
+          )}
+        </div>
+      </div>
     </section>
   );
 }
@@ -1367,6 +1470,7 @@ export const getStaticPaths: GetStaticPaths = async () => {
 export const getStaticProps: GetStaticProps<{
   profile: PlayerProfileResponse;
   seo: SeoProps;
+  tcgPhotoUrl: string | null;
 }> = async (ctx) => {
   const rawUserId = ctx.params?.userId;
   const userId = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId;
@@ -1405,8 +1509,29 @@ export const getStaticProps: GetStaticProps<{
     /* on reste sur false — ne pas indexer par défaut */
   }
 
+  // Photo de carte TCG — DÉLIBÉRÉMENT HORS DE `PlayerProfileResponse`.
+  //
+  // Ce type sert aussi `/api/public/v1/players/[userId]`, une API partenaire
+  // versionnée. Une joueuse a consenti à ce que sa photo illustre ses cartes
+  // sur le site ; pas à la voir servie dans un flux de données pour tiers,
+  // moissonnable et hors de portée du retrait qu'elle contrôle ici. L'y faire
+  // entrer par simple ajout de champ serait un élargissement de portée
+  // silencieux — d'où une prop de page, alimentée par l'ISR seul.
+  let tcgPhotoUrl: string | null = null;
+  try {
+    const face = (await readPlayerFaces(DEFAULT_TENANT_ID, [userId])).get(
+      userId
+    );
+    // `hasTcgPhoto` sépare la photo CONSENTIE de l'avatar de repli que
+    // `readPlayerFaces` renvoie sinon. On ne veut que la première : la fiche a
+    // déjà un meilleur avatar pour les joueuses non classées.
+    tcgPhotoUrl = face?.hasTcgPhoto ? (face.imageUrl ?? null) : null;
+  } catch {
+    /* la carte s'affichera avec l'avatar public — dégradé, jamais cassé */
+  }
+
   return {
-    props: { profile, seo: buildPlayerSeo(profile, discoverable) },
+    props: { profile, seo: buildPlayerSeo(profile, discoverable), tcgPhotoUrl },
     revalidate: 300,
   };
 };
