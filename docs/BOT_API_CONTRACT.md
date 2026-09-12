@@ -3887,8 +3887,14 @@ Le contenu du fichier est vérifié par ses *magic bytes*, pas seulement par le
 `mimeType` déclaré : le bucket est public, et un type déclaré est une
 affirmation du client. Pas de SVG (document scriptable), pas de PDF.
 
+La monnaie du TCG **se gagne, elle ne s'achète pas en argent réel** : monnaie
+achetable + contenu aléatoire formerait une loot box payante — interdite en
+Belgique et aux Pays-Bas, surveillée par l'ANJ en France, avec un public qui
+compte des mineures. Aucun endpoint ci-dessous ne connaît de moyen de paiement.
+
 | Route | Methods | Auth | Notes |
 | --- | --- | --- | --- |
+| [`pages/api/player/tcg/booster.ts`](../pages/api/player/tcg/booster.ts) | POST | Bearer joueur (`withAuthRoute`) | Achète un booster avec ses pièces. Ne crée qu'un paquet **fermé** ; le tirage appartient à l'ouverture. Débit **conditionnel au solde lu** (`.eq('balance', avant)`) : deux achats simultanés ne peuvent pas dépenser deux fois les mêmes pièces, le second reçoit `409 { code:'balance_changed' }`. Si l'écriture au registre échoue, le paquet est supprimé — ni pièces prélevées, ni paquet livré. `400 { code:'insufficient_funds', balance, price }`. Rate-limit **20 / min**. |
 | [`pages/api/player/tcg/photo.ts`](../pages/api/player/tcg/photo.ts) | GET, POST, DELETE | Bearer joueur (`withAuthRoute`) | `GET 200 { status, photoUrl, optedIn, rejectedReason }` — la joueuse voit sa propre photo même `pending`/`rejected`, le filtrage public appartient au lecteur des cartes. `POST { data, mimeType }` (base64, 2 Mio, PNG/JPEG/WebP) → `200 { status:'pending' }` ; `400 { code }` parmi `missing_data`, `unsupported_type`, `invalid_base64`, `too_large`, `content_mismatch`. `DELETE` → `200 { status:'revoked' }`. Rate-limit **5 / min** (POST), **10 / min** (DELETE). |
 
 ---

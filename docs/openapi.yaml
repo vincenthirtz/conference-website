@@ -33960,6 +33960,65 @@ paths:
                     enum: [revoked]
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/player/tcg/booster:
+    post:
+      tags:
+        - public/auth
+      summary: Acheter un booster TCG avec ses pieces.
+      description: |
+        La monnaie se GAGNE (victoires), elle ne s'achete pas en argent reel :
+        aucun moyen de paiement n'est relie a cet endpoint. Monnaie achetable +
+        contenu aleatoire formerait une loot box payante.
+
+        L'achat ne cree qu'un paquet FERME ; le tirage appartient a
+        l'ouverture. Le debit est CONDITIONNEL au solde lu (`.eq('balance',
+        avant)`) : deux achats simultanes ne peuvent pas depenser deux fois les
+        memes pieces, le second recoit 409. Si l'ecriture au registre echoue,
+        le paquet est supprime — ni pieces prelevees, ni paquet livre.
+        Rate-limit 20 / min.
+      operationId: buyPlayerTcgBooster
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Booster achete (ferme).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  packId:
+                    type: string
+                    format: uuid
+                  price:
+                    type: integer
+        '400':
+          description: |
+            `code: insufficient_funds` — le solde ne couvre pas le prix. La
+            reponse rappelle `balance` et `price`.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  balance:
+                    type: integer
+                  price:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: |
+            `code: balance_changed` — le solde a bouge entre la lecture et le
+            debit (achat concurrent). Reessayer est sur.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /api/admin/tcg/photos:
     get:
       summary: File des photos de cartes TCG en attente de relecture.

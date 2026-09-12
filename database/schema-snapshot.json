@@ -1299,6 +1299,7 @@
       "granted_at",
       "id",
       "opened_at",
+      "source_kind",
       "source_match_id",
       "tenant_id",
       "user_id"
