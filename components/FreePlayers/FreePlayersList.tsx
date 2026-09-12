@@ -8,6 +8,7 @@
 // l'API publique ne les renvoie même pas (cf. utils/freePlayers.ts).
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useT, format as fmt } from '@/lib/i18n/useT';
 import nsRejoindrePage from '@/lib/i18n/locales/fr/rejoindrePage';
 import { useLang } from '@/lib/i18n/LanguageProvider';
@@ -211,6 +212,19 @@ export default function FreePlayersList({
             ))}
           </ul>
           <p className="mt-4 text-xs text-gray-500">{t.listNoContact}</p>
+          {/* Cette liste est éphémère (fiches à 60 jours) et anonyme. La carte
+              joueuse est l'autre porte : durable, et c'est elle qui alimente le
+              réseau. On le dit ici plutôt que dans une carte de plus — la
+              section de renvois en compte déjà trois. */}
+          <p className="mt-1 text-xs text-gray-500">
+            {t.listCardHint}{' '}
+            <Link
+              href="/player/discovery"
+              className="font-semibold text-gray-300 underline underline-offset-2 hover:text-white"
+            >
+              {t.listCardCta}
+            </Link>
+          </p>
         </>
       )}
     </section>

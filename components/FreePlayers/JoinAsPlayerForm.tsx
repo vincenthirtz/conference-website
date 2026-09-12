@@ -18,6 +18,7 @@
 import { useId, useRef, useState } from 'react';
 import { socialUrl } from '@/config/socials';
 import { useT, format as fmt } from '@/lib/i18n/useT';
+import Link from 'next/link';
 import nsRejoindrePage from '@/lib/i18n/locales/fr/rejoindrePage';
 import {
   FREE_PLAYER_LEVELS,
@@ -200,6 +201,19 @@ export default function JoinAsPlayerForm({
         >
           {t.successDiscordCta}
         </a>
+        {/* Une fiche expire à 60 jours ; la carte joueuse, elle, reste. C'est
+            le seul endroit du parcours où l'on peut le dire à quelqu'un qui
+            vient justement de manifester qu'elle cherche — et un simple lien,
+            pas un bouton, pour ne pas concurrencer l'appel Discord ci-dessus. */}
+        <p className="mt-4 text-xs text-gray-300">
+          {t.successCardBody}{' '}
+          <Link
+            href="/player/discovery"
+            className="font-semibold text-[var(--color-green-light)] underline underline-offset-2"
+          >
+            {t.successCardCta}
+          </Link>
+        </p>
         <div className="mt-4">
           <button
             type="button"

@@ -84,6 +84,12 @@ export default ns('rejoindrePage', {
     'La suite se passe sur le serveur : prends le rôle « Recherche une équipe », regarde qui recrute, pose tes questions.',
   successDiscordCta: 'Rejoindre le Discord',
   successAgain: 'Modifier ma fiche',
+  successCardBody:
+    'Ta fiche expire dans 60 jours. Ta carte joueuse, elle, reste : elle te rend trouvable toute l’année par les autres joueuses, et tu peux la désactiver d’un clic.',
+  successCardCta: 'Créer ma carte joueuse',
+  listCardHint:
+    'Ces fiches expirent au bout de 60 jours. Pour rester trouvable toute l’année, il y a la carte joueuse.',
+  listCardCta: 'Voir le réseau des joueuses',
   privacyNote:
     'Ton email et ton pseudo Discord ne sont visibles que par les capitaines connectées. Ta fiche expire au bout de 60 jours, et tu peux la retirer à tout moment depuis le lien envoyé par email.',
 

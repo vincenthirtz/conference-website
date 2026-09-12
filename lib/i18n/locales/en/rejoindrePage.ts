@@ -75,6 +75,12 @@ export default {
     'The rest happens on the server: grab the “Looking for a team” role, see who is recruiting, ask your questions.',
   successDiscordCta: 'Join the Discord',
   successAgain: 'Edit my profile',
+  successCardBody:
+    'Your listing expires in 60 days. Your player card does not: it makes you findable all year by other players, and you can switch it off in one click.',
+  successCardCta: 'Create my player card',
+  listCardHint:
+    'These listings expire after 60 days. To stay findable all year, there is the player card.',
+  listCardCta: 'See the players network',
   privacyNote:
     'Your email and Discord handle are only visible to signed-in captains. Your profile expires after 60 days, and you can remove it at any time using the link sent by email.',
   errorName: 'Enter a nickname (2 characters minimum).',
