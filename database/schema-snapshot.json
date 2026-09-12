@@ -1316,6 +1316,22 @@
       "updated_at",
       "user_id"
     ],
+    "tcg_wallet_entries": [
+      "amount",
+      "created_at",
+      "id",
+      "source_kind",
+      "source_ref",
+      "tenant_id",
+      "user_id"
+    ],
+    "tcg_wallets": [
+      "balance",
+      "created_at",
+      "tenant_id",
+      "updated_at",
+      "user_id"
+    ],
     "team_audit_logs": [
       "action",
       "created_at",
@@ -2667,6 +2683,14 @@
     },
     "tcg_player_cards_tenant_id_fkey": {
       "source": "tcg_player_cards",
+      "target": "tenants"
+    },
+    "tcg_wallet_entries_tenant_id_fkey": {
+      "source": "tcg_wallet_entries",
+      "target": "tenants"
+    },
+    "tcg_wallets_tenant_id_fkey": {
+      "source": "tcg_wallets",
       "target": "tenants"
     },
     "team_audit_logs_team_id_fkey": {

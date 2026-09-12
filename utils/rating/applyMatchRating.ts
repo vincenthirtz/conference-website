@@ -27,6 +27,7 @@ import {
 } from './computePlayerRatings';
 import { deriveTeamRatings } from './deriveTeamRatings';
 import { isNonPlayingTeamRole } from '../teams/roleKind';
+import { grantVictoryRewards } from '../tcg/grantVictoryRewards';
 
 const SCORED_STATUSES = new Set(['finished', 'walkover']);
 
@@ -415,6 +416,25 @@ export async function applyMatchRatingIncremental(
 
     // 10) Recalcul team_ratings des 2 équipes.
     await recomputeTeamRatingsFor(tenantId, [match.team1_id, match.team2_id]);
+
+    // 11) Récompenses TCG du camp gagnant : un paquet + des pièces.
+    //
+    // EN DERNIER, ET DANS LE `try`. En dernier parce qu'une récompense ratée ne
+    // doit pas empêcher le rating d'être écrit ; dans le `try` parce que tous
+    // les `return` ci-dessus sont des cas où le match N'EST PAS compté (bye,
+    // statut non final, historique déjà présent) — et un match non compté ne
+    // doit rien payer. Atteindre cette ligne, c'est avoir noté la rencontre.
+    //
+    // L'idempotence n'est pas assurée ici : elle tient aux contraintes UNIQUE
+    // de `tcg_packs` et `tcg_wallet_entries`. Un rejeu n'ajoute donc rien.
+    // `grantVictoryRewards` ne lève jamais (contrat de ce hook).
+    await grantVictoryRewards({
+      tenantId,
+      matchId,
+      winnerTeamId: match.winner_team_id as string,
+      isScrim: Boolean(match.scrim_id),
+      participants,
+    });
   } catch (err) {
     logger.error('[rating] applyMatchRatingIncremental exception', err);
   }
