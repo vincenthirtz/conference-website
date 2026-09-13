@@ -30,10 +30,15 @@ import { readPlayerProfile } from '@/utils/rating/readPlayerProfile';
 import { cardRarity, teamCardRarity, isFoil } from '@/utils/tcg/rarity';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import { pickPackSubjects, PACK_SIZE } from '@/utils/tcg/drawPack';
-// Le prix est rendu par l'API plutôt que recopié dans la page : importer
-// `economy.ts` côté client ferait entrer le moteur de rating dont il dérive le
-// barème dans le bundle navigateur.
-import { BOOSTER_PRICE_COINS } from '@/utils/tcg/economy';
+import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
+// Le prix ET le barème sont rendus par l'API plutôt que recopiés dans la page :
+// importer `economy.ts` côté client ferait entrer le moteur de rating dont il
+// dérive le barème dans le bundle navigateur.
+import {
+  BOOSTER_PRICE_COINS,
+  MATCH_WIN_COINS,
+  SCRIM_WIN_COINS,
+} from '@/utils/tcg/economy';
 import { logger } from '@/utils/logger';
 
 export default withAuthRoute(async function handler(
@@ -110,6 +115,14 @@ async function listPacks(
     balance: (walletRes.data as { balance?: number } | null)?.balance ?? 0,
     // Source unique du prix : l'interface l'affiche, elle ne le connaît pas.
     boosterPrice: BOOSTER_PRICE_COINS,
+    // CE QUE RAPPORTE UNE VICTOIRE. Sans ce barème, la page montrait un solde
+    // et un bouton d'achat sans jamais dire comment gagner des pièces : à zéro,
+    // on voyait un prix et aucun chemin pour l'atteindre. Rendu par l'API pour
+    // la même raison que le prix — l'interface l'affiche sans le connaître.
+    earn: {
+      matchWin: MATCH_WIN_COINS,
+      scrimWin: SCRIM_WIN_COINS,
+    },
   });
 }
 
@@ -273,17 +286,68 @@ async function openPack(
     return res.status(500).json({ error: 'Ouverture impossible.' });
   }
 
+  // 5) LES FACES DES CARTES TIRÉES — pour que l'ouverture se VOIE.
+  //
+  // Sans elles, la réponse ne portait que des identifiants : la page ne pouvait
+  // rien montrer et se contentait de recharger la collection, où les nouvelles
+  // cartes se fondaient en silence. Ouvrir un paquet sans découvrir ce qu'on a
+  // obtenu, c'est retirer à un TCG son seul moment.
+  //
+  // On réutilise les lecteurs de la collection, et ce n'est pas qu'une économie
+  // de code : ce sont eux qui portent la garantie de consentement (photo
+  // `approved` ET non révoquée). La révélation en hérite, au lieu d'ouvrir une
+  // seconde voie d'accès aux photos qu'il faudrait sécuriser séparément.
+  // `drawn*` et non `playerIds` / `teamIds` : ces deux noms désignent déjà les
+  // VIVIERS plus haut dans la fonction. Les réutiliser ici ne mélangeait pas
+  // seulement deux notions — le tout du vivier et les cinq tirés — c'était une
+  // redéclaration qui empêchait le module de compiler, donc un 500 sur la
+  // route entière, GET compris.
+  const drawnPlayerIds = cards
+    .filter((c) => c.subject_kind === 'player')
+    .map((c) => c.card_user_id as string);
+  const drawnTeamIds = cards
+    .filter((c) => c.subject_kind === 'team')
+    .map((c) => c.card_team_id as string);
+
+  const [playerFaces, teamFaces] = await Promise.all([
+    readPlayerFaces(tenantId, drawnPlayerIds),
+    readTeamFaces(tenantId, drawnTeamIds),
+  ]);
+
   return res.status(200).json({
     packId,
     openedAt,
-    cards: cards.map((c) => ({
-      position: c.position,
-      kind: c.subject_kind,
-      userId: c.card_user_id,
-      teamId: c.card_team_id,
-      rarity: c.rarity,
-      isFoil: c.is_foil,
-    })),
+    // Même forme que `/api/player/tcg/collection`, à `count` près : la page
+    // rend les deux avec le même composant, elle ne doit pas connaître deux
+    // vocabulaires pour la même carte.
+    cards: cards.map((c) => {
+      const base = {
+        position: c.position,
+        rarity: c.rarity,
+        isFoil: c.is_foil,
+      };
+      if (c.subject_kind === 'player') {
+        const face = playerFaces.get(c.card_user_id as string);
+        return {
+          ...base,
+          kind: 'player' as const,
+          userId: c.card_user_id,
+          teamId: null,
+          displayName: face?.displayName ?? null,
+          imageUrl: face?.imageUrl ?? null,
+        };
+      }
+      const face = teamFaces.get(c.card_team_id as string);
+      return {
+        ...base,
+        kind: 'team' as const,
+        userId: null,
+        teamId: c.card_team_id,
+        name: face?.name ?? null,
+        slug: face?.slug ?? null,
+        logoUrl: face?.logoUrl ?? null,
+      };
+    }),
   });
 }
 

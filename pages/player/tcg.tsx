@@ -54,6 +54,44 @@ type CollectionCard =
       count: number;
     };
 
+/**
+ * Une carte tout juste tirée. Même forme que `CollectionCard` à `count` près :
+ * un exemplaire unique n'a pas de compte, et le composant de carte masque déjà
+ * le compteur à 1.
+ */
+type DrawnCard =
+  | {
+      position: number;
+      kind: 'player';
+      userId: string;
+      displayName: string | null;
+      imageUrl: string | null;
+      rarity: TcgRarity;
+      isFoil: boolean;
+    }
+  | {
+      position: number;
+      kind: 'team';
+      teamId: string;
+      name: string | null;
+      slug: string | null;
+      logoUrl: string | null;
+      rarity: TcgRarity;
+      isFoil: boolean;
+    };
+
+/**
+ * Clé d'un sujet, commune aux deux formes de carte.
+ *
+ * Sert à répondre à LA question qu'on se pose en ouvrant un paquet : nouvelle
+ * carte, ou doublon ? La page détient déjà la collection d'avant le
+ * rechargement, donc la réponse ne coûte aucune requête — encore faut-il la
+ * calculer avant de rafraîchir, après quoi tout paraît possédé.
+ */
+function subjectKey(card: DrawnCard | CollectionCard): string {
+  return card.kind === 'player' ? `p-${card.userId}` : `t-${card.teamId}`;
+}
+
 function PlayerTcg() {
   const t = useT(nsPlayerTcg);
   const { addToast } = useToast();
@@ -66,10 +104,26 @@ function PlayerTcg() {
   // que le barème bougerait, et importer `economy.ts` traînerait le moteur de
   // rating dans le bundle navigateur.
   const [boosterPrice, setBoosterPrice] = useState<number | null>(null);
+  // Le barème vient de l'API, comme le prix : sans lui, la page affichait un
+  // solde et un bouton d'achat sans jamais dire comment gagner des pièces.
+  const [earn, setEarn] = useState<{
+    matchWin: number;
+    scrimWin: number;
+  } | null>(null);
   const [cards, setCards] = useState<CollectionCard[]>([]);
   const [totals, setTotals] = useState({ distinct: 0, total: 0 });
   const [busy, setBusy] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  // Les cartes du dernier paquet ouvert. C'est LE moment du TCG : le serveur
+  // les renvoie déjà, la page se contentait de les jeter et de recharger la
+  // collection, où le tirage se fondait sans qu'on l'ait vu.
+  // `newKeys` accompagne les cartes plutôt que de les modifier : « nouvelle »
+  // décrit ma collection à cet instant, pas la carte elle-même — la même carte
+  // sera un doublon au prochain paquet.
+  const [revealed, setRevealed] = useState<{
+    cards: DrawnCard[];
+    newKeys: string[];
+  } | null>(null);
 
   const labels = {
     rarity: {
@@ -89,6 +143,7 @@ function PlayerTcg() {
           packs: Pack[];
           balance: number;
           boosterPrice: number;
+          earn?: { matchWin: number; scrimWin: number };
         }>('/api/player/tcg/packs'),
         adminFetchJson<{
           cards: CollectionCard[];
@@ -100,6 +155,12 @@ function PlayerTcg() {
       setBalance(packsData.balance ?? 0);
       if (typeof packsData.boosterPrice === 'number') {
         setBoosterPrice(packsData.boosterPrice);
+      }
+      if (
+        typeof packsData.earn?.matchWin === 'number' &&
+        typeof packsData.earn?.scrimWin === 'number'
+      ) {
+        setEarn(packsData.earn);
       }
       setCards(collData.cards ?? []);
       setTotals({
@@ -143,6 +204,28 @@ function PlayerTcg() {
           await load();
           return;
         }
+
+        // LA RÉVÉLATION. Le serveur renvoie les cartes tirées, faces
+        // comprises : on les garde pour les montrer, au lieu de recharger la
+        // collection en silence. Une réponse illisible n'est pas une erreur
+        // d'ouverture — le paquet EST ouvert et les cartes sont en base ; on
+        // se rabat alors sur le rechargement, sans rien annoncer de faux.
+        const body = (await res.json().catch(() => null)) as {
+          cards?: DrawnCard[];
+        } | null;
+        if (Array.isArray(body?.cards) && body.cards.length > 0) {
+          // Photo de la collection AVANT le rechargement : c'est le seul
+          // moment où « nouvelle » veut encore dire quelque chose. Après
+          // `load()`, tout ce qu'on vient de tirer figure dans la collection
+          // et paraît possédé de longue date.
+          const ownedBefore = new Set(cards.map(subjectKey));
+          const drawn = [...body.cards].sort((a, b) => a.position - b.position);
+          setRevealed({
+            cards: drawn,
+            newKeys: drawn.map(subjectKey).filter((k) => !ownedBefore.has(k)),
+          });
+        }
+
         await load();
       } catch {
         addToast(t.errGeneric, 'error');
@@ -150,7 +233,7 @@ function PlayerTcg() {
         setBusy(null);
       }
     },
-    [adminFetch, addToast, load, t]
+    [adminFetch, addToast, load, t, cards]
   );
 
   const buyBooster = useCallback(async () => {
@@ -213,6 +296,16 @@ function PlayerTcg() {
               <p className="text-sm text-gray-300">
                 {format(t.balance, { count: balance })}
               </p>
+              {/* Comment on en gagne. À zéro, un prix sans chemin pour
+                  l'atteindre n'apprend rien. */}
+              {earn !== null && (
+                <p className="mt-1 text-xs text-gray-500">
+                  {format(t.earnHint, {
+                    match: earn.matchWin,
+                    scrim: earn.scrimWin,
+                  })}
+                </p>
+              )}
               {/* Prix inconnu = bouton absent. Afficher « Acheter (— pièces) »
                   proposerait une dépense dont on ignore le montant. */}
               {boosterPrice !== null && (
@@ -252,6 +345,64 @@ function PlayerTcg() {
             </ul>
           )}
         </section>
+
+        {/* Le tirage qu'on vient d'ouvrir, entre les paquets et la collection :
+            on le voit à l'endroit où le regard va après avoir cliqué. Il reste
+            affiché jusqu'à ce qu'on le ferme — une révélation qui disparaît
+            toute seule est une révélation ratée. */}
+        {revealed !== null && (
+          <section className="mt-8 rounded-2xl border border-[var(--color-violet)]/40 bg-[var(--color-violet)]/[0.07] p-6">
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">{t.revealTitle}</h2>
+                <p className="mt-1 text-sm text-gray-400">{t.revealSubtitle}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRevealed(null)}
+                className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-gray-300 transition hover:border-white/40 hover:text-white"
+              >
+                {t.revealDismiss}
+              </button>
+            </div>
+            <ul className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+              {revealed.cards.map((card) => (
+                <li key={card.position}>
+                  {/* Nouvelle ou doublon : l'information qu'on cherche en
+                      ouvrant. Posée au-dessus de la carte plutôt que dans
+                      `TcgCard`, qui décrit une carte et non mon rapport à
+                      elle — la collection réutilise le même composant. */}
+                  {revealed.newKeys.includes(subjectKey(card)) && (
+                    <p className="mb-1 text-center text-[11px] font-bold uppercase tracking-wider text-[var(--color-green)]">
+                      {t.revealNewCard}
+                    </p>
+                  )}
+                  <TcgCard
+                    subject={
+                      card.kind === 'player'
+                        ? {
+                            kind: 'player',
+                            userId: card.userId,
+                            displayName: card.displayName,
+                            imageUrl: card.imageUrl,
+                          }
+                        : {
+                            kind: 'team',
+                            teamId: card.teamId,
+                            name: card.name,
+                            slug: card.slug,
+                            logoUrl: card.logoUrl,
+                          }
+                    }
+                    rarity={card.rarity}
+                    isFoil={card.isFoil}
+                    labels={labels}
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {/* Collection */}
         <section className="mt-8">

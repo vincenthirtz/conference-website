@@ -83,6 +83,8 @@ export default ns('playerTcg', {
   packFromPurchase: 'Acheté',
 
   balance: '{count} pièces',
+  // Le barème vient de l'API : la page l'affiche sans le connaître.
+  earnHint: '{match} pièces par victoire en match, {scrim} en scrim classé.',
   buyBooster: 'Acheter un booster ({price} pièces)',
   buying: 'Achat…',
   buySuccess: 'Booster acheté. Il t’attend dans tes paquets.',
@@ -91,6 +93,13 @@ export default ns('playerTcg', {
   errAlreadyOpened: 'Ce paquet est déjà ouvert.',
   errEmptyPool:
     'Aucune carte disponible pour l’instant — ton paquet reste intact.',
+
+  // Ouverture : ce qu'on vient d'obtenir. C'est le moment du TCG — la page
+  // rechargeait la collection sans jamais montrer le tirage.
+  revealTitle: 'Ton paquet',
+  revealSubtitle: 'Les cartes que tu viens d’obtenir.',
+  revealDismiss: 'Fermer',
+  revealNewCard: 'Nouvelle',
 
   // Raretés : mêmes paliers que les badges de la fiche joueuse.
   rarityCommon: 'Commune',

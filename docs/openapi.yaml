@@ -34080,6 +34080,18 @@ paths:
                       bougerait, et importer `economy.ts` dans la page
                       traînerait le moteur de rating dont il derive ce bareme
                       dans le bundle navigateur.
+                  earn:
+                    type: object
+                    description: |
+                      Ce que rapporte une victoire. Rendu pour la meme raison
+                      que `boosterPrice` : sans lui, la page affichait un solde
+                      et un prix sans jamais dire comment gagner des pieces —
+                      a zero, on voyait un montant et aucun chemin.
+                    properties:
+                      matchWin:
+                        type: integer
+                      scrimWin:
+                        type: integer
         '401':
           $ref: '#/components/responses/Unauthorized'
         '429':
@@ -34128,6 +34140,19 @@ paths:
                   openedAt:
                     type: string
                   cards:
+                    description: |
+                      Les cartes tirees, AVEC leur face (nom, image) : sans
+                      elle la page ne pouvait rien montrer de l'ouverture et se
+                      contentait de recharger la collection, ou le tirage se
+                      fondait en silence. Meme forme que
+                      `/api/player/tcg/collection` a `count` pres, pour que
+                      l'interface n'ait pas deux vocabulaires pour une carte.
+
+                      Les faces viennent de `readPlayerFaces` /
+                      `readTeamFaces` : la revelation herite ainsi de la
+                      garantie de consentement (photo `approved` ET non
+                      revoquee) au lieu d'ouvrir une seconde voie d'acces aux
+                      photos.
                     type: array
                     items:
                       type: object
@@ -34143,6 +34168,26 @@ paths:
                         teamId:
                           type: string
                           nullable: true
+                        displayName:
+                          type: string
+                          nullable: true
+                          description: Cartes `player` seulement.
+                        imageUrl:
+                          type: string
+                          nullable: true
+                          description: Cartes `player` seulement.
+                        name:
+                          type: string
+                          nullable: true
+                          description: Cartes `team` seulement.
+                        slug:
+                          type: string
+                          nullable: true
+                          description: Cartes `team` seulement.
+                        logoUrl:
+                          type: string
+                          nullable: true
+                          description: Cartes `team` seulement.
                         rarity:
                           type: string
                           enum: [common, rare, epic, legendary]

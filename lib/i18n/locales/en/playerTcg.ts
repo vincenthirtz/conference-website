@@ -68,6 +68,7 @@ export default {
   packFromPurchase: 'Purchased',
 
   balance: '{count} coins',
+  earnHint: '{match} coins per match win, {scrim} per ranked scrim win.',
   buyBooster: 'Buy a booster ({price} coins)',
   buying: 'Buying…',
   buySuccess: 'Booster purchased. It is waiting in your packs.',
@@ -75,6 +76,11 @@ export default {
   errBalanceChanged: 'Your balance changed in the meantime. Try again.',
   errAlreadyOpened: 'This pack is already open.',
   errEmptyPool: 'No card available right now — your pack is untouched.',
+
+  revealTitle: 'Your pack',
+  revealSubtitle: 'The cards you just pulled.',
+  revealDismiss: 'Close',
+  revealNewCard: 'New',
 
   rarityCommon: 'Common',
   rarityRare: 'Rare',
