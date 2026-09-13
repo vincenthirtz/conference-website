@@ -17,11 +17,11 @@
 //  - POST  /api/admin/twitch/moderation/ban  body { login, duration?, reason? }
 //  - POST  /api/admin/twitch/moderation/clear
 //  - PATCH /api/admin/twitch/moderation/chat-settings body { emote_mode?, subscriber_mode?, follower_mode?, follower_mode_duration?, slow_mode?, slow_mode_wait_time? }
-//  - GET    /api/admin/twitch/channel-points/rewards → { data: [{ id, title, cost?, is_enabled?, ... }] }
+//  - GET    /api/admin/twitch/channel-points/rewards → { rewards: [{ id, title, cost?, is_enabled?, ... }] }  ⚠ PAS { data } : Helix répond { data }, nos routes renomment ; lire json.data rend une liste vide, sans erreur.
 //  - POST   /api/admin/twitch/channel-points/rewards body { title, cost, prompt?, is_enabled?, is_user_input_required?, background_color?, should_redemptions_skip_request_queue? } → { reward }
 //  - PATCH  /api/admin/twitch/channel-points/rewards/{id} body { is_enabled?, is_paused?, title?, cost?, prompt? } → { reward }
 //  - DELETE /api/admin/twitch/channel-points/rewards/{id} → 200
-//  - GET    /api/admin/twitch/channel-points/redemptions?reward_id=&status=UNFULFILLED → { data: [{ id, user_name, user_input, ... }] }
+//  - GET    /api/admin/twitch/channel-points/redemptions?reward_id=&status=UNFULFILLED → { redemptions: [{ id, user_name, user_input, ... }] }  ⚠ idem : PAS { data }.
 //  - PATCH  /api/admin/twitch/channel-points/redemptions body { reward_id, redemption_ids, status }
 //  - POST   /api/admin/twitch/marker body { description? } → { marker } (409 NOT_LIVE si la chaîne n'est pas en live)
 //
@@ -349,10 +349,10 @@ export default function TwitchCommandsPanel() {
 
   const loadRewards = useCallback(async () => {
     try {
-      const json = await adminFetchJson<{ data: Reward[] }>(
+      const json = await adminFetchJson<{ rewards: Reward[] }>(
         '/api/admin/twitch/channel-points/rewards'
       );
-      setRewards(json.data ?? []);
+      setRewards(json.rewards ?? []);
     } catch (err) {
       if (errorCode(err) === 'NOT_CONNECTED') {
         handleNotConnected();
@@ -371,12 +371,12 @@ export default function TwitchCommandsPanel() {
     async (rewardId: string) => {
       setRedemptions(undefined);
       try {
-        const json = await adminFetchJson<{ data: Redemption[] }>(
+        const json = await adminFetchJson<{ redemptions: Redemption[] }>(
           `/api/admin/twitch/channel-points/redemptions?reward_id=${encodeURIComponent(
             rewardId
           )}&status=UNFULFILLED`
         );
-        setRedemptions(json.data ?? []);
+        setRedemptions(json.redemptions ?? []);
       } catch (err) {
         if (errorCode(err) === 'NOT_CONNECTED') {
           handleNotConnected();
