@@ -43,6 +43,11 @@ const TcgOverviewPanel = lazyPanel(
 const TcgOverlayCard = lazyPanel(
   () => import('@/components/admin/tcg/TcgOverlayCard')
 );
+// L'habillage vit dans un troisième composant, pour la même raison que le
+// deuxième : le lien, l'apparence et la vue d'ensemble sont trois sujets.
+const TcgOverlayThemeCard = lazyPanel(
+  () => import('@/components/admin/tcg/TcgOverlayThemeCard')
+);
 
 const ID_BASE = 'admin-moderation';
 
@@ -178,6 +183,40 @@ export default function AdminModerationPage({ staff }: StaffProps) {
                     loadError: tTcgOverview.overlayLoadError,
                     saveError: tTcgOverview.overlaySaveError,
                     obsHint: tTcgOverview.overlayObsHint,
+                  }}
+                />
+                <TcgOverlayThemeCard
+                  labels={{
+                    heading: tTcgOverview.themeHeading,
+                    subtitle: tTcgOverview.themeSubtitle,
+                    previewTitle: tTcgOverview.themePreviewTitle,
+                    accent: tTcgOverview.themeAccent,
+                    position: tTcgOverview.themePosition,
+                    positionTopLeft: tTcgOverview.themePosTopLeft,
+                    positionTopRight: tTcgOverview.themePosTopRight,
+                    positionBottomLeft: tTcgOverview.themePosBottomLeft,
+                    positionBottomRight: tTcgOverview.themePosBottomRight,
+                    dropLine: tTcgOverview.themeDropLine,
+                    winLine: tTcgOverview.themeWinLine,
+                    linePlaceholder: tTcgOverview.themeLinePlaceholder,
+                    lineHint: tTcgOverview.themeLineHint,
+                    media: tTcgOverview.themeMedia,
+                    mediaHint: tTcgOverview.themeMediaHint,
+                    mediaChoose: tTcgOverview.themeMediaChoose,
+                    mediaRemove: tTcgOverview.themeMediaRemove,
+                    saving: tTcgOverview.themeSaving,
+                    saved: tTcgOverview.themeSaved,
+                    loadError: tTcgOverview.themeLoadError,
+                    saveError: tTcgOverview.themeSaveError,
+                    errUnsupportedType: tTcgOverview.themeErrUnsupportedType,
+                    errTooLarge: tTcgOverview.themeErrTooLarge,
+                    errContentMismatch: tTcgOverview.themeErrContentMismatch,
+                    errInvalidColor: tTcgOverview.themeErrInvalidColor,
+                    previewDropEyebrow: tTcgOverview.themePreviewDropEyebrow,
+                    previewWinEyebrow: tTcgOverview.themePreviewWinEyebrow,
+                    previewDropLine: tTcgOverview.themePreviewDropLine,
+                    previewWinLine: tTcgOverview.themePreviewWinLine,
+                    previewName: tTcgOverview.themePreviewName,
                   }}
                 />
               </div>

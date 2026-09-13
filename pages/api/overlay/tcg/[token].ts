@@ -30,9 +30,22 @@ import {
   readTcgOverlayFeed,
   type OverlayFeedItem,
 } from '@/utils/tcg/overlayFeed';
+import { readOverlayTheme } from '@/utils/tcg/overlayTheme';
+import type { OverlayTheme } from '@/utils/tcg/overlayThemeShape';
 import { logger } from '@/utils/logger';
 
-export type TcgOverlayPayload = { items: OverlayFeedItem[] };
+// L'habillage voyage AVEC les annonces plutôt que par une seconde route : cela
+// éviterait un point d'entrée anonyme de plus, et la source interroge déjà
+// celle-ci toutes les 5 secondes. Le thème est petit et se met en cache avec le
+// reste.
+//
+// Il ne transite PAS par `overlayFeed.ts`, qui est la frontière de
+// confidentialité : l'habillage ne porte aucune donnée personnelle, et l'y
+// faire passer diluerait la seule raison d'être de ce module.
+export type TcgOverlayPayload = {
+  items: OverlayFeedItem[];
+  theme: OverlayTheme;
+};
 
 type ApiResponse = TcgOverlayPayload | { error: string; code?: string };
 
@@ -79,10 +92,15 @@ export default async function handler(
       .json({ error: 'Overlay introuvable.', code: 'UNKNOWN_TOKEN' });
   }
 
-  const items = await readTcgOverlayFeed(tenantId);
+  // En parallèle : deux lectures indépendantes, et l'overlay attend la plus
+  // lente des deux plutôt que leur somme. Aucune des deux ne lève.
+  const [items, theme] = await Promise.all([
+    readTcgOverlayFeed(tenantId),
+    readOverlayTheme(tenantId),
+  ]);
 
   res.setHeader('Cache-Control', 's-maxage=5, stale-while-revalidate=30');
   // Une URL porteuse n'a rien à faire dans un index de moteur de recherche.
   res.setHeader('X-Robots-Tag', 'noindex, nofollow');
-  return res.status(200).json({ items });
+  return res.status(200).json({ items, theme });
 }

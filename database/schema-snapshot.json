@@ -1293,6 +1293,17 @@
       "title",
       "updated_at"
     ],
+    "tcg_overlay_themes": [
+      "accent_color",
+      "drop_line",
+      "media_kind",
+      "media_path",
+      "position",
+      "tenant_id",
+      "updated_at",
+      "updated_by",
+      "win_line"
+    ],
     "tcg_overlay_tokens": [
       "created_at",
       "created_by",

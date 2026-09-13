@@ -103,4 +103,49 @@ export default adminNs('adminTcgOverview', {
   overlaySaveError: 'L’opération a échoué, réessaie.',
   overlayObsHint:
     'Qui a ce lien voit les annonces. Il n’affiche que le pseudo Twitch et l’événement — jamais le nom du compte du site.',
+
+  // --- Habillage de l'overlay -------------------------------------------------
+  // Ces clés sont les LIBELLÉS DE L'ÉDITEUR. Les deux phrases réglables, elles,
+  // sont du CONTENU : le texte de cette chaîne, saisi par la régie, dans sa
+  // langue. Elles ne passent donc pas par l'i18n — d'où `themeLineHint`, qui
+  // explique que laisser le champ vide restaure la phrase traduite.
+  themeHeading: 'Habillage de l’overlay',
+  themeSubtitle:
+    'L’aperçu ci-dessous est le rendu réel de la source OBS, pas une imitation : ce qui s’y affiche est ce que verra le direct.',
+  themePreviewTitle: 'Aperçu',
+  themeAccent: 'Couleur d’accent',
+  themePosition: 'Coin d’ancrage dans la scène',
+  themePosTopLeft: 'En haut à gauche',
+  themePosTopRight: 'En haut à droite',
+  themePosBottomLeft: 'En bas à gauche',
+  themePosBottomRight: 'En bas à droite',
+  themeDropLine: 'Phrase d’un drop',
+  themeWinLine: 'Phrase d’une victoire',
+  themeLinePlaceholder: '{name} remporte une carte',
+  themeLineHint:
+    '{name} est remplacé par le pseudo Twitch. Champ vide = phrase par défaut, traduite.',
+  themeMedia: 'Image ou vidéo',
+  themeMediaHint:
+    'PNG, JPEG ou WebP (2 Mo), MP4 ou WebM (8 Mo). Remplace l’étoile devant la phrase. Une vidéo est jouée muette et en boucle.',
+  themeMediaChoose: 'Choisir un fichier',
+  themeMediaRemove: 'Retirer',
+  themeSaving: 'Enregistrement…',
+  themeSaved: 'Habillage enregistré.',
+  themeLoadError: 'Impossible de lire l’habillage.',
+  themeSaveError: 'L’enregistrement a échoué, réessaie.',
+  themeErrUnsupportedType:
+    'Format non accepté. Utilise un PNG, JPEG, WebP, MP4 ou WebM.',
+  themeErrTooLarge: 'Fichier trop lourd.',
+  themeErrContentMismatch:
+    'Ce fichier n’est pas du type qu’il annonce : son contenu ne correspond pas.',
+  themeErrInvalidColor: 'Couleur invalide.',
+
+  // Libellés de l'APERÇU. Ils reprennent volontairement les formulations par
+  // défaut de l'overlay (`lib/i18n/locales/fr/overlayTcg.ts`) : l'aperçu doit
+  // montrer ce qui s'affichera si la régie ne règle aucune phrase.
+  themePreviewDropEyebrow: 'Drop',
+  themePreviewWinEyebrow: 'Victoire',
+  themePreviewDropLine: '{name} remporte une carte',
+  themePreviewWinLine: '{name} gagne un paquet',
+  themePreviewName: 'Une joueuse',
 });

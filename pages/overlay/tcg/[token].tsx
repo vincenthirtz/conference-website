@@ -11,10 +11,19 @@
 //   le chat) et une origine d'événement. Jamais le nom d'un compte du site,
 //   jamais une photo. La règle est tenue côté serveur par
 //   `utils/tcg/overlayFeed.ts` : cette page ne peut afficher que ce qu'il rend.
-// - Sans habillage : `pages/_app.tsx` rend `/overlay/*` nu (ni navigation, ni
-//   pied de page, ni bandeau cookies, ni toasts).
+// - Sans habillage de site : `pages/_app.tsx` rend `/overlay/*` nu (ni
+//   navigation, ni pied de page, ni bandeau cookies, ni toasts).
 // - FOND TRANSPARENT. C'est ce qui distingue une page d'un overlay : OBS
 //   compose la page au-dessus de la scène, tout aplat opaque masquerait le jeu.
+//
+// LA PASTILLE N'EST PAS DESSINÉE ICI. Elle vit dans
+// `components/overlay/TcgAnnouncement.tsx`, partagée avec l'aperçu de l'éditeur
+// d'habillage côté admin. C'est ce partage qui garantit que l'aperçu montre le
+// rendu réel et non une imitation qui divergerait au premier réglage ajouté.
+//
+// L'HABILLAGE ARRIVE PAR LA MÊME ROUTE que les annonces, et peut donc changer
+// PENDANT le direct : régler une couleur côté admin se voit au sondage suivant,
+// sans avoir à recharger la source dans OBS — geste qu'on évite en plein live.
 //
 // CONÇUE POUR ÊTRE AJOUTÉE AVANT LE DIRECT. Une source ouverte une heure trop
 // tôt ne doit rien montrer et ne rien casser : l'écran reste vide tant qu'il
@@ -24,51 +33,28 @@
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 
-import { useT, format } from '@/lib/i18n/useT';
-import {
-  useTcgOverlayFeed,
-  type TcgOverlayItem,
-} from '@/hooks/useTcgOverlayFeed';
+import { useT } from '@/lib/i18n/useT';
+import { useTcgOverlayFeed } from '@/hooks/useTcgOverlayFeed';
+import TcgAnnouncement from '@/components/overlay/TcgAnnouncement';
+import type { OverlayPosition } from '@/utils/tcg/overlayThemeShape';
 import nsOverlayTcg from '@/lib/i18n/locales/fr/overlayTcg';
 
 /** Jeton base64url ; même forme que celle admise par la route. */
 const TOKEN_RE = /^[A-Za-z0-9_-]{20,120}$/;
 
 /**
- * `typeof nsOverlayTcg.fr` et non `ReturnType<typeof useT<…>>` : `useT` prend le
- * MODULE de namespace et rend son dictionnaire. L'annotation par `ReturnType`
- * résolvait vers le module lui-même — le typecheck ne trouvait alors aucune des
- * clés de traduction.
+ * Où la pile d'annonces se pose dans la scène.
+ *
+ * `items-*` aligne aussi les pastilles entre elles : ancrées à droite, elles
+ * doivent border le bord droit, sinon des phrases de longueurs différentes
+ * produisent un bord gauche en dents de scie.
  */
-type OverlayDict = typeof nsOverlayTcg.fr;
-
-function Announcement({ item, t }: { item: TcgOverlayItem; t: OverlayDict }) {
-  const isDrop = item.kind === 'twitch_drop';
-  // Sans pseudo Twitch, un libellé neutre : cf. l'en-tête du namespace.
-  const name = item.twitchLogin ?? t.anonymous;
-
-  return (
-    <li
-      className="flex items-center gap-3 rounded-2xl border border-white/15 bg-black/70 px-5 py-3 shadow-2xl backdrop-blur-sm"
-      style={{ animation: 'tcgOverlayIn 320ms ease-out' }}
-    >
-      <span
-        aria-hidden
-        className={`text-2xl ${isDrop ? 'text-[var(--color-yellow)]' : 'text-[var(--color-green)]'}`}
-      >
-        {isDrop ? '★' : '✦'}
-      </span>
-      <span className="min-w-0">
-        <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-gray-400">
-          {isDrop ? t.dropEyebrow : t.winEyebrow}
-        </span>
-        <span className="block truncate text-base font-semibold text-white">
-          {format(isDrop ? t.dropLine : t.winLine, { name })}
-        </span>
-      </span>
-    </li>
-  );
-}
+const ANCHOR: Record<OverlayPosition, string> = {
+  'top-left': 'justify-start items-start',
+  'top-right': 'justify-start items-end',
+  'bottom-left': 'justify-end items-start',
+  'bottom-right': 'justify-end items-end',
+};
 
 export default function TcgOverlayPage() {
   const router = useRouter();
@@ -78,10 +64,18 @@ export default function TcgOverlayPage() {
   const token = typeof raw === 'string' ? raw : '';
   const valid = TOKEN_RE.test(token);
 
-  const { visible, rejected } = useTcgOverlayFeed({
+  const { visible, rejected, theme } = useTcgOverlayFeed({
     token: valid ? token : null,
     enabled: valid,
   });
+
+  const labels = {
+    dropEyebrow: t.dropEyebrow,
+    winEyebrow: t.winEyebrow,
+    dropLine: t.dropLine,
+    winLine: t.winLine,
+    anonymous: t.anonymous,
+  };
 
   return (
     <>
@@ -117,7 +111,9 @@ export default function TcgOverlayPage() {
         }
       `}</style>
 
-      <main className="min-h-screen p-6">
+      <main
+        className={`flex min-h-screen flex-col p-6 ${ANCHOR[theme.position]}`}
+      >
         {!valid ? (
           // Erreur de configuration : elle se voit une fois, au montage.
           <p className="rounded-xl bg-black/70 px-4 py-2 text-sm text-red-200">
@@ -132,7 +128,12 @@ export default function TcgOverlayPage() {
           // chargement : il resterait affiché pendant tout le direct.
           <ul className="flex flex-col gap-2">
             {visible.map((item) => (
-              <Announcement key={item.id} item={item} t={t} />
+              <TcgAnnouncement
+                key={item.id}
+                item={item}
+                theme={theme}
+                labels={labels}
+              />
             ))}
           </ul>
         )}

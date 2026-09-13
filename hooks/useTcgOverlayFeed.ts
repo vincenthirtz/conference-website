@@ -25,6 +25,14 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+// Depuis le module de FORME : `overlayTheme.ts` importe `supabaseAdmin`, et un
+// hook client qui y puise une valeur ferait entrer les polyfills Node dans le
+// bundle, sans erreur visible.
+import {
+  DEFAULT_OVERLAY_THEME,
+  type OverlayTheme,
+} from '@/utils/tcg/overlayThemeShape';
+
 export type TcgOverlayKind = 'twitch_drop' | 'match_win' | 'scrim_win';
 
 export type TcgOverlayItem = {
@@ -55,6 +63,8 @@ type State = {
   connecting: boolean;
   /** Jeton refusé : la régie doit le savoir, l'overlay reste muet. */
   rejected: boolean;
+  /** L'habillage réglé par la régie, ou le défaut. Jamais absent. */
+  theme: OverlayTheme;
 };
 
 export function useTcgOverlayFeed({
@@ -65,6 +75,12 @@ export function useTcgOverlayFeed({
   const [visible, setVisible] = useState<TcgOverlayItem[]>([]);
   const [connecting, setConnecting] = useState(true);
   const [rejected, setRejected] = useState(false);
+  const [theme, setTheme] = useState<OverlayTheme>(DEFAULT_OVERLAY_THEME);
+
+  // Empreinte du dernier thème appliqué. Sans cette comparaison, chaque
+  // sondage — toutes les 5 secondes, pendant des heures de direct — remplacerait
+  // l'objet par un équivalent et déclencherait un rendu de l'overlay pour rien.
+  const themeSig = useRef<string>('');
 
   // Identifiants déjà annoncés. Une `ref` et non un état : la faire entrer dans
   // le rendu déclencherait un cycle à chaque interrogation.
@@ -94,9 +110,22 @@ export function useTcgOverlayFeed({
         return;
       }
 
-      const json = (await res.json()) as { items?: TcgOverlayItem[] };
+      const json = (await res.json()) as {
+        items?: TcgOverlayItem[];
+        theme?: OverlayTheme;
+      };
       if (!alive.current) return;
       const items = Array.isArray(json.items) ? json.items : [];
+
+      // L'habillage peut changer PENDANT le direct : la régie règle une couleur
+      // et l'overlay suit au sondage suivant, sans recharger la source dans OBS.
+      if (json.theme) {
+        const sig = JSON.stringify(json.theme);
+        if (sig !== themeSig.current) {
+          themeSig.current = sig;
+          setTheme(json.theme);
+        }
+      }
 
       setConnecting(false);
 
@@ -140,5 +169,5 @@ export function useTcgOverlayFeed({
     };
   }, [enabled, token, pollMs, tick]);
 
-  return { visible, connecting, rejected };
+  return { visible, connecting, rejected, theme };
 }
