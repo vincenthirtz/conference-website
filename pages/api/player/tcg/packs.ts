@@ -27,8 +27,9 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import { readPlayerProfile } from '@/utils/rating/readPlayerProfile';
-import { cardRarity, teamCardRarity, isFoil } from '@/utils/tcg/rarity';
+import { cardRarity, isFoil } from '@/utils/tcg/rarity';
 import type { TcgRarity } from '@/utils/tcg/rarity';
+import { readTeamRarity } from '@/utils/tcg/readTeamRarity';
 import { pickPackSubjects, PACK_SIZE } from '@/utils/tcg/drawPack';
 import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
 // Le prix ET le barème sont rendus par l'API plutôt que recopiés dans la page :
@@ -367,28 +368,9 @@ async function rarityOf(
       return cardRarity(profile?.achievements.badges ?? []);
     }
 
-    const [ratingRes, ranksRes] = await Promise.all([
-      supabaseAdmin!
-        .from('team_ratings')
-        .select('rating')
-        .eq('tenant_id', tenantId)
-        .eq('team_id', subject.teamId)
-        .maybeSingle(),
-      supabaseAdmin!
-        .from('final_rankings')
-        .select('rank')
-        .eq('tenant_id', tenantId)
-        .eq('team_id', subject.teamId)
-        .order('rank', { ascending: true })
-        .limit(1),
-    ]);
-
-    const rating =
-      (ratingRes.data as { rating?: number } | null)?.rating ?? null;
-    const bestRank =
-      ((ranksRes.data ?? []) as Array<{ rank: number }>)[0]?.rank ?? null;
-
-    return teamCardRarity({ bestRank, rating });
+    // Lecture PARTAGÉE avec la page publique d'équipe : recopier ces deux
+    // requêtes ici aurait donné deux barèmes jumeaux, libres de diverger.
+    return readTeamRarity(tenantId, subject.teamId);
   } catch (err) {
     // Cf. l'en-tête : perdre une nuance de rareté vaut mieux que perdre le
     // paquet. La carte reste juste sur l'essentiel — qui elle représente.

@@ -60,4 +60,8 @@ export default {
   networkSample: 'over {count} proposal(s) received',
   networkScrimsTitle: 'Latest scrims',
   networkUnknownOpponent: 'Unknown opponent',
+
+  tcgTitle: 'Its card',
+  tcgIntro:
+    'Its rarity follows the team’s record and rating — the very same scale as player cards.',
 };

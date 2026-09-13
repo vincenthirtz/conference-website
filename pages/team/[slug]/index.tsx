@@ -44,6 +44,10 @@ import {
 import { logger } from '../../../utils/logger';
 import nsTeamDetail from '@/lib/i18n/locales/fr/teamDetail';
 import nsOverwatchRank from '@/lib/i18n/locales/fr/overwatchRank';
+import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
+import TcgCard from '@/components/tcg/TcgCard';
+import { readTeamRarity } from '@/utils/tcg/readTeamRarity';
+import type { TcgRarity } from '@/utils/tcg/rarity';
 import { XIcon } from '@/components/Icons';
 
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -173,6 +177,15 @@ type TeamPageProps = {
    * renseigné le sien.
    */
   skillAverage: ResolvedTeamSkillRating | null;
+  /**
+   * Rareté de la carte TCG de cette équipe, dérivée de son palmarès et de son
+   * classement (`utils/tcg/readTeamRarity.ts`).
+   *
+   * Les cartes d'équipe se tirent dans les paquets depuis leur création, mais
+   * n'apparaissaient NULLE PART publiquement : la fiche d'équipe est leur place,
+   * comme la fiche joueuse l'est pour les cartes de joueuses.
+   */
+  tcgRarity: TcgRarity;
   /** SEO par-entité, lu par `_app.tsx` → DefaultSeo (seule source des meta). */
   seo: SeoProps;
 };
@@ -599,6 +612,16 @@ export const getStaticProps: GetStaticProps<TeamPageProps> = async (ctx) => {
 
   const reliability = await loadTeamReliability(tenantId, team.id);
 
+  // Rareté de la carte TCG. Lecture PARTAGÉE avec l'ouverture de paquet : une
+  // équipe ne doit pas avoir une rareté ici et une autre dans les paquets.
+  // `readTeamRarity` ne lève jamais — une rareté illisible ne doit pas faire
+  // échouer le rendu d'une page publique.
+  //
+  // Pas de revalidation à la demande, contrairement à la photo d'une joueuse :
+  // l'ISR est déjà à 60 s ici, et une rareté qui met une minute à bouger
+  // n'engage personne. Une PHOTO retirée, si.
+  const tcgRarity = await readTeamRarity(tenantId, team.id);
+
   return {
     props: {
       team: team as Team,
@@ -611,6 +634,7 @@ export const getStaticProps: GetStaticProps<TeamPageProps> = async (ctx) => {
       scrimHistory,
       reliability,
       skillAverage,
+      tcgRarity,
       seo: buildTeamSeo(team),
     },
     revalidate: 60,
@@ -628,9 +652,13 @@ export default function TeamPage({
   recentMatches,
   embedHost,
   announcementActive,
+  tcgRarity,
 }: TeamPageProps) {
   const t = useT(nsTeamDetail);
   const tRank = useT(nsOverwatchRank);
+  // Les libellés de rareté viennent du namespace du TCG, pas de `teamDetail` :
+  // les redéfinir ici donnerait deux sources pour le même palier.
+  const tTcg = useT(nsPlayerTcg);
   const locale = useLocale();
   // `canEdit` is auth-dependent and therefore not part of the statically
   // generated payload. We resolve it client-side after hydration: a captain
@@ -1051,6 +1079,52 @@ export default function TeamPage({
             comment elle se comporte dans le réseau. Ces deux signaux répondent
             à « est-ce que ça vaut le coup de leur proposer un créneau ? ».
             Masqués quand il n'y a rien à dire — un bloc vide n'informe pas. */}
+        {/* ── Carte à collectionner ────────────────────────────────────────
+            AFFICHÉE SANS CONDITION, à la différence du bloc « réseau »
+            ci-dessous qui se masque quand il n'a rien à dire. Le barème pose
+            que TOUTE équipe a une carte, plancher `common` compris : la
+            masquer pour une équipe sans palmarès reviendrait à affirmer
+            qu'elle n'en a pas. C'est aussi ce qui fait découvrir le TCG à qui
+            n'en a jamais entendu parler.
+
+            La rareté vient de `getStaticProps` (readTeamRarity), pas d'un
+            calcul ici : le même barème sert au tirage des paquets. */}
+        <section className="mb-6 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-gray-300">
+            {t.tcgTitle}
+          </h2>
+          <div className="mt-3 flex flex-wrap items-start gap-5">
+            <div className="w-36 shrink-0 sm:w-40">
+              <TcgCard
+                subject={{
+                  kind: 'team',
+                  teamId: team.id,
+                  name: team.name,
+                  slug: team.slug ?? null,
+                  logoUrl: team.logo_url ?? null,
+                }}
+                rarity={tcgRarity}
+                // La carte est déjà sur la page de son sujet : pas de lien
+                // vers soi-même.
+                noLink
+                labels={{
+                  rarity: {
+                    common: tTcg.rarityCommon,
+                    rare: tTcg.rarityRare,
+                    epic: tTcg.rarityEpic,
+                    legendary: tTcg.rarityLegendary,
+                  },
+                  foil: tTcg.foil,
+                  copies: tTcg.copies,
+                }}
+              />
+            </div>
+            <p className="min-w-[12rem] flex-1 text-sm text-gray-400">
+              {t.tcgIntro}
+            </p>
+          </div>
+        </section>
+
         {(scrimHistory.length > 0 || reliability.responseRate !== null) && (
           <section className="mb-6 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4">
             <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-gray-300">

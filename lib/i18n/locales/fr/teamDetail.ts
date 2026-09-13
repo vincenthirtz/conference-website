@@ -60,4 +60,12 @@ export default ns('teamDetail', {
   networkSample: 'sur {count} proposition(s) reçue(s)',
   networkScrimsTitle: 'Derniers scrims',
   networkUnknownOpponent: 'Adversaire inconnu',
+
+  // --- Carte à collectionner (TCG) -----------------------------------------
+  // Les libellés de rareté ne sont PAS redéfinis ici : ils viennent du
+  // namespace `playerTcg`, comme sur la fiche joueuse. Deux sources diraient
+  // tôt ou tard deux choses du même palier.
+  tcgTitle: 'Sa carte',
+  tcgIntro:
+    'Sa rareté suit son palmarès et son classement — le même barème que les cartes de joueuses.',
 });
