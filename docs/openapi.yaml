@@ -8701,6 +8701,73 @@ paths:
               schema:
                 type: object
                 additionalProperties: true
+  /api/bot/v1/players/by-discord/{discordUserId}/tcg:
+    parameters:
+      - $ref: '#/components/parameters/DiscordUserId'
+    get:
+      tags:
+        - bot/players
+      summary: Etat TCG d'une joueuse — solde, paquets en attente, resume de collection.
+      description: |
+        UN RESUME, PAS LA COLLECTION. Un message Discord n'affiche pas quarante
+        cartes : rendre la collection entiere obligerait le bot a la tronquer,
+        donc a decider seul ce qui merite d'etre montre — et deux consommateurs
+        trancheraient differemment. On rend ce qui tient dans une phrase.
+
+        AUCUNE FACE, AUCUNE PHOTO. Le bot n'en a pas besoin pour dire « tu as
+        trois paquets », et ne pas les servir evite d'ouvrir une seconde voie
+        d'acces aux photos consenties : `readCardFaces` reste la seule, avec son
+        filtre `approved` ET non revoquee.
+
+        `boosterPrice` est rendu par l'API pour que le bot l'AFFICHE sans le
+        connaitre — un bareme recopie cote consommateur mentirait au premier
+        reglage.
+      operationId: botGetPlayerTcg
+      responses:
+        '200':
+          description: Etat TCG de la joueuse.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - authUserId
+                  - discordUserId
+                properties:
+                  authUserId:
+                    $ref: '#/components/schemas/Uuid'
+                  discordUserId:
+                    $ref: '#/components/schemas/DiscordId'
+                  balance:
+                    type: integer
+                  boosterPrice:
+                    type: integer
+                  packs:
+                    type: object
+                    properties:
+                      unopened:
+                        type: integer
+                      opened:
+                        type: integer
+                      total:
+                        type: integer
+                  collection:
+                    type: object
+                    properties:
+                      distinct:
+                        type: integer
+                        description: Sujets differents possedes.
+                      total:
+                        type: integer
+                        description: Exemplaires, doublons compris.
+                      bestRarity:
+                        type: string
+                        nullable: true
+                        enum: [common, rare, epic, legendary]
+        '400':
+          description: discordUserId invalide.
+        '404':
+          description: '`code: NOT_LINKED` — compte Discord non lie au site.'
   /api/bot/v1/players/by-discord/{discordUserId}/team:
     parameters:
       - $ref: '#/components/parameters/DiscordUserId'
