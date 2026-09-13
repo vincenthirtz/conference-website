@@ -25755,17 +25755,37 @@ paths:
                 additionalProperties: true
   /api/admin/twitch/channel-points/rewards:
     get:
-      summary: List manageable channel-point rewards.
+      summary: List channel-point rewards.
       description: |
         Requires `manager` role and the `channel:read:redemptions` scope.
-        Only rewards created by our client_id are returned
-        (`only_manageable_rewards=true`). `409 NOT_CONNECTED` /
-        `403 MISSING_SCOPE`.
+        By default only rewards created by our client_id are returned
+        (`only_manageable_rewards=true`) — ce sont les seules que Helix
+        autorise a MODIFIER.
+
+        `?all=1` leve le filtre et renvoie TOUTES les recompenses de la chaine,
+        y compris celles creees a la main dans l'interface Twitch. La
+        restriction Helix ne porte que sur l'ecriture : lire est permis avec le
+        meme scope. Sert a recuperer l'identifiant d'une recompense qu'on ne
+        gere pas — typiquement celle qui declenche un drop TCG. Sans cette
+        option, une recompense creee a la main avait un identifiant
+        inatteignable.
+
+        `409 NOT_CONNECTED` / `403 MISSING_SCOPE`.
       operationId: adminTwitchListRewards
       tags:
         - admin/twitch
       security:
         - StaffSession: []
+      parameters:
+        - name: all
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ['1', 'true']
+          description: >-
+            Leve `only_manageable_rewards` et renvoie toutes les recompenses de
+            la chaine.
       responses:
         '200':
           description: Manageable rewards.

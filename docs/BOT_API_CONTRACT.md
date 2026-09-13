@@ -2315,11 +2315,23 @@ Scope requis : **`channel:read:redemptions`**. **Response 200** :
 `{ rewards: [] }`. **Errors** : `401`, `403 { code: 'MISSING_SCOPE' }`,
 `409 { code: 'NOT_CONNECTED' }`, `502`.
 
-> ⚠️ **Caveat points de chaîne** : l'API Helix ne permet de gérer (lister
+**`?all=1`** lève le filtre et renvoie **toutes** les récompenses de la chaîne,
+y compris celles créées à la main dans l'interface Twitch. Sert à récupérer
+l'identifiant d'une récompense qu'on ne gère pas — typiquement celle qui
+déclenche un drop TCG (`/api/admin/twitch/eventsub/tcg-drop`). Sans cette
+option, le conseil « crée la récompense à la main » rendait son identifiant
+inatteignable.
+
+> ⚠️ **Caveat points de chaîne** : l'API Helix ne permet de **gérer** (lister
 > demandes, FULFILLED/CANCELED, éditer, supprimer) que les rewards **créés par
-> NOTRE `client_id`** (`only_manageable_rewards`). Les rewards créés par le
-> streamer lui-même ou d'autres apps ne sont ni listables ni gérables via ces
-> endpoints (Helix renvoie alors `400`/`403`, remonté proprement).
+> NOTRE `client_id`** (`only_manageable_rewards`). La restriction porte sur
+> l'ÉCRITURE : les rewards créés par le streamer ou d'autres apps restent
+> **listables** via `?all=1` (même scope `channel:read:redemptions`), mais toute
+> tentative de modification renvoie `400`/`403`, remonté proprement.
+>
+> Corollaire à connaître avant de choisir : une récompense créée par l'API
+> n'est plus éditable dans l'interface Twitch, et une récompense créée à la main
+> n'est pas modifiable par l'API. Il faut choisir qui la pilote.
 
 ##### `POST /api/admin/twitch/channel-points/rewards` (staff, `admin`+)
 

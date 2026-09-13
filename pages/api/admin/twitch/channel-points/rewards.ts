@@ -74,11 +74,28 @@ async function getHandler(
   }
 
   try {
+    // `?all=1` lève le filtre et liste TOUTES les récompenses de la chaîne,
+    // y compris celles créées à la main dans l'interface Twitch.
+    //
+    // POURQUOI CE PARAMÈTRE EXISTE. Le filtre par défaut ne rend que les
+    // récompenses créées par NOTRE `client_id` — c'est ce qu'il faut pour
+    // l'écran de gestion, puisque Twitch n'autorise la modification et la
+    // suppression que sur celles-là. Mais il rendait un cas impossible :
+    // récupérer l'identifiant d'une récompense créée à la main, par exemple
+    // celle qui déclenche un drop TCG. Or on RECOMMANDE la création manuelle,
+    // justement parce qu'une récompense créée par l'API n'est plus éditable
+    // dans l'interface Twitch. Sans cette option, le conseil se mordait la
+    // queue.
+    //
+    // La restriction Helix ne porte que sur l'ÉCRITURE : lire toutes les
+    // récompenses est permis avec le même scope `channel:read:redemptions`.
+    const listAll = req.query.all === '1' || req.query.all === 'true';
+
     const upstream = await helixFetch(
       token.accessToken,
       `/channel_points/custom_rewards?broadcaster_id=${encodeURIComponent(
         token.broadcasterId
-      )}&only_manageable_rewards=true`,
+      )}&only_manageable_rewards=${listAll ? 'false' : 'true'}`,
       { method: 'GET' }
     );
 
