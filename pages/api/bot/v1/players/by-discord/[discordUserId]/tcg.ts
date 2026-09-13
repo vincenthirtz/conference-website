@@ -94,10 +94,14 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   let bestRarity: TcgRarity | null = null;
 
   if (openedPackIds.length > 0) {
+    // Recyclées exclues, comme `/api/player/tcg/collection` : les deux
+    // lecteurs comptent la même chose et doivent le compter pareil, sinon le
+    // bot annoncerait une collection que le site ne montre pas.
     const { data: cardRows, error: cardsError } = await supabaseAdmin
       .from('tcg_pack_cards')
       .select('subject_kind, card_user_id, card_team_id, rarity')
       .in('pack_id', openedPackIds)
+      .is('recycled_at', null)
       .limit(MAX_CARDS);
 
     if (cardsError) {

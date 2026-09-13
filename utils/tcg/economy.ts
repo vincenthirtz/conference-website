@@ -45,6 +45,28 @@ export const SCRIM_WIN_COINS = Math.round(
  */
 export const BOOSTER_PRICE_COINS = 3 * MATCH_WIN_COINS;
 
+/**
+ * Ce que rapporte le recyclage d'un DOUBLON.
+ *
+ * Un dixième du booster : dix doublons pour en racheter un. Le rapport se
+ * défend dans les deux sens — assez pour que les doublons cessent d'être des
+ * objets morts, trop peu pour concurrencer la victoire, qui doit rester la
+ * voie principale (cf. `BOOSTER_PRICE_COINS` : « la monnaie ouvre une seconde
+ * voie, plus lente et choisie, elle ne remplace pas la première »).
+ *
+ * DÉRIVÉ, JAMAIS ÉCRIT EN DUR. Comme `SCRIM_WIN_COINS`, cette valeur suit son
+ * référent : régler le prix du booster règle mécaniquement la reprise, et les
+ * deux ne peuvent pas diverger.
+ *
+ * `Math.round` parce que les pièces sont entières, et un plancher à 1 pour
+ * qu'un réglage agressif du prix ne rende jamais le recyclage gratuit — une
+ * action qui ne rapporte rien est pire qu'une action absente.
+ */
+export const RECYCLE_REFUND_COINS = Math.max(
+  1,
+  Math.round(BOOSTER_PRICE_COINS / 10)
+);
+
 /** Ce que rapporte une victoire, selon la nature de la rencontre. */
 export function coinsForWin(isScrim: boolean): number {
   return isScrim ? SCRIM_WIN_COINS : MATCH_WIN_COINS;

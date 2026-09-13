@@ -39,6 +39,7 @@ import {
   BOOSTER_PRICE_COINS,
   MATCH_WIN_COINS,
   SCRIM_WIN_COINS,
+  RECYCLE_REFUND_COINS,
 } from '@/utils/tcg/economy';
 import { logger } from '@/utils/logger';
 
@@ -124,6 +125,10 @@ async function listPacks(
       matchWin: MATCH_WIN_COINS,
       scrimWin: SCRIM_WIN_COINS,
     },
+    // Reprise d'un doublon. Rendue pour la même raison que le prix : le bouton
+    // « Recycler (+N) » doit annoncer un montant JUSTE, et le recopier côté
+    // client le ferait mentir au premier réglage du barème.
+    recycleRefund: RECYCLE_REFUND_COINS,
   });
 }
 

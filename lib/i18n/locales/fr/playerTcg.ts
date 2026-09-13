@@ -109,10 +109,18 @@ export default ns('playerTcg', {
   walletHide: 'Masquer l’historique',
   walletEmpty: 'Aucun mouvement pour l’instant.',
   walletTruncated: 'Seuls les {count} derniers mouvements sont affichés.',
+  // Recyclage des doublons.
+  recycleAction: 'Recycler un doublon (+{refund})',
+  recycling: 'Recyclage…',
+  recycleSuccess: 'Doublon recyclé : +{refund} pièces.',
+  errNotADuplicate: 'C’est ton seul exemplaire de cette carte.',
+  errAlreadyRecycled: 'Cette carte a déjà été recyclée.',
+
   walletMatchWin: 'Victoire en match',
   walletScrimWin: 'Victoire en scrim',
   walletBoosterPurchase: 'Achat d’un booster',
   walletAdminGrant: 'Ajustement par l’équipe',
+  walletCardRecycled: 'Doublon recyclé',
   walletUnknownSource: 'Mouvement',
 
   // Raretés : mêmes paliers que les badges de la fiche joueuse.

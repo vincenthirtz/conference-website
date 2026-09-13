@@ -1293,6 +1293,7 @@
       "pack_id",
       "position",
       "rarity",
+      "recycled_at",
       "subject_kind"
     ],
     "tcg_packs": [

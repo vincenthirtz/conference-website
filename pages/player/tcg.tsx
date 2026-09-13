@@ -271,6 +271,8 @@ function PlayerTcg() {
           return t.walletBoosterPurchase;
         case 'admin_grant':
           return t.walletAdminGrant;
+        case 'card_recycled':
+          return t.walletCardRecycled;
         default:
           return t.walletUnknownSource;
       }

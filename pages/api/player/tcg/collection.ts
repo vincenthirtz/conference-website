@@ -81,11 +81,17 @@ export default withAuthRoute(async function handler(
     return res.status(200).json({ cards: [], distinct: 0, total: 0 });
   }
 
-  // 2) Leurs cartes.
+  // 2) Leurs cartes, RECYCLÉES EXCLUES.
+  //
+  //    La ligne d'une carte recyclée est conservée — c'est ce qui garde le
+  //    crédit correspondant explicable dans le registre — mais elle ne fait
+  //    plus partie de la collection. Sans ce filtre, on pourrait vendre une
+  //    carte ET la garder.
   const { data: cardRows, error: cardError } = await supabaseAdmin
     .from('tcg_pack_cards')
     .select('subject_kind, card_user_id, card_team_id, rarity, is_foil')
     .in('pack_id', packIds)
+    .is('recycled_at', null)
     .limit(MAX_CARDS);
 
   if (cardError) {

@@ -87,10 +87,17 @@ export default {
   walletHide: 'Hide history',
   walletEmpty: 'No movement yet.',
   walletTruncated: 'Only the last {count} movements are shown.',
+  recycleAction: 'Recycle a duplicate (+{refund})',
+  recycling: 'Recycling…',
+  recycleSuccess: 'Duplicate recycled: +{refund} coins.',
+  errNotADuplicate: 'This is your only copy of that card.',
+  errAlreadyRecycled: 'That card has already been recycled.',
+
   walletMatchWin: 'Match win',
   walletScrimWin: 'Scrim win',
   walletBoosterPurchase: 'Booster purchase',
   walletAdminGrant: 'Adjusted by the team',
+  walletCardRecycled: 'Duplicate recycled',
   walletUnknownSource: 'Movement',
 
   rarityCommon: 'Common',
