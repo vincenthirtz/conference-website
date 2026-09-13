@@ -26127,6 +26127,134 @@ paths:
               schema:
                 type: object
                 additionalProperties: true
+  /api/admin/twitch/eventsub/tcg-drop:
+    get:
+      summary: Etat de l'abonnement EventSub qui alimente le drop TCG.
+      description: |
+        Rend la recompense designee, l'URL de rappel, la presence du secret
+        partage, le scope requis et les abonnements webhook existants.
+        Permission `manage_broadcast`. Rate-limit 30 / min.
+      operationId: adminGetTcgDropEventSub
+      tags:
+        - admin/twitch
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Etat courant.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Aucune chaine connectee (`NOT_CONNECTED`).
+        '502':
+          description: Twitch injoignable (`TWITCH_TOKEN_ERROR`).
+    post:
+      summary: Designer une recompense et creer l'abonnement EventSub webhook.
+      description: |
+        LA PIECE QUI MANQUAIT. Le recepteur
+        `/api/webhooks/twitch/tcg-drop` etait livre, signe et teste, mais RIEN
+        ne creait l'abonnement qui le nourrit : la seule route EventSub du depot
+        utilise le transport `websocket`, lie a une session de navigateur, qui
+        n'alimente pas un recepteur serveur.
+
+        JETON D'APPLICATION, PAS JETON DE CHAINE. Twitch exige un app access
+        token (`client_credentials`) pour un abonnement webhook, la ou le
+        transport websocket veut un jeton utilisateur. L'inversion est
+        contre-intuitive et rend sinon un 401 que rien n'explique. La condition
+        porte le `broadcaster_user_id`, donc le scope `channel:read:redemptions`
+        doit avoir ete accorde.
+
+        `condition.reward_id` limite les notifications a CETTE recompense :
+        sans lui, tout echange de points de la chaine arriverait et « mettre en
+        avant mon message » donnerait une carte. Le webhook refiltre de son cote
+        — deux ceintures, parce qu'un abonnement recree a la main sans condition
+        repasserait sinon en mode « tout donner » en silence.
+
+        La recompense est ENREGISTREE AVANT l'appel a Twitch : si l'abonnement
+        echoue, la designation reste et l'appel se rejoue sans rien ressaisir.
+        L'ordre inverse laisserait un abonnement actif que le webhook refuserait,
+        faute de recompense designee.
+
+        Idempotent : un `409` Helix (« deja present ») est un succes
+        (`alreadyExisted: true`). Rate-limit 30 / min.
+      operationId: adminCreateTcgDropEventSub
+      tags:
+        - admin/twitch
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rewardId]
+              properties:
+                rewardId:
+                  type: string
+                  description: Identifiant Twitch de la recompense a ecouter.
+      responses:
+        '200':
+          description: Abonnement cree (ou deja present).
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: >-
+            Corps invalide (`INVALID_BODY`), ou URL de rappel non publique
+            (`CALLBACK_NOT_PUBLIC`) — Twitch appelle NOTRE serveur, donc la
+            souscription est impossible depuis un poste local.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Scope `channel:read:redemptions` manquant (`MISSING_SCOPE`).
+        '409':
+          description: Aucune chaine connectee (`NOT_CONNECTED`).
+        '502':
+          description: Twitch a refuse ou est injoignable (`TWITCH_HELIX_ERROR`).
+        '503':
+          description: >-
+            `TWITCH_EVENTSUB_SECRET` absent (`WEBHOOK_SECRET_MISSING`) : le
+            recepteur rejetterait chaque livraison en 403, l'abonnement serait
+            inerte. On refuse en amont.
+    delete:
+      summary: Supprimer l'abonnement EventSub du drop TCG.
+      description: |
+        La recompense designee RESTE : supprimer l'abonnement n'est pas oublier
+        quelle recompense on ecoutait. Un `404` Helix compte comme un succes
+        (l'etat voulu est atteint). Rate-limit 30 / min.
+      operationId: adminDeleteTcgDropEventSub
+      tags:
+        - admin/twitch
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Abonnements supprimes.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  removed:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Aucune chaine connectee (`NOT_CONNECTED`).
+        '502':
+          description: Twitch injoignable (`TWITCH_HELIX_ERROR`).
   /api/admin/twitch/eventsub/subscribe:
     post:
       summary: Create EventSub websocket subscriptions for a browser session.
@@ -33532,7 +33660,7 @@ paths:
                     type: string
                     format: uri
         '400':
-          description: "`discordUserId` invalide (`INVALID_DISCORD_ID`)."
+          description: '`discordUserId` invalide (`INVALID_DISCORD_ID`).'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':

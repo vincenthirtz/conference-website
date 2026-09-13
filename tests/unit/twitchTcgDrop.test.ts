@@ -59,6 +59,8 @@ const TENANT = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 const BROADCASTER_ID = 'bc-123';
 const BROADCASTER_LOGIN = 'mychannel';
 const VIEWER_TWITCH_ID = 'tw-viewer-1';
+/** Récompense DÉSIGNÉE pour le drop — celle et aucune autre. */
+const REWARD_ID = 'reward-tcg-1';
 const ALICE = 'user-alice';
 const LIVE_REF = `${BROADCASTER_ID}:2026-09-13T20:00:00Z`;
 
@@ -127,7 +129,13 @@ function signedHeaders(
   };
 }
 
-/** Charge utile d'un échange de points de chaîne. */
+/**
+ * Charge utile d'un échange de points de chaîne.
+ *
+ * Porte la BONNE récompense par défaut : le filtre ajouté au webhook rendrait
+ * sinon tous les cas nominaux en `reward_not_configured`, et on ne testerait
+ * plus rien d'autre que le filtre lui-même.
+ */
 function redemptionBody(over: Record<string, unknown> = {}): string {
   return JSON.stringify({
     subscription: { type: DROP_TYPE },
@@ -137,17 +145,26 @@ function redemptionBody(over: Record<string, unknown> = {}): string {
       broadcaster_user_login: BROADCASTER_LOGIN,
       user_id: VIEWER_TWITCH_ID,
       user_login: 'viewer',
+      reward: { id: REWARD_ID },
       ...over,
     },
   });
 }
 
-function seedConnection() {
+/**
+ * Chaîne connectée AVEC une récompense désignée.
+ *
+ * `tcg_reward_id` fait partie du décor nominal depuis que le webhook filtre :
+ * sans lui, aucune attribution n'est possible — c'est le défaut sûr.
+ */
+function seedConnection(over: Record<string, unknown> = {}) {
   store.twitch_broadcaster_connections = [
     {
       tenant_id: TENANT,
       broadcaster_id: BROADCASTER_ID,
       broadcaster_login: BROADCASTER_LOGIN,
+      tcg_reward_id: REWARD_ID,
+      ...over,
     },
   ] as any;
 }
@@ -450,6 +467,64 @@ describe('acheminement', () => {
     expect((res.body as Body).status).not.toBe('identity_not_linked');
     expect(entries()).toHaveLength(1);
     expect((entries()[0] as any).user_id).toBe(ALICE);
+  });
+
+  it('n’attribue RIEN quand une AUTRE récompense est échangée', async () => {
+    // LE CAS QUI JUSTIFIE LE FILTRE. Sans lui, « mettre en avant mon message »
+    // donnait une carte — prise sur la même économie que les victoires en
+    // match, à quelqu'un qui ne l'avait pas demandée.
+    seedConnection();
+    store.user_twitch_links = [
+      {
+        auth_user_id: ALICE,
+        twitch_user_id: VIEWER_TWITCH_ID,
+        twitch_login: 'kirisu',
+      },
+    ] as any;
+
+    const body = redemptionBody({ reward: { id: 'reward-autre-chose' } });
+    const res = makeRes();
+    await handler(makeReq({ body, headers: signedHeaders(body) }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as Body).status).toBe('other_reward');
+    expect(entries()).toHaveLength(0);
+    // On n'appelle même pas Helix : inutile de résoudre le direct pour un
+    // événement qui ne nous concerne pas.
+    expect(fetchTwitchLiveStatusMock).not.toHaveBeenCalled();
+  });
+
+  it('n’attribue RIEN si aucune récompense n’est désignée (défaut sûr)', async () => {
+    // Un oubli de configuration ne doit PAS se traduire par « on donne tout » :
+    // le défaut sûr est de ne rien donner.
+    seedConnection({ tcg_reward_id: null });
+    store.user_twitch_links = [
+      {
+        auth_user_id: ALICE,
+        twitch_user_id: VIEWER_TWITCH_ID,
+        twitch_login: 'kirisu',
+      },
+    ] as any;
+
+    const body = redemptionBody();
+    const res = makeRes();
+    await handler(makeReq({ body, headers: signedHeaders(body) }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as Body).status).toBe('reward_not_configured');
+    expect(entries()).toHaveLength(0);
+  });
+
+  it('n’attribue RIEN quand la charge ne porte aucune récompense', async () => {
+    // Charge amputée : traitée comme « pas la bonne », jamais comme « toutes ».
+    seedConnection();
+    const body = redemptionBody({ reward: undefined });
+    const res = makeRes();
+    await handler(makeReq({ body, headers: signedHeaders(body) }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as Body).status).toBe('other_reward');
+    expect(entries()).toHaveLength(0);
   });
 
   it('resolveSiteUserFromTwitch distingue « pas de lien » de « lecture en échec »', async () => {

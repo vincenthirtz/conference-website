@@ -1829,6 +1829,7 @@
       "expires_at",
       "refresh_token_enc",
       "scope",
+      "tcg_reward_id",
       "tenant_id",
       "updated_at"
     ],

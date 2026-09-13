@@ -147,6 +147,17 @@ const NotificationSchema = z.object({
     broadcaster_user_login: z.string().min(1).max(64).optional(),
     user_id: z.string().min(1).max(64),
     user_login: z.string().max(64).optional(),
+    /**
+     * LA RÉCOMPENSE ÉCHANGÉE. Elle décide si l'événement nous concerne : sans
+     * ce champ, toute récompense de la chaîne déclencherait un drop. Optionnel
+     * au schéma parce qu'une charge amputée ne doit pas faire échouer la
+     * vérification de signature — l'absence est traitée plus bas comme « pas
+     * la bonne récompense », donc sans attribution.
+     */
+    reward: z
+      .object({ id: z.string().min(1).max(200).optional() })
+      .partial()
+      .optional(),
   }),
 });
 
@@ -426,13 +437,32 @@ export async function grantTwitchDrop(input: {
  * `undefined` = erreur de lecture (à réessayer) ; `null` = chaîne réellement
  * inconnue. Un `if (error) return null` transformerait la panne en décision.
  */
-async function resolveTenantForBroadcaster(
+export type BroadcasterBinding = {
+  tenantId: string;
+  /**
+   * Récompense DÉSIGNÉE pour le drop, ou `null` si aucune.
+   *
+   * Lue dans la MÊME ligne que le tenant, à dessein : la condition de
+   * l'abonnement EventSub et ce filtre doivent voir la même valeur, et deux
+   * requêtes séparées pourraient les faire diverger le temps d'une écriture.
+   */
+  rewardId: string | null;
+};
+
+/**
+ * La chaîne connectée derrière un identifiant Twitch de diffuseuse.
+ *
+ * `undefined` = lecture impossible (réessayer) ; `null` = aucune chaîne connue.
+ * La distinction porte tout le comportement de la route : la première demande
+ * un retry, la seconde s'acquitte.
+ */
+async function resolveBroadcasterBinding(
   broadcasterId: string
-): Promise<string | null | undefined> {
+): Promise<BroadcasterBinding | null | undefined> {
   if (!supabaseAdmin) return undefined;
   const { data, error } = await supabaseAdmin
     .from('twitch_broadcaster_connections')
-    .select('tenant_id')
+    .select('tenant_id, tcg_reward_id')
     .eq('broadcaster_id', broadcasterId)
     .maybeSingle();
 
@@ -444,10 +474,18 @@ async function resolveTenantForBroadcaster(
     return undefined;
   }
   if (!data) return null;
-  const tenantId = (data as { tenant_id?: unknown }).tenant_id;
-  return typeof tenantId === 'string' && tenantId.length > 0
-    ? tenantId
-    : undefined;
+
+  const row = data as { tenant_id?: unknown; tcg_reward_id?: unknown };
+  const tenantId = row.tenant_id;
+  if (typeof tenantId !== 'string' || tenantId.length === 0) return undefined;
+
+  return {
+    tenantId,
+    rewardId:
+      typeof row.tcg_reward_id === 'string' && row.tcg_reward_id.length > 0
+        ? row.tcg_reward_id
+        : null,
+  };
 }
 
 /* -----------------------------------------------------------
@@ -597,6 +635,9 @@ export default async function handler(
   // rien ne s'y appuie pour décider d'un gain — c'est `twitchUserId` qui fait
   // foi (cf. `resolveSiteUserFromTwitch`).
   const twitchUserLogin: string | null = parsed.data.event.user_login ?? null;
+  // Récompense échangée. `null` quand la charge ne la porte pas : traité comme
+  // « pas la bonne », donc sans attribution — cf. le filtre plus bas.
+  const rewardId: string | null = parsed.data.event.reward?.id ?? null;
 
   if (subscriptionType !== DROP_SUBSCRIPTION_TYPE) {
     return res.status(200).json({ ok: true, status: 'ignored_event_type' });
@@ -610,16 +651,44 @@ export default async function handler(
       .json({ error: 'Database unavailable', code: 'DATABASE_UNAVAILABLE' });
   }
 
-  const tenantId = await resolveTenantForBroadcaster(broadcasterId);
-  if (tenantId === undefined) {
+  const binding = await resolveBroadcasterBinding(broadcasterId);
+  if (binding === undefined) {
     res.setHeader('Retry-After', '60');
     return res
       .status(503)
       .json({ error: 'Channel lookup failed', code: 'CHANNEL_LOOKUP_FAILED' });
   }
-  if (tenantId === null) {
+  if (binding === null) {
     // La souscription vise une chaîne qu'aucun tenant n'a connectée.
     return res.status(200).json({ ok: true, status: 'unknown_channel' });
+  }
+  const tenantId = binding.tenantId;
+
+  // LE FILTRE DE RÉCOMPENSE — sans lui, TOUT échange de points donnerait une
+  // carte : « mettre en avant mon message », un son, un emote. Une carte
+  // offerte à quelqu'un qui ne l'a pas demandée, prise sur la même économie
+  // que les victoires en match.
+  //
+  // L'abonnement EventSub porte déjà `condition.reward_id`, donc Twitch ne
+  // devrait livrer que la bonne récompense. Ce contrôle est la SECONDE
+  // ceinture : un abonnement recréé un jour sans condition — à la main, ou par
+  // un script pressé — repasserait sinon en mode « tout donner » sans que rien
+  // ne le signale.
+  //
+  // AUCUNE RÉCOMPENSE DÉSIGNÉE ⇒ ON N'ATTRIBUE RIEN. Le défaut sûr est de ne
+  // rien donner ; accepter tout par défaut ferait de l'oubli de configuration
+  // une distribution de cartes.
+  if (!binding.rewardId) {
+    logger.warn(
+      '[twitch/tcg-drop] aucune récompense désignée pour la chaîne %s — rien attribué',
+      broadcasterId
+    );
+    return res.status(200).json({ ok: true, status: 'reward_not_configured' });
+  }
+  if (rewardId !== binding.rewardId) {
+    // Une autre récompense de la chaîne : ce n'est pas une erreur, juste un
+    // événement qui ne nous concerne pas. 200, Twitch n'a rien à réessayer.
+    return res.status(200).json({ ok: true, status: 'other_reward' });
   }
 
   const identity = await resolveSiteUserFromTwitch(twitchUserId);

@@ -41,7 +41,17 @@ export function clientCreds(): { id: string; secret: string } | null {
   return { id, secret };
 }
 
-async function getAccessToken(): Promise<string | null> {
+/**
+ * Jeton d'APPLICATION (`client_credentials`), mis en cache avec une marge d'une
+ * minute.
+ *
+ * EXPORTÉ pour `pages/api/admin/twitch/eventsub/tcg-drop.ts` : un abonnement
+ * EventSub en transport **webhook** exige ce jeton-là, là où le transport
+ * websocket veut un jeton UTILISATEUR. L'inversion est contre-intuitive, et s'y
+ * tromper rend un 401 que rien n'explique — d'où cette note plutôt qu'un
+ * second helper qui aurait redemandé un jeton à chaque appel.
+ */
+export async function getAccessToken(): Promise<string | null> {
   const creds = clientCreds();
   if (!creds) return null;
 

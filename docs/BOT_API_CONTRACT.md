@@ -2210,6 +2210,41 @@ expires_at? }`. **Ne renvoie jamais les tokens** (même chiffrés). **Errors** :
 Déconnecte la chaîne (supprime la row). Renvoie `{ connected: false }`.
 **Errors** : `401`, `403`.
 
+##### `GET|POST|DELETE /api/admin/twitch/eventsub/tcg-drop` (staff, `manage_broadcast`)
+
+**La pièce qui manquait au drop TCG.** Le récepteur `/api/webhooks/twitch/tcg-drop`
+était livré, signé et testé — mais **rien ne créait l'abonnement qui le nourrit** :
+`eventsub/subscribe` utilise le transport `websocket`, lié à une session de
+navigateur, qui n'alimente pas un récepteur serveur.
+
+`GET` → `{ rewardId, callbackUrl, secretConfigured, hasScope, subscriptions[] }`.
+`POST { rewardId }` → désigne la récompense **et** crée l'abonnement.
+`DELETE` → supprime l'abonnement ; **la récompense désignée reste**.
+
+**Jeton d'APPLICATION, pas de chaîne** : Twitch exige un app access token
+(`client_credentials`) pour un abonnement webhook, là où le websocket veut un
+jeton utilisateur — inversion contre-intuitive qui rend sinon un `401` inexpliqué.
+La condition porte le `broadcaster_user_id`, d'où le scope `channel:read:redemptions`.
+
+**`condition.reward_id` filtre à la source** : sans lui, tout échange de points
+arriverait et « mettre en avant mon message » donnerait une carte. Le webhook
+refiltre de son côté — deux ceintures, car un abonnement recréé à la main sans
+condition repasserait en mode « tout donner » en silence. Côté base,
+`twitch_broadcaster_connections.tcg_reward_id` est la **source unique** des deux.
+`NULL` ⇒ le webhook n'attribue **rien** (défaut sûr).
+
+La récompense est **enregistrée avant** l'appel Twitch : un échec laisse la
+désignation en place et l'appel se rejoue. L'ordre inverse laisserait un
+abonnement actif que le webhook refuserait. Idempotent (`409` Helix =
+`alreadyExisted: true`).
+
+**Errors** : `400 { code:'INVALID_BODY' | 'CALLBACK_NOT_PUBLIC' }` (Twitch appelle
+NOTRE serveur : impossible depuis un poste local), `403 { code:'MISSING_SCOPE' }`,
+`409 { code:'NOT_CONNECTED' }`, `502 { code:'TWITCH_HELIX_ERROR' | 'TWITCH_TOKEN_ERROR' }`,
+`503 { code:'WEBHOOK_SECRET_MISSING' }` — sans `TWITCH_EVENTSUB_SECRET`,
+l'abonnement serait créé et **inerte** (chaque livraison rejetée en 403).
+Rate-limit **30 / min**.
+
 ##### `POST /api/admin/twitch/predictions` (staff, `admin`+)
 
 Crée une prediction. Body zod : `title` (1..45), `outcomes` (`string[]`, 2..10,
