@@ -699,6 +699,119 @@ describe('in-flight lock', () => {
  * event_segment.transitioned : audience = casters assignés au match
  * ===========================================================================*/
 
+/* ===========================================================================
+ * tcg.pack_granted — audience RÉDUITE à la gagnante
+ * ===========================================================================
+ *
+ * CE QUE CE BLOC PROTÈGE. Le dispatcher a une branche par défaut : tout le
+ * staff du tenant, plus les pole admins (cross-tenant). Un paquet gagné y
+ * tomberait sans deux exceptions explicites — `staffUserIds = []` et un fanout
+ * player réduit au seul `payload.userId`. Le résultat serait des dizaines de
+ * notifications par soirée de tournoi, envoyées à des gens que ça ne concerne
+ * pas : le meilleur moyen de faire couper les notifications à tout le monde.
+ *
+ * Ces exceptions tiennent en deux lignes, donc elles sont faciles à retirer par
+ * inadvertance. C'est ce test, et lui seul, qui s'y oppose.
+ */
+describe('tcg.pack_granted', () => {
+  // La gagnante n'est PAS staff : si elle l'était, la perspective staff
+  // primerait et ce test passerait au vert sans rien prouver du fanout player.
+  const USER_WINNER = 'auth-user-winner';
+  const SUB_WINNER = 'sub-winner';
+
+  function seedWinnerSubscription() {
+    (store.push_subscriptions as any[]).push({
+      id: SUB_WINNER,
+      user_id: USER_WINNER,
+      endpoint: 'https://push.example/winner',
+      p256dh: 'pk-w',
+      auth: 'auth-w',
+      user_agent: null,
+      last_seen_at: NOW,
+    });
+  }
+
+  function makePackEvent(data: Record<string, unknown> = {}) {
+    return {
+      id: 120,
+      event_id: 'evt-tcg-1',
+      event_name: 'tcg.pack_granted',
+      tenant_id: TENANT_A,
+      payload: {
+        id: 'evt-tcg-1',
+        event: 'tcg.pack_granted',
+        tenantId: TENANT_A,
+        timestamp: NOW,
+        data: {
+          userId: USER_WINNER,
+          discordUserId: null,
+          discordUsername: null,
+          matchId: 'match-1',
+          isScrim: false,
+          coins: 100,
+          ctaUrl: 'https://owwomenscup.fr/player/tcg',
+          ...data,
+        },
+      },
+      created_at: NOW,
+      status: 'pending',
+    };
+  }
+
+  it('notifie la gagnante, et PERSONNE d’autre', async () => {
+    seedWinnerSubscription();
+    store.bot_event_outbox = [makePackEvent()] as any;
+
+    const counters = await runWebPushDispatcher();
+
+    expect(counters.sent).toBe(1);
+    const targets = sendNotification.mock.calls.map(
+      (c: any[]) => c[0].endpoint
+    );
+    // Un seul destinataire. Le staff du tenant (a, b) et le pole admin, tous
+    // abonnés, ne doivent RIEN recevoir.
+    expect(targets).toEqual(['https://push.example/winner']);
+  });
+
+  it('pointe vers l’écran où le paquet s’ouvre, et annonce le gain', async () => {
+    seedWinnerSubscription();
+    store.bot_event_outbox = [makePackEvent()] as any;
+
+    await runWebPushDispatcher();
+
+    const payload = JSON.parse(sendNotification.mock.calls[0][1] as string);
+    // `/player/tcg` et non `/player` : la notification tient en un geste, elle
+    // ne doit pas obliger à chercher la tuile.
+    expect(payload.data.url).toBe('/player/tcg');
+    expect(payload.body).toContain('100');
+  });
+
+  it('n’annonce pas de montant quand il est absent', async () => {
+    // « et 0 pièces » serait une information FAUSSE, pas une information
+    // manquante.
+    seedWinnerSubscription();
+    store.bot_event_outbox = [makePackEvent({ coins: 0 })] as any;
+
+    await runWebPushDispatcher();
+
+    const payload = JSON.parse(sendNotification.mock.calls[0][1] as string);
+    expect(payload.body).not.toContain('0 pièces');
+    expect(payload.body).toContain('paquet');
+  });
+
+  it('n’envoie rien si le payload ne désigne aucune joueuse', async () => {
+    // Défense en profondeur : sans `userId`, on ne sait pas à qui s'adresser.
+    // Retomber sur le staff serait exactement le déluge qu'on évite.
+    seedWinnerSubscription();
+    store.bot_event_outbox = [makePackEvent({ userId: null })] as any;
+
+    const counters = await runWebPushDispatcher();
+
+    expect(counters.sent).toBe(0);
+    expect(sendNotification.mock.calls).toHaveLength(0);
+  });
+});
+
 describe('event_segment.transitioned', () => {
   const MATCH_ID = 'match-xyz';
   const CAST_MEMBER_A = 'cm-a';

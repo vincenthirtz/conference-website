@@ -54,6 +54,14 @@ export const WEB_PUSH_EVENT_TYPES = [
   // (payload.teamId), staff exclu — un récap d'équipe n'est pas une info de
   // staff. Opt-out par membre via le modèle habituel.
   'team.weekly.recap',
+  // TCG : un paquet vient d'être gagné. Audience = LA SEULE joueuse concernée
+  // (payload.userId), staff exclu comme pour le récap — et pour une raison plus
+  // tranchée encore : un paquet ne regarde personne d'autre. Sans cette
+  // exception dans le dispatcher, la branche par défaut préviendrait tout le
+  // staff du tenant (plus les pole admins, cross-tenant) à chaque victoire :
+  // des dizaines de notifications par soirée de tournoi, à des gens que ça ne
+  // concerne pas — le meilleur moyen de faire couper les notifications.
+  'tcg.pack_granted',
 ] as const;
 
 export type WebPushEventType = (typeof WEB_PUSH_EVENT_TYPES)[number];
@@ -114,6 +122,12 @@ export function playerUrlForEvent(
       // Le tableau de bord : c'est là que vivent le rythme, la mémoire et la
       // santé d'équipe, c'est-à-dire tout ce dont le récap parle.
       return '/player';
+    case 'tcg.pack_granted':
+      // L'écran où le paquet s'ouvre. Renvoyer vers `/player` obligerait à
+      // chercher la tuile, pour une notification dont l'objet tient en un
+      // geste — c'est le principe déjà retenu pour les events de match, qui
+      // pointent le fil du match et non le tableau de bord.
+      return '/player/tcg';
     case 'news.published':
       // V1 : pas de fanout player news (audience trop large), géré V2.
       return null;
@@ -157,6 +171,11 @@ export const EMAIL_EVENT_TYPES = [
   'scrim.planning.validated',
   'news.published',
   'team.weekly.recap',
+  // PAS de `tcg.pack_granted` ici, à dessein. Un digest qui annonce « tu as
+  // gagné un paquet avant-hier » n'apporte rien : le paquet ne périme pas, il
+  // attend sur la page, et le push immédiat a déjà fait le travail. Le canal
+  // email est réservé à ce qui se planifie ou se rate — un créneau, un
+  // check-in, un forfait.
 ] as const;
 
 export type EmailEventType = (typeof EMAIL_EVENT_TYPES)[number];
@@ -196,6 +215,10 @@ export const PLAYER_PUSH_EVENT_TYPES = [
   // par chaque membre depuis ses préférences — sinon « opt-out par membre »
   // n'existe que sur le papier.
   'team.weekly.recap',
+  // Le paquet gagné s'adresse à la joueuse et à elle seule : il doit donc
+  // figurer dans SES préférences, sinon « désactivable » ne serait vrai que
+  // sur le papier.
+  'tcg.pack_granted',
 ] as const satisfies readonly WebPushEventType[];
 
 export type PlayerPushEventType = (typeof PLAYER_PUSH_EVENT_TYPES)[number];
@@ -621,6 +644,23 @@ export function renderWebPushPayload(
         body: summary || 'Le bilan de la semaine de votre équipe est prêt.',
         url: playerUrlForEvent(eventName, payload) ?? '/player',
         actions: [{ action: 'view', title: 'Voir le tableau de bord' }],
+      };
+    }
+    case 'tcg.pack_granted': {
+      const data = unwrap(payload);
+      const url = playerUrlForEvent(eventName, payload) ?? '/player/tcg';
+      const coins = data['coins'];
+      // Le montant n'est annoncé que s'il est connu : « et 0 pièces » serait
+      // une information fausse, pas une information manquante.
+      const gain =
+        typeof coins === 'number' && Number.isFinite(coins) && coins > 0
+          ? ` et ${coins} pièces`
+          : '';
+      return {
+        title: '🎴 Nouveau paquet',
+        body: `Ta victoire t’a rapporté un paquet${gain}.`,
+        url,
+        actions: [{ action: 'view', title: 'Ouvrir mon paquet' }],
       };
     }
     case 'scrim.planning.opened': {

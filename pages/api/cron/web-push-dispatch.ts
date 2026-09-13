@@ -545,7 +545,12 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
     // transitions de segment match→live, on cible les casters assignés au
     // match uniquement (audience réduite, cf. loadCasterUserIdsForMatch).
     let staffUserIds: string[];
-    if (event.event_name === 'team.weekly.recap') {
+    if (event.event_name === 'tcg.pack_granted') {
+      // Un paquet gagné ne regarde QUE la joueuse qui l'a gagné. Sans cette
+      // exception, la branche par défaut ci-dessous préviendrait tout le staff
+      // du tenant — et les pole admins de tous les tenants — à chaque victoire.
+      staffUserIds = [];
+    } else if (event.event_name === 'team.weekly.recap') {
       // N7 : un récap d'équipe n'est PAS une information de staff. Sans cette
       // exception, chaque staff recevrait le bilan hebdomadaire de toutes les
       // équipes du tenant — le meilleur moyen de faire couper les
@@ -616,6 +621,17 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
       if (teamId) {
         playerUserIds = await loadTeamMemberUserIds([teamId], event.tenant_id);
       }
+    } else if (event.event_name === 'tcg.pack_granted') {
+      // L'émetteur a déjà résolu la destinataire : un event PAR gagnante, donc
+      // exactement un `userId` par event. Le dispatcher ne fait que router — il
+      // ne recalcule pas qui a gagné.
+      const data = (event.payload ?? {}) as Record<string, unknown>;
+      const inner =
+        data.data && typeof data.data === 'object'
+          ? (data.data as Record<string, unknown>)
+          : data;
+      const userId = typeof inner.userId === 'string' ? inner.userId : null;
+      playerUserIds = userId ? [userId] : [];
     } else if (event.event_name === 'scrim.search.matched') {
       // R6 : l'émetteur a déjà résolu les équipes compatibles
       // (payload.targetTeamIds) — on notifie leurs capitaines/managers. Pas de
