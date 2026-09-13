@@ -14,11 +14,20 @@
 // RETURNING`, vérifiée sur la vraie base (cf. tcgGrantVictoryRewards.test.ts).
 // Un rejeu doit donc rendre `replayed` et ne rien ajouter.
 //
-// DEUX BLOCAGES SONT TESTÉS COMME TELS, PAS CONTOURNÉS :
-//   - aucune table ne relie une identité Twitch à un compte du site ;
-//   - `earnSources.ts` marque `twitch_drop` avec `schemaReady: false`.
-// Les tests figent le comportement voulu dans cet état (200 + statut explicite,
-// zéro écriture) ; ils devront être RELUS le jour où les migrations passent.
+// LES DEUX BLOCAGES SONT LEVÉS, ET CE FICHIER A CHANGÉ DE RÔLE. Il figeait
+// autrefois deux manques — aucune table d'identité Twitch, `twitch_drop` refusé
+// par le CHECK du registre — en attendant que 200 + statut explicite reste la
+// bonne réponse. Les deux migrations sont passées (`tcg_twitch_drop.sql`), le
+// pont d'identité est alimenté par OAuth (`/api/auth/twitch/*`), et ces tests
+// décrivent désormais le chemin qui ABOUTIT autant que celui qui s'arrête.
+//
+// CE QUI RESTE À PROTÉGER EN PRIORITÉ, en plus de la signature :
+//   - « pas de compte lié » (200, acquitté) et « lecture en échec » (503,
+//     réessayable) ne doivent JAMAIS se confondre. Les traiter pareil ferait
+//     perdre des drops en silence pendant une panne de base — une erreur n'est
+//     pas une absence ;
+//   - l'identité vient de `user_twitch_links`, prouvée par OAuth, jamais du
+//     pseudo auto-déclaré : sinon n'importe qui encaisse les drops d'une autre.
 
 import { Readable } from 'node:stream';
 import crypto from 'node:crypto';
@@ -400,10 +409,12 @@ describe('acheminement', () => {
     expect(entries()).toHaveLength(0);
   });
 
-  it('s’arrête proprement faute de lien d’identité Twitch', async () => {
-    // ÉTAT NOMINAL AUJOURD'HUI. Aucune table ne relie un compte Twitch à un
-    // compte du site : la route le DIT (200 + statut) au lieu de deviner un
-    // destinataire à partir du pseudo auto-déclaré, qui n'est jamais vérifié.
+  it('s’arrête proprement quand la spectatrice n’a pas rattaché son compte', async () => {
+    // CAS NOMINAL, ET IL LE RESTE. Le pont d'identité existe désormais
+    // (`user_twitch_links`, alimentée par OAuth), mais la plupart des
+    // spectatrices ne l'auront pas emprunté : la route le DIT (200 + statut) au
+    // lieu de deviner un destinataire à partir du pseudo auto-déclaré, qui
+    // n'est jamais vérifié.
     seedConnection();
     const body = redemptionBody();
     const res = makeRes();
@@ -411,17 +422,56 @@ describe('acheminement', () => {
 
     expect(res.statusCode).toBe(200);
     expect((res.body as Body).status).toBe('identity_not_linked');
-    expect((res.body as Body).code).toBe('IDENTITY_BACKEND_MISSING');
+    expect((res.body as Body).code).toBe('IDENTITY_NOT_LINKED');
     expect(entries()).toHaveLength(0);
     // La résolution du direct n'est même pas tentée : inutile d'appeler Helix
     // pour une récompense qu'on ne saurait attribuer.
     expect(fetchTwitchLiveStatusMock).not.toHaveBeenCalled();
   });
 
-  it('resolveSiteUserFromTwitch annonce le manque au lieu de deviner', async () => {
-    expect(resolveSiteUserFromTwitch(VIEWER_TWITCH_ID)).toEqual({
+  it('attribue la récompense quand le compte Twitch EST rattaché', async () => {
+    // Le pont en action : c'est ce que la migration `tcg_twitch_drop.sql`
+    // rendait possible sans que rien ne le remplisse. Un lien prouvé par OAuth
+    // suffit désormais à faire aboutir un drop.
+    seedConnection();
+    store.user_twitch_links = [
+      {
+        auth_user_id: ALICE,
+        twitch_user_id: VIEWER_TWITCH_ID,
+        twitch_login: 'kirisu',
+      },
+    ] as any;
+
+    const body = redemptionBody();
+    const res = makeRes();
+    await handler(makeReq({ body, headers: signedHeaders(body) }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as Body).status).not.toBe('identity_not_linked');
+    expect(entries()).toHaveLength(1);
+    expect((entries()[0] as any).user_id).toBe(ALICE);
+  });
+
+  it('resolveSiteUserFromTwitch distingue « pas de lien » de « lecture en échec »', async () => {
+    // LA DISTINCTION EST LE POINT. Traiter une base injoignable comme « aucun
+    // compte lié » ferait perdre des drops en SILENCE pendant une panne : le
+    // premier cas s'acquitte en 200, le second doit être réessayé.
+    seedConnection();
+    await expect(resolveSiteUserFromTwitch(VIEWER_TWITCH_ID)).resolves.toEqual({
       ok: false,
-      reason: 'IDENTITY_BACKEND_MISSING',
+      reason: 'IDENTITY_NOT_LINKED',
+    });
+
+    store.user_twitch_links = [
+      {
+        auth_user_id: ALICE,
+        twitch_user_id: VIEWER_TWITCH_ID,
+        twitch_login: 'kirisu',
+      },
+    ] as any;
+    await expect(resolveSiteUserFromTwitch(VIEWER_TWITCH_ID)).resolves.toEqual({
+      ok: true,
+      userId: ALICE,
     });
   });
 });

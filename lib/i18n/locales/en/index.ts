@@ -180,6 +180,8 @@ import enProductionPartner from './productionPartner';
 import enPalmaresPage from './palmaresPage';
 import enMapsVoxelPage from './mapsVoxelPage';
 import enPlayerHeroPrefs from './playerHeroPrefs';
+import enPlayerTwitchLink from './playerTwitchLink';
+import enOverlayTcg from './overlayTcg';
 
 const enDict = {
   profileSummary: enProfileSummary,
@@ -349,6 +351,8 @@ const enDict = {
   mapsVoxelPage: enMapsVoxelPage,
   playerTcg: enPlayerTcg,
   playerHeroPrefs: enPlayerHeroPrefs,
+  playerTwitchLink: enPlayerTwitchLink,
+  overlayTcg: enOverlayTcg,
 };
 
 export default enDict;

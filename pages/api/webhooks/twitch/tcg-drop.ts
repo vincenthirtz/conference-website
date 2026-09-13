@@ -76,6 +76,7 @@ import { logger } from '@/utils/logger';
 import { fetchTwitchLiveStatus } from '@/utils/twitch';
 import { TWITCH_DROP_COINS, getEarnSource } from '@/utils/tcg/earnSources';
 import { refreshBalance } from '@/utils/tcg/grantVictoryRewards';
+import { findAuthUserIdByTwitchUserId } from '@/utils/auth/twitchLinks';
 
 /** Le corps doit rester brut : la signature couvre les octets reçus. */
 export const config = { api: { bodyParser: false } };
@@ -215,49 +216,41 @@ function header(req: NextApiRequest, name: string): string | null {
 
 export type IdentityResolution =
   | { ok: true; userId: string }
-  | { ok: false; reason: 'IDENTITY_BACKEND_MISSING' };
+  | { ok: false; reason: 'IDENTITY_NOT_LINKED' | 'IDENTITY_LOOKUP_FAILED' };
 
 /**
  * Compte du site correspondant à un identifiant Twitch.
  *
- * RIEN NE PERMET DE RÉPONDRE AUJOURD'HUI, et cette fonction le dit plutôt que
- * de bricoler. Deux « solutions » seraient des fautes :
+ * LA SOURCE EST `user_twitch_links`, ALIMENTÉE PAR OAUTH — jamais une saisie.
+ * Se rabattre sur le pseudo Twitch DÉCLARÉ (`user_metadata.twitch`, miroité
+ * dans `team_members.twitch`) serait une faute : il est auto-déclaré et jamais
+ * vérifié, donc n'importe qui pourrait inscrire le pseudo d'une autre et
+ * encaisser ses récompenses. Un webhook signé qui distribue sur une identité
+ * non prouvée ne vaut pas mieux qu'un webhook sans signature.
  *
- *   1. Se rabattre sur le pseudo Twitch DÉCLARÉ (`user_metadata.twitch`, posé
- *      par /api/player/update-profile, miroité dans `team_members.twitch`). Il
- *      est auto-déclaré et JAMAIS vérifié : n'importe qui peut inscrire le
- *      pseudo d'une autre et encaisser ses récompenses. Un webhook signé qui
- *      distribue sur une identité non prouvée ne vaut pas mieux qu'un webhook
- *      sans signature.
- *   2. Créer la table depuis le code. Le schéma vit dans
- *      `database/migrations/`, et une table d'identité mérite d'être relue.
- *
- * MIGRATION ATTENDUE — `database/migrations/create_user_twitch_links.sql`,
- * calquée sur `add_user_discord_links.sql` :
- *
- *   CREATE TABLE IF NOT EXISTS user_twitch_links (
- *     auth_user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
- *     twitch_user_id text NOT NULL UNIQUE,   -- id numérique, STABLE
- *     twitch_login text,                     -- affichage seulement, se renomme
- *     linked_at timestamptz NOT NULL DEFAULT now(),
- *     updated_at timestamptz NOT NULL DEFAULT now()
- *   );
- *
- * `twitch_user_id` UNIQUE empêche deux comptes du site de revendiquer la même
- * chaîne ; la PK sur `auth_user_id` empêche l'inverse. Le login n'est JAMAIS une
- * clé : Twitch autorise le renommage, l'indexer serait un piège.
- *
- * Le lien doit venir d'un OAuth Twitch côté joueuse — le socle existe déjà
- * (`utils/twitchBroadcaster.ts` fait ce flux pour le broadcaster) — pour que
- * `twitch_user_id` vienne de Twitch et jamais d'une saisie.
+ * TROIS ISSUES, PAS DEUX, et la distinction compte :
+ *   - lien trouvé → on attribue ;
+ *   - AUCUN lien (`IDENTITY_NOT_LINKED`) → cas nominal d'une spectatrice qui
+ *     n'a pas rattaché son compte : on acquitte en 200, Twitch n'a rien à
+ *     réessayer ;
+ *   - LECTURE EN ÉCHEC (`IDENTITY_LOOKUP_FAILED`) → ce n'est PAS une absence de
+ *     lien. Traiter les deux pareil ferait perdre des drops en silence pendant
+ *     une panne de base. L'appelant demande un réessai.
  *
  * LIEN GLOBAL, PAS PAR TENANT, comme `user_discord_links` : une identité Twitch
  * ne change pas d'un tenant à l'autre. Le tenant reste porté par la récompense.
  */
-export function resolveSiteUserFromTwitch(
-  _twitchUserId: string
-): IdentityResolution {
-  return { ok: false, reason: 'IDENTITY_BACKEND_MISSING' };
+export async function resolveSiteUserFromTwitch(
+  twitchUserId: string
+): Promise<IdentityResolution> {
+  const userId = await findAuthUserIdByTwitchUserId(twitchUserId);
+  if (userId === undefined) {
+    return { ok: false, reason: 'IDENTITY_LOOKUP_FAILED' };
+  }
+  if (userId === null) {
+    return { ok: false, reason: 'IDENTITY_NOT_LINKED' };
+  }
+  return { ok: true, userId };
 }
 
 /* -----------------------------------------------------------
@@ -622,10 +615,20 @@ export default async function handler(
     return res.status(200).json({ ok: true, status: 'unknown_channel' });
   }
 
-  const identity = resolveSiteUserFromTwitch(twitchUserId);
+  const identity = await resolveSiteUserFromTwitch(twitchUserId);
   if (!identity.ok) {
-    // Le cas NOMINAL tant que la table de liaison n'existe pas. 200 : Twitch
-    // n'a rien à réessayer, c'est chez nous qu'il manque quelque chose.
+    if (identity.reason === 'IDENTITY_LOOKUP_FAILED') {
+      // Panne de lecture : surtout PAS un acquittement. Traiter une base
+      // injoignable comme « pas de compte lié » ferait perdre des drops en
+      // silence — une erreur n'est pas une absence.
+      res.setHeader('Retry-After', '60');
+      return res.status(503).json({
+        error: 'Identity lookup failed',
+        code: 'IDENTITY_LOOKUP_FAILED',
+      });
+    }
+    // Cas NOMINAL : la spectatrice n'a pas rattaché son compte Twitch. 200 :
+    // Twitch n'a rien à réessayer, il manque quelque chose de notre côté.
     logger.warn(
       '[twitch/tcg-drop] identité Twitch non résolue (%s) — aucune récompense',
       identity.reason

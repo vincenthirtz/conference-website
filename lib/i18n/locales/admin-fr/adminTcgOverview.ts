@@ -77,4 +77,30 @@ export default adminNs('adminTcgOverview', {
   kindTeam: 'Équipe',
   kindMap: 'Map',
   unknownSubject: 'Sujet inconnu',
+
+  // Source navigateur OBS / Streamlabs. Le lien est un secret PORTEUR : les
+  // textes disent ce que « régénérer » casse, avant qu'on clique.
+  overlayHeading: 'Overlay OBS',
+  overlaySubtitle:
+    'Annonce en direct les cartes gagnées. À coller dans une source « Navigateur » d’OBS ou Streamlabs.',
+  overlayNone: 'Aucun lien d’overlay pour cet espace.',
+  overlayCreatedAt: 'Créé le {date}',
+  overlayLastUsedAt: 'Dernier appel : {date}',
+  overlayNeverUsed: 'Jamais utilisé',
+  overlayReveal: 'Afficher',
+  overlayHide: 'Masquer',
+  overlayCopy: 'Copier',
+  overlayCopied: 'Lien copié',
+  overlayCreate: 'Créer le lien',
+  overlayRotate: 'Régénérer',
+  overlayRotateWarning:
+    'Le lien actuel cessera immédiatement de fonctionner : l’overlay déjà configuré dans OBS deviendra muet jusqu’à ce que tu y colles le nouveau lien. À faire si le lien a circulé.',
+  overlayRevoke: 'Révoquer',
+  overlayRevokeWarning:
+    'L’overlay cessera de fonctionner et aucun nouveau lien ne sera créé. Tu pourras en émettre un plus tard.',
+  overlayWorking: 'En cours…',
+  overlayLoadError: 'Impossible de lire le lien d’overlay.',
+  overlaySaveError: 'L’opération a échoué, réessaie.',
+  overlayObsHint:
+    'Qui a ce lien voit les annonces. Il n’affiche que le pseudo Twitch et l’événement — jamais le nom du compte du site.',
 });

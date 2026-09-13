@@ -15,6 +15,7 @@ import DiscoveryCard from '@/components/player/DiscoveryCard';
 import BattlenetVerifyCard from '@/components/player/BattlenetVerifyCard';
 import TcgPhotoCard from '@/components/player/TcgPhotoCard';
 import HeroPreferencesCard from '@/components/player/HeroPreferencesCard';
+import TwitchLinkCard from '@/components/player/TwitchLinkCard';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
@@ -577,6 +578,12 @@ function PlayerProfile() {
               l'état (statut, toast de retour) et ne rend rien si la feature est
               dormante. Même composant que l'onboarding post-création d'équipe. */}
           <BattlenetVerifyCard variant="section" />
+
+          {/* Mon compte Twitch — placée AVANT les deux cartes TCG parce qu'elle
+              en est la condition d'accès : sans ce lien prouvé par OAuth, une
+              carte réclamée pendant un direct n'a aucun destinataire. Ne rend
+              rien si la fonctionnalité est dormante. */}
+          <TwitchLinkCard />
 
           {/* Mes héros — placée AVANT la carte à collectionner parce qu'elle en
               est le repli : le héros préféré ne sert que si aucune photo n'est

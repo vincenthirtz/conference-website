@@ -37,6 +37,12 @@ const TcgPhotosPanel = lazyPanel(
 const TcgOverviewPanel = lazyPanel(
   () => import('@/components/admin/tcg/TcgOverviewPanel')
 );
+// Panneau SÉPARÉ, monté à côté du précédent : le lien d'overlay OBS relève du
+// TCG mais n'a rien à faire dans un fichier qu'on vient d'alléger pour tenir
+// sous le plafond de taille des écrans admin.
+const TcgOverlayCard = lazyPanel(
+  () => import('@/components/admin/tcg/TcgOverlayCard')
+);
 
 const ID_BASE = 'admin-moderation';
 
@@ -149,7 +155,32 @@ export default function AdminModerationPage({ staff }: StaffProps) {
             ) : active === 'tcg-photos' && isManager ? (
               <TcgPhotosPanel />
             ) : active === 'tcg-overview' && isManager ? (
-              <TcgOverviewPanel labels={tTcgOverview} />
+              <div className="space-y-6">
+                <TcgOverviewPanel labels={tTcgOverview} />
+                <TcgOverlayCard
+                  labels={{
+                    heading: tTcgOverview.overlayHeading,
+                    subtitle: tTcgOverview.overlaySubtitle,
+                    none: tTcgOverview.overlayNone,
+                    createdAt: tTcgOverview.overlayCreatedAt,
+                    lastUsedAt: tTcgOverview.overlayLastUsedAt,
+                    neverUsed: tTcgOverview.overlayNeverUsed,
+                    reveal: tTcgOverview.overlayReveal,
+                    hide: tTcgOverview.overlayHide,
+                    copy: tTcgOverview.overlayCopy,
+                    copied: tTcgOverview.overlayCopied,
+                    create: tTcgOverview.overlayCreate,
+                    rotate: tTcgOverview.overlayRotate,
+                    rotateWarning: tTcgOverview.overlayRotateWarning,
+                    revoke: tTcgOverview.overlayRevoke,
+                    revokeWarning: tTcgOverview.overlayRevokeWarning,
+                    working: tTcgOverview.overlayWorking,
+                    loadError: tTcgOverview.overlayLoadError,
+                    saveError: tTcgOverview.overlaySaveError,
+                    obsHint: tTcgOverview.overlayObsHint,
+                  }}
+                />
+              </div>
             ) : (
               <DisputesPanel />
             )}

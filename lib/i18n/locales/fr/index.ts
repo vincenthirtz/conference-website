@@ -174,6 +174,8 @@ import nsPlayerAgenda from './playerAgenda';
 import nsPlayerMyTeams from './playerMyTeams';
 import nsProductionPartner from './productionPartner';
 import nsPlayerHeroPrefs from './playerHeroPrefs';
+import nsPlayerTwitchLink from './playerTwitchLink';
+import nsOverlayTcg from './overlayTcg';
 
 export const frDict = {
   profileSummary: nsProfileSummary.fr,
@@ -343,4 +345,6 @@ export const frDict = {
   productionPartner: nsProductionPartner.fr,
   playerTcg: nsPlayerTcg.fr,
   playerHeroPrefs: nsPlayerHeroPrefs.fr,
+  playerTwitchLink: nsPlayerTwitchLink.fr,
+  overlayTcg: nsOverlayTcg.fr,
 };
