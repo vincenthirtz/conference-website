@@ -115,6 +115,18 @@ export const BOT_EVENT_NAMES = [
   // équipe et par semaine, et UNIQUEMENT si la semaine a quelque chose à
   // raconter (cf. utils/teams/weeklyRecap.ts).
   'team.weekly.recap',
+  // TCG — une joueuse vient de gagner un paquet.
+  //
+  // UN ÉVÉNEMENT PAR GAGNANTE, comme `scrim.request` et `checkin.nudge` : un
+  // DM refusé (DM fermés) ne doit pas faire rejouer l'envoi aux quatre autres,
+  // et le paquet est de toute façon individuel.
+  //
+  // ÉMIS UNIQUEMENT À LA PREMIÈRE ATTRIBUTION. L'écriture du paquet est un
+  // `ON CONFLICT DO NOTHING` dont le `RETURNING` ne rend que l'inséré — donc
+  // un rejeu (reprise de cron, correction de score) ne renotifie personne,
+  // sans relire avant d'écrire. C'est la relecture préalable qui avait produit
+  // quatre publications Discord en double le 2026-09-12.
+  'tcg.pack_granted',
 ] as const;
 
 export type BotEventName = (typeof BOT_EVENT_NAMES)[number];

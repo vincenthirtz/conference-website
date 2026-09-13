@@ -22,3 +22,35 @@ export function absoluteUrl(path: string): string {
   if (typeof window !== 'undefined') return `${window.location.origin}${path}`;
   return path;
 }
+
+/**
+ * Origine du site vue du SERVEUR, en couvrant les variables des différents
+ * hébergements (`URL` est posée par Netlify au build et au runtime).
+ *
+ * Le domaine en dernier recours n'est pas un aveu de paresse : ce chemin sert
+ * des liens qui partent hors du navigateur, où l'absence d'URL n'a pas de repli
+ * acceptable.
+ */
+const SERVER_ORIGIN = (
+  process.env.SITE_URL ||
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  process.env.URL ||
+  'https://owwomenscup.fr'
+).replace(/\/+$/, '');
+
+/**
+ * Comme `absoluteUrl`, mais TOUJOURS absolue.
+ *
+ * POURQUOI LES DEUX COEXISTENT. `absoluteUrl` rend le chemin relatif quand il
+ * ignore l'origine : dans une page, c'est dégradé mais utilisable. Pour un lien
+ * qui QUITTE le site — un DM Discord, un email — un chemin relatif n'est pas
+ * dégradé, il est inerte : personne ne peut le suivre. Ces appels-là ne doivent
+ * donc jamais pouvoir en recevoir un.
+ *
+ * `utils/scrimRequestNotify.ts` compose la même chaîne localement ; il est
+ * antérieur à cette fonction et gagnerait à l'adopter — recopier une liste de
+ * replis est la façon dont deux comportements se mettent à diverger.
+ */
+export function absoluteSiteUrl(path: string): string {
+  return `${SERVER_ORIGIN}${path}`;
+}

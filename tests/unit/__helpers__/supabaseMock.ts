@@ -415,6 +415,17 @@ class Builder {
   private orderBy: Array<{ col: string; asc: boolean; nullsFirst: boolean }> =
     [];
   private wantCount = false;
+  /**
+   * Lignes RÉELLEMENT insérées par un `upsert(..., { ignoreDuplicates: true })`,
+   * à rendre sur un `.select()` chaîné. `null` = pas un upsert de ce type.
+   *
+   * Vérifié sur la vraie base : `ON CONFLICT DO NOTHING ... RETURNING` ne rend
+   * que l'inséré (3 lignes soumises dont 1 en conflit → 2 rendues). C'est ce
+   * qui permet à un appelant de distinguer une PREMIÈRE écriture d'un REJEU
+   * sans relire avant d'écrire — la relecture préalable étant précisément la
+   * fenêtre qui a produit quatre publications Discord en double.
+   */
+  private upsertReturning: Row[] | null = null;
 
   constructor(private readonly table: string) {}
 
@@ -441,25 +452,56 @@ class Builder {
    * Supports composite conflict targets ("col_a,col_b") as PostgREST does:
    * every listed column must match for a row to be considered the same.
    */
-  upsert(payload: Row | Row[], opts?: { onConflict?: string }) {
+  upsert(
+    payload: Row | Row[],
+    opts?: { onConflict?: string; ignoreDuplicates?: boolean }
+  ) {
     const items = Array.isArray(payload) ? payload : [payload];
     const onConflict = opts?.onConflict;
+    // `ignoreDuplicates` était IGNORÉ : sur conflit, ce mock faisait
+    // `Object.assign` — il ÉCRASAIT là où Postgres ne fait rien. Un test
+    // « rejouer n'ajoute rien » passait donc au vert pour la mauvaise raison
+    // (une seule ligne parce qu'elle avait été réécrite), et un appelant qui
+    // distingue première écriture et rejeu était intestable.
+    //
+    // Le changement est CANTONNÉ à `ignoreDuplicates: true` : sans ce drapeau,
+    // le comportement historique est conservé au mot près, pour ne rien casser
+    // des centaines d'appels qui s'y fient.
+    const ignoreDuplicates = opts?.ignoreDuplicates === true;
     const rows = (store[this.table] ||= []);
+    const inserted: Row[] = [];
+
     if (onConflict) {
       const keys = onConflict.split(',').map((k) => k.trim());
       for (const item of items) {
         const idx = rows.findIndex((r) =>
           keys.every((k) => (r as any)[k] === (item as any)[k])
         );
-        if (idx >= 0) Object.assign(rows[idx], item);
-        else rows.push({ ...item });
+        if (idx >= 0) {
+          if (ignoreDuplicates) continue; // DO NOTHING : la ligne reste intacte
+          Object.assign(rows[idx], item);
+          continue;
+        }
+        const row = { ...item };
+        rows.push(row);
+        inserted.push(row);
       }
     } else {
-      for (const item of items) rows.push({ ...item });
+      for (const item of items) {
+        const row = { ...item };
+        rows.push(row);
+        inserted.push(row);
+      }
     }
-    // Return self so the caller can still chain, but `_execute` will be a no-op.
+
+    // Return self so the caller can still chain.
     this.op = 'select'; // already mutated, terminal awaits should resolve cleanly
-    this.filters = [() => false]; // empty result on subsequent select
+    if (ignoreDuplicates) {
+      // `.select()` chaîné → les lignes réellement insérées, comme RETURNING.
+      this.upsertReturning = inserted;
+    } else {
+      this.filters = [() => false]; // empty result on subsequent select
+    }
     return this;
   }
 
@@ -668,6 +710,17 @@ class Builder {
     count?: number | null;
   }> {
     const rows = (store[this.table] ||= []);
+
+    // Un upsert `ignoreDuplicates` rend ses lignes insérées, pas le contenu
+    // filtré de la table : c'est la sémantique de RETURNING.
+    if (this.upsertReturning !== null) {
+      const returned = this.upsertReturning;
+      return {
+        data: returned.map((r) => ({ ...r })),
+        error: null,
+        count: this.wantCount ? returned.length : null,
+      };
+    }
 
     if (this.op === 'select') {
       let matched = rows.filter((r) => this.filters.every((f) => f(r)));

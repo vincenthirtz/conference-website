@@ -31,6 +31,9 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+import { emitBotEvent } from '@/utils/botEvents';
+import { getDiscordLinksForUsers } from '@/utils/discordLinks';
+import { absoluteSiteUrl } from '@/utils/siteUrl';
 import { coinsForWin } from './economy';
 
 export type VictoryParticipant = {
@@ -65,18 +68,32 @@ export async function grantVictoryRewards(input: {
     const nowIso = new Date().toISOString();
 
     // 1) Un paquet par gagnante.
-    const { error: packError } = await supabaseAdmin.from('tcg_packs').upsert(
-      winners.map((userId) => ({
-        tenant_id: tenantId,
-        user_id: userId,
-        source_match_id: matchId,
-        granted_at: nowIso,
-      })),
-      {
-        onConflict: 'tenant_id,user_id,source_match_id',
-        ignoreDuplicates: true,
-      }
-    );
+    //
+    // LE `.select()` N'EST PAS DÉCORATIF : avec `ignoreDuplicates`, PostgREST
+    // exécute un `ON CONFLICT DO NOTHING ... RETURNING` qui ne rend QUE les
+    // lignes réellement insérées (vérifié sur la base : 3 lignes soumises dont
+    // 1 en conflit → 2 rendues). C'est ce qui permet d'annoncer la récompense
+    // à la PREMIÈRE attribution seulement : un rejeu — reprise de cron,
+    // correction de score — rend un tableau vide, donc ne renotifie personne.
+    //
+    // La solution naïve serait de relire « ai-je déjà donné ? » avant d'écrire.
+    // C'est exactement la fenêtre entre lecture et écriture qui a produit
+    // quatre publications Discord en double le 2026-09-12.
+    const { data: grantedRows, error: packError } = await supabaseAdmin
+      .from('tcg_packs')
+      .upsert(
+        winners.map((userId) => ({
+          tenant_id: tenantId,
+          user_id: userId,
+          source_match_id: matchId,
+          granted_at: nowIso,
+        })),
+        {
+          onConflict: 'tenant_id,user_id,source_match_id',
+          ignoreDuplicates: true,
+        }
+      )
+      .select('user_id');
     if (packError) {
       logger.error('[tcg] paquets non attribués: %s', packError.message);
     }
@@ -112,6 +129,23 @@ export async function grantVictoryRewards(input: {
     await Promise.all(
       winners.map((userId) => refreshBalance(tenantId, userId))
     );
+
+    // 4) Annoncer les paquets NOUVELLEMENT attribués.
+    //
+    // En dernier, et sur la seule foi de ce que l'insertion a rendu : une
+    // récompense qu'on n'est pas certain d'avoir écrite ne doit pas être
+    // annoncée. Une erreur à l'étape 1 laisse `grantedRows` à `null`, et on
+    // n'annonce alors rien plutôt que de promettre un paquet introuvable.
+    const newlyGranted = (
+      (grantedRows ?? []) as Array<{ user_id: string }>
+    ).map((r) => r.user_id);
+    await announceNewPacks({
+      tenantId,
+      matchId,
+      isScrim,
+      coins: amount,
+      userIds: newlyGranted,
+    });
   } catch (err) {
     // Un hook d'effet de bord ne casse pas son hôte. Cf. l'en-tête.
     logger.error(
@@ -120,6 +154,55 @@ export async function grantVictoryRewards(input: {
       err instanceof Error ? err.message : String(err)
     );
   }
+}
+
+/**
+ * Émet `tcg.pack_granted`, une fois par gagnante.
+ *
+ * UN ÉVÉNEMENT PAR DESTINATAIRE, comme `scrim.request` et `checkin.nudge` : un
+ * envoi refusé (DM fermés) ne doit pas faire rejouer les autres au retry, et un
+ * paquet est de toute façon individuel.
+ *
+ * LE LIEN DISCORD EST RÉSOLU ICI, pas côté bot. Le site est le seul à connaître
+ * la correspondance compte ↔ Discord ; la lui laisser porter évite au bot une
+ * requête par destinataire. Une joueuse sans compte lié n'est PAS une erreur :
+ * l'événement part quand même avec `discordUserId: null`, et le consommateur
+ * décide (un DM est impossible, une annonce en salon reste possible).
+ *
+ * Ne lève jamais : `emitBotEvent` rend un résultat plutôt que de jeter, et
+ * l'appelante est un hook qui ne doit pas casser son hôte.
+ */
+async function announceNewPacks(input: {
+  tenantId: string;
+  matchId: string;
+  isScrim: boolean;
+  coins: number;
+  userIds: readonly string[];
+}): Promise<void> {
+  if (input.userIds.length === 0) return;
+
+  const links = await getDiscordLinksForUsers([...input.userIds]);
+  // Absolue : ce lien part dans un DM, où un chemin relatif est inerte.
+  const ctaUrl = absoluteSiteUrl('/player/tcg');
+
+  await Promise.all(
+    input.userIds.map((userId) => {
+      const link = links.get(userId) ?? null;
+      return emitBotEvent(
+        'tcg.pack_granted',
+        {
+          userId,
+          discordUserId: link?.discordUserId ?? null,
+          discordUsername: link?.discordUsername ?? null,
+          matchId: input.matchId,
+          isScrim: input.isScrim,
+          coins: input.coins,
+          ctaUrl,
+        },
+        input.tenantId
+      );
+    })
+  );
 }
 
 /**
