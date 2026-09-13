@@ -12,11 +12,14 @@ import { describe, expect, it } from 'vitest';
 import {
   PACK_SIZE,
   TEAM_SLOTS,
+  MAP_SLOTS,
   pickPackSubjects,
 } from '../../utils/tcg/drawPack';
 
 const PLAYERS = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'];
 const TEAMS = ['t1', 't2', 't3'];
+/** Slugs quelconques : le tirage ne consulte pas le registre, il reçoit une liste. */
+const MAPS = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'];
 
 /** Tirages neutres : toujours le premier élément restant. */
 const ZEROS = Array(12).fill(0);
@@ -43,7 +46,9 @@ describe('pickPackSubjects', () => {
       rolls: [0.9, 0.1, 0.5, 0.99, 0.3, 0.7, 0.2],
     });
 
-    const ids = out.map((s) => (s.kind === 'player' ? s.userId : s.teamId));
+    const ids = out.map((s) =>
+      s.kind === 'player' ? s.userId : s.kind === 'map' ? s.slug : s.teamId
+    );
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -104,7 +109,9 @@ describe('pickPackSubjects', () => {
     });
 
     expect(out).toHaveLength(PACK_SIZE);
-    const ids = out.map((s) => (s.kind === 'player' ? s.userId : s.teamId));
+    const ids = out.map((s) =>
+      s.kind === 'player' ? s.userId : s.kind === 'map' ? s.slug : s.teamId
+    );
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -118,5 +125,93 @@ describe('pickPackSubjects', () => {
     // Premier tirage = équipe, valeur haute → dernière équipe du vivier.
     const team = out.find((s) => s.kind === 'team');
     expect(team).toEqual({ kind: 'team', teamId: 't3' });
+  });
+
+  /* ------------------------------------------------------------------------
+   * L'emplacement de MAP
+   *
+   * Les cas ci-dessus n'passent aucun `mapSlugs` : ils décrivent le tirage
+   * SANS vivier de maps, ce qui reste un cas valide (registre vidé) et une
+   * spécification qu'on ne réécrit pas pour un ajout. Ceux qui suivent
+   * décrivent la composition que la route produit réellement.
+   * --------------------------------------------------------------------- */
+
+  // Trois viviers, chacun avec son repli : un tableau court ne ferait pas
+  // échouer le tirage, il le rendrait déterministe sans qu'on le voie.
+  const MANY_ZEROS = Array(PACK_SIZE * 4).fill(0);
+
+  it('réserve un emplacement à une map : trois joueuses, une équipe, une map', () => {
+    const out = pickPackSubjects({
+      playerIds: PLAYERS,
+      teamIds: TEAMS,
+      mapSlugs: MAPS,
+      rolls: MANY_ZEROS,
+    });
+
+    expect(out).toHaveLength(PACK_SIZE);
+    expect(out.filter((s) => s.kind === 'map')).toHaveLength(MAP_SLOTS);
+    expect(out.filter((s) => s.kind === 'team')).toHaveLength(TEAM_SLOTS);
+    expect(out.filter((s) => s.kind === 'player')).toHaveLength(
+      PACK_SIZE - TEAM_SLOTS - MAP_SLOTS
+    );
+  });
+
+  it('n’évince JAMAIS une joueuse au profit d’une map', () => {
+    // La règle de fond : un TCG de compétition parle d'abord de celles qui
+    // jouent. Les maps occupent une place que personne ne réclame, elles ne
+    // prennent pas celle d'une joueuse. Sans vivier de maps, la composition
+    // doit être exactement celle d'avant.
+    const withMaps = pickPackSubjects({
+      playerIds: PLAYERS,
+      teamIds: TEAMS,
+      mapSlugs: MAPS,
+      rolls: MANY_ZEROS,
+    });
+    const without = pickPackSubjects({
+      playerIds: PLAYERS,
+      teamIds: TEAMS,
+      rolls: MANY_ZEROS,
+    });
+
+    expect(without.filter((s) => s.kind === 'player')).toHaveLength(
+      PACK_SIZE - TEAM_SLOTS
+    );
+    // L'emplacement de map coûte UNE place de joueuse, pas davantage.
+    expect(withMaps.filter((s) => s.kind === 'player')).toHaveLength(
+      PACK_SIZE - TEAM_SLOTS - MAP_SLOTS
+    );
+  });
+
+  it('comble avec des maps en dernier recours, sans jamais les répéter', () => {
+    // Aucune joueuse, aucune équipe : le paquet reste COMPLET plutôt que
+    // d'être amputé — c'est ce qui rend `empty_pool` inatteignable côté route
+    // depuis que le registre des maps sert de vivier.
+    const out = pickPackSubjects({
+      playerIds: [],
+      teamIds: [],
+      mapSlugs: MAPS,
+      rolls: MANY_ZEROS,
+    });
+
+    expect(out).toHaveLength(PACK_SIZE);
+    expect(out.every((s) => s.kind === 'map')).toBe(true);
+
+    const slugs = out
+      .filter((s): s is { kind: 'map'; slug: string } => s.kind === 'map')
+      .map((s) => s.slug);
+    expect(new Set(slugs).size).toBe(slugs.length);
+  });
+
+  it('rend un paquet vide quand les TROIS viviers sont vides', () => {
+    // Le registre des maps n'est jamais vide en pratique, mais la fonction ne
+    // le suppose pas : c'est ce qui la garde honnête si on le vidait.
+    expect(
+      pickPackSubjects({
+        playerIds: [],
+        teamIds: [],
+        mapSlugs: [],
+        rolls: MANY_ZEROS,
+      })
+    ).toEqual([]);
   });
 });

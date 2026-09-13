@@ -20,10 +20,16 @@
 
 import { describe, it, expect } from 'vitest';
 
+// Le modèle et sa normalisation ont quitté le composant pour
+// `utils/tcg/overviewModel.ts` : ce sont des types et des fonctions pures, sans
+// une ligne de JSX, et le panneau les importe désormais de là. Ce test pointe
+// vers le vrai module plutôt que vers un ré-export de confort — un test qui dit
+// d'où vient ce qu'il teste vaut mieux qu'une indirection qui masque la
+// frontière.
 import {
   normalizeTcgOverview,
   isTcgOverviewEmpty,
-} from '@/components/admin/tcg/TcgOverviewPanel';
+} from '@/utils/tcg/overviewModel';
 
 /** Une réponse complète, à la forme rendue par l'endpoint. */
 function fullPayload() {

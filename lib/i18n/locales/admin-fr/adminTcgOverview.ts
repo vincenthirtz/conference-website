@@ -75,5 +75,6 @@ export default adminNs('adminTcgOverview', {
   topSubjectsFoil: 'dont {count} brillantes',
   kindPlayer: 'Joueuse',
   kindTeam: 'Équipe',
+  kindMap: 'Map',
   unknownSubject: 'Sujet inconnu',
 });

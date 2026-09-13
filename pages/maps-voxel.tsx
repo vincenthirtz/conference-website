@@ -41,7 +41,14 @@ type VoxelMap = {
 
 type Props = { maps: VoxelMap[] };
 
-const MODE_ORDER = ['control', 'escort', 'hybrid', 'push', 'flashpoint', 'standard'] as const;
+const MODE_ORDER = [
+  'control',
+  'escort',
+  'hybrid',
+  'push',
+  'flashpoint',
+  'standard',
+] as const;
 
 const modeLabel = (t: Dict, layout: string): string =>
   ({
@@ -67,16 +74,26 @@ const archLabel = (t: Dict, architecture: string): string =>
   })[architecture] ?? architecture;
 
 const envLabel = (t: Dict, environment: string): string =>
-  ({ sea: t.envSea, sand: t.envSand, snow: t.envSnow, grass: t.envGrass, lava: t.envLava })[
-    environment
-  ] ?? environment;
+  ({
+    sea: t.envSea,
+    sand: t.envSand,
+    snow: t.envSnow,
+    grass: t.envGrass,
+    lava: t.envLava,
+  })[environment] ?? environment;
 
 const moodLabel = (t: Dict, mood: string): string =>
   ({ day: t.moodDay, dusk: t.moodDusk, night: t.moodNight })[mood] ?? mood;
 
 function MapCard({ map, t }: { map: VoxelMap; t: Dict }) {
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] transition hover:border-purple-400/40 hover:bg-white/[0.06]">
+    // `id` = cible d'ancre : les cartes de map du TCG pointent vers
+    // `/maps-voxel#<slug>`, faute de page par map. `scroll-mt` dégage la
+    // hauteur de la barre de navigation, sans quoi l'ancre se cale sous elle.
+    <article
+      id={map.slug}
+      className="group flex scroll-mt-24 flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] transition hover:border-purple-400/40 hover:bg-white/[0.06]"
+    >
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-black/40">
         {/* SVG statique déjà rendu : pas de next/image (il n'optimise pas le SVG). */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -126,7 +143,10 @@ function MapCard({ map, t }: { map: VoxelMap; t: Dict }) {
           ))}
           <span className="ml-auto flex flex-wrap justify-end gap-1">
             {map.landmarks.map((landmark) => (
-              <span key={landmark} className="font-mono text-[10px] text-gray-500">
+              <span
+                key={landmark}
+                className="font-mono text-[10px] text-gray-500"
+              >
                 {landmark}
               </span>
             ))}
@@ -160,13 +180,20 @@ function MapsVoxelPage({ maps }: Props) {
     <div className="min-h-screen bg-gradient-to-b from-[#0d0b14] via-[#120f1c] to-[#0d0b14]">
       <main className="mx-auto max-w-7xl px-4 pt-28 pb-16 sm:px-6 lg:px-8">
         <header className="flex flex-col gap-4">
-          <p className="text-xs uppercase tracking-[0.22em] text-purple-300">{t.eyebrow}</p>
-          <h1 className="text-4xl font-black tracking-tight text-white sm:text-5xl">{t.title}</h1>
+          <p className="text-xs uppercase tracking-[0.22em] text-purple-300">
+            {t.eyebrow}
+          </p>
+          <h1 className="text-4xl font-black tracking-tight text-white sm:text-5xl">
+            {t.title}
+          </h1>
           <p className="max-w-3xl text-gray-300">{t.lede}</p>
           <p className="max-w-3xl text-sm text-gray-400">{t.posture}</p>
         </header>
 
-        <nav className="mt-10 flex flex-wrap items-center gap-2" aria-label={t.filterAll}>
+        <nav
+          className="mt-10 flex flex-wrap items-center gap-2"
+          aria-label={t.filterAll}
+        >
           <button
             type="button"
             onClick={() => setMode('all')}
@@ -215,7 +242,9 @@ function MapsVoxelPage({ maps }: Props) {
                 <span className="font-mono text-xs text-purple-300">
                   {String(i + 1).padStart(2, '0')}
                 </span>
-                <h3 className="text-lg font-semibold text-white">{step.title}</h3>
+                <h3 className="text-lg font-semibold text-white">
+                  {step.title}
+                </h3>
                 <p className="text-sm text-gray-400">{step.body}</p>
               </li>
             ))}
@@ -235,7 +264,14 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
     const recipe = getMapRecipe('overwatch', entry.name, entry.type);
     let weightKb = 0;
     try {
-      const file = path.join(process.cwd(), 'public', 'img', 'maps', 'overwatch', `${recipe.slug}.svg`);
+      const file = path.join(
+        process.cwd(),
+        'public',
+        'img',
+        'maps',
+        'overwatch',
+        `${recipe.slug}.svg`
+      );
       weightKb = Math.round(statSync(file).size / 1024);
     } catch {
       // Maquette pas encore rendue (npm run maps:render) : on affiche 0 plutôt

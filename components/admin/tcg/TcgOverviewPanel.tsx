@@ -42,8 +42,16 @@
 // économique (gagner → ouvrir → recycler → racheter) : les afficher côte à côte
 // est le but de ce panneau, les confondre le viderait de son sens.
 //
-// FORME LUE de `GET /api/admin/tcg/overview` — chaque champ est revalidé ici,
-// et toute absence est gérée :
+// LE MODÈLE ET SA NORMALISATION VIVENT AILLEURS : `utils/tcg/overviewModel.ts`.
+// Ce sont des types et des fonctions pures, sans une ligne de JSX ; ils étaient
+// déjà séparés par leur propre bandeau et déjà exportés « pour les tests », deux
+// aveux qu'ils n'étaient pas à leur place. Le garde de taille des écrans admin
+// (`tests/unit/adminFileSizeGuard.test.ts`) l'a rendu concret en refusant ce
+// fichier à 809 lignes ; sa règle dit d'extraire un panneau plutôt que de geler,
+// et c'est ce qui a été fait. Ne reste ici que l'AFFICHAGE.
+//
+// FORME LUE de `GET /api/admin/tcg/overview` — chaque champ est revalidé dans
+// ce module, et toute absence est gérée :
 //   packs:  { granted, opened, pending, bySource: { victory, purchase } }
 //   coins:  { inCirculation, earned, spent, wallets, boosterPrice, truncated }
 //   cards:  { total, foil, byRarity, recycled, drawn, truncated }
@@ -65,245 +73,15 @@ import StatCard from '@/components/admin/dashboard/StatCard';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
 import { RARITY_ORDER } from '@/utils/tcg/rarity';
 import type { TcgRarity } from '@/utils/tcg/rarity';
-
-/* ---------------------------------------------------------------------------
- * Modèle normalisé
- * ------------------------------------------------------------------------- */
-
-/** `null` = non mesurable pour l'instant (cf. l'en-tête). */
-type Count = number | null;
-
-export type TcgOverviewPacks = {
-  granted: Count;
-  opened: Count;
-  pending: Count;
-  fromVictory: Count;
-  fromPurchase: Count;
-};
-
-export type TcgOverviewCoins = {
-  inCirculation: Count;
-  earned: Count;
-  spent: Count;
-  wallets: Count;
-  /** Constante de barème rappelée par l'endpoint, pas une mesure. */
-  boosterPrice: Count;
-  truncated: boolean;
-};
-
-export type TcgOverviewCards = {
-  /** Cartes ENCORE possédées. */
-  total: Count;
-  foil: Count;
-  byRarity: Record<TcgRarity, Count>;
-  recycled: Count;
-  /** Toutes les cartes jamais tirées, recyclées comprises. */
-  drawn: Count;
-  truncated: boolean;
-};
-
-export type TcgOverviewPhotos = {
-  pending: Count;
-  approved: Count;
-  rejected: Count;
-  optedIn: Count;
-  revoked: Count;
-};
-
-export type TcgOverviewSubject = {
-  kind: 'player' | 'team';
-  /** Identifiant du sujet, `null` si la réponse n'en portait pas. */
-  id: string | null;
-  name: string | null;
-  imageUrl: string | null;
-  count: Count;
-  foilCount: Count;
-  /** Fiche publique, `null` quand on ne peut pas la construire honnêtement. */
-  href: string | null;
-};
-
-export type TcgOverview = {
-  packs: TcgOverviewPacks;
-  coins: TcgOverviewCoins;
-  cards: TcgOverviewCards;
-  photos: TcgOverviewPhotos;
-  topSubjects: TcgOverviewSubject[];
-  generatedAt: string | null;
-};
-
-/* ---------------------------------------------------------------------------
- * Normalisation défensive (pure, exportée pour les tests)
- * ------------------------------------------------------------------------- */
-
-type RawRecord = Record<string, unknown>;
-
-function asRecord(value: unknown): RawRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? (value as RawRecord)
-    : {};
-}
-
-/**
- * Un compteur, ou `null`.
- *
- * Refuse tout ce qui n'est pas un nombre positif exploitable : absent, `null`,
- * chaîne, NaN, négatif. Un compteur négatif n'existe pas dans ce domaine — on
- * compte des paquets, des cartes, des pièces détenues. En afficher un
- * reviendrait à présenter une donnée corrompue avec l'aplomb d'une mesure.
- */
-function asCount(value: unknown): Count {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
-    return null;
-  }
-  return Math.floor(value);
-}
-
-function asText(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function normalizeSubject(raw: unknown): TcgOverviewSubject | null {
-  const rec = asRecord(raw);
-  const kind =
-    rec.kind === 'player' ? 'player' : rec.kind === 'team' ? 'team' : null;
-  // Sans nature, on ne sait ni comment étiqueter la ligne ni où elle pointe :
-  // on l'écarte plutôt que d'inventer l'une ou l'autre.
-  if (!kind) return null;
-
-  // L'endpoint nomme la clé selon la nature du sujet ; `id` est accepté en
-  // repli pour qu'un sujet reste identifiable même si la forme évolue.
-  const userId =
-    asText(rec.userId) ?? (kind === 'player' ? asText(rec.id) : null);
-  const teamId =
-    asText(rec.teamId) ?? (kind === 'team' ? asText(rec.id) : null);
-  const slug = asText(rec.slug);
-
-  return {
-    kind,
-    id: kind === 'player' ? userId : teamId,
-    name: asText(rec.name),
-    imageUrl: asText(rec.imageUrl),
-    count: asCount(rec.count),
-    foilCount: asCount(rec.foilCount),
-    href:
-      kind === 'player'
-        ? userId
-          ? `/player/${userId}`
-          : null
-        : // Une équipe s'adresse par son slug ; son uuid ne mène nulle part.
-          slug
-          ? `/team/${slug}`
-          : null,
-  };
-}
-
-/**
- * Traduit la réponse brute en modèle affichable.
- *
- * Écrite pour ne JAMAIS lever : une réponse vide, tronquée ou d'une forme
- * inattendue donne un panneau vide, pas un écran blanc. C'est une vue de
- * lecture — elle ne doit pas pouvoir casser la page qui l'héberge.
- */
-export function normalizeTcgOverview(raw: unknown): TcgOverview {
-  const root = asRecord(raw);
-  const packsRaw = asRecord(root.packs);
-  const bySource = asRecord(packsRaw.bySource);
-  const coinsRaw = asRecord(root.coins);
-  const cardsRaw = asRecord(root.cards);
-  const byRarityRaw = asRecord(cardsRaw.byRarity);
-  const photosRaw = asRecord(root.photos);
-
-  const byRarity = RARITY_ORDER.reduce(
-    (acc, rarity) => {
-      acc[rarity] = asCount(byRarityRaw[rarity]);
-      return acc;
-    },
-    {} as Record<TcgRarity, Count>
-  );
-
-  const topSubjects = (Array.isArray(root.topSubjects) ? root.topSubjects : [])
-    .map(normalizeSubject)
-    .filter((s): s is TcgOverviewSubject => s !== null)
-    // L'endpoint trie déjà ; on le refait pour que l'affichage tienne la
-    // promesse de son titre quoi qu'il renvoie. Les comptes absents ferment la
-    // marche plutôt que de passer pour les plus faibles.
-    .sort((a, b) => (b.count ?? -1) - (a.count ?? -1));
-
-  return {
-    packs: {
-      granted: asCount(packsRaw.granted),
-      opened: asCount(packsRaw.opened),
-      pending: asCount(packsRaw.pending),
-      fromVictory: asCount(bySource.victory),
-      fromPurchase: asCount(bySource.purchase),
-    },
-    coins: {
-      inCirculation: asCount(coinsRaw.inCirculation),
-      earned: asCount(coinsRaw.earned),
-      spent: asCount(coinsRaw.spent),
-      wallets: asCount(coinsRaw.wallets),
-      boosterPrice: asCount(coinsRaw.boosterPrice),
-      truncated: coinsRaw.truncated === true,
-    },
-    cards: {
-      total: asCount(cardsRaw.total),
-      foil: asCount(cardsRaw.foil),
-      byRarity,
-      recycled: asCount(cardsRaw.recycled),
-      drawn: asCount(cardsRaw.drawn),
-      truncated: cardsRaw.truncated === true,
-    },
-    photos: {
-      pending: asCount(photosRaw.pending),
-      approved: asCount(photosRaw.approved),
-      rejected: asCount(photosRaw.rejected),
-      optedIn: asCount(photosRaw.optedIn),
-      revoked: asCount(photosRaw.revoked),
-    },
-    topSubjects,
-    generatedAt: asText(root.generatedAt),
-  };
-}
-
-/**
- * Le tableau de bord n'a-t-il rien à montrer ?
- *
- * « Rien » = aucun compteur renseigné à une valeur non nulle ET aucun sujet.
- * `boosterPrice` est EXCLU du test : c'est une constante de barème, présente
- * même sur une économie qui n'a jamais tourné — la compter empêcherait à jamais
- * l'état vide de s'afficher. On distingue enfin ce cas d'une erreur : une
- * économie qui n'a pas démarré est un état normal, qui mérite un `EmptyState`
- * et non une alerte.
- */
-export function isTcgOverviewEmpty(data: TcgOverview): boolean {
-  const counters: Count[] = [
-    data.packs.granted,
-    data.packs.opened,
-    data.packs.pending,
-    data.packs.fromVictory,
-    data.packs.fromPurchase,
-    data.coins.inCirculation,
-    data.coins.earned,
-    data.coins.spent,
-    data.coins.wallets,
-    data.cards.total,
-    data.cards.foil,
-    data.cards.recycled,
-    data.cards.drawn,
-    ...RARITY_ORDER.map((r) => data.cards.byRarity[r]),
-    data.photos.pending,
-    data.photos.approved,
-    data.photos.rejected,
-    data.photos.optedIn,
-    data.photos.revoked,
-  ];
-  return (
-    data.topSubjects.length === 0 &&
-    counters.every((c) => c === null || c === 0)
-  );
-}
+import {
+  normalizeTcgOverview,
+  isTcgOverviewEmpty,
+} from '@/utils/tcg/overviewModel';
+import type {
+  Count,
+  TcgOverview,
+  TcgOverviewSubject,
+} from '@/utils/tcg/overviewModel';
 
 /* ---------------------------------------------------------------------------
  * Libellés
@@ -366,6 +144,7 @@ export type TcgOverviewLabels = {
   topSubjectsFoil: string;
   kindPlayer: string;
   kindTeam: string;
+  kindMap: string;
   unknownSubject: string;
 };
 
@@ -758,7 +537,9 @@ export default function TcgOverviewPanel({ labels }: Props): JSX.Element {
                       <span className="shrink-0 rounded-full bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-gray-400">
                         {subject.kind === 'team'
                           ? labels.kindTeam
-                          : labels.kindPlayer}
+                          : subject.kind === 'map'
+                            ? labels.kindMap
+                            : labels.kindPlayer}
                       </span>
 
                       {/* Un brillant est un exemplaire, pas une carte de plus :

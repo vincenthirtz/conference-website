@@ -26,6 +26,7 @@ import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { resolveActorPlayer } from '@/utils/botActor';
 import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
 import { BOOSTER_PRICE_COINS } from '@/utils/tcg/economy';
+import { cardSubjectKey } from '@/utils/tcg/subjectKey';
 import { logger } from '@/utils/logger';
 
 // Volontairement identique aux autres routes bot (`{15,25}`) et non au
@@ -99,7 +100,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     // bot annoncerait une collection que le site ne montre pas.
     const { data: cardRows, error: cardsError } = await supabaseAdmin
       .from('tcg_pack_cards')
-      .select('subject_kind, card_user_id, card_team_id, rarity')
+      .select('subject_kind, card_user_id, card_team_id, card_map_slug, rarity')
       .in('pack_id', openedPackIds)
       .is('recycled_at', null)
       .limit(MAX_CARDS);
@@ -111,17 +112,17 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
 
     const subjects = new Set<string>();
     for (const row of (cardRows ?? []) as Array<{
-      subject_kind: 'player' | 'team';
+      subject_kind: 'player' | 'team' | 'map';
       card_user_id: string | null;
       card_team_id: string | null;
+      card_map_slug: string | null;
       rarity: TcgRarity;
     }>) {
-      const subjectId =
-        row.subject_kind === 'player' ? row.card_user_id : row.card_team_id;
       // Le CHECK du schéma garantit exactement un sujet ; une ligne sans sujet
       // serait une corruption — on la saute plutôt que de la compter.
-      if (!subjectId) continue;
-      subjects.add(`${row.subject_kind}:${subjectId}`);
+      const key = cardSubjectKey(row);
+      if (!key) continue;
+      subjects.add(key);
       total += 1;
       if (
         bestRarity === null ||

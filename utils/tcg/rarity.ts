@@ -104,6 +104,28 @@ export function isFoil(roll: number): boolean {
 }
 
 /* ---------------------------------------------------------------------------
+ * Cartes de MAP
+ * ------------------------------------------------------------------------- */
+
+/**
+ * La rareté d'une carte de map — la même pour toutes, toujours.
+ *
+ * UNE MAP N'A PAS DE PALMARÈS, DONC PAS DE PRESTIGE. Tout le barème ci-dessus
+ * mesure un parcours : des badges gagnés, un rang obtenu, un rating atteint.
+ * Une map ne gagne rien et ne progresse pas. Lui attribuer une rareté variable
+ * demanderait d'inventer un second critère de valeur — l'ancienneté, la
+ * fréquence en tournoi, le goût de qui écrit la liste — c'est-à-dire une
+ * seconde échelle de prestige à côté de celle des joueuses. C'est exactement ce
+ * que ce module refuse depuis l'origine : deux échelles finissent par dire deux
+ * vérités différentes sur le même tournoi.
+ *
+ * Les cartes de map se distinguent donc par la BRILLANCE seule (`FOIL_CHANCE`),
+ * qui est une variante d'impression et non un degré de mérite. Une map
+ * brillante est rare sans prétendre valoir davantage.
+ */
+export const MAP_CARD_RARITY: TcgRarity = 'common';
+
+/* ---------------------------------------------------------------------------
  * Cartes d'ÉQUIPE
  * ------------------------------------------------------------------------- */
 

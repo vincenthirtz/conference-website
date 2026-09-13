@@ -1294,6 +1294,7 @@
       "updated_at"
     ],
     "tcg_pack_cards": [
+      "card_map_slug",
       "card_team_id",
       "card_user_id",
       "is_foil",

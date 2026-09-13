@@ -41,6 +41,7 @@ import { withAuthRoute } from '@/utils/staff';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import { RECYCLE_REFUND_COINS } from '@/utils/tcg/economy';
 import { refreshBalance } from '@/utils/tcg/grantVictoryRewards';
+import { cardSubjectKey } from '@/utils/tcg/subjectKey';
 import { logger } from '@/utils/logger';
 
 /** Borne de lecture, comme les autres routes de collection. */
@@ -50,9 +51,10 @@ const MAX_CARDS = 5000;
 type CardRow = {
   pack_id: string;
   position: number;
-  subject_kind: 'player' | 'team';
+  subject_kind: 'player' | 'team' | 'map';
   card_user_id: string | null;
   card_team_id: string | null;
+  card_map_slug: string | null;
 };
 
 export default withAuthRoute(async function handler(
@@ -121,7 +123,9 @@ export default withAuthRoute(async function handler(
   //    exemplaires. Une seule lecture sert aux deux.
   const { data: cardRows, error: cardsError } = await supabaseAdmin
     .from('tcg_pack_cards')
-    .select('pack_id, position, subject_kind, card_user_id, card_team_id')
+    .select(
+      'pack_id, position, subject_kind, card_user_id, card_team_id, card_map_slug'
+    )
     .in('pack_id', packIds)
     .is('recycled_at', null)
     .limit(MAX_CARDS);
@@ -144,9 +148,26 @@ export default withAuthRoute(async function handler(
       .json({ error: 'Carte déjà recyclée.', code: 'already_recycled' });
   }
 
-  const subjectOf = (c: CardRow) =>
-    c.subject_kind === 'player' ? `p:${c.card_user_id}` : `t:${c.card_team_id}`;
+  // Clé partagée avec les autres lecteurs (`utils/tcg/subjectKey.ts`) plutôt
+  // qu'un ternaire local : c'est la même question, elle doit avoir la même
+  // réponse partout — sinon une carte de map serait comptée comme une carte
+  // d'équipe sans sujet, et « mon seul exemplaire » deviendrait faux.
+  const subjectOf = (c: CardRow) => cardSubjectKey(c);
   const targetSubject = subjectOf(target);
+  if (!targetSubject) {
+    // Ligne sans sujet exploitable : le CHECK du schéma l'interdit, donc c'est
+    // une corruption. On refuse plutôt que de créditer une carte qu'on ne sait
+    // pas identifier — un crédit sans contrepartie est de la monnaie créée.
+    logger.error(
+      '[tcg/recycle] carte %s:%s sans sujet exploitable',
+      packId,
+      position
+    );
+    return res.status(409).json({
+      error: 'Cette carte est illisible.',
+      code: 'not_a_duplicate',
+    });
+  }
   const copies = cards.filter((c) => subjectOf(c) === targetSubject).length;
 
   if (copies < 2) {

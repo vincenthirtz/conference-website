@@ -68,6 +68,8 @@ import { formatZodError } from '@/utils/validation';
 import { BOOSTER_PRICE_COINS } from '@/utils/tcg/economy';
 import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
 import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
+import { readMapFaces } from '@/utils/tcg/readMapFaces';
+import { cardSubjectKey } from '@/utils/tcg/subjectKey';
 import { logger } from '@/utils/logger';
 
 /* -------------------------------------------------------------------------- */
@@ -115,6 +117,15 @@ export type TcgTopSubject =
       kind: 'team';
       teamId: string;
       slug: string | null;
+      name: string | null;
+      imageUrl: string | null;
+      count: number;
+      foilCount: number;
+    }
+  | {
+      kind: 'map';
+      /** Le slug EST l'identifiant : les maps vivent dans un registre, pas en base. */
+      slug: string;
       name: string | null;
       imageUrl: string | null;
       count: number;
@@ -405,7 +416,7 @@ async function handler(
   const bySubject = new Map<
     string,
     {
-      kind: 'player' | 'team';
+      kind: 'player' | 'team' | 'map';
       subjectId: string;
       count: number;
       foilCount: number;
@@ -419,7 +430,7 @@ async function handler(
     const { data, error } = await db
       .from('tcg_pack_cards')
       .select(
-        'pack_id, subject_kind, card_user_id, card_team_id, rarity, is_foil, recycled_at'
+        'pack_id, subject_kind, card_user_id, card_team_id, card_map_slug, rarity, is_foil, recycled_at'
       )
       .in('pack_id', packIds)
       .limit(MAX_CARDS);
@@ -433,9 +444,10 @@ async function handler(
       for (const rarity of RARITY_ORDER) rarityCounts[rarity] = null;
     } else {
       const cardRows = (data ?? []) as Array<{
-        subject_kind: 'player' | 'team';
+        subject_kind: 'player' | 'team' | 'map';
         card_user_id: string | null;
         card_team_id: string | null;
+        card_map_slug: string | null;
         rarity: TcgRarity;
         is_foil: boolean | null;
         recycled_at: string | null;
@@ -462,13 +474,12 @@ async function handler(
         // d'inventer une cinquième catégorie dans la réponse.
         if (typeof current === 'number') rarityCounts[row.rarity] = current + 1;
 
-        const subjectId =
-          row.subject_kind === 'player' ? row.card_user_id : row.card_team_id;
         // Le CHECK du schéma garantit exactement un sujet ; une ligne sans
         // sujet est une corruption, pas une carte à compter.
-        if (!subjectId) continue;
+        const key = cardSubjectKey(row);
+        if (!key) continue;
+        const subjectId = key.slice(key.indexOf(':') + 1);
 
-        const key = `${row.subject_kind}:${subjectId}`;
         const agg = bySubject.get(key);
         if (agg) {
           agg.count += 1;
@@ -498,7 +509,7 @@ async function handler(
   // non retiré). Lire `tcg_player_cards` en direct pour gagner une requête
   // contournerait ce filtre, et le panneau staff afficherait des photos que le
   // site public n'a plus le droit de montrer.
-  const [playerFaces, teamFaces] = await Promise.all([
+  const [playerFaces, teamFaces, mapFaces] = await Promise.all([
     readPlayerFaces(
       tenantId,
       ranked.filter((s) => s.kind === 'player').map((s) => s.subjectId)
@@ -507,9 +518,25 @@ async function handler(
       tenantId,
       ranked.filter((s) => s.kind === 'team').map((s) => s.subjectId)
     ),
+    // Sans `tenantId` : les maps sont un registre commun, pas des données de
+    // tenant. Rien à filtrer non plus — une maquette n'est pas une photo.
+    readMapFaces(
+      ranked.filter((s) => s.kind === 'map').map((s) => s.subjectId)
+    ),
   ]);
 
   const topSubjects: TcgTopSubject[] = ranked.map((subject) => {
+    if (subject.kind === 'map') {
+      const face = mapFaces.get(subject.subjectId);
+      return {
+        kind: 'map' as const,
+        slug: subject.subjectId,
+        name: face?.name ?? null,
+        imageUrl: face?.imageUrl ?? null,
+        count: subject.count,
+        foilCount: subject.foilCount,
+      };
+    }
     if (subject.kind === 'player') {
       const face = playerFaces.get(subject.subjectId);
       return {

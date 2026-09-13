@@ -1,6 +1,12 @@
 // components/tcg/TcgCard.tsx
 //
-// Une carte du TCG : une joueuse ou une équipe.
+// Une carte du TCG : une joueuse, une équipe ou une map.
+//
+// LA MAP EST LE SEUL SUJET DONT L'IMAGE EXISTE TOUJOURS. Une maquette voxel est
+// un dessin produit par le projet (`npm run maps:render`), pas la photo d'une
+// personne : rien à consentir, rien à révoquer, et donc jamais d'aplat de repli
+// — sauf si la map a quitté le registre, cas que `readMapFaces` rend
+// explicitement sans image plutôt que de pointer vers un fichier absent.
 //
 // LES COULEURS DE RARETÉ SONT CELLES DES BADGES DU PROFIL, pas une palette
 // inventée. `BADGE_TIER_STYLES` (fiche joueuse) habille déjà bronze / silver /
@@ -60,6 +66,12 @@ export type TcgCardSubject =
       name: string | null;
       slug: string | null;
       logoUrl: string | null;
+    }
+  | {
+      kind: 'map';
+      slug: string;
+      name: string | null;
+      imageUrl: string | null;
     };
 
 export type TcgCardProps = {
@@ -99,18 +111,24 @@ export default function TcgCard({
 }: TcgCardProps): JSX.Element {
   const name =
     subject.kind === 'player' ? subject.displayName : (subject.name ?? null);
-  const imageUrl =
-    subject.kind === 'player' ? subject.imageUrl : subject.logoUrl;
+  // Le cas particulier est l'ÉQUIPE, qui porte un `logoUrl` : joueuses et maps
+  // nomment toutes deux leur image `imageUrl`. Écrit dans ce sens pour qu'un
+  // quatrième sujet n'ait rien à ajouter ici.
+  const imageUrl = subject.kind === 'team' ? subject.logoUrl : subject.imageUrl;
   const href = noLink
     ? null
     : subject.kind === 'player'
       ? `/player/${subject.userId}`
-      : subject.slug
-        ? // `/team/` au SINGULIER : c'est la route publique réelle
-          // (pages/team/[slug]/index.tsx). Le pluriel menait à un 404 sur
-          // chaque carte d'équipe.
-          `/team/${subject.slug}`
-        : null;
+      : subject.kind === 'map'
+        ? // Aucune page par map n'existe : on vise l'ancre de la maquette sur
+          // la page du pool, que `MapCard` pose sur son article.
+          `/maps-voxel#${subject.slug}`
+        : subject.slug
+          ? // `/team/` au SINGULIER : c'est la route publique réelle
+            // (pages/team/[slug]/index.tsx). Le pluriel menait à un 404 sur
+            // chaque carte d'équipe.
+            `/team/${subject.slug}`
+          : null;
 
   const inner = (
     <>

@@ -53,6 +53,15 @@ type CollectionCard =
       rarity: TcgRarity;
       isFoil: boolean;
       count: number;
+    }
+  | {
+      kind: 'map';
+      slug: string;
+      name: string | null;
+      imageUrl: string | null;
+      rarity: TcgRarity;
+      isFoil: boolean;
+      count: number;
     };
 
 /**
@@ -79,6 +88,15 @@ type DrawnCard =
       logoUrl: string | null;
       rarity: TcgRarity;
       isFoil: boolean;
+    }
+  | {
+      position: number;
+      kind: 'map';
+      slug: string;
+      name: string | null;
+      imageUrl: string | null;
+      rarity: TcgRarity;
+      isFoil: boolean;
     };
 
 /**
@@ -90,7 +108,13 @@ type DrawnCard =
  * calculer avant de rafraîchir, après quoi tout paraît possédé.
  */
 function subjectKey(card: DrawnCard | CollectionCard): string {
-  return card.kind === 'player' ? `p-${card.userId}` : `t-${card.teamId}`;
+  // Pendant CLIENT de `utils/tcg/subjectKey.ts`, qui travaille sur des lignes
+  // de base ; ici les cartes arrivent déjà mises en forme par l'API et portent
+  // des noms de champs différents. Les préfixes doivent rester distincts entre
+  // types, sinon une map et une équipe de même identifiant se confondraient.
+  if (card.kind === 'player') return `p-${card.userId}`;
+  if (card.kind === 'map') return `m-${card.slug}`;
+  return `t-${card.teamId}`;
 }
 
 /** Un mouvement du registre. `amount` est signé : gain positif, dépense négative. */
@@ -465,13 +489,20 @@ function PlayerTcg() {
                             displayName: card.displayName,
                             imageUrl: card.imageUrl,
                           }
-                        : {
-                            kind: 'team',
-                            teamId: card.teamId,
-                            name: card.name,
-                            slug: card.slug,
-                            logoUrl: card.logoUrl,
-                          }
+                        : card.kind === 'map'
+                          ? {
+                              kind: 'map',
+                              slug: card.slug,
+                              name: card.name,
+                              imageUrl: card.imageUrl,
+                            }
+                          : {
+                              kind: 'team',
+                              teamId: card.teamId,
+                              name: card.name,
+                              slug: card.slug,
+                              logoUrl: card.logoUrl,
+                            }
                     }
                     rarity={card.rarity}
                     isFoil={card.isFoil}
@@ -587,13 +618,9 @@ function PlayerTcg() {
               </p>
               <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
                 {cards.map((card) => (
-                  <li
-                    key={
-                      card.kind === 'player'
-                        ? `p-${card.userId}`
-                        : `t-${card.teamId}`
-                    }
-                  >
+                  // `subjectKey` plutôt qu'une clé recopiée : une seule règle
+                  // d'identité pour la collection et pour la révélation.
+                  <li key={subjectKey(card)}>
                     <TcgCard
                       subject={
                         card.kind === 'player'
@@ -603,13 +630,20 @@ function PlayerTcg() {
                               displayName: card.displayName,
                               imageUrl: card.imageUrl,
                             }
-                          : {
-                              kind: 'team',
-                              teamId: card.teamId,
-                              name: card.name,
-                              slug: card.slug,
-                              logoUrl: card.logoUrl,
-                            }
+                          : card.kind === 'map'
+                            ? {
+                                kind: 'map',
+                                slug: card.slug,
+                                name: card.name,
+                                imageUrl: card.imageUrl,
+                              }
+                            : {
+                                kind: 'team',
+                                teamId: card.teamId,
+                                name: card.name,
+                                slug: card.slug,
+                                logoUrl: card.logoUrl,
+                              }
                       }
                       rarity={card.rarity}
                       isFoil={card.isFoil}

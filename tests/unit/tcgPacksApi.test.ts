@@ -183,10 +183,15 @@ describe('POST /api/player/tcg/packs — ouverture', () => {
 
     for (const card of res.body.cards) {
       expect(typeof card.position).toBe('number');
-      expect(['player', 'team']).toContain(card.kind);
+      expect(['player', 'team', 'map']).toContain(card.kind);
       // La face : un nom lisible, pas seulement un identifiant.
       if (card.kind === 'player') {
         expect(card.displayName).toMatch(/^Joueuse \d$/);
+      } else if (card.kind === 'map') {
+        // La face d'une map vient du REGISTRE, pas de la base : aucune donnée
+        // n'a été semée pour elle, et elle doit malgré tout être complète.
+        expect(typeof card.name).toBe('string');
+        expect(card.imageUrl).toMatch(/^\/img\/maps\/overwatch\/.+\.svg$/);
       } else {
         expect(card.name).toBe('Hinode Sparkles');
         expect(card.slug).toBe('hinode-sparkles');
@@ -226,9 +231,17 @@ describe('POST /api/player/tcg/packs — ouverture', () => {
     expect(store.tcg_pack_cards ?? []).toHaveLength(PACK_SIZE);
   });
 
-  it('ne consomme pas le paquet quand le vivier est vide', async () => {
-    // Le tirage précède la consommation : rien à distribuer ne doit pas coûter
-    // son paquet à quelqu'un.
+  it('ouvre un paquet de maps quand aucune joueuse ni équipe n’existe', async () => {
+    // CE CONTRAT A CHANGÉ avec l'arrivée des cartes de map, et ce test dit le
+    // nouveau plutôt que d'épingler l'ancien.
+    //
+    // AVANT : les deux viviers venaient de la base ; tous deux vides valaient
+    // `409 empty_pool`, et le paquet restait fermé pour ne pas être perdu.
+    // MAINTENANT : le vivier des maps est un registre EN MÉMOIRE, jamais vide.
+    // Un tenant sans aucune joueuse ni équipe classée reçoit donc un paquet
+    // complet de maps. C'est le comportement voulu — un paquet non vide vaut
+    // mieux qu'un paquet refusé — mais il rend `empty_pool` inatteignable par
+    // cette voie, ce que dit aussi le commentaire de la route.
     store.player_ratings = [] as any;
     store.teams = [] as any;
     seedPack();
@@ -236,9 +249,15 @@ describe('POST /api/player/tcg/packs — ouverture', () => {
     const res = makeRes();
     await handler(makeReq({ method: 'POST', body: { packId: PACK } }), res);
 
-    expect(res.statusCode).toBe(409);
-    expect(res.body.code).toBe('empty_pool');
-    expect((store.tcg_packs?.[0] as any).opened_at).toBeNull();
+    expect(res.statusCode).toBe(200);
+    // Le paquet reste COMPLET : l'emplacement de map, puis quatre maps de
+    // comblement — les viviers absents ne l'amputent pas.
+    expect(res.body.cards).toHaveLength(PACK_SIZE);
+    expect(
+      res.body.cards.every((c: { kind: string }) => c.kind === 'map')
+    ).toBe(true);
+    // Et le paquet est bien consommé, puisqu'il a distribué quelque chose.
+    expect((store.tcg_packs?.[0] as any).opened_at).toBeTruthy();
   });
 
   it('ne confirme pas l’existence d’un paquet qui n’est pas le sien', async () => {

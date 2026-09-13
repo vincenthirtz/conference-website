@@ -34449,7 +34449,7 @@ paths:
                       properties:
                         kind:
                           type: string
-                          enum: [player, team]
+                          enum: [player, team, map]
                         userId:
                           type: string
                           nullable: true
@@ -34462,18 +34462,33 @@ paths:
                         name:
                           type: string
                           nullable: true
+                          description: Cartes `team` et `map`.
                         slug:
                           type: string
                           nullable: true
+                          description: >-
+                            Adresse publique pour une carte `team` ; pour une
+                            carte `map`, c'est l'IDENTIFIANT lui-meme, les maps
+                            vivant dans un registre et non dans une table.
                         imageUrl:
                           type: string
                           nullable: true
+                          description: >-
+                            Cartes `player` et `map`. Pour une map, la maquette
+                            voxel pre-rendue ; `null` si la map a quitte le
+                            registre.
                         logoUrl:
                           type: string
                           nullable: true
+                          description: Cartes `team` seulement.
                         rarity:
                           type: string
                           enum: [common, rare, epic, legendary]
+                          description: >-
+                            Toujours `common` pour une carte `map` : une map n'a
+                            pas de palmares, donc pas de prestige a mesurer. Une
+                            rarete variable inventerait une seconde echelle de
+                            valeur a cote de celle des joueuses.
                         isFoil:
                           type: boolean
                         count:
@@ -34605,7 +34620,9 @@ paths:
                       `readTeamFaces` : la revelation herite ainsi de la
                       garantie de consentement (photo `approved` ET non
                       revoquee) au lieu d'ouvrir une seconde voie d'acces aux
-                      photos.
+                      photos. Les cartes `map`, elles, n'ont rien a consentir :
+                      une maquette voxel est un dessin produit par le projet,
+                      pas l'image d'une personne.
                     type: array
                     items:
                       type: object
@@ -34614,7 +34631,7 @@ paths:
                           type: integer
                         kind:
                           type: string
-                          enum: [player, team]
+                          enum: [player, team, map]
                         userId:
                           type: string
                           nullable: true
@@ -34628,15 +34645,20 @@ paths:
                         imageUrl:
                           type: string
                           nullable: true
-                          description: Cartes `player` seulement.
+                          description: >-
+                            Cartes `player` et `map`. Pour une map, la maquette
+                            voxel pre-rendue ; `null` si la map a quitte le
+                            registre.
                         name:
                           type: string
                           nullable: true
-                          description: Cartes `team` seulement.
+                          description: Cartes `team` et `map`.
                         slug:
                           type: string
                           nullable: true
-                          description: Cartes `team` seulement.
+                          description: >-
+                            Adresse publique pour une carte `team` ; pour une
+                            carte `map`, c'est l'IDENTIFIANT lui-meme.
                         logoUrl:
                           type: string
                           nullable: true
@@ -34644,6 +34666,9 @@ paths:
                         rarity:
                           type: string
                           enum: [common, rare, epic, legendary]
+                          description: >-
+                            Toujours `common` pour une carte `map` — cf. la
+                            description de `/api/player/tcg/collection`.
                         isFoil:
                           type: boolean
         '400':

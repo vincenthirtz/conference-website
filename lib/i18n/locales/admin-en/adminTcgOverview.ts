@@ -66,5 +66,6 @@ export default {
   topSubjectsFoil: 'incl. {count} foil',
   kindPlayer: 'Player',
   kindTeam: 'Team',
+  kindMap: 'Map',
   unknownSubject: 'Unknown subject',
 };

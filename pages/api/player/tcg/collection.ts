@@ -26,6 +26,8 @@ import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
 import { POOL_LIMIT } from '@/utils/tcg/drawPack';
 import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
+import { readMapFaces, MAP_POOL_SLUGS } from '@/utils/tcg/readMapFaces';
+import { cardSubjectKey } from '@/utils/tcg/subjectKey';
 import { logger } from '@/utils/logger';
 
 /** Borne de sécurité : au-delà, la collection se pagine (v2). */
@@ -33,7 +35,7 @@ const MAX_PACKS = 500;
 const MAX_CARDS = 5000;
 
 type Aggregated = {
-  kind: 'player' | 'team';
+  kind: 'player' | 'team' | 'map';
   subjectId: string;
   count: number;
   /** Meilleure rareté possédée : la rareté est figée par tirage et peut différer d'un exemplaire à l'autre. */
@@ -90,7 +92,9 @@ export default withAuthRoute(async function handler(
   //    carte ET la garder.
   const { data: cardRows, error: cardError } = await supabaseAdmin
     .from('tcg_pack_cards')
-    .select('subject_kind, card_user_id, card_team_id, rarity, is_foil')
+    .select(
+      'subject_kind, card_user_id, card_team_id, card_map_slug, rarity, is_foil'
+    )
     .in('pack_id', packIds)
     .is('recycled_at', null)
     .limit(MAX_CARDS);
@@ -103,19 +107,19 @@ export default withAuthRoute(async function handler(
   // 3) Agrégation par sujet.
   const byKey = new Map<string, Aggregated>();
   for (const row of (cardRows ?? []) as Array<{
-    subject_kind: 'player' | 'team';
+    subject_kind: 'player' | 'team' | 'map';
     card_user_id: string | null;
     card_team_id: string | null;
+    card_map_slug: string | null;
     rarity: TcgRarity;
     is_foil: boolean;
   }>) {
-    const subjectId =
-      row.subject_kind === 'player' ? row.card_user_id : row.card_team_id;
     // Le CHECK du schéma garantit exactement un sujet ; une ligne sans sujet
     // serait une corruption, on la saute plutôt que d'afficher une carte vide.
-    if (!subjectId) continue;
+    const key = cardSubjectKey(row);
+    if (!key) continue;
+    const subjectId = key.slice(key.indexOf(':') + 1);
 
-    const key = `${row.subject_kind}:${subjectId}`;
     const existing = byKey.get(key);
     if (!existing) {
       byKey.set(key, {
@@ -139,7 +143,7 @@ export default withAuthRoute(async function handler(
   const aggregated = [...byKey.values()];
 
   // 4) Les faces — relues, jamais figées (retrait de consentement rétroactif).
-  const [playerFaces, teamFaces] = await Promise.all([
+  const [playerFaces, teamFaces, mapFaces] = await Promise.all([
     readPlayerFaces(
       tenantId,
       aggregated.filter((a) => a.kind === 'player').map((a) => a.subjectId)
@@ -147,6 +151,11 @@ export default withAuthRoute(async function handler(
     readTeamFaces(
       tenantId,
       aggregated.filter((a) => a.kind === 'team').map((a) => a.subjectId)
+    ),
+    // Pas de `tenantId` : les maps ne sont pas des données de tenant mais un
+    // registre commun, lu en mémoire (cf. `utils/tcg/readMapFaces.ts`).
+    readMapFaces(
+      aggregated.filter((a) => a.kind === 'map').map((a) => a.subjectId)
     ),
   ]);
 
@@ -158,6 +167,18 @@ export default withAuthRoute(async function handler(
           kind: 'player' as const,
           userId: a.subjectId,
           displayName: face?.displayName ?? null,
+          imageUrl: face?.imageUrl ?? null,
+          rarity: a.rarity,
+          isFoil: a.hasFoil,
+          count: a.count,
+        };
+      }
+      if (a.kind === 'map') {
+        const face = mapFaces.get(a.subjectId);
+        return {
+          kind: 'map' as const,
+          slug: a.subjectId,
+          name: face?.name ?? null,
           imageUrl: face?.imageUrl ?? null,
           rarity: a.rarity,
           isFoil: a.hasFoil,
@@ -219,7 +240,11 @@ export default withAuthRoute(async function handler(
   } else {
     const players = Math.min(poolPlayersRes.count ?? 0, POOL_LIMIT);
     const teams = Math.min(poolTeamsRes.count ?? 0, POOL_LIMIT);
-    pool = { distinct: players + teams };
+    // Les maps ne se comptent pas en base : leur vivier EST le registre, et
+    // c'est la même liste que celle passée au tirage — deux comptages séparés
+    // finiraient par promettre des cartes qu'aucun paquet ne peut donner.
+    const maps = Math.min(MAP_POOL_SLUGS.length, POOL_LIMIT);
+    pool = { distinct: players + teams + maps };
   }
 
   return res.status(200).json({

@@ -11,16 +11,27 @@
 // barème réduit « spécial tirage » : une seconde échelle de prestige, que le
 // projet refuse depuis `utils/tcg/rarity.ts`.
 //
-// UNE CARTE D'ÉQUIPE PAR PAQUET, PAS UNE PROBABILITÉ PAR EMPLACEMENT. Tirer
-// chaque emplacement indépendamment laisserait sortir des paquets entièrement
-// composés d'équipes — rare, mais absurde le jour où ça arrive. Un emplacement
-// réservé donne une composition lisible : « quatre joueuses et une équipe ».
+// UNE CARTE D'ÉQUIPE ET UNE CARTE DE MAP PAR PAQUET, PAS UNE PROBABILITÉ PAR
+// EMPLACEMENT. Tirer chaque emplacement indépendamment laisserait sortir des
+// paquets entièrement composés d'équipes — rare, mais absurde le jour où ça
+// arrive. Des emplacements réservés donnent une composition lisible : « trois
+// joueuses, une équipe, une map ».
 
 /** Cartes par paquet. */
 export const PACK_SIZE = 5;
 
 /** Emplacements réservés aux équipes, quand le vivier en contient. */
 export const TEAM_SLOTS = 1;
+
+/**
+ * Emplacements réservés aux maps, quand le registre en contient.
+ *
+ * Le vivier des maps est un REGISTRE EN MÉMOIRE (`config/maps/overwatch.ts`),
+ * pas une table : il n'est jamais vide en pratique, et n'a pas besoin d'être
+ * plafonné par `POOL_LIMIT`. Il reste traité comme les autres ici — un vivier
+ * qu'on pourrait vider sans casser le tirage.
+ */
+export const MAP_SLOTS = 1;
 
 /**
  * Sujets lus au plus dans chaque vivier lors d'un tirage.
@@ -36,7 +47,8 @@ export const POOL_LIMIT = 1000;
 
 export type DrawnSubject =
   | { kind: 'player'; userId: string }
-  | { kind: 'team'; teamId: string };
+  | { kind: 'team'; teamId: string }
+  | { kind: 'map'; slug: string };
 
 /**
  * Choisit `count` éléments distincts, ou moins si le vivier est trop petit.
@@ -70,35 +82,64 @@ function pickDistinct<T>(
 /**
  * Les sujets d'un paquet, dans l'ordre d'affichage.
  *
- * Quand un vivier manque, l'autre comble : un paquet fait toujours `PACK_SIZE`
- * cartes tant qu'il reste des sujets, plutôt que de sortir amputé. Si les deux
- * viviers sont vides, on rend un tableau vide et c'est à l'appelant de refuser
- * l'ouverture — un paquet sans carte n'est pas un paquet.
+ * Quand un vivier manque, les autres comblent : un paquet fait toujours
+ * `PACK_SIZE` cartes tant qu'il reste des sujets, plutôt que de sortir amputé.
+ * Si TOUS les viviers sont vides, on rend un tableau vide et c'est à l'appelant
+ * de refuser l'ouverture — un paquet sans carte n'est pas un paquet.
+ *
+ * L'ORDRE DE COMBLEMENT EST DÉLIBÉRÉ : les joueuses d'abord, puis les équipes,
+ * puis les maps. Un TCG de compétition parle d'abord de celles qui jouent ; les
+ * maps sont un décor du tournoi, pas son sujet. Elles ne doivent donc jamais
+ * évincer une joueuse d'un paquet, seulement occuper une place que personne ne
+ * réclame.
  */
 export function pickPackSubjects(input: {
   playerIds: readonly string[];
   teamIds: readonly string[];
+  /** Slugs du registre des maps ; vide = pas de carte de map. */
+  mapSlugs?: readonly string[];
   /** Au moins `PACK_SIZE` valeurs dans [0, 1). */
   rolls: readonly number[];
 }): DrawnSubject[] {
   const { playerIds, teamIds, rolls } = input;
+  const mapSlugs = input.mapSlugs ?? [];
 
   const teamCount = Math.min(TEAM_SLOTS, teamIds.length);
   const teams = pickDistinct(teamIds, teamCount, rolls);
 
-  // Les joueuses occupent le reste, et comblent les emplacements d'équipe
-  // laissés vacants par un vivier d'équipes trop court.
-  const playerCount = PACK_SIZE - teams.length;
-  const players = pickDistinct(playerIds, playerCount, rolls.slice(teamCount));
+  const mapCount = Math.min(MAP_SLOTS, mapSlugs.length);
+  const maps = pickDistinct(mapSlugs, mapCount, rolls.slice(teamCount));
 
-  // Si les joueuses n'ont pas suffi, on complète avec d'autres équipes.
-  const shortfall = PACK_SIZE - teams.length - players.length;
+  // Les joueuses occupent le reste, et comblent les emplacements réservés
+  // laissés vacants par un vivier d'équipes ou de maps trop court.
+  const playerCount = PACK_SIZE - teams.length - maps.length;
+  const players = pickDistinct(
+    playerIds,
+    playerCount,
+    rolls.slice(teamCount + mapCount)
+  );
+
+  // Si les joueuses n'ont pas suffi, on complète avec d'autres équipes, puis
+  // avec d'autres maps — dans cet ordre, cf. l'en-tête de la fonction.
+  let shortfall = PACK_SIZE - teams.length - maps.length - players.length;
+  const consumed = teamCount + mapCount + players.length;
+
   const extraTeams =
     shortfall > 0
       ? pickDistinct(
           teamIds.filter((id) => !teams.includes(id)),
           shortfall,
-          rolls.slice(teamCount + players.length)
+          rolls.slice(consumed)
+        )
+      : [];
+  shortfall -= extraTeams.length;
+
+  const extraMaps =
+    shortfall > 0
+      ? pickDistinct(
+          mapSlugs.filter((s) => !maps.includes(s)),
+          shortfall,
+          rolls.slice(consumed + extraTeams.length)
         )
       : [];
 
@@ -106,5 +147,7 @@ export function pickPackSubjects(input: {
     ...players.map((userId): DrawnSubject => ({ kind: 'player', userId })),
     ...teams.map((teamId): DrawnSubject => ({ kind: 'team', teamId })),
     ...extraTeams.map((teamId): DrawnSubject => ({ kind: 'team', teamId })),
+    ...maps.map((slug): DrawnSubject => ({ kind: 'map', slug })),
+    ...extraMaps.map((slug): DrawnSubject => ({ kind: 'map', slug })),
   ];
 }

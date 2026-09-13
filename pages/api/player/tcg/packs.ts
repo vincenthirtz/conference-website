@@ -27,10 +27,16 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import { readPlayerProfile } from '@/utils/rating/readPlayerProfile';
-import { cardRarity, isFoil } from '@/utils/tcg/rarity';
+import { cardRarity, isFoil, MAP_CARD_RARITY } from '@/utils/tcg/rarity';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import { readTeamRarity } from '@/utils/tcg/readTeamRarity';
-import { pickPackSubjects, PACK_SIZE, POOL_LIMIT } from '@/utils/tcg/drawPack';
+import {
+  pickPackSubjects,
+  PACK_SIZE,
+  POOL_LIMIT,
+  type DrawnSubject,
+} from '@/utils/tcg/drawPack';
+import { readMapFaces, MAP_POOL_SLUGS } from '@/utils/tcg/readMapFaces';
 import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
 // Le prix ET le barème sont rendus par l'API plutôt que recopiés dans la page :
 // importer `economy.ts` côté client ferait entrer le moteur de rating dont il
@@ -218,11 +224,28 @@ async function openPack(
   const subjects = pickPackSubjects({
     playerIds,
     teamIds,
-    rolls: Array.from({ length: PACK_SIZE * 2 }, () => Math.random()),
+    // Le vivier des maps n'est pas lu en base : c'est un registre en mémoire
+    // (`config/maps/overwatch.ts`), Overwatch n'exposant aucune API de maps.
+    // Aucune requête de plus, donc, et la même liste sert de dénominateur à la
+    // progression de collection.
+    mapSlugs: MAP_POOL_SLUGS,
+    // Quatre fois la taille du paquet : trois viviers, chacun avec son repli.
+    // Un tableau trop court n'échouerait pas — `pickDistinct` retombe sur « le
+    // premier disponible » — mais rendrait le tirage discrètement moins
+    // aléatoire, ce qui ne se verrait sur aucun test.
+    rolls: Array.from({ length: PACK_SIZE * 4 }, () => Math.random()),
   });
 
   if (subjects.length === 0) {
     // Rien à distribuer : le paquet reste FERMÉ, il sera ouvrable plus tard.
+    //
+    // DEVENU QUASI INATTEIGNABLE depuis l'arrivée des cartes de map : le vivier
+    // des maps est un registre en mémoire, jamais vide, donc un tenant sans
+    // aucune joueuse ni équipe classée reçoit un paquet de maps plutôt qu'un
+    // refus — et c'est mieux ainsi, un paquet non vide valant mieux qu'un
+    // paquet refusé. La garde reste en place parce qu'elle ne coûte rien et
+    // qu'elle couvre le jour où le registre serait vidé ; elle n'est plus la
+    // protection qu'elle était, et le dire vaut mieux que le laisser croire.
     return res
       .status(409)
       .json({ error: 'Aucune carte disponible.', code: 'empty_pool' });
@@ -260,6 +283,7 @@ async function openPack(
         subject_kind: subject.kind,
         card_user_id: subject.kind === 'player' ? subject.userId : null,
         card_team_id: subject.kind === 'team' ? subject.teamId : null,
+        card_map_slug: subject.kind === 'map' ? subject.slug : null,
         rarity,
         is_foil: isFoil(Math.random()),
       };
@@ -314,10 +338,15 @@ async function openPack(
   const drawnTeamIds = cards
     .filter((c) => c.subject_kind === 'team')
     .map((c) => c.card_team_id as string);
+  const drawnMapSlugs = cards
+    .filter((c) => c.subject_kind === 'map')
+    .map((c) => c.card_map_slug as string);
 
-  const [playerFaces, teamFaces] = await Promise.all([
+  const [playerFaces, teamFaces, mapFaces] = await Promise.all([
     readPlayerFaces(tenantId, drawnPlayerIds),
     readTeamFaces(tenantId, drawnTeamIds),
+    // Sans `tenantId` : une map appartient au registre commun, pas au tenant.
+    readMapFaces(drawnMapSlugs),
   ]);
 
   return res.status(200).json({
@@ -343,6 +372,18 @@ async function openPack(
           imageUrl: face?.imageUrl ?? null,
         };
       }
+      if (c.subject_kind === 'map') {
+        const face = mapFaces.get(c.card_map_slug as string);
+        return {
+          ...base,
+          kind: 'map' as const,
+          userId: null,
+          teamId: null,
+          slug: c.card_map_slug,
+          name: face?.name ?? null,
+          imageUrl: face?.imageUrl ?? null,
+        };
+      }
       const face = teamFaces.get(c.card_team_id as string);
       return {
         ...base,
@@ -362,15 +403,20 @@ async function openPack(
 /* -------------------------------------------------------------------------- */
 
 async function rarityOf(
-  subject:
-    | { kind: 'player'; userId: string }
-    | { kind: 'team'; teamId: string },
+  subject: DrawnSubject,
   tenantId: string
 ): Promise<TcgRarity> {
   try {
     if (subject.kind === 'player') {
       const profile = await readPlayerProfile(subject.userId, tenantId);
       return cardRarity(profile?.achievements.badges ?? []);
+    }
+
+    if (subject.kind === 'map') {
+      // Rareté FIXE, et aucune lecture : une map n'a pas de palmarès, donc pas
+      // de prestige à mesurer. Le détail du raisonnement est dans
+      // `utils/tcg/rarity.ts`, où vivent toutes les décisions de rareté.
+      return MAP_CARD_RARITY;
     }
 
     // Lecture PARTAGÉE avec la page publique d'équipe : recopier ces deux
