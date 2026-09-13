@@ -77,6 +77,9 @@ import { fetchTwitchLiveStatus } from '@/utils/twitch';
 import { TWITCH_DROP_COINS, getEarnSource } from '@/utils/tcg/earnSources';
 import { refreshBalance } from '@/utils/tcg/grantVictoryRewards';
 import { findAuthUserIdByTwitchUserId } from '@/utils/auth/twitchLinks';
+import { getDiscordLinkForUser } from '@/utils/discordLinks';
+import { emitBotEvent } from '@/utils/botEvents';
+import { absoluteSiteUrl } from '@/utils/siteUrl';
 
 /** Le corps doit rester brut : la signature couvre les octets reçus. */
 export const config = { api: { bodyParser: false } };
@@ -590,6 +593,10 @@ export default async function handler(
   const broadcasterLogin: string | null =
     parsed.data.event.broadcaster_user_login ?? null;
   const twitchUserId: string = parsed.data.event.user_id;
+  // Pseudo de la SPECTATRICE, pour l'annonce seulement. Il se renomme, donc
+  // rien ne s'y appuie pour décider d'un gain — c'est `twitchUserId` qui fait
+  // foi (cf. `resolveSiteUserFromTwitch`).
+  const twitchUserLogin: string | null = parsed.data.event.user_login ?? null;
 
   if (subscriptionType !== DROP_SUBSCRIPTION_TYPE) {
     return res.status(200).json({ ok: true, status: 'ignored_event_type' });
@@ -672,5 +679,58 @@ export default async function handler(
       .json({ error: 'Reward not granted', code: 'GRANT_FAILED' });
   }
 
+  // SEULEMENT sur une attribution RÉELLE. `replayed` signifie que la contrainte
+  // d'unicité a écarté un doublon — Twitch retente volontiers une livraison, et
+  // renotifier à chaque tentative transformerait un incident réseau en spam de
+  // messages privés. `unsupported` n'a rien attribué du tout.
+  if (outcome === 'granted') {
+    await announceTwitchDrop({
+      tenantId,
+      userId: identity.userId,
+      twitchLogin: twitchUserLogin,
+    });
+  }
+
   return res.status(200).json({ ok: true, status: outcome });
+}
+
+/**
+ * Émet `tcg.drop_granted` — le DM Discord qui annonce la carte réclamée.
+ *
+ * LE LIEN DISCORD EST RÉSOLU ICI, pas côté bot : le site est le seul à
+ * connaître la correspondance compte ↔ Discord, et la lui laisser porter évite
+ * au bot une requête par destinataire. Même choix que `announceNewPacks`.
+ *
+ * Une joueuse sans compte Discord lié n'est PAS une erreur : l'événement part
+ * quand même avec `discordUserId: null`, et le consommateur décide — ici, pas
+ * de canal, donc rien. Elle verra sa carte sur le site, et l'overlay l'aura
+ * annoncée à l'antenne.
+ *
+ * NE LÈVE JAMAIS. On vient de créditer quelqu'un : une notification ratée ne
+ * doit pas transformer une attribution réussie en 503, qui ferait retenter
+ * Twitch et rejouer tout le chemin.
+ */
+async function announceTwitchDrop(input: {
+  tenantId: string;
+  userId: string;
+  twitchLogin: string | null;
+}): Promise<void> {
+  try {
+    const link = await getDiscordLinkForUser(input.userId);
+    await emitBotEvent(
+      'tcg.drop_granted',
+      {
+        userId: input.userId,
+        discordUserId: link?.discordUserId ?? null,
+        discordUsername: link?.discordUsername ?? null,
+        twitchLogin: input.twitchLogin,
+        coins: TWITCH_DROP_COINS,
+        // Absolue : ce lien part dans un DM, où un chemin relatif est inerte.
+        ctaUrl: absoluteSiteUrl('/player/tcg'),
+      },
+      input.tenantId
+    );
+  } catch (err) {
+    logger.error('[twitch/tcg-drop] annonce non émise', err);
+  }
 }

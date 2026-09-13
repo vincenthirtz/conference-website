@@ -127,6 +127,23 @@ export const BOT_EVENT_NAMES = [
   // sans relire avant d'écrire. C'est la relecture préalable qui avait produit
   // quatre publications Discord en double le 2026-09-12.
   'tcg.pack_granted',
+
+  // TCG : une carte réclamée EN DIRECT sur Twitch (points de chaîne).
+  //
+  // MÊME DISCIPLINE QUE `tcg.pack_granted` : un événement par destinataire, et
+  // ÉMIS UNIQUEMENT SUR UNE ATTRIBUTION RÉELLE. `grantTwitchDrop` rend
+  // `granted` | `replayed` | `unsupported` ; seul `granted` notifie. Un rejeu
+  // de livraison EventSub — Twitch retente volontiers — ne doit renotifier
+  // personne, et l'unicité vient du schéma (UNIQUE sur `source_ref` = le
+  // direct), jamais d'une relecture préalable.
+  //
+  // PAS DE NOTIFICATION PUSH POUR CET ÉVÉNEMENT, à dessein : il n'est PAS dans
+  // `WEB_PUSH_EVENT_TYPES`. La branche par défaut du dispatcher préviendrait
+  // tout le staff du tenant et les pole admins — pour un gain qui ne regarde
+  // qu'une personne. Et celle-ci vient précisément de dépenser ses points
+  // devant son écran : elle n'a pas besoin qu'on l'avertisse d'un geste qu'elle
+  // vient de faire. Le DM Discord suffit, et l'overlay le montre à l'antenne.
+  'tcg.drop_granted',
 ] as const;
 
 export type BotEventName = (typeof BOT_EVENT_NAMES)[number];

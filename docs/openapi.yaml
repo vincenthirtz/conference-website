@@ -33466,6 +33466,83 @@ paths:
                 additionalProperties: true
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/bot/v1/players/by-discord/{discordUserId}/twitch:
+    get:
+      summary: Etat du rattachement Twitch d'une joueuse, vu du bot Discord.
+      description: |
+        Alimente la commande `/twitch`. Une carte reclamee pendant un direct n'a
+        de destinataire que si le compte Twitch est relie au compte du site : le
+        bot est la ou les joueuses sont deja, il leur dit ou elles en sont et
+        donne le lien.
+
+        `ctaUrl` est compose PAR LE SITE, en absolu — une base recopiee cote bot
+        mentirait au premier changement. Il vise `/player/profile` et NON la
+        route OAuth : un lien recu en message prive s'ouvre souvent dans un
+        navigateur deconnecte, ou la page redirige proprement vers la connexion
+        tandis que `/api/auth/twitch/start` rendrait un 401 JSON, c'est-a-dire
+        un cul-de-sac.
+
+        AUCUN IDENTIFIANT TWITCH N'EST RENDU, seulement le pseudo : il est deja
+        public et sert a confirmer QUEL compte est relie (une joueuse peut en
+        avoir plusieurs), la ou `twitch_user_id` n'apprendrait rien et n'a pas a
+        circuler. Rate-limit 60 / min.
+      operationId: botGetPlayerTwitchLink
+      tags:
+        - bot
+      parameters:
+        - name: discordUserId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifiant Discord de la joueuse.
+      responses:
+        '200':
+          description: Etat du rattachement Twitch.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - authUserId
+                  - discordUserId
+                  - configured
+                  - linked
+                properties:
+                  authUserId:
+                    type: string
+                    format: uuid
+                  discordUserId:
+                    type: string
+                  configured:
+                    type: boolean
+                    description: >-
+                      False quand la fonctionnalite est dormante cote site : la
+                      commande le dit au lieu d'offrir un lien inutile.
+                  linked:
+                    type: boolean
+                  twitchLogin:
+                    type: string
+                    nullable: true
+                  linkedAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  ctaUrl:
+                    type: string
+                    format: uri
+        '400':
+          description: "`discordUserId` invalide (`INVALID_DISCORD_ID`)."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: >-
+            Compte Discord relie a aucun compte du site (`NOT_LINKED`). La
+            commande le traduit en « utilise /inscription ».
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          description: Erreur de lecture.
   /api/player/twitch-status:
     get:
       summary: Etat du lien Twitch de la joueuse courante.
