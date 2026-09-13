@@ -80,6 +80,11 @@ import { findAuthUserIdByTwitchUserId } from '@/utils/auth/twitchLinks';
 import { getDiscordLinkForUser } from '@/utils/discordLinks';
 import { emitBotEvent } from '@/utils/botEvents';
 import { absoluteSiteUrl } from '@/utils/siteUrl';
+import {
+  getValidBroadcasterToken,
+  helixFetch,
+  hasScope,
+} from '@/utils/twitchBroadcaster';
 
 /** Le corps doit rester brut : la signature couvre les octets reçus. */
 export const config = { api: { bodyParser: false } };
@@ -437,6 +442,88 @@ export async function grantTwitchDrop(input: {
  * `undefined` = erreur de lecture (à réessayer) ; `null` = chaîne réellement
  * inconnue. Un `if (error) return null` transformerait la panne en décision.
  */
+/* -----------------------------------------------------------
+ * Résolution de la demande — rendre ses points, ou honorer
+ * ---------------------------------------------------------*/
+
+/** Scope que la chaîne doit avoir accordé pour qu'on puisse résoudre. */
+const REDEMPTIONS_MANAGE_SCOPE = 'channel:manage:redemptions';
+
+/**
+ * Marque une demande de points de chaîne comme honorée ou annulée.
+ *
+ * POURQUOI CETTE FONCTION EXISTE — un préjudice réel, pas un confort. Sans
+ * elle, une spectatrice qui échange 10 000 points sans avoir rattaché son
+ * compte perd ses points ET n'a pas de carte : le webhook acquittait poliment
+ * en 200 et la demande restait « en attente » pour l'éternité. Twitch sait
+ * rembourser — `CANCELED` rend les points — et la chaîne nous a accordé le
+ * scope pour le faire.
+ *
+ * ON N'ANNULE PAS TOUT, et la nuance compte :
+ *   - `granted`               → FULFILLED : la carte est donnée, c'est honoré ;
+ *   - identité non rattachée,
+ *     hors direct,
+ *     récompense non configurée → CANCELED : elle a payé, elle n'a rien eu ;
+ *   - `replayed`              → RIEN. La carte a déjà été donnée une fois ;
+ *     rembourser offrirait la carte ET les points ;
+ *   - autre récompense        → RIEN. Ce n'est pas la nôtre, on n'y touche pas ;
+ *   - panne transitoire (503) → RIEN. Twitch réessaiera, annuler fermerait la
+ *     porte à la seconde tentative.
+ *
+ * NE LÈVE JAMAIS, ET NE CHANGE JAMAIS LE SORT DE L'APPEL. Une annulation qui
+ * échoue est ennuyeuse ; transformer pour autant une attribution réussie en 503
+ * ferait rejouer tout le chemin à Twitch et pourrait distribuer deux fois. Le
+ * pire cas ici est une demande qui reste en attente — exactement l'état
+ * d'avant, donc jamais une régression.
+ */
+async function resolveRedemption(input: {
+  tenantId: string;
+  rewardId: string;
+  redemptionId: string;
+  status: 'FULFILLED' | 'CANCELED';
+}): Promise<void> {
+  if (!supabaseAdmin) return;
+  try {
+    const token = await getValidBroadcasterToken(supabaseAdmin, input.tenantId);
+    if (!token) return;
+    if (!hasScope(token.scope, REDEMPTIONS_MANAGE_SCOPE)) {
+      logger.warn(
+        '[twitch/tcg-drop] scope %s absent — demande %s laissée en attente',
+        REDEMPTIONS_MANAGE_SCOPE,
+        input.redemptionId
+      );
+      return;
+    }
+
+    const upstream = await helixFetch(
+      token.accessToken,
+      `/channel_points/custom_rewards/redemptions?broadcaster_id=${encodeURIComponent(
+        token.broadcasterId
+      )}&reward_id=${encodeURIComponent(
+        input.rewardId
+      )}&id=${encodeURIComponent(input.redemptionId)}`,
+      { method: 'PATCH', body: JSON.stringify({ status: input.status }) }
+    );
+
+    if (!upstream.ok) {
+      logger.warn(
+        '[twitch/tcg-drop] résolution %s refusée (HTTP %s) pour %s',
+        input.status,
+        upstream.status,
+        input.redemptionId
+      );
+      return;
+    }
+    logger.info(
+      '[twitch/tcg-drop] demande %s → %s',
+      input.redemptionId,
+      input.status
+    );
+  } catch (err) {
+    logger.warn('[twitch/tcg-drop] résolution impossible', err);
+  }
+}
+
 export type BroadcasterBinding = {
   tenantId: string;
   /**
@@ -638,6 +725,9 @@ export default async function handler(
   // Récompense échangée. `null` quand la charge ne la porte pas : traité comme
   // « pas la bonne », donc sans attribution — cf. le filtre plus bas.
   const rewardId: string | null = parsed.data.event.reward?.id ?? null;
+  // Identifiant de la DEMANDE (pas de la récompense) : c'est lui qui permet de
+  // rendre ses points à la spectatrice quand on ne peut rien lui attribuer.
+  const redemptionId: string = parsed.data.event.id;
 
   if (subscriptionType !== DROP_SUBSCRIPTION_TYPE) {
     return res.status(200).json({ ok: true, status: 'ignored_event_type' });
@@ -683,6 +773,17 @@ export default async function handler(
       '[twitch/tcg-drop] aucune récompense désignée pour la chaîne %s — rien attribué',
       broadcasterId
     );
+    // Notre oubli de configuration, pas le sien : on lui rend ses points.
+    // `rewardId` est celui de l'ÉVÉNEMENT (non nul ici, sinon on serait sorti
+    // en `other_reward`) — on n'a pas de récompense désignée à comparer.
+    if (rewardId) {
+      await resolveRedemption({
+        tenantId,
+        rewardId,
+        redemptionId,
+        status: 'CANCELED',
+      });
+    }
     return res.status(200).json({ ok: true, status: 'reward_not_configured' });
   }
   if (rewardId !== binding.rewardId) {
@@ -709,6 +810,15 @@ export default async function handler(
       '[twitch/tcg-drop] identité Twitch non résolue (%s) — aucune récompense',
       identity.reason
     );
+    // LE CAS QUI JUSTIFIE TOUT CE MÉCANISME. Elle a dépensé ses points et
+    // n'aura pas de carte, faute de compte rattaché. Lui rendre ses points est
+    // le minimum ; le message de chat (lot suivant) lui dira pourquoi.
+    await resolveRedemption({
+      tenantId,
+      rewardId: binding.rewardId,
+      redemptionId,
+      status: 'CANCELED',
+    });
     return res.status(200).json({
       ok: true,
       status: 'identity_not_linked',
@@ -719,6 +829,12 @@ export default async function handler(
   if (!broadcasterLogin) {
     // Sans login, pas de résolution du direct, donc pas de clé anti-abus. On
     // préfère ne rien donner plutôt que d'inventer une clé plus permissive.
+    await resolveRedemption({
+      tenantId,
+      rewardId: binding.rewardId,
+      redemptionId,
+      status: 'CANCELED',
+    });
     return res.status(200).json({ ok: true, status: 'live_unresolved' });
   }
 
@@ -731,7 +847,13 @@ export default async function handler(
   }
   if (liveRef === null) {
     // Hors direct : un « drop de live » sans live n'a pas de sens, et n'aurait
-    // aucune clé d'unicité stable.
+    // aucune clé d'unicité stable. Rien n'est attribué → on rend les points.
+    await resolveRedemption({
+      tenantId,
+      rewardId: binding.rewardId,
+      redemptionId,
+      status: 'CANCELED',
+    });
     return res.status(200).json({ ok: true, status: 'not_live' });
   }
 
@@ -753,6 +875,19 @@ export default async function handler(
   // renotifier à chaque tentative transformerait un incident réseau en spam de
   // messages privés. `unsupported` n'a rien attribué du tout.
   if (outcome === 'granted') {
+    // La carte est donnée : la demande est HONORÉE. Sans ce marquage elle
+    // resterait « en attente » dans le tableau de bord de la chaîne, où la
+    // régie devrait la résoudre à la main après chaque drop.
+    //
+    // `replayed` ne passe PAS ici, à dessein : la demande d'origine a déjà été
+    // marquée, et une seconde livraison du même événement ne doit ni renotifier
+    // ni rembourser — ce serait offrir la carte et les points.
+    await resolveRedemption({
+      tenantId,
+      rewardId: binding.rewardId,
+      redemptionId,
+      status: 'FULFILLED',
+    });
     await announceTwitchDrop({
       tenantId,
       userId: identity.userId,

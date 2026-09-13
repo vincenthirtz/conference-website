@@ -34599,10 +34599,25 @@ paths:
         le registre `utils/tcg/earnSources.ts` impose « un drop par live et par
         personne », et l'unicite du registre porte cette garantie.
 
-        DEUX PREREQUIS NON LIVRES : aucune table ne relie une identite Twitch a
-        un compte du site (migration `user_twitch_links` a ecrire), et le CHECK
-        de `source_kind` n'admet pas encore `twitch_drop` — le registre le
-        signale par `schemaReady: false`.
+        LA DEMANDE EST RESOLUE, PAS LAISSEE EN ATTENTE. Sans cela, une
+        spectatrice qui echange ses points sans compte rattache perdait ses
+        points ET n'avait pas de carte. Matrice :
+          - `granted` → FULFILLED (la carte est donnee, la demande est honoree) ;
+          - identite non rattachee, hors direct, recompense non configuree →
+            CANCELED, ce qui REND les points ;
+          - `replayed` → RIEN : la carte a deja ete donnee une fois, rembourser
+            offrirait la carte ET les points ;
+          - autre recompense → RIEN, elle ne nous appartient pas ;
+          - panne transitoire → RIEN, Twitch reessaiera.
+        Exige le scope `channel:manage:redemptions`. La resolution est NON
+        BLOQUANTE : une annulation qui echoue laisse la demande en attente
+        (l'etat d'avant) mais ne transforme jamais une attribution reussie en
+        503, ce qui ferait retenter Twitch et pourrait distribuer deux fois.
+
+        Les deux prerequis d'origine sont LEVES depuis le 2026-09-13 :
+        `user_twitch_links` existe et est alimentee par OAuth
+        (`/api/auth/twitch/*`), et le CHECK de `source_kind` admet
+        `twitch_drop` (`schemaReady: true`).
       operationId: twitchTcgDropWebhook
       security: []
       responses:

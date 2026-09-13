@@ -552,6 +552,98 @@ describe('acheminement', () => {
 });
 
 /* -----------------------------------------------------------
+ * Remboursement — ne pas faire payer ce qu'on n'a pas donné
+ * ---------------------------------------------------------*/
+
+describe('remboursement', () => {
+  // CE QUE CES CAS PROTÈGENT. Une spectatrice qui échange 10 000 points sans
+  // compte rattaché perdait ses points ET n'avait pas de carte : le webhook
+  // acquittait en 200 et la demande restait en attente pour l'éternité. Twitch
+  // sait rembourser (`CANCELED`), et la chaîne nous en a donné le droit.
+  //
+  // La résolution est NON BLOQUANTE par construction : sans jeton de chaîne
+  // déchiffrable (le cas dans ces tests), elle échoue en silence. Ces cas
+  // vérifient donc que le SORT DE L'APPEL reste correct — statut rendu,
+  // écritures faites ou non — et jamais qu'un appel Helix a eu lieu.
+
+  it('un compte non rattaché n’attribue rien et n’écrit rien', async () => {
+    seedConnection();
+    const body = redemptionBody();
+    const res = makeRes();
+    await handler(makeReq({ body, headers: signedHeaders(body) }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as Body).status).toBe('identity_not_linked');
+    expect(entries()).toHaveLength(0);
+  });
+
+  it('une résolution impossible ne fait PAS échouer l’attribution', async () => {
+    // LE POINT DE CONCEPTION. Le jeton de chaîne n'est pas déchiffrable ici :
+    // la résolution échoue. Elle ne doit pour autant ni jeter, ni changer le
+    // statut, ni empêcher le crédit — sinon Twitch retenterait et pourrait
+    // distribuer deux fois.
+    seedConnection();
+    store.user_twitch_links = [
+      {
+        auth_user_id: ALICE,
+        twitch_user_id: VIEWER_TWITCH_ID,
+        twitch_login: 'kirisu',
+      },
+    ] as any;
+
+    const body = redemptionBody();
+    const res = makeRes();
+    await handler(makeReq({ body, headers: signedHeaders(body) }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(entries()).toHaveLength(1);
+    expect((entries()[0] as any).user_id).toBe(ALICE);
+  });
+
+  it('un REJEU ne recrédite pas, et ne doit pas rembourser', async () => {
+    // Rembourser un rejeu offrirait la carte ET les points : la première
+    // livraison a déjà été honorée. L'unicité du registre porte la garantie —
+    // une seule écriture malgré deux livraisons.
+    seedConnection();
+    store.user_twitch_links = [
+      {
+        auth_user_id: ALICE,
+        twitch_user_id: VIEWER_TWITCH_ID,
+        twitch_login: 'kirisu',
+      },
+    ] as any;
+
+    const b1 = redemptionBody();
+    await handler(
+      makeReq({ body: b1, headers: signedHeaders(b1, { id: 'msg-A' }) }),
+      makeRes()
+    );
+    const b2 = redemptionBody();
+    const res2 = makeRes();
+    await handler(
+      makeReq({ body: b2, headers: signedHeaders(b2, { id: 'msg-B' }) }),
+      res2
+    );
+
+    expect(res2.statusCode).toBe(200);
+    // UNE seule écriture au registre, malgré deux livraisons acceptées.
+    expect(entries()).toHaveLength(1);
+  });
+
+  it('une AUTRE récompense n’est jamais résolue par nous', async () => {
+    // Elle ne nous appartient pas : ni honorer, ni rembourser. Toucher à la
+    // demande de quelqu'un d'autre serait pire que ne rien faire.
+    seedConnection();
+    const body = redemptionBody({ reward: { id: 'reward-autre' } });
+    const res = makeRes();
+    await handler(makeReq({ body, headers: signedHeaders(body) }), res);
+
+    expect((res.body as Body).status).toBe('other_reward');
+    expect(entries()).toHaveLength(0);
+  });
+});
+
+/* -----------------------------------------------------------
  * Attribution
  * ---------------------------------------------------------*/
 
