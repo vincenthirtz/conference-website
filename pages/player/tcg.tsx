@@ -143,6 +143,13 @@ function PlayerTcg() {
   const [earn, setEarn] = useState<{
     matchWin: number;
     scrimWin: number;
+    /**
+     * Barème du drop en direct. OPTIONNEL : l'API ne le rend que si une chaîne
+     * Twitch est connectée ET qu'une récompense lui est désignée. Absent, on
+     * n'annonce rien — promettre un gain qui n'aboutirait jamais serait pire
+     * que de le taire.
+     */
+    twitchDrop?: number;
   } | null>(null);
   const [cards, setCards] = useState<CollectionCard[]>([]);
   const [totals, setTotals] = useState({ distinct: 0, total: 0 });
@@ -189,7 +196,7 @@ function PlayerTcg() {
           packs: Pack[];
           balance: number;
           boosterPrice: number;
-          earn?: { matchWin: number; scrimWin: number };
+          earn?: { matchWin: number; scrimWin: number; twitchDrop?: number };
         }>('/api/player/tcg/packs'),
         adminFetchJson<{
           cards: CollectionCard[];
@@ -309,6 +316,11 @@ function PlayerTcg() {
           return t.walletAdminGrant;
         case 'card_recycled':
           return t.walletCardRecycled;
+        case 'twitch_drop':
+          // Sans ce cas, un drop tombait dans le repli neutre (« Mouvement ») :
+          // des pièces arrivaient sans que la joueuse puisse les rattacher à
+          // une action — le seul gain inexplicable de la liste.
+          return t.walletTwitchDrop;
         default:
           return t.walletUnknownSource;
       }
@@ -403,10 +415,20 @@ function PlayerTcg() {
                   l'atteindre n'apprend rien. */}
               {earn !== null && (
                 <p className="mt-1 text-xs text-gray-500">
-                  {format(t.earnHint, {
-                    match: earn.matchWin,
-                    scrim: earn.scrimWin,
-                  })}
+                  {/* Le drop n'est mentionné QUE s'il est branché : l'API ne
+                      rend `twitchDrop` que si une chaîne est connectée avec une
+                      récompense désignée. Deux formulations plutôt qu'une
+                      phrase à trous — « et  par carte » se lirait mal. */}
+                  {typeof earn.twitchDrop === 'number'
+                    ? format(t.earnHintWithDrop, {
+                        match: earn.matchWin,
+                        scrim: earn.scrimWin,
+                        drop: earn.twitchDrop,
+                      })
+                    : format(t.earnHint, {
+                        match: earn.matchWin,
+                        scrim: earn.scrimWin,
+                      })}
                 </p>
               )}
               {/* Prix inconnu = bouton absent. Afficher « Acheter (— pièces) »

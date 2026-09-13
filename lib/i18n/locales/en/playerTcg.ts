@@ -69,6 +69,8 @@ export default {
 
   balance: '{count} coins',
   earnHint: '{match} coins per match win, {scrim} per ranked scrim win.',
+  earnHintWithDrop:
+    '{match} coins per match win, {scrim} per ranked scrim win, {drop} per card claimed on stream.',
   buyBooster: 'Buy a booster ({price} coins)',
   buying: 'Buying…',
   buySuccess: 'Booster purchased. It is waiting in your packs.',
@@ -109,6 +111,7 @@ export default {
   walletBoosterPurchase: 'Booster purchase',
   walletAdminGrant: 'Adjusted by the team',
   walletCardRecycled: 'Duplicate recycled',
+  walletTwitchDrop: 'Card claimed on stream',
   walletUnknownSource: 'Movement',
 
   rarityCommon: 'Common',

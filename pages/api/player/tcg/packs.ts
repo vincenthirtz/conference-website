@@ -37,6 +37,10 @@ import {
   type DrawnSubject,
 } from '@/utils/tcg/drawPack';
 import { readMapFaces, MAP_POOL_SLUGS } from '@/utils/tcg/readMapFaces';
+// Barème du drop en direct. Rendu à l'interface pour la même raison que le prix
+// du booster : elle l'AFFICHE sans le connaître, et le recopier côté client le
+// ferait mentir au premier réglage.
+import { TWITCH_DROP_COINS } from '@/utils/tcg/earnSources';
 import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
 // Le prix ET le barème sont rendus par l'API plutôt que recopiés dans la page :
 // importer `economy.ts` côté client ferait entrer le moteur de rating dont il
@@ -130,12 +134,49 @@ async function listPacks(
     earn: {
       matchWin: MATCH_WIN_COINS,
       scrimWin: SCRIM_WIN_COINS,
+      // Le drop en direct n'est annoncé QUE s'il est réellement branché.
+      // Promettre « et N pièces sur le stream » à un espace sans chaîne
+      // connectée serait une promesse creuse — même discipline que le prix du
+      // booster, masqué quand il est inconnu. `undefined` = rien à dire.
+      ...(await twitchDropReward(tenantId)),
     },
     // Reprise d'un doublon. Rendue pour la même raison que le prix : le bouton
     // « Recycler (+N) » doit annoncer un montant JUSTE, et le recopier côté
     // client le ferait mentir au premier réglage du barème.
     recycleRefund: RECYCLE_REFUND_COINS,
   });
+}
+
+/**
+ * Le barème du drop Twitch, ou rien.
+ *
+ * POURQUOI CONDITIONNEL. Le drop n'existe que si une chaîne est connectée ET
+ * qu'une récompense de points de chaîne lui est désignée
+ * (`twitch_broadcaster_connections.tcg_reward_id`). Annoncer le barème sans
+ * cela ferait miroiter un moyen de gagner qui n'aboutirait jamais, et le
+ * webhook rembourserait chaque tentative en répondant `reward_not_configured`.
+ *
+ * Ne lève jamais : une lecture en échec fait taire l'annonce plutôt que de
+ * casser la page des paquets. Perdre une mention vaut mieux que perdre l'écran.
+ */
+async function twitchDropReward(
+  tenantId: string
+): Promise<{ twitchDrop?: number }> {
+  if (!supabaseAdmin) return {};
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('twitch_broadcaster_connections')
+      .select('tcg_reward_id')
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
+    if (error) return {};
+    const reward = (data as { tcg_reward_id?: unknown } | null)?.tcg_reward_id;
+    return typeof reward === 'string' && reward.length > 0
+      ? { twitchDrop: TWITCH_DROP_COINS }
+      : {};
+  } catch {
+    return {};
+  }
 }
 
 /* -------------------------------------------------------------------------- */
