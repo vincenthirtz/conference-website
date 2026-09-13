@@ -82,6 +82,17 @@ export default {
   revealDismiss: 'Close',
   revealNewCard: 'New',
 
+  walletTitle: 'My coins',
+  walletShow: 'View history',
+  walletHide: 'Hide history',
+  walletEmpty: 'No movement yet.',
+  walletTruncated: 'Only the last {count} movements are shown.',
+  walletMatchWin: 'Match win',
+  walletScrimWin: 'Scrim win',
+  walletBoosterPurchase: 'Booster purchase',
+  walletAdminGrant: 'Adjusted by the team',
+  walletUnknownSource: 'Movement',
+
   rarityCommon: 'Common',
   rarityRare: 'Rare',
   rarityEpic: 'Epic',

@@ -92,6 +92,15 @@ function subjectKey(card: DrawnCard | CollectionCard): string {
   return card.kind === 'player' ? `p-${card.userId}` : `t-${card.teamId}`;
 }
 
+/** Un mouvement du registre. `amount` est signé : gain positif, dépense négative. */
+type WalletEntry = {
+  id: string;
+  amount: number;
+  sourceKind: string;
+  sourceRef: string;
+  createdAt: string;
+};
+
 function PlayerTcg() {
   const t = useT(nsPlayerTcg);
   const { addToast } = useToast();
@@ -124,6 +133,15 @@ function PlayerTcg() {
     cards: DrawnCard[];
     newKeys: string[];
   } | null>(null);
+  // L'historique se charge AU CLIC, pas au chargement de la page. Le solde est
+  // déjà affiché ; imposer une requête de plus à chaque visite pour une
+  // information qu'on consulte rarement ferait payer tout le monde pour le
+  // confort de quelques-unes. C'est aussi pourquoi la route est séparée.
+  const [wallet, setWallet] = useState<{
+    entries: WalletEntry[];
+    truncated: boolean;
+  } | null>(null);
+  const [walletOpen, setWalletOpen] = useState(false);
 
   const labels = {
     rarity: {
@@ -235,6 +253,53 @@ function PlayerTcg() {
     },
     [adminFetch, addToast, load, t, cards]
   );
+
+  /**
+   * Libellé d'un mouvement. L'API rend le FAIT (`sourceKind`), la page le
+   * formule : traduire côté serveur l'obligerait à connaître la langue de la
+   * lectrice. Une source inconnue — un `source_kind` ajouté plus tard — rend un
+   * libellé neutre plutôt que rien : le montant et la date restent lisibles.
+   */
+  const walletLabel = useCallback(
+    (sourceKind: string): string => {
+      switch (sourceKind) {
+        case 'match_win':
+          return t.walletMatchWin;
+        case 'scrim_win':
+          return t.walletScrimWin;
+        case 'booster_purchase':
+          return t.walletBoosterPurchase;
+        case 'admin_grant':
+          return t.walletAdminGrant;
+        default:
+          return t.walletUnknownSource;
+      }
+    },
+    [t]
+  );
+
+  const toggleWallet = useCallback(async () => {
+    if (walletOpen) {
+      setWalletOpen(false);
+      return;
+    }
+    setWalletOpen(true);
+    // Rechargé à chaque ouverture : le registre a pu bouger depuis la dernière
+    // fois, et il est bon marché. On ne montre rien en cas d'échec plutôt
+    // qu'un historique vide, qui ferait croire à une absence de mouvements.
+    try {
+      const data = await adminFetchJson<{
+        entries: WalletEntry[];
+        truncated: boolean;
+      }>('/api/player/tcg/wallet');
+      setWallet({
+        entries: data.entries ?? [],
+        truncated: data.truncated === true,
+      });
+    } catch {
+      setWallet(null);
+    }
+  }, [walletOpen, adminFetchJson]);
 
   const buyBooster = useCallback(async () => {
     setBusy('buy');
@@ -403,6 +468,63 @@ function PlayerTcg() {
             </ul>
           </section>
         )}
+
+        {/* ── Historique du porte-monnaie ──────────────────────────────────
+            « D'où viennent mes pièces ? » — la question que la migration du
+            registre annonçait, et à laquelle rien ne répondait : la page
+            affichait un solde sans aucun moyen de savoir ce qui l'avait formé.
+
+            Replié par défaut, chargé au clic : le solde suffit à la plupart des
+            visites. */}
+        <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">{t.walletTitle}</h2>
+            <button
+              type="button"
+              onClick={() => void toggleWallet()}
+              className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-gray-300 transition hover:border-white/40 hover:text-white"
+            >
+              {walletOpen ? t.walletHide : t.walletShow}
+            </button>
+          </div>
+
+          {walletOpen && wallet !== null && (
+            <>
+              {wallet.entries.length === 0 ? (
+                <p className="mt-4 text-sm text-gray-400">{t.walletEmpty}</p>
+              ) : (
+                <ul className="mt-4 divide-y divide-white/5">
+                  {wallet.entries.map((e) => (
+                    <li
+                      key={e.id}
+                      className="flex items-center justify-between gap-4 py-2 text-sm"
+                    >
+                      <span className="min-w-0 flex-1 truncate text-gray-300">
+                        {walletLabel(e.sourceKind)}
+                      </span>
+                      {/* Le signe est porté par la couleur ET par le texte :
+                          la couleur seule ne se lit pas en daltonisme. */}
+                      <span
+                        className={
+                          e.amount >= 0
+                            ? 'shrink-0 font-semibold text-[var(--color-green)]'
+                            : 'shrink-0 font-semibold text-gray-400'
+                        }
+                      >
+                        {e.amount >= 0 ? `+${e.amount}` : e.amount}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {wallet.truncated && (
+                <p className="mt-3 text-xs text-gray-500">
+                  {format(t.walletTruncated, { count: wallet.entries.length })}
+                </p>
+              )}
+            </>
+          )}
+        </section>
 
         {/* Collection */}
         <section className="mt-8">

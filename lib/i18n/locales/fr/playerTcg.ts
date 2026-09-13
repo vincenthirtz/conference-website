@@ -101,6 +101,20 @@ export default ns('playerTcg', {
   revealDismiss: 'Fermer',
   revealNewCard: 'Nouvelle',
 
+  // Historique du porte-monnaie. Les libellés sont ici et non côté serveur :
+  // l'API rend le FAIT (`sourceKind`), l'interface le formule — traduire au
+  // serveur l'obligerait à connaître la langue de la lectrice.
+  walletTitle: 'Mes pièces',
+  walletShow: 'Voir l’historique',
+  walletHide: 'Masquer l’historique',
+  walletEmpty: 'Aucun mouvement pour l’instant.',
+  walletTruncated: 'Seuls les {count} derniers mouvements sont affichés.',
+  walletMatchWin: 'Victoire en match',
+  walletScrimWin: 'Victoire en scrim',
+  walletBoosterPurchase: 'Achat d’un booster',
+  walletAdminGrant: 'Ajustement par l’équipe',
+  walletUnknownSource: 'Mouvement',
+
   // Raretés : mêmes paliers que les badges de la fiche joueuse.
   rarityCommon: 'Commune',
   rarityRare: 'Rare',

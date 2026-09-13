@@ -34027,6 +34027,77 @@ paths:
                     enum: [revoked]
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/player/tcg/wallet:
+    get:
+      tags:
+        - public/auth
+      summary: Mon historique de pieces — le registre qui justifie le solde.
+      description: |
+        `tcg_wallets.balance` n'est qu'un CACHE ; `tcg_wallet_entries` est la
+        source de verite et justifie le solde ligne a ligne. La migration
+        portait deja un index `(tenant_id, user_id, created_at DESC)` cree pour
+        cette lecture : elle n'avait simplement jamais ete livree, et l'espace
+        joueuse affichait un solde sans aucun moyen de savoir ce qui l'avait
+        forme.
+
+        BORNEE A 50, PAS PAGINEE. Au rythme d'un mouvement par victoire, 50
+        lignes couvrent une saison entiere ; un curseur pour un cas qui n'existe
+        pas serait de la complexite sans usage. `truncated` dit franchement que
+        l'histoire continue au-dela.
+
+        `shownTotal` est la somme des lignes RENDUES, pas du registre entier :
+        annoncer un total qui ne correspond pas a ce qu'on montre creerait un
+        ecart inexplicable — exactement ce que cette page doit permettre de
+        reperer.
+
+        `sourceKind` est rendu BRUT : l'API rend le fait, l'interface le
+        formule. Traduire ici obligerait le serveur a connaitre la langue de la
+        lectrice. Rate-limit 60 / min.
+      operationId: readPlayerTcgWallet
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Derniers mouvements de pieces, du plus recent au plus ancien.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          $ref: '#/components/schemas/Uuid'
+                        amount:
+                          type: integer
+                          description: Signe — positif pour un gain, negatif pour une depense.
+                        sourceKind:
+                          type: string
+                          enum:
+                            [
+                              match_win,
+                              scrim_win,
+                              booster_purchase,
+                              admin_grant,
+                            ]
+                        sourceRef:
+                          type: string
+                          description: Identifiant de l'objet source, en texte (match, paquet…).
+                        createdAt:
+                          type: string
+                  shownTotal:
+                    type: integer
+                  truncated:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /api/player/tcg/collection:
     get:
       tags:
