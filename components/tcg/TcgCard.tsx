@@ -34,7 +34,13 @@ const RARITY_STYLES: Record<TcgRarity, string> = {
   legendary: 'border-cyan-400/40 bg-cyan-400/10',
 };
 
-const RARITY_TEXT: Record<TcgRarity, string> = {
+/**
+ * Exporté pour que `TcgCollectionProgress` habille ses lignes de rareté avec
+ * EXACTEMENT ces teintes. Sans cet export, le composant de progression aurait
+ * dû recopier la palette — et deux listes de classes libres de diverger
+ * finissent par donner deux couleurs à la même rareté.
+ */
+export const RARITY_TEXT: Record<TcgRarity, string> = {
   common: 'text-amber-300',
   rare: 'text-zinc-200',
   epic: 'text-yellow-300',
