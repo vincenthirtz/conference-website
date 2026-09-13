@@ -109,6 +109,20 @@ export default ns('playerTcg', {
   walletHide: 'Masquer l’historique',
   walletEmpty: 'Aucun mouvement pour l’instant.',
   walletTruncated: 'Seuls les {count} derniers mouvements sont affichés.',
+  // Progression de la collection. Les variantes `_one`/`_other` suivent la
+  // convention du dépôt : c'est la PAGE qui choisit le pluriel, pas le
+  // composant — sinon il faudrait lui apprendre les règles de chaque langue.
+  progressTitle: 'Ta progression',
+  progressCount_one: '{owned} carte sur {pool}',
+  progressCount_other: '{owned} cartes sur {pool}',
+  progressPercent: '{percent} % de la collection',
+  progressCopies_one: '{count} exemplaire, doublons compris',
+  progressCopies_other: '{count} exemplaires, doublons compris',
+  progressAria: 'Progression de ta collection',
+  progressByRarity: 'Par rareté',
+  progressRarityCount: '{owned} / {pool}',
+  progressComplete: 'Collection complète. Tu as tout.',
+
   // Recyclage des doublons.
   recycleAction: 'Recycler un doublon (+{refund})',
   recycling: 'Recyclage…',

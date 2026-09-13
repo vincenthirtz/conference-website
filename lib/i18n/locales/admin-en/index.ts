@@ -9,6 +9,7 @@
 
 import enAdminQuickBracket from './adminQuickBracket';
 import enAdminTcgPhotos from './adminTcgPhotos';
+import enAdminTcgOverview from './adminTcgOverview';
 import enAdminLogout from './adminLogout';
 import enAdminForgotPassword from './adminForgotPassword';
 import enAdminResetPassword from './adminResetPassword';
@@ -393,6 +394,7 @@ const adminEnDict = {
   adminFreePlayers: enAdminFreePlayers,
   adminNetworkFunnel: enAdminNetworkFunnel,
   adminTcgPhotos: enAdminTcgPhotos,
+  adminTcgOverview: enAdminTcgOverview,
 };
 
 export default adminEnDict;

@@ -22,6 +22,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import TcgCard from '@/components/tcg/TcgCard';
+import TcgCollectionProgress from '@/components/tcg/TcgCollectionProgress';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
@@ -121,6 +122,9 @@ function PlayerTcg() {
   } | null>(null);
   const [cards, setCards] = useState<CollectionCard[]>([]);
   const [totals, setTotals] = useState({ distinct: 0, total: 0 });
+  // Séparé de `totals` : le vivier ne vient pas de la même mesure et peut
+  // manquer alors que la collection est lisible.
+  const [pool, setPool] = useState<{ distinct: number } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   // Les cartes du dernier paquet ouvert. C'est LE moment du TCG : le serveur
@@ -167,6 +171,9 @@ function PlayerTcg() {
           cards: CollectionCard[];
           distinct: number;
           total: number;
+          // Le vivier — combien de sujets EXISTENT. `null` quand la lecture a
+          // échoué : la barre disparaît alors, plutôt que d'annoncer « 12 sur 0 ».
+          pool?: { distinct: number } | null;
         }>('/api/player/tcg/collection'),
       ]);
       setPacks(packsData.packs ?? []);
@@ -181,6 +188,11 @@ function PlayerTcg() {
         setEarn(packsData.earn);
       }
       setCards(collData.cards ?? []);
+      setPool(
+        collData.pool && typeof collData.pool.distinct === 'number'
+          ? collData.pool
+          : null
+      );
       setTotals({
         distinct: collData.distinct ?? 0,
         total: collData.total ?? 0,
@@ -527,6 +539,37 @@ function PlayerTcg() {
             </>
           )}
         </section>
+
+        {/* ── Progression ──────────────────────────────────────────────────
+            « 12 cartes » ne dit rien sans « sur combien » : un TCG vit de la
+            complétion, et sans horizon il n'y a pas d'objectif. Le composant
+            se masque tout seul quand le vivier est inconnu — un dénominateur
+            faux serait pire qu'un dénominateur absent.
+
+            Pas de répartition par rareté : elle exigerait de recalculer les
+            badges de tout le vivier (cf. `collection.ts`). Le composant sait
+            s'en passer. */}
+        <TcgCollectionProgress
+          owned={{ distinct: totals.distinct, total: totals.total }}
+          pool={pool ?? undefined}
+          labels={{
+            title: t.progressTitle,
+            // Le PLURIEL est choisi ici, pas dans le composant : lui apprendre
+            // les règles de chaque langue serait le mauvais endroit.
+            count:
+              (pool?.distinct ?? 0) > 1
+                ? t.progressCount_other
+                : t.progressCount_one,
+            percent: t.progressPercent,
+            copies:
+              totals.total > 1 ? t.progressCopies_other : t.progressCopies_one,
+            progressAria: t.progressAria,
+            byRarityTitle: t.progressByRarity,
+            rarityCount: t.progressRarityCount,
+            complete: t.progressComplete,
+            rarity: labels.rarity,
+          }}
+        />
 
         {/* Collection */}
         <section className="mt-8">

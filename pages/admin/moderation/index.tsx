@@ -14,6 +14,10 @@ import nsAdminModeration from '@/lib/i18n/locales/admin-fr/adminModeration';
 // Namespace propre à l'onglet TCG : y ajouter une clé dans `adminModeration`
 // aurait touché deux fichiers de plus et leur parité, pour un seul intitulé.
 import nsAdminTcgPhotos from '@/lib/i18n/locales/admin-fr/adminTcgPhotos';
+// Namespace distinct de `adminTcgPhotos` : relire une photo et mesurer une
+// économie sont deux métiers, et mélanger leurs libellés obligerait à toucher
+// la parité des deux à chaque évolution de l'un.
+import nsAdminTcgOverview from '@/lib/i18n/locales/admin-fr/adminTcgOverview';
 
 import { lazyPanel } from '@/components/admin/lazyPanel';
 
@@ -29,6 +33,9 @@ const SupportPanel = lazyPanel(
 );
 const TcgPhotosPanel = lazyPanel(
   () => import('@/components/admin/moderation/TcgPhotosPanel')
+);
+const TcgOverviewPanel = lazyPanel(
+  () => import('@/components/admin/tcg/TcgOverviewPanel')
 );
 
 const ID_BASE = 'admin-moderation';
@@ -53,6 +60,7 @@ export const getServerSideProps = withStaffPage('caster');
 export default function AdminModerationPage({ staff }: StaffProps) {
   const t = useAdminT(nsAdminModeration);
   const tTcg = useAdminT(nsAdminTcgPhotos);
+  const tTcgOverview = useAdminT(nsAdminTcgOverview);
   const isManager = hasAtLeastRole(staff.role as StaffRole, 'admin');
 
   const tabs = [
@@ -65,6 +73,10 @@ export default function AdminModerationPage({ staff }: StaffProps) {
           // Relire la photo d'une personne réelle n'est pas un geste de
           // caster : même palier que Blacklist et Support.
           { id: 'tcg-photos', label: tTcg.tabLabel },
+          // Mesurer l'économie expose qui possède quoi : même palier que la
+          // file de photos, et la permission `moderate_support` de l'endpoint
+          // correspond exactement à ce gate.
+          { id: 'tcg-overview', label: tTcgOverview.tabLabel },
         ]
       : []),
   ];
@@ -136,6 +148,8 @@ export default function AdminModerationPage({ staff }: StaffProps) {
               <SupportPanel />
             ) : active === 'tcg-photos' && isManager ? (
               <TcgPhotosPanel />
+            ) : active === 'tcg-overview' && isManager ? (
+              <TcgOverviewPanel labels={tTcgOverview} />
             ) : (
               <DisputesPanel />
             )}

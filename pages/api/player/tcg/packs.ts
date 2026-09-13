@@ -30,7 +30,7 @@ import { readPlayerProfile } from '@/utils/rating/readPlayerProfile';
 import { cardRarity, isFoil } from '@/utils/tcg/rarity';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import { readTeamRarity } from '@/utils/tcg/readTeamRarity';
-import { pickPackSubjects, PACK_SIZE } from '@/utils/tcg/drawPack';
+import { pickPackSubjects, PACK_SIZE, POOL_LIMIT } from '@/utils/tcg/drawPack';
 import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
 // Le prix ET le barème sont rendus par l'API plutôt que recopiés dans la page :
 // importer `economy.ts` côté client ferait entrer le moteur de rating dont il
@@ -186,7 +186,7 @@ async function openPack(
       .from('player_ratings')
       .select('user_id')
       .eq('tenant_id', tenantId)
-      .limit(1000),
+      .limit(POOL_LIMIT),
     supabaseAdmin!
       .from('teams')
       .select('id')
@@ -197,7 +197,7 @@ async function openPack(
       // Une équipe au drapeau non renseigné disparaîtrait donc du vivier sans
       // que rien ne le signale. `or(...)` accepte les deux formes de « active ».
       .or('is_active.is.null,is_active.eq.true')
-      .limit(1000),
+      .limit(POOL_LIMIT),
   ]);
 
   if (playersRes.error || teamsRes.error) {

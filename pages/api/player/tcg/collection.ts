@@ -24,6 +24,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
+import { POOL_LIMIT } from '@/utils/tcg/drawPack';
 import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
 import { logger } from '@/utils/logger';
 
@@ -180,9 +181,56 @@ export default withAuthRoute(async function handler(
       (x, y) => RARITY_ORDER.indexOf(y.rarity) - RARITY_ORDER.indexOf(x.rarity)
     );
 
+  // 5) LE VIVIER — combien de sujets EXISTENT, pour que « 12 cartes » devienne
+  //    « 12 sur 48 ». Sans dénominateur, une collection n'a pas d'horizon.
+  //
+  //    LES FILTRES SONT CEUX DU TIRAGE, AU MOT PRÈS (cf. l'étape 2 de
+  //    `packs.ts`) : joueuses sans filtre, équipes non supprimées et actives —
+  //    `is_active` étant NULLABLE, le `or(...)` accepte NULL comme `true`, là
+  //    où un `neq` exclurait les lignes non renseignées. Un dénominateur plus
+  //    large que le tirage promettrait des cartes qu'aucun paquet ne peut
+  //    donner.
+  //
+  //    Plafonné à `POOL_LIMIT`, la constante que le tirage lit lui aussi : au
+  //    delà, le tirage ne regarde pas les sujets suivants, donc les compter
+  //    rendrait la complétion inatteignable.
+  //
+  //    BEST-EFFORT : un vivier illisible rend `null`, pas `0`. Le composant de
+  //    progression masque alors sa barre au lieu d'annoncer « 12 sur 0 ».
+  let pool: { distinct: number } | null = null;
+  const [poolPlayersRes, poolTeamsRes] = await Promise.all([
+    supabaseAdmin
+      .from('player_ratings')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId),
+    supabaseAdmin
+      .from('teams')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
+      .or('is_active.is.null,is_active.eq.true'),
+  ]);
+
+  if (poolPlayersRes.error || poolTeamsRes.error) {
+    logger.warn(
+      '[tcg/collection] vivier illisible: %s',
+      poolPlayersRes.error?.message ?? poolTeamsRes.error?.message
+    );
+  } else {
+    const players = Math.min(poolPlayersRes.count ?? 0, POOL_LIMIT);
+    const teams = Math.min(poolTeamsRes.count ?? 0, POOL_LIMIT);
+    pool = { distinct: players + teams };
+  }
+
   return res.status(200).json({
     cards,
     distinct: cards.length,
     total: aggregated.reduce((sum, a) => sum + a.count, 0),
+    // PAS de répartition par rareté ici, à dessein : la rareté d'un sujet se
+    // dérive de ses badges, donc l'obtenir pour tout le vivier demanderait une
+    // lecture de profil par sujet — impraticable sur un millier. Le composant
+    // masque cette section faute de données ; un dénominateur faux par rareté
+    // serait pire qu'un dénominateur absent.
+    pool,
   });
 });

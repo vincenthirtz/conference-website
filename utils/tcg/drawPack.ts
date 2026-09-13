@@ -22,6 +22,18 @@ export const PACK_SIZE = 5;
 /** Emplacements réservés aux équipes, quand le vivier en contient. */
 export const TEAM_SLOTS = 1;
 
+/**
+ * Sujets lus au plus dans chaque vivier lors d'un tirage.
+ *
+ * EXPORTÉ PARCE QUE LE DÉNOMINATEUR EN DÉPEND. La progression de collection
+ * affiche « X sur Y » : si Y comptait TOUS les sujets alors que le tirage n'en
+ * regarde que les mille premiers, on promettrait des cartes qu'aucun paquet ne
+ * peut donner — une joueuse resterait bloquée à 999/1200 sans comprendre. Le
+ * décompte du vivier doit donc se plafonner ici aussi, et la seule façon d'en
+ * être sûr est que les deux lisent la MÊME constante.
+ */
+export const POOL_LIMIT = 1000;
+
 export type DrawnSubject =
   | { kind: 'player'; userId: string }
   | { kind: 'team'; teamId: string };
