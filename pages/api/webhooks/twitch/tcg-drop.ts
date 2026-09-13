@@ -85,6 +85,7 @@ import {
   helixFetch,
   hasScope,
 } from '@/utils/twitchBroadcaster';
+import { sendTwitchChatMessage } from '@/utils/twitchChat';
 
 /** Le corps doit rester brut : la signature couvre les octets reçus. */
 export const config = { api: { bodyParser: false } };
@@ -524,6 +525,35 @@ async function resolveRedemption(input: {
   }
 }
 
+/**
+ * Dit au chat comment rattacher son compte, après un échange remboursé.
+ *
+ * SANS MENTIONNER PERSONNE. Annoncer « untel n'a pas rattaché son compte »
+ * exposerait un échec individuel devant toute la chaîne — une aide qui
+ * humilierait. Le message s'adresse au chat en général : celle qui vient de
+ * cliquer se reconnaîtra, les autres y verront une information utile.
+ *
+ * BEST-EFFORT INTÉGRAL. Le remboursement, lui, a déjà eu lieu : c'est le geste
+ * qui répare. Ce message n'est qu'une explication, et son échec ne doit rien
+ * changer au sort de la requête.
+ */
+async function announceLinkNeeded(tenantId: string): Promise<void> {
+  if (!supabaseAdmin) return;
+  const result = await sendTwitchChatMessage(
+    supabaseAdmin,
+    tenantId,
+    '🎴 Points remboursés : ce compte Twitch n’est pas encore relié au site. ' +
+      'Tape /twitch sur le Discord de la Women’s Cup pour le rattacher, ' +
+      'et ta prochaine carte arrivera.'
+  );
+  if (!result.sent) {
+    logger.warn(
+      '[twitch/tcg-drop] message de chat non envoyé (%s)',
+      result.reason
+    );
+  }
+}
+
 export type BroadcasterBinding = {
   tenantId: string;
   /**
@@ -811,14 +841,20 @@ export default async function handler(
       identity.reason
     );
     // LE CAS QUI JUSTIFIE TOUT CE MÉCANISME. Elle a dépensé ses points et
-    // n'aura pas de carte, faute de compte rattaché. Lui rendre ses points est
-    // le minimum ; le message de chat (lot suivant) lui dira pourquoi.
+    // n'aura pas de carte, faute de compte rattaché. On lui rend ses points,
+    // puis on dit dans le chat POURQUOI — sans quoi elle voit son échange
+    // annulé sans explication, et conclut que la récompense est cassée.
     await resolveRedemption({
       tenantId,
       rewardId: binding.rewardId,
       redemptionId,
       status: 'CANCELED',
     });
+    // SEUL cas où l'on parle dans le chat : c'est le seul où la personne peut
+    // AGIR. « Hors direct » ou « récompense mal configurée » ne la regardent
+    // pas, et l'inonder de messages qu'elle ne peut pas suivre serait pire que
+    // le silence.
+    await announceLinkNeeded(tenantId);
     return res.status(200).json({
       ok: true,
       status: 'identity_not_linked',
