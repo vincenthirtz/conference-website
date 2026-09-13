@@ -173,6 +173,7 @@ import nsPlayerMatch from './playerMatch';
 import nsPlayerAgenda from './playerAgenda';
 import nsPlayerMyTeams from './playerMyTeams';
 import nsProductionPartner from './productionPartner';
+import nsPlayerHeroPrefs from './playerHeroPrefs';
 
 export const frDict = {
   profileSummary: nsProfileSummary.fr,
@@ -341,4 +342,5 @@ export const frDict = {
   playerMyTeams: nsPlayerMyTeams.fr,
   productionPartner: nsProductionPartner.fr,
   playerTcg: nsPlayerTcg.fr,
+  playerHeroPrefs: nsPlayerHeroPrefs.fr,
 };

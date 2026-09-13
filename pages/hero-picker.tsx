@@ -4,61 +4,14 @@ import Paragraph from '@/components/Typography/paragraph';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT, format } from '@/lib/i18n/useT';
 import nsHeroPicker from '@/lib/i18n/locales/fr/heroPicker';
+import { OVERWATCH_HEROES, type OverwatchHero } from '@/utils/heroes/overwatch';
 
-type Hero = {
-  name: string;
-  role: 'Tank' | 'Damage' | 'Support';
-};
+// La liste vit dans `utils/heroes/overwatch.ts` : elle est desormais lue AUSSI
+// par l'API des preferences et par la recommandation d'illustration du TCG. La
+// garder ici en aurait fait une seconde liste, libre de diverger.
+type Hero = OverwatchHero;
 
-const HEROES: Hero[] = [
-  // Tanks
-  { name: 'D.Va', role: 'Tank' },
-  { name: 'Doomfist', role: 'Tank' },
-  { name: 'Junker Queen', role: 'Tank' },
-  { name: 'Mauga', role: 'Tank' },
-  { name: 'Orisa', role: 'Tank' },
-  { name: 'Ramattra', role: 'Tank' },
-  { name: 'Reinhardt', role: 'Tank' },
-  { name: 'Roadhog', role: 'Tank' },
-  { name: 'Hazard', role: 'Tank' },
-  { name: 'Sigma', role: 'Tank' },
-  { name: 'Winston', role: 'Tank' },
-  { name: 'Wrecking Ball', role: 'Tank' },
-  { name: 'Zarya', role: 'Tank' },
-
-  // Damage
-  { name: 'Ashe', role: 'Damage' },
-  { name: 'Bastion', role: 'Damage' },
-  { name: 'Cassidy', role: 'Damage' },
-  { name: 'Echo', role: 'Damage' },
-  { name: 'Genji', role: 'Damage' },
-  { name: 'Hanzo', role: 'Damage' },
-  { name: 'Junkrat', role: 'Damage' },
-  { name: 'Mei', role: 'Damage' },
-  { name: 'Venture', role: 'Damage' },
-  { name: 'Vendetta', role: 'Damage' },
-  { name: 'Pharah', role: 'Damage' },
-  { name: 'Reaper', role: 'Damage' },
-  { name: 'Sojourn', role: 'Damage' },
-  { name: 'Soldier: 76', role: 'Damage' },
-  { name: 'Sombra', role: 'Damage' },
-  { name: 'Symmetra', role: 'Damage' },
-  { name: 'Torbjorn', role: 'Damage' },
-  { name: 'Tracer', role: 'Damage' },
-  { name: 'Widowmaker', role: 'Damage' },
-
-  // Supports
-  { name: 'Ana', role: 'Support' },
-  { name: 'Baptiste', role: 'Support' },
-  { name: 'Brigitte', role: 'Support' },
-  { name: 'Illari', role: 'Support' },
-  { name: 'Kiriko', role: 'Support' },
-  { name: 'Lifeweaver', role: 'Support' },
-  { name: 'Lucio', role: 'Support' },
-  { name: 'Mercy', role: 'Support' },
-  { name: 'Moira', role: 'Support' },
-  { name: 'Zenyatta', role: 'Support' },
-];
+const HEROES: readonly Hero[] = OVERWATCH_HEROES;
 
 export default function HeroPickerPage() {
   const t = useT(nsHeroPicker);

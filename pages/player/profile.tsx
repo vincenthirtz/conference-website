@@ -14,6 +14,7 @@ import { useLocale } from '@/lib/i18n/useLocale';
 import DiscoveryCard from '@/components/player/DiscoveryCard';
 import BattlenetVerifyCard from '@/components/player/BattlenetVerifyCard';
 import TcgPhotoCard from '@/components/player/TcgPhotoCard';
+import HeroPreferencesCard from '@/components/player/HeroPreferencesCard';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
@@ -576,6 +577,11 @@ function PlayerProfile() {
               l'état (statut, toast de retour) et ne rend rien si la feature est
               dormante. Même composant que l'onboarding post-création d'équipe. */}
           <BattlenetVerifyCard variant="section" />
+
+          {/* Mes héros — placée AVANT la carte à collectionner parce qu'elle en
+              est le repli : le héros préféré ne sert que si aucune photo n'est
+              déposée. Lire l'ordre de haut en bas, c'est lire cette règle. */}
+          <HeroPreferencesCard />
 
           {/* Ma carte à collectionner (TCG) — la carte porte son propre état et
               ne rend RIEN tant qu'elle n'a pas pu lire celui-ci : mieux vaut

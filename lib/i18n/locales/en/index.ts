@@ -179,6 +179,7 @@ import enRecrutementPage from './recrutementPage';
 import enProductionPartner from './productionPartner';
 import enPalmaresPage from './palmaresPage';
 import enMapsVoxelPage from './mapsVoxelPage';
+import enPlayerHeroPrefs from './playerHeroPrefs';
 
 const enDict = {
   profileSummary: enProfileSummary,
@@ -347,6 +348,7 @@ const enDict = {
   palmaresPage: enPalmaresPage,
   mapsVoxelPage: enMapsVoxelPage,
   playerTcg: enPlayerTcg,
+  playerHeroPrefs: enPlayerHeroPrefs,
 };
 
 export default enDict;
