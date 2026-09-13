@@ -32,13 +32,21 @@
 // mineures. Ajouter une source `topup` serait une décision produit prise en
 // connaissance de cause, pas une extension de ce fichier.
 //
-// TROIS SOURCES NE SONT PAS ENCORE ACCEPTÉES PAR LE SCHÉMA. Le CHECK
+// DEUX SOURCES NE SONT PAS ENCORE ACCEPTÉES PAR LE SCHÉMA. Le CHECK
 // `tcg_wallet_entries_source_kind_check` liste aujourd'hui match_win,
-// scrim_win, booster_purchase, admin_grant, card_recycled ; celui de
-// `tcg_packs` liste victory et purchase. Le registre le dit lui-même
-// (`schemaReady`) au lieu de le laisser découvrir en production par une
-// écriture rejetée : décrire une voie et pouvoir l'écrire sont deux choses
-// distinctes, et ce module ne décrit que la première.
+// scrim_win, booster_purchase, admin_grant, card_recycled et twitch_drop
+// (`tcg_twitch_drop.sql`, 2026-09-13) ; celui de `tcg_packs` liste victory et
+// purchase. Restent donc interdits d'écriture `tournament_placement` et
+// `checkin_streak`. Le registre le dit lui-même (`schemaReady`) au lieu de le
+// laisser découvrir en production par une écriture rejetée : décrire une voie
+// et pouvoir l'écrire sont deux choses distinctes, et ce module ne décrit que
+// la première.
+//
+// CE DRAPEAU N'EST PAS DESCRIPTIF, IL COMMANDE. Le webhook du drop lit
+// `getEarnSource('twitch_drop').schemaReady` et refuse de servir tant qu'il est
+// faux : le basculer MET LA ROUTE EN SERVICE. Migrer sans basculer laisse la
+// voie éteinte en silence ; basculer sans migrer fait rejeter l'écriture en
+// production. Les deux gestes vont ensemble, et le test unitaire le rappelle.
 
 import {
   BOOSTER_PRICE_COINS,
@@ -220,6 +228,14 @@ export const TCG_EARN_SOURCES: readonly TcgEarnSource[] = [
     schemaReady: false,
   },
   {
+    // ALLUMÉE le 2026-09-13 : `tcg_twitch_drop.sql` a élargi le CHECK de
+    // `source_kind`. Ce drapeau n'est pas décoratif — le webhook lit
+    // `getEarnSource('twitch_drop').schemaReady` et refuse de servir tant
+    // qu'il est faux, donc le basculer MET LA ROUTE EN SERVICE.
+    //
+    // Elle reste néanmoins sans effet utile tant que `user_twitch_links` est
+    // vide : le refus passe simplement de « schéma non prêt » à
+    // « identité non liée ». Il manque un flux OAuth Twitch côté joueuse.
     key: 'twitch_drop',
     packs: 1,
     coins: TWITCH_DROP_COINS,
@@ -227,7 +243,7 @@ export const TCG_EARN_SOURCES: readonly TcgEarnSource[] = [
     // garantit, la contrainte UNIQUE faisant le reste.
     refKind: 'stream',
     maxPerRef: 1,
-    schemaReady: false,
+    schemaReady: true,
   },
   {
     key: 'booster_purchase',

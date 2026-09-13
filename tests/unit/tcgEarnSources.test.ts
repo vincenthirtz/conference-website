@@ -172,13 +172,18 @@ describe('limites anti-abus', () => {
 describe('schemaReady', () => {
   it('ne déclare écrivables que les source_kind acceptés par le CHECK', () => {
     // CHECK actuel : match_win, scrim_win, booster_purchase, admin_grant,
-    // card_recycled. Les trois nouvelles voies exigent une migration AVANT
-    // d'être écrites — ce test est le rappel de la lever au bon moment.
+    // card_recycled, twitch_drop. `tcg_twitch_drop.sql` a levé le verrou du
+    // drop le 2026-09-13 ; `tournament_placement` et `checkin_streak` restent
+    // interdits d'écriture — ni origine acceptée, ni écrivain.
+    //
+    // Ce test est le rappel de lever chaque verrou AU BON MOMENT : basculer un
+    // `schemaReady` sans migration ferait échouer l'écriture en production, et
+    // migrer sans basculer laisserait la voie éteinte en silence.
     expect(
       writableEarnSources()
         .map((s) => s.key)
         .sort()
-    ).toEqual(['booster_purchase', 'match_win', 'scrim_win']);
+    ).toEqual(['booster_purchase', 'match_win', 'scrim_win', 'twitch_drop']);
   });
 });
 

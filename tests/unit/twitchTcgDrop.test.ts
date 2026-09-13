@@ -431,11 +431,17 @@ describe('acheminement', () => {
  * ---------------------------------------------------------*/
 
 describe('attribution', () => {
-  it('refuse d’écrire tant que le schéma n’accepte pas la source', async () => {
-    // `earnSources.ts` marque `twitch_drop` avec `schemaReady: false` : le CHECK
-    // `tcg_wallet_entries_source_kind_check` n'admet pas encore cette valeur.
-    // Mieux vaut le dire ici que de le découvrir par un INSERT rejeté en prod.
-    expect(getEarnSource('twitch_drop')?.schemaReady).toBe(false);
+  it('la source est ALLUMÉE : l’attribution n’est plus refusée d’office', async () => {
+    // Ce cas figeait `schemaReady: false` et attendait `unsupported`. Il a fait
+    // son travail : `tcg_twitch_drop.sql` (2026-09-13) a élargi le CHECK et la
+    // bascule du drapeau a fait ÉCHOUER ce test — transformant une mise en
+    // service silencieuse en signal bruyant. C'est exactement ce qu'on lui
+    // demandait.
+    //
+    // Il garde donc le sens INVERSE : la source étant prête, `grantTwitchDrop`
+    // ne doit plus rendre `unsupported`. Le chemin nominal et l'idempotence
+    // sont couverts par les deux cas suivants, qui appellent `writeDropEntry`.
+    expect(getEarnSource('twitch_drop')?.schemaReady).toBe(true);
 
     const outcome = await grantTwitchDrop({
       tenantId: TENANT,
@@ -443,8 +449,17 @@ describe('attribution', () => {
       sourceRef: LIVE_REF,
     });
 
-    expect(outcome).toBe('unsupported');
-    expect(entries()).toHaveLength(0);
+    expect(outcome).not.toBe('unsupported');
+  });
+
+  it('une source encore éteinte reste interdite d’écriture', async () => {
+    // Le garde GÉNÉRIQUE survit à l'allumage du drop : `grantTwitchDrop` fige
+    // sa clé (`EARN_SOURCE_KEY`), on ne peut donc pas le rebrancher sur une
+    // autre source — mais le registre, lui, doit continuer d'exclure ce que le
+    // CHECK n'accepte pas. `checkin_streak` n'a ni origine acceptée ni
+    // écrivain : le jour où quelqu'un basculera son drapeau sans migrer, ce
+    // cas le dira.
+    expect(getEarnSource('checkin_streak')?.schemaReady).toBe(false);
   });
 
   it('crédite le barème du registre, une seule fois par direct', async () => {

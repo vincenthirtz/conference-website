@@ -1844,6 +1844,13 @@
       "linked_at",
       "updated_at"
     ],
+    "user_twitch_links": [
+      "auth_user_id",
+      "linked_at",
+      "twitch_login",
+      "twitch_user_id",
+      "updated_at"
+    ],
     "web_push_deliveries": [
       "acked_at",
       "attempts",
@@ -2897,6 +2904,10 @@
     },
     "user_discord_links_auth_user_id_fkey": {
       "source": "user_discord_links",
+      "target": "users"
+    },
+    "user_twitch_links_auth_user_id_fkey": {
+      "source": "user_twitch_links",
       "target": "users"
     },
     "web_push_deliveries_outbox_event_id_fkey": {
