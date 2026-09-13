@@ -9,26 +9,55 @@
 // plus lente (les tests). ESLint garde son cache (`.eslintcache`) : sur un
 // second passage, il ne relit que les fichiers touchés.
 //
-// La sortie de chaque tâche est TAMPONNÉE puis rendue d'un bloc à la fin —
-// trois flux entrelacés seraient illisibles. L'ordre d'affichage est fixe
-// (tests, typecheck, lint), pas l'ordre d'arrivée.
+// Sur le bridage des workers — MESURÉ, ne pas refaire l'erreur : plafonner
+// vitest aux cœurs physiques (2 workers au lieu de son défaut) fait passer le
+// run de 60,6 s à 88,2 s pour un load identique (12,9 → 11,9). Le parallélisme
+// par défaut est le bon réglage ; ce sont les runs à CACHE FROID qui coûtent
+// cher (typecheck : 11 s à chaud, 177 s à froid). Si le total explose, vérifier
+// `tsconfig.tsbuildinfo` avant de soupçonner la concurrence.
+//
+// Les garde-fous ci-dessous restent disponibles à la demande, pour une machine
+// déjà chaude ou occupée — mais ils ne sont PAS le défaut.
 //
 // Usage :
-//   npm run verify            # tout
-//   npm run verify -- --quick # saute les tests (typecheck + lint seuls)
+//   npm run verify                  # tout, sous budget
+//   npm run verify -- --quick       # saute les tests (typecheck + lint)
+//   npm run verify -- --serial      # une tâche à la fois (machine chaude)
+//   VERIFY_JOBS=4 npm run verify    # plafonne le total à 4 threads
 //
 // Code de sortie : 0 si tout passe, 1 dès qu'une tâche échoue.
 
 import { spawn } from 'node:child_process';
+import os from 'node:os';
 import process from 'node:process';
 
 const quick = process.argv.includes('--quick');
+const serial = process.argv.includes('--serial');
+
+const LOGICAL = os.availableParallelism?.() ?? os.cpus().length;
+
+// Aucun plafond par défaut : vitest gère son propre pool mieux que nous.
+// VERIFY_JOBS=<n> impose un budget total (tsc et eslint prennent 1 thread
+// chacun, vitest reçoit le reste) — utile si on compile ou joue en parallèle.
+const BUDGET = Number(process.env.VERIFY_JOBS) || 0;
+const VITEST_WORKERS = BUDGET ? Math.max(1, BUDGET - 2) : 0;
 
 /** @type {{ name: string, cmd: string, args: string[] }[]} */
 const TASKS = [
   ...(quick
     ? []
-    : [{ name: 'tests', cmd: 'npx', args: ['vitest', 'run', '--silent'] }]),
+    : [
+        {
+          name: 'tests',
+          cmd: 'npx',
+          args: [
+            'vitest',
+            'run',
+            '--silent',
+            ...(VITEST_WORKERS ? [`--maxWorkers=${VITEST_WORKERS}`] : []),
+          ],
+        },
+      ]),
   { name: 'typecheck', cmd: 'npx', args: ['tsc', '--noEmit'] },
   {
     name: 'lint',
@@ -42,7 +71,9 @@ const fmt = (ms) => `${(ms / 1000).toFixed(1)}s`;
 function run(task) {
   const started = Date.now();
   return new Promise((resolve) => {
-    const child = spawn(task.cmd, task.args, {
+    // `nice` : priorité basse. Le run prend le CPU disponible mais rend la main
+    // à l'interface, ce qui évite les à-coups pendant qu'on continue à coder.
+    const child = spawn('nice', ['-n', '10', task.cmd, ...task.args], {
       stdio: ['ignore', 'pipe', 'pipe'],
       env: process.env,
     });
@@ -64,9 +95,22 @@ function run(task) {
 }
 
 const started = Date.now();
-console.log(`▶ verify : ${TASKS.map((t) => t.name).join(' + ')} en parallèle…`);
+const plan = serial
+  ? `${TASKS.map((t) => t.name).join(' → ')} en série`
+  : `${TASKS.map((t) => t.name).join(' + ')} en parallèle`;
+console.log(
+  `▶ verify : ${plan}` +
+    (BUDGET ? ` — budget ${BUDGET}/${LOGICAL} threads` : '') +
+    '…',
+);
 
-const results = await Promise.all(TASKS.map(run));
+let results;
+if (serial) {
+  results = [];
+  for (const t of TASKS) results.push(await run(t));
+} else {
+  results = await Promise.all(TASKS.map(run));
+}
 const wall = Date.now() - started;
 
 for (const r of results) {
@@ -78,12 +122,12 @@ for (const r of results) {
 }
 
 const failed = results.filter((r) => r.code !== 0);
-const serial = results.reduce((sum, r) => sum + r.ms, 0);
+const cpu = results.reduce((sum, r) => sum + r.ms, 0);
 console.log(
-  `\n⏱  ${fmt(wall)} au total (${fmt(serial)} en série) — ` +
+  `\n⏱  ${fmt(wall)} au total (${fmt(cpu)} cumulés) — ` +
     (failed.length
       ? `${failed.length} échec(s) : ${failed.map((f) => f.name).join(', ')}`
-      : 'tout est vert.')
+      : 'tout est vert.'),
 );
 
 process.exit(failed.length ? 1 : 0);
