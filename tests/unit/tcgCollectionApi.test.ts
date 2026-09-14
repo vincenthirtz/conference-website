@@ -538,6 +538,125 @@ describe('GET /api/player/tcg/collection — consentement photo', () => {
 });
 
 /* -------------------------------------------------------------------------- */
+/* `recyclable` — QUEL exemplaire on propose de recycler                        */
+/* -------------------------------------------------------------------------- */
+
+describe('GET /api/player/tcg/collection — exemplaire recyclable', () => {
+  // CE QUE CES CAS PROTÈGENT. La route de recyclage accepte n'importe quel
+  // exemplaire pourvu qu'il en reste un autre : elle ne regarde PAS lequel
+  // part. Le choix appartient donc à cette route-ci, et une inversion de sa
+  // comparaison détruirait la meilleure carte d'une joueuse sans qu'aucune
+  // erreur ne se produise — le bouton dirait toujours « recycler un doublon ».
+
+  it('ne propose RIEN quand il n’y a qu’un exemplaire', async () => {
+    // La route de recyclage refuserait ce cas (`not_a_duplicate`) : afficher un
+    // bouton reviendrait à promettre un geste impossible.
+    setAuthUser({ id: OWNER });
+    seedPack(PACK_A);
+    seedPlayerCard(PACK_A, SUBJECT_1);
+
+    const res = makeRes();
+    await handler(makeReq(), res);
+
+    expect(res.body.cards[0].count).toBe(1);
+    expect(res.body.cards[0].recyclable).toBeNull();
+  });
+
+  it('désigne la COMMUNE quand on possède aussi une épique', async () => {
+    // LE cas central. Sans lui, une inversion du tri ferait recycler l'épique
+    // et garder la commune — un clic censé ranger ses doublons coûterait la
+    // meilleure carte.
+    setAuthUser({ id: OWNER });
+    seedPack(PACK_A);
+    seedPlayerCard(PACK_A, SUBJECT_1, { rarity: 'epic' });
+    seedPlayerCard(PACK_A, SUBJECT_1, { rarity: 'common' });
+
+    const res = makeRes();
+    await handler(makeReq(), res);
+
+    const card = res.body.cards[0];
+    // La carte s'affiche avec sa MEILLEURE rareté…
+    expect(card.rarity).toBe('epic');
+    // … mais c'est la PIRE qu'on propose de recycler.
+    const commune = (store.tcg_pack_cards as any[]).find(
+      (c) => c.rarity === 'common'
+    );
+    expect(card.recyclable).toEqual({
+      packId: commune.pack_id,
+      position: commune.position,
+    });
+  });
+
+  it('à rareté égale, garde la brillante et propose l’autre', async () => {
+    // La brillance ne vaut aucun palier de plus, mais entre deux communes on
+    // ne détruit pas celle qui brille.
+    setAuthUser({ id: OWNER });
+    seedPack(PACK_A);
+    seedPlayerCard(PACK_A, SUBJECT_1, { rarity: 'common', isFoil: true });
+    seedPlayerCard(PACK_A, SUBJECT_1, { rarity: 'common', isFoil: false });
+
+    const res = makeRes();
+    await handler(makeReq(), res);
+
+    const terne = (store.tcg_pack_cards as any[]).find((c) => !c.is_foil);
+    expect(res.body.cards[0].recyclable).toEqual({
+      packId: terne.pack_id,
+      position: terne.position,
+    });
+  });
+
+  it('ne compte pas une carte DÉJÀ recyclée comme un doublon', async () => {
+    // Une carte revendue garde sa ligne — c'est ce qui rend le crédit
+    // explicable — mais elle ne fait plus partie de la collection. Deux
+    // exemplaires dont un recyclé, c'est un exemplaire.
+    setAuthUser({ id: OWNER });
+    seedPack(PACK_A);
+    seedPlayerCard(PACK_A, SUBJECT_1);
+    seedPlayerCard(PACK_A, SUBJECT_1, {
+      recycledAt: '2026-02-01T00:00:00.000Z',
+    });
+
+    const res = makeRes();
+    await handler(makeReq(), res);
+
+    expect(res.body.cards[0].count).toBe(1);
+    expect(res.body.cards[0].recyclable).toBeNull();
+  });
+
+  it('désigne un exemplaire même réparti sur DEUX paquets', async () => {
+    // `packId` change d'un exemplaire à l'autre : le couple rendu doit
+    // désigner la bonne carte, pas seulement la bonne position.
+    setAuthUser({ id: OWNER });
+    seedPack(PACK_A);
+    seedPack(PACK_B);
+    seedPlayerCard(PACK_A, SUBJECT_1, { rarity: 'legendary' });
+    seedPlayerCard(PACK_B, SUBJECT_1, { rarity: 'rare' });
+
+    const res = makeRes();
+    await handler(makeReq(), res);
+
+    expect(res.body.cards[0].rarity).toBe('legendary');
+    expect(res.body.cards[0].recyclable.packId).toBe(PACK_B);
+  });
+
+  it('vaut aussi pour une carte d’équipe', async () => {
+    // Les trois sujets passent par la même agrégation : si l'un d'eux perdait
+    // `recyclable`, seule une carte sur trois serait recyclable.
+    setAuthUser({ id: OWNER });
+    seedPack(PACK_A);
+    seedTeamCard(PACK_A, TEAM, { rarity: 'rare' });
+    seedTeamCard(PACK_A, TEAM, { rarity: 'common' });
+
+    const res = makeRes();
+    await handler(makeReq(), res);
+
+    const card = res.body.cards.find((c: any) => c.kind === 'team');
+    expect(card.count).toBe(2);
+    expect(card.recyclable).not.toBeNull();
+  });
+});
+
+/* -------------------------------------------------------------------------- */
 /* Chemins dégradés                                                             */
 /* -------------------------------------------------------------------------- */
 
