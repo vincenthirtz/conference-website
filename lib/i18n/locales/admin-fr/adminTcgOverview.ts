@@ -186,6 +186,10 @@ export default adminNs('adminTcgOverview', {
   giftConfirmBody:
     '{count} compte(s) vont être crédités. C’est immédiat et définitif : un paquet ouvert ne se reprend pas.',
   giftGranted: '{granted} compte(s) crédité(s).',
+  // Le cas du 2026-09-14 : pièces écrites, paquets refusés par une contrainte.
+  // L'écart doit se lire à l'écran, pas seulement dans les journaux.
+  giftPartial:
+    '{granted} compte(s) crédité(s) mais seulement {packsGranted} paquet(s) accordé(s). Les pièces ne seront pas rejouées : lis les journaux serveur avant de relancer.',
   giftLoadError: 'Impossible de lire l’état du cadeau de bienvenue.',
   giftGrantError: 'La distribution a échoué, réessaie.',
 });

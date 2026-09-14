@@ -56,6 +56,8 @@ export type TcgWelcomeGiftLabels = {
   confirmBody: string;
   /** Interpole `{granted}`. */
   granted: string;
+  /** Interpole `{granted}` et `{packsGranted}`. Écriture partielle : cf. `onGrant`. */
+  partial: string;
   loadError: string;
   grantError: string;
 };
@@ -120,7 +122,25 @@ export default function TcgWelcomeGiftCard({
     try {
       const next = await mutateJson<State>(ROUTE, { method: 'POST' });
       setState(next);
-      addToast(format(labels.granted, { granted: next.granted }), 'success');
+      // UN SUCCÈS N'EN EST PAS UN SI LES PAQUETS MANQUENT, et cet écran l'a
+      // appris à ses dépens. Le 2026-09-14, il a affiché « 58 compte(s)
+      // crédité(s) » en vert alors que `packsGranted` valait 0 : la contrainte
+      // `tcg_packs_source_coherent` refusait chaque paquet `welcome`,
+      // `grantWelcomeGift` journalisait sans lever — délibérément, pour ne pas
+      // perdre 57 crédits à cause d'un — et le seul humain dans la boucle a lu
+      // une réussite. Le compte rendu PORTAIT l'écart depuis le début ;
+      // personne ne le regardait. On le regarde maintenant.
+      if (next.packsGranted < next.granted) {
+        addToast(
+          format(labels.partial, {
+            granted: next.granted,
+            packsGranted: next.packsGranted,
+          }),
+          'error'
+        );
+      } else {
+        addToast(format(labels.granted, { granted: next.granted }), 'success');
+      }
     } catch (err) {
       logger.error('[admin/tcg/welcome-gift] grant error:', err);
       addToast((err as Error)?.message || labels.grantError, 'error');
@@ -144,6 +164,24 @@ export default function TcgWelcomeGiftCard({
             className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200"
           >
             {error}
+          </div>
+        )}
+
+        {/* UN TOAST DISPARAÎT, PAS UN MANQUE. Une distribution incomplète laisse
+            des joueuses avec des pièces et sans paquet — un état qu'aucun rejeu
+            ne répare (les pièces existent, donc le RETURNING ne rend plus
+            personne). Ça se répare à la main, donc ça doit rester affiché.
+            Après un GET, `granted` vaut 0 : la condition ne se déclenche
+            qu'à la suite d'une distribution réelle. */}
+        {state && state.granted > state.packsGranted && (
+          <div
+            role="alert"
+            className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200"
+          >
+            {format(labels.partial, {
+              granted: state.granted,
+              packsGranted: state.packsGranted,
+            })}
           </div>
         )}
 

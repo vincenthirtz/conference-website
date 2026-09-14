@@ -328,6 +328,7 @@ export function resetSupabaseMock() {
   storageUploads.length = 0;
   storageRemovals.length = 0;
   _storageRemoveResult = { data: null, error: null };
+  _tableWriteErrors = {};
   _rpcResults.clear();
   rpcCalls.length = 0;
 }
@@ -711,6 +712,15 @@ class Builder {
   }> {
     const rows = (store[this.table] ||= []);
 
+    // Une ÉCRITURE refusée, comme le ferait une contrainte. Les lectures
+    // passent : c'est bien l'écriture que Postgres rejette. Placé AVANT la
+    // branche d'upsert, sinon un upsert échapperait au refus. Cf.
+    // `setTableWriteError` pour la raison d'être de ce levier.
+    const writeError = _tableWriteErrors[this.table];
+    if (writeError && this.op !== 'select') {
+      return { data: null, error: writeError };
+    }
+
     // Un upsert `ignoreDuplicates` rend ses lignes insérées, pas le contenu
     // filtré de la table : c'est la sémantique de RETURNING.
     if (this.upsertReturning !== null) {
@@ -807,6 +817,29 @@ class Builder {
 
     return { data: [], error: null };
   }
+}
+
+/** Écritures refusées par table. Cf. `setTableWriteError`. */
+let _tableWriteErrors: Record<string, { message: string } | null> = {};
+
+/**
+ * Faire échouer les ÉCRITURES sur une table, comme le ferait une contrainte.
+ *
+ * POURQUOI CE LEVIER EXISTE. Ce mock n'évalue AUCUN `CHECK` : une insertion que
+ * Postgres refuserait passe ici au vert. Le 2026-09-14,
+ * `tcg_packs_source_coherent` a rejeté 58 paquets en production, et aucun test
+ * ne POUVAIT le voir — la panne était structurellement intestable.
+ *
+ * Ce réglage ne remplace pas la contrainte, et ne prétend pas la simuler : il
+ * permet de tester ce que le code FAIT quand une écriture est refusée, ce qui
+ * est justement là que ce genre d'incident se joue (avaler l'erreur, ou la
+ * rendre visible). La contrainte elle-même reste vérifiée par la migration.
+ */
+export function setTableWriteError(
+  table: string,
+  error: { message: string } | null
+) {
+  _tableWriteErrors[table] = error;
 }
 
 /** State for `supabaseAdmin.storage.from(bucket).upload()`. */

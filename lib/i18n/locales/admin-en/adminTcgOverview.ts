@@ -158,6 +158,10 @@ export default {
   giftConfirmBody:
     '{count} account(s) will be credited. This is immediate and final: an opened pack cannot be taken back.',
   giftGranted: '{granted} account(s) credited.',
+  // The 2026-09-14 case: coins written, packs refused by a constraint. The gap
+  // has to be readable on screen, not only in the logs.
+  giftPartial:
+    '{granted} account(s) credited but only {packsGranted} pack(s) handed out. The coins will not be replayed: read the server logs before running it again.',
   giftLoadError: 'Could not read the welcome gift status.',
   giftGrantError: 'The hand-out failed, please try again.',
 };

@@ -241,6 +241,14 @@ export async function grantWelcomeGift(input: {
       // Les pièces sont déjà écrites et ne seront pas rejouées : on le dit
       // fort. Le manque est visible (des pièces sans paquet) et réparable à la
       // main, là où une reprise automatique multiplierait les paquets.
+      //
+      // CE CHEMIN A ÉTÉ EMPRUNTÉ EN PRODUCTION, le 2026-09-14 : `tcg_packs`
+      // porte DEUX contraintes sur `source_kind`, et la migration du cadeau
+      // n'en avait élargi qu'une. `tcg_packs_source_coherent` — dont le nom ne
+      // dit pas qu'elle contraint cette colonne — a rejeté les 58 paquets. Ne
+      // pas lever reste le bon arbitrage ; ce qui manquait, c'est que
+      // QUELQU'UN LISE `packsGranted`. L'écran d'administration compare
+      // désormais ce compteur à `granted` au lieu d'annoncer un succès.
       logger.error(
         '[tcg/welcome] paquets non accordés pour %d compte(s): %s',
         credited.length,

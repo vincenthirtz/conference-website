@@ -34,7 +34,11 @@ vi.mock('@/utils/supabase', async () => {
   return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
 });
 
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import {
+  store,
+  resetSupabaseMock,
+  setTableWriteError,
+} from './__helpers__/supabaseMock';
 import { grantWelcomeGift } from '../../utils/tcg/grantWelcomeGift';
 import { earnReward } from '../../utils/tcg/earnSources';
 
@@ -260,6 +264,57 @@ describe('grantWelcomeGift — rejeu', () => {
     });
 
     expect(next.granted).toBe(1);
+  });
+});
+
+describe('grantWelcomeGift — écriture partielle', () => {
+  it('rend packsGranted < granted quand les paquets sont refusés — le cas du 2026-09-14', async () => {
+    // CE TEST EXISTE PARCE QUE LA PRODUCTION L'A FAIT. `tcg_packs` portait DEUX
+    // contraintes sur `source_kind` ; la migration du cadeau n'en avait élargi
+    // qu'une, et `tcg_packs_source_coherent` — qui ne nomme pas la colonne —
+    // rejetait chaque paquet `welcome` en 23514. 58 comptes ont reçu leurs
+    // pièces, aucun son paquet, et l'email annonçant les deux était déjà parti.
+    //
+    // Aucun test ne pouvait l'attraper : le mock n'évalue pas les `CHECK`. Ce
+    // cas ne teste donc pas la contrainte (c'est le rôle de la migration) mais
+    // le COMPORTEMENT face à un refus — la partie qui a échoué en silence.
+    setTableWriteError('tcg_packs', {
+      message: 'new row violates check constraint "tcg_packs_source_coherent"',
+    });
+
+    const report = await grantWelcomeGift({
+      tenantId: TENANT,
+      tournamentId: TOURNAMENT,
+    });
+
+    // Les pièces restent écrites, et ne seront pas rejouées : c'est le choix
+    // assumé de l'ordre d'écriture, pas un effet de bord.
+    expect(report.granted).toBe(3);
+    expect(entries()).toHaveLength(3);
+
+    // L'ÉCART EST RENDU, PAS AVALÉ. C'est cette valeur que l'écran compare à
+    // `granted` avant d'oser afficher un succès.
+    expect(report.packsGranted).toBe(0);
+    expect(packs()).toHaveLength(0);
+  });
+
+  it('un rejeu après le refus ne répare RIEN — la réparation est manuelle', async () => {
+    // Le corollaire cruel de l'idempotence, et la raison pour laquelle les 58
+    // paquets ont dû être rattrapés en SQL : le second passage ne crédite que
+    // les comptes que le `ON CONFLICT DO NOTHING ... RETURNING` vient de
+    // rendre. Les pièces existant déjà, il ne rend personne, donc n'accorde
+    // aucun paquet — même une fois la contrainte réparée.
+    const input = { tenantId: TENANT, tournamentId: TOURNAMENT };
+
+    setTableWriteError('tcg_packs', { message: 'violates check constraint' });
+    await grantWelcomeGift(input);
+
+    setTableWriteError('tcg_packs', null); // la contrainte est réparée
+    const second = await grantWelcomeGift(input);
+
+    expect(second.granted).toBe(0);
+    expect(second.packsGranted).toBe(0);
+    expect(packs()).toHaveLength(0); // toujours rien : il faut réparer à la main
   });
 });
 

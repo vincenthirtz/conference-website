@@ -241,6 +241,7 @@ export default function AdminModerationPage({ staff }: StaffProps) {
                     confirmTitle: tTcgOverview.giftConfirmTitle,
                     confirmBody: tTcgOverview.giftConfirmBody,
                     granted: tTcgOverview.giftGranted,
+                    partial: tTcgOverview.giftPartial,
                     loadError: tTcgOverview.giftLoadError,
                     grantError: tTcgOverview.giftGrantError,
                   }}
