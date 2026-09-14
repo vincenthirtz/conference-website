@@ -51,9 +51,11 @@ function scopeToRound<T extends { is: Function; eq: Function }>(
   query: T,
   round: number | null
 ): T {
-  return (round === null
-    ? query.is('round_number', null)
-    : query.eq('round_number', round)) as T;
+  return (
+    round === null
+      ? query.is('round_number', null)
+      : query.eq('round_number', round)
+  ) as T;
 }
 
 // Rôle minimum : manager (peut gérer les settings du tournoi)
@@ -358,7 +360,8 @@ async function handleAddDefaults(
     type: m.type,
     image: m.image,
   }));
-  const source = resolvedSource === 'tournament-round' ? 'tournament' : resolvedSource;
+  const source =
+    resolvedSource === 'tournament-round' ? 'tournament' : resolvedSource;
 
   // Maps déjà présentes DANS CE POOL (dédup insensible à la casse). Scoper à la
   // journée est indispensable : sinon remplir J3 sauterait toutes les cartes

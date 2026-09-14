@@ -41,7 +41,13 @@ const TZ = 'Europe/Paris';
 
 // Clés d'URL préfixées `c` : la page héberge trois onglets sous la même adresse
 // (scrims `s*`, grilles `p*`, agenda `c*`).
-const CAL_FILTER_KEYS = ['cview', 'cweek', 'cmonth', 'cteam', 'cstatus'] as const;
+const CAL_FILTER_KEYS = [
+  'cview',
+  'cweek',
+  'cmonth',
+  'cteam',
+  'cstatus',
+] as const;
 
 const ALL_STATUSES = [
   'draft',
@@ -95,7 +101,8 @@ export default function ScrimCalendarPanel() {
 
   const view: 'week' | 'month' = filters.cview === 'month' ? 'month' : 'week';
   const setView = useCallback(
-    (next: 'week' | 'month') => setFilters({ cview: next === 'month' ? 'month' : null }),
+    (next: 'week' | 'month') =>
+      setFilters({ cview: next === 'month' ? 'month' : null }),
     [setFilters]
   );
 
@@ -179,9 +186,10 @@ export default function ScrimCalendarPanel() {
   // plage affichée : sans ça, changer de semaine faisait disparaître l'option
   // du menu alors que le filtre restait actif — l'agenda paraissait vide sans
   // que rien ne l'explique, et on ne pouvait plus le désélectionner.
-  const [stickyTeam, setStickyTeam] = useState<{ id: string; name: string } | null>(
-    null
-  );
+  const [stickyTeam, setStickyTeam] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const teamOptions = useMemo(
     () => buildTeamOptions([...rawScrims, ...rawMatches], stickyTeam),
@@ -194,7 +202,9 @@ export default function ScrimCalendarPanel() {
     (id: string) => {
       setTeamFilter(id);
       setStickyTeam(
-        id ? { id, name: teamOptions.find((o) => o.id === id)?.name ?? id } : null
+        id
+          ? { id, name: teamOptions.find((o) => o.id === id)?.name ?? id }
+          : null
       );
     },
     [teamOptions, setTeamFilter]
@@ -396,7 +406,9 @@ export default function ScrimCalendarPanel() {
         id,
         { scheduled_date: zonedTimeToUtcIso(dayYmd, minute, TZ) },
         'move',
-        before.scheduled_date ? { scheduled_date: before.scheduled_date } : undefined
+        before.scheduled_date
+          ? { scheduled_date: before.scheduled_date }
+          : undefined
       );
     },
     [patchScrim, currentValues]
@@ -551,7 +563,9 @@ export default function ScrimCalendarPanel() {
           className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-700 bg-neutral-800/70 px-4 py-2.5 text-sm"
         >
           <span className="text-neutral-300">
-            {undoable.kind === 'move' ? t.calUndoMovedHint : t.calUndoResizedHint}
+            {undoable.kind === 'move'
+              ? t.calUndoMovedHint
+              : t.calUndoResizedHint}
           </span>
           <button
             type="button"

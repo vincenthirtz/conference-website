@@ -110,7 +110,8 @@ test.describe('/admin/teams/my auth protection', () => {
 
 // ─── Authenticated UI flows (route-mocked endpoints) ───────────────────────
 
-test.describe.serial('/admin/teams/my roster management', () => {
+test.describe('/admin/teams/my roster management', () => {
+  test.describe.configure({ mode: 'serial' });
   test.beforeAll(async () => {
     if (skipIfNoServiceRole()) return;
     await deleteTestStaff(CAPTAIN_EMAIL);

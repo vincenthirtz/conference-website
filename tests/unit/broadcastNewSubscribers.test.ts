@@ -104,7 +104,11 @@ beforeEach(() => {
 
 describe('onlyNew — dry-run diff', () => {
   it('with no prior sends, every confirmed recipient is « new »', async () => {
-    setAuthListUsers([confirmedUser('u1'), confirmedUser('u2'), confirmedUser('u3')]);
+    setAuthListUsers([
+      confirmedUser('u1'),
+      confirmedUser('u2'),
+      confirmedUser('u3'),
+    ]);
 
     const res = makeRes();
     await campaignHandler(
@@ -124,13 +128,32 @@ describe('onlyNew — dry-run diff', () => {
   });
 
   it('excludes recipients already marked sent for this campaign', async () => {
-    setAuthListUsers([confirmedUser('u1'), confirmedUser('u2'), confirmedUser('u3')]);
+    setAuthListUsers([
+      confirmedUser('u1'),
+      confirmedUser('u2'),
+      confirmedUser('u3'),
+    ]);
     store.broadcast_recipients = [
-      { campaign_id: BUILTIN_ID, user_id: 'u1', email: 'u1@x.com', status: 'sent' },
+      {
+        campaign_id: BUILTIN_ID,
+        user_id: 'u1',
+        email: 'u1@x.com',
+        status: 'sent',
+      },
       // pending ne compte pas comme « déjà envoyé »
-      { campaign_id: BUILTIN_ID, user_id: 'u2', email: 'u2@x.com', status: 'pending' },
+      {
+        campaign_id: BUILTIN_ID,
+        user_id: 'u2',
+        email: 'u2@x.com',
+        status: 'pending',
+      },
       // sent mais AUTRE campagne → ne doit pas filtrer u3 ici
-      { campaign_id: 'other', user_id: 'u3', email: 'u3@x.com', status: 'sent' },
+      {
+        campaign_id: 'other',
+        user_id: 'u3',
+        email: 'u3@x.com',
+        status: 'sent',
+      },
     ] as any;
 
     const res = makeRes();

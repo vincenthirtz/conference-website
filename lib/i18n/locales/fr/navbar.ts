@@ -34,7 +34,7 @@ export default ns('navbar', {
     Ligues: 'Ligues',
     Communauté: 'Communauté',
     "L'association": "L'association",
-    'Ambassadeur·rices': 'Ambassadeur·rices',
+    Ambassadeur·rices: 'Ambassadeur·rices',
     'Cartes à collectionner': 'Cartes à collectionner',
     Partenaires: 'Partenaires',
     'Édition 2025': 'Édition 2025',

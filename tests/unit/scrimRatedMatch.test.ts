@@ -67,10 +67,38 @@ function seedScrim(over: Record<string, unknown> = {}): void {
     { id: TEAM_B, tenant_id: TENANT, name: 'Bravo' },
   ];
   store.team_members = [
-    { tenant_id: TENANT, team_id: TEAM_A, user_id: A1, role: 'player', is_substitute: false, battle_tag: null },
-    { tenant_id: TENANT, team_id: TEAM_A, user_id: A2, role: 'player', is_substitute: false, battle_tag: null },
-    { tenant_id: TENANT, team_id: TEAM_B, user_id: B1, role: 'player', is_substitute: false, battle_tag: null },
-    { tenant_id: TENANT, team_id: TEAM_B, user_id: B2, role: 'player', is_substitute: false, battle_tag: null },
+    {
+      tenant_id: TENANT,
+      team_id: TEAM_A,
+      user_id: A1,
+      role: 'player',
+      is_substitute: false,
+      battle_tag: null,
+    },
+    {
+      tenant_id: TENANT,
+      team_id: TEAM_A,
+      user_id: A2,
+      role: 'player',
+      is_substitute: false,
+      battle_tag: null,
+    },
+    {
+      tenant_id: TENANT,
+      team_id: TEAM_B,
+      user_id: B1,
+      role: 'player',
+      is_substitute: false,
+      battle_tag: null,
+    },
+    {
+      tenant_id: TENANT,
+      team_id: TEAM_B,
+      user_id: B2,
+      role: 'player',
+      is_substitute: false,
+      battle_tag: null,
+    },
   ];
   store.matches = [];
   store.match_participants = [];
@@ -78,8 +106,7 @@ function seedScrim(over: Record<string, unknown> = {}): void {
   store.player_rating_history = [];
 }
 
-const mirrors = () =>
-  (store.matches || []).filter((m) => m.scrim_id === SCRIM);
+const mirrors = () => (store.matches || []).filter((m) => m.scrim_id === SCRIM);
 
 beforeEach(() => resetSupabaseMock());
 

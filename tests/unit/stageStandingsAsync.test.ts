@@ -72,7 +72,9 @@ describe('computeStageStandings — dispatcher', () => {
   it('returns an empty array when the stage has no teams', async () => {
     seedStageTeams('stage-x', []);
     seedMatches([]);
-    expect(await computeStageStandings(TEST_TENANT, 'stage-x', 'group')).toEqual([]);
+    expect(
+      await computeStageStandings(TEST_TENANT, 'stage-x', 'group')
+    ).toEqual([]);
   });
 
   it('dispatches to group computation for stage_type=group', async () => {
@@ -116,7 +118,11 @@ describe('computeStageStandings — dispatcher', () => {
       },
     ]);
 
-    const standings = await computeStageStandings(TEST_TENANT, 's1', 'round_robin');
+    const standings = await computeStageStandings(
+      TEST_TENANT,
+      's1',
+      'round_robin'
+    );
     expect(standings[0].teamId).toBe('t2');
   });
 
@@ -170,7 +176,11 @@ describe('computeStageStandings — dispatcher', () => {
     ]);
     seedMatches([]);
 
-    const standings = await computeStageStandings(TEST_TENANT, 's1', 'showmatch');
+    const standings = await computeStageStandings(
+      TEST_TENANT,
+      's1',
+      'showmatch'
+    );
     expect(standings.map((s) => s.teamId)).toEqual(['t2', 't3', 't1']);
     for (const s of standings) {
       expect(s.wins).toBe(0);
@@ -236,9 +246,9 @@ describe('computeStageStandings — dispatcher', () => {
 describe('computeGroupedStandings', () => {
   it('throws when the stage does not exist', async () => {
     store.tournament_stages = [] as any;
-    await expect(computeGroupedStandings(TEST_TENANT, 'missing')).rejects.toThrow(
-      /not found/
-    );
+    await expect(
+      computeGroupedStandings(TEST_TENANT, 'missing')
+    ).rejects.toThrow(/not found/);
   });
 
   it('splits teams by group_assignments and computes per-group standings', async () => {

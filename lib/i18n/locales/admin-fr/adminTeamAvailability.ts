@@ -36,8 +36,7 @@ export default adminNs('adminTeamAvailability', {
   timeOfDay: 'Heure',
   weekdays: 'Jours',
   timezone: 'Fuseau',
-  timezoneHint:
-    'Les heures et les dates sont lues dans ce fuseau, pas en UTC.',
+  timezoneHint: 'Les heures et les dates sont lues dans ce fuseau, pas en UTC.',
   scope: 'Portée',
   scopeAll: 'Tous les tournois',
   scopeAllHint: 'Une règle permanente de l’équipe.',

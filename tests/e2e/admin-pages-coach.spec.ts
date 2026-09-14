@@ -45,7 +45,8 @@ async function expectPageLoaded(page: import('@playwright/test').Page) {
 
 // ─── Connexion ──────────────────────────────────────────────────────
 
-test.describe.serial('Admin pages — Test Coach', () => {
+test.describe('Admin pages — Test Coach', () => {
+  test.describe.configure({ mode: 'serial' });
   test('Connexion au dashboard admin', async ({ page }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 

@@ -54,7 +54,9 @@ export function useIsrRefresh<T>({
   revalidateOnFocus = true,
 }: UseIsrRefreshOptions<T>): UseIsrRefreshResult<T> {
   const hasInitial = initial !== null && initial !== undefined;
-  const [data, setData] = useState<T | null>(hasInitial ? (initial as T) : null);
+  const [data, setData] = useState<T | null>(
+    hasInitial ? (initial as T) : null
+  );
   // On ne montre le spinner que si on n'a rien à afficher (fallback ISR).
   const [loading, setLoading] = useState(!hasInitial && when);
   const [error, setError] = useState<unknown>(null);

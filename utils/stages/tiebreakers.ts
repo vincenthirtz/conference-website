@@ -86,9 +86,7 @@ export interface RankedTeam extends TiebreakerTeam {
 }
 
 /** Nettoie une liste venue des settings ; rend `null` si rien d'exploitable. */
-export function parseTiebreakerOrder(
-  value: unknown
-): TiebreakerKey[] | null {
+export function parseTiebreakerOrder(value: unknown): TiebreakerKey[] | null {
   if (!Array.isArray(value)) return null;
   const seen = new Set<string>();
   const out: TiebreakerKey[] = [];
@@ -173,7 +171,8 @@ function splitGroup(
   if (group.length <= 1 || keys.length === 0) return group;
 
   const [key, ...rest] = keys;
-  const h2h = key === 'head_to_head' ? headToHeadPoints(group, matches) : new Map();
+  const h2h =
+    key === 'head_to_head' ? headToHeadPoints(group, matches) : new Map();
 
   const buckets = new Map<number, TiebreakerTeam[]>();
   for (const team of group) {

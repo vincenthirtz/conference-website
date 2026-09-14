@@ -80,7 +80,8 @@ export function buildTeamOptions(
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+const clamp = (v: number, lo: number, hi: number) =>
+  Math.min(hi, Math.max(lo, v));
 
 export type KeyboardMove =
   | { type: 'move'; dayYmd: string; minute: number }
@@ -107,8 +108,17 @@ export function keyboardMove(params: {
   days: string[];
   snap: number;
 }): KeyboardMove {
-  const { key, shiftKey, dayYmd, minute, duration, bandStart, bandEnd, days, snap } =
-    params;
+  const {
+    key,
+    shiftKey,
+    dayYmd,
+    minute,
+    duration,
+    bandStart,
+    bandEnd,
+    days,
+    snap,
+  } = params;
 
   if (shiftKey && (key === 'ArrowUp' || key === 'ArrowDown')) {
     const next = clamp(
@@ -131,8 +141,14 @@ export function keyboardMove(params: {
   if (key === 'ArrowLeft' || key === 'ArrowRight') {
     const idx = days.indexOf(dayYmd);
     if (idx === -1) return null;
-    const nextIdx = clamp(idx + (key === 'ArrowRight' ? 1 : -1), 0, days.length - 1);
-    return nextIdx === idx ? null : { type: 'move', dayYmd: days[nextIdx], minute };
+    const nextIdx = clamp(
+      idx + (key === 'ArrowRight' ? 1 : -1),
+      0,
+      days.length - 1
+    );
+    return nextIdx === idx
+      ? null
+      : { type: 'move', dayYmd: days[nextIdx], minute };
   }
 
   return null;
@@ -145,7 +161,10 @@ export function keyboardMove(params: {
  * annulerait vers un état périmé.
  */
 export function effectiveValues<
-  T extends { scheduled_date?: string | null; duration_minutes?: number | null },
+  T extends {
+    scheduled_date?: string | null;
+    duration_minutes?: number | null;
+  },
 >(raw: T | undefined, override: Partial<T> | undefined) {
   return {
     scheduled_date:

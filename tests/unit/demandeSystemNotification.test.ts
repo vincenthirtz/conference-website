@@ -33,7 +33,10 @@ describe('isSystemNotification', () => {
   it('reconnaît les deux autres écrans qui notifient', () => {
     for (const type of ['tournament_open', 'captain_message']) {
       expect(
-        isSystemNotification({ user_id: null, payload: { notification_type: type } })
+        isSystemNotification({
+          user_id: null,
+          payload: { notification_type: type },
+        })
       ).toBe(true);
     }
   });
@@ -43,7 +46,10 @@ describe('isSystemNotification', () => {
     // supprimé. Le masquer ferait perdre l'information.
     expect(isSystemNotification({ user_id: null, payload: null })).toBe(false);
     expect(
-      isSystemNotification({ user_id: null, payload: { user_battle_tag: 'X#1' } })
+      isSystemNotification({
+        user_id: null,
+        payload: { user_battle_tag: 'X#1' },
+      })
     ).toBe(false);
   });
 
@@ -61,10 +67,16 @@ describe('isSystemNotification', () => {
     // Un payload malformé ne doit pas transformer une demande orpheline en
     // notification : on perdrait le signal « compte supprimé ».
     expect(
-      isSystemNotification({ user_id: null, payload: { notification_type: 42 } })
+      isSystemNotification({
+        user_id: null,
+        payload: { notification_type: 42 },
+      })
     ).toBe(false);
     expect(
-      isSystemNotification({ user_id: null, payload: { notification_type: null } })
+      isSystemNotification({
+        user_id: null,
+        payload: { notification_type: null },
+      })
     ).toBe(false);
   });
 });

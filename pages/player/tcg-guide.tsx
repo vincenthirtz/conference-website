@@ -158,11 +158,7 @@ function TcgGuide(): JSX.Element {
               <EarnRow label={t.earnMatchWin} coins={earn.matchWin} t={t} />
               <EarnRow label={t.earnScrimWin} coins={earn.scrimWin} t={t} />
               {typeof earn.welcomeGift === 'number' && (
-                <EarnRow
-                  label={t.earnWelcome}
-                  coins={earn.welcomeGift}
-                  t={t}
-                />
+                <EarnRow label={t.earnWelcome} coins={earn.welcomeGift} t={t} />
               )}
               {typeof earn.twitchDrop === 'number' && (
                 <EarnRow

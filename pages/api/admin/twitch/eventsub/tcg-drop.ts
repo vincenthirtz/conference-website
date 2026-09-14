@@ -154,12 +154,10 @@ async function handler(
   // de ses scopes pour prédire le refus de Twitch plutôt que le subir.
   const token = await getValidBroadcasterToken(supabaseAdmin, ctx.tenantId);
   if (!token) {
-    return res
-      .status(409)
-      .json({
-        error: 'Aucune chaîne Twitch connectée.',
-        code: 'NOT_CONNECTED',
-      });
+    return res.status(409).json({
+      error: 'Aucune chaîne Twitch connectée.',
+      code: 'NOT_CONNECTED',
+    });
   }
 
   const appToken = await getAccessToken();
@@ -326,12 +324,10 @@ async function handler(
   if (req.method === 'DELETE') {
     const subs = await listOurSubscriptions(appToken, creds.id);
     if (subs === null) {
-      return res
-        .status(502)
-        .json({
-          error: 'Twitch EventSub injoignable.',
-          code: 'TWITCH_HELIX_ERROR',
-        });
+      return res.status(502).json({
+        error: 'Twitch EventSub injoignable.',
+        code: 'TWITCH_HELIX_ERROR',
+      });
     }
 
     let removed = 0;

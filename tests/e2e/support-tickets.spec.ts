@@ -17,7 +17,8 @@ const TS = Date.now();
 
 const createdTicketIds: string[] = [];
 
-test.describe.serial('Support tickets — public API', () => {
+test.describe('Support tickets — public API', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
 
   test.afterAll(async () => {
@@ -277,7 +278,8 @@ const BOT_KEY = process.env.BOT_API_KEY;
 const HAS_BOT_KEY = Boolean(BOT_KEY);
 const botCreatedTicketIds: string[] = [];
 
-test.describe.serial('Support tickets — bot API (x-api-key)', () => {
+test.describe('Support tickets — bot API (x-api-key)', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(
     !HAS_BOT_KEY || !HAS_SUPABASE,
     'BOT_API_KEY ou Supabase service role manquant'

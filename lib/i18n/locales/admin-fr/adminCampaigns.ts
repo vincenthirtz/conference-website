@@ -212,8 +212,7 @@ export default adminNs('adminCampaigns', {
   audienceTournamentNeverLoggedIn: 'Inscrit·es au tournoi jamais connecté·es',
   audienceTournamentIncompleteRoster: 'Capitaines — roster incomplet',
   audienceTeamMembersWithoutDiscord: 'Membres d’équipe — Discord non lié',
-  audienceTeamMembersWithoutBattleTag:
-    'Membres d’équipe — BattleTag manquant',
+  audienceTeamMembersWithoutBattleTag: 'Membres d’équipe — BattleTag manquant',
   audienceTeamCaptainsManagers: 'Capitaines ET managers d’équipe',
   // « Encadrement » et non « staff » : dans ce produit, « staff » désigne le
   // staff DU SITE (owner/admin/caster). Réutiliser le mot ici ferait choisir

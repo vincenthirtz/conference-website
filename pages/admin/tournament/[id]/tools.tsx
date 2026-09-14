@@ -531,7 +531,6 @@ function TournamentToolsPage({ initialTournament }: Props) {
           onConfirm={handleCloneTournament}
         />
       )}
-
     </>
   );
 }

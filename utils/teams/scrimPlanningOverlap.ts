@@ -78,7 +78,11 @@ export function horizonDates(cfg: PlanningConfig): string[] {
 /** Liste ordonnée des minutes-de-jour (lignes) de la bande horaire. */
 export function slotMinutesOfDay(cfg: PlanningConfig): number[] {
   const out: number[] = [];
-  for (let m = cfg.dayStartMin; m + cfg.slotMinutes <= cfg.dayEndMin; m += cfg.slotMinutes) {
+  for (
+    let m = cfg.dayStartMin;
+    m + cfg.slotMinutes <= cfg.dayEndMin;
+    m += cfg.slotMinutes
+  ) {
     out.push(m);
   }
   return out;
@@ -338,5 +342,8 @@ export function rankValidatableSlots(
       count: cell.count,
       full: isFullOverlap(cell),
     }))
-    .sort((a, b) => b.count - a.count || (a.slot < b.slot ? -1 : a.slot > b.slot ? 1 : 0));
+    .sort(
+      (a, b) =>
+        b.count - a.count || (a.slot < b.slot ? -1 : a.slot > b.slot ? 1 : 0)
+    );
 }

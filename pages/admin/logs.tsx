@@ -23,7 +23,9 @@ const DiscordLogsPanel = lazyPanel(
 
 const ID_BASE = 'admin-journals';
 
-export const getServerSideProps = withStaffPage({ permission: 'manage_settings' });
+export const getServerSideProps = withStaffPage({
+  permission: 'manage_settings',
+});
 
 /**
  * Merged logs page ("Journaux"). Hosts the former /admin/logs (staff audit),

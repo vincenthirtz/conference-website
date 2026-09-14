@@ -39,7 +39,8 @@ let playerAuthId: string;
 let captainAuthId: string;
 let teamId: string;
 
-test.describe.serial('Player actions audit — setup', () => {
+test.describe('Player actions audit — setup', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {
@@ -91,10 +92,15 @@ test.describe.serial('Player actions audit — setup', () => {
   test.afterAll(async () => {
     if (!supabaseTestClient) return;
     if (teamId) {
-      await supabaseTestClient.from('team_members').delete().eq('team_id', teamId);
+      await supabaseTestClient
+        .from('team_members')
+        .delete()
+        .eq('team_id', teamId);
       await supabaseTestClient.from('teams').delete().eq('id', teamId);
     }
-    for (const aid of [adminAuthId, playerAuthId, captainAuthId].filter(Boolean)) {
+    for (const aid of [adminAuthId, playerAuthId, captainAuthId].filter(
+      Boolean
+    )) {
       await supabaseTestClient
         .from('bot_player_actions')
         .delete()
@@ -118,7 +124,8 @@ test.describe.serial('Player actions audit — setup', () => {
 /* leave_team produit une row dans bot_player_actions                        */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Audit row écrite sur action player', () => {
+test.describe('Audit row écrite sur action player', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('POST /teams/leave écrit action=leave_team', async ({ request }) => {
@@ -147,7 +154,8 @@ test.describe.serial('Audit row écrite sur action player', () => {
 /* GET /player-actions                                                       */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('GET /player-actions', () => {
+test.describe('GET /player-actions', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('403 si actor non admin', async ({ request }) => {

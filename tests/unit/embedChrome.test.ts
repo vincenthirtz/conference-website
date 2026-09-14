@@ -14,7 +14,10 @@ vi.mock('@/utils/supabase', async () => {
 });
 
 import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
-import { DEFAULT_TENANT_ID, __resetTenantSlugCacheForTests } from '../../utils/tenant';
+import {
+  DEFAULT_TENANT_ID,
+  __resetTenantSlugCacheForTests,
+} from '../../utils/tenant';
 import {
   parseEmbedTheme,
   parseEmbedAccentParam,
@@ -64,7 +67,9 @@ describe('resolveEmbedTenantId', () => {
 
   it('falls back to the default tenant for unknown / absent slug', async () => {
     store.tenants = [] as any;
-    expect(await resolveEmbedTenantId({ tenant: 'ghost' })).toBe(DEFAULT_TENANT_ID);
+    expect(await resolveEmbedTenantId({ tenant: 'ghost' })).toBe(
+      DEFAULT_TENANT_ID
+    );
     expect(await resolveEmbedTenantId({})).toBe(DEFAULT_TENANT_ID);
   });
 });

@@ -929,9 +929,11 @@ export default async function handler(
     if (creatorUserId !== null && m.user_id === creatorUserId) continue;
     const email = userIdToEmail.get(m.user_id);
     if (email) {
-      sendTeamJoinEmail(email, createdTeam.name, m.role, tenantId).catch((err) => {
-        logger.error('[create-with-member] team join email error:', err);
-      });
+      sendTeamJoinEmail(email, createdTeam.name, m.role, tenantId).catch(
+        (err) => {
+          logger.error('[create-with-member] team join email error:', err);
+        }
+      );
     }
   }
 

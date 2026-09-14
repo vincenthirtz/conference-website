@@ -47,7 +47,8 @@ let team1Id: string;
 let team2Id: string;
 let matchId: string;
 
-test.describe.serial('Admin cast assignments API', () => {
+test.describe('Admin cast assignments API', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
 
   test.beforeAll(async () => {
@@ -139,7 +140,10 @@ test.describe.serial('Admin cast assignments API', () => {
       .from('tournaments')
       .delete()
       .eq('id', tournamentId);
-    await supabaseTestClient.from('cast_members').delete().eq('id', castMemberId);
+    await supabaseTestClient
+      .from('cast_members')
+      .delete()
+      .eq('id', castMemberId);
     await deleteTestStaff(CASTER_EMAIL);
     await deleteTestStaff(STAFF_EMAIL);
   });
@@ -172,7 +176,10 @@ test.describe.serial('Admin cast assignments API', () => {
       `/api/admin/matches/${matchId}/cast-assignments`,
       {
         headers: { Authorization: `Bearer ${staffToken}` },
-        data: { castMemberId: 'not-a-uuid', briefingAt: '2026-12-01T15:00:00Z' },
+        data: {
+          castMemberId: 'not-a-uuid',
+          briefingAt: '2026-12-01T15:00:00Z',
+        },
       }
     );
     expect(res.status()).toBe(400);

@@ -69,8 +69,7 @@ function makeRes() {
   return res;
 }
 
-const member = () =>
-  (store.team_members as any[]).find((m) => m.id === MEMBER);
+const member = () => (store.team_members as any[]).find((m) => m.id === MEMBER);
 
 beforeEach(() => {
   resetSupabaseMock();
@@ -104,7 +103,10 @@ beforeEach(() => {
 describe('PATCH — niveau déclaré', () => {
   it('le staff pose un niveau', async () => {
     const res = makeRes();
-    await handler(makeReq({ body: { memberId: MEMBER, skillRating: 3500 } }), res);
+    await handler(
+      makeReq({ body: { memberId: MEMBER, skillRating: 3500 } }),
+      res
+    );
     expect(res.statusCode).toBe(200);
     expect(member().skill_rating).toBe(3500);
   });
@@ -162,7 +164,10 @@ describe('PATCH — niveau déclaré', () => {
     // déplace personne — même exception que la correction de BattleTag.
     isTeamRosterLocked.mockResolvedValue({ locked: true } as any);
     const res = makeRes();
-    await handler(makeReq({ body: { memberId: MEMBER, skillRating: 4000 } }), res);
+    await handler(
+      makeReq({ body: { memberId: MEMBER, skillRating: 4000 } }),
+      res
+    );
     expect(res.statusCode).toBe(200);
     expect(member().skill_rating).toBe(4000);
   });

@@ -125,10 +125,7 @@ export async function findDisputesBlockingDownstream(
     .eq('status', 'disputed');
 
   if (error) {
-    logger.error(
-      '[disputeImpact] findDisputesBlockingDownstream error',
-      error
-    );
+    logger.error('[disputeImpact] findDisputesBlockingDownstream error', error);
     return [];
   }
 

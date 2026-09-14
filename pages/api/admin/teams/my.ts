@@ -203,7 +203,11 @@ export default withSubjectRoute(
           .json({ error: 'Le sigle ne peut pas dépasser 16 caractères.' });
       }
 
-      if ('country' in body && body.country && body.country.trim().length > 56) {
+      if (
+        'country' in body &&
+        body.country &&
+        body.country.trim().length > 56
+      ) {
         return res
           .status(400)
           .json({ error: 'Le pays ne peut pas dépasser 56 caractères.' });

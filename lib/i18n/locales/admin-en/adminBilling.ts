@@ -71,7 +71,8 @@ export default {
   termSwitchLabel: 'Billing period',
   termMonthly: 'Monthly',
   termYearly: 'Yearly',
-  termYearlySaving: 'Pay yearly and {months} months are on us ({monthly} × 12 = €{twelve} versus €{yearly}).',
+  termYearlySaving:
+    'Pay yearly and {months} months are on us ({monthly} × 12 = €{twelve} versus €{yearly}).',
   currentTermMonthly: 'You are billed monthly.',
   currentTermYearly: 'You are billed yearly.',
   currentBadge: 'Current plan',
@@ -95,6 +96,8 @@ export default {
   colHelloasso: 'HelloAsso ref.',
   paymentsEmptyTitle: 'No payments',
   paymentsEmptyDesc: 'Payments will appear here after your first subscription.',
-  graceBanner: 'Your renewal date has passed. Your features stay active for a few more days: renew to keep your Discord bot.',
-  graceBannerUntil: 'Your renewal date has passed. Your features stay active until {date}: renew before then to keep your Discord bot.',
+  graceBanner:
+    'Your renewal date has passed. Your features stay active for a few more days: renew to keep your Discord bot.',
+  graceBannerUntil:
+    'Your renewal date has passed. Your features stay active until {date}: renew before then to keep your Discord bot.',
 };

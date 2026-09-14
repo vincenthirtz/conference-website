@@ -129,8 +129,9 @@ describe('utils/googleDrive', () => {
 
   it('refuse une clé JSON illisible avec un message qui dit quoi corriger', async () => {
     process.env.GOOGLE_DRIVE_SA_KEY = 'pas du json, pas du base64 non plus !!!';
-    const { listDriveFiles, DriveConfigError } =
-      await import('@/utils/googleDrive');
+    const { listDriveFiles, DriveConfigError } = await import(
+      '@/utils/googleDrive'
+    );
     await expect(listDriveFiles()).rejects.toBeInstanceOf(DriveConfigError);
   });
 
@@ -153,8 +154,9 @@ describe('utils/googleDrive', () => {
       };
     });
 
-    const { listDriveFiles, resetDriveTokenCache } =
-      await import('@/utils/googleDrive');
+    const { listDriveFiles, resetDriveTokenCache } = await import(
+      '@/utils/googleDrive'
+    );
     resetDriveTokenCache();
     const listing = await listDriveFiles();
 
@@ -210,8 +212,9 @@ describe('utils/googleDrive', () => {
       return { files: [] };
     });
 
-    const { listDriveFiles, resetDriveTokenCache } =
-      await import('@/utils/googleDrive');
+    const { listDriveFiles, resetDriveTokenCache } = await import(
+      '@/utils/googleDrive'
+    );
     resetDriveTokenCache();
     const listing = await listDriveFiles({ folderId: 'sub' });
     expect(listing.breadcrumb).toEqual([
@@ -230,8 +233,9 @@ describe('utils/googleDrive', () => {
       return { files: [] };
     });
 
-    const { listDriveFiles, resetDriveTokenCache } =
-      await import('@/utils/googleDrive');
+    const { listDriveFiles, resetDriveTokenCache } = await import(
+      '@/utils/googleDrive'
+    );
     resetDriveTokenCache();
     await listDriveFiles({ search: "Rapport d'activité" });
 
@@ -346,8 +350,9 @@ describe('utils/googleDrive — écriture', () => {
       return {};
     });
 
-    const { trashDriveFile, resetDriveTokenCache } =
-      await import('@/utils/googleDrive');
+    const { trashDriveFile, resetDriveTokenCache } = await import(
+      '@/utils/googleDrive'
+    );
     resetDriveTokenCache();
     await trashDriveFile({ fileId: 'doc1' });
 
@@ -414,8 +419,9 @@ describe('utils/googleDrive — formes de configuration', () => {
       }
       return { files: [] };
     });
-    const { listDriveFiles, resetDriveTokenCache } =
-      await import('@/utils/googleDrive');
+    const { listDriveFiles, resetDriveTokenCache } = await import(
+      '@/utils/googleDrive'
+    );
     resetDriveTokenCache();
     // Signer exige un PEM réel : si la normalisation n'avait pas lieu, OpenSSL
     // échouerait ici avec un message incompréhensible.
@@ -428,8 +434,9 @@ describe('utils/googleDrive — formes de configuration', () => {
     // l'écran doit proposer de la coller — pas renvoyer vers la création d'un
     // compte de service déjà fait.
     process.env.GOOGLE_DRIVE_SA_EMAIL = 'asso@projet.iam.gserviceaccount.com';
-    const { isDriveConfigured, isDriveAwaitingPrivateKey } =
-      await import('@/utils/googleDrive');
+    const { isDriveConfigured, isDriveAwaitingPrivateKey } = await import(
+      '@/utils/googleDrive'
+    );
     await expect(isDriveConfigured()).resolves.toBe(false);
     await expect(isDriveAwaitingPrivateKey()).resolves.toBe(true);
   });
@@ -452,8 +459,9 @@ describe('utils/googleDrive — formes de configuration', () => {
       }
       return { files: [] };
     });
-    const { listDriveFiles, resetDriveTokenCache } =
-      await import('@/utils/googleDrive');
+    const { listDriveFiles, resetDriveTokenCache } = await import(
+      '@/utils/googleDrive'
+    );
     resetDriveTokenCache();
     await listDriveFiles();
 
@@ -508,8 +516,9 @@ describe('utils/googleDrive — téléchargement', () => {
       mimeType: 'application/pdf',
       size: '1024',
     });
-    const { downloadDriveFile, resetDriveTokenCache } =
-      await import('@/utils/googleDrive');
+    const { downloadDriveFile, resetDriveTokenCache } = await import(
+      '@/utils/googleDrive'
+    );
     resetDriveTokenCache();
     await downloadDriveFile({ fileId: 'doc1' });
 
@@ -536,8 +545,9 @@ describe('utils/googleDrive — téléchargement', () => {
       name: 'PV du 12 mars',
       mimeType: 'application/vnd.google-apps.document',
     });
-    const { downloadDriveFile, resetDriveTokenCache } =
-      await import('@/utils/googleDrive');
+    const { downloadDriveFile, resetDriveTokenCache } = await import(
+      '@/utils/googleDrive'
+    );
     resetDriveTokenCache();
     const file = await downloadDriveFile({ fileId: 'doc1' });
 
@@ -553,8 +563,9 @@ describe('utils/googleDrive — téléchargement', () => {
       mimeType: 'application/pdf',
       size: '2048',
     });
-    const { downloadDriveFile, resetDriveTokenCache } =
-      await import('@/utils/googleDrive');
+    const { downloadDriveFile, resetDriveTokenCache } = await import(
+      '@/utils/googleDrive'
+    );
     resetDriveTokenCache();
     const file = await downloadDriveFile({ fileId: 'doc1' });
 

@@ -37,7 +37,10 @@ const uuid = z.string().uuid();
 /** `HH:MM` ou `HH:MM:SS`, bornes réelles — `25:00` n'est pas une heure. */
 const timeOfDay = z
   .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, 'Heure attendue au format HH:MM');
+  .regex(
+    /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/,
+    'Heure attendue au format HH:MM'
+  );
 
 const isoDate = z
   .string()
@@ -78,8 +81,16 @@ const createSchema = z.discriminatedUnion('kind', [
     ends_on: isoDate,
     ...baseFields,
   }),
-  z.object({ kind: z.literal('earliest'), time_of_day: timeOfDay, ...baseFields }),
-  z.object({ kind: z.literal('latest'), time_of_day: timeOfDay, ...baseFields }),
+  z.object({
+    kind: z.literal('earliest'),
+    time_of_day: timeOfDay,
+    ...baseFields,
+  }),
+  z.object({
+    kind: z.literal('latest'),
+    time_of_day: timeOfDay,
+    ...baseFields,
+  }),
   z.object({
     kind: z.literal('weekday'),
     weekdays: z.array(z.number().int().min(1).max(7)).min(1).max(7),
@@ -115,7 +126,9 @@ async function handler(
 
   const teamId = readQueryParam(req, 'teamId');
   if (!teamId || !isValidUUID(teamId)) {
-    return res.status(400).json({ error: 'Invalid teamId', code: 'INVALID_TEAM_ID' });
+    return res
+      .status(400)
+      .json({ error: 'Invalid teamId', code: 'INVALID_TEAM_ID' });
   }
 
   // L'équipe doit exister DANS le tenant courant : sans ce contrôle, une
@@ -133,14 +146,25 @@ async function handler(
     return res.status(500).json({ error: 'Server error.' });
   }
   if (!team) {
-    return res.status(404).json({ error: 'Team not found', code: 'TEAM_NOT_FOUND' });
+    return res
+      .status(404)
+      .json({ error: 'Team not found', code: 'TEAM_NOT_FOUND' });
   }
 
   if (req.method === 'GET') return handleList(req, res, ctx, teamId);
 
-  if (req.method === 'POST' || req.method === 'PATCH' || req.method === 'DELETE') {
+  if (
+    req.method === 'POST' ||
+    req.method === 'PATCH' ||
+    req.method === 'DELETE'
+  ) {
     if (
-      applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-team-availability')
+      applyRateLimit(
+        req,
+        res,
+        { max: 60, windowMs: 60_000 },
+        'admin-team-availability'
+      )
     ) {
       return;
     }
@@ -242,7 +266,9 @@ async function handleCreate(
     starts_on: body.kind === 'blackout' ? body.starts_on : null,
     ends_on: body.kind === 'blackout' ? body.ends_on : null,
     time_of_day:
-      body.kind === 'earliest' || body.kind === 'latest' ? body.time_of_day : null,
+      body.kind === 'earliest' || body.kind === 'latest'
+        ? body.time_of_day
+        : null,
     weekdays: body.kind === 'weekday' ? body.weekdays : null,
     timezone: body.timezone ?? 'Europe/Paris',
     note: body.note ?? null,
@@ -268,7 +294,11 @@ async function handleCreate(
     entity_id: teamId,
     tenant_id: ctx.tenantId,
     tournament_id: tournamentId,
-    payload: { team_name: teamName, constraint_id: constraint.id, kind: body.kind },
+    payload: {
+      team_name: teamName,
+      constraint_id: constraint.id,
+      kind: body.kind,
+    },
   });
 
   return res.status(201).json({ constraint });
@@ -312,15 +342,20 @@ async function handlePatch(
 
   const existing = await loadOwned(ctx, teamId, id);
   if (!existing) {
-    return res.status(404).json({ error: 'Constraint not found', code: 'NOT_FOUND' });
+    return res
+      .status(404)
+      .json({ error: 'Constraint not found', code: 'NOT_FOUND' });
   }
 
   // Les champs d'une AUTRE nature sont ignorés plutôt que refusés : le CHECK SQL
   // les rejetterait de toute façon, et l'appelant a plus probablement envoyé un
   // formulaire complet qu'une bêtise.
   const body = parsed.data;
-  const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if ('tournament_id' in body) update.tournament_id = body.tournament_id ?? null;
+  const update: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+  if ('tournament_id' in body)
+    update.tournament_id = body.tournament_id ?? null;
   if (body.timezone !== undefined) update.timezone = body.timezone;
   if (body.note !== undefined) update.note = body.note ?? null;
   if (existing.kind === 'blackout') {
@@ -368,7 +403,9 @@ async function handlePatch(
     payload: { team_name: teamName, constraint_id: id, kind: existing.kind },
   });
 
-  return res.status(200).json({ constraint: rowToConstraint(updated as AvailabilityRow) });
+  return res
+    .status(200)
+    .json({ constraint: rowToConstraint(updated as AvailabilityRow) });
 }
 
 async function handleDelete(
@@ -385,7 +422,9 @@ async function handleDelete(
 
   const existing = await loadOwned(ctx, teamId, id);
   if (!existing) {
-    return res.status(404).json({ error: 'Constraint not found', code: 'NOT_FOUND' });
+    return res
+      .status(404)
+      .json({ error: 'Constraint not found', code: 'NOT_FOUND' });
   }
 
   const { error } = await supabaseAdmin

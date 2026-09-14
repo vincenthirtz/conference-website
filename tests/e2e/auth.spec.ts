@@ -19,7 +19,8 @@ async function cleanupUsers() {
   await deleteTestStaff(STAFF_LOGIN_EMAIL);
 }
 
-test.describe.serial('Auth flow', () => {
+test.describe('Auth flow', () => {
+  test.describe.configure({ mode: 'serial' });
   test.beforeAll(async () => {
     await cleanupUsers();
   });

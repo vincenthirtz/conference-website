@@ -77,7 +77,7 @@ const tables = Object.keys(definitions).sort();
 
 if (tables.length === 0) {
   console.error(
-    "Aucune définition dans la réponse OpenAPI — clé invalide ou schéma vide. " +
+    'Aucune définition dans la réponse OpenAPI — clé invalide ou schéma vide. ' +
       "L'instantané n'est PAS écrit (un fichier vide rendrait le garde-fou aveugle)."
   );
   process.exit(1);
@@ -104,7 +104,7 @@ const fkRes = await fetch(`${url}/rest/v1/rpc/introspect_foreign_keys`, {
 if (!fkRes.ok) {
   console.error(
     `Introspection des cles etrangeres impossible (${fkRes.status}). ` +
-      "Migration add_introspect_foreign_keys_function appliquee ? " +
+      'Migration add_introspect_foreign_keys_function appliquee ? ' +
       "L'instantané n'est PAS écrit : le garde-fou deviendrait aveugle aux indices de relation."
   );
   process.exit(1);

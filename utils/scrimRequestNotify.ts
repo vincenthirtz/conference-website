@@ -147,7 +147,10 @@ export async function getTeamScrimRecipients(
 
     const userIds = [...roleByUser.keys()];
     if (userIds.length === 0) {
-      return { recipients: [], teamName: (team.name as string) || 'ton équipe' };
+      return {
+        recipients: [],
+        teamName: (team.name as string) || 'ton équipe',
+      };
     }
 
     const links = await getDiscordLinksForUsers(userIds);

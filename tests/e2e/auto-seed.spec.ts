@@ -57,7 +57,8 @@ let otherStageId: string;
 
 const skip = !supabaseTestClient;
 
-test.describe.serial('Auto-seed E2E (API)', () => {
+test.describe('Auto-seed E2E (API)', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(skip, 'Supabase service role manquant');
 
   /* -----------------------------------------------------------

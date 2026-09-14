@@ -111,9 +111,13 @@ describe('computeProposedSeeding', () => {
     expect(r[3]).toEqual({ matchId: 'm1', slot: 2, teamId: 't4', seed: 4 });
 
     // Effective pairings : m1 = 1 vs 4, m2 = 2 vs 3.
-    const m1 = r.filter((s) => s.matchId === 'm1').sort((a, b) => a.slot - b.slot);
+    const m1 = r
+      .filter((s) => s.matchId === 'm1')
+      .sort((a, b) => a.slot - b.slot);
     expect(m1.map((s) => s.seed)).toEqual([1, 4]);
-    const m2 = r.filter((s) => s.matchId === 'm2').sort((a, b) => a.slot - b.slot);
+    const m2 = r
+      .filter((s) => s.matchId === 'm2')
+      .sort((a, b) => a.slot - b.slot);
     expect(m2.map((s) => s.seed)).toEqual([2, 3]);
   });
 

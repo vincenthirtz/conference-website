@@ -31,7 +31,8 @@ type State =
 function RetraitAnnoncePage() {
   const t = useT(nsRecrutementPage);
   const router = useRouter();
-  const token = typeof router.query.token === 'string' ? router.query.token : '';
+  const token =
+    typeof router.query.token === 'string' ? router.query.token : '';
   const [state, setState] = useState<State>({ kind: 'loading' });
 
   useEffect(() => {

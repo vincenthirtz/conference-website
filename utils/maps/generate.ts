@@ -5,7 +5,12 @@
 // maquette.
 
 import { SceneBuilder } from './builder';
-import { buildEnvironment, buildLayout, GROUND_HEIGHT, patchShade } from './layouts';
+import {
+  buildEnvironment,
+  buildLayout,
+  GROUND_HEIGHT,
+  patchShade,
+} from './layouts';
 import { buildLandmark } from './landmarks';
 import { canDress, groundProp, shrub } from './props';
 import { createRng } from './rng';
@@ -16,7 +21,9 @@ import { MAP_LAYOUTS } from './types';
  * `map_type` (registre de jeux / tenant_map_pool) -> archétype de terrain.
  * Tout type inconnu retombe sur `standard` : ajouter un jeu ne casse rien.
  */
-export function layoutForMapType(mapType: string | null | undefined): MapLayout {
+export function layoutForMapType(
+  mapType: string | null | undefined
+): MapLayout {
   const t = (mapType ?? '').trim().toLowerCase();
   if ((MAP_LAYOUTS as readonly string[]).includes(t)) return t as MapLayout;
   // Alias rencontrés dans les autres jeux du registre.
@@ -37,7 +44,7 @@ function scatterProps(
   b: SceneBuilder,
   rng: ReturnType<typeof createRng>,
   density: number,
-  vegetation: number,
+  vegetation: number
 ): void {
   if (density <= 0) return;
   const attempts = Math.round(160 * density);
@@ -125,7 +132,7 @@ export function generateScene(recipe: MapRecipe): VoxelScene {
     builder,
     rng,
     recipe.scatter ?? 0.4,
-    recipe.environment ? (VEGETATION[recipe.environment.kind] ?? 0.35) : 0.35,
+    recipe.environment ? (VEGETATION[recipe.environment.kind] ?? 0.35) : 0.35
   );
   // En dernier : la nappe ne remplit que ce qui est resté vide.
   buildEnvironment(builder, recipe);

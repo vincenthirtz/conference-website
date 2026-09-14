@@ -176,9 +176,9 @@ describe('emailHtmlToPlainText', () => {
   });
 
   it('ignore le contenu des balises supprimées', () => {
-    expect(emailHtmlToPlainText('<script>secret()</script><p>visible</p>')).toBe(
-      'visible'
-    );
+    expect(
+      emailHtmlToPlainText('<script>secret()</script><p>visible</p>')
+    ).toBe('visible');
   });
 
   it('tronque au-delà de la longueur demandée', () => {

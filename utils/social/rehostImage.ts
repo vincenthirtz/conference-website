@@ -86,7 +86,11 @@ export async function rehostImage(
   try {
     parsed = new URL(url);
   } catch {
-    return { url, rehosted: false, error: "L'adresse de l'image est invalide." };
+    return {
+      url,
+      rehosted: false,
+      error: "L'adresse de l'image est invalide.",
+    };
   }
   if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
     return { url, rehosted: false, error: "L'image doit être en http(s)." };
@@ -145,7 +149,11 @@ export async function rehostImage(
 
   // Le hash du CONTENU sert de nom : republier deux fois la même image ne
   // remplit pas le bucket de doublons.
-  const hash = crypto.createHash('sha256').update(buffer).digest('hex').slice(0, 32);
+  const hash = crypto
+    .createHash('sha256')
+    .update(buffer)
+    .digest('hex')
+    .slice(0, 32);
   const path = `${prefix}/${hash}${EXT_BY_MIME[mimeType]}`;
 
   const { error: uploadError } = await supabaseAdmin.storage

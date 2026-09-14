@@ -19,7 +19,9 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeMatch(overrides: Partial<AnalyticsMatch> & { id: string }): AnalyticsMatch {
+function makeMatch(
+  overrides: Partial<AnalyticsMatch> & { id: string }
+): AnalyticsMatch {
   return {
     id: overrides.id,
     team1_id: 'team1_id' in overrides ? (overrides.team1_id ?? null) : null,
@@ -31,7 +33,9 @@ function makeMatch(overrides: Partial<AnalyticsMatch> & { id: string }): Analyti
   };
 }
 
-function makeGame(overrides: Partial<AnalyticsGame> & { match_id: string }): AnalyticsGame {
+function makeGame(
+  overrides: Partial<AnalyticsGame> & { match_id: string }
+): AnalyticsGame {
   return {
     match_id: overrides.match_id,
     map_name: 'map_name' in overrides ? (overrides.map_name ?? null) : 'Ilios',
@@ -106,9 +110,24 @@ describe('computeTournamentAnalytics — teams', () => {
   it('computes played/wins/losses/winRate and sorts by winRate desc then wins desc', () => {
     // A: 2 wins 0 loss (rate 1.0), B: 1 win 1 loss (0.5), C: 0 win 2 loss (0.0)
     const matches: AnalyticsMatch[] = [
-      makeMatch({ id: 'm1', team1_id: 'A', team2_id: 'B', winner_team_id: 'A' }),
-      makeMatch({ id: 'm2', team1_id: 'A', team2_id: 'C', winner_team_id: 'A' }),
-      makeMatch({ id: 'm3', team1_id: 'B', team2_id: 'C', winner_team_id: 'B' }),
+      makeMatch({
+        id: 'm1',
+        team1_id: 'A',
+        team2_id: 'B',
+        winner_team_id: 'A',
+      }),
+      makeMatch({
+        id: 'm2',
+        team1_id: 'A',
+        team2_id: 'C',
+        winner_team_id: 'A',
+      }),
+      makeMatch({
+        id: 'm3',
+        team1_id: 'B',
+        team2_id: 'C',
+        winner_team_id: 'B',
+      }),
     ];
     const input = emptyInput({
       matches,
@@ -138,15 +157,36 @@ describe('computeTournamentAnalytics — teams', () => {
     expect(b.winRate).toBeCloseTo(0.5, 10);
 
     const c = out.teams[2];
-    expect(c).toMatchObject({ teamId: 'C', played: 2, wins: 0, losses: 2, winRate: 0 });
+    expect(c).toMatchObject({
+      teamId: 'C',
+      played: 2,
+      wins: 0,
+      losses: 2,
+      winRate: 0,
+    });
   });
 
   it('breaks winRate ties by wins desc', () => {
     // Both A and B at winRate 1.0, but A has 2 wins, B has 1 win.
     const matches: AnalyticsMatch[] = [
-      makeMatch({ id: 'm1', team1_id: 'A', team2_id: 'X', winner_team_id: 'A' }),
-      makeMatch({ id: 'm2', team1_id: 'A', team2_id: 'Y', winner_team_id: 'A' }),
-      makeMatch({ id: 'm3', team1_id: 'B', team2_id: 'Z', winner_team_id: 'B' }),
+      makeMatch({
+        id: 'm1',
+        team1_id: 'A',
+        team2_id: 'X',
+        winner_team_id: 'A',
+      }),
+      makeMatch({
+        id: 'm2',
+        team1_id: 'A',
+        team2_id: 'Y',
+        winner_team_id: 'A',
+      }),
+      makeMatch({
+        id: 'm3',
+        team1_id: 'B',
+        team2_id: 'Z',
+        winner_team_id: 'B',
+      }),
     ];
     const out = computeTournamentAnalytics(emptyInput({ matches }));
     // A (2 wins) before B (1 win), both winRate 1.0.
@@ -157,7 +197,12 @@ describe('computeTournamentAnalytics — teams', () => {
 
   it('falls back to teamId as name when team not in teamsById', () => {
     const matches: AnalyticsMatch[] = [
-      makeMatch({ id: 'm1', team1_id: 'A', team2_id: 'B', winner_team_id: 'A' }),
+      makeMatch({
+        id: 'm1',
+        team1_id: 'A',
+        team2_id: 'B',
+        winner_team_id: 'A',
+      }),
     ];
     const out = computeTournamentAnalytics(emptyInput({ matches }));
     const a = out.teams.find((t) => t.teamId === 'A');
@@ -166,13 +211,28 @@ describe('computeTournamentAnalytics — teams', () => {
 
   it('aggregates mapWins/mapLosses per team from games', () => {
     const matches: AnalyticsMatch[] = [
-      makeMatch({ id: 'm1', team1_id: 'A', team2_id: 'B', winner_team_id: 'A' }),
+      makeMatch({
+        id: 'm1',
+        team1_id: 'A',
+        team2_id: 'B',
+        winner_team_id: 'A',
+      }),
     ];
     // A wins 2 maps (via winner_team_id and via score), B wins 1 (via score).
     const games: AnalyticsGame[] = [
       makeGame({ match_id: 'm1', map_order: 0, winner_team_id: 'A' }),
-      makeGame({ match_id: 'm1', map_order: 1, team1_score: 3, team2_score: 1 }), // A by score
-      makeGame({ match_id: 'm1', map_order: 2, team1_score: 1, team2_score: 3 }), // B by score
+      makeGame({
+        match_id: 'm1',
+        map_order: 1,
+        team1_score: 3,
+        team2_score: 1,
+      }), // A by score
+      makeGame({
+        match_id: 'm1',
+        map_order: 2,
+        team1_score: 1,
+        team2_score: 3,
+      }), // B by score
     ];
     const out = computeTournamentAnalytics(emptyInput({ matches, games }));
     const a = out.teams.find((t) => t.teamId === 'A')!;
@@ -185,7 +245,12 @@ describe('computeTournamentAnalytics — teams', () => {
 
   it('ignores byes for match-level win/loss counts', () => {
     const matches: AnalyticsMatch[] = [
-      makeMatch({ id: 'm1', team1_id: 'A', team2_id: 'B', winner_team_id: 'A' }),
+      makeMatch({
+        id: 'm1',
+        team1_id: 'A',
+        team2_id: 'B',
+        winner_team_id: 'A',
+      }),
       makeMatch({
         id: 'bye',
         team1_id: 'A',
@@ -220,8 +285,19 @@ describe('computeTournamentAnalytics — teams', () => {
 describe('computeTournamentAnalytics — summary', () => {
   it('computes totalMatches, finishedMatches, totalGames', () => {
     const matches: AnalyticsMatch[] = [
-      makeMatch({ id: 'm1', team1_id: 'A', team2_id: 'B', winner_team_id: 'A', status: 'finished' }),
-      makeMatch({ id: 'm2', team1_id: 'A', team2_id: 'B', status: 'in_progress' }),
+      makeMatch({
+        id: 'm1',
+        team1_id: 'A',
+        team2_id: 'B',
+        winner_team_id: 'A',
+        status: 'finished',
+      }),
+      makeMatch({
+        id: 'm2',
+        team1_id: 'A',
+        team2_id: 'B',
+        status: 'in_progress',
+      }),
     ];
     const games: AnalyticsGame[] = [
       makeGame({ match_id: 'm1', map_order: 0 }),
@@ -235,7 +311,12 @@ describe('computeTournamentAnalytics — summary', () => {
 
   it('avgGameDurationMin averages only non-null positive durations', () => {
     const matches: AnalyticsMatch[] = [
-      makeMatch({ id: 'm1', team1_id: 'A', team2_id: 'B', winner_team_id: 'A' }),
+      makeMatch({
+        id: 'm1',
+        team1_id: 'A',
+        team2_id: 'B',
+        winner_team_id: 'A',
+      }),
     ];
     const games: AnalyticsGame[] = [
       makeGame({ match_id: 'm1', map_order: 0, duration_minutes: 10 }),
@@ -276,11 +357,31 @@ describe('computeTournamentAnalytics — summary', () => {
 describe('computeTournamentAnalytics — maps', () => {
   it('counts picks/bans from vetos and gamesPlayed from games, sorted by gamesPlayed desc', () => {
     const vetos: AnalyticsVeto[] = [
-      makeVeto({ match_id: 'm1', step_number: 1, action: 'ban', map_name: 'Ilios' }),
-      makeVeto({ match_id: 'm1', step_number: 2, action: 'pick', map_name: 'Nepal' }),
-      makeVeto({ match_id: 'm1', step_number: 3, action: 'pick', map_name: 'Nepal' }),
+      makeVeto({
+        match_id: 'm1',
+        step_number: 1,
+        action: 'ban',
+        map_name: 'Ilios',
+      }),
+      makeVeto({
+        match_id: 'm1',
+        step_number: 2,
+        action: 'pick',
+        map_name: 'Nepal',
+      }),
+      makeVeto({
+        match_id: 'm1',
+        step_number: 3,
+        action: 'pick',
+        map_name: 'Nepal',
+      }),
       // decider counts as a pick (else-branch in impl)
-      makeVeto({ match_id: 'm1', step_number: 4, action: 'decider', map_name: 'Busan' }),
+      makeVeto({
+        match_id: 'm1',
+        step_number: 4,
+        action: 'decider',
+        map_name: 'Busan',
+      }),
     ];
     const games: AnalyticsGame[] = [
       makeGame({ match_id: 'm1', map_order: 0, map_name: 'Nepal' }),
@@ -306,8 +407,20 @@ describe('computeTournamentAnalytics — maps', () => {
 
   it('computes per-map avgDurationMin and overtimeRate', () => {
     const games: AnalyticsGame[] = [
-      makeGame({ match_id: 'm1', map_order: 0, map_name: 'Nepal', duration_minutes: 10, went_overtime: true }),
-      makeGame({ match_id: 'm1', map_order: 1, map_name: 'Nepal', duration_minutes: 20, went_overtime: false }),
+      makeGame({
+        match_id: 'm1',
+        map_order: 0,
+        map_name: 'Nepal',
+        duration_minutes: 10,
+        went_overtime: true,
+      }),
+      makeGame({
+        match_id: 'm1',
+        map_order: 1,
+        map_name: 'Nepal',
+        duration_minutes: 20,
+        went_overtime: false,
+      }),
     ];
     const out = computeTournamentAnalytics(emptyInput({ games }));
     const nepal = out.maps.find((m) => m.mapName === 'Nepal')!;
@@ -319,7 +432,12 @@ describe('computeTournamentAnalytics — maps', () => {
 describe('computeTournamentAnalytics — heroes', () => {
   it('returns [] when there are no draftSteps', () => {
     const matches: AnalyticsMatch[] = [
-      makeMatch({ id: 'm1', team1_id: 'A', team2_id: 'B', winner_team_id: 'A' }),
+      makeMatch({
+        id: 'm1',
+        team1_id: 'A',
+        team2_id: 'B',
+        winner_team_id: 'A',
+      }),
     ];
     const games: AnalyticsGame[] = [makeGame({ match_id: 'm1', map_order: 0 })];
     const out = computeTournamentAnalytics(emptyInput({ matches, games }));
@@ -328,30 +446,73 @@ describe('computeTournamentAnalytics — heroes', () => {
 
   it('counts picks/bans, resolves hero names, sorts by (picks+bans) desc', () => {
     const draftSteps: AnalyticsDraftStep[] = [
-      makeDraft({ match_id: 'm1', game_index: 1, action: 'pick', hero_id: 'h1' }),
-      makeDraft({ match_id: 'm1', game_index: 1, action: 'pick', hero_id: 'h1' }),
-      makeDraft({ match_id: 'm1', game_index: 1, action: 'ban', hero_id: 'h1' }),
-      makeDraft({ match_id: 'm1', game_index: 1, action: 'pick', hero_id: 'h2' }),
-      makeDraft({ match_id: 'm1', game_index: 1, action: 'ban', hero_id: null }), // ignored (no hero_id)
+      makeDraft({
+        match_id: 'm1',
+        game_index: 1,
+        action: 'pick',
+        hero_id: 'h1',
+      }),
+      makeDraft({
+        match_id: 'm1',
+        game_index: 1,
+        action: 'pick',
+        hero_id: 'h1',
+      }),
+      makeDraft({
+        match_id: 'm1',
+        game_index: 1,
+        action: 'ban',
+        hero_id: 'h1',
+      }),
+      makeDraft({
+        match_id: 'm1',
+        game_index: 1,
+        action: 'pick',
+        hero_id: 'h2',
+      }),
+      makeDraft({
+        match_id: 'm1',
+        game_index: 1,
+        action: 'ban',
+        hero_id: null,
+      }), // ignored (no hero_id)
     ];
     const out = computeTournamentAnalytics(
       emptyInput({
         draftSteps,
-        heroesById: heroesMap({ id: 'h1', name: 'Tracer' }, { id: 'h2', name: 'Genji' }),
+        heroesById: heroesMap(
+          { id: 'h1', name: 'Tracer' },
+          { id: 'h2', name: 'Genji' }
+        ),
       })
     );
 
     // h1 total 3 (2 picks + 1 ban), h2 total 1 -> h1 first
     expect(out.heroes.map((h) => h.heroId)).toEqual(['h1', 'h2']);
     const h1 = out.heroes[0];
-    expect(h1).toMatchObject({ heroId: 'h1', name: 'Tracer', picks: 2, bans: 1 });
+    expect(h1).toMatchObject({
+      heroId: 'h1',
+      name: 'Tracer',
+      picks: 2,
+      bans: 1,
+    });
     const h2 = out.heroes[1];
-    expect(h2).toMatchObject({ heroId: 'h2', name: 'Genji', picks: 1, bans: 0 });
+    expect(h2).toMatchObject({
+      heroId: 'h2',
+      name: 'Genji',
+      picks: 1,
+      bans: 0,
+    });
   });
 
   it('falls back to heroId when hero not in heroesById', () => {
     const draftSteps: AnalyticsDraftStep[] = [
-      makeDraft({ match_id: 'm1', game_index: 1, action: 'pick', hero_id: 'hX' }),
+      makeDraft({
+        match_id: 'm1',
+        game_index: 1,
+        action: 'pick',
+        hero_id: 'hX',
+      }),
     ];
     const out = computeTournamentAnalytics(emptyInput({ draftSteps }));
     expect(out.heroes[0].name).toBe('hX');
@@ -360,18 +521,41 @@ describe('computeTournamentAnalytics — heroes', () => {
   it('computes hero win/loss on an unambiguous game<->draft pairing', () => {
     // Single game, map_order 0 <-> game_index 1. team1 wins the game.
     const matches: AnalyticsMatch[] = [
-      makeMatch({ id: 'm1', team1_id: 'A', team2_id: 'B', winner_team_id: 'A' }),
+      makeMatch({
+        id: 'm1',
+        team1_id: 'A',
+        team2_id: 'B',
+        winner_team_id: 'A',
+      }),
     ];
     const games: AnalyticsGame[] = [
       makeGame({ match_id: 'm1', map_order: 0, winner_team_id: 'A' }),
     ];
     const draftSteps: AnalyticsDraftStep[] = [
       // team1 (A) picks h1 -> win
-      makeDraft({ match_id: 'm1', game_index: 1, action: 'pick', side: 'team1', hero_id: 'h1' }),
+      makeDraft({
+        match_id: 'm1',
+        game_index: 1,
+        action: 'pick',
+        side: 'team1',
+        hero_id: 'h1',
+      }),
       // team2 (B) picks h2 -> loss
-      makeDraft({ match_id: 'm1', game_index: 1, action: 'pick', side: 'team2', hero_id: 'h2' }),
+      makeDraft({
+        match_id: 'm1',
+        game_index: 1,
+        action: 'pick',
+        side: 'team2',
+        hero_id: 'h2',
+      }),
       // ban never counts as win/loss
-      makeDraft({ match_id: 'm1', game_index: 1, action: 'ban', side: 'team1', hero_id: 'h3' }),
+      makeDraft({
+        match_id: 'm1',
+        game_index: 1,
+        action: 'ban',
+        side: 'team1',
+        hero_id: 'h3',
+      }),
     ];
     const out = computeTournamentAnalytics(
       emptyInput({
@@ -393,22 +577,41 @@ describe('computeTournamentAnalytics — heroes', () => {
     expect(h2).toMatchObject({ picks: 1, wins: 0, losses: 1, winRate: 0 });
 
     const h3 = out.heroes.find((h) => h.heroId === 'h3')!;
-    expect(h3).toMatchObject({ bans: 1, picks: 0, wins: 0, losses: 0, winRate: 0 });
+    expect(h3).toMatchObject({
+      bans: 1,
+      picks: 0,
+      wins: 0,
+      losses: 0,
+      winRate: 0,
+    });
   });
 
   it('does not attribute win/loss when the game pairing is ambiguous', () => {
     // Two games share map_order 0 -> byOrder.length > 1 -> resolveGame returns null.
     const matches: AnalyticsMatch[] = [
-      makeMatch({ id: 'm1', team1_id: 'A', team2_id: 'B', winner_team_id: 'A' }),
+      makeMatch({
+        id: 'm1',
+        team1_id: 'A',
+        team2_id: 'B',
+        winner_team_id: 'A',
+      }),
     ];
     const games: AnalyticsGame[] = [
       makeGame({ match_id: 'm1', map_order: 0, winner_team_id: 'A' }),
       makeGame({ match_id: 'm1', map_order: 0, winner_team_id: 'B' }),
     ];
     const draftSteps: AnalyticsDraftStep[] = [
-      makeDraft({ match_id: 'm1', game_index: 1, action: 'pick', side: 'team1', hero_id: 'h1' }),
+      makeDraft({
+        match_id: 'm1',
+        game_index: 1,
+        action: 'pick',
+        side: 'team1',
+        hero_id: 'h1',
+      }),
     ];
-    const out = computeTournamentAnalytics(emptyInput({ matches, games, draftSteps }));
+    const out = computeTournamentAnalytics(
+      emptyInput({ matches, games, draftSteps })
+    );
     const h1 = out.heroes.find((h) => h.heroId === 'h1')!;
     expect(h1.picks).toBe(1); // pick still counted
     expect(h1.wins).toBe(0);

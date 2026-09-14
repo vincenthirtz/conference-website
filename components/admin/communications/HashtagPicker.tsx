@@ -57,7 +57,9 @@ export default function HashtagPicker({
   // Le tag tapé n'existe pas encore dans l'historique : on propose quand même
   // de l'ajouter, sinon le premier usage d'un tag serait impossible.
   const typed = normalizeHashtag(query);
-  const isNew = Boolean(typed && !value.includes(typed) && !matches.includes(typed));
+  const isNew = Boolean(
+    typed && !value.includes(typed) && !matches.includes(typed)
+  );
 
   function add(tags: string[]): void {
     const next = [...value];

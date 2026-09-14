@@ -38,7 +38,8 @@ let tournamentId: string;
 let stageId: string;
 let disputedMatchId: string;
 
-test.describe.serial('Bot autocomplete + dispute — setup', () => {
+test.describe('Bot autocomplete + dispute — setup', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {
@@ -113,9 +114,9 @@ test.describe.serial('Bot autocomplete + dispute — setup', () => {
     // Capitaine est aussi membre de A (sinon resolveActorPlayer ne le voit
     // pas comme membre de match) — il a deja captain_id mais on insert dans
     // team_members aussi pour l'autocomplete /matches actorDiscordUserId.
-    await supabaseTestClient.from('team_members').insert([
-      { team_id: teamAId, user_id: captainAuthId, role: 'captain' },
-    ]);
+    await supabaseTestClient
+      .from('team_members')
+      .insert([{ team_id: teamAId, user_id: captainAuthId, role: 'captain' }]);
 
     await supabaseTestClient.from('stage_teams').insert([
       { stage_id: stageId, team_id: teamAId },
@@ -148,7 +149,10 @@ test.describe.serial('Bot autocomplete + dispute — setup', () => {
         .from('match_score_reports')
         .delete()
         .eq('match_id', disputedMatchId);
-      await supabaseTestClient.from('matches').delete().eq('id', disputedMatchId);
+      await supabaseTestClient
+        .from('matches')
+        .delete()
+        .eq('id', disputedMatchId);
     }
     if (stageId) {
       await supabaseTestClient
@@ -190,10 +194,13 @@ test.describe.serial('Bot autocomplete + dispute — setup', () => {
 /* Autocomplete                                                              */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot autocomplete', () => {
+test.describe('Bot autocomplete', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
-  test('tournaments : q substring trouve le tournoi setup', async ({ request }) => {
+  test('tournaments : q substring trouve le tournoi setup', async ({
+    request,
+  }) => {
     const res = await request.get(
       `/api/bot/v1/autocomplete/tournaments?q=Zorglub`,
       { headers: { 'x-api-key': API_KEY! } }
@@ -282,7 +289,8 @@ test.describe.serial('Bot autocomplete', () => {
 /* /disputes + /resolve-dispute                                              */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot disputes — list + resolve', () => {
+test.describe('Bot disputes — list + resolve', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('GET /disputes 403 si actor non admin', async ({ request }) => {

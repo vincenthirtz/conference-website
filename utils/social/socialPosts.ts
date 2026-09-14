@@ -192,7 +192,9 @@ export function resolveTargets(
   const order = new Map(SOCIAL_PLATFORMS.map((p, i) => [p.key, i]));
   return targets
     .map((t) => resolveTarget(base, t))
-    .sort((a, b) => (order.get(a.platform) ?? 99) - (order.get(b.platform) ?? 99));
+    .sort(
+      (a, b) => (order.get(a.platform) ?? 99) - (order.get(b.platform) ?? 99)
+    );
 }
 
 /**

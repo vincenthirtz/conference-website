@@ -13,7 +13,10 @@
 
 import { describe, it, expect } from 'vitest';
 import type { AdminLink } from '../../types/components';
-import { ADMIN_LINKS, filterAdminLinks } from '../../components/Navbar/adminLinks';
+import {
+  ADMIN_LINKS,
+  filterAdminLinks,
+} from '../../components/Navbar/adminLinks';
 
 /** Aplati récursif : tous les nœuds porteurs d'un `ref` non vide (vrais liens). */
 function collectLinks(nodes: AdminLink[]): AdminLink[] {
@@ -85,7 +88,9 @@ describe('filterAdminLinks — console développeur', () => {
     // « Facturation » exige minRole admin ; un caster ne doit voir que le
     // Dashboard (minRole caster), même en mode développeur.
     const casterDev = filterAdminLinks('caster', ADMIN_LINKS, 'developer');
-    const titles = collectLinks(casterDev).map((l) => l.title).sort();
+    const titles = collectLinks(casterDev)
+      .map((l) => l.title)
+      .sort();
     expect(titles).toEqual(['Dashboard']);
     expect(titles).not.toContain('Facturation');
   });

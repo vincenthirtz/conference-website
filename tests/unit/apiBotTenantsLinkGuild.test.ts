@@ -327,7 +327,8 @@ describe('POST /api/bot/v1/tenants/link-guild', () => {
       expect(tenant.plan_is_trial).toBe(true);
 
       const days =
-        (Date.parse(tenant.plan_expires_at as string) - Date.now()) / 86_400_000;
+        (Date.parse(tenant.plan_expires_at as string) - Date.now()) /
+        86_400_000;
       expect(days).toBeGreaterThan(29);
       expect(days).toBeLessThanOrEqual(30);
     });

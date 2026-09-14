@@ -25,39 +25,75 @@ export const OVERWATCH: GameDef = {
   matchFormats: ['bo1', 'bo3', 'bo5'],
   mapPool: [
     // Control
-    { name: 'Antarctic Peninsula', type: 'control', image: `${ART}/antarctic-peninsula.svg` },
+    {
+      name: 'Antarctic Peninsula',
+      type: 'control',
+      image: `${ART}/antarctic-peninsula.svg`,
+    },
     { name: 'Busan', type: 'control', image: `${ART}/busan.svg` },
     { name: 'Ilios', type: 'control', image: `${ART}/ilios.svg` },
-    { name: 'Lijiang Tower', type: 'control', image: `${ART}/lijiang-tower.svg` },
+    {
+      name: 'Lijiang Tower',
+      type: 'control',
+      image: `${ART}/lijiang-tower.svg`,
+    },
     { name: 'Nepal', type: 'control', image: `${ART}/nepal.svg` },
     { name: 'Oasis', type: 'control', image: `${ART}/oasis.svg` },
     { name: 'Samoa', type: 'control', image: `${ART}/samoa.svg` },
     // Escort
-    { name: 'Circuit Royal', type: 'escort', image: `${ART}/circuit-royal.svg` },
+    {
+      name: 'Circuit Royal',
+      type: 'escort',
+      image: `${ART}/circuit-royal.svg`,
+    },
     { name: 'Dorado', type: 'escort', image: `${ART}/dorado.svg` },
     { name: 'Havana', type: 'escort', image: `${ART}/havana.svg` },
     { name: 'Junkertown', type: 'escort', image: `${ART}/junkertown.svg` },
     { name: 'Rialto', type: 'escort', image: `${ART}/rialto.svg` },
     { name: 'Route 66', type: 'escort', image: `${ART}/route-66.svg` },
-    { name: 'Shambali Monastery', type: 'escort', image: `${ART}/shambali-monastery.svg` },
-    { name: 'Watchpoint: Gibraltar', type: 'escort', image: `${ART}/watchpoint-gibraltar.svg` },
+    {
+      name: 'Shambali Monastery',
+      type: 'escort',
+      image: `${ART}/shambali-monastery.svg`,
+    },
+    {
+      name: 'Watchpoint: Gibraltar',
+      type: 'escort',
+      image: `${ART}/watchpoint-gibraltar.svg`,
+    },
     // Hybrid
-    { name: 'Blizzard World', type: 'hybrid', image: `${ART}/blizzard-world.svg` },
+    {
+      name: 'Blizzard World',
+      type: 'hybrid',
+      image: `${ART}/blizzard-world.svg`,
+    },
     { name: 'Eichenwalde', type: 'hybrid', image: `${ART}/eichenwalde.svg` },
     { name: 'Hollywood', type: 'hybrid', image: `${ART}/hollywood.svg` },
     { name: "King's Row", type: 'hybrid', image: `${ART}/kings-row.svg` },
     { name: 'Midtown', type: 'hybrid', image: `${ART}/midtown.svg` },
-    { name: 'Neon Junction', type: 'hybrid', image: `${ART}/neon-junction.svg` },
+    {
+      name: 'Neon Junction',
+      type: 'hybrid',
+      image: `${ART}/neon-junction.svg`,
+    },
     { name: 'Numbani', type: 'hybrid', image: `${ART}/numbani.svg` },
     { name: 'Paraíso', type: 'hybrid', image: `${ART}/paraiso.svg` },
     // Push
     { name: 'Colosseo', type: 'push', image: `${ART}/colosseo.svg` },
     { name: 'Esperança', type: 'push', image: `${ART}/esperanca.svg` },
-    { name: 'New Queen Street', type: 'push', image: `${ART}/new-queen-street.svg` },
+    {
+      name: 'New Queen Street',
+      type: 'push',
+      image: `${ART}/new-queen-street.svg`,
+    },
     { name: 'Runasapi', type: 'push', image: `${ART}/runasapi.svg` },
     // Flashpoint
     { name: 'Aatlis', type: 'flashpoint', image: `${ART}/aatlis.svg` },
-    { name: 'New Junk City', type: 'flashpoint', image: `${ART}/new-junk-city.svg` },
+    {
+      name: 'New Junk City',
+      type: 'flashpoint',
+      image: `${ART}/new-junk-city.svg`,
+    },
     { name: 'Suravasa', type: 'flashpoint', image: `${ART}/suravasa.svg` },
   ],
   registrationPresets: [

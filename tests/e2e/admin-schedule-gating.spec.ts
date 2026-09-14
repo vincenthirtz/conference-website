@@ -43,9 +43,7 @@ test.describe('Planning admin — contrôle d’accès', () => {
   test('les contraintes d’équipe refusent un appel non authentifié', async ({
     request,
   }) => {
-    const res = await request.get(
-      `/api/admin/teams/${TEAM_ID}/availability`
-    );
+    const res = await request.get(`/api/admin/teams/${TEAM_ID}/availability`);
     expect(res.status()).toBe(401);
   });
 

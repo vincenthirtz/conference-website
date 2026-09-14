@@ -24,7 +24,9 @@ const pool: PoolMap[] = [
 
 describe('mapNameKey', () => {
   it('neutralise casse, accents, ponctuation et espaces multiples', () => {
-    expect(mapNameKey('Château Guillard')).toBe(mapNameKey('chateau  guillard'));
+    expect(mapNameKey('Château Guillard')).toBe(
+      mapNameKey('chateau  guillard')
+    );
     expect(mapNameKey('LIJIANG TOWER')).toBe(mapNameKey('lijiang-tower'));
   });
 
@@ -44,12 +46,16 @@ describe('mapNameKey', () => {
 describe('normalizeMapName', () => {
   it('ramène une saisie approximative à l’orthographe du pool', () => {
     expect(normalizeMapName('kings row', pool)).toBe("King's Row");
-    expect(normalizeMapName('  CHATEAU   GUILLARD ', pool)).toBe('Château Guillard');
+    expect(normalizeMapName('  CHATEAU   GUILLARD ', pool)).toBe(
+      'Château Guillard'
+    );
   });
 
   it('laisse passer une carte hors pool, nettoyée', () => {
     // Une arène personnalisée doit rester saisissable.
-    expect(normalizeMapName('  Mon  Arène  Perso ', pool)).toBe('Mon Arène Perso');
+    expect(normalizeMapName('  Mon  Arène  Perso ', pool)).toBe(
+      'Mon Arène Perso'
+    );
   });
 
   it('traite le vide comme une absence', () => {
@@ -75,15 +81,32 @@ describe('sortPoolRows', () => {
       { map_name: 'Busan', map_type: null, image_url: null, order_index: 1 },
       { map_name: 'Nepal', map_type: null, image_url: null, order_index: 2 },
     ];
-    expect(sortPoolRows(rows).map((m) => m.name)).toEqual(['Busan', 'Ilios', 'Nepal']);
+    expect(sortPoolRows(rows).map((m) => m.name)).toEqual([
+      'Busan',
+      'Ilios',
+      'Nepal',
+    ]);
   });
 
   it('place les lignes sans order_index à la fin', () => {
     const rows = [
-      { map_name: 'Sans index', map_type: null, image_url: null, order_index: null },
-      { map_name: 'Avec index', map_type: null, image_url: null, order_index: 5 },
+      {
+        map_name: 'Sans index',
+        map_type: null,
+        image_url: null,
+        order_index: null,
+      },
+      {
+        map_name: 'Avec index',
+        map_type: null,
+        image_url: null,
+        order_index: 5,
+      },
     ];
-    expect(sortPoolRows(rows).map((m) => m.name)).toEqual(['Avec index', 'Sans index']);
+    expect(sortPoolRows(rows).map((m) => m.name)).toEqual([
+      'Avec index',
+      'Sans index',
+    ]);
   });
 
   it('ne mute pas le tableau reçu', () => {
@@ -173,7 +196,10 @@ function roundAwareClient(byRound: Record<string, Row[]>) {
       };
       builder.then = (resolve: (v: unknown) => unknown) =>
         Promise.resolve({
-          data: byRound[round === null || round === undefined ? 'default' : String(round)] ?? [],
+          data:
+            byRound[
+              round === null || round === undefined ? 'default' : String(round)
+            ] ?? [],
           error: null,
         }).then(resolve);
       return builder;
@@ -190,7 +216,14 @@ describe('resolveEffectiveMapPool', () => {
   it('sert le pool de la journée demandée quand elle en a un', async () => {
     const client = roundAwareClient({
       default: tournamentRows,
-      '1': [{ map_name: 'Colosseo', map_type: 'push', image_url: null, order_index: 1 }],
+      '1': [
+        {
+          map_name: 'Colosseo',
+          map_type: 'push',
+          image_url: null,
+          order_index: 1,
+        },
+      ],
     });
     const res = await resolveEffectiveMapPool(client, {
       tenantId: 't1',
@@ -223,7 +256,14 @@ describe('resolveEffectiveMapPool', () => {
   it('sans journée, sert le pool par défaut sans y mêler les journées', async () => {
     const client = roundAwareClient({
       default: tournamentRows,
-      '1': [{ map_name: 'Busan', map_type: 'control', image_url: null, order_index: 1 }],
+      '1': [
+        {
+          map_name: 'Busan',
+          map_type: 'control',
+          image_url: null,
+          order_index: 1,
+        },
+      ],
     });
     const res = await resolveEffectiveMapPool(client, {
       tenantId: 't1',
@@ -246,7 +286,10 @@ describe('resolveEffectiveMapPool', () => {
   });
 
   it('préfère les cartes déclarées sur le tournoi', async () => {
-    const client = fakeClient({ tournament_maps: tournamentRows, tenant_map_pool: tenantRows });
+    const client = fakeClient({
+      tournament_maps: tournamentRows,
+      tenant_map_pool: tenantRows,
+    });
     const res = await resolveEffectiveMapPool(client, {
       tenantId: 't1',
       tournamentId: 'trn',
@@ -257,7 +300,10 @@ describe('resolveEffectiveMapPool', () => {
   });
 
   it('retombe sur le pool du tenant si le tournoi n’a rien déclaré', async () => {
-    const client = fakeClient({ tournament_maps: [], tenant_map_pool: tenantRows });
+    const client = fakeClient({
+      tournament_maps: [],
+      tenant_map_pool: tenantRows,
+    });
     const res = await resolveEffectiveMapPool(client, {
       tenantId: 't1',
       tournamentId: 'trn',
@@ -281,7 +327,10 @@ describe('resolveEffectiveMapPool', () => {
   it('ignore le tournoi quand includeTournamentMaps est faux', async () => {
     // C'est le cas de « ajouter les maps par défaut », qui ALIMENTE
     // tournament_maps et ne peut donc pas s'en servir comme source.
-    const client = fakeClient({ tournament_maps: tournamentRows, tenant_map_pool: tenantRows });
+    const client = fakeClient({
+      tournament_maps: tournamentRows,
+      tenant_map_pool: tenantRows,
+    });
     const res = await resolveEffectiveMapPool(client, {
       tenantId: 't1',
       tournamentId: 'trn',
@@ -330,7 +379,10 @@ describe('normalizeGameSlug', () => {
   });
 
   it('un scrim « Overwatch » atteint le pool du tenant', async () => {
-    const client = fakeClient({ tournament_maps: [], tenant_map_pool: tenantRows });
+    const client = fakeClient({
+      tournament_maps: [],
+      tenant_map_pool: tenantRows,
+    });
     const res = await resolveEffectiveMapPool(client, {
       tenantId: 't1',
       game: 'Overwatch',

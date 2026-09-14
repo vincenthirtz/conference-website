@@ -82,7 +82,8 @@ const ALLOWED_CHAT_IDS = (process.env.TELEGRAM_ALLOWED_CHAT_IDS || '')
 const FREEBOX_APP_TOKEN = process.env.FREEBOX_APP_TOKEN;
 const FREEBOX_APP_ID = process.env.FREEBOX_APP_ID || 'fr.bibimbox.api';
 const FREEBOX_API_BASE =
-  process.env.FREEBOX_API_REMOTE_BASE || 'https://tpiii9e3.fbxos.fr:6750/api/v8';
+  process.env.FREEBOX_API_REMOTE_BASE ||
+  'https://tpiii9e3.fbxos.fr:6750/api/v8';
 const FREEBOX_VM_ID = process.env.FREEBOX_VM_ID || '2';
 
 // --- Client HTTPS minimal vers l'API Freebox (CA épinglée) -----------------
@@ -97,7 +98,7 @@ type FreeboxResp = {
 function freeboxRequest(
   method: 'GET' | 'POST',
   path: string,
-  opts: { session?: string; body?: unknown } = {},
+  opts: { session?: string; body?: unknown } = {}
 ): Promise<FreeboxResp> {
   const url = new URL(`${FREEBOX_API_BASE}${path}`);
   const payload = opts.body != null ? JSON.stringify(opts.body) : undefined;
@@ -127,10 +128,14 @@ function freeboxRequest(
           try {
             resolve(JSON.parse(data) as FreeboxResp);
           } catch {
-            reject(new Error(`Réponse Freebox non-JSON (${res.statusCode}): ${data.slice(0, 200)}`));
+            reject(
+              new Error(
+                `Réponse Freebox non-JSON (${res.statusCode}): ${data.slice(0, 200)}`
+              )
+            );
           }
         });
-      },
+      }
     );
     req.on('timeout', () => req.destroy(new Error('timeout Freebox')));
     req.on('error', reject);
@@ -142,7 +147,8 @@ function freeboxRequest(
 async function freeboxLogin(): Promise<string> {
   const challengeResp = await freeboxRequest('GET', '/login/');
   const challenge = challengeResp.result?.challenge;
-  if (!challenge) throw new Error('challenge Freebox introuvable (box injoignable ?)');
+  if (!challenge)
+    throw new Error('challenge Freebox introuvable (box injoignable ?)');
   const password = crypto
     .createHmac('sha1', FREEBOX_APP_TOKEN as string)
     .update(challenge)
@@ -151,20 +157,26 @@ async function freeboxLogin(): Promise<string> {
     body: { app_id: FREEBOX_APP_ID, password },
   });
   if (!sess.success || !sess.result?.session_token) {
-    throw new Error(`login Freebox échoué: ${sess.error_code || sess.msg || 'inconnu'}`);
+    throw new Error(
+      `login Freebox échoué: ${sess.error_code || sess.msg || 'inconnu'}`
+    );
   }
   return sess.result.session_token as string;
 }
 
 async function vmStatus(session: string): Promise<string> {
   const resp = await freeboxRequest('GET', `/vm/${FREEBOX_VM_ID}`, { session });
-  if (!resp.success || !resp.result) throw new Error('lecture statut VM échouée');
+  if (!resp.success || !resp.result)
+    throw new Error('lecture statut VM échouée');
   return resp.result.status as string;
 }
 
 // --- Telegram ---------------------------------------------------------------
 
-async function telegramSend(chatId: number | string, text: string): Promise<void> {
+async function telegramSend(
+  chatId: number | string,
+  text: string
+): Promise<void> {
   await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -195,13 +207,18 @@ async function runCommand(command: string): Promise<string> {
       return `🚀 Démarrage envoyé (était *${current}*). La stack remonte toute seule ensuite.`;
 
     case 'stop_vm':
-      if (current !== 'running') return `✅ VM déjà *${current}* — rien à faire.`;
-      await freeboxRequest('POST', `/vm/${FREEBOX_VM_ID}/powerbutton`, { session });
+      if (current !== 'running')
+        return `✅ VM déjà *${current}* — rien à faire.`;
+      await freeboxRequest('POST', `/vm/${FREEBOX_VM_ID}/powerbutton`, {
+        session,
+      });
       return `🛑 Arrêt (ACPI) envoyé.`;
 
     case 'restart_vm':
       if (current === 'running') {
-        await freeboxRequest('POST', `/vm/${FREEBOX_VM_ID}/powerbutton`, { session });
+        await freeboxRequest('POST', `/vm/${FREEBOX_VM_ID}/powerbutton`, {
+          session,
+        });
         return `🔄 Arrêt demandé — renvoie /start\\_vm une fois *stopped*.`;
       }
       await freeboxRequest('POST', `/vm/${FREEBOX_VM_ID}/start`, { session });
@@ -218,9 +235,15 @@ export const handler: Handler = async (event) => {
   // Toujours répondre 200 à Telegram (sinon il rejoue l'update en boucle).
   const ok = { statusCode: 200, body: 'ok' };
 
-  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
+  if (event.httpMethod !== 'POST')
+    return { statusCode: 405, body: 'Method Not Allowed' };
 
-  if (!BOT_TOKEN || !WEBHOOK_SECRET || !FREEBOX_APP_TOKEN || ALLOWED_CHAT_IDS.length === 0) {
+  if (
+    !BOT_TOKEN ||
+    !WEBHOOK_SECRET ||
+    !FREEBOX_APP_TOKEN ||
+    ALLOWED_CHAT_IDS.length === 0
+  ) {
     logger.error('[telegram-vm] configuration incomplète (env manquantes)');
     return { statusCode: 503, body: 'not configured' };
   }
@@ -254,7 +277,11 @@ export const handler: Handler = async (event) => {
   }
 
   // /start_vm@MonBot  → start_vm
-  const command = text.trim().replace(/^\//, '').split(/[@\s]/)[0].toLowerCase();
+  const command = text
+    .trim()
+    .replace(/^\//, '')
+    .split(/[@\s]/)[0]
+    .toLowerCase();
 
   try {
     const reply = await runCommand(command);

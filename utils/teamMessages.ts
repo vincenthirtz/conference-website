@@ -161,9 +161,7 @@ export async function loadTeamRosterStates(
 
   const { data: teams, error: teamsError } = await supabaseAdmin
     .from('teams')
-    .select(
-      'id, name, slug, captain_id, discord_channel_id, discord_role_id'
-    )
+    .select('id, name, slug, captain_id, discord_channel_id, discord_role_id')
     .in('id', teamIds)
     .eq('is_active', true)
     .is('deleted_at', null);
@@ -187,9 +185,7 @@ export async function loadTeamRosterStates(
   // « Jamais connecté » se lit sur auth.users, hors portée de PostgREST : on
   // résout les comptes concernés via l'API admin auth, en un seul scan.
   const dormantUserIds = await listNeverSignedInUserIds(
-    memberRows
-      .map((m) => m.user_id)
-      .filter((id): id is string => Boolean(id))
+    memberRows.map((m) => m.user_id).filter((id): id is string => Boolean(id))
   );
 
   const byTeam = new Map<
@@ -198,8 +194,12 @@ export async function loadTeamRosterStates(
   >();
   for (const m of memberRows) {
     if (!m.team_id) continue;
-    const acc =
-      byTeam.get(m.team_id) ?? { starters: 0, subs: 0, noTag: 0, dormant: 0 };
+    const acc = byTeam.get(m.team_id) ?? {
+      starters: 0,
+      subs: 0,
+      noTag: 0,
+      dormant: 0,
+    };
     // L'encadrement (coach / manager) n'est pas du roster jouant : il ne compte
     // ni dans l'effectif (min_players) ni parmi les BattleTags attendus — un
     // BattleTag n'est exigé que des rôles qui jouent (cf. roleRequiresBattleTag).
@@ -218,17 +218,23 @@ export async function loadTeamRosterStates(
 
   const fixturesByTeam = await loadTeamFixtures(resolvedId, tenantId);
 
-  base.teams = ((teams ?? []) as Array<{
-    id: string;
-    name?: string | null;
-    slug?: string | null;
-    captain_id?: string | null;
-    discord_channel_id?: string | null;
-    discord_role_id?: string | null;
-  }>)
+  base.teams = (
+    (teams ?? []) as Array<{
+      id: string;
+      name?: string | null;
+      slug?: string | null;
+      captain_id?: string | null;
+      discord_channel_id?: string | null;
+      discord_role_id?: string | null;
+    }>
+  )
     .map((team) => {
-      const acc =
-        byTeam.get(team.id) ?? { starters: 0, subs: 0, noTag: 0, dormant: 0 };
+      const acc = byTeam.get(team.id) ?? {
+        starters: 0,
+        subs: 0,
+        noTag: 0,
+        dormant: 0,
+      };
       return {
         teamId: team.id,
         teamName: team.name || 'équipe',
@@ -308,9 +314,7 @@ async function loadTeamFixtures(
       [t2, nameOf(m.team1)],
     ] as const) {
       if (!other) continue;
-      const line = [round, when, `vs ${other}`]
-        .filter(Boolean)
-        .join(' · ');
+      const line = [round, when, `vs ${other}`].filter(Boolean).join(' · ');
       const list = out.get(self) ?? [];
       list.push(line);
       out.set(self, list);
@@ -586,7 +590,9 @@ export function composeTeamMessages(
       }
       const values = buildTemplateValues(team, ctx);
       const mentionPrefix =
-        opts.mention && team.discordRoleId ? `<@&${team.discordRoleId}>\n\n` : '';
+        opts.mention && team.discordRoleId
+          ? `<@&${team.discordRoleId}>\n\n`
+          : '';
       return {
         team,
         kind: 'custom' as const,

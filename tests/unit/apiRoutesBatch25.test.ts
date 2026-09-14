@@ -569,7 +569,12 @@ describe('/api/admin/users/manage', () => {
       { id: 'u3', email: 'c@c.com', user_metadata: {} } as any,
     ]);
     store.team_members = [
-      { user_id: 'u3', team_id: 't1', role: 'player', team: { id: 't1', name: 'Alpha' } },
+      {
+        user_id: 'u3',
+        team_id: 't1',
+        role: 'player',
+        team: { id: 't1', name: 'Alpha' },
+      },
     ] as any;
     store.user_battlenet_links = [] as any;
 
@@ -818,7 +823,7 @@ describe('/api/admin/users/manage', () => {
     });
   });
 
-  it('PATCH battle_tag 404 quand la ligne de roster n\'existe pas', async () => {
+  it("PATCH battle_tag 404 quand la ligne de roster n'existe pas", async () => {
     // Avant : UPDATE sur 0 ligne → `success` trompeur.
     setAdminUser('u-target', 't@a.com');
     store.team_members = [] as any;
@@ -837,7 +842,7 @@ describe('/api/admin/users/manage', () => {
     expect(res.statusCode).toBe(404);
   });
 
-  it('PATCH battle_tag 403 sur le roster d\'un autre tenant', async () => {
+  it("PATCH battle_tag 403 sur le roster d'un autre tenant", async () => {
     setAdminUser('u-target', 't@a.com');
     store.team_members = [
       {
@@ -1034,7 +1039,7 @@ describe('/api/admin/users/manage', () => {
     );
   });
 
-  it('GET expose la liaison Discord et sait filtrer ceux qui n\'en ont pas', async () => {
+  it("GET expose la liaison Discord et sait filtrer ceux qui n'en ont pas", async () => {
     const helper = await import('./__helpers__/supabaseMock');
     helper.setAuthListUsers([
       { id: 'u1', email: 'lie@a.com', user_metadata: {} } as any,

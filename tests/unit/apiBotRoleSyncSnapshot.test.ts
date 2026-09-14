@@ -61,7 +61,11 @@ beforeEach(() => {
     },
   ] as any;
   store.user_discord_links = [
-    { auth_user_id: MANAGER, discord_user_id: DISCORD_ID, discord_username: 'amissa' },
+    {
+      auth_user_id: MANAGER,
+      discord_user_id: DISCORD_ID,
+      discord_username: 'amissa',
+    },
   ] as any;
   store.team_members = [
     {
@@ -112,7 +116,9 @@ describe('multi-équipes', () => {
     await handler(makeReq(), res);
     expect(res.statusCode).toBe(200);
 
-    const user = (res.body as any).users.find((u: any) => u.authUserId === MANAGER);
+    const user = (res.body as any).users.find(
+      (u: any) => u.authUserId === MANAGER
+    );
     expect(user.teams.map((t: any) => t.discordRoleId).sort()).toEqual([
       'role-ashes',
       'role-embers',
@@ -123,7 +129,9 @@ describe('multi-équipes', () => {
   it('garde `team` (appartenance principale) pour un bot pas encore à jour', async () => {
     const res = makeRes();
     await handler(makeReq(), res);
-    const user = (res.body as any).users.find((u: any) => u.authUserId === MANAGER);
+    const user = (res.body as any).users.find(
+      (u: any) => u.authUserId === MANAGER
+    );
     expect(user.team).not.toBeNull();
     expect(user.teams.some((t: any) => t.id === user.team.id)).toBe(true);
   });
@@ -132,7 +140,9 @@ describe('multi-équipes', () => {
     store.team_members = [] as any;
     const res = makeRes();
     await handler(makeReq(), res);
-    const user = (res.body as any).users.find((u: any) => u.authUserId === MANAGER);
+    const user = (res.body as any).users.find(
+      (u: any) => u.authUserId === MANAGER
+    );
     expect(user.teams).toEqual([]);
     expect(user.team).toBeNull();
   });

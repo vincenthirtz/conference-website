@@ -74,8 +74,7 @@ export default adminNs('adminTeamsMy', {
   unknownPlayer: 'Joueur inconnu',
   skillRatingLabel: 'Niveau Overwatch (SR)',
   skillRatingUpdated: 'Niveau mis à jour',
-  errSkillRatingInvalid:
-    'Le SR doit être un nombre entier entre 0 et 5000.',
+  errSkillRatingInvalid: 'Le SR doit être un nombre entier entre 0 et 5000.',
   joinMissingBattleTagLabel: 'BattleTag de la joueuse',
   joinMissingBattleTagHint:
     "Elle ne l'a pas renseigné : saisis-le pour l'ajouter au roster, ou demande-lui de compléter son profil.",

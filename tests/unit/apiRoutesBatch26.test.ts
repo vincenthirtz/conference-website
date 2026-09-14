@@ -609,7 +609,12 @@ describe('/api/admin/teams/[teamId]/tournaments', () => {
     seedRegistrable({ minPlayers: 1, players: 3 });
     store.stage_teams = [{ stage_id: 's1', team_id: TEAM_ID }] as any;
     store.tournament_teams = [
-      { id: 'tt-1', tournament_id: TID, team_id: TEAM_ID, status: 'registered' },
+      {
+        id: 'tt-1',
+        tournament_id: TID,
+        team_id: TEAM_ID,
+        status: 'registered',
+      },
     ] as any;
 
     const res = makeRes();

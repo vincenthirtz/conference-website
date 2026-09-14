@@ -111,7 +111,8 @@ export default function PlacementRolesEditor({
                     disabled={disabled}
                     onChange={(e) =>
                       update(i, {
-                        to: e.target.value === '' ? null : Number(e.target.value),
+                        to:
+                          e.target.value === '' ? null : Number(e.target.value),
                       })
                     }
                     className="w-full rounded-lg border border-neutral-600 bg-neutral-800 px-2 py-1.5 text-sm"
@@ -168,7 +169,9 @@ export default function PlacementRolesEditor({
                 {describePlacementRule(rule)}
               </p>
               {invalid.has(i) && (
-                <p className="mt-1 text-xs text-red-300">{labels.invalidRole}</p>
+                <p className="mt-1 text-xs text-red-300">
+                  {labels.invalidRole}
+                </p>
               )}
             </li>
           ))}

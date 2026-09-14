@@ -16,10 +16,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { describe, it, expect } from 'vitest';
 
-const css = readFileSync(
-  join(process.cwd(), 'styles/globals.css'),
-  'utf8'
-);
+const css = readFileSync(join(process.cwd(), 'styles/globals.css'), 'utf8');
 
 /** Extrait la valeur hex d'un token `--name: #xxxxxx;` du :root. */
 function token(name: string): string {
@@ -66,17 +63,25 @@ describe('rebrand — garde-fou contraste WCAG', () => {
     '%s passe AA (≥4.5) comme texte sur --bg-deep',
     (name) => {
       const r = ratio(token(name), BG_DEEP);
-      expect(r, `${name} sur ${BG_DEEP} = ${r.toFixed(2)}`).toBeGreaterThanOrEqual(4.5);
+      expect(
+        r,
+        `${name} sur ${BG_DEEP} = ${r.toFixed(2)}`
+      ).toBeGreaterThanOrEqual(4.5);
     }
   );
 
   it('--color-violet-deep est lisible comme texte sur blanc (AA)', () => {
     const r = ratio(token('color-violet-deep'), WHITE);
-    expect(r, `violet-deep sur blanc = ${r.toFixed(2)}`).toBeGreaterThanOrEqual(4.5);
+    expect(r, `violet-deep sur blanc = ${r.toFixed(2)}`).toBeGreaterThanOrEqual(
+      4.5
+    );
   });
 
   it('le jaune reste un accent : NON lisible comme texte sur blanc (<3:1)', () => {
     const r = ratio(token('color-yellow'), WHITE);
-    expect(r, `yellow sur blanc = ${r.toFixed(2)} — si ≥3, revoir l'usage`).toBeLessThan(3);
+    expect(
+      r,
+      `yellow sur blanc = ${r.toFixed(2)} — si ≥3, revoir l'usage`
+    ).toBeLessThan(3);
   });
 });

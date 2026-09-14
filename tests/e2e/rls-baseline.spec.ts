@@ -40,7 +40,8 @@ const RLS_PROTECTED_TABLES = [
   ...PARTIALLY_PUBLIC_TABLES,
 ] as const;
 
-test.describe.serial('RLS baseline (P1-A)', () => {
+test.describe('RLS baseline (P1-A)', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEYS, 'Supabase env non configuré');
 
   test('client anon : SELECT sur tables fully opaque retourne 0 row', async () => {

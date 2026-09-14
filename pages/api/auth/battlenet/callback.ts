@@ -198,11 +198,7 @@ export default async function handler(
     }
 
     const { verifiedCount, mismatchCount, filledCount } =
-      await stampVerifiedTeamMembers(
-        user.id,
-        info.battleTag,
-        info.battleNetId
-      );
+      await stampVerifiedTeamMembers(user.id, info.battleTag, info.battleNetId);
 
     // Aucune ligne estampillée ET aucun mismatch ⇒ l'utilisateur n'est dans
     // aucun roster (staff non-joueuse, joueuse pas encore inscrite). Le lien est

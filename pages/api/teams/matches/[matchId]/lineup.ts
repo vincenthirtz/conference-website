@@ -188,12 +188,10 @@ export default withSubjectRoute(
 
     /* ------------------------------------------------------- PUT  /  POST */
     if (!openState.open) {
-      return res
-        .status(409)
-        .json({
-          error: CLOSED_MESSAGE[openState.reason],
-          code: openState.reason,
-        });
+      return res.status(409).json({
+        error: CLOSED_MESSAGE[openState.reason],
+        code: openState.reason,
+      });
     }
 
     // Une feuille validée est figée : la rouvrir demande un admin (cf.

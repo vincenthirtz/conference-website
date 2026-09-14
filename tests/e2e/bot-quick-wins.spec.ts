@@ -35,7 +35,8 @@ let teamAId: string;
 let teamBId: string;
 let invitationId: string;
 
-test.describe.serial('Quick wins — setup', () => {
+test.describe('Quick wins — setup', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {
@@ -173,10 +174,16 @@ test.describe.serial('Quick wins — setup', () => {
     }
     if (stageId) {
       await supabaseTestClient.from('matches').delete().eq('stage_id', stageId);
-      await supabaseTestClient.from('tournament_stages').delete().eq('id', stageId);
+      await supabaseTestClient
+        .from('tournament_stages')
+        .delete()
+        .eq('id', stageId);
     }
     if (tournamentId) {
-      await supabaseTestClient.from('tournaments').delete().eq('id', tournamentId);
+      await supabaseTestClient
+        .from('tournaments')
+        .delete()
+        .eq('id', tournamentId);
     }
     for (const tid of [teamAId, teamBId].filter(Boolean)) {
       await supabaseTestClient.from('team_members').delete().eq('team_id', tid);
@@ -202,7 +209,8 @@ test.describe.serial('Quick wins — setup', () => {
 /* GET /teams/[id]/invitations                                               */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Team invitations GET', () => {
+test.describe('Team invitations GET', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('200 retourne l’invitation pending', async ({ request }) => {
@@ -246,7 +254,8 @@ test.describe.serial('Team invitations GET', () => {
 /* GET /players/.../history                                                  */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Player history GET', () => {
+test.describe('Player history GET', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('200 capitaine A : 2 matchs, 1W/1L', async ({ request }) => {
@@ -286,7 +295,8 @@ test.describe.serial('Player history GET', () => {
 /* GET /twitch/live                                                          */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Twitch live GET', () => {
+test.describe('Twitch live GET', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('200 (peut être vide si aucun channel ou Twitch unset)', async ({
@@ -307,7 +317,8 @@ test.describe.serial('Twitch live GET', () => {
 /* GET /leaderboards/teams                                                   */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Leaderboards teams GET', () => {
+test.describe('Leaderboards teams GET', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('200 inclut team A et B (1W/1L chacune)', async ({ request }) => {

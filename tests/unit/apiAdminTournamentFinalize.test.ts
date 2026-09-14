@@ -71,9 +71,7 @@ beforeEach(() => {
   setAuthUser({ id: 'user-1' });
   store.staff = [makeStaffRow('admin')] as any;
   // baseline : 4 teams registered, running tournament
-  store.tournaments = [
-    { id: TID, name: 'Cup 2026', status: 'running',  },
-  ] as any;
+  store.tournaments = [{ id: TID, name: 'Cup 2026', status: 'running' }] as any;
   store.tournament_teams = [
     { tournament_id: TID, team_id: T1 },
     { tournament_id: TID, team_id: T2 },
@@ -164,10 +162,7 @@ describe('GET /api/admin/tournament/[id]/podium-preview', () => {
 describe('POST /api/admin/tournament/[id]/finalize — validation', () => {
   it('405 on non-POST', async () => {
     const res = makeRes();
-    await finalizeHandler(
-      makeReq({ method: 'GET', query: { id: TID } }),
-      res
-    );
+    await finalizeHandler(makeReq({ method: 'GET', query: { id: TID } }), res);
     expect(res.statusCode).toBe(405);
   });
 
@@ -288,9 +283,7 @@ describe('POST /api/admin/tournament/[id]/finalize — validation', () => {
   });
 
   it('409 when tournament status is not running', async () => {
-    store.tournaments = [
-      { id: TID, name: 'Cup', status: 'draft',  },
-    ] as any;
+    store.tournaments = [{ id: TID, name: 'Cup', status: 'draft' }] as any;
     const res = makeRes();
     await finalizeHandler(
       makeReq({
@@ -399,9 +392,7 @@ describe('POST /api/admin/tournament/[id]/finalize — apply', () => {
 
   it('409 when re-finalizing with a different payload without force', async () => {
     // Seed an already-finalized tournament
-    store.tournaments = [
-      { id: TID, name: 'Cup', status: 'completed',  },
-    ] as any;
+    store.tournaments = [{ id: TID, name: 'Cup', status: 'completed' }] as any;
     store.final_rankings = [
       { tournament_id: TID, team_id: T1, rank: 1, prize: null, notes: null },
       { tournament_id: TID, team_id: T2, rank: 2, prize: null, notes: null },
@@ -426,9 +417,7 @@ describe('POST /api/admin/tournament/[id]/finalize — apply', () => {
   });
 
   it('force=true overwrites existing rankings and logs unfinalize + finalize', async () => {
-    store.tournaments = [
-      { id: TID, name: 'Cup', status: 'completed',  },
-    ] as any;
+    store.tournaments = [{ id: TID, name: 'Cup', status: 'completed' }] as any;
     store.final_rankings = [
       { tournament_id: TID, team_id: T1, rank: 1, prize: null, notes: null },
       { tournament_id: TID, team_id: T2, rank: 2, prize: null, notes: null },

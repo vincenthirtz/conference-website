@@ -26,7 +26,9 @@ import type { StaffProps } from '@/types/admin';
 import nsAdminDiscordTeamChannels from '@/lib/i18n/locales/admin-fr/adminDiscordTeamChannels';
 import { logger } from '../../../utils/logger';
 
-export const getServerSideProps = withStaffPage({ permission: 'manage_settings' });
+export const getServerSideProps = withStaffPage({
+  permission: 'manage_settings',
+});
 
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
 

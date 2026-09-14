@@ -81,9 +81,9 @@ describe('constraintApplies', () => {
   });
 
   it('ignore les byes — un bye n’oppose personne', () => {
-    expect(constraintApplies(makeConstraint(), makeMatch({ isBye: true }))).toBe(
-      false
-    );
+    expect(
+      constraintApplies(makeConstraint(), makeMatch({ isBye: true }))
+    ).toBe(false);
   });
 });
 
@@ -110,14 +110,19 @@ describe('checkConstraint · earliest', () => {
   it('date le match sur son COUP D’ENVOI, pas sur sa fin', () => {
     // 21 h 00 pile : le match finira à 22 h 30, et c'est autorisé.
     const m = makeMatch({ scheduledAt: '2026-09-23T19:00:00.000Z' });
-    expect(checkConstraint(m, makeConstraint({ timeOfDay: '21:00' }))).toBeNull();
+    expect(
+      checkConstraint(m, makeConstraint({ timeOfDay: '21:00' }))
+    ).toBeNull();
   });
 });
 
 describe('checkConstraint · latest', () => {
   it('signale un match qui commence après l’heure plafond', () => {
     const m = makeMatch({ scheduledAt: '2026-09-23T20:00:00.000Z' }); // 22 h Paris
-    const v = checkConstraint(m, makeConstraint({ kind: 'latest', timeOfDay: '21:00' }));
+    const v = checkConstraint(
+      m,
+      makeConstraint({ kind: 'latest', timeOfDay: '21:00' })
+    );
     expect(v?.reason).toBe('commence à 22:00, pas de match après 21:00');
   });
 
@@ -203,27 +208,51 @@ describe('checkConstraint · weekday', () => {
   it('numérote dimanche 7 et non 0', () => {
     // 2026-09-20 est un dimanche.
     const m = makeMatch({ scheduledAt: '2026-09-20T18:30:00.000Z' });
-    const c = makeConstraint({ kind: 'weekday', timeOfDay: null, weekdays: [7] });
+    const c = makeConstraint({
+      kind: 'weekday',
+      timeOfDay: null,
+      weekdays: [7],
+    });
     expect(checkConstraint(m, c)?.reason).toBe('indisponible le dimanche');
   });
 });
 
 describe('checkConstraint · robustesse', () => {
   it('ne dit rien d’un match non planifié', () => {
-    expect(checkConstraint(makeMatch({ scheduledAt: null }), makeConstraint())).toBeNull();
+    expect(
+      checkConstraint(makeMatch({ scheduledAt: null }), makeConstraint())
+    ).toBeNull();
   });
 
   it('ne dit rien d’une date illisible', () => {
-    expect(checkConstraint(makeMatch({ scheduledAt: 'pas-une-date' }), makeConstraint())).toBeNull();
+    expect(
+      checkConstraint(
+        makeMatch({ scheduledAt: 'pas-une-date' }),
+        makeConstraint()
+      )
+    ).toBeNull();
   });
 
   it('ne dit rien d’une contrainte incomplète plutôt que d’inventer', () => {
-    expect(checkConstraint(makeMatch(), makeConstraint({ timeOfDay: null }))).toBeNull();
     expect(
-      checkConstraint(makeMatch(), makeConstraint({ kind: 'blackout', timeOfDay: null, startsOn: '2026-09-18', endsOn: null }))
+      checkConstraint(makeMatch(), makeConstraint({ timeOfDay: null }))
     ).toBeNull();
     expect(
-      checkConstraint(makeMatch(), makeConstraint({ kind: 'weekday', timeOfDay: null, weekdays: [] }))
+      checkConstraint(
+        makeMatch(),
+        makeConstraint({
+          kind: 'blackout',
+          timeOfDay: null,
+          startsOn: '2026-09-18',
+          endsOn: null,
+        })
+      )
+    ).toBeNull();
+    expect(
+      checkConstraint(
+        makeMatch(),
+        makeConstraint({ kind: 'weekday', timeOfDay: null, weekdays: [] })
+      )
     ).toBeNull();
   });
 
@@ -283,8 +312,14 @@ describe('findAvailabilityViolations', () => {
   });
 
   it('rend les anomalies dans l’ordre du calendrier', () => {
-    const tard = makeMatch({ id: 'tard', scheduledAt: '2026-09-25T18:30:00.000Z' });
-    const tot = makeMatch({ id: 'tot', scheduledAt: '2026-09-19T18:30:00.000Z' });
+    const tard = makeMatch({
+      id: 'tard',
+      scheduledAt: '2026-09-25T18:30:00.000Z',
+    });
+    const tot = makeMatch({
+      id: 'tot',
+      scheduledAt: '2026-09-19T18:30:00.000Z',
+    });
     const v = findAvailabilityViolations([tard, tot], contraintes);
     expect(v[0].matchId).toBe('tot');
     expect(v.at(-1)?.matchId).toBe('tard');
@@ -292,7 +327,10 @@ describe('findAvailabilityViolations', () => {
 
   it('ignore les matchs sans date', () => {
     expect(
-      findAvailabilityViolations([makeMatch({ scheduledAt: null })], contraintes)
+      findAvailabilityViolations(
+        [makeMatch({ scheduledAt: null })],
+        contraintes
+      )
     ).toEqual([]);
   });
 
@@ -307,7 +345,11 @@ describe('isSlotAllowed', () => {
 
   it('refuse un créneau trop tôt sans toucher au match', () => {
     const m = makeMatch({ scheduledAt: null });
-    const res = isSlotAllowed(m, new Date('2026-09-23T17:00:00.000Z'), contraintes);
+    const res = isSlotAllowed(
+      m,
+      new Date('2026-09-23T17:00:00.000Z'),
+      contraintes
+    );
     expect(res.allowed).toBe(false);
     expect(res.violations).toHaveLength(1);
     expect(m.scheduledAt).toBeNull(); // le match d'entrée n'est pas muté
@@ -381,7 +423,14 @@ describe('blackoutDaysByTeam', () => {
 
   it('déplie aussi les jours de semaine', () => {
     const map = blackoutDaysByTeam(
-      [makeConstraint({ id: 'w', kind: 'weekday', timeOfDay: null, weekdays: [1] })],
+      [
+        makeConstraint({
+          id: 'w',
+          kind: 'weekday',
+          timeOfDay: null,
+          weekdays: [1],
+        }),
+      ],
       '2026-09-01',
       '2026-09-30'
     );
@@ -398,8 +447,21 @@ describe('blackoutDaysByTeam', () => {
     const map = blackoutDaysByTeam(
       [
         blackout,
-        makeConstraint({ id: 'b2', teamId: SHU, kind: 'blackout', timeOfDay: null, startsOn: '2026-09-19', endsOn: '2026-09-19' }),
-        makeConstraint({ id: 'b3', kind: 'blackout', timeOfDay: null, startsOn: '2026-09-19', endsOn: '2026-09-19' }),
+        makeConstraint({
+          id: 'b2',
+          teamId: SHU,
+          kind: 'blackout',
+          timeOfDay: null,
+          startsOn: '2026-09-19',
+          endsOn: '2026-09-19',
+        }),
+        makeConstraint({
+          id: 'b3',
+          kind: 'blackout',
+          timeOfDay: null,
+          startsOn: '2026-09-19',
+          endsOn: '2026-09-19',
+        }),
       ],
       '2026-09-18',
       '2026-09-20'
@@ -410,7 +472,11 @@ describe('blackoutDaysByTeam', () => {
   it('ignore les contraintes d’HEURE — une heure ne grise pas une journée', () => {
     // Griser le jour entier pour « pas avant 21 h » se lirait comme une
     // interdiction, alors que le créneau de 22 h reste jouable.
-    const map = blackoutDaysByTeam([makeConstraint()], '2026-09-01', '2026-09-30');
+    const map = blackoutDaysByTeam(
+      [makeConstraint()],
+      '2026-09-01',
+      '2026-09-30'
+    );
     expect(map.size).toBe(0);
   });
 

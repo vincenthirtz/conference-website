@@ -125,9 +125,7 @@ describe('POST /api/admin/scrims/[scrimId]/cast-assignments', () => {
   });
 
   it('404 when scrim not found', async () => {
-    store.cast_members = [
-      { id: CAST_MEMBER_ID, is_active: true },
-    ] as any;
+    store.cast_members = [{ id: CAST_MEMBER_ID, is_active: true }] as any;
     const res = makeRes();
     await scrimCastHandler(
       makeReq({
@@ -142,9 +140,7 @@ describe('POST /api/admin/scrims/[scrimId]/cast-assignments', () => {
 
   it('201 inserts cast_assignment with scrim_id (NOT match_id) + emits event', async () => {
     store.scrims = [{ id: SCRIM_ID, name: 'Test scrim' }] as any;
-    store.cast_members = [
-      { id: CAST_MEMBER_ID, is_active: true },
-    ] as any;
+    store.cast_members = [{ id: CAST_MEMBER_ID, is_active: true }] as any;
 
     const res = makeRes();
     await scrimCastHandler(
@@ -190,10 +186,7 @@ describe('POST /api/admin/scrims/[scrimId]/cast-assignments', () => {
       },
     ] as any;
     const res = makeRes();
-    await scrimCastHandler(
-      makeReq({ query: { scrimId: SCRIM_ID } }),
-      res
-    );
+    await scrimCastHandler(makeReq({ query: { scrimId: SCRIM_ID } }), res);
     expect(res.statusCode).toBe(200);
     const body = res.body as any;
     expect(body.assignments).toHaveLength(1);

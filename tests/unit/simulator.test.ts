@@ -866,9 +866,7 @@ describe('generateDoubleElim wiring', () => {
     );
     const gf = stage.matches.find((m) => m.bracket_side === 'final');
     expect(gf).toBeDefined();
-    const feeders = stage.matches.filter(
-      (m) => m.next_match_win_id === gf!.id
-    );
+    const feeders = stage.matches.filter((m) => m.next_match_win_id === gf!.id);
     // Exactly the WB final and the LB final advance into the grand final.
     expect(feeders).toHaveLength(2);
     const sides = feeders.map((m) => m.bracket_side).sort();

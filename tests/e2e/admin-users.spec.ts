@@ -20,7 +20,8 @@ async function cleanupUsers() {
   await deleteTestUser(TARGET_USER_EMAIL);
 }
 
-test.describe.serial('Admin users management', () => {
+test.describe('Admin users management', () => {
+  test.describe.configure({ mode: 'serial' });
   test.beforeAll(async () => {
     await cleanupUsers();
     // Pre-create admin user for all tests

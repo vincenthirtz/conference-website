@@ -22,7 +22,6 @@ import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import type { StaffProps } from '@/types/admin';
 import nsAdminStageSeeding from '@/lib/i18n/locales/admin-fr/adminStageSeeding';
 
-
 type TeamLite = {
   id: string;
   name: string;
@@ -68,7 +67,6 @@ type PreviewResponse = {
 
 type Pattern = 'standard' | 'sequential';
 
-
 // --- Seed par rating (Glicko + SoS) -----------------------------------------
 
 type RatingMethod = 'rating' | 'rating_sos';
@@ -102,7 +100,9 @@ type RatingSeedResponse = {
   pattern: Pattern;
 };
 
-export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
+export const getServerSideProps = withStaffPage({
+  permission: 'manage_tournaments',
+});
 
 function SeedingComparatorPage(_: StaffProps) {
   const t = useAdminT(nsAdminStageSeeding);

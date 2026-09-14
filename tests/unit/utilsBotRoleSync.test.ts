@@ -189,9 +189,7 @@ describe('resolveRoleSyncUser — manager de plusieurs équipes', () => {
 
 describe('resolvePreviousTeamRoleId', () => {
   it('returns discord_role_id of the team', async () => {
-    store.teams = [
-      { id: TEAM_ID, discord_role_id: 'role-123' },
-    ] as any;
+    store.teams = [{ id: TEAM_ID, discord_role_id: 'role-123' }] as any;
     const result = await resolvePreviousTeamRoleId(TEAM_ID);
     expect(result).toBe('role-123');
   });

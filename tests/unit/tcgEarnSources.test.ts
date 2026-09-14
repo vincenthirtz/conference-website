@@ -211,9 +211,7 @@ describe('les deux cadeaux d’accueil', () => {
   });
 
   it('offrent la même chose : accueillir ne dépend pas de savoir jouer', () => {
-    expect(earnReward('supporter_welcome')).toEqual(
-      earnReward('welcome_gift')
-    );
+    expect(earnReward('supporter_welcome')).toEqual(earnReward('welcome_gift'));
     // Et un paquet, comme toute source du registre : c'est l'ouverture qui
     // fait le TCG.
     expect(earnReward('supporter_welcome').packs).toBe(1);

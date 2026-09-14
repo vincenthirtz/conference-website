@@ -370,7 +370,9 @@ describe('POST /api/admin/site-settings/discord-test', () => {
       expect.objectContaining({
         embeds: expect.arrayContaining([
           expect.objectContaining({
-            footer: expect.objectContaining({ text: expect.stringMatching(/global/i) }),
+            footer: expect.objectContaining({
+              text: expect.stringMatching(/global/i),
+            }),
           }),
         ]),
       })

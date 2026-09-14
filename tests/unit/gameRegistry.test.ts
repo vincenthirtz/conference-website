@@ -9,7 +9,13 @@ import {
 } from '../../config/games';
 
 const VALID_FORMATS: readonly MatchFormat[] = ['bo1', 'bo3', 'bo5', 'bo7'];
-const VETO_GAMES = ['overwatch', 'valorant', 'cs2', 'r6-siege', 'marvel-rivals'] as const;
+const VETO_GAMES = [
+  'overwatch',
+  'valorant',
+  'cs2',
+  'r6-siege',
+  'marvel-rivals',
+] as const;
 const DRAFT_GAMES = ['lol', 'dota2'] as const;
 const EXPECTED_GAME_COUNT = 8;
 
@@ -144,7 +150,9 @@ describe('game registry', () => {
           for (const fmt of game.matchFormats) {
             const steps = game.draftFlows![fmt]!.steps;
             for (const step of steps) {
-              const expectedAction = step.phase.startsWith('ban') ? 'ban' : 'pick';
+              const expectedAction = step.phase.startsWith('ban')
+                ? 'ban'
+                : 'pick';
               expect(step.action).toBe(expectedAction);
             }
           }
@@ -186,8 +194,12 @@ describe('game registry', () => {
     });
 
     it('each team picks exactly 5 heroes', () => {
-      const team1Picks = flow.steps.filter((s) => s.side === 'team1' && s.action === 'pick').length;
-      const team2Picks = flow.steps.filter((s) => s.side === 'team2' && s.action === 'pick').length;
+      const team1Picks = flow.steps.filter(
+        (s) => s.side === 'team1' && s.action === 'pick'
+      ).length;
+      const team2Picks = flow.steps.filter(
+        (s) => s.side === 'team2' && s.action === 'pick'
+      ).length;
       expect(team1Picks).toBe(5);
       expect(team2Picks).toBe(5);
     });

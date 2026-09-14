@@ -37,12 +37,10 @@ function query(table: string) {
     eq: (c: string, v: unknown) => (filters.push((r) => read(r, c) === v), q),
     neq: (c: string, v: unknown) => (filters.push((r) => read(r, c) !== v), q),
     gt: (c: string, v: number) => (
-      filters.push((r) => (read(r, c) as number) > v),
-      q
+      filters.push((r) => (read(r, c) as number) > v), q
     ),
     is: (c: string, v: unknown) => (
-      filters.push((r) => (read(r, c) ?? null) === v),
-      q
+      filters.push((r) => (read(r, c) ?? null) === v), q
     ),
     not: (c: string, op: string, v: unknown) => {
       if (op === 'is') filters.push((r) => (read(r, c) ?? null) !== v);

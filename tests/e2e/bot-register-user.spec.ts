@@ -22,7 +22,8 @@ function discordId(suffix: number): string {
   return `${6_000_000_000_000_000_000n + BigInt((TS + suffix) % 1_000_000_000)}`;
 }
 
-test.describe.serial('Bot register-user — auth & validation', () => {
+test.describe('Bot register-user — auth & validation', () => {
+  test.describe.configure({ mode: 'serial' });
   test('rejette sans x-api-key', async ({ request }) => {
     const res = await request.post('/api/bot/v1/register-user', {
       data: { email: `x-${TS}@test.local`, discordUserId: discordId(0) },
@@ -45,7 +46,8 @@ test.describe.serial('Bot register-user — auth & validation', () => {
     expect(res.status()).toBe(405);
   });
 
-  test.describe.serial('Validation (requires BOT_API_KEY)', () => {
+  test.describe('Validation (requires BOT_API_KEY)', () => {
+    test.describe.configure({ mode: 'serial' });
     test.skip(!HAS_KEY, 'BOT_API_KEY manquant');
 
     test('rejette un email invalide', async ({ request }) => {
@@ -103,7 +105,8 @@ test.describe.serial('Bot register-user — auth & validation', () => {
 
 /* ---------- Happy paths ---------- */
 
-test.describe.serial('Bot register-user — création', () => {
+test.describe('Bot register-user — création', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.afterAll(async () => {

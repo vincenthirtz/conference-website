@@ -128,7 +128,10 @@ describe('POST /api/public/newsletter/subscribe', () => {
 
   it('invalid email → 400', async () => {
     const res = makeRes();
-    await subscribeHandler(makeReq({ body: validBody({ email: 'nope' }) }), res);
+    await subscribeHandler(
+      makeReq({ body: validBody({ email: 'nope' }) }),
+      res
+    );
     expect(res.statusCode).toBe(400);
   });
 

@@ -73,7 +73,14 @@ async function handler(
       .json({ error: 'Invalid tournament id', code: 'INVALID_TOURNAMENT_ID' });
   }
 
-  if (applyRateLimit(req, res, { max: 30, windowMs: 60_000 }, 'admin-schedule-move')) {
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 30, windowMs: 60_000 },
+      'admin-schedule-move'
+    )
+  ) {
     return;
   }
 

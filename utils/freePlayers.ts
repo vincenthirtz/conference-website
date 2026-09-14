@@ -121,7 +121,9 @@ export type PublicFreePlayer = {
   since: string | null;
 };
 
-export function toPublicFreePlayer(row: FreePlayerRow): PublicFreePlayer | null {
+export function toPublicFreePlayer(
+  row: FreePlayerRow
+): PublicFreePlayer | null {
   // Un nom affichable est la seule donnée strictement nécessaire : sans elle,
   // la ligne n'apprend rien à personne. Les rows Discord non liées peuvent ne
   // porter qu'un pseudo Discord — ça suffit.

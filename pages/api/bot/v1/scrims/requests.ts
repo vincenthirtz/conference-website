@@ -57,7 +57,9 @@ const bodySchema = z.object({
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Service base de données indisponible.' });
+    return res
+      .status(500)
+      .json({ error: 'Service base de données indisponible.' });
   }
   const tenantId = req.botContext.tenantId;
   const body = (req.body ?? {}) as Record<string, unknown>;
@@ -122,7 +124,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     }
     const nego = readScrimNego(payload);
     const proposer =
-      nego.proposed_by ?? ((payload.from_team_id as string | null) ?? null);
+      nego.proposed_by ?? (payload.from_team_id as string | null) ?? null;
     // L'équipe dont c'est le tour : celle qui n'a pas proposé.
     actingTeamId =
       participantIds.find((id) => id !== proposer) ?? participantIds[0] ?? null;

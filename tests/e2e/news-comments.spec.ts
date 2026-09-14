@@ -6,7 +6,8 @@ const NEWS_SLUG = `${baseSlug}-${Date.now()}`; // unique per run
 const COMMENT_CONTENT = `Test commentaire e2e ${Date.now()}`;
 const AUTHOR_NAME = 'E2E Bot';
 
-test.describe.serial('News comments', () => {
+test.describe('News comments', () => {
+  test.describe.configure({ mode: 'serial' });
   let createdNewsId: string | null = null;
   let createdNewsSlug = NEWS_SLUG;
 

@@ -72,9 +72,7 @@ async function handlePut(
 
   const body = (req.body ?? {}) as { handle?: unknown; appPassword?: unknown };
   const handle =
-    typeof body.handle === 'string'
-      ? body.handle.trim().replace(/^@/, '')
-      : '';
+    typeof body.handle === 'string' ? body.handle.trim().replace(/^@/, '') : '';
   const appPassword =
     typeof body.appPassword === 'string' ? body.appPassword.trim() : '';
 

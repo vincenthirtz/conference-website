@@ -27,10 +27,7 @@ import { BROADCAST_OPT_OUT_EVENT_TYPE } from './webPushEvents';
 import { slugifyCampaignName } from './campaignSchema';
 import { DEFAULT_TENANT_ID } from './tenant';
 import { resolveCurrentTournamentId } from './currentTournament';
-import {
-  isNonPlayingTeamRole,
-  roleRequiresBattleTag,
-} from './teams/roleKind';
+import { isNonPlayingTeamRole, roleRequiresBattleTag } from './teams/roleKind';
 
 import { logger } from './logger';
 

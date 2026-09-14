@@ -34,7 +34,9 @@ import {
   type TeamRosterState,
 } from '../../utils/teamMessages';
 
-import cronHandler, { daysUntil } from '../../pages/api/cron/team-roster-reminders';
+import cronHandler, {
+  daysUntil,
+} from '../../pages/api/cron/team-roster-reminders';
 
 const TENANT = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 const TOURNAMENT = 'e8fa740c-d92b-49d8-a654-05a37d0eea3b';
@@ -156,7 +158,12 @@ describe('buildRosterReminder', () => {
 
   it("bascule sur le message 'roster complet' sans alerte", () => {
     const msg = buildRosterReminder(
-      team({ starters: 5, substitutes: 2, missingStarters: 0, neverLoggedIn: 0 }),
+      team({
+        starters: 5,
+        substitutes: 2,
+        missingStarters: 0,
+        neverLoggedIn: 0,
+      }),
       ctx()
     );
     expect(msg.kind).toBe('complete');
@@ -172,10 +179,7 @@ describe('buildRosterReminder', () => {
   });
 
   it('marque non livrable une équipe sans salon provisionné', () => {
-    const msg = buildRosterReminder(
-      team({ discordChannelId: null }),
-      ctx()
-    );
+    const msg = buildRosterReminder(team({ discordChannelId: null }), ctx());
     expect(msg.deliverable).toBe(false);
   });
 });
@@ -282,10 +286,10 @@ describe('sendTeamMessages', () => {
   });
 
   it("n'autorise le ping du rôle que si le contenu porte la mention", async () => {
-    const withMention = composeTeamMessages(
-      ctx({ teams: [team()] }),
-      { preset: 'roster-reminder', mention: true }
-    );
+    const withMention = composeTeamMessages(ctx({ teams: [team()] }), {
+      preset: 'roster-reminder',
+      mention: true,
+    });
     await sendTeamMessages(withMention, {
       tenantId: TENANT,
       tournamentId: TOURNAMENT,
@@ -364,10 +368,30 @@ describe('loadTeamRosterStates', () => {
       },
     ];
     store.team_members = [
-      { team_id: 'team-a', user_id: 'u1', is_substitute: false, battle_tag: 'A#1' },
-      { team_id: 'team-a', user_id: 'u2', is_substitute: false, battle_tag: null },
-      { team_id: 'team-a', user_id: 'u5', is_substitute: true, battle_tag: 'E#5' },
-      { team_id: 'team-b', user_id: 'u3', is_substitute: false, battle_tag: 'B#1' },
+      {
+        team_id: 'team-a',
+        user_id: 'u1',
+        is_substitute: false,
+        battle_tag: 'A#1',
+      },
+      {
+        team_id: 'team-a',
+        user_id: 'u2',
+        is_substitute: false,
+        battle_tag: null,
+      },
+      {
+        team_id: 'team-a',
+        user_id: 'u5',
+        is_substitute: true,
+        battle_tag: 'E#5',
+      },
+      {
+        team_id: 'team-b',
+        user_id: 'u3',
+        is_substitute: false,
+        battle_tag: 'B#1',
+      },
     ];
     setAuthListUsers([
       { id: 'u1', email: 'u1@x.fr', last_sign_in_at: '2026-07-01T10:00:00Z' },
@@ -464,7 +488,12 @@ describe('cron team-roster-reminders', () => {
       },
     ];
     store.team_members = [
-      { team_id: 'team-a', user_id: 'u1', is_substitute: false, battle_tag: 'A#1' },
+      {
+        team_id: 'team-a',
+        user_id: 'u1',
+        is_substitute: false,
+        battle_tag: 'A#1',
+      },
     ];
     setAuthListUsers([
       { id: 'u1', email: 'u1@x.fr', last_sign_in_at: '2026-07-01T10:00:00Z' },
@@ -493,10 +522,7 @@ describe('cron team-roster-reminders', () => {
 
   it('refuse sans secret', async () => {
     const res = mockRes();
-    await cronHandler(
-      { method: 'POST', headers: {}, query: {} } as never,
-      res
-    );
+    await cronHandler({ method: 'POST', headers: {}, query: {} } as never, res);
     expect((res as unknown as { statusCode: number }).statusCode).toBe(401);
   });
 

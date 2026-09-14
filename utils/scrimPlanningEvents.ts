@@ -16,10 +16,7 @@ import { supabaseAdmin } from './supabase';
 import { logger } from './logger';
 import { emitBotEvent, type BotEventName } from './botEvents';
 
-type ScrimPlanningEventName = Extract<
-  BotEventName,
-  `scrim.planning.${string}`
->;
+type ScrimPlanningEventName = Extract<BotEventName, `scrim.planning.${string}`>;
 
 type PlanningRow = {
   id: string;

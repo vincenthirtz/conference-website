@@ -23,7 +23,11 @@ export type PoolMap = {
   image: string | null;
 };
 
-export type PoolSource = 'tournament' | 'tournament-round' | 'tenant' | 'defaults';
+export type PoolSource =
+  | 'tournament'
+  | 'tournament-round'
+  | 'tenant'
+  | 'defaults';
 
 type PoolRow = {
   map_name: string;
@@ -73,7 +77,9 @@ export function sortPoolRows(rows: PoolRow[]): PoolMap[] {
  * AUCUNE carte : pool vide, aucune normalisation, et personne n'en saurait
  * rien. PURE.
  */
-export function normalizeGameSlug(game: string | null | undefined): string | null {
+export function normalizeGameSlug(
+  game: string | null | undefined
+): string | null {
   if (!game) return null;
   const slug = String(game).trim().toLowerCase();
   return slug || null;
@@ -96,16 +102,18 @@ export function staticPool(game: string | null): PoolMap[] {
  * donnent la même clé. PURE.
  */
 export function mapNameKey(name: string): string {
-  return name
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // diacritiques combinants
-    .toLowerCase()
-    // Les apostrophes sont SUPPRIMÉES, pas transformées en séparateur : sinon
-    // « King's Row » donnerait « king s row » et « KINGS-ROW » « kings row »,
-    // deux clés différentes pour la même carte.
-    .replace(/['\u2019\u02bc]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
+  return (
+    name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // diacritiques combinants
+      .toLowerCase()
+      // Les apostrophes sont SUPPRIMÉES, pas transformées en séparateur : sinon
+      // « King's Row » donnerait « king s row » et « KINGS-ROW » « kings row »,
+      // deux clés différentes pour la même carte.
+      .replace(/['\u2019\u02bc]/g, '')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+  );
 }
 
 /**
@@ -151,7 +159,10 @@ async function tournamentPoolRows(
     .eq('tenant_id', tenantId)
     .eq('tournament_id', tournamentId)
     .eq('enabled', true);
-  query = round === null ? query.is('round_number', null) : query.eq('round_number', round);
+  query =
+    round === null
+      ? query.is('round_number', null)
+      : query.eq('round_number', round);
 
   const { data, error } = await query;
   if (error || !data || data.length === 0) return null;
@@ -196,7 +207,12 @@ export async function resolveEffectiveMapPool(
 
   if (includeTournamentMaps && tournamentId) {
     if (round !== null) {
-      const rows = await tournamentPoolRows(client, tenantId, tournamentId, round);
+      const rows = await tournamentPoolRows(
+        client,
+        tenantId,
+        tournamentId,
+        round
+      );
       if (rows) return { maps: sortPoolRows(rows), source: 'tournament-round' };
     }
     const rows = await tournamentPoolRows(client, tenantId, tournamentId, null);

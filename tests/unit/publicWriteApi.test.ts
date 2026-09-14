@@ -592,7 +592,12 @@ describe('withPublicWrite quota gate', () => {
     setRpcResult('consume_api_usage', {
       data: [{ minute_count: 1, month_count: 500_001 }],
     });
-    const w = await runWrite({ plan: 'circuit' }, 'pk_live_q_month', false, 'tok-qm');
+    const w = await runWrite(
+      { plan: 'circuit' },
+      'pk_live_q_month',
+      false,
+      'tok-qm'
+    );
     expect(w.res.statusCode).toBe(429);
     expect((w.res.body as any).code).toBe('QUOTA_EXCEEDED');
     expect(w.res.headers['Retry-After']).toBeDefined();
@@ -603,7 +608,12 @@ describe('withPublicWrite quota gate', () => {
     setRpcResult('consume_api_usage', {
       data: [{ minute_count: 121, month_count: 10 }],
     });
-    const w = await runWrite({ plan: 'circuit' }, 'pk_live_q_min', false, 'tok-qr');
+    const w = await runWrite(
+      { plan: 'circuit' },
+      'pk_live_q_min',
+      false,
+      'tok-qr'
+    );
     expect(w.res.statusCode).toBe(429);
     expect((w.res.body as any).code).toBe('RATE_LIMITED');
     expect(w.handler).not.toHaveBeenCalled();
@@ -613,7 +623,12 @@ describe('withPublicWrite quota gate', () => {
     setRpcResult('consume_api_usage', {
       data: [{ minute_count: 999_999, month_count: 999_999 }],
     });
-    const w = await runWrite({ plan: 'circuit' }, 'pk_live_q_comp', true, 'tok-qc');
+    const w = await runWrite(
+      { plan: 'circuit' },
+      'pk_live_q_comp',
+      true,
+      'tok-qc'
+    );
     expect(w.res.statusCode).toBe(200);
     expect(w.handler).toHaveBeenCalledTimes(1);
   });
@@ -622,7 +637,12 @@ describe('withPublicWrite quota gate', () => {
     setRpcResult('consume_api_usage', {
       data: [{ minute_count: 999_999, month_count: 999_999 }],
     });
-    const w = await runWrite({ plan: 'foundation' }, 'pk_live_q_found', false, 'tok-qf');
+    const w = await runWrite(
+      { plan: 'foundation' },
+      'pk_live_q_found',
+      false,
+      'tok-qf'
+    );
     expect(w.res.statusCode).toBe(200);
     expect(w.handler).toHaveBeenCalledTimes(1);
   });

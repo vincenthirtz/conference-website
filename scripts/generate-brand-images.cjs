@@ -67,7 +67,11 @@ async function generateOgCover() {
 
   await sharp(Buffer.from(background))
     .composite([
-      { input: logo, top: Math.round(CY - LOGO / 2), left: Math.round((W - LOGO) / 2) },
+      {
+        input: logo,
+        top: Math.round(CY - LOGO / 2),
+        left: Math.round((W - LOGO) / 2),
+      },
       { input: Buffer.from(wordmark), top: 0, left: 0 },
     ])
     .png({ compressionLevel: 9 })

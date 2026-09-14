@@ -114,7 +114,11 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     const rows = membershipsByUser.get(link.auth_user_id) ?? [];
     const teams: SnapshotTeam[] = [];
     for (const m of rows) {
-      const teamRel = m?.team ? (Array.isArray(m.team) ? m.team[0] : m.team) : null;
+      const teamRel = m?.team
+        ? Array.isArray(m.team)
+          ? m.team[0]
+          : m.team
+        : null;
       if (!teamRel) continue;
       teams.push({
         id: teamRel.id,
@@ -130,7 +134,9 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       rows as { team_id: string; role?: string | null }[]
     );
     const primary =
-      (primaryRow && teams.find((t) => t.id === primaryRow.team_id)) || teams[0] || null;
+      (primaryRow && teams.find((t) => t.id === primaryRow.team_id)) ||
+      teams[0] ||
+      null;
     return {
       authUserId: link.auth_user_id,
       discordUserId: link.discord_user_id,

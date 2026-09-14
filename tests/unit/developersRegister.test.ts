@@ -227,7 +227,9 @@ describe('/api/developers/register', () => {
   it('email déjà pris → 200 { alreadyExists:true } sans provisioning', async () => {
     setCreateUserResult({
       data: { user: null },
-      error: { message: 'A user with this email address has already been registered' },
+      error: {
+        message: 'A user with this email address has already been registered',
+      },
     });
     const res = makeRes();
     await registerHandler(makeReq({ body: validBody }), res);
@@ -243,7 +245,12 @@ describe('/api/developers/register', () => {
   it('collision de slug → suffixe -2 sur le slug du tenant créé', async () => {
     // Un tenant existant occupe déjà le slug dérivé de « Acme Corp ».
     store.tenants = [
-      { id: 't-existing', slug: 'acme-corp', name: 'Acme Corp', kind: 'organizer' },
+      {
+        id: 't-existing',
+        slug: 'acme-corp',
+        name: 'Acme Corp',
+        kind: 'organizer',
+      },
     ] as any;
 
     const res = makeRes();

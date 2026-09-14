@@ -13,11 +13,15 @@ import nsAdminStats from '@/lib/i18n/locales/admin-fr/adminStats';
 import { lazyPanel } from '@/components/admin/lazyPanel';
 
 // Onglets secondaires : chargés au clic (cf. components/admin/lazyPanel).
-const MapStatsPanel = lazyPanel(() => import('@/components/admin/stats/MapStatsPanel'));
+const MapStatsPanel = lazyPanel(
+  () => import('@/components/admin/stats/MapStatsPanel')
+);
 
 const ID_BASE = 'admin-stats';
 
-export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
+export const getServerSideProps = withStaffPage({
+  permission: 'manage_tournaments',
+});
 
 /**
  * Merged statistics page. Hosts the former /admin/stats/teams and

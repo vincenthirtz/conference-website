@@ -16,7 +16,13 @@ import type { SceneBuilder } from './builder';
 import type { LandmarkKind } from './types';
 import type { Rng } from './rng';
 
-type LandmarkFn = (b: SceneBuilder, cx: number, cz: number, baseY: number, rng: Rng) => void;
+type LandmarkFn = (
+  b: SceneBuilder,
+  cx: number,
+  cz: number,
+  baseY: number,
+  rng: Rng
+) => void;
 
 const OVER = { keepExisting: false } as const;
 
@@ -27,7 +33,7 @@ function gableRoof(
   y: number,
   z0: number,
   w: number,
-  d: number,
+  d: number
 ): void {
   const steps = Math.ceil(d / 2);
   for (let i = 0; i < steps; i += 1) {
@@ -46,7 +52,7 @@ function windows(
   w: number,
   h: number,
   d: number,
-  rng: Rng,
+  rng: Rng
 ): void {
   for (let y = y0 + 1; y < y0 + h - 1; y += 2) {
     for (let x = x0 + 1; x < x0 + w - 1; x += 2) {
@@ -124,7 +130,13 @@ const dome: LandmarkFn = (b, cx, cz, y, rng) => {
   // Percements du tambour.
   for (let a = 0; a < 8; a += 1) {
     const t = (a / 8) * Math.PI * 2;
-    b.place(cx + Math.round(Math.cos(t) * r), y + 2, cz + Math.round(Math.sin(t) * r), 'highlight', OVER);
+    b.place(
+      cx + Math.round(Math.cos(t) * r),
+      y + 2,
+      cz + Math.round(Math.sin(t) * r),
+      'highlight',
+      OVER
+    );
   }
   b.ring(cx, cz, r + 0.6, 1.4, y + 4, 1, 'accent');
   const layers = r + 2;
@@ -144,7 +156,16 @@ const spire: LandmarkFn = (b, cx, cz, y, rng) => {
   for (let i = 0; i < h; i += 1) {
     const s = i < h * 0.35 ? 3 : 1;
     const o = Math.floor(s / 2);
-    b.box(cx - o, y + 6 + i, cz - o, s, 1, s, i % 3 === 2 ? 'accent' : 'structure', OVER);
+    b.box(
+      cx - o,
+      y + 6 + i,
+      cz - o,
+      s,
+      1,
+      s,
+      i % 3 === 2 ? 'accent' : 'structure',
+      OVER
+    );
   }
   b.box(cx, y + 6 + h, cz, 1, 2, 1, 'highlight', OVER);
 };
@@ -184,7 +205,13 @@ const palm: LandmarkFn = (b, cx, cz, y, rng) => {
     [0, -1],
   ]) {
     for (let i = 1; i <= 3; i += 1) {
-      b.place(tx + dx * i, top - (i === 3 ? 1 : 0), cz + dz * i, 'accent', OVER);
+      b.place(
+        tx + dx * i,
+        top - (i === 3 ? 1 : 0),
+        cz + dz * i,
+        'accent',
+        OVER
+      );
     }
   }
   b.place(tx, top, cz, 'accent', OVER);
@@ -213,7 +240,8 @@ const ruin: LandmarkFn = (b, cx, cz, y, rng) => {
     b.box(x, y + 1, cz - 1, 2, h, 2, 'structure');
     b.box(x, y + 1 + h, cz - 1, 2, 1, 2, 'accent', OVER);
     // Une travée sur trois porte encore son entablement.
-    if (i > 0 && i % 3 === 0) b.box(x - 2, y + 2 + h, cz - 1, 4, 1, 2, 'accent', OVER);
+    if (i > 0 && i % 3 === 0)
+      b.box(x - 2, y + 2 + h, cz - 1, 4, 1, 2, 'accent', OVER);
   }
 };
 
@@ -264,7 +292,8 @@ const gate: LandmarkFn = (b, cx, cz, y, rng) => {
     const x = side < 0 ? cx - half : cx + half - 3;
     b.box(x, y, cz - 2, 4, h, 5, 'structure');
     // Créneaux.
-    for (let i = 0; i < 4; i += 2) b.box(x + i, y + h, cz - 2, 1, 2, 5, 'accent', OVER);
+    for (let i = 0; i < 4; i += 2)
+      b.box(x + i, y + h, cz - 2, 1, 2, 5, 'accent', OVER);
     b.box(x, y + h, cz - 2, 4, 1, 5, 'accent', OVER);
   }
   b.box(cx - half, y + h - 3, cz - 2, span, 3, 5, 'structure');
@@ -290,7 +319,7 @@ const amphitheatre: LandmarkFn = (b, cx, cz, y) => {
         cz + Math.round(Math.sin(ang) * rr),
         1,
         h,
-        1,
+        1
       );
     }
   };
@@ -303,7 +332,8 @@ const amphitheatre: LandmarkFn = (b, cx, cz, y) => {
     // Arcades — évidées, pas peintes : c'est le jour qui passe au travers qui
     // fait lire l'édifice comme un amphithéâtre et non comme un mur rond.
     const openings = 14 - t * 2;
-    for (let a = 0; a < openings; a += 1) pierce((a / openings) * Math.PI * 2, y0 + 1, 2, r);
+    for (let a = 0; a < openings; a += 1)
+      pierce((a / openings) * Math.PI * 2, y0 + 1, 2, r);
   }
 
   // Arène intérieure, en creux.
@@ -311,7 +341,8 @@ const amphitheatre: LandmarkFn = (b, cx, cz, y) => {
   // Pan de mur effondré : la brèche est la signature de la ruine.
   for (let a = 0; a < 7; a += 1) {
     const ang = 0.85 + a * 0.1;
-    for (let h = 0; h < tiers * 3 + 1; h += 1) pierce(ang, y + 2 + h, 1, outer + 0.5);
+    for (let h = 0; h < tiers * 3 + 1; h += 1)
+      pierce(ang, y + 2 + h, 1, outer + 0.5);
   }
 };
 
@@ -320,14 +351,24 @@ const temple: LandmarkFn = (b, cx, cz, y, rng) => {
   b.box(cx - 6, y, cz - 6, 13, 2, 13, 'structure');
   b.box(cx - 6, y + 2, cz - 6, 13, 1, 13, 'accent', OVER);
   // Escalier d'accès.
-  for (let i = 0; i < 3; i += 1) b.box(cx - 2, y + i, cz + 7 - i, 5, 1, 1, 'accent');
+  for (let i = 0; i < 3; i += 1)
+    b.box(cx - 2, y + i, cz + 7 - i, 5, 1, 1, 'accent');
   const tiers = rng.int(5, 6);
   for (let t = 0; t < tiers; t += 1) {
     const s = 9 - t * 1.4;
     const o = Math.floor(s / 2);
     const y0 = y + 3 + t * 2;
     b.box(cx - o, y0, cz - o, Math.round(s), 2, Math.round(s), 'structure');
-    b.box(cx - o - 1, y0 + 2, cz - o - 1, Math.round(s) + 2, 1, Math.round(s) + 2, 'accent', OVER);
+    b.box(
+      cx - o - 1,
+      y0 + 2,
+      cz - o - 1,
+      Math.round(s) + 2,
+      1,
+      Math.round(s) + 2,
+      'accent',
+      OVER
+    );
   }
   const topY = y + 3 + tiers * 2 + 1;
   for (let i = 0; i < 4; i += 1) {
@@ -357,7 +398,14 @@ const smokestack: LandmarkFn = (b, cx, cz, y, rng) => {
   const h = rng.int(12, 16);
   b.box(cx - 2, y, cz - 2, 5, 2, 5, 'structure');
   for (let i = 0; i < h; i += 1) {
-    b.disc(cx, cz, 1.7 - (i / h) * 0.4, y + 2 + i, 1, i % 5 === 4 ? 'accent' : 'structure');
+    b.disc(
+      cx,
+      cz,
+      1.7 - (i / h) * 0.4,
+      y + 2 + i,
+      1,
+      i % 5 === 4 ? 'accent' : 'structure'
+    );
   }
   b.ring(cx, cz, 1.8, 1.2, y + 2 + h, 2, 'accent');
   b.place(cx, y + 4 + h, cz, 'highlight', OVER);
@@ -372,11 +420,23 @@ const townhouses: LandmarkFn = (b, cx, cz, y, rng) => {
   for (let i = 0; i < count; i += 1) {
     const h = rng.int(6, 9);
     const bx = x0 + i * w;
-    b.box(bx, y, cz - 3, w, h, d, 'structure', { shade: (rng.int(0, 2) - 1) * 0.07 });
+    b.box(bx, y, cz - 3, w, h, d, 'structure', {
+      shade: (rng.int(0, 2) - 1) * 0.07,
+    });
     windows(b, bx, y, cz - 3, w, h, d, rng);
     gableRoof(b, bx, y + h, cz - 3, w, d);
     // Cheminée — le détail qui fait lire « rue », pas « immeuble ».
-    if (rng.chance(0.7)) b.box(bx + rng.int(0, w - 1), y + h + 2, cz - 1, 1, 3, 1, 'structure', OVER);
+    if (rng.chance(0.7))
+      b.box(
+        bx + rng.int(0, w - 1),
+        y + h + 2,
+        cz - 1,
+        1,
+        3,
+        1,
+        'structure',
+        OVER
+      );
     // Devanture éclairée au rez-de-chaussée.
     b.box(bx + 1, y + 1, cz + d - 4, w - 2, 1, 1, 'highlight', OVER);
   }
@@ -399,8 +459,22 @@ const village: LandmarkFn = (b, cx, cz, _y, rng) => {
     windows(b, hx, y0, hz, w, h, d, rng);
     if (rng.chance(0.45)) {
       // Coupole : c'est elle qui donne l'accent coloré du village.
-      b.disc(hx + w / 2 - 0.5, hz + d / 2 - 0.5, Math.min(w, d) / 2, y0 + h, 1, 'accent');
-      b.disc(hx + w / 2 - 0.5, hz + d / 2 - 0.5, Math.min(w, d) / 2 - 1, y0 + h + 1, 1, 'accent');
+      b.disc(
+        hx + w / 2 - 0.5,
+        hz + d / 2 - 0.5,
+        Math.min(w, d) / 2,
+        y0 + h,
+        1,
+        'accent'
+      );
+      b.disc(
+        hx + w / 2 - 0.5,
+        hz + d / 2 - 0.5,
+        Math.min(w, d) / 2 - 1,
+        y0 + h + 1,
+        1,
+        'accent'
+      );
     } else {
       b.box(hx - 1, y0 + h, hz - 1, w + 2, 1, d + 2, 'accent', OVER);
     }
@@ -424,7 +498,6 @@ const tram: LandmarkFn = (b, cx, cz, y, rng) => {
   b.box(car, deck + 4, cz - 1, 6, 1, 3, 'structure', OVER);
 };
 
-
 /** Tour à toits étagés et auvents relevés. */
 const pagoda: LandmarkFn = (b, cx, cz, y, rng) => {
   const tiers = rng.int(3, 4);
@@ -442,10 +515,25 @@ const pagoda: LandmarkFn = (b, cx, cz, y, rng) => {
     }
     // Auvent : plus large que l'étage, avec les angles relevés — c'est le
     // débord et le relèvement qui donnent la silhouette, pas la couleur.
-    b.box(cx - o - 2, level + 3, cz - o - 2, width + 4, 1, width + 4, 'accent', OVER);
+    b.box(
+      cx - o - 2,
+      level + 3,
+      cz - o - 2,
+      width + 4,
+      1,
+      width + 4,
+      'accent',
+      OVER
+    );
     for (const sx of [-1, 1]) {
       for (const sz of [-1, 1]) {
-        b.place(cx + sx * (o + 2), level + 4, cz + sz * (o + 2), 'accent', OVER);
+        b.place(
+          cx + sx * (o + 2),
+          level + 4,
+          cz + sz * (o + 2),
+          'accent',
+          OVER
+        );
       }
     }
     level += 4;
@@ -484,7 +572,8 @@ const castle: LandmarkFn = (b, cx, cz, y, rng) => {
   // Donjon.
   const keep = rng.int(9, 12);
   b.box(cx - 2, y, cz - 2, 5, keep, 5, 'structure');
-  for (let i = -2; i <= 2; i += 2) b.place(cx + i, y + 2, cz + 2, 'highlight', OVER);
+  for (let i = -2; i <= 2; i += 2)
+    b.place(cx + i, y + 2, cz + 2, 'highlight', OVER);
   b.box(cx - 3, y + keep, cz - 3, 7, 1, 7, 'accent', OVER);
   for (let i = 0; i < 4; i += 1) {
     const s = 5 - i;
@@ -510,7 +599,16 @@ const stupa: LandmarkFn = (b, cx, cz, y, rng) => {
   const topY = y + 5 + layers;
   b.box(cx - 1, topY, cz - 1, 3, 1, 3, 'accent', OVER);
   for (let i = 0; i < 5; i += 1) {
-    b.box(cx, topY + 1 + i, cz, 1, 1, 1, i % 2 === 0 ? 'accent' : 'highlight', OVER);
+    b.box(
+      cx,
+      topY + 1 + i,
+      cz,
+      1,
+      1,
+      1,
+      i % 2 === 0 ? 'accent' : 'highlight',
+      OVER
+    );
   }
   // Cordes à fanions tendues vers le sol.
   for (const [dx, dz] of [
@@ -563,7 +661,8 @@ const bridge: LandmarkFn = (b, cx, cz, y, rng) => {
     b.box(cx + s * half - 1, y + 2, cz - 2, 3, 1, 5, 'accent', OVER);
   }
 
-  const deck = (i: number): number => y + 1 + Math.round(rise * (1 - (i / half) ** 2));
+  const deck = (i: number): number =>
+    y + 1 + Math.round(rise * (1 - (i / half) ** 2));
 
   for (let i = -half; i <= half; i += 1) {
     const h = deck(i);
@@ -593,7 +692,15 @@ const dish: LandmarkFn = (b, cx, cz, y, rng) => {
   b.box(cx - 1, y + 4, cz - 1, 3, 3, 3, 'structure');
   // Coupe parabolique inclinée : chaque anneau monte d'un cran en s'écartant.
   for (let i = 0; i <= r; i += 1) {
-    b.ring(cx, cz, i + 0.6, 1.2, y + 7 + Math.round((i * i) / (r * 1.6)), 1, 'accent');
+    b.ring(
+      cx,
+      cz,
+      i + 0.6,
+      1.2,
+      y + 7 + Math.round((i * i) / (r * 1.6)),
+      1,
+      'accent'
+    );
   }
   b.disc(cx, cz, 1.4, y + 7, 1, 'accent');
   // Contre-réflecteur au foyer.
@@ -612,7 +719,8 @@ const rocket: LandmarkFn = (b, cx, cz, y, rng) => {
     b.disc(cx, cz, 1.8, y + 3 + i, 1, i % 6 === 5 ? 'accent' : 'structure');
   }
   // Coiffe.
-  for (let i = 0; i < 4; i += 1) b.disc(cx, cz, 1.8 - i * 0.45, y + 3 + h + i, 1, 'accent');
+  for (let i = 0; i < 4; i += 1)
+    b.disc(cx, cz, 1.8 - i * 0.45, y + 3 + h + i, 1, 'accent');
   b.place(cx, y + 7 + h, cz, 'highlight', OVER);
   // Ailerons.
   for (const [dx, dz] of [
@@ -621,11 +729,13 @@ const rocket: LandmarkFn = (b, cx, cz, y, rng) => {
     [0, 2],
     [0, -2],
   ]) {
-    for (let i = 0; i < 4; i += 1) b.place(cx + dx, y + 3 + i, cz + dz, 'accent', OVER);
+    for (let i = 0; i < 4; i += 1)
+      b.place(cx + dx, y + 3 + i, cz + dz, 'accent', OVER);
   }
   // Portique de service et bras ombilical.
   b.box(cx + 5, y, cz - 1, 2, h, 2, 'structure');
-  for (let i = 4; i < h; i += 5) b.box(cx + 2, y + i, cz, 3, 1, 1, 'highlight', OVER);
+  for (let i = 4; i < h; i += 5)
+    b.box(cx + 2, y + i, cz, 3, 1, 1, 'highlight', OVER);
 };
 
 /** Grande roue : jante verticale épaisse, rayons clairsemés, nacelles. */
@@ -649,7 +759,8 @@ const ferriswheel: LandmarkFn = (b, cx, cz, y, rng) => {
     const px = cx + Math.round(Math.cos(a) * r);
     const py = hub + Math.round(Math.sin(a) * r);
     if (py < y) continue;
-    for (let dz = -1; dz <= 1; dz += 1) b.place(px, py, cz + dz, 'accent', OVER);
+    for (let dz = -1; dz <= 1; dz += 1)
+      b.place(px, py, cz + dz, 'accent', OVER);
   }
 
   // Rayons et nacelles : un sur huit, pour garder la roue ajourée.
@@ -664,7 +775,8 @@ const ferriswheel: LandmarkFn = (b, cx, cz, y, rng) => {
     const nx = cx + Math.round(Math.cos(a) * (r - 1));
     const ny = hub + Math.round(Math.sin(a) * (r - 1));
     if (ny > y) {
-      for (let dz = -1; dz <= 1; dz += 1) b.place(nx, ny, cz + dz, 'highlight', OVER);
+      for (let dz = -1; dz <= 1; dz += 1)
+        b.place(nx, ny, cz + dz, 'highlight', OVER);
     }
   }
 };
@@ -707,7 +819,7 @@ export function buildLandmark(
   cx: number,
   cz: number,
   baseY: number,
-  rng: Rng,
+  rng: Rng
 ): void {
   LANDMARKS[kind](b, cx, cz, baseY, rng);
 }

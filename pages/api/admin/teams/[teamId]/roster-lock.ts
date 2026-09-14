@@ -53,11 +53,7 @@ type TournamentRow = {
  * répond « verrouillé ou non » pour agir, celui-ci détaille POURQUOI, ce dont
  * l'écran a besoin pour proposer le bon geste.
  */
-function describe(
-  t: TournamentRow,
-  teamWindow: string | null,
-  nowMs: number
-) {
+function describe(t: TournamentRow, teamWindow: string | null, nowMs: number) {
   const archived = t.status === 'archived' || t.status === 'completed';
   const lockedAtMs = t.roster_locked_at ? Date.parse(t.roster_locked_at) : NaN;
   const lockApplies =

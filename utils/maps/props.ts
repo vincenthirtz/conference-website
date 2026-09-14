@@ -24,7 +24,12 @@ import type { Rng } from './rng';
 const OVER = { keepExisting: false } as const;
 
 /** Une colonne accepte-t-elle un prop ? (terrain nu, pas l'objectif, pas un toit) */
-export function canDress(b: SceneBuilder, x: number, z: number, groundTop: number): boolean {
+export function canDress(
+  b: SceneBuilder,
+  x: number,
+  z: number,
+  groundTop: number
+): boolean {
   const top = b.columnTop(x, z);
   if (top !== groundTop) return false;
   const below = b.get(x, top - 1, z);
@@ -36,7 +41,13 @@ export function canDress(b: SceneBuilder, x: number, z: number, groundTop: numbe
 // ---------------------------------------------------------------------------
 
 /** Lampadaire : fût, potence et source. */
-export function lamppost(b: SceneBuilder, x: number, y: number, z: number, rng: Rng): void {
+export function lamppost(
+  b: SceneBuilder,
+  x: number,
+  y: number,
+  z: number,
+  rng: Rng
+): void {
   const h = rng.int(3, 4);
   b.box(x, y, z, 1, h, 1, 'structure', { shade: -0.16 });
   b.place(x, y + h, z, 'accent', OVER);
@@ -44,7 +55,13 @@ export function lamppost(b: SceneBuilder, x: number, y: number, z: number, rng: 
 }
 
 /** Pile de caisses. */
-export function crates(b: SceneBuilder, x: number, y: number, z: number, rng: Rng): void {
+export function crates(
+  b: SceneBuilder,
+  x: number,
+  y: number,
+  z: number,
+  rng: Rng
+): void {
   b.box(x, y, z, 2, 1, 2, 'structure', { shade: -0.1 });
   if (rng.chance(0.7)) b.box(x, y + 1, z, 1, 1, 1, 'accent', OVER);
   if (rng.chance(0.35)) b.place(x + 1, y + 1, z + 1, 'structure', OVER);
@@ -57,14 +74,26 @@ export function barrel(b: SceneBuilder, x: number, y: number, z: number): void {
 }
 
 /** Banc adossé. */
-export function bench(b: SceneBuilder, x: number, y: number, z: number, rng: Rng): void {
+export function bench(
+  b: SceneBuilder,
+  x: number,
+  y: number,
+  z: number,
+  rng: Rng
+): void {
   const along = rng.chance(0.5);
   if (along) b.box(x, y, z, 3, 1, 1, 'accent');
   else b.box(x, y, z, 1, 1, 3, 'accent');
 }
 
 /** Jardinière : bac maçonné et végétation. */
-export function planter(b: SceneBuilder, x: number, y: number, z: number, rng: Rng): void {
+export function planter(
+  b: SceneBuilder,
+  x: number,
+  y: number,
+  z: number,
+  rng: Rng
+): void {
   b.shell(x, y, z, 3, 1, 3, 'structure', { shade: -0.12 });
   b.box(x + 1, y, z + 1, 1, 1, 1, 'accent');
   if (rng.chance(0.5)) {
@@ -75,7 +104,13 @@ export function planter(b: SceneBuilder, x: number, y: number, z: number, rng: R
 }
 
 /** Mât à fanion. */
-export function banner(b: SceneBuilder, x: number, y: number, z: number, rng: Rng): void {
+export function banner(
+  b: SceneBuilder,
+  x: number,
+  y: number,
+  z: number,
+  rng: Rng
+): void {
   const h = rng.int(5, 7);
   b.box(x, y, z, 1, h, 1, 'structure', { shade: -0.18 });
   b.box(x, y + h - 3, z + 1, 1, 3, 1, 'accent', OVER);
@@ -83,13 +118,27 @@ export function banner(b: SceneBuilder, x: number, y: number, z: number, rng: Rn
 }
 
 /** Bloc rocheux — pour les terrains nus. */
-export function rock(b: SceneBuilder, x: number, y: number, z: number, rng: Rng): void {
+export function rock(
+  b: SceneBuilder,
+  x: number,
+  y: number,
+  z: number,
+  rng: Rng
+): void {
   b.box(x, y, z, 2, 1, 2, 'ground', { shade: -0.2 });
-  b.place(x + rng.int(0, 1), y + 1, z + rng.int(0, 1), 'ground', { shade: -0.26 });
+  b.place(x + rng.int(0, 1), y + 1, z + rng.int(0, 1), 'ground', {
+    shade: -0.26,
+  });
 }
 
 /** Arbuste taillé. */
-export function shrub(b: SceneBuilder, x: number, y: number, z: number, rng: Rng): void {
+export function shrub(
+  b: SceneBuilder,
+  x: number,
+  y: number,
+  z: number,
+  rng: Rng
+): void {
   b.box(x, y, z, 1, rng.int(1, 2), 1, 'structure', { shade: -0.22 });
   const top = b.columnTop(x, z);
   b.box(x - 1, top, z, 3, 1, 1, 'accent');
@@ -97,10 +146,25 @@ export function shrub(b: SceneBuilder, x: number, y: number, z: number, rng: Rng
   b.place(x, top + 1, z, 'accent');
 }
 
-const GROUND_PROPS = [lamppost, crates, barrel, bench, planter, banner, rock, shrub] as const;
+const GROUND_PROPS = [
+  lamppost,
+  crates,
+  barrel,
+  bench,
+  planter,
+  banner,
+  rock,
+  shrub,
+] as const;
 
 /** Pose un prop au sol choisi au hasard. */
-export function groundProp(b: SceneBuilder, x: number, y: number, z: number, rng: Rng): void {
+export function groundProp(
+  b: SceneBuilder,
+  x: number,
+  y: number,
+  z: number,
+  rng: Rng
+): void {
   const fn = rng.pick(GROUND_PROPS);
   if (fn) fn(b, x, y, z, rng);
 }
@@ -120,7 +184,7 @@ export function lampLine(
   to: { x: number; z: number },
   groundTop: number,
   spacing = 5,
-  offset = 3,
+  offset = 3
 ): void {
   const dx = to.x - from.x;
   const dz = to.z - from.z;
@@ -146,7 +210,7 @@ export function railing(
   y: number,
   z0: number,
   w: number,
-  d: number,
+  d: number
 ): void {
   for (let x = 0; x < w; x += 1) {
     for (let z = 0; z < d; z += 1) {
@@ -168,7 +232,12 @@ export function railing(
 // qui reste lisible quand la vignette descend à 200 px.
 
 /** Convoi : châssis, caisse et fanal. */
-export function payload(b: SceneBuilder, x: number, y: number, z: number): void {
+export function payload(
+  b: SceneBuilder,
+  x: number,
+  y: number,
+  z: number
+): void {
   b.box(x - 1, y, z - 2, 3, 1, 5, 'structure', { shade: -0.2 });
   b.box(x - 1, y + 1, z - 1, 3, 3, 3, 'accent', OVER);
   b.box(x - 1, y + 4, z - 1, 3, 1, 3, 'structure', OVER);
@@ -177,7 +246,12 @@ export function payload(b: SceneBuilder, x: number, y: number, z: number): void 
 }
 
 /** Automate de poussée : buste, tête et bras. */
-export function pushBot(b: SceneBuilder, x: number, y: number, z: number): void {
+export function pushBot(
+  b: SceneBuilder,
+  x: number,
+  y: number,
+  z: number
+): void {
   b.box(x - 2, y, z - 2, 5, 1, 5, 'structure', { shade: -0.2 });
   b.box(x - 1, y + 1, z - 1, 3, 4, 3, 'accent');
   b.box(x - 2, y + 3, z - 1, 1, 3, 1, 'structure', OVER);
@@ -188,7 +262,13 @@ export function pushBot(b: SceneBuilder, x: number, y: number, z: number): void 
 }
 
 /** Balise d'objectif : mât et couronne lumineuse. */
-export function beacon(b: SceneBuilder, x: number, y: number, z: number, height = 6): void {
+export function beacon(
+  b: SceneBuilder,
+  x: number,
+  y: number,
+  z: number,
+  height = 6
+): void {
   b.box(x, y, z, 1, height, 1, 'structure', { shade: -0.16 });
   b.box(x - 1, y + height, z - 1, 3, 1, 3, 'highlight', OVER);
   b.place(x, y + height + 1, z, 'accent', OVER);
@@ -196,15 +276,25 @@ export function beacon(b: SceneBuilder, x: number, y: number, z: number, height 
 }
 
 /** Portique de point de capture : quatre mâts et un linteau lumineux. */
-export function captureFrame(b: SceneBuilder, cx: number, y: number, cz: number, r: number): void {
+export function captureFrame(
+  b: SceneBuilder,
+  cx: number,
+  y: number,
+  cz: number,
+  r: number
+): void {
   for (const sx of [-1, 1]) {
     for (const sz of [-1, 1]) {
-      b.box(cx + sx * r, y, cz + sz * r, 1, 5, 1, 'structure', { shade: -0.16 });
+      b.box(cx + sx * r, y, cz + sz * r, 1, 5, 1, 'structure', {
+        shade: -0.16,
+      });
       b.place(cx + sx * r, y + 5, cz + sz * r, 'highlight', OVER);
     }
   }
-  for (const sz of [-1, 1]) b.box(cx - r, y + 5, cz + sz * r, r * 2 + 1, 1, 1, 'accent', OVER);
-  for (const sx of [-1, 1]) b.box(cx + sx * r, y + 5, cz - r, 1, 1, r * 2 + 1, 'accent', OVER);
+  for (const sz of [-1, 1])
+    b.box(cx - r, y + 5, cz + sz * r, r * 2 + 1, 1, 1, 'accent', OVER);
+  for (const sx of [-1, 1])
+    b.box(cx + sx * r, y + 5, cz - r, 1, 1, r * 2 + 1, 'accent', OVER);
 }
 
 // ---------------------------------------------------------------------------
@@ -212,7 +302,13 @@ export function captureFrame(b: SceneBuilder, cx: number, y: number, cz: number,
 // ---------------------------------------------------------------------------
 
 /** Souche de cheminée. */
-function chimney(b: SceneBuilder, x: number, y: number, z: number, rng: Rng): void {
+function chimney(
+  b: SceneBuilder,
+  x: number,
+  y: number,
+  z: number,
+  rng: Rng
+): void {
   const h = rng.int(2, 4);
   b.box(x, y, z, 1, h, 1, 'structure', { shade: -0.14 });
   b.place(x, y + h, z, 'accent', OVER);
@@ -226,14 +322,26 @@ function watertank(b: SceneBuilder, x: number, y: number, z: number): void {
 }
 
 /** Édicule technique. */
-function plantroom(b: SceneBuilder, x: number, y: number, z: number, rng: Rng): void {
+function plantroom(
+  b: SceneBuilder,
+  x: number,
+  y: number,
+  z: number,
+  rng: Rng
+): void {
   const w = rng.int(2, 3);
   b.box(x, y, z, w, 2, w, 'structure', { shade: -0.08 });
   b.box(x, y + 2, z, w, 1, w, 'accent', OVER);
 }
 
 /** Antenne. */
-function antenna(b: SceneBuilder, x: number, y: number, z: number, rng: Rng): void {
+function antenna(
+  b: SceneBuilder,
+  x: number,
+  y: number,
+  z: number,
+  rng: Rng
+): void {
   const h = rng.int(3, 5);
   b.box(x, y, z, 1, h, 1, 'structure', { shade: -0.2 });
   b.place(x, y + h, z, 'highlight', OVER);
@@ -246,7 +354,14 @@ function skylight(b: SceneBuilder, x: number, y: number, z: number): void {
 }
 
 /** Terrasse : garde-corps et un peu de mobilier. */
-function terrace(b: SceneBuilder, x: number, y: number, z: number, w: number, d: number): void {
+function terrace(
+  b: SceneBuilder,
+  x: number,
+  y: number,
+  z: number,
+  w: number,
+  d: number
+): void {
   railing(b, x, y, z, w, d);
   if (w > 3 && d > 3) b.place(x + 1, y, z + 1, 'accent', OVER);
 }
@@ -264,7 +379,7 @@ export function roofProps(
   y: number,
   z0: number,
   w: number,
-  d: number,
+  d: number
 ): void {
   if (w < 3 || d < 3) return;
   const pick = (): number => rng.next();

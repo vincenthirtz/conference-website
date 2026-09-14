@@ -12,7 +12,9 @@ import LogoUpload from '@/components/admin/LogoUpload';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminNewsNew from '@/lib/i18n/locales/admin-fr/adminNewsNew';
 
-export const getServerSideProps = withStaffPage({ permission: 'manage_communications' });
+export const getServerSideProps = withStaffPage({
+  permission: 'manage_communications',
+});
 
 const slugifyValue = (value: string) =>
   slugify(value, { lower: true, strict: true });

@@ -720,7 +720,9 @@ function AdminDemandeDetailPage() {
                     qu'une équipe existait. */}
                 {typeof payload.roster_players === 'number' && (
                   <div>
-                    <div className="text-neutral-500 text-xs">{t.rosterAtApply}</div>
+                    <div className="text-neutral-500 text-xs">
+                      {t.rosterAtApply}
+                    </div>
                     <div
                       className={`font-medium ${
                         payload.min_players &&

@@ -56,7 +56,9 @@ describe('scrimCalendar geometry', () => {
   });
 
   it('localInputValue formate en datetime-local', () => {
-    expect(localInputValue('2026-07-10', 20 * 60 + 30)).toBe('2026-07-10T20:30');
+    expect(localInputValue('2026-07-10', 20 * 60 + 30)).toBe(
+      '2026-07-10T20:30'
+    );
   });
 });
 

@@ -34,8 +34,12 @@ function seedStaff() {
     created_at: '2026-01-01T00:00:00.000Z',
   };
   store.staff = [staff] as any;
-  store.tenants = [{ id: TENANT, slug: 'alpha', name: 'Alpha', is_active: true }] as any;
-  store.tenant_staff = [{ tenant_id: TENANT, staff_id: 'staff-1', role: 'admin' }] as any;
+  store.tenants = [
+    { id: TENANT, slug: 'alpha', name: 'Alpha', is_active: true },
+  ] as any;
+  store.tenant_staff = [
+    { tenant_id: TENANT, staff_id: 'staff-1', role: 'admin' },
+  ] as any;
 }
 
 function makeReq(over: Partial<any> = {}): any {
@@ -105,7 +109,9 @@ describe('POST /api/admin/webhooks', () => {
     seedStaff();
     const res = makeRes();
     await indexHandler(
-      makeReq({ body: { url: 'https://x.com/h', event_types: ['bogus.event'] } }),
+      makeReq({
+        body: { url: 'https://x.com/h', event_types: ['bogus.event'] },
+      }),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -117,7 +123,9 @@ describe('POST /api/admin/webhooks', () => {
     seedStaff();
     const res = makeRes();
     await indexHandler(
-      makeReq({ body: { url: 'ftp://x.com/h', event_types: ['match.finished'] } }),
+      makeReq({
+        body: { url: 'ftp://x.com/h', event_types: ['match.finished'] },
+      }),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -169,10 +177,18 @@ describe('PATCH / DELETE /api/admin/webhooks/[id]', () => {
 
   it('PATCH enable resets the consecutive-failure counter', async () => {
     seedStaff();
-    seedSub({ enabled: false, consecutive_failures: 15, disabled_at: '2026-06-01T00:00:00.000Z' });
+    seedSub({
+      enabled: false,
+      consecutive_failures: 15,
+      disabled_at: '2026-06-01T00:00:00.000Z',
+    });
     const res = makeRes();
     await idHandler(
-      makeReq({ method: 'PATCH', query: { id: SUB_ID }, body: { enabled: true } }),
+      makeReq({
+        method: 'PATCH',
+        query: { id: SUB_ID },
+        body: { enabled: true },
+      }),
       res
     );
     expect(res.statusCode).toBe(200);
@@ -187,7 +203,11 @@ describe('PATCH / DELETE /api/admin/webhooks/[id]', () => {
     seedSub({ tenant_id: 'other-tenant' });
     const res = makeRes();
     await idHandler(
-      makeReq({ method: 'PATCH', query: { id: SUB_ID }, body: { enabled: false } }),
+      makeReq({
+        method: 'PATCH',
+        query: { id: SUB_ID },
+        body: { enabled: false },
+      }),
       res
     );
     expect(res.statusCode).toBe(404);

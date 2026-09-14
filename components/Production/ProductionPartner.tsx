@@ -16,12 +16,7 @@ import Image from 'next/image';
 import { InstagramIcon, TwitchIcon } from '@/components/Icons';
 import { useT, format } from '@/lib/i18n/useT';
 import nsProductionPartner from '@/lib/i18n/locales/fr/productionPartner';
-import {
-  POGTV_INSTAGRAM,
-  POGTV_LOGO,
-  POGTV_NAME,
-  POGTV_TWITCH,
-} from './pogtv';
+import { POGTV_INSTAGRAM, POGTV_LOGO, POGTV_NAME, POGTV_TWITCH } from './pogtv';
 
 type Props = {
   variant?: 'full' | 'compact';

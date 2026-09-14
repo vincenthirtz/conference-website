@@ -82,11 +82,11 @@ export default adminNs('adminTournamentMaps', {
   roundMapsCount: '{count} maps',
   roundInheritsDefault: 'Reprend le pool du tournoi',
   roundNoneScheduled:
-    "Aucune journée au planning : ajoutez des matchs pour déclarer un pool par journée.",
+    'Aucune journée au planning : ajoutez des matchs pour déclarer un pool par journée.',
   roundScopeNotice:
     'Vous éditez le pool de la journée {round}. Ajouts, modifications et suppressions ne concernent que cette journée.',
   emptyRoundPool:
-    "Aucune map propre à la journée {round} : elle utilisera le pool du tournoi.",
+    'Aucune map propre à la journée {round} : elle utilisera le pool du tournoi.',
   mapRoundPoolToggle: 'Map du tournoi',
   selectMapFromDefaultLabel: 'Sélectionner une map du pool du tournoi',
   fillRoundFromDefault: '+ Reprendre le pool du tournoi ({count})',

@@ -62,7 +62,9 @@ export interface AvailabilityViolation {
 export const DEFAULT_CONSTRAINT_TIMEZONE = 'Europe/Paris';
 
 /** `HH:MM[:SS]` → minutes depuis minuit. `null` si illisible. */
-export function parseTimeOfDay(value: string | null | undefined): number | null {
+export function parseTimeOfDay(
+  value: string | null | undefined
+): number | null {
   if (!value) return null;
   const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(value.trim());
   if (!m) return null;
@@ -282,7 +284,9 @@ export function isoWeekdayOfYmd(ymd: string): number | null {
 function nextYmd(ymd: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
   if (!m) return ymd;
-  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + 1));
+  const d = new Date(
+    Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + 1)
+  );
   return d.toISOString().slice(0, 10);
 }
 
@@ -304,7 +308,10 @@ export function blackoutDaysByTeam(
   toYmd: string
 ): Map<string, string[]> {
   const out = new Map<string, string[]>();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(fromYmd) || !/^\d{4}-\d{2}-\d{2}$/.test(toYmd)) {
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(fromYmd) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(toYmd)
+  ) {
     return out;
   }
 

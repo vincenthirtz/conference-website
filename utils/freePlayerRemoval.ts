@@ -60,10 +60,7 @@ function sign(payloadB64: string, secret: string): string {
 /** Token auto-portant autorisant le retrait de CETTE fiche, et d'elle seule. */
 export function generateFreePlayerRemovalToken(freePlayerId: string): string {
   const payloadB64 = b64url(
-    Buffer.from(
-      JSON.stringify({ f: freePlayerId, v: TOKEN_VERSION }),
-      'utf8'
-    )
+    Buffer.from(JSON.stringify({ f: freePlayerId, v: TOKEN_VERSION }), 'utf8')
   );
   return `${payloadB64}.${sign(payloadB64, getSecret())}`;
 }

@@ -25,7 +25,8 @@ export function useCountUp(
   active: boolean,
   durationMs = 1400
 ): number {
-  const safeTarget = typeof target === 'number' && isFinite(target) ? target : 0;
+  const safeTarget =
+    typeof target === 'number' && isFinite(target) ? target : 0;
   const [value, setValue] = useState(0);
   const frameRef = useRef<number | null>(null);
   const startRef = useRef<number | null>(null);

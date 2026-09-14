@@ -221,7 +221,9 @@ describe('POST /api/admin/matches/[matchId]/drafts', () => {
     expect(res.body.draft.draft.pick_timer_seconds).toBe(30);
 
     // 20 LoL Tournament Draft steps got seeded.
-    expect(res.body.draft.steps).toHaveLength(LOL.draftFlows!.bo3!.steps.length);
+    expect(res.body.draft.steps).toHaveLength(
+      LOL.draftFlows!.bo3!.steps.length
+    );
     expect(res.body.draft.steps).toHaveLength(20);
     // First step is a ban by team1.
     expect(res.body.draft.steps[0]).toMatchObject({
@@ -330,7 +332,11 @@ describe('POST /api/admin/matches/[matchId]/drafts', () => {
  * PATCH /api/admin/matches/[matchId]/drafts/[gameIndex]/side
  * ---------------------------------------------------------*/
 
-async function initLolGame(matchId: string, gameIndex: number, fearless = false) {
+async function initLolGame(
+  matchId: string,
+  gameIndex: number,
+  fearless = false
+) {
   const req = makeReq({
     query: { matchId },
     body: { gameIndex, fearless },
@@ -717,14 +723,10 @@ describe('POST /api/admin/matches/[matchId]/drafts/[gameIndex]/start', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.draft.draft.status).toBe('in_progress');
     expect(res.body.draft.draft.started_at).toBeTruthy();
-    const step1 = res.body.draft.steps.find(
-      (s: any) => s.step_number === 1
-    );
+    const step1 = res.body.draft.steps.find((s: any) => s.step_number === 1);
     expect(step1.deadline_at).toBeTruthy();
     // step 2's deadline is set lazily on commit; not stamped by start.
-    const step2 = res.body.draft.steps.find(
-      (s: any) => s.step_number === 2
-    );
+    const step2 = res.body.draft.steps.find((s: any) => s.step_number === 2);
     expect(step2.deadline_at).toBeFalsy();
   });
 
@@ -811,9 +813,7 @@ describe('POST /api/admin/matches/[matchId]/drafts/[gameIndex]/auto-pick', () =>
     expect(res.body.stepNumber).toBe(1);
     // First alphabetical eligible LoL hero is Aatrox.
     expect(res.body.heroId).toBe(HERO_AATROX);
-    const stepRow = res.body.draft.steps.find(
-      (s: any) => s.step_number === 1
-    );
+    const stepRow = res.body.draft.steps.find((s: any) => s.step_number === 1);
     expect(stepRow.auto_picked).toBe(true);
     expect(stepRow.hero_id).toBe(HERO_AATROX);
   });
@@ -851,9 +851,7 @@ describe('commitDraftStep partial-failure retry idempotency', () => {
     // step 2 in DB but crashed BEFORE updating match_drafts.current_step.
     // We replay that state in the mock store : step 2 has the hero set,
     // but the parent row is still at current_step = 1.
-    const draft = (store.match_drafts as any[]).find(
-      (d) => d.game_index === 1
-    );
+    const draft = (store.match_drafts as any[]).find((d) => d.game_index === 1);
     const step2 = (store.match_draft_steps as any[]).find(
       (s) => s.draft_id === draft.id && s.step_number === 2
     );
@@ -871,9 +869,7 @@ describe('commitDraftStep partial-failure retry idempotency', () => {
       (s: any) => s.step_number === 2
     );
     expect(step2After.hero_id).toBe(HERO_AHRI);
-    const step3 = retry.body.draft.steps.find(
-      (s: any) => s.step_number === 3
-    );
+    const step3 = retry.body.draft.steps.find((s: any) => s.step_number === 3);
     expect(step3.deadline_at).toBeTruthy();
   });
 
@@ -886,9 +882,7 @@ describe('commitDraftStep partial-failure retry idempotency', () => {
     // at current_step=1. A retry with a DIFFERENT hero must NOT silently
     // overwrite the committed pick — the engine flags HERO_ALREADY_PICKED
     // (or _BANNED) on the duplicate, surfacing the inconsistency.
-    const draft = (store.match_drafts as any[]).find(
-      (d) => d.game_index === 1
-    );
+    const draft = (store.match_drafts as any[]).find((d) => d.game_index === 1);
     const step2 = (store.match_draft_steps as any[]).find(
       (s) => s.draft_id === draft.id && s.step_number === 2
     );
@@ -930,9 +924,7 @@ describe('commitDraftStep deadline propagation', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.draft.draft.status).toBe('completed');
     // No step 21 to stamp.
-    const step20 = res.body.draft.steps.find(
-      (s: any) => s.step_number === 20
-    );
+    const step20 = res.body.draft.steps.find((s: any) => s.step_number === 20);
     expect(step20.hero_id).toBe(HERO_GAREN);
   });
 });

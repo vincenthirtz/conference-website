@@ -11,7 +11,9 @@ import type { EventSegment, EventSegmentStatus } from '../../types/events';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeSegment(overrides: Partial<EventSegment> & { id: string; ord: number }): EventSegment {
+function makeSegment(
+  overrides: Partial<EventSegment> & { id: string; ord: number }
+): EventSegment {
   return {
     id: overrides.id,
     ord: overrides.ord,
@@ -23,7 +25,7 @@ function makeSegment(overrides: Partial<EventSegment> & { id: string; ord: numbe
     title: overrides.title ?? `Segment ${overrides.ord}`,
     // `?? 15` masquerait un override explicite a `null` → on teste la cle.
     duration_min:
-      'duration_min' in overrides ? overrides.duration_min ?? null : 15,
+      'duration_min' in overrides ? (overrides.duration_min ?? null) : 15,
     status: overrides.status ?? 'upcoming',
     started_at: overrides.started_at ?? null,
     ended_at: overrides.ended_at ?? null,
@@ -205,7 +207,12 @@ describe('computeRunSchedule', () => {
   it('skipped segment in the middle: ignored in walk', () => {
     const segments = [
       makeSegment({ id: 's1', ord: 0, duration_min: 10 }),
-      makeSegment({ id: 's2-skip', ord: 1, duration_min: 30, status: 'skipped' }),
+      makeSegment({
+        id: 's2-skip',
+        ord: 1,
+        duration_min: 30,
+        status: 'skipped',
+      }),
       makeSegment({ id: 's3', ord: 2, duration_min: 5 }),
     ];
 

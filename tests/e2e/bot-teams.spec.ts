@@ -44,9 +44,12 @@ let publishedTournamentId: string;
 let publishedStageId: string;
 let draftTournamentId: string;
 
-test.describe.serial('Bot teams — auth & method', () => {
+test.describe('Bot teams — auth & method', () => {
+  test.describe.configure({ mode: 'serial' });
   test('POST sans clé → 401/500', async ({ request }) => {
-    const res = await request.post('/api/bot/v1/teams', { data: { name: 'x' } });
+    const res = await request.post('/api/bot/v1/teams', {
+      data: { name: 'x' },
+    });
     expect([401, 500]).toContain(res.status());
   });
 
@@ -58,7 +61,8 @@ test.describe.serial('Bot teams — auth & method', () => {
   });
 });
 
-test.describe.serial('Bot teams — POST création', () => {
+test.describe('Bot teams — POST création', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {
@@ -79,10 +83,7 @@ test.describe.serial('Bot teams — POST création', () => {
         .from('team_members')
         .delete()
         .in('team_id', createdTeamIds);
-      await supabaseTestClient
-        .from('teams')
-        .delete()
-        .in('id', createdTeamIds);
+      await supabaseTestClient.from('teams').delete().in('id', createdTeamIds);
     }
     await supabaseTestClient
       .from('user_discord_links')
@@ -160,7 +161,8 @@ test.describe.serial('Bot teams — POST création', () => {
   });
 });
 
-test.describe.serial('Bot tournament registration', () => {
+test.describe('Bot tournament registration', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {

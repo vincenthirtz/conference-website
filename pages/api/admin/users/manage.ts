@@ -549,7 +549,10 @@ async function handler(
         .maybeSingle();
 
       if (memberErr) {
-        logger.error('[admin/users/manage] membership lookup error:', memberErr);
+        logger.error(
+          '[admin/users/manage] membership lookup error:',
+          memberErr
+        );
         return res.status(500).json({ error: 'Failed to load membership.' });
       }
       if (!membership) {

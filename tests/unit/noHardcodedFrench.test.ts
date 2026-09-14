@@ -131,8 +131,7 @@ function walk(dir: string): string[] {
  */
 function stripComments(src: string): string {
   let out = '';
-  let mode: 'code' | 'line' | 'block' | 'sq' | 'dq' | 'tmpl' | 'regex' =
-    'code';
+  let mode: 'code' | 'line' | 'block' | 'sq' | 'dq' | 'tmpl' | 'regex' = 'code';
   /** Dernier caractère non blanc vu en mode code (arbitrage regex / division). */
   let prevSignificant = '';
   const canPrecedeRegex = (ch: string): boolean =>

@@ -145,7 +145,12 @@ describe('loadCaptainManagerUserIdsForTeams', () => {
     store.team_members = [
       { team_id: 't1', user_id: 'mgr-1', role: 'manager', tenant_id: TENANT_A },
       // player n'est PAS privilégié → exclu.
-      { team_id: 't1', user_id: 'player-1', role: 'player', tenant_id: TENANT_A },
+      {
+        team_id: 't1',
+        user_id: 'player-1',
+        role: 'player',
+        tenant_id: TENANT_A,
+      },
       // manager déjà capitaine ailleurs → dédup.
       { team_id: 't2', user_id: 'cap-1', role: 'manager', tenant_id: TENANT_A },
     ] as any;

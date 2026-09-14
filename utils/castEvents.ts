@@ -108,19 +108,26 @@ async function resolveMatch(matchId: string): Promise<MatchSnapshot | null> {
   }
   if (!data) return null;
 
-  const team1 = (data as any).team1 as
-    | { id: string; name: string; short_name: string | null }
-    | null;
-  const team2 = (data as any).team2 as
-    | { id: string; name: string; short_name: string | null }
-    | null;
-  const tournament = (data as any).tournament as
-    | { id: string; name: string }
-    | null;
+  const team1 = (data as any).team1 as {
+    id: string;
+    name: string;
+    short_name: string | null;
+  } | null;
+  const team2 = (data as any).team2 as {
+    id: string;
+    name: string;
+    short_name: string | null;
+  } | null;
+  const tournament = (data as any).tournament as {
+    id: string;
+    name: string;
+  } | null;
   const stage = (data as any).stage as { id: string; name: string } | null;
-  const scrim = (data as any).scrim as
-    | { id: string; name: string; slug: string }
-    | null;
+  const scrim = (data as any).scrim as {
+    id: string;
+    name: string;
+    slug: string;
+  } | null;
 
   return {
     id: data.id as string,
@@ -132,11 +139,11 @@ async function resolveMatch(matchId: string): Promise<MatchSnapshot | null> {
     team2: team2
       ? { id: team2.id, name: team2.name, shortName: team2.short_name }
       : null,
-    tournament: tournament ? { id: tournament.id, name: tournament.name } : null,
-    stage: stage ? { id: stage.id, name: stage.name } : null,
-    scrim: scrim
-      ? { id: scrim.id, name: scrim.name, slug: scrim.slug }
+    tournament: tournament
+      ? { id: tournament.id, name: tournament.name }
       : null,
+    stage: stage ? { id: stage.id, name: stage.name } : null,
+    scrim: scrim ? { id: scrim.id, name: scrim.name, slug: scrim.slug } : null,
   };
 }
 

@@ -44,10 +44,14 @@ async function handler(
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
-  if (applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'notify-captains'))
+  if (
+    applyRateLimit(req, res, { max: 20, windowMs: 60_000 }, 'notify-captains')
+  )
     return;
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Service base de données indisponible.' });
+    return res
+      .status(500)
+      .json({ error: 'Service base de données indisponible.' });
   }
 
   const demandeId = req.query.id;

@@ -91,10 +91,9 @@ describe('utils/supabase', () => {
     cookies.setAll([{ name: 'sb-1', value: '', options: { maxAge: 0 } }], {});
 
     // anti-cache headers (0.12) are forwarded onto the response
-    cookies.setAll(
-      [{ name: 'sb-4', value: 'v4', options: {} }],
-      { 'Cache-Control': 'private, no-store' }
-    );
+    cookies.setAll([{ name: 'sb-4', value: 'v4', options: {} }], {
+      'Cache-Control': 'private, no-store',
+    });
     expect(headers['Cache-Control']).toBe('private, no-store');
   });
 
@@ -151,7 +150,10 @@ describe('utils/supabase', () => {
     mod.getServerClient(req, res);
     const cookies = captured.opts.cookies;
 
-    cookies.setAll([{ name: 'custom-session', value: 'opaque', options: {} }], {});
+    cookies.setAll(
+      [{ name: 'custom-session', value: 'opaque', options: {} }],
+      {}
+    );
     const serialized = headers['Set-Cookie'];
     const value = Array.isArray(serialized) ? serialized[0] : serialized;
     expect(value).toContain('custom-session=opaque');

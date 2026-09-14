@@ -31,10 +31,9 @@ describe('parseRoundParam', () => {
   // le pool du tournoi sans que personne le voie.
   it('refuse ce qui n’est pas une journée, plutôt que de viser le pool par défaut', () => {
     for (const bad of ['deux', '0', '-1', '2.5', '2e1', '0x2', '1 2', '+2']) {
-      expect(
-        parseRoundParam(bad).ok,
-        `« ${bad} » devrait être refusé`
-      ).toBe(false);
+      expect(parseRoundParam(bad).ok, `« ${bad} » devrait être refusé`).toBe(
+        false
+      );
     }
   });
 

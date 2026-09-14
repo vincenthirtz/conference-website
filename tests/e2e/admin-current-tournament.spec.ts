@@ -37,7 +37,8 @@ async function getStaffAccessToken(): Promise<string | null> {
 let staffToken: string | null = null;
 let tournamentId: string;
 
-test.describe.serial('Admin "Tournoi en cours" E2E', () => {
+test.describe('Admin "Tournoi en cours" E2E', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
 
   test.beforeAll(async () => {

@@ -50,6 +50,7 @@ export function createRng(seed: string | number): Rng {
     int: (min, max) => min + Math.floor(next() * (max - min + 1)),
     range: (min, max) => min + next() * (max - min),
     chance: (p) => next() < p,
-    pick: (items) => (items.length === 0 ? undefined : items[Math.floor(next() * items.length)]),
+    pick: (items) =>
+      items.length === 0 ? undefined : items[Math.floor(next() * items.length)],
   };
 }

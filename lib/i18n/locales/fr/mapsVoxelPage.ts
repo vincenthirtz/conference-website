@@ -52,13 +52,13 @@ export default ns('mapsVoxelPage', {
   howTitle: 'Comment une maquette est fabriquée',
   howStep1Title: 'Une recette',
   howStep1Body:
-    "Quinze lignes par map : une palette de quatre couleurs, un style de bâti, un décor alentour et deux ou trois silhouettes prises dans un vocabulaire générique. Le mode de jeu, lui, est déjà en base — il sert de squelette.",
+    'Quinze lignes par map : une palette de quatre couleurs, un style de bâti, un décor alentour et deux ou trois silhouettes prises dans un vocabulaire générique. Le mode de jeu, lui, est déjà en base — il sert de squelette.',
   howStep2Title: 'Un moteur déterministe',
   howStep2Body:
     "Le nom de la map sert de graine : le terrain, l'implantation du bâti et le mobilier en découlent. Même recette, même maquette, toujours — et deux maps du même mode ne se ressemblent pas.",
   howStep3Title: 'Un SVG isométrique',
   howStep3Body:
-    "Occlusion ambiante, ombre portée et perspective aérienne sont calculées au rendu. Le fichier pèse une dizaine de kilo-octets compressé et reste net à toutes les tailles, sans une ligne de JavaScript.",
+    'Occlusion ambiante, ombre portée et perspective aérienne sont calculées au rendu. Le fichier pèse une dizaine de kilo-octets compressé et reste net à toutes les tailles, sans une ligne de JavaScript.',
 
   vocabularyNote:
     "Les silhouettes sont affichées avec leur identifiant du moteur : c'est le vocabulaire dans lequel s'écrivent les recettes.",

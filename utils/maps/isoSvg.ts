@@ -96,12 +96,14 @@ const HEIGHT_LIFT = 0.07;
  * disparaît sous la teinte et toutes les maps de nuit se ressemblent. Le
  * contraste de nuit vient du CIEL sombre, pas d'un voile sur les briques.
  */
-const MOODS: Record<MapMood, { tint: [number, number, number]; mix: number; sky: [string, string] }> =
-  {
-    day: { tint: [255, 250, 235], mix: 0.06, sky: ['#e3edf6', '#b3c6db'] },
-    dusk: { tint: [255, 170, 105], mix: 0.12, sky: ['#f7cb95', '#7d4f74'] },
-    night: { tint: [120, 150, 225], mix: 0.13, sky: ['#1c2545', '#080b16'] },
-  };
+const MOODS: Record<
+  MapMood,
+  { tint: [number, number, number]; mix: number; sky: [string, string] }
+> = {
+  day: { tint: [255, 250, 235], mix: 0.06, sky: ['#e3edf6', '#b3c6db'] },
+  dusk: { tint: [255, 170, 105], mix: 0.12, sky: ['#f7cb95', '#7d4f74'] },
+  night: { tint: [120, 150, 225], mix: 0.13, sky: ['#1c2545', '#080b16'] },
+};
 
 function colorForRole(role: BrickRole, recipe: MapRecipe): string {
   switch (role) {
@@ -136,11 +138,17 @@ function parseHex(hex: string): [number, number, number] {
   ];
 }
 
-const clamp255 = (n: number): number => (n < 0 ? 0 : n > 255 ? 255 : Math.round(n));
+const clamp255 = (n: number): number =>
+  n < 0 ? 0 : n > 255 ? 255 : Math.round(n);
 const toHex = (rgb: [number, number, number]): string =>
   `#${rgb.map((c) => clamp255(c).toString(16).padStart(2, '0')).join('')}`;
 
-function shadeColor(base: string, light: number, variation: number, mood: MapMood): string {
+function shadeColor(
+  base: string,
+  light: number,
+  variation: number,
+  mood: MapMood
+): string {
   const [r, g, b] = parseHex(base);
   const { tint, mix } = MOODS[mood];
   const k = light * (1 + variation);
@@ -151,12 +159,16 @@ function shadeColor(base: string, light: number, variation: number, mood: MapMoo
   ]);
 }
 
-const escapeXml = (s: string): string => s.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
+const escapeXml = (s: string): string =>
+  s.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 /** Clé d'occupation — doit rester identique à celle du SceneBuilder. */
 const cellKey = (x: number, y: number, z: number): string => `${x},${y},${z}`;
 
-export function renderIsoSvg(scene: VoxelScene, options: IsoSvgOptions = {}): string {
+export function renderIsoSvg(
+  scene: VoxelScene,
+  options: IsoSvgOptions = {}
+): string {
   const tile = options.tile ?? 16;
   const cubeHeight = options.cubeHeight ?? 10;
   const padding = options.padding ?? 14;
@@ -184,7 +196,8 @@ export function renderIsoSvg(scene: VoxelScene, options: IsoSvgOptions = {}): st
     byCell.set(cellKey(brick.x, brick.y, brick.z), brick);
     if (brick.y > peak) peak = brick.y;
   }
-  const occupied = (x: number, y: number, z: number): boolean => byCell.has(cellKey(x, y, z));
+  const occupied = (x: number, y: number, z: number): boolean =>
+    byCell.has(cellKey(x, y, z));
 
   // Carte des hauteurs (sommet de chaque colonne), base de l'ombre portée.
   const heights = new Map<string, number>();
@@ -193,7 +206,8 @@ export function renderIsoSvg(scene: VoxelScene, options: IsoSvgOptions = {}): st
     const current = heights.get(k);
     if (current === undefined || brick.y > current) heights.set(k, brick.y);
   }
-  const heightAt = (x: number, z: number): number => heights.get(`${x},${z}`) ?? -99;
+  const heightAt = (x: number, z: number): number =>
+    heights.get(`${x},${z}`) ?? -99;
 
   /** Nombre de briques bordant la face du dessus au niveau supérieur (0..4). */
   const aoTop = (x: number, y: number, z: number): number =>
@@ -214,7 +228,9 @@ export function renderIsoSvg(scene: VoxelScene, options: IsoSvgOptions = {}): st
   };
 
   // Ordre du peintre : du fond vers l'avant.
-  const sorted: Brick[] = [...scene.bricks].sort((a, b) => a.x + a.y + a.z - (b.x + b.y + b.z));
+  const sorted: Brick[] = [...scene.bricks].sort(
+    (a, b) => a.x + a.y + a.z - (b.x + b.y + b.z)
+  );
 
   const parts: string[] = [];
   let minSx = Infinity;
@@ -237,7 +253,12 @@ export function renderIsoSvg(scene: VoxelScene, options: IsoSvgOptions = {}): st
   /** Couleur finale d'une face, tous termes d'éclairage cumulés. */
   const faceColor = (brick: Brick, light: number): string => {
     const lift = 1 + (brick.y / peak) * HEIGHT_LIFT;
-    return shadeColor(colorForRole(brick.role, scene.recipe), light * lift, brick.shade ?? 0, mood);
+    return shadeColor(
+      colorForRole(brick.role, scene.recipe),
+      light * lift,
+      brick.shade ?? 0,
+      mood
+    );
   };
 
   // La fusion des faces du dessus se décide sur la COULEUR FINALE, pas sur le
@@ -272,13 +293,13 @@ export function renderIsoSvg(scene: VoxelScene, options: IsoSvgOptions = {}): st
     if (!leftHidden) {
       const ao = occupied(x, y + 1, z + 1) ? AO_STEP * 2 : 0;
       parts.push(
-        `<use href="#${idLeft}" x="${sx}" y="${sy}" fill="${faceColor(brick, FACE_LIGHT.left * (1 - ao))}"/>`,
+        `<use href="#${idLeft}" x="${sx}" y="${sy}" fill="${faceColor(brick, FACE_LIGHT.left * (1 - ao))}"/>`
       );
     }
     if (!rightHidden) {
       const ao = occupied(x + 1, y + 1, z) ? AO_STEP * 2 : 0;
       parts.push(
-        `<use href="#${idRight}" x="${sx}" y="${sy}" fill="${faceColor(brick, FACE_LIGHT.right * (1 - ao))}"/>`,
+        `<use href="#${idRight}" x="${sx}" y="${sy}" fill="${faceColor(brick, FACE_LIGHT.right * (1 - ao))}"/>`
       );
     }
     if (topHidden) continue;
@@ -292,7 +313,8 @@ export function renderIsoSvg(scene: VoxelScene, options: IsoSvgOptions = {}): st
     let last = brick;
     for (let n = 1; ; n += 1) {
       const nextBrick = byCell.get(cellKey(x + n, y, z));
-      if (!nextBrick || !topVisible(nextBrick) || topFill(nextBrick) !== fill) break;
+      if (!nextBrick || !topVisible(nextBrick) || topFill(nextBrick) !== fill)
+        break;
       last = nextBrick;
     }
 
@@ -302,7 +324,7 @@ export function renderIsoSvg(scene: VoxelScene, options: IsoSvgOptions = {}): st
       const [ex, ey] = project(last.x, last.y, last.z);
       track(ex, ey);
       parts.push(
-        `<path fill="${fill}" d="M${sx - hw} ${sy}L${sx} ${sy - hh}L${ex + hw} ${ey}L${ex} ${ey + hh}Z"/>`,
+        `<path fill="${fill}" d="M${sx - hw} ${sy}L${sx} ${sy - hh}L${ex + hw} ${ey}L${ex} ${ey + hh}Z"/>`
       );
     }
 
@@ -312,7 +334,9 @@ export function renderIsoSvg(scene: VoxelScene, options: IsoSvgOptions = {}): st
       const studFill = faceColor(brick, FACE_LIGHT.top * 1.13);
       for (let cx = brick.x; cx <= last.x; cx += 1) {
         const [ux, uy] = project(cx, y, z);
-        parts.push(`<use href="#${idStud}" x="${ux}" y="${uy}" fill="${studFill}"/>`);
+        parts.push(
+          `<use href="#${idStud}" x="${ux}" y="${uy}" fill="${studFill}"/>`
+        );
       }
     }
   }

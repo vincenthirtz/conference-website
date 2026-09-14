@@ -45,7 +45,8 @@ async function loginAsUI(page: Page, email: string) {
   await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
 }
 
-test.describe.serial('Admin idempotency middleware', () => {
+test.describe('Admin idempotency middleware', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
 
   let staffToken: string | null = null;

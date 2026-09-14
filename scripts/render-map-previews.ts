@@ -30,7 +30,13 @@ const AUTHORED: { game: string; recipes: MapRecipe[] }[] = [
   { game: 'overwatch', recipes: OVERWATCH_RECIPES },
 ];
 
-type Rendered = { game: string; recipe: MapRecipe; svg: string; bricks: number; bytes: number };
+type Rendered = {
+  game: string;
+  recipe: MapRecipe;
+  svg: string;
+  bricks: number;
+  bytes: number;
+};
 
 function render(game: string, recipe: MapRecipe): Rendered {
   const scene = generateScene(recipe);
@@ -38,7 +44,13 @@ function render(game: string, recipe: MapRecipe): Rendered {
   const dir = join(OUT_ROOT, game);
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, `${recipe.slug}.svg`), svg);
-  return { game, recipe, svg, bricks: scene.bricks.length, bytes: Buffer.byteLength(svg) };
+  return {
+    game,
+    recipe,
+    svg,
+    bricks: scene.bricks.length,
+    bytes: Buffer.byteLength(svg),
+  };
 }
 
 function contactSheet(items: Rendered[]): string {
@@ -47,7 +59,7 @@ function contactSheet(items: Rendered[]): string {
       (it) =>
         `<figure><div class="frame">${it.svg}</div>` +
         `<figcaption><b>${it.recipe.name}</b><br>${it.recipe.layout} · ${it.recipe.mood ?? 'day'} · ` +
-        `${it.bricks} briques · ${(it.bytes / 1024).toFixed(0)} ko</figcaption></figure>`,
+        `${it.bricks} briques · ${(it.bytes / 1024).toFixed(0)} ko</figcaption></figure>`
     )
     .join('');
   return (
@@ -78,7 +90,12 @@ if (all) {
     const game = getGame(slug);
     if (!game) continue;
     for (const map of game.mapPool) {
-      if (rendered.some((r) => r.game === slug && r.recipe.slug === mapSlug(map.name))) continue;
+      if (
+        rendered.some(
+          (r) => r.game === slug && r.recipe.slug === mapSlug(map.name)
+        )
+      )
+        continue;
       rendered.push(render(slug, deriveRecipe(map.name, map.type)));
     }
   }
@@ -90,6 +107,6 @@ writeFileSync(join(ROOT, 'map-previews.html'), contactSheet(rendered));
 const total = rendered.reduce((n, r) => n + r.bytes, 0);
 console.log(
   `${rendered.length} maquettes -> public/img/maps/ (${(total / 1024).toFixed(0)} ko, ` +
-    `moyenne ${(total / rendered.length / 1024).toFixed(1)} ko)`,
+    `moyenne ${(total / rendered.length / 1024).toFixed(1)} ko)`
 );
 console.log('planche-contact : map-previews.html');

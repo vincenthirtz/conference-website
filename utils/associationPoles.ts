@@ -15,5 +15,8 @@ export const POLE_LABELS: Record<PoleKey, string> = {
 };
 
 export function isPoleKey(value: unknown): value is PoleKey {
-  return typeof value === 'string' && (POLE_KEYS as readonly string[]).includes(value);
+  return (
+    typeof value === 'string' &&
+    (POLE_KEYS as readonly string[]).includes(value)
+  );
 }

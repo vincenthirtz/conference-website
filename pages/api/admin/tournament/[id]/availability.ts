@@ -82,13 +82,18 @@ async function handler(
     .eq('tenant_id', ctx.tenantId);
 
   if (eErr) {
-    logger.error('[admin/tournament-availability] entrants', eErr, { tournamentId });
+    logger.error('[admin/tournament-availability] entrants', eErr, {
+      tournamentId,
+    });
     return res.status(500).json({ error: 'Server error.' });
   }
 
   type EntrantRow = {
     team_id: string;
-    team: { id: string; name: string | null } | { id: string; name: string | null }[] | null;
+    team:
+      | { id: string; name: string | null }
+      | { id: string; name: string | null }[]
+      | null;
   };
   const teamNames = new Map<string, string | null>();
   for (const row of (entrants ?? []) as EntrantRow[]) {

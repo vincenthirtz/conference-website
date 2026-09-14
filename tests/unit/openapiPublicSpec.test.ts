@@ -86,7 +86,9 @@ function makeRes() {
   res.status = (c: number) => ((res.statusCode = c), res);
   res.json = (b: unknown) => ((res.body = b), res);
   res.send = (b: unknown) => ((res.body = b), res);
-  res.setHeader = (k: string, v: unknown) => ((res.headers[k.toLowerCase()] = v), res);
+  res.setHeader = (k: string, v: unknown) => (
+    (res.headers[k.toLowerCase()] = v), res
+  );
   res.end = () => res;
   return res;
 }
@@ -161,7 +163,11 @@ describe('GET /api/public/openapi', () => {
     expect(res.statusCode).toBe(200);
     expect(res.headers['access-control-allow-origin']).toBe('*');
     expect((res.body as any).openapi).toBeDefined();
-    expect(Object.keys((res.body as any).paths).every((k: string) => k.startsWith('/api/public/'))).toBe(true);
+    expect(
+      Object.keys((res.body as any).paths).every((k: string) =>
+        k.startsWith('/api/public/')
+      )
+    ).toBe(true);
   });
 
   it('405 sur POST', () => {

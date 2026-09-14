@@ -13,7 +13,11 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 
-import { store, resetSupabaseMock, setAuthListUsers } from './__helpers__/supabaseMock';
+import {
+  store,
+  resetSupabaseMock,
+  setAuthListUsers,
+} from './__helpers__/supabaseMock';
 import {
   computeUnsentRecipients,
   computeNewRecipients,

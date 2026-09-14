@@ -40,7 +40,8 @@ async function getStaffAccessToken(): Promise<string | null> {
 let staffToken: string | null = null;
 let tournamentId: string;
 
-test.describe.serial('Teams import E2E (CSV + platform)', () => {
+test.describe('Teams import E2E (CSV + platform)', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
 
   test.beforeAll(async () => {

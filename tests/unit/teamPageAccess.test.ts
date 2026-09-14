@@ -51,9 +51,9 @@ describe('resolveTeamPageAccess', () => {
   });
 
   it('aucune équipe gérée → rien, même avec un drapeau', () => {
-    expect(resolveTeamPageAccess({ team: null, isCaptain: true }, 't1')).toEqual(
-      NO_TEAM_PAGE_ACCESS
-    );
+    expect(
+      resolveTeamPageAccess({ team: null, isCaptain: true }, 't1')
+    ).toEqual(NO_TEAM_PAGE_ACCESS);
     expect(resolveTeamPageAccess(null, 't1')).toEqual(NO_TEAM_PAGE_ACCESS);
   });
 });

@@ -128,10 +128,7 @@ describe('GET /api/admin/site-settings/team-roles', () => {
 describe('PUT /api/admin/site-settings/team-roles', () => {
   it('400 when roles is missing or not an array', async () => {
     const r1 = makeRes();
-    await teamRolesHandler(
-      makeAuthedReq({ method: 'PUT', body: {} }),
-      r1
-    );
+    await teamRolesHandler(makeAuthedReq({ method: 'PUT', body: {} }), r1);
     expect(r1.statusCode).toBe(400);
 
     const r2 = makeRes();
@@ -257,10 +254,7 @@ describe('PUT /api/admin/site-settings/team-roles', () => {
       makeAuthedReq({
         method: 'PUT',
         body: {
-          roles: [
-            { value: 'COACH' },
-            { value: 'sub', label: '   ' },
-          ],
+          roles: [{ value: 'COACH' }, { value: 'sub', label: '   ' }],
         },
       }),
       res

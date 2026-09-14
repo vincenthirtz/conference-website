@@ -89,7 +89,9 @@ function useInboxCount(): number | null {
           adminFetchJson<{ total: number }>(
             '/api/admin/tenant-requests?status=pending&limit=1'
           ),
-          adminFetchJson<{ links: unknown[] }>('/api/admin/pending-guild-links'),
+          adminFetchJson<{ links: unknown[] }>(
+            '/api/admin/pending-guild-links'
+          ),
         ]);
         if (cancelled) return;
         setCount((requests.total ?? 0) + (guilds.links?.length ?? 0));

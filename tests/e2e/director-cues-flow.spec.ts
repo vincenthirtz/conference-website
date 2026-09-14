@@ -52,7 +52,8 @@ async function loginVia(
   await page.waitForLoadState('networkidle');
 }
 
-test.describe.serial('Director cues -> cockpit ack flow', () => {
+test.describe('Director cues -> cockpit ack flow', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
 
   test.beforeAll(async () => {
@@ -144,7 +145,10 @@ test.describe.serial('Director cues -> cockpit ack flow', () => {
 
     if (runId) {
       // Cues + acks cascade via FK ON DELETE CASCADE.
-      await supabaseTestClient.from('event_cues').delete().eq('event_run_id', runId);
+      await supabaseTestClient
+        .from('event_cues')
+        .delete()
+        .eq('event_run_id', runId);
       await supabaseTestClient
         .from('event_segments')
         .delete()
@@ -152,8 +156,14 @@ test.describe.serial('Director cues -> cockpit ack flow', () => {
       await supabaseTestClient.from('event_runs').delete().eq('id', runId);
     }
     if (castMemberId) {
-      await supabaseTestClient.from('caster_presence').delete().eq('cast_member_id', castMemberId);
-      await supabaseTestClient.from('cast_members').delete().eq('id', castMemberId);
+      await supabaseTestClient
+        .from('caster_presence')
+        .delete()
+        .eq('cast_member_id', castMemberId);
+      await supabaseTestClient
+        .from('cast_members')
+        .delete()
+        .eq('id', castMemberId);
     }
     if (managerAuthId) await deleteTestStaff(MANAGER_EMAIL);
     if (casterAuthId) await deleteTestStaff(CASTER_EMAIL);
@@ -215,9 +225,7 @@ test.describe.serial('Director cues -> cockpit ack flow', () => {
     await expect(modal).toBeHidden({ timeout: 5_000 });
 
     // 6. Manager voit le ack count (refresh CueFeed poll 5s)
-    const ackCount = managerPage
-      .getByTestId(/^cue-feed-ack-count-/)
-      .first();
+    const ackCount = managerPage.getByTestId(/^cue-feed-ack-count-/).first();
     await expect(ackCount).toHaveText('1/1', { timeout: 15_000 });
 
     await managerCtx.close();

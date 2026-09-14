@@ -35,7 +35,11 @@ vi.mock('@/utils/staffLogs', () => ({
   logStaffAction: logStaffActionMock,
 }));
 
-import { store, resetSupabaseMock, setAuthUser } from './__helpers__/supabaseMock';
+import {
+  store,
+  resetSupabaseMock,
+  setAuthUser,
+} from './__helpers__/supabaseMock';
 import { invalidateStaffCache } from '../../utils/staff';
 
 import cueRetractHandler from '../../pages/api/admin/events/[runId]/cues/[cueId]';
@@ -181,7 +185,11 @@ describe('DELETE /api/admin/events/[runId]/cues/[cueId]', () => {
 
     expect(res.statusCode).toBe(200);
     const body = res.body as {
-      cue: { id: string; retracted_at: string | null; retracted_by_user_id: string | null };
+      cue: {
+        id: string;
+        retracted_at: string | null;
+        retracted_by_user_id: string | null;
+      };
       alreadyRetracted?: boolean;
     };
     expect(body.alreadyRetracted).toBeUndefined();
@@ -190,7 +198,9 @@ describe('DELETE /api/admin/events/[runId]/cues/[cueId]', () => {
     expect(body.cue.retracted_by_user_id).toBe('user-1');
 
     // Persisted row is mutated in place.
-    const persisted = (store.event_cues as any[]).find((c) => c.id === CUE_ACTIVE);
+    const persisted = (store.event_cues as any[]).find(
+      (c) => c.id === CUE_ACTIVE
+    );
     expect(persisted.retracted_at).toBeTruthy();
     expect(persisted.retracted_by_user_id).toBe('user-1');
 
@@ -207,7 +217,9 @@ describe('DELETE /api/admin/events/[runId]/cues/[cueId]', () => {
 
   it('200 idempotent when the cue is already retracted: alreadyRetracted=true, no second update, no log', async () => {
     seedCues();
-    const before = (store.event_cues as any[]).find((c) => c.id === CUE_RETRACTED);
+    const before = (store.event_cues as any[]).find(
+      (c) => c.id === CUE_RETRACTED
+    );
     const originalRetractedAt = before.retracted_at;
     const originalRetractedBy = before.retracted_by_user_id;
 
@@ -219,14 +231,20 @@ describe('DELETE /api/admin/events/[runId]/cues/[cueId]', () => {
 
     expect(res.statusCode).toBe(200);
     const body = res.body as {
-      cue: { id: string; retracted_at: string | null; retracted_by_user_id: string | null };
+      cue: {
+        id: string;
+        retracted_at: string | null;
+        retracted_by_user_id: string | null;
+      };
       alreadyRetracted?: boolean;
     };
     expect(body.alreadyRetracted).toBe(true);
     expect(body.cue.id).toBe(CUE_RETRACTED);
 
     // No second UPDATE: the stamp is unchanged (not overwritten with now()/user-1).
-    const after = (store.event_cues as any[]).find((c) => c.id === CUE_RETRACTED);
+    const after = (store.event_cues as any[]).find(
+      (c) => c.id === CUE_RETRACTED
+    );
     expect(after.retracted_at).toBe(originalRetractedAt);
     expect(after.retracted_by_user_id).toBe(originalRetractedBy);
 
@@ -239,7 +257,10 @@ describe('DELETE /api/admin/events/[runId]/cues/[cueId]', () => {
     const res = makeRes();
     await cueRetractHandler(
       makeAuthedReq({
-        query: { runId: RUN_LIVE, cueId: '99999999-9999-4999-8999-999999999999' },
+        query: {
+          runId: RUN_LIVE,
+          cueId: '99999999-9999-4999-8999-999999999999',
+        },
       }),
       res
     );
@@ -257,7 +278,9 @@ describe('DELETE /api/admin/events/[runId]/cues/[cueId]', () => {
     expect(res.statusCode).toBe(404);
 
     // The other-tenant cue is untouched.
-    const untouched = (store.event_cues as any[]).find((c) => c.id === CUE_OTHER_TENANT);
+    const untouched = (store.event_cues as any[]).find(
+      (c) => c.id === CUE_OTHER_TENANT
+    );
     expect(untouched.retracted_at).toBeNull();
     expect(logStaffActionMock).not.toHaveBeenCalled();
   });
@@ -311,7 +334,9 @@ describe('DELETE /api/admin/events/[runId]/cues/[cueId]', () => {
     expect(res.statusCode).toBe(403);
 
     // The cue is left untouched when access is denied.
-    const untouched = (store.event_cues as any[]).find((c) => c.id === CUE_ACTIVE);
+    const untouched = (store.event_cues as any[]).find(
+      (c) => c.id === CUE_ACTIVE
+    );
     expect(untouched.retracted_at).toBeNull();
   });
 });

@@ -6,7 +6,7 @@ import {
 } from '../../utils/associationPoles';
 
 describe('associationPoles', () => {
-  it('expose les 4 pôles attendus, dans l\'ordre', () => {
+  it("expose les 4 pôles attendus, dans l'ordre", () => {
     expect(POLE_KEYS).toEqual([
       'direction',
       'tournoi',

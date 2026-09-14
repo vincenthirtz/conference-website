@@ -34,8 +34,7 @@ export default {
     'Voice and text chat are subject to the Blizzard Code of Conduct.',
   section3Item3:
     'Dispute resolution: final decision by the tournament referees.',
-  section3Item4:
-    `Joining the tournament Discord is mandatory: ${socialUrl('discord')}`,
+  section3Item4: `Joining the tournament Discord is mandatory: ${socialUrl('discord')}`,
   modesEyebrow: 'Game modes',
   modesTitle: 'Win conditions by mode',
   modesNote: 'Applies with the « Competitive rules » preset in custom games.',

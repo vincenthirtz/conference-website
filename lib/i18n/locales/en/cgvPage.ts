@@ -20,88 +20,57 @@ export default {
   contactUs: 'Contact us',
 
   a1Title: 'Article 1 — Purpose and scope',
-  a1p1:
-    'These terms govern the sale of organiser workspace offers (“the Service”) by the Women’s Cup association (“the Association”) to any legal entity or individual who subscribes (“the Customer”).',
-  a1p2:
-    'They apply from the opening of a workspace — including during the free trial and on the free tier, where nothing is owed — and then to every order placed from the Customer’s administration area. They apply neither to participation in the competitions run by the Association nor to browsing the site, both of which are free.',
-  a1p3:
-    'Acceptance is collected twice, for two distinct things: at the opening of the workspace it makes these terms binding on the relationship; before each payment it forms the sale. Neither is presumed — both are ticked, and recorded with their date and the version accepted.',
+  a1p1: 'These terms govern the sale of organiser workspace offers (“the Service”) by the Women’s Cup association (“the Association”) to any legal entity or individual who subscribes (“the Customer”).',
+  a1p2: 'They apply from the opening of a workspace — including during the free trial and on the free tier, where nothing is owed — and then to every order placed from the Customer’s administration area. They apply neither to participation in the competitions run by the Association nor to browsing the site, both of which are free.',
+  a1p3: 'Acceptance is collected twice, for two distinct things: at the opening of the workspace it makes these terms binding on the relationship; before each payment it forms the sale. Neither is presumed — both are ticked, and recorded with their date and the version accepted.',
 
   a2Title: 'Article 2 — Identity of the seller',
-  a2p1:
-    'Women’s Cup association, a non-profit association governed by the French law of 1 July 1901.',
+  a2p1: 'Women’s Cup association, a non-profit association governed by the French law of 1 July 1901.',
   a2rna: 'RNA no.: W691112531',
   a2siren: 'SIREN no.: 109 139 444',
   a2siret: 'SIRET no. (registered office): 10913944400011',
-  a2p2:
-    'The registered office address and full contact details appear in the site’s legal notice.',
+  a2p2: 'The registered office address and full contact details appear in the site’s legal notice.',
 
   a3Title: 'Article 3 — Key features of the Service',
-  a3p1:
-    'The Service is digital content supplied online, on no tangible medium. It gives access to a competition management workspace: teams and sign-ups, match schedule and refereeing, and depending on the offer, a Discord bot, your own brand and domain, player ratings, API access and a video control room.',
-  a3p2:
-    'The exact contents of each offer are those shown on the offers page on the day of the order, and repeated in the summary presented before payment. The Customer is invited to read them: it is the description that binds, not the name of the offer.',
+  a3p1: 'The Service is digital content supplied online, on no tangible medium. It gives access to a competition management workspace: teams and sign-ups, match schedule and refereeing, and depending on the offer, a Discord bot, your own brand and domain, player ratings, API access and a video control room.',
+  a3p2: 'The exact contents of each offer are those shown on the offers page on the day of the order, and repeated in the summary presented before payment. The Customer is invited to read them: it is the description that binds, not the name of the offer.',
   a3p3: 'The Éditeur offer is quoted individually and cannot be ordered online.',
 
   a4Title: 'Article 4 — Interoperability and compatibility',
-  a4p1:
-    'The Service runs in an up-to-date web browser (Chrome, Firefox, Safari or Edge), on desktop and mobile alike. No installation is required. An internet connection is necessary.',
-  a4p2:
-    'Discord features assume the Customer has a Discord server and can invite a bot to it; broadcast features assume a Twitch account and, for overlays, control-room software accepting a browser source (OBS or equivalent). The Association supplies neither those accounts nor that software.',
-  a4p3:
-    'The Customer’s data can be exported at any time from the administration area, in JSON and CSV, readable by any common spreadsheet or tool.',
-  a4p4:
-    'The Service depends on third-party services (Discord, Twitch, Blizzard, the host and the database). An outage at any of them may affect the corresponding features.',
+  a4p1: 'The Service runs in an up-to-date web browser (Chrome, Firefox, Safari or Edge), on desktop and mobile alike. No installation is required. An internet connection is necessary.',
+  a4p2: 'Discord features assume the Customer has a Discord server and can invite a bot to it; broadcast features assume a Twitch account and, for overlays, control-room software accepting a browser source (OBS or equivalent). The Association supplies neither those accounts nor that software.',
+  a4p3: 'The Customer’s data can be exported at any time from the administration area, in JSON and CSV, readable by any common spreadsheet or tool.',
+  a4p4: 'The Service depends on third-party services (Discord, Twitch, Blizzard, the host and the database). An outage at any of them may affect the corresponding features.',
 
   a5Title: 'Article 5 — Ordering',
-  a5p1:
-    'Ordering happens in two steps, in accordance with article 1127-2 of the French Civil Code.',
-  a5s1:
-    'The Customer picks an offer and a billing period, then a summary shows the chosen offer, the period, the unit price and the total amount payable.',
-  a5s2:
-    'At that point the Customer can go back, change their choice and correct any mistake.',
-  a5s3:
-    'The Customer expressly accepts these terms, then expressly requests immediate performance of the Service while acknowledging the loss of their right of withdrawal (article 9). These two boxes are separate and unticked by default.',
-  a5s4:
-    'The Customer confirms the order using the button reading “Order with obligation to pay”.',
-  a5p2:
-    'The order is formed only upon that final click. The date, time and version of the terms accepted are recorded by the Association and can be provided to the Customer on request.',
+  a5p1: 'Ordering happens in two steps, in accordance with article 1127-2 of the French Civil Code.',
+  a5s1: 'The Customer picks an offer and a billing period, then a summary shows the chosen offer, the period, the unit price and the total amount payable.',
+  a5s2: 'At that point the Customer can go back, change their choice and correct any mistake.',
+  a5s3: 'The Customer expressly accepts these terms, then expressly requests immediate performance of the Service while acknowledging the loss of their right of withdrawal (article 9). These two boxes are separate and unticked by default.',
+  a5s4: 'The Customer confirms the order using the button reading “Order with obligation to pay”.',
+  a5p2: 'The order is formed only upon that final click. The date, time and version of the terms accepted are recorded by the Association and can be provided to the Customer on request.',
 
   a6Title: 'Article 6 — Prices',
-  a6p1:
-    'Prices are stated in euros and are those shown on the offers page on the day of the order. The amount charged is the one shown in the summary: no fee or surcharge is added at the payment step.',
-  a6p2:
-    'Two billing periods are offered. Monthly, the monthly price buys one month of service. Yearly, ten months are charged for twelve months of service.',
-  a6p3:
-    'The Association may change its prices at any time. The price that applies is the one at the time of the order; a change has no effect on periods already paid for.',
+  a6p1: 'Prices are stated in euros and are those shown on the offers page on the day of the order. The amount charged is the one shown in the summary: no fee or surcharge is added at the payment step.',
+  a6p2: 'Two billing periods are offered. Monthly, the monthly price buys one month of service. Yearly, ten months are charged for twelve months of service.',
+  a6p3: 'The Association may change its prices at any time. The price that applies is the one at the time of the order; a change has no effect on periods already paid for.',
 
   a7Title: 'Article 7 — Payment',
-  a7p1:
-    'Payment is made online, in a single instalment, through HelloAsso, the Association’s payment provider. The Customer is redirected to HelloAsso to enter their card details.',
-  a7p2:
-    'Those details never pass through the Association’s servers and are never stored there.',
-  a7p3:
-    'The offer is activated as soon as payment confirmation is received, in principle immediately. If payment fails, no order is formed and nothing is owed.',
+  a7p1: 'Payment is made online, in a single instalment, through HelloAsso, the Association’s payment provider. The Customer is redirected to HelloAsso to enter their card details.',
+  a7p2: 'Those details never pass through the Association’s servers and are never stored there.',
+  a7p3: 'The offer is activated as soon as payment confirmation is received, in principle immediately. If payment fails, no order is formed and nothing is owed.',
 
   a8Title: 'Article 8 — Duration, expiry and no tacit renewal',
-  a8p1:
-    'Each payment opens a period of one month or one year depending on the chosen billing period. Renewing early extends the current period rather than replacing it.',
-  a8p2:
-    'There is no tacit renewal, no automatic debit and no direct-debit mandate: each period is a separate order and a deliberate payment. The Customer therefore has nothing to cancel — simply not renewing is enough.',
-  a8p3:
-    'The Customer is notified by email before the expiry date, and again on the day itself.',
-  a8p4:
-    'Failing renewal, the offer’s capabilities stay open for seven days after expiry, then the workspace reverts to the Découverte tier. No data is deleted on that account.',
+  a8p1: 'Each payment opens a period of one month or one year depending on the chosen billing period. Renewing early extends the current period rather than replacing it.',
+  a8p2: 'There is no tacit renewal, no automatic debit and no direct-debit mandate: each period is a separate order and a deliberate payment. The Customer therefore has nothing to cancel — simply not renewing is enough.',
+  a8p3: 'The Customer is notified by email before the expiry date, and again on the day itself.',
+  a8p4: 'Failing renewal, the offer’s capabilities stay open for seven days after expiry, then the workspace reverts to the Découverte tier. No data is deleted on that account.',
 
   a9Title: 'Article 9 — Right of withdrawal',
-  a9p1:
-    'A consumer Customer, as well as a professional employing no more than five people and subscribing outside their main line of business, has fourteen days from the conclusion of the PAID ORDER to withdraw, without justification and at no cost. Opening a workspace and the free trial, which call for no payment, do not start that period: there would be nothing to refund.',
-  a9p2:
-    'As the Service is digital content supplied on no tangible medium and performed immediately, that right lapses upon full performance, on the double condition that the Customer expressly requested that immediate performance AND acknowledged thereby losing the right of withdrawal. That is what the second tick box at ordering is for.',
-  a9p3:
-    'Without that double consent the right of withdrawal remains and may be exercised by any unambiguous statement sent to the Association; a refund follows within fourteen days of receiving the request.',
-  a9p4:
-    'Otherwise, sums paid correspond to a period of service already opened and are not refunded pro rata.',
+  a9p1: 'A consumer Customer, as well as a professional employing no more than five people and subscribing outside their main line of business, has fourteen days from the conclusion of the PAID ORDER to withdraw, without justification and at no cost. Opening a workspace and the free trial, which call for no payment, do not start that period: there would be nothing to refund.',
+  a9p2: 'As the Service is digital content supplied on no tangible medium and performed immediately, that right lapses upon full performance, on the double condition that the Customer expressly requested that immediate performance AND acknowledged thereby losing the right of withdrawal. That is what the second tick box at ordering is for.',
+  a9p3: 'Without that double consent the right of withdrawal remains and may be exercised by any unambiguous statement sent to the Association; a refund follows within fourteen days of receiving the request.',
+  a9p4: 'Otherwise, sums paid correspond to a period of service already opened and are not refunded pro rata.',
 
   a10Title: 'Article 10 — Conformity guarantee',
   a10p1:

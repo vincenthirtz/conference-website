@@ -27,27 +27,32 @@ const ROOTS = ['pages/admin', 'components/admin'];
  * chiffre est un progrès ; le monter fait échouer le test.
  */
 const BASELINE: Record<string, number> = {
-  'pages/admin/tournament-simulator.tsx': 3880,
+  // 2026-09-15 : passage de Prettier au formateur Biome. Les coupures de ligne
+  // diffèrent légèrement (±10 lignes par fichier, aucun code ajouté) : tous les
+  // chiffres ci-dessous ont été recalés sur le rendu Biome, à la hausse comme
+  // à la baisse. `tournaments/create.tsx` est entré à 801 par ce seul effet.
+  'pages/admin/tournaments/create.tsx': 801,
+  'pages/admin/tournament-simulator.tsx': 3879,
   'pages/admin/tasks/index.tsx': 3292,
-  'pages/admin/users/manage.tsx': 2451,
+  'pages/admin/users/manage.tsx': 2421,
   // 2281 écrites : le flux de l'auto-scheduler est parti dans
   // `hooks/useAutoSchedule.tsx` (lot 6), et le plafond suit — un gel qui ne
   // descend jamais finit par ne plus rien geler.
-  'pages/admin/tournament/[id]/matches.tsx': 2281,
-  'components/admin/communications/CampaignsPanel.tsx': 2283,
+  'pages/admin/tournament/[id]/matches.tsx': 2253,
+  'components/admin/communications/CampaignsPanel.tsx': 1164,
   'pages/admin/teams/my.tsx': 1754,
-  'pages/admin/demandes/index.tsx': 1664,
-  'pages/admin/tournament/[id]/dashboard.tsx': 1627,
-  'pages/admin/teams/[teamId]/edit.tsx': 1550,
-  'pages/admin/matches/[matchId]/edit.tsx': 1453,
-  'pages/admin/teams/index.tsx': 1446,
-  'pages/admin/events/[runId]/director.tsx': 1289,
-  'components/admin/moderation/SupportPanel.tsx': 1210,
+  'pages/admin/demandes/index.tsx': 1614,
+  'pages/admin/tournament/[id]/dashboard.tsx': 1614,
+  'pages/admin/teams/[teamId]/edit.tsx': 1516,
+  'pages/admin/matches/[matchId]/edit.tsx': 1343,
+  'pages/admin/teams/index.tsx': 1445,
+  'pages/admin/events/[runId]/director.tsx': 1277,
+  'components/admin/moderation/SupportPanel.tsx': 1167,
   'components/admin/broadcast/TwitchCommandsPanel.tsx': 1203,
-  'pages/admin/regie.tsx': 1185,
-  'pages/admin/users/[userId]/player-view.tsx': 1103,
-  'pages/admin/tournament/[id]/edit.tsx': 991,
-  'pages/admin/stages/[stageId]/seeding.tsx': 970,
+  'pages/admin/regie.tsx': 1038,
+  'pages/admin/users/[userId]/player-view.tsx': 1092,
+  'pages/admin/tournament/[id]/edit.tsx': 996,
+  'pages/admin/stages/[stageId]/seeding.tsx': 964,
   // 692 écrites : la liste des champs et le type de la config sont partis dans
   // `utils/discord/discordConfigFields.ts` — non pour gagner des lignes, mais
   // pour que le test de whitelist puisse les confronter au handler PUT sans
@@ -57,23 +62,23 @@ const BASELINE: Record<string, number> = {
   // de repli de la page — la LISTE des champs, elle, vit déjà dans
   // `utils/discord/discordConfigFields.ts`. Le prochain qui ajoute un salon
   // paiera pareil : c'est le prix admis, pas une dérive.
-  'pages/admin/tenants/[id]/discord-config/[guildId].tsx': 693,
-  'pages/admin/stages/[stageId].tsx': 950,
+  'pages/admin/tenants/[id]/discord-config/[guildId].tsx': 692,
+  'pages/admin/stages/[stageId].tsx': 952,
   'pages/admin/users/new.tsx': 930,
-  'pages/admin/demandes/[id].tsx': 921,
+  'pages/admin/demandes/[id].tsx': 923,
   // 764 écrites : la fiche a rendu ses secrets bot à un panneau (T8), et le
   // plafond suit — un gel qui ne descend jamais finit par ne plus rien geler.
-  'pages/admin/tenants/[id].tsx': 800,
+  'pages/admin/tenants/[id].tsx': 794,
   'components/admin/profile/ProfileModal.tsx': 914,
-  'components/admin/navigation/adminNav.ts': 969,
-  'pages/admin/stages/[stageId]/groups.tsx': 856,
+  'components/admin/navigation/adminNav.ts': 881,
+  'pages/admin/stages/[stageId]/groups.tsx': 858,
   'pages/admin/broadcast/live.tsx': 837,
-  'pages/admin/leagues/[id].tsx': 825,
-  'pages/admin/scrims/plannings/[planningId].tsx': 825,
+  'pages/admin/leagues/[id].tsx': 827,
+  'pages/admin/scrims/plannings/[planningId].tsx': 813,
   // 576 écrites : le sélecteur de journée, la grille, le formulaire d'ajout et
   // la modale d'édition sont partis dans `components/admin/tournament/mapPool/`
   // (pool par journée), et le plafond suit.
-  'pages/admin/tournament/[id]/maps.tsx': 576,
+  'pages/admin/tournament/[id]/maps.tsx': 586,
 };
 
 function walk(dir: string, acc: string[] = []): string[] {
@@ -93,8 +98,8 @@ function countLines(file: string): number {
 }
 
 describe('taille des écrans admin', () => {
-  const files = ROOTS.flatMap((root) =>
-    walk(path.join(process.cwd(), root))
+  const files = ROOTS.flatMap(
+    (root) => walk(path.join(process.cwd(), root))
     // Séparateurs POSIX : le gel est écrit avec des `/`. Sous Windows, les `\`
     // de path.relative faisaient échouer le garde sur TOUS les fichiers gelés —
     // un échec permanent, donc ignoré, qui a masqué un vrai dépassement

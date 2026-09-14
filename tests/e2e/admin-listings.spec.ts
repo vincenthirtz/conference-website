@@ -84,7 +84,8 @@ async function expectListingLoaded(
   ).toHaveCount(0);
 }
 
-test.describe.serial('Admin listings load reliably', () => {
+test.describe('Admin listings load reliably', () => {
+  test.describe.configure({ mode: 'serial' });
   test.beforeAll(async () => {
     await deleteTestStaff(ADMIN_EMAIL);
     await createTestStaff(ADMIN_EMAIL, TEST_PASSWORD, 'admin');

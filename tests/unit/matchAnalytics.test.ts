@@ -19,7 +19,9 @@ import type {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeGame(overrides: Partial<AnalyticsGame> & { match_id?: string }): AnalyticsGame {
+function makeGame(
+  overrides: Partial<AnalyticsGame> & { match_id?: string }
+): AnalyticsGame {
   return {
     match_id: overrides.match_id ?? 'm1',
     map_name: 'map_name' in overrides ? (overrides.map_name ?? null) : 'Ilios',
@@ -53,7 +55,9 @@ function makeVeto(
   };
 }
 
-function makeDraft(overrides: Partial<AnalyticsDraftStep> = {}): AnalyticsDraftStep {
+function makeDraft(
+  overrides: Partial<AnalyticsDraftStep> = {}
+): AnalyticsDraftStep {
   return {
     match_id: overrides.match_id ?? 'm1',
     game_index: overrides.game_index ?? 1,
@@ -68,7 +72,9 @@ function heroesMap(...refs: AnalyticsHeroRef[]): Map<string, AnalyticsHeroRef> {
   return new Map(refs.map((r) => [r.id, r]));
 }
 
-function input(overrides: Partial<MatchAnalyticsInput> = {}): MatchAnalyticsInput {
+function input(
+  overrides: Partial<MatchAnalyticsInput> = {}
+): MatchAnalyticsInput {
   return {
     team1Id: 'team1Id' in overrides ? (overrides.team1Id ?? null) : 'A',
     team2Id: 'team2Id' in overrides ? (overrides.team2Id ?? null) : 'B',
@@ -134,9 +140,24 @@ describe('computeMatchAnalytics — games & mapScore', () => {
 describe('computeMatchAnalytics — vetoSequence', () => {
   it('orders veto steps by step_number and preserves action/mapName/teamId', () => {
     const vetos: AnalyticsVeto[] = [
-      makeVeto({ step_number: 3, action: 'decider', map_name: 'Busan', team_id: null }),
-      makeVeto({ step_number: 1, action: 'ban', map_name: 'Ilios', team_id: 'A' }),
-      makeVeto({ step_number: 2, action: 'pick', map_name: 'Nepal', team_id: 'B' }),
+      makeVeto({
+        step_number: 3,
+        action: 'decider',
+        map_name: 'Busan',
+        team_id: null,
+      }),
+      makeVeto({
+        step_number: 1,
+        action: 'ban',
+        map_name: 'Ilios',
+        team_id: 'A',
+      }),
+      makeVeto({
+        step_number: 2,
+        action: 'pick',
+        map_name: 'Nepal',
+        team_id: 'B',
+      }),
     ];
     const out = computeMatchAnalytics(input({ vetos }));
 
@@ -159,9 +180,19 @@ describe('computeMatchAnalytics — vetoSequence', () => {
 describe('computeMatchAnalytics — draft', () => {
   it('groups draft steps by gameIndex and resolves heroName from heroesById', () => {
     const draftSteps: AnalyticsDraftStep[] = [
-      makeDraft({ game_index: 2, action: 'pick', side: 'team1', hero_id: 'h3' }),
+      makeDraft({
+        game_index: 2,
+        action: 'pick',
+        side: 'team1',
+        hero_id: 'h3',
+      }),
       makeDraft({ game_index: 1, action: 'ban', side: 'team1', hero_id: 'h1' }),
-      makeDraft({ game_index: 1, action: 'pick', side: 'team2', hero_id: 'h2' }),
+      makeDraft({
+        game_index: 1,
+        action: 'pick',
+        side: 'team2',
+        hero_id: 'h2',
+      }),
     ];
     const out = computeMatchAnalytics(
       input({
@@ -196,8 +227,14 @@ describe('computeMatchAnalytics — draft', () => {
     const out = computeMatchAnalytics(
       input({ draftSteps, heroesById: heroesMap({ id: 'h1', name: 'Tracer' }) })
     );
-    expect(out.draft[0].steps[0]).toMatchObject({ heroId: null, heroName: null });
-    expect(out.draft[0].steps[1]).toMatchObject({ heroId: 'unknown', heroName: null });
+    expect(out.draft[0].steps[0]).toMatchObject({
+      heroId: null,
+      heroName: null,
+    });
+    expect(out.draft[0].steps[1]).toMatchObject({
+      heroId: 'unknown',
+      heroName: null,
+    });
   });
 });
 
@@ -214,7 +251,9 @@ describe('computeMatchAnalytics — empty / degraded', () => {
     const games: AnalyticsGame[] = [
       makeGame({ map_order: 0, team1_score: 3, team2_score: 1 }),
     ];
-    const out = computeMatchAnalytics(input({ team1Id: null, team2Id: null, games }));
+    const out = computeMatchAnalytics(
+      input({ team1Id: null, team2Id: null, games })
+    );
     // Score favors "team1" side but team1Id is null -> winnerTeamId resolves to null.
     expect(out.games[0].winnerTeamId).toBeNull();
     expect(out.mapScore).toEqual({ team1: 0, team2: 0 });

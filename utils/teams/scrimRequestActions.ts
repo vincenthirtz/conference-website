@@ -252,7 +252,11 @@ export async function applyScrimRequestAction(
       .from('demandes')
       .update({
         status: 'pending',
-        payload: { ...payload, scrim_nego: newNego, preferred_date: newSlots[0] },
+        payload: {
+          ...payload,
+          scrim_nego: newNego,
+          preferred_date: newSlots[0],
+        },
       })
       .eq('id', demandeId)
       .eq('tenant_id', tenantId);
@@ -355,8 +359,7 @@ export async function applyScrimRequestAction(
   }
 
   const fromTeamName = (payload.from_team_name as string) || 'Equipe inconnue';
-  const targetTeamName =
-    (payload.target_team_name as string) || actor.teamName;
+  const targetTeamName = (payload.target_team_name as string) || actor.teamName;
 
   await supabaseAdmin.from('demandes').insert({
     user_id: null,

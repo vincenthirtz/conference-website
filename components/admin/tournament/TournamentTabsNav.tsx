@@ -113,7 +113,8 @@ export function tournamentTabHref(
   tournamentId: string,
   id: TournamentTabId
 ): string {
-  const group = TOURNAMENT_TAB_GROUPS.find((g) => g.id === id) ?? TOURNAMENT_TAB_GROUPS[0];
+  const group =
+    TOURNAMENT_TAB_GROUPS.find((g) => g.id === id) ?? TOURNAMENT_TAB_GROUPS[0];
   return `/admin/tournament/${tournamentId}/${group.members[0].route}`;
 }
 
@@ -153,7 +154,9 @@ export default function TournamentTabsNav({
   const tx = t as Record<string, string>;
   const router = useRouter();
 
-  const group = TOURNAMENT_TAB_GROUPS.find((g) => g.id === active) ?? TOURNAMENT_TAB_GROUPS[0];
+  const group =
+    TOURNAMENT_TAB_GROUPS.find((g) => g.id === active) ??
+    TOURNAMENT_TAB_GROUPS[0];
 
   // `router.pathname` rend le chemin AVEC le `[id]` non substitué
   // (`/admin/tournament/[id]/maps`) : son dernier segment est le slug de route,

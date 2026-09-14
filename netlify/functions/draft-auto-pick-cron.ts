@@ -51,10 +51,7 @@ export const handler: Handler = async () => {
       };
     }
 
-    logger.info(
-      '[draft-auto-pick-cron] processed: %s',
-      text.slice(0, 200)
-    );
+    logger.info('[draft-auto-pick-cron] processed: %s', text.slice(0, 200));
     return { statusCode: 200, body: text };
   } catch (err) {
     const aborted = (err as Error)?.name === 'AbortError';

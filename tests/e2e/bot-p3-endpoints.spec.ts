@@ -39,7 +39,8 @@ let matchWithBothTeamsId: string;
 let matchWithOneTeamId: string;
 let createdCloneId: string | null = null;
 
-test.describe.serial('Bot P3 — setup', () => {
+test.describe('Bot P3 — setup', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {
@@ -205,7 +206,8 @@ test.describe.serial('Bot P3 — setup', () => {
 /* /veto                                                                     */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot /veto', () => {
+test.describe('Bot /veto', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('GET 200 retourne le flow + 0 steps', async ({ request }) => {
@@ -303,7 +305,8 @@ test.describe.serial('Bot /veto', () => {
 /* /auto-byes                                                                */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot /auto-byes', () => {
+test.describe('Bot /auto-byes', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('403 si actor non admin', async ({ request }) => {
@@ -338,7 +341,8 @@ test.describe.serial('Bot /auto-byes', () => {
 /* /clone                                                                    */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot /clone', () => {
+test.describe('Bot /clone', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('403 si actor non admin', async ({ request }) => {
@@ -377,7 +381,8 @@ test.describe.serial('Bot /clone', () => {
 /* /teams/[id]/discord (write-back)                                          */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot Discord write-back', () => {
+test.describe('Bot Discord write-back', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('403 si actor non admin', async ({ request }) => {

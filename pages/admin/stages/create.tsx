@@ -74,7 +74,9 @@ type CreateStageResponse = {
   };
 };
 
-export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
+export const getServerSideProps = withStaffPage({
+  permission: 'manage_tournaments',
+});
 
 function AdminStageCreatePage(_props: StaffProps) {
   const t = useAdminT(nsAdminStagesCreate);

@@ -19,7 +19,8 @@ const TS = Date.now();
 
 const createdIds: string[] = [];
 
-test.describe.serial('News ingest — POST /api/news', () => {
+test.describe('News ingest — POST /api/news', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(
     !HAS_KEY || !HAS_SUPABASE,
     'BOT_API_KEY ou Supabase service role manquant'

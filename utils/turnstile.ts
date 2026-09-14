@@ -55,7 +55,9 @@ export async function verifyTurnstileToken(
         errorCodes: ['missing-server-secret'],
       };
     }
-    logger.warn('[turnstile] TURNSTILE_SECRET_KEY unset — skipping verification (non-prod)');
+    logger.warn(
+      '[turnstile] TURNSTILE_SECRET_KEY unset — skipping verification (non-prod)'
+    );
     return { ok: true };
   }
 

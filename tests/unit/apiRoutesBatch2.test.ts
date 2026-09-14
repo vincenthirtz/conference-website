@@ -28,9 +28,7 @@ import teamsLeaveHandler from '../../pages/api/teams/leave';
  * Helpers (same shape as apiAdminRoutes.test.ts)
  * ---------------------------------------------------------*/
 
-function makeStaff(
-  role: 'owner' | 'admin' | 'caster' = 'admin'
-): StaffMember {
+function makeStaff(role: 'owner' | 'admin' | 'caster' = 'admin'): StaffMember {
   return {
     id: 'staff-1',
     auth_user_id: 'user-1',
@@ -310,7 +308,10 @@ describe('/api/checkin/[token]', () => {
   it('GET 200 returns match info when token matches', async () => {
     const tok = 'a'.repeat(32);
     store.matches = [
-      { id: 'm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', status: 'pending',
+      {
+        id: 'm1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        status: 'pending',
         scheduled_at: '2026-04-01T12:00:00.000Z',
         team1_id: 'team-a',
         team2_id: 'team-b',
@@ -334,7 +335,10 @@ describe('/api/checkin/[token]', () => {
   it('POST 200 marks the team checked in', async () => {
     const tok = 'b'.repeat(32);
     store.matches = [
-      { id: 'm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', status: 'pending',
+      {
+        id: 'm1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        status: 'pending',
         scheduled_at: '2026-04-01T12:00:00.000Z',
         team1_id: 'team-a',
         team2_id: 'team-b',
@@ -358,7 +362,10 @@ describe('/api/checkin/[token]', () => {
   it('POST 400 when match is finished', async () => {
     const tok = 'c'.repeat(32);
     store.matches = [
-      { id: 'm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', status: 'finished',
+      {
+        id: 'm1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        status: 'finished',
         scheduled_at: '2026-04-01T12:00:00.000Z',
         team1_id: 'team-a',
         team2_id: 'team-b',
@@ -424,11 +431,26 @@ describe('POST /api/teams/leave', () => {
   it('returns 403 when the captain still has other members (must transfer first)', async () => {
     setAuthUser({ id: 'user-1' });
     store.team_members = [
-      { id: 'tm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 't1', user_id: 'user-1' },
-      { id: 'tm2', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 't1', user_id: 'user-2' },
+      {
+        id: 'tm1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        team_id: 't1',
+        user_id: 'user-1',
+      },
+      {
+        id: 'tm2',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        team_id: 't1',
+        user_id: 'user-2',
+      },
     ] as any;
     store.teams = [
-      { id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', name: 'Alpha' },
+      {
+        id: 't1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
+        name: 'Alpha',
+      },
     ] as any;
     const res = makeRes();
     await teamsLeaveHandler(makeReq({ method: 'POST' }, true), res);
@@ -441,10 +463,20 @@ describe('POST /api/teams/leave', () => {
   it('captain alone → leaving dissolves the team (soft-delete)', async () => {
     setAuthUser({ id: 'user-1' });
     store.team_members = [
-      { id: 'tm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 't1', user_id: 'user-1' },
+      {
+        id: 'tm1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        team_id: 't1',
+        user_id: 'user-1',
+      },
     ] as any;
     store.teams = [
-      { id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', name: 'Alpha' },
+      {
+        id: 't1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
+        name: 'Alpha',
+      },
     ] as any;
     store.tournament_teams = [];
     store.tournaments = [];
@@ -461,15 +493,37 @@ describe('POST /api/teams/leave', () => {
   it('captain alone but roster locked → 409, team not dissolved', async () => {
     setAuthUser({ id: 'user-1' });
     store.team_members = [
-      { id: 'tm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 't1', user_id: 'user-1' },
+      {
+        id: 'tm1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        team_id: 't1',
+        user_id: 'user-1',
+      },
     ] as any;
     store.teams = [
-      { id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'user-1', name: 'Alpha' },
+      {
+        id: 't1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'user-1',
+        name: 'Alpha',
+      },
     ] as any;
-    store.tournament_teams = [{ tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', tournament_id: 'tour1', team_id: 't1' }] as any;
+    store.tournament_teams = [
+      {
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        tournament_id: 'tour1',
+        team_id: 't1',
+      },
+    ] as any;
     const past = new Date(Date.now() - 60_000).toISOString();
     store.tournaments = [
-      { id: 'tour1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', name: 'X', roster_locked_at: past, status: 'in_progress' },
+      {
+        id: 'tour1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        name: 'X',
+        roster_locked_at: past,
+        status: 'in_progress',
+      },
     ] as any;
     const res = makeRes();
     await teamsLeaveHandler(makeReq({ method: 'POST' }, true), res);
@@ -481,13 +535,33 @@ describe('POST /api/teams/leave', () => {
   it('returns 409 when the roster is locked', async () => {
     setAuthUser({ id: 'user-1' });
     store.team_members = [
-      { id: 'tm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 't1', user_id: 'user-1' },
+      {
+        id: 'tm1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        team_id: 't1',
+        user_id: 'user-1',
+      },
     ] as any;
-    store.teams = [{ id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'someone-else' }] as any;
-    store.tournament_teams = [{ tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', tournament_id: 'tour1', team_id: 't1' }] as any;
+    store.teams = [
+      {
+        id: 't1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'someone-else',
+      },
+    ] as any;
+    store.tournament_teams = [
+      {
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        tournament_id: 'tour1',
+        team_id: 't1',
+      },
+    ] as any;
     const past = new Date(Date.now() - 60_000).toISOString();
     store.tournaments = [
-      { id: 'tour1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', name: 'X',
+      {
+        id: 'tour1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        name: 'X',
         roster_locked_at: past,
         status: 'in_progress',
       },
@@ -501,9 +575,20 @@ describe('POST /api/teams/leave', () => {
   it('200 when leaving cleanly — membership row is removed', async () => {
     setAuthUser({ id: 'user-1' });
     store.team_members = [
-      { id: 'tm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', team_id: 't1', user_id: 'user-1' },
+      {
+        id: 'tm1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        team_id: 't1',
+        user_id: 'user-1',
+      },
     ] as any;
-    store.teams = [{ id: 't1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', captain_id: 'someone-else' }] as any;
+    store.teams = [
+      {
+        id: 't1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        captain_id: 'someone-else',
+      },
+    ] as any;
     store.tournament_teams = [];
     store.tournaments = [];
     const res = makeRes();

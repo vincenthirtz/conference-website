@@ -273,7 +273,8 @@ const resolvers = {
               : 'API rate limit exceeded.',
             {
               extensions: {
-                code: quota.scope === 'month' ? 'QUOTA_EXCEEDED' : 'RATE_LIMITED',
+                code:
+                  quota.scope === 'month' ? 'QUOTA_EXCEEDED' : 'RATE_LIMITED',
                 retryAfterSec: quota.retryAfterSec,
                 limit: quota.limit,
               },

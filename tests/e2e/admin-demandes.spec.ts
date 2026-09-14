@@ -57,7 +57,8 @@ async function loginAsAdmin(page: Page) {
   await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
 }
 
-test.describe.serial('Admin demandes page', () => {
+test.describe('Admin demandes page', () => {
+  test.describe.configure({ mode: 'serial' });
   let playerId: string | null = null;
   const seeded: SeededDemande[] = [];
 

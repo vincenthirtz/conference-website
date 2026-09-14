@@ -218,7 +218,8 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
               href,
               target: '_blank',
               rel: 'noreferrer noopener',
-              className: 'text-cyan-300 underline hover:text-cyan-200 break-all',
+              className:
+                'text-cyan-300 underline hover:text-cyan-200 break-all',
             },
             autolinkMatch[0]
           )
@@ -478,9 +479,7 @@ export function parseEmbedUrl(
 
   let url: URL;
   try {
-    url = new URL(
-      trimmed.startsWith('http') ? trimmed : `https://${trimmed}`
-    );
+    url = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
   } catch {
     return null;
   }
@@ -517,12 +516,7 @@ export const MEMBER_DISPLAY_NAME_MAX = 60;
 export const MEMBER_PRONOUNS_MAX = 20;
 export const MEMBER_TAGLINE_MAX = 120;
 
-export const MEMBER_SPECIALTIES = [
-  'tank',
-  'dps',
-  'support',
-  'flex',
-] as const;
+export const MEMBER_SPECIALTIES = ['tank', 'dps', 'support', 'flex'] as const;
 export type MemberSpecialty = (typeof MEMBER_SPECIALTIES)[number];
 
 /**

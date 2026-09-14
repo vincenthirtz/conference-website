@@ -48,7 +48,9 @@ async function readPlacementRules(tenantId: string): Promise<PlacementRule[]> {
       .in('guild_id', ids);
 
     return (data ?? []).flatMap((row) =>
-      parsePlacementRules((row as { placement_roles?: unknown }).placement_roles)
+      parsePlacementRules(
+        (row as { placement_roles?: unknown }).placement_roles
+      )
     );
   } catch (err) {
     logger.error('[finalize] placement rules read error (non-fatal)', err);
@@ -67,7 +69,6 @@ type FinalizeBody = {
   rankings?: RankingInput[];
   force?: boolean;
 };
-
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'tournament-finalize' }),

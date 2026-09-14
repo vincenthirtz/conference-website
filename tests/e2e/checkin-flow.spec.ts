@@ -28,7 +28,8 @@ function randomToken(prefix: string) {
   return `e2e-${prefix}-${TS}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-test.describe.serial('Check-in flow E2E', () => {
+test.describe('Check-in flow E2E', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
 
   test.beforeAll(async () => {

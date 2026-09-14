@@ -19,7 +19,9 @@ const TOURNOI = 'cup-2026';
 /** `2026-09-18 20:30` Paris → ISO UTC (CEST = UTC+2 en septembre). */
 function paris(day: string, hhmm: string): string {
   const [h, m] = hhmm.split(':').map(Number);
-  return new Date(`${day}T${String(h - 2).padStart(2, '0')}:${String(m).padStart(2, '0')}:00.000Z`).toISOString();
+  return new Date(
+    `${day}T${String(h - 2).padStart(2, '0')}:${String(m).padStart(2, '0')}:00.000Z`
+  ).toISOString();
 }
 
 function match(
@@ -132,7 +134,9 @@ describe('diagnoseSchedule · correction triviale', () => {
       ],
       [pasAvant21h]
     );
-    expect(d.anomalies.find((x) => x.kind === 'availability')?.suggestion).toBeNull();
+    expect(
+      d.anomalies.find((x) => x.kind === 'availability')?.suggestion
+    ).toBeNull();
   });
 
   it('ne propose rien quand le créneau conforme ferait jouer une équipe deux fois', () => {
@@ -145,7 +149,9 @@ describe('diagnoseSchedule · correction triviale', () => {
       [pasAvant21h],
       { maxConcurrentMatches: 2 }
     );
-    expect(d.anomalies.find((x) => x.kind === 'availability')?.suggestion).toBeNull();
+    expect(
+      d.anomalies.find((x) => x.kind === 'availability')?.suggestion
+    ).toBeNull();
   });
 
   it('ne propose rien quand aucun créneau du soir ne convient', () => {
@@ -158,7 +164,9 @@ describe('diagnoseSchedule · correction triviale', () => {
       ],
       [indispo18au20]
     );
-    expect(d.anomalies.find((x) => x.kind === 'availability')?.suggestion).toBeNull();
+    expect(
+      d.anomalies.find((x) => x.kind === 'availability')?.suggestion
+    ).toBeNull();
   });
 });
 
@@ -206,10 +214,14 @@ describe('diagnoseSchedule · double-booking', () => {
 
 describe('diagnoseSchedule · cadre du tournoi', () => {
   it('signale un match hors des dates annoncées', () => {
-    const d = diagnoseSchedule([match('m1', '2026-11-05', '20:30', ECL, POS)], [], {
-      tournamentStart: '2026-09-18',
-      tournamentEnd: '2026-10-23',
-    });
+    const d = diagnoseSchedule(
+      [match('m1', '2026-11-05', '20:30', ECL, POS)],
+      [],
+      {
+        tournamentStart: '2026-09-18',
+        tournamentEnd: '2026-10-23',
+      }
+    );
     const a = d.anomalies.find((x) => x.kind === 'outside_tournament');
     expect(a?.severity).toBe('warning');
     expect(a?.message).toContain('2026-11-05');
@@ -224,7 +236,9 @@ describe('diagnoseSchedule · cadre du tournoi', () => {
       [],
       { tournamentStart: '2026-09-18', tournamentEnd: '2026-10-23' }
     );
-    expect(d.anomalies.filter((a) => a.kind === 'outside_tournament')).toEqual([]);
+    expect(d.anomalies.filter((a) => a.kind === 'outside_tournament')).toEqual(
+      []
+    );
   });
 
   it('signale un créneau qui porte plus de matchs que la production', () => {
@@ -296,9 +310,11 @@ describe('previewMoves', () => {
   ];
 
   it('dit ce que le déplacement répare', () => {
-    const impact = previewMoves(cal(), [pasAvant21h], [
-      { matchId: 'm1', scheduledAt: paris('2026-10-21', '22:00') },
-    ]);
+    const impact = previewMoves(
+      cal(),
+      [pasAvant21h],
+      [{ matchId: 'm1', scheduledAt: paris('2026-10-21', '22:00') }]
+    );
     expect(impact.fixed).toHaveLength(1);
     expect(impact.fixed[0].kind).toBe('availability');
     expect(impact.broken).toEqual([]);
@@ -310,20 +326,28 @@ describe('previewMoves', () => {
   it('dit ce qu’il casse ailleurs', () => {
     // Déplacer m2 sur le créneau de m1 met deux matchs à 20 h 30 : la
     // production n'en porte qu'un. Le déplacement répare zéro et casse un.
-    const impact = previewMoves(cal(), [], [
-      { matchId: 'm2', scheduledAt: paris('2026-10-21', '20:30') },
-    ]);
+    const impact = previewMoves(
+      cal(),
+      [],
+      [{ matchId: 'm2', scheduledAt: paris('2026-10-21', '20:30') }]
+    );
     expect(impact.fixed).toEqual([]);
     expect(impact.broken.map((a) => a.kind)).toContain('slot_collision');
   });
 
   it('juge un ÉCHANGE d’un seul tenant', () => {
     // Chacun pris seul écraserait l'autre ; ensemble, la permutation est nette.
-    const impact = previewMoves(cal(), [pasAvant21h], [
-      { matchId: 'm1', scheduledAt: paris('2026-10-21', '19:00') },
-      { matchId: 'm2', scheduledAt: paris('2026-10-21', '20:30') },
-    ]);
-    expect(impact.broken.filter((a) => a.kind === 'slot_collision')).toEqual([]);
+    const impact = previewMoves(
+      cal(),
+      [pasAvant21h],
+      [
+        { matchId: 'm1', scheduledAt: paris('2026-10-21', '19:00') },
+        { matchId: 'm2', scheduledAt: paris('2026-10-21', '20:30') },
+      ]
+    );
+    expect(impact.broken.filter((a) => a.kind === 'slot_collision')).toEqual(
+      []
+    );
     // Hinode passe de 20 h 30 à 19 h : toujours avant 21 h, donc l'anomalie
     // change de message — elle est « réparée » puis « recréée », pas conservée.
     expect(impact.fixed).toHaveLength(1);
@@ -332,17 +356,21 @@ describe('previewMoves', () => {
   });
 
   it('signale une anomalie inchangée comme restante, pas comme réparée', () => {
-    const impact = previewMoves(cal(), [pasAvant21h], [
-      { matchId: 'm3', scheduledAt: paris('2026-10-15', '22:00') },
-    ]);
+    const impact = previewMoves(
+      cal(),
+      [pasAvant21h],
+      [{ matchId: 'm3', scheduledAt: paris('2026-10-15', '22:00') }]
+    );
     expect(impact.fixed).toEqual([]);
     expect(impact.remaining.map((a) => a.matchIds[0])).toContain('m1');
   });
 
   it('accepte de déplanifier, et le signale', () => {
-    const impact = previewMoves(cal(), [pasAvant21h], [
-      { matchId: 'm1', scheduledAt: null },
-    ]);
+    const impact = previewMoves(
+      cal(),
+      [pasAvant21h],
+      [{ matchId: 'm1', scheduledAt: null }]
+    );
     expect(impact.fixed.map((a) => a.kind)).toEqual(['availability']);
     expect(impact.broken.map((a) => a.kind)).toEqual(['unscheduled']);
     expect(impact.createsBlocking).toBe(false);
@@ -351,9 +379,11 @@ describe('previewMoves', () => {
   it('ne touche pas au calendrier d’entrée', () => {
     const input = cal();
     const before = input.map((m) => m.scheduledAt);
-    previewMoves(input, [pasAvant21h], [
-      { matchId: 'm1', scheduledAt: paris('2026-10-21', '22:00') },
-    ]);
+    previewMoves(
+      input,
+      [pasAvant21h],
+      [{ matchId: 'm1', scheduledAt: paris('2026-10-21', '22:00') }]
+    );
     expect(input.map((m) => m.scheduledAt)).toEqual(before);
   });
 });

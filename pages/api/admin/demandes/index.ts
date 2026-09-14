@@ -344,7 +344,10 @@ async function handleGet(
     // Staff handler (processed_by). The SSR loader always batch-loads this, so
     // we mirror it unconditionally (single .in query, bounded by the page).
     staffIds.length > 0
-      ? supabaseAdmin!.from('staff').select('id, display_name').in('id', staffIds)
+      ? supabaseAdmin!
+          .from('staff')
+          .select('id, display_name')
+          .in('id', staffIds)
       : Promise.resolve<NoQuery>({ data: null, error: null }),
   ]);
 
@@ -648,7 +651,10 @@ async function handlePost(
                 }
               }
             } catch (seedCrash) {
-              logger.error('[admin/demandes] stage_teams seed crash:', seedCrash);
+              logger.error(
+                '[admin/demandes] stage_teams seed crash:',
+                seedCrash
+              );
             }
 
             // Auto news: team approved for tournament

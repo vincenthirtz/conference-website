@@ -308,22 +308,18 @@ export default async function handler(
     }
 
     logger.error('[developers/register] tenants.insert error', tenantErr);
-    return res
-      .status(500)
-      .json({
-        error: 'Impossible de créer l’espace développeur.',
-        code: 'SERVER',
-      });
+    return res.status(500).json({
+      error: 'Impossible de créer l’espace développeur.',
+      code: 'SERVER',
+    });
   }
 
   if (!tenantId) {
     logger.error('[developers/register] could not allocate a unique slug');
-    return res
-      .status(500)
-      .json({
-        error: 'Impossible de créer l’espace développeur.',
-        code: 'SERVER',
-      });
+    return res.status(500).json({
+      error: 'Impossible de créer l’espace développeur.',
+      code: 'SERVER',
+    });
   }
 
   // 2c) staff (role 'owner' global — confiné à ce tenant via tenant_staff).
@@ -341,12 +337,10 @@ export default async function handler(
   if (staffErr || !insertedStaff) {
     logger.error('[developers/register] staff.insert error', staffErr);
     await rollback('staff.insert');
-    return res
-      .status(500)
-      .json({
-        error: 'Impossible de créer l’espace développeur.',
-        code: 'SERVER',
-      });
+    return res.status(500).json({
+      error: 'Impossible de créer l’espace développeur.',
+      code: 'SERVER',
+    });
   }
   createdStaffId = insertedStaff.id as string;
 
@@ -359,12 +353,10 @@ export default async function handler(
   if (tsErr) {
     logger.error('[developers/register] tenant_staff.insert error', tsErr);
     await rollback('tenant_staff.insert');
-    return res
-      .status(500)
-      .json({
-        error: 'Impossible de créer l’espace développeur.',
-        code: 'SERVER',
-      });
+    return res.status(500).json({
+      error: 'Impossible de créer l’espace développeur.',
+      code: 'SERVER',
+    });
   }
   stampedTenantStaff = true;
 

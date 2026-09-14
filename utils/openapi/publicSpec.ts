@@ -135,7 +135,8 @@ export function filterPublicSpec(full: OpenApiDoc): OpenApiDoc {
     if (!isObject(item)) continue;
     for (const op of Object.values(item)) {
       if (isObject(op) && Array.isArray(op.tags)) {
-        for (const tag of op.tags) if (typeof tag === 'string') usedTags.add(tag);
+        for (const tag of op.tags)
+          if (typeof tag === 'string') usedTags.add(tag);
       }
     }
   }

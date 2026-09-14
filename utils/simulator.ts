@@ -312,13 +312,14 @@ export function resolveByes(matches: SimMatch[]): SimMatch[] {
   for (let i = 0; i < updated.length; i++) idxById.set(updated[i].id, i);
 
   const resolveTarget = (id: string | null, idx: number | null) =>
-    id != null ? idxById.get(id) : idx ?? undefined;
+    id != null ? idxById.get(id) : (idx ?? undefined);
 
   const hasPendingFeeder = (targetIdx: number, slot: 1 | 2): boolean => {
     for (const f of updated) {
       if (f.status === 'finished') continue;
       if (
-        resolveTarget(f.next_match_win_id, f.next_match_win_idx) === targetIdx &&
+        resolveTarget(f.next_match_win_id, f.next_match_win_idx) ===
+          targetIdx &&
         f.next_match_win_slot === slot
       )
         return true;

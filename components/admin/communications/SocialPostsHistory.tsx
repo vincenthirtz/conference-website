@@ -34,10 +34,7 @@ export type HistoryPost = {
   targets: HistoryTarget[];
 };
 
-export function statusLabel(
-  status: TargetStatus | undefined,
-  t: Dict
-): string {
+export function statusLabel(status: TargetStatus | undefined, t: Dict): string {
   switch (status) {
     case 'sent':
       return t.statusSent;

@@ -46,7 +46,8 @@ async function getAuthHeader(page: Page): Promise<string | null> {
   return headers ? `Bearer ${headers}` : null;
 }
 
-test.describe.serial('Admin tenants UI (S7)', () => {
+test.describe('Admin tenants UI (S7)', () => {
+  test.describe.configure({ mode: 'serial' });
   test.beforeAll(async () => {
     if (skipIfNoServiceRole()) return;
     await deleteTestStaff(ADMIN_EMAIL);

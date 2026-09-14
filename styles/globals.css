@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 /* ─────────────────────────────────────────────────────────
  * Tailwind v4 theme — neon palette + animations exposed as
@@ -364,7 +364,7 @@ html,
 body {
   padding: 0;
   margin: 0;
-  font-family: var(--font-sans), 'Work Sans', sans-serif;
+  font-family: var(--font-sans), "Work Sans", sans-serif;
   scroll-behavior: smooth;
   overflow-x: hidden;
   width: 100%;
@@ -448,7 +448,7 @@ select option {
   isolation: isolate;
 }
 .section-brand-bg::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
@@ -496,7 +496,7 @@ select option {
 
 /* Subtle inner highlight so the CTA reads as a glass surface, not flat fill */
 .esport-cta::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
@@ -696,7 +696,7 @@ select option {
 
 .hero-aurora::before,
 .hero-aurora::after {
-  content: '';
+  content: "";
   position: absolute;
   width: 60vmin;
   height: 60vmin;
@@ -996,7 +996,7 @@ select option {
 }
 
 .home-title span::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   right: 0;
@@ -1008,7 +1008,7 @@ select option {
 }
 
 .home-title span::before {
-  content: '';
+  content: "";
   position: absolute;
   color: white;
   top: 0;
@@ -1067,17 +1067,17 @@ select option {
   bottom: clamp(18px, 4vw, 32px);
   background:
     radial-gradient(
-        circle at 35% 30%,
-        rgba(255, 156, 41, 0.4),
-        rgba(0, 0, 0, 0)
-      )
-      no-repeat,
+      circle at 35% 30%,
+      rgba(255, 156, 41, 0.4),
+      rgba(0, 0, 0, 0)
+    )
+    no-repeat,
     radial-gradient(
-        circle at 65% 30%,
-        rgba(255, 255, 255, 0.18),
-        rgba(0, 0, 0, 0)
-      )
-      no-repeat,
+      circle at 65% 30%,
+      rgba(255, 255, 255, 0.18),
+      rgba(0, 0, 0, 0)
+    )
+    no-repeat,
     var(--bg-elevated);
   box-shadow: var(--glow-warm-soft);
   transition:
@@ -1143,7 +1143,7 @@ select option {
 }
 
 .back-to-top-thruster::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 16px -10px -12px;
   background: radial-gradient(
@@ -1353,7 +1353,7 @@ select option {
   will-change: transform;
 }
 
-.sponsor-marquee[data-reverse='true'] .sponsor-marquee-track {
+.sponsor-marquee[data-reverse="true"] .sponsor-marquee-track {
   animation-direction: reverse;
 }
 
@@ -1702,7 +1702,7 @@ select option {
     isolation: isolate;
   }
   .neon-border-tri::before {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     border-radius: inherit;
@@ -1747,7 +1747,7 @@ select option {
     overflow: hidden;
   }
   .neon-card::before {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     border-radius: inherit;
@@ -1779,7 +1779,7 @@ select option {
     isolation: isolate;
   }
   .neon-shimmer-host::after {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     bottom: 0;
@@ -1875,7 +1875,7 @@ select option {
 }
 
 .section-eyebrow::after {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   right: 0;
@@ -2017,7 +2017,7 @@ select option {
  * their own ring colours). */
 button:focus-visible,
 a:focus-visible,
-[role='button']:focus-visible {
+[role="button"]:focus-visible {
   outline: 2px solid var(--color-neon-cyan);
   outline-offset: 2px;
   box-shadow: 0 0 0 4px rgba(77, 255, 138, 0.2);
@@ -2070,30 +2070,30 @@ a:focus-visible,
     transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: opacity, transform;
 }
-.tl-reveal[data-revealed='true'] {
+.tl-reveal[data-revealed="true"] {
   opacity: 1;
   transform: none;
 }
 /* Décalage en cascade pour les grilles (stagger). */
-.tl-reveal[data-stagger='1'] {
+.tl-reveal[data-stagger="1"] {
   transition-delay: 0.06s;
 }
-.tl-reveal[data-stagger='2'] {
+.tl-reveal[data-stagger="2"] {
   transition-delay: 0.12s;
 }
-.tl-reveal[data-stagger='3'] {
+.tl-reveal[data-stagger="3"] {
   transition-delay: 0.18s;
 }
-.tl-reveal[data-stagger='4'] {
+.tl-reveal[data-stagger="4"] {
   transition-delay: 0.24s;
 }
-.tl-reveal[data-stagger='5'] {
+.tl-reveal[data-stagger="5"] {
   transition-delay: 0.3s;
 }
 
 /* Grain / bruit léger en overlay (texture premium, ~2% opacité). */
 .tl-grain::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -2118,7 +2118,7 @@ a:focus-visible,
   isolation: isolate;
 }
 .tl-gradient-border::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;

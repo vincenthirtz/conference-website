@@ -22,7 +22,8 @@ vi.mock('@/utils/botEvents', () => ({
     items: Array<{ event: string; data: unknown }>,
     tenantId: string
   ) => {
-    for (const it of items) await (emitBotEvent as any)(it.event, it.data, tenantId);
+    for (const it of items)
+      await (emitBotEvent as any)(it.event, it.data, tenantId);
     return { persisted: items.length, delivery: Promise.resolve([]) };
   },
 }));
@@ -112,8 +113,18 @@ function seedTournament() {
     { id: TEAM_B, tenant_id: DEFAULT_TENANT_ID, name: 'Bravo' },
   ] as any;
   store.tournament_teams = [
-    { id: 'tt1', tenant_id: DEFAULT_TENANT_ID, tournament_id: TOURNOI, team_id: TEAM_A },
-    { id: 'tt2', tenant_id: DEFAULT_TENANT_ID, tournament_id: TOURNOI, team_id: TEAM_B },
+    {
+      id: 'tt1',
+      tenant_id: DEFAULT_TENANT_ID,
+      tournament_id: TOURNOI,
+      team_id: TEAM_A,
+    },
+    {
+      id: 'tt2',
+      tenant_id: DEFAULT_TENANT_ID,
+      tournament_id: TOURNOI,
+      team_id: TEAM_B,
+    },
   ] as any;
   store.matches = [
     {
@@ -211,7 +222,11 @@ describe('/api/admin/teams/[teamId]/availability', () => {
       makeReq({
         method: 'POST',
         query: { teamId: TEAM_A },
-        body: { kind: 'earliest', time_of_day: '21:00', timezone: 'Mars/Olympus' },
+        body: {
+          kind: 'earliest',
+          time_of_day: '21:00',
+          timezone: 'Mars/Olympus',
+        },
       }),
       res
     );
@@ -224,7 +239,11 @@ describe('/api/admin/teams/[teamId]/availability', () => {
       makeReq({
         method: 'POST',
         query: { teamId: TEAM_A },
-        body: { kind: 'blackout', starts_on: '2026-09-20', ends_on: '2026-09-18' },
+        body: {
+          kind: 'blackout',
+          starts_on: '2026-09-20',
+          ends_on: '2026-09-18',
+        },
       }),
       res
     );
@@ -331,7 +350,9 @@ describe('/api/admin/tournament/[id]/schedule-move', () => {
     const res = makeRes();
     await moveHandler(
       moveReq({
-        moves: [{ matchId: MATCH_2, scheduledAt: paris('2026-09-23', '22:00') }],
+        moves: [
+          { matchId: MATCH_2, scheduledAt: paris('2026-09-23', '22:00') },
+        ],
       }),
       res
     );
@@ -344,7 +365,9 @@ describe('/api/admin/tournament/[id]/schedule-move', () => {
     const res = makeRes();
     await moveHandler(
       moveReq({
-        moves: [{ matchId: MATCH_1, scheduledAt: paris('2026-09-23', '22:00') }],
+        moves: [
+          { matchId: MATCH_1, scheduledAt: paris('2026-09-23', '22:00') },
+        ],
       }),
       res
     );
@@ -374,7 +397,9 @@ describe('/api/admin/tournament/[id]/schedule-move', () => {
     const res = makeRes();
     await moveHandler(
       moveReq({
-        moves: [{ matchId: MATCH_1, scheduledAt: paris('2026-09-18', '22:00') }],
+        moves: [
+          { matchId: MATCH_1, scheduledAt: paris('2026-09-18', '22:00') },
+        ],
       }),
       res
     );
@@ -404,7 +429,9 @@ describe('/api/admin/tournament/[id]/schedule-move', () => {
     const res = makeRes();
     await moveHandler(
       moveReq({
-        moves: [{ matchId: MATCH_1, scheduledAt: paris('2026-09-23', '22:00') }],
+        moves: [
+          { matchId: MATCH_1, scheduledAt: paris('2026-09-23', '22:00') },
+        ],
         apply: true,
       }),
       res
@@ -419,7 +446,10 @@ describe('/api/admin/tournament/[id]/schedule-move', () => {
     const target = paris('2026-09-23', '22:00');
     const res = makeRes();
     await moveHandler(
-      moveReq({ moves: [{ matchId: MATCH_1, scheduledAt: target }], apply: true }),
+      moveReq({
+        moves: [{ matchId: MATCH_1, scheduledAt: target }],
+        apply: true,
+      }),
       res
     );
     expect(res.statusCode).toBe(200);

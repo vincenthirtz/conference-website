@@ -54,7 +54,9 @@ describe('période de grâce', () => {
   it('les retire au-delà', () => {
     const s = state({
       plan_status: 'past_due',
-      plan_expires_at: new Date(NOW - (PLAN_GRACE_DAYS + 1) * DAY).toISOString(),
+      plan_expires_at: new Date(
+        NOW - (PLAN_GRACE_DAYS + 1) * DAY
+      ).toISOString(),
     });
     expect(isPlanEntitled(s, NOW)).toBe(false);
     expect(effectivePlan(s, NOW)).toBe('discovery');

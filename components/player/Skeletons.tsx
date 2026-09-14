@@ -96,7 +96,9 @@ export function PlayerDashboardSkeleton(): JSX.Element {
  */
 export function PlayerPageSkeleton({
   rows = 3,
-}: { rows?: number } = {}): JSX.Element {
+}: {
+  rows?: number;
+} = {}): JSX.Element {
   return (
     <div
       className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white"

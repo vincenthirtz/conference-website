@@ -15,11 +15,11 @@ export default ns('teamRegistration', {
 
   registeredTitle: 'Inscrite à {tournament}',
   registeredDesc:
-    "Rien à faire de plus de ce côté : ton équipe fait partie des équipes inscrites.",
+    'Rien à faire de plus de ce côté : ton équipe fait partie des équipes inscrites.',
 
   pendingTitle: 'Candidature envoyée',
   pendingDesc:
-    'Le staff doit encore la valider. Tu n\'as pas besoin d\'en déposer une seconde.',
+    "Le staff doit encore la valider. Tu n'as pas besoin d'en déposer une seconde.",
 
   rejectedNotice:
     "Ta candidature précédente n'a pas été retenue (le {date}). Tu peux en redéposer une, ou en parler au staff avant.",
@@ -31,9 +31,9 @@ export default ns('teamRegistration', {
   rosterWarning:
     'Il te manque {missing} membres pour atteindre les {min} attendus — vous êtes {count} (hors coach).',
   rosterWarningStillOpen:
-    'Ça ne t\'empêche pas de déposer ta candidature dès maintenant : le staff la validera quand le roster sera au complet. Beaucoup d\'équipes se composent après s\'être déclarées.',
+    "Ça ne t'empêche pas de déposer ta candidature dès maintenant : le staff la validera quand le roster sera au complet. Beaucoup d'équipes se composent après s'être déclarées.",
 
-  blockersTitle: 'Ce qu\'il reste à faire',
+  blockersTitle: "Ce qu'il reste à faire",
   blockerNotOpen:
     'Les inscriptions à ce tournoi ne sont pas ouvertes en ce moment.',
   blockerTournamentFull:
@@ -48,7 +48,7 @@ export default ns('teamRegistration', {
   messageOptional: 'facultatif',
   messagePlaceholder: 'Un contexte utile à la validation ?',
 
-  customFieldsTitle: "Champs demandés par le tournoi",
+  customFieldsTitle: 'Champs demandés par le tournoi',
   customFieldRequiredMark: '*',
   customFieldRequiredError: 'Ce champ est requis.',
   customFieldSelectPlaceholder: 'Choisir…',

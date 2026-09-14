@@ -463,9 +463,9 @@ describe('buildCampaignEmailHtml — bodyFormat html', () => {
     // résolu à l'envoi selon l'espace (cf. utils/emailBrand.ts). Une campagne
     // d'un autre tournoi pointerait sinon vers nos images.
     expect(html).toContain(`${BRAND_TOKENS.siteUrl}/img/logos/pogtv.png`);
-    expect(
-      applyBrand(html, DEFAULT_EMAIL_BRAND)
-    ).toContain('https://owwomenscup.fr/img/logos/pogtv.png');
+    expect(applyBrand(html, DEFAULT_EMAIL_BRAND)).toContain(
+      'https://owwomenscup.fr/img/logos/pogtv.png'
+    );
   });
 
   it('conserve le greeting, le wrapper de marque et la désinscription', () => {

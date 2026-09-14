@@ -35,7 +35,12 @@ async function handler(
   ctx: AuthenticatedStaffContext
 ) {
   if (
-    applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, 'admin-free-players')
+    applyRateLimit(
+      req,
+      res,
+      { max: 60, windowMs: 60_000 },
+      'admin-free-players'
+    )
   ) {
     return;
   }

@@ -195,7 +195,10 @@
           "prereqs": ["Tournoi + équipe existants", "Rôle staff"],
           "endpoint": "POST /api/bot/v1/tournaments/:tournamentId/teams",
           "impact": {
-            "db": ["tournament_teams (insert)", "matches (update si phase précisée)"],
+            "db": [
+              "tournament_teams (insert)",
+              "matches (update si phase précisée)"
+            ],
             "ui": ["/tournoi/<slug>", "/admin/tournois"]
           },
           "examples": [
@@ -295,7 +298,10 @@
           "prereqs": ["Avoir envoyé l'invitation OU être staff"],
           "endpoint": "POST /api/bot/v1/invitations/:demandeId",
           "impact": {
-            "db": ["team_invitations (update status='cancelled')", "demandes (update)"],
+            "db": [
+              "team_invitations (update status='cancelled')",
+              "demandes (update)"
+            ],
             "ui": ["/equipe/<slug>"]
           },
           "examples": [
@@ -318,7 +324,10 @@
           "prereqs": ["Avoir reçu l'invitation en DM"],
           "endpoint": "POST /api/bot/v1/invitations/:demandeId",
           "impact": {
-            "db": ["team_invitations (update status)", "team_members (insert si accept)"],
+            "db": [
+              "team_invitations (update status)",
+              "team_members (insert si accept)"
+            ],
             "ui": ["/equipe/<slug>"]
           },
           "examples": [
@@ -338,7 +347,9 @@
           "signature": "/equipe quitter",
           "role": "player",
           "phase": "equipes",
-          "prereqs": ["Faire partie d'une équipe et ne pas en être la capitaine"],
+          "prereqs": [
+            "Faire partie d'une équipe et ne pas en être la capitaine"
+          ],
           "endpoint": "POST /api/bot/v1/teams/leave",
           "impact": {
             "db": ["team_members (delete)"],
@@ -472,7 +483,10 @@
           "signature": "Job interne bot : DM caster T-30 min avec bouton ✅ \"OK je suis prêt\" (customId `cast:ack:<assignmentId>`)",
           "role": "captain",
           "phase": "casts",
-          "prereqs": ["Cast assigné non-acknowledgé", "Match dans [now, now+30 min]"],
+          "prereqs": [
+            "Cast assigné non-acknowledgé",
+            "Match dans [now, now+30 min]"
+          ],
           "endpoint": "GET /api/bot/v1/cast/upcoming?withinMinutes=30 (lecture cron) + POST /api/bot/v1/cast/:assignmentId/ack (clic bouton)",
           "impact": {
             "db": ["cast_assignments (update acked_at)"],
@@ -660,7 +674,9 @@
           "signature": "/phase next-round phase-id:<uuid>",
           "role": "admin",
           "phase": "matchs",
-          "prereqs": ["Phase à élimination ou Swiss avec round courant terminé"],
+          "prereqs": [
+            "Phase à élimination ou Swiss avec round courant terminé"
+          ],
           "endpoint": "POST /api/bot/v1/stages/:stageId/next-round",
           "impact": {
             "db": ["matches (insert next round)"],
@@ -687,7 +703,10 @@
           "signature": "/ma-dispute match:<autocomplete>  •  Bouton 📎 « Ajouter une preuve » (V1 : invite upload, pas de pipeline)",
           "role": "captain",
           "phase": "disputes",
-          "prereqs": ["Être capitaine d'une des 2 équipes du match", "Match en dispute"],
+          "prereqs": [
+            "Être capitaine d'une des 2 équipes du match",
+            "Match en dispute"
+          ],
           "endpoint": "GET /api/bot/v1/matches/:matchId/dispute?actorDiscordUserId=...",
           "impact": {
             "db": [],
@@ -788,7 +807,10 @@
           "prereqs": ["Rôle staff"],
           "endpoint": "POST /api/bot/v1/matches/:matchId/reset",
           "impact": {
-            "db": ["matches (clear score, status→scheduled)", "match_reports (delete)"],
+            "db": [
+              "matches (clear score, status→scheduled)",
+              "match_reports (delete)"
+            ],
             "ui": ["/tournoi/<slug>", "/match/<id>"]
           },
           "examples": [
@@ -832,10 +854,16 @@
           "signature": "/phase finaliser phase-id:<uuid> [force:bool]",
           "role": "admin",
           "phase": "cloture",
-          "prereqs": ["Tous les matchs de la phase terminés (sauf si force=true)", "Rôle staff"],
+          "prereqs": [
+            "Tous les matchs de la phase terminés (sauf si force=true)",
+            "Rôle staff"
+          ],
           "endpoint": "POST /api/bot/v1/stages/:stageId/finalize",
           "impact": {
-            "db": ["stages (update finalized_at)", "tournament_teams (update standings)"],
+            "db": [
+              "stages (update finalized_at)",
+              "tournament_teams (update standings)"
+            ],
             "ui": ["/tournoi/<slug>"]
           },
           "examples": [

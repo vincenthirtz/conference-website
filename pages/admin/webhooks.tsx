@@ -72,7 +72,9 @@ function formatDate(s: string | null, fallback: string): string {
   }
 }
 
-export const getServerSideProps = withStaffPage({ permission: 'manage_settings' });
+export const getServerSideProps = withStaffPage({
+  permission: 'manage_settings',
+});
 
 function AdminWebhooksPage() {
   const t = useAdminT(nsAdminWebhooks);

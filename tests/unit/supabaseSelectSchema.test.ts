@@ -106,7 +106,10 @@ describe('schéma : colonnes citées dans les .select()', () => {
     const offenders: string[] = [];
     for (const ref of scan.hints) {
       if (snapshot.foreignKeys[ref.hint]) continue;
-      if (isColumnOf(ref.source, ref.hint) || isColumnOf(ref.target, ref.hint)) {
+      if (
+        isColumnOf(ref.source, ref.hint) ||
+        isColumnOf(ref.target, ref.hint)
+      ) {
         continue;
       }
       offenders.push(`${ref.file}:${ref.line} — ${ref.target}!${ref.hint}`);
@@ -175,15 +178,21 @@ describe('schéma : colonnes citées dans les .select()', () => {
     // l'extraction est cassée, pas que le dépôt n'en utilise aucun.
     expect(scan.hints.length).toBeGreaterThan(20);
     // Filtres et écritures : même exigence de non-vacuité.
-    expect(scan.usages.filter((u) => u.kind === 'filter').length).toBeGreaterThan(1000);
-    expect(scan.usages.filter((u) => u.kind === 'write').length).toBeGreaterThan(200);
+    expect(
+      scan.usages.filter((u) => u.kind === 'filter').length
+    ).toBeGreaterThan(1000);
+    expect(
+      scan.usages.filter((u) => u.kind === 'write').length
+    ).toBeGreaterThan(200);
     expect(Object.keys(snapshot.foreignKeys).length).toBeGreaterThan(100);
   });
 
   it('ne garde en manques connus que des relations réellement absentes', () => {
     // Quand la relation est enfin créée, ce test réclame le retrait de la
     // ligne — sans quoi la liste deviendrait une exemption permanente.
-    const stillMissing = [...KNOWN_MISSING_RELATIONS].filter((t) => !known.has(t));
+    const stillMissing = [...KNOWN_MISSING_RELATIONS].filter(
+      (t) => !known.has(t)
+    );
     expect(
       stillMissing,
       'Relation désormais présente en base : retirez-la de KNOWN_MISSING_RELATIONS.'
@@ -326,7 +335,9 @@ describe('analyseur : résolution de la table', () => {
   it('attrape la faute qui a motivé ce garde-fou', () => {
     // matches.best_of n'existait pas en base : l'endpoint répondait 500 et
     // /admin/scrims/[id] restait bloqué.
-    const r = run(`supabaseAdmin.from('matches').select('id, colonne_fantome');`);
+    const r = run(
+      `supabaseAdmin.from('matches').select('id, colonne_fantome');`
+    );
     const cols = new Set(snapshot.tables.matches);
     const faulty = r.refs.filter((x) => !cols.has(x.column));
     expect(faulty.map((x) => x.column)).toEqual(['colonne_fantome']);

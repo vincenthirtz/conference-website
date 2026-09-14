@@ -28,7 +28,8 @@ async function getToken(): Promise<string | null> {
   return data.session?.access_token ?? null;
 }
 
-test.describe.serial('Tiebreaker override (P1-B)', () => {
+test.describe('Tiebreaker override (P1-B)', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
 
   let token: string | null = null;
@@ -105,7 +106,10 @@ test.describe.serial('Tiebreaker override (P1-B)', () => {
         .delete()
         .eq('id', tournamentId);
     for (const tid of [team1Id, team2Id].filter(Boolean)) {
-      await supabaseTestClient.from('teams').delete().eq('id', tid as string);
+      await supabaseTestClient
+        .from('teams')
+        .delete()
+        .eq('id', tid as string);
     }
     await deleteTestStaff(STAFF_EMAIL);
   });
@@ -161,7 +165,7 @@ test.describe.serial('Tiebreaker override (P1-B)', () => {
     expect(body.overrides.length).toBeGreaterThanOrEqual(1);
   });
 
-  test('DELETE retire l\'override', async ({ request }) => {
+  test("DELETE retire l'override", async ({ request }) => {
     const { data: list } = await supabaseTestClient!
       .from('stage_tiebreaker_overrides')
       .select('id')

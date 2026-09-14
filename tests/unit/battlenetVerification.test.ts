@@ -137,13 +137,28 @@ describe('upsertBattlenetLink', () => {
 describe('stampVerifiedTeamMembers', () => {
   it('stampe les lignes qui matchent (case-insensitive) et laisse les mismatch', async () => {
     store.team_members = [
-      { id: 'tm-1', user_id: USER_A, role: 'player', battle_tag: 'Tracer#2100' },
+      {
+        id: 'tm-1',
+        user_id: USER_A,
+        role: 'player',
+        battle_tag: 'Tracer#2100',
+      },
       // case diff → match
-      { id: 'tm-2', user_id: USER_A, role: 'player', battle_tag: 'tracer#2100' },
+      {
+        id: 'tm-2',
+        user_id: USER_A,
+        role: 'player',
+        battle_tag: 'tracer#2100',
+      },
       // mismatch
       { id: 'tm-3', user_id: USER_A, role: 'player', battle_tag: 'Widow#1111' },
       // autre user
-      { id: 'tm-5', user_id: USER_B, role: 'player', battle_tag: 'Tracer#2100' },
+      {
+        id: 'tm-5',
+        user_id: USER_B,
+        role: 'player',
+        battle_tag: 'Tracer#2100',
+      },
     ];
 
     const r = await stampVerifiedTeamMembers(USER_A, BTAG, BNET_ID);
@@ -165,7 +180,12 @@ describe('stampVerifiedTeamMembers', () => {
   it('REMPLIT une fiche jouante sans tag avec le tag prouvé, et l’estampille', async () => {
     store.team_members = [
       { id: 'tm-vide', user_id: USER_A, role: 'player', battle_tag: null },
-      { id: 'tm-blanc', user_id: USER_A, role: 'substitute', battle_tag: '   ' },
+      {
+        id: 'tm-blanc',
+        user_id: USER_A,
+        role: 'substitute',
+        battle_tag: '   ',
+      },
     ];
 
     const r = await stampVerifiedTeamMembers(USER_A, BTAG, BNET_ID);
@@ -550,7 +570,7 @@ describe('GET /api/auth/battlenet/login-start', () => {
     expect(cookie).toContain('HttpOnly');
   });
 
-  it("returnTo externe est ramené à un chemin interne", async () => {
+  it('returnTo externe est ramené à un chemin interne', async () => {
     configure();
     const handler = (await import('../../pages/api/auth/battlenet/login-start'))
       .default;
@@ -584,10 +604,9 @@ describe('GET /api/auth/battlenet/callback — branche connexion', () => {
       )
       .mockImplementationOnce(
         async () =>
-          new Response(
-            JSON.stringify({ sub: battleNetId, battletag: BTAG }),
-            { status: 200 }
-          )
+          new Response(JSON.stringify({ sub: battleNetId, battletag: BTAG }), {
+            status: 200,
+          })
       );
   }
 

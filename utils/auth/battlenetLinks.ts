@@ -263,5 +263,7 @@ export async function findAuthUserIdByBattleNetId(
     logger.error('[battlenetLinks] login lookup error', error);
     return null;
   }
-  return (data as { auth_user_id?: string | null } | null)?.auth_user_id ?? null;
+  return (
+    (data as { auth_user_id?: string | null } | null)?.auth_user_id ?? null
+  );
 }

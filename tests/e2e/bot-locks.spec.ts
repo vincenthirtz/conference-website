@@ -16,7 +16,8 @@ const HAS_KEY = Boolean(API_KEY);
 const HAS_SUPABASE = Boolean(supabaseTestClient);
 const TS = Date.now();
 
-test.describe.serial('Bot distributed locks (P1-D)', () => {
+test.describe('Bot distributed locks (P1-D)', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   const lockName = `e2e-lock-${TS}`;

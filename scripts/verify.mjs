@@ -86,7 +86,12 @@ function run(task) {
     child.stdout.on('data', (c) => (output += c));
     child.stderr.on('data', (c) => (output += c));
     child.on('error', (err) => {
-      resolve({ ...task, code: 1, output: String(err), ms: Date.now() - started });
+      resolve({
+        ...task,
+        code: 1,
+        output: String(err),
+        ms: Date.now() - started,
+      });
     });
     child.on('close', (code) => {
       resolve({
@@ -106,7 +111,7 @@ const plan = serial
 console.log(
   `▶ verify : ${plan}` +
     (BUDGET ? ` — budget ${BUDGET}/${LOGICAL} threads` : '') +
-    '…',
+    '…'
 );
 
 let results;
@@ -132,7 +137,7 @@ console.log(
   `\n⏱  ${fmt(wall)} au total (${fmt(cpu)} cumulés) — ` +
     (failed.length
       ? `${failed.length} échec(s) : ${failed.map((f) => f.name).join(', ')}`
-      : 'tout est vert.'),
+      : 'tout est vert.')
 );
 
 process.exit(failed.length ? 1 : 0);

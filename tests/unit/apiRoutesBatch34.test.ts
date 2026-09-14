@@ -567,7 +567,7 @@ describe('POST /api/teams/create-with-member', () => {
     expect((res.body as any).tournament).toBeFalsy();
   });
 
-  it("201 dépose une candidature quand le roster DÉCLARÉ atteint min_players", async () => {
+  it('201 dépose une candidature quand le roster DÉCLARÉ atteint min_players', async () => {
     // Flux capitaine : seule la créatrice est insérée, les 4 autres sont
     // invitées. Le roster confirmé (1) ne peut pas atteindre min_players=5 —
     // c'est structurel depuis le modèle invite-accept, pas un cas limite. Sans

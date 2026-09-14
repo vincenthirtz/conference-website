@@ -22,11 +22,7 @@ const LEVEL_RANK: Record<LogLevel, number> = {
 
 // Lowest level that will be emitted. Server emits everything; client drops
 // debug/info in production.
-const minLevel: LogLevel = isServer
-  ? 'debug'
-  : isProd
-    ? 'warn'
-    : 'debug';
+const minLevel: LogLevel = isServer ? 'debug' : isProd ? 'warn' : 'debug';
 
 function emit(level: LogLevel, args: unknown[]): void {
   if (LEVEL_RANK[level] < LEVEL_RANK[minLevel]) return;

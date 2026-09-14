@@ -42,7 +42,9 @@ function toLocalInputValue(iso: string): string {
   }
 }
 
-export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
+export const getServerSideProps = withStaffPage({
+  permission: 'manage_tournaments',
+});
 
 function AdminTournamentEditPage(_props: StaffProps) {
   const router = useRouter();
@@ -322,7 +324,10 @@ function AdminTournamentEditPage(_props: StaffProps) {
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
           {/* Header */}
           <div className="mb-8">
-            <TournamentTabsNav tournamentId={String(id ?? '')} active="settings" />
+            <TournamentTabsNav
+              tournamentId={String(id ?? '')}
+              active="settings"
+            />
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>

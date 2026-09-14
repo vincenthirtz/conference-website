@@ -15,9 +15,7 @@ import { describe, it, expect } from 'vitest';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 
-import HomeTeamsStrip, {
-  teamMonogram,
-} from '@/components/Home/HomeTeamsStrip';
+import HomeTeamsStrip, { teamMonogram } from '@/components/Home/HomeTeamsStrip';
 // Le lien vers une fiche d'équipe est maintenant un util partagé : la bande
 // d'accueil et la liste des équipes d'un tournoi pointent vers la MÊME page.
 import { publicTeamHref } from '@/utils/teams/publicTeamHref';
@@ -45,7 +43,9 @@ describe('publicTeamHref', () => {
 
   it('retombe sur l’id quand le slug manque', () => {
     // Une équipe sans slug reste atteignable : /team/[slug] accepte les deux.
-    expect(publicTeamHref(team({ slug: null, id: 'abc-123' }))).toBe('/team/abc-123');
+    expect(publicTeamHref(team({ slug: null, id: 'abc-123' }))).toBe(
+      '/team/abc-123'
+    );
   });
 
   it('encode les slugs à caractères spéciaux', () => {
@@ -61,9 +61,9 @@ describe('teamMonogram', () => {
   });
 
   it('retombe sur les initiales', () => {
-    expect(
-      teamMonogram({ name: 'Team Positivité', shortName: null })
-    ).toBe('TP');
+    expect(teamMonogram({ name: 'Team Positivité', shortName: null })).toBe(
+      'TP'
+    );
     expect(teamMonogram({ name: 'Hinode Sparkles', shortName: '' })).toBe('HS');
   });
 

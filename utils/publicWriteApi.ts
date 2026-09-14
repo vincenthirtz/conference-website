@@ -163,7 +163,10 @@ export async function resolveApiTokenFromHeader(
   if (!data || data.revoked_at) return { ok: false };
 
   // Expiration : une échéance passée rejette le token, comme une révocation.
-  if (data.expires_at && new Date(data.expires_at as string).getTime() <= Date.now()) {
+  if (
+    data.expires_at &&
+    new Date(data.expires_at as string).getTime() <= Date.now()
+  ) {
     return { ok: false };
   }
 

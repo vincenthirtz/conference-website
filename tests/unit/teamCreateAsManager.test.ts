@@ -208,15 +208,15 @@ describe('POST /api/teams/create-with-member — mode manager', () => {
       'cap@example.com',
       'p2@example.com',
     ]);
-    expect(
-      calls.every((c) => c.inviteUrl.includes('/invitation/'))
-    ).toBe(true);
+    expect(calls.every((c) => c.inviteUrl.includes('/invitation/'))).toBe(true);
     // La capitaine désignée est invitée EN TANT QUE capitaine.
     expect(calls.find((c) => c.to === 'cap@example.com')!.asCaptain).toBe(true);
 
     // Le jeton n'est stocké que hashé, avec l'email visé pour la vérification
     // d'identité à l'ouverture du lien.
-    const invites = (store.demandes as any[]).filter((d) => d.type === 'invite');
+    const invites = (store.demandes as any[]).filter(
+      (d) => d.type === 'invite'
+    );
     expect(
       invites.every(
         (i) =>

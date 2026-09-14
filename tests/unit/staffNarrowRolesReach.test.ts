@@ -67,7 +67,11 @@ describe('bénévole (helper)', () => {
   });
 
   it('ne voit ni les réglages, ni la facturation, ni le staff', () => {
-    const forbidden = ['/admin/site-settings', '/admin/billing', '/admin/users'];
+    const forbidden = [
+      '/admin/site-settings',
+      '/admin/billing',
+      '/admin/users',
+    ];
     for (const route of forbidden) {
       expect(routes.some((r) => r.startsWith(route))).toBe(false);
     }

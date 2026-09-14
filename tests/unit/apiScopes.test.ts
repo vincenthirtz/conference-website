@@ -97,9 +97,9 @@ describe('parseScopes', () => {
 describe('hasScope', () => {
   it('matches exactly', () => {
     expect(hasScope(['matches:write'], 'matches:write')).toBe(true);
-    expect(hasScope(['tournaments:read', 'matches:write'], 'matches:write')).toBe(
-      true
-    );
+    expect(
+      hasScope(['tournaments:read', 'matches:write'], 'matches:write')
+    ).toBe(true);
   });
 
   it('does NOT imply read from write (no hierarchy)', () => {

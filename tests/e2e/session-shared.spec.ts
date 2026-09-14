@@ -62,9 +62,9 @@ test.describe('Session partagée & redirection joueur', () => {
 
     // 1) Login réel → /player. Le dashboard réel répond 200 (joueur sans équipe).
     await loginPlayer(page, PLAYER_EMAIL, '/player');
-    await expect(
-      page.getByRole('button', { name: 'Déconnexion' })
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'Déconnexion' })).toBeVisible(
+      { timeout: 10000 }
+    );
 
     // 2) On invalide la session côté serveur : le prochain chargement du
     //    dashboard renvoie 401. On mocke aussi /api/admin/me en 401 pour que la
@@ -106,24 +106,24 @@ test.describe('Session partagée & redirection joueur', () => {
     await mockApiJson(page, '/api/player/notifications', EMPTY_NOTIFS);
 
     await loginPlayer(page, PLAYER_EMAIL, '/player');
-    await expect(
-      page.getByRole('button', { name: 'Déconnexion' })
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'Déconnexion' })).toBeVisible(
+      { timeout: 10000 }
+    );
 
     // Route publique : la nav marketing lit la MÊME session via le provider.
     await page.goto('/');
     // Le bloc « Connexion / Inscription » staff est masqué car authUser présent.
     await expect(page.locator('a:has-text("Connexion")')).toHaveCount(0);
     // La cloche joueur (PlayerBell → useAuthSession) est visible pour un connecté.
-    await expect(
-      page.getByRole('link', { name: /Notifications/ })
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('link', { name: /Notifications/ })).toBeVisible(
+      { timeout: 10000 }
+    );
 
     // Retour sur /player : la barre joueur (usePlayerSession) réapparaît sans
     // re-login → le provider a bien conservé la session à travers les routes.
     await page.goto('/player');
-    await expect(
-      page.getByRole('button', { name: 'Déconnexion' })
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'Déconnexion' })).toBeVisible(
+      { timeout: 10000 }
+    );
   });
 });

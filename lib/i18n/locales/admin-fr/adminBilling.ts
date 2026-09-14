@@ -65,14 +65,14 @@ export default adminNs('adminBilling', {
   orderCgvAfter: ' (version {version}).',
   orderWaiver:
     'Je demande l’exécution immédiate du service et je reconnais qu’une fois celui-ci pleinement exécuté, je perdrai mon droit de rétractation de quatorze jours.',
-  orderConsentRequired:
-    'Les deux cases doivent être cochées pour commander.',
+  orderConsentRequired: 'Les deux cases doivent être cochées pour commander.',
   orderSubmit: 'Commander avec obligation de paiement',
   perMonth: '/ mois',
   termSwitchLabel: 'Périodicité',
   termMonthly: 'Au mois',
   termYearly: "À l'année",
-  termYearlySaving: "À l'année, {months} mois sont offerts ({monthly} × 12 = {twelve} € contre {yearly} €).",
+  termYearlySaving:
+    "À l'année, {months} mois sont offerts ({monthly} × 12 = {twelve} € contre {yearly} €).",
   currentTermMonthly: 'Vous payez au mois.',
   currentTermYearly: "Vous payez à l'année.",
   currentBadge: 'Plan actuel',
@@ -97,6 +97,8 @@ export default adminNs('adminBilling', {
   paymentsEmptyTitle: 'Aucun paiement',
   paymentsEmptyDesc:
     'Les paiements apparaîtront ici après ta première souscription.',
-  graceBanner: "Votre échéance est passée. Vos fonctionnalités restent actives quelques jours encore : renouvelez pour ne pas perdre votre bot Discord.",
-  graceBannerUntil: "Votre échéance est passée. Vos fonctionnalités restent actives jusqu'au {date} : renouvelez avant cette date pour ne pas perdre votre bot Discord.",
+  graceBanner:
+    'Votre échéance est passée. Vos fonctionnalités restent actives quelques jours encore : renouvelez pour ne pas perdre votre bot Discord.',
+  graceBannerUntil:
+    "Votre échéance est passée. Vos fonctionnalités restent actives jusqu'au {date} : renouvelez avant cette date pour ne pas perdre votre bot Discord.",
 });

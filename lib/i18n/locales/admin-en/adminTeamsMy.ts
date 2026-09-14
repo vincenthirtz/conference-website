@@ -73,8 +73,7 @@ export default {
   unknownPlayer: 'Unknown player',
   skillRatingLabel: 'Overwatch skill rating (SR)',
   skillRatingUpdated: 'Rating updated',
-  errSkillRatingInvalid:
-    'The SR must be a whole number between 0 and 5000.',
+  errSkillRatingInvalid: 'The SR must be a whole number between 0 and 5000.',
   joinMissingBattleTagLabel: "Player's BattleTag",
   joinMissingBattleTagHint:
     'She has not filled it in: enter it to add her to the roster, or ask her to complete her profile.',

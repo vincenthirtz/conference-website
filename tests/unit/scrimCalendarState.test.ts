@@ -14,7 +14,13 @@ import {
   effectiveValues,
 } from '@/utils/teams/scrimCalendarState';
 
-const ALL = ['draft', 'scheduled', 'running', 'completed', 'cancelled'] as const;
+const ALL = [
+  'draft',
+  'scheduled',
+  'running',
+  'completed',
+  'cancelled',
+] as const;
 
 describe('isYmd', () => {
   it('accepte une date bien formée, rejette le reste', () => {
@@ -33,7 +39,10 @@ describe('parseStatusFilter', () => {
   });
 
   it('lit une liste et ignore les valeurs inconnues', () => {
-    expect(parseStatusFilter('draft,running', ALL)).toEqual(['draft', 'running']);
+    expect(parseStatusFilter('draft,running', ALL)).toEqual([
+      'draft',
+      'running',
+    ]);
     expect(parseStatusFilter('draft,pouet', ALL)).toEqual(['draft']);
   });
 
@@ -118,7 +127,9 @@ describe('keyboardMove', () => {
   };
 
   it('flèche bas/haut déplace d’un cran', () => {
-    expect(keyboardMove({ ...base, key: 'ArrowDown', shiftKey: false })).toEqual({
+    expect(
+      keyboardMove({ ...base, key: 'ArrowDown', shiftKey: false })
+    ).toEqual({
       type: 'move',
       dayYmd: '2026-09-09',
       minute: 1215,
@@ -131,7 +142,9 @@ describe('keyboardMove', () => {
   });
 
   it('flèche droite/gauche change de jour, à la même heure', () => {
-    expect(keyboardMove({ ...base, key: 'ArrowRight', shiftKey: false })).toEqual({
+    expect(
+      keyboardMove({ ...base, key: 'ArrowRight', shiftKey: false })
+    ).toEqual({
       type: 'move',
       dayYmd: '2026-09-10',
       minute: 1200,
@@ -139,10 +152,12 @@ describe('keyboardMove', () => {
   });
 
   it('Maj+flèches change la durée', () => {
-    expect(keyboardMove({ ...base, key: 'ArrowDown', shiftKey: true })).toEqual({
-      type: 'resize',
-      duration: 75,
-    });
+    expect(keyboardMove({ ...base, key: 'ArrowDown', shiftKey: true })).toEqual(
+      {
+        type: 'resize',
+        duration: 75,
+      }
+    );
   });
 
   it('ne fait jamais sortir de la plage horaire visible', () => {
@@ -191,7 +206,12 @@ describe('keyboardMove', () => {
   it('ignore les touches non gérées et un jour hors grille', () => {
     expect(keyboardMove({ ...base, key: 'Enter', shiftKey: false })).toBeNull();
     expect(
-      keyboardMove({ ...base, dayYmd: '1999-01-01', key: 'ArrowRight', shiftKey: false })
+      keyboardMove({
+        ...base,
+        dayYmd: '1999-01-01',
+        key: 'ArrowRight',
+        shiftKey: false,
+      })
     ).toBeNull();
   });
 });

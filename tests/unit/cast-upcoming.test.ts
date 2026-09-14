@@ -77,7 +77,14 @@ beforeEach(() => {
   // clé de tenant (bot auto-hébergé) ne reçoit que ses propres assignations.
   seedBotAuth({ platformKey: true });
   // V2 strict tenant header — withBotRoute checks existence in `tenants`.
-  store.tenants = [{ id: CONFERENCE_TENANT_ID, plan: 'foundation', plan_status: 'active', plan_expires_at: null }] as any;
+  store.tenants = [
+    {
+      id: CONFERENCE_TENANT_ID,
+      plan: 'foundation',
+      plan_status: 'active',
+      plan_expires_at: null,
+    },
+  ] as any;
 
   const now = Date.now();
   const inTenMin = new Date(now + 10 * 60_000).toISOString();

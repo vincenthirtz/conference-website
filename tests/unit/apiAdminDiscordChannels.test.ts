@@ -8,7 +8,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { StaffMember } from '../../types/staff';
 
-import { store, resetSupabaseMock, setAuthUser } from './__helpers__/supabaseMock';
+import {
+  store,
+  resetSupabaseMock,
+  setAuthUser,
+} from './__helpers__/supabaseMock';
 import { invalidateStaffCache } from '../../utils/staff';
 
 import channelsHandler from '../../pages/api/admin/tenants/[id]/discord-config/[guildId]/channels';
@@ -65,7 +69,9 @@ function makeRes(): any {
 
 const BOT_INVENTORY = {
   guild: { id: GUILD_ID, name: 'Test Guild' },
-  channels: [{ id: 'c1', name: 'général', type: 0, parentId: null, position: 1 }],
+  channels: [
+    { id: 'c1', name: 'général', type: 0, parentId: null, position: 1 },
+  ],
   roles: [{ id: 'r1', name: 'Admin', color: 255, position: 5, managed: false }],
 };
 
@@ -76,10 +82,20 @@ beforeEach(() => {
   process.env.BOT_WEBHOOK_URL = 'https://bot.example/bot/site-events';
   store.staff = [makeStaffRow('owner')] as any;
   store.tenant_staff = [
-    { tenant_id: TENANT_A, staff_id: STAFF_1, role: 'admin', created_at: '2026-01-01' },
+    {
+      tenant_id: TENANT_A,
+      staff_id: STAFF_1,
+      role: 'admin',
+      created_at: '2026-01-01',
+    },
   ] as any;
   store.discord_guilds = [
-    { guild_id: GUILD_ID, tenant_id: TENANT_A, is_primary: true, created_at: '2026-01-01' },
+    {
+      guild_id: GUILD_ID,
+      tenant_id: TENANT_A,
+      is_primary: true,
+      created_at: '2026-01-01',
+    },
   ] as any;
   store.tenant_secrets = [
     { tenant_id: TENANT_A, bot_webhook_secret: 'sek-hmac' },
@@ -161,7 +177,12 @@ describe('GET /api/admin/tenants/[id]/discord-config/[guildId]/channels', () => 
     // élève le rôle effectif, laisser 'admin' ici décrirait un administrateur
     // du tenant, pas un caster.
     store.tenant_staff = [
-      { tenant_id: TENANT_A, staff_id: STAFF_1, role: 'caster', created_at: '2026-01-01' },
+      {
+        tenant_id: TENANT_A,
+        staff_id: STAFF_1,
+        role: 'caster',
+        created_at: '2026-01-01',
+      },
     ] as any;
     invalidateStaffCache();
     const res = makeRes();

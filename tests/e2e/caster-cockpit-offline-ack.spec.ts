@@ -88,8 +88,8 @@ async function loginAsCaster(page: import('@playwright/test').Page) {
   });
 }
 
-test.describe
-  .serial('Cockpit caster — ack cue urgent sous coupure réseau', () => {
+test.describe('Cockpit caster — ack cue urgent sous coupure réseau', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
 
   test.beforeAll(async () => {

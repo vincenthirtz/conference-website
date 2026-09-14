@@ -51,7 +51,8 @@ test.describe('Admin notifications (sans auth)', () => {
   });
 });
 
-test.describe.serial('Admin notifications page (staff session)', () => {
+test.describe('Admin notifications page (staff session)', () => {
+  test.describe.configure({ mode: 'serial' });
   test.beforeAll(async () => {
     if (!skipIfNoServiceRole()) {
       await deleteTestStaff(ADMIN_EMAIL);

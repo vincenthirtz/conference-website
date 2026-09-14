@@ -85,7 +85,8 @@ async function expectAllowed(page: Page, path: string) {
   expect(page.url()).not.toContain('/login');
 }
 
-test.describe.serial('Admin role-gating (withStaffPage)', () => {
+test.describe('Admin role-gating (withStaffPage)', () => {
+  test.describe.configure({ mode: 'serial' });
   test.beforeAll(async () => {
     if (skipIfNoServiceRole()) return;
     await deleteTestStaff(CASTER_EMAIL);

@@ -10,16 +10,15 @@
 //   - source optionnelle persistée
 
 import { test, expect } from '@playwright/test';
-import {
-  supabaseTestClient,
-} from '../utils/supabaseTestClient';
+import { supabaseTestClient } from '../utils/supabaseTestClient';
 import crypto from 'crypto';
 
 const API_KEY = process.env.BOT_API_KEY;
 const HAS_KEY = Boolean(API_KEY);
 const HAS_SUPABASE = Boolean(supabaseTestClient);
 
-test.describe.serial('Bot events handled (P1-C persistance ack)', () => {
+test.describe('Bot events handled (P1-C persistance ack)', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   const createdEventIds: string[] = [];

@@ -94,8 +94,8 @@ test.describe('Public tournament page → team link', () => {
     await page.waitForURL(`**${expectedHref}`, { timeout: 10000 });
 
     // The public team page renders the team name as its main heading.
-    await expect(
-      page.getByRole('heading', { name: TEAM_NAME })
-    ).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: TEAM_NAME })).toBeVisible({
+      timeout: 15000,
+    });
   });
 });

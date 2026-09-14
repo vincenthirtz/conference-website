@@ -45,7 +45,9 @@ describe('resolveMissingDisplayNames', () => {
     ]);
 
     expect(resolved.size).toBe(0);
-    expect(rpcCalls.some((c) => c.fn === 'admin_get_user_profiles')).toBe(false);
+    expect(rpcCalls.some((c) => c.fn === 'admin_get_user_profiles')).toBe(
+      false
+    );
   });
 
   it('ignore les lignes sans user_id', async () => {
@@ -53,7 +55,9 @@ describe('resolveMissingDisplayNames', () => {
       { user_id: null, display_name: null },
     ]);
     expect(resolved.size).toBe(0);
-    expect(rpcCalls.some((c) => c.fn === 'admin_get_user_profiles')).toBe(false);
+    expect(rpcCalls.some((c) => c.fn === 'admin_get_user_profiles')).toBe(
+      false
+    );
   });
 });
 
@@ -71,13 +75,19 @@ describe('withFallbackDisplayName', () => {
 
   it('retombe sur le pseudo du compte', () => {
     expect(
-      withFallbackDisplayName({ user_id: 'u-coach', display_name: null }, resolved)
+      withFallbackDisplayName(
+        { user_id: 'u-coach', display_name: null },
+        resolved
+      )
     ).toBe('Coach Nyo');
   });
 
   it('renvoie null quand rien n’est connu', () => {
     expect(
-      withFallbackDisplayName({ user_id: 'u-inconnue', display_name: null }, resolved)
+      withFallbackDisplayName(
+        { user_id: 'u-inconnue', display_name: null },
+        resolved
+      )
     ).toBeNull();
     expect(
       withFallbackDisplayName({ user_id: null, display_name: null }, resolved)

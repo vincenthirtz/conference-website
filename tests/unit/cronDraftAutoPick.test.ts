@@ -9,10 +9,7 @@ vi.mock('@/utils/supabase', async () => {
   return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
 });
 
-import {
-  store,
-  resetSupabaseMock,
-} from './__helpers__/supabaseMock';
+import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
 
 import { runDraftAutoPickTick } from '../../utils/draftEngine';
 import cronHandler from '../../pages/api/cron/draft-auto-pick';

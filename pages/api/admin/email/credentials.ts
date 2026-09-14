@@ -56,10 +56,7 @@ async function handler(
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
-async function handleGet(
-  res: NextApiResponse,
-  ctx: AuthenticatedStaffContext
-) {
+async function handleGet(res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   // L'espace historique envoie via le compte de la plateforme : il n'a rien à
   // configurer, et le dire évite qu'on lui invente un problème.
   if (ctx.tenantId === DEFAULT_TENANT_ID) {
@@ -104,7 +101,8 @@ async function verifyBrevoKey(
     });
     clearTimeout(timeout);
 
-    if (r.status === 401) return { ok: false, error: 'Clé API refusée par Brevo.' };
+    if (r.status === 401)
+      return { ok: false, error: 'Clé API refusée par Brevo.' };
     if (!r.ok) return { ok: false, error: `Brevo a répondu HTTP ${r.status}.` };
 
     const data = (await r.json().catch(() => null)) as {

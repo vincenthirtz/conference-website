@@ -240,7 +240,11 @@ export function generateDoubleElim(
   if (wbRounds >= 2) {
     const wbByRound = new Map<number, number[]>();
     const lbByRound = new Map<number, number[]>();
-    const pushRound = (map: Map<number, number[]>, round: number, i: number) => {
+    const pushRound = (
+      map: Map<number, number[]>,
+      round: number,
+      i: number
+    ) => {
       const arr = map.get(round);
       if (arr) arr.push(i);
       else map.set(round, [i]);
@@ -248,7 +252,8 @@ export function generateDoubleElim(
     for (let i = 0; i < allMatches.length; i++) {
       const mm = allMatches[i];
       if (mm.bracket_side === 'wb') pushRound(wbByRound, mm.round_number, i);
-      else if (mm.bracket_side === 'lb') pushRound(lbByRound, mm.round_number, i);
+      else if (mm.bracket_side === 'lb')
+        pushRound(lbByRound, mm.round_number, i);
     }
 
     const setWin = (src: number, dst: number, slot: 1 | 2) => {

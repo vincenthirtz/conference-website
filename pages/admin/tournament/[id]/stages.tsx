@@ -16,15 +16,12 @@ import {
   TOURNAMENT_TEMPLATES,
   type TournamentTemplate,
 } from '@/config/tournament-templates';
-import type {
-  StaffProps,
-  StageType,
-  StageSummary,
-} from '@/types/admin';
+import type { StaffProps, StageType, StageSummary } from '@/types/admin';
 import nsAdminTournamentStagesList from '@/lib/i18n/locales/admin-fr/adminTournamentStagesList';
 
-
-export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
+export const getServerSideProps = withStaffPage({
+  permission: 'manage_tournaments',
+});
 
 type Dict = typeof nsAdminTournamentStagesList.fr;
 

@@ -65,9 +65,7 @@ export default function RosterUnlockAlert({
       await mutateJson(`/api/admin/tournament/${tournamentId}/roster-unlock`, {
         method: minutes === null ? 'DELETE' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        ...(minutes === null
-          ? {}
-          : { body: JSON.stringify({ minutes }) }),
+        ...(minutes === null ? {} : { body: JSON.stringify({ minutes }) }),
       });
       await onRefresh();
     } catch (err) {

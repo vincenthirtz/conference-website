@@ -72,7 +72,10 @@ function statusColor(status: string) {
 }
 
 /** Un 0-0 est un résultat valide ; c'est l'absence des deux qui ne l'est pas. */
-function hasScore(s: { team1_score: number | null; team2_score: number | null }) {
+function hasScore(s: {
+  team1_score: number | null;
+  team2_score: number | null;
+}) {
   return s.team1_score != null && s.team2_score != null;
 }
 

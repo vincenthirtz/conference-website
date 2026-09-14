@@ -22,7 +22,9 @@ describe('parsePlacementRules', () => {
     const parsed = parsePlacementRules([
       { from: 1, to: 1, roleId: R1, label: 'Vainqueure' },
     ]);
-    expect(parsed).toEqual([{ from: 1, to: 1, roleId: R1, label: 'Vainqueure' }]);
+    expect(parsed).toEqual([
+      { from: 1, to: 1, roleId: R1, label: 'Vainqueure' },
+    ]);
   });
 
   it('accepte `to: null` — « et tout le reste »', () => {

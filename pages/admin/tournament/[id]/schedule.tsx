@@ -421,71 +421,76 @@ export default function TournamentSchedulePage() {
                 // case de calendrier, une anomalie tient en une couleur, pas en
                 // une phrase. Les deux vues lisent le même diagnostic.
                 view === 'list' && (
-                <ul className="space-y-2">
-                  {data.anomalies.map((a, i) => (
-                    <li
-                      key={`${a.kind}-${a.matchIds.join('-')}-${i}`}
-                      className={`rounded-xl border px-4 py-3 ${SEVERITY_STYLE[a.severity]}`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <span
-                          aria-hidden="true"
-                          className={`mt-2 h-2 w-2 shrink-0 rounded-full ${SEVERITY_DOT[a.severity]}`}
-                        />
-                        <div className="min-w-0 space-y-1">
-                          <p className="text-xs uppercase tracking-[0.1em] text-neutral-400">
-                            {kindLabel(a.kind)}
-                            {a.at && <> · {when(a.at)}</>}
-                          </p>
-                          <p className="text-sm text-neutral-100">{a.message}</p>
+                  <ul className="space-y-2">
+                    {data.anomalies.map((a, i) => (
+                      <li
+                        key={`${a.kind}-${a.matchIds.join('-')}-${i}`}
+                        className={`rounded-xl border px-4 py-3 ${SEVERITY_STYLE[a.severity]}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <span
+                            aria-hidden="true"
+                            className={`mt-2 h-2 w-2 shrink-0 rounded-full ${SEVERITY_DOT[a.severity]}`}
+                          />
+                          <div className="min-w-0 space-y-1">
+                            <p className="text-xs uppercase tracking-[0.1em] text-neutral-400">
+                              {kindLabel(a.kind)}
+                              {a.at && <> · {when(a.at)}</>}
+                            </p>
+                            <p className="text-sm text-neutral-100">
+                              {a.message}
+                            </p>
 
-                          {a.suggestion && (
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                              <p className="text-sm text-emerald-200">
-                                <span className="text-xs uppercase tracking-[0.1em] text-emerald-300/80">
-                                  {t.suggestionLabel}
-                                </span>{' '}
-                                —{' '}
-                                {format(t.suggestionMove, {
-                                  time: when(a.suggestion.moveTo),
-                                })}
-                                .{' '}
-                                <span className="text-neutral-300">
-                                  {a.suggestion.why}
-                                </span>
-                              </p>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  a.suggestion &&
-                                  void applySuggestion(a.suggestion, a.message)
-                                }
-                                disabled={movingId !== null}
-                                className="rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-100 disabled:opacity-50"
-                              >
-                                {movingId === a.suggestion.matchId
-                                  ? t.applyChecking
-                                  : t.applySuggestion}
-                              </button>
-                            </div>
-                          )}
+                            {a.suggestion && (
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                <p className="text-sm text-emerald-200">
+                                  <span className="text-xs uppercase tracking-[0.1em] text-emerald-300/80">
+                                    {t.suggestionLabel}
+                                  </span>{' '}
+                                  —{' '}
+                                  {format(t.suggestionMove, {
+                                    time: when(a.suggestion.moveTo),
+                                  })}
+                                  .{' '}
+                                  <span className="text-neutral-300">
+                                    {a.suggestion.why}
+                                  </span>
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    a.suggestion &&
+                                    void applySuggestion(
+                                      a.suggestion,
+                                      a.message
+                                    )
+                                  }
+                                  disabled={movingId !== null}
+                                  className="rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-100 disabled:opacity-50"
+                                >
+                                  {movingId === a.suggestion.matchId
+                                    ? t.applyChecking
+                                    : t.applySuggestion}
+                                </button>
+                              </div>
+                            )}
 
-                          <p className="flex flex-wrap gap-3 pt-1">
-                            {a.matchIds.map((matchId) => (
-                              <Link
-                                key={matchId}
-                                href={`/admin/matches/${matchId}`}
-                                className="text-xs underline text-neutral-300"
-                              >
-                                {t.openMatch}
-                              </Link>
-                            ))}
-                          </p>
+                            <p className="flex flex-wrap gap-3 pt-1">
+                              {a.matchIds.map((matchId) => (
+                                <Link
+                                  key={matchId}
+                                  href={`/admin/matches/${matchId}`}
+                                  className="text-xs underline text-neutral-300"
+                                >
+                                  {t.openMatch}
+                                </Link>
+                              ))}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                      </li>
+                    ))}
+                  </ul>
                 )
               )}
             </>

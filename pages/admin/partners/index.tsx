@@ -13,7 +13,9 @@ import nsAdminPartnersHub from '@/lib/i18n/locales/admin-fr/adminPartnersHub';
 
 const ID_BASE = 'admin-partners';
 
-export const getServerSideProps = withStaffPage({ permission: 'manage_communications' });
+export const getServerSideProps = withStaffPage({
+  permission: 'manage_communications',
+});
 
 /**
  * Merged partners hub. Hosts the former /admin/partners (list + création) and

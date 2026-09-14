@@ -51,7 +51,8 @@ let stageId: string;
 // Invitations crees au fil des tests, nettoyes au teardown.
 const createdInvitationIds: string[] = [];
 
-test.describe.serial('Bot captain actions — setup & shared fixtures', () => {
+test.describe('Bot captain actions — setup & shared fixtures', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {
@@ -216,14 +217,14 @@ let pendingInvitationId: string;
 let invitationToRejectId: string;
 let invitationToCancelId: string;
 
-test.describe.serial('Bot /inviter — POST /teams/[teamId]/invitations', () => {
+test.describe('Bot /inviter — POST /teams/[teamId]/invitations', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('401 sans clé', async ({ request }) => {
-    const res = await request.post(
-      `/api/bot/v1/teams/${teamId}/invitations`,
-      { data: {} }
-    );
+    const res = await request.post(`/api/bot/v1/teams/${teamId}/invitations`, {
+      data: {},
+    });
     expect([401, 500]).toContain(res.status());
   });
 
@@ -243,106 +244,87 @@ test.describe.serial('Bot /inviter — POST /teams/[teamId]/invitations', () => 
   });
 
   test('400 si actorDiscordUserId manquant', async ({ request }) => {
-    const res = await request.post(
-      `/api/bot/v1/teams/${teamId}/invitations`,
-      {
-        headers: { 'x-api-key': API_KEY! },
-        data: {},
-      }
-    );
+    const res = await request.post(`/api/bot/v1/teams/${teamId}/invitations`, {
+      headers: { 'x-api-key': API_KEY! },
+      data: {},
+    });
     expect(res.status()).toBe(400);
   });
 
   test('403 si actor pas capitaine de cette équipe', async ({ request }) => {
-    const res = await request.post(
-      `/api/bot/v1/teams/${teamId}/invitations`,
-      {
-        headers: { 'x-api-key': API_KEY! },
-        data: {
-          actorDiscordUserId: OTHER_CAPTAIN_DISCORD,
-          targetDiscordUserId: OUTSIDER_DISCORD,
-        },
-      }
-    );
+    const res = await request.post(`/api/bot/v1/teams/${teamId}/invitations`, {
+      headers: { 'x-api-key': API_KEY! },
+      data: {
+        actorDiscordUserId: OTHER_CAPTAIN_DISCORD,
+        targetDiscordUserId: OUTSIDER_DISCORD,
+      },
+    });
     expect(res.status()).toBe(403);
   });
 
   test('400 si targetDiscordUserId manquant', async ({ request }) => {
-    const res = await request.post(
-      `/api/bot/v1/teams/${teamId}/invitations`,
-      {
-        headers: { 'x-api-key': API_KEY! },
-        data: { actorDiscordUserId: CAPTAIN_DISCORD },
-      }
-    );
+    const res = await request.post(`/api/bot/v1/teams/${teamId}/invitations`, {
+      headers: { 'x-api-key': API_KEY! },
+      data: { actorDiscordUserId: CAPTAIN_DISCORD },
+    });
     expect(res.status()).toBe(400);
   });
 
   test('404 si target pas liée au site', async ({ request }) => {
-    const res = await request.post(
-      `/api/bot/v1/teams/${teamId}/invitations`,
-      {
-        headers: { 'x-api-key': API_KEY! },
-        data: {
-          actorDiscordUserId: CAPTAIN_DISCORD,
-          targetDiscordUserId: discordId(99),
-        },
-      }
-    );
+    const res = await request.post(`/api/bot/v1/teams/${teamId}/invitations`, {
+      headers: { 'x-api-key': API_KEY! },
+      data: {
+        actorDiscordUserId: CAPTAIN_DISCORD,
+        targetDiscordUserId: discordId(99),
+      },
+    });
     expect(res.status()).toBe(404);
   });
 
   test('400 si target déjà membre de la team (MEMBER)', async ({ request }) => {
-    const res = await request.post(
-      `/api/bot/v1/teams/${teamId}/invitations`,
-      {
-        headers: { 'x-api-key': API_KEY! },
-        data: {
-          actorDiscordUserId: CAPTAIN_DISCORD,
-          targetDiscordUserId: MEMBER_DISCORD,
-        },
-      }
-    );
+    const res = await request.post(`/api/bot/v1/teams/${teamId}/invitations`, {
+      headers: { 'x-api-key': API_KEY! },
+      data: {
+        actorDiscordUserId: CAPTAIN_DISCORD,
+        targetDiscordUserId: MEMBER_DISCORD,
+      },
+    });
     expect(res.status()).toBe(400);
   });
 
   test('400 si BattleTag mal formé', async ({ request }) => {
-    const res = await request.post(
-      `/api/bot/v1/teams/${teamId}/invitations`,
-      {
-        headers: { 'x-api-key': API_KEY! },
-        data: {
-          actorDiscordUserId: CAPTAIN_DISCORD,
-          targetDiscordUserId: OUTSIDER_DISCORD,
-          battleTag: 'pas un battletag',
-        },
-      }
-    );
+    const res = await request.post(`/api/bot/v1/teams/${teamId}/invitations`, {
+      headers: { 'x-api-key': API_KEY! },
+      data: {
+        actorDiscordUserId: CAPTAIN_DISCORD,
+        targetDiscordUserId: OUTSIDER_DISCORD,
+        battleTag: 'pas un battletag',
+      },
+    });
     expect(res.status()).toBe(400);
   });
 
   test('201 happy path : crée invitation pending pour OUTSIDER', async ({
     request,
   }) => {
-    const res = await request.post(
-      `/api/bot/v1/teams/${teamId}/invitations`,
-      {
-        headers: { 'x-api-key': API_KEY! },
-        data: {
-          actorDiscordUserId: CAPTAIN_DISCORD,
-          targetDiscordUserId: OUTSIDER_DISCORD,
-          role: 'player',
-          comment: 'Tu joins?',
-        },
-      }
-    );
+    const res = await request.post(`/api/bot/v1/teams/${teamId}/invitations`, {
+      headers: { 'x-api-key': API_KEY! },
+      data: {
+        actorDiscordUserId: CAPTAIN_DISCORD,
+        targetDiscordUserId: OUTSIDER_DISCORD,
+        role: 'player',
+        comment: 'Tu joins?',
+      },
+    });
     expect(res.status()).toBe(201);
     const body = await res.json();
     expect(body.invitation.type).toBe('invite');
     expect(body.invitation.status).toBe('pending');
     expect(body.invitation.user_id).toBe(outsiderAuthId);
     expect(body.invitation.team_id).toBe(teamId);
-    expect(body.invitation.payload.invitee_discord_user_id).toBe(OUTSIDER_DISCORD);
+    expect(body.invitation.payload.invitee_discord_user_id).toBe(
+      OUTSIDER_DISCORD
+    );
     expect(body.invitation.payload.expires_at).toBeTruthy();
     pendingInvitationId = body.invitation.id;
     createdInvitationIds.push(pendingInvitationId);
@@ -351,16 +333,13 @@ test.describe.serial('Bot /inviter — POST /teams/[teamId]/invitations', () => 
   test('409 si invitation pending déjà existante pour ce couple', async ({
     request,
   }) => {
-    const res = await request.post(
-      `/api/bot/v1/teams/${teamId}/invitations`,
-      {
-        headers: { 'x-api-key': API_KEY! },
-        data: {
-          actorDiscordUserId: CAPTAIN_DISCORD,
-          targetDiscordUserId: OUTSIDER_DISCORD,
-        },
-      }
-    );
+    const res = await request.post(`/api/bot/v1/teams/${teamId}/invitations`, {
+      headers: { 'x-api-key': API_KEY! },
+      data: {
+        actorDiscordUserId: CAPTAIN_DISCORD,
+        targetDiscordUserId: OUTSIDER_DISCORD,
+      },
+    });
     expect(res.status()).toBe(409);
   });
 });
@@ -369,7 +348,8 @@ test.describe.serial('Bot /inviter — POST /teams/[teamId]/invitations', () => 
 /* GET /api/bot/v1/players/by-discord/[id]/invitations                       */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot list invitations — GET /players/.../invitations', () => {
+test.describe('Bot list invitations — GET /players/.../invitations', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('400 si discordUserId invalide', async ({ request }) => {
@@ -415,7 +395,8 @@ test.describe.serial('Bot list invitations — GET /players/.../invitations', ()
 /* POST /api/bot/v1/invitations/[demandeId]                                  */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot accept/reject/cancel — POST /invitations/[id]', () => {
+test.describe('Bot accept/reject/cancel — POST /invitations/[id]', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('400 si action invalide', async ({ request }) => {
@@ -496,7 +477,9 @@ test.describe.serial('Bot accept/reject/cancel — POST /invitations/[id]', () =
     expect(res.status()).toBe(409);
   });
 
-  test('reject flow : nouvelle invite → OUTSIDER refuse', async ({ request }) => {
+  test('reject flow : nouvelle invite → OUTSIDER refuse', async ({
+    request,
+  }) => {
     // OUTSIDER est dans la team apres l'accept. Pour tester reject, on
     // l'enleve d'abord puis on recree une invite.
     await supabaseTestClient!
@@ -545,7 +528,9 @@ test.describe.serial('Bot accept/reject/cancel — POST /invitations/[id]', () =
     expect(m).toBeNull();
   });
 
-  test('cancel flow : capitaine annule sa propre invite', async ({ request }) => {
+  test('cancel flow : capitaine annule sa propre invite', async ({
+    request,
+  }) => {
     const create = await request.post(
       `/api/bot/v1/teams/${teamId}/invitations`,
       {
@@ -582,7 +567,8 @@ test.describe.serial('Bot accept/reject/cancel — POST /invitations/[id]', () =
 /* DELETE /api/bot/v1/teams/[teamId]/members (kicker)                        */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot /kicker — DELETE /teams/[teamId]/members', () => {
+test.describe('Bot /kicker — DELETE /teams/[teamId]/members', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('403 si actor pas capitaine', async ({ request }) => {
@@ -608,13 +594,16 @@ test.describe.serial('Bot /kicker — DELETE /teams/[teamId]/members', () => {
   });
 
   test('404 si target pas dans la team', async ({ request }) => {
-    const res = await request.delete(`/api/bot/v1/teams/${otherTeamId}/members`, {
-      headers: { 'x-api-key': API_KEY! },
-      data: {
-        actorDiscordUserId: OTHER_CAPTAIN_DISCORD,
-        targetDiscordUserId: MEMBER_DISCORD,
-      },
-    });
+    const res = await request.delete(
+      `/api/bot/v1/teams/${otherTeamId}/members`,
+      {
+        headers: { 'x-api-key': API_KEY! },
+        data: {
+          actorDiscordUserId: OTHER_CAPTAIN_DISCORD,
+          targetDiscordUserId: MEMBER_DISCORD,
+        },
+      }
+    );
     expect(res.status()).toBe(404);
   });
 
@@ -642,110 +631,109 @@ test.describe.serial('Bot /kicker — DELETE /teams/[teamId]/members', () => {
 /* POST /api/bot/v1/teams/[teamId]/transfer-captain                          */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial(
-  'Bot /transferer-capitaine — POST /teams/[teamId]/transfer-captain',
-  () => {
-    test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
+test.describe('Bot /transferer-capitaine — POST /teams/[teamId]/transfer-captain', () => {
+  test.describe.configure({ mode: 'serial' });
+  test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
-    test.beforeAll(async () => {
-      if (!supabaseTestClient) return;
-      // À ce stade : la team contient juste CAPTAIN (MEMBER kické, OUTSIDER
-      // jamais accepté la dernière invite). Pour tester le transfert, on
-      // remet OUTSIDER en place directement via DB.
-      await supabaseTestClient.from('team_members').insert({
-        team_id: teamId,
-        user_id: outsiderAuthId,
-        role: 'player',
-      });
+  test.beforeAll(async () => {
+    if (!supabaseTestClient) return;
+    // À ce stade : la team contient juste CAPTAIN (MEMBER kické, OUTSIDER
+    // jamais accepté la dernière invite). Pour tester le transfert, on
+    // remet OUTSIDER en place directement via DB.
+    await supabaseTestClient.from('team_members').insert({
+      team_id: teamId,
+      user_id: outsiderAuthId,
+      role: 'player',
     });
+  });
 
-    test('400 si newCaptainDiscordUserId manquant', async ({ request }) => {
-      const res = await request.post(
-        `/api/bot/v1/teams/${teamId}/transfer-captain`,
-        {
-          headers: { 'x-api-key': API_KEY! },
-          data: { actorDiscordUserId: CAPTAIN_DISCORD },
-        }
-      );
-      expect(res.status()).toBe(400);
-    });
+  test('400 si newCaptainDiscordUserId manquant', async ({ request }) => {
+    const res = await request.post(
+      `/api/bot/v1/teams/${teamId}/transfer-captain`,
+      {
+        headers: { 'x-api-key': API_KEY! },
+        data: { actorDiscordUserId: CAPTAIN_DISCORD },
+      }
+    );
+    expect(res.status()).toBe(400);
+  });
 
-    test('403 si actor pas capitaine', async ({ request }) => {
-      const res = await request.post(
-        `/api/bot/v1/teams/${teamId}/transfer-captain`,
-        {
-          headers: { 'x-api-key': API_KEY! },
-          data: {
-            actorDiscordUserId: OTHER_CAPTAIN_DISCORD,
-            newCaptainDiscordUserId: OUTSIDER_DISCORD,
-          },
-        }
-      );
-      expect(res.status()).toBe(403);
-    });
+  test('403 si actor pas capitaine', async ({ request }) => {
+    const res = await request.post(
+      `/api/bot/v1/teams/${teamId}/transfer-captain`,
+      {
+        headers: { 'x-api-key': API_KEY! },
+        data: {
+          actorDiscordUserId: OTHER_CAPTAIN_DISCORD,
+          newCaptainDiscordUserId: OUTSIDER_DISCORD,
+        },
+      }
+    );
+    expect(res.status()).toBe(403);
+  });
 
-    test('400 si new captain = self', async ({ request }) => {
-      const res = await request.post(
-        `/api/bot/v1/teams/${teamId}/transfer-captain`,
-        {
-          headers: { 'x-api-key': API_KEY! },
-          data: {
-            actorDiscordUserId: CAPTAIN_DISCORD,
-            newCaptainDiscordUserId: CAPTAIN_DISCORD,
-          },
-        }
-      );
-      expect(res.status()).toBe(400);
-    });
+  test('400 si new captain = self', async ({ request }) => {
+    const res = await request.post(
+      `/api/bot/v1/teams/${teamId}/transfer-captain`,
+      {
+        headers: { 'x-api-key': API_KEY! },
+        data: {
+          actorDiscordUserId: CAPTAIN_DISCORD,
+          newCaptainDiscordUserId: CAPTAIN_DISCORD,
+        },
+      }
+    );
+    expect(res.status()).toBe(400);
+  });
 
-    test('400 si new captain pas membre', async ({ request }) => {
-      const res = await request.post(
-        `/api/bot/v1/teams/${teamId}/transfer-captain`,
-        {
-          headers: { 'x-api-key': API_KEY! },
-          data: {
-            actorDiscordUserId: CAPTAIN_DISCORD,
-            newCaptainDiscordUserId: OTHER_CAPTAIN_DISCORD,
-          },
-        }
-      );
-      expect(res.status()).toBe(400);
-    });
+  test('400 si new captain pas membre', async ({ request }) => {
+    const res = await request.post(
+      `/api/bot/v1/teams/${teamId}/transfer-captain`,
+      {
+        headers: { 'x-api-key': API_KEY! },
+        data: {
+          actorDiscordUserId: CAPTAIN_DISCORD,
+          newCaptainDiscordUserId: OTHER_CAPTAIN_DISCORD,
+        },
+      }
+    );
+    expect(res.status()).toBe(400);
+  });
 
-    test('200 happy path + DB.captain_id mis à jour', async ({ request }) => {
-      const res = await request.post(
-        `/api/bot/v1/teams/${teamId}/transfer-captain`,
-        {
-          headers: { 'x-api-key': API_KEY! },
-          data: {
-            actorDiscordUserId: CAPTAIN_DISCORD,
-            newCaptainDiscordUserId: OUTSIDER_DISCORD,
-          },
-        }
-      );
-      expect(res.status()).toBe(200);
+  test('200 happy path + DB.captain_id mis à jour', async ({ request }) => {
+    const res = await request.post(
+      `/api/bot/v1/teams/${teamId}/transfer-captain`,
+      {
+        headers: { 'x-api-key': API_KEY! },
+        data: {
+          actorDiscordUserId: CAPTAIN_DISCORD,
+          newCaptainDiscordUserId: OUTSIDER_DISCORD,
+        },
+      }
+    );
+    expect(res.status()).toBe(200);
 
-      const { data: t } = await supabaseTestClient!
-        .from('teams')
-        .select('captain_id')
-        .eq('id', teamId)
-        .single();
-      expect(t!.captain_id).toBe(outsiderAuthId);
+    const { data: t } = await supabaseTestClient!
+      .from('teams')
+      .select('captain_id')
+      .eq('id', teamId)
+      .single();
+    expect(t!.captain_id).toBe(outsiderAuthId);
 
-      // Restaurer CAPTAIN pour les blocs suivants
-      await supabaseTestClient!
-        .from('teams')
-        .update({ captain_id: captainAuthId })
-        .eq('id', teamId);
-    });
-  }
-);
+    // Restaurer CAPTAIN pour les blocs suivants
+    await supabaseTestClient!
+      .from('teams')
+      .update({ captain_id: captainAuthId })
+      .eq('id', teamId);
+  });
+});
 
 /* ------------------------------------------------------------------------- */
 /* POST /api/bot/v1/teams/leave (quitter)                                    */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot /quitter-equipe — POST /teams/leave', () => {
+test.describe('Bot /quitter-equipe — POST /teams/leave', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('400 si actorDiscordUserId manquant', async ({ request }) => {
@@ -808,7 +796,8 @@ test.describe.serial('Bot /quitter-equipe — POST /teams/leave', () => {
 /* POST /api/bot/v1/tournaments/[id]/teams — captain self-register branch    */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot /inscrire-mon-equipe — captain self-register', () => {
+test.describe('Bot /inscrire-mon-equipe — captain self-register', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('403 si capitaine essaie d’inscrire une team qui n’est pas la sienne', async ({

@@ -62,7 +62,8 @@ function makeRes() {
 /** Route tenant-scopée qui renvoie simplement le tenant résolu. */
 function echoRoute(key = 'platform-key-test') {
   return withBotRoute(
-    async (req, res) => res.status(200).json({ tenantId: req.botContext.tenantId }),
+    async (req, res) =>
+      res.status(200).json({ tenantId: req.botContext.tenantId }),
     { methods: ['GET'], rateLimit: { max: 1000, key } }
   );
 }

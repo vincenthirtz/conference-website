@@ -38,7 +38,8 @@ let teamAId: string;
 let teamBId: string;
 let matchId: string;
 
-test.describe.serial('P4 — setup', () => {
+test.describe('P4 — setup', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {
@@ -164,7 +165,8 @@ test.describe.serial('P4 — setup', () => {
 /* Maintenance mode                                                          */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('P4.1 — Maintenance mode', () => {
+test.describe('P4.1 — Maintenance mode', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {
@@ -227,7 +229,8 @@ test.describe.serial('P4.1 — Maintenance mode', () => {
 /* Per-actor rate limit                                                      */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('P4.2 — Per-actor rate limit', () => {
+test.describe('P4.2 — Per-actor rate limit', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('5e POST consécutif renvoie 429 ACTOR_RATE_LIMIT (forfeit)', async ({
@@ -263,7 +266,8 @@ test.describe.serial('P4.2 — Per-actor rate limit', () => {
 /* Webhook outbox                                                            */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('P4.4 — Webhook outbox', () => {
+test.describe('P4.4 — Webhook outbox', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('POST /matches/[id]/forfeit crée une row pending dans bot_event_outbox', async ({

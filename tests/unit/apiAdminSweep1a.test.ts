@@ -17,7 +17,13 @@ const {
   fetchDashboardData,
 } = vi.hoisted(() => ({
   postToDiscordWebhook: vi.fn(async () => undefined),
-  listCheckinStatus: vi.fn(async () => [{ id: 'm1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', status: 'ok' }]),
+  listCheckinStatus: vi.fn(async () => [
+    {
+      id: 'm1',
+      tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+      status: 'ok',
+    },
+  ]),
   processCheckinForUpcomingMatches: vi.fn(async () => ({
     scanned: 5,
     acted: 2,

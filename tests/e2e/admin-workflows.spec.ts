@@ -52,7 +52,8 @@ const createdTeamIds: string[] = [];
 
 const skip = !supabaseTestClient;
 
-test.describe.serial('Admin workflows E2E (API)', () => {
+test.describe('Admin workflows E2E (API)', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(skip, 'Supabase service role manquant');
 
   test.beforeAll(async () => {

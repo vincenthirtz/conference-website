@@ -44,7 +44,11 @@ export const handler: Handler = async () => {
     });
     const body = await res.text();
     if (!res.ok) {
-      logger.error('[social-token-refresh-cron] upstream %s: %s', res.status, body);
+      logger.error(
+        '[social-token-refresh-cron] upstream %s: %s',
+        res.status,
+        body
+      );
       return { statusCode: 502, body };
     }
     logger.info('[social-token-refresh-cron] %s', body);

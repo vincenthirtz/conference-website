@@ -107,7 +107,10 @@ export function listSourceFiles(roots: string[], cwd: string): string[] {
         continue;
       }
       if (stat.isDirectory()) walk(full);
-      else if (SOURCE_EXTENSIONS.has(extname(entry)) && !entry.endsWith('.d.ts')) {
+      else if (
+        SOURCE_EXTENSIONS.has(extname(entry)) &&
+        !entry.endsWith('.d.ts')
+      ) {
         out.push(full);
       }
     }
@@ -164,7 +167,10 @@ function embeddedTableName(head: string): {
   }
   name = name.trim();
   const table = /^[A-Za-z_][A-Za-z0-9_]*$/.test(name) ? name : null;
-  return { table, hint: hint && /^[A-Za-z_][A-Za-z0-9_]*$/.test(hint) ? hint : null };
+  return {
+    table,
+    hint: hint && /^[A-Za-z_][A-Za-z0-9_]*$/.test(hint) ? hint : null,
+  };
 }
 
 /**
@@ -203,7 +209,14 @@ export function collectColumnRefs(
       // Embarcation dont on ne sait pas nommer la table, ou dont la cible est
       // une clé étrangère : contenu non analysé (cf. FK_COLUMN_HINT).
       if (embedded && !FK_COLUMN_HINT.test(embedded)) {
-        collectColumnRefs(item.slice(open + 1, -1), embedded, file, line, out, hints);
+        collectColumnRefs(
+          item.slice(open + 1, -1),
+          embedded,
+          file,
+          line,
+          out,
+          hints
+        );
       }
       continue;
     }
@@ -266,8 +279,19 @@ function indexLocalTables(source: ts.SourceFile): Map<string, string> {
 
 /** Méthodes de filtre PostgREST dont le 1er argument est une colonne. */
 const FILTER_METHODS = new Set([
-  'eq', 'neq', 'gt', 'gte', 'lt', 'lte',
-  'like', 'ilike', 'is', 'in', 'contains', 'containedBy', 'order',
+  'eq',
+  'neq',
+  'gt',
+  'gte',
+  'lt',
+  'lte',
+  'like',
+  'ilike',
+  'is',
+  'in',
+  'contains',
+  'containedBy',
+  'order',
 ]);
 
 const WRITE_METHODS = new Set(['insert', 'update', 'upsert']);
@@ -289,7 +313,11 @@ function filterColumnName(raw: string): string | null {
  *  d'autres `.select()` (DOM, bibliothèques tierces). */
 const LOOKS_LIKE_POSTGREST = /^[\w\s,*():!.>-]+$/;
 
-export function scanFile(file: string, text: string, relative: string): ScanResult {
+export function scanFile(
+  file: string,
+  text: string,
+  relative: string
+): ScanResult {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
   const localTables = indexLocalTables(source);
   const refs: ColumnRef[] = [];
@@ -300,7 +328,10 @@ export function scanFile(file: string, text: string, relative: string): ScanResu
 
   const visit = (node: ts.Node) => {
     // Filtres et écritures : mêmes conséquences qu'un select fautif.
-    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression)
+    ) {
       const method = node.expression.name.text;
       const arg0 = node.arguments[0];
 
@@ -309,12 +340,24 @@ export function scanFile(file: string, text: string, relative: string): ScanResu
         const column = filterColumnName(arg0.text);
         if (table && column) {
           const line =
-            source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
-          usages.push({ table, column, file: relative, line, kind: 'filter', method });
+            source.getLineAndCharacterOfPosition(node.getStart(source)).line +
+            1;
+          usages.push({
+            table,
+            column,
+            file: relative,
+            line,
+            kind: 'filter',
+            method,
+          });
         }
       }
 
-      if (WRITE_METHODS.has(method) && arg0 && ts.isObjectLiteralExpression(arg0)) {
+      if (
+        WRITE_METHODS.has(method) &&
+        arg0 &&
+        ts.isObjectLiteralExpression(arg0)
+      ) {
         const table = tableFromChain(node.expression.expression, localTables);
         if (table) {
           for (const prop of arg0.properties) {
@@ -328,8 +371,16 @@ export function scanFile(file: string, text: string, relative: string): ScanResu
             // Un spread (`...payload`) ne dit rien de ses clés : on ne devine pas.
             if (!column) continue;
             const line =
-              source.getLineAndCharacterOfPosition(prop.getStart(source)).line + 1;
-            usages.push({ table, column, file: relative, line, kind: 'write', method });
+              source.getLineAndCharacterOfPosition(prop.getStart(source)).line +
+              1;
+            usages.push({
+              table,
+              column,
+              file: relative,
+              line,
+              kind: 'write',
+              method,
+            });
           }
         }
       }
@@ -354,7 +405,11 @@ export function scanFile(file: string, text: string, relative: string): ScanResu
         } else {
           skipped.push({ file: relative, line, reason: 'select-dynamique' });
         }
-      } else if (arg && ts.isStringLiteralLike(arg) && LOOKS_LIKE_POSTGREST.test(arg.text)) {
+      } else if (
+        arg &&
+        ts.isStringLiteralLike(arg) &&
+        LOOKS_LIKE_POSTGREST.test(arg.text)
+      ) {
         // Table non résolue mais argument crédible : c'est un angle mort, il
         // doit se voir plutôt que disparaître.
         skipped.push({ file: relative, line, reason: 'table-dynamique' });

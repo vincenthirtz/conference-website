@@ -142,10 +142,7 @@ export function useIdempotentMutation(
   );
 
   const mutate = useCallback(
-    async (
-      input: string,
-      init: AdminFetchOptions = {}
-    ): Promise<Response> => {
+    async (input: string, init: AdminFetchOptions = {}): Promise<Response> => {
       const finalInit = injectKey(init);
       try {
         const res = await adminFetch(input, finalInit);
@@ -159,24 +156,24 @@ export function useIdempotentMutation(
         // Background Sync et on renvoie une Response synthétique 202 que
         // le caller peut détecter via le header X-BG-Sync.
         if (isNetworkError(err)) {
-          const queueId = await enqueueMutation(input, finalInit as RequestInit);
+          const queueId = await enqueueMutation(
+            input,
+            finalInit as RequestInit
+          );
           // On régénère la clé : la mutation est "envoyée" (en file) du point
           // de vue du caller, le prochain mutate doit avoir une nouvelle
           // intention sinon le serveur dédupliquerait à tort.
           if (autoRegenerateOnSuccess) {
             keyRef.current = generateKey();
           }
-          return new Response(
-            JSON.stringify({ queued: true, queueId }),
-            {
-              status: 202,
-              headers: {
-                'Content-Type': 'application/json',
-                [BG_SYNC_HEADER]: 'queued',
-                [BG_SYNC_ID_HEADER]: String(queueId),
-              },
-            }
-          );
+          return new Response(JSON.stringify({ queued: true, queueId }), {
+            status: 202,
+            headers: {
+              'Content-Type': 'application/json',
+              [BG_SYNC_HEADER]: 'queued',
+              [BG_SYNC_ID_HEADER]: String(queueId),
+            },
+          });
         }
         throw err;
       }
@@ -199,7 +196,10 @@ export function useIdempotentMutation(
         return out;
       } catch (err) {
         if (isNetworkError(err)) {
-          const queueId = await enqueueMutation(input, finalInit as RequestInit);
+          const queueId = await enqueueMutation(
+            input,
+            finalInit as RequestInit
+          );
           if (autoRegenerateOnSuccess) {
             keyRef.current = generateKey();
           }

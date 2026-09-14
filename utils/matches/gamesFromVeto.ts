@@ -135,7 +135,9 @@ export async function syncGamesFromVeto(
 export async function clearGamesFromVeto(
   client: SupabaseClient,
   params: { tenantId: string; matchId: string }
-): Promise<{ cleared: number } | { cleared: null; reason: 'scores-existants' | 'erreur' }> {
+): Promise<
+  { cleared: number } | { cleared: null; reason: 'scores-existants' | 'erreur' }
+> {
   const { tenantId, matchId } = params;
 
   const { data: existing, error: readErr } = await client

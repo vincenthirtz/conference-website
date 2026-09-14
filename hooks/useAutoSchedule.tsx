@@ -147,7 +147,8 @@ export function useAutoSchedule({
 
       let toastMsg = format(t.autoDoneMsg, { count: scheduledCount });
       if (conflictCount > 0) {
-        toastMsg += ' ' + format(t.autoConflictsAccepted, { count: conflictCount });
+        toastMsg +=
+          ' ' + format(t.autoConflictsAccepted, { count: conflictCount });
       }
       if (warnings.length > 0) toastMsg += ` ${warnings.join(' ')}`;
 

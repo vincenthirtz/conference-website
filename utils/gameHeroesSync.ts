@@ -128,7 +128,10 @@ export function dotaPrimaryAttrToAttribute(attr: string): string | null {
   }
 }
 
-export function mapDotaHeroToRow(hero: OpenDotaHero, now: string): GameHeroUpsertRow {
+export function mapDotaHeroToRow(
+  hero: OpenDotaHero,
+  now: string
+): GameHeroUpsertRow {
   const shortName = dotaShortName(hero.name);
   return {
     game: 'dota2',
@@ -211,7 +214,9 @@ export async function syncLolHeroes(nowIso?: string): Promise<SyncGameSummary> {
   }
 }
 
-export async function syncDota2Heroes(nowIso?: string): Promise<SyncGameSummary> {
+export async function syncDota2Heroes(
+  nowIso?: string
+): Promise<SyncGameSummary> {
   const now = nowIso ?? new Date().toISOString();
   try {
     const heroes = await fetchJson<OpenDotaHero[]>(
@@ -234,7 +239,10 @@ export async function syncDota2Heroes(nowIso?: string): Promise<SyncGameSummary>
 export async function syncAllGameHeroes(): Promise<SyncAllSummary> {
   const startedAt = new Date().toISOString();
   const startedAtMs = Date.now();
-  const games = await Promise.all([syncLolHeroes(startedAt), syncDota2Heroes(startedAt)]);
+  const games = await Promise.all([
+    syncLolHeroes(startedAt),
+    syncDota2Heroes(startedAt),
+  ]);
   const finishedAtMs = Date.now();
   return {
     startedAt,

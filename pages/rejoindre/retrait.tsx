@@ -29,7 +29,8 @@ type State =
 function RetraitPage() {
   const t = useT(nsRejoindrePage);
   const router = useRouter();
-  const token = typeof router.query.token === 'string' ? router.query.token : '';
+  const token =
+    typeof router.query.token === 'string' ? router.query.token : '';
   const [state, setState] = useState<State>({ kind: 'loading' });
 
   useEffect(() => {

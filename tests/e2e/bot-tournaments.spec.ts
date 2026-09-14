@@ -36,7 +36,8 @@ let publishedTournamentId: string;
 let draftTournamentId: string;
 const createdTournamentIds: string[] = [];
 
-test.describe.serial('Bot tournaments — auth & method', () => {
+test.describe('Bot tournaments — auth & method', () => {
+  test.describe.configure({ mode: 'serial' });
   test('rejette sans x-api-key', async ({ request }) => {
     const res = await request.get('/api/bot/v1/tournaments');
     expect([401, 500]).toContain(res.status());
@@ -58,7 +59,8 @@ test.describe.serial('Bot tournaments — auth & method', () => {
   });
 });
 
-test.describe.serial('Bot tournaments — GET (list)', () => {
+test.describe('Bot tournaments — GET (list)', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {
@@ -133,7 +135,8 @@ test.describe.serial('Bot tournaments — GET (list)', () => {
   });
 });
 
-test.describe.serial('Bot tournaments — POST (create)', () => {
+test.describe('Bot tournaments — POST (create)', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {

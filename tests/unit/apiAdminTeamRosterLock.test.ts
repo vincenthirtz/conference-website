@@ -75,7 +75,9 @@ beforeEach(() => {
       deleted_at: null,
     },
   ] as any;
-  store.tenants = [{ id: TENANT, slug: 'conf', name: 'Conf', is_active: true }] as any;
+  store.tenants = [
+    { id: TENANT, slug: 'conf', name: 'Conf', is_active: true },
+  ] as any;
   store.tenant_staff = [
     { tenant_id: TENANT, staff_id: STAFF_ID, role: 'admin' },
   ] as any;
@@ -148,7 +150,8 @@ describe('GET — état par tournoi', () => {
   });
 
   it('404 sur une équipe d’un autre espace', async () => {
-    (store.teams as any[])[0].tenant_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    (store.teams as any[])[0].tenant_id =
+      'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
     const res = makeRes();
     await handler(makeReq(), res);
     expect(res.statusCode).toBe(404);

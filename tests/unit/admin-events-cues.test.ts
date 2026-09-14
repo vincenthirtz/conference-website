@@ -172,7 +172,14 @@ describe('POST /api/admin/events/[runId]/cues', () => {
     );
 
     expect(res.statusCode).toBe(201);
-    const body = res.body as { cue: { id: string; severity: string; body: string; created_by_user_id: string } };
+    const body = res.body as {
+      cue: {
+        id: string;
+        severity: string;
+        body: string;
+        created_by_user_id: string;
+      };
+    };
     expect(body.cue.severity).toBe('info');
     expect(body.cue.body).toBe('Hello casters');
     expect(body.cue.created_by_user_id).toBe('user-1');

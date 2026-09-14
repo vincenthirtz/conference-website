@@ -12,7 +12,15 @@ function team(
   points: number,
   over: Partial<TiebreakerTeam> = {}
 ): TiebreakerTeam {
-  return { teamId, points, wins: 0, scoreDiff: 0, scored: 0, seed: null, ...over };
+  return {
+    teamId,
+    points,
+    wins: 0,
+    scoreDiff: 0,
+    scored: 0,
+    seed: null,
+    ...over,
+  };
 }
 
 function win(winner: string, loser: string, s1 = 2, s2 = 0): TiebreakerMatch {
@@ -77,7 +85,10 @@ describe('rankWithTiebreakers · confrontation directe', () => {
   it('fait passer devant celle qui a battu l’autre', () => {
     // Même total, même différence : seul le face-à-face les sépare.
     const r = rankWithTiebreakers(
-      [team('A', 3, { wins: 1, scoreDiff: 0 }), team('B', 3, { wins: 1, scoreDiff: 0 })],
+      [
+        team('A', 3, { wins: 1, scoreDiff: 0 }),
+        team('B', 3, { wins: 1, scoreDiff: 0 }),
+      ],
       [win('B', 'A')]
     );
     expect(r.map((x) => x.teamId)).toEqual(['B', 'A']);
@@ -88,7 +99,11 @@ describe('rankWithTiebreakers · confrontation directe', () => {
     // A a battu C (hors du groupe à égalité) ; B a battu A. Le face-à-face
     // interne donne B devant, la victoire de A sur C ne pèse pas ici.
     const r = rankWithTiebreakers(
-      [team('A', 3, { scoreDiff: 0 }), team('B', 3, { scoreDiff: 0 }), team('C', 9)],
+      [
+        team('A', 3, { scoreDiff: 0 }),
+        team('B', 3, { scoreDiff: 0 }),
+        team('C', 9),
+      ],
       [win('A', 'C'), win('B', 'A')]
     );
     expect(r.map((x) => x.teamId)).toEqual(['C', 'B', 'A']);

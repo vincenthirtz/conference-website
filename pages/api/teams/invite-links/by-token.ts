@@ -246,12 +246,10 @@ const handlePost = withAuthRoute(async function handlePost(
 
   const lockStatus = await isTeamRosterLocked(tenantId, team.id);
   if (lockStatus.locked) {
-    return res
-      .status(409)
-      .json({
-        error: rosterLockErrorMessage(lockStatus),
-        code: 'ROSTER_LOCKED',
-      });
+    return res.status(409).json({
+      error: rosterLockErrorMessage(lockStatus),
+      code: 'ROSTER_LOCKED',
+    });
   }
 
   if (roleRequiresBattleTag(link.role) && !body.battle_tag?.trim()) {
@@ -275,12 +273,10 @@ const handlePost = withAuthRoute(async function handlePost(
   const inviterId = link.created_by ?? team.captain_id ?? null;
   if (!inviterId) {
     await releaseSeat(link);
-    return res
-      .status(409)
-      .json({
-        error: 'Ce lien n’est plus rattaché à personne.',
-        code: 'LINK_ORPHAN',
-      });
+    return res.status(409).json({
+      error: 'Ce lien n’est plus rattaché à personne.',
+      code: 'LINK_ORPHAN',
+    });
   }
 
   const invite = await createInvitation(tenantId, {

@@ -87,7 +87,9 @@ async function handlePut(
     );
   } catch (err) {
     logger.error('[admin/instagram/secret] enregistrement impossible', err);
-    return res.status(500).json({ error: 'Le secret n’a pas pu être enregistré.' });
+    return res
+      .status(500)
+      .json({ error: 'Le secret n’a pas pu être enregistré.' });
   }
 
   if (ctx.staff?.id) {

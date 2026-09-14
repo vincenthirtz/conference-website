@@ -14,9 +14,7 @@ const UUID_RE =
  * helpers, build-time `getStaticProps`) keep working without churn while the
  * multi-tenant migration progresses.
  */
-export async function findTournamentByIdOrSlug<
-  T = Record<string, unknown>,
->(
+export async function findTournamentByIdOrSlug<T = Record<string, unknown>>(
   idOrSlug: string,
   columns = '*',
   tenantId: string = DEFAULT_TENANT_ID

@@ -76,7 +76,8 @@ let team2Id: string;
 let matchId: string;
 let captainAuthId: string;
 
-test.describe.serial('Bot reminders — match_checkin fonctionnel', () => {
+test.describe('Bot reminders — match_checkin fonctionnel', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(
     !HAS_KEY || !HAS_SUPABASE,
     'BOT_API_KEY ou Supabase service role manquant'
@@ -229,7 +230,8 @@ let j1TeamId: string;
 let j1CaptainAuthId: string;
 let j1OtherSnapshot: { id: string; j1_reminder_sent_at: string | null }[] = [];
 
-test.describe.serial('Bot reminders — tournament_j1 fonctionnel', () => {
+test.describe('Bot reminders — tournament_j1 fonctionnel', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(
     !HAS_KEY || !HAS_SUPABASE,
     'BOT_API_KEY ou Supabase service role manquant'
@@ -393,7 +395,8 @@ let castTeam2Id: string;
 let castMatchId: string;
 let castAssignmentId: string;
 
-test.describe.serial('Bot reminders — cast_briefing fonctionnel', () => {
+test.describe('Bot reminders — cast_briefing fonctionnel', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(
     !HAS_KEY || !HAS_SUPABASE,
     'BOT_API_KEY ou Supabase service role manquant'

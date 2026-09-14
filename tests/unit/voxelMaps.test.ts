@@ -8,7 +8,11 @@ import { generateScene, layoutForMapType } from '@/utils/maps/generate';
 import { renderIsoSvg } from '@/utils/maps/isoSvg';
 import { createRng, hashSeed } from '@/utils/maps/rng';
 import { mapSlug } from '@/utils/maps/slug';
-import { LANDMARK_KINDS, MAP_LAYOUTS, type MapRecipe } from '@/utils/maps/types';
+import {
+  LANDMARK_KINDS,
+  MAP_LAYOUTS,
+  type MapRecipe,
+} from '@/utils/maps/types';
 import { buildLandmark } from '@/utils/maps/landmarks';
 import { buildLayout } from '@/utils/maps/layouts';
 import { canDress, groundProp, railing, roofProps } from '@/utils/maps/props';
@@ -55,7 +59,11 @@ describe('rng', () => {
   it('même graine, même suite', () => {
     const a = createRng('ilios');
     const b = createRng('ilios');
-    expect([a.next(), a.next(), a.next()]).toEqual([b.next(), b.next(), b.next()]);
+    expect([a.next(), a.next(), a.next()]).toEqual([
+      b.next(),
+      b.next(),
+      b.next(),
+    ]);
   });
 
   it('graines différentes, suites différentes', () => {
@@ -204,7 +212,12 @@ describe('generateScene', () => {
     // temps du test pour la même information.
     const outside = scene.bricks.filter(
       (b) =>
-        b.x < minX || b.x > maxX || b.y < minY || b.y > maxY || b.z < minZ || b.z > maxZ,
+        b.x < minX ||
+        b.x > maxX ||
+        b.y < minY ||
+        b.y > maxY ||
+        b.z < minZ ||
+        b.z > maxZ
     );
     expect(outside).toEqual([]);
   });
@@ -213,8 +226,11 @@ describe('generateScene', () => {
     const invalid = OVERWATCH_RECIPES.flatMap((recipe) =>
       generateScene(recipe).bricks.filter(
         (b) =>
-          !Number.isInteger(b.x) || !Number.isInteger(b.y) || !Number.isInteger(b.z) || b.y < 0,
-      ),
+          !Number.isInteger(b.x) ||
+          !Number.isInteger(b.y) ||
+          !Number.isInteger(b.z) ||
+          b.y < 0
+      )
     );
     expect(invalid).toEqual([]);
   });
@@ -247,7 +263,9 @@ describe('generateScene', () => {
       environment: { kind: 'sea', color: '#123456' },
     });
     const ground = new Set(
-      scene.bricks.filter((b) => b.role === 'ground').map((b) => `${b.x},${b.z}`),
+      scene.bricks
+        .filter((b) => b.role === 'ground')
+        .map((b) => `${b.x},${b.z}`)
     );
     for (const brick of scene.bricks) {
       if (brick.role !== 'environment') continue;
@@ -396,14 +414,17 @@ describe('registre de recettes', () => {
 
   it('toute couleur de palette est un hex valide', () => {
     for (const recipe of OVERWATCH_RECIPES) {
-      for (const color of recipe.palette) expect(color).toMatch(/^#[0-9a-f]{6}$/i);
-      if (recipe.environment) expect(recipe.environment.color).toMatch(/^#[0-9a-f]{6}$/i);
+      for (const color of recipe.palette)
+        expect(color).toMatch(/^#[0-9a-f]{6}$/i);
+      if (recipe.environment)
+        expect(recipe.environment.color).toMatch(/^#[0-9a-f]{6}$/i);
     }
   });
 
   it('les silhouettes déclarées existent toutes', () => {
     for (const recipe of OVERWATCH_RECIPES) {
-      for (const kind of recipe.landmarks) expect(LANDMARK_KINDS).toContain(kind);
+      for (const kind of recipe.landmarks)
+        expect(LANDMARK_KINDS).toContain(kind);
     }
   });
 
@@ -420,7 +441,9 @@ describe('registre de recettes', () => {
   });
 
   it('deriveRecipe est déterministe', () => {
-    expect(deriveRecipe('Numbani', 'hybrid')).toEqual(deriveRecipe('Numbani', 'hybrid'));
+    expect(deriveRecipe('Numbani', 'hybrid')).toEqual(
+      deriveRecipe('Numbani', 'hybrid')
+    );
   });
 
   it('deriveRecipe distingue deux maps de même type', () => {
@@ -438,15 +461,25 @@ describe('registre de recettes', () => {
     expect(missing).toEqual([]);
   });
 
-  it("le lot Overwatch ne contient pas de recette orpheline (map retirée du pool)", () => {
-    const pool = new Set(getGame('overwatch')!.mapPool.map((m) => mapSlug(m.name)));
-    const orphans = OVERWATCH_RECIPES.filter((r) => !pool.has(r.slug)).map((r) => r.slug);
+  it('le lot Overwatch ne contient pas de recette orpheline (map retirée du pool)', () => {
+    const pool = new Set(
+      getGame('overwatch')!.mapPool.map((m) => mapSlug(m.name))
+    );
+    const orphans = OVERWATCH_RECIPES.filter((r) => !pool.has(r.slug)).map(
+      (r) => r.slug
+    );
     expect(orphans).toEqual([]);
   });
 
   it('chaque mode de jeu Overwatch est couvert par au moins une recette', () => {
     const layouts = new Set(OVERWATCH_RECIPES.map((r) => r.layout));
-    expect([...layouts].sort()).toEqual(['control', 'escort', 'flashpoint', 'hybrid', 'push']);
+    expect([...layouts].sort()).toEqual([
+      'control',
+      'escort',
+      'flashpoint',
+      'hybrid',
+      'push',
+    ]);
   });
 
   // Le catalogue Overwatch ne pointe plus vers un CDN tiers : les vignettes sont
@@ -463,11 +496,13 @@ describe('registre de recettes', () => {
   it('le fichier de chaque vignette Overwatch existe sur le disque', () => {
     const missing = getGame('overwatch')!
       .mapPool.map((m) => m.image)
-      .filter((image) => !existsSync(path.join(process.cwd(), 'public', image)));
+      .filter(
+        (image) => !existsSync(path.join(process.cwd(), 'public', image))
+      );
     expect(missing).toEqual([]);
   });
 
-  it('aucune vignette Overwatch ne dépend encore d\'un hôte externe', () => {
+  it("aucune vignette Overwatch ne dépend encore d'un hôte externe", () => {
     const remote = getGame('overwatch')!
       .mapPool.map((m) => m.image)
       .filter((image) => /^https?:\/\//.test(image));
@@ -480,20 +515,16 @@ describe('registre de recettes', () => {
   // qui ferait perdre à ce test tout son intérêt (c'est LA garantie que le repli
   // ne produit jamais de maquette vide, pour n'importe quelle map de n'importe
   // quel jeu).
-  it(
-    'chaque map de chaque jeu du registre produit une maquette rendable',
-    () => {
-      const empty: string[] = [];
-      for (const slug of GAME_SLUGS) {
-        const game = getGame(slug);
-        if (!game) continue;
-        for (const map of game.mapPool) {
-          const scene = generateScene(getMapRecipe(slug, map.name, map.type));
-          if (scene.bricks.length <= 200) empty.push(`${slug}/${map.name}`);
-        }
+  it('chaque map de chaque jeu du registre produit une maquette rendable', () => {
+    const empty: string[] = [];
+    for (const slug of GAME_SLUGS) {
+      const game = getGame(slug);
+      if (!game) continue;
+      for (const map of game.mapPool) {
+        const scene = generateScene(getMapRecipe(slug, map.name, map.type));
+        if (scene.bricks.length <= 200) empty.push(`${slug}/${map.name}`);
       }
-      expect(empty).toEqual([]);
-    },
-    60_000
-  );
+    }
+    expect(empty).toEqual([]);
+  }, 60_000);
 });

@@ -60,7 +60,9 @@ type ApiResponse = {
   team2: TeamMini | null;
 };
 
-export const getServerSideProps = withStaffPage({ permission: 'arbitrate_matches' });
+export const getServerSideProps = withStaffPage({
+  permission: 'arbitrate_matches',
+});
 
 function formatToInputDateTime(iso: string | null): string {
   if (!iso) return '';

@@ -20,7 +20,11 @@ import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 const ROOT = path.resolve(process.cwd(), 'docs');
 const SPEC = path.join(ROOT, 'openapi.yaml');
-const FRAGMENTS = ['openapi-admin.yaml', 'openapi-cron.yaml', 'openapi-public.yaml']
+const FRAGMENTS = [
+  'openapi-admin.yaml',
+  'openapi-cron.yaml',
+  'openapi-public.yaml',
+]
   .map((f) => path.join(ROOT, f))
   .filter((f) => fs.existsSync(f));
 
@@ -30,7 +34,8 @@ function die(msg) {
 }
 
 if (!fs.existsSync(SPEC)) die(`missing ${SPEC}`);
-if (FRAGMENTS.length === 0) die('no fragments found (expected openapi-{admin,cron,public}.yaml)');
+if (FRAGMENTS.length === 0)
+  die('no fragments found (expected openapi-{admin,cron,public}.yaml)');
 
 const root = parseYaml(fs.readFileSync(SPEC, 'utf8'));
 root.paths ??= {};
@@ -75,4 +80,6 @@ const out = stringifyYaml(root, { lineWidth: 0, aliasDuplicateObjects: false });
 fs.writeFileSync(SPEC, out, 'utf8');
 
 console.log(`merge-openapi: +${addedPaths} paths, +${addedSchemas} schemas`);
-console.log(`merge-openapi: ${SPEC} now ${Object.keys(root.paths).length} paths, ${Object.keys(root.components.schemas).length} schemas`);
+console.log(
+  `merge-openapi: ${SPEC} now ${Object.keys(root.paths).length} paths, ${Object.keys(root.components.schemas).length} schemas`
+);

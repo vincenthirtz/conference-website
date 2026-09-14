@@ -17,7 +17,11 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 
-import { store, resetSupabaseMock, setAuthUser } from './__helpers__/supabaseMock';
+import {
+  store,
+  resetSupabaseMock,
+  setAuthUser,
+} from './__helpers__/supabaseMock';
 import { DEFAULT_CURRENT_TOURNAMENT_ID } from '../../utils/currentTournament';
 import registerTeamHandler from '../../pages/api/demandes/register-team';
 import type { TeamRegistrationStatus } from '../../pages/api/demandes/register-team';

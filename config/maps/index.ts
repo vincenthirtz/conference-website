@@ -14,7 +14,12 @@
 import { hashSeed } from '@/utils/maps/rng';
 import { mapSlug } from '@/utils/maps/slug';
 import { layoutForMapType } from '@/utils/maps/generate';
-import type { LandmarkKind, MapMood, MapPalette, MapRecipe } from '@/utils/maps/types';
+import type {
+  LandmarkKind,
+  MapMood,
+  MapPalette,
+  MapRecipe,
+} from '@/utils/maps/types';
 import { OVERWATCH_RECIPES } from './overwatch';
 
 const RECIPES_BY_GAME: Record<string, MapRecipe[]> = {
@@ -68,7 +73,11 @@ export function deriveRecipe(name: string, mapType?: string | null): MapRecipe {
  * Recette d'une map. Ne renvoie jamais null : à défaut de recette écrite, une
  * recette dérivée est calculée. `mapType` n'est utilisé que pour la dérivation.
  */
-export function getMapRecipe(game: string, mapName: string, mapType?: string | null): MapRecipe {
+export function getMapRecipe(
+  game: string,
+  mapName: string,
+  mapType?: string | null
+): MapRecipe {
   const slug = mapSlug(mapName);
   const authored = RECIPES_BY_GAME[game]?.find((r) => r.slug === slug);
   return authored ?? deriveRecipe(mapName, mapType);
@@ -83,6 +92,6 @@ export function hasAuthoredRecipe(game: string, mapName: string): boolean {
 /** Toutes les recettes écrites à la main, tous jeux confondus. */
 export function listAuthoredRecipes(): { game: string; recipe: MapRecipe }[] {
   return Object.entries(RECIPES_BY_GAME).flatMap(([game, recipes]) =>
-    recipes.map((recipe) => ({ game, recipe })),
+    recipes.map((recipe) => ({ game, recipe }))
   );
 }

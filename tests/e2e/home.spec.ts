@@ -30,7 +30,9 @@ test.describe('Home — hero', () => {
     );
   });
 
-  test('hero decorative aurora is present and aria-hidden', async ({ page }) => {
+  test('hero decorative aurora is present and aria-hidden', async ({
+    page,
+  }) => {
     const aurora = page.locator('header.hero-section .hero-aurora');
     await expect(aurora).toBeAttached();
     await expect(aurora).toHaveAttribute('aria-hidden', 'true');
@@ -89,7 +91,9 @@ test.describe('Home — participer en 3 étapes', () => {
     // 3 étapes numérotées, liens vers create / inscription / live.
     const stepLinks = section.locator('ol a');
     await expect(stepLinks).toHaveCount(3);
-    await expect(section.locator('a[href="/team/create"]').first()).toBeVisible();
+    await expect(
+      section.locator('a[href="/team/create"]').first()
+    ).toBeVisible();
     await expect(section.locator('a[href="/inscription-2026"]')).toBeVisible();
     await expect(section.locator('a[href="/ambassadors"]')).toBeVisible();
   });

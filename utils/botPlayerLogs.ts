@@ -21,7 +21,6 @@ export { PLAYER_ACTIONS } from './botPlayerActions';
 export type { PlayerAction } from './botPlayerActions';
 import type { PlayerAction } from './botPlayerActions';
 
-
 export type LogPlayerActionInput = {
   /**
    * Tenant de l'action. `bot_player_actions.tenant_id` est NOT NULL sans

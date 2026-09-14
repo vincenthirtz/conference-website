@@ -155,7 +155,9 @@ async function handler(
     // `limit` s'applique à CHAQUE requête : sans cette coupe, demander 20
     // pouvait en rendre 40. L'appelant compte sur le nombre qu'il a demandé
     // pour savoir s'il y a une suite.
-    const formatted = unique.slice(0, limitNum).map((log) => formatStaffLog(log));
+    const formatted = unique
+      .slice(0, limitNum)
+      .map((log) => formatStaffLog(log));
 
     return res.status(200).json({
       teamId: id,

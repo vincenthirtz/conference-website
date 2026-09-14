@@ -80,7 +80,7 @@ const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
  */
 export function cleanOverlayLine(value: unknown): string | null {
   if (typeof value !== 'string') return null;
-   
+
   const cleaned = value.replace(/[\u0000-\u001f\u007f]/g, '').trim();
   if (!cleaned) return null;
   return cleaned.slice(0, OVERLAY_LINE_MAX);

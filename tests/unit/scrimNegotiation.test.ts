@@ -347,9 +347,9 @@ describe('POST /api/teams/scrim-requests — accept', () => {
     // `scrim.scheduled`, et le bot n'annoncerait rien dans #scrims (il ignore
     // volontairement `scrim.created`). La programmation doit etre emise ici,
     // sinon l'annonce Discord disparait sans que rien ne le signale.
-    const emitted = (emitScrimEvent as unknown as { mock: { calls: unknown[][] } }).mock.calls.map(
-      (c) => c[0]
-    );
+    const emitted = (
+      emitScrimEvent as unknown as { mock: { calls: unknown[][] } }
+    ).mock.calls.map((c) => c[0]);
     expect(emitted).toContain('scrim.created');
     expect(emitted).toContain('scrim.scheduled');
 

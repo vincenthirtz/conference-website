@@ -51,7 +51,9 @@ type AdminFetchApi = {
   ) => Promise<T>;
 };
 
-export function useAdminFetch(options: UseAdminFetchOptions = {}): AdminFetchApi {
+export function useAdminFetch(
+  options: UseAdminFetchOptions = {}
+): AdminFetchApi {
   const { loginPath = '/admin/login' } = options;
   const router = useRouter();
 

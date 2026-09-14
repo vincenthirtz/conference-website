@@ -31,8 +31,7 @@ export default ns('rulesPage', {
   section3Item2: 'Chat vocal et textuel soumis au Code de conduite Blizzard.',
   section3Item3:
     "Résolution des litiges : décision finale par l'arbitrage tournoi.",
-  section3Item4:
-    `Rejoindre le Discord du tournoi est obligatoire : ${socialUrl('discord')}`,
+  section3Item4: `Rejoindre le Discord du tournoi est obligatoire : ${socialUrl('discord')}`,
   modesEyebrow: 'Modes de jeu',
   modesTitle: 'Conditions de victoire par mode',
   modesNote:

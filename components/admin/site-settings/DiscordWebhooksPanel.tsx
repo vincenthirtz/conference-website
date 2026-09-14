@@ -61,8 +61,9 @@ export default function DiscordWebhooksPanel() {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<DraftMap>(emptyDrafts());
-  const [saving, setSaving] =
-    useState<Record<DiscordChannelType, boolean>>(emptySaving());
+  const [saving, setSaving] = useState<Record<DiscordChannelType, boolean>>(
+    emptySaving()
+  );
 
   const fetchData = useCallback(async () => {
     setLoading(true);

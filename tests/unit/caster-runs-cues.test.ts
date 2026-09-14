@@ -106,10 +106,34 @@ beforeEach(() => {
     },
   ] as any;
   store.event_runs = [
-    { id: RUN_LIVE, tenant_id: TENANT_X, status: 'live', name: 'Live', slug: 'live' },
-    { id: RUN_DRAFT, tenant_id: TENANT_X, status: 'draft', name: 'Draft', slug: 'draft' },
-    { id: RUN_DONE, tenant_id: TENANT_X, status: 'done', name: 'Done', slug: 'done' },
-    { id: RUN_Y, tenant_id: TENANT_Y, status: 'live', name: 'Other', slug: 'other' },
+    {
+      id: RUN_LIVE,
+      tenant_id: TENANT_X,
+      status: 'live',
+      name: 'Live',
+      slug: 'live',
+    },
+    {
+      id: RUN_DRAFT,
+      tenant_id: TENANT_X,
+      status: 'draft',
+      name: 'Draft',
+      slug: 'draft',
+    },
+    {
+      id: RUN_DONE,
+      tenant_id: TENANT_X,
+      status: 'done',
+      name: 'Done',
+      slug: 'done',
+    },
+    {
+      id: RUN_Y,
+      tenant_id: TENANT_Y,
+      status: 'live',
+      name: 'Other',
+      slug: 'other',
+    },
   ] as any;
   store.event_cues = [
     {

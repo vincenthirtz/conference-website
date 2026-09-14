@@ -139,7 +139,10 @@ async function alreadyClaimed(
     .eq('source_kind', WALLET_SOURCE_KIND)
     .eq('source_ref', tenantId);
   if (error) {
-    logger.error('[tcg/supporter-welcome] registre illisible: %s', error.message);
+    logger.error(
+      '[tcg/supporter-welcome] registre illisible: %s',
+      error.message
+    );
     return null;
   }
   return (count ?? 0) > 0;
@@ -213,7 +216,8 @@ export async function grantSupporterWelcome(input: {
   }
 
   // Zéro ligne rendue = elle l'avait déjà. C'est un rejeu, pas une panne.
-  if (((inserted ?? []) as unknown[]).length === 0) return { status: 'already' };
+  if (((inserted ?? []) as unknown[]).length === 0)
+    return { status: 'already' };
 
   // 2) Le paquet, seulement maintenant qu'on sait l'avoir créditée.
   let packGranted = false;

@@ -44,7 +44,9 @@ describe('géométrie de la grille', () => {
   });
 
   it('slotKey convertit le mur-horloge Paris en ISO UTC (DST été = UTC+2)', () => {
-    expect(slotKey(cfg, '2026-07-10', 18 * 60)).toBe('2026-07-10T16:00:00.000Z');
+    expect(slotKey(cfg, '2026-07-10', 18 * 60)).toBe(
+      '2026-07-10T16:00:00.000Z'
+    );
   });
 
   it('slotKeysForHorizon = jours × créneaux, ordre de rendu, dédup implicite', () => {
@@ -118,7 +120,7 @@ describe('buildHeatmap', () => {
     expect(hm[slotB].count).toBe(1);
   });
 
-  it('conserve l\'attribution des participants pour le hover', () => {
+  it("conserve l'attribution des participants pour le hover", () => {
     const hm = buildHeatmap([
       { party: 'staff', userId: 'c1', displayName: 'Alice', slots: [slotA] },
       { party: 'staff', userId: 'c2', displayName: 'Bob', slots: [slotA] },
@@ -140,7 +142,11 @@ describe('buildHeatmap', () => {
 });
 
 describe('isSlotValidatable / isFullOverlap', () => {
-  const bothTeams = { count: 2, parties: ['team1', 'team2'] as const, participants: [] };
+  const bothTeams = {
+    count: 2,
+    parties: ['team1', 'team2'] as const,
+    participants: [],
+  };
   const oneTeam = { count: 1, parties: ['team1'] as const, participants: [] };
   const full = {
     count: 3,
@@ -149,14 +155,20 @@ describe('isSlotValidatable / isFullOverlap', () => {
   };
 
   it('validatable dès que les 2 équipes sont présentes', () => {
-    expect(isSlotValidatable({ ...bothTeams, parties: [...bothTeams.parties] })).toBe(true);
-    expect(isSlotValidatable({ ...oneTeam, parties: [...oneTeam.parties] })).toBe(false);
+    expect(
+      isSlotValidatable({ ...bothTeams, parties: [...bothTeams.parties] })
+    ).toBe(true);
+    expect(
+      isSlotValidatable({ ...oneTeam, parties: [...oneTeam.parties] })
+    ).toBe(false);
     expect(isSlotValidatable(undefined)).toBe(false);
   });
 
   it('full overlap = les 3 parties', () => {
     expect(isFullOverlap({ ...full, parties: [...full.parties] })).toBe(true);
-    expect(isFullOverlap({ ...bothTeams, parties: [...bothTeams.parties] })).toBe(false);
+    expect(
+      isFullOverlap({ ...bothTeams, parties: [...bothTeams.parties] })
+    ).toBe(false);
   });
 
   it('requireStaff : les 2 équipes ne suffisent pas sans le staff', () => {
@@ -193,7 +205,7 @@ describe('rankValidatableSlots', () => {
     expect(ranked[1].full).toBe(false);
   });
 
-  it('renvoie [] quand aucun créneau n\'a les 2 équipes', () => {
+  it("renvoie [] quand aucun créneau n'a les 2 équipes", () => {
     const hm = buildHeatmap([{ party: 'team1', userId: 'a', slots: [s1] }]);
     expect(rankValidatableSlots(hm)).toEqual([]);
   });
@@ -219,7 +231,7 @@ describe('copyFirstPaintedDayAcrossHorizon', () => {
     expect(out.sort()).toEqual([d0_18, d0_19, d1_18, d1_19].sort());
   });
 
-  it('renvoie l\'entrée inchangée si rien n\'est peint', () => {
+  it("renvoie l'entrée inchangée si rien n'est peint", () => {
     expect(copyFirstPaintedDayAcrossHorizon(cfg2, [])).toEqual([]);
   });
 

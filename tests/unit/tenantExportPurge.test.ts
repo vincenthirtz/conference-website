@@ -106,7 +106,11 @@ beforeEach(() => {
     { id: 't2', tenant_id: OTHER, name: 'Ailleurs' },
   ] as any;
   store.tenant_secrets = [
-    { tenant_id: TENANT, bot_api_key_hash: 'DEADBEEF', bot_webhook_secret: 'S' },
+    {
+      tenant_id: TENANT,
+      bot_api_key_hash: 'DEADBEEF',
+      bot_webhook_secret: 'S',
+    },
   ] as any;
 });
 

@@ -32,7 +32,8 @@ async function getToken(): Promise<string | null> {
   return data.session.access_token;
 }
 
-test.describe.serial('Stage / match format lock (P0-A)', () => {
+test.describe('Stage / match format lock (P0-A)', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
 
   let token: string | null = null;
@@ -102,13 +103,23 @@ test.describe.serial('Stage / match format lock (P0-A)', () => {
 
   test.afterAll(async () => {
     if (!supabaseTestClient) return;
-    if (matchId) await supabaseTestClient.from('matches').delete().eq('id', matchId);
+    if (matchId)
+      await supabaseTestClient.from('matches').delete().eq('id', matchId);
     if (stageId)
-      await supabaseTestClient.from('tournament_stages').delete().eq('id', stageId);
+      await supabaseTestClient
+        .from('tournament_stages')
+        .delete()
+        .eq('id', stageId);
     if (tournamentId)
-      await supabaseTestClient.from('tournaments').delete().eq('id', tournamentId);
+      await supabaseTestClient
+        .from('tournaments')
+        .delete()
+        .eq('id', tournamentId);
     for (const tid of [team1Id, team2Id].filter(Boolean)) {
-      await supabaseTestClient.from('teams').delete().eq('id', tid as string);
+      await supabaseTestClient
+        .from('teams')
+        .delete()
+        .eq('id', tid as string);
     }
     await deleteTestStaff(STAFF_EMAIL);
   });

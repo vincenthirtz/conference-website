@@ -130,9 +130,9 @@ describe('rotation sans coupure', () => {
   });
 
   it('une clé jamais émise n’ouvre rien', async () => {
-    expect(
-      await verifyBotApiKeyMultiTenant(keyReq('cle-inventee'))
-    ).toEqual({ ok: false });
+    expect(await verifyBotApiKeyMultiTenant(keyReq('cle-inventee'))).toEqual({
+      ok: false,
+    });
   });
 
   it('la révocation coupe l’ancienne, pas la nouvelle', async () => {

@@ -22,7 +22,13 @@ const key = (x: number, y: number, z: number): string => `${x},${y},${z}`;
 export class SceneBuilder {
   private readonly cells = new Map<string, Brick>();
 
-  place(x: number, y: number, z: number, role: BrickRole, opts: PlaceOptions = {}): void {
+  place(
+    x: number,
+    y: number,
+    z: number,
+    role: BrickRole,
+    opts: PlaceOptions = {}
+  ): void {
     const ix = Math.round(x);
     const iy = Math.round(y);
     const iz = Math.round(z);
@@ -60,7 +66,7 @@ export class SceneBuilder {
     h: number,
     d: number,
     role: BrickRole,
-    opts: PlaceOptions = {},
+    opts: PlaceOptions = {}
   ): void {
     for (let x = 0; x < w; x += 1) {
       for (let y = 0; y < h; y += 1) {
@@ -80,13 +86,14 @@ export class SceneBuilder {
     h: number,
     d: number,
     role: BrickRole,
-    opts: PlaceOptions = {},
+    opts: PlaceOptions = {}
   ): void {
     for (let x = 0; x < w; x += 1) {
       for (let z = 0; z < d; z += 1) {
         const edge = x === 0 || x === w - 1 || z === 0 || z === d - 1;
         if (!edge) continue;
-        for (let y = 0; y < h; y += 1) this.place(x0 + x, y0 + y, z0 + z, role, opts);
+        for (let y = 0; y < h; y += 1)
+          this.place(x0 + x, y0 + y, z0 + z, role, opts);
       }
     }
   }
@@ -99,13 +106,14 @@ export class SceneBuilder {
     y0: number,
     h: number,
     role: BrickRole,
-    opts: PlaceOptions = {},
+    opts: PlaceOptions = {}
   ): void {
     const r = Math.ceil(radius);
     for (let x = -r; x <= r; x += 1) {
       for (let z = -r; z <= r; z += 1) {
         if (x * x + z * z > radius * radius) continue;
-        for (let y = 0; y < h; y += 1) this.place(cx + x, y0 + y, cz + z, role, opts);
+        for (let y = 0; y < h; y += 1)
+          this.place(cx + x, y0 + y, cz + z, role, opts);
       }
     }
   }
@@ -119,7 +127,7 @@ export class SceneBuilder {
     y0: number,
     h: number,
     role: BrickRole,
-    opts: PlaceOptions = {},
+    opts: PlaceOptions = {}
   ): void {
     const inner = radius - thickness;
     const r = Math.ceil(radius);
@@ -127,7 +135,8 @@ export class SceneBuilder {
       for (let z = -r; z <= r; z += 1) {
         const d2 = x * x + z * z;
         if (d2 > radius * radius || d2 < inner * inner) continue;
-        for (let y = 0; y < h; y += 1) this.place(cx + x, y0 + y, cz + z, role, opts);
+        for (let y = 0; y < h; y += 1)
+          this.place(cx + x, y0 + y, cz + z, role, opts);
       }
     }
   }
@@ -140,7 +149,7 @@ export class SceneBuilder {
     y0: number,
     h: number,
     role: BrickRole,
-    opts: PlaceOptions = {},
+    opts: PlaceOptions = {}
   ): void {
     const dx = to.x - from.x;
     const dz = to.z - from.z;
@@ -152,7 +161,8 @@ export class SceneBuilder {
       const cz = from.z + dz * t;
       for (let ox = -half; ox <= half; ox += 1) {
         for (let oz = -half; oz <= half; oz += 1) {
-          for (let y = 0; y < h; y += 1) this.place(cx + ox, y0 + y, cz + oz, role, opts);
+          for (let y = 0; y < h; y += 1)
+            this.place(cx + ox, y0 + y, cz + oz, role, opts);
         }
       }
     }
@@ -164,7 +174,14 @@ export class SceneBuilder {
   }
 
   /** Évide un pavé — arcades, portes, brèches. */
-  carveBox(x0: number, y0: number, z0: number, w: number, h: number, d: number): void {
+  carveBox(
+    x0: number,
+    y0: number,
+    z0: number,
+    w: number,
+    h: number,
+    d: number
+  ): void {
     for (let x = 0; x < w; x += 1) {
       for (let y = 0; y < h; y += 1) {
         for (let z = 0; z < d; z += 1) this.carve(x0 + x, y0 + y, z0 + z);
@@ -196,7 +213,7 @@ export class SceneBuilder {
     from: number,
     baseY: number,
     role: BrickRole,
-    shadeFor?: (x: number, z: number) => number,
+    shadeFor?: (x: number, z: number) => number
   ): void {
     const lowest = new Map<string, Brick>();
     for (const brick of [...this.cells.values()].slice(from)) {

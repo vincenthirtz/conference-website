@@ -21,12 +21,7 @@ import type { RegistrationField } from '@/utils/registrationFields';
  * `utils/staffPermissions.ts`. Les deux valeurs étaient déjà acceptées par la
  * CHECK `staff_role_check` en base — aucune migration nécessaire.
  */
-export type StaffRole =
-  | 'owner'
-  | 'admin'
-  | 'caster'
-  | 'referee'
-  | 'helper';
+export type StaffRole = 'owner' | 'admin' | 'caster' | 'referee' | 'helper';
 
 export type StaffShape = {
   id: string;

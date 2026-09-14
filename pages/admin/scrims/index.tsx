@@ -20,8 +20,12 @@ import nsAdminScrimsList from '@/lib/i18n/locales/admin-fr/adminScrimsList';
 import { lazyPanel } from '@/components/admin/lazyPanel';
 
 // Onglets secondaires : chargés au clic (cf. components/admin/lazyPanel).
-const ScrimPlanningsListPanel = lazyPanel(() => import('@/components/admin/scrims/ScrimPlanningsListPanel'));
-const ScrimCalendarPanel = lazyPanel(() => import('@/components/admin/scrims/ScrimCalendarPanel'));
+const ScrimPlanningsListPanel = lazyPanel(
+  () => import('@/components/admin/scrims/ScrimPlanningsListPanel')
+);
+const ScrimCalendarPanel = lazyPanel(
+  () => import('@/components/admin/scrims/ScrimCalendarPanel')
+);
 
 const ID_BASE = 'admin-scrims';
 

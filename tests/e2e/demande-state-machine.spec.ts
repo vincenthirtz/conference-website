@@ -39,10 +39,7 @@ async function getToken(): Promise<string | null> {
 
 type Seeded = { id: string; status: string };
 
-async function seedDemande(
-  playerId: string,
-  status: string
-): Promise<Seeded> {
+async function seedDemande(playerId: string, status: string): Promise<Seeded> {
   const { data } = await supabaseTestClient!
     .from('demandes')
     .insert({
@@ -57,7 +54,8 @@ async function seedDemande(
   return data as Seeded;
 }
 
-test.describe.serial('Demande state machine (P0-B)', () => {
+test.describe('Demande state machine (P0-B)', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
 
   let token: string | null = null;

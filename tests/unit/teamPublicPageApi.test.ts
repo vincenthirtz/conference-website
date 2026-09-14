@@ -135,10 +135,7 @@ describe('method + auth', () => {
 describe('permission', () => {
   it('captain can update', async () => {
     const res = makeRes();
-    await handler(
-      makeReq({ body: { description: 'Hello team' } }),
-      res
-    );
+    await handler(makeReq({ body: { description: 'Hello team' } }), res);
     expect(res.statusCode).toBe(200);
     expect((store.teams as any[])[0].description).toBe('Hello team');
   });
@@ -146,10 +143,7 @@ describe('permission', () => {
   it('manager (role with edit_public_page) can update', async () => {
     setAuthUser({ id: MANAGER_ID });
     const res = makeRes();
-    await handler(
-      makeReq({ body: { description: 'By manager' } }),
-      res
-    );
+    await handler(makeReq({ body: { description: 'By manager' } }), res);
     expect(res.statusCode).toBe(200);
     expect((store.teams as any[])[0].description).toBe('By manager');
   });
@@ -157,10 +151,7 @@ describe('permission', () => {
   it('plain player is rejected with 403', async () => {
     setAuthUser({ id: PLAYER_ID });
     const res = makeRes();
-    await handler(
-      makeReq({ body: { description: 'should fail' } }),
-      res
-    );
+    await handler(makeReq({ body: { description: 'should fail' } }), res);
     expect(res.statusCode).toBe(403);
     expect((store.teams as any[])[0].description).toBeNull();
   });
@@ -180,10 +171,7 @@ describe('permission', () => {
       },
     ] as any;
     const res = makeRes();
-    await handler(
-      makeReq({ body: { description: 'edited by staff' } }),
-      res
-    );
+    await handler(makeReq({ body: { description: 'edited by staff' } }), res);
     expect(res.statusCode).toBe(200);
     expect((store.teams as any[])[0].description).toBe('edited by staff');
   });
@@ -249,19 +237,13 @@ describe('permission', () => {
 describe('field validation', () => {
   it('rejects description longer than 280 chars', async () => {
     const res = makeRes();
-    await handler(
-      makeReq({ body: { description: 'a'.repeat(281) } }),
-      res
-    );
+    await handler(makeReq({ body: { description: 'a'.repeat(281) } }), res);
     expect(res.statusCode).toBe(400);
   });
 
   it('rejects public_content longer than 5000 chars', async () => {
     const res = makeRes();
-    await handler(
-      makeReq({ body: { public_content: 'a'.repeat(5001) } }),
-      res
-    );
+    await handler(makeReq({ body: { public_content: 'a'.repeat(5001) } }), res);
     expect(res.statusCode).toBe(400);
   });
 
@@ -288,10 +270,7 @@ describe('field validation', () => {
 
   it('rejects javascript: website URLs', async () => {
     const res = makeRes();
-    await handler(
-      makeReq({ body: { website: 'javascript:alert(1)' } }),
-      res
-    );
+    await handler(makeReq({ body: { website: 'javascript:alert(1)' } }), res);
     expect(res.statusCode).toBe(400);
   });
 
@@ -303,29 +282,20 @@ describe('field validation', () => {
 
   it('accepts a valid http(s) website', async () => {
     const res = makeRes();
-    await handler(
-      makeReq({ body: { website: 'https://example.com' } }),
-      res
-    );
+    await handler(makeReq({ body: { website: 'https://example.com' } }), res);
     expect(res.statusCode).toBe(200);
     expect((store.teams as any[])[0].website).toBe('https://example.com');
   });
 
   it('rejects logo_url with an unsafe protocol', async () => {
     const res = makeRes();
-    await handler(
-      makeReq({ body: { logo_url: 'javascript:alert(1)' } }),
-      res
-    );
+    await handler(makeReq({ body: { logo_url: 'javascript:alert(1)' } }), res);
     expect(res.statusCode).toBe(400);
   });
 
   it('accepts a valid hex secondary_color and stores it lowercased', async () => {
     const res = makeRes();
-    await handler(
-      makeReq({ body: { secondary_color: '#22D3EE' } }),
-      res
-    );
+    await handler(makeReq({ body: { secondary_color: '#22D3EE' } }), res);
     expect(res.statusCode).toBe(200);
     expect((store.teams as any[])[0].secondary_color).toBe('#22d3ee');
   });
@@ -393,10 +363,7 @@ describe('field validation', () => {
 
   it('rejects social handles longer than 80 chars', async () => {
     const res = makeRes();
-    await handler(
-      makeReq({ body: { youtube: 'a'.repeat(81) } }),
-      res
-    );
+    await handler(makeReq({ body: { youtube: 'a'.repeat(81) } }), res);
     expect(res.statusCode).toBe(400);
   });
 
@@ -423,10 +390,7 @@ describe('field validation', () => {
 
   it('rejects achievements with empty titles', async () => {
     const res = makeRes();
-    await handler(
-      makeReq({ body: { achievements: [{ title: '   ' }] } }),
-      res
-    );
+    await handler(makeReq({ body: { achievements: [{ title: '   ' }] } }), res);
     expect(res.statusCode).toBe(400);
   });
 

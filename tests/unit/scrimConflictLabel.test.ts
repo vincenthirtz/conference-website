@@ -17,7 +17,13 @@ describe('summarizeConflicts', () => {
 
   it('nomme le conflit et formate sa date', () => {
     const res = summarizeConflicts(
-      [{ type: 'scrim', name: 'Phoenix vs Dragons', when: '2026-09-08T18:00:00Z' }],
+      [
+        {
+          type: 'scrim',
+          name: 'Phoenix vs Dragons',
+          when: '2026-09-08T18:00:00Z',
+        },
+      ],
       when,
       'Sans nom'
     );

@@ -135,7 +135,10 @@ export function describeGraphError(body: string): string {
       }
     ).error;
     if (e?.message) {
-      return `${e.type ?? 'Error'}#${e.code ?? '?'}: ${e.message}`.slice(0, 300);
+      return `${e.type ?? 'Error'}#${e.code ?? '?'}: ${e.message}`.slice(
+        0,
+        300
+      );
     }
   } catch {
     // Corps non JSON : on le rend tel quel, tronqué.

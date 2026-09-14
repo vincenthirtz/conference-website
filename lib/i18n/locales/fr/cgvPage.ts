@@ -29,89 +29,57 @@ export default ns('cgvPage', {
   contactUs: 'Nous écrire',
 
   a1Title: 'Article 1 — Objet et champ d’application',
-  a1p1:
-    "Les présentes conditions régissent la vente des offres d'espace organisateur (« le Service ») par l'association Women's Cup (« l'Association ») à toute personne morale ou physique qui souscrit (« le Client »).",
-  a1p2:
-    "Elles s'appliquent dès l'ouverture d'un espace — y compris pendant l'essai gratuit et sur le palier gratuit, où aucune somme n'est due — puis à chaque commande passée depuis l'espace d'administration du Client. Elles ne s'appliquent ni à la participation aux compétitions organisées par l'Association, ni à la consultation du site, l'une et l'autre gratuites.",
-  a1p3:
-    "L'acceptation est recueillie deux fois, et pour deux choses distinctes : à l'ouverture de l'espace, elle rend les présentes opposables à la relation ; avant chaque paiement, elle forme la vente. Ni l'une ni l'autre n'est présumée — elles se cochent, et sont enregistrées avec leur date et la version acceptée.",
+  a1p1: "Les présentes conditions régissent la vente des offres d'espace organisateur (« le Service ») par l'association Women's Cup (« l'Association ») à toute personne morale ou physique qui souscrit (« le Client »).",
+  a1p2: "Elles s'appliquent dès l'ouverture d'un espace — y compris pendant l'essai gratuit et sur le palier gratuit, où aucune somme n'est due — puis à chaque commande passée depuis l'espace d'administration du Client. Elles ne s'appliquent ni à la participation aux compétitions organisées par l'Association, ni à la consultation du site, l'une et l'autre gratuites.",
+  a1p3: "L'acceptation est recueillie deux fois, et pour deux choses distinctes : à l'ouverture de l'espace, elle rend les présentes opposables à la relation ; avant chaque paiement, elle forme la vente. Ni l'une ni l'autre n'est présumée — elles se cochent, et sont enregistrées avec leur date et la version acceptée.",
 
   a2Title: 'Article 2 — Identité du vendeur',
-  a2p1:
-    "Association Women's Cup, association déclarée régie par la loi du 1er juillet 1901, à but non lucratif.",
+  a2p1: "Association Women's Cup, association déclarée régie par la loi du 1er juillet 1901, à but non lucratif.",
   a2rna: 'N° RNA : W691112531',
   a2siren: 'N° SIREN : 109 139 444',
   a2siret: 'N° SIRET (siège) : 10913944400011',
-  a2p2:
-    "L'adresse du siège social et les coordonnées complètes figurent dans les mentions légales du site.",
+  a2p2: "L'adresse du siège social et les coordonnées complètes figurent dans les mentions légales du site.",
 
   a3Title: 'Article 3 — Caractéristiques essentielles du Service',
-  a3p1:
-    "Le Service est un contenu numérique fourni en ligne, sans support matériel. Il donne accès à un espace d'organisation de compétitions : gestion des équipes et des inscriptions, calendrier et arbitrage des matchs, et selon l'offre souscrite, bot Discord, marque et domaine propres, classement des joueuses, accès à l'API et régie vidéo.",
-  a3p2:
-    "Le contenu exact de chaque offre est celui affiché sur la page des offres au jour de la commande, et rappelé dans le récapitulatif présenté avant paiement. Le Client est invité à en prendre connaissance : c'est la description qui l'engage, non le nom de l'offre.",
-  a3p3:
-    "L'offre Éditeur est établie sur devis et ne se commande pas en ligne.",
+  a3p1: "Le Service est un contenu numérique fourni en ligne, sans support matériel. Il donne accès à un espace d'organisation de compétitions : gestion des équipes et des inscriptions, calendrier et arbitrage des matchs, et selon l'offre souscrite, bot Discord, marque et domaine propres, classement des joueuses, accès à l'API et régie vidéo.",
+  a3p2: "Le contenu exact de chaque offre est celui affiché sur la page des offres au jour de la commande, et rappelé dans le récapitulatif présenté avant paiement. Le Client est invité à en prendre connaissance : c'est la description qui l'engage, non le nom de l'offre.",
+  a3p3: "L'offre Éditeur est établie sur devis et ne se commande pas en ligne.",
 
   a4Title: 'Article 4 — Interopérabilité et compatibilité',
-  a4p1:
-    "Le Service s'utilise depuis un navigateur web à jour (Chrome, Firefox, Safari ou Edge), sur ordinateur comme sur mobile. Aucune installation n'est requise. Une connexion internet est nécessaire.",
-  a4p2:
-    "Les fonctions liées à Discord supposent que le Client dispose d'un serveur Discord et puisse y inviter un bot ; celles liées à la diffusion supposent un compte Twitch et, pour les overlays, un logiciel de régie acceptant une source navigateur (OBS ou équivalent). L'Association ne fournit ni ces comptes ni ces logiciels.",
-  a4p3:
-    "Les données du Client sont exportables à tout moment depuis l'administration, aux formats JSON et CSV, lisibles par tout tableur ou outil courant.",
-  a4p4:
-    "Le Service dépend de services tiers (Discord, Twitch, Blizzard, l'hébergeur et la base de données). Une interruption chez l'un d'eux peut affecter tout ou partie des fonctions correspondantes.",
+  a4p1: "Le Service s'utilise depuis un navigateur web à jour (Chrome, Firefox, Safari ou Edge), sur ordinateur comme sur mobile. Aucune installation n'est requise. Une connexion internet est nécessaire.",
+  a4p2: "Les fonctions liées à Discord supposent que le Client dispose d'un serveur Discord et puisse y inviter un bot ; celles liées à la diffusion supposent un compte Twitch et, pour les overlays, un logiciel de régie acceptant une source navigateur (OBS ou équivalent). L'Association ne fournit ni ces comptes ni ces logiciels.",
+  a4p3: "Les données du Client sont exportables à tout moment depuis l'administration, aux formats JSON et CSV, lisibles par tout tableur ou outil courant.",
+  a4p4: "Le Service dépend de services tiers (Discord, Twitch, Blizzard, l'hébergeur et la base de données). Une interruption chez l'un d'eux peut affecter tout ou partie des fonctions correspondantes.",
 
   a5Title: 'Article 5 — Commande',
-  a5p1:
-    "La commande se déroule en deux temps, conformément à l'article 1127-2 du code civil.",
-  a5s1:
-    "Le Client choisit son offre et sa périodicité, puis un récapitulatif lui présente l'offre retenue, la périodicité, le prix unitaire et le montant total à payer.",
-  a5s2:
-    'À ce stade, le Client peut revenir en arrière, modifier son choix et corriger toute erreur.',
-  a5s3:
-    "Le Client accepte expressément les présentes conditions, puis demande expressément l'exécution immédiate du Service en reconnaissant renoncer à son droit de rétractation (article 9). Ces deux cases sont distinctes et vierges par défaut.",
-  a5s4:
-    'Le Client confirme sa commande en actionnant le bouton portant la mention « Commander avec obligation de paiement ».',
-  a5p2:
-    "La commande n'est formée qu'à ce dernier clic. La date, l'heure et la version des conditions acceptées sont enregistrées par l'Association et peuvent être communiquées au Client sur demande.",
+  a5p1: "La commande se déroule en deux temps, conformément à l'article 1127-2 du code civil.",
+  a5s1: "Le Client choisit son offre et sa périodicité, puis un récapitulatif lui présente l'offre retenue, la périodicité, le prix unitaire et le montant total à payer.",
+  a5s2: 'À ce stade, le Client peut revenir en arrière, modifier son choix et corriger toute erreur.',
+  a5s3: "Le Client accepte expressément les présentes conditions, puis demande expressément l'exécution immédiate du Service en reconnaissant renoncer à son droit de rétractation (article 9). Ces deux cases sont distinctes et vierges par défaut.",
+  a5s4: 'Le Client confirme sa commande en actionnant le bouton portant la mention « Commander avec obligation de paiement ».',
+  a5p2: "La commande n'est formée qu'à ce dernier clic. La date, l'heure et la version des conditions acceptées sont enregistrées par l'Association et peuvent être communiquées au Client sur demande.",
 
   a6Title: 'Article 6 — Prix',
-  a6p1:
-    'Les prix sont indiqués en euros et sont ceux affichés sur la page des offres au jour de la commande. Le montant qui sera débité est celui affiché au récapitulatif : aucun frais ni supplément n’est ajouté à l’étape de paiement.',
-  a6p2:
-    "Deux périodicités sont proposées. Au mois, le prix mensuel est dû pour un mois de service. À l'année, dix mois sont facturés pour douze mois de service.",
-  a6p3:
-    "L'Association peut modifier ses prix à tout moment. Le prix applicable est celui de la commande ; une modification est sans effet sur les périodes déjà payées.",
+  a6p1: 'Les prix sont indiqués en euros et sont ceux affichés sur la page des offres au jour de la commande. Le montant qui sera débité est celui affiché au récapitulatif : aucun frais ni supplément n’est ajouté à l’étape de paiement.',
+  a6p2: "Deux périodicités sont proposées. Au mois, le prix mensuel est dû pour un mois de service. À l'année, dix mois sont facturés pour douze mois de service.",
+  a6p3: "L'Association peut modifier ses prix à tout moment. Le prix applicable est celui de la commande ; une modification est sans effet sur les périodes déjà payées.",
 
   a7Title: 'Article 7 — Paiement',
-  a7p1:
-    "Le paiement s'effectue en ligne, en une fois, via HelloAsso, prestataire de paiement de l'Association. Le Client est redirigé vers HelloAsso pour saisir ses coordonnées bancaires.",
-  a7p2:
-    "Ces coordonnées ne transitent pas par les serveurs de l'Association et n'y sont jamais conservées.",
-  a7p3:
-    "L'offre est activée dès réception de la confirmation de paiement, en principe immédiate. En cas d'échec du paiement, aucune commande n'est formée et aucune somme n'est due.",
+  a7p1: "Le paiement s'effectue en ligne, en une fois, via HelloAsso, prestataire de paiement de l'Association. Le Client est redirigé vers HelloAsso pour saisir ses coordonnées bancaires.",
+  a7p2: "Ces coordonnées ne transitent pas par les serveurs de l'Association et n'y sont jamais conservées.",
+  a7p3: "L'offre est activée dès réception de la confirmation de paiement, en principe immédiate. En cas d'échec du paiement, aucune commande n'est formée et aucune somme n'est due.",
 
   a8Title: 'Article 8 — Durée, échéance et absence de reconduction tacite',
-  a8p1:
-    "Chaque paiement ouvre une période d'un mois ou d'un an selon la périodicité choisie. Un renouvellement anticipé prolonge la période en cours plutôt que de l'écraser.",
-  a8p2:
-    "Il n'existe ni reconduction tacite, ni prélèvement automatique, ni mandat de prélèvement : chaque période fait l'objet d'une commande distincte et d'un paiement volontaire. Le Client n'a donc rien à résilier — il lui suffit de ne pas renouveler.",
-  a8p3:
-    "Le Client est prévenu par courriel avant l'échéance, puis le jour de l'échéance.",
-  a8p4:
-    "À défaut de renouvellement, les capacités de l'offre restent ouvertes pendant sept jours après l'échéance, puis l'espace revient au palier Découverte. Aucune donnée n'est supprimée de ce seul fait.",
+  a8p1: "Chaque paiement ouvre une période d'un mois ou d'un an selon la périodicité choisie. Un renouvellement anticipé prolonge la période en cours plutôt que de l'écraser.",
+  a8p2: "Il n'existe ni reconduction tacite, ni prélèvement automatique, ni mandat de prélèvement : chaque période fait l'objet d'une commande distincte et d'un paiement volontaire. Le Client n'a donc rien à résilier — il lui suffit de ne pas renouveler.",
+  a8p3: "Le Client est prévenu par courriel avant l'échéance, puis le jour de l'échéance.",
+  a8p4: "À défaut de renouvellement, les capacités de l'offre restent ouvertes pendant sept jours après l'échéance, puis l'espace revient au palier Découverte. Aucune donnée n'est supprimée de ce seul fait.",
 
   a9Title: 'Article 9 — Droit de rétractation',
-  a9p1:
-    "Le Client consommateur, ainsi que le professionnel employant cinq salariés au plus et souscrivant en dehors de son activité principale, dispose d'un délai de quatorze jours à compter de la conclusion de la COMMANDE PAYANTE pour se rétracter sans avoir à se justifier ni à supporter de frais. L'ouverture d'un espace et l'essai gratuit, qui n'appellent aucun paiement, n'ouvrent pas ce délai : il n'y aurait rien à rembourser.",
-  a9p2:
-    "Le Service étant un contenu numérique fourni sans support matériel et exécuté immédiatement, ce droit s'éteint dès l'exécution complète, à la double condition que le Client ait expressément demandé cette exécution immédiate ET reconnu qu'il perdrait de ce fait son droit de rétractation. C'est l'objet de la seconde case cochée lors de la commande.",
-  a9p3:
-    "À défaut de ce double consentement, le droit de rétractation subsiste et s'exerce par toute déclaration dénuée d'ambiguïté adressée à l'Association ; le remboursement intervient dans les quatorze jours suivant la réception de la demande.",
-  a9p4:
-    "En dehors de ces cas, les sommes versées correspondent à une période de service ouverte et ne donnent pas lieu à remboursement au prorata.",
+  a9p1: "Le Client consommateur, ainsi que le professionnel employant cinq salariés au plus et souscrivant en dehors de son activité principale, dispose d'un délai de quatorze jours à compter de la conclusion de la COMMANDE PAYANTE pour se rétracter sans avoir à se justifier ni à supporter de frais. L'ouverture d'un espace et l'essai gratuit, qui n'appellent aucun paiement, n'ouvrent pas ce délai : il n'y aurait rien à rembourser.",
+  a9p2: "Le Service étant un contenu numérique fourni sans support matériel et exécuté immédiatement, ce droit s'éteint dès l'exécution complète, à la double condition que le Client ait expressément demandé cette exécution immédiate ET reconnu qu'il perdrait de ce fait son droit de rétractation. C'est l'objet de la seconde case cochée lors de la commande.",
+  a9p3: "À défaut de ce double consentement, le droit de rétractation subsiste et s'exerce par toute déclaration dénuée d'ambiguïté adressée à l'Association ; le remboursement intervient dans les quatorze jours suivant la réception de la demande.",
+  a9p4: 'En dehors de ces cas, les sommes versées correspondent à une période de service ouverte et ne donnent pas lieu à remboursement au prorata.',
 
   a10Title: 'Article 10 — Garantie de conformité',
   a10p1:
@@ -176,14 +144,12 @@ export default ns('cgvPage', {
   a18Title: 'Article 18 — Modification des présentes conditions',
   a18p1:
     "L'Association peut modifier les présentes conditions. La version applicable à une commande est celle acceptée lors de cette commande, dont la référence est enregistrée.",
-  a18p2:
-    'Une modification est sans effet sur les périodes déjà payées.',
+  a18p2: 'Une modification est sans effet sur les périodes déjà payées.',
 
   a19Title: 'Article 19 — Droit applicable et juridiction',
-  a19p1:
-    'Les présentes conditions sont soumises au droit français.',
+  a19p1: 'Les présentes conditions sont soumises au droit français.',
   a19p2:
-    "À défaut de résolution amiable, le litige relève des juridictions françaises compétentes. Le Client consommateur peut saisir à son choix la juridiction du lieu où il demeurait au moment de la conclusion du contrat.",
+    'À défaut de résolution amiable, le litige relève des juridictions françaises compétentes. Le Client consommateur peut saisir à son choix la juridiction du lieu où il demeurait au moment de la conclusion du contrat.',
 
   a20Title: 'Article 20 — Langue',
   a20p1:

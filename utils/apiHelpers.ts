@@ -151,12 +151,7 @@ export function validateRole(role: string | null | undefined): string {
  * `validateSpecialty` seul ne permet pas de distinguer « effacer » de « valeur
  * erronée ». Chaque route en gardait sa propre copie.
  */
-export const ALLOWED_SPECIALTIES = new Set([
-  'tank',
-  'dps',
-  'support',
-  'flex',
-]);
+export const ALLOWED_SPECIALTIES = new Set(['tank', 'dps', 'support', 'flex']);
 
 /**
  * Validate a team member in-game specialty against the allowed list

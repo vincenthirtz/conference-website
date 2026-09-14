@@ -35,7 +35,8 @@ let captainAuthId: string;
 let memberAuthId: string;
 let teamId: string;
 
-test.describe.serial('PATCH /api/bot/v1/teams/[teamId]', () => {
+test.describe('PATCH /api/bot/v1/teams/[teamId]', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {
@@ -83,7 +84,10 @@ test.describe.serial('PATCH /api/bot/v1/teams/[teamId]', () => {
   test.afterAll(async () => {
     if (!supabaseTestClient) return;
     if (teamId) {
-      await supabaseTestClient.from('team_members').delete().eq('team_id', teamId);
+      await supabaseTestClient
+        .from('team_members')
+        .delete()
+        .eq('team_id', teamId);
       await supabaseTestClient.from('teams').delete().eq('id', teamId);
     }
     const ids = [captainAuthId, memberAuthId].filter(Boolean);

@@ -47,7 +47,9 @@ export type RegistrationFullState = {
 // l'appelant qui fournit la vérité.
 export function useRegistrationFull({
   enabled = true,
-}: { enabled?: boolean } = {}): RegistrationFullState {
+}: {
+  enabled?: boolean;
+} = {}): RegistrationFullState {
   const [state, setState] = useState<RegistrationFullState>({
     isFull: false,
     loading: enabled,
@@ -81,8 +83,8 @@ export function useRegistrationFull({
           const next = upcoming[0];
           const isFull = Boolean(
             next &&
-            next.max_teams != null &&
-            (next.team_count ?? 0) >= next.max_teams
+              next.max_teams != null &&
+              (next.team_count ?? 0) >= next.max_teams
           );
           setState({ isFull, loading: false });
         }

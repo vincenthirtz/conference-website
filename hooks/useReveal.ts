@@ -42,7 +42,11 @@ export function useReveal<T extends HTMLElement = HTMLDivElement>({
     const node = ref.current;
     if (!node) return;
 
-    if (disabled || prefersReducedMotion() || !('IntersectionObserver' in window)) {
+    if (
+      disabled ||
+      prefersReducedMotion() ||
+      !('IntersectionObserver' in window)
+    ) {
       setRevealed(true);
       return;
     }

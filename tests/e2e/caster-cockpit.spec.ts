@@ -58,7 +58,8 @@ async function loginAsCaster(page: import('@playwright/test').Page) {
   await page.waitForLoadState('networkidle');
 }
 
-test.describe.serial('Caster cockpit — golden path', () => {
+test.describe('Caster cockpit — golden path', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
 
   test.beforeAll(async () => {

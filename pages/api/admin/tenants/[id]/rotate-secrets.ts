@@ -88,7 +88,9 @@ async function handler(
   // pas de la même façon.
   const reason =
     typeof (req.body as { reason?: unknown } | undefined)?.reason === 'string'
-      ? String((req.body as { reason?: string }).reason).trim().slice(0, 500)
+      ? String((req.body as { reason?: string }).reason)
+          .trim()
+          .slice(0, 500)
       : null;
 
   const { id } = req.query;

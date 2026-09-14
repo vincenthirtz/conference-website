@@ -65,9 +65,7 @@ describe('runDisputeSlaCheck', () => {
     expect(payload.slaMinutes).toBe(60);
     expect(tenantId).toBe(TENANT_A);
 
-    const stamped = (store.matches as any[]).find(
-      (m) => m.id === 'm-breached'
-    );
+    const stamped = (store.matches as any[]).find((m) => m.id === 'm-breached');
     expect(stamped.escalation_pinged_at).toBe('2026-05-25T12:00:00.000Z');
 
     const untouched = (store.matches as any[]).find((m) => m.id === 'm-fresh');

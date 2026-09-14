@@ -45,7 +45,16 @@ export function rowToConstraint(row: AvailabilityRow): AvailabilityConstraint {
   };
 }
 
-const WEEKDAY_SHORT = ['', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+const WEEKDAY_SHORT = [
+  '',
+  'lundi',
+  'mardi',
+  'mercredi',
+  'jeudi',
+  'vendredi',
+  'samedi',
+  'dimanche',
+];
 
 /**
  * La contrainte en une phrase, telle qu'on la relit dans une liste.
@@ -65,7 +74,9 @@ export function describeConstraint(c: AvailabilityConstraint): string {
     case 'latest':
       return `Pas de match après ${c.timeOfDay ?? '?'}`;
     case 'weekday': {
-      const days = (c.weekdays ?? []).map((d) => WEEKDAY_SHORT[d] ?? `jour ${d}`);
+      const days = (c.weekdays ?? []).map(
+        (d) => WEEKDAY_SHORT[d] ?? `jour ${d}`
+      );
       if (days.length === 0) return 'Indisponible (jours manquants)';
       if (days.length === 1) return `Indisponible le ${days[0]}`;
       const last = days[days.length - 1];

@@ -21,7 +21,9 @@ import type {
 import { logger } from '../../../utils/logger';
 import nsAdminLeaguesList from '@/lib/i18n/locales/admin-fr/adminLeaguesList';
 
-export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
+export const getServerSideProps = withStaffPage({
+  permission: 'manage_tournaments',
+});
 
 type Dict = typeof nsAdminLeaguesList.fr;
 

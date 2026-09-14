@@ -81,7 +81,8 @@ export default function ScheduleMonthCalendar({
   labels,
 }: Props) {
   const placed = useMemo(() => {
-    const out: Array<{ ymd: string; minute: number; match: CalendarMatch }> = [];
+    const out: Array<{ ymd: string; minute: number; match: CalendarMatch }> =
+      [];
     for (const m of matches) {
       if (!m.scheduledAt || m.isBye || m.status === 'cancelled') continue;
       const p = dateAndMinuteInTz(m.scheduledAt, timezone);
@@ -204,7 +205,9 @@ export default function ScheduleMonthCalendar({
             >
               <span
                 className={`pl-0.5 text-[0.6rem] tabular-nums ${
-                  blocked ? 'font-semibold text-neutral-300' : 'text-neutral-500'
+                  blocked
+                    ? 'font-semibold text-neutral-300'
+                    : 'text-neutral-500'
                 }`}
               >
                 {cell.day}
@@ -251,8 +254,14 @@ export default function ScheduleMonthCalendar({
       )}
 
       <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-neutral-400">
-        <Swatch className="border-l-red-400 bg-red-500/15" label={labels.legendBlocking} />
-        <Swatch className="border-l-amber-400 bg-amber-500/15" label={labels.legendWarning} />
+        <Swatch
+          className="border-l-red-400 bg-red-500/15"
+          label={labels.legendBlocking}
+        />
+        <Swatch
+          className="border-l-amber-400 bg-amber-500/15"
+          label={labels.legendWarning}
+        />
         <Swatch
           className="border-l-emerald-500/60 bg-neutral-700/40"
           label={labels.legendOk}

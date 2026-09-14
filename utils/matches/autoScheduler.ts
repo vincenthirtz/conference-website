@@ -13,10 +13,7 @@ import type {
   SchedulingConflict,
   TimeWindow,
 } from '../../types/matches';
-import {
-  isSlotAllowed,
-  type AvailabilityConstraint,
-} from './availability';
+import { isSlotAllowed, type AvailabilityConstraint } from './availability';
 
 /* -----------------------------------------------------------
  * Fonction principale

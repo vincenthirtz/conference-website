@@ -58,7 +58,14 @@ const DEMANDE = '550e8400-e29b-41d4-a716-446655449999';
 
 function seedBase() {
   store.teams = [
-    { id: TEAM, tenant_id: TENANT, captain_id: CAPTAIN, is_active: true, name: 'Target', logo_url: null },
+    {
+      id: TEAM,
+      tenant_id: TENANT,
+      captain_id: CAPTAIN,
+      is_active: true,
+      name: 'Target',
+      logo_url: null,
+    },
   ] as any;
   store.demandes = [
     {
@@ -111,7 +118,13 @@ describe('POST /api/teams/transfer-requests (approve)', () => {
     ] as any;
     const past = new Date(Date.now() - 60_000).toISOString();
     store.tournaments = [
-      { id: 'tour-1', tenant_id: TENANT, name: 'Cup', roster_locked_at: past, status: 'in_progress' },
+      {
+        id: 'tour-1',
+        tenant_id: TENANT,
+        name: 'Cup',
+        roster_locked_at: past,
+        status: 'in_progress',
+      },
     ] as any;
     const res = makeRes();
     await transferRequestsHandler(
@@ -119,7 +132,9 @@ describe('POST /api/teams/transfer-requests (approve)', () => {
       res
     );
     expect(res.statusCode).toBe(409);
-    expect(rpcCalls.find((c) => c.fn === 'approve_transfer_request')).toBeFalsy();
+    expect(
+      rpcCalls.find((c) => c.fn === 'approve_transfer_request')
+    ).toBeFalsy();
   });
 
   it('RPC 23505 → 409', async () => {
@@ -170,6 +185,8 @@ describe('POST /api/teams/transfer-requests (approve)', () => {
     expect(res.statusCode).toBe(200);
     const dem = (store.demandes as any[]).find((d) => d.id === DEMANDE);
     expect(dem.status).toBe('rejected');
-    expect(rpcCalls.find((c) => c.fn === 'approve_transfer_request')).toBeFalsy();
+    expect(
+      rpcCalls.find((c) => c.fn === 'approve_transfer_request')
+    ).toBeFalsy();
   });
 });

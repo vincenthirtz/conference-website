@@ -41,7 +41,8 @@ let team2Id: string;
 const createdStageIds: string[] = [];
 const createdMatchIds: string[] = [];
 
-test.describe.serial('Bot stages & matches', () => {
+test.describe('Bot stages & matches', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {

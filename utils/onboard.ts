@@ -135,8 +135,7 @@ export function buildBotInviteUrl(): string | null {
   // 0x10000000 (manage events) | manage channels (0x10) | manage roles (0x10000000)
   // We default to a wide-but-not-administrator bitfield that lines up with
   // the bot's current command set. Operators can override via env.
-  const permissions =
-    process.env.DISCORD_BOT_PERMISSIONS ?? '1099780063312';
+  const permissions = process.env.DISCORD_BOT_PERMISSIONS ?? '1099780063312';
 
   const params = new URLSearchParams({
     client_id: clientId,

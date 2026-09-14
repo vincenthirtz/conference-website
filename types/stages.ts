@@ -48,7 +48,9 @@ export type GroupSettings = CommonStageSettings & {
    * Ordre de departage du classement. Absent = defaut (confrontation directe,
    * puis difference de score, puis victoires, puis seed).
    */
-  standings_tiebreakers?: import('@/utils/stages/tiebreakers').TiebreakerKey[] | null;
+  standings_tiebreakers?:
+    | import('@/utils/stages/tiebreakers').TiebreakerKey[]
+    | null;
 };
 
 /**

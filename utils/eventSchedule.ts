@@ -71,9 +71,7 @@ export function computeRunSchedule(
   //    - Si le run est live (started_at set), on consomme l'horaire reel de
   //      demarrage : tout le planning aval est rebase sur le started_at.
   //    - Sinon, on planifie depuis le scheduled_at (planifie initial).
-  const runStartMs = new Date(
-    run.started_at ?? run.scheduled_at
-  ).getTime();
+  const runStartMs = new Date(run.started_at ?? run.scheduled_at).getTime();
 
   // 3. Walk forward : pour chaque segment dans l'ordre, on calcule son
   //    plannedStartAt soit depuis le cursor (computed) soit depuis l'override

@@ -36,7 +36,8 @@ async function getToken(email: string): Promise<string | null> {
   return data.session?.access_token ?? null;
 }
 
-test.describe.serial('Bracket snapshots (P2-C)', () => {
+test.describe('Bracket snapshots (P2-C)', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
 
   let mgrToken: string | null = null;
@@ -128,20 +129,20 @@ test.describe.serial('Bracket snapshots (P2-C)', () => {
         .delete()
         .eq('id', tournamentId);
     for (const tid of [team1Id, team2Id].filter(Boolean)) {
-      await supabaseTestClient.from('teams').delete().eq('id', tid as string);
+      await supabaseTestClient
+        .from('teams')
+        .delete()
+        .eq('id', tid as string);
     }
     await deleteTestStaff(MGR_EMAIL);
     await deleteTestStaff(ADMIN_EMAIL);
   });
 
   test('POST manager crée un snapshot manuel', async ({ request }) => {
-    const res = await request.post(
-      `/api/admin/stages/${stageId}/snapshots`,
-      {
-        headers: { Authorization: `Bearer ${mgrToken}` },
-        data: { reason: 'pre-test' },
-      }
-    );
+    const res = await request.post(`/api/admin/stages/${stageId}/snapshots`, {
+      headers: { Authorization: `Bearer ${mgrToken}` },
+      data: { reason: 'pre-test' },
+    });
     expect(res.status()).toBe(201);
     const body = await res.json();
     expect(body.snapshotId).toBeGreaterThan(0);
@@ -149,10 +150,9 @@ test.describe.serial('Bracket snapshots (P2-C)', () => {
   });
 
   test('GET liste les snapshots du stage', async ({ request }) => {
-    const res = await request.get(
-      `/api/admin/stages/${stageId}/snapshots`,
-      { headers: { Authorization: `Bearer ${mgrToken}` } }
-    );
+    const res = await request.get(`/api/admin/stages/${stageId}/snapshots`, {
+      headers: { Authorization: `Bearer ${mgrToken}` },
+    });
     expect(res.status()).toBe(200);
     const body = await res.json();
     expect(body.snapshots.length).toBeGreaterThanOrEqual(1);
@@ -167,17 +167,14 @@ test.describe.serial('Bracket snapshots (P2-C)', () => {
       .limit(1);
     const id = data![0].id;
 
-    const res = await request.patch(
-      `/api/admin/stages/${stageId}/snapshots`,
-      {
-        headers: { Authorization: `Bearer ${mgrToken}` },
-        data: { snapshotId: id },
-      }
-    );
+    const res = await request.patch(`/api/admin/stages/${stageId}/snapshots`, {
+      headers: { Authorization: `Bearer ${mgrToken}` },
+      data: { snapshotId: id },
+    });
     expect(res.status()).toBe(403);
   });
 
-  test('PATCH restore par admin restaure l\'état du match', async ({
+  test("PATCH restore par admin restaure l'état du match", async ({
     request,
   }) => {
     // 1) Mute le match → status finished + scores
@@ -200,13 +197,10 @@ test.describe.serial('Bracket snapshots (P2-C)', () => {
       .limit(1);
     const oldestId = snaps![0].id;
 
-    const res = await request.patch(
-      `/api/admin/stages/${stageId}/snapshots`,
-      {
-        headers: { Authorization: `Bearer ${adminToken}` },
-        data: { snapshotId: oldestId },
-      }
-    );
+    const res = await request.patch(`/api/admin/stages/${stageId}/snapshots`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: { snapshotId: oldestId },
+    });
     expect(res.status()).toBe(200);
     const body = await res.json();
     expect(body.restored).toBeGreaterThanOrEqual(1);

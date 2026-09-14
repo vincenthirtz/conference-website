@@ -31,7 +31,8 @@ const EXTRA_MEMBER_BTAGS = Array.from({ length: 5 }).map(
 );
 const ALL_TEST_EMAILS = [PLAYER_EMAIL, ...EXTRA_MEMBER_EMAILS];
 
-test.describe.serial('Team creation page', () => {
+test.describe('Team creation page', () => {
+  test.describe.configure({ mode: 'serial' });
   test.beforeAll(async () => {
     await deleteTeamsByName([
       `${TEAM_NAME}%`,
@@ -97,8 +98,9 @@ test.describe.serial('Team creation page', () => {
       process.env.SUPABASE_SERVICE_ROLE_KEY ||
       process.env.NEXT_SUPABASE_SERVICE_ROLE_KEY
     ) {
-      const { supabaseTestClient } =
-        await import('../utils/supabaseTestClient');
+      const { supabaseTestClient } = await import(
+        '../utils/supabaseTestClient'
+      );
       if (supabaseTestClient) {
         const { data, error } = await supabaseTestClient
           .from('teams')

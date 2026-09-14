@@ -89,10 +89,34 @@ function makeRes() {
 
 function seedAll() {
   store.event_runs = [
-    { id: RUN_LIVE, tenant_id: TENANT_X, status: 'live', name: 'Live', slug: 'live' },
-    { id: RUN_DRAFT, tenant_id: TENANT_X, status: 'draft', name: 'Draft', slug: 'draft' },
-    { id: RUN_DONE, tenant_id: TENANT_X, status: 'done', name: 'Done', slug: 'done' },
-    { id: RUN_Y, tenant_id: TENANT_Y, status: 'live', name: 'OtherT', slug: 'othert' },
+    {
+      id: RUN_LIVE,
+      tenant_id: TENANT_X,
+      status: 'live',
+      name: 'Live',
+      slug: 'live',
+    },
+    {
+      id: RUN_DRAFT,
+      tenant_id: TENANT_X,
+      status: 'draft',
+      name: 'Draft',
+      slug: 'draft',
+    },
+    {
+      id: RUN_DONE,
+      tenant_id: TENANT_X,
+      status: 'done',
+      name: 'Done',
+      slug: 'done',
+    },
+    {
+      id: RUN_Y,
+      tenant_id: TENANT_Y,
+      status: 'live',
+      name: 'OtherT',
+      slug: 'othert',
+    },
   ] as any;
 
   store.event_cues = [
@@ -205,7 +229,9 @@ describe('POST /api/caster/cues/[cueId]/ack', () => {
   it('404 when cueId is unknown', async () => {
     const res = makeRes();
     await ackHandler(
-      makeAuthedReq({ query: { cueId: '99999999-9999-4999-8999-999999999999' } }),
+      makeAuthedReq({
+        query: { cueId: '99999999-9999-4999-8999-999999999999' },
+      }),
       res
     );
     expect(res.statusCode).toBe(404);

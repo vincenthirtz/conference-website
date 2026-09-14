@@ -38,7 +38,6 @@ const GUILD_NAME_MAX = 200;
 /** Tenant requests are auto-claimable for 7 days after creation. */
 const REQUEST_TTL_DAYS = 7;
 
-
 type TenantRequestRow = {
   id: string;
   requester_auth_user_id: string | null;

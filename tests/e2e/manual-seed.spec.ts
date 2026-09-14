@@ -28,7 +28,8 @@ async function getToken(): Promise<string | null> {
   return data.session?.access_token ?? null;
 }
 
-test.describe.serial('Manual seed (P1-B)', () => {
+test.describe('Manual seed (P1-B)', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
 
   let token: string | null = null;
@@ -111,7 +112,10 @@ test.describe.serial('Manual seed (P1-B)', () => {
         .delete()
         .eq('id', tournamentId);
     for (const tid of [team1Id, team2Id].filter(Boolean)) {
-      await supabaseTestClient.from('teams').delete().eq('id', tid as string);
+      await supabaseTestClient
+        .from('teams')
+        .delete()
+        .eq('id', tid as string);
     }
     await deleteTestStaff(STAFF_EMAIL);
   });
@@ -119,18 +123,15 @@ test.describe.serial('Manual seed (P1-B)', () => {
   test('POST manual-seed assigne team1 + team2 sur le match', async ({
     request,
   }) => {
-    const res = await request.post(
-      `/api/admin/stages/${stageId}/manual-seed`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        data: {
-          assignments: [
-            { matchId: match1Id, slot: 1, teamId: team1Id, seed: 1 },
-            { matchId: match1Id, slot: 2, teamId: team2Id, seed: 2 },
-          ],
-        },
-      }
-    );
+    const res = await request.post(`/api/admin/stages/${stageId}/manual-seed`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: {
+        assignments: [
+          { matchId: match1Id, slot: 1, teamId: team1Id, seed: 1 },
+          { matchId: match1Id, slot: 2, teamId: team2Id, seed: 2 },
+        ],
+      },
+    });
     expect(res.status()).toBe(200);
     const body = await res.json();
     expect(body.seeded).toHaveLength(2);
@@ -148,53 +149,44 @@ test.describe.serial('Manual seed (P1-B)', () => {
   test('slot déjà rempli → 409 SLOT_CONFLICT sans replaceExisting', async ({
     request,
   }) => {
-    const res = await request.post(
-      `/api/admin/stages/${stageId}/manual-seed`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        data: {
-          assignments: [
-            // Réassigner slot 1 à team2 (déjà team1)
-            { matchId: match1Id, slot: 1, teamId: team2Id },
-          ],
-        },
-      }
-    );
+    const res = await request.post(`/api/admin/stages/${stageId}/manual-seed`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: {
+        assignments: [
+          // Réassigner slot 1 à team2 (déjà team1)
+          { matchId: match1Id, slot: 1, teamId: team2Id },
+        ],
+      },
+    });
     expect(res.status()).toBe(409);
     const body = await res.json();
     expect(body.code).toBe('SLOT_CONFLICT');
   });
 
-  test('replaceExisting=true autorise l\'écrasement', async ({ request }) => {
-    const res = await request.post(
-      `/api/admin/stages/${stageId}/manual-seed`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        data: {
-          replaceExisting: true,
-          assignments: [
-            { matchId: match1Id, slot: 1, teamId: team2Id },
-            { matchId: match1Id, slot: 2, teamId: team1Id },
-          ],
-        },
-      }
-    );
+  test("replaceExisting=true autorise l'écrasement", async ({ request }) => {
+    const res = await request.post(`/api/admin/stages/${stageId}/manual-seed`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: {
+        replaceExisting: true,
+        assignments: [
+          { matchId: match1Id, slot: 1, teamId: team2Id },
+          { matchId: match1Id, slot: 2, teamId: team1Id },
+        ],
+      },
+    });
     expect(res.status()).toBe(200);
   });
 
   test('teamId dupliqué dans assignments → 400', async ({ request }) => {
-    const res = await request.post(
-      `/api/admin/stages/${stageId}/manual-seed`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        data: {
-          assignments: [
-            { matchId: match1Id, slot: 1, teamId: team1Id },
-            { matchId: match1Id, slot: 2, teamId: team1Id }, // dup
-          ],
-        },
-      }
-    );
+    const res = await request.post(`/api/admin/stages/${stageId}/manual-seed`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: {
+        assignments: [
+          { matchId: match1Id, slot: 1, teamId: team1Id },
+          { matchId: match1Id, slot: 2, teamId: team1Id }, // dup
+        ],
+      },
+    });
     expect(res.status()).toBe(400);
   });
 

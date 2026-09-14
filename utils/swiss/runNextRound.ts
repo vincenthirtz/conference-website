@@ -161,7 +161,12 @@ export async function runSwissNextRound(
   input: RunNextRoundInput
 ): Promise<RunNextRoundResult> {
   if (!supabaseAdmin) {
-    return { ok: false, status: 503, code: 'DB_ERROR', error: 'Service indisponible.' };
+    return {
+      ok: false,
+      status: 503,
+      code: 'DB_ERROR',
+      error: 'Service indisponible.',
+    };
   }
 
   // 1) Stage
@@ -172,10 +177,20 @@ export async function runSwissNextRound(
     .eq('id', input.stageId)
     .maybeSingle();
   if (stageErr) {
-    return { ok: false, status: 500, code: 'DB_ERROR', error: stageErr.message };
+    return {
+      ok: false,
+      status: 500,
+      code: 'DB_ERROR',
+      error: stageErr.message,
+    };
   }
   if (!stageData) {
-    return { ok: false, status: 404, code: 'STAGE_NOT_FOUND', error: 'Stage introuvable.' };
+    return {
+      ok: false,
+      status: 404,
+      code: 'STAGE_NOT_FOUND',
+      error: 'Stage introuvable.',
+    };
   }
   const stage = stageData as StageRow;
   if (stage.stage_type !== 'swiss') {
@@ -253,7 +268,11 @@ export async function runSwissNextRound(
   }
 
   const totalRounds = settings.total_rounds;
-  if (typeof totalRounds === 'number' && totalRounds > 0 && nextRound > totalRounds) {
+  if (
+    typeof totalRounds === 'number' &&
+    totalRounds > 0 &&
+    nextRound > totalRounds
+  ) {
     return {
       ok: false,
       status: 400,
@@ -307,7 +326,8 @@ export async function runSwissNextRound(
     if (s.hadBye) hadByeSet.add(s.id);
   }
   for (const m of allMatches) {
-    if (m.is_bye && m.team1_id && m.status === 'finished') hadByeSet.add(m.team1_id);
+    if (m.is_bye && m.team1_id && m.status === 'finished')
+      hadByeSet.add(m.team1_id);
   }
 
   // 5) Pairings
@@ -349,16 +369,12 @@ export async function runSwissNextRound(
     team1Id: p.player1Id,
     team1Name: nameById.get(p.player1Id) ?? null,
     team2Id: p.player2Id ?? null,
-    team2Name: p.player2Id ? nameById.get(p.player2Id) ?? null : null,
+    team2Name: p.player2Id ? (nameById.get(p.player2Id) ?? null) : null,
     isBye: p.isBye,
   }));
 
   // 7) Garde rematches : en mode insert, refuse sans acceptRematches.
-  if (
-    hasRematches &&
-    !input.dryRun &&
-    input.acceptRematches !== true
-  ) {
+  if (hasRematches && !input.dryRun && input.acceptRematches !== true) {
     return {
       ok: false,
       status: 409,

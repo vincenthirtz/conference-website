@@ -195,7 +195,9 @@ export default function JoinTeamPage() {
       });
 
       const team = teams.find((tm) => tm.id === selectedTeamId);
-      trackEvent(ANALYTICS_EVENTS.joinRequestSent, { desired_role: desiredRole });
+      trackEvent(ANALYTICS_EVENTS.joinRequestSent, {
+        desired_role: desiredRole,
+      });
       setSuccessTeamName(team?.name || t.selectedTeamFallback);
       setSuccess(true);
     } catch (err: unknown) {

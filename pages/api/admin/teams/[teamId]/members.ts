@@ -302,11 +302,9 @@ async function handler(
           team.name,
           memberPayload.role,
           ctx.tenantId
-        ).catch(
-          (err) => {
-            logger.error('[members POST] team join email error:', err);
-          }
-        );
+        ).catch((err) => {
+          logger.error('[members POST] team join email error:', err);
+        });
       } else {
         // Resolve email from auth if userId was provided directly
         supabaseAdmin.auth.admin

@@ -59,7 +59,14 @@ function secondsToNextMinute(now: Date): number {
 }
 
 function secondsToNextMonthUTC(now: Date): number {
-  const next = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0);
+  const next = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth() + 1,
+    1,
+    0,
+    0,
+    0
+  );
   return Math.max(1, Math.ceil((next - now.getTime()) / 1000));
 }
 

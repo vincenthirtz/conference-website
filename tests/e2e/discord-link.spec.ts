@@ -40,7 +40,8 @@ async function signIn(email: string, password: string): Promise<string | null> {
 let playerToken: string | null = null;
 let playerAuthId: string;
 
-test.describe.serial('Discord link API', () => {
+test.describe('Discord link API', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
 
   test.beforeAll(async () => {

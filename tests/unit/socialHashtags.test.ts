@@ -37,13 +37,16 @@ describe('normalizeHashtag', () => {
 
 describe('normalizeHashtags', () => {
   it('dédoublonne les variantes d’un même tag', () => {
-    expect(normalizeHashtags(['#Overwatch', 'overwatch', '#OVERWATCH'])).toEqual(
-      ['overwatch']
-    );
+    expect(
+      normalizeHashtags(['#Overwatch', 'overwatch', '#OVERWATCH'])
+    ).toEqual(['overwatch']);
   });
 
   it('plafonne la liste', () => {
-    const many = Array.from({ length: 50 }, (_, i) => `tag${'x'.repeat(i + 1)}`);
+    const many = Array.from(
+      { length: 50 },
+      (_, i) => `tag${'x'.repeat(i + 1)}`
+    );
     expect(normalizeHashtags(many)).toHaveLength(MAX_HASHTAGS);
   });
 });

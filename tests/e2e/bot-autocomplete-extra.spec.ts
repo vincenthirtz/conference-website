@@ -24,13 +24,18 @@ let tournamentId: string;
 let stage1Id: string;
 let stage2Id: string;
 
-test.describe.serial('Bot AC extra — setup', () => {
+test.describe('Bot AC extra — setup', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {
     if (!supabaseTestClient) return;
 
-    const caster = await createTestStaff(CASTER_EMAIL, 'TestPass123!', 'caster');
+    const caster = await createTestStaff(
+      CASTER_EMAIL,
+      'TestPass123!',
+      'caster'
+    );
     casterAuthId = caster!.id;
 
     const { data: cm } = await supabaseTestClient
@@ -91,10 +96,16 @@ test.describe.serial('Bot AC extra — setup', () => {
       await supabaseTestClient.from('tournament_stages').delete().eq('id', id);
     }
     if (tournamentId) {
-      await supabaseTestClient.from('tournaments').delete().eq('id', tournamentId);
+      await supabaseTestClient
+        .from('tournaments')
+        .delete()
+        .eq('id', tournamentId);
     }
     if (castMemberId) {
-      await supabaseTestClient.from('cast_members').delete().eq('id', castMemberId);
+      await supabaseTestClient
+        .from('cast_members')
+        .delete()
+        .eq('id', castMemberId);
     }
     await deleteTestStaff(CASTER_EMAIL);
   });
@@ -110,7 +121,8 @@ test.describe.serial('Bot AC extra — setup', () => {
 /* /autocomplete/stages                                                      */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('AC stages', () => {
+test.describe('AC stages', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('200 vide sans tournamentId', async ({ request }) => {
@@ -161,7 +173,8 @@ test.describe.serial('AC stages', () => {
 /* /autocomplete/cast-members                                                */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('AC cast-members', () => {
+test.describe('AC cast-members', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('200 trouve le cast member par substring', async ({ request }) => {

@@ -603,7 +603,14 @@ describe('/api/bot/scrims', () => {
   beforeEach(() => {
     seedBotAuth();
     // V2 strict tenant header — withBotRoute checks existence in `tenants`.
-    store.tenants = [{ id: CONFERENCE_TENANT_ID, plan: 'foundation', plan_status: 'active', plan_expires_at: null }] as any;
+    store.tenants = [
+      {
+        id: CONFERENCE_TENANT_ID,
+        plan: 'foundation',
+        plan_status: 'active',
+        plan_expires_at: null,
+      },
+    ] as any;
     store.user_discord_links = [
       { discord_user_id: DISCORD_ID, auth_user_id: 'user-1' },
     ] as any;
@@ -702,7 +709,14 @@ describe('/api/bot/scrims', () => {
 describe('/api/bot/scrims/[scrimId]', () => {
   beforeEach(() => {
     seedBotAuth();
-    store.tenants = [{ id: CONFERENCE_TENANT_ID, plan: 'foundation', plan_status: 'active', plan_expires_at: null }] as any;
+    store.tenants = [
+      {
+        id: CONFERENCE_TENANT_ID,
+        plan: 'foundation',
+        plan_status: 'active',
+        plan_expires_at: null,
+      },
+    ] as any;
     store.user_discord_links = [
       { discord_user_id: DISCORD_ID, auth_user_id: 'user-1' },
     ] as any;
@@ -836,7 +850,14 @@ describe('/api/bot/scrims/[scrimId]/matches/[matchId]', () => {
 
   beforeEach(() => {
     seedBotAuth();
-    store.tenants = [{ id: CONFERENCE_TENANT_ID, plan: 'foundation', plan_status: 'active', plan_expires_at: null }] as any;
+    store.tenants = [
+      {
+        id: CONFERENCE_TENANT_ID,
+        plan: 'foundation',
+        plan_status: 'active',
+        plan_expires_at: null,
+      },
+    ] as any;
     store.user_discord_links = [
       { discord_user_id: DISCORD_ID, auth_user_id: 'user-1' },
     ] as any;
@@ -1039,7 +1060,14 @@ describe('/api/bot/scrims/[scrimId]/matches/[matchId]', () => {
 describe('/api/bot/scrims/[scrimId]/matches', () => {
   beforeEach(() => {
     seedBotAuth();
-    store.tenants = [{ id: CONFERENCE_TENANT_ID, plan: 'foundation', plan_status: 'active', plan_expires_at: null }] as any;
+    store.tenants = [
+      {
+        id: CONFERENCE_TENANT_ID,
+        plan: 'foundation',
+        plan_status: 'active',
+        plan_expires_at: null,
+      },
+    ] as any;
     store.user_discord_links = [
       { discord_user_id: DISCORD_ID, auth_user_id: 'user-1' },
     ] as any;
@@ -1163,10 +1191,11 @@ describe('/api/bot/scrims/[scrimId]/matches', () => {
     const [changes, tenantId] = emitScheduleBatchMock.mock.calls[0] as any;
     expect(tenantId).toBe(CONFERENCE_TENANT_ID);
     expect(changes).toHaveLength(2);
-    expect(changes.every((c: any) => c.previous === null && c.scrimId === SCRIM_ID)).toBe(true);
-    expect(changes.map((c: any) => c.next).sort()).toEqual([
-      '2026-10-07T17:00:00.000Z',
-      null,
-    ].sort());
+    expect(
+      changes.every((c: any) => c.previous === null && c.scrimId === SCRIM_ID)
+    ).toBe(true);
+    expect(changes.map((c: any) => c.next).sort()).toEqual(
+      ['2026-10-07T17:00:00.000Z', null].sort()
+    );
   });
 });

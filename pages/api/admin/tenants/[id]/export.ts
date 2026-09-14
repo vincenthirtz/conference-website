@@ -46,7 +46,12 @@ async function handler(
   ctx: AuthenticatedStaffContext
 ) {
   if (
-    applyRateLimit(req, res, { max: 3, windowMs: 300_000 }, 'admin-tenant-export')
+    applyRateLimit(
+      req,
+      res,
+      { max: 3, windowMs: 300_000 },
+      'admin-tenant-export'
+    )
   ) {
     return;
   }

@@ -57,7 +57,12 @@ function seed(opts: { slotOfMine?: 1 | 2; minPlayers?: number | null } = {}) {
 
   store.teams = [
     { id: TEAM_ID, name: 'Phenix', slug: 'phenix', captain_id: CAPTAIN_ID },
-    { id: OTHER_TEAM_ID, name: 'Avoidgers', slug: 'avoidgers', captain_id: null },
+    {
+      id: OTHER_TEAM_ID,
+      name: 'Avoidgers',
+      slug: 'avoidgers',
+      captain_id: null,
+    },
   ] as any;
 
   store.team_members = [

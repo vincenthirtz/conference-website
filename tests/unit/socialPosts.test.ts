@@ -136,10 +136,10 @@ describe('resolveTarget', () => {
 
 describe('resolveTargets', () => {
   it('rend les cibles dans l’ordre du catalogue, pas celui du payload', () => {
-    const out = resolveTargets(
-      { text: 'Texte' },
-      [{ platform: 'discord_announce' }, { platform: 'site_news' }]
-    );
+    const out = resolveTargets({ text: 'Texte' }, [
+      { platform: 'discord_announce' },
+      { platform: 'site_news' },
+    ]);
     // On n'attend QUE les cibles demandées, mais dans l'ordre du catalogue.
     // Comparer au catalogue entier ferait échouer ce test à chaque cible
     // ajoutée, alors qu'il ne parle que de tri.
@@ -239,13 +239,9 @@ describe('publishTargets', () => {
       postId: 'post-1',
     });
 
-    const byPlatform = Object.fromEntries(
-      outcomes.map((o) => [o.platform, o])
-    );
+    const byPlatform = Object.fromEntries(outcomes.map((o) => [o.platform, o]));
     expect(byPlatform.site_news.status).toBe('sent');
     expect(byPlatform.discord_announce.status).toBe('failed');
-    expect(
-      aggregateStatus(outcomes.map((o) => o.status))
-    ).toBe('partial');
+    expect(aggregateStatus(outcomes.map((o) => o.status))).toBe('partial');
   });
 });

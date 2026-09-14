@@ -21,9 +21,15 @@ describe('formatSiteDate', () => {
 
   it('suit la langue de l’interface', () => {
     const day = { day: 'numeric', month: 'long' } as const;
-    expect(formatSiteDate('2026-09-16T19:00:00Z', 'fr', day)).toBe('16 septembre');
-    expect(formatSiteDate('2026-09-16T19:00:00Z', 'en', day)).toBe('16 September');
-    expect(formatSiteDate('2026-09-16T19:00:00Z', 'en-GB', day)).toBe('16 September');
+    expect(formatSiteDate('2026-09-16T19:00:00Z', 'fr', day)).toBe(
+      '16 septembre'
+    );
+    expect(formatSiteDate('2026-09-16T19:00:00Z', 'en', day)).toBe(
+      '16 September'
+    );
+    expect(formatSiteDate('2026-09-16T19:00:00Z', 'en-GB', day)).toBe(
+      '16 September'
+    );
   });
 
   it('prend le jour calendaire de Paris près de minuit', () => {

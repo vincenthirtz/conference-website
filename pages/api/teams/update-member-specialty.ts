@@ -24,7 +24,6 @@ import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 
 import { logger } from '../../../utils/logger';
 
-
 export default withSubjectRoute(
   async function handler(
     req: NextApiRequest,

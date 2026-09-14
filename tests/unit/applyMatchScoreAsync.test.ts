@@ -121,7 +121,12 @@ describe('applyMatchScore — guards', () => {
     store.matches = [];
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     await expect(
-      applyMatchScore({ tenantId: TENANT_ID, matchId: 'missing', team1Score: 2, team2Score: 1 })
+      applyMatchScore({
+        tenantId: TENANT_ID,
+        matchId: 'missing',
+        team1Score: 2,
+        team2Score: 1,
+      })
     ).rejects.toThrow(/introuvable/);
     consoleSpy.mockRestore();
   });
@@ -130,7 +135,12 @@ describe('applyMatchScore — guards', () => {
     seedMatch();
     seedTournament('completed');
     await expect(
-      applyMatchScore({ tenantId: TENANT_ID, matchId: 'm1', team1Score: 2, team2Score: 1 })
+      applyMatchScore({
+        tenantId: TENANT_ID,
+        matchId: 'm1',
+        team1Score: 2,
+        team2Score: 1,
+      })
     ).rejects.toThrow(/tournoi est terminé/);
   });
 
@@ -138,7 +148,12 @@ describe('applyMatchScore — guards', () => {
     seedMatch({ status: 'disputed' });
     seedTournament();
     await expect(
-      applyMatchScore({ tenantId: TENANT_ID, matchId: 'm1', team1Score: 2, team2Score: 1 })
+      applyMatchScore({
+        tenantId: TENANT_ID,
+        matchId: 'm1',
+        team1Score: 2,
+        team2Score: 1,
+      })
     ).rejects.toThrow(/en dispute/);
   });
 
@@ -146,7 +161,12 @@ describe('applyMatchScore — guards', () => {
     seedMatch();
     seedTournament();
     await expect(
-      applyMatchScore({ tenantId: TENANT_ID, matchId: 'm1', team1Score: -1, team2Score: 0 })
+      applyMatchScore({
+        tenantId: TENANT_ID,
+        matchId: 'm1',
+        team1Score: -1,
+        team2Score: 0,
+      })
     ).rejects.toThrow(/Scores invalides/);
   });
 
@@ -154,7 +174,12 @@ describe('applyMatchScore — guards', () => {
     seedMatch();
     seedTournament();
     await expect(
-      applyMatchScore({ tenantId: TENANT_ID, matchId: 'm1', team1Score: 1.5, team2Score: 0 })
+      applyMatchScore({
+        tenantId: TENANT_ID,
+        matchId: 'm1',
+        team1Score: 1.5,
+        team2Score: 0,
+      })
     ).rejects.toThrow(/Scores invalides/);
   });
 
@@ -162,7 +187,11 @@ describe('applyMatchScore — guards', () => {
     seedMatch();
     seedTournament();
     await expect(
-      applyMatchScore({ tenantId: TENANT_ID, matchId: 'm1', forfeitTeamId: 'team-x' })
+      applyMatchScore({
+        tenantId: TENANT_ID,
+        matchId: 'm1',
+        forfeitTeamId: 'team-x',
+      })
     ).rejects.toThrow(/ne fait pas partie de ce match/);
   });
 });
@@ -239,7 +268,11 @@ describe('applyMatchScore — forfeit', () => {
   it('auto-computes scores from match_format when forfeit on team1', async () => {
     seedMatch({ match_format: 'bo5' }); // first to 3 wins
     seedTournament();
-    await applyMatchScore({ tenantId: TENANT_ID, matchId: 'm1', forfeitTeamId: 'team-a' });
+    await applyMatchScore({
+      tenantId: TENANT_ID,
+      matchId: 'm1',
+      forfeitTeamId: 'team-a',
+    });
     const m = store.matches[0] as any;
     expect(m.team1_score).toBe(0);
     expect(m.team2_score).toBe(3);
@@ -309,7 +342,12 @@ describe('applyMatchScore — propagation', () => {
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     await expect(
-      applyMatchScore({ tenantId: TENANT_ID, matchId: 'm1', team1Score: 2, team2Score: 1 })
+      applyMatchScore({
+        tenantId: TENANT_ID,
+        matchId: 'm1',
+        team1Score: 2,
+        team2Score: 1,
+      })
     ).rejects.toThrow(/Propagation bracket échouée/);
     consoleSpy.mockRestore();
 
@@ -328,7 +366,12 @@ describe('applyMatchScore — propagation', () => {
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     await expect(
-      applyMatchScore({ tenantId: TENANT_ID, matchId: 'm1', team1Score: 2, team2Score: 1 })
+      applyMatchScore({
+        tenantId: TENANT_ID,
+        matchId: 'm1',
+        team1Score: 2,
+        team2Score: 1,
+      })
     ).rejects.toThrow(/Reset de la propagation échoué/);
     consoleSpy.mockRestore();
 
@@ -364,7 +407,12 @@ describe('applyMatchScore — side effects', () => {
   it('does not log when staffId is omitted', async () => {
     seedMatch();
     seedTournament();
-    await applyMatchScore({ tenantId: TENANT_ID, matchId: 'm1', team1Score: 2, team2Score: 1 });
+    await applyMatchScore({
+      tenantId: TENANT_ID,
+      matchId: 'm1',
+      team1Score: 2,
+      team2Score: 1,
+    });
     expect(logStaffAction).not.toHaveBeenCalled();
   });
 
@@ -408,7 +456,11 @@ describe('applyMatchScore — side effects', () => {
   it('skips MVP poll on a forfeit (walkover)', async () => {
     seedMatch();
     seedTournament();
-    await applyMatchScore({ tenantId: TENANT_ID, matchId: 'm1', forfeitTeamId: 'team-a' });
+    await applyMatchScore({
+      tenantId: TENANT_ID,
+      matchId: 'm1',
+      forfeitTeamId: 'team-a',
+    });
     await new Promise((r) => setImmediate(r));
     expect(postMvpPoll).not.toHaveBeenCalled();
   });
@@ -416,7 +468,11 @@ describe('applyMatchScore — side effects', () => {
   it('auto-computes scores from match_format=bo1 on forfeit of team2', async () => {
     seedMatch({ match_format: 'bo1' });
     seedTournament();
-    await applyMatchScore({ tenantId: TENANT_ID, matchId: 'm1', forfeitTeamId: 'team-b' });
+    await applyMatchScore({
+      tenantId: TENANT_ID,
+      matchId: 'm1',
+      forfeitTeamId: 'team-b',
+    });
     const m = (store.matches as any).find((x: any) => x.id === 'm1');
     expect(m.team1_score).toBe(1);
     expect(m.team2_score).toBe(0);
@@ -426,7 +482,11 @@ describe('applyMatchScore — side effects', () => {
   it('auto-computes scores from match_format=bo7 on forfeit', async () => {
     seedMatch({ match_format: 'bo7' });
     seedTournament();
-    await applyMatchScore({ tenantId: TENANT_ID, matchId: 'm1', forfeitTeamId: 'team-b' });
+    await applyMatchScore({
+      tenantId: TENANT_ID,
+      matchId: 'm1',
+      forfeitTeamId: 'team-b',
+    });
     const m = (store.matches as any).find((x: any) => x.id === 'm1');
     // bo7 -> first to 4
     expect(m.team1_score).toBe(4);
@@ -436,7 +496,11 @@ describe('applyMatchScore — side effects', () => {
   it('uses sensible default when match_format unknown on forfeit', async () => {
     seedMatch({ match_format: null });
     seedTournament();
-    await applyMatchScore({ tenantId: TENANT_ID, matchId: 'm1', forfeitTeamId: 'team-b' });
+    await applyMatchScore({
+      tenantId: TENANT_ID,
+      matchId: 'm1',
+      forfeitTeamId: 'team-b',
+    });
     const m = (store.matches as any).find((x: any) => x.id === 'm1');
     // default is bo1 / 1 win
     expect(m.team1_score).toBeGreaterThanOrEqual(1);
@@ -446,7 +510,11 @@ describe('applyMatchScore — side effects', () => {
   it('forfeit transitions match to walkover status', async () => {
     seedMatch();
     seedTournament();
-    await applyMatchScore({ tenantId: TENANT_ID, matchId: 'm1', forfeitTeamId: 'team-a' });
+    await applyMatchScore({
+      tenantId: TENANT_ID,
+      matchId: 'm1',
+      forfeitTeamId: 'team-a',
+    });
     const m = (store.matches as any).find((x: any) => x.id === 'm1');
     expect(m.status).toBe('walkover');
     expect(m.forfeit_team_id).toBe('team-a');

@@ -44,7 +44,9 @@ export type UseCasterTournaments = {
 
 export function useCasterTournaments({
   enabled = true,
-}: { enabled?: boolean } = {}): UseCasterTournaments {
+}: {
+  enabled?: boolean;
+} = {}): UseCasterTournaments {
   const [tournaments, setTournaments] = useState<CasterApiTournament[]>([]);
   const [tournamentsLoading, setTournamentsLoading] = useState(false);
   const [tournamentId, setTournamentId] = useState<string | null>(null);

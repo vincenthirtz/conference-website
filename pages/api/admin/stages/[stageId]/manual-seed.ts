@@ -94,11 +94,9 @@ async function handler(
     }
     const a = raw as Record<string, unknown>;
     if (typeof a.matchId !== 'string' || !isValidUUID(a.matchId)) {
-      return res
-        .status(400)
-        .json({
-          error: `matchId invalide : ${String(a.matchId).slice(0, 40)}`,
-        });
+      return res.status(400).json({
+        error: `matchId invalide : ${String(a.matchId).slice(0, 40)}`,
+      });
     }
     if (typeof a.teamId !== 'string' || !isValidUUID(a.teamId)) {
       return res

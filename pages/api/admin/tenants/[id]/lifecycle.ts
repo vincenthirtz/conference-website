@@ -156,7 +156,9 @@ async function handler(
     .from('tenants')
     .update(update)
     .eq('id', id)
-    .select('id, slug, lifecycle_state, lifecycle_reason, purge_after, is_active')
+    .select(
+      'id, slug, lifecycle_state, lifecycle_reason, purge_after, is_active'
+    )
     .maybeSingle();
 
   if (error) {

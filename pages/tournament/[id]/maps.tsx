@@ -135,7 +135,13 @@ function buildMapsSeo(tournament: Tournament): SeoProps {
  * l'Overwatch, type saisi à la main) retombe dans « Autres » plutôt que de
  * disparaître.
  */
-const POOL_MODES = ['control', 'escort', 'hybrid', 'push', 'flashpoint'] as const;
+const POOL_MODES = [
+  'control',
+  'escort',
+  'hybrid',
+  'push',
+  'flashpoint',
+] as const;
 
 function poolModeLabel(t: MapsDict, mode: string): string {
   return (
@@ -208,7 +214,11 @@ async function loadRoundPools(
     round_number: number;
   }[]) {
     const bucket = byRound.get(row.round_number) ?? [];
-    bucket.push({ name: row.map_name, type: row.map_type, image: row.image_url });
+    bucket.push({
+      name: row.map_name,
+      type: row.map_type,
+      image: row.image_url,
+    });
     byRound.set(row.round_number, bucket);
   }
 
@@ -227,7 +237,9 @@ function groupPoolByMode(pool: PoolMap[]): { mode: string; maps: PoolMap[] }[] {
   const groups = new Map<string, PoolMap[]>();
   for (const map of pool) {
     const mode = (map.type ?? '').toLowerCase();
-    const key = (POOL_MODES as readonly string[]).includes(mode) ? mode : 'other';
+    const key = (POOL_MODES as readonly string[]).includes(mode)
+      ? mode
+      : 'other';
     const bucket = groups.get(key);
     if (bucket) bucket.push(map);
     else groups.set(key, [map]);
@@ -400,7 +412,8 @@ export default function TournamentMapsPage({
   // Journée sélectionnée dans le pool. `null` = pool du tournoi. Les pools sont
   // tous chargés côté serveur : basculer ne recharge rien.
   const [poolRound, setPoolRound] = useState<number | null>(null);
-  const selectedRoundPool = roundPools.find((r) => r.round === poolRound) ?? null;
+  const selectedRoundPool =
+    roundPools.find((r) => r.round === poolRound) ?? null;
   const shownPool = selectedRoundPool ? selectedRoundPool.maps : pool;
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
   const isCompleted =

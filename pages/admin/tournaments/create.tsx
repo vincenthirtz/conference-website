@@ -59,7 +59,9 @@ function stageTypeBadge(type: string) {
   }
 }
 
-export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
+export const getServerSideProps = withStaffPage({
+  permission: 'manage_tournaments',
+});
 
 function AdminTournamentCreatePage(_props: Props) {
   const t = useAdminT(nsAdminTournamentsCreate);

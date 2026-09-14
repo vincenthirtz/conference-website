@@ -62,7 +62,8 @@ async function wipeVetoSteps(matchId: string) {
     .eq('match_id', matchId);
 }
 
-test.describe.serial('Veto locked flow (P0 matches)', () => {
+test.describe('Veto locked flow (P0 matches)', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
 
   let adminToken: string | null = null;

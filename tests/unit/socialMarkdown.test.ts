@@ -48,7 +48,9 @@ describe('stripMarkdown', () => {
   });
 
   it('n’écrit pas deux fois une URL qui est son propre libellé', () => {
-    expect(stripMarkdown('[https://ow.fr](https://ow.fr)')).toBe('https://ow.fr');
+    expect(stripMarkdown('[https://ow.fr](https://ow.fr)')).toBe(
+      'https://ow.fr'
+    );
   });
 
   it('aplati un tableau en lignes lisibles', () => {
@@ -175,7 +177,9 @@ describe('stripDiscordMarkup', () => {
   });
 
   it('retire les mentions de personne, de rôle et de salon', () => {
-    expect(stripDiscordMarkup('cédée à <@493476887977394176>.')).toBe('cédée à.');
+    expect(stripDiscordMarkup('cédée à <@493476887977394176>.')).toBe(
+      'cédée à.'
+    );
     expect(stripDiscordMarkup('ping <@!123456789> ok')).toBe('ping ok');
     expect(stripDiscordMarkup('rôle <@&987654321> ok')).toBe('rôle ok');
     expect(stripDiscordMarkup('voir <#1430516361255321691> ok')).toBe(

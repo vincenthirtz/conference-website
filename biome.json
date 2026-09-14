@@ -21,11 +21,7 @@
     "indentWidth": 2,
     "lineEnding": "lf",
     "lineWidth": 80,
-    "includes": [
-      "**",
-      "!**/.github",
-      "!database/schema-snapshot.json"
-    ]
+    "includes": ["**", "!**/.github", "!database/schema-snapshot.json"]
   },
   "javascript": {
     "formatter": {

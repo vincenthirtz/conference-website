@@ -86,7 +86,9 @@ function withRound(url: string, round: number | null): string {
   return url.includes('?') ? `${url}&${q}` : `${url}?${q}`;
 }
 
-export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
+export const getServerSideProps = withStaffPage({
+  permission: 'manage_tournaments',
+});
 
 function AdminTournamentMapsPage(_: StaffProps) {
   const t = useAdminT(nsAdminTournamentMaps);
@@ -211,7 +213,11 @@ function AdminTournamentMapsPage(_: StaffProps) {
     return month && dayOfMonth ? `${dayOfMonth}/${month}` : day;
   }, []);
 
-  async function handleAddMap(map: { name: string; type: string; image: string }) {
+  async function handleAddMap(map: {
+    name: string;
+    type: string;
+    image: string;
+  }) {
     if (!tournamentId) return;
     setAdding(true);
     setErrorMsg(null);
@@ -323,7 +329,9 @@ function AdminTournamentMapsPage(_: StaffProps) {
         const json = await res.json().catch(() => ({}));
         throw new Error(json.error || t.errorAddAll);
       }
-      const json = (await res.json().catch(() => ({}))) as { imported?: number };
+      const json = (await res.json().catch(() => ({}))) as {
+        imported?: number;
+      };
       if ((json.imported ?? 0) === 0) {
         addToast(t.alertAllMapsPresent, 'info');
       }
@@ -518,7 +526,9 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
           {!loading && !errorMsg && maps.length === 0 && (
             <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-              {editingRound ? format(t.emptyRoundPool, { round: roundLabel }) : t.emptyMaps}
+              {editingRound
+                ? format(t.emptyRoundPool, { round: roundLabel })
+                : t.emptyMaps}
             </div>
           )}
 

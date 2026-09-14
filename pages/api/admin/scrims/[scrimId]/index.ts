@@ -175,11 +175,9 @@ async function handlePatch(
   ) {
     const dm = Number(updatePayload.duration_minutes);
     if (!Number.isInteger(dm) || dm < 15 || dm > 720) {
-      return res
-        .status(400)
-        .json({
-          error: 'duration_minutes doit être un entier entre 15 et 720',
-        });
+      return res.status(400).json({
+        error: 'duration_minutes doit être un entier entre 15 et 720',
+      });
     }
     updatePayload.duration_minutes = dm;
   }

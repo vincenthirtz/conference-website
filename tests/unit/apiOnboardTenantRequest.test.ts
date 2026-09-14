@@ -139,10 +139,7 @@ describe('POST /api/onboard/tenant-request', () => {
   it('400 si email invalide', async () => {
     signIn();
     const res = makeRes();
-    await handler(
-      makeReq(validBody({ requested_email: 'not-an-email' })),
-      res
-    );
+    await handler(makeReq(validBody({ requested_email: 'not-an-email' })), res);
     expect(res.statusCode).toBe(400);
     expect((res.body as any).code).toBe('INVALID_BODY');
   });

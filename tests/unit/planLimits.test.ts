@@ -89,7 +89,11 @@ describe('assertPlanLimit — ligues', () => {
   it('ne compte pas les ligues des autres espaces', async () => {
     seedTenant('regie');
     store.leagues = [
-      { id: 'l1', tenant_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', name: 'X' },
+      {
+        id: 'l1',
+        tenant_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        name: 'X',
+      },
     ] as any;
     const v = await assertPlanLimit(TENANT, 'leagues');
     expect(v.ok).toBe(true);
@@ -139,9 +143,14 @@ describe('registre d’application des capacités', () => {
 
     for (const [key, entry] of Object.entries(PLAN_FEATURE_ENFORCEMENT)) {
       if (entry.kind === 'code') {
-        expect(entry.where.length, `${key}: lieu d'application vide`).toBeGreaterThan(0);
+        expect(
+          entry.where.length,
+          `${key}: lieu d'application vide`
+        ).toBeGreaterThan(0);
       } else {
-        expect(entry.why.length, `${key}: justification vide`).toBeGreaterThan(40);
+        expect(entry.why.length, `${key}: justification vide`).toBeGreaterThan(
+          40
+        );
       }
     }
   });

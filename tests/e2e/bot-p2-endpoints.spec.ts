@@ -43,7 +43,8 @@ let teamAId: string;
 let teamBId: string;
 let matchId: string;
 
-test.describe.serial('Bot P2 — setup', () => {
+test.describe('Bot P2 — setup', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {
@@ -51,15 +52,31 @@ test.describe.serial('Bot P2 — setup', () => {
 
     const admin = await createTestStaff(ADMIN_EMAIL, 'TestPass123!', 'admin');
     adminAuthId = admin!.id;
-    const caster = await createTestStaff(CASTER_EMAIL, 'TestPass123!', 'caster');
+    const caster = await createTestStaff(
+      CASTER_EMAIL,
+      'TestPass123!',
+      'caster'
+    );
     casterAuthId = caster!.id;
     const player = await createTestPlayer(PLAYER_EMAIL, 'TestPass123!');
     playerAuthId = player!.id;
 
     await supabaseTestClient.from('user_discord_links').insert([
-      { auth_user_id: adminAuthId, discord_user_id: ADMIN_DISCORD, discord_username: `p2_adm_${TS}` },
-      { auth_user_id: casterAuthId, discord_user_id: CASTER_DISCORD, discord_username: `p2_cast_${TS}` },
-      { auth_user_id: playerAuthId, discord_user_id: PLAYER_DISCORD, discord_username: `p2_pl_${TS}` },
+      {
+        auth_user_id: adminAuthId,
+        discord_user_id: ADMIN_DISCORD,
+        discord_username: `p2_adm_${TS}`,
+      },
+      {
+        auth_user_id: casterAuthId,
+        discord_user_id: CASTER_DISCORD,
+        discord_username: `p2_cast_${TS}`,
+      },
+      {
+        auth_user_id: playerAuthId,
+        discord_user_id: PLAYER_DISCORD,
+        discord_username: `p2_pl_${TS}`,
+      },
     ]);
 
     // cast_member row pointing at the staff caster
@@ -170,7 +187,9 @@ test.describe.serial('Bot P2 — setup', () => {
       await supabaseTestClient.from('team_members').delete().eq('team_id', tid);
       await supabaseTestClient.from('teams').delete().eq('id', tid);
     }
-    for (const aid of [adminAuthId, casterAuthId, playerAuthId].filter(Boolean)) {
+    for (const aid of [adminAuthId, casterAuthId, playerAuthId].filter(
+      Boolean
+    )) {
       await supabaseTestClient
         .from('user_discord_links')
         .delete()
@@ -191,7 +210,8 @@ test.describe.serial('Bot P2 — setup', () => {
 /* PATCH /matches/[id]  (admin meta)                                         */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot match meta — PATCH /matches/[id]', () => {
+test.describe('Bot match meta — PATCH /matches/[id]', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('403 si actor non admin', async ({ request }) => {
@@ -266,7 +286,8 @@ test.describe.serial('Bot match meta — PATCH /matches/[id]', () => {
 /* PATCH /players/by-discord/[id]/profile                                    */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot profile — PATCH /players/.../profile', () => {
+test.describe('Bot profile — PATCH /players/.../profile', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('403 si on essaie de modifier le profil de quelqu’un d’autre (non admin)', async ({
@@ -304,7 +325,9 @@ test.describe.serial('Bot profile — PATCH /players/.../profile', () => {
     expect(res.status()).toBe(400);
   });
 
-  test('200 self-service : battleTag + mainRole + rank', async ({ request }) => {
+  test('200 self-service : battleTag + mainRole + rank', async ({
+    request,
+  }) => {
     const res = await request.patch(
       `/api/bot/v1/players/by-discord/${PLAYER_DISCORD}/profile`,
       {
@@ -321,7 +344,8 @@ test.describe.serial('Bot profile — PATCH /players/.../profile', () => {
     const body = await res.json();
     expect(body.editedBy).toBe('self');
 
-    const { data: u } = await supabaseTestClient!.auth.admin.getUserById(playerAuthId);
+    const { data: u } =
+      await supabaseTestClient!.auth.admin.getUserById(playerAuthId);
     expect(u.user!.user_metadata.battle_tag).toBe('Joueuse#1234');
     expect(u.user!.user_metadata.main_role).toBe('support');
     expect(u.user!.user_metadata.rank).toBe('Diamant 2');
@@ -350,7 +374,8 @@ test.describe.serial('Bot profile — PATCH /players/.../profile', () => {
 
 let createdAssignmentId: string;
 
-test.describe.serial('Bot cast — POST/GET/DELETE /matches/[id]/cast', () => {
+test.describe('Bot cast — POST/GET/DELETE /matches/[id]/cast', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('403 sur POST si actor non admin', async ({ request }) => {
@@ -418,7 +443,8 @@ test.describe.serial('Bot cast — POST/GET/DELETE /matches/[id]/cast', () => {
 /* GET /cast/assignments  (windowed list)                                    */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot cast list — GET /cast/assignments', () => {
+test.describe('Bot cast list — GET /cast/assignments', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {

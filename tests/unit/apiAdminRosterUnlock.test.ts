@@ -145,9 +145,7 @@ describe('ouverture', () => {
     expect(minutes).toBeGreaterThan(29);
     expect(minutes).toBeLessThanOrEqual(30.5);
 
-    expect(
-      (store.tournaments as any[])[0].roster_unlocked_until
-    ).toBeTruthy();
+    expect((store.tournaments as any[])[0].roster_unlocked_until).toBeTruthy();
   });
 
   it('une durée absente prend le défaut d’une heure', async () => {

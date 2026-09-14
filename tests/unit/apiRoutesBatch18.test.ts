@@ -749,7 +749,10 @@ describe('/api/admin/tournaments', () => {
     store.tournament_maps = [];
     const res = makeRes();
     await adminTournamentsHandler(
-      makeReq({ method: 'POST', body: { name: 'Brand New Cup', game: 'overwatch' } }, true),
+      makeReq(
+        { method: 'POST', body: { name: 'Brand New Cup', game: 'overwatch' } },
+        true
+      ),
       res
     );
     expect(res.statusCode).toBe(201);

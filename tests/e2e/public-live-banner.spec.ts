@@ -97,7 +97,9 @@ test.describe('Public live banner', () => {
     await expect(banner).toContainText(/EN DIRECT MAINTENANT/i);
   });
 
-  test('/ambassadors n affiche pas le banner sans run live', async ({ page }) => {
+  test('/ambassadors n affiche pas le banner sans run live', async ({
+    page,
+  }) => {
     if (!supabaseTestClient) return;
 
     // Ensure nothing live remains for our slug.

@@ -270,7 +270,9 @@ async function loadFullDraft(
   }
   const steps = (stepsRows ?? []) as MatchDraftStep[];
 
-  const heroIds = steps.map((s) => s.hero_id).filter((id): id is string => !!id);
+  const heroIds = steps
+    .map((s) => s.hero_id)
+    .filter((id): id is string => !!id);
   let heroesById = new Map<string, GameHero>();
   if (heroIds.length > 0) {
     const { data: heroRows, error: heroErr } = await client
@@ -336,7 +338,11 @@ export type InitDraftInput = {
 
 export async function initDraft(input: InitDraftInput): Promise<DraftState> {
   const client = db();
-  const ctx = await loadMatchContext(input.matchId, input.tenantId, input.gameIndex);
+  const ctx = await loadMatchContext(
+    input.matchId,
+    input.tenantId,
+    input.gameIndex
+  );
 
   const existing = await loadDraftRowByGameIndex(
     ctx.matchId,
@@ -492,7 +498,11 @@ export type GetDraftStateInput = {
 export async function getDraftState(
   input: GetDraftStateInput
 ): Promise<DraftState | null> {
-  const ctx = await loadMatchContext(input.matchId, input.tenantId, input.gameIndex);
+  const ctx = await loadMatchContext(
+    input.matchId,
+    input.tenantId,
+    input.gameIndex
+  );
   const existing = await loadDraftRowByGameIndex(
     ctx.matchId,
     input.gameIndex,
@@ -515,7 +525,11 @@ export async function setDraftSides(
   input: SetDraftSidesInput
 ): Promise<DraftState> {
   const client = db();
-  const ctx = await loadMatchContext(input.matchId, input.tenantId, input.gameIndex);
+  const ctx = await loadMatchContext(
+    input.matchId,
+    input.tenantId,
+    input.gameIndex
+  );
   const existing = await loadDraftRowByGameIndex(
     ctx.matchId,
     input.gameIndex,
@@ -526,7 +540,10 @@ export async function setDraftSides(
   }
 
   const allowed = SIDES_BY_GAME[ctx.game] as readonly string[];
-  if (!allowed.includes(input.team1Side) || !allowed.includes(input.team2Side)) {
+  if (
+    !allowed.includes(input.team1Side) ||
+    !allowed.includes(input.team2Side)
+  ) {
     throw new DraftEngineError(
       'SIDES_INVALID',
       `Sides must be one of ${allowed.join('|')} for game "${ctx.game}".`,
@@ -613,7 +630,11 @@ export type StartDraftInput = {
  */
 export async function startDraft(input: StartDraftInput): Promise<DraftState> {
   const client = db();
-  const ctx = await loadMatchContext(input.matchId, input.tenantId, input.gameIndex);
+  const ctx = await loadMatchContext(
+    input.matchId,
+    input.tenantId,
+    input.gameIndex
+  );
   const existing = await loadDraftRowByGameIndex(
     ctx.matchId,
     input.gameIndex,
@@ -679,7 +700,11 @@ export async function commitDraftStep(
   input: CommitDraftStepInput
 ): Promise<DraftState> {
   const client = db();
-  const ctx = await loadMatchContext(input.matchId, input.tenantId, input.gameIndex);
+  const ctx = await loadMatchContext(
+    input.matchId,
+    input.tenantId,
+    input.gameIndex
+  );
   const existing = await loadDraftRowByGameIndex(
     ctx.matchId,
     input.gameIndex,
@@ -922,7 +947,11 @@ export async function applyAutoPickIfExpired(
   if (draft.status !== 'in_progress') return null;
 
   // Resolve the match context so we get the flow + tenant-scoped check.
-  const ctx = await loadMatchContext(draft.match_id, input.tenantId, draft.game_index);
+  const ctx = await loadMatchContext(
+    draft.match_id,
+    input.tenantId,
+    draft.game_index
+  );
 
   // Current step = current_step + 1 (1-based).
   const expected = draft.current_step + 1;
@@ -1090,7 +1119,7 @@ export async function runDraftAutoPickTick(
   if (dErr) {
     throw new DraftEngineError('DB_ERROR', dErr.message, 500);
   }
-  for (const d of ((drafts ?? []) as any[])) {
+  for (const d of (drafts ?? []) as any[]) {
     try {
       const result = await applyAutoPickIfExpired({
         draftId: d.id,

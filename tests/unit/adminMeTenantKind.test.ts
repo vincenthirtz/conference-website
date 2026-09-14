@@ -78,7 +78,13 @@ beforeEach(() => {
 describe('/api/admin/me — active_tenant_kind', () => {
   it('GET renvoie active_tenant_kind="developer" pour un tenant développeur', async () => {
     store.tenants = [
-      { id: TENANT_DEV, slug: 'devco', name: 'DevCo', is_active: true, kind: 'developer' },
+      {
+        id: TENANT_DEV,
+        slug: 'devco',
+        name: 'DevCo',
+        is_active: true,
+        kind: 'developer',
+      },
     ] as any;
     store.tenant_staff = [
       { tenant_id: TENANT_DEV, staff_id: 'staff-1', role: 'owner' },
@@ -94,7 +100,13 @@ describe('/api/admin/me — active_tenant_kind', () => {
 
   it('GET renvoie active_tenant_kind="organizer" pour un tenant organisateur', async () => {
     store.tenants = [
-      { id: TENANT_ORG, slug: 'orga', name: 'Orga', is_active: true, kind: 'organizer' },
+      {
+        id: TENANT_ORG,
+        slug: 'orga',
+        name: 'Orga',
+        is_active: true,
+        kind: 'organizer',
+      },
     ] as any;
     store.tenant_staff = [
       { tenant_id: TENANT_ORG, staff_id: 'staff-1', role: 'owner' },

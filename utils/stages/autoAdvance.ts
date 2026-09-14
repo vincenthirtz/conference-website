@@ -50,8 +50,7 @@ export async function tryAutoAdvanceFromMatch(params: {
   // Quand fourni, on scope toutes les queries au tenant ; sinon comportement legacy.
   // (typage volontairement large : Supabase builder chains ne s'auto-resolvent
   // pas correctement quand on les passe via generique.)
-  const scoped = (q: any): any =>
-    tenantId ? q.eq('tenant_id', tenantId) : q;
+  const scoped = (q: any): any => (tenantId ? q.eq('tenant_id', tenantId) : q);
 
   // 1) Charger le stage source
   const { data: stage, error: stageErr } = await scoped(

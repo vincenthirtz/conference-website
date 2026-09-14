@@ -465,9 +465,7 @@ describe('PATCH /api/player/update-profile', () => {
     expect(updateSpy).toHaveBeenCalledOnce();
     const args = updateSpy.mock.calls[0][1] as any;
     expect(args.user_metadata.existing).toBe('old');
-    expect(args.user_metadata.avatar_url).toBe(
-      'https://cdn.example.com/a.png'
-    );
+    expect(args.user_metadata.avatar_url).toBe('https://cdn.example.com/a.png');
     expect((res.body as any).avatar_url).toBe('https://cdn.example.com/a.png');
     updateSpy.mockRestore();
   });

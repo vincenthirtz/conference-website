@@ -383,22 +383,29 @@ function clausePredicate(clause: string): (row: Row) => boolean {
   if (op === 'eq') return (row) => String(value(row) ?? '') === raw;
   if (op === 'neq') return (row) => String(value(row) ?? '') !== raw;
   if (op === 'is') {
-    if (raw === 'null') return (row) => value(row) === null || value(row) === undefined;
-    if (raw === 'true' || raw === 'false') return (row) => value(row) === (raw === 'true');
+    if (raw === 'null')
+      return (row) => value(row) === null || value(row) === undefined;
+    if (raw === 'true' || raw === 'false')
+      return (row) => value(row) === (raw === 'true');
   }
   if (op === 'not' && parts[2] === 'is' && parts[3] === 'null') {
     return (row) => value(row) !== null && value(row) !== undefined;
   }
   if (op === 'ilike') {
     const needle = raw.replace(/^%|%$/g, '').toLowerCase();
-    return (row) => String(value(row) ?? '').toLowerCase().includes(needle);
+    return (row) =>
+      String(value(row) ?? '')
+        .toLowerCase()
+        .includes(needle);
   }
   if (op === 'gte') return (row) => (value(row) as never) >= (raw as never);
   if (op === 'lte') return (row) => (value(row) as never) <= (raw as never);
   if (op === 'gt') return (row) => (value(row) as never) > (raw as never);
   if (op === 'lt') return (row) => (value(row) as never) < (raw as never);
 
-  console.warn(`supabaseMock: .or() ne gère pas « ${clause} » — clause ignorée`);
+  console.warn(
+    `supabaseMock: .or() ne gère pas « ${clause} » — clause ignorée`
+  );
   return () => true;
 }
 
@@ -1090,7 +1097,10 @@ export const supabaseAdmin = {
           if (!matched) return false;
         }
         const accountRole = (u.role ?? '').toLowerCase();
-        if (pFilters.includes('staff') && !STAFF_ACCOUNT_ROLES.includes(accountRole))
+        if (
+          pFilters.includes('staff') &&
+          !STAFF_ACCOUNT_ROLES.includes(accountRole)
+        )
           return false;
         if (
           pFilters.includes('community') &&

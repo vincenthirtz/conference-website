@@ -30,10 +30,20 @@ type CgvDict = typeof nsCgvPage.fr;
  */
 const getArticles = (t: CgvDict) => [
   { title: t.a1Title, body: [t.a1p1, t.a1p2, t.a1p3] },
-  { title: t.a2Title, body: [t.a2p1], rows: [t.a2rna, t.a2siren, t.a2siret], after: [t.a2p2] },
+  {
+    title: t.a2Title,
+    body: [t.a2p1],
+    rows: [t.a2rna, t.a2siren, t.a2siret],
+    after: [t.a2p2],
+  },
   { title: t.a3Title, body: [t.a3p1, t.a3p2, t.a3p3] },
   { title: t.a4Title, body: [t.a4p1, t.a4p2, t.a4p3, t.a4p4] },
-  { title: t.a5Title, body: [t.a5p1], steps: [t.a5s1, t.a5s2, t.a5s3, t.a5s4], after: [t.a5p2] },
+  {
+    title: t.a5Title,
+    body: [t.a5p1],
+    steps: [t.a5s1, t.a5s2, t.a5s3, t.a5s4],
+    after: [t.a5p2],
+  },
   { title: t.a6Title, body: [t.a6p1, t.a6p2, t.a6p3] },
   { title: t.a7Title, body: [t.a7p1, t.a7p2, t.a7p3] },
   { title: t.a8Title, body: [t.a8p1, t.a8p2, t.a8p3, t.a8p4] },

@@ -138,9 +138,13 @@ describe('readInstagramForMirror', () => {
         code: 190,
       },
     });
-    await expect(readInstagramForMirror(T)).rejects.toThrow(/OAuthException#190/);
+    await expect(readInstagramForMirror(T)).rejects.toThrow(
+      /OAuthException#190/
+    );
     const [, msg, opts] = markReadErrorMock.mock.calls[0];
-    expect(msg).toMatch(/^HTTP 400 OAuthException#190: Error validating access token/);
+    expect(msg).toMatch(
+      /^HTTP 400 OAuthException#190: Error validating access token/
+    );
     expect(opts).toEqual({ expired: true });
   });
 

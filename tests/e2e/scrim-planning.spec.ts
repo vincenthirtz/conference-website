@@ -53,7 +53,8 @@ function tomorrowYMD(): string {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 }
 
-test.describe.serial('Scrim planning (grille de dispos)', () => {
+test.describe('Scrim planning (grille de dispos)', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
 
   let adminToken: string | null = null;
@@ -214,7 +215,9 @@ test.describe.serial('Scrim planning (grille de dispos)', () => {
     expect(res.status()).toBe(200);
   });
 
-  test('le staff (caster) peint sa dispo (party staff)', async ({ request }) => {
+  test('le staff (caster) peint sa dispo (party staff)', async ({
+    request,
+  }) => {
     const res = await request.put(
       `/api/teams/scrim-plannings/${planningId}/availability`,
       {
@@ -254,7 +257,9 @@ test.describe.serial('Scrim planning (grille de dispos)', () => {
 
   // ─── Admin valide ─────────────────────────────────────
 
-  test('admin valide le créneau → scrim scheduled créé', async ({ request }) => {
+  test('admin valide le créneau → scrim scheduled créé', async ({
+    request,
+  }) => {
     const res = await request.post(
       `/api/admin/scrim-plannings/${planningId}/validate`,
       {

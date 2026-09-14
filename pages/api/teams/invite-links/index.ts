@@ -183,12 +183,10 @@ export default withSubjectRoute(
 
       if (error) {
         logger.error('[teams/invite-links] revoke error', error);
-        return res
-          .status(500)
-          .json({
-            error: 'Le lien n’a pas pu être révoqué.',
-            code: 'REVOKE_FAILED',
-          });
+        return res.status(500).json({
+          error: 'Le lien n’a pas pu être révoqué.',
+          code: 'REVOKE_FAILED',
+        });
       }
       return res.status(200).json({ link: null, revoked: true });
     }
@@ -261,12 +259,10 @@ export default withSubjectRoute(
 
     if (revokeErr) {
       logger.error('[teams/invite-links] rotate/revoke error', revokeErr);
-      return res
-        .status(500)
-        .json({
-          error: 'Le lien n’a pas pu être régénéré.',
-          code: 'ROTATE_FAILED',
-        });
+      return res.status(500).json({
+        error: 'Le lien n’a pas pu être régénéré.',
+        code: 'ROTATE_FAILED',
+      });
     }
 
     const token = generateInviteToken();
@@ -294,12 +290,10 @@ export default withSubjectRoute(
 
     if (insertErr || !inserted) {
       logger.error('[teams/invite-links] insert error', insertErr);
-      return res
-        .status(500)
-        .json({
-          error: 'Le lien n’a pas pu être créé.',
-          code: 'CREATE_FAILED',
-        });
+      return res.status(500).json({
+        error: 'Le lien n’a pas pu être créé.',
+        code: 'CREATE_FAILED',
+      });
     }
 
     return res.status(201).json({

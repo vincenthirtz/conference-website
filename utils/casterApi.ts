@@ -211,7 +211,8 @@ export async function handleCasterTournamentMaps(
   // tournoi. Le filtre sur `round_number` n'est jamais omis : sans lui, les
   // pools par journée apparaîtraient en double dans le menu.
   const roundRaw = firstQueryValue(req.query.round);
-  const round = roundRaw !== undefined && roundRaw !== '' ? Number(roundRaw) : null;
+  const round =
+    roundRaw !== undefined && roundRaw !== '' ? Number(roundRaw) : null;
   if (roundRaw !== undefined && roundRaw !== '' && !Number.isInteger(round)) {
     res.status(400).json({ error: 'Invalid round' });
     return;
@@ -225,7 +226,9 @@ export async function handleCasterTournamentMaps(
       .eq('tenant_id', tenantId)
       .eq('enabled', true)
       .order('map_name', { ascending: true });
-    return value === null ? q.is('round_number', null) : q.eq('round_number', value);
+    return value === null
+      ? q.is('round_number', null)
+      : q.eq('round_number', value);
   };
 
   if (round !== null) {

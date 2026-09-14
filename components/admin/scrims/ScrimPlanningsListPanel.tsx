@@ -109,7 +109,9 @@ export default function ScrimPlanningsListPanel() {
   // Grille ouverte depuis un scrim sans date : la validation replanifiera ce
   // scrim au lieu d'en créer un second.
   const prefillScrim =
-    typeof router.query.forScrim === 'string' ? router.query.forScrim : undefined;
+    typeof router.query.forScrim === 'string'
+      ? router.query.forScrim
+      : undefined;
 
   // Ouvre automatiquement la modale (une seule fois) quand `?new=1` est présent.
   useEffect(() => {

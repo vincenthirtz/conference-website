@@ -50,7 +50,9 @@ function compare(
   if (a == null) return 1;
   if (b == null) return -1;
   if (typeof a === 'number' && typeof b === 'number') return (a - b) * factor;
-  return String(a).localeCompare(String(b), undefined, { numeric: true }) * factor;
+  return (
+    String(a).localeCompare(String(b), undefined, { numeric: true }) * factor
+  );
 }
 
 describe('tri', () => {

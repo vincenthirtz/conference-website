@@ -68,7 +68,9 @@ describe('resolveNewsImageUrl', () => {
 describe('isLogoAsset', () => {
   it('reconnaît le dossier des logos, pas le nom du fichier', () => {
     expect(isLogoAsset('/img/logos/2026-logo.png')).toBe(true);
-    expect(isLogoAsset('https://owwomenscup.fr/img/logos/pogtv.png')).toBe(true);
+    expect(isLogoAsset('https://owwomenscup.fr/img/logos/pogtv.png')).toBe(
+      true
+    );
     // Un fichier qui s'appelle « logo » sans être rangé là n'en est pas un.
     expect(isLogoAsset('/img/teams-images/logo-eclypse.png')).toBe(false);
     expect(isLogoAsset('https://cdn.test/cover.jpg')).toBe(false);

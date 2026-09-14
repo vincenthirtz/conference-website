@@ -208,9 +208,9 @@ describe('filterAdminLinks – child minRole inheritance', () => {
     expect(filterAdminLinks('caster', customLinks).map((l) => l.title)).toEqual(
       []
     );
-    expect(
-      filterAdminLinks('admin', customLinks).map((l) => l.title)
-    ).toEqual(['Parent (manager)']);
+    expect(filterAdminLinks('admin', customLinks).map((l) => l.title)).toEqual([
+      'Parent (manager)',
+    ]);
   });
 
   it('keeps a parent when self-ref is accessible, even if children are gone', () => {

@@ -41,7 +41,8 @@ let memberAuthId: string;
 let teamId: string;
 const createdRowIds: number[] = [];
 
-test.describe.serial('Bot player audit — setup', () => {
+test.describe('Bot player audit — setup', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {
@@ -98,19 +99,24 @@ test.describe.serial('Bot player audit — setup', () => {
         .in('id', createdRowIds);
     }
     // Cleanup audit rows referencing test users (in case some weren't tracked)
-    for (const aid of [adminAuthId, captainAuthId, memberAuthId].filter(Boolean)) {
+    for (const aid of [adminAuthId, captainAuthId, memberAuthId].filter(
+      Boolean
+    )) {
       await supabaseTestClient
         .from('bot_player_actions')
         .delete()
-        .or(
-          `actor_auth_user_id.eq.${aid},target_auth_user_id.eq.${aid}`
-        );
+        .or(`actor_auth_user_id.eq.${aid},target_auth_user_id.eq.${aid}`);
     }
     if (teamId) {
-      await supabaseTestClient.from('team_members').delete().eq('team_id', teamId);
+      await supabaseTestClient
+        .from('team_members')
+        .delete()
+        .eq('team_id', teamId);
       await supabaseTestClient.from('teams').delete().eq('id', teamId);
     }
-    for (const aid of [adminAuthId, captainAuthId, memberAuthId].filter(Boolean)) {
+    for (const aid of [adminAuthId, captainAuthId, memberAuthId].filter(
+      Boolean
+    )) {
       await supabaseTestClient
         .from('user_discord_links')
         .delete()
@@ -130,10 +136,13 @@ test.describe.serial('Bot player audit — setup', () => {
 /* Génère une action via /kicker (POST DELETE members) → log capté            */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Audit log capture', () => {
+test.describe('Audit log capture', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
-  test('Le kick produit une row dans bot_player_actions', async ({ request }) => {
+  test('Le kick produit une row dans bot_player_actions', async ({
+    request,
+  }) => {
     const res = await request.delete(`/api/bot/v1/teams/${teamId}/members`, {
       headers: { 'x-api-key': API_KEY! },
       data: {
@@ -169,7 +178,8 @@ test.describe.serial('Audit log capture', () => {
 /* GET /players/.../actions                                                   */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Audit GET endpoint', () => {
+test.describe('Audit GET endpoint', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('400 sans actorDiscordUserId', async ({ request }) => {

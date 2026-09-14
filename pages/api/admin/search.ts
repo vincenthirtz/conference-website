@@ -123,8 +123,9 @@ async function handler(
               id: t.id as string,
               title: (t.name as string) ?? '',
               subtitle:
-                ((t.column as { name?: string } | null)?.name as string | undefined) ??
-                null,
+                ((t.column as { name?: string } | null)?.name as
+                  | string
+                  | undefined) ?? null,
               href: `/admin/tournament/${t.id as string}/dashboard`,
             }));
           })

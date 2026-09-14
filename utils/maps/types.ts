@@ -113,7 +113,13 @@ export type Brick = {
 };
 
 /** Décor qui entoure le terrain jouable — c'est lui qui « pose » la map. */
-export const ENVIRONMENT_KINDS = ['sea', 'sand', 'snow', 'lava', 'grass'] as const;
+export const ENVIRONMENT_KINDS = [
+  'sea',
+  'sand',
+  'snow',
+  'lava',
+  'grass',
+] as const;
 export type EnvironmentKind = (typeof ENVIRONMENT_KINDS)[number];
 
 export type MapEnvironment = {
@@ -156,5 +162,12 @@ export type VoxelScene = {
   recipe: MapRecipe;
   bricks: Brick[];
   /** Bornes inclusives, calculées après génération. */
-  bounds: { minX: number; maxX: number; minY: number; maxY: number; minZ: number; maxZ: number };
+  bounds: {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+    minZ: number;
+    maxZ: number;
+  };
 };

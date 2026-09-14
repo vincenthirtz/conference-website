@@ -17,7 +17,7 @@ export default {
   toastUnregistered: 'Team unregistered from the tournament',
   confirmIncompleteRoster: 'Incomplete roster: {count} player(s) of {min}',
   confirmIncompleteRosterDesc:
-    "The team is below the roster size the tournament expects. You can register it anyway — the gap is recorded in the staff logs.",
+    'The team is below the roster size the tournament expects. You can register it anyway — the gap is recorded in the staff logs.',
   rosterGapWarning:
     'This team has {count} player(s) for {min} expected (coaches and managers excluded).',
   confirmUnregister: 'Unregister this team from this tournament?',
@@ -79,30 +79,32 @@ export default {
   teamIdLabel: 'Team ID',
   quickLinksTitle: 'Quick links',
   publicPage: 'Public page',
-  rosterLockTitle: "Roster lock",
-  rosterLockIntro: "Opens a window for THIS team only. It closes on its own; the tournament dashboard opens one for every team.",
-  rosterLockLocked: "Locked: captains and managers cannot change the line-up.",
-  rosterLockNotLocked: "No lock in force.",
-  rosterLockOpenTeam: "Unlocked for this team until {time}.",
-  rosterLockOpenTournament: "Unlocked for the whole tournament until {time}.",
-  rosterLockAlreadyOpen: "Already opened by the tournament",
-  rosterLockRelock: "Lock again",
-  rosterLockMinutes: "{n} min",
-  rosterLockHours: "{n} h",
-  rosterLockDays: "{n} d",
-  rosterLockLoadError: "Lock status unavailable.",
-  rosterLockActionError: "The action failed.",
+  rosterLockTitle: 'Roster lock',
+  rosterLockIntro:
+    'Opens a window for THIS team only. It closes on its own; the tournament dashboard opens one for every team.',
+  rosterLockLocked: 'Locked: captains and managers cannot change the line-up.',
+  rosterLockNotLocked: 'No lock in force.',
+  rosterLockOpenTeam: 'Unlocked for this team until {time}.',
+  rosterLockOpenTournament: 'Unlocked for the whole tournament until {time}.',
+  rosterLockAlreadyOpen: 'Already opened by the tournament',
+  rosterLockRelock: 'Lock again',
+  rosterLockMinutes: '{n} min',
+  rosterLockHours: '{n} h',
+  rosterLockDays: '{n} d',
+  rosterLockLoadError: 'Lock status unavailable.',
+  rosterLockActionError: 'The action failed.',
   // Quick links
-  captainViewLink: "Captain view",
-  discordChannelsLink: "Team Discord channels",
+  captainViewLink: 'Captain view',
+  discordChannelsLink: 'Team Discord channels',
 
   // Roster size on an already-joined tournament
-  registeredRosterGap: "Roster too small: {count} player(s) for a minimum of {min}.",
+  registeredRosterGap:
+    'Roster too small: {count} player(s) for a minimum of {min}.',
 
   // Staff history
-  historyTitle: "History",
-  historyLoading: "Loading…",
-  historyEmpty: "No recorded action on this team.",
-  historyLoadError: "History unavailable.",
-  historyTruncated: "Only the last {count} actions are shown.",
+  historyTitle: 'History',
+  historyLoading: 'Loading…',
+  historyEmpty: 'No recorded action on this team.',
+  historyLoadError: 'History unavailable.',
+  historyTruncated: 'Only the last {count} actions are shown.',
 };

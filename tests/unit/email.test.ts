@@ -98,7 +98,8 @@ describe('sendEmail', () => {
     });
     vi.stubGlobal('fetch', mockFetch);
 
-    const url = 'https://owwomenscup.fr/api/email/unsubscribe?token=t&scope=broadcast';
+    const url =
+      'https://owwomenscup.fr/api/email/unsubscribe?token=t&scope=broadcast';
     await sendEmail({
       to: 'a@b.com',
       subject: 'Hi',

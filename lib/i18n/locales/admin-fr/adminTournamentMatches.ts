@@ -121,7 +121,8 @@ export default adminNs('adminTournamentMatches', {
   autoSimTitle: 'Simulation : {count} match(s) seraient planifiés',
   autoSimSubtitle: 'Rien n’est écrit tant que tu n’as pas confirmé.',
   autoSimUnscheduled: '{count} match(s) resteraient sans date.',
-  autoSimConstraints: '{count} contrainte(s) de disponibilité prise(s) en compte.',
+  autoSimConstraints:
+    '{count} contrainte(s) de disponibilité prise(s) en compte.',
   autoSimNoConstraints:
     'Aucune contrainte de disponibilité déclarée : le calcul ne tient compte que des créneaux et du repos.',
   autoSimNothing: 'Aucun match à planifier — tous ont déjà une date.',

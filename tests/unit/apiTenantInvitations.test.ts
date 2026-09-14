@@ -166,10 +166,12 @@ describe('acceptation publique', () => {
       await import('../../utils/tenants/invitationEmail'),
       'buildInvitationEmail'
     );
-    spy.mockImplementation((opts: Parameters<typeof buildInvitationEmail>[0]) => {
-      capturedToken = opts.token;
-      return buildInvitationEmail(opts);
-    });
+    spy.mockImplementation(
+      (opts: Parameters<typeof buildInvitationEmail>[0]) => {
+        capturedToken = opts.token;
+        return buildInvitationEmail(opts);
+      }
+    );
     await invite(email);
     spy.mockRestore();
     return capturedToken;

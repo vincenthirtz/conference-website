@@ -38,10 +38,7 @@ function tournament(
   };
 }
 
-function render(
-  t: UpcomingTournament | null,
-  teams: HomeTeam[] = []
-): string {
+function render(t: UpcomingTournament | null, teams: HomeTeam[] = []): string {
   return renderToString(
     createElement(HomeSpotlight, {
       tournament: t,

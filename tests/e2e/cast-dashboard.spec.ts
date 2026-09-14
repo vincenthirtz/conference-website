@@ -46,7 +46,8 @@ let team1Id: string;
 let team2Id: string;
 let matchId: string;
 
-test.describe.serial('Cast dashboard E2E', () => {
+test.describe('Cast dashboard E2E', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
 
   test.beforeAll(async () => {

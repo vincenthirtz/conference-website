@@ -15,8 +15,9 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps, StageSummary, TournamentMini } from '@/types/admin';
 import nsAdminTournamentBulkOps from '@/lib/i18n/locales/admin-fr/adminTournamentBulkOps';
 
-
-export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
+export const getServerSideProps = withStaffPage({
+  permission: 'manage_tournaments',
+});
 
 type RoundOption = { stageId: string; roundNumber: number; matchCount: number };
 

@@ -19,7 +19,11 @@ import {
   setRpcResult,
   rpcCalls,
 } from './__helpers__/supabaseMock';
-import { consumeApiQuota, minuteKey, monthKey } from '../../utils/billing/apiQuota';
+import {
+  consumeApiQuota,
+  minuteKey,
+  monthKey,
+} from '../../utils/billing/apiQuota';
 import type { TenantPlanState } from '../../utils/billing/planFeatures';
 
 const TENANT = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';

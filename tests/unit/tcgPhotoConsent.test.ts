@@ -346,7 +346,10 @@ describe('POST /api/player/tcg/photo — dépôt et remplacement', () => {
         method: 'POST',
         // Base64 valide, contenu qui n'est pas un PNG : le bucket est public,
         // le type déclaré par le client ne fait pas foi.
-        body: { data: Buffer.from('pas une image').toString('base64'), mimeType: 'image/png' },
+        body: {
+          data: Buffer.from('pas une image').toString('base64'),
+          mimeType: 'image/png',
+        },
       }),
       res
     );
@@ -425,7 +428,11 @@ describe('PATCH /api/admin/tcg/photos — relecture', () => {
     // Le cas réel : la joueuse a retiré son accord pendant que la relectrice
     // avait la file ouverte. Sa décision à elle prime.
     seedPlayer();
-    seedCard({ photo_status: 'none', photo_path: null, revoked_at: '2026-02-01' });
+    seedCard({
+      photo_status: 'none',
+      photo_path: null,
+      revoked_at: '2026-02-01',
+    });
     seedStaff();
 
     const res = makeRes();

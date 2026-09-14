@@ -56,7 +56,9 @@ describe('pickedMapsFromSteps', () => {
 describe('buildGamesPayload', () => {
   it('numérote les cartes et marque la carte d’appoint', () => {
     const payload = buildGamesPayload(steps, 't1', 'm1');
-    expect(payload.map((g) => [g.map_order, g.map_name, g.is_tiebreaker])).toEqual([
+    expect(
+      payload.map((g) => [g.map_order, g.map_name, g.is_tiebreaker])
+    ).toEqual([
       [0, "King's Row", false],
       [1, 'Numbani', false],
       [2, 'Nepal', true],
@@ -75,13 +77,21 @@ describe('buildGamesPayload', () => {
 
 describe('hasRecordedScore', () => {
   it('un 0-0 est une ligne préparée, pas un résultat', () => {
-    expect(hasRecordedScore({ id: 'g', team1_score: 0, team2_score: 0 })).toBe(false);
-    expect(hasRecordedScore({ id: 'g', team1_score: null, team2_score: null })).toBe(false);
+    expect(hasRecordedScore({ id: 'g', team1_score: 0, team2_score: 0 })).toBe(
+      false
+    );
+    expect(
+      hasRecordedScore({ id: 'g', team1_score: null, team2_score: null })
+    ).toBe(false);
   });
 
   it('tout score non nul, des deux côtés, compte', () => {
-    expect(hasRecordedScore({ id: 'g', team1_score: 1, team2_score: 0 })).toBe(true);
-    expect(hasRecordedScore({ id: 'g', team1_score: 0, team2_score: 2 })).toBe(true);
+    expect(hasRecordedScore({ id: 'g', team1_score: 1, team2_score: 0 })).toBe(
+      true
+    );
+    expect(hasRecordedScore({ id: 'g', team1_score: 0, team2_score: 2 })).toBe(
+      true
+    );
   });
 });
 
@@ -119,13 +129,18 @@ function fakeClient(initial: unknown[], opts: { readError?: boolean } = {}) {
       return builder;
     },
   };
-  return client as unknown as Parameters<typeof syncGamesFromVeto>[0] & typeof client;
+  return client as unknown as Parameters<typeof syncGamesFromVeto>[0] &
+    typeof client;
 }
 
 describe('syncGamesFromVeto', () => {
   it('crée les parties quand le match n’en a aucune', async () => {
     const client = fakeClient([]);
-    const res = await syncGamesFromVeto(client, { tenantId: 't1', matchId: 'm1', steps });
+    const res = await syncGamesFromVeto(client, {
+      tenantId: 't1',
+      matchId: 'm1',
+      steps,
+    });
     expect(res).toEqual({ created: true, count: 3 });
     expect(client.state.inserted).toHaveLength(3);
     expect(client.state.deletes).toBe(0);
@@ -138,7 +153,11 @@ describe('syncGamesFromVeto', () => {
       { id: 'g1', team1_score: 0, team2_score: 0 },
       { id: 'g2', team1_score: 0, team2_score: 0 },
     ]);
-    const res = await syncGamesFromVeto(client, { tenantId: 't1', matchId: 'm1', steps });
+    const res = await syncGamesFromVeto(client, {
+      tenantId: 't1',
+      matchId: 'm1',
+      steps,
+    });
     expect(res).toEqual({ created: true, count: 3 });
     expect(client.state.deletes).toBe(1);
     expect(client.state.inserted).toHaveLength(3);
@@ -149,7 +168,11 @@ describe('syncGamesFromVeto', () => {
       { id: 'g1', team1_score: 2, team2_score: 1 },
       { id: 'g2', team1_score: 0, team2_score: 0 },
     ]);
-    const res = await syncGamesFromVeto(client, { tenantId: 't1', matchId: 'm1', steps });
+    const res = await syncGamesFromVeto(client, {
+      tenantId: 't1',
+      matchId: 'm1',
+      steps,
+    });
     expect(res).toEqual({ created: false, reason: 'scores-existants' });
     expect(client.state.deletes).toBe(0);
     expect(client.state.inserted).toHaveLength(0);
@@ -168,7 +191,11 @@ describe('syncGamesFromVeto', () => {
 
   it('une lecture en erreur n’efface rien', async () => {
     const client = fakeClient([], { readError: true });
-    const res = await syncGamesFromVeto(client, { tenantId: 't1', matchId: 'm1', steps });
+    const res = await syncGamesFromVeto(client, {
+      tenantId: 't1',
+      matchId: 'm1',
+      steps,
+    });
     expect(res).toEqual({ created: false, reason: 'erreur' });
     expect(client.state.deletes).toBe(0);
   });
@@ -180,7 +207,9 @@ describe('clearGamesFromVeto', () => {
       { id: 'g1', team1_score: 0, team2_score: 0 },
       { id: 'g2', team1_score: 0, team2_score: 0 },
     ]);
-    expect(await clearGamesFromVeto(client, { tenantId: 't1', matchId: 'm1' })).toEqual({
+    expect(
+      await clearGamesFromVeto(client, { tenantId: 't1', matchId: 'm1' })
+    ).toEqual({
       cleared: 2,
     });
   });
@@ -189,7 +218,9 @@ describe('clearGamesFromVeto', () => {
     // Le reset du veto supprimait jusqu'ici TOUTES les parties du match : une
     // perte de résultats à un clic.
     const client = fakeClient([{ id: 'g1', team1_score: 3, team2_score: 2 }]);
-    expect(await clearGamesFromVeto(client, { tenantId: 't1', matchId: 'm1' })).toEqual({
+    expect(
+      await clearGamesFromVeto(client, { tenantId: 't1', matchId: 'm1' })
+    ).toEqual({
       cleared: null,
       reason: 'scores-existants',
     });
@@ -198,7 +229,9 @@ describe('clearGamesFromVeto', () => {
 
   it('sans partie, ne fait rien et ne se plaint pas', async () => {
     const client = fakeClient([]);
-    expect(await clearGamesFromVeto(client, { tenantId: 't1', matchId: 'm1' })).toEqual({
+    expect(
+      await clearGamesFromVeto(client, { tenantId: 't1', matchId: 'm1' })
+    ).toEqual({
       cleared: 0,
     });
   });

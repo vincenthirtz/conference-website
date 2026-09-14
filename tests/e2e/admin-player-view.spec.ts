@@ -176,8 +176,7 @@ test.describe('Admin "Vue player" (command center)', () => {
 
     await page.route(
       (url) =>
-        url.pathname ===
-        `/api/admin/users/${TARGET_USER_ID}/player-view`,
+        url.pathname === `/api/admin/users/${TARGET_USER_ID}/player-view`,
       async (route) => {
         await route.fulfill({
           status: 200,
@@ -254,9 +253,7 @@ test.describe('Admin "Vue player" (command center)', () => {
     ).toBeVisible();
     // Scope to main content — the cookie banner also has a "Refuser" button.
     const main = page.locator('#main-content');
-    await expect(
-      main.getByRole('button', { name: 'Approuver' })
-    ).toBeVisible();
+    await expect(main.getByRole('button', { name: 'Approuver' })).toBeVisible();
     await expect(main.getByRole('button', { name: 'Refuser' })).toBeVisible();
   });
 
@@ -338,9 +335,10 @@ test.describe('Admin "Vue player" (command center)', () => {
       (url) => url.pathname === '/api/admin/demandes',
       async (route) => {
         if (route.request().method() === 'POST') {
-          demandeBody = route
-            .request()
-            .postDataJSON() as Record<string, unknown>;
+          demandeBody = route.request().postDataJSON() as Record<
+            string,
+            unknown
+          >;
           await route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -383,8 +381,7 @@ test.describe('Admin "Vue player" (command center)', () => {
 
     await page.route(
       (url) =>
-        url.pathname ===
-        `/api/admin/users/${TARGET_USER_ID}/player-view`,
+        url.pathname === `/api/admin/users/${TARGET_USER_ID}/player-view`,
       async (route) => {
         await route.fulfill({
           status: 404,

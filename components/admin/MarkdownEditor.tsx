@@ -86,7 +86,9 @@ export default function MarkdownEditor({
         const lineStart = value.lastIndexOf('\n', start - 1) + 1;
         insertStart = lineStart;
         const lineEnd = end;
-        const lines = (value.slice(lineStart, lineEnd) || wrap.sample).split('\n');
+        const lines = (value.slice(lineStart, lineEnd) || wrap.sample).split(
+          '\n'
+        );
         inserted = lines.map((l) => `${wrap.before}${l}`).join('\n');
         const next =
           value.slice(0, lineStart) + inserted + value.slice(lineEnd);

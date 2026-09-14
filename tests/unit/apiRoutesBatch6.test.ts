@@ -202,7 +202,7 @@ describe('GET /api/admin/logs', () => {
     expect((res.body as any).logs.map((l: any) => l.id)).toEqual(['l1']);
   });
 
-  it('ignore un userId qui n\'est pas un uuid', async () => {
+  it("ignore un userId qui n'est pas un uuid", async () => {
     store.staff_logs = [
       {
         id: 'l1',

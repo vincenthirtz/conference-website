@@ -193,7 +193,10 @@ describe('publishImage', () => {
 
 describe('validation Instagram côté composeur', () => {
   it('refuse un post sans image, à l’aperçu', () => {
-    const out = resolveTarget({ text: 'Le J7 bouge' }, { platform: 'instagram' });
+    const out = resolveTarget(
+      { text: 'Le J7 bouge' },
+      { platform: 'instagram' }
+    );
     expect(out.error).toMatch(/image est obligatoire/);
   });
 

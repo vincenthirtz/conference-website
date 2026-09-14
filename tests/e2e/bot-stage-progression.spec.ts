@@ -38,7 +38,8 @@ let team3Id: string;
 let team4Id: string;
 const createdMatchIds: string[] = [];
 
-test.describe.serial('Bot progression — setup', () => {
+test.describe('Bot progression — setup', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {
@@ -49,8 +50,16 @@ test.describe.serial('Bot progression — setup', () => {
     const player = await createTestPlayer(PLAYER_EMAIL, 'TestPass123!');
     playerAuthId = player!.id;
     await supabaseTestClient.from('user_discord_links').insert([
-      { auth_user_id: adminAuthId, discord_user_id: ADMIN_DISCORD, discord_username: `prog_adm_${TS}` },
-      { auth_user_id: playerAuthId, discord_user_id: PLAYER_DISCORD, discord_username: `prog_pl_${TS}` },
+      {
+        auth_user_id: adminAuthId,
+        discord_user_id: ADMIN_DISCORD,
+        discord_username: `prog_adm_${TS}`,
+      },
+      {
+        auth_user_id: playerAuthId,
+        discord_user_id: PLAYER_DISCORD,
+        discord_username: `prog_pl_${TS}`,
+      },
     ]);
 
     const { data: tour } = await supabaseTestClient
@@ -153,13 +162,17 @@ test.describe.serial('Bot progression — setup', () => {
         },
       ])
       .select('id');
-    for (const m of r1.data ?? []) createdMatchIds.push((m as { id: string }).id);
+    for (const m of r1.data ?? [])
+      createdMatchIds.push((m as { id: string }).id);
   });
 
   test.afterAll(async () => {
     if (!supabaseTestClient) return;
     if (createdMatchIds.length > 0) {
-      await supabaseTestClient.from('matches').delete().in('id', createdMatchIds);
+      await supabaseTestClient
+        .from('matches')
+        .delete()
+        .in('id', createdMatchIds);
     }
     // Cleanup tout match créé par les tests (rounds générés)
     await supabaseTestClient
@@ -167,14 +180,26 @@ test.describe.serial('Bot progression — setup', () => {
       .delete()
       .eq('stage_id', swissStageId);
     if (swissStageId) {
-      await supabaseTestClient.from('stage_teams').delete().eq('stage_id', swissStageId);
-      await supabaseTestClient.from('tournament_stages').delete().eq('id', swissStageId);
+      await supabaseTestClient
+        .from('stage_teams')
+        .delete()
+        .eq('stage_id', swissStageId);
+      await supabaseTestClient
+        .from('tournament_stages')
+        .delete()
+        .eq('id', swissStageId);
     }
     if (bracketStageId) {
-      await supabaseTestClient.from('tournament_stages').delete().eq('id', bracketStageId);
+      await supabaseTestClient
+        .from('tournament_stages')
+        .delete()
+        .eq('id', bracketStageId);
     }
     if (tournamentId) {
-      await supabaseTestClient.from('tournaments').delete().eq('id', tournamentId);
+      await supabaseTestClient
+        .from('tournaments')
+        .delete()
+        .eq('id', tournamentId);
     }
     for (const tid of [team1Id, team2Id, team3Id, team4Id].filter(Boolean)) {
       await supabaseTestClient.from('team_members').delete().eq('team_id', tid);
@@ -201,7 +226,8 @@ test.describe.serial('Bot progression — setup', () => {
 /* /next-round                                                               */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot /next-round', () => {
+test.describe('Bot /next-round', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('403 si actor non admin', async ({ request }) => {
@@ -307,7 +333,8 @@ test.describe.serial('Bot /next-round', () => {
 /* /finalize                                                                 */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot /finalize', () => {
+test.describe('Bot /finalize', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('403 si actor non admin', async ({ request }) => {

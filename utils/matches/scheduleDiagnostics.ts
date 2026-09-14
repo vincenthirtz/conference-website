@@ -186,8 +186,10 @@ function overlaps(
   restMinutes: number
 ): boolean {
   const rest = restMinutes * 60_000;
-  return aStart.getTime() < bEnd.getTime() + rest &&
-    bStart.getTime() < aEnd.getTime() + rest;
+  return (
+    aStart.getTime() < bEnd.getTime() + rest &&
+    bStart.getTime() < aEnd.getTime() + rest
+  );
 }
 
 /**
@@ -266,8 +268,12 @@ export function diagnoseSchedule(
       const b = sorted[i + 1];
       const aStart = new Date(a.scheduledAt as string);
       const bStart = new Date(b.scheduledAt as string);
-      const aEnd = new Date(aStart.getTime() + durationOf(a, durations) * 60_000);
-      const bEnd = new Date(bStart.getTime() + durationOf(b, durations) * 60_000);
+      const aEnd = new Date(
+        aStart.getTime() + durationOf(a, durations) * 60_000
+      );
+      const bEnd = new Date(
+        bStart.getTime() + durationOf(b, durations) * 60_000
+      );
 
       if (overlaps(aStart, aEnd, bStart, bEnd, restMinutes)) {
         anomalies.push({
@@ -312,7 +318,10 @@ export function diagnoseSchedule(
     for (const m of dated) {
       let day: string;
       try {
-        day = getWallClockParts(new Date(m.scheduledAt as string), timezone).date;
+        day = getWallClockParts(
+          new Date(m.scheduledAt as string),
+          timezone
+        ).date;
       } catch {
         continue;
       }
@@ -419,8 +428,10 @@ function findSameEveningFix(
     const candEnd = new Date(candidate.getTime() + myDuration);
     const clash = others.some((m) => {
       const shares =
-        (m.team1Id && (m.team1Id === match.team1Id || m.team1Id === match.team2Id)) ||
-        (m.team2Id && (m.team2Id === match.team1Id || m.team2Id === match.team2Id));
+        (m.team1Id &&
+          (m.team1Id === match.team1Id || m.team1Id === match.team2Id)) ||
+        (m.team2Id &&
+          (m.team2Id === match.team1Id || m.team2Id === match.team2Id));
       if (!shares) return false;
       const s = new Date(m.scheduledAt as string);
       const e = new Date(s.getTime() + durationOf(m, ctx.durations) * 60_000);

@@ -20,9 +20,7 @@ import {
 function html(input: string | null | undefined): string {
   const node = renderTeamPublicMarkdown(input);
   if (node === null) return '';
-  return renderToStaticMarkup(
-    React.createElement(React.Fragment, null, node)
-  );
+  return renderToStaticMarkup(React.createElement(React.Fragment, null, node));
 }
 
 /* -----------------------------------------------------------

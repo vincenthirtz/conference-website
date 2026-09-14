@@ -424,7 +424,10 @@ export async function markReadError(
       .eq('tenant_id', tenantId)
       .eq('platform', 'instagram');
   } catch (err) {
-    logger.error('[instagram] consignation de l’erreur de lecture impossible', err);
+    logger.error(
+      '[instagram] consignation de l’erreur de lecture impossible',
+      err
+    );
   }
 }
 

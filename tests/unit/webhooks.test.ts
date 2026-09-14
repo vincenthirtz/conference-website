@@ -33,8 +33,12 @@ describe('isWebhookableEvent', () => {
 
 describe('eventMatchesSubscription', () => {
   it('matches by exact name', () => {
-    expect(eventMatchesSubscription('match.finished', ['match.finished'])).toBe(true);
-    expect(eventMatchesSubscription('match.finished', ['news.published'])).toBe(false);
+    expect(eventMatchesSubscription('match.finished', ['match.finished'])).toBe(
+      true
+    );
+    expect(eventMatchesSubscription('match.finished', ['news.published'])).toBe(
+      false
+    );
   });
 
   it("'*' matches any webhookable event but never a non-webhookable one", () => {
@@ -47,7 +51,11 @@ describe('eventMatchesSubscription', () => {
 
 describe('parseWebhookEventTypes', () => {
   it('accepts a valid subset', () => {
-    const r = parseWebhookEventTypes(['match.finished', 'news.published', 'match.finished']);
+    const r = parseWebhookEventTypes([
+      'match.finished',
+      'news.published',
+      'match.finished',
+    ]);
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.types).toEqual(['match.finished', 'news.published']); // deduped
   });
@@ -70,7 +78,10 @@ describe('signWebhookBody + buildWebhookHeaders', () => {
   it('produces a deterministic HMAC-SHA256 hex matching crypto', () => {
     const secret = 'whsec_test';
     const body = '{"a":1}';
-    const expected = crypto.createHmac('sha256', secret).update(body).digest('hex');
+    const expected = crypto
+      .createHmac('sha256', secret)
+      .update(body)
+      .digest('hex');
     expect(signWebhookBody(secret, body)).toBe(expected);
   });
 
@@ -100,7 +111,11 @@ describe('generateWebhookSecret', () => {
 
 describe('WEBHOOK_EVENT_TYPES', () => {
   it('does not include internal Discord-ops events', () => {
-    for (const internal of ['team.member.added', 'cast.assigned', 'staff.role.changed']) {
+    for (const internal of [
+      'team.member.added',
+      'cast.assigned',
+      'staff.role.changed',
+    ]) {
       expect(WEBHOOK_EVENT_TYPES).not.toContain(internal as never);
     }
   });

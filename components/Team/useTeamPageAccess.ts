@@ -57,8 +57,7 @@ export function useTeamPageAccess(teamId: string): TeamPageAccess {
   const { user, token, loading } = useSession();
   const userId = user?.id ?? null;
   const signedIn = shouldCheckTeamPageAccess({ loading, userId });
-  const [resolved, setResolved] =
-    useState<TeamPageAccess>(NO_TEAM_PAGE_ACCESS);
+  const [resolved, setResolved] = useState<TeamPageAccess>(NO_TEAM_PAGE_ACCESS);
 
   useEffect(() => {
     if (!signedIn) return;

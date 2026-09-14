@@ -211,7 +211,7 @@ describe('runTaskBoardDigest', () => {
     expect(b.overdueTasks.omitted).toBe(3);
   });
 
-  it('topTasks : nomme les cartes prioritaires quand rien n\'est daté', async () => {
+  it("topTasks : nomme les cartes prioritaires quand rien n'est daté", async () => {
     store.tasks = [
       task({ id: 'low', title: 'Petit truc', priority: 'low' }),
       task({ id: 'urgent', title: 'Gros truc', priority: 'urgent' }),
@@ -233,7 +233,7 @@ describe('runTaskBoardDigest', () => {
     ]);
   });
 
-  it('topTasks reste vide dès qu\'il y a du daté (les listes datées suffisent)', async () => {
+  it("topTasks reste vide dès qu'il y a du daté (les listes datées suffisent)", async () => {
     store.tasks = [
       task({ id: 'late', due_date: YESTERDAY, title: 'En retard' }),
       task({ id: 'other', title: 'Sans date', priority: 'urgent' }),

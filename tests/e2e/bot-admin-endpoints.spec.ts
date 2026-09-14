@@ -41,7 +41,8 @@ let teamId: string;
 let opponentTeamId: string;
 let matchId: string;
 
-test.describe.serial('Bot admin endpoints — setup', () => {
+test.describe('Bot admin endpoints — setup', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {
@@ -171,7 +172,8 @@ test.describe.serial('Bot admin endpoints — setup', () => {
 /* /publier-tournoi                                                          */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot /publier-tournoi — POST /tournaments/[id]/status', () => {
+test.describe('Bot /publier-tournoi — POST /tournaments/[id]/status', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('401 sans clé', async ({ request }) => {
@@ -241,7 +243,8 @@ test.describe.serial('Bot /publier-tournoi — POST /tournaments/[id]/status', (
 /* /forfait                                                                  */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot /forfait — POST /matches/[id]/forfeit', () => {
+test.describe('Bot /forfait — POST /matches/[id]/forfeit', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('403 si actor non admin', async ({ request }) => {
@@ -295,7 +298,8 @@ test.describe.serial('Bot /forfait — POST /matches/[id]/forfeit', () => {
 /* /reset-match                                                              */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot /reset-match — POST /matches/[id]/reset', () => {
+test.describe('Bot /reset-match — POST /matches/[id]/reset', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('403 si actor non admin', async ({ request }) => {
@@ -319,7 +323,9 @@ test.describe.serial('Bot /reset-match — POST /matches/[id]/reset', () => {
 
     const { data: m } = await supabaseTestClient!
       .from('matches')
-      .select('status, team1_score, team2_score, winner_team_id, forfeit_team_id')
+      .select(
+        'status, team1_score, team2_score, winner_team_id, forfeit_team_id'
+      )
       .eq('id', matchId)
       .single();
     expect(m!.status).toBe('pending');
@@ -334,7 +340,8 @@ test.describe.serial('Bot /reset-match — POST /matches/[id]/reset', () => {
 /* /logs                                                                     */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot /logs — GET /staff-logs', () => {
+test.describe('Bot /logs — GET /staff-logs', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('403 si actor non admin', async ({ request }) => {
@@ -366,7 +373,8 @@ test.describe.serial('Bot /logs — GET /staff-logs', () => {
 /* /demandes                                                                 */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot /demandes — GET /demandes', () => {
+test.describe('Bot /demandes — GET /demandes', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   let createdDemandeId: string | null = null;
@@ -391,7 +399,10 @@ test.describe.serial('Bot /demandes — GET /demandes', () => {
 
   test.afterAll(async () => {
     if (!supabaseTestClient || !createdDemandeId) return;
-    await supabaseTestClient.from('demandes').delete().eq('id', createdDemandeId);
+    await supabaseTestClient
+      .from('demandes')
+      .delete()
+      .eq('id', createdDemandeId);
   });
 
   test('403 si actor non admin', async ({ request }) => {
@@ -417,7 +428,9 @@ test.describe.serial('Bot /demandes — GET /demandes', () => {
     );
     expect(res.status()).toBe(200);
     const body = await res.json();
-    const found = body.demandes.find((d: { id: string }) => d.id === createdDemandeId);
+    const found = body.demandes.find(
+      (d: { id: string }) => d.id === createdDemandeId
+    );
     expect(found).toBeTruthy();
     expect(found.status).toBe('pending');
     expect(found.type).toBe('join');

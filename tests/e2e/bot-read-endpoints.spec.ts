@@ -36,7 +36,8 @@ let tournamentId: string;
 let stageId: string;
 let upcomingMatchId: string;
 
-test.describe.serial('Bot read endpoints — setup', () => {
+test.describe('Bot read endpoints — setup', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {
@@ -69,7 +70,9 @@ test.describe.serial('Bot read endpoints — setup', () => {
 
     // Tournoi qui démarre dans 3 jours (window /rappels = 7j) -> doit
     // apparaitre dans tournament_j1
-    const startsIn3Days = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+    const startsIn3Days = new Date(
+      Date.now() + 3 * 24 * 60 * 60 * 1000
+    ).toISOString();
     const { data: tour } = await supabaseTestClient
       .from('tournaments')
       .insert({
@@ -103,7 +106,9 @@ test.describe.serial('Bot read endpoints — setup', () => {
     });
 
     // Un match pending dans 6h pour /rappels (window 48h) et /bracket
-    const scheduledIn6h = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
+    const scheduledIn6h = new Date(
+      Date.now() + 6 * 60 * 60 * 1000
+    ).toISOString();
     const { data: match } = await supabaseTestClient
       .from('matches')
       .insert({
@@ -123,7 +128,10 @@ test.describe.serial('Bot read endpoints — setup', () => {
   test.afterAll(async () => {
     if (!supabaseTestClient) return;
     if (upcomingMatchId) {
-      await supabaseTestClient.from('matches').delete().eq('id', upcomingMatchId);
+      await supabaseTestClient
+        .from('matches')
+        .delete()
+        .eq('id', upcomingMatchId);
     }
     if (stageId) {
       await supabaseTestClient
@@ -142,7 +150,10 @@ test.describe.serial('Bot read endpoints — setup', () => {
         .eq('id', tournamentId);
     }
     if (teamId) {
-      await supabaseTestClient.from('team_members').delete().eq('team_id', teamId);
+      await supabaseTestClient
+        .from('team_members')
+        .delete()
+        .eq('team_id', teamId);
       await supabaseTestClient.from('teams').delete().eq('id', teamId);
     }
     if (captainAuthId) {
@@ -166,7 +177,8 @@ test.describe.serial('Bot read endpoints — setup', () => {
 /* GET /api/bot/v1/tournaments/[id]/teams   (participants)                   */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot GET participants', () => {
+test.describe('Bot GET participants', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('401 sans clé', async ({ request }) => {
@@ -212,7 +224,8 @@ test.describe.serial('Bot GET participants', () => {
 /* GET /api/bot/v1/tournaments/[id]/bracket                                  */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot GET bracket', () => {
+test.describe('Bot GET bracket', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('400 si tournamentId invalide', async ({ request }) => {
@@ -280,7 +293,8 @@ test.describe.serial('Bot GET bracket', () => {
 /* GET /api/bot/v1/players/by-discord/[id]/reminders                         */
 /* ------------------------------------------------------------------------- */
 
-test.describe.serial('Bot GET player reminders', () => {
+test.describe('Bot GET player reminders', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test('400 si discordUserId invalide', async ({ request }) => {

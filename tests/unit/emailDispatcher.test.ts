@@ -145,7 +145,7 @@ describe('opt-in gating', () => {
     expect(sendDigestEmail).not.toHaveBeenCalled();
   });
 
-  it("ignore un opt-in email enabled=false (re-opt-out)", async () => {
+  it('ignore un opt-in email enabled=false (re-opt-out)', async () => {
     (store.notification_prefs as any[]).push({
       user_id: USER_A,
       event_type: 'news.published',

@@ -175,7 +175,12 @@ describe('GET /api/cast/[matchId]', () => {
           country: 'BE',
           captain_id: 'cap-2',
         },
-        tournament: { id: 'tour-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', name: 'Cup', slug: 'cup' },
+        tournament: {
+          id: 'tour-1',
+          tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+          name: 'Cup',
+          slug: 'cup',
+        },
         stage: { id: 's1', name: 'Group', stage_type: 'group' },
       },
     ] as any;
@@ -252,7 +257,11 @@ describe('GET /api/cast/[matchId]', () => {
         team2_id: 't2',
         team1: { id: 't1', name: 'Alpha', captain_id: 'cap-1' },
         team2: { id: 't2', name: 'Beta', captain_id: 'cap-2' },
-        tournament: { id: 'tour-1', tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4', name: 'Cup' },
+        tournament: {
+          id: 'tour-1',
+          tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+          name: 'Cup',
+        },
         stage: null,
       },
       {

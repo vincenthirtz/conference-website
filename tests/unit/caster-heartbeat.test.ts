@@ -105,9 +105,27 @@ beforeEach(() => {
     },
   ] as any;
   store.event_runs = [
-    { id: RUN_LIVE, tenant_id: TENANT_X, status: 'live', name: 'Live', slug: 'live' },
-    { id: RUN_DRAFT, tenant_id: TENANT_X, status: 'draft', name: 'Draft', slug: 'draft' },
-    { id: RUN_OTHER_TENANT, tenant_id: TENANT_Y, status: 'live', name: 'Other', slug: 'other' },
+    {
+      id: RUN_LIVE,
+      tenant_id: TENANT_X,
+      status: 'live',
+      name: 'Live',
+      slug: 'live',
+    },
+    {
+      id: RUN_DRAFT,
+      tenant_id: TENANT_X,
+      status: 'draft',
+      name: 'Draft',
+      slug: 'draft',
+    },
+    {
+      id: RUN_OTHER_TENANT,
+      tenant_id: TENANT_Y,
+      status: 'live',
+      name: 'Other',
+      slug: 'other',
+    },
   ] as any;
   store.caster_presence = [] as any;
 });
@@ -115,7 +133,10 @@ beforeEach(() => {
 describe('POST /api/caster/heartbeat', () => {
   it('200 on first heartbeat — caster_presence row created with tenant + run + user_agent', async () => {
     const res = makeRes();
-    await heartbeatHandler(makeAuthedReq({ body: { event_run_id: RUN_LIVE } }), res);
+    await heartbeatHandler(
+      makeAuthedReq({ body: { event_run_id: RUN_LIVE } }),
+      res
+    );
 
     expect(res.statusCode).toBe(200);
     const body = res.body as {
@@ -134,10 +155,14 @@ describe('POST /api/caster/heartbeat', () => {
 
   it('200 on subsequent heartbeat — UPSERT keeps a single row and updates last_seen_at', async () => {
     const res1 = makeRes();
-    await heartbeatHandler(makeAuthedReq({ body: { event_run_id: RUN_LIVE } }), res1);
+    await heartbeatHandler(
+      makeAuthedReq({ body: { event_run_id: RUN_LIVE } }),
+      res1
+    );
     expect(res1.statusCode).toBe(200);
     expect((store.caster_presence as any[]).length).toBe(1);
-    const firstSeen = (store.caster_presence as any[])[0].last_seen_at as string;
+    const firstSeen = (store.caster_presence as any[])[0]
+      .last_seen_at as string;
 
     // Wait a hair to ensure a different ISO timestamp on the second call.
     await new Promise((r) => setTimeout(r, 5));
@@ -163,7 +188,10 @@ describe('POST /api/caster/heartbeat', () => {
 
   it('200 with event_run_id=null (caster on cockpit without active run)', async () => {
     const res = makeRes();
-    await heartbeatHandler(makeAuthedReq({ body: { event_run_id: null } }), res);
+    await heartbeatHandler(
+      makeAuthedReq({ body: { event_run_id: null } }),
+      res
+    );
 
     expect(res.statusCode).toBe(200);
     const body = res.body as { presence: { event_run_id: string | null } };

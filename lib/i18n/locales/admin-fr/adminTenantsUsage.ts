@@ -16,7 +16,7 @@ export default adminNs('adminTenantsUsage', {
   atRisk: '{n} espace(s) au-delà de 80 %',
   loading: 'Chargement des compteurs…',
   emptyTitle: 'Aucun espace',
-  emptyDesc: "Rien à mesurer pour le moment.",
+  emptyDesc: 'Rien à mesurer pour le moment.',
   colTenant: 'Espace',
   colPlan: 'Plan',
   colUsage: 'Ce mois-ci',

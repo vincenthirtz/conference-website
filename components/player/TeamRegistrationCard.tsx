@@ -73,7 +73,9 @@ export default function TeamRegistrationCard({
   const [loadFailed, setLoadFailed] = useState(false);
 
   const [message, setMessage] = useState('');
-  const [fieldValues, setFieldValues] = useState<Record<string, FieldValue>>({});
+  const [fieldValues, setFieldValues] = useState<Record<string, FieldValue>>(
+    {}
+  );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -358,10 +360,7 @@ export default function TeamRegistrationCard({
             </div>
 
             {submitError && (
-              <p
-                role="alert"
-                className="text-sm text-[var(--status-error)]"
-              >
+              <p role="alert" className="text-sm text-[var(--status-error)]">
                 {submitError}
               </p>
             )}

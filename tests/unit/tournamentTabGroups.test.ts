@@ -63,9 +63,10 @@ describe('groupes d’onglets du tournoi', () => {
   it('ne pointe vers aucun écran qui n’existe pas', () => {
     const routes = realRoutes();
     const ghosts = memberRoutes.filter((r) => !routes.includes(r));
-    expect(ghosts, `Routes fantômes dans la nav : ${ghosts.join(', ')}`).toEqual(
-      []
-    );
+    expect(
+      ghosts,
+      `Routes fantômes dans la nav : ${ghosts.join(', ')}`
+    ).toEqual([]);
   });
 
   it('mène chaque groupe à son premier écran', () => {
@@ -79,9 +80,9 @@ describe('groupes d’onglets du tournoi', () => {
   it('retombe sur le tableau de bord pour un groupe inconnu', () => {
     // Défense en profondeur : une valeur `active` obsolète ne doit pas produire
     // un lien cassé, elle doit ramener quelque part de sensé.
-    expect(
-      tournamentTabHref('T', 'inconnu' as never)
-    ).toBe('/admin/tournament/T/dashboard');
+    expect(tournamentTabHref('T', 'inconnu' as never)).toBe(
+      '/admin/tournament/T/dashboard'
+    );
   });
 
   it('a un libellé traduit pour chaque groupe et chaque écran', () => {

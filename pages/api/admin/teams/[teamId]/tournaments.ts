@@ -365,10 +365,11 @@ async function handlePost(
       // On ne rollback pas `stage_teams` : l'équipe est seedée, c'est déjà la
       // moitié utile. Mais on le DIT — un succès silencieux ici reproduirait
       // exactement le bug qu'on corrige.
-      logger.error(
-        '[admin/teams/tournaments] tournament_teams upsert failed',
-        { teamId, tournamentId, error: ttError.message }
-      );
+      logger.error('[admin/teams/tournaments] tournament_teams upsert failed', {
+        teamId,
+        tournamentId,
+        error: ttError.message,
+      });
       return res.status(500).json({
         error:
           "L'équipe a été seedée dans les phases mais son inscription n'a pas pu être enregistrée. Réessaie ou préviens un dev.",
@@ -510,10 +511,11 @@ async function handleDelete(
       .eq('tournament_id', tournamentId);
 
     if (ttDeleteError) {
-      logger.error(
-        '[admin/teams/tournaments] tournament_teams delete failed',
-        { teamId, tournamentId, error: ttDeleteError.message }
-      );
+      logger.error('[admin/teams/tournaments] tournament_teams delete failed', {
+        teamId,
+        tournamentId,
+        error: ttDeleteError.message,
+      });
       return res.status(500).json({
         error:
           "L'équipe a été retirée des phases mais son inscription n'a pas pu être supprimée. Réessaie ou préviens un dev.",

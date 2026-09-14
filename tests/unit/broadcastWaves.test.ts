@@ -421,10 +421,26 @@ describe('computeAudienceRecipients', () => {
 
   it('tournament-captains-incomplete-roster: capitaines sous le min_players (titulaires seuls)', async () => {
     setAuthListUsers([
-      { id: 'cap1', email: 'cap1@x.com', email_confirmed_at: '2026-01-01' } as any,
-      { id: 'cap2', email: 'cap2@x.com', email_confirmed_at: '2026-01-01' } as any,
-      { id: 'cap3', email: 'cap3@x.com', email_confirmed_at: '2026-01-01' } as any,
-      { id: 'cap4', email: 'cap4@x.com', email_confirmed_at: '2026-01-01' } as any,
+      {
+        id: 'cap1',
+        email: 'cap1@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
+      {
+        id: 'cap2',
+        email: 'cap2@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
+      {
+        id: 'cap3',
+        email: 'cap3@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
+      {
+        id: 'cap4',
+        email: 'cap4@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
     ]);
     store.tournaments = [
       {
@@ -472,10 +488,26 @@ describe('computeAudienceRecipients', () => {
     // par un manager — voire sans capitaine du tout, état légitime — ne
     // recevait donc RIEN, sans que rien ne le signale.
     setAuthListUsers([
-      { id: 'cap1', email: 'cap1@x.com', email_confirmed_at: '2026-01-01' } as any,
-      { id: 'mgr1', email: 'mgr1@x.com', email_confirmed_at: '2026-01-01' } as any,
-      { id: 'mgr2', email: 'mgr2@x.com', email_confirmed_at: '2026-01-01' } as any,
-      { id: 'mgr3', email: 'mgr3@x.com', email_confirmed_at: '2026-01-01' } as any,
+      {
+        id: 'cap1',
+        email: 'cap1@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
+      {
+        id: 'mgr1',
+        email: 'mgr1@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
+      {
+        id: 'mgr2',
+        email: 'mgr2@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
+      {
+        id: 'mgr3',
+        email: 'mgr3@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
     ]);
     store.tournaments = [
       {
@@ -523,7 +555,11 @@ describe('computeAudienceRecipients', () => {
     // 4 joueuses + 2 managers ne font pas 6 titulaires. Les compter faisait
     // passer l'équipe pour complète, donc la privait de la relance.
     setAuthListUsers([
-      { id: 'cap1', email: 'cap1@x.com', email_confirmed_at: '2026-01-01' } as any,
+      {
+        id: 'cap1',
+        email: 'cap1@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
     ]);
     store.tournaments = [
       {
@@ -596,10 +632,26 @@ describe('computeAudienceRecipients', () => {
     // Le trou d'origine : « Capitaines d'équipe » ne lit que teams.captain_id,
     // donc un manager n'était joignable par AUCUN segment.
     setAuthListUsers([
-      { id: 'cap1', email: 'c1@x.com', email_confirmed_at: '2026-01-01' } as any,
-      { id: 'mgr1', email: 'm1@x.com', email_confirmed_at: '2026-01-01' } as any,
-      { id: 'coach1', email: 'co@x.com', email_confirmed_at: '2026-01-01' } as any,
-      { id: 'ply1', email: 'p1@x.com', email_confirmed_at: '2026-01-01' } as any,
+      {
+        id: 'cap1',
+        email: 'c1@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
+      {
+        id: 'mgr1',
+        email: 'm1@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
+      {
+        id: 'coach1',
+        email: 'co@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
+      {
+        id: 'ply1',
+        email: 'p1@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
     ]);
     store.teams = [
       { id: 't1', captain_id: 'cap1', is_active: true, deleted_at: null },
@@ -622,7 +674,11 @@ describe('computeAudienceRecipients', () => {
     // manager », la capitaine désignée n'a pas encore accepté. L'ancien
     // segment ne renvoyait alors personne pour cette équipe.
     setAuthListUsers([
-      { id: 'mgr1', email: 'm1@x.com', email_confirmed_at: '2026-01-01' } as any,
+      {
+        id: 'mgr1',
+        email: 'm1@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
     ]);
     store.teams = [
       { id: 't1', captain_id: null, is_active: true, deleted_at: null },
@@ -639,11 +695,31 @@ describe('computeAudienceRecipients', () => {
 
   it('team-staff : capitaine + managers + coachs, joueuses exclues', async () => {
     setAuthListUsers([
-      { id: 'cap1', email: 'c1@x.com', email_confirmed_at: '2026-01-01' } as any,
-      { id: 'mgr1', email: 'm1@x.com', email_confirmed_at: '2026-01-01' } as any,
-      { id: 'coach1', email: 'co@x.com', email_confirmed_at: '2026-01-01' } as any,
-      { id: 'ply1', email: 'p1@x.com', email_confirmed_at: '2026-01-01' } as any,
-      { id: 'sub1', email: 's1@x.com', email_confirmed_at: '2026-01-01' } as any,
+      {
+        id: 'cap1',
+        email: 'c1@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
+      {
+        id: 'mgr1',
+        email: 'm1@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
+      {
+        id: 'coach1',
+        email: 'co@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
+      {
+        id: 'ply1',
+        email: 'p1@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
+      {
+        id: 'sub1',
+        email: 's1@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
     ]);
     store.teams = [
       { id: 't1', captain_id: 'cap1', is_active: true, deleted_at: null },
@@ -668,8 +744,16 @@ describe('computeAudienceRecipients', () => {
     // Le segment historique ne change PAS de définition : c'est son libellé qui
     // dit désormais « sans les managers ». Des campagnes existantes le portent.
     setAuthListUsers([
-      { id: 'cap1', email: 'c1@x.com', email_confirmed_at: '2026-01-01' } as any,
-      { id: 'mgr1', email: 'm1@x.com', email_confirmed_at: '2026-01-01' } as any,
+      {
+        id: 'cap1',
+        email: 'c1@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
+      {
+        id: 'mgr1',
+        email: 'm1@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
     ]);
     store.teams = [
       { id: 't1', captain_id: 'cap1', is_active: true, deleted_at: null },
@@ -704,11 +788,7 @@ describe('computeAudienceRecipients', () => {
     const recipients = await computeAudienceRecipients(
       'team-members-without-battletag'
     );
-    expect(recipients.map((r) => r.user_id).sort()).toEqual([
-      'u1',
-      'u2',
-      'u3',
-    ]);
+    expect(recipients.map((r) => r.user_id).sort()).toEqual(['u1', 'u2', 'u3']);
   });
 
   it('team-members-without-battletag: audience vide quand tout le monde en a un', async () => {
@@ -726,7 +806,11 @@ describe('computeAudienceRecipients', () => {
 
   it('tournament-captains-incomplete-roster: audience vide si min_players non configuré', async () => {
     setAuthListUsers([
-      { id: 'cap1', email: 'cap1@x.com', email_confirmed_at: '2026-01-01' } as any,
+      {
+        id: 'cap1',
+        email: 'cap1@x.com',
+        email_confirmed_at: '2026-01-01',
+      } as any,
     ]);
     store.tournaments = [
       {

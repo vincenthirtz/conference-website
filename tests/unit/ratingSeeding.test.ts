@@ -98,9 +98,7 @@ describe('computeRatingSeeding — method "rating_sos"', () => {
 
 describe('computeRatingSeeding — defaults for null inputs', () => {
   it('falls back to defaultRating for null rating and null sos', () => {
-    const teams: SeedingTeamInput[] = [
-      team('A', { rating: null, sos: null }),
-    ];
+    const teams: SeedingTeamInput[] = [team('A', { rating: null, sos: null })];
     const result = computeRatingSeeding({ teams, method: 'rating_sos' });
     expect(result[0].rating).toBe(SEEDING_DEFAULT_RATING);
     expect(result[0].sos).toBe(SEEDING_DEFAULT_RATING);
@@ -200,8 +198,8 @@ describe('computeRatingSeeding — ranks and empty input', () => {
 
   it('returns [] for empty input', () => {
     expect(computeRatingSeeding({ teams: [], method: 'rating' })).toEqual([]);
-    expect(
-      computeRatingSeeding({ teams: [], method: 'rating_sos' })
-    ).toEqual([]);
+    expect(computeRatingSeeding({ teams: [], method: 'rating_sos' })).toEqual(
+      []
+    );
   });
 });

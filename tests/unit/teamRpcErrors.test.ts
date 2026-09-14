@@ -46,7 +46,10 @@ describe('mapTeamRpcError', () => {
 
   // transfer_captain sentinels.
   it('P0002 (no_data_found) → 404 team introuvable', () => {
-    const r = mapTeamRpcError({ code: 'P0002', message: 'query returned no rows' });
+    const r = mapTeamRpcError({
+      code: 'P0002',
+      message: 'query returned no rows',
+    });
     expect(r.status).toBe(404);
   });
 

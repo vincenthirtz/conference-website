@@ -27,7 +27,10 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logStaffAction } from '@/utils/staffLogs';
 import { logger } from '@/utils/logger';
-import { SOCIAL_PLATFORMS, isSocialPlatformKey } from '@/utils/social/platforms';
+import {
+  SOCIAL_PLATFORMS,
+  isSocialPlatformKey,
+} from '@/utils/social/platforms';
 import { loadAccount } from '@/utils/social/instagram';
 import {
   getIntegrationSecret,
@@ -93,7 +96,9 @@ async function handleGet(
   ctx: AuthenticatedStaffContext
 ) {
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Service base de données indisponible.' });
+    return res
+      .status(500)
+      .json({ error: 'Service base de données indisponible.' });
   }
   const limit = Math.max(1, Math.min(50, Number(req.query.limit) || 20));
 
@@ -109,7 +114,9 @@ async function handleGet(
 
   if (error) {
     logger.error('[admin/social-posts] list error', error);
-    return res.status(500).json({ error: 'Chargement de l’historique impossible.' });
+    return res
+      .status(500)
+      .json({ error: 'Chargement de l’historique impossible.' });
   }
 
   // État de connexion des cibles qui en exigent une. Le panneau s'en sert pour
@@ -261,7 +268,9 @@ async function handlePost(
   }
 
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Service base de données indisponible.' });
+    return res
+      .status(500)
+      .json({ error: 'Service base de données indisponible.' });
   }
 
   const { data: post, error: postError } = await supabaseAdmin
@@ -278,7 +287,9 @@ async function handlePost(
 
   if (postError || !post) {
     logger.error('[admin/social-posts] create error', postError);
-    return res.status(500).json({ error: 'Enregistrement du post impossible.' });
+    return res
+      .status(500)
+      .json({ error: 'Enregistrement du post impossible.' });
   }
   const postId = (post as { id: string }).id;
 
@@ -331,7 +342,9 @@ async function handlePost(
   // ISR : l'actualité n'apparaît sur l'accueil et la liste qu'après
   // revalidation. Best-effort — une revalidation ratée se rattrape au prochain
   // build, elle ne doit pas faire échouer une publication déjà partie.
-  const news = outcomes.find((o) => o.platform === 'site_news' && o.status === 'sent');
+  const news = outcomes.find(
+    (o) => o.platform === 'site_news' && o.status === 'sent'
+  );
   if (news) {
     await Promise.all(
       newsRevalidatePaths(news.permalink).map((path) =>

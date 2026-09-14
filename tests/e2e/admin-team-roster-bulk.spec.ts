@@ -125,7 +125,8 @@ test.describe('/admin/teams/[teamId]/edit bulk auth', () => {
 
 // ─── Authenticated UI flows (route-mocked) ─────────────────────────────────
 
-test.describe.serial('/admin/teams/[teamId]/edit bulk roster UI', () => {
+test.describe('/admin/teams/[teamId]/edit bulk roster UI', () => {
+  test.describe.configure({ mode: 'serial' });
   test.beforeAll(async () => {
     if (skipIfNoServiceRole()) return;
     await deleteTestStaff(STAFF_EMAIL);

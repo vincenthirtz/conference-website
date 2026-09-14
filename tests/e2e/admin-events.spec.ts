@@ -98,7 +98,8 @@ async function dismissNextDevOverlay(page: import('@playwright/test').Page) {
   });
 }
 
-test.describe.serial('Admin Director — golden path', () => {
+test.describe('Admin Director — golden path', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
 
   test.beforeAll(async () => {

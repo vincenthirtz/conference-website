@@ -171,7 +171,12 @@ describe('resolveTenantIdForPublicRequestAsync()', () => {
   });
 
   it('falls back to DEFAULT_TENANT_ID for reserved path segments (/api, /_next, /admin, /auth)', async () => {
-    for (const seg of ['/api/foo', '/_next/static', '/admin/dashboard', '/auth/login']) {
+    for (const seg of [
+      '/api/foo',
+      '/_next/static',
+      '/admin/dashboard',
+      '/auth/login',
+    ]) {
       const id = await resolveTenantIdForPublicRequestAsync(makeReq(seg));
       expect(id, `segment "${seg}" should fall back`).toBe(DEFAULT_TENANT_ID);
     }

@@ -86,9 +86,9 @@ export default function TeamAvailabilityPanel({ teamId }: { teamId: string }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminFetchJson<{ constraints: AvailabilityConstraint[] }>(
-        `/api/admin/teams/${teamId}/availability`
-      );
+      const data = await adminFetchJson<{
+        constraints: AvailabilityConstraint[];
+      }>(`/api/admin/teams/${teamId}/availability`);
       setConstraints(data.constraints ?? []);
       setError(null);
     } catch {

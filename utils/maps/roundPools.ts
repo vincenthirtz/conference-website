@@ -43,7 +43,8 @@ export function parseRoundParam(value: unknown): ParsedRound {
   if (value === undefined || value === null) return { ok: true, round: null };
 
   const raw = String(value).trim();
-  if (raw === '' || raw.toLowerCase() === 'default') return { ok: true, round: null };
+  if (raw === '' || raw.toLowerCase() === 'default')
+    return { ok: true, round: null };
 
   // `Number()` accepterait « 2.5 », « 2e10 » ou « 0x2 » : on impose la forme
   // décimale entière, seule à correspondre à `matches.round_number`.
@@ -96,13 +97,19 @@ export function buildRoundOptions(
   matches: MatchRow[],
   mapCounts: Map<number, number> = new Map()
 ): RoundOption[] {
-  const byRound = new Map<number, { label: string | null; days: Set<string> }>();
+  const byRound = new Map<
+    number,
+    { label: string | null; days: Set<string> }
+  >();
 
   for (const row of matches) {
     const round = row.round_number;
     if (typeof round !== 'number' || !Number.isFinite(round)) continue;
 
-    const entry = byRound.get(round) ?? { label: null, days: new Set<string>() };
+    const entry = byRound.get(round) ?? {
+      label: null,
+      days: new Set<string>(),
+    };
     // Le premier libellé non vide gagne : `round_name` est censé être constant
     // pour une journée, mais rien ne l'impose en base.
     if (!entry.label && row.round_name) entry.label = row.round_name;

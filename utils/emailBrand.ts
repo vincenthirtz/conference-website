@@ -108,7 +108,10 @@ export async function resolveEmailBrand(
       .maybeSingle();
 
     if (error) {
-      logger.warn('[emailBrand] lookup failed', { tenantId, error: error.message });
+      logger.warn('[emailBrand] lookup failed', {
+        tenantId,
+        error: error.message,
+      });
       return DEFAULT_EMAIL_BRAND; // erreur transitoire → pas de cache
     }
 
@@ -154,9 +157,8 @@ export async function resolveEmailBrand(
         siteUrl,
         // Le LOGO, lui, est du white-label : le palier gratuit garde le nôtre.
         logoUrl:
-          (canWhiteLabel
-            ? sanitizeLogoUrl(row.logo_url, siteUrl)
-            : null) ?? DEFAULT_EMAIL_BRAND.logoUrl,
+          (canWhiteLabel ? sanitizeLogoUrl(row.logo_url, siteUrl) : null) ??
+          DEFAULT_EMAIL_BRAND.logoUrl,
       };
     }
   } catch (err) {

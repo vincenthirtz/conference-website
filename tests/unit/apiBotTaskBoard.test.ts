@@ -236,9 +236,30 @@ describe('GET bot /tasks/board-snapshot (vue live, sans acteur staff)', () => {
       },
     ] as any;
     store.task_checklist_items = [
-      { id: 'ci-1', tenant_id: T, task_id: TASK, label: 'a', is_done: true, position: 0 },
-      { id: 'ci-2', tenant_id: T, task_id: TASK, label: 'b', is_done: false, position: 1 },
-      { id: 'ci-3', tenant_id: T, task_id: TASK, label: 'c', is_done: false, position: 2 },
+      {
+        id: 'ci-1',
+        tenant_id: T,
+        task_id: TASK,
+        label: 'a',
+        is_done: true,
+        position: 0,
+      },
+      {
+        id: 'ci-2',
+        tenant_id: T,
+        task_id: TASK,
+        label: 'b',
+        is_done: false,
+        position: 1,
+      },
+      {
+        id: 'ci-3',
+        tenant_id: T,
+        task_id: TASK,
+        label: 'c',
+        is_done: false,
+        position: 2,
+      },
     ] as any;
     // Carte soft-deleted : NE doit PAS apparaître dans le snapshot.
     store.tasks.push({
@@ -263,7 +284,10 @@ describe('GET bot /tasks/board-snapshot (vue live, sans acteur staff)', () => {
     expect(board.id).toBe(BOARD);
     expect(board.name).toBe('Association');
     // Colonnes triées par position.
-    expect(board.columns.map((c: any) => c.name)).toEqual(['À faire', 'Terminé']);
+    expect(board.columns.map((c: any) => c.name)).toEqual([
+      'À faire',
+      'Terminé',
+    ]);
     const col1 = board.columns[0];
     expect(col1.isDone).toBe(false);
     expect(col1.cards).toHaveLength(1);
@@ -320,7 +344,9 @@ describe('GET bot /tasks/board-snapshot (vue live, sans acteur staff)', () => {
   it('404 board_not_found sur board inconnu', async () => {
     const res = makeRes();
     await snapshotHandler(
-      makeBotReq({ query: { boardId: '33333333-3333-4333-8333-3333333333ff' } }),
+      makeBotReq({
+        query: { boardId: '33333333-3333-4333-8333-3333333333ff' },
+      }),
       res
     );
     expect(res.statusCode).toBe(404);

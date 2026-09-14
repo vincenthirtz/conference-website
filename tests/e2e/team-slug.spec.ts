@@ -55,9 +55,9 @@ test.describe('teams.slug column + auto-generation', () => {
 
     await page.goto(`/team/${EXPECTED_SLUG}`);
 
-    await expect(
-      page.getByRole('heading', { name: TEAM_NAME })
-    ).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: TEAM_NAME })).toBeVisible({
+      timeout: 15000,
+    });
 
     // Une seule vérité SEO : DefaultSeo est la seule source des meta.
     await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
@@ -81,9 +81,9 @@ test.describe('teams.slug column + auto-generation', () => {
     await page.goto(`/team/${teamId}`);
 
     await expect(page).toHaveURL(new RegExp(`/team/${EXPECTED_SLUG}$`));
-    await expect(
-      page.getByRole('heading', { name: TEAM_NAME })
-    ).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: TEAM_NAME })).toBeVisible({
+      timeout: 15000,
+    });
   });
 
   test('/scrim page links to /team/<slug>', async ({ page }) => {

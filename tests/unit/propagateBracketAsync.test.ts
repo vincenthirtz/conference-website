@@ -68,9 +68,9 @@ beforeEach(() => {
 describe('propagateBracketForMatch — early returns', () => {
   it('throws when the match is missing', async () => {
     seedMatches([]);
-    await expect(propagateBracketForMatch(TENANT_ID, 'missing')).rejects.toThrow(
-      /introuvable/
-    );
+    await expect(
+      propagateBracketForMatch(TENANT_ID, 'missing')
+    ).rejects.toThrow(/introuvable/);
   });
 
   it('returns null winner/loser when match status is cancelled', async () => {
@@ -271,7 +271,9 @@ describe('propagateBracketForMatch — tiebreakers', () => {
     store.tournament_stages = [
       { id: 'stage1', tenant_id: TENANT_ID, tiebreaker_policy: 'map_diff' },
     ] as any;
-    store.games = [{ tenant_id: TENANT_ID, match_id: 'm1', team1_score: 3, team2_score: 3 }] as any;
+    store.games = [
+      { tenant_id: TENANT_ID, match_id: 'm1', team1_score: 3, team2_score: 3 },
+    ] as any;
 
     const result = await propagateBracketForMatch(TENANT_ID, 'm1');
     expect(result.tiebreakerApplied).toBe('extra_round');
@@ -366,7 +368,9 @@ describe('resetPropagationForMatch', () => {
 
   it('does nothing for a missing match', async () => {
     seedMatches([]);
-    await expect(resetPropagationForMatch(TENANT_ID, 'nope')).resolves.toBeUndefined();
+    await expect(
+      resetPropagationForMatch(TENANT_ID, 'nope')
+    ).resolves.toBeUndefined();
   });
 
   it('does nothing when the match has no propagation links', async () => {

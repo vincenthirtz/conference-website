@@ -38,7 +38,8 @@ const MATCH_CHANNEL_ID = snowflake(5);
 let tournamentId: string;
 let matchId: string;
 
-test.describe.serial('Bot match discord writeback — auth & method', () => {
+test.describe('Bot match discord writeback — auth & method', () => {
+  test.describe.configure({ mode: 'serial' });
   test('PATCH sans cle -> 401', async ({ request }) => {
     const res = await request.patch(
       '/api/bot/v1/matches/00000000-0000-0000-0000-000000000000/discord',
@@ -74,8 +75,8 @@ test.describe.serial('Bot match discord writeback — auth & method', () => {
   });
 });
 
-test.describe
-  .serial('Bot match discord writeback — validation & writes', () => {
+test.describe('Bot match discord writeback — validation & writes', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_KEY || !HAS_SUPABASE, 'BOT_API_KEY ou Supabase manquant');
 
   test.beforeAll(async () => {

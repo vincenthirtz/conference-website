@@ -181,7 +181,8 @@ async function apiGet(
  * Setup / Teardown
  * ---------------------------------------------------------*/
 
-test.describe.serial('Diagnostic admin', () => {
+test.describe('Diagnostic admin', () => {
+  test.describe.configure({ mode: 'serial' });
   test.skip(skip, 'Supabase service role manquant');
 
   test.beforeAll(async () => {

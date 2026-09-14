@@ -247,7 +247,9 @@ describe('GET /api/players/[userId]/profile', () => {
         end_date: '2026-06-01',
       },
     ] as any;
-    store.teams = [{ tenant_id: TENANT, id: TEAM, name: 'Les Championnes' }] as any;
+    store.teams = [
+      { tenant_id: TENANT, id: TEAM, name: 'Les Championnes' },
+    ] as any;
     store.league_standings = [];
 
     const res = makeRes();

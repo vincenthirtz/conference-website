@@ -155,7 +155,11 @@ describe('toPublicFreePlayer', () => {
 
   it('retombe sur le pseudo Discord quand il n’y a pas de nom saisi', () => {
     const projected = toPublicFreePlayer(
-      row({ source: 'discord', display_name: null, discord_username: 'nova_ow' })
+      row({
+        source: 'discord',
+        display_name: null,
+        discord_username: 'nova_ow',
+      })
     );
     expect(projected?.name).toBe('nova_ow');
   });
@@ -189,7 +193,8 @@ describe('péremption', () => {
   it('computeExpiresAt place la limite à 60 jours', () => {
     const from = new Date('2026-08-23T12:00:00.000Z');
     const diffDays =
-      (new Date(computeExpiresAt(from)).getTime() - from.getTime()) / 86_400_000;
+      (new Date(computeExpiresAt(from)).getTime() - from.getTime()) /
+      86_400_000;
     expect(Math.round(diffDays)).toBe(FREE_PLAYER_TTL_DAYS);
   });
 
@@ -283,10 +288,7 @@ describe('POST /api/public/free-players', () => {
 
   it('rejette une fiche sans poste', async () => {
     const res = makeRes();
-    await publicHandler(
-      makeReq({ body: { ...VALID_BODY, roles: [] } }),
-      res
-    );
+    await publicHandler(makeReq({ body: { ...VALID_BODY, roles: [] } }), res);
     expect(res.statusCode).toBe(400);
     expect(res.body.code).toBe('VALIDATION');
   });
@@ -323,7 +325,9 @@ describe('POST /api/public/free-players', () => {
 // ---------------------------------------------------------------------------
 
 describe('POST /api/bot/v1/free-players/sync', () => {
-  function botReq(players: Array<{ discordUserId: string; discordUsername?: string }>) {
+  function botReq(
+    players: Array<{ discordUserId: string; discordUsername?: string }>
+  ) {
     return {
       method: 'POST',
       headers: {
@@ -359,7 +363,12 @@ describe('POST /api/bot/v1/free-players/sync', () => {
     ] as any[];
 
     const res = makeRes();
-    await botSyncHandler(botReq([{ discordUserId: '100000000000000222', discordUsername: 'nouvelle' }]), res);
+    await botSyncHandler(
+      botReq([
+        { discordUserId: '100000000000000222', discordUsername: 'nouvelle' },
+      ]),
+      res
+    );
 
     expect(res.statusCode).toBe(200);
     const rows = store.free_players as any[];
@@ -371,7 +380,9 @@ describe('POST /api/bot/v1/free-players/sync', () => {
     expect(bySource.web).toHaveLength(1);
     expect(bySource.web[0].id).toBe('web-1');
     // …et le set Discord a bien été remplacé.
-    expect(bySource.discord.map((r) => r.discord_user_id)).toEqual(['100000000000000222']);
+    expect(bySource.discord.map((r) => r.discord_user_id)).toEqual([
+      '100000000000000222',
+    ]);
   });
 
   it('marque explicitement la provenance des rows qu’il insère', async () => {
@@ -379,7 +390,10 @@ describe('POST /api/bot/v1/free-players/sync', () => {
     store.free_players = [];
 
     const res = makeRes();
-    await botSyncHandler(botReq([{ discordUserId: '100000000000000333' }]), res);
+    await botSyncHandler(
+      botReq([{ discordUserId: '100000000000000333' }]),
+      res
+    );
 
     expect(res.statusCode).toBe(200);
     expect((store.free_players as any[])[0].source).toBe('discord');
@@ -419,10 +433,7 @@ describe('retrait autonome', () => {
     const token = generateFreePlayerRemovalToken('fiche-1');
 
     const res = makeRes();
-    await removeHandler(
-      makeReq({ method: 'GET', query: { token } }),
-      res
-    );
+    await removeHandler(makeReq({ method: 'GET', query: { token } }), res);
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({ name: 'Nova' });

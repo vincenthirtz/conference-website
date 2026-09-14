@@ -62,7 +62,8 @@ export default {
   calFilterStatus: 'Status',
   calFilterAllTeams: 'All teams',
   calConflictWarningOne: 'Slot already booked: {name} — {when}.',
-  calConflictWarningMore: 'Slot already booked: {name} — {when} (+{count} more).',
+  calConflictWarningMore:
+    'Slot already booked: {name} — {when} (+{count} more).',
   calConflictUnnamed: 'scheduled match',
   calRescheduled: 'Scrim rescheduled.',
   calUndo: 'Undo',

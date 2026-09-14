@@ -38,16 +38,19 @@ export type TextFlavour = 'markdown' | 'discord' | 'plain';
 
 /** `![alt](url)` → `alt (url)`, ou `url` seule si l'alt est vide. */
 function flattenImages(md: string): string {
-  return md.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (_m, alt, url) =>
-    alt ? `${alt} (${url})` : url
+  return md.replace(
+    /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g,
+    (_m, alt, url) => (alt ? `${alt} (${url})` : url)
   );
 }
 
 /** `[texte](url)` → `texte (url)`. Pour les surfaces sans liens masqués. */
 function flattenLinks(md: string): string {
-  return md.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (_m, text, url) =>
-    // Un lien dont le libellé EST déjà l'URL n'a pas à être écrit deux fois.
-    text.trim() === url.trim() ? url : `${text} (${url})`
+  return md.replace(
+    /\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g,
+    (_m, text, url) =>
+      // Un lien dont le libellé EST déjà l'URL n'a pas à être écrit deux fois.
+      text.trim() === url.trim() ? url : `${text} (${url})`
   );
 }
 
@@ -65,7 +68,10 @@ function flattenTables(md: string): string {
       out.push(line);
       continue;
     }
-    const cells = trimmed.slice(1, -1).split('|').map((c) => c.trim());
+    const cells = trimmed
+      .slice(1, -1)
+      .split('|')
+      .map((c) => c.trim());
     // La ligne de séparation (|---|:--:|) ne porte aucune information.
     if (cells.every((c) => /^:?-{2,}:?$/.test(c))) continue;
     out.push(cells.filter(Boolean).join(' · '));
