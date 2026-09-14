@@ -38,6 +38,7 @@ const getSiteSections = (t: PlanDict): SiteSection[] => [
       { label: t.linkAmbassadors, href: '/ambassadors' },
       { label: t.linkLore, href: '/lore' },
       { label: t.linkHeroPicker, href: '/hero-picker' },
+      { label: t.linkTcg, href: '/tcg' },
     ],
   },
   {

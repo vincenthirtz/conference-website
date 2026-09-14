@@ -33,6 +33,7 @@ export default {
   linkAmbassadors: 'Ambassadors',
   linkLore: 'Lore & media',
   linkHeroPicker: 'Hero Picker',
+  linkTcg: 'Trading cards',
   section3Title: 'Take part',
   section3Desc: 'Registration, teams and exchanges with the staff.',
   linkRegister: 'Staff / player registration',

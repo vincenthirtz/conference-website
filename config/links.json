@@ -36,6 +36,10 @@
         "ref": "/live"
       },
       {
+        "title": "Cartes à collectionner",
+        "ref": "/tcg"
+      },
+      {
         "title": "Partenaires",
         "ref": "/partenaires"
       },

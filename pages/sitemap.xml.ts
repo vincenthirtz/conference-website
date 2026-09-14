@@ -44,6 +44,10 @@ const publicRoutes = [
   { path: '/leaderboard', priority: '0.7', changefreq: 'daily' },
   { path: '/palmares', priority: '0.7', changefreq: 'weekly' },
   { path: '/leagues', priority: '0.7', changefreq: 'weekly' },
+  // Catalogue TCG : indexable SANS réserve, parce qu'il ne liste que des
+  // ENTITÉS — équipes et maps. Les cartes de joueuses n'y figurent pas (cf.
+  // l'en-tête de pages/tcg.tsx et la décision du 13/07 rappelée plus bas).
+  { path: '/tcg', priority: '0.6', changefreq: 'weekly' },
   { path: '/mentions-legales', priority: '0.3', changefreq: 'yearly' },
   { path: '/cgv', priority: '0.3', changefreq: 'yearly' },
   { path: '/plan-du-site', priority: '0.3', changefreq: 'monthly' },

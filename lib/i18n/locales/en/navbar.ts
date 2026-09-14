@@ -36,6 +36,7 @@ export default {
     Communauté: 'Community',
     "L'association": 'The association',
     'Ambassadeur·rices': 'Ambassadors',
+    'Cartes à collectionner': 'Trading cards',
     Partenaires: 'Partners',
     'Édition 2025': '2025 edition',
   },

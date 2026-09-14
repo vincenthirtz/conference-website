@@ -15,6 +15,7 @@
 
 import enProfileSummary from './profileSummary';
 import enPlayerTcg from './playerTcg';
+import enTcgCatalog from './tcgCatalog';
 import enPlayerIndex from './playerIndex';
 import enSupportAssoCard from './supportAssoCard';
 import enCopyButton from './copyButton';
@@ -352,6 +353,7 @@ const enDict = {
   palmaresPage: enPalmaresPage,
   mapsVoxelPage: enMapsVoxelPage,
   playerTcg: enPlayerTcg,
+  tcgCatalog: enTcgCatalog,
   playerHeroPrefs: enPlayerHeroPrefs,
   playerTwitchLink: enPlayerTwitchLink,
   overlayTcg: enOverlayTcg,

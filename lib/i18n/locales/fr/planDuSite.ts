@@ -35,6 +35,7 @@ export default ns('planDuSite', {
   linkAmbassadors: 'Ambassadeur·rices',
   linkLore: 'Lore & médias',
   linkHeroPicker: 'Hero Picker',
+  linkTcg: 'Cartes à collectionner',
   section3Title: 'Participer',
   section3Desc: 'Inscription, équipes et échanges avec le staff.',
   linkRegister: 'Inscription staff / joueur',

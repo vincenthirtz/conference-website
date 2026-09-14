@@ -9,6 +9,7 @@
 
 import nsProfileSummary from './profileSummary';
 import nsPlayerTcg from './playerTcg';
+import nsTcgCatalog from './tcgCatalog';
 import nsPlayerIndex from './playerIndex';
 import nsSupportAssoCard from './supportAssoCard';
 import nsCopyButton from './copyButton';
@@ -346,6 +347,7 @@ export const frDict = {
   playerMyTeams: nsPlayerMyTeams.fr,
   productionPartner: nsProductionPartner.fr,
   playerTcg: nsPlayerTcg.fr,
+  tcgCatalog: nsTcgCatalog.fr,
   playerHeroPrefs: nsPlayerHeroPrefs.fr,
   playerTwitchLink: nsPlayerTwitchLink.fr,
   overlayTcg: nsOverlayTcg.fr,
