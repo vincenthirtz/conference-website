@@ -17,6 +17,7 @@ export type RoleLabels = {
   roleReferee: string;
   roleHelper: string;
   rolePlayer: string;
+  roleSupporter: string;
   roleMember: string;
 };
 
@@ -38,6 +39,10 @@ export function roleLabel(t: RoleLabels, role: string | null) {
       return t.roleHelper;
     case 'player':
       return t.rolePlayer;
+    // Même raison que `referee`/`helper` ci-dessus : sans ce cas, le `default`
+    // rendait le slug brut « supporter » dans le sélecteur et les badges.
+    case 'supporter':
+      return t.roleSupporter;
     case 'member':
       return t.roleMember;
     default:
@@ -61,6 +66,8 @@ export function roleColor(role: string | null) {
       return 'bg-amber-600 text-white';
     case 'player':
       return 'bg-emerald-600 text-white';
+    case 'supporter':
+      return 'bg-fuchsia-700 text-white';
     default:
       return 'bg-neutral-600 text-neutral-100';
   }

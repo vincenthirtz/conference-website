@@ -163,9 +163,25 @@ describe('/api/auth/register', () => {
     expect(signUpCalls[0].options?.data?.role).toBe('manager');
   });
 
+  it('accountType=supporter → rôle supporter en metadata', async () => {
+    // Une personne qui ne joue ni n'encadre — elle suit la compétition et
+    // collectionne — doit pouvoir créer son compte elle-même : 26 comptes sur
+    // 97 étaient déjà dans ce cas sans que rien ne les désigne. Le rôle reste
+    // une ÉTIQUETTE : il n'accorde aucun droit, et surtout aucune monnaie TCG
+    // (elle est gagnée, jamais achetée — cf. docs/TCG.md).
+    const res = makeRes();
+    await registerHandler(
+      makeReq({ body: { ...validBody, accountType: 'supporter' } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(signUpCalls[0].options?.data?.role).toBe('supporter');
+  });
+
   it('accountType hors liste fermée → 400, pas d’escalade', async () => {
-    // La liste est FERMÉE (player | manager) : 'owner', 'developer' ou tout
-    // rôle staff doivent être refusés à la porte, pas coercés en silence.
+    // La liste est FERMÉE (player | manager | supporter) : 'owner',
+    // 'developer' ou tout rôle staff doivent être refusés à la porte, pas
+    // coercés en silence.
     for (const accountType of ['owner', 'developer', 'admin', 'caster']) {
       const res = makeRes();
       await registerHandler(

@@ -15,6 +15,7 @@ export default {
   roleManager: 'Manager',
   roleCaster: 'Caster',
   rolePlayer: 'Player',
+  roleSupporter: 'Supporter',
   roleMember: 'Member',
   accountRoleLabel: 'Account role',
   roleGroupCommunity: 'Community (no back-office access)',

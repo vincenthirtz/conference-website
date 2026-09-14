@@ -13,6 +13,7 @@ export default {
   roleLabels: {
     captain: 'Captain',
     player: 'Player',
+    supporter: 'Supporter',
   },
   fallbackName: 'Player',
   skipToContent: 'Skip to main content',

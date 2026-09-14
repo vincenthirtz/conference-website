@@ -27,6 +27,7 @@ export default ns('playerProfile', {
   signIn: 'Se connecter',
   roleCaptain: 'Capitaine',
   rolePlayer: 'Joueuse',
+  roleSupporter: 'Supportrice',
   backToDashboard: 'Tableau de bord',
   pageTitle: 'Mon profil',
   pageSubtitle: 'Gère ton compte, ton email, ton mot de passe et tes données.',

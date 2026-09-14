@@ -44,8 +44,23 @@ const optionalTrimmed = (max: number) =>
 /**
  * Rôles ouverts à l'auto-inscription. Liste FERMÉE : tout le reste
  * ('developer', rôles staff…) passe par une autre porte.
+ *
+ * `supporter` = elle ne joue pas et n'encadre personne : elle suit la
+ * compétition, collectionne le TCG et peut soutenir l'association. Comme les
+ * deux autres, le rôle n'accorde AUCUN droit — c'est une étiquette.
+ *
+ * IL N'OUVRE RIEN QUI FÛT FERMÉ, et c'est pourquoi il n'y a pas de garde à
+ * ajouter ailleurs : l'espace joueuse ne demande pas d'équipe, et le TCG se
+ * gagne déjà sans en avoir une (drop Twitch pendant un direct). Ce qui manquait
+ * n'était pas une permission, c'était une PORTE et un nom — 26 comptes sur 97
+ * n'étaient ni sur un roster ni staff, sans que rien ne les désigne.
+ *
+ * ⚠️ IL NE DONNE AUCUNE MONNAIE TCG, et ne doit jamais en donner : la monnaie
+ * est GAGNÉE, jamais achetée (boîtes à butin BE/NL, ANJ, public mineur — cf.
+ * docs/TCG.md). Soutenir l'association et collectionner sont deux capacités du
+ * même compte, jamais un échange de l'une contre l'autre.
  */
-const SELF_SERVICE_ROLES = ['player', 'manager'] as const;
+const SELF_SERVICE_ROLES = ['player', 'manager', 'supporter'] as const;
 
 /**
  * Attribution d'acquisition envoyée par le formulaire (cf.

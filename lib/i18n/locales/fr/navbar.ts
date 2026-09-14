@@ -12,6 +12,7 @@ export default ns('navbar', {
   roleLabels: {
     captain: 'Capitaine',
     player: 'Joueuse',
+    supporter: 'Supportrice',
   },
   fallbackName: 'Joueuse',
   skipToContent: 'Aller au contenu principal',

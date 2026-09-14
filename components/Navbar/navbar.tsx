@@ -103,10 +103,14 @@ function Navbar(): JSX.Element {
     (playerUser?.user_metadata?.full_name as string | undefined) ||
     playerUser?.email?.split('@')[0] ||
     tNav.fallbackName;
+  // Lecture dans la table plutôt qu'un ternaire : « tout ce qui n'est pas
+  // capitaine est joueuse » affichait « Joueuse » à une supportrice dès qu'un
+  // troisième rôle de compte a existé. Un rôle inconnu retombe volontairement
+  // sur « Joueuse », de loin le cas le plus fréquent.
+  const accountRole = playerUser?.user_metadata?.role as string | undefined;
   const playerRoleLabel =
-    playerUser?.user_metadata?.role === 'captain'
-      ? tNav.roleLabels.captain
-      : tNav.roleLabels.player;
+    (tNav.roleLabels as Record<string, string>)[accountRole ?? 'player'] ??
+    tNav.roleLabels.player;
   const playerAvatarUrl =
     (playerUser?.user_metadata?.avatar_url as string | undefined) || null;
 

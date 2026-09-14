@@ -14,6 +14,9 @@ export default adminNs('adminUsersManage', {
   roleManager: 'Manager',
   roleCaster: 'Caster',
   rolePlayer: 'Joueur',
+  // Laissé tel quel comme Owner/Admin/Manager/Caster au-dessus : les libellés
+  // de rôle de cet écran ne sont pas traduits.
+  roleSupporter: 'Supporter',
   roleMember: 'Membre',
   // --- Séparation des deux dimensions de rôles (compte vs équipe) ---
   accountRoleLabel: 'Rôle de compte',

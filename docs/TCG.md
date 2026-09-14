@@ -30,11 +30,24 @@ vivier des maps vient d'ailleurs d'un registre en mémoire
 ([`config/maps/overwatch.ts`](../config/maps/overwatch.ts)) et non de la base —
 conséquence pratique : il n'est jamais vide.
 
-Le public est celui de l'espace joueuse : les personnes qui jouent, pas les
-visiteuses du site. La page est en `noindex` — une collection personnelle n'a
-rien à faire dans un moteur de recherche — et les deux endroits publics où une
-carte apparaît sont la fiche d'une joueuse (`/player/[userId]`, sa propre carte,
-sans lien vers elle-même) et la fiche d'une équipe (`/team/[slug]`).
+Le public est celui de l'espace joueuse — mais plus seulement les personnes qui
+jouent. **Révision du 2026-09-14** : un compte `supporter` s'inscrit désormais
+en propre depuis `/register`, pour suivre la compétition et collectionner sans
+être sur un roster. La formulation d'origine — « les personnes qui jouent, pas
+les visiteuses du site » — est donc **levée délibérément**, et non par dérive.
+Elle décrivait d'ailleurs mal l'existant : au moment de la révision, 26 comptes
+sur 97 n'étaient ni sur un roster ni staff, sans que rien ne les désigne.
+
+Ce que la révision ne change PAS. La page reste en `noindex` (une collection
+personnelle n'a rien à faire dans un moteur de recherche) ; les deux seuls
+endroits publics où une carte apparaît restent la fiche d'une joueuse
+(`/player/[userId]`, sa propre carte, sans lien vers elle-même) et la fiche
+d'une équipe (`/team/[slug]`) ; et surtout **la monnaie reste gagnée, jamais
+achetée**. Une supportrice n'a aucune victoire à son actif : sa voie est le
+**drop Twitch** pendant un direct, qui n'exige pas d'équipe et fonctionne déjà.
+Faire un don ne crédite RIEN — soutenir l'association et collectionner sont deux
+capacités du même compte, jamais un échange de l'une contre l'autre. Le rôle
+n'ouvre donc aucune permission : il donne une porte et un nom.
 
 Le TCG ne crée aucune donnée de compétition : il **relit** celle qui existe. Les
 paquets sont attribués depuis `applyMatchRatingIncremental`, l'entonnoir unique

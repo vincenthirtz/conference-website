@@ -19,8 +19,15 @@ export default ns('registerPage', {
   accountTypePlayerHint: 'Je joue en équipe ou je cherche une équipe.',
   accountTypeManager: 'Manager',
   accountTypeManagerHint: "J'encadre une équipe sans y jouer.",
+  accountTypeSupporter: 'Supportrice',
+  accountTypeSupporterHint:
+    'Je ne joue pas : je suis la compétition et je collectionne.',
   managerNoBattleTagNote:
     "Pas de BattleTag demandé : en tant que manager tu n'as pas besoin de compte Overwatch. Après confirmation de ton email, tu pourras créer ton équipe — et en encadrer plusieurs.",
+  // Dit ce qu'on peut faire ET comment on gagne des cartes : sans cela, une
+  // supportrice arrive sur une collection vide sans savoir par où commencer.
+  supporterNoBattleTagNote:
+    "Pas de BattleTag demandé : tu n'as pas besoin de compte Overwatch. Après confirmation de ton email, tu auras ta collection de cartes — elles se gagnent en regardant les directs, en liant ton compte Twitch — et tu pourras soutenir l'association si tu le souhaites. Un don ne donne jamais de cartes ni de pièces : les deux restent séparés.",
   displayNameLabel: 'Nom affiché (optionnel)',
   displayNamePlaceholder: 'Ex: LaKiiroi',
   battleTagLabel: 'BattleTag (format Pseudo#0000)',

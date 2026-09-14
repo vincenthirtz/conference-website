@@ -15,14 +15,19 @@ function RegisterPage() {
   const [confirm, setConfirm] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [battleTag, setBattleTag] = useState('');
-  // Type de compte. « manager » = elle encadre une équipe sans y jouer : pas de
-  // BattleTag à saisir (elle n'a pas forcément de compte Overwatch), et
-  // l'après-inscription la mène vers la création d'équipe plutôt que vers la
-  // recherche d'une équipe. Le rôle n'accorde aucun droit en soi
-  // (cf. pages/api/auth/register.ts) — c'est une étiquette de compte.
-  const [accountType, setAccountType] = useState<'player' | 'manager'>(
-    'player'
-  );
+  // Type de compte. « manager » = elle encadre une équipe sans y jouer ;
+  // « supporter » = elle ne joue ni n'encadre, elle suit la compétition,
+  // collectionne le TCG et peut soutenir l'association. Le rôle n'accorde aucun
+  // droit en soi (cf. pages/api/auth/register.ts) — c'est une étiquette.
+  //
+  // SEULE UNE JOUEUSE A UN BATTLETAG, et la condition est écrite dans ce sens.
+  // Elle était formulée en négatif (« si ce n'est pas un manager, exige le
+  // format ») : l'arrivée d'un troisième cas aurait réclamé un BattleTag à une
+  // supportrice sans que rien ne le signale.
+  const [accountType, setAccountType] = useState<
+    'player' | 'manager' | 'supporter'
+  >('player');
+  const isPlayerAccount = accountType === 'player';
   const isManagerAccount = accountType === 'manager';
 
   const [loading, setLoading] = useState(false);
@@ -119,7 +124,7 @@ function RegisterPage() {
     }
 
     if (
-      !isManagerAccount &&
+      isPlayerAccount &&
       battleTag.trim() &&
       !BATTLETAG_PATTERN.test(battleTag.trim())
     ) {
@@ -143,11 +148,11 @@ function RegisterPage() {
           email: email.trim(),
           password,
           displayName: displayName.trim() || undefined,
-          // Un compte manager ne porte pas de BattleTag, même si le champ a été
+          // Seul un compte joueuse porte un BattleTag, même si le champ a été
           // rempli avant de basculer le choix.
-          battleTag: isManagerAccount
-            ? undefined
-            : battleTag.trim() || undefined,
+          battleTag: isPlayerAccount
+            ? battleTag.trim() || undefined
+            : undefined,
           accountType,
           // Attribution : première touche mémorisée si consentement analytics,
           // sinon les utm_* de l'URL courante. `null` quand il n'y a rien.
@@ -226,7 +231,7 @@ function RegisterPage() {
                 <legend className="px-1 text-xs font-medium tracking-[0.12em] uppercase text-gray-300">
                   {t.accountTypeLegend}
                 </legend>
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2 sm:grid-cols-3">
                   {(
                     [
                       {
@@ -238,6 +243,11 @@ function RegisterPage() {
                         value: 'manager' as const,
                         label: t.accountTypeManager,
                         hint: t.accountTypeManagerHint,
+                      },
+                      {
+                        value: 'supporter' as const,
+                        label: t.accountTypeSupporter,
+                        hint: t.accountTypeSupporterHint,
                       },
                     ] as const
                   ).map((opt) => (
@@ -299,9 +309,11 @@ function RegisterPage() {
                 />
               </div>
 
-              {isManagerAccount ? (
+              {!isPlayerAccount ? (
                 <p className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-[11px] leading-relaxed text-gray-300">
-                  {t.managerNoBattleTagNote}
+                  {isManagerAccount
+                    ? t.managerNoBattleTagNote
+                    : t.supporterNoBattleTagNote}
                 </p>
               ) : (
                 <div>

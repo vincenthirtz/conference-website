@@ -20,8 +20,13 @@ export default {
   accountTypePlayerHint: "I play on a team, or I'm looking for one.",
   accountTypeManager: 'Manager',
   accountTypeManagerHint: 'I run a team without playing on it.',
+  accountTypeSupporter: 'Supporter',
+  accountTypeSupporterHint:
+    "I don't play: I follow the competition and I collect.",
   managerNoBattleTagNote:
     "No BattleTag needed: as a manager you don't need an Overwatch account. Once your email is confirmed you'll be able to create your team — and to run more than one.",
+  supporterNoBattleTagNote:
+    "No BattleTag needed: you don't need an Overwatch account. Once your email is confirmed you'll have your card collection — cards are earned by watching the streams, with your Twitch account linked — and you can support the association if you wish. A donation never grants cards or coins: the two stay separate.",
   displayNameLabel: 'Display name (optional)',
   displayNamePlaceholder: 'e.g. LaKiiroi',
   battleTagLabel: 'BattleTag (format Name#0000)',

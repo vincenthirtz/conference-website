@@ -326,6 +326,7 @@ function PlayerProfile() {
     manager: t.roleManager,
     coach: t.roleCoach,
     substitute: t.roleSubstitute,
+    supporter: t.roleSupporter,
   };
   const roleLabel = roleLabels[role] ?? t.rolePlayer;
   const battleTag = (user.user_metadata?.battle_tag as string) || '—';

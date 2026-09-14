@@ -148,8 +148,17 @@ function readViewState(query: Record<string, string | string[] | undefined>) {
  *     modifiable ici (cf. /admin/teams/[id]/edit), on l'affiche en lecture.
  * ------------------------------------------------------------------------ */
 
-/** Rôles de compte n'ouvrant aucun accès au back-office. */
-const COMMUNITY_ROLES = ['member', 'player'];
+/**
+ * Rôles de compte n'ouvrant aucun accès au back-office.
+ *
+ * DOIT rester en phase avec `SELF_SERVICE_ROLES` (pages/api/auth/register.ts) :
+ * cette liste est le seul endroit d'où l'on attribue ou filtre le rôle d'un
+ * compte EXISTANT. `manager` y manquait depuis son ouverture à l'inscription —
+ * créable à l'inscription, ni attribuable ni filtrable ensuite, exactement le
+ * défaut que décrit le commentaire de `STAFF_ROLE_OPTIONS` ci-dessous pour
+ * `referee`/`helper`. Il est ajouté ici en même temps que `supporter`.
+ */
+const COMMUNITY_ROLES = ['member', 'player', 'manager', 'supporter'];
 /**
  * Rôles de compte qui provisionnent une entrée `staff`, du plus étroit au plus
  * large.

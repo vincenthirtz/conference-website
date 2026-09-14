@@ -28,6 +28,7 @@ export default {
   signIn: 'Sign in',
   roleCaptain: 'Captain',
   rolePlayer: 'Player',
+  roleSupporter: 'Supporter',
   backToDashboard: 'Dashboard',
   pageTitle: 'My profile',
   pageSubtitle: 'Manage your account, email, password and data.',
