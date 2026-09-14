@@ -69,36 +69,110 @@ export default function TcgAnnouncement({
 
   return (
     <li
-      className="flex items-center gap-3 rounded-2xl border border-white/15 bg-black/70 px-5 py-3 shadow-2xl backdrop-blur-sm"
+      // Marges latérales larges : elles tiennent la phrase À L'INTÉRIEUR des
+      // deux crochets. Trop serrées, le texte passe dessous et le motif cesse
+      // d'encadrer quoi que ce soit.
+      className="relative isolate overflow-hidden rounded-2xl border border-white/15 bg-black/70 px-16 py-6 text-center shadow-2xl backdrop-blur-sm"
       style={{ animation: 'tcgOverlayIn 320ms ease-out' }}
     >
-      {theme.mediaUrl ? (
-        <Media url={theme.mediaUrl} kind={theme.mediaKind} />
-      ) : (
-        <span
-          aria-hidden
-          className="text-2xl"
-          // La couleur d'accent ne distingue plus drop et victoire quand la
-          // régie en a choisi une : c'est SA charte, elle prime sur notre code
-          // de couleur interne.
-          style={{ color: theme.accentColor }}
-        >
-          {isDrop ? '★' : '✦'}
-        </span>
-      )}
+      <PulseFx />
 
-      <span className="min-w-0">
+      {/* `relative` : le texte passe AU-DESSUS du FX, qui est en fond absolu.
+          L'ombre portée le tient lisible pendant les 0,4 s où la lueur passe
+          derrière lui — après quoi elle ne coûte plus rien. */}
+      <span
+        className="relative flex flex-col items-center gap-1"
+        style={{ textShadow: '0 2px 8px rgba(0,0,0,0.9)' }}
+      >
+        {theme.mediaUrl ? (
+          <Media url={theme.mediaUrl} kind={theme.mediaKind} />
+        ) : (
+          <span
+            aria-hidden
+            className="text-2xl leading-none"
+            // La couleur d'accent ne distingue plus drop et victoire quand la
+            // régie en a choisi une : c'est SA charte, elle prime sur notre code
+            // de couleur interne.
+            style={{ color: theme.accentColor }}
+          >
+            {isDrop ? '★' : '✦'}
+          </span>
+        )}
+
         <span
           className="block text-[10px] font-bold uppercase tracking-[0.18em]"
           style={{ color: theme.accentColor }}
         >
           {isDrop ? labels.dropEyebrow : labels.winEyebrow}
         </span>
-        <span className="block truncate text-base font-semibold text-white">
+        <span className="block max-w-[22ch] truncate text-base font-semibold text-white">
           {interpolate(template, name)}
         </span>
       </span>
     </li>
+  );
+}
+
+/**
+ * L'HABILLAGE : le FX « pulse » de la charte, en fond de l'annonce.
+ *
+ * Deux crochets néon qui s'écartent puis s'éteignent, autour du vide central où
+ * le texte est posé — c'est pour cela que la pastille est désormais CENTRÉE et
+ * non plus alignée à gauche : le motif encadre une phrase, il ne la borde pas.
+ *
+ * `mix-blend-mode: screen` plutôt qu'une vidéo à canal alpha : le rendu est un
+ * néon sur NOIR PUR, et le noir est l'élément neutre du mode écran — il
+ * disparaît exactement, tandis que la lueur s'ajoute. On garde donc le fond
+ * translucide de la pastille (un simple `object-cover` opaque l'aurait masqué),
+ * sans dépendre d'un encodage alpha que tous les lecteurs ne servent pas.
+ *
+ * DEUX SOURCES, WEBM D'ABORD. La source d'origine est en HEVC, que le
+ * navigateur embarqué d'OBS ne décode pas : elle ne montrerait rien du tout, et
+ * sans erreur. Le VP9 est toujours disponible dans ce moteur ; le H.264 couvre
+ * les navigateurs qui n'ont pas VP9. L'ordre compte — le premier lu gagne.
+ *
+ * JOUÉE UNE FOIS, PAS EN BOUCLE. Le motif dure 0,4 s et se termine sur du noir :
+ * c'est un impact à l'apparition, qui s'efface ensuite pour laisser lire la
+ * phrase. En boucle, il clignoterait toutes les 400 ms derrière un texte —
+ * pénible à regarder, et illisible.
+ */
+function PulseFx() {
+  return (
+    <>
+      <video
+        aria-hidden
+        autoPlay
+        muted
+        playsInline
+        // AGRANDIE À 220 % ET CENTRÉE, et c'est le réglage qui fait tout.
+        // À l'échelle 1, les deux crochets tombent au milieu du cadre et
+        // BARRENT la phrase au lieu de l'encadrer — vérifié au rendu. Zoomer
+        // les repousse vers les bords de la pastille, et dégage le centre pour
+        // le texte, qui est exactement la composition du motif d'origine.
+        //
+        // Une source OBS ne reçoit aucun clic ; la vidéo ne doit de toute façon
+        // jamais intercepter quoi que ce soit.
+        className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[220%] w-[220%] -translate-x-1/2 -translate-y-1/2 object-cover motion-reduce:hidden"
+        style={{ mixBlendMode: 'screen' }}
+      >
+        <source src="/overlay/tcg/pulse-horizontal.webm" type="video/webm" />
+        <source src="/overlay/tcg/pulse-horizontal.mp4" type="video/mp4" />
+      </video>
+
+      {/* Voile sombre au centre, SOUS le texte et AU-DESSUS du FX (il est le
+          second des deux `-z-10`, donc peint par-dessus). Au pic du flash, la
+          lueur traverse la pastille de part en part ; sans ce voile, la phrase
+          se lit sur un fond magenta vif pendant une demi-seconde. Il s'efface
+          vers les bords pour ne pas éteindre les crochets eux-mêmes. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 motion-reduce:hidden"
+        style={{
+          background:
+            'radial-gradient(ellipse at center, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 55%, transparent 100%)',
+        }}
+      />
+    </>
   );
 }
 
