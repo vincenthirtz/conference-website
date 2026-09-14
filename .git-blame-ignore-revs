@@ -1,0 +1,5 @@
+# Commits de pure mise en forme, ignorés par `git blame` (et par GitHub).
+# Local : git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# style: reformater le dépôt avec Biome (2026-09-15)
+b865930e0cec94baabadaa685cfecc733024f948
