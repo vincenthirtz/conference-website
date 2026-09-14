@@ -243,7 +243,15 @@ export function setUserCacheEntry<V extends { expiresAt: number }>(
   cache.set(key, value);
 }
 
-async function resolveUserFromToken(token: string): Promise<User | null> {
+/**
+ * Exportée parce que les pages publiques d'invitation acceptent DEUX sources de
+ * session : le Bearer (espace joueur, `useSession`) et le cookie (parcours
+ * staff). Une route qui n'en connaît qu'une renvoie un 401 qui dépend de la
+ * page d'où l'on vient — incompréhensible côté utilisateur.
+ */
+export async function resolveUserFromToken(
+  token: string
+): Promise<User | null> {
   const now = Date.now();
   const cached = tokenUserCache.get(token);
   if (cached && cached.expiresAt > now) {
@@ -398,7 +406,8 @@ export async function requireStaffRoleFromRequest(
   const { resolveActiveTenant, readActiveTenantCookie, readTenantStaffRole } =
     await import('./adminTenants');
   const cookieTenantId = readActiveTenantCookie(req.cookies);
-  const isPoleAdmin = (ctx.staff as { is_pole_admin?: boolean }).is_pole_admin === true;
+  const isPoleAdmin =
+    (ctx.staff as { is_pole_admin?: boolean }).is_pole_admin === true;
   const { tenantId, source } = await resolveActiveTenant(
     ctx.staff.id,
     cookieTenantId,
@@ -470,8 +479,7 @@ export async function requireStaffPermissionFromRequest(
   // fiche staff. La seconde est ce qui permet de confier une tâche précise sans
   // donner un rôle entier — « le Drive de l'asso à la trésorière » sans faire
   // d'elle une administratrice du site.
-  const permissionRole =
-    opts?.scope === 'platform' ? ctx.globalRole : ctx.role;
+  const permissionRole = opts?.scope === 'platform' ? ctx.globalRole : ctx.role;
   if (
     !hasStaffPermission(permissionRole, ctx.staff.extra_permissions, permission)
   ) {

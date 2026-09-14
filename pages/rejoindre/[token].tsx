@@ -67,6 +67,20 @@ function JoinByLinkPage() {
         const json = await res.json().catch(() => null);
         if (cancelled) return;
         if (!res.ok) {
+          // Ce jeton n'est pas un lien d'équipe partageable — mais il peut être
+          // une invitation NOMINATIVE collée dans la mauvaise barre d'adresse.
+          // On demande sa famille avant de conclure à l'inexistence : « lien
+          // invalide » sur un lien valide est le pire des messages.
+          const probe = await fetch(
+            `/api/invitations/${encodeURIComponent(token)}`
+          )
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null);
+          if (cancelled) return;
+          if (probe?.kind === 'tenant' || probe?.kind === 'team') {
+            void router.replace(`/invitation/${encodeURIComponent(token)}`);
+            return;
+          }
           setLoadError(json?.error || t.errorNotFound);
           return;
         }
@@ -81,7 +95,7 @@ function JoinByLinkPage() {
     return () => {
       cancelled = true;
     };
-  }, [router.isReady, token, t]);
+  }, [router, token, t]);
 
   const join = useCallback(async () => {
     if (!token || !authToken) return;

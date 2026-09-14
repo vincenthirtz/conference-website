@@ -21,11 +21,19 @@ import crypto from 'crypto';
 /** Longueur du jeton brut, en octets, avant encodage base64url. */
 const TOKEN_BYTES = 32;
 
-/** Base du site, même convention que utils/email.ts / create-with-member.ts. */
-const SITE_URL =
+/**
+ * Base du site, même convention que utils/email.ts / create-with-member.ts.
+ *
+ * Slash final retiré, comme le fait `invitationUrl` (utils/tenants/
+ * invitationEmail.ts) : un `NEXT_PUBLIC_SITE_URL` terminé par `/` produisait
+ * sinon `https://…//invitation/<token>`, que certains clients mail réécrivent
+ * ou tronquent.
+ */
+const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ||
   process.env.SITE_URL ||
-  'https://owwomenscup.fr';
+  'https://owwomenscup.fr'
+).replace(/\/+$/, '');
 
 /** Jeton brut à transmettre à l'invitée (jamais persisté tel quel). */
 export function generateInviteToken(): string {
