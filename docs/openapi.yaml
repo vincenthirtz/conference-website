@@ -35300,7 +35300,22 @@ paths:
         si elle est `approved` ET non revoquee.
 
         Rarete rendue = la MEILLEURE possedee, la rarete etant figee par tirage
-        et pouvant differer d'un exemplaire a l'autre. Rate-limit 60 / min.
+        et pouvant differer d'un exemplaire a l'autre.
+
+        `recyclable` DESIGNE UN EXEMPLAIRE PRECIS (`packId` + `position`), le
+        couple qu'exige `POST /api/player/tcg/recycle` et qui porte son
+        idempotence (`source_ref = <pack_id>:<position>`). Il vaut `null` des
+        qu'il n'y a qu'un exemplaire : la route refuse le dernier.
+
+        L'EXEMPLAIRE DESIGNE EST LE MOINS PRECIEUX — plus basse rarete, non
+        brillant a rarete egale. La route de recyclage, elle, accepte n'importe
+        quel exemplaire pourvu qu'il en reste un autre : elle ne regarde PAS
+        lequel part. Le choix appartient donc a cette route-ci, et envoyer le
+        premier venu detruirait un jour l'epique d'une joueuse en lui laissant
+        la commune. La carte s'affiche avec sa MEILLEURE rarete tandis qu'on
+        propose la PIRE : les deux informations coexistent sans se contredire.
+
+        Rate-limit 60 / min.
       operationId: readPlayerTcgCollection
       security:
         - PlayerBearer: []
@@ -35363,6 +35378,21 @@ paths:
                           type: boolean
                         count:
                           type: integer
+                        recyclable:
+                          type: object
+                          nullable: true
+                          description: >-
+                            L'exemplaire propose au recyclage, ou `null` des
+                            qu'il n'y en a qu'un — la route de recyclage refuse
+                            le dernier (`not_a_duplicate`), et un bouton
+                            qu'elle rejetterait promettrait un geste
+                            impossible. Le couple designe LE MOINS PRECIEUX des
+                            exemplaires.
+                          properties:
+                            packId:
+                              type: string
+                            position:
+                              type: integer
                   distinct:
                     type: integer
                   total:
