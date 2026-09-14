@@ -9,8 +9,8 @@ npm run dev              # Start development server (Next.js)
 npm run build            # Production build
 npm run start            # Start production server
 npm run lint             # Biome lint (hooks, a11y, Next) — code mort via tsconfig strict
-npm run format           # Prettier write
-npm run format:check     # Prettier check
+npm run format           # Biome format --write (remplace Prettier)
+npm run format:check     # Biome format (vérification)
 npm run test             # Playwright e2e tests (95 specs)
 npm run test:unit        # Vitest unit tests (185 files, ~3350 tests)
 npm run test:unit:watch  # Vitest watch mode

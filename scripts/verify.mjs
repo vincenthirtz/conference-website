@@ -8,8 +8,9 @@
 // alors qu'elles tiennent sur des cœurs différents ; le mur, c'est désormais la
 // plus lente (les tests).
 //
-// Le lint est Biome (Rust, ~2 s sur tout le dépôt, sans cache) : ESLint prenait
-// 27 s à chaud pour ne bloquer aucune erreur. Les contrôles « code mort » qu'il
+// Lint ET format sont Biome (`biome check`, Rust, quelques secondes sur tout le
+// dépôt, sans cache) : ESLint prenait 27 s à chaud pour ne bloquer aucune
+// erreur, et Prettier ne tournait qu'à la main. Les contrôles « code mort » qu'il
 // portait (variables, imports, paramètres inutilisés…) sont passés dans
 // `tsconfig.json`, donc dans le typecheck.
 //
@@ -64,9 +65,9 @@ const TASKS = [
       ]),
   { name: 'typecheck', cmd: 'npx', args: ['tsc', '--noEmit'] },
   {
-    name: 'lint',
+    name: 'biome',
     cmd: 'npx',
-    args: ['biome', 'lint', '.'],
+    args: ['biome', 'check', '.'],
   },
 ];
 
