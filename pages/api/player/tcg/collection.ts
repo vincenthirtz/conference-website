@@ -42,7 +42,36 @@ type Aggregated = {
   rarity: TcgRarity;
   /** Vrai dès qu'un exemplaire est brillant. */
   hasFoil: boolean;
+  /**
+   * L'exemplaire le MOINS précieux du sujet — celui qu'on proposera au
+   * recyclage. Cf. `worseThan` : plus basse rareté, et non brillant à rareté
+   * égale.
+   */
+  worst: { packId: string; position: number; rarity: TcgRarity; foil: boolean };
 };
+
+/**
+ * `a` est-il un moins bon exemplaire que `b` ?
+ *
+ * POURQUOI CE CHOIX EXISTE, ET POURQUOI IL EST ICI. La route de recyclage
+ * accepte n'importe quel exemplaire pourvu qu'il en reste un autre : elle ne
+ * regarde PAS lequel part. C'est donc à l'appelant de décider, et une
+ * interface qui enverrait le premier venu détruirait un jour l'épique d'une
+ * joueuse en lui laissant la commune — un clic censé « ranger ses doublons »
+ * lui coûterait sa meilleure carte.
+ *
+ * La brillance départage à rareté égale : elle ne vaut aucun palier de plus,
+ * mais entre deux communes on garde celle qui brille.
+ */
+function worseThan(
+  a: { rarity: TcgRarity; foil: boolean },
+  b: { rarity: TcgRarity; foil: boolean }
+): boolean {
+  const ra = RARITY_ORDER.indexOf(a.rarity);
+  const rb = RARITY_ORDER.indexOf(b.rarity);
+  if (ra !== rb) return ra < rb;
+  return !a.foil && b.foil;
+}
 
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
@@ -92,8 +121,11 @@ export default withAuthRoute(async function handler(
   //    carte ET la garder.
   const { data: cardRows, error: cardError } = await supabaseAdmin
     .from('tcg_pack_cards')
+    // `pack_id, position` en plus : c'est le couple qui DÉSIGNE un exemplaire,
+    // et la route de recyclage n'accepte rien d'autre. Sans eux, la collection
+    // savait compter les doublons sans pouvoir en recycler un seul.
     .select(
-      'subject_kind, card_user_id, card_team_id, card_map_slug, rarity, is_foil'
+      'pack_id, position, subject_kind, card_user_id, card_team_id, card_map_slug, rarity, is_foil'
     )
     .in('pack_id', packIds)
     .is('recycled_at', null)
@@ -107,6 +139,8 @@ export default withAuthRoute(async function handler(
   // 3) Agrégation par sujet.
   const byKey = new Map<string, Aggregated>();
   for (const row of (cardRows ?? []) as Array<{
+    pack_id: string;
+    position: number;
     subject_kind: 'player' | 'team' | 'map';
     card_user_id: string | null;
     card_team_id: string | null;
@@ -120,6 +154,13 @@ export default withAuthRoute(async function handler(
     if (!key) continue;
     const subjectId = key.slice(key.indexOf(':') + 1);
 
+    const copy = {
+      packId: row.pack_id,
+      position: row.position,
+      rarity: row.rarity,
+      foil: Boolean(row.is_foil),
+    };
+
     const existing = byKey.get(key);
     if (!existing) {
       byKey.set(key, {
@@ -128,6 +169,7 @@ export default withAuthRoute(async function handler(
         count: 1,
         rarity: row.rarity,
         hasFoil: Boolean(row.is_foil),
+        worst: copy,
       });
       continue;
     }
@@ -138,6 +180,9 @@ export default withAuthRoute(async function handler(
     ) {
       existing.rarity = row.rarity;
     }
+    // On suit le pire exemplaire au fil de la lecture : c'est lui qu'on
+    // proposera au recyclage, jamais le meilleur.
+    if (worseThan(copy, existing.worst)) existing.worst = copy;
   }
 
   const aggregated = [...byKey.values()];
@@ -159,6 +204,22 @@ export default withAuthRoute(async function handler(
     ),
   ]);
 
+  /**
+   * L'exemplaire proposé au recyclage, ou `null`.
+   *
+   * `null` DÈS QU'IL N'Y A QU'UN EXEMPLAIRE, et ce n'est pas une précaution
+   * d'affichage : la route refuse le dernier exemplaire (`not_a_duplicate`).
+   * Exposer un bouton qu'elle rejetterait ferait promettre un geste impossible.
+   *
+   * C'est le MOINS précieux qui est désigné (cf. `worseThan`) : la carte
+   * affichée porte la meilleure rareté possédée, et recycler « ce doublon » ne
+   * doit jamais coûter la meilleure des copies.
+   */
+  const recyclableOf = (a: Aggregated) =>
+    a.count >= 2
+      ? { packId: a.worst.packId, position: a.worst.position }
+      : null;
+
   const cards = aggregated
     .map((a) => {
       if (a.kind === 'player') {
@@ -171,6 +232,7 @@ export default withAuthRoute(async function handler(
           rarity: a.rarity,
           isFoil: a.hasFoil,
           count: a.count,
+          recyclable: recyclableOf(a),
         };
       }
       if (a.kind === 'map') {
@@ -183,6 +245,7 @@ export default withAuthRoute(async function handler(
           rarity: a.rarity,
           isFoil: a.hasFoil,
           count: a.count,
+          recyclable: recyclableOf(a),
         };
       }
       const face = teamFaces.get(a.subjectId);
@@ -195,6 +258,7 @@ export default withAuthRoute(async function handler(
         rarity: a.rarity,
         isFoil: a.hasFoil,
         count: a.count,
+        recyclable: recyclableOf(a),
       };
     })
     // Les plus rares d'abord : une collection se regarde par ses pièces fortes.

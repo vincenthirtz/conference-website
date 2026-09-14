@@ -20,6 +20,7 @@ import Link from 'next/link';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useT, format } from '@/lib/i18n/useT';
 import TcgCard from '@/components/tcg/TcgCard';
 import { TcgCoin, TcgAmount } from '@/components/tcg/TcgCoin';
@@ -73,6 +74,12 @@ type CollectionCard =
       rarity: TcgRarity;
       isFoil: boolean;
       count: number;
+      /**
+       * L'exemplaire que l'API propose au recyclage — le MOINS précieux — ou
+       * `null` quand il n'y a qu'un exemplaire : la route refuse de retirer le
+       * dernier, et un bouton condamné au refus ne doit pas s'afficher.
+       */
+      recyclable?: { packId: string; position: number } | null;
     }
   | {
       kind: 'team';
@@ -83,6 +90,12 @@ type CollectionCard =
       rarity: TcgRarity;
       isFoil: boolean;
       count: number;
+      /**
+       * L'exemplaire que l'API propose au recyclage — le MOINS précieux — ou
+       * `null` quand il n'y a qu'un exemplaire : la route refuse de retirer le
+       * dernier, et un bouton condamné au refus ne doit pas s'afficher.
+       */
+      recyclable?: { packId: string; position: number } | null;
     }
   | {
       kind: 'map';
@@ -92,6 +105,12 @@ type CollectionCard =
       rarity: TcgRarity;
       isFoil: boolean;
       count: number;
+      /**
+       * L'exemplaire que l'API propose au recyclage — le MOINS précieux — ou
+       * `null` quand il n'y a qu'un exemplaire : la route refuse de retirer le
+       * dernier, et un bouton condamné au refus ne doit pas s'afficher.
+       */
+      recyclable?: { packId: string; position: number } | null;
     };
 
 /**
@@ -164,10 +183,22 @@ function PlayerTcg() {
 
   const [packs, setPacks] = useState<Pack[]>([]);
   const [balance, setBalance] = useState(0);
+  // Recycler MARQUE une carte définitivement : le geste passe par une
+  // confirmation, comme les autres actions irréversibles de l'espace joueuse.
+  const { confirm, dialog } = useConfirmDialog();
+
   // Le prix vient de l'API : le coder ici en dur ferait mentir le bouton dès
   // que le barème bougerait, et importer `economy.ts` traînerait le moteur de
   // rating dans le bundle navigateur.
   const [boosterPrice, setBoosterPrice] = useState<number | null>(null);
+  /**
+   * Ce que rapporte le recyclage d'un doublon, rendu par l'API.
+   *
+   * `null` tant qu'on ne l'a pas lu — et le bouton reste alors absent : « +—
+   * pièces » proposerait un échange dont on ignore le montant, exactement la
+   * raison qui fait déjà disparaître le bouton d'achat sans prix connu.
+   */
+  const [recycleRefund, setRecycleRefund] = useState<number | null>(null);
   // Le barème vient de l'API, comme le prix : sans lui, la page affichait un
   // solde et un bouton d'achat sans jamais dire comment gagner des pièces.
   const [earn, setEarn] = useState<{
@@ -226,6 +257,7 @@ function PlayerTcg() {
           packs: Pack[];
           balance: number;
           boosterPrice: number;
+          recycleRefund?: number;
           earn?: { matchWin: number; scrimWin: number; twitchDrop?: number };
         }>('/api/player/tcg/packs'),
         adminFetchJson<{
@@ -241,6 +273,11 @@ function PlayerTcg() {
       setBalance(packsData.balance ?? 0);
       if (typeof packsData.boosterPrice === 'number') {
         setBoosterPrice(packsData.boosterPrice);
+      }
+      // Le montant vient de l'API, jamais recopié ici : le recopier ferait
+      // mentir le bouton au premier réglage du barème.
+      if (typeof packsData.recycleRefund === 'number') {
+        setRecycleRefund(packsData.recycleRefund);
       }
       if (
         typeof packsData.earn?.matchWin === 'number' &&
@@ -411,6 +448,72 @@ function PlayerTcg() {
       setBusy(null);
     }
   }, [adminFetch, addToast, load, t]);
+
+  /**
+   * Recycler un doublon.
+   *
+   * LE GESTE EST DÉFINITIF — la carte est marquée, pas empruntée — d'où la
+   * confirmation, qui dit aussi lequel des exemplaires part. Même patron que
+   * `buyBooster` : état occupé, traduction du `code` d'erreur, et `load()`
+   * dans les DEUX issues.
+   *
+   * Recharger même après un échec n'est pas de la prudence excessive : la route
+   * marque la carte AVANT de créditer, et relâche le marquage si le crédit
+   * échoue. L'écran doit donc montrer l'état réel plutôt que sa version
+   * optimiste — dans un sens comme dans l'autre.
+   */
+  const recycleCard = useCallback(
+    async (target: { packId: string; position: number }) => {
+      const busyKey = `recycle:${target.packId}:${target.position}`;
+      const ok = await confirm({
+        title: t.recycleConfirmTitle,
+        subtitle: format(t.recycleConfirmBody, { refund: recycleRefund ?? '' }),
+        variant: 'warning',
+        confirmLabel: t.recycleConfirmYes,
+        cancelLabel: t.recycleConfirmNo,
+      });
+      if (!ok) return;
+
+      setBusy(busyKey);
+      try {
+        const res = await adminFetch('/api/player/tcg/recycle', {
+          method: 'POST',
+          body: JSON.stringify(target),
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as {
+            code?: string;
+            refund?: number;
+          };
+          addToast(
+            body.code === 'not_a_duplicate'
+              ? t.errNotADuplicate
+              : body.code === 'already_recycled'
+                ? t.errAlreadyRecycled
+                : t.errGeneric,
+            'error'
+          );
+          await load();
+          return;
+        }
+        const body = (await res.json().catch(() => ({}))) as {
+          refund?: number;
+        };
+        addToast(
+          format(t.recycleSuccess, {
+            refund: body.refund ?? recycleRefund ?? '',
+          }),
+          'success'
+        );
+        await load();
+      } catch {
+        addToast(t.errGeneric, 'error');
+      } finally {
+        setBusy(null);
+      }
+    },
+    [adminFetch, addToast, confirm, load, recycleRefund, t]
+  );
 
   const unopened = packs.filter((p) => !p.openedAt);
 
@@ -717,41 +820,69 @@ function PlayerTcg() {
                 })}
               </p>
               <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-                {cards.map((card) => (
-                  // `subjectKey` plutôt qu'une clé recopiée : une seule règle
-                  // d'identité pour la collection et pour la révélation.
-                  <li key={subjectKey(card)}>
-                    <TcgCard
-                      subject={
-                        card.kind === 'player'
-                          ? {
-                              kind: 'player',
-                              userId: card.userId,
-                              displayName: card.displayName,
-                              imageUrl: card.imageUrl,
-                            }
-                          : card.kind === 'map'
+                {cards.map((card) => {
+                  // Extrait en variable locale plutôt que ré-interrogé dans le
+                  // gestionnaire : cela évite une assertion non-nulle et rend
+                  // la clé d'occupation lisible.
+                  const target = card.recyclable ?? null;
+                  const recycleKey = target
+                    ? `recycle:${target.packId}:${target.position}`
+                    : null;
+                  return (
+                    // `subjectKey` plutôt qu'une clé recopiée : une seule règle
+                    // d'identité pour la collection et pour la révélation.
+                    <li key={subjectKey(card)}>
+                      <TcgCard
+                        subject={
+                          card.kind === 'player'
                             ? {
-                                kind: 'map',
-                                slug: card.slug,
-                                name: card.name,
+                                kind: 'player',
+                                userId: card.userId,
+                                displayName: card.displayName,
                                 imageUrl: card.imageUrl,
                               }
-                            : {
-                                kind: 'team',
-                                teamId: card.teamId,
-                                name: card.name,
-                                slug: card.slug,
-                                logoUrl: card.logoUrl,
-                              }
-                      }
-                      rarity={card.rarity}
-                      isFoil={card.isFoil}
-                      count={card.count}
-                      labels={labels}
-                    />
-                  </li>
-                ))}
+                            : card.kind === 'map'
+                              ? {
+                                  kind: 'map',
+                                  slug: card.slug,
+                                  name: card.name,
+                                  imageUrl: card.imageUrl,
+                                }
+                              : {
+                                  kind: 'team',
+                                  teamId: card.teamId,
+                                  name: card.name,
+                                  slug: card.slug,
+                                  logoUrl: card.logoUrl,
+                                }
+                        }
+                        rarity={card.rarity}
+                        isFoil={card.isFoil}
+                        count={card.count}
+                        labels={labels}
+                      />
+                      {/* Le recyclage n'apparaît QUE sur un vrai doublon :
+                        l'API ne rend `recyclable` qu'à partir de deux
+                        exemplaires, et la route refuserait le dernier. Le
+                        montant est celui rendu par l'API — le recopier ici le
+                        ferait mentir au premier réglage du barème. */}
+                      {target && recycleRefund !== null && (
+                        <button
+                          type="button"
+                          onClick={() => void recycleCard(target)}
+                          disabled={busy !== null}
+                          className="mt-2 w-full rounded-lg border border-white/10 px-2 py-1.5 text-[11px] text-gray-400 transition hover:border-[var(--color-green)]/50 hover:text-[var(--color-green)] disabled:opacity-50"
+                        >
+                          {busy === recycleKey
+                            ? t.recycling
+                            : format(t.recycleAction, {
+                                refund: recycleRefund,
+                              })}
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </>
           )}
@@ -762,6 +893,10 @@ function PlayerTcg() {
             {t.title}
           </Link>
         </p>
+
+        {/* Sans ce rendu, `await confirm(...)` ne se résoudrait jamais et le
+            bouton de recyclage resterait bloqué. */}
+        {dialog}
       </main>
     </div>
   );

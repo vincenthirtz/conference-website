@@ -137,6 +137,13 @@ export default ns('playerTcg', {
 
   // Recyclage des doublons.
   recycleAction: 'Recycler un doublon (+{refund})',
+  // Le recyclage MARQUE la carte définitivement : on demande confirmation, et
+  // on dit lequel des exemplaires part — le moins précieux, jamais le meilleur.
+  recycleConfirmTitle: 'Recycler un doublon ?',
+  recycleConfirmBody:
+    'Un exemplaire de cette carte sera retiré de ta collection contre {refund} pièces. C’est le moins précieux qui part, et tu gardes le reste. C’est définitif.',
+  recycleConfirmYes: 'Recycler',
+  recycleConfirmNo: 'Annuler',
   recycling: 'Recyclage…',
   recycleSuccess: 'Doublon recyclé : +{refund} pièces.',
   errNotADuplicate: 'C’est ton seul exemplaire de cette carte.',

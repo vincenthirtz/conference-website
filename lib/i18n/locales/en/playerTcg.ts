@@ -104,6 +104,11 @@ export default {
   progressComplete: 'Collection complete. You have them all.',
 
   recycleAction: 'Recycle a duplicate (+{refund})',
+  recycleConfirmTitle: 'Recycle a duplicate?',
+  recycleConfirmBody:
+    'One copy of this card will be removed from your collection for {refund} coins. The least valuable copy goes, and you keep the rest. This is final.',
+  recycleConfirmYes: 'Recycle',
+  recycleConfirmNo: 'Cancel',
   recycling: 'Recycling…',
   recycleSuccess: 'Duplicate recycled: +{refund} coins.',
   errNotADuplicate: 'This is your only copy of that card.',
