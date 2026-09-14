@@ -47,6 +47,7 @@ import nsOverwatchRank from '@/lib/i18n/locales/fr/overwatchRank';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
 import TcgCard from '@/components/tcg/TcgCard';
 import { readTeamRarity } from '@/utils/tcg/readTeamRarity';
+import { tcgTeamImageUrl } from '@/utils/tcg/teamCardImage';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import { XIcon } from '@/components/Icons';
 
@@ -65,6 +66,8 @@ type Team = {
   name: string;
   short_name?: string | null;
   logo_url?: string | null;
+  /** Chemin (pas URL) de l'illustration de la carte TCG. Résolu en prop. */
+  tcg_image_path?: string | null;
   banner_url?: string | null;
   country?: string | null;
   description?: string | null;
@@ -160,6 +163,12 @@ type ScrimHistoryEntry = {
 
 type TeamPageProps = {
   team: Team;
+  /**
+   * URL publique de l'illustration de carte TCG, `null` si l'équipe n'en a pas
+   * déposé — la carte prend alors son logo. Résolue côté serveur : le chemin de
+   * bucket ne franchit pas la frontière du rendu.
+   */
+  tcgImageUrl: string | null;
   members: TeamMember[];
   tournaments: Tournament[];
   matchStats: MatchStats;
@@ -625,6 +634,13 @@ export const getStaticProps: GetStaticProps<TeamPageProps> = async (ctx) => {
   return {
     props: {
       team: team as Team,
+      // Même raisonnement que la rareté ci-dessus : l'ISR à 60 s suffit. Une
+      // illustration que l'équipe vient de changer n'engage qu'elle-même, à la
+      // différence d'une photo de joueuse retirée, qui exige l'immédiat.
+      tcgImageUrl: tcgTeamImageUrl(
+        supabaseAdmin.storage,
+        (team as Team).tcg_image_path
+      ),
       members: (members || []) as TeamMember[],
       tournaments,
       matchStats,
@@ -643,6 +659,7 @@ export const getStaticProps: GetStaticProps<TeamPageProps> = async (ctx) => {
 
 export default function TeamPage({
   team,
+  tcgImageUrl,
   members,
   skillAverage,
   tournaments,
@@ -1102,6 +1119,7 @@ export default function TeamPage({
                   name: team.name,
                   slug: team.slug ?? null,
                   logoUrl: team.logo_url ?? null,
+                  cardImageUrl: tcgImageUrl,
                 }}
                 rarity={tcgRarity}
                 // La carte est déjà sur la page de son sujet : pas de lien

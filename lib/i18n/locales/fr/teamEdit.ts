@@ -20,6 +20,24 @@ export default ns('teamEdit', {
   bannerLabel: 'Bannière',
   bannerHint:
     'PNG, JPEG, WebP ou SVG — max 2 Mo (512 Ko en SVG). Format paysage (1500×500).',
+  tcgImageLabel: 'Illustration de la carte TCG',
+  tcgImageHint:
+    'PNG, JPEG ou WebP — max {max}. Format portrait (3/4) recommandé : l’image remplit toute la carte. Publiée immédiatement, sans passer par « Enregistrer ».',
+  tcgImageEmpty: 'Aucune image',
+  tcgImageUsingLogo:
+    'Sans illustration, la carte utilise le logo de l’équipe, centré sur un fond de marque.',
+  tcgImageUsingUpload: 'La carte utilise cette illustration.',
+  tcgImageUpload: 'Choisir une image',
+  tcgImageReplace: 'Remplacer',
+  tcgImageRemove: 'Retirer',
+  tcgImageBusy: 'Envoi…',
+  tcgImageErrorType: 'Format non accepté — utilise un PNG, un JPEG ou un WebP.',
+  tcgImageErrorTooLarge: 'Image trop lourde — 2 Mo maximum.',
+  tcgImageErrorMismatch:
+    'Le contenu du fichier ne correspond pas à son format annoncé.',
+  tcgImageErrorForbidden:
+    'Tu n’as pas la permission de modifier l’identité de cette équipe.',
+  tcgImageErrorGeneric: 'L’envoi a échoué. Réessaie dans un instant.',
   accentColorLabel: "Couleur d'accent",
   secondaryColorLabel: 'Couleur secondaire',
   secondaryColorHint:

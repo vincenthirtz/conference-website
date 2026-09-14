@@ -255,6 +255,7 @@ export default withAuthRoute(async function handler(
         name: face?.name ?? null,
         slug: face?.slug ?? null,
         logoUrl: face?.logoUrl ?? null,
+        cardImageUrl: face?.cardImageUrl ?? null,
         rarity: a.rarity,
         isFoil: a.hasFoil,
         count: a.count,

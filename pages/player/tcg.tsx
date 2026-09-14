@@ -87,6 +87,8 @@ type CollectionCard =
       name: string | null;
       slug: string | null;
       logoUrl: string | null;
+      /** Illustration déposée par l'équipe ; `null` ⇒ la carte prend le logo. */
+      cardImageUrl: string | null;
       rarity: TcgRarity;
       isFoil: boolean;
       count: number;
@@ -135,6 +137,7 @@ type DrawnCard =
       name: string | null;
       slug: string | null;
       logoUrl: string | null;
+      cardImageUrl: string | null;
       rarity: TcgRarity;
       isFoil: boolean;
     }
@@ -717,6 +720,7 @@ function PlayerTcg() {
                               name: card.name,
                               slug: card.slug,
                               logoUrl: card.logoUrl,
+                              cardImageUrl: card.cardImageUrl,
                             }
                     }
                     rarity={card.rarity}
@@ -870,6 +874,7 @@ function PlayerTcg() {
                                   name: card.name,
                                   slug: card.slug,
                                   logoUrl: card.logoUrl,
+                                  cardImageUrl: card.cardImageUrl,
                                 }
                         }
                         rarity={card.rarity}

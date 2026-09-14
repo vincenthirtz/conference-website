@@ -605,7 +605,9 @@ async function handler(
       teamId: subject.subjectId,
       slug: face?.slug ?? null,
       name: face?.name ?? null,
-      imageUrl: face?.logoUrl ?? null,
+      // L'overview n'affiche qu'une vignette : illustration si elle existe,
+      // logo sinon. Pas de cadrage à décider ici, donc pas de second champ.
+      imageUrl: face?.cardImageUrl ?? face?.logoUrl ?? null,
       count: subject.count,
       foilCount: subject.foilCount,
     };

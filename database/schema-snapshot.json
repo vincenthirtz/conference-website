@@ -1566,6 +1566,7 @@
       "skill_rating",
       "slug",
       "sponsors",
+      "tcg_image_path",
       "tenant_id",
       "tiktok",
       "twitch",

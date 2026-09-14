@@ -41,10 +41,7 @@ import { readMapFaces, MAP_POOL_SLUGS } from '@/utils/tcg/readMapFaces';
 // la même raison que le prix du booster : elle les AFFICHE sans les connaître,
 // et les recopier côté client les ferait mentir au premier réglage — c'est
 // doublement vrai du guide, qui prétend énoncer la règle.
-import {
-  TWITCH_DROP_COINS,
-  WELCOME_GIFT_COINS,
-} from '@/utils/tcg/earnSources';
+import { TWITCH_DROP_COINS, WELCOME_GIFT_COINS } from '@/utils/tcg/earnSources';
 import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
 // Le prix ET le barème sont rendus par l'API plutôt que recopiés dans la page :
 // importer `economy.ts` côté client ferait entrer le moteur de rating dont il
@@ -442,6 +439,7 @@ async function openPack(
         name: face?.name ?? null,
         slug: face?.slug ?? null,
         logoUrl: face?.logoUrl ?? null,
+        cardImageUrl: face?.cardImageUrl ?? null,
       };
     }),
   });

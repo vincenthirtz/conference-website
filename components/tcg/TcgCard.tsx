@@ -66,6 +66,12 @@ export type TcgCardSubject =
       name: string | null;
       slug: string | null;
       logoUrl: string | null;
+      /**
+       * Illustration déposée pour la carte. Absente ⇒ on retombe sur le logo.
+       * Optionnelle pour que les appelants qui n'en disposent pas (aperçus,
+       * maquettes) restent valides sans rien changer.
+       */
+      cardImageUrl?: string | null;
     }
   | {
       kind: 'map';
@@ -114,7 +120,16 @@ export default function TcgCard({
   // Le cas particulier est l'ÉQUIPE, qui porte un `logoUrl` : joueuses et maps
   // nomment toutes deux leur image `imageUrl`. Écrit dans ce sens pour qu'un
   // quatrième sujet n'ait rien à ajouter ici.
-  const imageUrl = subject.kind === 'team' ? subject.logoUrl : subject.imageUrl;
+  //
+  // Une équipe a deux visuels possibles : l'illustration que sa capitaine a
+  // déposée, et son logo. Le repli est ici parce que le CADRAGE en dépend, et
+  // que les deux décisions n'en font qu'une : une illustration est faite pour
+  // remplir le cadre, un logo pour y flotter sans être rogné.
+  const usesTeamLogo = subject.kind === 'team' && !subject.cardImageUrl;
+  const imageUrl =
+    subject.kind === 'team'
+      ? (subject.cardImageUrl ?? subject.logoUrl)
+      : subject.imageUrl;
   const href = noLink
     ? null
     : subject.kind === 'player'
@@ -139,9 +154,7 @@ export default function TcgCard({
             alt=""
             fill
             sizes="(max-width: 640px) 45vw, 180px"
-            className={
-              subject.kind === 'team' ? 'object-contain p-4' : 'object-cover'
-            }
+            className={usesTeamLogo ? 'object-contain p-4' : 'object-cover'}
             unoptimized
           />
         ) : (

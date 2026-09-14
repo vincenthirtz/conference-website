@@ -21,6 +21,23 @@ export default {
   bannerLabel: 'Banner',
   bannerHint:
     'PNG, JPEG, WebP or SVG — max 2 MB (512 KB for SVG). Landscape format (1500×500).',
+  tcgImageLabel: 'TCG card artwork',
+  tcgImageHint:
+    'PNG, JPEG or WebP — max {max}. Portrait (3:4) recommended: the image fills the whole card. Published immediately, without going through “Save”.',
+  tcgImageEmpty: 'No image',
+  tcgImageUsingLogo:
+    'Without artwork, the card falls back to the team logo, centred on a branded background.',
+  tcgImageUsingUpload: 'The card uses this artwork.',
+  tcgImageUpload: 'Choose an image',
+  tcgImageReplace: 'Replace',
+  tcgImageRemove: 'Remove',
+  tcgImageBusy: 'Uploading…',
+  tcgImageErrorType: 'Unsupported format — use PNG, JPEG or WebP.',
+  tcgImageErrorTooLarge: 'Image too large — 2 MB maximum.',
+  tcgImageErrorMismatch: 'The file contents do not match its declared format.',
+  tcgImageErrorForbidden:
+    'You do not have permission to change this team’s identity.',
+  tcgImageErrorGeneric: 'Upload failed. Try again in a moment.',
   accentColorLabel: 'Accent color',
   secondaryColorLabel: 'Secondary color',
   secondaryColorHint:

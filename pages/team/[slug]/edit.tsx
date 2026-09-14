@@ -32,6 +32,8 @@ import {
 } from '@/utils/markdown/teamPublicMarkdown';
 import { useToast } from '@/components/Toast';
 import LogoUpload from '@/components/admin/LogoUpload';
+import TcgTeamImageCard from '@/components/Team/TcgTeamImageCard';
+import { tcgTeamImageUrl } from '@/utils/tcg/teamCardImage';
 import MemberProfileEditor, {
   type EditableMember,
 } from '@/components/Team/MemberProfileEditor';
@@ -46,6 +48,8 @@ type EditableTeam = {
   name: string;
   short_name: string | null;
   logo_url: string | null;
+  /** Chemin de bucket ; l'URL publique est résolue en prop (`tcgImageUrl`). */
+  tcg_image_path: string | null;
   banner_url: string | null;
   description: string | null;
   public_content: string | null;
@@ -71,6 +75,8 @@ type EditableTeam = {
 
 type Props = {
   team: EditableTeam;
+  /** URL publique de l'illustration TCG, `null` si l'équipe n'en a pas. */
+  tcgImageUrl: string | null;
   members: EditableMember[];
 };
 
@@ -101,7 +107,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   // Resolve team by slug first, then id/name/short_name (back-compat).
   let team: EditableTeam | null = null;
   const fields =
-    'id, slug, name, short_name, logo_url, banner_url, description, public_content, accent_color, secondary_color, banner_overlay, banner_focal, twitter, discord, website, youtube, twitch, instagram, tiktok, achievements, sponsors, embed_provider, embed_id, pinned_announcement, pinned_announcement_until, captain_id';
+    'id, slug, name, short_name, logo_url, tcg_image_path, banner_url, description, public_content, accent_color, secondary_color, banner_overlay, banner_focal, twitter, discord, website, youtube, twitch, instagram, tiktok, achievements, sponsors, embed_provider, embed_id, pinned_announcement, pinned_announcement_until, captain_id';
   const isUuid =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
       slug
@@ -186,10 +192,20 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     twitch: m.twitch ?? null,
   }));
 
-  return { props: { team, members } };
+  return {
+    props: {
+      team,
+      tcgImageUrl: tcgTeamImageUrl(supabaseAdmin.storage, team.tcg_image_path),
+      members,
+    },
+  };
 };
 
-export default function TeamPublicEditPage({ team, members }: Props) {
+export default function TeamPublicEditPage({
+  team,
+  tcgImageUrl,
+  members,
+}: Props) {
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
   const t = useT(nsTeamEdit);
@@ -371,6 +387,17 @@ export default function TeamPublicEditPage({ team, members }: Props) {
               onChange={setBannerUrl}
               endpoint={uploadEndpoint}
             />
+
+            {/* Séparé par un trait : ce bloc s'enregistre SEUL, contrairement à
+                tout le reste du formulaire. Le dire visuellement autant que par
+                le texte. */}
+            <div className="border-t border-white/5 pt-4">
+              <TcgTeamImageCard
+                teamId={team.id}
+                logoUrl={logoUrl || null}
+                initialImageUrl={tcgImageUrl}
+              />
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ColorField

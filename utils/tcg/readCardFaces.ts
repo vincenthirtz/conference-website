@@ -35,9 +35,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { recommendCardHero } from '@/utils/heroes/recommendCardHero';
 import { maskBattleTag } from '@/utils/battleTag';
+import { TCG_BUCKET, tcgTeamImageUrl } from '@/utils/tcg/teamCardImage';
 
 /** Même bucket public que les logos d'équipe. */
-const BUCKET = 'teams-images';
+const BUCKET = TCG_BUCKET;
 
 export type PlayerFace = {
   userId: string;
@@ -61,6 +62,16 @@ export type TeamFace = {
   shortName: string | null;
   slug: string | null;
   logoUrl: string | null;
+  /**
+   * Illustration déposée par la capitaine (ou le staff) pour la carte TCG.
+   * `null` = aucune, et la carte retombe sur `logoUrl`.
+   *
+   * Les deux champs restent DISTINCTS au lieu d'être fusionnés à la lecture :
+   * le rendu n'est pas le même — une illustration remplit son cadre, un logo
+   * doit rester contenu dans le sien. Écraser `logoUrl` ici ferait recadrer les
+   * logos de toutes les équipes qui n'ont rien déposé.
+   */
+  cardImageUrl: string | null;
 };
 
 /**
@@ -253,7 +264,7 @@ export async function readTeamFaces(
 
   const { data, error } = await supabaseAdmin
     .from('teams')
-    .select('id, name, short_name, slug, logo_url')
+    .select('id, name, short_name, slug, logo_url, tcg_image_path')
     .eq('tenant_id', tenantId)
     .in('id', ids);
 
@@ -268,6 +279,7 @@ export async function readTeamFaces(
     short_name: string | null;
     slug: string | null;
     logo_url: string | null;
+    tcg_image_path: string | null;
   }>) {
     faces.set(row.id, {
       teamId: row.id,
@@ -275,6 +287,10 @@ export async function readTeamFaces(
       shortName: row.short_name,
       slug: row.slug,
       logoUrl: row.logo_url,
+      // Résolu ICI, comme la photo d'une joueuse : la collection, l'ouverture
+      // de paquet et l'overview staff passent tous par ce lecteur, et aucun
+      // n'a à savoir qu'un chemin de bucket existe.
+      cardImageUrl: tcgTeamImageUrl(supabaseAdmin.storage, row.tcg_image_path),
     });
   }
 
