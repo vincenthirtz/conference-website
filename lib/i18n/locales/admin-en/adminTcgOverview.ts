@@ -29,6 +29,7 @@ export default {
   packsPending: 'Never opened',
   packsFromVictory: 'Earned (win)',
   packsFromPurchase: 'Purchased',
+  packsFromWelcome: 'Welcome gift',
 
   coinsTitle: 'Coins',
   coinsInCirculation: 'In circulation',
@@ -37,6 +38,16 @@ export default {
   coinsEarned: 'Total earned',
   coinsSpent: 'Total spent',
   coinsBoosterPrice: 'Booster price:',
+
+  coinsBySourceTitle: 'Where gains come from',
+  coinsBySourceEmpty: 'No gain recorded.',
+  coinsSourceMatchWin: 'Match wins',
+  coinsSourceScrimWin: 'Scrim wins',
+  coinsSourceTwitchDrop: 'Live drops',
+  coinsSourceWelcomeGift: 'Welcome gifts',
+  coinsSourceCardRecycled: 'Recycled duplicates',
+  coinsSourceAdminGrant: 'Team adjustments',
+  coinsSourceUnknown: 'Other ({kind})',
 
   cardsTitle: 'Cards',
   cardsTotal: 'Owned',

@@ -107,6 +107,7 @@ export type TcgOverviewLabels = {
   packsPending: string;
   packsFromVictory: string;
   packsFromPurchase: string;
+  packsFromWelcome: string;
 
   coinsTitle: string;
   coinsInCirculation: string;
@@ -116,6 +117,18 @@ export type TcgOverviewLabels = {
   coinsSpent: string;
   /** Suivi du montant : « Prix d'un booster : 300 ». */
   coinsBoosterPrice: string;
+
+  /** Ventilation des CRÉDITS par origine. Cf. `coinSourceLabel`. */
+  coinsBySourceTitle: string;
+  coinsBySourceEmpty: string;
+  coinsSourceMatchWin: string;
+  coinsSourceScrimWin: string;
+  coinsSourceTwitchDrop: string;
+  coinsSourceWelcomeGift: string;
+  coinsSourceCardRecycled: string;
+  coinsSourceAdminGrant: string;
+  /** Repli d'une origine inconnue de ce panneau. Interpole `{kind}`. */
+  coinsSourceUnknown: string;
 
   cardsTitle: string;
   cardsTotal: string;
@@ -178,6 +191,38 @@ const PHOTOS_QUEUE_HREF = '/admin/moderation?tab=tcg-photos';
  * risque d'écart d'hydratation ici, puisque les chiffres n'existent qu'après le
  * chargement client (le premier rendu montre le spinner).
  */
+/**
+ * Le nom lisible d'une origine de gain.
+ *
+ * L'API rend le `source_kind` BRUT — elle rend le fait, l'interface le formule.
+ * Les clés ne sont donc pas closes : le registre des sources peut en gagner une
+ * (`checkin_streak`, `tournament_placement`) sans que ce panneau le sache.
+ *
+ * D'OÙ UN REPLI QUI MONTRE LA CLÉ, ET SURTOUT PAS UNE LIGNE MASQUÉE. Escamoter
+ * une origine inconnue ferait que la somme des lignes affichées cesserait
+ * d'égaler le cumul juste au-dessus, et cet écart se lirait comme une perte
+ * inexpliquée — exactement le faux signal que cet endpoint s'interdit de
+ * produire.
+ */
+function coinSourceLabel(kind: string, labels: TcgOverviewLabels): string {
+  switch (kind) {
+    case 'match_win':
+      return labels.coinsSourceMatchWin;
+    case 'scrim_win':
+      return labels.coinsSourceScrimWin;
+    case 'twitch_drop':
+      return labels.coinsSourceTwitchDrop;
+    case 'welcome_gift':
+      return labels.coinsSourceWelcomeGift;
+    case 'card_recycled':
+      return labels.coinsSourceCardRecycled;
+    case 'admin_grant':
+      return labels.coinsSourceAdminGrant;
+    default:
+      return format(labels.coinsSourceUnknown, { kind });
+  }
+}
+
 function num(value: Count): string {
   return value === null ? '—' : value.toLocaleString();
 }
@@ -308,7 +353,7 @@ export default function TcgOverviewPanel({ labels }: Props): JSX.Element {
                 accent="amber"
               />
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="mt-3 grid grid-cols-3 gap-3">
               <StatCard
                 label={labels.packsFromVictory}
                 value={num(data.packs.fromVictory)}
@@ -317,6 +362,11 @@ export default function TcgOverviewPanel({ labels }: Props): JSX.Element {
               <StatCard
                 label={labels.packsFromPurchase}
                 value={num(data.packs.fromPurchase)}
+                accent="gray"
+              />
+              <StatCard
+                label={labels.packsFromWelcome}
+                value={num(data.packs.fromWelcome)}
                 accent="gray"
               />
             </div>
@@ -348,6 +398,43 @@ export default function TcgOverviewPanel({ labels }: Props): JSX.Element {
                 accent="pink"
               />
             </div>
+            {/* D'où viennent les pièces. Le cumul seul ne dit pas si elles
+                arrivent des matchs, des drops en direct ou d'un cadeau — et le
+                drop ne crée aucun paquet, donc la ventilation des paquets ne
+                pouvait pas le montrer. */}
+            <div className="mt-4 border-t border-white/10 pt-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                {labels.coinsBySourceTitle}
+              </p>
+              {data.coins.earnedBySource === null ? null : Object.keys(
+                  data.coins.earnedBySource
+                ).length === 0 ? (
+                <p className="mt-1 text-[11px] text-gray-500">
+                  {labels.coinsBySourceEmpty}
+                </p>
+              ) : (
+                <ul className="mt-2 space-y-1">
+                  {Object.entries(data.coins.earnedBySource)
+                    // La plus grosse origine d'abord : c'est celle qui explique
+                    // l'économie, et celle par laquelle une dérive commence.
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([kind, amount]) => (
+                      <li
+                        key={kind}
+                        className="flex items-baseline justify-between gap-3 text-xs"
+                      >
+                        <span className="min-w-0 truncate text-gray-400">
+                          {coinSourceLabel(kind, labels)}
+                        </span>
+                        <span className="shrink-0 tabular-nums text-gray-200">
+                          {amount}
+                        </span>
+                      </li>
+                    ))}
+                </ul>
+              )}
+            </div>
+
             <p className="mt-3 text-[11px] text-gray-500">
               {labels.coinsBoosterPrice} {num(data.coins.boosterPrice)}
             </p>

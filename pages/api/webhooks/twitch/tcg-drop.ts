@@ -388,28 +388,33 @@ export async function writeDropEntry(input: {
  * l'écriture quand même ferait rejeter l'INSERT par la base (23514) : on préfère
  * le dire ici plutôt que de le laisser découvrir en production.
  *
- * MIGRATION ATTENDUE, calquée sur `tcg_recycle_duplicates.sql` qui a déjà élargi
- * ce même CHECK pour `card_recycled` — élargir, jamais réécrire :
+ * MIGRATION FAITE le 2026-09-13 (`tcg_twitch_drop.sql`), sur le modèle de
+ * `tcg_recycle_duplicates.sql` — élargir, jamais réécrire. `schemaReady` est
+ * passé à `true` dans `earnSources.ts` dans le même geste, ce qui a allumé
+ * cette route sans la modifier.
  *
- *   ALTER TABLE public.tcg_wallet_entries
- *     DROP CONSTRAINT IF EXISTS tcg_wallet_entries_source_kind_check;
- *   ALTER TABLE public.tcg_wallet_entries
- *     ADD CONSTRAINT tcg_wallet_entries_source_kind_check CHECK (
- *       source_kind IN ('match_win', 'scrim_win', 'booster_purchase',
- *                       'admin_grant', 'card_recycled', 'twitch_drop')
- *     );
+ * LE PAQUET (`packs: 1` au registre) N'EST TOUJOURS PAS ÉCRIT ICI, mais la
+ * raison a changé et il faut le savoir avant de s'y remettre.
  *
- * … puis basculer `schemaReady: true` dans `earnSources.ts`, ce qui allume cette
- * route sans la modifier.
+ * L'obstacle réel n'a jamais été le CHECK — qui admet désormais
+ * `victory | purchase | welcome` — mais l'ABSENCE D'ANCRE D'IDEMPOTENCE : un
+ * paquet sans match a `source_match_id NULL`, or deux NULL sont DISTINCTS dans
+ * une contrainte UNIQUE. C'est ce qui permet d'acheter plusieurs boosters, et
+ * ce qui laisserait un rejeu offrir un second paquet.
  *
- * LE PAQUET (`packs: 1` au registre) N'EST PAS ÉCRIT ICI, et c'est délibéré.
- * `tcg_packs` n'a pas d'origine `drop` (CHECK `victory` | `purchase`) et, plus
- * gênant, aucune ANCRE D'IDEMPOTENCE pour ce cas : un paquet sans match a
- * `source_match_id NULL`, or deux NULL sont DISTINCTS dans une contrainte UNIQUE
- * — c'est exactement ce qui permet d'acheter plusieurs boosters, et c'est ce qui
- * laisserait un rejeu offrir un second paquet. Le livrer exigerait donc une
- * colonne `source_ref` sur `tcg_packs` plus un index UNIQUE partiel, pas
- * seulement un CHECK élargi. Cf. le rendu.
+ * CE COMMENTAIRE AFFIRMAIT QU'IL FAUDRAIT UNE COLONNE `source_ref` SUR
+ * `tcg_packs` PLUS UN INDEX UNIQUE PARTIEL. C'est faux depuis le 2026-09-14 :
+ * `utils/tcg/grantWelcomeGift.ts` accorde un paquet sans match, de façon
+ * idempotente, SANS toucher au schéma de `tcg_packs`. Le procédé consiste à
+ * écrire d'abord l'entrée de porte-monnaie — dont l'unicité
+ * `(tenant, user, source_kind, source_ref)` est bien réelle — en
+ * `ON CONFLICT DO NOTHING ... RETURNING`, puis à n'accorder un paquet qu'aux
+ * lignes effectivement rendues. Un rejeu n'en rend aucune, donc n'accorde rien.
+ *
+ * Le transposer ici serait donc peu coûteux : il faudrait une origine `drop`
+ * au CHECK de `tcg_packs`, et déplacer l'attribution du paquet APRÈS le
+ * `RETURNING` déjà présent plus haut dans ce fichier. Ce n'est pas fait parce
+ * que personne ne l'a demandé, pas parce que c'est bloqué.
  */
 export async function grantTwitchDrop(input: {
   tenantId: string;

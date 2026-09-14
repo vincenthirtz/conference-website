@@ -47,11 +47,22 @@ export type TcgOverviewPacks = {
   pending: Count;
   fromVictory: Count;
   fromPurchase: Count;
+  /** Cadeau d'accueil d'une édition. */
+  fromWelcome: Count;
 };
 
 export type TcgOverviewCoins = {
   inCirculation: Count;
   earned: Count;
+  /**
+   * `earned` ventilé par `source_kind` brut, crédits seulement.
+   *
+   * `null` = non mesurable, même convention que `earned` ; `{}` = mesuré et
+   * sans aucun crédit. Les clés ne sont PAS closes : l'API rend les origines
+   * réellement présentes, donc le panneau doit savoir afficher une clé qu'il
+   * ne connaît pas encore plutôt que de la faire disparaître.
+   */
+  earnedBySource: Record<string, number> | null;
   spent: Count;
   wallets: Count;
   /** Constante de barème rappelée par l'endpoint, pas une mesure. */
@@ -124,6 +135,27 @@ function asCount(value: unknown): Count {
     return null;
   }
   return Math.floor(value);
+}
+
+/**
+ * Une ventilation `origine → montant`, ou `null`.
+ *
+ * DÉFENSIF COMME LE RESTE DU FICHIER : ce qui n'est pas un objet rend `null`
+ * (« non mesurable »), et chaque valeur aberrante est ÉCARTÉE plutôt que
+ * forcée à zéro — une origine à `0` affirmerait « mesuré, et vide », ce qu'on
+ * ne sait pas. Les clés restent celles de l'API : le panneau doit pouvoir
+ * afficher une origine qu'il ne connaît pas encore.
+ */
+function asAmountMap(value: unknown): Record<string, number> | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return null;
+  }
+  const out: Record<string, number> = {};
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    const amount = asCount(raw);
+    if (amount !== null) out[key] = amount;
+  }
+  return out;
 }
 
 function asText(value: unknown): string | null {
@@ -220,10 +252,12 @@ export function normalizeTcgOverview(raw: unknown): TcgOverview {
       pending: asCount(packsRaw.pending),
       fromVictory: asCount(bySource.victory),
       fromPurchase: asCount(bySource.purchase),
+      fromWelcome: asCount(bySource.welcome),
     },
     coins: {
       inCirculation: asCount(coinsRaw.inCirculation),
       earned: asCount(coinsRaw.earned),
+      earnedBySource: asAmountMap(coinsRaw.earnedBySource),
       spent: asCount(coinsRaw.spent),
       wallets: asCount(coinsRaw.wallets),
       boosterPrice: asCount(coinsRaw.boosterPrice),

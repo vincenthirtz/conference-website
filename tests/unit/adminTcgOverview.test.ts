@@ -440,7 +440,7 @@ describe('GET /api/admin/tcg/overview — agrégation', () => {
       granted: 0,
       opened: 0,
       pending: 0,
-      bySource: { victory: 0, purchase: 0 },
+      bySource: { victory: 0, purchase: 0, welcome: 0 },
     });
     expect(res.body.cards).toEqual({
       total: 0,
@@ -453,6 +453,9 @@ describe('GET /api/admin/tcg/overview — agrégation', () => {
     expect(res.body.coins).toEqual({
       inCirculation: 0,
       earned: 0,
+      // `{}` et non `null` : le registre a été LU, il ne contient simplement
+      // aucun crédit. C'est la même distinction que `0` vs `null` ailleurs.
+      earnedBySource: {},
       spent: 0,
       wallets: 0,
       boosterPrice: BOOSTER_PRICE_COINS,
@@ -480,8 +483,36 @@ describe('GET /api/admin/tcg/overview — agrégation', () => {
       granted: 3,
       opened: 2,
       pending: 1,
-      bySource: { victory: 2, purchase: 1 },
+      bySource: { victory: 2, purchase: 1, welcome: 0 },
     });
+  });
+
+  it('ventile les gains par origine, sans y mêler les dépenses', async () => {
+    // `earned` dit COMBIEN, jamais D'OÙ — et c'est la question qu'on se pose en
+    // surveillant une économie. Les drops en direct n'apparaissaient nulle part
+    // ailleurs : ils ne créent aucun paquet, donc la ventilation des paquets ne
+    // pouvait pas les montrer.
+    seedStaff();
+    seedEconomy();
+
+    const res = await callOverview();
+
+    expect(res.statusCode).toBe(200);
+    // Deux victoires à 100 et un recyclage à 50. L'achat de booster (−300) est
+    // un DÉBIT : il reste dans `spent` et n'a rien à faire dans les origines de
+    // gain, sinon acheter passerait pour une façon d'obtenir des pièces.
+    expect(res.body.coins.earnedBySource).toEqual({
+      match_win: 200,
+      card_recycled: 50,
+    });
+    // La ventilation totalise exactement `earned` : un écart se lirait comme
+    // une perte inexpliquée.
+    const ventilated = Object.values(
+      res.body.coins.earnedBySource as Record<string, number>
+    ).reduce((sum, n) => sum + n, 0);
+    expect(ventilated).toBe(res.body.coins.earned);
+    // L'autre tenant (7777 en `match_win`) ne doit apparaître nulle part.
+    expect(res.body.coins.earned).toBe(250);
   });
 
   it('exclut les cartes recyclées des possédées, et les compte à part', async () => {

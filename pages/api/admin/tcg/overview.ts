@@ -139,13 +139,30 @@ export type TcgOverview = {
     opened: Count;
     /** Distribués mais jamais ouverts. */
     pending: Count;
-    bySource: { victory: Count; purchase: Count };
+    bySource: { victory: Count; purchase: Count; welcome: Count };
   };
   coins: {
     /** Somme des soldes : ce qui est détenu, donc dépensable demain. */
     inCirculation: Count;
     /** Cumul des crédits du registre. */
     earned: Count;
+    /**
+     * `earned` VENTILÉ par origine (`source_kind` brut), crédits seulement.
+     *
+     * POURQUOI CETTE CLÉ EXISTE. `earned` seul répond « combien », jamais
+     * « d'où ». Or surveiller une économie qui « dérive sans prévenir » — les
+     * termes de l'en-tête — c'est justement savoir si les pièces viennent des
+     * matchs, des drops en direct ou d'un cadeau d'accueil. Les paquets se
+     * ventilaient déjà ; la monnaie, non, et c'est là que le drop était
+     * invisible (il ne crée aucun paquet).
+     *
+     * `null` = registre non lisible, cohérent avec `earned`. `{}` = lu et sans
+     * aucun crédit. Les clés sont les `source_kind` RÉELLEMENT présents : on
+     * n'invente pas une ligne à zéro pour une origine jamais utilisée.
+     *
+     * Hérite du plafond de `truncated` : la somme est minorée, jamais majorée.
+     */
+    earnedBySource: Record<string, number> | null;
     /** Cumul des débits, en valeur absolue. */
     spent: Count;
     /** Porte-monnaie non vides. */
@@ -271,6 +288,7 @@ async function handler(
     packsPendingR,
     packsVictoryR,
     packsPurchaseR,
+    packsWelcomeR,
     photosPendingR,
     photosApprovedR,
     photosRejectedR,
@@ -302,6 +320,16 @@ async function handler(
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
       .eq('source_kind', 'purchase'),
+    // Cadeau d'accueil d'une édition. COMPTÉ, pas déduit de
+    // `granted - victory - purchase` : la convention `null` ≠ `0` de ce fichier
+    // interdit l'arithmétique entre compteurs, puisqu'une clé en échec vaut
+    // `null` et qu'une soustraction produirait un nombre inventé. C'est la même
+    // raison qui fait compter `pending` au lieu de le déduire.
+    db
+      .from('tcg_packs')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('source_kind', 'welcome'),
 
     // La file de relecture : le même filtre que `photos.ts`, pour que le
     // compteur du tableau de bord et la file affichée ne se contredisent pas.
@@ -365,8 +393,10 @@ async function handler(
       .eq('tenant_id', tenantId)
       .limit(MAX_WALLETS),
     db
+      // `source_kind` en plus de `amount` : la ventilation des crédits se fait
+      // dans la boucle qui suit, sans requête supplémentaire.
       .from('tcg_wallet_entries')
-      .select('amount')
+      .select('amount, source_kind')
       .eq('tenant_id', tenantId)
       .limit(MAX_ENTRIES),
   ]);
@@ -374,7 +404,10 @@ async function handler(
   // -- Pièces --------------------------------------------------------------
 
   const balanceRows = rowsOf<{ balance: number | null }>(balancesR, 'balances');
-  const entryRows = rowsOf<{ amount: number | null }>(entriesR, 'entries');
+  const entryRows = rowsOf<{ amount: number | null; source_kind?: unknown }>(
+    entriesR,
+    'entries'
+  );
 
   const inCirculation =
     balanceRows === null
@@ -383,17 +416,35 @@ async function handler(
 
   let earned: Count = null;
   let spent: Count = null;
+  // `null` tant que le registre n'est pas lisible — même convention que
+  // `earned`, pour qu'une panne de lecture ne se lise pas comme une économie
+  // sans aucun gain.
+  let earnedBySource: Record<string, number> | null = null;
   if (entryRows !== null) {
     earned = 0;
     spent = 0;
+    earnedBySource = {};
     for (const entry of entryRows) {
       const amount = toInt(entry.amount);
       // Le registre est signé : crédit > 0, débit < 0. `spent` est rendu en
       // valeur ABSOLUE — un tableau de bord qui affiche « -4 200 dépensées »
       // se lit deux fois avant d'être compris, et le panneau écarte de toute
       // façon les compteurs négatifs.
-      if (amount > 0) earned += amount;
-      else spent += -amount;
+      if (amount > 0) {
+        earned += amount;
+        // Ventilation des CRÉDITS seulement : un débit a déjà sa place dans
+        // `spent`, et le mêler aux origines de gain ferait apparaître l'achat
+        // de booster comme une façon d'obtenir des pièces.
+        //
+        // Une origine illisible ou absente est rangée sous `unknown` plutôt
+        // qu'écartée : le total ventilé doit rester égal à `earned`, sinon
+        // l'écart passerait pour une perte.
+        const kind =
+          typeof entry.source_kind === 'string' && entry.source_kind.trim()
+            ? entry.source_kind
+            : 'unknown';
+        earnedBySource[kind] = (earnedBySource[kind] ?? 0) + amount;
+      } else spent += -amount;
     }
   }
 
@@ -570,11 +621,13 @@ async function handler(
       bySource: {
         victory: resolveCount(packsVictoryR, 'packs.victory'),
         purchase: resolveCount(packsPurchaseR, 'packs.purchase'),
+        welcome: resolveCount(packsWelcomeR, 'packs.welcome'),
       },
     },
     coins: {
       inCirculation,
       earned,
+      earnedBySource,
       spent,
       wallets: resolveCount(walletsR, 'coins.wallets'),
       boosterPrice: BOOSTER_PRICE_COINS,

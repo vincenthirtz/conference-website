@@ -35,6 +35,7 @@ export default adminNs('adminTcgOverview', {
   packsPending: 'Jamais ouverts',
   packsFromVictory: 'Offerts (victoire)',
   packsFromPurchase: 'Achetés',
+  packsFromWelcome: 'Cadeau de bienvenue',
 
   coinsTitle: 'Monnaie',
   coinsInCirculation: 'En circulation',
@@ -45,6 +46,22 @@ export default adminNs('adminTcgOverview', {
   coinsEarned: 'Cumul gagné',
   coinsSpent: 'Cumul dépensé',
   coinsBoosterPrice: 'Prix d’un booster :',
+
+  // D'OÙ VIENNENT LES PIÈCES. `coinsEarned` dit combien, jamais d'où — et c'est
+  // la question qu'on se pose en surveillant une économie. Les drops en direct
+  // n'apparaissaient nulle part ailleurs : ils ne créent aucun paquet.
+  coinsBySourceTitle: 'Origine des gains',
+  coinsBySourceEmpty: 'Aucun gain enregistré.',
+  coinsSourceMatchWin: 'Victoires en match',
+  coinsSourceScrimWin: 'Victoires en scrim',
+  coinsSourceTwitchDrop: 'Drops en direct',
+  coinsSourceWelcomeGift: 'Cadeaux de bienvenue',
+  coinsSourceCardRecycled: 'Doublons recyclés',
+  coinsSourceAdminGrant: 'Ajustements de l’équipe',
+  // Repli pour une origine que ce panneau ne connaît pas encore : on affiche sa
+  // clé brute plutôt que de la masquer, sinon le total ventilé cesserait de
+  // correspondre au cumul affiché juste au-dessus.
+  coinsSourceUnknown: 'Autre ({kind})',
 
   cardsTitle: 'Cartes',
   cardsTotal: 'Possédées',

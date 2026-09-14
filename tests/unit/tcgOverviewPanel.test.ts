@@ -38,11 +38,14 @@ function fullPayload() {
       granted: 3,
       opened: 2,
       pending: 1,
-      bySource: { victory: 2, purchase: 1 },
+      bySource: { victory: 2, purchase: 1, welcome: 1 },
     },
     coins: {
       inCirculation: 250,
       earned: 250,
+      // Ventilation des CRÉDITS, qui totalise exactement `earned`. Le débit
+      // (booster acheté) reste dans `spent` et n'a pas d'origine de gain.
+      earnedBySource: { match_win: 200, welcome_gift: 50 },
       spent: 300,
       wallets: 1,
       boosterPrice: 300,
@@ -90,10 +93,15 @@ describe('normalizeTcgOverview — réponse nominale', () => {
       pending: 1,
       fromVictory: 2,
       fromPurchase: 1,
+      fromWelcome: 1,
     });
     expect(data.coins).toEqual({
       inCirculation: 250,
       earned: 250,
+      // La ventilation totalise EXACTEMENT `earned` : un exemple qui ne
+      // s'additionnerait pas contredirait l'invariant que la route s'impose,
+      // et personne ne remarquerait l'écart dans un jeu de données inventé.
+      earnedBySource: { match_win: 200, welcome_gift: 50 },
       spent: 300,
       wallets: 1,
       boosterPrice: 300,

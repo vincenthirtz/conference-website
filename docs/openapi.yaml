@@ -34956,6 +34956,29 @@ paths:
         lisent ligne a ligne, donc bornes — un plafond atteint leve `truncated`
         plutot que de faire passer un total tronque pour un total exact.
 
+        `coins.earnedBySource` VENTILE `earned` PAR ORIGINE (`source_kind`
+        brut), credits seulement. `earned` seul repond « combien », jamais
+        « d'ou » — or c'est la question qu'on se pose en surveillant une
+        economie. Les drops en direct n'apparaissaient nulle part ailleurs :
+        ils ne creent AUCUN paquet, donc la ventilation des paquets ne pouvait
+        pas les montrer.
+
+        Les cles ne sont PAS closes : ce sont les `source_kind` reellement
+        presents, jamais une ligne a zero pour une origine inutilisee. Un
+        consommateur doit donc savoir afficher une cle qu'il ne connait pas.
+        `null` = registre non lisible (meme convention que `earned`) ; `{}` =
+        lu et sans aucun credit. La ventilation totalise exactement `earned` —
+        une origine illisible tombe sous `unknown` plutot que d'etre ecartee,
+        sinon l'ecart se lirait comme une perte. Calculee dans la boucle qui
+        somme deja les ecritures : aucune requete supplementaire, et elle herite
+        du meme `truncated`.
+
+        `packs.bySource` porte une TROISIEME origine, `welcome` (cadeau
+        d'accueil). Chaque origine est COMPTEE pour elle-meme, jamais deduite de
+        `granted` moins les autres : la convention `null` ≠ `0` interdit
+        l'arithmetique entre compteurs, puisqu'une cle en echec vaut `null` et
+        qu'une soustraction produirait un nombre invente.
+
         Permission `moderate_support`, la meme que la file de moderation.
         Rate-limit 30 / min.
       operationId: readAdminTcgOverview
