@@ -8801,7 +8801,16 @@ paths:
                 additionalProperties: true
   /api/bot/v1/players/by-discord/{discordUserId}/tcg:
     parameters:
-      - $ref: '#/components/parameters/DiscordUserId'
+      # PAS `#/components/parameters/DiscordUserId` ({17,20}) : la route
+      # accepte 15 a 25 chiffres, comme `discordIdSchema`, parce que des
+      # identifiants courts existent chez les comptes les plus anciens. C'est le
+      # code qui fait foi ; la spec s'aligne sur lui.
+      - name: discordUserId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[0-9]{15,25}$
     get:
       tags:
         - bot/players
@@ -8835,7 +8844,9 @@ paths:
                   authUserId:
                     $ref: '#/components/schemas/Uuid'
                   discordUserId:
-                    $ref: '#/components/schemas/DiscordId'
+                    type: string
+                    pattern: ^[0-9]{15,25}$
+                    description: L'identifiant recu en chemin, rendu tel quel.
                   balance:
                     type: integer
                   boosterPrice:
@@ -24511,6 +24522,16 @@ paths:
         transitions `tournament.status` from `running` to `completed`. Re-call
         on a finalized tournament is a 200 no-op unless `force=true`. Emits
         `tournament.finalized` to the bot outbox. Supports idempotency.
+
+        PALMARES TCG (2026-09-15). Une fois le podium fige, les TITULAIRES qui
+        ont joue pour une equipe du top 8 dans ce tournoi (`match_participants`,
+        `is_substitute = false`) recoivent pieces et paquets selon
+        `PLACEMENT_TIERS` (`utils/tcg/grantPlacementRewards.ts`). Une
+        recompense par personne ET par tournoi : un rejeu a l'identique — qui
+        reste un no-op sur le classement — ne recredite personne et sert de
+        voie de reprise ; un `force=true` ne repaie pas la difference de rang et
+        ne reprend rien. Le compte rendu est rendu dans
+        `tcg_placement_rewards`.
       operationId: adminFinalizeTournament
       tags:
         - admin/tournaments
@@ -24593,6 +24614,26 @@ paths:
                           format: date-time
                   already_finalized:
                     type: boolean
+                  tcg_placement_rewards:
+                    type: object
+                    description: |
+                      Compte rendu du palmares TCG. `packsGranted` <
+                      `packsExpected` = paquets refuses par la base (pieces
+                      ecrites) ; `status: error` = rien n'a ete decide sur une
+                      lecture en echec.
+                    properties:
+                      status:
+                        type: string
+                        enum: [granted, nothing, not_ready, error]
+                      eligible:
+                        type: integer
+                      granted:
+                        type: integer
+                        description: Joueuses creditees par CET appel (0 sur un rejeu).
+                      packsExpected:
+                        type: integer
+                      packsGranted:
+                        type: integer
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -32562,6 +32603,14 @@ paths:
       tags:
         - public/teams
       summary: Redeem un token de check-in (idempotent).
+      description: |
+        Effet de bord TCG (2026-09-15) : un check-in NEUF qui clot une serie de
+        `CHECKIN_STREAK_LENGTH` check-ins consecutifs de l'equipe dans le
+        tournoi credite `CHECKIN_STREAK_COINS` et un paquet `streak` aux
+        titulaires du roster (`utils/tcg/grantCheckinStreak.ts`). Cle
+        `<tournoi>:<match>` : un rejeu ne recredite pas. Best-effort, sans effet
+        sur la reponse ; meme branchement pour
+        `POST /api/bot/v1/matches/{matchId}/checkin`.
       operationId: redeemCheckinToken
       security: []
       responses:
@@ -34723,6 +34772,19 @@ paths:
         `user_twitch_links` existe et est alimentee par OAuth
         (`/api/auth/twitch/*`), et le CHECK de `source_kind` admet
         `twitch_drop` (`schemaReady: true`).
+
+        UN PAQUET EN PLUS DES PIECES (2026-09-15). Le registre attribue au drop
+        `TWITCH_DROP_COINS` ET un paquet d'origine `drop` (sans match). Ordre
+        d'ecriture impose par `utils/tcg/grantCoinsThenPacks.ts` : les pieces
+        en `ON CONFLICT DO NOTHING ... RETURNING`, puis le paquet a la seule
+        ligne rendue. Un retry Twitch (autre `message-id`, meme direct) rend
+        `replayed` et ne cree NI pieces NI paquet. Si le paquet est refuse (ex.
+        migration `tcg_earn_sources_drop_streak_placement.sql` non appliquee),
+        le drop reste `granted` en pieces seules : pas de 503, qui ferait
+        retenter Twitch sans jamais honorer la demande.
+
+        L'evenement bot `tcg.drop_granted` porte, en AJOUT RETROCOMPATIBLE,
+        `pack: { id: string } | null` — `null` quand aucun paquet n'a ete cree.
       operationId: twitchTcgDropWebhook
       security: []
       responses:
@@ -34731,7 +34793,9 @@ paths:
             Acquittement. Soit le `challenge` en text/plain
             (`webhook_callback_verification`), soit `{ ok, status }` ou `status`
             vaut `granted`, `replayed`, `identity_not_linked`, `not_live`,
-            `unknown_channel`, `ignored_event_type`, `revoked`…
+            `unknown_channel`, `ignored_event_type`, `revoked`… Sur
+            `granted` seulement, `packGranted: boolean` dit si le paquet a ete
+            cree (diagnostic ; Twitch ignore le corps).
         '400':
           description: '`MISSING_HEADERS`, `INVALID_TIMESTAMP`, `INVALID_JSON`, `INVALID_PAYLOAD`.'
         '403':
@@ -35016,6 +35080,129 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '500':
           $ref: '#/components/responses/ServerError'
+  /api/admin/tcg/grant:
+    post:
+      summary: Corriger le solde de pieces TCG d'une joueuse (credit ou retrait).
+      description: |
+        `withStaffRoute(handler, { permission: 'moderate_support' })` — meme
+        permission que le reste de l'economie du TCG (cadeau d'accueil, vue
+        d'ensemble). L'ecrivain de `source_kind = 'admin_grant'`.
+
+        UNE CORRECTION, PAS UNE VENTE. La monnaie du TCG se gagne, elle ne
+        s'achete pas : cette route ne connait aucun moyen de paiement ni aucun
+        don. Elle repare un solde que le jeu a mal tenu, et laisse une trace.
+
+        LE REGISTRE D'ABORD. Une ligne `tcg_wallet_entries` (source de verite)
+        `{ amount, source_kind: 'admin_grant', source_ref: idempotencyKey }`,
+        puis `refreshBalance` recalcule le cache `tcg_wallets.balance`.
+        `balance` rendu = somme du registre, plafonnee a zero.
+
+        IDEMPOTENCE PORTEE PAR LA BASE, sans migration : `idempotencyKey` est
+        la `source_ref`, et l'unicite `(tenant_id, user_id, source_kind,
+        source_ref)` interdit la seconde ecriture. Rejouer la meme cle rend
+        l'ecriture existante avec `replayed: true`, sans double credit ni
+        second journal. Une cle deja appliquee a une AUTRE joueuse ou a un AUTRE
+        montant est refusee en 400 (`INVALID_BODY`) : repondre « deja fait »
+        masquerait une correction jamais appliquee.
+
+        UN RETRAIT NE REND JAMAIS UN SOLDE NEGATIF. Le disponible est le MINIMUM
+        du cache et du registre (un achat de booster debite le cache avant
+        d'ecrire au registre), et le cache est reserve CONDITIONNELLEMENT
+        (`.eq('balance', avant)`) avant l'ecriture — meme discipline que
+        `POST /api/player/tcg/booster`. Une ecriture refusee rend la reservation.
+
+        UNE ERREUR N'EST PAS UNE ABSENCE : une lecture de compte en echec rend
+        500, jamais `USER_NOT_FOUND` ; une insertion en erreur est relue par la
+        cle avant de conclure a l'echec (504 apres commit).
+
+        Le motif n'est PAS stocke dans le registre (aucune colonne) : il est
+        journalise `tcg_admin_grant` dans `staff_logs`, payload
+        `{ userId, amount, reason, entryId }`. `private, no-store`.
+        Rate-limit 30 / min.
+      operationId: adminGrantTcgCoins
+      tags:
+        - admin/tcg
+      security:
+        - StaffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, amount, reason, idempotencyKey]
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                amount:
+                  type: integer
+                  minimum: -10000
+                  maximum: 10000
+                  description: Entier non nul. Negatif = retrait.
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+                  description: Rogne (trim) avant validation.
+                idempotencyKey:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Correction appliquee, ou rejeu d'une correction deja appliquee.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, entryId, balance, replayed]
+                properties:
+                  ok:
+                    type: boolean
+                    enum: [true]
+                  entryId:
+                    type: string
+                    format: uuid
+                  balance:
+                    type: integer
+                    minimum: 0
+                  replayed:
+                    type: boolean
+        '400':
+          description: |
+            `code: INVALID_BODY` — corps invalide, ou cle d'idempotence deja
+            utilisee pour une autre joueuse / un autre montant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: |
+            `code: USER_NOT_FOUND` — aucun compte pour `userId`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            `code: INSUFFICIENT_BALANCE` — le retrait rendrait le solde negatif
+            (la reponse porte `balance`, le disponible). Rare :
+            `code: BALANCE_CHANGED` — le solde a bouge trois fois de suite
+            pendant la reservation ; reessayer avec la MEME cle est sur.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          description: Service indisponible (client service-role absent).
   /api/admin/tcg/overview:
     get:
       tags:
@@ -35068,8 +35255,9 @@ paths:
         somme deja les ecritures : aucune requete supplementaire, et elle herite
         du meme `truncated`.
 
-        `packs.bySource` porte une TROISIEME origine, `welcome` (cadeau
-        d'accueil). Chaque origine est COMPTEE pour elle-meme, jamais deduite de
+        `packs.bySource` porte aussi `welcome` (cadeau d'accueil), `drop`
+        (drop Twitch), `placement` (palmares de tournoi) et `streak` (serie de
+        check-ins). Chaque origine est COMPTEE pour elle-meme, jamais deduite de
         `granted` moins les autres : la convention `null` ≠ `0` interdit
         l'arithmetique entre compteurs, puisqu'une cle en echec vaut `null` et
         qu'une soustraction produirait un nombre invente.
@@ -35109,6 +35297,10 @@ paths:
                         properties:
                           victory: { type: integer, nullable: true }
                           purchase: { type: integer, nullable: true }
+                          welcome: { type: integer, nullable: true }
+                          drop: { type: integer, nullable: true }
+                          placement: { type: integer, nullable: true }
+                          streak: { type: integer, nullable: true }
                   coins:
                     type: object
                     properties:
@@ -35464,10 +35656,43 @@ paths:
         la commune. La carte s'affiche avec sa MEILLEURE rarete tandis qu'on
         propose la PIRE : les deux informations coexistent sans se contredire.
 
+        PAGINATION PAR CURSEUR, RETROCOMPATIBLE. Sans `limit` ni `cursor`, la
+        collection entiere est rendue comme avant, avec `nextCursor: null`.
+        Avec l'un des deux, une page (40 cartes par defaut, 200 au plus) et
+        `nextCursor` tant qu'il en reste. Ordre TOTAL : rarete decroissante
+        puis cle de sujet (`<kind>:<id>`) — trier sur la rarete seule laisserait
+        les ex aequo dans un ordre non garanti, et deux pages pourraient se
+        chevaucher. On pagine l'AFFICHAGE, pas la lecture : `distinct` et
+        `total` restent ceux de la collection entiere, et seules les faces de
+        la page sont relues. Le curseur ne contient jamais d'URL d'image (une
+        face se relit a chaque affichage : retrait de consentement retroactif).
+        Les cartes sont lues par tranches, sans le plafond silencieux de 1000
+        lignes de PostgREST qui amputait l'ancienne lecture.
+        `Cache-Control: private, no-store`.
+
         Rate-limit 60 / min.
       operationId: readPlayerTcgCollection
       security:
         - PlayerBearer: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: >-
+            Taille de page, entier de 1 a 200. Hors bornes : `400
+            invalid_limit` (jamais rogne en silence).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+        - name: cursor
+          in: query
+          required: false
+          description: >-
+            `nextCursor` rendu par la page precedente. Opaque. Illisible ou
+            forge : `400 invalid_cursor`. Au-dela de la fin : page vide.
+          schema:
+            type: string
       responses:
         '200':
           description: Collection agregee, les plus rares d'abord.
@@ -35544,8 +35769,27 @@ paths:
                               type: integer
                   distinct:
                     type: integer
+                    description: Sujets distincts de la collection ENTIERE, pas de la page.
                   total:
                     type: integer
+                    description: Exemplaires de la collection ENTIERE, doublons compris.
+                  pool:
+                    type: object
+                    nullable: true
+                    description: >-
+                      Le vivier (sujets existants), `null` si illisible. Absent
+                      quand la collection est vide.
+                    properties:
+                      distinct:
+                        type: integer
+                  nextCursor:
+                    type: string
+                    nullable: true
+                    description: >-
+                      Curseur de la page suivante ; `null` sur la derniere page
+                      ou quand la collection est servie en entier.
+        '400':
+          description: '`code: invalid_limit` ou `code: invalid_cursor`.'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '429':
@@ -35557,9 +35801,49 @@ paths:
       tags:
         - public/auth
       summary: Mes paquets TCG (ouverts et fermes) et mon solde de pieces.
+      description: |
+        PAGINATION PAR CURSEUR, RETROCOMPATIBLE. Sans parametre, la reponse est
+        celle d'avant — les 200 paquets les plus recents — plus `nextCursor`,
+        qui dit enfin s'il en existe d'autres. Ordre `(granted_at DESC, id
+        DESC)` : le second critere tranche les paquets attribues au meme
+        instant (un cadeau distribue en lot). Le curseur est interpole dans un
+        filtre PostgREST, d'ou une validation de forme exacte (horodatage +
+        UUID) : tout autre contenu est un `400 invalid_cursor`.
+
+        `unopened` est un COMPTE de tous les paquets fermes, independant de la
+        page et du filtre : l'ancien calcul sur les 200 lignes lues annoncait
+        moins de paquets a ouvrir qu'il n'en existait.
+        `Cache-Control: private, no-store`. Rate-limit 60 / min.
       operationId: listPlayerTcgPacks
       security:
         - PlayerBearer: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Taille de page, 1 a 200, defaut 200. Hors bornes `400 invalid_limit`.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 200
+        - name: cursor
+          in: query
+          required: false
+          description: '`nextCursor` de la page precedente. Opaque. Invalide : `400 invalid_cursor`.'
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          description: >-
+            `unopened` (paquets a ouvrir) ou `opened`. Absent : tous. Sans ce
+            filtre, un paquet ferme plus ancien que la premiere page ne
+            s'afficherait jamais cote espace joueuse. Autre valeur : `400
+            invalid_status`.
+          schema:
+            type: string
+            enum: [unopened, opened]
       responses:
         '200':
           description: Paquets et solde.
@@ -35578,7 +35862,7 @@ paths:
                           format: uuid
                         source:
                           type: string
-                          enum: [victory, purchase]
+                          enum: [victory, purchase, welcome]
                         grantedAt:
                           type: string
                         openedAt:
@@ -35586,6 +35870,11 @@ paths:
                           nullable: true
                   unopened:
                     type: integer
+                    description: Nombre TOTAL de paquets fermes, quels que soient la page et le filtre.
+                  nextCursor:
+                    type: string
+                    nullable: true
+                    description: Curseur de la page suivante ; `null` sur la derniere.
                   balance:
                     type: integer
                   boosterPrice:
@@ -35609,6 +35898,8 @@ paths:
                         type: integer
                       scrimWin:
                         type: integer
+        '400':
+          description: '`code` parmi `invalid_limit`, `invalid_cursor`, `invalid_status`.'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '429':
@@ -35720,6 +36011,15 @@ paths:
                             description de `/api/player/tcg/collection`.
                         isFoil:
                           type: boolean
+                        isNew:
+                          type: boolean
+                          description: >-
+                            `true` si l'appelante ne possedait pas ce sujet
+                            avant ce paquet (cartes recyclees exclues). Decide
+                            par le SERVEUR : la collection etant paginee,
+                            l'interface ne sait plus ce qu'elle possede deja.
+                            OMIS si la lecture echoue — l'ouverture, deja
+                            ecrite, n'est pas annulee pour un badge.
         '400':
           description: '`code: missing_pack`.'
         '401':
@@ -35801,8 +36101,16 @@ paths:
       description: |
         `withStaffRoute(handler, { permission: 'moderate_support' })`.
         Les plus anciennes d'abord (une photo ne doit pas attendre derriere une
-        plus recente). Le pseudo n'est pas resolu : la file rend `userId` et le
-        panneau renvoie vers la fiche publique. Rate-limit 60 / min.
+        plus recente). Chaque element porte `displayName` et `email`, resolus
+        en UN appel par la RPC `admin_get_user_profiles`
+        (`fetchAdminUserProfiles` ; le profil vit dans
+        `auth.users.raw_user_meta_data`, il n'existe pas de table `profiles`).
+        `displayName` = `display_name`, sinon `full_name` (comptes Discord).
+        L'ENRICHISSEMENT NE FAIT JAMAIS ECHOUER LA FILE : une RPC en echec ou un
+        compte introuvable rend `null` pour les deux champs, et la file reste
+        servie — ce qu'une relectrice doit voir avant tout, c'est l'image.
+        `null` veut dire « nom inconnu », jamais « compte supprime ».
+        Rate-limit 60 / min.
       operationId: adminTcgPhotosList
       tags:
         - admin/misc
@@ -35824,6 +36132,17 @@ paths:
                         userId:
                           type: string
                           format: uuid
+                        displayName:
+                          type: string
+                          nullable: true
+                          description: |
+                            Pseudo du compte (`display_name`, sinon
+                            `full_name`). `null` si la resolution echoue.
+                        email:
+                          type: string
+                          nullable: true
+                          description: |
+                            `null` si la resolution echoue.
                         photoUrl:
                           type: string
                           nullable: true

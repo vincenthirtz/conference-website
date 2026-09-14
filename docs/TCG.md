@@ -12,7 +12,7 @@
 > `tcg_packs_allow_purchased.sql`, `tcg_recycle_duplicates.sql`,
 > `tcg_twitch_drop.sql`, `add_tcg_overlay_tokens.sql`, `tcg_overlay_theme.sql`,
 > `tcg_welcome_gift.sql`, `tcg_welcome_gift_pack_coherence.sql`,
-> `tcg_supporter_welcome.sql`,
+> `tcg_supporter_welcome.sql`, `tcg_earn_sources_drop_streak_placement.sql`,
 > [`components/tcg/TcgCard.tsx`](../components/tcg/TcgCard.tsx),
 > [`components/overlay/TcgAnnouncement.tsx`](../components/overlay/TcgAnnouncement.tsx) et
 > [`pages/player/tcg.tsx`](../pages/player/tcg.tsx).
@@ -266,6 +266,9 @@ ne remplace pas la première.
 | `SCRIM_WIN_COINS`      | 50     | `MATCH_WIN_COINS × SCRIM_RATING_WEIGHT` (0,5)          |
 | `BOOSTER_PRICE_COINS`  | 300    | `3 × MATCH_WIN_COINS` — trois victoires, ou six scrims |
 | `RECYCLE_REFUND_COINS` | 30     | `BOOSTER_PRICE_COINS / 10`, plancher à 1               |
+| `TWITCH_DROP_COINS`    | 25     | `SCRIM_WIN_COINS / 2`, plancher à 1 — + un paquet      |
+| `CHECKIN_STREAK_COINS` | 50     | `SCRIM_WIN_COINS` — + un paquet, tous les 5 check-ins  |
+| `PLACEMENT_TIERS`      | 1→8    | rang 1 : 500 + 3 paquets · 2 : 300 + 2 · 3 : 200 + 1 · 4-8 : 100 + 1 |
 
 Aucun de ces montants n'est écrit en dur ailleurs : **le rapport scrim/match est
 importé, pas recopié.** Le dépôt pondère déjà un scrim à `SCRIM_RATING_WEIGHT`
@@ -310,10 +313,17 @@ figé sur une valeur encore plus fausse.
 `source_kind` accepté par le schéma : `match_win`, `scrim_win`,
 `booster_purchase`, `admin_grant`, `card_recycled`, `twitch_drop`
 (`tcg_twitch_drop.sql`, 2026-09-13), `welcome_gift` (`tcg_welcome_gift.sql`,
-2026-09-14) et `supporter_welcome` (`tcg_supporter_welcome.sql`, 2026-09-14).
+2026-09-14), `supporter_welcome` (`tcg_supporter_welcome.sql`, 2026-09-14),
+`checkin_streak` et `tournament_placement`
+(`tcg_earn_sources_drop_streak_placement.sql`, 2026-09-15 — **à appliquer**, cf.
+§7). Côté paquets, `tcg_packs.source_kind` admet `victory`, `purchase`,
+`welcome`, et avec la même migration `drop`, `placement` et `streak`.
+`admin_grant` est écrit par `POST /api/admin/tcg/grant` (correction tracée
+par l'équipe, `source_ref` = clé d'idempotence, motif dans `staff_logs`).
 `source_ref` est du **texte**,
 et non un uuid, parce que les sources n'ont pas toutes la même clé (un match, un
-paquet, une carte `<pack_id>:<position>`, un tournoi, un tenant).
+paquet, une carte `<pack_id>:<position>`, un tournoi, un tenant, un direct,
+`<tournoi>:<match>`).
 
 ⚠️ **Une table peut porter plusieurs `CHECK` sur la même colonne.** `tcg_packs`
 en a deux : `tcg_packs_source_kind_check` **et** `tcg_packs_source_coherent`,
@@ -382,32 +392,40 @@ raison dans les deux cas — mieux vaut un état réparable (des pièces prélev
 sans paquet, une carte retirée sans crédit ; les deux sont relâchés en cas
 d'échec) que de la monnaie ou un paquet créés à partir de rien.
 
-### Le drop Twitch, et pourquoi il verse des pièces
+### Le drop Twitch : des pièces et un paquet
 
 [`pages/api/webhooks/twitch/tcg-drop.ts`](../pages/api/webhooks/twitch/tcg-drop.ts)
-crédite `BOOSTER_PRICE_COINS` **en pièces**, et n'insère aucune ligne
-`tcg_packs`. La raison invoquée est qu'un drop de live n'a aucun match légitime à
-désigner, et que lui en prêter un entrerait en collision avec le paquet de
-victoire du même match (même contrainte `UNIQUE`) : la spectatrice qui joue ce
-match perdrait l'une des deux récompenses. Créditer le prix exact d'un booster la
-laisse l'échanger par le chemin qui existe déjà, sans inventer une seconde
-sémantique de paquet.
+crédite `TWITCH_DROP_COINS` — **25 pièces**, la moitié d'un scrim : regarder
+n'est pas jouer, et le drop reste la plus petite récompense du barème — **et un
+paquet** d'origine `drop` depuis le 2026-09-15. Le registre le lui attribuait
+depuis le début ; seul le paquet manquait.
 
-**En service depuis le 2026-09-13.** La divergence de barème que ce document
-signalait (le registre annonçant `TWITCH_DROP_COINS`, le webhook créditant
-`BOOSTER_PRICE_COINS` — douze fois l'écart) est **tranchée en faveur du
-registre** : le webhook importe `TWITCH_DROP_COINS` et crédite 50 pièces, la
-moitié d'un scrim. Regarder n'est pas jouer, et le drop reste la plus petite
-récompense du barème.
+**Pourquoi le paquet n'emprunte pas un match.** Prêter au drop le match en cours
+le ferait entrer en collision avec le paquet de victoire du même match (même
+`UNIQUE (tenant_id, user_id, source_match_id)`) : la spectatrice qui joue ce
+match perdrait l'une des deux récompenses. Un paquet `drop` a donc
+`source_match_id NULL` — et deux `NULL` étant distincts dans une contrainte
+`UNIQUE`, `tcg_packs` n'offre plus aucune ancre d'idempotence.
 
-Il ne crée **toujours aucun paquet**, mais la raison a changé et mérite d'être
-sue : l'obstacle n'est pas le `CHECK` de `tcg_packs` (qui admet désormais
-`welcome`) mais l'absence d'ancre d'idempotence — un paquet sans match a
-`source_match_id NULL`, et deux `NULL` sont distincts dans une contrainte
-`UNIQUE`. `utils/tcg/grantWelcomeGift.ts` a depuis montré comment contourner
-cela sans toucher au schéma : écrire le porte-monnaie d'abord, n'accorder un
-paquet qu'aux lignes que le `RETURNING` a réellement rendues. Le transposer ici
-serait peu coûteux ; ce n'est pas fait parce que personne ne l'a demandé.
+**L'ancre est le porte-monnaie, et l'ordre d'écriture est le garde-fou**
+([`utils/tcg/grantCoinsThenPacks.ts`](../utils/tcg/grantCoinsThenPacks.ts),
+partagé avec la série et le palmarès ci-dessous) : les pièces d'abord, en
+`ON CONFLICT DO NOTHING ... RETURNING` sur `source_ref = <broadcaster>:<startedAt>`,
+puis le paquet à la seule ligne rendue. Un retry de Twitch — autre
+`message-id`, même direct — rend `replayed` : **ni pièces ni paquet**, ni
+annonce, ni remboursement.
+
+**Un paquet refusé ne fait pas échouer le drop.** Si l'insertion du paquet
+échoue (la migration de l'origine `drop` non appliquée, typiquement), les
+pièces sont écrites, la demande Twitch est honorée, la réponse porte
+`packGranted: false` et l'annonce `pack: null`. Rendre un 503 aurait fait
+retenter Twitch, le retry serait tombé sur `replayed` et la demande n'aurait
+jamais été honorée. Le pire cas reste « des pièces sans paquet », visible et
+réparable à la main — jamais « deux paquets ».
+
+L'annonce bot `tcg.drop_granted` porte, **en ajout rétrocompatible**,
+`pack: { id: string } | null` : un bot ancien l'ignore, un bot à jour ne dit
+« un paquet t'attend » que lorsque c'est vrai.
 
 ### Le cadeau de bienvenue
 
@@ -468,6 +486,77 @@ capacités du même compte, jamais un échange de l'une contre l'autre : branche
 ce cadeau sur un paiement en ferait une loot box payante (cf. « La monnaie se
 gagne, elle ne s'achète pas »).
 
+### La série de check-ins
+
+[`utils/tcg/grantCheckinStreak.ts`](../utils/tcg/grantCheckinStreak.ts) offre
+`CHECKIN_STREAK_COINS` (50, le prix d'un scrim) **et un paquet** `streak` quand
+une équipe fait son check-in à `CHECKIN_STREAK_LENGTH` (5, le seuil du badge
+`win_streak`) matchs consécutifs d'un même tournoi. La ponctualité est ce qui
+évite les forfaits : elle mérite une contrepartie, sans être payée comme une
+victoire.
+
+**Branchée dans `redeemCheckinToken`**, l'entonnoir unique du lien public
+(`POST /api/checkin/[token]`) et du bouton Discord
+(`POST /api/bot/v1/matches/[matchId]/checkin`), et **seulement sur un check-in
+neuf** : un rejeu retombe sur `alreadyCheckedIn` avant d'y arriver. L'écrivain
+ne lève jamais ; un échec ne change rien au check-in, déjà écrit.
+
+**Ce qu'est une série.** Les matchs de l'équipe dans le tournoi, triés par
+horaire prévu, jusqu'au match validé inclus ; on compte à rebours les check-ins
+consécutifs. Un **forfait** (match sans check-in) **rompt** la série. Un bye, un
+match supprimé, annulé ou reporté ne compte **ni ne rompt** : l'équipe n'y
+pouvait pas être présente. Une fenêtre se ferme à chaque multiple de 5 (5, 10,
+15…).
+
+**La clé est le match qui ferme la fenêtre** : `source_ref = <tournoi>:<match>`.
+Un numéro de série (« 1ʳᵉ série ») aurait été recalculé à 1 après une rupture,
+et la contrainte `UNIQUE` aurait jeté la série suivante comme un doublon.
+
+**Choix produit par défaut — le plus conservateur : les TITULAIRES du roster.**
+Au check-in, aucune feuille de match n'existe encore (`match_participants` est
+figé à la fin du match) : impossible de savoir qui jouera. Sont donc
+récompensés les `team_members` avec un compte, **hors remplaçantes**
+(`is_substitute`) et **hors encadrement** (coach, manager — le filtre du
+snapshot `match_participants`). Payer toutes les inscrites aurait récompensé
+une remplaçante jamais présente. Écart assumé avec la victoire, qui paie les
+remplaçantes : celle-là sait qui a joué, celle-ci non.
+
+### Le palmarès de fin de tournoi
+
+[`utils/tcg/grantPlacementRewards.ts`](../utils/tcg/grantPlacementRewards.ts)
+paie le top 8 selon `PLACEMENT_TIERS` — les seuils des badges `champion`,
+`finalist`, `podium` et `top_cut`, pas une nouvelle échelle. Il est appelé par
+`POST /api/admin/tournament/[id]/finalize`, **après** l'écriture de
+`final_rankings` et du statut : on ne paie qu'un podium figé, jamais un bracket
+qu'une contestation pourrait encore déplacer.
+
+**Choix produit par défaut — le plus conservateur : les titulaires qui ont
+JOUÉ pour l'équipe dans ce tournoi**, c'est-à-dire au moins une ligne
+`match_participants` (tournoi, équipe) avec `is_substitute = false` et un compte.
+C'est exactement la définition du palmarès d'une joueuse (`readPlayerProfile`) :
+la récompense suit le badge que sa fiche affichera. Écartés : le roster courant
+(il paierait une recrue arrivée après le tournoi et oublierait une joueuse
+partie) et les remplaçantes (plus généreux que le badge lui-même). Une équipe
+sans feuille de match figée ne rapporte **rien** — on ne devine pas un roster.
+
+**Une récompense par personne et par tournoi** (`source_ref` = le tournoi). Une
+joueuse passée par deux équipes classées ne touche que son **meilleur** rang.
+
+**Conséquences de la clé, assumées :**
+
+- une finalisation **relancée à l'identique** (no-op sur le classement) rappelle
+  l'écrivain : un rejeu sain ne crédite personne, et c'est la **voie de
+  reprise** après une panne ou une migration appliquée après coup ;
+- un classement **réécrit** (`force: true`) ne repaie pas la différence de rang
+  et **ne reprend rien** — un paquet ouvert ne se reprend pas ; seules les
+  joueuses **entrées** dans le top 8 sont créditées.
+
+Des participations illisibles rendent `status: 'error'` sans rien écrire :
+payer sur une lecture partielle oublierait des joueuses que la clé rendrait
+irrattrapables. La lecture est paginée (pages de 1 000, ordre stable). Le compte
+rendu `{ status, eligible, granted, packsExpected, packsGranted }` est **rendu
+dans la réponse** de la finalisation (`tcg_placement_rewards`).
+
 ### Ce que la victoire déclenche
 
 [`utils/tcg/grantVictoryRewards.ts`](../utils/tcg/grantVictoryRewards.ts) est
@@ -500,7 +589,7 @@ direct, tout passe par les routes serveur.
 | Table                | Clé                    | Rôle                                                  |
 | -------------------- | ---------------------- | ----------------------------------------------------- |
 | `tcg_player_cards`   | `(tenant_id, user_id)` | consentement + photo modérée d'une joueuse            |
-| `tcg_packs`          | `id`                   | un paquet : `victory`, `purchase` ou `welcome`        |
+| `tcg_packs`          | `id`                   | un paquet : `victory`, `purchase`, `welcome`, `drop`, `placement` ou `streak` |
 | `tcg_pack_cards`     | `(pack_id, position)`  | contenu figé d'un paquet ouvert                       |
 | `tcg_wallets`        | `(tenant_id, user_id)` | solde — **cache** du registre, `CHECK (balance >= 0)` |
 | `tcg_wallet_entries` | `id`                   | registre des mouvements — **source de vérité**        |
@@ -531,9 +620,12 @@ entre la lecture et l'écriture.
   identiques dont une seule oubliée aurait suffi à compter une map comme une
   équipe sans sujet. Les lecteurs sautent une ligne sans sujet plutôt que d'afficher une
   carte vide : ce serait une corruption.
-- `CHECK` de cohérence d'origine : `victory` **exige** un match, `purchase`
-  l'**interdit**. Un achat qui citerait un match serait une victoire déguisée et
-  fausserait la contrainte d'unicité.
+- `CHECK` de cohérence d'origine : `victory` **exige** un match, toutes les
+  autres origines (`purchase`, `welcome`, `drop`, `placement`, `streak`)
+  l'**interdisent**. Un achat qui citerait un match serait une victoire déguisée ;
+  un drop ou une série qui en citerait un entrerait en collision avec le paquet
+  de victoire du même match. Pour ces origines sans match, l'idempotence vient
+  du registre des pièces, écrit **avant** le paquet (`grantCoinsThenPacks`).
 - L'ouverture d'un paquet nullifie sa réservation via `opened_at IS NULL` dans le
   `WHERE`, et le recyclage via `recycled_at IS NULL` : deux clics simultanés ne
   peuvent pas réussir tous les deux, le second ne touche aucune ligne.
@@ -560,22 +652,29 @@ joueuse) et scopées au tenant résolu par `resolveTenantIdForUserRequest`.
 | Route                                                | Méthodes          | Auth                                 | Rôle                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | ---------------------------------------------------- | ----------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/api/player/tcg/photo`                              | GET, POST, DELETE | joueuse                              | L'état de **ma** carte ; déposer une photo (vaut consentement, repasse en `pending`) ; retirer son accord. 5/min en POST, 10/min en DELETE.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `/api/player/tcg/packs`                              | GET, POST         | joueuse                              | Mes paquets + solde + `boosterPrice`, `earn`, `recycleRefund` (GET, 60/min) ; ouvrir un paquet et **révéler** ses cartes, faces comprises (POST, 30/min).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `/api/player/tcg/collection`                         | GET               | joueuse                              | Ma collection, déduite des paquets ouverts, recyclées exclues, agrégée par sujet, les plus rares d'abord. Chaque carte porte `recyclable` : le couple `{ packId, position }` d'un exemplaire à recycler, ou `null` dès qu'il n'y en a qu'un — la route de recyclage refuse le dernier, et un bouton qu'elle rejetterait promettrait un geste impossible. L'exemplaire désigné est le **moins précieux** (plus basse rareté, non brillant à rareté égale) : la carte s'affiche avec sa MEILLEURE rareté, et recycler « ce doublon » ne doit jamais coûter la meilleure des copies. 60/min.                                                                                                                                       |
+| `/api/player/tcg/packs`                              | GET, POST         | joueuse                              | Mes paquets + solde + `boosterPrice`, `earn`, `recycleRefund` (GET, 60/min) — **paginé** : `limit` (1..200, défaut 200), `cursor`, `status=unopened\|opened`, `nextCursor` ; `unopened` compte TOUS les paquets fermés. Ouvrir un paquet et **révéler** ses cartes, faces comprises, chacune avec `isNew` (POST, 30/min).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `/api/player/tcg/collection`                         | GET               | joueuse                              | Ma collection, déduite des paquets ouverts, recyclées exclues, agrégée par sujet, les plus rares d'abord. Chaque carte porte `recyclable` : le couple `{ packId, position }` d'un exemplaire à recycler, ou `null` dès qu'il n'y en a qu'un — la route de recyclage refuse le dernier, et un bouton qu'elle rejetterait promettrait un geste impossible. L'exemplaire désigné est le **moins précieux** (plus basse rareté, non brillant à rareté égale) : la carte s'affiche avec sa MEILLEURE rareté, et recycler « ce doublon » ne doit jamais coûter la meilleure des copies. **Paginée** : `limit` (1..200), `cursor`, `nextCursor` ; sans paramètre, tout comme avant. 60/min.                                                                                                                                       |
 | `/api/player/tcg/booster`                            | POST              | joueuse                              | Acheter un paquet **fermé** avec ses pièces. 20/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `/api/player/tcg/recycle`                            | POST              | joueuse                              | Recycler un **doublon** contre `RECYCLE_REFUND_COINS`. 30/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `/api/player/tcg/wallet`                             | GET               | joueuse                              | « D'où viennent mes pièces ? » — 50 derniers mouvements, `shownTotal`, `truncated`. 60/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `/api/admin/tcg/photos`                              | GET, PATCH        | staff, permission `moderate_support` | La file de relecture (`pending`, la plus ancienne d'abord) ; approuver ou refuser. Journalisé. 60/min en GET, 30/min en PATCH.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `/api/admin/tcg/photos`                              | GET, PATCH        | staff, permission `moderate_support` | La file de relecture (`pending`, la plus ancienne d'abord) ; approuver ou refuser. Chaque élément porte `displayName` et `email`, résolus en un appel par la RPC `fetchAdminUserProfiles` — un **enrichissement, jamais une condition** : une résolution en échec rend `null` et la file reste servie, parce qu'une relectrice doit d'abord voir l'image. Journalisé. 60/min en GET, 30/min en PATCH. |
 | `/api/admin/tcg/overview`                            | GET               | staff, permission `moderate_support` | État de l'économie en un appel : paquets, pièces, cartes par rareté, photos, sujets les plus distribués. Tout est agrégé côté serveur — aucune ligne de détail ne sort. `null` ≠ `0` : une clé en échec vaut « pas mesurable », jamais « mesuré et vide ». 30/min, `Cache-Control: private, max-age=30`.                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `/api/bot/v1/players/by-discord/{discordUserId}/tcg` | GET               | bot, `x-api-key` par tenant          | Solde, paquets en attente et **résumé** de collection pour Discord. 60/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `/api/webhooks/twitch/tcg-drop`                      | POST              | signature HMAC Twitch EventSub       | Webhook entrant : créditer une spectatrice qui échange des points de chaîne. Corps lu brut (`bodyParser: false`), signature vérifiée **avant** tout parsing, fenêtre anti-rejeu de 10 min, tenant résolu par la chaîne et non par `x-tenant-id`. **En service** depuis le 2026-09-13. Une `revocation` est lue et non seulement acquittée : son `status` dit laquelle des trois causes s'applique. 600/min.                                                                                                                                                                                                                                                                                                                     |
+| `/api/bot/v1/players/by-discord/{discordUserId}/tcg` | GET               | bot, `x-api-key` par tenant          | Solde, paquets en attente et **résumé** de collection pour Discord. `discordUserId` : 15 à 25 chiffres (la spec est alignée sur le code, des identifiants courts existant chez les comptes anciens). 60/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `/api/webhooks/twitch/tcg-drop`                      | POST              | signature HMAC Twitch EventSub       | Webhook entrant : créditer une spectatrice qui échange des points de chaîne. Corps lu brut (`bodyParser: false`), signature vérifiée **avant** tout parsing, fenêtre anti-rejeu de 10 min, tenant résolu par la chaîne et non par `x-tenant-id`. **En service** depuis le 2026-09-13. Une `revocation` est lue et non seulement acquittée : son `status` dit laquelle des trois causes s'applique. Crédite **pièces + un paquet `drop`** (pièces d'abord) ; `packGranted` dans la réponse, `pack: { id } \| null` dans `tcg.drop_granted`. 600/min.                                                                                                                                                                                                                                                                                                                     |
 | `/api/admin/tcg/overlay-token`                       | GET, POST, DELETE | staff, permission `moderate_support` | Le lien de la source navigateur OBS. Un seul jeton actif par espace : émettre révoque le précédent. Journalisé **sans** le jeton. 30/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `/api/admin/tcg/overlay-theme`                       | GET, PUT          | staff, permission `moderate_support` | L'habillage de l'overlay (couleur, position, deux formulations, image ou vidéo). **Patch partiel** ; `null` = revenir au défaut. Média validé par **magic bytes** avant dépôt en bucket public. 30/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `/api/admin/tcg/welcome-gift`                        | GET, POST         | staff, permission `moderate_support` | Simuler puis distribuer le cadeau d'accueil de l'édition en cours. `GET` n'écrit rien. `POST` honore `Idempotency-Key`. Journalisé. 20/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `/api/admin/tcg/grant`                               | POST              | staff, permission `moderate_support` | Corriger le solde d'une joueuse (`admin_grant`, crédit ou retrait, valeur absolue ≤ 10 000, motif obligatoire). **Une correction tracée, pas une vente.** Registre d'abord, `source_ref` = `idempotencyKey` : l'unicité du registre porte l'idempotence, un rejeu rend `replayed: true` sans double crédit. Un retrait ne passe jamais sous zéro (`409 INSUFFICIENT_BALANCE`) : réservation conditionnelle du cache, disponible = minimum du cache et du registre. Motif journalisé `tcg_admin_grant` (le registre n'a pas de colonne pour lui). 30/min. |
 | `/api/player/tcg/welcome-gift`                       | GET, POST         | joueuse (**`withSubjectRoute`**)     | `GET` : « Ai-je reçu un cadeau ? » — `{ gift: { coins, receivedAt } \| null, supporterClaimable }`, les DEUX accueils confondus (`welcome_gift` et `supporter_welcome`) ; `supporterClaimable` vient de `grantSupporterWelcome({ dryRun: true })`, donc des conditions EXACTES du POST — proposer un bouton que le serveur refuserait serait pire que ne rien proposer. `POST` : réclamer le cadeau **supportrice**, une fois par compte, `{ status, coins, packGranted }` — `packGranted: false` DIT l'écriture partielle au lieu de la masquer. Seule route `tcg/` à honorer `?as=`, mais **sans `allowActAs`** : le `POST` est donc refusé en inspection, un cadeau réclamé ne se rendant pas. 60/min en GET, 6/min en POST. |
 | `/api/overlay/tcg/{token}`                           | GET               | **public**, porté par le jeton       | Le flux d'annonces d'une source navigateur OBS, plus l'habillage. Réduit au déjà-public : pseudo Twitch et origine d'événement, jamais un nom de compte ni une photo. `s-maxage=5`. 120/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
 Quelques conventions transverses :
+
+- **Deux routes hors `tcg/` écrivent au TCG en effet de bord** :
+  `POST /api/admin/tournament/[id]/finalize` (palmarès, compte rendu additif
+  `tcg_placement_rewards`) et `redeemCheckinToken`, derrière
+  `POST /api/checkin/[token]` et `POST /api/bot/v1/matches/[matchId]/checkin`
+  (série de check-ins, réponse inchangée). Aucune n'émet d'événement bot.
 
 - **404 plutôt que 403** sur un paquet ou une carte qui n'est pas le sien : on ne
   confirme pas l'existence de ce qui n'appartient pas à l'appelante.
@@ -588,8 +687,31 @@ Quelques conventions transverses :
 - **La route bot ne rend qu'un résumé**, jamais la collection ni les faces : un
   message Discord n'affiche pas quarante cartes, et renvoyer tout obligerait le
   bot à décider seul ce qui mérite d'être montré.
-- **Bornes de lecture partagées** : 500 paquets et 5 000 cartes côté collection,
-  recyclage et route bot ; au-delà, la collection se paginera (v2).
+- **Pagination par curseur (2026-09-15)**, [`utils/tcg/pageCursor.ts`](../utils/tcg/pageCursor.ts).
+  Rétrocompatible : sans paramètre, la forme d'avant plus `nextCursor`. Un
+  curseur plutôt qu'un offset, parce qu'une collection bouge pendant qu'on la
+  parcourt (ouvrir, recycler) et qu'un offset répète ou saute alors une carte.
+  L'ordre est **total** — rareté puis clé de sujet pour la collection,
+  `(granted_at, id)` décroissants pour les paquets — faute de quoi les ex æquo
+  n'ont pas d'ordre garanti. La collection pagine l'**affichage**, pas la
+  lecture : compter les exemplaires et désigner le pire doublon exigent toutes
+  les cartes d'un sujet ; `distinct`/`total` restent donc globaux et seules les
+  faces de la page sont relues. Le curseur ne porte **jamais d'URL d'image**, et
+  les deux routes répondent `private, no-store`. Le curseur des paquets est
+  interpolé dans un `.or(...)` PostgREST : il est validé en forme exacte
+  (horodatage + UUID), jamais ignoré en silence (`400 invalid_cursor`).
+- **Lecture sans plafond silencieux** : [`utils/tcg/readOwnedCards.ts`](../utils/tcg/readOwnedCards.ts)
+  lit les paquets par pages de 1000 et leurs cartes par lots de 100 paquets.
+  L'ancien `.limit(5000)` de la collection était en réalité servi à **1000
+  lignes** par PostgREST (`max_rows`) : au-delà de 200 paquets ouverts, compteur,
+  progression et doublons devenaient faux ensemble. Plafond restant :
+  10 000 paquets, journalisé s'il est atteint. Le **recyclage** et la **route
+  bot** lisent par le même module : les trois lecteurs comptent la même
+  collection (la route bot compte en outre ses paquets en `head: true`).
+- **« Nouvelle carte » est décidé par le serveur** (`isNew` à l'ouverture, via
+  `readOwnedSubjectKeys`) : une collection paginée ne permet plus à la page de
+  savoir ce qu'on possède. Requête ciblée sur les cinq sujets tirés, jamais une
+  relecture de toute la collection ; omis si la lecture échoue.
 
 ## 7. Ce qui reste à faire
 
@@ -600,44 +722,65 @@ Quelques conventions transverses :
   Le titre de la carte « Monnaie » ne la porte pas non plus, `WidgetCard.title`
   étant typé `string` : l'élargir pour un seul appelant coûterait plus que le
   gain.
-- **`checkin_streak` et `tournament_placement` restent sans écrivain.** Le
-  registre les décrit et dit lui-même (`schemaReady: false`) que les `CHECK` en
-  base ne les acceptent pas : migration requise **avant** toute écriture. Les
-  cinq autres voies sont en service. Le registre, lui, est bien lu — par le
-  webhook de drop et par la distribution du cadeau d'accueil.
-- **Le drop Twitch ne crée pas de paquet**, alors que le registre lui en attribue
-  un. Ce n'est plus un blocage de schéma : `grantWelcomeGift` a montré comment
-  accorder un paquet sans match de façon idempotente (porte-monnaie d'abord,
-  paquet aux seules lignes rendues). Il faudrait une origine `drop` au `CHECK` de
-  `tcg_packs` et déplacer l'attribution après le `RETURNING` déjà présent.
+- **`tcg_earn_sources_drop_streak_placement.sql` est À APPLIQUER, et AVANT le
+  déploiement du code** qui l'accompagne (2026-09-15). Elle élargit
+  `tcg_wallet_entries_source_kind_check`, `tcg_packs_source_kind_check` ET
+  `tcg_packs_source_coherent`. Code sans migration : le drop part en pièces
+  seules (`pack: null`, ce drop-là ne recevra jamais son paquet), la série et le
+  palmarès voient leurs pièces refusées (une finalisation relancée à l'identique
+  répare le palmarès ; une série manquée n'est pas rejouée). Revérifier d'abord
+  en base qu'aucune autre contrainte `CHECK` n'existe sur ces deux tables.
+- **Les trois nouvelles origines de paquet ne sont pas ventilées côté staff.**
+  L'espace joueuse les nomme depuis le 2026-09-15 (`packOriginLabel` et
+  l'historique : « Récupéré en direct », « Classement de tournoi », « Série de
+  check-ins »), mais `/api/admin/tcg/overview` ne compte que `victory`,
+  `purchase` et `welcome` : ces paquets entrent dans le total sans ventilation.
+- **Ni la série ni le palmarès ne sont annoncés.** Aucun événement bot, aucune
+  notification : le paquet attend sur `/player/tcg`. Un `tcg.pack_granted`
+  élargi (ou deux événements dédiés) serait un changement de contrat bot à
+  concevoir avec le consommateur.
 - **Aucune joueuse n'a rattaché son compte Twitch** (0 sur 58 participantes au
   2026-09-14). Toute la chaîne fonctionne, mais sans `user_twitch_links` le
   webhook répond `identity_not_linked` et personne ne reçoit rien. La carte de
-  rattachement est désormais montée sur `/player/tcg`, là où la page promet des
-  pièces « par carte récupérée sur le stream » ; reste à voir si cela suffit.
+  rattachement est montée sur `/player/tcg`, et depuis le 2026-09-15 elle
+  **argumente** quand le drop est branché : un titre et une phrase chiffrés
+  (« chaque carte récupérée te rapporte N pièces », montant rendu par l'API) et
+  le bouton en évidence, plus un lien « Rattacher Twitch » accolé au barème.
+  Tant que rien n'est lié seulement ; ensuite, la confirmation habituelle. Le
+  flux OAuth est inchangé. Reste à MESURER l'effet (compter les
+  `user_twitch_links` dans deux semaines) — aucune donnée ne le dit encore.
 - **Ni overlay émis, ni habillage réglé, ni cadeau distribué** au 2026-09-14 :
   les trois attendent un geste de la régie, par construction. Un lien d'overlay
   s'émet, un cadeau se distribue — ni l'un ni l'autre ne doit être l'effet de
   bord d'un déploiement.
-- **`admin_grant` n'a pas d'écrivain.** Le `source_kind` est accepté par le
-  schéma, affiché par l'historique (« Ajustement par l'équipe ») et décrit comme
-  « la correction manuelle tracée par `logStaffAction` », mais aucun endpoint ne
-  crée une telle écriture. Un solde ne peut donc pas être corrigé autrement qu'à
-  la main en base.
-- **La file de modération n'affiche pas les pseudos.** Elle rend `userId` et
-  renvoie vers la fiche publique ; résoudre les noms passe par la RPC
-  `fetchAdminUserProfiles` (le profil vit dans `auth.users.raw_user_meta_data`,
-  il n'existe pas de table `profiles`). Ce serait un ajout, pas une réécriture.
-- **La collection n'est pas paginée** : bornes fixes à 500 paquets / 5 000 cartes,
-  pagination annoncée en v2. La liste des paquets, elle, est bornée à 200 —
-  divergence à réduire si un compte dépasse ce volume.
-- **Contrats à réaligner.** `/api/admin/tcg/overview` figure désormais dans les
-  deux documents, avec `earnedBySource` et la troisième origine de paquets ; les
-  routes d'overlay, d'habillage et de cadeau y ont été ajoutées avec leur lot.
-  Reste `/api/webhooks/twitch/tcg-drop`, absent d'`openapi.yaml` — c'est un
-  webhook entrant, non appelable par un client, mais la règle de synchronisation
-  du dépôt ne fait pas cette exception.
-- **Écart de validation assumé sur la route bot** : le code accepte un
-  `discordUserId` de 15 à 25 chiffres, volontairement plus large que le `pattern`
-  de la spec, parce que des identifiants courts existent chez les comptes les plus
-  anciens. À trancher : aligner la spec, ou resserrer le code.
+- **Le motif d'une correction `admin_grant` ne vit que dans `staff_logs`.**
+  `POST /api/admin/tcg/grant` écrit le mouvement au registre et le motif au
+  journal staff (payload `entryId`), faute de colonne dans
+  `tcg_wallet_entries`. L'historique joueuse affiche donc « Ajustement par
+  l'équipe » sans le pourquoi. Ajouter une colonne `note` demanderait une
+  migration appliquée AVANT le code — sinon chaque correction échouerait en 500 ;
+  à décider si les joueuses doivent lire ce motif.
+- **La carte « Ajuster un solde » (onglet Économie TCG de `/admin/moderation`)
+  a deux angles morts.** Elle n'affiche pas le solde AVANT correction — aucune
+  route staff ne lit le porte-monnaie d'une autre joueuse, et le solde résultant
+  n'arrive qu'avec la réponse. Et sa recherche de comptes réutilise
+  `/api/admin/users/search`, gardée par `manage_staff` au niveau plateforme :
+  un staff qui n'a que `moderate_support` voit la recherche refusée et doit
+  coller l'identifiant du compte (l'écran le lui dit). Les onglets TCG, eux,
+  suivent désormais la permission `moderate_support` et non plus le rôle.
+- **Passe UX de `/player/tcg` et `/tcg` (2026-09-15) non vérifiée en
+  navigateur ni couverte en e2e.** Livré : focus porté sur la révélation et
+  rendu aux paquets à la fermeture, annonce `aria-live` du tirage (nom, rareté,
+  brillante, nouvelle/doublon), apparition échelonnée neutralisée par
+  `prefers-reduced-motion`, écran d'erreur distinct d'une collection vide,
+  squelettes de chargement, état vide qui mène au paquet en attente, cibles
+  tactiles de 44 px, rareté doublée d'un repère non chromatique (losanges),
+  confirmation de recyclage chiffrée (gain, solde avant → après, exemplaires
+  restants). Aucun `next dev` n'a pu être lancé pendant ce lot (travail
+  parallèle) : relire à 360 / 768 / 1280 px et ajouter un scénario Playwright
+  « charger plus » sur une base LOCALE avant de considérer le lot clos.
+- **Le `pattern` partagé `DiscordUserId` d'`openapi.yaml` reste `{17,20}`.**
+  L'écart est tranché pour la route TCG (paramètre déclaré en ligne, `{15,25}`,
+  comme le code) ; les autres routes `by-discord` valident elles aussi par
+  `discordIdSchema` (`{15,25}`) et gardent la spec plus stricte. Élargir le
+  composant partagé réglerait tout d'un coup.
