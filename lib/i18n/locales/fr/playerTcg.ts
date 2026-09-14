@@ -167,4 +167,9 @@ export default ns('playerTcg', {
   rarityLegendary: 'Légendaire',
   foil: 'Brillante',
   copies: '×{count}',
+
+  // Lien vers le guide, à côté du titre. Les questions qu'il traite — d'où
+  // viennent les paquets, ce que devient ma photo — se posent en regardant
+  // cette page, pas depuis le tableau de bord.
+  guideLink: 'Comment ça marche ?',
 });

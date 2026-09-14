@@ -129,6 +129,8 @@ export default {
   catTcg: 'My collection',
   qaTcg: 'My cards',
   qaTcgDesc: 'Packs, coins and collection',
+  qaTcgGuide: 'How it works',
+  qaTcgGuideDesc: 'Earning, recycling, and your photo',
 
   welcomeGiftTitle: 'Welcome gift',
   welcomeGiftBody:

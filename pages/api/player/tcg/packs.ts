@@ -37,10 +37,14 @@ import {
   type DrawnSubject,
 } from '@/utils/tcg/drawPack';
 import { readMapFaces, MAP_POOL_SLUGS } from '@/utils/tcg/readMapFaces';
-// Barème du drop en direct. Rendu à l'interface pour la même raison que le prix
-// du booster : elle l'AFFICHE sans le connaître, et le recopier côté client le
-// ferait mentir au premier réglage.
-import { TWITCH_DROP_COINS } from '@/utils/tcg/earnSources';
+// Barèmes du drop en direct et du cadeau d'accueil. Rendus à l'interface pour
+// la même raison que le prix du booster : elle les AFFICHE sans les connaître,
+// et les recopier côté client les ferait mentir au premier réglage — c'est
+// doublement vrai du guide, qui prétend énoncer la règle.
+import {
+  TWITCH_DROP_COINS,
+  WELCOME_GIFT_COINS,
+} from '@/utils/tcg/earnSources';
 import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
 // Le prix ET le barème sont rendus par l'API plutôt que recopiés dans la page :
 // importer `economy.ts` côté client ferait entrer le moteur de rating dont il
@@ -134,6 +138,10 @@ async function listPacks(
     earn: {
       matchWin: MATCH_WIN_COINS,
       scrimWin: SCRIM_WIN_COINS,
+      // INCONDITIONNEL, à la différence du drop : c'est l'énoncé d'une règle
+      // (« le cadeau d'accueil vaut tant »), pas la promesse d'en recevoir un.
+      // Les deux cadeaux — édition et supportrice — valent le même montant.
+      welcomeGift: WELCOME_GIFT_COINS,
       // Le drop en direct n'est annoncé QUE s'il est réellement branché.
       // Promettre « et N pièces sur le stream » à un espace sans chaîne
       // connectée serait une promesse creuse — même discipline que le prix du

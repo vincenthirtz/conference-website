@@ -205,6 +205,11 @@ function PlayerTcg() {
     matchWin: number;
     scrimWin: number;
     /**
+     * Barème du cadeau d'accueil. OPTIONNEL par prudence de lecture : la page
+     * doit rester juste face à une réponse d'API antérieure à son ajout.
+     */
+    welcomeGift?: number;
+    /**
      * Barème du drop en direct. OPTIONNEL : l'API ne le rend que si une chaîne
      * Twitch est connectée ET qu'une récompense lui est désignée. Absent, on
      * n'annonce rien — promettre un gain qui n'aboutirait jamais serait pire
@@ -520,9 +525,20 @@ function PlayerTcg() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
       <main className="container mx-auto px-4 pb-16 pt-24">
-        <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">
-          {t.collectionTitle}
-        </h1>
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">
+            {t.collectionTitle}
+          </h1>
+          {/* Discret, mais AU TITRE : « d'où viennent les paquets » et « que
+              devient ma photo » se demandent en regardant sa collection, pas
+              depuis le tableau de bord. */}
+          <Link
+            href="/player/tcg-guide"
+            className="text-sm font-medium text-purple-300 underline-offset-4 transition hover:text-purple-200 hover:underline"
+          >
+            {t.guideLink}
+          </Link>
+        </div>
 
         {/* Paquets et solde */}
         <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">

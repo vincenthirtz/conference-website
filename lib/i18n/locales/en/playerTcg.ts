@@ -128,4 +128,6 @@ export default {
   rarityLegendary: 'Legendary',
   foil: 'Foil',
   copies: '×{count}',
+
+  guideLink: 'How does it work?',
 };

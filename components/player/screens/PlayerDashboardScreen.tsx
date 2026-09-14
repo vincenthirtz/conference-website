@@ -960,6 +960,16 @@ export default function PlayerDashboardScreen() {
                 description={t.qaTcgDesc}
                 tone="purple"
               />
+              {/* Le guide, à côté de la collection et non caché dedans : les
+                  questions qu'il traite — d'où viennent les paquets, ce que
+                  devient ma photo — se posent souvent AVANT d'avoir une seule
+                  carte à regarder. */}
+              <QuickAction
+                href="/player/tcg-guide"
+                label={t.qaTcgGuide}
+                description={t.qaTcgGuideDesc}
+                tone="purple"
+              />
             </div>
           </CategorySection>
 

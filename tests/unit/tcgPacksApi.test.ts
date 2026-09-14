@@ -40,7 +40,10 @@ import {
   MATCH_WIN_COINS,
   SCRIM_WIN_COINS,
 } from '../../utils/tcg/economy';
-import { TWITCH_DROP_COINS } from '../../utils/tcg/earnSources';
+import {
+  TWITCH_DROP_COINS,
+  WELCOME_GIFT_COINS,
+} from '../../utils/tcg/earnSources';
 import { PACK_SIZE } from '../../utils/tcg/drawPack';
 
 import handler from '../../pages/api/player/tcg/packs';
@@ -147,6 +150,11 @@ describe('GET /api/player/tcg/packs', () => {
     expect(res.body.earn).toEqual({
       matchWin: MATCH_WIN_COINS,
       scrimWin: SCRIM_WIN_COINS,
+      // Ajouté pour le guide (`/player/tcg-guide`), qui énonce le barème et ne
+      // doit surtout pas le recopier. Ce `toEqual` STRICT est volontaire : il
+      // a fait échouer la construction le jour où ce champ est apparu, ce qui
+      // est exactement son rôle — la forme de `earn` ne bouge pas en silence.
+      welcomeGift: WELCOME_GIFT_COINS,
     });
   });
 
@@ -163,6 +171,13 @@ describe('GET /api/player/tcg/packs', () => {
 
     expect(res.statusCode).toBe(200);
     expect('twitchDrop' in res.body.earn).toBe(false);
+
+    // ...MAIS le cadeau d'accueil, lui, reste annoncé. L'asymétrie est
+    // VOULUE et mérite d'être défendue : `twitchDrop` promet un gain qui
+    // n'aboutirait pas sans chaîne branchée, tandis que `welcomeGift` énonce
+    // une règle du barème, vraie indépendamment de Twitch. Sans ce cas,
+    // « harmoniser » les deux champs paraîtrait une simplification.
+    expect(res.body.earn.welcomeGift).toBe(WELCOME_GIFT_COINS);
   });
 
   it('annonce le drop dès qu’une récompense est désignée', async () => {

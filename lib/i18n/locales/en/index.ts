@@ -92,6 +92,7 @@ import enOnboardCheckEmail from './onboardCheckEmail';
 import enOnboardInviteBot from './onboardInviteBot';
 import enOnboardSecrets from './onboardSecrets';
 import enGuideManageTeam from './guideManageTeam';
+import enGuidePlayerTcg from './guidePlayerTcg';
 import enContactForm from './contactForm';
 import enPublicScrimDialog from './publicScrimDialog';
 import enMemberProfileEditor from './memberProfileEditor';
@@ -262,6 +263,7 @@ const enDict = {
   onboardInviteBot: enOnboardInviteBot,
   onboardSecrets: enOnboardSecrets,
   guideManageTeam: enGuideManageTeam,
+  guidePlayerTcg: enGuidePlayerTcg,
   contactForm: enContactForm,
   publicScrimDialog: enPublicScrimDialog,
   memberProfileEditor: enMemberProfileEditor,

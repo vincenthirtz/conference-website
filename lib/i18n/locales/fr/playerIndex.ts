@@ -135,6 +135,8 @@ export default ns('playerIndex', {
   catTcg: 'Ma collection',
   qaTcg: 'Mes cartes',
   qaTcgDesc: 'Paquets, pièces et collection',
+  qaTcgGuide: 'Comment ça marche',
+  qaTcgGuideDesc: 'Gagner, recycler, et ta photo',
 
   // Cadeau d'accueil d'une édition. La carte ne s'affiche QUE si le cadeau
   // existe vraiment : ces textes ne sont donc jamais lus « à vide ».

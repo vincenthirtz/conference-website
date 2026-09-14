@@ -90,6 +90,7 @@ import nsOnboardCheckEmail from './onboardCheckEmail';
 import nsOnboardInviteBot from './onboardInviteBot';
 import nsOnboardSecrets from './onboardSecrets';
 import nsGuideManageTeam from './guideManageTeam';
+import nsGuidePlayerTcg from './guidePlayerTcg';
 import nsContactForm from './contactForm';
 import nsPublicScrimDialog from './publicScrimDialog';
 import nsMemberProfileEditor from './memberProfileEditor';
@@ -260,6 +261,7 @@ export const frDict = {
   onboardInviteBot: nsOnboardInviteBot.fr,
   onboardSecrets: nsOnboardSecrets.fr,
   guideManageTeam: nsGuideManageTeam.fr,
+  guidePlayerTcg: nsGuidePlayerTcg.fr,
   contactForm: nsContactForm.fr,
   publicScrimDialog: nsPublicScrimDialog.fr,
   memberProfileEditor: nsMemberProfileEditor.fr,
