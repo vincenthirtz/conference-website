@@ -34,6 +34,7 @@
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { recommendCardHero } from '@/utils/heroes/recommendCardHero';
+import { maskBattleTag } from '@/utils/battleTag';
 
 /** Même bucket public que les logos d'équipe. */
 const BUCKET = 'teams-images';
@@ -80,7 +81,10 @@ export async function readPlayerFaces(
   const [ratingsRes, cardsRes, prefsRes, membersRes] = await Promise.all([
     supabaseAdmin
       .from('player_ratings')
-      .select('user_id, display_name, avatar_url')
+      // `battle_tag` est lu pour SERVIR DE NOM quand `display_name` est absent
+      // — cf. `nameOf` plus bas. C'est le repli que tout le reste du dépôt
+      // applique déjà (classement, page match, carte OG…).
+      .select('user_id, display_name, battle_tag, avatar_url')
       .eq('tenant_id', tenantId)
       .in('user_id', ids),
     // Le filtre de consentement, en une clause : approuvée ET non révoquée.
@@ -164,6 +168,28 @@ export async function readPlayerFaces(
     }
   }
 
+  /**
+   * Le nom porté par la carte.
+   *
+   * WHY ce repli : une joueuse des éditions passées n'a PAS de compte auth,
+   * donc jamais de `display_name` — son nom vit dans `battle_tag`, et le seed
+   * qui crée ces lignes le dit en toutes lettres
+   * (`database/seeds/edition_2025_match_participants.sql`). Ce module était le
+   * seul du dépôt à ne pas appliquer le repli `display_name ?? battle_tag` que
+   * font le classement, la page de match et la carte OG : ces joueuses
+   * ressortaient donc sans nom, et l'interface les libellait « Sujet inconnu ».
+   *
+   * Le tag est MASQUÉ (« Akira#4422 » → « Akira ») : une carte s'affiche dans la
+   * collection d'autres joueuses et sur une fiche publique, soit exactement les
+   * surfaces où `utils/battleTag.ts` proscrit le discriminant numérique. Même
+   * choix que la carte OG (`pages/api/og/player/[userId].tsx`).
+   */
+  const nameOf = (row: {
+    display_name: string | null;
+    battle_tag: string | null;
+  }): string | null =>
+    row.display_name ?? maskBattleTag(row.battle_tag) ?? null;
+
   /** Le héros représentant cette joueuse, calculé par le réducteur partagé. */
   const heroFor = (userId: string) => {
     const prefs = prefsByUser.get(userId);
@@ -181,12 +207,13 @@ export async function readPlayerFaces(
   for (const row of (ratingsRes.data ?? []) as Array<{
     user_id: string;
     display_name: string | null;
+    battle_tag: string | null;
     avatar_url: string | null;
   }>) {
     const photo = photoByUser.get(row.user_id) ?? null;
     faces.set(row.user_id, {
       userId: row.user_id,
-      displayName: row.display_name,
+      displayName: nameOf(row),
       imageUrl: photo ?? row.avatar_url ?? null,
       hasTcgPhoto: Boolean(photo),
       ...heroFor(row.user_id),
