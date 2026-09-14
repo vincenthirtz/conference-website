@@ -35,13 +35,20 @@
 // DEUX SOURCES NE SONT PAS ENCORE ACCEPTÉES PAR LE SCHÉMA. Le CHECK
 // `tcg_wallet_entries_source_kind_check` liste aujourd'hui match_win,
 // scrim_win, booster_purchase, admin_grant, card_recycled, twitch_drop
-// (`tcg_twitch_drop.sql`, 2026-09-13) et welcome_gift
-// (`tcg_welcome_gift.sql`, 2026-09-14) ; celui de `tcg_packs` liste victory et
-// purchase. Restent donc interdits d'écriture `tournament_placement` et
-// `checkin_streak`. Le registre le dit lui-même (`schemaReady`) au lieu de le
-// laisser découvrir en production par une écriture rejetée : décrire une voie
-// et pouvoir l'écrire sont deux choses distinctes, et ce module ne décrit que
-// la première.
+// (`tcg_twitch_drop.sql`, 2026-09-13), welcome_gift (`tcg_welcome_gift.sql`,
+// 2026-09-14) et supporter_welcome (`tcg_supporter_welcome.sql`, 2026-09-14) ;
+// celui de `tcg_packs` liste victory, purchase et welcome. Restent donc
+// interdits d'écriture `tournament_placement` et `checkin_streak`. Le registre
+// le dit lui-même (`schemaReady`) au lieu de le laisser découvrir en production
+// par une écriture rejetée : décrire une voie et pouvoir l'écrire sont deux
+// choses distinctes, et ce module ne décrit que la première.
+//
+// ⚠️ UNE TABLE PEUT PORTER PLUSIEURS CHECK SUR LA MÊME COLONNE, et c'est le
+// piège qui a coûté 58 paquets le 2026-09-14 : `tcg_packs_source_kind_check`
+// avait été élargi, `tcg_packs_source_coherent` — qui ne nomme pas la colonne —
+// non. Avant de basculer un `schemaReady`, ÉNUMÉRER les contraintes des deux
+// tables (`pg_constraint` sur `tcg_packs` ET `tcg_wallet_entries`) plutôt que
+// de corriger celle dont le nom ressemble au sujet.
 //
 // CE DRAPEAU N'EST PAS DESCRIPTIF, IL COMMANDE. Le webhook du drop lit
 // `getEarnSource('twitch_drop').schemaReady` et refuse de servir tant qu'il est
@@ -163,7 +170,8 @@ export type TcgEarnSourceKey =
   | 'twitch_drop'
   | 'checkin_streak'
   | 'tournament_placement'
-  | 'welcome_gift';
+  | 'welcome_gift'
+  | 'supporter_welcome';
 
 /**
  * Ce que `source_ref` doit contenir — donc ce qu'« une occurrence » veut dire.
@@ -179,7 +187,14 @@ export type TcgSourceRefKind =
   | 'stream'
   /** Une fenêtre de série close, p. ex. `<tournoi>:<n° de série>`. */
   | 'streak_window'
-  | 'tournament';
+  | 'tournament'
+  /**
+   * L'espace lui-même : « une fois par compte », sans rattachement à un
+   * évènement. Le seul cas est le cadeau d'accueil d'une supportrice, qui n'a
+   * ni match ni édition à quoi s'accrocher — et `source_ref` ne peut pas être
+   * NULL, deux NULL étant DISTINCTS dans une contrainte UNIQUE.
+   */
+  | 'tenant';
 
 export type TcgEarnSource = {
   key: TcgEarnSourceKey;
@@ -278,6 +293,30 @@ export const TCG_EARN_SOURCES: readonly TcgEarnSource[] = [
     // Un cadeau par personne et par ÉDITION : c'est `source_ref = tournoi` qui
     // le garantit, la contrainte UNIQUE faisant le reste.
     refKind: 'tournament',
+    maxPerRef: 1,
+    schemaReady: true,
+  },
+  {
+    // ALLUMÉE le 2026-09-14 : `tcg_supporter_welcome.sql` a élargi le CHECK de
+    // `tcg_wallet_entries`. Côté paquets, RIEN à migrer — vérifié et non
+    // supposé : `tcg_packs` admet déjà 'welcome' dans ses DEUX contraintes.
+    //
+    // DISTINCTE DE `welcome_gift`, et ce n'est pas un doublon : celui-là vaut
+    // une fois par ÉDITION et vise les rosters engagés ; celui-ci vaut une fois
+    // par COMPTE et vise qui ne joue pas. Les fondre aurait fait porter à une
+    // même clé deux règles d'unicité incompatibles.
+    key: 'supporter_welcome',
+    // Un paquet, comme toute source de ce registre : c'est l'ouverture qui fait
+    // le TCG, des pièces seules exigeraient une seconde démarche avant la
+    // moindre joie.
+    packs: 1,
+    // Le même montant qu'un cadeau de participante : de quoi ouvrir la porte,
+    // pas de quoi se constituer une collection — un booster en coûte trois
+    // fois plus, et la suite passe par le drop en direct.
+    coins: WELCOME_GIFT_COINS,
+    // `source_ref` = le TENANT : « une fois, jamais deux », appliqué par la
+    // contrainte UNIQUE et par rien d'autre.
+    refKind: 'tenant',
     maxPerRef: 1,
     schemaReady: true,
   },

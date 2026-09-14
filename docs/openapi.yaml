@@ -35176,8 +35176,18 @@ paths:
         - public/auth
       summary: Ai-je recu un cadeau de bienvenue, et lequel ?
       description: |
-        `200 { gift: { coins, receivedAt } | null }`. Alimente la carte du
-        tableau de bord, qui se retire d'elle-meme quand il n'y a rien a dire.
+        `200 { gift: { coins, receivedAt } | null, supporterClaimable }`.
+        Alimente la carte du tableau de bord, qui se retire d'elle-meme quand
+        il n'y a rien a dire.
+
+        LES DEUX ACCUEILS SONT CONFONDUS ici (`welcome_gift`, celui d'une
+        edition, et `supporter_welcome`, celui d'une supportrice) : filtrer sur
+        la seule cle d'origine aurait rendu le second invisible sur l'ecran
+        meme qui sert a l'annoncer.
+
+        `supporterClaimable` est calcule par `grantSupporterWelcome({ dryRun:
+        true })`, donc avec les conditions EXACTES du POST : proposer un bouton
+        que le serveur refuserait ensuite serait pire que ne rien proposer.
 
         L'ABSENCE DE CADEAU EST UN ETAT NORMAL, pas une erreur : une joueuse
         d'une equipe non engagee, ou arrivee apres la distribution, n'en a pas.
@@ -35201,6 +35211,50 @@ paths:
       responses:
         '200':
           description: Le cadeau recu, ou `null`.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - public/auth
+      summary: Reclamer le cadeau d'accueil d'une supportrice
+      description: |
+        `200 { status, coins?, packGranted? }`. Une fois par COMPTE.
+
+        POURQUOI UNE ORIGINE DISTINCTE du cadeau d'edition. L'unicite du
+        registre est `(tenant_id, user_id, source_kind, source_ref)` : ici
+        `source_ref` porte le TENANT, la ou `welcome_gift` porte le TOURNOI.
+        Faire porter deux regles d'unicite a une meme cle aurait rendu « une
+        fois » ambigu.
+
+        REFUS ORDINAIRES, rendus en 200 avec un motif lisible plutot qu'en 4xx :
+        `not_supporter` (le role de compte n'est pas `supporter`),
+        `on_roster` (elle figure sur un roster — le role n'etant qu'une
+        etiquette choisie a l'inscription, sans ce refus une joueuse
+        cumulerait les deux accueils), `already` (rejeu).
+
+        ⚠️ `allowActAs` N'EST PAS ACTIVE sur cette route : `?as=` est donc
+        refuse hors GET, et `subject.userId === user.id` est garanti ici. Un
+        staff qui inspecte ne peut pas reclamer a la place de quelqu'un — un
+        cadeau reclame ne se rend pas.
+
+        `packGranted` est RENDU a l'appelant : si l'insertion du paquet echoue,
+        les pieces sont deja ecrites et ne seront pas rejouees, et l'ecran doit
+        le dire au lieu d'afficher un succes. Rate-limit 6 / min.
+      operationId: claimSupporterTcgWelcomeGift
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Cadeau accorde, ou motif de refus.
           content:
             application/json:
               schema:

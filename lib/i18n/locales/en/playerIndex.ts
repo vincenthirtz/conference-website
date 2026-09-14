@@ -134,4 +134,14 @@ export default {
   welcomeGiftBody:
     'Welcome to the Cup. A pack is waiting for you, and {coins} coins are already in your account.',
   welcomeGiftCta: 'Open my pack',
+
+  supporterWelcomeTitle: 'Your welcome gift is waiting',
+  supporterWelcomeBody:
+    "You don't play, but you collect: a pack and {coins} coins to get started. After that, cards are earned by watching the streams, with your Twitch account linked.",
+  supporterWelcomeCta: 'Claim my gift',
+  supporterWelcomeClaiming: 'One moment…',
+  supporterWelcomeError:
+    'Could not claim the gift right now. Please try again in a moment.',
+  supporterWelcomePartial:
+    'Your coins are credited, but the pack could not be created. The staff has been notified — no need to try again.',
 };

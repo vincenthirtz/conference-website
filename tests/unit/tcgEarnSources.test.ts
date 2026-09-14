@@ -45,6 +45,7 @@ describe('intégrité du registre', () => {
         'checkin_streak',
         'tournament_placement',
         'welcome_gift',
+        'supporter_welcome',
       ])
     );
   });
@@ -173,10 +174,12 @@ describe('limites anti-abus', () => {
 describe('schemaReady', () => {
   it('ne déclare écrivables que les source_kind acceptés par le CHECK', () => {
     // CHECK actuel : match_win, scrim_win, booster_purchase, admin_grant,
-    // card_recycled, twitch_drop, welcome_gift. `tcg_twitch_drop.sql` a levé le
-    // verrou du drop le 2026-09-13, `tcg_welcome_gift.sql` celui du cadeau
-    // d'accueil le 2026-09-14 ; `tournament_placement` et `checkin_streak`
-    // restent interdits d'écriture — ni origine acceptée, ni écrivain.
+    // card_recycled, twitch_drop, welcome_gift, supporter_welcome.
+    // `tcg_twitch_drop.sql` a levé le verrou du drop le 2026-09-13,
+    // `tcg_welcome_gift.sql` celui du cadeau d'édition et
+    // `tcg_supporter_welcome.sql` celui du cadeau supportrice le 2026-09-14 ;
+    // `tournament_placement` et `checkin_streak` restent interdits d'écriture —
+    // ni origine acceptée, ni écrivain.
     //
     // Ce test est le rappel de lever chaque verrou AU BON MOMENT : basculer un
     // `schemaReady` sans migration ferait échouer l'écriture en production, et
@@ -189,9 +192,39 @@ describe('schemaReady', () => {
       'booster_purchase',
       'match_win',
       'scrim_win',
+      'supporter_welcome',
       'twitch_drop',
       'welcome_gift',
     ]);
+  });
+});
+
+describe('les deux cadeaux d’accueil', () => {
+  it('ne partagent PAS la même unité : édition contre compte', () => {
+    // C'est la seule raison d'être de deux clés plutôt qu'une. L'unicité du
+    // registre est `(tenant, user, source_kind, source_ref)` : faire porter à
+    // une même clé un ref « tournoi » et un ref « tenant » rendrait « une
+    // fois » ambigu, et l'un des deux cadeaux deviendrait rejouable.
+    expect(getEarnSource('welcome_gift')?.refKind).toBe('tournament');
+    expect(getEarnSource('supporter_welcome')?.refKind).toBe('tenant');
+    expect(getEarnSource('supporter_welcome')?.maxPerRef).toBe(1);
+  });
+
+  it('offrent la même chose : accueillir ne dépend pas de savoir jouer', () => {
+    expect(earnReward('supporter_welcome')).toEqual(
+      earnReward('welcome_gift')
+    );
+    // Et un paquet, comme toute source du registre : c'est l'ouverture qui
+    // fait le TCG.
+    expect(earnReward('supporter_welcome').packs).toBe(1);
+  });
+
+  it('reste très en dessous d’un booster — la porte, pas la collection', () => {
+    // Sans cette borne, s'inscrire « supportrice » deviendrait un raccourci
+    // vers un booster gratuit, et le cadeau remplacerait le fait de jouer.
+    expect(earnReward('supporter_welcome').coins).toBeLessThan(
+      BOOSTER_PRICE_COINS
+    );
   });
 });
 

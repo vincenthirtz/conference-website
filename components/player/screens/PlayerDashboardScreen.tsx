@@ -21,6 +21,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import ProfileSummaryCard from '@/components/player/ProfileSummaryCard';
 import WelcomeGiftCard from '@/components/player/WelcomeGiftCard';
+import SupporterWelcomeCard from '@/components/player/SupporterWelcomeCard';
 import DiscordLinkCard from '@/components/player/DiscordLinkCard';
 import NetworkOnboardingCard from '@/components/player/NetworkOnboardingCard';
 import RegistrationDeadlineBanner from '@/components/player/RegistrationDeadlineBanner';
@@ -947,6 +948,11 @@ export default function PlayerDashboardScreen() {
                 n'y a rien à annoncer, et sa route honore `?as=` — il montre
                 donc le cadeau de la personne inspectée, pas celui du staff. */}
             <WelcomeGiftCard />
+            {/* Le cadeau d'accueil SUPPORTRICE, qui se RÉCLAME. Il ne s'affiche
+                qu'à qui peut réellement le prendre (rôle de compte
+                « supporter », hors roster, pas déjà réclamé) — la route le
+                calcule avec les conditions exactes du chemin d'écriture. */}
+            <SupporterWelcomeCard />
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <QuickAction
                 href="/player/tcg"

@@ -143,4 +143,19 @@ export default ns('playerIndex', {
   welcomeGiftBody:
     'Bienvenue dans la Cup. Un paquet t’attend, et {coins} pièces sont déjà sur ton compte.',
   welcomeGiftCta: 'Ouvrir mon paquet',
+
+  // Cadeau d'accueil d'une SUPPORTRICE — distinct du précédent : une fois par
+  // compte, et il se RÉCLAME (la carte porte un bouton). Elle ne s'affiche que
+  // si le cadeau est réellement disponible.
+  supporterWelcomeTitle: 'Ton cadeau de bienvenue t’attend',
+  /** Interpole `{coins}`. */
+  supporterWelcomeBody:
+    'Tu ne joues pas, mais tu collectionnes : un paquet et {coins} pièces pour commencer. Ensuite, les cartes se gagnent en regardant les directs, compte Twitch lié.',
+  supporterWelcomeCta: 'Récupérer mon cadeau',
+  supporterWelcomeClaiming: 'Un instant…',
+  supporterWelcomeError:
+    'Impossible de récupérer le cadeau pour le moment. Réessaie dans un instant.',
+  // L'écart est DIT, jamais masqué par un succès : cf. l'incident du 2026-09-14.
+  supporterWelcomePartial:
+    'Tes pièces sont créditées, mais le paquet n’a pas pu être créé. Le staff est prévenu — inutile de recommencer.',
 });

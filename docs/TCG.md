@@ -11,7 +11,8 @@
 > les migrations `create_tcg_tables.sql`, `create_tcg_currency_tables.sql`,
 > `tcg_packs_allow_purchased.sql`, `tcg_recycle_duplicates.sql`,
 > `tcg_twitch_drop.sql`, `add_tcg_overlay_tokens.sql`, `tcg_overlay_theme.sql`,
-> `tcg_welcome_gift.sql`,
+> `tcg_welcome_gift.sql`, `tcg_welcome_gift_pack_coherence.sql`,
+> `tcg_supporter_welcome.sql`,
 > [`components/tcg/TcgCard.tsx`](../components/tcg/TcgCard.tsx),
 > [`components/overlay/TcgAnnouncement.tsx`](../components/overlay/TcgAnnouncement.tsx) et
 > [`pages/player/tcg.tsx`](../pages/player/tcg.tsx).
@@ -286,10 +287,31 @@ figé sur une valeur encore plus fausse.
 
 `source_kind` accepté par le schéma : `match_win`, `scrim_win`,
 `booster_purchase`, `admin_grant`, `card_recycled`, `twitch_drop`
-(`tcg_twitch_drop.sql`, 2026-09-13) et `welcome_gift` (`tcg_welcome_gift.sql`,
-2026-09-14). `source_ref` est du **texte**,
+(`tcg_twitch_drop.sql`, 2026-09-13), `welcome_gift` (`tcg_welcome_gift.sql`,
+2026-09-14) et `supporter_welcome` (`tcg_supporter_welcome.sql`, 2026-09-14).
+`source_ref` est du **texte**,
 et non un uuid, parce que les sources n'ont pas toutes la même clé (un match, un
-paquet, une carte `<pack_id>:<position>`).
+paquet, une carte `<pack_id>:<position>`, un tournoi, un tenant).
+
+⚠️ **Une table peut porter plusieurs `CHECK` sur la même colonne.** `tcg_packs`
+en a deux : `tcg_packs_source_kind_check` **et** `tcg_packs_source_coherent`,
+dont le nom ne dit pas qu'elle contraint `source_kind`. Le 2026-09-14, élargir
+la première sans la seconde a fait rejeter **58 paquets** en `23514`, sans que
+rien ne s'arrête : l'appelant journalisait l'échec et continuait, et l'écran
+d'administration a affiché un succès. Avant d'ajouter une valeur, **énumérer**
+plutôt que corriger celle dont le nom ressemble au sujet :
+
+```sql
+SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint
+WHERE conrelid = ANY (ARRAY['public.tcg_packs'::regclass,
+                            'public.tcg_wallet_entries'::regclass])
+  AND contype = 'c';
+```
+
+Le mock Supabase des tests unitaires **n'évalue aucun `CHECK`** : cette panne
+était structurellement intestable. `setTableWriteError` (ajouté depuis) ne
+simule pas la contrainte — il permet de tester ce que le code FAIT face à un
+refus, ce qui est là que ce genre d'incident se joue.
 
 ### Achat, ouverture, recyclage
 
@@ -388,6 +410,41 @@ paquet sans pièces — et la relance en ajouterait un second, `tcg_packs` n'aya
 aucune unicité exploitable ici. Distribuer reste un **geste de staff** explicite
 et journalisé (`tcg_welcome_gift_grant`), jamais un effet de bord de
 déploiement.
+
+### Le cadeau d'accueil d'une supportrice
+
+[`utils/tcg/grantSupporterWelcome.ts`](../utils/tcg/grantSupporterWelcome.ts)
+offre **un paquet et `MATCH_WIN_COINS`**, une fois par compte, à qui porte le
+rôle de compte `supporter` (cf. §1). Les six autres sources supposent toutes
+qu'on joue : sans lui, une supportrice arrive sur une collection vide et sa
+seule voie — le drop Twitch — n'existe que pendant un direct.
+
+**Une fois par COMPTE, pas par édition**, et c'est toute la différence avec le
+cadeau ci-dessus. L'unicité du registre étant
+`(tenant_id, user_id, source_kind, source_ref)`, `source_ref` porte ici le
+**tenant** et non le tournoi. Faire porter à une seule clé deux règles
+d'unicité aurait rendu « une fois » ambigu — d'où deux `source_kind` distincts
+plutôt qu'un réemploi, et un `refKind` déclaré par source dans le registre.
+
+Le corollaire est voulu : une supportrice qui rejoindrait plus tard un roster
+recevra aussi le cadeau de son édition. Ce sont deux accueils différents.
+L'inverse est **refusé** — on ne sert pas le cadeau supportrice à qui figure
+déjà sur un roster, le rôle de compte n'étant qu'une étiquette choisie à
+l'inscription et rien n'empêchant une joueuse de la cocher.
+
+Il se **réclame** (`POST /api/player/tcg/welcome-gift`), il n'est pas distribué :
+un geste par personne, jamais un effet de bord. La route n'active pas
+`allowActAs`, donc `?as=` y est refusé — un staff qui inspecte ne peut pas
+réclamer à la place de quelqu'un, et un cadeau réclamé ne se rend pas. Le même
+ordre d'écriture protège que partout ailleurs (pièces d'abord en
+`ON CONFLICT DO NOTHING ... RETURNING`, paquet ensuite), et `packGranted` est
+**rendu à l'appelant** : si le paquet échoue, l'écran le dit au lieu d'afficher
+un succès.
+
+**Aucun rapport avec le don.** Soutenir l'association et collectionner sont deux
+capacités du même compte, jamais un échange de l'une contre l'autre : brancher
+ce cadeau sur un paiement en ferait une loot box payante (cf. « La monnaie se
+gagne, elle ne s'achète pas »).
 
 ### Ce que la victoire déclenche
 
@@ -493,7 +550,7 @@ joueuse) et scopées au tenant résolu par `resolveTenantIdForUserRequest`.
 | `/api/admin/tcg/overlay-token`                       | GET, POST, DELETE | staff, permission `moderate_support` | Le lien de la source navigateur OBS. Un seul jeton actif par espace : émettre révoque le précédent. Journalisé **sans** le jeton. 30/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `/api/admin/tcg/overlay-theme`                       | GET, PUT          | staff, permission `moderate_support` | L'habillage de l'overlay (couleur, position, deux formulations, image ou vidéo). **Patch partiel** ; `null` = revenir au défaut. Média validé par **magic bytes** avant dépôt en bucket public. 30/min.                                                                                                                                                                                                                                                                                                                                                                                   |
 | `/api/admin/tcg/welcome-gift`                        | GET, POST         | staff, permission `moderate_support` | Simuler puis distribuer le cadeau d'accueil de l'édition en cours. `GET` n'écrit rien. `POST` honore `Idempotency-Key`. Journalisé. 20/min.                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `/api/player/tcg/welcome-gift`                       | GET               | joueuse (**`withSubjectRoute`**)     | « Ai-je reçu un cadeau ? » — `{ gift: { coins, receivedAt } \| null }`. Seule route `tcg/` à honorer `?as=` : le tableau de bord est partagé avec l'inspection staff. 60/min.                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `/api/player/tcg/welcome-gift` | GET, POST | joueuse (**`withSubjectRoute`**) | `GET` : « Ai-je reçu un cadeau ? » — `{ gift: { coins, receivedAt } \| null, supporterClaimable }`, les DEUX accueils confondus (`welcome_gift` et `supporter_welcome`) ; `supporterClaimable` vient de `grantSupporterWelcome({ dryRun: true })`, donc des conditions EXACTES du POST — proposer un bouton que le serveur refuserait serait pire que ne rien proposer. `POST` : réclamer le cadeau **supportrice**, une fois par compte, `{ status, coins, packGranted }` — `packGranted: false` DIT l'écriture partielle au lieu de la masquer. Seule route `tcg/` à honorer `?as=`, mais **sans `allowActAs`** : le `POST` est donc refusé en inspection, un cadeau réclamé ne se rendant pas. 60/min en GET, 6/min en POST. |
 | `/api/overlay/tcg/{token}`                           | GET               | **public**, porté par le jeton       | Le flux d'annonces d'une source navigateur OBS, plus l'habillage. Réduit au déjà-public : pseudo Twitch et origine d'événement, jamais un nom de compte ni une photo. `s-maxage=5`. 120/min.                                                                                                                                                                                                                                                                                                                                                                                              |
 
 Quelques conventions transverses :
