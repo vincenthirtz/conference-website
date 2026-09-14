@@ -66,6 +66,7 @@ export default {
   packOpening: 'Opening…',
   packFromVictory: 'Won in a match',
   packFromPurchase: 'Purchased',
+  packFromWelcome: 'Welcome gift',
 
   balance: '{count} coins',
   earnHint: '{match} coins per match win, {scrim} per ranked scrim win.',

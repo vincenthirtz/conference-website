@@ -44,6 +44,7 @@ describe('intégrité du registre', () => {
         'twitch_drop',
         'checkin_streak',
         'tournament_placement',
+        'welcome_gift',
       ])
     );
   });
@@ -172,9 +173,10 @@ describe('limites anti-abus', () => {
 describe('schemaReady', () => {
   it('ne déclare écrivables que les source_kind acceptés par le CHECK', () => {
     // CHECK actuel : match_win, scrim_win, booster_purchase, admin_grant,
-    // card_recycled, twitch_drop. `tcg_twitch_drop.sql` a levé le verrou du
-    // drop le 2026-09-13 ; `tournament_placement` et `checkin_streak` restent
-    // interdits d'écriture — ni origine acceptée, ni écrivain.
+    // card_recycled, twitch_drop, welcome_gift. `tcg_twitch_drop.sql` a levé le
+    // verrou du drop le 2026-09-13, `tcg_welcome_gift.sql` celui du cadeau
+    // d'accueil le 2026-09-14 ; `tournament_placement` et `checkin_streak`
+    // restent interdits d'écriture — ni origine acceptée, ni écrivain.
     //
     // Ce test est le rappel de lever chaque verrou AU BON MOMENT : basculer un
     // `schemaReady` sans migration ferait échouer l'écriture en production, et
@@ -183,7 +185,13 @@ describe('schemaReady', () => {
       writableEarnSources()
         .map((s) => s.key)
         .sort()
-    ).toEqual(['booster_purchase', 'match_win', 'scrim_win', 'twitch_drop']);
+    ).toEqual([
+      'booster_purchase',
+      'match_win',
+      'scrim_win',
+      'twitch_drop',
+      'welcome_gift',
+    ]);
   });
 });
 

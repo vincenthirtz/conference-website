@@ -20,6 +20,7 @@ import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import ProfileSummaryCard from '@/components/player/ProfileSummaryCard';
+import WelcomeGiftCard from '@/components/player/WelcomeGiftCard';
 import DiscordLinkCard from '@/components/player/DiscordLinkCard';
 import NetworkOnboardingCard from '@/components/player/NetworkOnboardingCard';
 import RegistrationDeadlineBanner from '@/components/player/RegistrationDeadlineBanner';
@@ -941,6 +942,11 @@ export default function PlayerDashboardScreen() {
               collection. La placer dans la section précédente l'aurait rendue
               invisible à celles-là mêmes qui débutent. */}
           <CategorySection id="tcg" label={t.catTcg}>
+            {/* Le cadeau d'accueil, AVANT le raccourci : c'est une nouvelle,
+                pas une action permanente. Il se retire de lui-même quand il
+                n'y a rien à annoncer, et sa route honore `?as=` — il montre
+                donc le cadeau de la personne inspectée, pas celui du staff. */}
+            <WelcomeGiftCard />
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <QuickAction
                 href="/player/tcg"

@@ -129,4 +129,9 @@ export default {
   catTcg: 'My collection',
   qaTcg: 'My cards',
   qaTcgDesc: 'Packs, coins and collection',
+
+  welcomeGiftTitle: 'Welcome gift',
+  welcomeGiftBody:
+    'Welcome to the Cup. A pack is waiting for you, and {coins} coins are already in your account.',
+  welcomeGiftCta: 'Open my pack',
 };

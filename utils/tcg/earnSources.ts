@@ -34,8 +34,9 @@
 //
 // DEUX SOURCES NE SONT PAS ENCORE ACCEPTÉES PAR LE SCHÉMA. Le CHECK
 // `tcg_wallet_entries_source_kind_check` liste aujourd'hui match_win,
-// scrim_win, booster_purchase, admin_grant, card_recycled et twitch_drop
-// (`tcg_twitch_drop.sql`, 2026-09-13) ; celui de `tcg_packs` liste victory et
+// scrim_win, booster_purchase, admin_grant, card_recycled, twitch_drop
+// (`tcg_twitch_drop.sql`, 2026-09-13) et welcome_gift
+// (`tcg_welcome_gift.sql`, 2026-09-14) ; celui de `tcg_packs` liste victory et
 // purchase. Restent donc interdits d'écriture `tournament_placement` et
 // `checkin_streak`. Le registre le dit lui-même (`schemaReady`) au lieu de le
 // laisser découvrir en production par une écriture rejetée : décrire une voie
@@ -100,6 +101,24 @@ export const CHECKIN_STREAK_LENGTH = 5;
 export const CHECKIN_STREAK_COINS = SCRIM_WIN_COINS;
 
 /**
+ * Pièces jointes au cadeau d'accueil, offert une fois par édition à chaque
+ * participante.
+ *
+ * LE CADEAU EST D'ABORD UN PAQUET (cf. son entrée au registre), et ces pièces
+ * viennent en plus. C'est ce qui a décidé du montant : le prix d'un booster
+ * aurait doublé le présent, puisque le paquet est déjà donné. Une victoire de
+ * match, elle, dit « voilà de quoi continuer » sans remplacer le fait de jouer.
+ *
+ * DÉRIVÉ, JAMAIS ÉCRIT EN DUR, comme tout le barème : régler `MATCH_WIN_COINS`
+ * emporte le cadeau avec lui, et les deux ne peuvent pas diverger.
+ *
+ * IL NE REMPLACE PAS LA VICTOIRE. Une seule fois, par édition : de quoi ouvrir
+ * la porte, pas de quoi se constituer une collection sans jouer — la victoire
+ * reste la voie principale (cf. `BOOSTER_PRICE_COINS`).
+ */
+export const WELCOME_GIFT_COINS = MATCH_WIN_COINS;
+
+/**
  * Palmarès de fin de tournoi : multiplicateurs appliqués à `MATCH_WIN_COINS`.
  *
  * LES SEUILS SONT CEUX DES BADGES, pas une nouvelle échelle. `achievements.ts`
@@ -143,7 +162,8 @@ export type TcgEarnSourceKey =
   | 'booster_purchase'
   | 'twitch_drop'
   | 'checkin_streak'
-  | 'tournament_placement';
+  | 'tournament_placement'
+  | 'welcome_gift';
 
 /**
  * Ce que `source_ref` doit contenir — donc ce qu'« une occurrence » veut dire.
@@ -242,6 +262,22 @@ export const TCG_EARN_SOURCES: readonly TcgEarnSource[] = [
     // Un seul drop par live ET par personne : c'est `source_ref = live` qui le
     // garantit, la contrainte UNIQUE faisant le reste.
     refKind: 'stream',
+    maxPerRef: 1,
+    schemaReady: true,
+  },
+  {
+    // ALLUMÉE le 2026-09-14 : `tcg_welcome_gift.sql` a élargi le CHECK de
+    // `source_kind`. Migration et bascule vont ensemble — cf. l'en-tête.
+    key: 'welcome_gift',
+    // UN PAQUET, comme toute source de gain de ce registre. Ne créditer que des
+    // pièces aurait exigé une seconde démarche — aller acheter — avant de
+    // procurer la moindre joie, alors que l'ouverture d'un paquet EST le moment
+    // qui compte dans un TCG. Les pièces viennent en plus, pour continuer.
+    packs: 1,
+    coins: WELCOME_GIFT_COINS,
+    // Un cadeau par personne et par ÉDITION : c'est `source_ref = tournoi` qui
+    // le garantit, la contrainte UNIQUE faisant le reste.
+    refKind: 'tournament',
     maxPerRef: 1,
     schemaReady: true,
   },

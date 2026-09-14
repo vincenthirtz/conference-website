@@ -192,6 +192,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   // TCG (cartes joueuses)
   tcg_photo_approve: 'Photo de carte TCG approuvée',
   tcg_photo_reject: 'Photo de carte TCG refusée',
+  tcg_welcome_gift_grant: 'Cadeau de bienvenue TCG distribué',
   // Broadcast
   broadcast_state_update: 'Mise à jour état broadcast',
   broadcast_next_match: 'Passage au match suivant (broadcast)',

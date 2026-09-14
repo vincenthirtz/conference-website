@@ -81,6 +81,7 @@ export default ns('playerTcg', {
   packOpening: 'Ouverture…',
   packFromVictory: 'Gagné en match',
   packFromPurchase: 'Acheté',
+  packFromWelcome: 'Cadeau de bienvenue',
 
   balance: '{count} pièces',
   // Le barème vient de l'API : la page l'affiche sans le connaître.

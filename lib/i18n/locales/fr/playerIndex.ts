@@ -135,4 +135,12 @@ export default ns('playerIndex', {
   catTcg: 'Ma collection',
   qaTcg: 'Mes cartes',
   qaTcgDesc: 'Paquets, pièces et collection',
+
+  // Cadeau d'accueil d'une édition. La carte ne s'affiche QUE si le cadeau
+  // existe vraiment : ces textes ne sont donc jamais lus « à vide ».
+  welcomeGiftTitle: 'Cadeau de bienvenue',
+  /** Interpole `{coins}`. */
+  welcomeGiftBody:
+    'Bienvenue dans la Cup. Un paquet t’attend, et {coins} pièces sont déjà sur ton compte.',
+  welcomeGiftCta: 'Ouvrir mon paquet',
 });

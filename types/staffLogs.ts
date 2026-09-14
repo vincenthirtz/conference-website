@@ -208,6 +208,11 @@ export type StaffLogAction =
   // pouvoir dire QUI a approuvé ou refusé, et quand.
   | 'tcg_photo_approve'
   | 'tcg_photo_reject'
+  // Créditer d'un coup toutes les participantes d'une édition est un acte
+  // collectif et irréversible (on ne reprend pas un paquet ouvert) : il doit
+  // dire QUI l'a déclenché, sur quelle édition, et combien de comptes il a
+  // touchés.
+  | 'tcg_welcome_gift_grant'
   // --- Broadcast ---
   | 'broadcast_state_update'
   | 'broadcast_next_match'

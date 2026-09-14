@@ -29,10 +29,38 @@ import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
 
 type Pack = {
   id: string;
-  source: 'victory' | 'purchase';
+  // `welcome` = cadeau d'accueil d'une édition. L'API rend `source_kind` brut ;
+  // l'union doit donc suivre le CHECK de `tcg_packs`, sans quoi une origine
+  // ajoutée en base retombe silencieusement sur le libellé d'à côté.
+  source: 'victory' | 'purchase' | 'welcome';
   grantedAt: string;
   openedAt: string | null;
 };
+
+/**
+ * D'où vient ce paquet, en toutes lettres.
+ *
+ * LA BRANCHE PAR DÉFAUT N'EST PAS DÉCORATIVE. L'API rend `source_kind` en
+ * chaîne BRUTE, sans union fermée côté serveur : une origine ajoutée en base
+ * arriverait ici sans que TypeScript s'en aperçoive. Sans ce repli, elle
+ * prendrait le libellé de la branche voisine — c'est exactement ainsi qu'un
+ * paquet de bienvenue se serait annoncé « Gagné en match ».
+ */
+function packOriginLabel(
+  source: Pack['source'],
+  t: typeof nsPlayerTcg.fr
+): string {
+  switch (source) {
+    case 'purchase':
+      return t.packFromPurchase;
+    case 'welcome':
+      return t.packFromWelcome;
+    case 'victory':
+      return t.packFromVictory;
+    default:
+      return t.packFromVictory;
+  }
+}
 
 type CollectionCard =
   | {
@@ -460,9 +488,12 @@ function PlayerTcg() {
                   >
                     {busy === pack.id ? t.packOpening : t.packOpen}
                     <span className="ml-2 text-xs font-normal text-gray-400">
-                      {pack.source === 'purchase'
-                        ? t.packFromPurchase
-                        : t.packFromVictory}
+                      {/* Un `switch` et non un ternaire binaire : avec deux
+                          issues seulement, un paquet `welcome` se serait
+                          affiché « Gagné en match » — le même défaut muet que
+                          le porte-monnaie, où un drop passait pour un
+                          « Mouvement ». */}
+                      {packOriginLabel(pack.source, t)}
                     </span>
                   </button>
                 </li>
