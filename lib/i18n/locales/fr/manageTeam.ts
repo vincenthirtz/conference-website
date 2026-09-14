@@ -57,7 +57,11 @@ export default ns('manageTeam', {
   invitationSentOn: 'Envoyée le {date}',
   invitationExpiresOn: 'expire le {date}',
   invitationExpired: 'Expirée',
-  invitationNoEmail: 'Sans email — à transmettre à la main',
+  invitationNoEmail: 'Sans email — le lien est à transmettre à la main',
+  invitationViaDiscord:
+    'Envoyée sur Discord — elle peut répondre au message du bot, ou depuis son espace joueuse',
+  invitationNoEmailNoLink:
+    'Ni email ni lien — elle la verra dans son espace joueuse',
   resendInvitation: 'Relancer',
   resendInvitationTitle:
     "Renvoyer l'email d'invitation avec un nouveau lien (l'ancien cesse de fonctionner)",

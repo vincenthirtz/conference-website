@@ -133,14 +133,19 @@ export default withSubjectRoute(
     }
 
     // POST → relance.
+    //
+    // SANS EMAIL, ON RELANCE QUAND MÊME. Cette route refusait tout
+    // `NO_INVITE_EMAIL`, ce qui condamnait les invitations nées ailleurs que du
+    // formulaire du site : celles du bot Discord et celles d'`invite-free-player`
+    // n'ont pas d'adresse, et ne pouvaient donc ni être prolongées ni recevoir
+    // un lien — elles expiraient sans recours.
+    //
+    // Or une relance fait DEUX choses, et une seule dépend de l'email : elle
+    // repousse l'expiration et elle refait un lien. Le lien est rendu à
+    // l'appelante — la capitaine, sur le site — qui le transmet par ses propres
+    // moyens ; c'est déjà ce que fait le chemin avec email quand l'envoi
+    // échoue. Rien de tout cela ne passe par Discord.
     const email = invitation.payload?.invite_email ?? null;
-    if (!email) {
-      return res.status(400).json({
-        error:
-          "Cette invitation n'a pas d'email associé : elle ne peut pas être relancée.",
-        code: 'NO_INVITE_EMAIL',
-      });
-    }
 
     const token = generateInviteToken();
     const refreshed = await refreshInvitationToken(
@@ -168,18 +173,20 @@ export default withSubjectRoute(
     // (Discord, SMS…). Un échec d'envoi ne doit pas annuler la relance déjà
     // persistée — l'ancien lien, lui, est déjà invalidé.
     let emailSent = false;
-    try {
-      const sendResult = await sendTeamInviteLinkEmail({
-        tenantId,
-        to: email,
-        teamName: team?.name ?? 'ton équipe',
-        role: invitation.payload?.desired_role ?? 'player',
-        asCaptain: Boolean(invitation.payload?.set_captain),
-        inviteUrl,
-      });
-      emailSent = !!sendResult?.success;
-    } catch (err) {
-      logger.error('[teams/invitations/:id] resend email failed', err);
+    if (email) {
+      try {
+        const sendResult = await sendTeamInviteLinkEmail({
+          tenantId,
+          to: email,
+          teamName: team?.name ?? 'ton équipe',
+          role: invitation.payload?.desired_role ?? 'player',
+          asCaptain: Boolean(invitation.payload?.set_captain),
+          inviteUrl,
+        });
+        emailSent = !!sendResult?.success;
+      } catch (err) {
+        logger.error('[teams/invitations/:id] resend email failed', err);
+      }
     }
 
     return res.status(200).json({

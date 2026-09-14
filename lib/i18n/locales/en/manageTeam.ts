@@ -53,6 +53,10 @@ export default {
   invitationExpiresOn: 'expires on {date}',
   invitationExpired: 'Expired',
   invitationNoEmail: 'No email — share the link manually',
+  invitationViaDiscord:
+    'Sent on Discord — she can answer the bot’s message, or from her player space',
+  invitationNoEmailNoLink:
+    'No email, no link — she will see it in her player space',
   resendInvitation: 'Resend',
   resendInvitationTitle:
     'Send the invitation email again with a new link (the old one stops working)',

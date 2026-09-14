@@ -156,6 +156,13 @@ type SentInvitation = {
   expires_at: string | null;
   expired: boolean;
   has_invite_link: boolean;
+  /**
+   * D'où vient l'invitation (`website`, `discord_bot`…). Lu pour DIRE à la
+   * capitaine par quel canal l'invitée a été jointe : sans lui, une invitation
+   * partie sur Discord s'affichait « à transmettre à la main », alors qu'il n'y
+   * a précisément rien à transmettre.
+   */
+  source: string | null;
 };
 
 /**
@@ -1495,7 +1502,8 @@ export default function PlayerManageTeamScreen() {
                           maxLength={maxLength}
                           value={
                             teamIdentityDrafts[field] ??
-                            ((team?.[field] as string | null) ?? '')
+                            (team?.[field] as string | null) ??
+                            ''
                           }
                           onChange={(e) =>
                             setTeamIdentityDrafts((prev) => ({
@@ -1979,25 +1987,38 @@ export default function PlayerManageTeamScreen() {
                               )}
                             </div>
                             {!invitation.email && (
+                              // TROIS SITUATIONS, TROIS PHRASES. Elles étaient
+                              // dites de la même façon — « à transmettre à la
+                              // main » — alors qu'une seule des trois laisse
+                              // quelque chose à transmettre.
                               <div className="text-xs text-amber-300/80 mt-1">
-                                {t.invitationNoEmail}
+                                {invitation.has_invite_link
+                                  ? t.invitationNoEmail
+                                  : invitation.source === 'discord_bot'
+                                    ? t.invitationViaDiscord
+                                    : t.invitationNoEmailNoLink}
                               </div>
                             )}
                           </div>
                           {canEditRoster && (
                             <div className="flex gap-2 flex-shrink-0">
-                              {invitation.email && (
-                                <button
-                                  onClick={() =>
-                                    handleResendInvitation(invitation)
-                                  }
-                                  disabled={busy}
-                                  title={t.resendInvitationTitle}
-                                  className="px-3 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 text-violet-200 text-xs font-semibold transition disabled:opacity-50"
-                                >
-                                  {t.resendInvitation}
-                                </button>
-                              )}
+                              {/* Plus conditionné à l'email : relancer repousse
+                                  l'expiration ET refait un lien, et seule la
+                                  seconde moitié dépendait d'une adresse. Les
+                                  invitations venues de Discord ou de la banque
+                                  de joueuses n'en ont pas, et n'avaient donc
+                                  aucun moyen d'être prolongées — elles
+                                  expiraient sans recours. */}
+                              <button
+                                onClick={() =>
+                                  handleResendInvitation(invitation)
+                                }
+                                disabled={busy}
+                                title={t.resendInvitationTitle}
+                                className="px-3 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 text-violet-200 text-xs font-semibold transition disabled:opacity-50"
+                              >
+                                {t.resendInvitation}
+                              </button>
                               <button
                                 onClick={() =>
                                   handleCancelInvitation(invitation)

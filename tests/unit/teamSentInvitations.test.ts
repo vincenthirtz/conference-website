@@ -284,6 +284,49 @@ describe('POST /api/teams/invitations/[invitationId] — relance', () => {
     expect(JSON.stringify(stored.payload)).not.toContain(token);
   });
 
+  it('relance une invitation SANS email (Discord, banque de joueuses)', async () => {
+    // Ces invitations-là n'ont ni adresse ni lien : celles créées par le bot
+    // Discord (`/api/bot/v1/teams/:id/invitations`) et par
+    // `invite-free-player`. La route les refusait en 400 NO_INVITE_EMAIL, si
+    // bien qu'elles expiraient sans aucun recours — alors que la moitié utile
+    // d'une relance, repousser l'expiration, ne dépend d'aucune adresse.
+    const row = seedInvitation({
+      source: 'discord_bot',
+      payload: {
+        desired_role: 'player',
+        expires_at: inDays(1),
+        captain_auth_user_id: CAPTAIN_ID,
+        // Ni `invite_email`, ni `invite_token_hash` : c'est tout le cas.
+      },
+    });
+    const oldExpiry = (row.payload as any).expires_at;
+    setAuthUser({ id: CAPTAIN_ID });
+    const res = makeRes();
+
+    await invitationHandler(
+      makeReq({ method: 'POST', query: { invitationId: INVITE_ID } }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    const body = res.body as any;
+    expect(body.status).toBe('resent');
+    // Pas d'adresse, donc pas d'envoi — et surtout pas d'échec pour autant.
+    expect(body.email).toBeNull();
+    expect(body.email_sent).toBe(false);
+    expect(sendTeamInviteLinkEmail).not.toHaveBeenCalled();
+
+    const stored = (store.demandes as any[]).find((d) => d.id === INVITE_ID);
+    expect(Date.parse(stored.payload.expires_at)).toBeGreaterThan(
+      Date.parse(oldExpiry)
+    );
+    // Un lien est bien créé : il est rendu à la capitaine, qui est sur le SITE
+    // et le transmet elle-même. Il ne transite jamais par Discord.
+    const token = body.invite_url.split('/invitation/')[1];
+    expect(stored.payload.invite_token_hash).toBe(hashInviteToken(token));
+    expect(JSON.stringify(stored.payload)).not.toContain(token);
+  });
+
   it('un manager peut relancer une invitation émise par la capitaine', async () => {
     // L'équipe se gère à plusieurs : réserver l'action à l'émetteur laisserait
     // le manager constater un blocage sans pouvoir le lever.
@@ -300,26 +343,16 @@ describe('POST /api/teams/invitations/[invitationId] — relance', () => {
     expect((res.body as any).status).toBe('resent');
   });
 
-  it('400 quand l’invitation n’a pas d’email (rien à relancer)', async () => {
-    seedInvitation({
-      payload: {
-        desired_role: 'player',
-        expires_at: inDays(7),
-        captain_auth_user_id: CAPTAIN_ID,
-      },
-    });
-    setAuthUser({ id: CAPTAIN_ID });
-    const res = makeRes();
-
-    await invitationHandler(
-      makeReq({ method: 'POST', query: { invitationId: INVITE_ID } }),
-      res
-    );
-
-    expect(res.statusCode).toBe(400);
-    expect((res.body as any).code).toBe('NO_INVITE_EMAIL');
-    expect(sendTeamInviteLinkEmail).not.toHaveBeenCalled();
-  });
+  // RÈGLE RETIRÉE, VOLONTAIREMENT : un `400 NO_INVITE_EMAIL` se tenait ici et
+  // refusait toute relance sans adresse. Il partait du principe qu'une relance
+  // EST un renvoi d'email. Mais elle fait deux choses — repousser l'expiration
+  // et refaire un lien — et seule la seconde a besoin d'une adresse pour
+  // voyager. La règle condamnait donc à l'expiration, sans recours, toutes les
+  // invitations nées ailleurs que du formulaire du site : celles du bot Discord
+  // et celles de la banque de joueuses.
+  //
+  // Le cas est désormais couvert par « relance une invitation SANS email »
+  // ci-dessus, qui vérifie qu'elle aboutit ET qu'aucun email ne part.
 
   it('404 pour une invitation d’une autre équipe (pas de fuite d’existence)', async () => {
     seedInvitation({ id: OTHER_INVITE_ID, team_id: OTHER_TEAM_ID });
