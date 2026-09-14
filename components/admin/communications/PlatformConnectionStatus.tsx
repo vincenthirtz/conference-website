@@ -137,7 +137,6 @@ export default function PlatformConnectionStatus({
           {platform.key === 'instagram' ? (
             <>
               {' · '}
-              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
               <a
                 href={INSTAGRAM_AUTHORIZE}
                 className={`underline underline-offset-2 ${
@@ -214,7 +213,6 @@ export default function PlatformConnectionStatus({
       <p className="text-xs text-amber-300">
         {conn?.status === 'expired' ? t.connectionExpired : t.notConnected}{' '}
         {secretSet ? (
-          // eslint-disable-next-line @next/next/no-html-link-for-pages
           <a
             href={INSTAGRAM_AUTHORIZE}
             className="underline underline-offset-2"
