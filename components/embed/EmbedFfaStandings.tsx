@@ -139,7 +139,7 @@ export default function EmbedFfaStandings({
                     <td className="px-3 py-2">
                       <span className="flex items-center gap-2">
                         {s.logoUrl && (
-                          // eslint-disable-next-line @next/next/no-img-element
+                          // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
                           <img
                             src={s.logoUrl}
                             alt=""

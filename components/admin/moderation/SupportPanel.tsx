@@ -140,13 +140,13 @@ export default function SupportPanel() {
   }, [search]);
 
   // Debounce ~300ms : propage la saisie vers le query param `search`.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: debounce piloté par la seule saisie utilisateur ; ajouter search/setFilters réinitialiserait le timer
   useEffect(() => {
     if (searchInput === search) return;
     const t = setTimeout(() => {
       setFilters({ search: searchInput.trim() || null });
     }, 300);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- debounce piloté par la seule saisie utilisateur ; ajouter search/setFilters réinitialiserait le timer
   }, [searchInput]);
 
   // Tout changement de filtre/recherche repart de la première page.

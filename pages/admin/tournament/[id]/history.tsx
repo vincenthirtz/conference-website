@@ -98,10 +98,10 @@ function AdminTournamentHistoryPage(_props: StaffProps) {
     }
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: GARDÉ : exclusion INTENTIONNELLE de entityType/action, appliqués seulement au clic « Filtrer » (fetchLogs les lit via closure au submit) ; les lister rechargerait à chaque frappe. (fetchLogs utilise `fetch` brut, pas adminFetch* : la stabilisation du hook ne change rien ici.)
   useEffect(() => {
     if (!id) return;
     fetchLogs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- GARDÉ : exclusion INTENTIONNELLE de entityType/action, appliqués seulement au clic « Filtrer » (fetchLogs les lit via closure au submit) ; les lister rechargerait à chaque frappe. (fetchLogs utilise `fetch` brut, pas adminFetch* : la stabilisation du hook ne change rien ici.)
   }, [id, limit]);
 
   function handleFilterSubmit(e: React.FormEvent) {

@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
+/* biome-ignore-all lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */
 // components/Home/HomeSupportStrip.tsx
 //
 // Bande "soutiens" de la refonte accueil : sponsors + production + presse

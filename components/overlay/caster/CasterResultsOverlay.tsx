@@ -68,7 +68,7 @@ function ResultTeamLogo({ url, name }: { url: string; name: string }) {
   useEffect(() => setFailed(false), [url]);
   if (url && !failed) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
+      // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
       <img
         className="team-logo"
         src={url}

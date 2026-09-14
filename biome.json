@@ -1,0 +1,56 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "includes": [
+      "**",
+      "!**/.claude",
+      "!**/.history",
+      "!**/.next",
+      "!**/node_modules",
+      "!**/coverage",
+      "!**/test-results",
+      "!**/playwright-report",
+      "!**/public",
+      "!**/next-env.d.ts"
+    ]
+  },
+  "css": { "parser": { "tailwindDirectives": true } },
+  "formatter": { "enabled": false },
+  "assist": { "enabled": false },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "none",
+      "a11y": {
+        "useAltText": "error",
+        "useValidAriaProps": "error",
+        "useValidAriaValues": "error",
+        "noAriaUnsupportedElements": "error",
+        "useAriaPropsForRole": "error"
+      },
+      "correctness": {
+        "useHookAtTopLevel": "error",
+        "useExhaustiveDependencies": {
+          "level": "error",
+          "options": { "reportUnnecessaryDependencies": false }
+        },
+        "useJsxKeyInIterable": "error",
+        "noChildrenProp": "error",
+        "noVoidElementsWithChildren": "error"
+      },
+      "security": {
+        "noDangerouslySetInnerHtmlWithChildren": "error",
+        "noBlankTarget": "error"
+      },
+      "suspicious": {
+        "noDuplicateJsxProps": "error",
+        "noCommentText": "error",
+        "noDocumentImportInPage": "error",
+        "noHeadImportInDocument": "error"
+      },
+      "performance": { "noImgElement": "error" },
+      "style": { "noHeadElement": "error" }
+    }
+  }
+}

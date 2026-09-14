@@ -202,7 +202,7 @@ export default function TeamPicker({
                 >
                   <div className="w-10 h-10 rounded-full bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
                     {team.logo_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
+                      // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
                       <img
                         src={team.logo_url}
                         alt=""

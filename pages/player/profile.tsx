@@ -361,7 +361,7 @@ function PlayerProfile() {
             <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
               <div className="flex items-center gap-4">
                 {avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+                  // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
                   <img
                     src={avatarUrl}
                     alt={t.avatarAlt}

@@ -107,11 +107,11 @@ function AdminStageHistoryPage(_props: StaffProps) {
     }
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dépendances choisies à dessein (exclusion reprise d’ESLint)
   useEffect(() => {
     if (!stageId) return;
     fetchLogs();
     // Rechargement volontairement piloté par stageId/limit seuls ; fetchLogs lit aussi les filtres (entityType/action) appliqués via un bouton dédié, pas en réactif.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stageId, limit]);
 
   // Charge le type de phase + le tournoi parent pour la barre d'onglets.

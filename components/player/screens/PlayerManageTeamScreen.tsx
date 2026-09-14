@@ -1080,7 +1080,7 @@ export default function PlayerManageTeamScreen() {
           {/* Team header */}
           <div className="flex items-center gap-4 mb-8">
             {team.logo_url && (
-              // eslint-disable-next-line @next/next/no-img-element
+              // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
               <img
                 src={team.logo_url}
                 alt={team.name}

@@ -19,7 +19,7 @@
 // chose (cf. `utils/social/markdown.ts`) : c'est l'aperçu par cible du
 // composeur, en dessous, qui montre ce qui part vraiment ailleurs.
 
-import { useCallback, useId, useRef, useState } from 'react';
+import { useCallback, useId, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -121,8 +121,10 @@ export default function MarkdownEditor({
     [onChange, value]
   );
 
-  const actions: Array<{ key: string; label: string; wrap: Wrap; hint: string }> =
-    [
+  const actions = useMemo<
+    Array<{ key: string; label: string; wrap: Wrap; hint: string }>
+  >(
+    () => [
       {
         key: 'bold',
         label: 'B',
@@ -159,7 +161,9 @@ export default function MarkdownEditor({
         hint: `${labels.link} (⌘K)`,
         wrap: { before: '[', after: '](https://)', sample: labels.link },
       },
-    ];
+    ],
+    [labels]
+  );
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

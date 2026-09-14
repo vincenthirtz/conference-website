@@ -101,6 +101,7 @@ export default function RequestCaptainPage() {
     [t]
   );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dépendances choisies à dessein (exclusion reprise d’ESLint)
   useEffect(() => {
     if (!ready || !token) return;
     let cancelled = false;
@@ -129,7 +130,6 @@ export default function RequestCaptainPage() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, token, router, adminFetchJson]);
 
   // Recharge la liste d'equipes quand la recherche (debouncee) change.

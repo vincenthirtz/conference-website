@@ -843,6 +843,7 @@ function AssociationPage({
                       <div className="flex flex-wrap gap-1.5">
                         {members.map((member) => {
                           const content = (
+                            // biome-ignore lint/correctness/useJsxKeyInIterable: faux positif — la `key` est posée sur l’élément qui enveloppe `inner` / `content`
                             <span className="inline-flex items-center gap-2">
                               {member.image_url ? (
                                 <Image

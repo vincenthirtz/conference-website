@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
+/* biome-ignore-all lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */
 // components/tournament/landing/SponsorsStrip.tsx
 //
 // Partenaires : logos monochromes → couleur au survol. Masquée si aucun
@@ -29,6 +29,7 @@ export default function SponsorsStrip({
       <Reveal className="flex flex-wrap items-center justify-center gap-x-8 gap-y-6 rounded-3xl border border-white/10 bg-white/[0.02] px-6 py-10 sm:gap-x-14">
         {partners.map((p) => {
           const inner = p.logoUrl ? (
+            // biome-ignore lint/correctness/useJsxKeyInIterable: faux positif — la `key` est posée sur l’élément qui enveloppe `inner` / `content`
             <img
               src={p.logoUrl}
               alt={p.name}
@@ -38,6 +39,7 @@ export default function SponsorsStrip({
               className="block max-h-12 w-auto object-contain opacity-60 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0"
             />
           ) : (
+            // biome-ignore lint/correctness/useJsxKeyInIterable: faux positif — la `key` est posée sur l’élément qui enveloppe `inner` / `content`
             <span className="text-lg font-bold uppercase tracking-wider text-white/60 transition-colors hover:text-white">
               {p.name}
             </span>

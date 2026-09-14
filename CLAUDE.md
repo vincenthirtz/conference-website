@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev              # Start development server (Next.js)
 npm run build            # Production build
 npm run start            # Start production server
-npm run lint             # ESLint with auto-fix
+npm run lint             # Biome lint (hooks, a11y, Next) — code mort via tsconfig strict
 npm run format           # Prettier write
 npm run format:check     # Prettier check
 npm run test             # Playwright e2e tests (95 specs)

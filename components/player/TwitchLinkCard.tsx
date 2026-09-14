@@ -72,6 +72,7 @@ export default function TwitchLinkCard({ loginPath = '/login' }: Props) {
 
   // Retour du flux OAuth : un toast, puis on nettoie le paramètre pour qu'un
   // rafraîchissement ne le rejoue pas.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dépendances choisies à dessein (exclusion reprise d’ESLint)
   useEffect(() => {
     const raw = router.query.twitch;
     const value = typeof raw === 'string' ? raw : null;
@@ -88,7 +89,6 @@ export default function TwitchLinkCard({ loginPath = '/login' }: Props) {
     });
     void load();
     // `router.query` suffit : on ne veut réagir qu'à l'arrivée du paramètre.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.query.twitch]);
 
   const onUnlink = async () => {

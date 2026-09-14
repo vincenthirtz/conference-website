@@ -31,6 +31,7 @@ export default function CastMemberStaffPicker({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: chargement de la liste des casters au montage uniquement (indépendant des props ; garde `cancelled` anti-race). adminFetchJson/t sont désormais stables mais on garde `[]` pour rendre l'intention « once » explicite.
   useEffect(() => {
     let cancelled = false;
 
@@ -58,7 +59,6 @@ export default function CastMemberStaffPicker({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement de la liste des casters au montage uniquement (indépendant des props ; garde `cancelled` anti-race). adminFetchJson/t sont désormais stables mais on garde `[]` pour rendre l'intention « once » explicite.
   }, []);
 
   const selectableCasters = useMemo(() => {

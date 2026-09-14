@@ -94,7 +94,7 @@ export function DraftBoard({ state }: Props) {
                     {hero ? (
                       <>
                         {hero.icon_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
+                          // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
                           <img
                             src={hero.icon_url}
                             alt=""

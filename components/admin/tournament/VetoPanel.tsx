@@ -644,7 +644,7 @@ export default function VetoPanel() {
                           </div>
                           {mapData?.image_url ? (
                             <div className="w-full h-28 bg-gradient-to-b from-emerald-900/20 to-transparent">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              {/* biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */}
                               <img
                                 src={mapData.image_url}
                                 alt={pm.map_name}
@@ -728,7 +728,7 @@ export default function VetoPanel() {
                           >
                             {m.image_url ? (
                               <div className="w-full h-24 bg-gradient-to-b from-purple-900/20 to-transparent">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                {/* biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */}
                                 <img
                                   src={m.image_url}
                                   alt={m.map_name}

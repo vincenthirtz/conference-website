@@ -107,7 +107,7 @@ function BoardLogo({ url, name }: { url: string | null; name: string }) {
   if (url && !failed) {
     return (
       <span className="logo">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {/* biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */}
         <img src={url} alt="" onError={() => setFailed(true)} />
       </span>
     );

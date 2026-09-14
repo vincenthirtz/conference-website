@@ -35,7 +35,7 @@ function TeamLogo({ url, name }: { url: string; name: string }) {
   useEffect(() => setFailed(false), [url]);
   if (url && !failed) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
+      // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
       <img
         className="team-logo"
         src={url}
@@ -68,7 +68,7 @@ function OwBanPill({
   return (
     <div className="ow-ban">
       {portrait && !failed ? (
-        // eslint-disable-next-line @next/next/no-img-element
+        // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
         <img
           className="ow-ban-portrait"
           src={portrait}
@@ -90,7 +90,7 @@ function OwTeamLogo({ url }: { url: string }) {
   useEffect(() => setFailed(false), [url]);
   if (!url || failed) return null;
   return (
-    // eslint-disable-next-line @next/next/no-img-element
+    // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
     <img
       className="ow-team-id-logo"
       src={url}

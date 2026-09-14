@@ -90,7 +90,7 @@ export function HeroPool({
               } ${isBusy ? 'opacity-60' : ''} disabled:cursor-not-allowed`}
             >
               {hero.icon_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
+                // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
                 <img
                   src={hero.icon_url}
                   alt={hero.name}

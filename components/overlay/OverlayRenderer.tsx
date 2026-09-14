@@ -113,7 +113,7 @@ function TeamLogo({
   const dim = size === 'lg' ? 'h-24 w-24' : 'h-14 w-14';
   if (logoUrl) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
+      // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
       <img
         src={logoUrl}
         alt={logoLabel}
@@ -277,7 +277,7 @@ function CenterCard({
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center px-16 text-center">
       {branding?.logoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
+        // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
         <img
           src={branding.logoUrl}
           alt={branding.name}

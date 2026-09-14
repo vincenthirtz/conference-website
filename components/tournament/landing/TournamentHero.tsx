@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
+/* biome-ignore-all lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */
 // components/tournament/landing/TournamentHero.tsx
 //
 // Hero premium plein écran : artwork (banner_url) + overlay + mesh animé +

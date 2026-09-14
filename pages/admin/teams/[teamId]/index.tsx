@@ -188,7 +188,7 @@ function AdminTeamDetailPage(_props: StaffProps) {
               <>
                 <div className="flex items-center gap-4 flex-wrap">
                   {team.logo_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
+                    // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
                     <img
                       src={team.logo_url}
                       alt={team.name}

@@ -35,7 +35,7 @@ export default function ProfileSummaryCard({ user, displayName }: Props) {
 
       <div className="flex items-center gap-3 mb-4">
         {avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
+          // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
           <img
             src={avatarUrl}
             alt="Avatar"

@@ -110,9 +110,9 @@ export default function PlayerRequestsPage() {
   const loading = authLoading || teamLoading;
 
   // Surface a connection error if the shared team fetch failed.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dépendances choisies à dessein (exclusion reprise d’ESLint)
   useEffect(() => {
     if (teamError) setError(t.connectionError);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamError]);
 
   // Derive the transfer-target roster (captains/managers can propose a

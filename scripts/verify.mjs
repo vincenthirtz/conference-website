@@ -6,8 +6,12 @@
 //
 // Pourquoi : elles ne se parlent pas. En série, on payait la somme des trois
 // alors qu'elles tiennent sur des cœurs différents ; le mur, c'est désormais la
-// plus lente (les tests). ESLint garde son cache (`.eslintcache`) : sur un
-// second passage, il ne relit que les fichiers touchés.
+// plus lente (les tests).
+//
+// Le lint est Biome (Rust, ~2 s sur tout le dépôt, sans cache) : ESLint prenait
+// 27 s à chaud pour ne bloquer aucune erreur. Les contrôles « code mort » qu'il
+// portait (variables, imports, paramètres inutilisés…) sont passés dans
+// `tsconfig.json`, donc dans le typecheck.
 //
 // Sur le bridage des workers — MESURÉ, ne pas refaire l'erreur : plafonner
 // vitest aux cœurs physiques (2 workers au lieu de son défaut) fait passer le
@@ -37,7 +41,7 @@ const serial = process.argv.includes('--serial');
 const LOGICAL = os.availableParallelism?.() ?? os.cpus().length;
 
 // Aucun plafond par défaut : vitest gère son propre pool mieux que nous.
-// VERIFY_JOBS=<n> impose un budget total (tsc et eslint prennent 1 thread
+// VERIFY_JOBS=<n> impose un budget total (tsc et biome prennent 1 thread
 // chacun, vitest reçoit le reste) — utile si on compile ou joue en parallèle.
 const BUDGET = Number(process.env.VERIFY_JOBS) || 0;
 const VITEST_WORKERS = BUDGET ? Math.max(1, BUDGET - 2) : 0;
@@ -62,7 +66,7 @@ const TASKS = [
   {
     name: 'lint',
     cmd: 'npx',
-    args: ['eslint', '.', '--fix', '--cache', '--cache-location', '.eslintcache'],
+    args: ['biome', 'lint', '.'],
   },
 ];
 

@@ -126,7 +126,7 @@ export default function TeamCard({
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             {team.logo_url && (
-              // eslint-disable-next-line @next/next/no-img-element
+              // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
               <img
                 src={team.logo_url}
                 alt={team.name}

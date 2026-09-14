@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
+/* biome-ignore-all lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */
 // components/tournament/landing/TeamRoster.tsx
 //
 // Roster premium des équipes engagées. Cartes avec logo, hover animé et lien

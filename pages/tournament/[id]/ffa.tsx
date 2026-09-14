@@ -189,7 +189,7 @@ export default function TournamentFfaPage({
                     <td className="px-4 py-3">
                       <span className="flex items-center gap-3">
                         {row.logoUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
+                          // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
                           <img
                             src={row.logoUrl}
                             alt=""

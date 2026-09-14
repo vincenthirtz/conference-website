@@ -104,6 +104,7 @@ export default function PartnersListPanel() {
   }, [searchFilter]);
 
   // Debounce ~300ms : propage la saisie vers le query param `search`
+  // biome-ignore lint/correctness/useExhaustiveDependencies: debounce piloté par la seule saisie utilisateur ; ajouter searchFilter/setFilters/resetOffset réinitialiserait le timer
   useEffect(() => {
     if (searchInput === searchFilter) return;
     const t = setTimeout(() => {
@@ -111,7 +112,6 @@ export default function PartnersListPanel() {
       setFilters({ search: searchInput.trim() || null });
     }, 300);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- debounce piloté par la seule saisie utilisateur ; ajouter searchFilter/setFilters/resetOffset réinitialiserait le timer
   }, [searchInput]);
 
   // Tout changement de filtre serveur revient à la première page
@@ -332,7 +332,7 @@ export default function PartnersListPanel() {
                 {/* Logo or icon */}
                 <div className="flex-shrink-0">
                   {p.logo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
+                    // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
                     <img
                       src={p.logo_url}
                       alt={p.name}

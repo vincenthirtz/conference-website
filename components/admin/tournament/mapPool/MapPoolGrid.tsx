@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
+/* biome-ignore-all lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */
 // components/admin/tournament/mapPool/MapPoolGrid.tsx
 //
 // Grille des cartes du pool édité, avec édition et suppression par carte.

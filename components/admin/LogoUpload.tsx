@@ -220,7 +220,7 @@ export default function LogoUpload({
       {value && !error && (
         <div className="flex items-center gap-3 mt-1">
           {!imgError && (
-            // eslint-disable-next-line @next/next/no-img-element
+            // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
             <img
               src={value}
               alt={t.previewAlt}

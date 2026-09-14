@@ -1595,7 +1595,7 @@ function MemberCard({
     >
       <div className="flex-shrink-0">
         {avatar ? (
-          // eslint-disable-next-line @next/next/no-img-element
+          // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
           <img
             src={avatar}
             alt=""
@@ -1718,7 +1718,7 @@ function SponsorTile({ sponsor }: { sponsor: Sponsor }) {
   const inner = (
     <div className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 px-3 py-2 hover:border-white/30 transition-colors">
       {sponsor.logo_url && safeHref(sponsor.logo_url) ? (
-        // eslint-disable-next-line @next/next/no-img-element
+        // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
         <img
           src={sponsor.logo_url}
           alt={sponsor.name}

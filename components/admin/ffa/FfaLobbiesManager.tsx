@@ -448,7 +448,7 @@ function FfaLobbiesManager({
                             <td className="py-2 pr-2">
                               <span className="flex items-center gap-2">
                                 {entry.teamLogoUrl && (
-                                  // eslint-disable-next-line @next/next/no-img-element
+                                  // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
                                   <img
                                     src={entry.teamLogoUrl}
                                     alt=""
@@ -625,7 +625,7 @@ function FfaLobbiesManager({
                       <td className="py-2">
                         <span className="flex items-center gap-2">
                           {s.teamLogoUrl && (
-                            // eslint-disable-next-line @next/next/no-img-element
+                            // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
                             <img
                               src={s.teamLogoUrl}
                               alt=""

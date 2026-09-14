@@ -207,11 +207,10 @@ function Media({ url, kind }: { url: string; kind: 'image' | 'video' | null }) {
   // l'optimiseur exigerait de déclarer ce domaine dans `remotePatterns` — un
   // hôte manquant y rend l'image invisible sans la moindre erreur serveur.
   //
-  // La directive est collée à la balise, PAS avant le `return` : `eslint .`
-  // tourne avec `--fix` dans ce dépôt, et une directive qui ne couvre pas la
-  // bonne ligne est jugée inutilisée, donc SUPPRIMÉE au prochain lint.
+  // La directive est collée à la balise, PAS avant le `return` : une
+  // suppression Biome ne couvre que le nœud qui la suit immédiatement.
   return (
-    // eslint-disable-next-line @next/next/no-img-element
+    // biome-ignore lint/performance/noImgElement: URL de bucket de stockage, hors remotePatterns (voir ci-dessus)
     <img
       aria-hidden
       alt=""

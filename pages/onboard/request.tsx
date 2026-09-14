@@ -199,11 +199,11 @@ function OnboardRequestPage() {
   const turnstileMissing = !siteKey;
 
   // Pre-fill email with the Discord OAuth email if available — easy QoL win.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dépendances choisies à dessein (exclusion reprise d’ESLint)
   useEffect(() => {
     if (user?.email && !email) {
       setEmail(user.email);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const handleSubmit = useCallback(

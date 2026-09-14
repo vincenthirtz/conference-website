@@ -54,7 +54,7 @@ function PressSection(): JSX.Element {
             className="press-card card-brand rounded-2xl bg-white/5 p-5 flex flex-col gap-3 transition-all duration-300 w-full max-w-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]"
           >
             {item.logo ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
+              /* biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */
               <img
                 src={item.logo}
                 alt={item.source}

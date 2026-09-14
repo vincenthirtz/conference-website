@@ -355,9 +355,9 @@ function Comments({ newsId }: { newsId: string }) {
     }
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dépendances choisies à dessein (exclusion reprise d’ESLint)
   useEffect(() => {
     loadComments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newsId]);
 
   const handleSubmit = async (e: React.FormEvent) => {

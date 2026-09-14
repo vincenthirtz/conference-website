@@ -63,9 +63,9 @@ export default function MapStatsPanel() {
   const [limit] = useState(100);
   const [offset, setOffset] = useState(0);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refetch piloté par les seuls filtres/offset listés ; `searchMap` (réactif) est volontairement exclu (appliqué via handleFilterSubmit). adminFetch* est désormais stable mais fetchStats reste hors deps pour ne pas déclencher sur `searchMap`.
   useEffect(() => {
     fetchStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch piloté par les seuls filtres/offset listés ; `searchMap` (réactif) est volontairement exclu (appliqué via handleFilterSubmit). adminFetch* est désormais stable mais fetchStats reste hors deps pour ne pas déclencher sur `searchMap`.
   }, [offset, sortBy, sortDir, minMatches]);
 
   async function fetchStats() {

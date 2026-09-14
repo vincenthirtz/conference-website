@@ -165,7 +165,7 @@ function TeamCard({
         {team.logoUrl && (
           // Logo décoratif à côté du nom ; next/image exigerait de déclarer
           // chaque domaine de stockage, pour une page qui ne fait qu'imprimer.
-          // eslint-disable-next-line @next/next/no-img-element
+          // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
           <img
             src={team.logoUrl}
             alt=""

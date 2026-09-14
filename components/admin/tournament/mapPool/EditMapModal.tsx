@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
+/* biome-ignore-all lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */
 // components/admin/tournament/mapPool/EditMapModal.tsx
 //
 // Édition d'une carte du pool : nom, type, visuel. Extrait de

@@ -265,6 +265,7 @@ export default function PublicCreateTeamPage() {
       .catch(() => {});
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: un seul captcha au montage ; les suivants sont demandés explicitement (échec, renvoi)
   useEffect(() => {
     refreshCaptcha();
   }, []);

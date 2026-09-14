@@ -910,7 +910,7 @@ function RatingRow({ row }: { row: RatingBreakdownRow }) {
       <td className="py-2 pr-3">
         <div className="flex items-center gap-2">
           {row.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
+            // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
             <img
               src={row.logoUrl}
               alt=""

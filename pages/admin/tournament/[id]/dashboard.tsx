@@ -434,11 +434,11 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
   // Chargement mono-shot des colonnes d'inscription + des équipes (le payload
   // dashboard ne les porte pas). Borné à [tournamentId] : les fetchers sont
   // stables (adminFetch* à identité figée), aucun state mutable listé.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: chargement initial mono-shot borné à [tournamentId]
   useEffect(() => {
     if (!tournamentId) return;
     fetchRegistrationFields();
     fetchTournamentTeams();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement initial mono-shot borné à [tournamentId]
   }, [tournamentId]);
 
   /* -----------------------------------------------------------

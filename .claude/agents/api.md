@@ -43,7 +43,7 @@ You are the **API** specialist for the `conference-website` repo (Next.js 16, Pa
 
 ```bash
 npm run dev                                          # Local dev server
-npm run lint                                         # ESLint (auto-fix)
+npm run lint                                         # Biome lint (hooks, a11y, Next)
 npm run format:check                                 # Prettier check
 npm run test:unit                                    # Vitest unit tests
 npm run test                                         # Playwright e2e (needs .env.local)

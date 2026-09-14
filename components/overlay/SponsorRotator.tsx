@@ -63,7 +63,7 @@ export function SponsorRotator({
           className="sponsor-fade flex items-center justify-center"
         >
           {current.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
+            // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
             <img
               src={current.logoUrl}
               alt={current.name}

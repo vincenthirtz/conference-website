@@ -66,7 +66,7 @@ Reuse before inventing:
 
 ```bash
 npm run dev                                          # Local dev (http://localhost:3000)
-npm run lint                                         # ESLint auto-fix
+npm run lint                                         # Biome lint (hooks, a11y, Next)
 npm run format:check                                 # Prettier check
 npm run test:unit                                    # Vitest
 npm run test                                         # Playwright e2e (full)

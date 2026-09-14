@@ -236,7 +236,7 @@ function PartnersPage({ partners }: PartnersPageProps) {
                         </div>
                         {partner.logo_url && (
                           <div className="mt-3 flex items-center justify-center rounded-xl border border-white/10 bg-white/5 p-3">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            {/* biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */}
                             <img
                               src={partner.logo_url}
                               alt={format(t.logoAlt, { name: partner.name })}

@@ -143,6 +143,7 @@ function BroadcastLivePage({ staff }: StaffProps) {
   // Retour du flux OAuth Twitch : live.tsx peut recevoir ?twitch=connected|error.
   // On affiche le toast correspondant puis on NETTOIE le query param (shallow,
   // sans re-fetch SSR) pour ne pas rejouer le toast au refresh.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dépendances choisies à dessein (exclusion reprise d’ESLint)
   useEffect(() => {
     if (!router.isReady) return;
     const twitch = router.query.twitch;
@@ -155,7 +156,6 @@ function BroadcastLivePage({ staff }: StaffProps) {
     router.replace({ pathname: router.pathname, query: rest }, undefined, {
       shallow: true,
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady, router.query.twitch]);
 
   const fetchState = useCallback(async () => {

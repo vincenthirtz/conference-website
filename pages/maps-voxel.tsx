@@ -96,7 +96,7 @@ function MapCard({ map, t }: { map: VoxelMap; t: Dict }) {
     >
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-black/40">
         {/* SVG statique déjà rendu : pas de next/image (il n'optimise pas le SVG). */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {/* biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */}
         <img
           src={`/img/maps/overwatch/${map.slug}.svg`}
           alt={map.name}

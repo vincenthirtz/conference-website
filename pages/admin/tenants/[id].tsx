@@ -593,7 +593,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                           data-testid="tenant-branding-preview"
                         >
                           {editLogoUrl.trim() ? (
-                            // eslint-disable-next-line @next/next/no-img-element
+                            // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
                             <img
                               src={editLogoUrl.trim()}
                               alt={t.previewLogoAlt}

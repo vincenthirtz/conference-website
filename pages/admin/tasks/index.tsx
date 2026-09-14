@@ -908,6 +908,7 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
   // Ouverture différée d'une carte arrivée depuis « Mes tâches » : une fois le
   // détail du board cible chargé, on ouvre la carte correspondante (puis on
   // retombe silencieusement si elle n'existe plus).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dépendances choisies à dessein (exclusion reprise d’ESLint)
   useEffect(() => {
     if (!pendingOpenCardId || !detail || detail.id !== activeBoardId) return;
     for (const col of detail.columns) {
@@ -918,12 +919,12 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
       }
     }
     setPendingOpenCardId(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detail, pendingOpenCardId, activeBoardId]);
 
   // Reflect the active board in the URL (?board=) — shallow, no reload — so a
   // refresh or shared link reopens the same board. Deps intentionally limited
   // to activeBoardId to avoid re-fetching the board list on URL changes.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dépendances choisies à dessein (exclusion reprise d’ESLint)
   useEffect(() => {
     if (!activeBoardId || router.query.board === activeBoardId) return;
     router.replace(
@@ -934,7 +935,6 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
       undefined,
       { shallow: true }
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBoardId]);
 
   // Liste du staff (assignation) — via le tenant actif.

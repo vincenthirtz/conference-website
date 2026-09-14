@@ -449,7 +449,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
           <div className="relative flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-4 min-w-0">
               {profile?.avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
+                // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
                 <img
                   src={profile.avatar_url}
                   alt={t.avatarAlt}

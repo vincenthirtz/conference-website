@@ -128,7 +128,7 @@ function BanSelect({
   return (
     <div className="flex items-center gap-2">
       {b?.portrait ? (
-        // eslint-disable-next-line @next/next/no-img-element -- portrait externe (CDN Blizzard), pas d'optimisation next/image nécessaire
+        // biome-ignore lint/performance/noImgElement: portrait externe (CDN Blizzard), pas d'optimisation next/image nécessaire
         <img
           src={b.portrait}
           alt=""

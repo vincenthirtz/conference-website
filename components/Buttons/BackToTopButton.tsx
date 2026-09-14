@@ -72,7 +72,7 @@ const BackToTopButton: React.FC = () => {
           déjà le bouton. L'ancien « Back to top » codé en dur masquait le
           texte français et restait en anglais quelle que soit la langue. Le
           logo est décoratif — son alt ajoutait « Overwatch logo » au nom. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {/* biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */}
       <img
         src={OVERWATCH_LOGO}
         alt=""

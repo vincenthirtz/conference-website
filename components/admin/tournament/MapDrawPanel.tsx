@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
+/* biome-ignore-all lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */
 // components/admin/tournament/MapDrawPanel.tsx
 // Tournament "map draw" panel (random BO3/BO5 map draw, 3 choices per slot,
 // PDF export). Extracted from the former /admin/tournament/[id]/map-draw page;

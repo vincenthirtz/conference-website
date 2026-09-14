@@ -333,6 +333,7 @@ export function useTwitchChat() {
   // Auto-connexion au chargement quand une chaîne est déjà connectée côté
   // serveur (même posture que l'app desktop : Twitch connecté ⇒ chat connecté).
   const autoConnectedRef = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dépendances choisies à dessein (exclusion reprise d’ESLint)
   useEffect(() => {
     if (autoConnectedRef.current) return;
     autoConnectedRef.current = true;
@@ -344,7 +345,6 @@ export function useTwitchChat() {
       }
     })();
     // connect/loadConnection sont stables ; l'effet ne doit tourner qu'une fois.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // --- EventSub -------------------------------------------------------------

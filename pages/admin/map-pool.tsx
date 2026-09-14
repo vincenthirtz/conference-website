@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
+/* biome-ignore-all lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */
 // pages/admin/map-pool.tsx
 // Catalogue de maps GLOBAL au tenant (tenant_map_pool), éditable, un onglet par jeu.
 // Miroir visuel de pages/admin/tournament/[id]/maps.tsx mais sans tournamentId :

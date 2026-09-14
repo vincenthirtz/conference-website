@@ -60,7 +60,7 @@ export default function DirectoryPlayerCard({
           className="group flex min-w-0 items-center gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60"
         >
           {player.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
+            // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
             <img
               src={player.avatarUrl}
               alt=""

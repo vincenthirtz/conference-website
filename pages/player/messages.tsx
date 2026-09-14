@@ -128,7 +128,7 @@ export default function MessagesPage() {
   // for conversation A can't clobber the freshly-opened conversation B.
   const activeRequestRef = useRef<string | null>(null);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
@@ -169,12 +169,12 @@ export default function MessagesPage() {
   }, [ready, canManage, loadConversations]);
 
   // Open conversation from URL query
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dépendances choisies à dessein (exclusion reprise d’ESLint)
   useEffect(() => {
     const convId = router.query.conv as string;
     if (convId && ready && canManage) {
       openConversation(convId);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.query.conv, ready, canManage]);
 
   // Focus management on view transitions (keyboard / screen-reader users).
@@ -253,7 +253,13 @@ export default function MessagesPage() {
     } catch (err) {
       logger.error('[messages] realtime reload error:', err);
     }
-  }, [activeConvId, adminFetchJson, loadConversations, withTeam]);
+  }, [
+    activeConvId,
+    adminFetchJson,
+    loadConversations,
+    scrollToBottom,
+    withTeam,
+  ]);
 
   // Subscribe to demandes targeting the captain's team. Postgres only
   // gives us coarse filtering on top-level columns, so we further narrow
@@ -315,10 +321,10 @@ export default function MessagesPage() {
   // Debounce the team search input so we fire at most one /api/teams request
   // per 300ms pause, instead of one per keystroke.
   const debouncedTeamSearch = useDebounce(teamSearch, 300);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dépendances choisies à dessein (exclusion reprise d’ESLint)
   useEffect(() => {
     if (!showNewConv) return;
     loadTeams(debouncedTeamSearch);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedTeamSearch, showNewConv]);
 
   const handleNewConversation = () => {
@@ -492,7 +498,7 @@ export default function MessagesPage() {
               {activeConvId && otherTeam && (
                 <div className="flex items-center gap-2">
                   {otherTeam.logo_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
+                    // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
                     <img
                       src={otherTeam.logo_url}
                       alt=""

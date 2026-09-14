@@ -22,6 +22,7 @@ export default function DiscordMemberRedirect() {
   // donc offrir la sortie. Renseigné avec la destination déjà validée.
   const [backHref, setBackHref] = useState('/');
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dépendances choisies à dessein (exclusion reprise d’ESLint)
   useEffect(() => {
     const ensureRole = async () => {
       try {
@@ -156,7 +157,6 @@ export default function DiscordMemberRedirect() {
     };
 
     ensureRole();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   return (

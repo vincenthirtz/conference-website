@@ -90,7 +90,7 @@ function TeamLogo({
 }) {
   if (logoUrl) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
+      // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
       <img
         src={logoUrl}
         alt={name ?? ''}

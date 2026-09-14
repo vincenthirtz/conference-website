@@ -117,9 +117,9 @@ export default function TeamStatsPanel() {
     fetchTournaments();
   }, [fetchTournaments]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refetch piloté par les seuls filtres/offset listés ; `search` (réactif) est volontairement exclu (appliqué via handleFilterSubmit). adminFetch* est désormais stable mais fetchStats reste hors deps pour ne pas déclencher sur `search`.
   useEffect(() => {
     fetchStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch piloté par les seuls filtres/offset listés ; `search` (réactif) est volontairement exclu (appliqué via handleFilterSubmit). adminFetch* est désormais stable mais fetchStats reste hors deps pour ne pas déclencher sur `search`.
   }, [offset, tournamentId, sortBy, sortDir, minMatches]);
 
   async function fetchStats() {

@@ -61,7 +61,7 @@ export function useAdminFetch(options: UseAdminFetchOptions = {}): AdminFetchApi
   // à `adminFetch`/`adminFetchJson` d'avoir des deps VIDES → identité STABLE
   // sur toute la durée de vie du composant. Sans ça, l'identité changeait à
   // chaque changement de `router` (hydratation, query), forçant les 91
-  // consommateurs à des `eslint-disable react-hooks/exhaustive-deps` (cf. R12)
+  // consommateurs à des `biome-ignore lint/correctness/useExhaustiveDependencies` (cf. R12)
   // et exposant à des refetch parasites. Le comportement (redirect 401 vers le
   // loginPath courant) est identique — on lit toujours la valeur la plus récente.
   const routerRef = useRef(router);

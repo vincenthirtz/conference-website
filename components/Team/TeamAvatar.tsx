@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
+/* biome-ignore-all lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */
 // components/Team/TeamAvatar.tsx
 //
 // La pastille d'une équipe : son logo, ou son monogramme quand elle n'en a pas.

@@ -100,7 +100,7 @@ function ScrimLogo({ team }: { team: ScrimView['team1'] }) {
   useEffect(() => setFailed(false), [url]);
   if (url && !failed) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
+      // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
       <img className="logo" src={url} alt="" onError={() => setFailed(true)} />
     );
   }

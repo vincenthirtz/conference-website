@@ -254,7 +254,7 @@ function AdminEditPartnerPage(_props: Props) {
                   />
                   {form.logoUrl && (
                     <div className="mt-2 p-2 bg-white/5 rounded-lg border border-neutral-700">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      {/* biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */}
                       <img
                         src={form.logoUrl}
                         alt={t.logoPreviewAlt}

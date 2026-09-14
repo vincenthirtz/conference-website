@@ -142,7 +142,7 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
                     <div className="flex -space-x-2">
                       {heroes.slice(0, 5).map((hero) =>
                         hero.icon ? (
-                          // eslint-disable-next-line @next/next/no-img-element
+                          // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
                           <img
                             key={hero.name}
                             src={hero.icon}

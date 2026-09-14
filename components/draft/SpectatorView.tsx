@@ -66,7 +66,7 @@ function PickSlot({
       } bg-neutral-950/80`}
     >
       {hero?.image_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
+        // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
         <img
           src={hero.image_url}
           alt=""
@@ -125,7 +125,7 @@ function BanSlot({
       }
     >
       {hero?.icon_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
+        // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
         <img
           src={hero.icon_url}
           alt={hero.name}

@@ -545,7 +545,7 @@ export default function TournamentMapsPage({
                               échoue, la tuile reste présentable sans JS. */}
                           <div className="relative aspect-[16/10] w-full bg-gradient-to-br from-purple-900/40 to-black/50">
                             {map.image && (
-                              // eslint-disable-next-line @next/next/no-img-element
+                              // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
                               <img
                                 src={map.image}
                                 alt={map.name}

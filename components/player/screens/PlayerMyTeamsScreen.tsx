@@ -60,7 +60,7 @@ function TeamCardRow({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           {row.team.logoUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
+            // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
             <img
               src={row.team.logoUrl}
               alt=""

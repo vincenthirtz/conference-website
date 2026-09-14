@@ -164,7 +164,7 @@ export default function BriefingPanel({ matchId, accessToken }: Props) {
             >
               <div className="flex items-center gap-2 mb-2">
                 {team.logoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+                  // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
                   <img
                     src={team.logoUrl}
                     alt=""

@@ -83,7 +83,7 @@ Explicit camelCase describing the content. NEVER `label1`, `text2`, `str`. Prefe
 cd /Users/Alicia/Documents/Vincent/conference-website
 python3 -c "import json;json.load(open('lib/i18n/locales/fr.json'));json.load(open('lib/i18n/locales/en.json'));print('json ok')"
 npx tsc --noEmit          # MUST be clean — parity guard + typing
-npx eslint <changed files> --fix   # match Prettier/ESLint
+npx biome lint <changed files>     # + npx prettier --write <changed files>
 ```
 
 Fix everything until `tsc --noEmit` passes with zero errors. A parity-guard error (`Type ... is not assignable` in parity.ts, or a missing property on the fr/en object) means a key exists on one side only — reconcile it.

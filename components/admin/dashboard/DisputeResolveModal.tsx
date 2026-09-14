@@ -624,7 +624,7 @@ function EvidenceRow({
           rel="noopener noreferrer"
           className="shrink-0 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {/* biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */}
           <img
             src={item.signedUrl}
             alt={format(t.evidenceImgAlt, { side: sideLabel })}

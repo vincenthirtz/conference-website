@@ -108,7 +108,6 @@ export default function TiktokMirrorCard({ t }: { t: Dict }) {
               connecté : une session révoquée côté plateforme ne se voit pas à
               l'échéance du jeton (cf. Instagram, 2026-09-11). */}
           {' · '}
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a
             href="/api/admin/tiktok/authorize"
             className="text-neutral-400 underline underline-offset-2 hover:text-neutral-200"
@@ -125,7 +124,6 @@ export default function TiktokMirrorCard({ t }: { t: Dict }) {
                   répond par une redirection 302 vers l'écran de consentement
                   TikTok. Une navigation côté client de Next resterait dans
                   l'app et n'irait nulle part. */}
-              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
               <a
                 href="/api/admin/tiktok/authorize"
                 className="underline underline-offset-2"

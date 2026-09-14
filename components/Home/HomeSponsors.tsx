@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
+/* biome-ignore-all lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */
 import Link from 'next/link';
 import type { JSX } from 'react';
 import Heading from '@/components/Typography/heading';

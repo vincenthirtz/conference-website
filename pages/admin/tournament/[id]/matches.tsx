@@ -366,10 +366,10 @@ function AdminTournamentMatchesPage(_props: StaffProps) {
     setFiltersHydrated(true);
   }, [router.isReady, router.query.stageId]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: GARDÉ : deps curées à dessein. `search` est exclu (appliqué au submit) ; `fetchMatches` ne peut pas être mémoïsé/listé sans casse : il est appelé à la fois par cet effet (qui NE doit PAS dépendre de `search`) et par handleFilterSubmit/handlers (qui DOIVENT lire le `search` courant → closure fraîche à chaque render, cf. fetchMatchesRef). adminFetch* est stable mais n'y change rien.
   useEffect(() => {
     if (!id || !filtersHydrated) return;
     fetchMatches();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- GARDÉ : deps curées à dessein. `search` est exclu (appliqué au submit) ; `fetchMatches` ne peut pas être mémoïsé/listé sans casse : il est appelé à la fois par cet effet (qui NE doit PAS dépendre de `search`) et par handleFilterSubmit/handlers (qui DOIVENT lire le `search` courant → closure fraîche à chaque render, cf. fetchMatchesRef). adminFetch* est stable mais n'y change rien.
   }, [
     id,
     filtersHydrated,

@@ -1028,6 +1028,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   // d'historique par frappe au clavier (le bouton « précédent » doit sortir de
   // la page, pas rejouer douze filtres). Débouncé pour la même raison que la
   // recherche : une réécriture d'URL par caractère saisi est inutile.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dépendances choisies à dessein (exclusion reprise d’ESLint)
   useEffect(() => {
     const timer = setTimeout(() => {
       const params = new URLSearchParams();
@@ -1047,7 +1048,6 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     return () => clearTimeout(timer);
     // `router` est volontairement hors deps : il change d'identité à chaque
     // navigation et relancerait l'effet en boucle.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, roleFilter, quickFilters, sortField, sortDir, offset]);
 
   useEffect(() => {

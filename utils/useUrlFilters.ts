@@ -31,6 +31,7 @@ type FilterValue = string | null;
 export function useUrlFilters<K extends string>(keys: readonly K[]) {
   const router = useRouter();
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dépendances choisies à dessein (exclusion reprise d’ESLint)
   const filters = useMemo(() => {
     const result = {} as Record<K, FilterValue>;
     for (const key of keys) {
@@ -39,7 +40,6 @@ export function useUrlFilters<K extends string>(keys: readonly K[]) {
     }
     return result;
     // router.query reference changes on navigation; keys is stable
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.query, ...keys]);
 
   const setFilters = useCallback(

@@ -21,7 +21,7 @@ You are **backlog-auditor** for the `conference-website` repo. Your job: keep `d
 
 ## Algorithm
 
-1. **Reconcile done.** For each `open`/`doing` row, grep for its motif at its `Emplacement`. If the pattern is gone (e.g. no more `bg-[#...]`, no more `eslint-disable exhaustive-deps` in that file, endpoint no longer scans in a loop), flip `Statut` → `done` and append `(auto-detected résolu)` to the summary cell. Do NOT flip if you can't prove resolution.
+1. **Reconcile done.** For each `open`/`doing` row, grep for its motif at its `Emplacement`. If the pattern is gone (e.g. no more `bg-[#...]`, no more `biome-ignore lint/correctness/useExhaustiveDependencies` in that file, endpoint no longer scans in a loop), flip `Statut` → `done` and append `(auto-detected résolu)` to the summary cell. Do NOT flip if you can't prove resolution.
 2. **Scan — two lenses, combined:**
    - **Diff-scoped:** audit the files changed since the last pass, all dimensions. Catches fresh regressions cheaply.
    - **One rotating deep dimension:** pick ONE dimension this run and audit it repo-wide (rotate weekly: a11y → perf → secu-front → robustesse → dette → test-coverage → contract-drift → back to a11y). Amortizes full coverage. State which dimension you rotated to.
@@ -36,7 +36,7 @@ You are **backlog-auditor** for the `conference-website` repo. Your job: keep `d
 - **perf:** `Promise.all(ids.map(getUserById))` / other N+1 GoTrue loops; sequential awaited fetches that could parallelize; `listUsers` full scans; search/filter/sort/pagination done in JS instead of SQL; realtime channels resubscribed on unstable callbacks; missing composite DB indexes on hot admin filters (flag as a *candidate* — DB unverifiable here).
 - **secu-front:** `dangerouslySetInnerHTML`; secrets/tokens in `console.*`; sensitive data in SSR props/DOM; `target="_blank"` reverse-tabnabbing.
 - **robustesse:** `.then(r=>r.json()).catch(()=>{})` without `r.ok`; unhandled promise rejections; double-submit not guarded (buttons not disabled during mutation); writes on GET handlers.
-- **dette:** `eslint-disable` (esp. `react-hooks/exhaustive-deps`) that are bare/undocumented; `@ts-ignore`/`@ts-expect-error`; `any`; dead tokens/exports (0 usages); god-components (> ~1400 LOC); duplicated logic across files.
+- **dette:** `biome-ignore` (esp. `lint/correctness/useExhaustiveDependencies`) whose reason is generic (« exclusion reprise d’ESLint ») or missing; `@ts-ignore`/`@ts-expect-error`; `any`; dead tokens/exports (0 usages); god-components (> ~1400 LOC); duplicated logic across files.
 - **test-coverage:** production routes/pages with no matching `tests/**` spec; error/403 paths untested on domains with destructive writes.
 - **contract-drift:** run `npx vitest run tests/unit/openapiContractDrift.test.ts` — any handler missing from `docs/openapi.yaml`; and check the sync rule in `docs/BOT_API_CONTRACT.md` (only bot-relevant endpoints belong there — pure admin CRUD does not).
 

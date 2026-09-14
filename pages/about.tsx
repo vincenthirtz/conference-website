@@ -267,7 +267,7 @@ function AboutPage({ videoUrl }: AboutPageProps) {
                     aria-label={t.videoPlayAria}
                   >
                     {youtubeId ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
+                      /* biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */
                       <img
                         src={`https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`}
                         alt={t.videoPreviewAlt}
