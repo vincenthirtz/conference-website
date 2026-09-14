@@ -8,6 +8,7 @@ import { useStaffSession } from '@/hooks/useStaffSession';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import PublicNav from './PublicNav';
+import LiveLogoPulse from './LiveLogoPulse';
 import { ADMIN_LINKS, filterAdminLinks } from './adminLinks';
 import { PLAYER_LINKS } from './playerLinks';
 import { useT } from '@/lib/i18n/useT';
@@ -201,9 +202,13 @@ function Navbar(): JSX.Element {
             {!hideMarketingNav && (
               <Link
                 href="/"
-                className="group flex shrink-0 cursor-pointer items-center"
+                className="group relative flex shrink-0 cursor-pointer items-center"
                 aria-label={tNav.homeAria}
               >
+                {/* Pulse néon quand womens_cup est en direct — logo par défaut
+                    seulement : un tenant en marque blanche n'est pas la chaîne
+                    de la Women's Cup. */}
+                {!branding && <LiveLogoPulse />}
                 <Image
                   src={logoSrc}
                   alt={logoAlt}

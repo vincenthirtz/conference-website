@@ -1,9 +1,19 @@
 // components/Home/useTwitchLive.ts
 //
-// Détection de live Twitch partagée par la refonte accueil (hero + spotlight).
-// Un seul poll (`/api/twitch/live`) pilote à la fois la pastille du hero et le
-// panneau du spotlight, sans dupliquer les requêtes. Le tick est sauté quand
-// l'onglet n'est pas visible.
+// Détection de live Twitch de la chaîne `womens_cup`, partagée par TOUS les
+// consommateurs : la refonte accueil (hero + spotlight) et le logo de la navbar
+// (FX « pulse » quand la chaîne est en direct).
+//
+// UN SEUL POLL POUR TOUT LE SITE. La navbar est montée dans `_app` sur chaque
+// page ; si chaque appel du hook lançait son propre `setInterval`, l'accueil
+// taperait `/api/twitch/live` deux fois par minute (navbar + hero), et la route
+// est limitée à 30 req/min par IP. L'état vit donc dans un store de module :
+// le premier abonné démarre le poll, le dernier qui se désabonne l'arrête, et
+// un abonné qui arrive en cours de route reçoit tout de suite la dernière
+// valeur connue au lieu de refaire une requête.
+//
+// Le premier appel attend un temps mort du navigateur (il ne doit pas concourir
+// avec l'hydratation), et le tick est sauté quand l'onglet n'est pas visible.
 
 import { useEffect, useState } from 'react';
 
@@ -18,6 +28,8 @@ export type TwitchLive = {
   parent: string | null;
   channel: string;
 };
+
+type LiveSnapshot = Omit<TwitchLive, 'parent' | 'channel'>;
 
 function scheduleIdle(cb: () => void): () => void {
   if (typeof window === 'undefined') return () => {};
@@ -36,43 +48,43 @@ function scheduleIdle(cb: () => void): () => void {
   return () => window.clearTimeout(id);
 }
 
-export function useTwitchLive(): TwitchLive {
-  const [state, setState] = useState<Omit<TwitchLive, 'parent' | 'channel'>>({
-    live: false,
-  });
-  const [parent, setParent] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
+let snapshot: LiveSnapshot = { live: false };
+const listeners = new Set<(s: LiveSnapshot) => void>();
+let stopPolling: (() => void) | null = null;
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') setParent(window.location.hostname);
-    return scheduleIdle(() => setReady(true));
-  }, []);
+function publish(next: LiveSnapshot) {
+  snapshot = next;
+  listeners.forEach((l) => l(next));
+}
 
-  useEffect(() => {
-    if (!ready) return;
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const res = await fetch(`/api/twitch/live?channels=${CHANNEL}`);
-        if (!res.ok) return;
-        const json = await res.json();
-        if (cancelled) return;
-        const s = json?.statuses?.[CHANNEL] ?? { live: false };
-        setState({
-          live: Boolean(s.live),
-          title: s.title,
-          viewerCount:
-            typeof s.viewer_count === 'number' ? s.viewer_count : undefined,
-        });
-      } catch {
-        /* offline / network error: stay not-live */
-      }
-    };
+function startPolling(): () => void {
+  let cancelled = false;
+  let intervalId: ReturnType<typeof setInterval> | null = null;
+
+  const load = async () => {
+    try {
+      const res = await fetch(`/api/twitch/live?channels=${CHANNEL}`);
+      if (!res.ok) return;
+      const json = await res.json();
+      if (cancelled) return;
+      const s = json?.statuses?.[CHANNEL] ?? { live: false };
+      publish({
+        live: Boolean(s.live),
+        title: s.title,
+        viewerCount:
+          typeof s.viewer_count === 'number' ? s.viewer_count : undefined,
+      });
+    } catch {
+      /* offline / network error: garder la dernière valeur connue */
+    }
+  };
+
+  const cancelIdle = scheduleIdle(() => {
+    if (cancelled) return;
     load();
     // Onglet en arrière-plan = on saute le tick (même garde que PlayerBell /
-    // AdminTopBar). Sans ça, un onglet home laissé ouvert tapait /api/twitch/live
-    // toutes les 60 s indéfiniment, sans que personne ne regarde la pastille.
-    const id = setInterval(() => {
+    // AdminTopBar) : personne ne regarde la pastille ni le logo.
+    intervalId = setInterval(() => {
       if (
         typeof document !== 'undefined' &&
         document.visibilityState !== 'visible'
@@ -80,11 +92,36 @@ export function useTwitchLive(): TwitchLive {
         return;
       load();
     }, POLL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, [ready]);
+  });
+
+  return () => {
+    cancelled = true;
+    cancelIdle();
+    if (intervalId) clearInterval(intervalId);
+  };
+}
+
+function subscribe(listener: (s: LiveSnapshot) => void): () => void {
+  listeners.add(listener);
+  if (!stopPolling) stopPolling = startPolling();
+  listener(snapshot);
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0 && stopPolling) {
+      stopPolling();
+      stopPolling = null;
+    }
+  };
+}
+
+export function useTwitchLive(): TwitchLive {
+  const [state, setState] = useState<LiveSnapshot>({ live: false });
+  const [parent, setParent] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') setParent(window.location.hostname);
+    return subscribe(setState);
+  }, []);
 
   return { ...state, parent, channel: CHANNEL };
 }
