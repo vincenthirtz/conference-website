@@ -6,7 +6,6 @@
 // - helpers pour analyser l'historique des joueurs
 
 import type {
-  MatchOutcome,
   RawOutcomeInput,
   SwissMatchResult,
   SwissPastMatch,

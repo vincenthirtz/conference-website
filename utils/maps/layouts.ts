@@ -20,7 +20,6 @@
 import { SceneBuilder } from './builder';
 import {
   beacon,
-  canDress,
   captureFrame,
   lampLine,
   payload,

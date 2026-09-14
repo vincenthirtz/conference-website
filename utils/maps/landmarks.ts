@@ -275,7 +275,7 @@ const gate: LandmarkFn = (b, cx, cz, y, rng) => {
 };
 
 /** Amphithéâtre : anneau à arcades sur plusieurs niveaux, avec sa brèche. */
-const amphitheatre: LandmarkFn = (b, cx, cz, y, rng) => {
+const amphitheatre: LandmarkFn = (b, cx, cz, y) => {
   const outer = 8;
   const thickness = 2.4;
   const tiers = 3;
@@ -383,7 +383,7 @@ const townhouses: LandmarkFn = (b, cx, cz, y, rng) => {
 };
 
 /** Village blanchi à la chaux : cubes accolés, quelques coupoles. */
-const village: LandmarkFn = (b, cx, cz, y, rng) => {
+const village: LandmarkFn = (b, cx, cz, _y, rng) => {
   const houses = rng.int(6, 8);
   for (let i = 0; i < houses; i += 1) {
     const ang = (i / houses) * Math.PI * 2 + rng.range(-0.3, 0.3);

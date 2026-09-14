@@ -10,9 +10,7 @@
 import type {
   ComputeSwissStandingsOptions,
   RankedSwissStanding,
-  SwissMatchResult,
   SwissStanding,
-  SwissStandingParticipant,
 } from '../../types/swiss';
 
 /**

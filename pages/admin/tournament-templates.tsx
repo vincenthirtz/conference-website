@@ -54,7 +54,7 @@ function stageTypeBadge(type: string) {
 
 export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
 
-function AdminTournamentTemplatesPage({ staff }: StaffProps) {
+function AdminTournamentTemplatesPage(_props: StaffProps) {
   const t = useAdminT(nsAdminTournamentTemplates);
   const STAGE_TYPES = getStageTypes(t);
   const router = useRouter();

@@ -89,7 +89,7 @@ async function handler(
 }
 
 async function handleGet(
-  req: NextApiRequest,
+  _req: NextApiRequest,
   res: NextApiResponse<ApiResponse>,
   id: string,
   ctx: AuthenticatedStaffContext

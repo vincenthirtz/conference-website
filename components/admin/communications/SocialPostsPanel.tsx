@@ -69,8 +69,6 @@ type PostResponse = {
   >;
 };
 
-type Dict = typeof nsAdminSocialPosts.fr;
-
 const ENDPOINT = '/api/admin/social-posts';
 const SECRET_ENDPOINT = '/api/admin/instagram/secret';
 
@@ -100,17 +98,6 @@ const emptyDraft: TargetDraft = {
  */
 function makeDraft(over: Partial<TargetDraft> = {}): TargetDraft {
   return { ...emptyDraft, hashtags: [], ...over };
-}
-
-function statusClass(status: TargetStatus | undefined): string {
-  switch (status) {
-    case 'sent':
-      return 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30';
-    case 'failed':
-      return 'bg-red-600/20 text-red-300 border-red-500/30';
-    default:
-      return 'bg-neutral-600/20 text-neutral-300 border-neutral-500/30';
-  }
 }
 
 export default function SocialPostsPanel() {

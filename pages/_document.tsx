@@ -40,7 +40,9 @@ function brandCssVars(branding: TenantBranding): string {
 }
 
 export default class MyDocument extends Document<MyDocumentProps> {
-  static async getInitialProps(ctx: DocumentContext): Promise<MyDocumentProps> {
+  static override async getInitialProps(
+    ctx: DocumentContext
+  ): Promise<MyDocumentProps> {
     // Résolution du branding AVANT le rendu du HTML de l'app : on lit le host
     // (comme pages/sitemap.xml.ts) puis on résout le tenant custom-domain. En
     // build statique (`ctx.req` absent) → pas de branding → défaut.
@@ -82,7 +84,7 @@ export default class MyDocument extends Document<MyDocumentProps> {
     return { ...initialProps, nonce, branding };
   }
 
-  render() {
+  override render() {
     const { nonce, branding } = this.props;
     const cssVars = branding ? brandCssVars(branding) : '';
     return (

@@ -12,7 +12,6 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import { useToast } from '@/components/Toast';
-import Modal from '@/components/admin/Modal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminCampaigns from '@/lib/i18n/locales/admin-fr/adminCampaigns';
 import CampaignDrawer from './CampaignDrawer';

@@ -1,9 +1,5 @@
 import { JSX } from 'react';
-import type {
-  HeadingLevel,
-  HeadingTypeStyle,
-  IHeading,
-} from '../../types/components';
+import type { IHeading } from '../../types/components';
 
 export default function Heading({
   typeStyle = 'heading-lg',

@@ -10,14 +10,6 @@ import LogoUpload from '@/components/admin/LogoUpload';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminNewsEdit from '@/lib/i18n/locales/admin-fr/adminNewsEdit';
 
-type Props = {
-  staff: {
-    id: string;
-    role: string;
-    display_name: string | null;
-  };
-};
-
 type FormState = {
   title: string;
   slug: string;
@@ -34,7 +26,7 @@ export const getServerSideProps = withStaffPage({ permission: 'manage_communicat
 const slugifyValue = (value: string) =>
   slugify(value, { lower: true, strict: true });
 
-export default function AdminNewsEdit({ staff }: Props) {
+export default function AdminNewsEdit() {
   const t = useAdminT(nsAdminNewsEdit);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();

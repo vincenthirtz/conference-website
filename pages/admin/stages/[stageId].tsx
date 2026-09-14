@@ -53,7 +53,7 @@ type TournamentApiResponse = {
 
 export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
 
-function AdminStagePage({ staff }: StaffProps) {
+function AdminStagePage(_props: StaffProps) {
   const t = useAdminT(nsAdminStageDetail);
   const router = useRouter();
   const { stageId } = router.query;

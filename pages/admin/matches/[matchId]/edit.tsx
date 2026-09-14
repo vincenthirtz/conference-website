@@ -129,7 +129,7 @@ function statusColor(status: MatchStatus) {
   }
 }
 
-function AdminMatchEditPage({ staff }: StaffProps) {
+function AdminMatchEditPage(_props: StaffProps) {
   const t = useAdminT(nsAdminMatchEdit);
   const router = useRouter();
   const { matchId } = router.query;

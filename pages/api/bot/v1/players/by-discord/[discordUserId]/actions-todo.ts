@@ -146,7 +146,6 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       const row = m as Record<string, unknown>;
       const matchId = row.id as string;
       const t1Id = row.team1_id as string;
-      const t2Id = row.team2_id as string;
       const isT1 = captainedTeamIds.includes(t1Id);
       const side: 1 | 2 = isT1 ? 1 : 2;
       const sideKey = side === 1 ? 'teamA' : 'teamB';

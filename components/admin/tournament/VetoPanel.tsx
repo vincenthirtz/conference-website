@@ -595,7 +595,6 @@ export default function VetoPanel() {
                   </h2>
                   <div className="flex flex-wrap gap-2">
                     {vetoState.steps.map((step: VetoStep, i: number) => {
-                      const flowStep = vetoState.flow[i];
                       return (
                         <div
                           key={step.id}

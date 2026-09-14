@@ -15,7 +15,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import { useToast } from '@/components/Toast';
-import { useT, format } from '@/lib/i18n/useT';
+import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import type { PlayerScrim } from '../../pages/api/player/scrims/index';
 import { logger } from '../../utils/logger';

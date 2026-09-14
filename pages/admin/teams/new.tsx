@@ -49,7 +49,7 @@ export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
   }
 );
 
-function AdminNewTeamPage({ staff, teamRoles }: StaffProps) {
+function AdminNewTeamPage({ teamRoles }: StaffProps) {
   const t = useAdminT(nsAdminTeamsNew);
   const router = useRouter();
   const { addToast } = useToast();

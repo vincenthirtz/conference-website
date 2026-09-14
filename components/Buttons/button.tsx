@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ButtonType, IButton } from '../../types/components';
+import type { IButton } from '../../types/components';
 
 function Button({
   className,

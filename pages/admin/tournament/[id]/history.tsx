@@ -53,7 +53,7 @@ function formatDateTime(iso: string) {
   }
 }
 
-function AdminTournamentHistoryPage({ staff }: StaffProps) {
+function AdminTournamentHistoryPage(_props: StaffProps) {
   const router = useRouter();
   const { id } = router.query;
   const t = useAdminT(nsAdminTournamentHistory);

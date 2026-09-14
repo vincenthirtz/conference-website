@@ -8,7 +8,7 @@
 //   - insertTeamMember (avec et sans pre-check max_players)
 //   - setTeamCaptain
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   store,
   resetSupabaseMock,

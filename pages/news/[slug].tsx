@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import { GetStaticPaths, GetStaticProps } from 'next';
 import Heading from '@/components/Typography/heading';
 import Button from '@/components/Buttons/button';

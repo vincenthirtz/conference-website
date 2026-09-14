@@ -30,7 +30,6 @@
 // comme tout le hub d'onboarding.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { applyRateLimit } from '@/utils/rateLimit';
@@ -38,8 +37,6 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { attachGuildToTenant } from '@/utils/tenants/attachGuild';
 import { logStaffAction } from '@/utils/staffLogs';
 import { logger } from '@/utils/logger';
-
-const GUILD_ID_RE = /^[0-9]{15,25}$/;
 
 async function handler(
   req: NextApiRequest,

@@ -74,7 +74,7 @@ function formatDate(d: string | null) {
   }
 }
 
-function AdminPartnershipRequestDetailPage({ staff }: Props) {
+function AdminPartnershipRequestDetailPage(_props: Props) {
   const t = useAdminT(nsAdminPartnershipRequestDetail);
   const statusLabels = getStatusLabels(t);
   const categoryLabels = getCategoryLabels(t);

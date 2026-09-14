@@ -13,7 +13,6 @@ import { withAuthRoute } from '@/utils/staff';
 import {
   accessHasPermission,
   assertTeamPermission,
-  TEAM_MANAGEMENT_FORBIDDEN,
 } from '@/utils/teams/managementAccess';
 import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';

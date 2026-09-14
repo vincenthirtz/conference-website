@@ -13,7 +13,7 @@ import Tabs, {
   tabPanelId,
   type TabItem,
 } from '@/components/admin/Tabs';
-import type { MatchStatus, FormatType, StageType } from '@/types/admin';
+import type { MatchStatus, FormatType } from '@/types/admin';
 import type { MatchForGraph } from '@/types/bracket';
 import { buildBracketGraph } from '@/utils/bracket/buildGraph';
 import { computeBracketLayout } from '@/utils/bracket/computePaths';
@@ -29,11 +29,9 @@ import {
 } from '@/utils/simulator';
 import type {
   SimTeam,
-  SimMap,
   SimMatch,
   SimStage,
   ScheduleConfig,
-  EscalationConfig,
   CompetitivenessMetrics,
   MonteCarloResult,
   H2HRecord,
@@ -100,7 +98,6 @@ function TournamentSimulatorPage() {
   const [animating, setAnimating] = useState(false);
   const animatingRef = useRef(false);
   const [dragSeedIdx, setDragSeedIdx] = useState<number | null>(null);
-  const [compareMode, setCompareMode] = useState(false);
   const [compareConfig, setCompareConfig] = useState<Partial<SimConfig> | null>(
     null
   );

@@ -52,7 +52,6 @@ describe('autoScheduleMatches', () => {
     expect(result.scheduled).toHaveLength(2);
     expect(result.unscheduledMatchIds).toHaveLength(0);
 
-    const start1 = new Date(result.scheduled[0].startAt);
     const end1 = new Date(result.scheduled[0].endAt);
     const start2 = new Date(result.scheduled[1].startAt);
 

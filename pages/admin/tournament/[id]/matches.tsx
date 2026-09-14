@@ -93,7 +93,7 @@ function stageLabel(t: Dict, stage: StageSummary | null | undefined) {
   return base;
 }
 
-function AdminTournamentMatchesPage({ staff }: StaffProps) {
+function AdminTournamentMatchesPage(_props: StaffProps) {
   const router = useRouter();
   const { id } = router.query;
   const { mutate: mutateIdempotent } = useIdempotentMutation();
@@ -742,7 +742,7 @@ function AdminTournamentMatchesPage({ staff }: StaffProps) {
       });
 
       const unresolved = csvPreview.filter(
-        (row, i) => !matchPayloads[i].team1_id || !matchPayloads[i].team2_id
+        (_row, i) => !matchPayloads[i].team1_id || !matchPayloads[i].team2_id
       );
 
       if (unresolved.length > 0) {

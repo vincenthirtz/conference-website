@@ -7,7 +7,7 @@
 //  - pages/api/team/[id]/maps.ts (~230 lines)
 //  - pages/api/team/[id]/stats.ts (~290 lines)
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 import {
   store,

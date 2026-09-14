@@ -1,4 +1,4 @@
-import React, { JSX } from 'react';
+import { JSX } from 'react';
 import ILink from '../illustration/link';
 import type { PastEditonCardProp } from '../../types/components';
 

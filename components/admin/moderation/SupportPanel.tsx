@@ -74,8 +74,6 @@ const FILTER_KEYS = ['status', 'severity', 'category', 'search'] as const;
 
 const PAGE_SIZE = 50;
 
-type Dict = typeof nsAdminSupport.fr;
-
 type TicketsResponse = {
   tickets?: Ticket[];
   total?: number;

@@ -22,7 +22,7 @@ function genIdempotencyKey(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export default function Contact({ className = '' }: { className?: string }) {
+export default function Contact() {
   const t = useT(nsContactForm);
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);

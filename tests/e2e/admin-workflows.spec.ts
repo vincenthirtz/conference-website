@@ -349,7 +349,6 @@ test.describe.serial('Admin workflows E2E (API)', () => {
   let bracketTournamentId: string;
   let bracketStageId: string | null = null;
   const bracketTeamIds: string[] = [];
-  let bracketMatchIds: string[] = [];
 
   test.describe('3 — Bracket & propagation', () => {
     test.beforeAll(async () => {
@@ -420,7 +419,6 @@ test.describe.serial('Admin workflows E2E (API)', () => {
       // 4 teams => 2 demi-finales + 1 finale = 3 matchs
       expect(body.match_count).toBe(3);
       expect(body.match_ids).toHaveLength(3);
-      bracketMatchIds = body.match_ids;
     });
 
     test('POST bracket save assigne les équipes aux matchs', async ({

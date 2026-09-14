@@ -56,7 +56,7 @@ export function createPollState(): MvpPollState {
  * l'erreur), sinon un état neuf avec les votes remis à zéro.
  */
 export function startPoll(
-  state: MvpPollState,
+  _state: MvpPollState,
   candidates: MvpTallyCandidate[],
   now: string = new Date().toISOString()
 ): MvpPollState | null {

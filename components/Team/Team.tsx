@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import React, { JSX } from 'react';
+import { JSX } from 'react';
 import type { TeamProps } from '../../types/components';
 
 function Team({ details, location, className }: TeamProps): JSX.Element {

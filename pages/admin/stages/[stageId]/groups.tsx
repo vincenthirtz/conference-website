@@ -2,7 +2,7 @@
 // Admin page for managing group/pool assignments in group or round_robin stages.
 // Supports drag & drop between groups + auto-distribution.
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -55,7 +55,7 @@ function GroupLabel({ groupKey }: { groupKey: string }) {
   );
 }
 
-function AdminStageGroupsPage({ staff }: StaffProps) {
+function AdminStageGroupsPage(_props: StaffProps) {
   const t = useAdminT(nsAdminStageGroups);
   const router = useRouter();
   const { stageId } = router.query;

@@ -139,7 +139,7 @@ type CaptainResolution = { side: 1 | 2; authUserId: string };
  * n'est pas capitaine.
  */
 async function resolveCaptain(
-  req: BotTenantRequest,
+  _req: BotTenantRequest,
   res: NextApiResponse,
   teams: { team1: MatchTeam; team2: MatchTeam },
   discordUserId: string

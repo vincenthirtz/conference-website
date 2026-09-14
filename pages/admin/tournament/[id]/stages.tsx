@@ -20,14 +20,9 @@ import type {
   StaffProps,
   StageType,
   StageSummary,
-  TournamentMini,
 } from '@/types/admin';
 import nsAdminTournamentStagesList from '@/lib/i18n/locales/admin-fr/adminTournamentStagesList';
 
-type MatchesApiResponse = {
-  tournament: TournamentMini | null;
-  stages: StageSummary[];
-};
 
 export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
 

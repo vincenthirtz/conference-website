@@ -21,12 +21,12 @@ export type { MatchRow, PropagationResult } from '@/types/bracket';
  *                  toutes les queries Supabase (matches, tournament_teams,
  *                  tournament_stages, stage_teams, games).
  * @param matchId  ID du match dont le résultat vient d'être mis à jour
- * @param chain    Si true, re-propage en profondeur (utile si plusieurs rounds déjà saisis)
+ * @param _chain    Si true, re-propage en profondeur (utile si plusieurs rounds déjà saisis)
  */
 export async function propagateBracketForMatch(
   tenantId: string,
   matchId: string,
-  chain: boolean = true
+  _chain: boolean = true
 ): Promise<PropagationResult> {
   const match = await fetchMatchWithLinks(tenantId, matchId);
 

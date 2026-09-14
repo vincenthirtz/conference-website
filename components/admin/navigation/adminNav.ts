@@ -1,11 +1,6 @@
 import type { AdminLink } from '@/types/components';
-import { hasAtLeastRole } from '@/utils/staff';
 import type { StaffRole } from '@/utils/staff';
-import {
-  roleHasStaffPermission,
-  type StaffPermission,
-} from '@/utils/staffPermissions';
-import type { TenantKind } from '@/utils/tenantKind';
+import { type StaffPermission } from '@/utils/staffPermissions';
 
 /**
  * Source unique de vérité de la navigation admin.

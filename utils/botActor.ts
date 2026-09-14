@@ -58,7 +58,7 @@ export async function resolveActorStaff(
  * Returns the actor on success, or `null` if the response has been sent.
  */
 export async function requireBotStaff(
-  req: NextApiRequest,
+  _req: NextApiRequest,
   res: NextApiResponse,
   body: Record<string, unknown>
 ): Promise<BotActor | null> {
@@ -108,7 +108,7 @@ export async function resolveActorPlayer(
  * Returns the actor on success, or `null` if the response has been sent.
  */
 export async function requireBotPlayer(
-  req: NextApiRequest,
+  _req: NextApiRequest,
   res: NextApiResponse,
   body: Record<string, unknown>
 ): Promise<BotPlayerActor | null> {

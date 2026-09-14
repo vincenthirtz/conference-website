@@ -58,8 +58,6 @@ import {
   teamRedirectDestination,
 } from '@/components/Team/teamPageSeo';
 
-type TeamDetailDict = typeof nsTeamDetail.fr;
-
 type Team = {
   id: string;
   slug?: string | null;

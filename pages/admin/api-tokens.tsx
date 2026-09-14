@@ -24,7 +24,6 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import AlertBanner from '@/components/admin/AlertBanner';
-import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
 import ApiTokenRevealModal from '@/components/admin/ApiTokenRevealModal';
 import { ALL_SCOPES } from '@/utils/apiScopes';

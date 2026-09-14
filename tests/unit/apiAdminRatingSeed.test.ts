@@ -56,7 +56,6 @@ function makeRes() {
 const TID = '550e8400-e29b-41d4-a716-446655440000';
 const TGT_STAGE = '22222222-2222-2222-2222-222222222222';
 const M1 = '33333333-3333-3333-3333-333333333331';
-const M2 = '33333333-3333-3333-3333-333333333332';
 const T1 = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1';
 const T2 = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2';
 

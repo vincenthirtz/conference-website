@@ -4,7 +4,7 @@
 // We can't realistically reproduce a full tournament-state fixture, but we can
 // drive it with a minimal seed so most aggregation branches execute.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
 

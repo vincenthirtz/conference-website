@@ -79,8 +79,6 @@ beforeEach(() => {
   logStaffActionMock.mockClear();
 });
 
-const VALID_UUID = '550e8400-e29b-41d4-a716-446655440000';
-
 /* -----------------------------------------------------------
  * /api/admin/me — bespoke auth (Bearer + staff lookup)
  * ---------------------------------------------------------*/

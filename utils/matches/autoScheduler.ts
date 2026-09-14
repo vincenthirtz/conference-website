@@ -283,8 +283,8 @@ function scheduleSingleMatch(
   windows: TimeWindow[],
   resourceNextFreeTime: Map<SchedulerResourceId, Date>,
   teamNextFreeTime: Map<string, Date>,
-  resourceGapMinutes: number,
-  teamRestMinutes: number,
+  _resourceGapMinutes: number,
+  _teamRestMinutes: number,
   slideWindowMinutes: number,
   teamConstraints: AvailabilityConstraint[] = []
 ): PlannedSlot | null {

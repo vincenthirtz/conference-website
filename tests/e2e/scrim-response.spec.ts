@@ -230,7 +230,7 @@ test.describe('Scrim response API (/api/teams/scrim-requests)', () => {
     expect(body.message).toContain('accepte');
   });
 
-  test('Scrim demande status is now approved', async ({ request }) => {
+  test('Scrim demande status is now approved', async () => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const { data } = await supabaseTestClient!
       .from('demandes')
@@ -240,9 +240,7 @@ test.describe('Scrim response API (/api/teams/scrim-requests)', () => {
     expect(data!.status).toBe('approved');
   });
 
-  test('Admin notification demande was created on approval', async ({
-    request,
-  }) => {
+  test('Admin notification demande was created on approval', async () => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const { data } = await supabaseTestClient!
       .from('demandes')

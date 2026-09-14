@@ -33,7 +33,6 @@ vi.mock('@/utils/email', () => ({
 import {
   store,
   resetSupabaseMock,
-  setAuthUser,
   setAuthListUsers,
   setCreateUserResult,
   setAdminUser,

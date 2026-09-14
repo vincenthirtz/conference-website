@@ -46,7 +46,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Modal from '@/components/ui/Modal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import EmptyState from '@/components/ui/EmptyState';
-import Badge, { type BadgeTone } from '@/components/ui/Badge';
+import Badge from '@/components/ui/Badge';
 import { lazyPanel } from '@/components/admin/lazyPanel';
 import { PlayerAreaProvider } from '@/components/player/PlayerAreaContext';
 // Les trois écrans de l'espace joueur sont montés UN À LA FOIS, et jamais sur

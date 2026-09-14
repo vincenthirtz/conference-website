@@ -2,12 +2,7 @@ import { socialUrl } from '../config/socials';
 import { logger } from './logger';
 import { sanitizeEmailHtml } from './emailHtmlSanitizer';
 import { getIntegrationSecret } from './integrationSecrets';
-import {
-  applyBrand,
-  resolveEmailBrand,
-  BRAND_TOKENS,
-  DEFAULT_EMAIL_BRAND,
-} from './emailBrand';
+import { applyBrand, resolveEmailBrand, BRAND_TOKENS } from './emailBrand';
 import { DEFAULT_TENANT_ID } from './tenant';
 import { PLAN_GRACE_DAYS } from './billing/planFeatures';
 // utils/email.ts

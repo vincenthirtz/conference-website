@@ -80,7 +80,6 @@ async function handler(
   const {
     limit = '100',
     offset = '0',
-    tournamentId,
     minMatches = '0',
     sortBy,
     sortDir,

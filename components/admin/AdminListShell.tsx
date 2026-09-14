@@ -75,7 +75,6 @@ export default function AdminListShell({
   loadingClassName = 'py-16',
   className,
   errorTestId,
-  emptyTestId,
   loadingTestId,
 }: AdminListShellProps) {
   let content: ReactNode;

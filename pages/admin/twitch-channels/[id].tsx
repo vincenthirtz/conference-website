@@ -16,7 +16,7 @@ type Props = {
   };
 };
 
-function AdminTwitchChannelEditPage({ staff }: Props) {
+function AdminTwitchChannelEditPage(_props: Props) {
   const t = useAdminT(nsAdminTwitchChannelEdit);
   const router = useRouter();
   const { addToast } = useToast();

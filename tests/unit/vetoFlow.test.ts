@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { VETO_FLOWS } from '@/types/veto';
-import type { VetoFlowStep, VetoAction } from '@/types/veto';
+import type { VetoAction } from '@/types/veto';
 
 describe('VETO_FLOWS', () => {
   it('defines flows for bo1, bo3, and bo5', () => {
@@ -107,7 +107,7 @@ describe('VETO_FLOWS', () => {
   describe('all flows', () => {
     it('all steps have valid actions', () => {
       const validActions: VetoAction[] = ['ban', 'pick', 'decider'];
-      for (const [format, flow] of Object.entries(VETO_FLOWS)) {
+      for (const [, flow] of Object.entries(VETO_FLOWS)) {
         for (const step of flow) {
           expect(validActions).toContain(step.action);
         }
@@ -116,7 +116,7 @@ describe('VETO_FLOWS', () => {
 
     it('all steps have valid sides', () => {
       const validSides = ['team1', 'team2', null];
-      for (const [format, flow] of Object.entries(VETO_FLOWS)) {
+      for (const [, flow] of Object.entries(VETO_FLOWS)) {
         for (const step of flow) {
           expect(validSides).toContain(step.side);
         }
@@ -124,7 +124,7 @@ describe('VETO_FLOWS', () => {
     });
 
     it('decider steps always have null side', () => {
-      for (const [format, flow] of Object.entries(VETO_FLOWS)) {
+      for (const [, flow] of Object.entries(VETO_FLOWS)) {
         const deciders = flow.filter((s) => s.action === 'decider');
         for (const d of deciders) {
           expect(d.side).toBeNull();
@@ -133,7 +133,7 @@ describe('VETO_FLOWS', () => {
     });
 
     it('ban/pick steps always have a team side', () => {
-      for (const [format, flow] of Object.entries(VETO_FLOWS)) {
+      for (const [, flow] of Object.entries(VETO_FLOWS)) {
         const nonDeciders = flow.filter((s) => s.action !== 'decider');
         for (const s of nonDeciders) {
           expect(s.side).not.toBeNull();

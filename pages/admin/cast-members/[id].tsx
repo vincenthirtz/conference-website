@@ -17,7 +17,7 @@ type Props = {
   };
 };
 
-function AdminCastMemberEditPage({ staff }: Props) {
+function AdminCastMemberEditPage(_props: Props) {
   const t = useAdminT(nsAdminCastMemberEdit);
   const router = useRouter();
   const { id } = router.query;

@@ -3,7 +3,7 @@
 // The handler is heavy: validates state, computes Swiss standings + eliminations,
 // then either dry-runs or inserts a new round of matches.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import type { StaffMember } from '../../types/staff';
 
 import {

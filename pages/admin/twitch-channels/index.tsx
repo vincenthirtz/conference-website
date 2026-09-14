@@ -50,7 +50,7 @@ function statusColor(isActive: boolean) {
     : 'bg-neutral-600 text-neutral-100';
 }
 
-function AdminTwitchChannelsPage({ staff }: Props) {
+function AdminTwitchChannelsPage(_props: Props) {
   const t = useAdminT(nsAdminTwitchChannelsList);
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);

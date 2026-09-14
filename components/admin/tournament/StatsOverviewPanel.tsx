@@ -8,7 +8,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
-import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentStats from '@/lib/i18n/locales/admin-fr/adminTournamentStats';
 
 type Tournament = {

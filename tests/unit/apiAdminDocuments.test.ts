@@ -28,8 +28,6 @@ import { invalidateStaffCache } from '../../utils/staff';
 
 import documentsHandler from '../../pages/api/admin/documents';
 
-const TENANT = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
-
 // Une clé PEM plausible : le handler ne fait qu'un contrôle de FORME avant de
 // chiffrer, il ne signe rien ici.
 const FAKE_PEM =

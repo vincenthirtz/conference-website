@@ -537,7 +537,7 @@ export function runMonteCarlo(
 
 export function computeCompetitiveness(
   allMatches: SimMatch[],
-  teams: SimTeam[]
+  _teams: SimTeam[]
 ): CompetitivenessMetrics {
   const finishedMatches = allMatches.filter(
     (m) => m.status === 'finished' && m.team1 && m.team2

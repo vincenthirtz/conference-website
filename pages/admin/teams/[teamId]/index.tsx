@@ -65,7 +65,7 @@ function formatVerifiedDate(d: string | null | undefined): string {
 
 export const getServerSideProps = withStaffPage({ permission: 'manage_teams' });
 
-function AdminTeamDetailPage({ staff }: StaffProps) {
+function AdminTeamDetailPage(_props: StaffProps) {
   const t = useAdminT(nsAdminTeamDetail);
   const router = useRouter();
   const { teamId } = router.query as { teamId?: string };

@@ -112,7 +112,7 @@ function formatDate(iso: string | null) {
   }
 }
 
-function AdminRecycleBinPage({ staff }: StaffProps) {
+function AdminRecycleBinPage(_props: StaffProps) {
   const router = useRouter();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();

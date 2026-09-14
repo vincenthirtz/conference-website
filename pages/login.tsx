@@ -8,7 +8,6 @@ import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
 import { supabaseClient, purgeSupabaseAuthStorage } from '@/utils/supabaseBrowser';
 import { STAFF_CACHE_KEY } from '@/hooks/useStaffSession';
-import { useSiteSetting } from '@/hooks/useSiteSettings';
 import { useT } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
@@ -49,7 +48,6 @@ function primeStaffCache(me: {
 const LoginPage = () => {
   const router = useRouter();
   const t = useT(nsLoginPage);
-  const { value: contactEmail } = useSiteSetting('contact_email');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

@@ -76,7 +76,7 @@ type AdherentData = {
   updated_at: string;
 };
 
-function AdminEditAdherentPage({ staff }: Props) {
+function AdminEditAdherentPage(_props: Props) {
   const t = useAdminT(nsAdminAdherentDetail);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();

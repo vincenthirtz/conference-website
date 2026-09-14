@@ -2,7 +2,6 @@
 // (pages/admin/tournament/[id].tsx). Extracted verbatim from the page so the
 // memoized row/modal components and the page agree on a single definition.
 
-import type { useAdminT } from '@/lib/i18n/useAdminT';
 import type { MatchStatus } from '@/types/admin';
 import type { RegistrationAnswers as RegistrationAnswerValues } from '@/utils/registrationFields';
 import nsAdminTournamentOverview from '@/lib/i18n/locales/admin-fr/adminTournamentOverview';

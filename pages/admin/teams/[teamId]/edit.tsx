@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import Link from 'next/link';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
 import EntityHistoryButton from '@/components/admin/EntityHistoryButton';
@@ -71,7 +70,6 @@ export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
 );
 
 function AdminEditTeamPage({
-  staff,
   teamRoles,
 }: StaffProps & { teamRoles: TeamRole[] }) {
   const t = useAdminT(nsAdminTeamEdit);

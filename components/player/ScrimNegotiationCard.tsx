@@ -14,7 +14,7 @@
 
 import { memo, useState } from 'react';
 import ScrimSlotCalendarPicker from '@/components/player/ScrimSlotCalendarPicker';
-import { format, type useT } from '@/lib/i18n/useT';
+import { format } from '@/lib/i18n/useT';
 import nsPlayerIndex from '@/lib/i18n/locales/fr/playerIndex';
 
 type Tr = typeof nsPlayerIndex.fr;

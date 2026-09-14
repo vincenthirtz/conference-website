@@ -15,7 +15,6 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps, StageSummary, TournamentMini } from '@/types/admin';
 import nsAdminTournamentBulkOps from '@/lib/i18n/locales/admin-fr/adminTournamentBulkOps';
 
-type Dict = typeof nsAdminTournamentBulkOps.fr;
 
 export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
 
@@ -31,7 +30,7 @@ function BulkOpsPage(_: StaffProps) {
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [tournament, setTournament] = useState<TournamentMini | null>(null);
+  const [, setTournament] = useState<TournamentMini | null>(null);
   const [stages, setStages] = useState<StageSummary[]>([]);
   const [roundOptions, setRoundOptions] = useState<RoundOption[]>([]);
 

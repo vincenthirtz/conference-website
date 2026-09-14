@@ -22,7 +22,6 @@ import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import type { StaffProps } from '@/types/admin';
 import nsAdminStageSeeding from '@/lib/i18n/locales/admin-fr/adminStageSeeding';
 
-type Dict = typeof nsAdminStageSeeding.fr;
 
 type TeamLite = {
   id: string;
@@ -69,11 +68,6 @@ type PreviewResponse = {
 
 type Pattern = 'standard' | 'sequential';
 
-type DraftSlot = {
-  matchId: string;
-  slot: 1 | 2;
-  teamId: string;
-};
 
 // --- Seed par rating (Glicko + SoS) -----------------------------------------
 

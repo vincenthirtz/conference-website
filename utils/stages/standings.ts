@@ -554,16 +554,11 @@ export function computeGroupStandings(
 export function computeBracketStandings(
   stageTeams: StageTeamRow[],
   finishedMatches: DbMatch[],
-  allMatches: DbMatch[]
+  _allMatches: DbMatch[]
 ): StageStanding[] {
   // For bracket: rank based on the furthest round reached.
   // The winner of the highest round match is #1, loser is #2, etc.
   // Teams eliminated in earlier rounds are ranked lower.
-
-  const maxRound = allMatches.reduce(
-    (acc, m) => Math.max(acc, m.round_number ?? 0),
-    0
-  );
 
   // Track the last round each team won
   const lastWinRound = new Map<string, number>();

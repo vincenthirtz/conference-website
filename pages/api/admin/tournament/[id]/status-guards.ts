@@ -65,7 +65,7 @@ async function handler(
     const currentStatus = tournament.status ?? 'draft';
 
     // Fetch counts in parallel (scoped to current tenant)
-    const [stagesRes, teamsRes, matchesRes] = await Promise.all([
+    const [stagesRes, teamsRes] = await Promise.all([
       supabaseAdmin
         .from('tournament_stages')
         .select('id', { count: 'exact', head: true })
@@ -76,17 +76,10 @@ async function handler(
         .select('id', { count: 'exact', head: true })
         .eq('tournament_id', tournamentId)
         .eq('tenant_id', ctx.tenantId),
-      supabaseAdmin
-        .from('matches')
-        .select('id', { count: 'exact', head: true })
-        .eq('tournament_id', tournamentId)
-        .eq('tenant_id', ctx.tenantId)
-        .neq('status', 'cancelled'),
     ]);
 
     const stagesCount = stagesRes.count ?? 0;
     const teamsCount = teamsRes.count ?? 0;
-    const matchesCount = matchesRes.count ?? 0;
 
     const guards: StatusGuard[] = [];
 

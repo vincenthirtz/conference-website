@@ -825,6 +825,7 @@ export function withBotRoute(
       if (!res.headersSent) {
         return res.status(500).json({ error: 'Internal error' });
       }
+      return undefined;
     }
   };
 }

@@ -1,4 +1,4 @@
-import React, { JSX } from 'react';
+import { JSX } from 'react';
 import Link from 'next/link';
 import type { SVGTypes } from '@/types/types';
 import { CookieSettingsButton } from '@/components/CookieBanner';

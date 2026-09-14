@@ -27,7 +27,7 @@ type FormData = {
   isActive: boolean;
 };
 
-function AdminEditPartnerPage({ staff }: Props) {
+function AdminEditPartnerPage(_props: Props) {
   const t = useAdminT(nsAdminPartnerEdit);
   const router = useRouter();
   const { addToast } = useToast();

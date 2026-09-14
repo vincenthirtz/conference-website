@@ -195,9 +195,7 @@ test.describe('Tournament notify captains API', () => {
     expect(body.messagesSent).toBeGreaterThanOrEqual(2);
   });
 
-  test('Captain A has a system message about the tournament', async ({
-    request,
-  }) => {
+  test('Captain A has a system message about the tournament', async () => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     // Check demandes for team A
     const { data } = await supabaseTestClient!
@@ -218,7 +216,7 @@ test.describe('Tournament notify captains API', () => {
     expect((data!.payload as any).from_team_name).toBe("OW Women's Cup");
   });
 
-  test('Captain B also has a system message', async ({ request }) => {
+  test('Captain B also has a system message', async () => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const { data } = await supabaseTestClient!
       .from('demandes')

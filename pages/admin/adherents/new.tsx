@@ -6,7 +6,6 @@ import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAutoSave } from '@/utils/useAutoSave';
 import DraftBanner from '@/components/admin/DraftBanner';
-import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
@@ -54,7 +53,7 @@ type FormData = {
   notes: string;
 };
 
-function AdminNewAdherentPage({ staff }: Props) {
+function AdminNewAdherentPage(_props: Props) {
   const t = useAdminT(nsAdminAdherentsNew);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();

@@ -461,12 +461,6 @@ export default function MatchPage({ match, lineups, mvp }: Props) {
   const gameCount = match.games.length;
   const tournamentPath = `/tournament/${match.tournament.slug || match.tournament.id}`;
 
-  const scoreLabel =
-    match.status === 'finished' &&
-    (match.team1_score !== null || match.team2_score !== null)
-      ? `${match.team1_score ?? 0} - ${match.team2_score ?? 0}`
-      : null;
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <main className="container mx-auto px-4 pt-24 pb-16 max-w-5xl">

@@ -68,21 +68,6 @@ type FinalizeBody = {
   force?: boolean;
 };
 
-type ApiResponse =
-  | {
-      success: true;
-      tournament: { id: string; name: string; status: string };
-      rankings: Array<{
-        team_id: string;
-        team_name: string;
-        rank: number;
-        prize: string | null;
-        notes: string | null;
-        frozen_at: string;
-      }>;
-      already_finalized: boolean;
-    }
-  | { error: string; details?: unknown };
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'tournament-finalize' }),

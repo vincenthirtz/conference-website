@@ -77,11 +77,7 @@ import {
   normalizeTcgOverview,
   isTcgOverviewEmpty,
 } from '@/utils/tcg/overviewModel';
-import type {
-  Count,
-  TcgOverview,
-  TcgOverviewSubject,
-} from '@/utils/tcg/overviewModel';
+import type { Count, TcgOverview } from '@/utils/tcg/overviewModel';
 
 /* ---------------------------------------------------------------------------
  * Libellés

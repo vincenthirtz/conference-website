@@ -19,7 +19,6 @@ import {
   type PlacementRule,
 } from '@/utils/discord/placementRoles';
 import WelcomeCardPreview, {
-  DEFAULT_WELCOME_MESSAGE,
   renderWelcomePreview,
 } from '@/components/admin/tenants/WelcomeCardPreview';
 import {

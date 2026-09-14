@@ -22,7 +22,6 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import AlertBanner from '@/components/admin/AlertBanner';
-import EmptyState from '@/components/admin/EmptyState';
 import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { logger } from '@/utils/logger';

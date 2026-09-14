@@ -7,7 +7,6 @@
 // mémoïsée puisse les réutiliser sans dupliquer la logique.
 
 import type { StageType } from '@/types/admin';
-import type { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminStageDetail from '@/lib/i18n/locales/admin-fr/adminStageDetail';
 
 export type Dict = typeof nsAdminStageDetail.fr;

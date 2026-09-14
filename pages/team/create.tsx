@@ -5,7 +5,6 @@ import { useToast } from '@/components/Toast';
 import { ANALYTICS_EVENTS, trackEvent } from '@/lib/analytics/track';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT, format } from '@/lib/i18n/useT';
-import { useLocale } from '@/lib/i18n/useLocale';
 // Import de TYPE uniquement (effacé à la compilation) : `utils/registrationFields`
 // importe zod, et en tirer une fonction ici embarquait ~250 ko de runtime de
 // validation dans une page PUBLIQUE. La normalisation des définitions se fait
@@ -162,7 +161,6 @@ function GlobeIcon({ className }: { className?: string }) {
 
 export default function PublicCreateTeamPage() {
   const t = useT(nsTeamCreate);
-  const locale = useLocale();
   const router = useRouter();
   // Source unique de vérité pour l'édition active (comme les landing pages) :
   // à défaut d'un `?tournament=<id>` explicite, on cible le tournoi féminin
@@ -207,9 +205,7 @@ export default function PublicCreateTeamPage() {
   // Clé d'idempotence courante : régénérée après chaque création réussie pour
   // qu'une nouvelle équipe soit bien une nouvelle intention (non dédupliquée).
   const idempotencyKeyRef = useRef<string>(genIdempotencyKey());
-  const [tournamentInfo, setTournamentInfo] = useState<TournamentInfo | null>(
-    null
-  );
+  const [, setTournamentInfo] = useState<TournamentInfo | null>(null);
   // Champs d'inscription personnalisés du tournoi cible (DÉFINITIONS, pas les
   // réponses). Chargés avec le tournoi puis validés via validateFieldDefinitions.
   const [registrationFields, setRegistrationFields] = useState<

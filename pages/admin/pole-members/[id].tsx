@@ -16,7 +16,7 @@ type Props = {
   };
 };
 
-function AdminPoleMemberEditPage({ staff }: Props) {
+function AdminPoleMemberEditPage(_props: Props) {
   const t = useAdminT(nsAdminPoleMemberEdit);
   const router = useRouter();
   const { id } = router.query;

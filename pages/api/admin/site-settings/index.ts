@@ -5,13 +5,6 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { applyRateLimit } from '@/utils/rateLimit';
 
 import { logger } from '../../../../utils/logger';
-type SiteSetting = {
-  key: string;
-  value: string;
-  description: string | null;
-  updated_at: string;
-  updated_by: string | null;
-};
 
 async function handler(
   req: NextApiRequest,

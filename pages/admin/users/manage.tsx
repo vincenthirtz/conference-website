@@ -1664,6 +1664,12 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       a.download = 'utilisateurs.csv';
       a.click();
       URL.revokeObjectURL(url);
+      if (truncated) {
+        addToast(
+          format(t.exportTruncated, { count: collected.length }),
+          'warning'
+        );
+      }
     } catch (err: unknown) {
       addToast((err as Error)?.message || t.errExport, 'error');
     } finally {

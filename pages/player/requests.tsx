@@ -45,7 +45,6 @@ export default function PlayerRequestsPage() {
   // Contexte joueur — derive depuis le cache partage useManagedTeam.
   const hasTeam = !!managedTeam?.team;
   const isCaptain = managedTeam?.isCaptain ?? false;
-  const isManager = managedTeam?.isManager ?? false;
   const myTeamId = managedTeam?.team?.id ?? null;
   /**
    * Permissions EFFECTIVES : `isManager` ne dit que « ce rôle accorde au moins

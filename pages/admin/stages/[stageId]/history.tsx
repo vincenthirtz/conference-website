@@ -57,7 +57,7 @@ function shortId(id: string) {
   return id.slice(0, 4) + '…' + id.slice(-3);
 }
 
-function AdminStageHistoryPage({ staff }: StaffProps) {
+function AdminStageHistoryPage(_props: StaffProps) {
   const t = useAdminT(nsAdminStageHistory);
   const router = useRouter();
   const { stageId } = router.query;

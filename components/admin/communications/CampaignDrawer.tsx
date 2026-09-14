@@ -19,7 +19,6 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminCampaigns from '@/lib/i18n/locales/admin-fr/adminCampaigns';
 import {
   getAudienceLabels,
-  formatDateTime,
   type CampaignSummary,
   type DryRunResult,
   type SendResult,

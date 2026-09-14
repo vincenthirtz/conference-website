@@ -80,7 +80,7 @@ export const getServerSideProps = withStaffPage({
   permission: 'manage_tournaments',
 });
 
-function AdminStageTeamsPage({ staff }: StaffProps) {
+function AdminStageTeamsPage(_props: StaffProps) {
   const t = useAdminT(nsAdminStageTeams);
   const router = useRouter();
   const { stageId } = router.query;

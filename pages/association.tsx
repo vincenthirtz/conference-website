@@ -606,7 +606,7 @@ function AssociationPage({
             <div className="absolute left-6 top-0 bottom-0 w-px bg-gradient-to-b from-purple-500/50 via-pink-500/50 to-cyan-500/50 hidden sm:block" />
 
             <div className="space-y-8 sm:space-y-12">
-              {timeline.map((item, idx) => (
+              {timeline.map((item) => (
                 <div key={item.year} className="relative sm:pl-16">
                   {/* Dot */}
                   <div className="absolute left-4 top-1 hidden sm:flex h-5 w-5 items-center justify-center">

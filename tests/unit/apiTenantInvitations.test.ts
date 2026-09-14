@@ -15,7 +15,6 @@
 //     global élevé : l'accès vaut pour un espace, via `tenant_staff`.
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import crypto from 'crypto';
 
 vi.mock('@/utils/supabase', async () => {
   const m = await import('./__helpers__/supabaseMock');
@@ -44,7 +43,6 @@ import publicHandler from '../../pages/api/invitations/[token]';
 const TENANT = CONFERENCE_TENANT_ID;
 const OWNER = 'user-owner';
 const INVITEE = 'user-invitee';
-const sha = (v: string) => crypto.createHash('sha256').update(v).digest('hex');
 
 let _t = 0;
 function req(over: Partial<Record<string, unknown>> = {}): any {

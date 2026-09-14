@@ -2,14 +2,13 @@
 // Espace joueur — page dediee "Mon profil" (resume + edition + RGPD).
 // La logique metier est reprise telle quelle de l'ancien ProfileCard.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabaseBrowser';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
-import { useToast } from '@/components/Toast';
-import { useT, format } from '@/lib/i18n/useT';
+import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import DiscoveryCard from '@/components/player/DiscoveryCard';
 import BattlenetVerifyCard from '@/components/player/BattlenetVerifyCard';
@@ -30,7 +29,6 @@ function PlayerProfile() {
   const tRank = useT(nsOverwatchRank);
   const tSpec = useT(nsSpecialty);
   const locale = useLocale();
-  const { addToast } = useToast();
   const { user, loading: authLoading } = usePlayerSession({
     redirectTo: '/login?next=/player/profile',
   });

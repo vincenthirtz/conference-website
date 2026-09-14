@@ -29,7 +29,7 @@ import { withBotRoute, type BotCrossTenantRequest } from '@/utils/botAuth';
 import { logger } from '@/utils/logger';
 import { sendOnboardSuccessEmail } from '@/utils/emailOnboard';
 import { getSiteUrl } from '@/utils/onboard';
-import { buildTrialFields, TRIAL_DAYS } from '@/utils/billing/trial';
+import { buildTrialFields } from '@/utils/billing/trial';
 
 const GUILD_ID_RE = /^[0-9]{15,25}$/;
 const OWNER_ID_RE = /^[0-9]{15,25}$/;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
-import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import { useAdminT } from '@/lib/i18n/useAdminT';
 import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
 import nsAdminStatsMaps from '@/lib/i18n/locales/admin-fr/adminStatsMaps';
 

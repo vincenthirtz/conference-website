@@ -15,7 +15,7 @@ const HEROES: readonly Hero[] = OVERWATCH_HEROES;
 
 export default function HeroPickerPage() {
   const t = useT(nsHeroPicker);
-  const [roleFilter, setRoleFilter] = useState<'All' | Hero['role']>('All');
+  const [roleFilter] = useState<'All' | Hero['role']>('All');
   const [favoriteHero, setFavoriteHero] = useState<Hero | null>(null);
   const [banHero, setBanHero] = useState<Hero | null>(null);
   const [phase, setPhase] = useState<'favorite' | 'cooldown' | 'ban' | 'done'>(

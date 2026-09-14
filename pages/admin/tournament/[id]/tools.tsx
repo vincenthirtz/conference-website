@@ -19,7 +19,6 @@ import { useToast } from '@/components/Toast';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
-import Modal from '@/components/admin/Modal';
 import { logger } from '@/utils/logger';
 import nsAdminTournamentOverview from '@/lib/i18n/locales/admin-fr/adminTournamentOverview';
 import nsAdminTournamentEmbed from '@/lib/i18n/locales/admin-fr/adminTournamentEmbed';

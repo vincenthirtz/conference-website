@@ -28,8 +28,6 @@ import {
 } from '@/components/admin/demandes/demandeChips';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
 
-type Dict = typeof nsAdminDemandesList.fr;
-
 type TournamentMini = {
   id: string;
   name: string;

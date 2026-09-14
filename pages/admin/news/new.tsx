@@ -12,20 +12,12 @@ import LogoUpload from '@/components/admin/LogoUpload';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminNewsNew from '@/lib/i18n/locales/admin-fr/adminNewsNew';
 
-type Props = {
-  staff: {
-    id: string;
-    role: string;
-    display_name: string | null;
-  };
-};
-
 export const getServerSideProps = withStaffPage({ permission: 'manage_communications' });
 
 const slugifyValue = (value: string) =>
   slugify(value, { lower: true, strict: true });
 
-export default function AdminNewsCreate({ staff }: Props) {
+export default function AdminNewsCreate() {
   const t = useAdminT(nsAdminNewsNew);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();

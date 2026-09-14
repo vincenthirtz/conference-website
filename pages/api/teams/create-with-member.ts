@@ -1,5 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import slugify from 'slugify';
 import { supabaseAdmin } from '@/utils/supabase';
 import { findOrCreateUserByEmail } from '@/utils/find-or-create-user';
 import {

@@ -408,8 +408,8 @@ async function handleDelete(
  */
 function computeMapWinsFromGames(
   games: GameRow[],
-  team1Id: string | null,
-  team2Id: string | null
+  _team1Id: string | null,
+  _team2Id: string | null
 ): { team1: number; team2: number } {
   let t1 = 0;
   let t2 = 0;

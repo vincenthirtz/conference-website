@@ -396,13 +396,12 @@ export default async function handler(
         : null,
   })
     .then((r) => {
-      if (r.messageId) {
-        // Store the Discord message ID for future edits
-        return supabaseAdmin!
-          .from('support_tickets')
-          .update({ discord_message_id: r.messageId })
-          .eq('id', ticket.id);
-      }
+      if (!r.messageId) return undefined;
+      // Store the Discord message ID for future edits
+      return supabaseAdmin!
+        .from('support_tickets')
+        .update({ discord_message_id: r.messageId })
+        .eq('id', ticket.id);
     })
     .catch((e) => logger.error('[support] notifySupportTicket error:', e));
 

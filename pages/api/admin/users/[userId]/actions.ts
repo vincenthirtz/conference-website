@@ -95,7 +95,7 @@ async function handler(
  * current team (the team they're already a member of).
  * ---------------------------------------------------------*/
 async function assignCaptain(
-  req: NextApiRequest,
+  _req: NextApiRequest,
   res: NextApiResponse<ActionResponse>,
   ctx: AuthenticatedStaffContext,
   userId: string,

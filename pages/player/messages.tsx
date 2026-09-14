@@ -130,7 +130,7 @@ export default function MessagesPage() {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
   const loading = authLoading || teamLoading;
 

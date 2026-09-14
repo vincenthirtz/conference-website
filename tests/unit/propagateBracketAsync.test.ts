@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import type { MatchRow } from '../../types/bracket';
 
 import { store, resetSupabaseMock } from './__helpers__/supabaseMock';

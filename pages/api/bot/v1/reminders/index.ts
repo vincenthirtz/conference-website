@@ -19,10 +19,7 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { buildCheckinUrl } from '@/utils/checkin';
-import {
-  getDiscordLinksForUsers,
-  type DiscordLink,
-} from '@/utils/discordLinks';
+import { getDiscordLinksForUsers } from '@/utils/discordLinks';
 import { logger } from '@/utils/logger';
 
 // Polling window — matches scheduled in this interval are eligible.

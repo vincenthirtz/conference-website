@@ -17,8 +17,6 @@ import { useLocale } from '@/lib/i18n/useLocale';
 import { formatSiteDate } from '@/utils/timezone';
 import nsTournamentsList from '@/lib/i18n/locales/fr/tournamentsList';
 
-type TournamentsDict = typeof nsTournamentsList.fr;
-
 export type Tournament = {
   id: string;
   name: string;

@@ -13,6 +13,16 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
+    // Contrôles qui remplacent ESLint (retiré : trop lent pour ce qu'il
+    // bloquait — 0 erreur, 365 avertissements ignorés). Ils tournent dans le
+    // même `tsc --noEmit` que le typecheck, donc sans passe supplémentaire.
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
     "skipLibCheck": true,
     "lib": ["dom", "dom.iterable", "esnext"],
     "incremental": true,

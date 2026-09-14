@@ -1,4 +1,3 @@
-import React from 'react';
 import { useCookieConsent } from '@/hooks/useCookieConsent';
 import { useT } from '@/lib/i18n/useT';
 import nsCookieBanner from '@/lib/i18n/locales/fr/cookieBanner';

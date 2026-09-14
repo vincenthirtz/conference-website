@@ -141,7 +141,7 @@ function statusColor(status: MatchStatus) {
   }
 }
 
-function AdminSwissStagePage({ staff }: StaffProps) {
+function AdminSwissStagePage(_props: StaffProps) {
   const t = useAdminT(nsAdminStageSwiss);
   const router = useRouter();
   const { stageId } = router.query;

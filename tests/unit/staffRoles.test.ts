@@ -10,8 +10,6 @@ vi.mock('../../utils/supabase', () => ({
 
 import {
   STAFF_ROLES,
-  STAFF_ROLE_LABEL,
-  STAFF_ROLE_RANK,
   formatStaffRoleLabel,
   getRoleLabel,
   getRoleDescription,

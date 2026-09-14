@@ -65,20 +65,6 @@ function BellIcon() {
   );
 }
 
-function Initials({ name }: { name: string | null }) {
-  const initials = (name || 'J')
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((p) => p.charAt(0).toUpperCase())
-    .join('');
-  return (
-    <span className="flex h-6 w-6 items-center justify-center rounded-full border border-purple-400/30 bg-purple-500/20 text-[10px] font-semibold text-purple-100">
-      {initials || 'J'}
-    </span>
-  );
-}
-
 export default function PlayerTopBar({
   playerName,
   roleLabel,

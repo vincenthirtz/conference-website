@@ -5,7 +5,6 @@ import {
 } from '../../utils/swiss/standings';
 import {
   outcomeToSwissResult,
-  defaultSwissScoreConfig,
   getPlayerOpponents,
   havePlayersMet,
   countMatchesBetween,

@@ -36,8 +36,6 @@ import type { AdminUserProfilePayload } from '@/pages/api/admin/users/[userId]/p
 import { logger } from '../../../../utils/logger';
 import nsAdminUserCaptainView from '@/lib/i18n/locales/admin-fr/adminUserCaptainView';
 
-type Dict = typeof nsAdminUserCaptainView.fr;
-
 type StaffShape = {
   id: string;
   role: string;

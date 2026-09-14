@@ -20,7 +20,7 @@
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState } from 'react';
-import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
+import { AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast/ToastContext';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -98,7 +98,6 @@ function AdminDraftPageContent() {
   const validIds =
     isValidUUID(matchId) && Number.isInteger(gameIndex) && gameIndex >= 1;
 
-  const { adminFetchJson } = useAdminFetch();
   const initMut = useIdempotentMutation();
   const sideMut = useIdempotentMutation();
   const startMut = useIdempotentMutation();

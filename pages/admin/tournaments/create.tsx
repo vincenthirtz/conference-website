@@ -17,7 +17,6 @@ import { useAdminT } from '@/lib/i18n/useAdminT';
 import { logger } from '../../../utils/logger';
 import nsAdminTournamentsCreate from '@/lib/i18n/locales/admin-fr/adminTournamentsCreate';
 
-type Dict = typeof nsAdminTournamentsCreate.fr;
 type Props = {
   staff: {
     id: string;
@@ -62,7 +61,7 @@ function stageTypeBadge(type: string) {
 
 export const getServerSideProps = withStaffPage({ permission: 'manage_tournaments' });
 
-function AdminTournamentCreatePage({ staff }: Props) {
+function AdminTournamentCreatePage(_props: Props) {
   const t = useAdminT(nsAdminTournamentsCreate);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
