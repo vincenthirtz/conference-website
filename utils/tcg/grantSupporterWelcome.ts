@@ -93,6 +93,13 @@ async function readAccountRole(
  * l'inscription : rien n'empêche une joueuse de cocher « supportrice ». Sans ce
  * garde-fou, elle encaisserait ce cadeau EN PLUS de celui de son édition. Les
  * deux accueils existent, mais pas pour la même personne au même moment.
+ *
+ * CE CONTRÔLE RESTE NÉCESSAIRE MALGRÉ LE TRIGGER. Depuis
+ * `clear_supporter_role_on_roster_join`, l'étiquette tombe à l'entrée dans un
+ * roster — donc le cas « supportrice ET sur un roster » ne devrait plus exister.
+ * Mais le trigger ne bloque jamais l'insertion en cas d'échec (il avertit), et
+ * un rôle peut aussi être reposé à la main depuis /admin/users/manage. On
+ * vérifie donc le FAIT plutôt que de faire confiance à l'étiquette.
  */
 async function isOnAnyRoster(
   tenantId: string,

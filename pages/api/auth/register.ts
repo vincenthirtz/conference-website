@@ -55,6 +55,14 @@ const optionalTrimmed = (max: number) =>
  * n'était pas une permission, c'était une PORTE et un nom — 26 comptes sur 97
  * n'étaient ni sur un roster ni staff, sans que rien ne les désigne.
  *
+ * PERSONNE N'Y EST ENFERMÉ, et ce n'est pas l'application qui le garantit :
+ * `clear_supporter_role_on_roster_join` (trigger AFTER INSERT sur
+ * `team_members`) retire l'étiquette dès l'entrée dans un roster, par quelque
+ * chemin que ce soit — invitation, wizard public, demande de capitanat, ajout
+ * par le staff ou par le bot. Les recenser un par un ici, c'était s'engager à
+ * ne jamais en oublier un. Le tableau de bord propose déjà « créer une
+ * équipe » (`TeamCard` → /player/request-captain) à qui n'en a pas.
+ *
  * ⚠️ IL NE DONNE AUCUNE MONNAIE TCG, et ne doit jamais en donner : la monnaie
  * est GAGNÉE, jamais achetée (boîtes à butin BE/NL, ANJ, public mineur — cf.
  * docs/TCG.md). Soutenir l'association et collectionner sont deux capacités du
