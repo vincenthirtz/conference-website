@@ -34889,7 +34889,15 @@ paths:
 
         Une ecriture partielle ne leve pas : crediter 57 comptes sur 58 vaut
         mieux qu'echouer sur les 58. Journalise (`tcg_welcome_gift_grant`) avec
-        le nombre de comptes touches. Rate-limit 20 / min.
+        le nombre de comptes touches.
+
+        HONORE `Idempotency-Key` (`withAdminIdempotency`, cle
+        `tcg-welcome-gift`) : un double-clic, un retry navigateur ou une coupure
+        reseau partielle ne distribuent pas deux fois. Ce n'est pas decoratif —
+        le schema protege des doublons de PIECES (unicite sur `source_ref`) mais
+        PAS des doublons de PAQUETS ; cette couche ferme la fenetre cote
+        transport. Seules les reponses 2xx sont mises en cache, donc un 500
+        transitoire reste rejouable. Rate-limit 20 / min.
       operationId: adminGrantTcgWelcomeGift
       tags:
         - admin/tcg

@@ -129,4 +129,24 @@ export default {
   themePreviewDropLine: '{name} claims a card',
   themePreviewWinLine: '{name} wins a pack',
   themePreviewName: 'A player',
+
+  giftHeading: 'Welcome gift',
+  giftSubtitle:
+    'Credits every player entered in the current edition. An opened pack cannot be taken back: the count is announced before the hand-out.',
+  giftEligible: '{count} player(s) with an account',
+  giftAlreadyGifted: '{count} already received the gift',
+  giftTeams: 'Across the rosters of {teams} entered team(s)',
+  giftReward: 'Each receives {packs} pack and {coins} coins',
+  giftNoTournament: 'No current edition: nothing to hand out.',
+  giftNothingToDo: 'Everyone has already received the gift.',
+  giftReplayHint:
+    'Running it again is safe: only players who joined since the last hand-out will be credited.',
+  giftGrant: 'Hand out',
+  giftGranting: 'Handing out…',
+  giftConfirmTitle: 'Hand out the welcome gift?',
+  giftConfirmBody:
+    '{count} account(s) will be credited. This is immediate and final: an opened pack cannot be taken back.',
+  giftGranted: '{granted} account(s) credited.',
+  giftLoadError: 'Could not read the welcome gift status.',
+  giftGrantError: 'The hand-out failed, please try again.',
 };

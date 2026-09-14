@@ -26,6 +26,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
+import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { logStaffAction } from '@/utils/staffLogs';
 import { logger } from '@/utils/logger';
 import { resolveCurrentTournamentId } from '@/utils/currentTournament';
@@ -85,13 +86,11 @@ async function handler(
         tournamentId,
         dryRun: true,
       });
-      return res
-        .status(200)
-        .json({
-          ...report,
-          tournamentId,
-          reward,
-        } satisfies TcgWelcomeGiftState);
+      return res.status(200).json({
+        ...report,
+        tournamentId,
+        reward,
+      } satisfies TcgWelcomeGiftState);
     }
 
     // Aiguillage en forme POSITIVE : c'est ce que lit le garde de dérive
@@ -120,13 +119,11 @@ async function handler(
         }
       }
 
-      return res
-        .status(200)
-        .json({
-          ...report,
-          tournamentId,
-          reward,
-        } satisfies TcgWelcomeGiftState);
+      return res.status(200).json({
+        ...report,
+        tournamentId,
+        reward,
+      } satisfies TcgWelcomeGiftState);
     }
 
     res.setHeader('Allow', 'GET, POST');
@@ -137,4 +134,17 @@ async function handler(
   }
 }
 
-export default withStaffRoute(handler, { permission: 'moderate_support' });
+// `withAdminIdempotency` N'EST PAS DÉCORATIF ICI. Le POST crédite d'un coup
+// toutes les participantes, et un paquet ouvert ne se rend pas : un double-clic,
+// un retry de navigateur ou une coupure réseau partielle ne doivent pas
+// distribuer deux fois. Le schéma protège déjà des doublons de PIÈCES (unicité
+// sur `source_ref`), mais RIEN ne protège des doublons de PAQUETS — c'est
+// justement le trou décrit dans `grantWelcomeGift.ts`. Cette couche ferme la
+// fenêtre côté transport, avant même que le handler ne s'exécute.
+//
+// Seules les réponses 2xx sont mises en cache : un 500 transitoire reste
+// rejouable, ce qui est le comportement voulu.
+export default withStaffRoute(
+  withAdminIdempotency(handler, { key: 'tcg-welcome-gift' }),
+  { permission: 'moderate_support' }
+);

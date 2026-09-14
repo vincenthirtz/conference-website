@@ -48,6 +48,12 @@ const TcgOverlayCard = lazyPanel(
 const TcgOverlayThemeCard = lazyPanel(
   () => import('@/components/admin/tcg/TcgOverlayThemeCard')
 );
+// Distribution du cadeau d'accueil : un quatrième sujet, donc un quatrième
+// composant — l'écran d'ensemble, le lien, l'apparence et le cadeau ne se
+// mélangent pas.
+const TcgWelcomeGiftCard = lazyPanel(
+  () => import('@/components/admin/tcg/TcgWelcomeGiftCard')
+);
 
 const ID_BASE = 'admin-moderation';
 
@@ -217,6 +223,26 @@ export default function AdminModerationPage({ staff }: StaffProps) {
                     previewDropLine: tTcgOverview.themePreviewDropLine,
                     previewWinLine: tTcgOverview.themePreviewWinLine,
                     previewName: tTcgOverview.themePreviewName,
+                  }}
+                />
+                <TcgWelcomeGiftCard
+                  labels={{
+                    heading: tTcgOverview.giftHeading,
+                    subtitle: tTcgOverview.giftSubtitle,
+                    eligible: tTcgOverview.giftEligible,
+                    alreadyGifted: tTcgOverview.giftAlreadyGifted,
+                    teams: tTcgOverview.giftTeams,
+                    reward: tTcgOverview.giftReward,
+                    noTournament: tTcgOverview.giftNoTournament,
+                    nothingToDo: tTcgOverview.giftNothingToDo,
+                    replayHint: tTcgOverview.giftReplayHint,
+                    grant: tTcgOverview.giftGrant,
+                    granting: tTcgOverview.giftGranting,
+                    confirmTitle: tTcgOverview.giftConfirmTitle,
+                    confirmBody: tTcgOverview.giftConfirmBody,
+                    granted: tTcgOverview.giftGranted,
+                    loadError: tTcgOverview.giftLoadError,
+                    grantError: tTcgOverview.giftGrantError,
                   }}
                 />
               </div>

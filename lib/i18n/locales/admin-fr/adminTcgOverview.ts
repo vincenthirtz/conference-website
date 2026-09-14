@@ -148,4 +148,27 @@ export default adminNs('adminTcgOverview', {
   themePreviewDropLine: '{name} remporte une carte',
   themePreviewWinLine: '{name} gagne un paquet',
   themePreviewName: 'Une joueuse',
+
+  // --- Cadeau de bienvenue ----------------------------------------------------
+  // Acte COLLECTIF et IRRÉVERSIBLE : les textes annoncent le nombre avant le
+  // clic, et la confirmation le répète. On ne valide pas une intention vague.
+  giftHeading: 'Cadeau de bienvenue',
+  giftSubtitle:
+    'Crédite chaque participante engagée dans l’édition en cours. Un paquet ouvert ne se rend pas : le nombre est annoncé avant la distribution.',
+  giftEligible: '{count} participante(s) avec un compte',
+  giftAlreadyGifted: '{count} ont déjà reçu le cadeau',
+  giftTeams: 'Sur les rosters de {teams} équipe(s) engagée(s)',
+  giftReward: 'Chacune reçoit {packs} paquet et {coins} pièces',
+  giftNoTournament: 'Aucune édition en cours : rien à distribuer.',
+  giftNothingToDo: 'Tout le monde a déjà reçu le cadeau.',
+  giftReplayHint:
+    'Relancer est sans risque : seules les joueuses arrivées depuis la dernière distribution seront créditées.',
+  giftGrant: 'Distribuer',
+  giftGranting: 'Distribution…',
+  giftConfirmTitle: 'Distribuer le cadeau de bienvenue ?',
+  giftConfirmBody:
+    '{count} compte(s) vont être crédités. C’est immédiat et définitif : un paquet ouvert ne se reprend pas.',
+  giftGranted: '{granted} compte(s) crédité(s).',
+  giftLoadError: 'Impossible de lire l’état du cadeau de bienvenue.',
+  giftGrantError: 'La distribution a échoué, réessaie.',
 });
