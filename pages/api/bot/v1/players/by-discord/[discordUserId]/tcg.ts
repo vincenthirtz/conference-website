@@ -27,16 +27,13 @@ import { resolveActorPlayer } from '@/utils/botActor';
 import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
 import { BOOSTER_PRICE_COINS } from '@/utils/tcg/economy';
 import { cardSubjectKey } from '@/utils/tcg/subjectKey';
+import { readOwnedCardRows } from '@/utils/tcg/readOwnedCards';
 import { logger } from '@/utils/logger';
 
 // Volontairement identique aux autres routes bot (`{15,25}`) et non au
 // `pattern` de la spec : c'est le code qui fait foi, et un identifiant Discord
 // court existe encore chez les comptes les plus anciens.
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
-
-/** Bornes de lecture, comme `/api/player/tcg/collection`. */
-const MAX_PACKS = 500;
-const MAX_CARDS = 5000;
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   // Pas de garde de méthode ici : `withBotRoute` filtre déjà et pose l'en-tête
@@ -61,78 +58,67 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const tenantId = req.botContext.tenantId;
   const userId = player.authUserId;
 
-  const [packsRes, walletRes] = await Promise.all([
+  // Paquets fermés COMPTÉS (et non déduits d'une liste bornée) ; cartes lues par
+  // tranches (`readOwnedCards`), comme `/api/player/tcg/collection` : PostgREST
+  // coupe toute réponse à 1000 lignes, et l'ancienne borne `.limit(5000)`
+  // faisait annoncer au bot une collection plus petite que celle du site.
+  const [unopenedRes, openedRes, walletRes, ownedRes] = await Promise.all([
     supabaseAdmin
       .from('tcg_packs')
-      .select('id, opened_at')
+      .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
       .eq('user_id', userId)
-      .limit(MAX_PACKS),
+      .is('opened_at', null),
+    supabaseAdmin
+      .from('tcg_packs')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('user_id', userId)
+      .not('opened_at', 'is', null),
     supabaseAdmin
       .from('tcg_wallets')
       .select('balance')
       .eq('tenant_id', tenantId)
       .eq('user_id', userId)
       .maybeSingle(),
+    readOwnedCardRows(tenantId, userId),
   ]);
 
-  if (packsRes.error) {
-    logger.error('[bot/player/tcg] paquets illisibles', packsRes.error);
+  if (unopenedRes.error || openedRes.error) {
+    logger.error(
+      '[bot/player/tcg] paquets illisibles',
+      unopenedRes.error ?? openedRes.error
+    );
+    return res.status(500).json({ error: 'Erreur de lecture' });
+  }
+  if (!ownedRes.ok) {
+    logger.error('[bot/player/tcg] cartes illisibles', ownedRes.error);
     return res.status(500).json({ error: 'Erreur de lecture' });
   }
 
-  const packs = (packsRes.data ?? []) as Array<{
-    id: string;
-    opened_at: string | null;
-  }>;
-  const openedPackIds = packs.filter((p) => p.opened_at).map((p) => p.id);
-  const unopened = packs.length - openedPackIds.length;
+  const unopened = unopenedRes.count ?? 0;
+  const opened = openedRes.count ?? 0;
 
   // Résumé de collection : les cartes des paquets OUVERTS. Un paquet fermé ne
   // contient encore rien — la collection se déduit, elle n'est pas stockée.
-  let distinct = 0;
   let total = 0;
   let bestRarity: TcgRarity | null = null;
-
-  if (openedPackIds.length > 0) {
-    // Recyclées exclues, comme `/api/player/tcg/collection` : les deux
-    // lecteurs comptent la même chose et doivent le compter pareil, sinon le
-    // bot annoncerait une collection que le site ne montre pas.
-    const { data: cardRows, error: cardsError } = await supabaseAdmin
-      .from('tcg_pack_cards')
-      .select('subject_kind, card_user_id, card_team_id, card_map_slug, rarity')
-      .in('pack_id', openedPackIds)
-      .is('recycled_at', null)
-      .limit(MAX_CARDS);
-
-    if (cardsError) {
-      logger.error('[bot/player/tcg] cartes illisibles', cardsError);
-      return res.status(500).json({ error: 'Erreur de lecture' });
+  const subjects = new Set<string>();
+  for (const row of ownedRes.value) {
+    // Le CHECK du schéma garantit exactement un sujet ; une ligne sans sujet
+    // serait une corruption — on la saute plutôt que de la compter.
+    const key = cardSubjectKey(row);
+    if (!key) continue;
+    subjects.add(key);
+    total += 1;
+    if (
+      bestRarity === null ||
+      RARITY_ORDER.indexOf(row.rarity) > RARITY_ORDER.indexOf(bestRarity)
+    ) {
+      bestRarity = row.rarity;
     }
-
-    const subjects = new Set<string>();
-    for (const row of (cardRows ?? []) as Array<{
-      subject_kind: 'player' | 'team' | 'map';
-      card_user_id: string | null;
-      card_team_id: string | null;
-      card_map_slug: string | null;
-      rarity: TcgRarity;
-    }>) {
-      // Le CHECK du schéma garantit exactement un sujet ; une ligne sans sujet
-      // serait une corruption — on la saute plutôt que de la compter.
-      const key = cardSubjectKey(row);
-      if (!key) continue;
-      subjects.add(key);
-      total += 1;
-      if (
-        bestRarity === null ||
-        RARITY_ORDER.indexOf(row.rarity) > RARITY_ORDER.indexOf(bestRarity)
-      ) {
-        bestRarity = row.rarity;
-      }
-    }
-    distinct = subjects.size;
   }
+  const distinct = subjects.size;
 
   return res.status(200).json({
     authUserId: userId,
@@ -142,7 +128,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     // connaît pas. Sans lui, un « il te manque X pièces » se calculerait avec
     // un barème recopié, qui mentirait au premier réglage.
     boosterPrice: BOOSTER_PRICE_COINS,
-    packs: { unopened, opened: openedPackIds.length, total: packs.length },
+    packs: { unopened, opened, total: unopened + opened },
     collection: { distinct, total, bestRarity },
   });
 }

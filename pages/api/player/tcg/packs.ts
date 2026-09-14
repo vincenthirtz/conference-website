@@ -43,6 +43,13 @@ import { readMapFaces, MAP_POOL_SLUGS } from '@/utils/tcg/readMapFaces';
 // doublement vrai du guide, qui prétend énoncer la règle.
 import { TWITCH_DROP_COINS, WELCOME_GIFT_COINS } from '@/utils/tcg/earnSources';
 import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
+import { readOwnedSubjectKeys } from '@/utils/tcg/readOwnedCards';
+import {
+  decodePacksCursor,
+  encodePacksCursor,
+  parsePageLimit,
+  type PacksCursor,
+} from '@/utils/tcg/pageCursor';
 // Le prix ET le barème sont rendus par l'API plutôt que recopiés dans la page :
 // importer `economy.ts` côté client ferait entrer le moteur de rating dont il
 // dérive le barème dans le bundle navigateur.
@@ -76,6 +83,9 @@ export default withAuthRoute(async function handler(
 /* GET — mes paquets et mon solde                                              */
 /* -------------------------------------------------------------------------- */
 
+/** Taille de page par défaut : l'ancienne borne fixe, pour rester rétrocompatible. */
+const DEFAULT_PACKS_LIMIT = 200;
+
 async function listPacks(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -87,20 +97,82 @@ async function listPacks(
   )
     return;
 
-  const [packsRes, walletRes] = await Promise.all([
-    supabaseAdmin!
-      .from('tcg_packs')
-      .select('id, source_kind, granted_at, opened_at')
-      .eq('tenant_id', tenantId)
-      .eq('user_id', userId)
+  // PAGINATION PAR CURSEUR, RÉTROCOMPATIBLE. Sans paramètre, la réponse est
+  // celle d'avant — les 200 paquets les plus récents — plus `nextCursor`, qui
+  // dit enfin s'il en existe d'autres au lieu de les taire.
+  //   - `limit`  : 1..200, défaut 200 (l'ancienne borne) ;
+  //   - `cursor` : rendu par la page précédente, opaque ;
+  //   - `status` : `unopened` | `opened`. L'espace joueuse n'affiche QUE les
+  //     paquets à ouvrir : sans ce filtre, un paquet fermé plus ancien que les
+  //     200 derniers ne s'afficherait jamais, et ne pourrait donc pas s'ouvrir.
+  const limitParam = parsePageLimit(req.query.limit);
+  if (limitParam === 'invalid') {
+    return res
+      .status(400)
+      .json({ error: 'Paramètre limit invalide.', code: 'invalid_limit' });
+  }
+  const limit = limitParam ?? DEFAULT_PACKS_LIMIT;
+
+  let cursor: PacksCursor | null = null;
+  if (req.query.cursor !== undefined) {
+    cursor = decodePacksCursor(req.query.cursor);
+    if (!cursor) {
+      return res
+        .status(400)
+        .json({ error: 'Curseur invalide.', code: 'invalid_cursor' });
+    }
+  }
+
+  const status = req.query.status;
+  if (status !== undefined && status !== 'unopened' && status !== 'opened') {
+    return res
+      .status(400)
+      .json({ error: 'Paramètre status invalide.', code: 'invalid_status' });
+  }
+
+  // Solde et barème changent d'un appel à l'autre : rien à garder en cache.
+  res.setHeader('Cache-Control', 'private, no-store');
+
+  let packsQuery = supabaseAdmin!
+    .from('tcg_packs')
+    .select('id, source_kind, granted_at, opened_at')
+    .eq('tenant_id', tenantId)
+    .eq('user_id', userId);
+  if (status === 'unopened') packsQuery = packsQuery.is('opened_at', null);
+  if (status === 'opened') packsQuery = packsQuery.not('opened_at', 'is', null);
+  if (cursor) {
+    // « Strictement après » dans l'ordre (granted_at DESC, id DESC). Les deux
+    // valeurs sont interpolées, d'où la validation de forme exacte dans
+    // `decodePacksCursor` : ni virgule ni parenthèse ne peut y entrer.
+    packsQuery = packsQuery.or(
+      `granted_at.lt.${cursor.grantedAt},and(granted_at.eq.${cursor.grantedAt},id.lt.${cursor.id})`
+    );
+  }
+
+  const [packsRes, walletRes, unopenedRes] = await Promise.all([
+    packsQuery
       .order('granted_at', { ascending: false })
-      .limit(200),
+      // Second critère : plusieurs paquets peuvent partager une date
+      // d'attribution (un cadeau distribué en lot). Sans lui, l'ordre des ex
+      // æquo n'est pas garanti et le curseur sauterait ou répéterait un paquet.
+      .order('id', { ascending: false })
+      // Une ligne de plus que demandé : c'est elle qui dit s'il reste une page.
+      .limit(limit + 1),
     supabaseAdmin!
       .from('tcg_wallets')
       .select('balance')
       .eq('tenant_id', tenantId)
       .eq('user_id', userId)
       .maybeSingle(),
+    // `unopened` est désormais un COMPTE, pas le filtrage de la page lue : avec
+    // plus de 200 paquets, l'ancien calcul annonçait moins de paquets à ouvrir
+    // qu'il n'en existait. `head: true` ne ramène aucune ligne.
+    supabaseAdmin!
+      .from('tcg_packs')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('user_id', userId)
+      .is('opened_at', null),
   ]);
 
   if (packsRes.error) {
@@ -108,12 +180,26 @@ async function listPacks(
     return res.status(500).json({ error: 'Lecture impossible.' });
   }
 
-  const packs = (packsRes.data ?? []) as Array<{
+  const rows = (packsRes.data ?? []) as Array<{
     id: string;
     source_kind: string;
     granted_at: string;
     opened_at: string | null;
   }>;
+  const hasMore = rows.length > limit;
+  const packs = hasMore ? rows.slice(0, limit) : rows;
+  const last = packs[packs.length - 1];
+  const nextCursor =
+    hasMore && last
+      ? encodePacksCursor({ grantedAt: last.granted_at, id: last.id })
+      : null;
+
+  // Compte illisible : on retombe sur l'ancien calcul (la page lue) plutôt que
+  // de faire échouer l'écran pour un chiffre d'appoint.
+  const unopened =
+    !unopenedRes.error && typeof unopenedRes.count === 'number'
+      ? unopenedRes.count
+      : packs.filter((p) => !p.opened_at).length;
 
   return res.status(200).json({
     packs: packs.map((p) => ({
@@ -122,7 +208,8 @@ async function listPacks(
       grantedAt: p.granted_at,
       openedAt: p.opened_at,
     })),
-    unopened: packs.filter((p) => !p.opened_at).length,
+    unopened,
+    nextCursor,
     // Pas de ligne de porte-monnaie = solde nul : état normal de quelqu'un qui
     // n'a encore rien gagné.
     balance: (walletRes.data as { balance?: number } | null)?.balance ?? 0,
@@ -388,12 +475,37 @@ async function openPack(
     .filter((c) => c.subject_kind === 'map')
     .map((c) => c.card_map_slug as string);
 
-  const [playerFaces, teamFaces, mapFaces] = await Promise.all([
+  const [playerFaces, teamFaces, mapFaces, ownedBefore] = await Promise.all([
     readPlayerFaces(tenantId, drawnPlayerIds),
     readTeamFaces(tenantId, drawnTeamIds),
     // Sans `tenantId` : une map appartient au registre commun, pas au tenant.
     readMapFaces(drawnMapSlugs),
+    // « Nouvelle carte ou doublon ? » — la question qu'on se pose en ouvrant.
+    // La page la déduisait de la collection chargée, ce qui devient faux dès
+    // que celle-ci est paginée : une carte possédée mais pas encore affichée
+    // passerait pour nouvelle. Ciblé sur les sujets tirés, hors de CE paquet.
+    readOwnedSubjectKeys(
+      tenantId,
+      userId,
+      { players: drawnPlayerIds, teams: drawnTeamIds, maps: drawnMapSlugs },
+      packId
+    ),
   ]);
+
+  // BEST-EFFORT : une lecture en échec n'annule pas une ouverture déjà écrite.
+  // `isNew` est alors OMIS — l'interface n'affiche aucun badge plutôt qu'un
+  // badge faux. Un sujet tiré deux fois dans le même paquet n'est « nouveau »
+  // qu'à sa première position : la seconde est déjà un doublon.
+  if (!ownedBefore.ok) {
+    logger.warn('[tcg/packs] nouveauté illisible: %s', ownedBefore.error);
+  }
+  const seenInPack = new Set<string>();
+  const isNewAt = (key: string): { isNew?: boolean } => {
+    if (!ownedBefore.ok) return {};
+    const fresh = !ownedBefore.value.has(key) && !seenInPack.has(key);
+    seenInPack.add(key);
+    return { isNew: fresh };
+  };
 
   return res.status(200).json({
     packId,
@@ -406,6 +518,9 @@ async function openPack(
         position: c.position,
         rarity: c.rarity,
         isFoil: c.is_foil,
+        ...isNewAt(
+          `${c.subject_kind}:${c.card_user_id ?? c.card_team_id ?? c.card_map_slug}`
+        ),
       };
       if (c.subject_kind === 'player') {
         const face = playerFaces.get(c.card_user_id as string);

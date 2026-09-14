@@ -42,11 +42,11 @@ import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import { RECYCLE_REFUND_COINS } from '@/utils/tcg/economy';
 import { refreshBalance } from '@/utils/tcg/grantVictoryRewards';
 import { cardSubjectKey } from '@/utils/tcg/subjectKey';
+import {
+  readCardsOfPacks,
+  readOpenedPackIds,
+} from '@/utils/tcg/readOwnedCards';
 import { logger } from '@/utils/logger';
-
-/** Borne de lecture, comme les autres routes de collection. */
-const MAX_PACKS = 500;
-const MAX_CARDS = 5000;
 
 type CardRow = {
   pack_id: string;
@@ -99,20 +99,24 @@ export default withAuthRoute(async function handler(
   // 1) Mes paquets OUVERTS. Une carte d'un paquet fermé n'est pas encore
   //    possédée ; une carte d'un paquet qui n'est pas le mien ne l'est pas non
   //    plus. Cette liste borne tout le reste.
-  const { data: packRows, error: packError } = await supabaseAdmin
-    .from('tcg_packs')
-    .select('id')
-    .eq('tenant_id', tenantId)
-    .eq('user_id', userId)
-    .not('opened_at', 'is', null)
-    .limit(MAX_PACKS);
-
-  if (packError) {
-    logger.error('[tcg/recycle] paquets illisibles: %s', packError.message);
+  //
+  //    Lecture PAR TRANCHES (`readOwnedCards`) et non plus `.limit(500)` : la
+  //    collection est paginée sans plafond, et PostgREST coupe toute réponse à
+  //    1000 lignes. Avec l'ancienne borne, au-delà de ~200 paquets ouverts, la
+  //    page montrait un doublon que cette route déclarait introuvable.
+  const packsRead = await readOpenedPackIds(tenantId, userId);
+  if (!packsRead.ok) {
+    logger.error('[tcg/recycle] paquets illisibles: %s', packsRead.error);
     return res.status(500).json({ error: 'Lecture impossible.' });
   }
+  if (packsRead.truncated) {
+    logger.warn(
+      '[tcg/recycle] plafond de lecture des paquets atteint (%s)',
+      userId
+    );
+  }
 
-  const packIds = ((packRows ?? []) as Array<{ id: string }>).map((p) => p.id);
+  const packIds = packsRead.value;
   if (!packIds.includes(packId)) {
     // 404 et non 403 : on ne confirme pas l'existence d'une carte qui n'est
     // pas la sienne.
@@ -121,21 +125,13 @@ export default withAuthRoute(async function handler(
 
   // 2) Mes cartes encore possédées, pour identifier le sujet ET compter ses
   //    exemplaires. Une seule lecture sert aux deux.
-  const { data: cardRows, error: cardsError } = await supabaseAdmin
-    .from('tcg_pack_cards')
-    .select(
-      'pack_id, position, subject_kind, card_user_id, card_team_id, card_map_slug'
-    )
-    .in('pack_id', packIds)
-    .is('recycled_at', null)
-    .limit(MAX_CARDS);
-
-  if (cardsError) {
-    logger.error('[tcg/recycle] cartes illisibles: %s', cardsError.message);
+  const cardsRead = await readCardsOfPacks(packIds);
+  if (!cardsRead.ok) {
+    logger.error('[tcg/recycle] cartes illisibles: %s', cardsRead.error);
     return res.status(500).json({ error: 'Lecture impossible.' });
   }
 
-  const cards = (cardRows ?? []) as CardRow[];
+  const cards: CardRow[] = cardsRead.value;
   const target = cards.find(
     (c) => c.pack_id === packId && c.position === position
   );

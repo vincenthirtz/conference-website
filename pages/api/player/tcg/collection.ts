@@ -16,6 +16,18 @@
 // LA FACE EST RELUE À CHAQUE FOIS, jamais figée au tirage : c'est ce qui rend
 // le retrait de consentement RÉTROACTIF sur les cartes déjà distribuées
 // (cf. `utils/tcg/readCardFaces.ts`).
+//
+// PAGINATION PAR CURSEUR, RÉTROCOMPATIBLE.
+//   - Sans `limit` ni `cursor` : toute la collection, comme avant, plus
+//     `nextCursor: null`. Un client qui ignore le champ ne perd rien.
+//   - Avec `limit` (1..200) et/ou `cursor` : une page, et `nextCursor` tant
+//     qu'il en reste. L'ordre est TOTAL — rareté décroissante puis clé de
+//     sujet — sans quoi deux pages pourraient se chevaucher.
+// On pagine l'AFFICHAGE, pas la lecture : compter les exemplaires, retenir la
+// meilleure rareté et désigner le pire doublon exigent de voir toutes les
+// cartes d'un sujet. `distinct` et `total` restent donc ceux de la collection
+// entière, et seules les faces de la page sont relues — c'est là qu'était le
+// coût (une lecture de consentement et de profil par sujet).
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 
@@ -28,14 +40,27 @@ import { POOL_LIMIT } from '@/utils/tcg/drawPack';
 import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
 import { readMapFaces, MAP_POOL_SLUGS } from '@/utils/tcg/readMapFaces';
 import { cardSubjectKey } from '@/utils/tcg/subjectKey';
+import { readOwnedCardRows } from '@/utils/tcg/readOwnedCards';
+import {
+  compareCollectionOrder,
+  decodeCollectionCursor,
+  encodeCollectionCursor,
+  parsePageLimit,
+  type CollectionCursor,
+} from '@/utils/tcg/pageCursor';
 import { logger } from '@/utils/logger';
 
-/** Borne de sécurité : au-delà, la collection se pagine (v2). */
-const MAX_PACKS = 500;
-const MAX_CARDS = 5000;
+/**
+ * Taille de page quand seul `cursor` est fourni. Quarante cartes = huit rangées
+ * sur la grille à cinq colonnes : un écran et demi, sans faire relire quarante
+ * faces à qui ne fera pas défiler.
+ */
+const DEFAULT_PAGE_SIZE = 40;
 
 type Aggregated = {
   kind: 'player' | 'team' | 'map';
+  /** `<kind>:<id>` — second critère de l'ordre total, et contenu du curseur. */
+  key: string;
   subjectId: string;
   count: number;
   /** Meilleure rareté possédée : la rareté est figée par tirage et peut différer d'un exemplaire à l'autre. */
@@ -91,63 +116,60 @@ export default withAuthRoute(async function handler(
     return;
   }
 
+  // Paramètres de page, validés AVANT toute lecture : un curseur illisible est
+  // une erreur du client, pas un « on repart du début » qui ferait boucler une
+  // pagination à l'infini.
+  const limitParam = parsePageLimit(req.query.limit);
+  if (limitParam === 'invalid') {
+    return res
+      .status(400)
+      .json({ error: 'Paramètre limit invalide.', code: 'invalid_limit' });
+  }
+  const rawCursor = req.query.cursor;
+  let cursor: CollectionCursor | null = null;
+  if (rawCursor !== undefined) {
+    cursor = decodeCollectionCursor(rawCursor);
+    if (!cursor) {
+      return res
+        .status(400)
+        .json({ error: 'Curseur invalide.', code: 'invalid_cursor' });
+    }
+  }
+  const paginated = limitParam !== null || cursor !== null;
+  const pageSize = limitParam ?? DEFAULT_PAGE_SIZE;
+
+  // Une collection est personnelle et ses faces se relisent à chaque appel
+  // (retrait de consentement) : aucune couche intermédiaire ne doit en garder
+  // une copie, page comprise.
+  res.setHeader('Cache-Control', 'private, no-store');
+
   const tenantId = resolveTenantIdForUserRequest(req);
   const userId = user.id;
 
-  // 1) Mes paquets ouverts. Un paquet fermé ne contient encore rien.
-  const { data: packRows, error: packError } = await supabaseAdmin
-    .from('tcg_packs')
-    .select('id')
-    .eq('tenant_id', tenantId)
-    .eq('user_id', userId)
-    .not('opened_at', 'is', null)
-    .limit(MAX_PACKS);
-
-  if (packError) {
-    logger.error('[tcg/collection] paquets illisibles: %s', packError.message);
+  // 1-2) Mes cartes encore possédées : paquets OUVERTS, recyclées exclues, lues
+  //      par tranches (cf. `readOwnedCards.ts` — l'ancien `.limit(5000)` était
+  //      en réalité plafonné à 1000 lignes par PostgREST).
+  const owned = await readOwnedCardRows(tenantId, userId);
+  if (!owned.ok) {
+    logger.error('[tcg/collection] cartes illisibles: %s', owned.error);
     return res.status(500).json({ error: 'Lecture impossible.' });
   }
-
-  const packIds = ((packRows ?? []) as Array<{ id: string }>).map((p) => p.id);
-  if (packIds.length === 0) {
-    return res.status(200).json({ cards: [], distinct: 0, total: 0 });
+  if (owned.truncated) {
+    logger.warn(
+      '[tcg/collection] plafond de lecture atteint pour %s — collection tronquée',
+      userId
+    );
   }
-
-  // 2) Leurs cartes, RECYCLÉES EXCLUES.
-  //
-  //    La ligne d'une carte recyclée est conservée — c'est ce qui garde le
-  //    crédit correspondant explicable dans le registre — mais elle ne fait
-  //    plus partie de la collection. Sans ce filtre, on pourrait vendre une
-  //    carte ET la garder.
-  const { data: cardRows, error: cardError } = await supabaseAdmin
-    .from('tcg_pack_cards')
-    // `pack_id, position` en plus : c'est le couple qui DÉSIGNE un exemplaire,
-    // et la route de recyclage n'accepte rien d'autre. Sans eux, la collection
-    // savait compter les doublons sans pouvoir en recycler un seul.
-    .select(
-      'pack_id, position, subject_kind, card_user_id, card_team_id, card_map_slug, rarity, is_foil'
-    )
-    .in('pack_id', packIds)
-    .is('recycled_at', null)
-    .limit(MAX_CARDS);
-
-  if (cardError) {
-    logger.error('[tcg/collection] cartes illisibles: %s', cardError.message);
-    return res.status(500).json({ error: 'Lecture impossible.' });
+  const cardRows = owned.value;
+  if (cardRows.length === 0) {
+    return res
+      .status(200)
+      .json({ cards: [], distinct: 0, total: 0, nextCursor: null });
   }
 
   // 3) Agrégation par sujet.
   const byKey = new Map<string, Aggregated>();
-  for (const row of (cardRows ?? []) as Array<{
-    pack_id: string;
-    position: number;
-    subject_kind: 'player' | 'team' | 'map';
-    card_user_id: string | null;
-    card_team_id: string | null;
-    card_map_slug: string | null;
-    rarity: TcgRarity;
-    is_foil: boolean;
-  }>) {
+  for (const row of cardRows) {
     // Le CHECK du schéma garantit exactement un sujet ; une ligne sans sujet
     // serait une corruption, on la saute plutôt que d'afficher une carte vide.
     const key = cardSubjectKey(row);
@@ -165,6 +187,7 @@ export default withAuthRoute(async function handler(
     if (!existing) {
       byKey.set(key, {
         kind: row.subject_kind,
+        key,
         subjectId,
         count: 1,
         rarity: row.rarity,
@@ -185,23 +208,43 @@ export default withAuthRoute(async function handler(
     if (worseThan(copy, existing.worst)) existing.worst = copy;
   }
 
-  const aggregated = [...byKey.values()];
+  // Les plus rares d'abord — une collection se regarde par ses pièces fortes —
+  // puis la clé de sujet, pour un ordre sans ex æquo (cf. `pageCursor.ts`).
+  const aggregated = [...byKey.values()].sort(compareCollectionOrder);
 
-  // 4) Les faces — relues, jamais figées (retrait de consentement rétroactif).
+  // 3 bis) La page. Le curseur désigne la DERNIÈRE carte déjà servie : on
+  //        reprend strictement après elle. Si ce sujet a disparu entre-temps
+  //        (recyclé jusqu'au dernier exemplaire), la comparaison le situe quand
+  //        même — aucun doublon, aucun trou.
+  let page = aggregated;
+  let nextCursor: string | null = null;
+  if (paginated) {
+    const start = cursor
+      ? aggregated.findIndex((a) => compareCollectionOrder(a, cursor) > 0)
+      : 0;
+    page = start === -1 ? [] : aggregated.slice(start, start + pageSize);
+    const last = page[page.length - 1];
+    const hasMore = start !== -1 && start + pageSize < aggregated.length;
+    nextCursor =
+      hasMore && last
+        ? encodeCollectionCursor({ rarity: last.rarity, key: last.key })
+        : null;
+  }
+
+  // 4) Les faces — relues, jamais figées (retrait de consentement rétroactif),
+  //    et SEULEMENT pour la page servie.
   const [playerFaces, teamFaces, mapFaces] = await Promise.all([
     readPlayerFaces(
       tenantId,
-      aggregated.filter((a) => a.kind === 'player').map((a) => a.subjectId)
+      page.filter((a) => a.kind === 'player').map((a) => a.subjectId)
     ),
     readTeamFaces(
       tenantId,
-      aggregated.filter((a) => a.kind === 'team').map((a) => a.subjectId)
+      page.filter((a) => a.kind === 'team').map((a) => a.subjectId)
     ),
     // Pas de `tenantId` : les maps ne sont pas des données de tenant mais un
     // registre commun, lu en mémoire (cf. `utils/tcg/readMapFaces.ts`).
-    readMapFaces(
-      aggregated.filter((a) => a.kind === 'map').map((a) => a.subjectId)
-    ),
+    readMapFaces(page.filter((a) => a.kind === 'map').map((a) => a.subjectId)),
   ]);
 
   /**
@@ -220,52 +263,48 @@ export default withAuthRoute(async function handler(
       ? { packId: a.worst.packId, position: a.worst.position }
       : null;
 
-  const cards = aggregated
-    .map((a) => {
-      if (a.kind === 'player') {
-        const face = playerFaces.get(a.subjectId);
-        return {
-          kind: 'player' as const,
-          userId: a.subjectId,
-          displayName: face?.displayName ?? null,
-          imageUrl: face?.imageUrl ?? null,
-          rarity: a.rarity,
-          isFoil: a.hasFoil,
-          count: a.count,
-          recyclable: recyclableOf(a),
-        };
-      }
-      if (a.kind === 'map') {
-        const face = mapFaces.get(a.subjectId);
-        return {
-          kind: 'map' as const,
-          slug: a.subjectId,
-          name: face?.name ?? null,
-          imageUrl: face?.imageUrl ?? null,
-          rarity: a.rarity,
-          isFoil: a.hasFoil,
-          count: a.count,
-          recyclable: recyclableOf(a),
-        };
-      }
-      const face = teamFaces.get(a.subjectId);
+  // L'ordre est déjà celui de `aggregated` : on ne retrie pas la page.
+  const cards = page.map((a) => {
+    if (a.kind === 'player') {
+      const face = playerFaces.get(a.subjectId);
       return {
-        kind: 'team' as const,
-        teamId: a.subjectId,
-        name: face?.name ?? null,
-        slug: face?.slug ?? null,
-        logoUrl: face?.logoUrl ?? null,
-        cardImageUrl: face?.cardImageUrl ?? null,
+        kind: 'player' as const,
+        userId: a.subjectId,
+        displayName: face?.displayName ?? null,
+        imageUrl: face?.imageUrl ?? null,
         rarity: a.rarity,
         isFoil: a.hasFoil,
         count: a.count,
         recyclable: recyclableOf(a),
       };
-    })
-    // Les plus rares d'abord : une collection se regarde par ses pièces fortes.
-    .sort(
-      (x, y) => RARITY_ORDER.indexOf(y.rarity) - RARITY_ORDER.indexOf(x.rarity)
-    );
+    }
+    if (a.kind === 'map') {
+      const face = mapFaces.get(a.subjectId);
+      return {
+        kind: 'map' as const,
+        slug: a.subjectId,
+        name: face?.name ?? null,
+        imageUrl: face?.imageUrl ?? null,
+        rarity: a.rarity,
+        isFoil: a.hasFoil,
+        count: a.count,
+        recyclable: recyclableOf(a),
+      };
+    }
+    const face = teamFaces.get(a.subjectId);
+    return {
+      kind: 'team' as const,
+      teamId: a.subjectId,
+      name: face?.name ?? null,
+      slug: face?.slug ?? null,
+      logoUrl: face?.logoUrl ?? null,
+      cardImageUrl: face?.cardImageUrl ?? null,
+      rarity: a.rarity,
+      isFoil: a.hasFoil,
+      count: a.count,
+      recyclable: recyclableOf(a),
+    };
+  });
 
   // 5) LE VIVIER — combien de sujets EXISTENT, pour que « 12 cartes » devienne
   //    « 12 sur 48 ». Sans dénominateur, une collection n'a pas d'horizon.
@@ -314,7 +353,9 @@ export default withAuthRoute(async function handler(
 
   return res.status(200).json({
     cards,
-    distinct: cards.length,
+    // Sur la collection ENTIÈRE, pas sur la page : c'est ce que la progression
+    // et le compteur affichent, et une page de 40 ne dit rien du total.
+    distinct: aggregated.length,
     total: aggregated.reduce((sum, a) => sum + a.count, 0),
     // PAS de répartition par rareté ici, à dessein : la rareté d'un sujet se
     // dérive de ses badges, donc l'obtenir pour tout le vivier demanderait une
@@ -322,5 +363,7 @@ export default withAuthRoute(async function handler(
     // masque cette section faute de données ; un dénominateur faux par rareté
     // serait pire qu'un dénominateur absent.
     pool,
+    // `null` = dernière page, ou collection servie en entier (sans paramètre).
+    nextCursor,
   });
 });

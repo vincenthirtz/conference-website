@@ -129,5 +129,62 @@ export default {
   foil: 'Foil',
   copies: '×{count}',
 
+  /* --- UX / accessibility pass (2026-09-15) --- */
+
+  loadErrorTitle: 'Your collection could not be loaded right now.',
+  loadErrorBody: 'Your cards and coins are not lost: only the loading failed.',
+  retry: 'Try again',
+  loadingCollection: 'Loading your collection…',
+  loadMoreError: 'The next part could not be loaded. Try again.',
+
+  collectionLoadMore: 'Show more cards',
+  collectionLoadingMore: 'Loading…',
+  collectionShown: '{shown} of {distinct} cards shown',
+  packsLoadMore: 'Show other packs',
+
+  collectionEmptyWithPacks_one:
+    'Your collection is still empty, but a pack is waiting for you just above.',
+  collectionEmptyWithPacks_other:
+    'Your collection is still empty, but {count} packs are waiting for you just above.',
+  collectionEmptyGoToPacks: 'Go to my packs',
+  collectionEmptyGuide: 'How to earn cards',
+
+  revealDuplicate: 'Duplicate',
+  revealSummary_none: 'No new card this time — only duplicates to recycle.',
+  revealSummary_one: '1 new card out of {count}.',
+  revealSummary_other: '{fresh} new cards out of {count}.',
+  revealDuplicateHint:
+    'Duplicates can be recycled from your collection: +{refund} coins per copy, and you always keep the best one.',
+  revealAnnounce: 'Pack opened. {cards}',
+  revealAnnounceCard: '{name}, {rarity}',
+  revealAnnounceNew: 'new',
+  revealAnnounceDuplicate: 'duplicate',
+  revealAnnounceFoil: 'foil',
+  revealUnnamed: 'Unnamed card',
+
+  recycleAria: 'Recycle a duplicate of {name}, +{refund} coins',
+  recycleConfirmTitleNamed: 'Recycle a duplicate of {name}?',
+  recycleConfirmGain: 'You receive',
+  recycleConfirmBalance: 'Your balance',
+  recycleConfirmKeep_one: 'You will have 1 copy left.',
+  recycleConfirmKeep_other: 'You will have {count} copies left.',
+  recycleConfirmWhich:
+    'The least valuable copy goes: your card keeps its best rarity. This is final.',
+
+  walletLoading: 'Loading history…',
+  walletError: 'History unavailable right now.',
+  walletWelcomeGift: 'Welcome gift',
+  walletSupporterWelcome: 'Supporter welcome gift',
+  packFromDrop: 'Claimed on stream',
+  packFromPlacement: 'Tournament placement',
+  packFromStreak: 'Check-in streak',
+  walletCheckinStreak: 'Check-in streak',
+  walletTournamentPlacement: 'Tournament placement',
+
+  twitchPitchTitle: 'Earn coins by watching our streams',
+  twitchPitchBody:
+    'During a Twitch stream, every card you claim with your channel points earns you {drop} coins. Link your account once, and they land here on their own.',
+  twitchEarnLink: 'Link Twitch',
+
   guideLink: 'How does it work?',
 };

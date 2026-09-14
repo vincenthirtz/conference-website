@@ -39,9 +39,33 @@ export type TwitchLinkStatus = {
 type Props = {
   /** Où renvoyer sur 401. `/login` côté joueuse. */
   loginPath?: string;
+  /**
+   * L'argument, quand la page hôte en a un — « ce qu'on gagne », en une phrase.
+   *
+   * POURQUOI. Au 2026-09-14, aucune des 58 participantes n'avait rattaché son
+   * compte. La carte expliquait POURQUOI le lien est demandé (identifier la
+   * destinataire d'un drop) et ce qu'il ne lit pas, mais jamais ce qu'il
+   * rapporte : un bouton « Rattacher mon compte Twitch » sans bénéfice visible
+   * se lit comme une formalité. Le montant n'est connu que de la page TCG (il
+   * vient de l'API, et seulement si le drop est réellement branché), d'où une
+   * prop plutôt qu'un texte ici.
+   *
+   * Absente : la carte reste celle du profil, inchangée. Le flux OAuth, lui,
+   * est le même dans les deux cas.
+   */
+  pitch?: { title: string; body: string };
+  /** Prévenir la page hôte de l'état lu, pour qu'elle adapte ses propres renvois. */
+  onStatus?: (status: TwitchLinkStatus | null) => void;
+  /** Ancre, pour qu'un lien de la page puisse y mener. */
+  id?: string;
 };
 
-export default function TwitchLinkCard({ loginPath = '/login' }: Props) {
+export default function TwitchLinkCard({
+  loginPath = '/login',
+  pitch,
+  onStatus,
+  id,
+}: Props) {
   const router = useRouter();
   const t = useT(nsPlayerTwitchLink);
   const locale = useLocale();
@@ -69,6 +93,12 @@ export default function TwitchLinkCard({ loginPath = '/login' }: Props) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Remonté après chaque lecture, `null` compris : une page qui affiche « Rattacher
+  // Twitch » doit cesser de le faire si l'état devient illisible.
+  useEffect(() => {
+    onStatus?.(status);
+  }, [status, onStatus]);
 
   // Retour du flux OAuth : un toast, puis on nettoie le paramètre pour qu'un
   // rafraîchissement ne le rejoue pas.
@@ -115,8 +145,47 @@ export default function TwitchLinkCard({ loginPath = '/login' }: Props) {
     router.pathname
   )}`;
 
+  // Variante « argumentaire » : seulement tant que rien n'est lié. Une fois le
+  // compte rattaché, répéter ce qu'on gagne n'apprend plus rien ; c'est la
+  // confirmation qui rassure.
+  if (pitch && !status.linked) {
+    return (
+      <section
+        id={id}
+        aria-labelledby={id ? `${id}-title` : undefined}
+        className="scroll-mt-24 rounded-2xl border border-purple-400/40 bg-purple-500/[0.08] p-5 sm:p-6"
+      >
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h2
+              id={id ? `${id}-title` : undefined}
+              className="text-lg font-semibold text-white"
+            >
+              {pitch.title}
+            </h2>
+            <p className="mt-1 max-w-prose text-sm text-gray-200">
+              {pitch.body}
+            </p>
+          </div>
+          <a
+            href={startHref}
+            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-purple-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-300"
+          >
+            {t.linkCta}
+          </a>
+        </div>
+        {/* Ce qui est demandé reste dit AVANT le clic, même en version courte :
+            l'argument ne remplace pas l'information. */}
+        <p className="mt-3 max-w-prose text-xs text-gray-400">{t.scopeNote}</p>
+      </section>
+    );
+  }
+
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
+    <section
+      id={id}
+      className="scroll-mt-24 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6"
+    >
       <h2 className="text-lg font-semibold">{t.title}</h2>
       <p className="mt-1 max-w-prose text-sm text-gray-400">{t.intro}</p>
       {/* Ce qui est demandé, dit avant le bouton. */}

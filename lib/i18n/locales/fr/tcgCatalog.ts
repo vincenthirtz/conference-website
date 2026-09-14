@@ -41,6 +41,8 @@ export default ns('tcgCatalog', {
   filterTeams: 'Équipes',
   filterMaps: 'Maps',
   countCards: '{n} cartes',
+  // Filtre sans résultat : une grille vide ressemble à une page cassée.
+  filterEmpty: 'Aucune carte dans cette catégorie pour l’instant.',
 
   playersTitle: 'Et les cartes de joueuses ?',
   playersCount:

@@ -211,7 +211,12 @@ describe('GET /api/player/tcg/collection — périmètre', () => {
     const res = await getCollection();
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({ cards: [], distinct: 0, total: 0 });
+    expect(res.body).toEqual({
+      cards: [],
+      distinct: 0,
+      total: 0,
+      nextCursor: null,
+    });
   });
 
   it('ignore les cartes d’un paquet FERMÉ', async () => {
@@ -245,7 +250,12 @@ describe('GET /api/player/tcg/collection — périmètre', () => {
     const res = await getCollection();
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({ cards: [], distinct: 0, total: 0 });
+    expect(res.body).toEqual({
+      cards: [],
+      distinct: 0,
+      total: 0,
+      nextCursor: null,
+    });
   });
 
   it('ignore les paquets d’un AUTRE tenant', async () => {

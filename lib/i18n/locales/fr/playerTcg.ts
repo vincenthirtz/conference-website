@@ -168,6 +168,77 @@ export default ns('playerTcg', {
   foil: 'Brillante',
   copies: '×{count}',
 
+  /* --- Passe UX / accessibilité (2026-09-15) --- */
+
+  // Chargement et erreur. Une lecture ratée ne doit JAMAIS s'afficher comme une
+  // collection vide : ce serait annoncer une perte qui n'a pas eu lieu.
+  loadErrorTitle: 'Impossible de charger ta collection pour le moment.',
+  loadErrorBody:
+    'Tes cartes et tes pièces ne sont pas perdues : c’est seulement la lecture qui a échoué.',
+  retry: 'Réessayer',
+  loadingCollection: 'Chargement de ta collection…',
+  loadMoreError: 'La suite n’a pas pu être chargée. Réessaie.',
+
+  // Pagination de la collection et des paquets.
+  collectionLoadMore: 'Afficher plus de cartes',
+  collectionLoadingMore: 'Chargement…',
+  collectionShown: '{shown} cartes affichées sur {distinct}',
+  packsLoadMore: 'Voir les autres paquets',
+
+  // État vide, contextualisé : on dit ce qu'on peut faire MAINTENANT.
+  collectionEmptyWithPacks_one:
+    'Ta collection est encore vide, mais un paquet t’attend juste au-dessus.',
+  collectionEmptyWithPacks_other:
+    'Ta collection est encore vide, mais {count} paquets t’attendent juste au-dessus.',
+  collectionEmptyGoToPacks: 'Aller à mes paquets',
+  collectionEmptyGuide: 'Comment gagner des cartes',
+
+  // Révélation d'un paquet. `revealAnnounce` est lu par la région `aria-live`,
+  // `revealSummary_*` est affiché : la même information, deux formes.
+  revealDuplicate: 'Doublon',
+  revealSummary_none:
+    'Aucune nouvelle carte cette fois — que des doublons à recycler.',
+  revealSummary_one: '1 nouvelle carte sur {count}.',
+  revealSummary_other: '{fresh} nouvelles cartes sur {count}.',
+  revealDuplicateHint:
+    'Un doublon se recycle depuis ta collection : +{refund} pièces par exemplaire, et tu gardes toujours le meilleur.',
+  revealAnnounce: 'Paquet ouvert. {cards}',
+  revealAnnounceCard: '{name}, {rarity}',
+  revealAnnounceNew: 'nouvelle',
+  revealAnnounceDuplicate: 'doublon',
+  revealAnnounceFoil: 'brillante',
+  revealUnnamed: 'Carte sans nom',
+
+  // Recyclage : ce qu'on gagne est dit AVANT de confirmer, chiffré.
+  recycleAria: 'Recycler un doublon de {name}, +{refund} pièces',
+  recycleConfirmTitleNamed: 'Recycler un doublon de {name} ?',
+  recycleConfirmGain: 'Tu reçois',
+  recycleConfirmBalance: 'Ton solde',
+  recycleConfirmKeep_one: 'Il t’en restera 1 exemplaire.',
+  recycleConfirmKeep_other: 'Il t’en restera {count} exemplaires.',
+  recycleConfirmWhich:
+    'C’est l’exemplaire le moins précieux qui part : ta carte garde sa meilleure rareté. C’est définitif.',
+
+  // Historique : les deux cadeaux d'accueil tombaient dans « Mouvement ».
+  walletLoading: 'Chargement de l’historique…',
+  walletError: 'Historique illisible pour le moment.',
+  walletWelcomeGift: 'Cadeau de bienvenue',
+  walletSupporterWelcome: 'Cadeau d’accueil supportrice',
+  // Origines sans match (2026-09-15) : sans libellé, elles s'affichaient
+  // « Gagné en match » ou « Mouvement ».
+  packFromDrop: 'Récupéré en direct',
+  packFromPlacement: 'Classement de tournoi',
+  packFromStreak: 'Série de check-ins',
+  walletCheckinStreak: 'Série de check-ins',
+  walletTournamentPlacement: 'Classement en tournoi',
+
+  // Rattachement Twitch, contextualisé : ce qu'on gagne, en une phrase. Affiché
+  // SEULEMENT si le drop est réellement branché (montant rendu par l'API).
+  twitchPitchTitle: 'Gagne des pièces en regardant nos directs',
+  twitchPitchBody:
+    'Pendant un direct Twitch, chaque carte récupérée avec tes points de chaîne te rapporte {drop} pièces. Rattache ton compte une fois, et elles arrivent ici toutes seules.',
+  twitchEarnLink: 'Rattacher Twitch',
+
   // Lien vers le guide, à côté du titre. Les questions qu'il traite — d'où
   // viennent les paquets, ce que devient ma photo — se posent en regardant
   // cette page, pas depuis le tableau de bord.

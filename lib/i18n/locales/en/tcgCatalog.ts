@@ -35,6 +35,7 @@ export default {
   filterTeams: 'Teams',
   filterMaps: 'Maps',
   countCards: '{n} cards',
+  filterEmpty: 'No card in this category yet.',
 
   playersTitle: 'What about player cards?',
   playersCount:

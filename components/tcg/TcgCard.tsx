@@ -27,7 +27,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { JSX } from 'react';
-import type { TcgRarity } from '@/utils/tcg/rarity';
+import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
 
 /**
  * Habillage par rareté, aligné sur `BADGE_TIER_STYLES` de la fiche joueuse :
@@ -52,6 +52,40 @@ export const RARITY_TEXT: Record<TcgRarity, string> = {
   epic: 'text-yellow-300',
   legendary: 'text-cyan-200',
 };
+
+/**
+ * Repère de rareté qui ne dépend PAS de la couleur : un à quatre losanges.
+ *
+ * Les quatre teintes (bronze, argent, or, platine) se confondent en daltonisme
+ * et sur un écran de téléphone en plein jour — l'argent et le platine surtout.
+ * Le nom de la rareté reste écrit à côté ; ce repère le redouble d'une forme
+ * qu'on compte d'un coup d'œil, comme les étoiles d'un classement. Décoratif
+ * pour un lecteur d'écran, qui entend déjà le libellé.
+ */
+export function TcgRarityPips({
+  rarity,
+  className,
+}: {
+  rarity: TcgRarity;
+  className?: string;
+}): JSX.Element {
+  const filled = RARITY_ORDER.indexOf(rarity) + 1;
+  return (
+    <span
+      aria-hidden
+      className={`inline-flex items-center gap-0.5 ${RARITY_TEXT[rarity]} ${className ?? ''}`}
+    >
+      {RARITY_ORDER.map((r, i) => (
+        <span
+          key={r}
+          className={`inline-block h-1.5 w-1.5 rotate-45 ${
+            i < filled ? 'bg-current' : 'border border-current opacity-30'
+          }`}
+        />
+      ))}
+    </span>
+  );
+}
 
 export type TcgCardSubject =
   | {
@@ -181,10 +215,13 @@ export default function TcgCard({
           {name ?? '—'}
         </p>
         <p
-          className={`text-[11px] font-semibold uppercase tracking-[0.1em] ${RARITY_TEXT[rarity]}`}
+          className={`flex flex-wrap items-center gap-x-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] ${RARITY_TEXT[rarity]}`}
         >
-          {labels.rarity[rarity]}
-          {isFoil ? ` · ${labels.foil}` : ''}
+          <TcgRarityPips rarity={rarity} />
+          <span>
+            {labels.rarity[rarity]}
+            {isFoil ? ` · ${labels.foil}` : ''}
+          </span>
         </p>
         {typeof count === 'number' && count > 1 && (
           <p className="text-[11px] text-gray-400">

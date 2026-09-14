@@ -32,7 +32,7 @@ import Link from 'next/link';
 import type { GetStaticProps } from 'next';
 
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
-import TcgCard from '@/components/tcg/TcgCard';
+import TcgCard, { TcgRarityPips, RARITY_TEXT } from '@/components/tcg/TcgCard';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import { MAP_CARD_RARITY } from '@/utils/tcg/rarity';
 import { format, useT } from '@/lib/i18n/useT';
@@ -95,12 +95,21 @@ function TcgCatalogPage({ cards, playerCount }: Props) {
     { title: t.howShopTitle, body: t.howShopBody },
   ];
 
-  const rarityRows: Array<{ label: string; what: string }> = [
-    { label: tc.rarityCommon, what: t.rarityCommonWhat },
-    { label: tc.rarityRare, what: t.rarityRareWhat },
-    { label: tc.rarityEpic, what: t.rarityEpicWhat },
-    { label: tc.rarityLegendary, what: t.rarityLegendaryWhat },
-  ];
+  // `rarity` en plus du libellé : la légende doit porter le MÊME repère que les
+  // cartes (teinte et losanges), sinon on apprend une échelle en mots et on la
+  // retrouve en couleurs sur le catalogue juste en dessous, sans lien entre les
+  // deux.
+  const rarityRows: Array<{ rarity: TcgRarity; label: string; what: string }> =
+    [
+      { rarity: 'common', label: tc.rarityCommon, what: t.rarityCommonWhat },
+      { rarity: 'rare', label: tc.rarityRare, what: t.rarityRareWhat },
+      { rarity: 'epic', label: tc.rarityEpic, what: t.rarityEpicWhat },
+      {
+        rarity: 'legendary',
+        label: tc.rarityLegendary,
+        what: t.rarityLegendaryWhat,
+      },
+    ];
 
   const filters: Array<{ key: Filter; label: string }> = [
     { key: 'all', label: t.filterAll },
@@ -152,7 +161,10 @@ function TcgCatalogPage({ cards, playerCount }: Props) {
                 key={row.label}
                 className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"
               >
-                <dt className="text-sm font-semibold text-white">
+                <dt
+                  className={`flex items-center gap-2 text-sm font-semibold ${RARITY_TEXT[row.rarity]}`}
+                >
+                  <TcgRarityPips rarity={row.rarity} />
                   {row.label}
                 </dt>
                 <dd className="mt-1 text-sm text-gray-400">{row.what}</dd>
@@ -166,7 +178,11 @@ function TcgCatalogPage({ cards, playerCount }: Props) {
         <section className="mt-16">
           <h2 className="text-2xl font-bold text-white">{t.catalogTitle}</h2>
 
-          <nav
+          {/* `role="group"` et non `<nav>` : ces boutons filtrent la grille,
+              ils ne mènent nulle part. Un repère de navigation annoncerait
+              des liens qui n'existent pas. */}
+          <div
+            role="group"
             className="mt-6 flex flex-wrap items-center gap-2"
             aria-label={t.catalogTitle}
           >
@@ -176,7 +192,7 @@ function TcgCatalogPage({ cards, playerCount }: Props) {
                 type="button"
                 onClick={() => setFilter(f.key)}
                 aria-pressed={filter === f.key}
-                className={`rounded-full border px-3 py-1.5 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 ${
+                className={`min-h-11 rounded-full border px-4 py-2 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 ${
                   filter === f.key
                     ? 'border-purple-400 bg-purple-500/20 text-white'
                     : 'border-white/15 text-gray-300 hover:border-white/30 hover:text-white'
@@ -185,12 +201,27 @@ function TcgCatalogPage({ cards, playerCount }: Props) {
                 {f.label}
               </button>
             ))}
-            <span className="ml-auto font-mono text-xs tabular-nums text-gray-500">
+            {/* Annoncé poliment : changer de filtre modifie la grille sans
+                déplacer le focus, et sans cette annonce une personne au
+                lecteur d'écran ne saurait pas que la liste a changé. */}
+            <span
+              role="status"
+              aria-live="polite"
+              className="ml-auto font-mono text-xs tabular-nums text-gray-400"
+            >
               {format(t.countCards, { n: shown.length })}
             </span>
-          </nav>
+          </div>
 
-          <ul className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          {shown.length === 0 && (
+            // Un filtre vide (aucune équipe active en intersaison, par exemple)
+            // doit se dire : une grille vide ressemble à une page cassée.
+            <p className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-gray-300">
+              {t.filterEmpty}
+            </p>
+          )}
+
+          <ul className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
             {shown.map((card) => (
               <li key={`${card.kind}-${card.id}`}>
                 <TcgCard

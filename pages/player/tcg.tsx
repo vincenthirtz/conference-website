@@ -14,28 +14,58 @@
 // acheter crée un paquet FERMÉ, ouvrir le consomme. Les fusionner masquerait
 // qu'un paquet acheté peut attendre, et rendrait impossible d'annuler l'une
 // sans l'autre.
+//
+// LA COLLECTION ET LES PAQUETS SONT PAGINÉS (curseur rendu par l'API). Deux
+// conséquences qui structurent cette page :
+//   - « nouvelle carte ou doublon ? » ne peut plus se déduire de la collection
+//     chargée — une carte possédée mais pas encore affichée passerait pour
+//     nouvelle. C'est le serveur qui le dit (`isNew`) ;
+//   - un rechargement après une action (ouverture, recyclage) redemande AU
+//     MOINS autant de cartes qu'il y en avait à l'écran : revenir à la première
+//     page ferait disparaître ce qu'on était en train de regarder.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useT, format } from '@/lib/i18n/useT';
-import TcgCard from '@/components/tcg/TcgCard';
+import TcgCard, { type TcgCardSubject } from '@/components/tcg/TcgCard';
 import { TcgCoin, TcgAmount } from '@/components/tcg/TcgCoin';
 import TcgCollectionProgress from '@/components/tcg/TcgCollectionProgress';
-import TwitchLinkCard from '@/components/player/TwitchLinkCard';
+import TcgPackReveal, {
+  type TcgRevealCard,
+} from '@/components/tcg/TcgPackReveal';
+import TwitchLinkCard, {
+  type TwitchLinkStatus,
+} from '@/components/player/TwitchLinkCard';
+import { Skeleton } from '@/components/ui/Skeleton';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
+
+/**
+ * Paquets à ouvrir par page. Au-delà, un bouton « voir les autres » : un mur de
+ * quarante boutons « Ouvrir » ne sert personne, et la plupart des comptes en ont
+ * moins de dix.
+ */
+const PACKS_PAGE = 24;
+/** Cartes par page : huit rangées sur la grille à cinq colonnes. */
+const COLLECTION_PAGE = 40;
+/** Plafond d'une page côté API (`MAX_PAGE_LIMIT`). */
+const API_MAX_LIMIT = 200;
+/** Ancre de la carte Twitch, visée par le lien du barème. */
+const TWITCH_ANCHOR = 'tcg-twitch';
 
 type Pack = {
   id: string;
   // `welcome` = cadeau d'accueil d'une édition. L'API rend `source_kind` brut ;
   // l'union doit donc suivre le CHECK de `tcg_packs`, sans quoi une origine
   // ajoutée en base retombe silencieusement sur le libellé d'à côté.
-  source: 'victory' | 'purchase' | 'welcome';
+  // `drop`, `placement`, `streak` : paquets sans match (drop Twitch, palmarès
+  // de tournoi, série de check-ins — `tcg_earn_sources_drop_streak_placement.sql`).
+  source: 'victory' | 'purchase' | 'welcome' | 'drop' | 'placement' | 'streak';
   grantedAt: string;
   openedAt: string | null;
 };
@@ -58,12 +88,25 @@ function packOriginLabel(
       return t.packFromPurchase;
     case 'welcome':
       return t.packFromWelcome;
+    case 'drop':
+      return t.packFromDrop;
+    case 'placement':
+      return t.packFromPlacement;
+    case 'streak':
+      return t.packFromStreak;
     case 'victory':
       return t.packFromVictory;
     default:
       return t.packFromVictory;
   }
 }
+
+/**
+ * L'exemplaire que l'API propose au recyclage — le MOINS précieux — ou `null`
+ * quand il n'y a qu'un exemplaire : la route refuse de retirer le dernier, et
+ * un bouton condamné au refus ne doit pas s'afficher.
+ */
+type Recyclable = { packId: string; position: number } | null;
 
 type CollectionCard =
   | {
@@ -74,12 +117,7 @@ type CollectionCard =
       rarity: TcgRarity;
       isFoil: boolean;
       count: number;
-      /**
-       * L'exemplaire que l'API propose au recyclage — le MOINS précieux — ou
-       * `null` quand il n'y a qu'un exemplaire : la route refuse de retirer le
-       * dernier, et un bouton condamné au refus ne doit pas s'afficher.
-       */
-      recyclable?: { packId: string; position: number } | null;
+      recyclable?: Recyclable;
     }
   | {
       kind: 'team';
@@ -92,12 +130,7 @@ type CollectionCard =
       rarity: TcgRarity;
       isFoil: boolean;
       count: number;
-      /**
-       * L'exemplaire que l'API propose au recyclage — le MOINS précieux — ou
-       * `null` quand il n'y a qu'un exemplaire : la route refuse de retirer le
-       * dernier, et un bouton condamné au refus ne doit pas s'afficher.
-       */
-      recyclable?: { packId: string; position: number } | null;
+      recyclable?: Recyclable;
     }
   | {
       kind: 'map';
@@ -107,22 +140,16 @@ type CollectionCard =
       rarity: TcgRarity;
       isFoil: boolean;
       count: number;
-      /**
-       * L'exemplaire que l'API propose au recyclage — le MOINS précieux — ou
-       * `null` quand il n'y a qu'un exemplaire : la route refuse de retirer le
-       * dernier, et un bouton condamné au refus ne doit pas s'afficher.
-       */
-      recyclable?: { packId: string; position: number } | null;
+      recyclable?: Recyclable;
     };
 
 /**
- * Une carte tout juste tirée. Même forme que `CollectionCard` à `count` près :
- * un exemplaire unique n'a pas de compte, et le composant de carte masque déjà
- * le compteur à 1.
+ * Une carte tout juste tirée. Même forme que `CollectionCard` à `count` près,
+ * plus `isNew` : rendu par le serveur, OPTIONNEL parce qu'une lecture en échec
+ * l'omet (et qu'une réponse d'API antérieure ne le porte pas).
  */
-type DrawnCard =
+type DrawnCard = { position: number; isNew?: boolean } & (
   | {
-      position: number;
       kind: 'player';
       userId: string;
       displayName: string | null;
@@ -131,7 +158,6 @@ type DrawnCard =
       isFoil: boolean;
     }
   | {
-      position: number;
       kind: 'team';
       teamId: string;
       name: string | null;
@@ -142,31 +168,97 @@ type DrawnCard =
       isFoil: boolean;
     }
   | {
-      position: number;
       kind: 'map';
       slug: string;
       name: string | null;
       imageUrl: string | null;
       rarity: TcgRarity;
       isFoil: boolean;
-    };
+    }
+);
+
+type Earn = {
+  matchWin: number;
+  scrimWin: number;
+  /**
+   * Barème du cadeau d'accueil. OPTIONNEL par prudence de lecture : la page
+   * doit rester juste face à une réponse d'API antérieure à son ajout.
+   */
+  welcomeGift?: number;
+  /**
+   * Barème du drop en direct. OPTIONNEL : l'API ne le rend que si une chaîne
+   * Twitch est connectée ET qu'une récompense lui est désignée. Absent, on
+   * n'annonce rien — promettre un gain qui n'aboutirait jamais serait pire que
+   * de le taire.
+   */
+  twitchDrop?: number;
+};
+
+type PacksResponse = {
+  packs: Pack[];
+  unopened?: number;
+  balance: number;
+  boosterPrice: number;
+  recycleRefund?: number;
+  earn?: Earn;
+  nextCursor?: string | null;
+};
+
+type CollectionResponse = {
+  cards: CollectionCard[];
+  distinct: number;
+  total: number;
+  // Le vivier — combien de sujets EXISTENT. `null` quand la lecture a échoué :
+  // la barre disparaît alors, plutôt que d'annoncer « 12 sur 0 ».
+  pool?: { distinct: number } | null;
+  nextCursor?: string | null;
+};
 
 /**
  * Clé d'un sujet, commune aux deux formes de carte.
  *
- * Sert à répondre à LA question qu'on se pose en ouvrant un paquet : nouvelle
- * carte, ou doublon ? La page détient déjà la collection d'avant le
- * rechargement, donc la réponse ne coûte aucune requête — encore faut-il la
- * calculer avant de rafraîchir, après quoi tout paraît possédé.
+ * Pendant CLIENT de `utils/tcg/subjectKey.ts`, qui travaille sur des lignes de
+ * base ; ici les cartes arrivent déjà mises en forme par l'API. Les préfixes
+ * doivent rester distincts entre types, sinon une map et une équipe de même
+ * identifiant se confondraient. Sert à dédoublonner deux pages de collection.
  */
 function subjectKey(card: DrawnCard | CollectionCard): string {
-  // Pendant CLIENT de `utils/tcg/subjectKey.ts`, qui travaille sur des lignes
-  // de base ; ici les cartes arrivent déjà mises en forme par l'API et portent
-  // des noms de champs différents. Les préfixes doivent rester distincts entre
-  // types, sinon une map et une équipe de même identifiant se confondraient.
   if (card.kind === 'player') return `p-${card.userId}`;
   if (card.kind === 'map') return `m-${card.slug}`;
   return `t-${card.teamId}`;
+}
+
+/** La face à passer à `TcgCard`, pour les deux formes de carte. */
+function cardSubject(card: DrawnCard | CollectionCard): TcgCardSubject {
+  if (card.kind === 'player') {
+    return {
+      kind: 'player',
+      userId: card.userId,
+      displayName: card.displayName,
+      imageUrl: card.imageUrl,
+    };
+  }
+  if (card.kind === 'map') {
+    return {
+      kind: 'map',
+      slug: card.slug,
+      name: card.name,
+      imageUrl: card.imageUrl,
+    };
+  }
+  return {
+    kind: 'team',
+    teamId: card.teamId,
+    name: card.name,
+    slug: card.slug,
+    logoUrl: card.logoUrl,
+    cardImageUrl: card.cardImageUrl,
+  };
+}
+
+/** Le nom lisible d'une carte, ou `null` si la face n'en porte pas. */
+function cardName(card: DrawnCard | CollectionCard): string | null {
+  return card.kind === 'player' ? card.displayName : card.name;
 }
 
 /** Un mouvement du registre. `amount` est signé : gain positif, dépense négative. */
@@ -178,18 +270,31 @@ type WalletEntry = {
   createdAt: string;
 };
 
+type LoadState = 'loading' | 'ready' | 'error';
+
 function PlayerTcg() {
   const t = useT(nsPlayerTcg);
   const { addToast } = useToast();
   usePlayerSession({ redirectTo: '/login?next=/player/tcg' });
   const { adminFetch, adminFetchJson } = useAdminFetch({ loginPath: '/login' });
 
-  const [packs, setPacks] = useState<Pack[]>([]);
-  const [balance, setBalance] = useState(0);
   // Recycler MARQUE une carte définitivement : le geste passe par une
   // confirmation, comme les autres actions irréversibles de l'espace joueuse.
   const { confirm, dialog } = useConfirmDialog();
 
+  /**
+   * `loading` → `ready` | `error`. UNE LECTURE RATÉE N'EST PAS UNE COLLECTION
+   * VIDE : la page affichait « Aucune carte pour l'instant » quand l'API ne
+   * répondait pas, c'est-à-dire qu'elle annonçait une perte qui n'avait pas eu
+   * lieu. L'erreur a désormais son écran, avec de quoi réessayer.
+   */
+  const [loadState, setLoadState] = useState<LoadState>('loading');
+  const loadedOnceRef = useRef(false);
+
+  const [packs, setPacks] = useState<Pack[]>([]);
+  const [unopenedCount, setUnopenedCount] = useState(0);
+  const [packsCursor, setPacksCursor] = useState<string | null>(null);
+  const [balance, setBalance] = useState(0);
   // Le prix vient de l'API : le coder ici en dur ferait mentir le bouton dès
   // que le barème bougerait, et importer `economy.ts` traînerait le moteur de
   // rating dans le bundle navigateur.
@@ -204,39 +309,30 @@ function PlayerTcg() {
   const [recycleRefund, setRecycleRefund] = useState<number | null>(null);
   // Le barème vient de l'API, comme le prix : sans lui, la page affichait un
   // solde et un bouton d'achat sans jamais dire comment gagner des pièces.
-  const [earn, setEarn] = useState<{
-    matchWin: number;
-    scrimWin: number;
-    /**
-     * Barème du cadeau d'accueil. OPTIONNEL par prudence de lecture : la page
-     * doit rester juste face à une réponse d'API antérieure à son ajout.
-     */
-    welcomeGift?: number;
-    /**
-     * Barème du drop en direct. OPTIONNEL : l'API ne le rend que si une chaîne
-     * Twitch est connectée ET qu'une récompense lui est désignée. Absent, on
-     * n'annonce rien — promettre un gain qui n'aboutirait jamais serait pire
-     * que de le taire.
-     */
-    twitchDrop?: number;
-  } | null>(null);
+  const [earn, setEarn] = useState<Earn | null>(null);
+
   const [cards, setCards] = useState<CollectionCard[]>([]);
+  const [collectionCursor, setCollectionCursor] = useState<string | null>(null);
   const [totals, setTotals] = useState({ distinct: 0, total: 0 });
   // Séparé de `totals` : le vivier ne vient pas de la même mesure et peut
   // manquer alors que la collection est lisible.
   const [pool, setPool] = useState<{ distinct: number } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
-  // Les cartes du dernier paquet ouvert. C'est LE moment du TCG : le serveur
-  // les renvoie déjà, la page se contentait de les jeter et de recharger la
-  // collection, où le tirage se fondait sans qu'on l'ait vu.
-  // `newKeys` accompagne les cartes plutôt que de les modifier : « nouvelle »
-  // décrit ma collection à cet instant, pas la carte elle-même — la même carte
-  // sera un doublon au prochain paquet.
+
+  // Les cartes du dernier paquet ouvert. `id` sert de clé de montage : ouvrir
+  // un second paquet sans fermer le premier doit REJOUER l'apparition et le
+  // déplacement du focus, pas mettre à jour une révélation déjà montée.
   const [revealed, setRevealed] = useState<{
+    id: string;
     cards: DrawnCard[];
-    newKeys: string[];
   } | null>(null);
+  /**
+   * Ce que lit la région `aria-live`. Elle est montée en permanence, vide : une
+   * région insérée AVEC son contenu n'est pas annoncée par tous les lecteurs
+   * d'écran.
+   */
+  const [announcement, setAnnouncement] = useState('');
+
   // L'historique se charge AU CLIC, pas au chargement de la page. Le solde est
   // déjà affiché ; imposer une requête de plus à chaque visite pour une
   // information qu'on consulte rarement ferait payer tout le monde pour le
@@ -245,7 +341,19 @@ function PlayerTcg() {
     entries: WalletEntry[];
     truncated: boolean;
   } | null>(null);
+  const [walletState, setWalletState] = useState<
+    'idle' | 'loading' | 'ready' | 'error'
+  >('idle');
   const [walletOpen, setWalletOpen] = useState(false);
+
+  // État du rattachement Twitch, remonté par la carte : sert à proposer le
+  // lien depuis le barème, et seulement à qui n'est pas encore liée.
+  const [twitchStatus, setTwitchStatus] = useState<TwitchLinkStatus | null>(
+    null
+  );
+
+  const packsHeadingRef = useRef<HTMLHeadingElement>(null);
+  const collectionListRef = useRef<HTMLUListElement>(null);
 
   const labels = {
     rarity: {
@@ -258,63 +366,190 @@ function PlayerTcg() {
     copies: t.copies,
   };
 
-  const load = useCallback(async () => {
-    try {
-      const [packsData, collData] = await Promise.all([
-        adminFetchJson<{
-          packs: Pack[];
-          balance: number;
-          boosterPrice: number;
-          recycleRefund?: number;
-          earn?: { matchWin: number; scrimWin: number; twitchDrop?: number };
-        }>('/api/player/tcg/packs'),
-        adminFetchJson<{
-          cards: CollectionCard[];
-          distinct: number;
-          total: number;
-          // Le vivier — combien de sujets EXISTENT. `null` quand la lecture a
-          // échoué : la barre disparaît alors, plutôt que d'annoncer « 12 sur 0 ».
-          pool?: { distinct: number } | null;
-        }>('/api/player/tcg/collection'),
-      ]);
-      setPacks(packsData.packs ?? []);
-      setBalance(packsData.balance ?? 0);
-      if (typeof packsData.boosterPrice === 'number') {
-        setBoosterPrice(packsData.boosterPrice);
-      }
-      // Le montant vient de l'API, jamais recopié ici : le recopier ferait
-      // mentir le bouton au premier réglage du barème.
-      if (typeof packsData.recycleRefund === 'number') {
-        setRecycleRefund(packsData.recycleRefund);
-      }
-      if (
-        typeof packsData.earn?.matchWin === 'number' &&
-        typeof packsData.earn?.scrimWin === 'number'
-      ) {
-        setEarn(packsData.earn);
-      }
-      setCards(collData.cards ?? []);
-      setPool(
-        collData.pool && typeof collData.pool.distinct === 'number'
-          ? collData.pool
-          : null
-      );
-      setTotals({
-        distinct: collData.distinct ?? 0,
-        total: collData.total ?? 0,
-      });
-    } catch {
-      // Lecture impossible : on n'affiche pas une collection vide, qui ferait
-      // croire à une perte. L'écran reste en attente.
-      return;
-    } finally {
-      setLoaded(true);
+  /**
+   * Annonce polie. Vider d'abord : deux ouvertures au résultat identique
+   * produiraient sinon le même texte, et une région dont le contenu ne change
+   * pas ne dit rien.
+   */
+  const announce = useCallback((text: string) => {
+    setAnnouncement('');
+    requestAnimationFrame(() => setAnnouncement(text));
+  }, []);
+
+  /**
+   * Au moins `atLeast` cartes, en suivant les curseurs. Borné par la taille de
+   * la collection : on s'arrête dès que l'API n'a plus de page.
+   */
+  const fetchCollection = useCallback(
+    async (atLeast: number) => {
+      const acc: CollectionCard[] = [];
+      let cursor: string | null = null;
+      let last: CollectionResponse | null = null;
+      do {
+        const size = Math.min(
+          API_MAX_LIMIT,
+          Math.max(COLLECTION_PAGE, atLeast - acc.length)
+        );
+        const qs: string = cursor
+          ? `limit=${size}&cursor=${encodeURIComponent(cursor)}`
+          : `limit=${size}`;
+        const page: CollectionResponse =
+          await adminFetchJson<CollectionResponse>(
+            `/api/player/tcg/collection?${qs}`
+          );
+        acc.push(...(page.cards ?? []));
+        last = page;
+        cursor = page.nextCursor ?? null;
+      } while (cursor && acc.length < atLeast);
+      return { cards: acc, last, cursor };
+    },
+    [adminFetchJson]
+  );
+
+  const applyPacks = useCallback((data: PacksResponse, append: boolean) => {
+    setPacks((prev) => {
+      const incoming = data.packs ?? [];
+      if (!append) return incoming;
+      const seen = new Set(prev.map((p) => p.id));
+      return [...prev, ...incoming.filter((p) => !seen.has(p.id))];
+    });
+    setPacksCursor(data.nextCursor ?? null);
+    setBalance(data.balance ?? 0);
+    setUnopenedCount(
+      typeof data.unopened === 'number'
+        ? data.unopened
+        : (data.packs ?? []).filter((p) => !p.openedAt).length
+    );
+    if (typeof data.boosterPrice === 'number') {
+      setBoosterPrice(data.boosterPrice);
     }
-  }, [adminFetchJson]);
+    // Le montant vient de l'API, jamais recopié ici : le recopier ferait
+    // mentir le bouton au premier réglage du barème.
+    if (typeof data.recycleRefund === 'number') {
+      setRecycleRefund(data.recycleRefund);
+    }
+    if (
+      typeof data.earn?.matchWin === 'number' &&
+      typeof data.earn?.scrimWin === 'number'
+    ) {
+      setEarn(data.earn);
+    }
+  }, []);
+
+  const applyCollectionMeta = useCallback((page: CollectionResponse) => {
+    setPool(
+      page.pool && typeof page.pool.distinct === 'number' ? page.pool : null
+    );
+    setTotals({ distinct: page.distinct ?? 0, total: page.total ?? 0 });
+  }, []);
+
+  /**
+   * Recharge paquets et collection.
+   *
+   * `keepCards` : combien de cartes étaient affichées. On en redemande au
+   * moins autant, pour qu'une action faite en bas d'une longue collection ne
+   * ramène pas à la première page.
+   */
+  const load = useCallback(
+    async (keepCards = 0) => {
+      try {
+        const [packsData, coll] = await Promise.all([
+          // Seulement les paquets FERMÉS : c'est tout ce que la page affiche,
+          // et sans ce filtre un paquet fermé plus ancien que la première page
+          // ne pourrait jamais s'ouvrir.
+          adminFetchJson<PacksResponse>(
+            `/api/player/tcg/packs?status=unopened&limit=${PACKS_PAGE}`
+          ),
+          fetchCollection(keepCards),
+        ]);
+        applyPacks(packsData, false);
+        setCards(coll.cards);
+        setCollectionCursor(coll.cursor);
+        if (coll.last) applyCollectionMeta(coll.last);
+        loadedOnceRef.current = true;
+        setLoadState('ready');
+      } catch {
+        // Déjà affichée : on garde l'écran (il reste juste à la seconde près)
+        // et on prévient. Jamais affichée : l'écran d'erreur, pas un vide.
+        if (loadedOnceRef.current) {
+          addToast(t.loadMoreError, 'error');
+        } else {
+          setLoadState('error');
+        }
+      }
+    },
+    [
+      adminFetchJson,
+      fetchCollection,
+      applyPacks,
+      applyCollectionMeta,
+      addToast,
+      t,
+    ]
+  );
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const retryLoad = useCallback(() => {
+    setLoadState('loading');
+    void load();
+  }, [load]);
+
+  const loadMorePacks = useCallback(async () => {
+    if (!packsCursor) return;
+    setBusy('more-packs');
+    try {
+      const data = await adminFetchJson<PacksResponse>(
+        `/api/player/tcg/packs?status=unopened&limit=${PACKS_PAGE}&cursor=${encodeURIComponent(packsCursor)}`
+      );
+      applyPacks(data, true);
+    } catch {
+      addToast(t.loadMoreError, 'error');
+    } finally {
+      setBusy(null);
+    }
+  }, [adminFetchJson, addToast, applyPacks, packsCursor, t]);
+
+  const loadMoreCards = useCallback(async () => {
+    if (!collectionCursor) return;
+    setBusy('more-cards');
+    const before = cards.length;
+    try {
+      const page = await adminFetchJson<CollectionResponse>(
+        `/api/player/tcg/collection?limit=${COLLECTION_PAGE}&cursor=${encodeURIComponent(collectionCursor)}`
+      );
+      setCards((prev) => {
+        const seen = new Set(prev.map(subjectKey));
+        return [
+          ...prev,
+          ...(page.cards ?? []).filter((c) => !seen.has(subjectKey(c))),
+        ];
+      });
+      setCollectionCursor(page.nextCursor ?? null);
+      applyCollectionMeta(page);
+      // LE FOCUS SUIT LA SUITE. Le bouton « Afficher plus » disparaît à la
+      // dernière page : laissé là, le focus retomberait en haut du document et
+      // la personne au clavier perdrait sa place. On le pose sur la première
+      // carte ajoutée — c'est aussi ce qu'on veut lire ensuite.
+      requestAnimationFrame(() => {
+        const item = collectionListRef.current?.children.item(before);
+        item?.querySelector<HTMLElement>('a, button')?.focus();
+      });
+    } catch {
+      addToast(t.loadMoreError, 'error');
+    } finally {
+      setBusy(null);
+    }
+  }, [
+    adminFetchJson,
+    addToast,
+    applyCollectionMeta,
+    cards.length,
+    collectionCursor,
+    t,
+  ]);
 
   const openPack = useCallback(
     async (packId: string) => {
@@ -337,7 +572,7 @@ function PlayerTcg() {
                 : t.errGeneric,
             'error'
           );
-          await load();
+          await load(cards.length);
           return;
         }
 
@@ -350,27 +585,44 @@ function PlayerTcg() {
           cards?: DrawnCard[];
         } | null;
         if (Array.isArray(body?.cards) && body.cards.length > 0) {
-          // Photo de la collection AVANT le rechargement : c'est le seul
-          // moment où « nouvelle » veut encore dire quelque chose. Après
-          // `load()`, tout ce qu'on vient de tirer figure dans la collection
-          // et paraît possédé de longue date.
-          const ownedBefore = new Set(cards.map(subjectKey));
           const drawn = [...body.cards].sort((a, b) => a.position - b.position);
-          setRevealed({
-            cards: drawn,
-            newKeys: drawn.map(subjectKey).filter((k) => !ownedBefore.has(k)),
-          });
+          setRevealed({ id: packId, cards: drawn });
+          announce(
+            format(t.revealAnnounce, {
+              cards: drawn
+                .map((c) => {
+                  const parts = [
+                    format(t.revealAnnounceCard, {
+                      name: cardName(c) ?? t.revealUnnamed,
+                      rarity: labels.rarity[c.rarity],
+                    }),
+                  ];
+                  if (c.isFoil) parts.push(t.revealAnnounceFoil);
+                  if (c.isNew === true) parts.push(t.revealAnnounceNew);
+                  if (c.isNew === false) parts.push(t.revealAnnounceDuplicate);
+                  return parts.join(', ');
+                })
+                .join(' ; '),
+            })
+          );
         }
 
-        await load();
+        await load(cards.length);
       } catch {
         addToast(t.errGeneric, 'error');
       } finally {
         setBusy(null);
       }
     },
-    [adminFetch, addToast, load, t, cards]
+    [adminFetch, addToast, announce, load, t, cards.length, labels.rarity]
   );
+
+  const dismissReveal = useCallback(() => {
+    setRevealed(null);
+    // Le bouton « Fermer » disparaît avec la révélation : on ramène le focus
+    // aux paquets, d'où l'on venait et où l'on ouvrira le suivant.
+    requestAnimationFrame(() => packsHeadingRef.current?.focus());
+  }, []);
 
   /**
    * Libellé d'un mouvement. L'API rend le FAIT (`sourceKind`), la page le
@@ -396,6 +648,17 @@ function PlayerTcg() {
           // des pièces arrivaient sans que la joueuse puisse les rattacher à
           // une action — le seul gain inexplicable de la liste.
           return t.walletTwitchDrop;
+        case 'welcome_gift':
+          // Même défaut, même correction : les deux cadeaux d'accueil
+          // s'affichaient « Mouvement » alors que c'est souvent la PREMIÈRE
+          // ligne de l'historique, celle qu'on cherche à comprendre.
+          return t.walletWelcomeGift;
+        case 'supporter_welcome':
+          return t.walletSupporterWelcome;
+        case 'checkin_streak':
+          return t.walletCheckinStreak;
+        case 'tournament_placement':
+          return t.walletTournamentPlacement;
         default:
           return t.walletUnknownSource;
       }
@@ -409,9 +672,10 @@ function PlayerTcg() {
       return;
     }
     setWalletOpen(true);
+    setWalletState('loading');
     // Rechargé à chaque ouverture : le registre a pu bouger depuis la dernière
-    // fois, et il est bon marché. On ne montre rien en cas d'échec plutôt
-    // qu'un historique vide, qui ferait croire à une absence de mouvements.
+    // fois, et il est bon marché. Un échec a son message plutôt qu'un
+    // historique vide, qui ferait croire à une absence de mouvements.
     try {
       const data = await adminFetchJson<{
         entries: WalletEntry[];
@@ -421,8 +685,10 @@ function PlayerTcg() {
         entries: data.entries ?? [],
         truncated: data.truncated === true,
       });
+      setWalletState('ready');
     } catch {
       setWallet(null);
+      setWalletState('error');
     }
   }, [walletOpen, adminFetchJson]);
 
@@ -445,25 +711,25 @@ function PlayerTcg() {
               : t.errGeneric,
           'error'
         );
-        await load();
+        await load(cards.length);
         return;
       }
       addToast(t.buySuccess, 'success');
-      await load();
+      await load(cards.length);
     } catch {
       addToast(t.errGeneric, 'error');
     } finally {
       setBusy(null);
     }
-  }, [adminFetch, addToast, load, t]);
+  }, [adminFetch, addToast, load, t, cards.length]);
 
   /**
    * Recycler un doublon.
    *
-   * LE GESTE EST DÉFINITIF — la carte est marquée, pas empruntée — d'où la
-   * confirmation, qui dit aussi lequel des exemplaires part. Même patron que
-   * `buyBooster` : état occupé, traduction du `code` d'erreur, et `load()`
-   * dans les DEUX issues.
+   * CE QU'ON GAGNE EST CHIFFRÉ AVANT DE CONFIRMER : le montant, le solde avant
+   * et après, et combien d'exemplaires il restera. « Recycler (+30) » disait le
+   * gain mais ni ce qu'il coûte (une carte) ni ce qu'il laisse — la
+   * confirmation est l'endroit où ces trois faits doivent se lire ensemble.
    *
    * Recharger même après un échec n'est pas de la prudence excessive : la route
    * marque la carte AVANT de créditer, et relâche le marquage si le crédit
@@ -471,14 +737,55 @@ function PlayerTcg() {
    * optimiste — dans un sens comme dans l'autre.
    */
   const recycleCard = useCallback(
-    async (target: { packId: string; position: number }) => {
+    async (card: CollectionCard) => {
+      const target = card.recyclable;
+      if (!target || recycleRefund === null) return;
       const busyKey = `recycle:${target.packId}:${target.position}`;
+      const name = cardName(card) ?? t.revealUnnamed;
+      const left = card.count - 1;
+
       const ok = await confirm({
-        title: t.recycleConfirmTitle,
-        subtitle: format(t.recycleConfirmBody, { refund: recycleRefund ?? '' }),
+        title: format(t.recycleConfirmTitleNamed, { name }),
         variant: 'warning',
         confirmLabel: t.recycleConfirmYes,
         cancelLabel: t.recycleConfirmNo,
+        body: (
+          <div className="space-y-3 text-sm text-neutral-200">
+            <dl className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+              <div className="flex items-center justify-between gap-4">
+                <dt className="text-neutral-400">{t.recycleConfirmGain}</dt>
+                <dd>
+                  <TcgAmount
+                    value={recycleRefund}
+                    signed
+                    size={15}
+                    className="font-semibold text-[var(--color-green)]"
+                  />
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="text-neutral-400">{t.recycleConfirmBalance}</dt>
+                <dd className="flex items-center gap-2">
+                  <TcgAmount value={balance} size={15} />
+                  <span aria-hidden className="text-neutral-500">
+                    →
+                  </span>
+                  <TcgAmount
+                    value={balance + recycleRefund}
+                    size={15}
+                    className="font-semibold text-white"
+                  />
+                </dd>
+              </div>
+            </dl>
+            <p>
+              {left > 1
+                ? format(t.recycleConfirmKeep_other, { count: left })
+                : t.recycleConfirmKeep_one}
+            </p>
+            <p className="text-neutral-400">{t.recycleConfirmWhich}</p>
+          </div>
+        ),
       });
       if (!ok) return;
 
@@ -491,7 +798,6 @@ function PlayerTcg() {
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as {
             code?: string;
-            refund?: number;
           };
           addToast(
             body.code === 'not_a_duplicate'
@@ -501,7 +807,7 @@ function PlayerTcg() {
                 : t.errGeneric,
             'error'
           );
-          await load();
+          await load(cards.length);
           return;
         }
         const body = (await res.json().catch(() => ({}))) as {
@@ -509,25 +815,77 @@ function PlayerTcg() {
         };
         addToast(
           format(t.recycleSuccess, {
-            refund: body.refund ?? recycleRefund ?? '',
+            refund: body.refund ?? recycleRefund,
           }),
           'success'
         );
-        await load();
+        await load(cards.length);
       } catch {
         addToast(t.errGeneric, 'error');
       } finally {
         setBusy(null);
       }
     },
-    [adminFetch, addToast, confirm, load, recycleRefund, t]
+    [
+      adminFetch,
+      addToast,
+      balance,
+      cards.length,
+      confirm,
+      load,
+      recycleRefund,
+      t,
+    ]
   );
 
-  const unopened = packs.filter((p) => !p.openedAt);
+  const goToPacks = useCallback(() => {
+    packsHeadingRef.current?.focus();
+  }, []);
+
+  // La carte Twitch prend l'argument « ce qu'on gagne » UNIQUEMENT si le drop
+  // est réellement branché : c'est la seule situation où le montant est vrai.
+  const twitchPitch =
+    typeof earn?.twitchDrop === 'number'
+      ? {
+          title: t.twitchPitchTitle,
+          body: format(t.twitchPitchBody, { drop: earn.twitchDrop }),
+        }
+      : undefined;
+  const showTwitchEarnLink =
+    twitchPitch !== undefined &&
+    twitchStatus?.configured === true &&
+    !twitchStatus.linked;
+
+  const revealCards: TcgRevealCard[] =
+    revealed?.cards.map((c) => ({
+      key: String(c.position),
+      subject: cardSubject(c),
+      rarity: c.rarity,
+      isFoil: c.isFoil,
+      isNew: typeof c.isNew === 'boolean' ? c.isNew : null,
+    })) ?? [];
+  const knownNew = revealCards.filter((c) => c.isNew !== null);
+  const freshCount = knownNew.filter((c) => c.isNew === true).length;
+  const revealSummary =
+    knownNew.length === 0
+      ? null
+      : freshCount === 0
+        ? t.revealSummary_none
+        : freshCount === 1
+          ? format(t.revealSummary_one, { count: revealCards.length })
+          : format(t.revealSummary_other, {
+              fresh: freshCount,
+              count: revealCards.length,
+            });
+
+  const isLoading = loadState === 'loading';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-      <main className="container mx-auto px-4 pb-16 pt-24">
+      <main
+        className="container mx-auto px-4 pb-16 pt-24"
+        aria-busy={isLoading}
+      >
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">
             {t.collectionTitle}
@@ -543,204 +901,222 @@ function PlayerTcg() {
           </Link>
         </div>
 
-        {/* Paquets et solde */}
-        <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold">{t.packsTitle}</h2>
-              <p className="mt-1 text-sm text-gray-400">
-                {unopened.length === 0
-                  ? t.packsNone
-                  : format(
-                      unopened.length > 1
-                        ? t.packsUnopened_other
-                        : t.packsUnopened_one,
-                      { count: unopened.length }
-                    )}
-              </p>
-            </div>
-            <div className="text-right">
-              {/* Le solde porte la pièce : c'est le montant qu'on vient
-                  chercher sur cette page. Le libellé remplace le mot
-                  « pièces », que l'icône dit déjà. */}
-              <p className="flex items-center justify-end gap-2 text-sm text-gray-300">
-                <span className="text-xs uppercase tracking-wide text-gray-500">
-                  {t.balanceLabel}
-                </span>
-                <TcgAmount
-                  value={balance}
-                  size={18}
-                  className="text-base font-semibold text-white"
-                />
-              </p>
-              {/* Comment on en gagne. À zéro, un prix sans chemin pour
-                  l'atteindre n'apprend rien. */}
-              {earn !== null && (
-                <p className="mt-1 text-xs text-gray-500">
-                  {/* Le drop n'est mentionné QUE s'il est branché : l'API ne
-                      rend `twitchDrop` que si une chaîne est connectée avec une
-                      récompense désignée. Deux formulations plutôt qu'une
-                      phrase à trous — « et  par carte » se lirait mal. */}
-                  {typeof earn.twitchDrop === 'number'
-                    ? format(t.earnHintWithDrop, {
-                        match: earn.matchWin,
-                        scrim: earn.scrimWin,
-                        drop: earn.twitchDrop,
-                      })
-                    : format(t.earnHint, {
-                        match: earn.matchWin,
-                        scrim: earn.scrimWin,
-                      })}
-                </p>
-              )}
-              {/* Prix inconnu = bouton absent. Afficher « Acheter (— pièces) »
-                  proposerait une dépense dont on ignore le montant. */}
-              {boosterPrice !== null && (
-                <button
-                  type="button"
-                  onClick={() => void buyBooster()}
-                  disabled={busy !== null}
-                  className="mt-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white transition hover:border-[var(--color-yellow)]/60 hover:text-[var(--color-yellow)] disabled:opacity-50"
-                >
-                  {busy === 'buy' ? (
-                    t.buying
-                  ) : (
-                    // Le prix en pièce plutôt qu'en toutes lettres : c'est une
-                    // dépense, et la pastille la rend comparable au solde
-                    // affiché juste au-dessus.
-                    <span className="inline-flex items-center gap-2">
-                      {t.buyBoosterShort}
-                      <TcgAmount value={boosterPrice} size={15} />
-                    </span>
-                  )}
-                </button>
-              )}
-            </div>
-          </div>
+        {/* Région d'annonce, montée VIDE en permanence (cf. `announce`). */}
+        <p role="status" aria-live="polite" className="sr-only">
+          {isLoading ? t.loadingCollection : announcement}
+        </p>
 
-          {unopened.length > 0 && (
-            <ul className="mt-5 flex flex-wrap gap-2">
-              {unopened.map((pack) => (
-                <li key={pack.id}>
+        {loadState === 'error' ? (
+          <section
+            role="alert"
+            className="mt-8 rounded-2xl border border-red-400/30 bg-red-500/[0.07] p-6"
+          >
+            <h2 className="text-lg font-semibold">{t.loadErrorTitle}</h2>
+            <p className="mt-1 max-w-prose text-sm text-gray-300">
+              {t.loadErrorBody}
+            </p>
+            <button
+              type="button"
+              onClick={retryLoad}
+              className="mt-4 min-h-11 rounded-xl bg-white/10 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]"
+            >
+              {t.retry}
+            </button>
+          </section>
+        ) : (
+          /* Paquets et solde */
+          <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+              <div>
+                <h2
+                  ref={packsHeadingRef}
+                  tabIndex={-1}
+                  className="scroll-mt-24 rounded text-lg font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]"
+                >
+                  {t.packsTitle}
+                </h2>
+                {isLoading ? (
+                  <Skeleton className="mt-2 h-4 w-40" />
+                ) : (
+                  <p className="mt-1 text-sm text-gray-400">
+                    {unopenedCount === 0
+                      ? t.packsNone
+                      : format(
+                          unopenedCount > 1
+                            ? t.packsUnopened_other
+                            : t.packsUnopened_one,
+                          { count: unopenedCount }
+                        )}
+                  </p>
+                )}
+              </div>
+              {/* Aligné à gauche sur mobile : à 400 px, un bloc calé à droite
+                  sous un titre calé à gauche se lit en zigzag. */}
+              <div className="sm:text-right">
+                {/* Le solde porte la pièce : c'est le montant qu'on vient
+                    chercher sur cette page. Le libellé remplace le mot
+                    « pièces », que l'icône dit déjà. */}
+                <p className="flex items-center gap-2 text-sm text-gray-300 sm:justify-end">
+                  <span className="text-xs uppercase tracking-wide text-gray-500">
+                    {t.balanceLabel}
+                  </span>
+                  {isLoading ? (
+                    <Skeleton className="h-5 w-14" />
+                  ) : (
+                    <TcgAmount
+                      value={balance}
+                      size={18}
+                      className="text-base font-semibold text-white"
+                    />
+                  )}
+                </p>
+                {/* Comment on en gagne. À zéro, un prix sans chemin pour
+                    l'atteindre n'apprend rien. */}
+                {earn !== null && (
+                  <p className="mt-1 max-w-md text-xs text-gray-400 sm:ml-auto">
+                    {/* Le drop n'est mentionné QUE s'il est branché : l'API ne
+                        rend `twitchDrop` que si une chaîne est connectée avec
+                        une récompense désignée. Deux formulations plutôt qu'une
+                        phrase à trous — « et  par carte » se lirait mal. */}
+                    {typeof earn.twitchDrop === 'number'
+                      ? format(t.earnHintWithDrop, {
+                          match: earn.matchWin,
+                          scrim: earn.scrimWin,
+                          drop: earn.twitchDrop,
+                        })
+                      : format(t.earnHint, {
+                          match: earn.matchWin,
+                          scrim: earn.scrimWin,
+                        })}
+                    {/* La promesse et le moyen de l'honorer, côte à côte : le
+                        barème annonce des pièces « sur le stream », le lien
+                        mène au geste qui les rend possibles. */}
+                    {showTwitchEarnLink && (
+                      <>
+                        {' '}
+                        <a
+                          href={`#${TWITCH_ANCHOR}`}
+                          className="font-semibold text-purple-300 underline underline-offset-2 hover:text-purple-200"
+                        >
+                          {t.twitchEarnLink}
+                        </a>
+                      </>
+                    )}
+                  </p>
+                )}
+                {/* Prix inconnu = bouton absent. Afficher « Acheter (— pièces) »
+                    proposerait une dépense dont on ignore le montant. */}
+                {boosterPrice !== null && (
                   <button
                     type="button"
-                    onClick={() => void openPack(pack.id)}
+                    onClick={() => void buyBooster()}
                     disabled={busy !== null}
-                    className="rounded-xl border border-[var(--color-violet)]/40 bg-[var(--color-violet)]/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-violet)]/20 disabled:opacity-50"
+                    aria-busy={busy === 'buy'}
+                    className="mt-3 min-h-11 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white transition hover:border-[var(--color-yellow)]/60 hover:text-[var(--color-yellow)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)] disabled:opacity-50"
                   >
-                    {busy === pack.id ? t.packOpening : t.packOpen}
-                    <span className="ml-2 text-xs font-normal text-gray-400">
-                      {/* Un `switch` et non un ternaire binaire : avec deux
-                          issues seulement, un paquet `welcome` se serait
-                          affiché « Gagné en match » — le même défaut muet que
-                          le porte-monnaie, où un drop passait pour un
-                          « Mouvement ». */}
-                      {packOriginLabel(pack.source, t)}
-                    </span>
+                    {busy === 'buy' ? (
+                      t.buying
+                    ) : (
+                      // Le prix en pièce plutôt qu'en toutes lettres : c'est
+                      // une dépense, et la pastille la rend comparable au solde
+                      // affiché juste au-dessus.
+                      <span className="inline-flex items-center gap-2">
+                        {t.buyBoosterShort}
+                        <TcgAmount value={boosterPrice} size={15} />
+                      </span>
+                    )}
                   </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+                )}
+              </div>
+            </div>
 
-        {/* Mon compte Twitch — JUSTE SOUS LE BARÈME, et c'est tout l'intérêt de
-            ce montage. La page annonce « et N pièces par carte récupérée sur le
-            stream » (cf. `earnHintWithDrop`) sans qu'aucun geste, depuis cet
-            écran, ne permette d'y accéder : le rattachement ne vivait que sur
-            `/player/profile`, où l'on ne va pas en pensant au TCG. La promesse
-            et le moyen de l'honorer se lisent désormais l'un sous l'autre.
-
-            La page profil portait déjà le bon raisonnement en commentaire —
-            « placée AVANT les cartes TCG parce qu'elle en est la condition
-            d'accès » — il n'avait simplement jamais été appliqué ici.
-
-            MONTÉE SANS CONDITION. Elle se masque d'elle-même quand la
-            fonctionnalité est dormante, et son état « lié » a sa place : voir
-            la promesse et pouvoir vérifier son rattachement au même endroit est
-            précisément ce qui manquait. La restreindre au seul état « non lié »
-            ferait disparaître la confirmation au moment où elle rassure.
-
-            `loginPath` n'est pas passé : son défaut (`/login`) est déjà celui
-            de cette page. */}
-        <div className="mt-8">
-          <TwitchLinkCard />
-        </div>
+            {packs.length > 0 && (
+              <ul className="mt-5 grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:flex sm:flex-wrap">
+                {packs.map((pack) => (
+                  <li key={pack.id}>
+                    <button
+                      type="button"
+                      onClick={() => void openPack(pack.id)}
+                      disabled={busy !== null}
+                      aria-busy={busy === pack.id}
+                      className="flex min-h-11 w-full flex-col items-start rounded-xl border border-[var(--color-violet)]/40 bg-[var(--color-violet)]/10 px-4 py-2.5 text-left text-sm font-semibold text-white transition hover:bg-[var(--color-violet)]/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)] disabled:opacity-50 sm:w-auto sm:flex-row sm:items-center sm:gap-2"
+                    >
+                      {busy === pack.id ? t.packOpening : t.packOpen}
+                      <span className="text-xs font-normal text-gray-300">
+                        {/* Un `switch` et non un ternaire binaire : avec deux
+                            issues seulement, un paquet `welcome` se serait
+                            affiché « Gagné en match ». */}
+                        {packOriginLabel(pack.source, t)}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {packsCursor && (
+              <button
+                type="button"
+                onClick={() => void loadMorePacks()}
+                disabled={busy !== null}
+                className="mt-3 min-h-11 rounded-full px-4 py-2 text-sm font-medium text-purple-300 underline-offset-4 transition hover:text-purple-200 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)] disabled:opacity-50"
+              >
+                {busy === 'more-packs'
+                  ? t.collectionLoadingMore
+                  : t.packsLoadMore}
+              </button>
+            )}
+          </section>
+        )}
 
         {/* Le tirage qu'on vient d'ouvrir, entre les paquets et la collection :
             on le voit à l'endroit où le regard va après avoir cliqué. Il reste
             affiché jusqu'à ce qu'on le ferme — une révélation qui disparaît
             toute seule est une révélation ratée. */}
         {revealed !== null && (
-          <section className="mt-8 rounded-2xl border border-[var(--color-violet)]/40 bg-[var(--color-violet)]/[0.07] p-6">
-            <div className="flex flex-wrap items-baseline justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">{t.revealTitle}</h2>
-                <p className="mt-1 text-sm text-gray-400">{t.revealSubtitle}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setRevealed(null)}
-                className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-gray-300 transition hover:border-white/40 hover:text-white"
-              >
-                {t.revealDismiss}
-              </button>
-            </div>
-            <ul className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-              {revealed.cards.map((card) => (
-                <li key={card.position}>
-                  {/* Nouvelle ou doublon : l'information qu'on cherche en
-                      ouvrant. Posée au-dessus de la carte plutôt que dans
-                      `TcgCard`, qui décrit une carte et non mon rapport à
-                      elle — la collection réutilise le même composant. */}
-                  {revealed.newKeys.includes(subjectKey(card)) && (
-                    <p className="mb-1 text-center text-[11px] font-bold uppercase tracking-wider text-[var(--color-green)]">
-                      {t.revealNewCard}
-                    </p>
-                  )}
-                  <TcgCard
-                    subject={
-                      card.kind === 'player'
-                        ? {
-                            kind: 'player',
-                            userId: card.userId,
-                            displayName: card.displayName,
-                            imageUrl: card.imageUrl,
-                          }
-                        : card.kind === 'map'
-                          ? {
-                              kind: 'map',
-                              slug: card.slug,
-                              name: card.name,
-                              imageUrl: card.imageUrl,
-                            }
-                          : {
-                              kind: 'team',
-                              teamId: card.teamId,
-                              name: card.name,
-                              slug: card.slug,
-                              logoUrl: card.logoUrl,
-                              cardImageUrl: card.cardImageUrl,
-                            }
-                    }
-                    rarity={card.rarity}
-                    isFoil={card.isFoil}
-                    labels={labels}
-                  />
-                </li>
-              ))}
-            </ul>
-          </section>
+          <TcgPackReveal
+            key={revealed.id}
+            cards={revealCards}
+            onDismiss={dismissReveal}
+            labels={{
+              title: t.revealTitle,
+              subtitle: t.revealSubtitle,
+              summary: revealSummary,
+              duplicateHint:
+                recycleRefund !== null
+                  ? format(t.revealDuplicateHint, { refund: recycleRefund })
+                  : null,
+              dismiss: t.revealDismiss,
+              newCard: t.revealNewCard,
+              duplicate: t.revealDuplicate,
+              card: labels,
+            }}
+          />
         )}
 
-        {/* ── Historique du porte-monnaie ──────────────────────────────────
-            « D'où viennent mes pièces ? » — la question que la migration du
-            registre annonçait, et à laquelle rien ne répondait : la page
-            affichait un solde sans aucun moyen de savoir ce qui l'avait formé.
+        {/* Mon compte Twitch — JUSTE SOUS LE BARÈME. La page annonce « et N
+            pièces par carte récupérée sur le stream » : la promesse et le moyen
+            de l'honorer se lisent l'un sous l'autre.
 
-            Replié par défaut, chargé au clic : le solde suffit à la plupart des
-            visites. */}
-        <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+            CONVERSION. Au 2026-09-14, 0 joueuse sur 58 avait rattaché son
+            compte : la carte expliquait POURQUOI le lien est demandé, jamais ce
+            qu'il rapporte. Quand le drop est branché, elle prend donc un titre
+            et une phrase chiffrés (`pitch`) et un bouton en évidence ; une fois
+            le compte lié, elle redevient la confirmation habituelle.
+
+            MONTÉE SANS CONDITION. Elle se masque d'elle-même quand la
+            fonctionnalité est dormante. */}
+        <div className="mt-8">
+          <TwitchLinkCard
+            id={TWITCH_ANCHOR}
+            pitch={twitchPitch}
+            onStatus={setTwitchStatus}
+          />
+        </div>
+
+        {/* ── Historique du porte-monnaie ──────────────────────────────────
+            « D'où viennent mes pièces ? ». Replié par défaut, chargé au clic :
+            le solde suffit à la plupart des visites. */}
+        <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="flex items-center gap-2 text-lg font-semibold">
               <TcgCoin size={18} />
@@ -749,150 +1125,200 @@ function PlayerTcg() {
             <button
               type="button"
               onClick={() => void toggleWallet()}
-              className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-gray-300 transition hover:border-white/40 hover:text-white"
+              aria-expanded={walletOpen}
+              aria-controls="tcg-wallet-history"
+              className="min-h-11 rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-gray-300 transition hover:border-white/40 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]"
             >
               {walletOpen ? t.walletHide : t.walletShow}
             </button>
           </div>
 
-          {walletOpen && wallet !== null && (
-            <>
-              {wallet.entries.length === 0 ? (
-                <p className="mt-4 text-sm text-gray-400">{t.walletEmpty}</p>
-              ) : (
-                <ul className="mt-4 divide-y divide-white/5">
-                  {wallet.entries.map((e) => (
-                    <li
-                      key={e.id}
-                      className="flex items-center justify-between gap-4 py-2 text-sm"
-                    >
-                      <span className="min-w-0 flex-1 truncate text-gray-300">
-                        {walletLabel(e.sourceKind)}
-                      </span>
-                      {/* Le signe est porté par la couleur ET par le texte :
-                          la couleur seule ne se lit pas en daltonisme. */}
-                      <TcgAmount
-                        value={e.amount}
-                        signed
-                        size={14}
-                        className={
-                          e.amount >= 0
-                            ? 'shrink-0 font-semibold text-[var(--color-green)]'
-                            : 'shrink-0 font-semibold text-gray-400'
-                        }
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {wallet.truncated && (
-                <p className="mt-3 text-xs text-gray-500">
-                  {format(t.walletTruncated, { count: wallet.entries.length })}
-                </p>
-              )}
-            </>
-          )}
+          <div id="tcg-wallet-history" hidden={!walletOpen}>
+            {walletState === 'loading' && (
+              <p role="status" className="mt-4 text-sm text-gray-400">
+                {t.walletLoading}
+              </p>
+            )}
+            {walletState === 'error' && (
+              <p role="alert" className="mt-4 text-sm text-gray-300">
+                {t.walletError}
+              </p>
+            )}
+            {walletState === 'ready' && wallet !== null && (
+              <>
+                {wallet.entries.length === 0 ? (
+                  <p className="mt-4 text-sm text-gray-400">{t.walletEmpty}</p>
+                ) : (
+                  <ul className="mt-4 divide-y divide-white/5">
+                    {wallet.entries.map((e) => (
+                      <li
+                        key={e.id}
+                        className="flex items-center justify-between gap-4 py-2 text-sm"
+                      >
+                        <span className="min-w-0 flex-1 truncate text-gray-300">
+                          {walletLabel(e.sourceKind)}
+                        </span>
+                        {/* Le signe est porté par la couleur ET par le texte :
+                            la couleur seule ne se lit pas en daltonisme. */}
+                        <TcgAmount
+                          value={e.amount}
+                          signed
+                          size={14}
+                          className={
+                            e.amount >= 0
+                              ? 'shrink-0 font-semibold text-[var(--color-green)]'
+                              : 'shrink-0 font-semibold text-gray-400'
+                          }
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {wallet.truncated && (
+                  <p className="mt-3 text-xs text-gray-500">
+                    {format(t.walletTruncated, {
+                      count: wallet.entries.length,
+                    })}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
         </section>
 
         {/* ── Progression ──────────────────────────────────────────────────
-            « 12 cartes » ne dit rien sans « sur combien » : un TCG vit de la
-            complétion, et sans horizon il n'y a pas d'objectif. Le composant
-            se masque tout seul quand le vivier est inconnu — un dénominateur
-            faux serait pire qu'un dénominateur absent.
-
-            Pas de répartition par rareté : elle exigerait de recalculer les
-            badges de tout le vivier (cf. `collection.ts`). Le composant sait
-            s'en passer. */}
-        <TcgCollectionProgress
-          owned={{ distinct: totals.distinct, total: totals.total }}
-          pool={pool ?? undefined}
-          labels={{
-            title: t.progressTitle,
-            // Le PLURIEL est choisi ici, pas dans le composant : lui apprendre
-            // les règles de chaque langue serait le mauvais endroit.
-            count:
-              (pool?.distinct ?? 0) > 1
-                ? t.progressCount_other
-                : t.progressCount_one,
-            percent: t.progressPercent,
-            copies:
-              totals.total > 1 ? t.progressCopies_other : t.progressCopies_one,
-            progressAria: t.progressAria,
-            byRarityTitle: t.progressByRarity,
-            rarityCount: t.progressRarityCount,
-            complete: t.progressComplete,
-            rarity: labels.rarity,
-          }}
-        />
+            « 12 cartes » ne dit rien sans « sur combien ». Les compteurs sont
+            ceux de la collection ENTIÈRE (l'API les rend sur chaque page), pas
+            ceux des cartes affichées. */}
+        {loadState === 'ready' && (
+          <TcgCollectionProgress
+            className="mt-8"
+            owned={{ distinct: totals.distinct, total: totals.total }}
+            pool={pool ?? undefined}
+            labels={{
+              title: t.progressTitle,
+              // Le PLURIEL est choisi ici, pas dans le composant : lui apprendre
+              // les règles de chaque langue serait le mauvais endroit.
+              count:
+                (pool?.distinct ?? 0) > 1
+                  ? t.progressCount_other
+                  : t.progressCount_one,
+              percent: t.progressPercent,
+              copies:
+                totals.total > 1
+                  ? t.progressCopies_other
+                  : t.progressCopies_one,
+              progressAria: t.progressAria,
+              byRarityTitle: t.progressByRarity,
+              rarityCount: t.progressRarityCount,
+              complete: t.progressComplete,
+              rarity: labels.rarity,
+            }}
+          />
+        )}
 
         {/* Collection */}
-        <section className="mt-8">
-          {loaded && cards.length === 0 ? (
-            <p className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-gray-300">
-              {t.collectionEmpty}
-            </p>
+        <section className="mt-8" aria-labelledby="tcg-collection-title">
+          <h2 id="tcg-collection-title" className="sr-only">
+            {t.collectionTitle}
+          </h2>
+          {isLoading ? (
+            <ul
+              aria-hidden
+              className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5"
+            >
+              {Array.from({ length: 10 }, (_, i) => (
+                <li key={i}>
+                  <Skeleton
+                    className="aspect-[3/4] w-full"
+                    rounded="rounded-xl"
+                  />
+                  <Skeleton className="mt-2 h-4 w-3/4" />
+                </li>
+              ))}
+            </ul>
+          ) : loadState === 'error' ? null : cards.length === 0 ? (
+            // VIDE, MAIS PAS SANS SUITE. Un paquet fermé attend peut-être : le
+            // dire, et y mener, vaut mieux que « gagne un match » à quelqu'un
+            // qui a déjà de quoi commencer.
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-gray-300">
+              <p>
+                {unopenedCount === 0
+                  ? t.collectionEmpty
+                  : unopenedCount === 1
+                    ? t.collectionEmptyWithPacks_one
+                    : format(t.collectionEmptyWithPacks_other, {
+                        count: unopenedCount,
+                      })}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                {unopenedCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={goToPacks}
+                    className="min-h-11 rounded-xl bg-[var(--color-violet)]/30 px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--color-violet)]/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]"
+                  >
+                    {t.collectionEmptyGoToPacks}
+                  </button>
+                )}
+                <Link
+                  href="/player/tcg-guide"
+                  className="inline-flex min-h-11 items-center rounded-xl border border-white/15 px-4 py-2 text-sm font-medium text-gray-200 transition hover:bg-white/10"
+                >
+                  {t.collectionEmptyGuide}
+                </Link>
+              </div>
+            </div>
           ) : (
             <>
               <p className="mb-4 text-sm text-gray-400">
-                {format(t.collectionCount, {
-                  distinct: totals.distinct,
-                  total: totals.total,
-                })}
+                {cards.length < totals.distinct
+                  ? format(t.collectionShown, {
+                      shown: cards.length,
+                      distinct: totals.distinct,
+                    })
+                  : format(t.collectionCount, {
+                      distinct: totals.distinct,
+                      total: totals.total,
+                    })}
               </p>
-              <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+              <ul
+                ref={collectionListRef}
+                className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5"
+              >
                 {cards.map((card) => {
-                  // Extrait en variable locale plutôt que ré-interrogé dans le
-                  // gestionnaire : cela évite une assertion non-nulle et rend
-                  // la clé d'occupation lisible.
                   const target = card.recyclable ?? null;
                   const recycleKey = target
                     ? `recycle:${target.packId}:${target.position}`
                     : null;
                   return (
                     // `subjectKey` plutôt qu'une clé recopiée : une seule règle
-                    // d'identité pour la collection et pour la révélation.
+                    // d'identité pour la collection et ses pages successives.
                     <li key={subjectKey(card)}>
                       <TcgCard
-                        subject={
-                          card.kind === 'player'
-                            ? {
-                                kind: 'player',
-                                userId: card.userId,
-                                displayName: card.displayName,
-                                imageUrl: card.imageUrl,
-                              }
-                            : card.kind === 'map'
-                              ? {
-                                  kind: 'map',
-                                  slug: card.slug,
-                                  name: card.name,
-                                  imageUrl: card.imageUrl,
-                                }
-                              : {
-                                  kind: 'team',
-                                  teamId: card.teamId,
-                                  name: card.name,
-                                  slug: card.slug,
-                                  logoUrl: card.logoUrl,
-                                  cardImageUrl: card.cardImageUrl,
-                                }
-                        }
+                        subject={cardSubject(card)}
                         rarity={card.rarity}
                         isFoil={card.isFoil}
                         count={card.count}
                         labels={labels}
                       />
                       {/* Le recyclage n'apparaît QUE sur un vrai doublon :
-                        l'API ne rend `recyclable` qu'à partir de deux
-                        exemplaires, et la route refuserait le dernier. Le
-                        montant est celui rendu par l'API — le recopier ici le
-                        ferait mentir au premier réglage du barème. */}
+                          l'API ne rend `recyclable` qu'à partir de deux
+                          exemplaires, et la route refuserait le dernier. Le
+                          montant est celui rendu par l'API. Le nom accessible
+                          dit DE QUELLE carte il s'agit : dans une grille de
+                          quarante, « Recycler (+30) » ne désigne rien. */}
                       {target && recycleRefund !== null && (
                         <button
                           type="button"
-                          onClick={() => void recycleCard(target)}
+                          onClick={() => void recycleCard(card)}
                           disabled={busy !== null}
-                          className="mt-2 w-full rounded-lg border border-white/10 px-2 py-1.5 text-[11px] text-gray-400 transition hover:border-[var(--color-green)]/50 hover:text-[var(--color-green)] disabled:opacity-50"
+                          aria-busy={busy === recycleKey}
+                          aria-label={format(t.recycleAria, {
+                            name: cardName(card) ?? t.revealUnnamed,
+                            refund: recycleRefund,
+                          })}
+                          className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-white/10 px-2 py-2 text-xs text-gray-300 transition hover:border-[var(--color-green)]/50 hover:text-[var(--color-green)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)] disabled:opacity-50"
                         >
                           {busy === recycleKey
                             ? t.recycling
@@ -905,6 +1331,21 @@ function PlayerTcg() {
                   );
                 })}
               </ul>
+              {collectionCursor && (
+                <div className="mt-6 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => void loadMoreCards()}
+                    disabled={busy !== null}
+                    aria-busy={busy === 'more-cards'}
+                    className="min-h-11 rounded-full border border-white/15 bg-white/5 px-6 py-2 text-sm font-semibold text-white transition hover:border-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)] disabled:opacity-50"
+                  >
+                    {busy === 'more-cards'
+                      ? t.collectionLoadingMore
+                      : t.collectionLoadMore}
+                  </button>
+                </div>
+              )}
             </>
           )}
         </section>
