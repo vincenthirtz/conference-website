@@ -185,6 +185,30 @@ describe('GET /api/invitations/[token] — aiguillage par famille', () => {
     expect(res.body.redirectTo).toBe(`/rejoindre/${encodeURIComponent(token)}`);
   });
 
+  it('reste un lien PARTAGEABLE même après avoir servi une fois', async () => {
+    // LE CAS QUE LA PREMIÈRE VERSION DE CE FICHIER MANQUAIT, et par lequel le
+    // résolveur se trompait : les familles ne s'excluent pas toutes. Rejoindre
+    // par un lien partageable crée une demande qui range le hash du MÊME jeton
+    // dans `payload.invite_token_hash` (cf. /api/teams/invite-links/by-token).
+    // Le jeton vit alors dans les deux tables.
+    //
+    // En classant `demandes` d'abord, `/invitation/<jeton>` répondait « cette
+    // invitation est déjà approved » sur un lien d'équipe parfaitement vivant,
+    // au lieu de renvoyer vers la page qui sait le servir.
+    const token = teamToken();
+    seedJoinLink(token);
+    seedTeamInvitation(token);
+    // La demande née de cet usage n'est plus `pending` : c'est l'état réel
+    // après une inscription réussie.
+    (store.demandes as Array<Record<string, unknown>>)[0].status = 'approved';
+
+    const res = await get(token);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.kind).toBe('join-link');
+    expect(res.body.redirectTo).toBe(`/rejoindre/${encodeURIComponent(token)}`);
+  });
+
   it('reste un 404 sec pour un jeton qui n’existe nulle part', async () => {
     const res = await get(teamToken());
 

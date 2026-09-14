@@ -89,10 +89,20 @@ export function redirectPathForKind(
 /**
  * Trouve la famille d'un jeton. `null` = ce hash n'existe nulle part.
  *
- * Les trois recherches partent EN PARALLÈLE : elles s'excluent mutuellement
- * (un hash ne peut appartenir qu'à une famille, les colonnes sont uniques), et
- * les enchaîner ne ferait qu'ajouter deux allers-retours au chemin chaud d'une
- * page publique.
+ * Les trois recherches partent EN PARALLÈLE : les enchaîner n'ajouterait que
+ * des allers-retours au chemin chaud d'une page publique.
+ *
+ * L'ORDRE DE DÉPARTAGE N'EST PAS ARBITRAIRE, et il compte : les familles ne
+ * s'excluent PAS toutes. Quand quelqu'un rejoint une équipe par un lien
+ * partageable, `/api/teams/invite-links/by-token` crée une demande qui range le
+ * hash de CE MÊME jeton dans `payload.invite_token_hash` — le hash vit alors
+ * dans deux tables à la fois.
+ *
+ * `team_invite_links` l'emporte donc, parce qu'il est le PROPRIÉTAIRE du jeton :
+ * la demande n'est que la trace de son usage. Dans l'ordre inverse, un lien
+ * d'équipe déjà utilisé une fois était classé « invitation nominative » et
+ * `/invitation/<jeton>` répondait « cette invitation est déjà approved » au lieu
+ * de renvoyer vers `/rejoindre`.
  */
 export async function resolveInvitationToken(
   token: string
@@ -138,6 +148,16 @@ export async function resolveInvitationToken(
     }
   }
 
+  // Le lien d'équipe EN PREMIER : c'est lui qui possède le jeton quand les deux
+  // tables le portent (cf. l'en-tête de cette fonction).
+  if (joinLink.data) {
+    return {
+      kind: 'join-link',
+      id: (joinLink.data as { id: string }).id,
+      tenantId:
+        (joinLink.data as { tenant_id: string | null }).tenant_id ?? null,
+    };
+  }
   if (tenant.data) {
     return {
       kind: 'tenant',
@@ -150,14 +170,6 @@ export async function resolveInvitationToken(
       kind: 'team',
       id: (team.data as { id: string }).id,
       tenantId: (team.data as { tenant_id: string | null }).tenant_id ?? null,
-    };
-  }
-  if (joinLink.data) {
-    return {
-      kind: 'join-link',
-      id: (joinLink.data as { id: string }).id,
-      tenantId:
-        (joinLink.data as { tenant_id: string | null }).tenant_id ?? null,
     };
   }
   return null;
