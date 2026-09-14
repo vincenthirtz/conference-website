@@ -96,4 +96,23 @@ export default {
   twitchPreviewTitle: 'Twitch preview of {channel}',
   twitchChatTitle: 'Twitch chat of {channel}',
   twitchOfflinePlayer: 'Offline — no preview available.',
+
+  dropHeading: 'TCG drops',
+  dropSubtitle:
+    'Twitch can disable the subscription without warning: without this panel, drops would stop mid-stream with nothing to show it.',
+  dropStatusHealthy: 'Operational',
+  dropStatusBroken: 'Needs fixing',
+  dropStatusUnknown: 'Unknown',
+  dropUnreadable:
+    'Twitch did not answer: we cannot tell whether the subscription is alive. “We do not know” is not “there is none”.',
+  dropSecretMissing:
+    'TWITCH_EVENTSUB_SECRET missing: every delivery would be rejected with a 403.',
+  dropScopeMissing:
+    'Scope channel:read:redemptions missing — reconnect the channel.',
+  dropRewardMissing:
+    'No channel-point reward designated: nothing to listen to.',
+  dropNoSubscription:
+    'No active subscription: Twitch will send no redemption at all.',
+  dropSubscriptionAiling: 'Subscription failing: {status}',
+  dropHealthyDetail: '{count} active subscription(s) — drops can land.',
 };

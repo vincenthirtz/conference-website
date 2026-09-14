@@ -97,4 +97,30 @@ export default adminNs('adminBroadcastLive', {
   twitchPreviewTitle: 'Aperçu Twitch de {channel}',
   twitchChatTitle: 'Chat Twitch de {channel}',
   twitchOfflinePlayer: 'Hors ligne — aucun aperçu disponible.',
+
+  // --- Santé de la chaîne de drop TCG -----------------------------------------
+  // Préfixe `drop*` et non `twitch*` : il ne s'agit pas du statut d'antenne
+  // (en direct / hors ligne) mais de la souscription EventSub qui fait tomber
+  // les cartes. Deux sujets distincts sur le même écran.
+  dropHeading: 'Drops TCG',
+  dropSubtitle:
+    'Twitch peut désactiver la souscription sans prévenir : sans cet écran, les drops s’arrêteraient en plein direct sans que rien ne le montre.',
+  dropStatusHealthy: 'Opérationnel',
+  dropStatusBroken: 'À réparer',
+  dropStatusUnknown: 'Indéterminé',
+  dropUnreadable:
+    'Twitch n’a pas répondu : impossible de dire si la souscription vit. « On ne sait pas » n’est pas « il n’y en a aucune ».',
+  dropSecretMissing:
+    'TWITCH_EVENTSUB_SECRET absent : chaque livraison serait rejetée en 403.',
+  dropScopeMissing:
+    'Scope channel:read:redemptions manquant — reconnecte la chaîne.',
+  dropRewardMissing:
+    'Aucune récompense de points de chaîne désignée : rien à écouter.',
+  dropNoSubscription:
+    'Aucune souscription active : Twitch n’enverra aucun échange.',
+  /** Interpole `{status}` — le statut BRUT de Twitch, jamais reformulé. */
+  dropSubscriptionAiling: 'Souscription en défaut : {status}',
+  /** Interpole `{count}`. */
+  dropHealthyDetail:
+    '{count} souscription(s) active(s) — les drops peuvent tomber.',
 });

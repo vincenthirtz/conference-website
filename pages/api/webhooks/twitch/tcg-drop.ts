@@ -167,6 +167,39 @@ const NotificationSchema = z.object({
   }),
 });
 
+/**
+ * Révocation : Twitch annonce qu'il CESSE d'envoyer.
+ *
+ * POURQUOI VALIDER UNE CHARGE DONT ON NE FAIT « RIEN ». Le message porte
+ * `subscription.status` — `authorization_revoked` (la chaîne a retiré son
+ * accord), `user_removed` (le compte a disparu), `notification_failures_exceeded`
+ * (nos réponses ont échoué trop souvent). Ces trois causes appellent des gestes
+ * OPPOSÉS : reconnecter la chaîne, ne rien faire, ou réparer le récepteur.
+ * Acquitter sans lire le statut laissait « les drops se sont arrêtés » sans
+ * jamais dire lequel des trois s'est produit.
+ *
+ * Tout est optionnel : une charge amputée ne doit pas empêcher d'acquitter.
+ * Twitch réessaie ce qu'il ne voit pas acquitté, et une révocation rejouée en
+ * boucle n'apporterait rien de plus.
+ */
+const RevocationSchema = z.object({
+  subscription: z
+    .object({
+      id: z.string().max(200).optional(),
+      status: z.string().max(100).optional(),
+      type: z.string().max(100).optional(),
+      condition: z
+        .object({
+          broadcaster_user_id: z.string().max(64).optional(),
+          reward_id: z.string().max(200).optional(),
+        })
+        .partial()
+        .optional(),
+    })
+    .partial()
+    .optional(),
+});
+
 /** Type de message, annoncé par `Twitch-Eventsub-Message-Type`. */
 const MessageTypeSchema = z.enum([
   'webhook_callback_verification',
@@ -734,8 +767,32 @@ export default async function handler(
   // série). Rien à réparer ici, mais la trace doit exister : sans elle, les
   // drops s'arrêteraient sans que personne ne sache pourquoi.
   if (parsedType.data === 'revocation') {
-    logger.warn('[twitch/tcg-drop] souscription révoquée par Twitch');
-    return res.status(200).json({ ok: true, status: 'revoked' });
+    // On LIT la charge au lieu de simplement acquitter : le statut dit laquelle
+    // des trois causes s'applique, et elles appellent des gestes opposés
+    // (cf. `RevocationSchema`). Sans lui, la régie savait seulement que « ça ne
+    // marche plus ».
+    const parsedRevocation = RevocationSchema.safeParse(payload);
+    const sub = parsedRevocation.success
+      ? parsedRevocation.data.subscription
+      : undefined;
+
+    logger.warn(
+      '[twitch/tcg-drop] souscription révoquée par Twitch — statut=%s type=%s id=%s chaîne=%s récompense=%s',
+      sub?.status ?? 'inconnu',
+      sub?.type ?? 'inconnu',
+      sub?.id ?? 'inconnu',
+      sub?.condition?.broadcaster_user_id ?? 'inconnue',
+      sub?.condition?.reward_id ?? 'inconnue'
+    );
+
+    // Le statut est RENDU dans la réponse : il n'apparaît nulle part ailleurs,
+    // et un acquittement muet rendrait le diagnostic impossible depuis les
+    // journaux de la fonction.
+    return res.status(200).json({
+      ok: true,
+      status: 'revoked',
+      reason: sub?.status ?? null,
+    });
   }
 
   const parsed = NotificationSchema.safeParse(payload);

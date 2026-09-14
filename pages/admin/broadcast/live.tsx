@@ -14,6 +14,7 @@ import { useEventRunRealtime } from '@/hooks/useEventRunRealtime';
 import { useToast } from '@/components/Toast';
 import RealtimeStatusBadge from '@/components/admin/RealtimeStatusBadge';
 import TwitchStatusPanel from '@/components/admin/broadcast/TwitchStatusPanel';
+import TcgDropHealthCard from '@/components/admin/broadcast/TcgDropHealthCard';
 import TwitchPredictionsPanel from '@/components/admin/broadcast/TwitchPredictionsPanel';
 import TwitchCommandsPanel from '@/components/admin/broadcast/TwitchCommandsPanel';
 import { useRouter } from 'next/router';
@@ -481,17 +482,16 @@ function BroadcastLivePage({ staff }: StaffProps) {
             </div>
           )}
 
-          {/* Statut Twitch (lecture seule) : indépendant du run, toujours visible
-              pour que le régisseur surveille le live sans quitter la console. */}
+          {/* Bloc Twitch, INDÉPENDANT du run et ordonné par urgence : la santé
+              des drops d'abord (seule panne invisible ailleurs — Twitch coupe
+              une souscription sans prévenir), puis le statut d'antenne, puis
+              les deux panneaux d'écriture. Chacun porte son « pourquoi » dans
+              son propre en-tête, et se masque seul quand il n'a rien à montrer
+              ou que la permission manque — cette console admet le rôle
+              `caster`, plus large que les routes qu'elle appelle. */}
+          <TcgDropHealthCard />
           <TwitchStatusPanel />
-
-          {/* Twitch Predictions (écriture) : connexion de la chaîne + pilotage des
-              predictions. Indépendant du run, comme le statut ci-dessus. */}
           <TwitchPredictionsPanel />
-
-          {/* Commandes Twitch (écriture) : Clip, message chat, modération et
-              points de chaîne. Ne s'affiche que si la chaîne est connectée ;
-              sinon l'invite à connecter est gérée par le panneau ci-dessus. */}
           <TwitchCommandsPanel />
 
           {loading && !data && (
