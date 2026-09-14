@@ -36,6 +36,11 @@ import {
   rosterLockErrorMessage,
 } from '@/utils/teams/rosterLock';
 import { createInvitation } from '@/utils/teams/invitations';
+import {
+  generateInviteToken,
+  hashInviteToken,
+  buildInviteUrl,
+} from '@/utils/teams/inviteLinks';
 import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
 import { logger } from '@/utils/logger';
 
@@ -139,6 +144,17 @@ export default withAuthRoute(async function handler(
 
   // Création de l'invitation (réutilise la logique partagée : captain != invitee,
   // déjà membre → 400, pending déjà existante → 409, battletag).
+  // UN LIEN, PARCE QUE CE CHEMIN N'EN AVAIT AUCUN AUTRE.
+  //
+  // Des trois façons de créer une invitation, celle-ci était la plus démunie :
+  // pas d'email (la banque de joueuses n'en collecte pas), pas de DM (contrairement
+  // au bot Discord), et aucun event sortant. L'invitée ne l'apprenait que par la
+  // cloche du site, à sa prochaine visite — qui pouvait ne jamais venir.
+  //
+  // Le jeton est rendu UNE SEULE FOIS à l'appelante, qui est sur le site et le
+  // transmet par ses propres moyens. Seule son empreinte est persistée.
+  const inviteToken = generateInviteToken();
+
   const result = await createInvitation(tenantId, {
     teamId,
     captainAuthUserId: user.id,
@@ -148,6 +164,7 @@ export default withAuthRoute(async function handler(
         ? freePlayer.discord_user_id
         : null,
     source: 'website',
+    inviteTokenHash: hashInviteToken(inviteToken),
   });
   if (!result.ok) {
     // Le helper renvoie 400 pour "déjà membre" ; on l'expose en 409 (conflit
@@ -171,5 +188,12 @@ export default withAuthRoute(async function handler(
         : null,
   });
 
-  return res.status(200).json({ ok: true, demandeId: result.data.id });
+  return res.status(200).json({
+    ok: true,
+    demandeId: result.data.id,
+    // Jeton en clair renvoyé UNE SEULE FOIS, comme à la création côté
+    // formulaire : il n'est stocké que haché, donc irrécupérable ensuite.
+    // Le perdre n'est pas grave — « Relancer » en refait un.
+    invite_url: buildInviteUrl(inviteToken),
+  });
 });

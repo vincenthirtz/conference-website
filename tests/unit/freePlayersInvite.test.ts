@@ -25,6 +25,7 @@ import {
   CONFERENCE_TENANT_ID,
 } from './__helpers__/supabaseMock';
 import inviteHandler from '../../pages/api/teams/invite-free-player';
+import { hashInviteToken } from '../../utils/teams/inviteLinks';
 
 const TEAM_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const OTHER_TEAM_ID = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
@@ -169,6 +170,30 @@ describe('POST /api/teams/invite-free-player', () => {
       source: 'website',
     });
     expect(demandes[0].payload.invitee_discord_user_id).toBe(D_FP);
+  });
+
+  it('rend un lien privé, stocké seulement haché', async () => {
+    // C'ÉTAIT LE CHEMIN LE PLUS DÉMUNI : des trois façons de créer une
+    // invitation, celle-ci n'avait ni email (la banque de joueuses n'en
+    // collecte pas), ni DM Discord, ni event sortant. L'invitée ne l'apprenait
+    // que par la cloche du site, à une visite qui pouvait ne jamais venir.
+    setAuthUser({ id: CAPTAIN_ID });
+    const res = makeRes();
+    await inviteHandler(
+      makeAuthedReq({ body: { teamId: TEAM_ID, authUserId: FP_LINKED } }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    const inviteUrl = (res.body as any).invite_url as string;
+    expect(inviteUrl).toContain('/invitation/');
+
+    const token = inviteUrl.split('/invitation/')[1];
+    const payload = (store.demandes as any[])[0].payload;
+    expect(payload.invite_token_hash).toBe(hashInviteToken(token));
+    // Le jeton en clair ne doit JAMAIS atterrir en base : il n'est rendu
+    // qu'une fois, à l'appelante.
+    expect(JSON.stringify(payload)).not.toContain(token);
   });
 
   it('409 when a pending invite already exists for this team', async () => {

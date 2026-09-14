@@ -15,6 +15,7 @@ import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useT } from '@/lib/i18n/useT';
 import nsFreePlayers from '@/lib/i18n/locales/fr/freePlayers';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';
+import CopyButton from '@/components/player/CopyButton';
 
 type FreePlayer = {
   /** Clé stable : une inscription web n'a pas de discordUserId. */
@@ -54,6 +55,13 @@ export default function FreePlayersSection({ teamId }: Props) {
   const [inviting, setInviting] = useState<string | null>(null);
   // discordUserId(s) successfully invited (shows "invite ✓").
   const [invited, setInvited] = useState<Record<string, boolean>>({});
+  /**
+   * Lien privé rendu à la création, par joueuse. Vit UNIQUEMENT en mémoire :
+   * la base n'en garde que l'empreinte, il est donc irrécupérable au
+   * rechargement. Le perdre n'est pas grave — « Relancer », côté invitations
+   * envoyées, en refait un.
+   */
+  const [inviteUrl, setInviteUrl] = useState<Record<string, string>>({});
   // Transient inline error message (e.g. 409).
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -81,12 +89,21 @@ export default function FreePlayersSection({ teamId }: Props) {
     setInviting(player.id);
     setActionError(null);
     try {
-      await adminFetchJson(withTeam('/api/teams/invite-free-player'), {
-        method: 'POST',
-        body: JSON.stringify({ teamId, authUserId: player.authUserId }),
-      });
+      const data = await adminFetchJson<{ invite_url?: string }>(
+        withTeam('/api/teams/invite-free-player'),
+        {
+          method: 'POST',
+          body: JSON.stringify({ teamId, authUserId: player.authUserId }),
+        }
+      );
       // Optimistic: mark this player as invited.
       setInvited((prev) => ({ ...prev, [player.id]: true }));
+      // Le lien n'est rendu QU'ICI et QU'UNE FOIS : il n'est stocké que haché.
+      // Sans lui affiché, l'invitée n'apprendrait l'invitation que par la
+      // cloche du site, à une prochaine visite qui peut ne jamais venir.
+      if (data?.invite_url) {
+        setInviteUrl((prev) => ({ ...prev, [player.id]: data.invite_url! }));
+      }
     } catch (err: unknown) {
       if (err instanceof AdminFetchError && err.status === 409) {
         setActionError(t.alreadyInvited);
@@ -133,83 +150,107 @@ export default function FreePlayersSection({ teamId }: Props) {
             return (
               <div
                 key={p.id}
-                className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/5 border border-white/5"
+                className="p-3 rounded-xl bg-white/5 border border-white/5"
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs text-gray-500">
-                      {(displayNameFor(p) || '??').slice(0, 2).toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-medium text-sm truncate">
-                      {displayNameFor(p)}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs text-gray-500">
+                        {(displayNameFor(p) || '??').slice(0, 2).toUpperCase()}
+                      </span>
                     </div>
-                    <div className="text-xs text-gray-500 truncate">
-                      {p.discordUsername ? (
-                        <span className="font-mono">@{p.discordUsername}</span>
-                      ) : p.roles.length > 0 ? (
-                        <span className="uppercase tracking-wide">
-                          {p.roles.join(' · ')}
-                        </span>
-                      ) : (
-                        t.noDiscordName
-                      )}
-                      {p.linked && p.specialty && (
-                        <span className="ml-2 text-gray-400">
-                          {' · '}
-                          {p.specialty}
-                        </span>
-                      )}
-                    </div>
-                    {p.availability && (
-                      <div className="text-xs text-gray-500 truncate">
-                        {p.availability}
+                    <div className="min-w-0">
+                      <div className="font-medium text-sm truncate">
+                        {displayNameFor(p)}
                       </div>
+                      <div className="text-xs text-gray-500 truncate">
+                        {p.discordUsername ? (
+                          <span className="font-mono">
+                            @{p.discordUsername}
+                          </span>
+                        ) : p.roles.length > 0 ? (
+                          <span className="uppercase tracking-wide">
+                            {p.roles.join(' · ')}
+                          </span>
+                        ) : (
+                          t.noDiscordName
+                        )}
+                        {p.linked && p.specialty && (
+                          <span className="ml-2 text-gray-400">
+                            {' · '}
+                            {p.specialty}
+                          </span>
+                        )}
+                      </div>
+                      {p.availability && (
+                        <div className="text-xs text-gray-500 truncate">
+                          {p.availability}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex-shrink-0">
+                    {!p.linked && p.contact?.email ? (
+                      // Inscription web : pas encore de compte, donc pas
+                      // d'invitation en un clic — mais un email pour la joindre.
+                      <div className="flex flex-col items-end gap-1 text-right">
+                        <a
+                          href={`mailto:${p.contact.email}`}
+                          className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-xs font-semibold transition"
+                        >
+                          {t.contact}
+                        </a>
+                        {p.contact.discord && (
+                          <span className="text-[11px] text-gray-500 font-mono">
+                            {p.contact.discord}
+                          </span>
+                        )}
+                      </div>
+                    ) : !p.linked ? (
+                      <div className="flex flex-col items-end gap-1 text-right">
+                        <span className="inline-flex items-center px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] text-gray-400">
+                          {t.notLinkedBadge}
+                        </span>
+                        <span className="text-[11px] text-gray-500 max-w-[12rem]">
+                          {t.notLinkedHint}
+                        </span>
+                      </div>
+                    ) : isInvited ? (
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
+                        {t.invited}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleInvite(p)}
+                        disabled={inviting === p.id}
+                        className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-xs font-semibold transition disabled:opacity-50"
+                      >
+                        {inviting === p.id ? t.inviting : t.invite}
+                      </button>
                     )}
                   </div>
                 </div>
 
-                <div className="flex-shrink-0">
-                  {!p.linked && p.contact?.email ? (
-                    // Inscription web : pas encore de compte, donc pas
-                    // d'invitation en un clic — mais un email pour la joindre.
-                    <div className="flex flex-col items-end gap-1 text-right">
-                      <a
-                        href={`mailto:${p.contact.email}`}
-                        className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-xs font-semibold transition"
-                      >
-                        {t.contact}
-                      </a>
-                      {p.contact.discord && (
-                        <span className="text-[11px] text-gray-500 font-mono">
-                          {p.contact.discord}
-                        </span>
-                      )}
+                {/* Le lien, montré UNE SEULE FOIS — juste après l'invitation.
+                    Sans lui, cette invitation n'a aucun canal : ni email (la
+                    banque de joueuses n'en collecte pas), ni DM Discord. */}
+                {inviteUrl[p.id] && (
+                  <div className="mt-3 rounded-lg border border-violet-500/30 bg-violet-500/10 p-3">
+                    <p className="text-[11px] text-violet-200">
+                      {t.inviteLinkHint}
+                    </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <code className="min-w-0 flex-1 truncate rounded bg-black/40 px-2 py-1 text-[11px] text-gray-300">
+                        {inviteUrl[p.id]}
+                      </code>
+                      <CopyButton
+                        value={inviteUrl[p.id]}
+                        className="px-2 py-1 text-[11px]"
+                      />
                     </div>
-                  ) : !p.linked ? (
-                    <div className="flex flex-col items-end gap-1 text-right">
-                      <span className="inline-flex items-center px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] text-gray-400">
-                        {t.notLinkedBadge}
-                      </span>
-                      <span className="text-[11px] text-gray-500 max-w-[12rem]">
-                        {t.notLinkedHint}
-                      </span>
-                    </div>
-                  ) : isInvited ? (
-                    <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
-                      {t.invited}
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => handleInvite(p)}
-                      disabled={inviting === p.id}
-                      className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-xs font-semibold transition disabled:opacity-50"
-                    >
-                      {inviting === p.id ? t.inviting : t.invite}
-                    </button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             );
           })}

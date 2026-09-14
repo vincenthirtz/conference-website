@@ -7356,16 +7356,31 @@ paths:
                 comment:
                   type: string
                   maxLength: 1000
+                role:
+                  type: string
+                  description: >-
+                    Role d'equipe propose. Valide cote API contre la table
+                    team_roles ; absent => 'player'.
+                battleTag:
+                  type: string
+                  description: BattleTag pre-rempli pour l'invitee.
       responses:
         '201':
-          description: Invitation creee.
+          description: >-
+            Invitation creee. Pas de lien partageable : l'invitee est deja liee
+            au site (la route echoue en 404 sinon) et recoit un DM du bot.
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  success:
+                    type: boolean
                   invitation:
                     $ref: '#/components/schemas/Invitation'
+                  teamName:
+                    type: string
+                    nullable: true
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':

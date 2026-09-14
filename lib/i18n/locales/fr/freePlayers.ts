@@ -21,6 +21,8 @@ export default ns('freePlayers', {
   invite: 'Inviter',
   inviting: 'Invitation…',
   invited: 'Invité ✓',
+  inviteLinkHint:
+    'Transmets-lui ce lien : c’est le seul moyen de la prévenir, elle ne recevra ni email ni message Discord. Il n’est affiché qu’une fois.',
   inviteError: "Impossible d'envoyer l'invitation.",
   alreadyInvited: "Ce joueur est déjà invité ou membre d'une équipe.",
   notLinkedBadge: 'Compte non lié',

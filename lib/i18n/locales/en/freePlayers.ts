@@ -19,6 +19,8 @@ export default {
   invite: 'Invite',
   inviting: 'Inviting…',
   invited: 'Invited ✓',
+  inviteLinkHint:
+    'Send her this link: it is the only way to reach her — she will get no email and no Discord message. Shown only once.',
   inviteError: 'Could not send the invitation.',
   alreadyInvited: 'This player is already invited or in a team.',
   notLinkedBadge: 'Account not linked',
