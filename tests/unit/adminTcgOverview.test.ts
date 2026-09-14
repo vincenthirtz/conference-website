@@ -440,7 +440,14 @@ describe('GET /api/admin/tcg/overview — agrégation', () => {
       granted: 0,
       opened: 0,
       pending: 0,
-      bySource: { victory: 0, purchase: 0, welcome: 0 },
+      bySource: {
+        victory: 0,
+        purchase: 0,
+        welcome: 0,
+        drop: 0,
+        placement: 0,
+        streak: 0,
+      },
     });
     expect(res.body.cards).toEqual({
       total: 0,
@@ -483,7 +490,14 @@ describe('GET /api/admin/tcg/overview — agrégation', () => {
       granted: 3,
       opened: 2,
       pending: 1,
-      bySource: { victory: 2, purchase: 1, welcome: 0 },
+      bySource: {
+        victory: 2,
+        purchase: 1,
+        welcome: 0,
+        drop: 0,
+        placement: 0,
+        streak: 0,
+      },
     });
   });
 

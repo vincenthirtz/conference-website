@@ -46,7 +46,11 @@ vi.mock('@/utils/twitch', () => ({
   fetchTwitchLiveStatus: fetchTwitchLiveStatusMock,
 }));
 
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import {
+  store,
+  resetSupabaseMock,
+  setTableWriteError,
+} from './__helpers__/supabaseMock';
 import { TWITCH_DROP_COINS, getEarnSource } from '../../utils/tcg/earnSources';
 import handler, {
   computeTwitchSignature,
@@ -175,11 +179,26 @@ function entries() {
 function wallets() {
   return (store.tcg_wallets ?? []) as Array<Record<string, unknown>>;
 }
+function packs() {
+  return (store.tcg_packs ?? []) as Array<Record<string, unknown>>;
+}
+/** Charges `tcg.drop_granted` persistées dans l'outbox du bot. */
+function dropEvents() {
+  return ((store.bot_event_outbox ?? []) as Array<Record<string, any>>)
+    .filter(
+      (row) =>
+        row.event_name === 'tcg.drop_granted' ||
+        row.payload?.event === 'tcg.drop_granted'
+    )
+    .map((row) => row.payload?.data as Record<string, unknown>);
+}
 
 type Body = { ok?: boolean; status?: string; code?: string; error?: string };
 
 beforeEach(() => {
   resetSupabaseMock();
+  setTableWriteError('tcg_packs', null);
+  setTableWriteError('tcg_wallet_entries', null);
   fetchTwitchLiveStatusMock.mockClear();
   process.env.TWITCH_EVENTSUB_SECRET = SECRET;
 });
@@ -660,23 +679,22 @@ describe('attribution', () => {
     // sont couverts par les deux cas suivants, qui appellent `writeDropEntry`.
     expect(getEarnSource('twitch_drop')?.schemaReady).toBe(true);
 
-    const outcome = await grantTwitchDrop({
+    const grant = await grantTwitchDrop({
       tenantId: TENANT,
       userId: ALICE,
       sourceRef: LIVE_REF,
     });
 
-    expect(outcome).not.toBe('unsupported');
+    expect(grant.outcome).not.toBe('unsupported');
   });
 
-  it('une source encore éteinte reste interdite d’écriture', async () => {
-    // Le garde GÉNÉRIQUE survit à l'allumage du drop : `grantTwitchDrop` fige
-    // sa clé (`EARN_SOURCE_KEY`), on ne peut donc pas le rebrancher sur une
-    // autre source — mais le registre, lui, doit continuer d'exclure ce que le
-    // CHECK n'accepte pas. `checkin_streak` n'a ni origine acceptée ni
-    // écrivain : le jour où quelqu'un basculera son drapeau sans migrer, ce
-    // cas le dira.
-    expect(getEarnSource('checkin_streak')?.schemaReady).toBe(false);
+  it('la série de check-ins est allumée avec sa migration, pas avant', async () => {
+    // Ce cas figeait `checkin_streak` à `schemaReady: false`, faute d'origine
+    // acceptée et d'écrivain. `tcg_earn_sources_drop_streak_placement.sql`
+    // (2026-09-15) élargit les CHECK, et `utils/tcg/grantCheckinStreak.ts`
+    // l'écrit : la bascule est faite DANS LE MÊME LOT, et ce test a échoué
+    // pour le signaler — c'est ce qu'on lui demandait.
+    expect(getEarnSource('checkin_streak')?.schemaReady).toBe(true);
   });
 
   it('crédite le barème du registre, une seule fois par direct', async () => {
@@ -685,7 +703,7 @@ describe('attribution', () => {
       userId: ALICE,
       sourceRef: LIVE_REF,
     });
-    expect(first).toBe('granted');
+    expect(first.outcome).toBe('granted');
 
     expect(entries()).toHaveLength(1);
     expect(entries()[0].amount).toBe(TWITCH_DROP_COINS);
@@ -704,8 +722,8 @@ describe('attribution', () => {
     // fenêtre entre la lecture et l'écriture (quatre doublons Discord le
     // 2026-09-12).
     const input = { tenantId: TENANT, userId: ALICE, sourceRef: LIVE_REF };
-    expect(await writeDropEntry(input)).toBe('granted');
-    expect(await writeDropEntry(input)).toBe('replayed');
+    expect((await writeDropEntry(input)).outcome).toBe('granted');
+    expect((await writeDropEntry(input)).outcome).toBe('replayed');
 
     expect(entries()).toHaveLength(1);
     // Le solde n'a pas doublé : il se recalcule depuis le registre.
@@ -727,7 +745,7 @@ describe('attribution', () => {
       sourceRef: `${BROADCASTER_ID}:2026-09-20T20:00:00Z`,
     });
 
-    expect(next).toBe('granted');
+    expect(next.outcome).toBe('granted');
     expect(entries()).toHaveLength(2);
     expect(wallets().find((w) => w.user_id === ALICE)?.balance).toBe(
       2 * TWITCH_DROP_COINS
@@ -747,12 +765,153 @@ describe('attribution', () => {
       }),
     } as any);
 
-    expect(
-      await writeDropEntry({
-        tenantId: TENANT,
-        userId: ALICE,
-        sourceRef: LIVE_REF,
-      })
-    ).toBe('unsupported');
+    const grant = await writeDropEntry({
+      tenantId: TENANT,
+      userId: ALICE,
+      sourceRef: LIVE_REF,
+    });
+    expect(grant.outcome).toBe('unsupported');
+    // Rien d'écrit, donc aucun paquet : le paquet ne précède jamais les pièces.
+    expect(grant.packId).toBeNull();
+    expect(packs()).toHaveLength(0);
+  });
+});
+
+/* -----------------------------------------------------------
+ * Le paquet du drop — pièces d'abord, paquet ensuite
+ * ---------------------------------------------------------*/
+
+describe('paquet du drop', () => {
+  // CE QUE CES CAS PROTÈGENT. Le registre attribue UN paquet au drop ; le
+  // webhook ne créditait que des pièces. Un paquet de drop n'a pas de match,
+  // donc `tcg_packs` n'a AUCUNE unicité exploitable (deux NULL sont distincts) :
+  // la seule chose qui empêche un retry Twitch de donner deux paquets est
+  // l'ORDRE d'écriture — porte-monnaie d'abord, paquet aux seules lignes que
+  // le RETURNING a rendues. Inverser cet ordre ferait passer ces cas au rouge.
+
+  function linkAlice() {
+    store.user_twitch_links = [
+      {
+        auth_user_id: ALICE,
+        twitch_user_id: VIEWER_TWITCH_ID,
+        twitch_login: 'kirisu',
+      },
+    ] as any;
+  }
+
+  it('crée UN paquet `drop`, sans match, avec les pièces', async () => {
+    const grant = await writeDropEntry({
+      tenantId: TENANT,
+      userId: ALICE,
+      sourceRef: LIVE_REF,
+    });
+
+    expect(grant.outcome).toBe('granted');
+    expect(packs()).toHaveLength(1);
+    expect(packs()[0]).toMatchObject({
+      tenant_id: TENANT,
+      user_id: ALICE,
+      source_kind: 'drop',
+      source_match_id: null,
+    });
+    // L'identifiant rendu est bien celui du paquet inséré.
+    expect(grant.packId).toBe(packs()[0].id);
+    expect(grant.coins).toBe(TWITCH_DROP_COINS);
+  });
+
+  it('un rejeu sur le même direct ne crée NI second paquet NI secondes pièces', async () => {
+    const input = { tenantId: TENANT, userId: ALICE, sourceRef: LIVE_REF };
+    await writeDropEntry(input);
+    const replay = await writeDropEntry(input);
+
+    expect(replay).toEqual({ outcome: 'replayed', packId: null, coins: 0 });
+    expect(packs()).toHaveLength(1);
+    expect(entries()).toHaveLength(1);
+  });
+
+  it('un retry WEBHOOK de Twitch (autre message-id) ne donne qu’un paquet et une annonce', async () => {
+    // Le cas réel : Twitch relivre le même échange avec un nouvel identifiant
+    // de message. Deux livraisons signées, acceptées, un seul direct.
+    seedConnection();
+    linkAlice();
+
+    const b1 = redemptionBody();
+    const res1 = makeRes();
+    await handler(
+      makeReq({ body: b1, headers: signedHeaders(b1, { id: 'msg-1' }) }),
+      res1
+    );
+    const b2 = redemptionBody();
+    const res2 = makeRes();
+    await handler(
+      makeReq({ body: b2, headers: signedHeaders(b2, { id: 'msg-2' }) }),
+      res2
+    );
+
+    expect((res1.body as Body).status).toBe('granted');
+    expect((res2.body as Body).status).toBe('replayed');
+    expect(entries()).toHaveLength(1);
+    expect(packs()).toHaveLength(1);
+    // Une seule annonce : le rejeu ne renotifie pas.
+    expect(dropEvents()).toHaveLength(1);
+  });
+
+  it('annonce `pack: { id }` dans `tcg.drop_granted`, champs historiques inchangés', async () => {
+    // CONTRAT AVEC LE BOT, ajout RÉTROCOMPATIBLE : `pack` vaut
+    // `{ id: string } | null`, et rien d'autre ne change.
+    seedConnection();
+    linkAlice();
+
+    const body = redemptionBody();
+    const res = makeRes();
+    await handler(makeReq({ body, headers: signedHeaders(body) }), res);
+
+    expect(res.statusCode).toBe(200);
+    const events = dropEvents();
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      userId: ALICE,
+      discordUserId: null,
+      discordUsername: null,
+      twitchLogin: 'viewer',
+      coins: TWITCH_DROP_COINS,
+      pack: { id: packs()[0].id },
+    });
+    expect(Object.keys(events[0].pack as object)).toEqual(['id']);
+    expect(typeof events[0].ctaUrl).toBe('string');
+  });
+
+  it('paquet refusé : les pièces restent, la demande est honorée, l’annonce dit `pack: null`', async () => {
+    // Le cas du 2026-09-14 (58 paquets rejetés par un CHECK) transposé ici :
+    // typiquement, la migration de l'origine `drop` n'est pas passée. On ne
+    // rend PAS 503 — le retry tomberait sur `replayed` et n'honorerait jamais
+    // la demande —, et on ne MASQUE pas l'écart : `pack: null`.
+    seedConnection();
+    linkAlice();
+    setTableWriteError('tcg_packs', { message: 'tcg_packs_source_coherent' });
+
+    const body = redemptionBody();
+    const res = makeRes();
+    await handler(makeReq({ body, headers: signedHeaders(body) }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({ status: 'granted', packGranted: false });
+    expect(entries()).toHaveLength(1);
+    expect(packs()).toHaveLength(0);
+    expect(dropEvents()[0]).toMatchObject({ pack: null });
+  });
+
+  it('un rejeu APRÈS un paquet refusé ne rattrape pas en doublant les pièces', async () => {
+    // Le pire cas assumé est « des pièces sans paquet » — réparable à la main —
+    // et jamais « des pièces en double ». Le rejeu ne rend aucune ligne au
+    // porte-monnaie, donc n'accorde rien.
+    const input = { tenantId: TENANT, userId: ALICE, sourceRef: LIVE_REF };
+    setTableWriteError('tcg_packs', { message: 'check' });
+    expect((await writeDropEntry(input)).packId).toBeNull();
+
+    setTableWriteError('tcg_packs', null);
+    expect((await writeDropEntry(input)).outcome).toBe('replayed');
+    expect(entries()).toHaveLength(1);
+    expect(packs()).toHaveLength(0);
   });
 });

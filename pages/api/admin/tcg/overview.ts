@@ -139,7 +139,17 @@ export type TcgOverview = {
     opened: Count;
     /** Distribués mais jamais ouverts. */
     pending: Count;
-    bySource: { victory: Count; purchase: Count; welcome: Count };
+    bySource: {
+      victory: Count;
+      purchase: Count;
+      welcome: Count;
+      /** Drop Twitch en direct. */
+      drop: Count;
+      /** Palmarès de fin de tournoi. */
+      placement: Count;
+      /** Série de check-ins. */
+      streak: Count;
+    };
   };
   coins: {
     /** Somme des soldes : ce qui est détenu, donc dépensable demain. */
@@ -289,6 +299,9 @@ async function handler(
     packsVictoryR,
     packsPurchaseR,
     packsWelcomeR,
+    packsDropR,
+    packsPlacementR,
+    packsStreakR,
     photosPendingR,
     photosApprovedR,
     photosRejectedR,
@@ -330,6 +343,26 @@ async function handler(
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
       .eq('source_kind', 'welcome'),
+    // Les trois origines sans match (migration
+    // `tcg_earn_sources_drop_streak_placement.sql`), comptées une à une pour la
+    // même raison : aucune arithmétique entre compteurs. Écrites en toutes
+    // lettres, pas en `.map` étalé : `Promise.allSettled` perdrait le typage
+    // positionnel du tuple déstructuré plus haut.
+    db
+      .from('tcg_packs')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('source_kind', 'drop'),
+    db
+      .from('tcg_packs')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('source_kind', 'placement'),
+    db
+      .from('tcg_packs')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('source_kind', 'streak'),
 
     // La file de relecture : le même filtre que `photos.ts`, pour que le
     // compteur du tableau de bord et la file affichée ne se contredisent pas.
@@ -624,6 +657,9 @@ async function handler(
         victory: resolveCount(packsVictoryR, 'packs.victory'),
         purchase: resolveCount(packsPurchaseR, 'packs.purchase'),
         welcome: resolveCount(packsWelcomeR, 'packs.welcome'),
+        drop: resolveCount(packsDropR, 'packs.drop'),
+        placement: resolveCount(packsPlacementR, 'packs.placement'),
+        streak: resolveCount(packsStreakR, 'packs.streak'),
       },
     },
     coins: {

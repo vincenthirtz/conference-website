@@ -32,16 +32,15 @@
 // mineures. Ajouter une source `topup` serait une décision produit prise en
 // connaissance de cause, pas une extension de ce fichier.
 //
-// DEUX SOURCES NE SONT PAS ENCORE ACCEPTÉES PAR LE SCHÉMA. Le CHECK
-// `tcg_wallet_entries_source_kind_check` liste aujourd'hui match_win,
-// scrim_win, booster_purchase, admin_grant, card_recycled, twitch_drop
-// (`tcg_twitch_drop.sql`, 2026-09-13), welcome_gift (`tcg_welcome_gift.sql`,
-// 2026-09-14) et supporter_welcome (`tcg_supporter_welcome.sql`, 2026-09-14) ;
-// celui de `tcg_packs` liste victory, purchase et welcome. Restent donc
-// interdits d'écriture `tournament_placement` et `checkin_streak`. Le registre
-// le dit lui-même (`schemaReady`) au lieu de le laisser découvrir en production
-// par une écriture rejetée : décrire une voie et pouvoir l'écrire sont deux
-// choses distinctes, et ce module ne décrit que la première.
+// TOUTES LES SOURCES SONT DÉSORMAIS ACCEPTÉES PAR LE SCHÉMA — à condition que
+// `tcg_earn_sources_drop_streak_placement.sql` (2026-09-15) soit appliquée.
+// Le CHECK `tcg_wallet_entries_source_kind_check` y liste match_win,
+// scrim_win, booster_purchase, admin_grant, card_recycled, twitch_drop,
+// welcome_gift, supporter_welcome, checkin_streak et tournament_placement ;
+// celui de `tcg_packs` victory, purchase, welcome, drop, placement et streak.
+// Le drapeau `schemaReady` reste utile : décrire une voie et pouvoir l'écrire
+// sont deux choses distinctes, et la prochaine source ajoutée ici devra
+// repasser par la même porte au lieu de se découvrir refusée en production.
 //
 // ⚠️ UNE TABLE PEUT PORTER PLUSIEURS CHECK SUR LA MÊME COLONNE, et c'est le
 // piège qui a coûté 58 paquets le 2026-09-14 : `tcg_packs_source_kind_check`
@@ -185,7 +184,14 @@ export type TcgSourceRefKind =
   | 'pack'
   /** L'identifiant du direct (event run / session de stream). */
   | 'stream'
-  /** Une fenêtre de série close, p. ex. `<tournoi>:<n° de série>`. */
+  /**
+   * Une fenêtre de série close : `<tournoi>:<match qui clôt la série>`.
+   *
+   * LE MATCH, PAS UN NUMÉRO DE SÉRIE. Un numéro (« 1re série de cinq ») se
+   * recalcule à zéro après une rupture : la série suivante reprendrait la clé
+   * `<tournoi>:1`, et la contrainte UNIQUE la jetterait comme un doublon. Le
+   * match qui clôt la fenêtre, lui, n'existe qu'une fois.
+   */
   | 'streak_window'
   | 'tournament'
   /**
@@ -247,20 +253,24 @@ export const TCG_EARN_SOURCES: readonly TcgEarnSource[] = [
   },
   {
     key: 'tournament_placement',
-    // Variables : `PLACEMENT_TIERS` en décide au vu du rang.
+    // ALLUMÉE le 2026-09-15 (`tcg_earn_sources_drop_streak_placement.sql`),
+    // écrite par `utils/tcg/grantPlacementRewards.ts` à la finalisation d'un
+    // tournoi. Variables : `PLACEMENT_TIERS` en décide au vu du rang.
     packs: 0,
     coins: null,
     refKind: 'tournament',
     maxPerRef: 1,
-    schemaReady: false,
+    schemaReady: true,
   },
   {
+    // ALLUMÉE le 2026-09-15 (`tcg_earn_sources_drop_streak_placement.sql`),
+    // écrite par `utils/tcg/grantCheckinStreak.ts` au check-in d'une équipe.
     key: 'checkin_streak',
     packs: 1,
     coins: CHECKIN_STREAK_COINS,
     refKind: 'streak_window',
     maxPerRef: 1,
-    schemaReady: false,
+    schemaReady: true,
   },
   {
     // ALLUMÉE le 2026-09-13 : `tcg_twitch_drop.sql` a élargi le CHECK de
@@ -272,6 +282,9 @@ export const TCG_EARN_SOURCES: readonly TcgEarnSource[] = [
     // vide : le refus passe simplement de « schéma non prêt » à
     // « identité non liée ». Il manque un flux OAuth Twitch côté joueuse.
     key: 'twitch_drop',
+    // UN PAQUET, ÉCRIT depuis le 2026-09-15 : le webhook passe par
+    // `grantCoinsThenPacks` (pièces d'abord, paquet `drop` aux seules lignes
+    // insérées). Il ne créditait auparavant que les pièces.
     packs: 1,
     coins: TWITCH_DROP_COINS,
     // Un seul drop par live ET par personne : c'est `source_ref = live` qui le

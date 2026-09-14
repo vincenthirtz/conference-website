@@ -16,6 +16,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { emitBotEvent } from '@/utils/botEvents';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
+import { grantPlacementRewards } from '@/utils/tcg/grantPlacementRewards';
 import { logger } from '../../../../../utils/logger';
 import {
   parsePlacementRules,
@@ -215,7 +216,22 @@ async function handler(
     const alreadyFinalized = existingArr.length > 0 && isIdentical;
 
     if (alreadyFinalized) {
-      // No-op : on renvoie l'état actuel sans toucher à la DB.
+      // No-op sur le CLASSEMENT : on renvoie l'état actuel sans le toucher.
+      //
+      // Une seule écriture possible ici, et elle est voulue : le palmarès TCG.
+      // Il est idempotent par construction (une récompense par personne et par
+      // tournoi, cf. `grantPlacementRewards`), donc relancer la finalisation
+      // à l'identique est la VOIE DE REPRISE d'une récompense ratée — panne
+      // passagère, ou migration appliquée après coup. Un rejeu sain ne crédite
+      // rien (`granted: 0`).
+      const tcgPlacementRewards = await grantPlacementRewards({
+        tenantId: ctx.tenantId,
+        tournamentId,
+        rankings: rankingsInput.map((r) => ({
+          teamId: r.team_id,
+          rank: r.rank,
+        })),
+      });
       const rankings = await fetchRankingsWithNames(tournamentId);
       return res.status(200).json({
         success: true,
@@ -226,6 +242,7 @@ async function handler(
         },
         rankings,
         already_finalized: true,
+        tcg_placement_rewards: tcgPlacementRewards,
       });
     }
 
@@ -316,6 +333,16 @@ async function handler(
       });
     }
 
+    // Palmarès TCG — APRÈS l'écriture du classement et du statut : on ne paie
+    // qu'un podium effectivement figé. Ne lève jamais ; le compte rendu est
+    // RENDU dans la réponse (`packsGranted` < `packsExpected` = paquets
+    // refusés), parce qu'un écart que personne ne lit est un écart avalé.
+    const tcgPlacementRewards = await grantPlacementRewards({
+      tenantId: ctx.tenantId,
+      tournamentId,
+      rankings: rankingsInput.map((r) => ({ teamId: r.team_id, rank: r.rank })),
+    });
+
     const rankings = await fetchRankingsWithNames(tournamentId);
 
     // Rôles Discord par classement (lot 8 / T3). Le site RÉSOUT « qui reçoit
@@ -370,6 +397,7 @@ async function handler(
       },
       rankings,
       already_finalized: false,
+      tcg_placement_rewards: tcgPlacementRewards,
     });
   } catch (err: unknown) {
     logger.error('[/api/admin/tournament/[id]/finalize] error:', err);

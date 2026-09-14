@@ -52,7 +52,7 @@
 //
 // FORME LUE de `GET /api/admin/tcg/overview` — chaque champ est revalidé dans
 // ce module, et toute absence est gérée :
-//   packs:  { granted, opened, pending, bySource: { victory, purchase } }
+//   packs:  { granted, opened, pending, bySource: { victory, purchase, welcome, drop, placement, streak } }
 //   coins:  { inCirculation, earned, spent, wallets, boosterPrice, truncated }
 //   cards:  { total, foil, byRarity, recycled, drawn, truncated }
 //   photos: { pending, approved, rejected, optedIn, revoked }
@@ -104,6 +104,9 @@ export type TcgOverviewLabels = {
   packsFromVictory: string;
   packsFromPurchase: string;
   packsFromWelcome: string;
+  packsFromDrop: string;
+  packsFromPlacement: string;
+  packsFromStreak: string;
 
   coinsTitle: string;
   coinsInCirculation: string;
@@ -123,6 +126,9 @@ export type TcgOverviewLabels = {
   coinsSourceWelcomeGift: string;
   coinsSourceCardRecycled: string;
   coinsSourceAdminGrant: string;
+  coinsSourceSupporterWelcome: string;
+  coinsSourceCheckinStreak: string;
+  coinsSourceTournamentPlacement: string;
   /** Repli d'une origine inconnue de ce panneau. Interpole `{kind}`. */
   coinsSourceUnknown: string;
 
@@ -214,6 +220,12 @@ function coinSourceLabel(kind: string, labels: TcgOverviewLabels): string {
       return labels.coinsSourceCardRecycled;
     case 'admin_grant':
       return labels.coinsSourceAdminGrant;
+    case 'supporter_welcome':
+      return labels.coinsSourceSupporterWelcome;
+    case 'checkin_streak':
+      return labels.coinsSourceCheckinStreak;
+    case 'tournament_placement':
+      return labels.coinsSourceTournamentPlacement;
     default:
       return format(labels.coinsSourceUnknown, { kind });
   }
@@ -365,6 +377,21 @@ export default function TcgOverviewPanel({ labels }: Props): JSX.Element {
                 value={num(data.packs.fromWelcome)}
                 accent="gray"
               />
+              <StatCard
+                label={labels.packsFromDrop}
+                value={num(data.packs.fromDrop)}
+                accent="gray"
+              />
+              <StatCard
+                label={labels.packsFromPlacement}
+                value={num(data.packs.fromPlacement)}
+                accent="gray"
+              />
+              <StatCard
+                label={labels.packsFromStreak}
+                value={num(data.packs.fromStreak)}
+                accent="gray"
+              />
             </div>
           </WidgetCard>
 
@@ -395,9 +422,9 @@ export default function TcgOverviewPanel({ labels }: Props): JSX.Element {
               />
             </div>
             {/* D'où viennent les pièces. Le cumul seul ne dit pas si elles
-                arrivent des matchs, des drops en direct ou d'un cadeau — et le
-                drop ne crée aucun paquet, donc la ventilation des paquets ne
-                pouvait pas le montrer. */}
+                arrivent des matchs, des drops en direct ou d'un cadeau ; la
+                ventilation des paquets ne le dit qu'à moitié, puisqu'un gain
+                en pièces seules (recyclage, ajustement) n'a pas de paquet. */}
             <div className="mt-4 border-t border-white/10 pt-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                 {labels.coinsBySourceTitle}

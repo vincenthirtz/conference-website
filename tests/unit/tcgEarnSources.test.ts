@@ -173,13 +173,16 @@ describe('limites anti-abus', () => {
 
 describe('schemaReady', () => {
   it('ne déclare écrivables que les source_kind acceptés par le CHECK', () => {
-    // CHECK actuel : match_win, scrim_win, booster_purchase, admin_grant,
-    // card_recycled, twitch_drop, welcome_gift, supporter_welcome.
+    // CHECK (avec `tcg_earn_sources_drop_streak_placement.sql`) : match_win,
+    // scrim_win, booster_purchase, admin_grant, card_recycled, twitch_drop,
+    // welcome_gift, supporter_welcome, checkin_streak, tournament_placement.
     // `tcg_twitch_drop.sql` a levé le verrou du drop le 2026-09-13,
-    // `tcg_welcome_gift.sql` celui du cadeau d'édition et
-    // `tcg_supporter_welcome.sql` celui du cadeau supportrice le 2026-09-14 ;
-    // `tournament_placement` et `checkin_streak` restent interdits d'écriture —
-    // ni origine acceptée, ni écrivain.
+    // `tcg_welcome_gift.sql` et `tcg_supporter_welcome.sql` ceux des deux
+    // cadeaux le 2026-09-14, et la migration du 2026-09-15 les deux derniers —
+    // `tournament_placement` et `checkin_streak`, avec leurs écrivains
+    // (`grantPlacementRewards`, `grantCheckinStreak`). Toutes les voies du
+    // registre sont donc écrivables : la prochaine ajoutée devra refaire ce
+    // chemin, migration ET bascule dans le même lot.
     //
     // Ce test est le rappel de lever chaque verrou AU BON MOMENT : basculer un
     // `schemaReady` sans migration ferait échouer l'écriture en production, et
@@ -190,9 +193,11 @@ describe('schemaReady', () => {
         .sort()
     ).toEqual([
       'booster_purchase',
+      'checkin_streak',
       'match_win',
       'scrim_win',
       'supporter_welcome',
+      'tournament_placement',
       'twitch_drop',
       'welcome_gift',
     ]);

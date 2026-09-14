@@ -74,8 +74,8 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { logger } from '@/utils/logger';
 import { fetchTwitchLiveStatus } from '@/utils/twitch';
-import { TWITCH_DROP_COINS, getEarnSource } from '@/utils/tcg/earnSources';
-import { refreshBalance } from '@/utils/tcg/grantVictoryRewards';
+import { earnReward, getEarnSource } from '@/utils/tcg/earnSources';
+import { grantCoinsThenPacks } from '@/utils/tcg/grantCoinsThenPacks';
 import { findAuthUserIdByTwitchUserId } from '@/utils/auth/twitchLinks';
 import { getDiscordLinkForUser } from '@/utils/discordLinks';
 import { emitBotEvent } from '@/utils/botEvents';
@@ -346,121 +346,130 @@ async function resolveLiveRef(
 export type GrantOutcome = 'granted' | 'replayed' | 'unsupported' | 'error';
 
 /**
- * Écrit le crédit, une fois et une seule.
+ * Ce qu'un drop a produit.
+ *
+ * `packId` n'est renseigné que sur `granted` ET si le paquet a réellement été
+ * inséré. `granted` avec `packId: null` est un état POSSIBLE et DIT : les
+ * pièces sont écrites, le paquet a été refusé (cf. `grantCoinsThenPacks`). On
+ * ne le masque pas, et on ne le rattrape pas par un réessai — un rejeu ne rend
+ * aucune ligne au porte-monnaie, donc n'accorderait rien, par construction.
+ */
+export type DropGrant = {
+  outcome: GrantOutcome;
+  packId: string | null;
+  /** Pièces créditées par CET appel (0 hors `granted`). */
+  coins: number;
+};
+
+/**
+ * Écrit le crédit ET le paquet, une fois et une seule.
  *
  * L'IDEMPOTENCE VIENT DU SCHÉMA, PAS D'UNE RELECTURE. `tcg_wallet_entries`
- * porte UNIQUE (tenant_id, user_id, source_kind, source_ref) : on écrit en
- * `upsert(..., { ignoreDuplicates: true })`, et le `.select()` chaîné ne rend
- * que les lignes RÉELLEMENT insérées (`ON CONFLICT DO NOTHING ... RETURNING`).
- * C'est ce qui distingue une première attribution d'un rejeu sans jamais relire
- * avant d'écrire — la relecture préalable étant la fenêtre qui a produit quatre
+ * porte UNIQUE (tenant_id, user_id, source_kind, source_ref), avec
+ * `source_ref` = le DIRECT : les pièces s'écrivent en `ON CONFLICT DO NOTHING
+ * ... RETURNING`, qui ne rend que les lignes RÉELLEMENT insérées. C'est ce qui
+ * distingue une première attribution d'un rejeu sans jamais relire avant
+ * d'écrire — la relecture préalable étant la fenêtre qui a produit quatre
  * publications Discord en double le 2026-09-12.
  *
- * Séparée de `grantTwitchDrop` pour rester testable : la garde de schéma
- * ci-dessous empêche aujourd'hui tout appel réel, mais la mécanique
- * d'idempotence, elle, doit être prouvée dès maintenant.
+ * LE PAQUET SUIT LE PORTE-MONNAIE, JAMAIS L'INVERSE. Un paquet de drop n'a pas
+ * de match (`source_match_id` NULL), donc `tcg_packs` n'offre aucune unicité
+ * exploitable : deux NULL sont DISTINCTS. Il n'est accordé qu'à la ligne que le
+ * RETURNING a rendue — un retry de Twitch ne rend rien, donc n'accorde rien.
+ * Toute la mécanique vit dans `grantCoinsThenPacks`, partagée avec la série de
+ * check-ins et le palmarès : une seule copie d'un ordre d'écriture qu'une
+ * inversion suffirait à rendre multiplicateur.
+ *
+ * POURQUOI PAS LE MATCH EN COURS COMME ANCRE. Prêter un match au drop le ferait
+ * entrer en collision avec le paquet de victoire du même match (même
+ * `tcg_packs_one_per_match`) : la spectatrice qui joue ce match perdrait l'une
+ * des deux récompenses. D'où l'origine `drop`, sans match
+ * (`tcg_earn_sources_drop_streak_placement.sql`).
  */
 export async function writeDropEntry(input: {
   tenantId: string;
   userId: string;
   sourceRef: string;
-}): Promise<GrantOutcome> {
-  if (!supabaseAdmin) return 'error';
+}): Promise<DropGrant> {
+  if (!supabaseAdmin) return { outcome: 'error', packId: null, coins: 0 };
 
-  const { data, error } = await supabaseAdmin
-    .from('tcg_wallet_entries')
-    .upsert(
+  // Le barème vient du REGISTRE : montant ET nombre de paquets.
+  const reward = earnReward(EARN_SOURCE_KEY);
+
+  const result = await grantCoinsThenPacks({
+    tenantId: input.tenantId,
+    walletSourceKind: EARN_SOURCE_KEY,
+    packSourceKind: 'drop',
+    grants: [
       {
-        tenant_id: input.tenantId,
-        user_id: input.userId,
-        amount: TWITCH_DROP_COINS,
-        source_kind: EARN_SOURCE_KEY,
-        source_ref: input.sourceRef,
-        created_at: new Date().toISOString(),
+        userId: input.userId,
+        sourceRef: input.sourceRef,
+        coins: reward.coins,
+        packs: reward.packs,
       },
-      {
-        onConflict: 'tenant_id,user_id,source_kind,source_ref',
-        ignoreDuplicates: true,
-      }
-    )
-    .select('user_id');
+    ],
+  });
 
-  if (error) {
-    const code = (error as { code?: string }).code ?? '';
+  if (!result.ok) {
     // 23514 (CHECK) / 23503 (clé étrangère) : la base REFUSE, et réessayer
     // donnera le même refus. On le distingue d'une panne pour ne pas condamner
     // Twitch à un retry perpétuel.
-    if (code === '23514' || code === '23503') {
-      logger.error(
-        '[twitch/tcg-drop] écriture refusée par une contrainte (%s): %s',
-        code,
-        error.message
-      );
-      return 'unsupported';
-    }
-    logger.error('[twitch/tcg-drop] crédit impossible: %s', error.message);
-    return 'error';
+    return {
+      outcome: result.reason === 'rejected' ? 'unsupported' : 'error',
+      packId: null,
+      coins: 0,
+    };
   }
 
-  const inserted = (data ?? []) as Array<{ user_id: string }>;
-  if (inserted.length === 0) return 'replayed';
+  const credit = result.credited[0];
+  if (!credit) return { outcome: 'replayed', packId: null, coins: 0 };
 
-  // Le solde est un cache du registre : il se RECALCULE, il ne s'incrémente
-  // pas. Un incrément perdu creuse un écart définitif ; un recalcul se répare
-  // au passage suivant.
-  await refreshBalance(input.tenantId, input.userId);
-  return 'granted';
+  if (reward.packs > 0 && credit.packIds.length === 0) {
+    // Pièces écrites, paquet refusé : on ne rend PAS `error`. Un 503 ferait
+    // retenter Twitch, le retry tomberait sur `replayed` et la demande ne
+    // serait jamais honorée — le pire des deux mondes. On honore ce qui a été
+    // donné, et l'annonce dit `pack: null`.
+    logger.error(
+      '[twitch/tcg-drop] drop crédité SANS paquet pour %s (direct %s)',
+      input.userId,
+      input.sourceRef
+    );
+  }
+
+  return {
+    outcome: 'granted',
+    packId: credit.packIds[0] ?? null,
+    coins: credit.coins,
+  };
 }
 
 /**
  * Récompense un drop, si et seulement si le schéma sait l'enregistrer.
  *
- * LA GARDE VIENT DU REGISTRE, PAS D'UNE CONSTANTE LOCALE.
- * `earnSources.ts` marque `twitch_drop` avec `schemaReady: false` tant que le
- * CHECK `tcg_wallet_entries_source_kind_check` n'admet pas cette valeur. Tenter
- * l'écriture quand même ferait rejeter l'INSERT par la base (23514) : on préfère
- * le dire ici plutôt que de le laisser découvrir en production.
+ * LA GARDE VIENT DU REGISTRE, PAS D'UNE CONSTANTE LOCALE. `earnSources.ts`
+ * marque chaque source d'un `schemaReady` ; tenter l'écriture d'une source
+ * que le CHECK n'admet pas ferait rejeter l'INSERT par la base (23514) : on
+ * préfère le dire ici plutôt que de le laisser découvrir en production.
  *
- * MIGRATION FAITE le 2026-09-13 (`tcg_twitch_drop.sql`), sur le modèle de
- * `tcg_recycle_duplicates.sql` — élargir, jamais réécrire. `schemaReady` est
- * passé à `true` dans `earnSources.ts` dans le même geste, ce qui a allumé
- * cette route sans la modifier.
- *
- * LE PAQUET (`packs: 1` au registre) N'EST TOUJOURS PAS ÉCRIT ICI, mais la
- * raison a changé et il faut le savoir avant de s'y remettre.
- *
- * L'obstacle réel n'a jamais été le CHECK — qui admet désormais
- * `victory | purchase | welcome` — mais l'ABSENCE D'ANCRE D'IDEMPOTENCE : un
- * paquet sans match a `source_match_id NULL`, or deux NULL sont DISTINCTS dans
- * une contrainte UNIQUE. C'est ce qui permet d'acheter plusieurs boosters, et
- * ce qui laisserait un rejeu offrir un second paquet.
- *
- * CE COMMENTAIRE AFFIRMAIT QU'IL FAUDRAIT UNE COLONNE `source_ref` SUR
- * `tcg_packs` PLUS UN INDEX UNIQUE PARTIEL. C'est faux depuis le 2026-09-14 :
- * `utils/tcg/grantWelcomeGift.ts` accorde un paquet sans match, de façon
- * idempotente, SANS toucher au schéma de `tcg_packs`. Le procédé consiste à
- * écrire d'abord l'entrée de porte-monnaie — dont l'unicité
- * `(tenant, user, source_kind, source_ref)` est bien réelle — en
- * `ON CONFLICT DO NOTHING ... RETURNING`, puis à n'accorder un paquet qu'aux
- * lignes effectivement rendues. Un rejeu n'en rend aucune, donc n'accorde rien.
- *
- * Le transposer ici serait donc peu coûteux : il faudrait une origine `drop`
- * au CHECK de `tcg_packs`, et déplacer l'attribution du paquet APRÈS le
- * `RETURNING` déjà présent plus haut dans ce fichier. Ce n'est pas fait parce
- * que personne ne l'a demandé, pas parce que c'est bloqué.
+ * Historique : les pièces sont écrites depuis le 2026-09-13
+ * (`tcg_twitch_drop.sql`) ; le PAQUET depuis le 2026-09-15
+ * (`tcg_earn_sources_drop_streak_placement.sql`, qui ajoute l'origine `drop`
+ * aux DEUX contraintes de `tcg_packs`). Tant que cette migration n'est pas
+ * appliquée, le paquet est refusé et le drop part en pièces seules,
+ * `pack: null` — exactement le comportement d'avant, jamais une régression.
  */
 export async function grantTwitchDrop(input: {
   tenantId: string;
   userId: string;
   sourceRef: string;
-}): Promise<GrantOutcome> {
+}): Promise<DropGrant> {
   const source = getEarnSource(EARN_SOURCE_KEY);
   if (!source?.schemaReady) {
     logger.warn(
       '[twitch/tcg-drop] source « %s » non acceptée par le schéma — aucune écriture',
       EARN_SOURCE_KEY
     );
-    return 'unsupported';
+    return { outcome: 'unsupported', packId: null, coins: 0 };
   }
   return writeDropEntry(input);
 }
@@ -955,11 +964,12 @@ export default async function handler(
     return res.status(200).json({ ok: true, status: 'not_live' });
   }
 
-  const outcome = await grantTwitchDrop({
+  const grant = await grantTwitchDrop({
     tenantId,
     userId: identity.userId,
     sourceRef: liveRef,
   });
+  const outcome = grant.outcome;
 
   if (outcome === 'error') {
     res.setHeader('Retry-After', '60');
@@ -990,7 +1000,14 @@ export default async function handler(
       tenantId,
       userId: identity.userId,
       twitchLogin: twitchUserLogin,
+      coins: grant.coins,
+      packId: grant.packId,
     });
+    // `packGranted` n'est lu par personne chez Twitch : il sert le diagnostic
+    // (journaux de la fonction), où un drop crédité sans paquet doit se voir.
+    return res
+      .status(200)
+      .json({ ok: true, status: outcome, packGranted: grant.packId !== null });
   }
 
   return res.status(200).json({ ok: true, status: outcome });
@@ -1016,6 +1033,8 @@ async function announceTwitchDrop(input: {
   tenantId: string;
   userId: string;
   twitchLogin: string | null;
+  coins: number;
+  packId: string | null;
 }): Promise<void> {
   try {
     const link = await getDiscordLinkForUser(input.userId);
@@ -1026,7 +1045,12 @@ async function announceTwitchDrop(input: {
         discordUserId: link?.discordUserId ?? null,
         discordUsername: link?.discordUsername ?? null,
         twitchLogin: input.twitchLogin,
-        coins: TWITCH_DROP_COINS,
+        coins: input.coins,
+        // AJOUT RÉTROCOMPATIBLE (2026-09-15) : le paquet créé, ou `null` s'il
+        // n'a pas pu l'être (pièces seules). Un bot plus ancien ignore le champ ;
+        // un bot à jour dit « un paquet t'attend » seulement quand c'est vrai.
+        // Contrat figé avec le bot : `{ id: string } | null`, rien d'autre.
+        pack: input.packId ? { id: input.packId } : null,
         // Absolue : ce lien part dans un DM, où un chemin relatif est inerte.
         ctaUrl: absoluteSiteUrl('/player/tcg'),
       },

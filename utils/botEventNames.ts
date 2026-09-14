@@ -132,7 +132,10 @@ export const BOT_EVENT_NAMES = [
   //
   // MÊME DISCIPLINE QUE `tcg.pack_granted` : un événement par destinataire, et
   // ÉMIS UNIQUEMENT SUR UNE ATTRIBUTION RÉELLE. `grantTwitchDrop` rend
-  // `granted` | `replayed` | `unsupported` ; seul `granted` notifie. Un rejeu
+  // `{ outcome: granted | replayed | unsupported | error, packId }` ; seul
+  // `granted` notifie. Depuis le 2026-09-15 la charge porte aussi, en ajout
+  // rétrocompatible, `pack: { id } | null` — le paquet `drop` créé avec les
+  // pièces, ou `null` s'il a été refusé. Un rejeu
   // de livraison EventSub — Twitch retente volontiers — ne doit renotifier
   // personne, et l'unicité vient du schéma (UNIQUE sur `source_ref` = le
   // direct), jamais d'une relecture préalable.

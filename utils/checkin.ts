@@ -24,6 +24,7 @@ import {
 } from './discord';
 import { applyMatchScore } from './matches/applyScore';
 import { emitBotEvent } from './botEvents';
+import { grantCheckinStreakReward } from './tcg/grantCheckinStreak';
 
 import { logger } from './logger';
 export const CHECKIN_OPEN_MINUTES = 60;
@@ -267,6 +268,23 @@ export async function redeemCheckinToken(
   if (error) {
     logger.error('[checkin] redeem update error:', error);
     return { ok: false, error: "Échec de l'enregistrement du check-in" };
+  }
+
+  // Série de check-ins (TCG). ICI et pas dans les routes : c'est l'entonnoir
+  // unique du lien public ET du bouton Discord. Seulement sur un check-in NEUF
+  // — un rejeu retombe plus haut sur `alreadyCheckedIn`. Attendu (une fonction
+  // serverless peut être gelée dès la réponse partie) mais JAMAIS bloquant :
+  // l'écrivain ne lève pas, et son échec ne change rien au check-in, déjà écrit.
+  const streak = await grantCheckinStreakReward({
+    tenantId,
+    matchId: resolved.matchId,
+    teamId: resolved.teamId,
+  });
+  if (streak.status === 'error') {
+    logger.warn(
+      '[checkin] récompense de série TCG non évaluée (match %s)',
+      resolved.matchId
+    );
   }
 
   return {

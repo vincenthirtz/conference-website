@@ -49,6 +49,12 @@ export type TcgOverviewPacks = {
   fromPurchase: Count;
   /** Cadeau d'accueil d'une édition. */
   fromWelcome: Count;
+  /** Drop Twitch en direct. */
+  fromDrop: Count;
+  /** Palmarès de fin de tournoi. */
+  fromPlacement: Count;
+  /** Série de check-ins. */
+  fromStreak: Count;
 };
 
 export type TcgOverviewCoins = {
@@ -253,6 +259,9 @@ export function normalizeTcgOverview(raw: unknown): TcgOverview {
       fromVictory: asCount(bySource.victory),
       fromPurchase: asCount(bySource.purchase),
       fromWelcome: asCount(bySource.welcome),
+      fromDrop: asCount(bySource.drop),
+      fromPlacement: asCount(bySource.placement),
+      fromStreak: asCount(bySource.streak),
     },
     coins: {
       inCirculation: asCount(coinsRaw.inCirculation),

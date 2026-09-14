@@ -30,6 +30,9 @@ export default {
   packsFromVictory: 'Earned (win)',
   packsFromPurchase: 'Purchased',
   packsFromWelcome: 'Welcome gift',
+  packsFromDrop: 'Live drops',
+  packsFromPlacement: 'Tournament placement',
+  packsFromStreak: 'Check-in streaks',
 
   coinsTitle: 'Coins',
   coinsInCirculation: 'In circulation',
@@ -47,6 +50,9 @@ export default {
   coinsSourceWelcomeGift: 'Welcome gifts',
   coinsSourceCardRecycled: 'Recycled duplicates',
   coinsSourceAdminGrant: 'Team adjustments',
+  coinsSourceSupporterWelcome: 'Supporter welcome',
+  coinsSourceCheckinStreak: 'Check-in streaks',
+  coinsSourceTournamentPlacement: 'Tournament placement',
   coinsSourceUnknown: 'Other ({kind})',
 
   cardsTitle: 'Cards',

@@ -36,6 +36,9 @@ export default adminNs('adminTcgOverview', {
   packsFromVictory: 'Offerts (victoire)',
   packsFromPurchase: 'Achetés',
   packsFromWelcome: 'Cadeau de bienvenue',
+  packsFromDrop: 'Drops en direct',
+  packsFromPlacement: 'Palmarès de tournoi',
+  packsFromStreak: 'Séries de check-ins',
 
   coinsTitle: 'Monnaie',
   coinsInCirculation: 'En circulation',
@@ -58,6 +61,9 @@ export default adminNs('adminTcgOverview', {
   coinsSourceWelcomeGift: 'Cadeaux de bienvenue',
   coinsSourceCardRecycled: 'Doublons recyclés',
   coinsSourceAdminGrant: 'Ajustements de l’équipe',
+  coinsSourceSupporterWelcome: 'Accueil des supportrices',
+  coinsSourceCheckinStreak: 'Séries de check-ins',
+  coinsSourceTournamentPlacement: 'Palmarès de tournoi',
   // Repli pour une origine que ce panneau ne connaît pas encore : on affiche sa
   // clé brute plutôt que de la masquer, sinon le total ventilé cesserait de
   // correspondre au cumul affiché juste au-dessus.

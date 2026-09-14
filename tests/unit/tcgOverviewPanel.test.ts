@@ -38,7 +38,14 @@ function fullPayload() {
       granted: 3,
       opened: 2,
       pending: 1,
-      bySource: { victory: 2, purchase: 1, welcome: 1 },
+      bySource: {
+        victory: 2,
+        purchase: 1,
+        welcome: 1,
+        drop: 3,
+        placement: 1,
+        streak: 2,
+      },
     },
     coins: {
       inCirculation: 250,
@@ -94,6 +101,9 @@ describe('normalizeTcgOverview — réponse nominale', () => {
       fromVictory: 2,
       fromPurchase: 1,
       fromWelcome: 1,
+      fromDrop: 3,
+      fromPlacement: 1,
+      fromStreak: 2,
     });
     expect(data.coins).toEqual({
       inCirculation: 250,
