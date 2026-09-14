@@ -10,6 +10,7 @@
 import nsAdminQuickBracket from './adminQuickBracket';
 import nsAdminTcgPhotos from './adminTcgPhotos';
 import nsAdminTcgOverview from './adminTcgOverview';
+import nsAdminTcgGrant from './adminTcgGrant';
 import nsAdminLogout from './adminLogout';
 import nsAdminForgotPassword from './adminForgotPassword';
 import nsAdminResetPassword from './adminResetPassword';
@@ -395,4 +396,5 @@ export const frDict = {
   adminNetworkFunnel: nsAdminNetworkFunnel.fr,
   adminTcgPhotos: nsAdminTcgPhotos.fr,
   adminTcgOverview: nsAdminTcgOverview.fr,
+  adminTcgGrant: nsAdminTcgGrant.fr,
 };

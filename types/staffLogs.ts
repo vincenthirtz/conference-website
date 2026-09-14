@@ -213,6 +213,11 @@ export type StaffLogAction =
   // dire QUI l'a déclenché, sur quelle édition, et combien de comptes il a
   // touchés.
   | 'tcg_welcome_gift_grant'
+  // Corriger à la main le solde de pièces d'UNE joueuse (crédit ou retrait) :
+  // le registre dit combien, seul le journal dit QUI et POURQUOI. La monnaie
+  // se gagne, elle ne s'achète pas — cette trace distingue une correction
+  // d'une création de monnaie à partir de rien.
+  | 'tcg_admin_grant'
   // --- Broadcast ---
   | 'broadcast_state_update'
   | 'broadcast_next_match'

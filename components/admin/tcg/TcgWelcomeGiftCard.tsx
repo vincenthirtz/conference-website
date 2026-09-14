@@ -32,6 +32,7 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
+import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import { format } from '@/lib/i18n/useT';
 import { logger } from '../../../utils/logger';
 
@@ -184,6 +185,10 @@ export default function TcgWelcomeGiftCard({
             })}
           </div>
         )}
+
+        {/* Chargement : un spinner plutôt qu'une carte muette, qui se lirait
+            comme « rien à distribuer ». */}
+        {!state && !error && <LoadingSpinner size="sm" className="py-4" />}
 
         {state && !state.tournamentId ? (
           // Aucune édition en cours : il n'y a rien à distribuer, et le dire

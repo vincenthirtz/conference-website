@@ -35,4 +35,21 @@ export default {
   conflict:
     'This photo is no longer pending — the player may have removed it. The list has been refreshed.',
   error: 'Action failed for now.',
+
+  retry: 'Retry',
+  emptyDescription: 'Newly submitted photos will show up here.',
+  pendingCount: '{count} photo(s) pending',
+  listLabel: 'Photos awaiting review',
+
+  photoAlt: 'Photo submitted by {name}',
+  photoMissing: 'File unavailable',
+  viewProfileOf: 'View {name}’s profile',
+  reasonLabel: 'Reason for declining {name}',
+  working: 'Working…',
+
+  confirmRejectTitle: 'Decline {name}’s photo?',
+  confirmRejectBody:
+    'The file will be deleted from storage. The player keeps the reason and can submit again.',
+  confirmRejectReason: 'Reason sent: “{reason}”',
+  confirmRejectNoReason: 'No reason will be sent.',
 };

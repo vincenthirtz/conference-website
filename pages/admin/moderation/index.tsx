@@ -54,6 +54,12 @@ const TcgOverlayThemeCard = lazyPanel(
 const TcgWelcomeGiftCard = lazyPanel(
   () => import('@/components/admin/tcg/TcgWelcomeGiftCard')
 );
+// Ajustement manuel d'un solde : une CORRECTION tracée (motif, journal), pas
+// une distribution. Cinquième sujet, cinquième composant ; ses libellés vivent
+// dans son propre namespace plutôt que dans cette page.
+const TcgGrantCard = lazyPanel(
+  () => import('@/components/admin/tcg/TcgGrantCard')
+);
 
 const ID_BASE = 'admin-moderation';
 
@@ -79,6 +85,13 @@ export default function AdminModerationPage({ staff }: StaffProps) {
   const tTcg = useAdminT(nsAdminTcgPhotos);
   const tTcgOverview = useAdminT(nsAdminTcgOverview);
   const isManager = hasAtLeastRole(staff.role as StaffRole, 'admin');
+  // Les onglets TCG suivent la PERMISSION de leurs routes (`moderate_support`
+  // pour photos, vue d'ensemble, overlay, cadeau et ajustement de solde), pas
+  // le rôle : ce droit s'accorde à l'unité, et un caster qui l'a reçu doit voir
+  // ce que l'API lui ouvre. Repli sur le rôle si la prop manque (fixtures).
+  const canModerateTcg = staff.permissions
+    ? staff.permissions.includes('moderate_support')
+    : isManager;
 
   const tabs = [
     ...(isManager ? [{ id: 'comments', label: t.tabComments }] : []),
@@ -87,12 +100,15 @@ export default function AdminModerationPage({ staff }: StaffProps) {
       ? [
           { id: 'blacklist', label: t.tabBlacklist },
           { id: 'support', label: t.tabSupport },
+        ]
+      : []),
+    ...(canModerateTcg
+      ? [
           // Relire la photo d'une personne réelle n'est pas un geste de
-          // caster : même palier que Blacklist et Support.
+          // caster par défaut : même permission que Support.
           { id: 'tcg-photos', label: tTcg.tabLabel },
-          // Mesurer l'économie expose qui possède quoi : même palier que la
-          // file de photos, et la permission `moderate_support` de l'endpoint
-          // correspond exactement à ce gate.
+          // Mesurer l'économie expose qui possède quoi, et corriger un solde
+          // la modifie : même permission que la file de photos.
           { id: 'tcg-overview', label: tTcgOverview.tabLabel },
         ]
       : []),
@@ -163,9 +179,9 @@ export default function AdminModerationPage({ staff }: StaffProps) {
               </>
             ) : active === 'support' && isManager ? (
               <SupportPanel />
-            ) : active === 'tcg-photos' && isManager ? (
+            ) : active === 'tcg-photos' && canModerateTcg ? (
               <TcgPhotosPanel />
-            ) : active === 'tcg-overview' && isManager ? (
+            ) : active === 'tcg-overview' && canModerateTcg ? (
               <div className="space-y-6">
                 <TcgOverviewPanel labels={tTcgOverview} />
                 <TcgOverlayCard
@@ -246,6 +262,7 @@ export default function AdminModerationPage({ staff }: StaffProps) {
                     grantError: tTcgOverview.giftGrantError,
                   }}
                 />
+                <TcgGrantCard />
               </div>
             ) : (
               <DisputesPanel />

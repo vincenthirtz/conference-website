@@ -27,6 +27,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
+import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import { logger } from '../../../utils/logger';
 
 export type TcgOverlayTokenState = {
@@ -159,7 +160,13 @@ export default function TcgOverlayCard({ labels }: Props) {
           </div>
         )}
 
-        {state?.url ? (
+        {/* PAS DE « AUCUN LIEN » AVANT D'AVOIR LU. Tant que l'état n'est pas
+            chargé, afficher la branche vide proposait « Créer » — et émettre
+            révoque le lien en service : un clic impatient coupait l'overlay
+            déjà configuré dans OBS. On attend donc la réponse, ou l'erreur. */}
+        {state === null && !error ? (
+          <LoadingSpinner size="sm" className="py-4" />
+        ) : state === null ? null : state.url ? (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <code className="min-w-0 flex-1 truncate rounded-lg border border-white/10 bg-black/40 px-3 py-2 font-mono text-xs text-gray-300">

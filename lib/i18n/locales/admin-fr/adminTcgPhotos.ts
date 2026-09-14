@@ -34,4 +34,31 @@ export default adminNs('adminTcgPhotos', {
   conflict:
     'Cette photo n’est plus en attente — la joueuse l’a peut-être retirée. La liste a été rafraîchie.',
   error: 'Action impossible pour le moment.',
+
+  // États de la file. Une lecture ratée n'est PAS une file vide : l'écran le
+  // dit, au lieu d'afficher « aucune photo » sur une panne.
+  retry: 'Réessayer',
+  emptyDescription: 'Les prochaines photos déposées apparaîtront ici.',
+  /** Interpole `{count}`. */
+  pendingCount: '{count} photo(s) en attente',
+  listLabel: 'Photos en attente de relecture',
+
+  // Identité de la déposante : pseudo, sinon email, sinon identifiant tronqué.
+  /** Interpole `{name}`. */
+  photoAlt: 'Photo déposée par {name}',
+  photoMissing: 'Fichier indisponible',
+  /** Interpole `{name}`. Nom accessible du lien vers la fiche. */
+  viewProfileOf: 'Voir la fiche de {name}',
+  /** Interpole `{name}`. */
+  reasonLabel: 'Motif du refus pour {name}',
+  working: 'En cours…',
+
+  // Le refus supprime le fichier : il passe par une confirmation.
+  /** Interpole `{name}`. */
+  confirmRejectTitle: 'Refuser la photo de {name} ?',
+  confirmRejectBody:
+    'Le fichier sera supprimé du stockage. La joueuse garde le motif et peut redéposer.',
+  /** Interpole `{reason}`. */
+  confirmRejectReason: 'Motif transmis : « {reason} »',
+  confirmRejectNoReason: 'Aucun motif ne sera transmis.',
 });

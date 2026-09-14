@@ -10,6 +10,7 @@
 import enAdminQuickBracket from './adminQuickBracket';
 import enAdminTcgPhotos from './adminTcgPhotos';
 import enAdminTcgOverview from './adminTcgOverview';
+import enAdminTcgGrant from './adminTcgGrant';
 import enAdminLogout from './adminLogout';
 import enAdminForgotPassword from './adminForgotPassword';
 import enAdminResetPassword from './adminResetPassword';
@@ -395,6 +396,7 @@ const adminEnDict = {
   adminNetworkFunnel: enAdminNetworkFunnel,
   adminTcgPhotos: enAdminTcgPhotos,
   adminTcgOverview: enAdminTcgOverview,
+  adminTcgGrant: enAdminTcgGrant,
 };
 
 export default adminEnDict;

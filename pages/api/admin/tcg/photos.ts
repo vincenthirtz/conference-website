@@ -13,12 +13,14 @@
 // motif du refus et peut redéposer ; c'est le fichier qui part, pas
 // l'explication.
 //
-// PAS D'ENRICHISSEMENT DES NOMS EN v1, à dessein. La file rend `userId`, et le
-// panneau renvoie vers la fiche publique de la joueuse. Aller chercher les
-// pseudos passe par la RPC `fetchAdminUserProfiles` (le profil vit dans
-// `auth.users.raw_user_meta_data`, il n'existe pas de table `profiles`) : ce
-// sera un ajout, pas une réécriture. Ce qu'une relectrice doit voir avant tout,
-// c'est l'image.
+// LES PSEUDOS SONT UN ENRICHISSEMENT, PAS UNE CONDITION. Chaque élément porte
+// `displayName` et `email`, résolus en UN aller-retour par la RPC
+// `fetchAdminUserProfiles` (le profil vit dans `auth.users.raw_user_meta_data`,
+// il n'existe pas de table `profiles`). Si la résolution échoue, les deux
+// champs retombent sur `null` et la file s'affiche quand même : ce qu'une
+// relectrice doit voir avant tout, c'est l'image — la priver de la file entière
+// parce qu'un nom manque retarderait la relecture d'une photo, c'est-à-dire
+// précisément ce que la file sert à éviter.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
@@ -30,6 +32,10 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { formatZodError } from '@/utils/validation';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { revalidatePlayerCard } from '@/utils/tcg/revalidatePlayerCard';
+import {
+  fetchAdminUserProfiles,
+  type AdminUserProfile,
+} from '@/utils/adminUserProfiles';
 import { logger } from '@/utils/logger';
 
 /** Même bucket public que les logos d'équipe (cf. l'endpoint joueuse). */
@@ -93,16 +99,45 @@ async function listPending(
     updated_at: string | null;
   }>;
 
-  const photos = rows.map((row) => ({
-    userId: row.user_id,
-    submittedAt: row.updated_at,
-    photoUrl: row.photo_path
-      ? supabaseAdmin!.storage.from(BUCKET).getPublicUrl(row.photo_path).data
-          .publicUrl
-      : null,
-  }));
+  const profiles = await resolveProfiles(rows.map((row) => row.user_id));
+
+  const photos = rows.map((row) => {
+    const profile = profiles.get(row.user_id);
+    return {
+      userId: row.user_id,
+      // `display_name` PUIS `full_name` : un compte créé via Discord n'a que
+      // le second (cf. `utils/teams/memberDisplayName.ts`).
+      displayName: profile?.display_name || profile?.full_name || null,
+      email: profile?.email ?? null,
+      submittedAt: row.updated_at,
+      photoUrl: row.photo_path
+        ? supabaseAdmin!.storage.from(BUCKET).getPublicUrl(row.photo_path).data
+            .publicUrl
+        : null,
+    };
+  });
 
   return res.status(200).json({ photos, total: photos.length });
+}
+
+/**
+ * Les profils des joueuses de la file, sans jamais faire échouer la liste.
+ *
+ * `fetchAdminUserProfiles` rend déjà une Map vide sur erreur RPC ; le `try`
+ * couvre ce qu'elle ne couvre pas (une exception levée avant l'appel). Une Map
+ * vide n'est PAS « ces comptes n'existent pas » : c'est « noms inconnus », et
+ * l'écran l'affiche comme tel (`null`), jamais comme un compte supprimé.
+ */
+async function resolveProfiles(
+  userIds: string[]
+): Promise<Map<string, AdminUserProfile>> {
+  if (userIds.length === 0) return new Map();
+  try {
+    return await fetchAdminUserProfiles(userIds);
+  } catch (err) {
+    logger.warn('[admin/tcg] pseudos non résolus: %s', String(err));
+    return new Map();
+  }
 }
 
 /* -------------------------------------------------------------------------- */
