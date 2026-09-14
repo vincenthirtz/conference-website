@@ -40,6 +40,7 @@ import {
   MATCH_WIN_COINS,
   SCRIM_WIN_COINS,
 } from '../../utils/tcg/economy';
+import { TWITCH_DROP_COINS } from '../../utils/tcg/earnSources';
 import { PACK_SIZE } from '../../utils/tcg/drawPack';
 
 import handler from '../../pages/api/player/tcg/packs';
@@ -147,6 +148,60 @@ describe('GET /api/player/tcg/packs', () => {
       matchWin: MATCH_WIN_COINS,
       scrimWin: SCRIM_WIN_COINS,
     });
+  });
+
+  it('N’ANNONCE PAS le drop quand aucune chaîne n’est branchée', async () => {
+    // Une promesse creuse est pire qu'un silence : sans récompense désignée, le
+    // webhook répondrait `reward_not_configured` et rembourserait chaque
+    // tentative. La page ne doit donc rien promettre.
+    seedPools();
+    seedPack();
+    store.twitch_broadcaster_connections = [] as any;
+
+    const res = makeRes();
+    await handler(makeReq(), res);
+
+    expect(res.statusCode).toBe(200);
+    expect('twitchDrop' in res.body.earn).toBe(false);
+  });
+
+  it('annonce le drop dès qu’une récompense est désignée', async () => {
+    seedPools();
+    seedPack();
+    store.twitch_broadcaster_connections = [
+      {
+        tenant_id: DEFAULT_TENANT_ID,
+        broadcaster_id: '1457667837',
+        broadcaster_login: 'womens_cup',
+        tcg_reward_id: '3e6f723b-3e83-4fb8-910c-1151d28db43f',
+      },
+    ] as any;
+
+    const res = makeRes();
+    await handler(makeReq(), res);
+
+    expect(res.statusCode).toBe(200);
+    // La constante, jamais sa valeur : le drop est dérivé du gain de scrim.
+    expect(res.body.earn.twitchDrop).toBe(TWITCH_DROP_COINS);
+  });
+
+  it('reste muet sur le drop si la chaîne est connectée SANS récompense', async () => {
+    // Connecter la chaîne ne suffit pas : c'est `tcg_reward_id` qui décide.
+    seedPools();
+    seedPack();
+    store.twitch_broadcaster_connections = [
+      {
+        tenant_id: DEFAULT_TENANT_ID,
+        broadcaster_id: '1457667837',
+        broadcaster_login: 'womens_cup',
+        tcg_reward_id: null,
+      },
+    ] as any;
+
+    const res = makeRes();
+    await handler(makeReq(), res);
+
+    expect('twitchDrop' in res.body.earn).toBe(false);
   });
 
   it('rend un solde nul quand aucun porte-monnaie n’existe', async () => {
