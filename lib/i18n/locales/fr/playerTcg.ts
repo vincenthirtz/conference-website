@@ -84,6 +84,11 @@ export default ns('playerTcg', {
   packFromWelcome: 'Cadeau de bienvenue',
 
   balance: '{count} pièces',
+  // Variantes SANS le mot, pour les endroits qui portent la pastille de pièce
+  // (`components/tcg/TcgCoin.tsx`) : l'icône dit déjà « pièces », le répéter
+  // ferait « ⬤ 100 pièces ». Les phrases en prose gardent le mot, elles.
+  balanceLabel: 'Solde',
+  buyBoosterShort: 'Acheter un booster',
   // Le barème vient de l'API : la page l'affiche sans le connaître.
   earnHint: '{match} pièces par victoire en match, {scrim} en scrim classé.',
   /**

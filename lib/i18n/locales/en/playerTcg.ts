@@ -69,6 +69,8 @@ export default {
   packFromWelcome: 'Welcome gift',
 
   balance: '{count} coins',
+  balanceLabel: 'Balance',
+  buyBoosterShort: 'Buy a booster',
   earnHint: '{match} coins per match win, {scrim} per ranked scrim win.',
   earnHintWithDrop:
     '{match} coins per match win, {scrim} per ranked scrim win, {drop} per card claimed on stream.',

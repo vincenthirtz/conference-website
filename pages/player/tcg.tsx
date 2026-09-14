@@ -22,6 +22,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import TcgCard from '@/components/tcg/TcgCard';
+import { TcgCoin, TcgAmount } from '@/components/tcg/TcgCoin';
 import TcgCollectionProgress from '@/components/tcg/TcgCollectionProgress';
 import TwitchLinkCard from '@/components/player/TwitchLinkCard';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -437,8 +438,18 @@ function PlayerTcg() {
               </p>
             </div>
             <div className="text-right">
-              <p className="text-sm text-gray-300">
-                {format(t.balance, { count: balance })}
+              {/* Le solde porte la pièce : c'est le montant qu'on vient
+                  chercher sur cette page. Le libellé remplace le mot
+                  « pièces », que l'icône dit déjà. */}
+              <p className="flex items-center justify-end gap-2 text-sm text-gray-300">
+                <span className="text-xs uppercase tracking-wide text-gray-500">
+                  {t.balanceLabel}
+                </span>
+                <TcgAmount
+                  value={balance}
+                  size={18}
+                  className="text-base font-semibold text-white"
+                />
               </p>
               {/* Comment on en gagne. À zéro, un prix sans chemin pour
                   l'atteindre n'apprend rien. */}
@@ -469,9 +480,17 @@ function PlayerTcg() {
                   disabled={busy !== null}
                   className="mt-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white transition hover:border-[var(--color-yellow)]/60 hover:text-[var(--color-yellow)] disabled:opacity-50"
                 >
-                  {busy === 'buy'
-                    ? t.buying
-                    : format(t.buyBooster, { price: boosterPrice })}
+                  {busy === 'buy' ? (
+                    t.buying
+                  ) : (
+                    // Le prix en pièce plutôt qu'en toutes lettres : c'est une
+                    // dépense, et la pastille la rend comparable au solde
+                    // affiché juste au-dessus.
+                    <span className="inline-flex items-center gap-2">
+                      {t.buyBoosterShort}
+                      <TcgAmount value={boosterPrice} size={15} />
+                    </span>
+                  )}
                 </button>
               )}
             </div>
@@ -600,7 +619,10 @@ function PlayerTcg() {
             visites. */}
         <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">{t.walletTitle}</h2>
+            <h2 className="flex items-center gap-2 text-lg font-semibold">
+              <TcgCoin size={18} />
+              {t.walletTitle}
+            </h2>
             <button
               type="button"
               onClick={() => void toggleWallet()}
@@ -626,15 +648,16 @@ function PlayerTcg() {
                       </span>
                       {/* Le signe est porté par la couleur ET par le texte :
                           la couleur seule ne se lit pas en daltonisme. */}
-                      <span
+                      <TcgAmount
+                        value={e.amount}
+                        signed
+                        size={14}
                         className={
                           e.amount >= 0
                             ? 'shrink-0 font-semibold text-[var(--color-green)]'
                             : 'shrink-0 font-semibold text-gray-400'
                         }
-                      >
-                        {e.amount >= 0 ? `+${e.amount}` : e.amount}
-                      </span>
+                      />
                     </li>
                   ))}
                 </ul>
