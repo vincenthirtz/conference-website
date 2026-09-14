@@ -23,6 +23,7 @@ import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import TcgCard from '@/components/tcg/TcgCard';
 import TcgCollectionProgress from '@/components/tcg/TcgCollectionProgress';
+import TwitchLinkCard from '@/components/player/TwitchLinkCard';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
@@ -501,6 +502,29 @@ function PlayerTcg() {
             </ul>
           )}
         </section>
+
+        {/* Mon compte Twitch — JUSTE SOUS LE BARÈME, et c'est tout l'intérêt de
+            ce montage. La page annonce « et N pièces par carte récupérée sur le
+            stream » (cf. `earnHintWithDrop`) sans qu'aucun geste, depuis cet
+            écran, ne permette d'y accéder : le rattachement ne vivait que sur
+            `/player/profile`, où l'on ne va pas en pensant au TCG. La promesse
+            et le moyen de l'honorer se lisent désormais l'un sous l'autre.
+
+            La page profil portait déjà le bon raisonnement en commentaire —
+            « placée AVANT les cartes TCG parce qu'elle en est la condition
+            d'accès » — il n'avait simplement jamais été appliqué ici.
+
+            MONTÉE SANS CONDITION. Elle se masque d'elle-même quand la
+            fonctionnalité est dormante, et son état « lié » a sa place : voir
+            la promesse et pouvoir vérifier son rattachement au même endroit est
+            précisément ce qui manquait. La restreindre au seul état « non lié »
+            ferait disparaître la confirmation au moment où elle rassure.
+
+            `loginPath` n'est pas passé : son défaut (`/login`) est déjà celui
+            de cette page. */}
+        <div className="mt-8">
+          <TwitchLinkCard />
+        </div>
 
         {/* Le tirage qu'on vient d'ouvrir, entre les paquets et la collection :
             on le voit à l'endroit où le regard va après avoir cliqué. Il reste
