@@ -464,6 +464,14 @@ class Builder {
     payload: Row | Row[],
     opts?: { onConflict?: string; ignoreDuplicates?: boolean }
   ) {
+    // Un upsert s'exécute ICI, pas dans `_execute` : sans ce contrôle, il
+    // échappait à `setTableWriteError` (la table était écrite et l'appelant
+    // voyait un succès). Refusé comme par une contrainte : rien n'est écrit,
+    // et `_execute` rend l'erreur puisque l'opération n'est pas une lecture.
+    if (_tableWriteErrors[this.table]) {
+      this.op = 'insert';
+      return this;
+    }
     const items = Array.isArray(payload) ? payload : [payload];
     const onConflict = opts?.onConflict;
     // `ignoreDuplicates` était IGNORÉ : sur conflit, ce mock faisait
