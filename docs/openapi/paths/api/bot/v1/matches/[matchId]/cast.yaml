@@ -21,6 +21,14 @@ get:
                   $ref: '#/components/schemas/CastAssignment'
     '500':
       $ref: '#/components/responses/ServerError'
+    "400":
+      $ref: "#/components/responses/BadRequest"
+    "401":
+      $ref: "#/components/responses/Unauthorized"
+    "403":
+      $ref: "#/components/responses/Forbidden"
+    "429":
+      $ref: "#/components/responses/RateLimited"
   x-zod-query: bot.matches/[matchId]/cast.query
 post:
   tags:

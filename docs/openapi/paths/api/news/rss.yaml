@@ -11,3 +11,5 @@ get:
         application/rss+xml:
           schema:
             type: string
+    "429":
+      $ref: "#/components/responses/RateLimited"

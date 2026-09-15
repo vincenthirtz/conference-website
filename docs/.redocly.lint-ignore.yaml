@@ -1,0 +1,11 @@
+# Exceptions VOULUES aux règles Redocly (docs/redocly.yaml), une par une, avec
+# leur raison. Ne pas régénérer ce fichier en masse (--generate-ignore-file) :
+# chaque entrée est une décision.
+../.generated/openapi.json:
+  operation-4xx-response:
+    # Fonction Netlify (netlify/functions/builds.ts) : répond 200, 502 ou 503,
+    # jamais un 4xx.
+    - '#/paths/~1api~1netlify-builds/get/responses'
+    # Lien de confirmation ouvert dans un navigateur : redirige TOUJOURS (302),
+    # y compris pour un jeton invalide (`?status=invalid`).
+    - '#/paths/~1api~1public~1newsletter~1confirm/get/responses'

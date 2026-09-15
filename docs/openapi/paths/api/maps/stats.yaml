@@ -27,3 +27,7 @@ get:
             $ref: '#/components/schemas/MapStats'
     '500':
       $ref: '#/components/responses/ServerError'
+    "400":
+      $ref: "#/components/responses/BadRequest"
+    "429":
+      $ref: "#/components/responses/RateLimited"

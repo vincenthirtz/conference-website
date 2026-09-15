@@ -82,3 +82,9 @@ post:
               capturedAt:
                 type: string
                 format: date-time
+    "400":
+      $ref: "#/components/responses/BadRequest"
+    "401":
+      $ref: "#/components/responses/Unauthorized"
+    "429":
+      $ref: "#/components/responses/RateLimited"

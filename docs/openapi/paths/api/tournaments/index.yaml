@@ -52,3 +52,5 @@ get:
                   $ref: '#/components/schemas/PublicTournamentSummary'
               total:
                 type: [integer, 'null']
+    "429":
+      $ref: "#/components/responses/RateLimited"

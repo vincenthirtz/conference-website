@@ -15,3 +15,7 @@ get:
                 type: array
                 items:
                   $ref: '#/components/schemas/Reminder'
+    "401":
+      $ref: "#/components/responses/Unauthorized"
+    "429":
+      $ref: "#/components/responses/RateLimited"

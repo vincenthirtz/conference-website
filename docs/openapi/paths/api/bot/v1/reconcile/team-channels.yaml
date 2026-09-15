@@ -90,3 +90,7 @@ get:
                 type: integer
               count:
                 type: integer
+    "401":
+      $ref: "#/components/responses/Unauthorized"
+    "429":
+      $ref: "#/components/responses/RateLimited"

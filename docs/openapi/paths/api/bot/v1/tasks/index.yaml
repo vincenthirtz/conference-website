@@ -49,6 +49,12 @@ get:
                 items:
                   type: object
                   additionalProperties: true
+    "400":
+      $ref: "#/components/responses/BadRequest"
+    "401":
+      $ref: "#/components/responses/Unauthorized"
+    "429":
+      $ref: "#/components/responses/RateLimited"
 post:
   tags:
     - bot/tasks
@@ -70,3 +76,9 @@ post:
           schema:
             type: object
             additionalProperties: true
+    "400":
+      $ref: "#/components/responses/BadRequest"
+    "401":
+      $ref: "#/components/responses/Unauthorized"
+    "429":
+      $ref: "#/components/responses/RateLimited"

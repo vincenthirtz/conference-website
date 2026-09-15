@@ -25,3 +25,5 @@ get:
                 items:
                   type: object
                   additionalProperties: true
+    "429":
+      $ref: "#/components/responses/RateLimited"

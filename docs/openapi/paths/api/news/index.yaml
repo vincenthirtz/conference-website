@@ -41,6 +41,8 @@ get:
                   $ref: '#/components/schemas/PublicNewsItem'
     '500':
       $ref: '#/components/responses/ServerError'
+    "429":
+      $ref: "#/components/responses/RateLimited"
 post:
   tags:
     - public/news

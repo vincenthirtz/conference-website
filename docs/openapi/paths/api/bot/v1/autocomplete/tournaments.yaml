@@ -21,3 +21,7 @@ get:
         application/json:
           schema:
             $ref: '#/components/schemas/AutocompleteResult'
+    "401":
+      $ref: "#/components/responses/Unauthorized"
+    "429":
+      $ref: "#/components/responses/RateLimited"

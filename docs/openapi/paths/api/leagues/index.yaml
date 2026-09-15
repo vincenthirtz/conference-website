@@ -20,3 +20,5 @@ get:
                   $ref: '#/components/schemas/PublicLeague'
     '500':
       $ref: '#/components/responses/ServerError'
+    "429":
+      $ref: "#/components/responses/RateLimited"

@@ -114,3 +114,7 @@ delete:
                 type: [object, 'null']
               revoked:
                 type: boolean
+    "401":
+      $ref: "#/components/responses/Unauthorized"
+    "429":
+      $ref: "#/components/responses/RateLimited"

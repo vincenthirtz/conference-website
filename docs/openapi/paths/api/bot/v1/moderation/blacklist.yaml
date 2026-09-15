@@ -34,6 +34,10 @@ get:
                 type: [array, 'null']
                 items:
                   type: string
+    "401":
+      $ref: "#/components/responses/Unauthorized"
+    "429":
+      $ref: "#/components/responses/RateLimited"
 post:
   tags:
     - bot/misc

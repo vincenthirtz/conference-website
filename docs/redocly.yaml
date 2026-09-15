@@ -14,3 +14,7 @@ rules:
   info-license-strict: off
   # Le serveur localhost est documenté exprès pour le développement.
   no-server-example.com: off
+  # Chaque opération documente au moins une réponse 4xx (auth, validation,
+  # rate-limit…). Bloquant : les rares routes qui n'en renvoient réellement
+  # aucune sont listées, avec leur raison, dans redocly.lint-ignore.yaml.
+  operation-4xx-response: error

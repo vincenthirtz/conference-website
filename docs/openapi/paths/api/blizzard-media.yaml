@@ -14,3 +14,5 @@ get:
             additionalProperties: true
     '500':
       $ref: '#/components/responses/ServerError'
+    "429":
+      $ref: "#/components/responses/RateLimited"

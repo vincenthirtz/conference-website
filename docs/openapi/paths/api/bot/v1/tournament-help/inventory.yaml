@@ -11,3 +11,7 @@ get:
           schema:
             type: object
             additionalProperties: true
+    "401":
+      $ref: "#/components/responses/Unauthorized"
+    "429":
+      $ref: "#/components/responses/RateLimited"

@@ -32,3 +32,7 @@ get:
                   $ref: '#/components/schemas/BotEventOutboxRow'
     '500':
       $ref: '#/components/responses/ServerError'
+    "401":
+      $ref: "#/components/responses/Unauthorized"
+    "429":
+      $ref: "#/components/responses/RateLimited"
