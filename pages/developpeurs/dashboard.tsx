@@ -195,7 +195,7 @@ function DeveloperHubPage({ staff }: Props) {
               aria-label={t.navLabel}
               className="mb-4 flex flex-wrap items-center gap-2 text-sm"
             >
-              <Link href="/developpeurs" className={secondaryBtn}>
+              <Link href="/organisateurs#developpeurs" className={secondaryBtn}>
                 {t.backToDocs}
               </Link>
               <Link href="/developpeurs/reference" className={secondaryBtn}>

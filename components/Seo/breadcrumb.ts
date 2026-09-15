@@ -45,7 +45,8 @@ const INTERMEDIATES: Record<string, { path: string; name: string }> = {
   '/news': { path: '/news', name: 'Actualités' },
   '/leagues': { path: '/leagues', name: 'Ligues & saisons' },
   '/scrim': { path: '/scrims', name: 'Scrims' },
-  '/developpeurs': { path: '/developpeurs', name: 'Développeurs' },
+  // /developpeurs redirige vers /organisateurs : le fil pointe sur la cible.
+  '/developpeurs': { path: '/organisateurs', name: 'Organisateurs' },
   '/partenaires': { path: '/partenaires', name: 'Partenaires' },
   '/rejoindre': { path: '/rejoindre', name: 'Trouver une équipe' },
 };

@@ -38,9 +38,12 @@ const publicRoutes = [
   { path: '/app', priority: '0.7', changefreq: 'monthly' },
   { path: '/register', priority: '0.8', changefreq: 'weekly' },
   { path: '/rules', priority: '0.5', changefreq: 'monthly' },
-  // `/developpeurs` redirige (308) vers `/organisateurs` : une URL redirigée
-  // n'a rien à faire dans un sitemap.
+  // `/developpeurs` redirige (308, next.config.js) vers `/organisateurs` : une
+  // URL redirigée n'a rien à faire dans un sitemap. La référence de l'API, elle,
+  // est une page publique indexable (générée depuis la spec) ; l'inscription et
+  // la console développeur sont en noindex et restent dehors.
   { path: '/organisateurs', priority: '0.6', changefreq: 'monthly' },
+  { path: '/developpeurs/reference', priority: '0.5', changefreq: 'weekly' },
   { path: '/leaderboard', priority: '0.7', changefreq: 'daily' },
   { path: '/palmares', priority: '0.7', changefreq: 'weekly' },
   { path: '/leagues', priority: '0.7', changefreq: 'weekly' },

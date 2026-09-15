@@ -471,7 +471,7 @@ function OrganisateursPage() {
       </section>
 
       {/* Développeurs — on ne les perd pas en route */}
-      <section className="mx-auto max-w-4xl px-6 pb-24">
+      <section id="developpeurs" className="mx-auto max-w-4xl px-6 pb-24">
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 sm:p-8">
           <h2 className="text-xl font-bold text-white">{t.devTitle}</h2>
           <p className="mt-2 text-sm text-gray-300">{t.devBody}</p>

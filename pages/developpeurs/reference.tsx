@@ -402,7 +402,7 @@ function ApiReferencePage({ spec }: PageProps) {
         </div>
         <div className="relative mx-auto max-w-5xl px-6 pt-32 pb-10">
           <Link
-            href="/developpeurs"
+            href="/organisateurs#developpeurs"
             className="text-sm text-gray-300 hover:text-white"
           >
             {t.backToGuide}

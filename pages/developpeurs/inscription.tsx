@@ -380,7 +380,10 @@ function DeveloperRegisterPage() {
                 {COPY.linkLogin}
               </Link>
               <span className="text-gray-600">•</span>
-              <Link href="/developpeurs" className="hover:text-white">
+              <Link
+                href="/organisateurs#developpeurs"
+                className="hover:text-white"
+              >
                 {COPY.linkBackToDocs}
               </Link>
             </div>

@@ -65,6 +65,18 @@ const nextConfig = {
    */
   async redirects() {
     return [
+      /**
+       * Ancienne page « API publique ». Le public qui arrive là vient organiser
+       * une compétition : la page vit à /organisateurs, dont la section
+       * #developpeurs renvoie à la référence de l'API et aux clés. Redirection
+       * déclarée ici plutôt que dans un getServerSideProps : servie sans
+       * exécuter de fonction serveur.
+       */
+      {
+        source: '/developpeurs',
+        destination: '/organisateurs',
+        permanent: true,
+      },
       {
         source: '/tournament/:id/teams/:teamId',
         destination: '/team/:teamId',
