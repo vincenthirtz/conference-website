@@ -554,6 +554,23 @@ components:
             - $ref: '#/components/schemas/Timestamp'
           nullable: true
           description: Horodatage de la verification, ou `null` si non lie.
+        reward:
+          type: object
+          nullable: true
+          description: >-
+            Ajout additif (2026-09-15). La recompense TCG de la verification,
+            pour que la carte l'annonce sans ecrire de nombre : `coins` vient du
+            registre `earnSources.ts`. `null` = recompense non activee
+            (`schemaReady` faux). `claimable: false` = deja recue (tous
+            tenants confondus) OU registre illisible — une erreur de lecture
+            n'est pas une absence, on ne promet pas a l'aveugle.
+          required: [coins, claimable]
+          properties:
+            coins:
+              type: integer
+              minimum: 1
+            claimable:
+              type: boolean
     PrizeCheckoutRequest:
       type: object
       description: >-
@@ -29058,6 +29075,23 @@ paths:
         joueur (`battle_net_id UNIQUE` → anti-smurf). Endpoint de redirection :
         ne renvoie jamais de JSON en cas de succes, uniquement des 302.
         Rate-limit 20 req/min par IP.
+
+        EFFET DE BORD TCG (2026-09-15) : une fois le lien ecrit, credite
+        `BATTLENET_VERIFIED_COINS` (100 pieces, sans paquet) au porte-monnaie du
+        tenant de la requete, UNE FOIS A VIE par joueuse et par compte Blizzard
+        (`utils/tcg/grantBattlenetVerified.ts`, `source_kind = battlenet_verified`,
+        migration `tcg_battlenet_verified.sql`), puis emet `tcg.reward_granted`
+        (`reason: 'battlenet_verified'`, sans tournoi). Best-effort : un refus
+        d'ecriture ou une exception est journalise et ne change JAMAIS le statut
+        `?battlenet=`.
+
+        PARAMETRE DE RETOUR ADDITIF : quand, et seulement quand, CET appel a
+        credite la recompense, la redirection porte en plus
+        `&tcg=battlenet_reward` (ex.
+        `/player/profile?battlenet=verified&tcg=battlenet_reward`). Rejeu, deja
+        recompensee, refus d'ecriture ou exception : parametre absent. L'espace
+        joueuse en fait « +N pieces », N etant relu dans
+        `GET /api/player/battlenet-status` (`reward.coins`), jamais dans l'URL.
       security: []
       parameters:
         - name: code
@@ -29086,7 +29120,9 @@ paths:
               schema:
                 type: string
               description: >-
-                `returnTo?battlenet=verified|linked|linked_no_match|already_linked|error`
+                `returnTo?battlenet=verified|linked|linked_no_match|already_linked|error`,
+                suivi de `&tcg=battlenet_reward` si la recompense TCG vient
+                d'etre creditee
                 (`linked` = lien cree mais l'utilisateur n'a AUCUNE ligne de
                 roster — cas normal d'un staff non-joueuse : succes neutre, pas
                 un avertissement)
@@ -33911,8 +33947,9 @@ paths:
       description: |
         Auth Bearer joueur (`withAuthRoute`). Indique si la feature est
         configuree cote serveur (`configured`) et si le joueur a deja lie un
-        BattleTag verifie (`linked` / `battleTag` / `verifiedAt`). Rate-limit
-        30 req/min.
+        BattleTag verifie (`linked` / `battleTag` / `verifiedAt`). Porte en
+        plus `reward: { coins, claimable } | null` (ajout additif 2026-09-15),
+        la recompense TCG de la verification. Rate-limit 30 req/min.
       security:
         - PlayerBearer: []
       responses:
@@ -35080,6 +35117,91 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '500':
           $ref: '#/components/responses/ServerError'
+  /api/admin/tcg/battlenet-backfill:
+    get:
+      summary: Simuler le rattrapage de la recompense Battle.net.
+      description: |
+        Rend ce qu'un rattrapage ferait, SANS rien ecrire :
+        `{ eligible, alreadyRewarded, wouldGrant, discordDms, outsideSpace,
+        ready, reward: { coins } }`.
+
+        AUDIENCE = L'ESPACE DU STAFF. `eligible` compte les comptes lies a
+        Battle.net ET rattaches au tenant (`ctx.tenantId`) par une ligne de
+        roster (`team_members`) ou un porte-monnaie TCG (`tcg_wallets`).
+        L'index « une fois par personne » etant global, crediter ici une
+        joueuse qui ne joue que dans un autre espace y consommerait sa
+        recompense unique. `outsideSpace` compte les liens ecartes pour cette
+        raison.
+
+        `alreadyRewarded` : deja recompenses par la personne OU par le compte
+        Blizzard, tous tenants confondus (affichage seulement : l'ecrivain et
+        ses index tranchent). `discordDms` : parmi `wouldGrant`, comptes relies
+        a Discord — autant de DM `tcg.reward_granted` partiront ; `null` = non
+        mesurable. `ready` : `schemaReady` de la source. Lecture paginee (1000).
+        Audience illisible → `500 AUDIENCE_UNREADABLE`, jamais « 0 compte ».
+        `private, no-store`. Rate-limit 20 / min.
+      operationId: adminPreviewTcgBattlenetBackfill
+      tags:
+        - admin/tcg
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Simulation, sans ecriture.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Rattraper la recompense Battle.net pour les comptes de l'espace.
+      description: |
+        Passe CHAQUE lien de l'audience (meme definition que le GET) par
+        `grantBattlenetVerifiedReward`, l'ecrivain du callback : memes index
+        anti-abus (une fois par personne, une fois par compte Blizzard, tous
+        tenants confondus), meme annonce `tcg.reward_granted`
+        (`reason: 'battlenet_verified'`, un DM par joueuse creditee reliee a
+        Discord). Rend `{ eligible, granted, already, errors, reward }`.
+
+        RELANCE SURE : un second passage ne credite que les comptes lies ou
+        rattaches entre-temps. Audience illisible → `500 AUDIENCE_UNREADABLE` et
+        RIEN n'est ecrit. Journalise `tcg_battlenet_backfill` (entity `tenant`,
+        payload `{ eligible, granted, already, errors, coins }`). HONORE
+        `Idempotency-Key` (`withAdminIdempotency`, cle `tcg-battlenet-backfill`).
+        La monnaie se gagne : aucun paiement ni don. Rate-limit 20 / min.
+      operationId: adminRunTcgBattlenetBackfill
+      tags:
+        - admin/tcg
+      security:
+        - StaffSession: []
+      responses:
+        '200':
+          description: Compteurs reels du rattrapage.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /api/admin/tcg/players:
     get:
       summary: Chercher le compte d'une joueuse pour corriger son solde TCG.
@@ -35668,6 +35790,13 @@ paths:
                               scrim_win,
                               booster_purchase,
                               admin_grant,
+                              card_recycled,
+                              twitch_drop,
+                              welcome_gift,
+                              supporter_welcome,
+                              checkin_streak,
+                              tournament_placement,
+                              battlenet_verified,
                             ]
                         sourceRef:
                           type: string

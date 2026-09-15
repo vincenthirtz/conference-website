@@ -2,7 +2,7 @@
 
 > Document de référence de la fonctionnalité TCG (_trading card game_) :
 > pourquoi elle existe sous cette forme, ce que le schéma garantit, et ce qui
-> reste à faire. Écrit d'après le code au **2026-09-14**.
+> reste à faire. Écrit d'après le code au **2026-09-15**.
 >
 > Sources : [`utils/tcg/`](../utils/tcg), [`pages/api/player/tcg/`](../pages/api/player/tcg),
 > [`pages/api/admin/tcg/`](../pages/api/admin/tcg),
@@ -13,6 +13,7 @@
 > `tcg_twitch_drop.sql`, `add_tcg_overlay_tokens.sql`, `tcg_overlay_theme.sql`,
 > `tcg_welcome_gift.sql`, `tcg_welcome_gift_pack_coherence.sql`,
 > `tcg_supporter_welcome.sql`, `tcg_earn_sources_drop_streak_placement.sql`,
+> `tcg_battlenet_verified.sql`,
 > [`components/tcg/TcgCard.tsx`](../components/tcg/TcgCard.tsx),
 > [`components/overlay/TcgAnnouncement.tsx`](../components/overlay/TcgAnnouncement.tsx) et
 > [`pages/player/tcg.tsx`](../pages/player/tcg.tsx).
@@ -269,6 +270,7 @@ ne remplace pas la première.
 | `TWITCH_DROP_COINS`    | 25     | `SCRIM_WIN_COINS / 2`, plancher à 1 — + un paquet      |
 | `CHECKIN_STREAK_COINS` | 50     | `SCRIM_WIN_COINS` — + un paquet, tous les 5 check-ins  |
 | `PLACEMENT_TIERS`      | 1→8    | rang 1 : 500 + 3 paquets · 2 : 300 + 2 · 3 : 200 + 1 · 4-8 : 100 + 1 |
+| `BATTLENET_VERIFIED_COINS` | 100 | `MATCH_WIN_COINS`, **sans paquet** — une fois à vie, compte Battle.net prouvé |
 
 Aucun de ces montants n'est écrit en dur ailleurs : **le rapport scrim/match est
 importé, pas recopié.** Le dépôt pondère déjà un scrim à `SCRIM_RATING_WEIGHT`
@@ -315,7 +317,9 @@ figé sur une valeur encore plus fausse.
 (`tcg_twitch_drop.sql`, 2026-09-13), `welcome_gift` (`tcg_welcome_gift.sql`,
 2026-09-14), `supporter_welcome` (`tcg_supporter_welcome.sql`, 2026-09-14),
 `checkin_streak` et `tournament_placement`
-(`tcg_earn_sources_drop_streak_placement.sql`, appliquée le 2026-09-15). Côté paquets, `tcg_packs.source_kind` admet `victory`, `purchase`,
+(`tcg_earn_sources_drop_streak_placement.sql`, appliquée le 2026-09-15), et
+`battlenet_verified` (`tcg_battlenet_verified.sql`, **non appliquée** à la
+rédaction, 2026-09-15). Côté paquets, `tcg_packs.source_kind` admet `victory`, `purchase`,
 `welcome`, et avec la même migration `drop`, `placement` et `streak`.
 `admin_grant` est écrit par `POST /api/admin/tcg/grant` (correction tracée
 par l'équipe, `source_ref` = clé d'idempotence). Son **motif est lisible par
@@ -578,6 +582,131 @@ le nombre de paquets RÉELLEMENT créés, pour ne jamais annoncer un paquet refu
 Le bot en fait un DM (raison d'abord, gain ensuite), dédoublonné par
 `(joueuse, source, sourceRef)`.
 
+### La vérification d'un compte Battle.net
+
+[`utils/tcg/grantBattlenetVerified.ts`](../utils/tcg/grantBattlenetVerified.ts)
+crédite `BATTLENET_VERIFIED_COINS` — **100 pièces, sans paquet** — la première
+fois qu'une joueuse prouve un compte Battle.net. **Une fois à vie.**
+
+**Pourquoi c'est sain : la vérification est une preuve, pas une déclaration.**
+Le flux est un OAuth Blizzard réel (`pages/api/auth/battlenet/callback.ts`) :
+code d'autorisation échangé côté serveur avec le secret client, `sub` et
+`battletag` lus sur `oauth/userinfo` avec le jeton rendu, state signé HMAC +
+nonce en cookie httpOnly + liaison à la session. Recopier le BattleTag d'une
+autre personne dans un roster ne rapporte rien : seul le retour d'OAuth crédite.
+Si la vérification avait été une simple saisie, on n'aurait rien crédité — une
+récompense sur une affirmation aurait payé l'usurpation qu'elle combat.
+
+Ce que la preuve **ne dit pas** : qu'il s'agit d'un compte Overwatch ancien ou
+unique. Un compte Battle.net est gratuit. D'où les limites ci-dessous, portées
+par le schéma.
+
+**Branché à un seul endroit** : le callback de vérification, juste après que
+`upsertBattlenetLink` — seul écrivain de `user_battlenet_links` — a réussi,
+quel que soit le statut du roster (`verified`, `linked`, `linked_no_match`) :
+c'est le compte qu'on récompense, pas la concordance d'un tag déclaré. La
+connexion par Battle.net (compte déjà lié) ne prouve rien de neuf et ne crédite
+rien. Effet de bord **best-effort** : son résultat est journalisé, jamais rendu
+dans la redirection, et ni un refus d'écriture ni une exception ne change le
+statut `?battlenet=`.
+
+**Trois règles, trois garde-fous en base, aucune relecture préalable :**
+
+| Règle | Garde-fou |
+| --- | --- |
+| Un rejeu (même personne, même compte, même tenant) ne crédite pas | clé du registre, `ON CONFLICT DO NOTHING` → zéro ligne rendue |
+| **Une fois par personne**, tous comptes Blizzard et tous tenants confondus | index unique partiel `tcg_wallet_entries_battlenet_once_per_user (user_id)` |
+| **Une fois par compte Blizzard**, toutes personnes et tous tenants confondus | index unique partiel `tcg_wallet_entries_battlenet_once_per_account (source_ref)` |
+
+La clé du registre contient `user_id` : seule, elle aurait laissé une joueuse
+changer de compte Blizzard et recréditer à chaque fois — de quoi remplir **un**
+porte-monnaie avec autant de comptes gratuits qu'on veut en créer. Le
+`ON CONFLICT` ne visant que la clé du registre, une violation des index partiels
+lève `23505` ; `grantCoinsThenPacks` la rend en `reason: 'conflict'` (distincte
+de `rejected` et `failed`), et l'écrivain la lit « déjà récompensée ». Retirer
+puis reposer la vérification ne recrédite donc rien. `tcg_wallet_entries.user_id`
+n'ayant pas de clé étrangère, supprimer un compte ne libère pas non plus le
+compte Blizzard.
+
+**`source_ref = bnet:<sha256("battlenet:" + battle_net_id)>`.** La référence
+circule dans l'historique rendu à la joueuse, l'outbox du bot et le DM :
+l'identifiant Blizzard n'y figure pas en clair. C'est une pseudonymisation — un
+identifiant numérique se retrouve par force brute — pas un secret. Pas de sel
+serveur : sa rotation casserait la règle « une fois par compte ».
+
+**Choix produit par défaut — les plus conservateurs :**
+
+- **Un seul tenant, celui de la requête**, résolu comme les routes
+  `/api/player/tcg/*` : le porte-monnaie que la joueuse consulte. La
+  vérification est un geste unique et global (le lien n'a pas de tenant) ; la
+  payer dans chaque organisation où elle joue la multiplierait, et l'index « une
+  fois par personne » l'interdit de toute façon.
+- **Des pièces, pas de paquet.** Exception assumée au « un paquet dans toute
+  source » : les cadeaux d'accueil donnent un paquet parce qu'ils ouvrent la
+  porte du TCG, la vérification n'ouvre rien. Un paquet aurait aussi exigé
+  d'élargir les deux contraintes de `tcg_packs` — celles des 58 paquets du
+  2026-09-14 — pour une récompense ponctuelle.
+- **100 pièces, soit une victoire de match et un tiers de booster** : de quoi
+  rapprocher du prochain paquet sans en offrir un, et moins que chacun des deux
+  cadeaux d'accueil (mêmes pièces, plus un paquet).
+- **Aucune rétroactivité automatique.** Les comptes vérifiés avant la
+  fonctionnalité ne reçoivent rien au déploiement — un gain n'est jamais l'effet
+  de bord d'un déploiement. L'interface n'offrant plus le bouton une fois le
+  compte lié, le rattrapage est un **geste staff** (ci-dessous).
+
+**Annonce.** `tcg.reward_granted` avec `reason: 'battlenet_verified'`,
+`tournamentId` et `tournamentName` à `null`, `packs: 0`, émis sur la seule
+ligne insérée. Ajout **additif** du contrat : le bot écarte toute raison
+inconnue sans DM, il doit donc apprendre celle-ci **avant** que le site l'émette.
+
+**La monnaie reste gagnée.** Vérifier un compte est un geste de la joueuse ;
+aucun paiement ni don n'y est lié.
+
+**Le rattrapage (geste staff).** `GET/POST /api/admin/tcg/battlenet-backfill`
+([`utils/tcg/battlenetBackfill.ts`](../utils/tcg/battlenetBackfill.ts), carte
+`TcgBattlenetBackfillCard` dans l'onglet Économie TCG de `/admin/moderation`),
+calqué sur le cadeau d'édition : simuler, confirmer (nombre, montant, total, DM
+Discord), distribuer, journaliser (`tcg_battlenet_backfill`). Chaque lien passe
+par **le même écrivain** que le callback : mêmes index, même annonce, relance
+sûre.
+
+**Choix d'audience — l'espace du staff, pas tous les liens.** Les liens
+Battle.net sont globaux, le crédit va dans `ctx.tenantId`, et l'index « une fois
+par personne » est global : rattraper depuis l'espace A une joueuse qui ne joue
+que dans B **consommerait dans A** sa récompense unique, et B ne pourrait plus la
+lui verser. Sont donc rattrapés les seuls comptes rattachés au tenant par **une
+ligne de roster** (`team_members`, la définition de « participante » des deux
+cadeaux d'accueil) **ou un porte-monnaie TCG** (`tcg_wallets` : elle collectionne
+déjà ici — supportrice, drop — sans roster). Les liens écartés sont comptés
+(`outsideSpace`) plutôt que tus. Limite assumée : un compte vérifié sans roster
+ni collection dans l'espace n'est rattrapable nulle part tant qu'il n'y entre
+pas — il peut aussi le rattacher lui-même en collectionnant, puis être rattrapé.
+
+Lectures paginées (1000) et par lots de 100 identifiants ; **une audience
+illisible rend `500 AUDIENCE_UNREADABLE` et le `POST` n'écrit rien** — une
+distribution sur audience partielle afficherait un succès en oubliant des
+joueuses. Écritures par vagues de 5. **DM** : un `tcg.reward_granted` par
+joueuse créditée ; la simulation dit combien partiront (`discordDms`, comptes
+reliés à Discord parmi `wouldGrant`, `null` si non mesurable) et la
+confirmation le répète.
+
+**L'incitation.** `GET /api/player/battlenet-status` porte
+`reward: { coins, claimable } | null` (additif) : montant du registre,
+`claimable: false` si déjà reçue **ou registre illisible** — une promesse faite à
+l'aveugle serait démentie au retour. `BattlenetVerifyCard` annonce alors
+« vérifier ton compte te rapporte N pièces, une seule fois » à qui n'est pas
+encore lié ; aucun nombre n'est écrit côté client, et le composant n'importe pas
+le registre (le moteur de rating entrerait dans le bundle) — la logique vit dans
+[`utils/tcg/battlenetRewardDisplay.ts`](../utils/tcg/battlenetRewardDisplay.ts),
+module pur. Au retour d'OAuth, le callback ajoute **`&tcg=battlenet_reward`**
+(ex. `/player/profile?battlenet=verified&tcg=battlenet_reward`) **seulement**
+quand l'écrivain rend `granted` ; rejeu, déjà récompensée, refus, exception →
+paramètre absent, jamais une erreur de vérification. La carte en fait un toast
+« +N pièces créditées », N relu dans l'état (`reward.coins`), jamais dans l'URL :
+un paramètre forgé ne crédite rien et n'affiche qu'à son auteur un montant
+exact. Le paramètre est retiré de l'URL avec `battlenet`, seulement s'il porte
+cette valeur.
+
 ### Ce que la victoire déclenche
 
 [`utils/tcg/grantVictoryRewards.ts`](../utils/tcg/grantVictoryRewards.ts) est
@@ -629,6 +758,11 @@ entre la lecture et l'écriture.
   `tcg_wallet_entries` : une source ne peut créditer ou débiter qu'une fois. Pour
   le recyclage, `source_ref = <pack_id>:<position>` désigne **la** carte, ce qui
   donne l'idempotence gratuitement.
+- Deux index uniques **partiels** sur `tcg_wallet_entries`, pour la seule
+  source `battlenet_verified` (`tcg_battlenet_verified.sql`) : `(user_id)` et
+  `(source_ref)`, **sans `tenant_id`** — une récompense par personne et par
+  compte Blizzard, tous tenants confondus. Ils lèvent `23505` là où la clé du
+  registre ferait `DO NOTHING` (cf. §4).
 - `CHECK` d'exclusivité sur `tcg_pack_cards` : exactement **un** des trois sujets
   renseigné (`card_user_id`, `card_team_id`, `card_map_slug`), cohérent avec
   `subject_kind`. Sans lui, une carte pourrait n'avoir aucun sujet (invisible) ou
@@ -686,17 +820,19 @@ joueuse) et scopées au tenant résolu par `resolveTenantIdForUserRequest`.
 | `/api/admin/tcg/overlay-theme`                       | GET, PUT          | staff, permission `manage_tcg`       | L'habillage de l'overlay (couleur, position, deux formulations, image ou vidéo). **Patch partiel** ; `null` = revenir au défaut. Média validé par **magic bytes** avant dépôt en bucket public. 30/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `/api/admin/tcg/welcome-gift`                        | GET, POST         | staff, permission `manage_tcg`       | Simuler puis distribuer le cadeau d'accueil de l'édition en cours. `GET` n'écrit rien. `POST` honore `Idempotency-Key`. Journalisé. 20/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `/api/admin/tcg/grant`                               | POST              | staff, permission `manage_tcg`       | Corriger le solde d'une joueuse (`admin_grant`, crédit ou retrait, valeur absolue ≤ 10 000, motif obligatoire). **Une correction tracée, pas une vente.** Registre d'abord, `source_ref` = `idempotencyKey` : l'unicité du registre porte l'idempotence, un rejeu rend `replayed: true` sans double crédit. Un retrait ne passe jamais sous zéro (`409 INSUFFICIENT_BALANCE`) : réservation conditionnelle du cache, disponible = minimum du cache et du registre. Motif journalisé `tcg_admin_grant` (le registre n'a pas de colonne pour lui). 30/min. |
+| `/api/admin/tcg/battlenet-backfill`                  | GET, POST         | staff, permission `manage_tcg`       | Rattraper la récompense Battle.net des comptes liés avant elle, **dans l'espace du staff** (roster ou porte-monnaie du tenant). `GET` simule (`eligible`, `alreadyRewarded`, `wouldGrant`, `discordDms`, `outsideSpace`, `ready`, `reward`) ; `POST` passe chaque lien par l'écrivain du callback, rend `{ eligible, granted, already, errors, reward }`. Audience illisible → `500`, rien écrit. `Idempotency-Key`. Journalisé `tcg_battlenet_backfill`. 20/min. |
 | `/api/admin/tcg/players`                             | GET               | staff, permission `manage_tcg`       | Recherche de comptes pour la carte « Ajuster un solde » (RPC `admin_search_users`, 20 résultats), sans exiger `manage_staff`. |
 | `/api/player/tcg/welcome-gift`                       | GET, POST         | joueuse (**`withSubjectRoute`**)     | `GET` : « Ai-je reçu un cadeau ? » — `{ gift: { coins, receivedAt } \| null, supporterClaimable }`, les DEUX accueils confondus (`welcome_gift` et `supporter_welcome`) ; `supporterClaimable` vient de `grantSupporterWelcome({ dryRun: true })`, donc des conditions EXACTES du POST — proposer un bouton que le serveur refuserait serait pire que ne rien proposer. `POST` : réclamer le cadeau **supportrice**, une fois par compte, `{ status, coins, packGranted }` — `packGranted: false` DIT l'écriture partielle au lieu de la masquer. Seule route `tcg/` à honorer `?as=`, mais **sans `allowActAs`** : le `POST` est donc refusé en inspection, un cadeau réclamé ne se rendant pas. 60/min en GET, 6/min en POST. |
 | `/api/overlay/tcg/{token}`                           | GET               | **public**, porté par le jeton       | Le flux d'annonces d'une source navigateur OBS, plus l'habillage. Réduit au déjà-public : pseudo Twitch et origine d'événement, jamais un nom de compte ni une photo. `s-maxage=5`. 120/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
 Quelques conventions transverses :
 
-- **Deux routes hors `tcg/` écrivent au TCG en effet de bord** :
+- **Trois routes hors `tcg/` écrivent au TCG en effet de bord** :
   `POST /api/admin/tournament/[id]/finalize` (palmarès, compte rendu additif
-  `tcg_placement_rewards`) et `redeemCheckinToken`, derrière
+  `tcg_placement_rewards`), `redeemCheckinToken`, derrière
   `POST /api/checkin/[token]` et `POST /api/bot/v1/matches/[matchId]/checkin`
-  (série de check-ins, réponse inchangée). Toutes deux annoncent le gain par
+  (série de check-ins, réponse inchangée), et `GET /api/auth/battlenet/callback`
+  (vérification Battle.net, redirection inchangée). Toutes annoncent le gain par
   `tcg.reward_granted` (`utils/tcg/announceReward.ts`), un événement par
   joueuse créditée, jamais sur un rejeu — le bot en fait un DM.
 
@@ -738,6 +874,23 @@ Quelques conventions transverses :
   relecture de toute la collection ; omis si la lecture échoue.
 
 ## 7. Ce qui reste à faire
+
+- **Récompense de vérification Battle.net : pas encore en service.** Ordre de
+  déploiement imposé : (1) le bot apprend `reason: 'battlenet_verified'` sans
+  tournoi (`services/discord-bot/tcg-events.js`, `REWARD_REASONS` +
+  `buildRewardGrantedDm`, et la clé de dédoublonnage qui filtre sur
+  `REWARD_REASONS`) ; (2) appliquer `tcg_battlenet_verified.sql` ; (3) déployer
+  le site. Site sans migration : vérification intacte, pièces rejetées en
+  `23514` et journalisées, rien de perdu — une vérification ultérieure crédite.
+- **Rattrapage et incitation Battle.net : livrés (2026-09-15), pas encore
+  exercés.** Le rattrapage attend un geste staff APRÈS la migration et le bot ;
+  à lancer depuis chaque espace concerné (audience = l'espace). Ni la carte ni le
+  toast de retour n'ont été vus en navigateur (aucun `next dev` pendant le lot) :
+  relire la phrase sur `/player/profile` et l'onboarding `manage-team?welcome=1`,
+  et un vrai aller-retour Blizzard sur une base LOCALE.
+- **L'aide du barème (`earnHint`, `/player/tcg`) ne cite toujours pas la
+  vérification** : l'incitation vit sur la carte de vérification, là où le geste
+  se fait. L'y ajouter demanderait un champ de plus dans `earn`.
 
 - **La monnaie n'a pas de pièce côté admin.** L'espace joueuse affiche désormais
   le logo en pastille devant chaque montant ; la vue d'ensemble staff, non — et
