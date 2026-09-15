@@ -241,7 +241,7 @@ curl -X POST https://<host>/api/graphql \
 ## 5. Portail développeur & spec machine-readable
 
 - **Spec publique JSON/YAML** : `GET /api/public/openapi` (anonyme, CORS `*`,
-  `?format=yaml`). Dérivée de `docs/openapi.yaml` filtrée aux paths
+  `?format=yaml`). Dérivée de la spec complète (fragments `docs/openapi/`) filtrée aux paths
   `/api/public/*` + composants transitivement référencés (aucune fuite
   bot/admin). Générateur pur : `utils/openapi/publicSpec.ts`
   (`filterPublicSpec` / `buildPublicSpec`), couvert par
@@ -295,7 +295,8 @@ Toute évolution de cette surface DOIT mettre à jour, ensemble :
 
 - les handlers (`pages/api/public/v1/*` write, `pages/api/graphql.ts`, schéma) ;
 - ce document ;
-- `docs/openapi.yaml` (le contract-drift `tests/unit/openapiContractDrift.test.ts`
+- le fragment OpenAPI de la route, `docs/openapi/paths/api/…` au même
+  emplacement que le handler (le contract-drift `tests/unit/openapiContractDrift.test.ts`
   échoue sinon) — la spec publique en dérive automatiquement ;
 - le picker de scopes admin (dérivé de `utils/apiScopes.ts` — automatique) ;
 - (à ajouter) un test de non-régression du SDL GraphQL (snapshot) et de la liste

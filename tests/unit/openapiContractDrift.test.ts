@@ -1,7 +1,7 @@
 // tests/unit/openapiContractDrift.test.ts
 //
 // Détecte la drift entre les 3 sources de vérité de la surface HTTP :
-//   1. `docs/openapi.yaml` — la spec (machine-readable).
+//   1. `docs/openapi/` — la spec (un fragment par handler, cf. utils/openapi/assemble.ts).
 //   2. `pages/api/**/*.ts` — les handlers Next.js (canonique).
 //   3. `../docker-box/services/discord-bot/**/*.{js,ts}` — le client bot
 //      (consumer cross-repo).
@@ -33,15 +33,15 @@ const BOT_CLIENT_ROOT =
 // Allowlists — known drift entries that should NOT fail the test
 // ---------------------------------------------------------------------------
 
-/** Path entries that exist in openapi.yaml but have no matching handler. */
+/** Path entries that exist in the OpenAPI spec but have no matching handler. */
 const ALLOWLIST_SPEC_WITHOUT_HANDLER = new Set<string>([
   // Add `'/api/foo/bar'` entries here as needed.
   // Servi par une fonction Netlify (netlify/functions/builds.ts), pas un
-  // handler Next — documenté dans openapi.yaml mais sans fichier pages/api.
+  // handler Next — documenté dans la spec (docs/openapi/paths/api/netlify-builds.yaml) mais sans fichier pages/api.
   '/api/netlify-builds',
 ]);
 
-/** Handler files whose path is intentionally missing from openapi.yaml. */
+/** Handler files whose path is intentionally missing from the OpenAPI spec. */
 const ALLOWLIST_HANDLER_WITHOUT_SPEC = new Set<string>([
   // Internal / temporary endpoints not yet documented.
 ]);
@@ -433,7 +433,7 @@ describe('OpenAPI ↔ handlers', () => {
     }
     expect(
       missing,
-      `${missing.length} handler(s) missing from openapi.yaml:\n  ${missing.join('\n  ')}`
+      `${missing.length} handler(s) missing from the OpenAPI spec:\n  ${missing.join('\n  ')}`
     ).toEqual([]);
   });
 
@@ -450,7 +450,7 @@ describe('OpenAPI ↔ handlers', () => {
     const unique = [...new Set(phantom)].sort();
     expect(
       unique,
-      `${unique.length} phantom path(s) in openapi.yaml (no handler file):\n  ${unique.join('\n  ')}`
+      `${unique.length} phantom path(s) in the OpenAPI spec (no handler file):\n  ${unique.join('\n  ')}`
     ).toEqual([]);
   });
 
@@ -559,7 +559,7 @@ describe('OpenAPI ↔ bot client (cross-repo)', () => {
     const unique = [...new Set(missing)].sort();
     expect(
       unique,
-      `${unique.length} bot call(s) not documented in openapi.yaml:\n  ${unique.join('\n  ')}`
+      `${unique.length} bot call(s) not documented in the OpenAPI spec:\n  ${unique.join('\n  ')}`
     ).toEqual([]);
   });
 });

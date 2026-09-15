@@ -1,15 +1,17 @@
 // utils/openapi/publicSpec.ts
 //
-// Derives the PUBLIC OpenAPI surface from the canonical `docs/openapi.yaml`
-// (which covers the full bot/admin/cron/public API). We keep only the
+// Derives the PUBLIC OpenAPI surface from the full spec (assembled from the
+// `docs/openapi/` fragments, cf. loadSpec.ts — it covers bot/admin/cron/public). We keep only the
 // `/api/public/*` paths and the components they transitively reference, so we
 // can serve a machine-readable public spec (`/api/public/openapi`) and render
 // an always-in-sync developer reference (`/developpeurs/reference`) without
 // leaking internal (bot/admin) endpoints or schema shapes.
 //
 // Pure filtering lives in `filterPublicSpec` (unit-tested); `buildPublicSpec`
-// reads + parses the YAML once and memoises the result.
+// memoises the result (read from the build-time JSON in production).
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { stringify as stringifyYaml } from 'yaml';
 import { loadFullSpec, type OpenApiDoc } from './loadSpec';
 
@@ -169,10 +171,22 @@ export function filterPublicSpec(full: OpenApiDoc): OpenApiDoc {
 
 let cached: OpenApiDoc | null = null;
 
-/** Full spec (cf. loadSpec) filtered to public, memoised. */
+/**
+ * Public spec, memoised. In production it is read from the JSON written at
+ * build time (`scripts/openapi/build.mjs`, ~22 KB) so the public route never
+ * loads the full spec; in dev/test it is filtered from the assembled spec.
+ */
 export function buildPublicSpec(): OpenApiDoc {
   if (cached) return cached;
-  cached = filterPublicSpec(loadFullSpec());
+  cached =
+    process.env.NODE_ENV === 'production'
+      ? (JSON.parse(
+          fs.readFileSync(
+            path.join(process.cwd(), '.generated', 'openapi.public.json'),
+            'utf8'
+          )
+        ) as OpenApiDoc)
+      : filterPublicSpec(loadFullSpec());
   return cached;
 }
 

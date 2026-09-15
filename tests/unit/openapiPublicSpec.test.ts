@@ -3,7 +3,7 @@
 // Coverage for the public OpenAPI derivation:
 //   - filterPublicSpec (pure): keeps only /api/public/* paths + transitively
 //     referenced components, drops internal (bot/admin) paths & schemas.
-//   - buildPublicSpec (real docs/openapi.yaml): no internal path/scheme leaks.
+//   - buildPublicSpec (real assembled spec): no internal path/scheme leaks.
 //   - GET /api/public/openapi: 200 JSON + CORS, 405 on POST.
 
 import { describe, it, expect } from 'vitest';
@@ -133,7 +133,7 @@ describe('filterPublicSpec (pure)', () => {
   });
 });
 
-describe('buildPublicSpec (docs/openapi.yaml réel)', () => {
+describe('buildPublicSpec (spec réelle assemblée)', () => {
   __resetPublicSpecCache();
   const spec = buildPublicSpec() as any;
 

@@ -36,5 +36,5 @@ export default {
   inPath: 'path',
   inQuery: 'query',
   generatedNote:
-    "This page is generated from docs/openapi.yaml at each deploy — it cannot drift from the API's real behaviour.",
+    "This page is generated from the repository's OpenAPI spec at each deploy — it cannot drift from the API's real behaviour.",
 };

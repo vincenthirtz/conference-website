@@ -1483,7 +1483,7 @@ Quelques conventions transverses :
   restants). Aucun `next dev` n'a pu être lancé pendant ce lot (travail
   parallèle) : relire à 360 / 768 / 1280 px et ajouter un scénario Playwright
   « charger plus » sur une base LOCALE avant de considérer le lot clos.
-- **Le `pattern` partagé `DiscordUserId` d'`openapi.yaml` reste `{17,20}`.**
+- **Le `pattern` partagé `DiscordUserId` de la spec OpenAPI (`docs/openapi/components/parameters.yaml`) reste `{17,20}`.**
   L'écart est tranché pour la route TCG (paramètre déclaré en ligne, `{15,25}`,
   comme le code) ; les autres routes `by-discord` valident elles aussi par
   `discordIdSchema` (`{15,25}`) et gardent la spec plus stricte. Élargir le

@@ -1,4 +1,5 @@
-# Lint de docs/openapi.yaml — exécuté en CI seulement (`npx @redocly/cli`), sans
+# Lint de la spec OpenAPI assemblée (.generated/openapi.json, depuis docs/openapi/)
+# — exécuté en CI seulement (`npx @redocly/cli`), sans
 # dépendance dans le repo (CLAUDE.md : zero-dependency policy).
 # Base « recommended » ; les écarts ci-dessous sont VOULUS, pas des oublis.
 extends:

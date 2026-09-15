@@ -4,7 +4,7 @@ get:
   summary: Spécification OpenAPI publique (machine-readable).
   description: >
     Spec OpenAPI 3.1 filtrée à la surface publique (`/api/public/*`), dérivée de
-    la spec canonique `docs/openapi.yaml`. Anonyme, CORS `*`, rate-limitée (120
+    la spec complète (fragments `docs/openapi/`). Anonyme, CORS `*`, rate-limitée (120
     req/min/IP). `?format=yaml` pour la variante YAML. À importer dans Postman /
     un générateur de code.
   operationId: publicGetOpenApiSpec

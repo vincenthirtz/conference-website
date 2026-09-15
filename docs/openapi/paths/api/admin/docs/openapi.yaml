@@ -1,7 +1,7 @@
 get:
   summary: Return this OpenAPI spec (owner-only).
   description: |
-    Serves `docs/openapi.yaml` raw (default) or as JSON when called
+    Serves the full assembled spec as YAML (default) or as JSON when called
     with `?format=json`. Powers the `/admin/api-docs` Swagger UI page.
   operationId: adminGetOpenApiSpec
   tags:

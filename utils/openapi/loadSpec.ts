@@ -2,30 +2,38 @@
 //
 // POINT D'ENTRÉE UNIQUE pour lire la spec OpenAPI complète. Les routes
 // (`/api/public/openapi`, `/api/admin/docs/openapi`), la page
-// `/developpeurs/reference` et les tests passent tous par ici : quand la source
-// de la spec change de forme (fichier unique → fragments assemblés), seul ce
-// module bouge.
+// `/developpeurs/reference` et les tests passent tous par ici.
 //
-// Le chemin est écrit en `path.join(process.cwd(), …)` littéral exprès : le
-// traçage de fichiers de Next ne suit que les lectures qu'il peut résoudre
-// statiquement, et c'est ce qui embarque la spec dans la fonction serveur.
+// La source est `docs/openapi/` (un fragment par handler, cf. assemble.ts) :
+//   - en PRODUCTION, on lit le JSON produit au build par
+//     `scripts/openapi/build.mjs` (`prebuild`). Pas de repli sur l'assemblage :
+//     un JSON absent est une erreur de build, pas un cas à masquer ;
+//   - en dev et en test, on assemble les fragments à la volée.
+//
+// Le chemin du JSON est écrit en `path.join(process.cwd(), …)` littéral et
+// déclaré dans `outputFileTracingIncludes` (next.config.js) : c'est ce qui
+// l'embarque dans la fonction serveur.
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { parse as parseYaml } from 'yaml';
+import { assembleSpec, type OpenApiDoc } from './assemble';
 
-export type OpenApiDoc = Record<string, unknown>;
+export type { OpenApiDoc };
 
 let cached: OpenApiDoc | null = null;
 
 /** Spec complète (bot, admin, cron, public), lue une fois puis mémorisée. */
 export function loadFullSpec(): OpenApiDoc {
   if (cached) return cached;
-  const raw = fs.readFileSync(
-    path.join(process.cwd(), 'docs', 'openapi.yaml'),
-    'utf8'
-  );
-  cached = parseYaml(raw) as OpenApiDoc;
+  cached =
+    process.env.NODE_ENV === 'production'
+      ? (JSON.parse(
+          fs.readFileSync(
+            path.join(process.cwd(), '.generated', 'openapi.json'),
+            'utf8'
+          )
+        ) as OpenApiDoc)
+      : assembleSpec();
   return cached;
 }
 

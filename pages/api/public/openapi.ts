@@ -1,7 +1,7 @@
 // GET /api/public/openapi
 //
 // Machine-readable PUBLIC OpenAPI spec — the `/api/public/*` surface only,
-// derived from the canonical `docs/openapi.yaml`. Anonymous, CORS `*`, so third
+// derived from the full spec (`docs/openapi/` fragments, JSON built at deploy). Anonymous, CORS `*`, so third
 // parties can import it into Postman / codegen / their own tooling. Mirrors the
 // posture of the other `/api/public/v1/*` reads.
 //

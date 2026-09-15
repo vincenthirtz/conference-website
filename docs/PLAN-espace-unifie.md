@@ -95,7 +95,7 @@ Codes d'erreur renvoyés : `invalid_subject` (400), `subject_read_only` (403),
   inspection consommerait le quota du joueur inspecté.
 - `tests/unit/openapiContractDrift.test.ts` détecte l'auth en scannant la
   source : `withSubjectRoute` a dû y être reconnu comme `player`.
-- `docs/openapi.yaml` : paramètre partagé `SubjectAs`, référencé par les 15
+- `docs/openapi/components/parameters.yaml` : paramètre partagé `SubjectAs`, référencé par les 15
   opérations GET.
 
 ## S2 / S3 — ce qui est en place

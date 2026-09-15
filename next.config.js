@@ -1,6 +1,20 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Spec OpenAPI générée au build (scripts/openapi/build.mjs, `prebuild`) et lue
+  // au runtime par ces routes : déclarée ici pour être embarquée dans leur
+  // fonction serveur, sans dépendre de l'heuristique de traçage.
+  outputFileTracingIncludes: {
+    '/api/public/openapi': ['./.generated/openapi.public.json'],
+    '/api/admin/docs/openapi': ['./.generated/openapi.json'],
+  },
+  // Le traçage suit aussi la lecture de dossier de l'assembleur (dev/test
+  // seulement) et embarquait les ~600 fragments YAML dans les fonctions ; la
+  // route publique emportait en plus la spec complète, qu'elle ne lit jamais.
+  outputFileTracingExcludes: {
+    '*': ['./docs/openapi/**'],
+    '/api/public/openapi': ['./.generated/openapi.json'],
+  },
   trailingSlash: false,
   images: {
     formats: ['image/avif', 'image/webp'],

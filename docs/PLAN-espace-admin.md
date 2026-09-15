@@ -489,5 +489,5 @@ même migration — avec des utilisateurs des deux côtés.
 `npm run verify` avant chaque commit. Tout lot touchant l'auth staff doit garder verts
 `tests/unit/subjectResolution.test.ts` et les suites `apiRoutesBatch*` ; tout lot touchant un
 endpoint doit passer `tests/unit/openapiContractDrift.test.ts` et mettre à jour
-[`docs/openapi.yaml`](./openapi.yaml) + [BOT_API_CONTRACT.md](./BOT_API_CONTRACT.md).
+le fragment [`docs/openapi/`](./openapi/) + [BOT_API_CONTRACT.md](./BOT_API_CONTRACT.md).
 Les e2e admin (`tests/e2e/admin-*.spec.ts`) tournent en **local uniquement** — jamais sur la prod.

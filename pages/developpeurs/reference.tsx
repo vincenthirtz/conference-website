@@ -1,6 +1,6 @@
 // pages/developpeurs/reference.tsx
 //
-// Référence d'API générée automatiquement depuis `docs/openapi.yaml` (filtrée
+// Référence d'API générée automatiquement depuis la spec OpenAPI (`docs/openapi/`, filtrée
 // à la surface publique). Rendu 100 % côté serveur (getStaticProps) — aucun
 // renderer client (swagger-ui/redoc) : incompatible avec le CSP strict à nonce
 // et fragile sous React 19. La spec ne bouge qu'au déploiement.

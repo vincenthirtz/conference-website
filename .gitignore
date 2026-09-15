@@ -18,6 +18,9 @@
 # production
 /build
 
+# spec OpenAPI assemblée au build (scripts/openapi/build.mjs)
+/.generated/
+
 # misc
 .DS_Store
 *.pem

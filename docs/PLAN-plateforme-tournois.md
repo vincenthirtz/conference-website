@@ -208,5 +208,5 @@ vérifier de ce côté — il dit d'ailleurs explicitement qu'aucune contrainte 
 ## 4. Vérification
 
 `npm run verify` avant chaque commit. Tout lot touchant un endpoint met à jour
-[`openapi.yaml`](./openapi.yaml) + [BOT_API_CONTRACT.md](./BOT_API_CONTRACT.md) et garde vert
+[`docs/openapi/`](./openapi/) + [BOT_API_CONTRACT.md](./BOT_API_CONTRACT.md) et garde vert
 `tests/unit/openapiContractDrift.test.ts`.

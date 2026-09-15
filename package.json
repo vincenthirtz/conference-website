@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run openapi:build",
     "build": "next build",
+    "openapi:build": "node --import ./scripts/register-ts.mjs scripts/openapi/build.mjs",
     "start": "next start",
     "format": "biome format --write .",
     "format:check": "biome format .",

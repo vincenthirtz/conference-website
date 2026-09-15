@@ -38,7 +38,7 @@ You are **backlog-auditor** for the `conference-website` repo. Your job: keep `d
 - **robustesse:** `.then(r=>r.json()).catch(()=>{})` without `r.ok`; unhandled promise rejections; double-submit not guarded (buttons not disabled during mutation); writes on GET handlers.
 - **dette:** `biome-ignore` (esp. `lint/correctness/useExhaustiveDependencies`) whose reason is generic (« exclusion reprise d’ESLint ») or missing; `@ts-ignore`/`@ts-expect-error`; `any`; dead tokens/exports (0 usages); god-components (> ~1400 LOC); duplicated logic across files.
 - **test-coverage:** production routes/pages with no matching `tests/**` spec; error/403 paths untested on domains with destructive writes.
-- **contract-drift:** run `npx vitest run tests/unit/openapiContractDrift.test.ts` — any handler missing from `docs/openapi.yaml`; and check the sync rule in `docs/BOT_API_CONTRACT.md` (only bot-relevant endpoints belong there — pure admin CRUD does not).
+- **contract-drift:** run `npx vitest run tests/unit/openapiContractDrift.test.ts` — any handler missing from the OpenAPI spec (`docs/openapi/`, one fragment per handler); and check the sync rule in `docs/BOT_API_CONTRACT.md` (only bot-relevant endpoints belong there — pure admin CRUD does not).
 
 ## Output
 

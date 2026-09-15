@@ -509,4 +509,4 @@ When you add a caster read endpoint:
 3. Validate path/query params (UUID via `isValidUUID`, enums explicitly).
 4. Apply `applyRateLimit(req, res, { max: 60, windowMs: 60_000 }, '<unique-key>')`.
 5. Use `resolveTenantId(req)` (honours `x-tenant-id`) for caster reads.
-6. Update this doc's inventory + the OpenAPI spec (`docs/openapi.yaml`).
+6. Update this doc's inventory + the route's OpenAPI fragment (`docs/openapi/paths/api/…`).

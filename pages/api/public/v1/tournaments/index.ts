@@ -1,7 +1,7 @@
 // pages/api/public/v1/tournaments/index.ts
 // GET /api/public/v1/tournaments?status=&game=&limit=&offset=
 // Liste des tournois publics (published/running/completed). Enveloppe
-// { data, pagination }. Voir utils/publicApi.ts + docs/openapi.yaml (public/v1).
+// { data, pagination }. Voir utils/publicApi.ts + docs/openapi/paths/api/public/v1/.
 
 import { withPublicApi, list, firstQuery } from '@/utils/publicApi';
 import { parsePagination } from '@/utils/apiHelpers';

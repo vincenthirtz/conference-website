@@ -1,15 +1,11 @@
 // La spec OpenAPI est découpée en fragments (docs/openapi/, cf.
-// utils/openapi/assemble.ts). Tant que `docs/openapi.yaml` existe encore, les
-// deux doivent décrire EXACTEMENT le même document.
+// utils/openapi/assemble.ts) : règles de l'assembleur.
 
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parse as parseYaml } from 'yaml';
 import { assembleSpec, fragmentToApiPath } from '../../utils/openapi/assemble';
-
-const REPO_ROOT = path.resolve(__dirname, '..', '..');
 
 describe('fragmentToApiPath', () => {
   it.each([
@@ -71,14 +67,5 @@ describe('assembleSpec', () => {
   it('refuse des paths ou components écrits dans root.yaml', () => {
     const dir = fixture({ 'root.yaml': 'openapi: 3.1.0\npaths: {}\n' });
     expect(() => assembleSpec(dir)).toThrow(/root\.yaml/);
-  });
-});
-
-describe('fragments ↔ docs/openapi.yaml', () => {
-  it('les fragments assemblés décrivent exactement docs/openapi.yaml', () => {
-    const legacy = parseYaml(
-      fs.readFileSync(path.join(REPO_ROOT, 'docs', 'openapi.yaml'), 'utf8')
-    );
-    expect(assembleSpec(REPO_ROOT)).toEqual(legacy);
   });
 });

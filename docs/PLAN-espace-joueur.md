@@ -296,4 +296,4 @@ vocal Discord, parfois dans un train.
 Pour tout lot touchant les permissions : `tests/unit/teamClientPermissions.test.ts`,
 `tests/unit/apiTeamsMyPermissions.test.ts`, `tests/unit/teamPermissions.test.ts` doivent rester verts
 sans être assouplis. Toute modification d'endpoint : `tests/unit/openapiContractDrift.test.ts` +
-mise à jour de [`docs/openapi.yaml`](./openapi.yaml) et de [BOT_API_CONTRACT.md](./BOT_API_CONTRACT.md).
+mise à jour de du fragment [`docs/openapi/`](./openapi/) et de [BOT_API_CONTRACT.md](./BOT_API_CONTRACT.md).

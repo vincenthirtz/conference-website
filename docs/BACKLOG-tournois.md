@@ -105,10 +105,10 @@
 - **Proposition** : exposer une API **lecture seule** (REST, clé API ou public read) pour brackets, standings, matchs d'un tournoi. Réutiliser l'infra OpenAPI déjà en place pour le bot.
 - **Critères d'acceptation** :
   - [ ] Endpoints lecture : tournoi, phases/bracket, standings, matchs/résultats.
-  - [ ] Documentés dans `openapi.yaml` + `BOT_API_CONTRACT.md` (règle de sync du repo).
+  - [ ] Documentés dans `docs/openapi/` + `BOT_API_CONTRACT.md` (règle de sync du repo).
   - [ ] Rate-limit + scoping (pas de données privées/PII exposées).
   - [ ] Tests contractuels (openapiContractDrift) verts.
-- **Zones touchées** : `pages/api/` (nouveaux endpoints publics), `docs/openapi.yaml`, `docs/BOT_API_CONTRACT.md`.
+- **Zones touchées** : `pages/api/` (nouveaux endpoints publics), `docs/openapi/`, `docs/BOT_API_CONTRACT.md`.
 - **Dépendances** : infra OpenAPI (existante).
 
 ### T6 · Inscriptions payantes 0 % commission

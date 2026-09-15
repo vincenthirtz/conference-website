@@ -35,5 +35,5 @@ export default ns('developpeursReference', {
   inPath: 'chemin',
   inQuery: 'requête',
   generatedNote:
-    "Cette page est générée depuis docs/openapi.yaml à chaque déploiement — elle ne peut pas dériver du comportement réel de l'API.",
+    "Cette page est générée depuis la spec OpenAPI du dépôt à chaque déploiement — elle ne peut pas dériver du comportement réel de l'API.",
 });

@@ -1823,7 +1823,7 @@ Limite de corps **15 Mo**.
 > **`discordUserId` de la route TCG : 15 à 25 chiffres** (2026-09-15). La spec
 > déclarait le `pattern` partagé `{17,20}` ; le code accepte `{15,25}`, comme
 > `discordIdSchema`, parce que des identifiants courts existent chez les comptes
-> les plus anciens. L'écart est tranché **en faveur du code** : `openapi.yaml`
+> les plus anciens. L'écart est tranché **en faveur du code** : la spec OpenAPI
 > déclare désormais le paramètre en ligne sur cette route.
 
 | [`players/by-discord/[discordUserId]/team.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/team.ts)                     | GET     | —     | `bot-player-team`                                                  |
@@ -3796,7 +3796,7 @@ Source de mapping pure : [`utils/gameHeroesSync.ts`](../utils/gameHeroesSync.ts)
 Tous sous `pages/api/admin/matches/[matchId]/drafts/...`, wrappés par
 `withStaffRoute(handler, 'admin') + withAdminIdempotency(...)`.
 Erreurs structurées : `DraftEngineError` (18 codes machine-readable,
-détaillés dans `components.schemas.DraftEngineError` de `openapi.yaml`).
+détaillés dans `components.schemas.DraftEngineError` de la spec OpenAPI, `docs/openapi/components/schemas.yaml`).
 
 | Route                                                                                               | Methods     | Min role | Notes                                                                                                                                                                                        |
 | --------------------------------------------------------------------------------------------------- | ----------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -3943,7 +3943,7 @@ partout (body, HelloAsso, DB) — pas d'arrondi flottant euros→centimes.
 | [`pages/api/admin/tournaments/[id]/prize-pool.ts`](../pages/api/admin/tournaments/[id]/prize-pool.ts) | GET, PUT, POST | `withStaffRoute(_, 'admin')` | GET → `{ pool: {id, tournament_id, tenant_id, title, currency, goal_amount_cents, base_amount_cents, raised_amount_cents, is_open, total_cents, created_at, updated_at} \| null, contributions:[{id, amount_cents, contributor_name, is_anonymous, message, helloasso_payment_id, checkout_intent_id, created_at}], contributorCount }`. PUT/POST body `{ title?, goal_amount_cents?:int\|null, base_amount_cents?:int, is_open?:bool }` → `201` (create) / `200` (update) `{ pool }`. `raised_amount_cents` jamais modifiable ici. `Cache-Control: no-store`. `staff_logs` écrit. |
 
 **Webhook — branche prize pool.** `POST /api/helloasso/webhook` (déjà documenté
-dans [`openapi.yaml`](openapi.yaml), non-bot) gère MAINTENANT aussi les
+dans la spec OpenAPI, [`docs/openapi/`](openapi/), non-bot) gère MAINTENANT aussi les
 contributions de cagnotte : lorsqu'un `Payment/Authorized` corrèle une cagnotte
 (metadata `kind='prize_pool'` du checkout-intent, ou fallback via une row
 `prize_pool_checkouts` matchée), il persiste une `prize_pool_contributions`

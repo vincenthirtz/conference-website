@@ -28,7 +28,7 @@ Keep the two sides in lockstep. **The site is canonical**; the bot consumes it.
 | Nav / i18n | `components/admin/navigation/adminNav.ts` (node `task-board`), namespaces `adminTaskBoard` + `navTaskBoard*` in `lib/i18n/locales/admin-{fr,en}.json` |
 | Audit | `types/staffLogs.ts` + `utils/staffLogs.ts` — slugs `task_*` |
 | Bot events (emit) | `utils/botEvents.ts` — `task.created` / `task.moved` / `task.assigned` |
-| Contract | `docs/BOT_API_CONTRACT.md` + `docs/openapi.yaml` |
+| Contract | `docs/BOT_API_CONTRACT.md` + `docs/openapi/` (fragment de la route) |
 | Unit tests | `tests/unit/apiAdminTaskBoard.test.ts`, `tests/unit/apiBotTaskBoard.test.ts` |
 | E2E | `tests/e2e/admin-tasks.spec.ts` |
 
@@ -69,7 +69,7 @@ Keep the two sides in lockstep. **The site is canonical**; the bot consumes it.
 - **Write once, reuse everywhere.** Create/move/assign logic lives in `utils/taskBoard.ts`. Admin and bot handlers only do auth + validation, then call the core. Never duplicate move/assign logic in a handler.
 - **Every mutation emits + logs.** The cores call `emitBotEvent('task.*', …, tenantId)` and `logStaffAction`. If you add a mutation, keep both. `task.assigned` is NOT emitted on un-assign (`assigneeStaffId=null`). `task.moved` is a no-op (no event) when the card is already in the target column at the same position.
 - **Idempotency.** `move` and `assign` are idempotent — admin via `withAdminIdempotency`, bot via `idempotent:true` (honours `Idempotency-Key`). The bot client derives the key from a business tuple or `{interaction}`.
-- **Contract in three places.** A change to any `/api/bot/v1/tasks/*` route or `task.*` event must land in the handler, `docs/BOT_API_CONTRACT.md` + `docs/openapi.yaml`, AND the bot `api-client.js`. Run `/sync-bot-contract` after. `openapiContractDrift.test.ts` guards the spec.
+- **Contract in three places.** A change to any `/api/bot/v1/tasks/*` route or `task.*` event must land in the handler, `docs/BOT_API_CONTRACT.md` + `docs/openapi/` (fragment de la route), AND the bot `api-client.js`. Run `/sync-bot-contract` after. `openapiContractDrift.test.ts` guards the spec.
 - **i18n parity.** New admin strings go in the `adminTaskBoard` namespace in BOTH `admin-fr.json` and `admin-en.json` (guard: `i18nLocaleParity.test.ts`). New `StaffLogAction` slugs need a FR label in `utils/staffLogs.ts`.
 - **Discord channel resolution.** Notifications post to `tasks_channel_id` (config) / `TASKS_CHANNEL_ID` (env), falling back to `staff_log_channel_id` / `STAFF_LOG_CHANNEL_ID`. `@mention` the assignee only when `assigneeDiscordUserId` resolves (via `assignee_staff_id → staff → user_discord_links`); otherwise `allowedMentions: { parse: [] }`.
 - **Staff-only, everywhere.** Admin API = `withStaffRoute('admin')`. Bot API = `requireBotStaff` (403 if the Discord actor isn't staff). `/kanban` = `requireAdmin:true` + `setDefaultMemberPermissions(Administrator)`.
