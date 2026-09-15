@@ -7,6 +7,14 @@ const { logStaffActionMock } = vi.hoisted(() => ({
 vi.mock('@/utils/staffLogs', () => ({
   logStaffAction: logStaffActionMock,
 }));
+// Recopie des logos partenaires : pas de réseau en test (cf. partnerLogo.test).
+const REHOSTED_LOGO =
+  'https://example.supabase.co/storage/v1/object/public/teams-images/partners/abc.png';
+vi.mock('@/utils/partners/partnerLogo', () => ({
+  resolvePartnerLogo: vi.fn(async (raw: string) =>
+    raw ? { ok: true, logoUrl: REHOSTED_LOGO } : { ok: true, logoUrl: null }
+  ),
+}));
 
 import {
   store,
@@ -166,9 +174,8 @@ describe('/api/admin/partners/[id]', () => {
     );
     expect(res.statusCode).toBe(200);
     expect((store.partners[0] as any).name).toBe('new');
-    expect((store.partners[0] as any).logo_url).toBe(
-      'https://example.com/logo.png'
-    );
+    // Le logo externe est recopié chez nous : c'est la copie qui est stockée.
+    expect((store.partners[0] as any).logo_url).toBe(REHOSTED_LOGO);
     expect(logStaffActionMock).toHaveBeenCalled();
   });
 

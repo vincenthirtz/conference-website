@@ -9,6 +9,7 @@ import {
   escapePostgrestValue,
 } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { resolvePartnerLogo } from '@/utils/partners/partnerLogo';
 
 import { logger } from '../../../../utils/logger';
 
@@ -128,11 +129,18 @@ async function handler(
       });
     }
 
+    const logo = await resolvePartnerLogo(body.logoUrl);
+    if (!logo.ok) {
+      return res
+        .status(400)
+        .json({ error: logo.error, code: 'LOGO_REHOST_FAILED' });
+    }
+
     const insertPayload = {
       name: body.name,
       description: body.description,
       category: body.category,
-      logo_url: sanitizeUrl(body.logoUrl),
+      logo_url: logo.logoUrl,
       website_url: sanitizeUrl(body.websiteUrl),
       note: body.note ?? null,
       display_order: body.displayOrder ?? 0,

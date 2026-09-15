@@ -4,6 +4,7 @@ import { withStaffRoute, StaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
+import { resolvePartnerLogo } from '@/utils/partners/partnerLogo';
 
 import { logger } from '../../../../utils/logger';
 type PartnerPayload = {
@@ -67,8 +68,15 @@ async function handler(
       }
       updates.category = body.category;
     }
-    if (body.logoUrl !== undefined)
-      updates.logo_url = sanitizeUrl(body.logoUrl);
+    if (body.logoUrl !== undefined) {
+      const logo = await resolvePartnerLogo(body.logoUrl);
+      if (!logo.ok) {
+        return res
+          .status(400)
+          .json({ error: logo.error, code: 'LOGO_REHOST_FAILED' });
+      }
+      updates.logo_url = logo.logoUrl;
+    }
     if (body.websiteUrl !== undefined)
       updates.website_url = sanitizeUrl(body.websiteUrl);
     if (body.note !== undefined) updates.note = body.note || null;

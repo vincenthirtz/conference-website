@@ -3,22 +3,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { useT } from '@/lib/i18n/useT';
 import nsPressSection from '@/lib/i18n/locales/fr/pressSection';
-
-type PressItem = {
-  title: string;
-  source: string;
-  url: string;
-  logo?: string;
-};
-
-const PRESS_ITEMS: PressItem[] = [
-  {
-    title: "OW Women's Cup 2026",
-    source: 'Ranked Actu',
-    url: 'https://rankedactu.fr/article/e-sport/cmmucnmqd000401jv59636io8',
-    logo: 'https://rankedactu.fr/_next/image?url=%2Flogo_white.webp&w=256&q=75',
-  },
-];
+import { PRESS_ITEMS } from './pressItems';
 
 function PressSection(): JSX.Element {
   const t = useT(nsPressSection);

@@ -20,21 +20,10 @@ import {
 import { useT } from '@/lib/i18n/useT';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 import nsProductionPartner from '@/lib/i18n/locales/fr/productionPartner';
+import { PRESS_ITEMS } from '@/components/Press/pressItems';
 
-type PressLogo = {
-  source: string;
-  url: string;
-  logo?: string;
-};
-
-// Aligné sur components/Press/PressSection (source unique de la presse).
-const PRESS_LOGOS: PressLogo[] = [
-  {
-    source: 'Ranked Actu',
-    url: 'https://rankedactu.fr/article/e-sport/cmmucnmqd000401jv59636io8',
-    logo: 'https://rankedactu.fr/_next/image?url=%2Flogo_white.webp&w=256&q=75',
-  },
-];
+// Source unique de la presse, partagée avec components/Press/PressSection.
+const PRESS_LOGOS = PRESS_ITEMS;
 
 type HomeSupportStripProps = {
   partners: HomePartner[];
