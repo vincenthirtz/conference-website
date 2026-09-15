@@ -10,24 +10,10 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - actorDiscordUserId
+          x-zod: bot.teams/[teamId]/discord
           properties:
             actorDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
-            discordRoleId:
-              oneOf:
-                - $ref: '#/components/schemas/DiscordId'
-                - type: 'null'
-            discordChannelId:
-              oneOf:
-                - $ref: '#/components/schemas/DiscordId'
-                - type: 'null'
-            discordVoiceChannelId:
-              oneOf:
-                - $ref: '#/components/schemas/DiscordId'
-                - type: 'null'
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '200':
       description: IDs persistes.

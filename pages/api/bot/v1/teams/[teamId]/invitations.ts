@@ -15,10 +15,11 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotPlayer, resolveActorPlayer } from '@/utils/botActor';
-import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
+import { uuidSchema } from '@/utils/botValidation';
 import { createInvitation } from '@/utils/teams/invitations';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
+import { createInvitationBodySchema } from '@/lib/apiContracts/bot/teams/[teamId]/invitations';
 
 const COMMENT_MAX = 1000;
 const MAX_LIMIT = 100;
@@ -30,18 +31,6 @@ const VALID_STATUSES = new Set([
   'cancelled',
   'all',
 ]);
-
-// POST body (création d'invitation). actorDiscordUserId lu par requireBotPlayer
-// (body brut). comment/role/battleTag restent optionnels et libres : le handler
-// applique slice(COMMENT_MAX) sur comment et createInvitation valide role.
-// bodySchema ne s'applique qu'au POST (GET safe → skip).
-const createInvitationBodySchema = z.object({
-  actorDiscordUserId: discordIdSchema,
-  targetDiscordUserId: discordIdSchema,
-  comment: z.string().optional(),
-  role: z.string().optional(),
-  battleTag: z.string().optional(),
-});
 
 // querySchema (GET + POST) : teamId UUID requis. Les filtres GET (status/type/
 // limit) gardent leur parsing inline dans handleList pour préserver le message

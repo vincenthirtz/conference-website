@@ -25,11 +25,7 @@ import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import {
-  discordIdSchema,
-  scoreSchema,
-  uuidSchema,
-} from '@/utils/botValidation';
+import { uuidSchema } from '@/utils/botValidation';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { reconcileMatchResult } from '@/utils/matches/reconcile';
 import { getSlaMinutes } from '@/utils/disputes/slaBreaches';
@@ -38,12 +34,8 @@ import { emitBotEvent } from '@/utils/botEvents';
 import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
+import { reportBodySchema } from '@/lib/apiContracts/bot/matches/[matchId]/report';
 
-const reportBodySchema = z.object({
-  discordUserId: discordIdSchema,
-  team1Score: scoreSchema,
-  team2Score: scoreSchema,
-});
 const reportQuerySchema = z.object({ matchId: uuidSchema });
 
 const SITE_URL =

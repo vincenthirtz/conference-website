@@ -19,19 +19,10 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
+import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
+import { discordWritebackBodySchema } from '@/lib/apiContracts/bot/teams/[teamId]/discord';
 
-// Body : actorDiscordUserId (lu par requireBotStaff sur le body brut) + les 3
-// snowflakes Discord. nullable() = passer null pour clearer un champ ;
-// optional() = champ absent -> no-op. discordIdSchema applique le même
-// regex/trim que l'ex-DISCORD_SNOWFLAKE_RE inline.
-const discordWritebackBodySchema = z.object({
-  actorDiscordUserId: discordIdSchema,
-  discordRoleId: discordIdSchema.nullable().optional(),
-  discordChannelId: discordIdSchema.nullable().optional(),
-  discordVoiceChannelId: discordIdSchema.nullable().optional(),
-});
 const discordQuerySchema = z.object({ teamId: uuidSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {

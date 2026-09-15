@@ -15,21 +15,14 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
+import { uuidSchema } from '@/utils/botValidation';
 import {
   resetPropagationForMatch,
   propagateBracketForMatch,
 } from '@/utils/bracket/propagate';
 import { logger } from '@/utils/logger';
+import { autoByesBodySchema } from '@/lib/apiContracts/bot/stages/[stageId]/auto-byes';
 
-// scoreForBye historique : nombre >= 0 (non forcément entier), défaut 1.
-// propagate : seul `false` explicite le désactive (défaut true).
-const autoByesBodySchema = z.object({
-  actorDiscordUserId: discordIdSchema,
-  roundNumber: z.number().int().optional(),
-  scoreForBye: z.number().min(0).optional(),
-  propagate: z.boolean().optional(),
-});
 const autoByesQuerySchema = z.object({ stageId: uuidSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {

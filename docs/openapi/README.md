@@ -22,6 +22,34 @@ et décrit `/api/teams/{teamId}/members`. Le fichier ne répète pas l'URL.
    (operationId uniques, tags déclarés, `$ref` résolus, composants morts), règles
    de l'assembleur.
 
+## Schémas générés depuis zod (`x-zod`)
+
+Quand le handler valide son entrée avec zod, le fragment ne recopie pas le
+schéma : il le référence.
+
+```yaml
+requestBody:
+  content:
+    application/json:
+      schema:
+        x-zod: bot.matches/[matchId]/report   # nom dans lib/apiContracts
+        properties:
+          discordUserId:
+            description: Capitaine qui déclare le score.   # texte seulement
+```
+
+- Le schéma vit dans `lib/apiContracts/**` (zod et modules purs, chemins
+  relatifs), importé par le handler ET enregistré dans
+  `lib/apiContracts/index.ts` (ou `bot/index.ts`).
+- L'assembleur y met `z.toJSONSchema` ; les clés voisines (descriptions,
+  exemples) sont fusionnées. Documenter une propriété absente du schéma zod,
+  référencer un nom inconnu, ou utiliser un schéma non représentable fait
+  échouer l'assemblage.
+- Couverture au 2026-09-15 : les 4 routes publiques d'écriture et 35 des 36
+  routes bot à corps validé. Exception : `bot/v1/tasks/index` lit
+  `actorDiscordUserId` hors de son schéma zod (partagé avec l'admin) ; son
+  corps reste écrit à la main.
+
 ## Où la spec est lue
 
 - **Dev et tests** : assemblée à la volée (`utils/openapi/loadSpec.ts`), rien à

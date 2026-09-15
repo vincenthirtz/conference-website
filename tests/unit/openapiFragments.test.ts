@@ -115,6 +115,32 @@ describe('x-zod : schémas générés depuis lib/apiContracts', () => {
     expect([...used].sort()).toEqual(['body', 'reply']);
   });
 
+  it('fusionne la documentation rédigée dans les propriétés générées', () => {
+    const out = resolveZodSchemas(
+      {
+        'x-zod': 'body',
+        properties: { email: { description: 'Contact', example: 'a@b.fr' } },
+      },
+      contracts
+    ) as any;
+    expect(out.properties.email).toMatchObject({
+      type: 'string',
+      maxLength: 200,
+      description: 'Contact',
+      example: 'a@b.fr',
+    });
+    expect(out.properties.note.description).toBe('libre');
+  });
+
+  it('refuse de documenter une propriété que le schéma zod n’a pas', () => {
+    expect(() =>
+      resolveZodSchemas(
+        { 'x-zod': 'body', properties: { phone: { description: 'x' } } },
+        contracts
+      )
+    ).toThrow(/absent du schéma zod/);
+  });
+
   it('refuse un nom inconnu', () => {
     expect(() => resolveZodSchemas({ 'x-zod': 'nope' }, contracts)).toThrow(
       /absent de lib\/apiContracts/

@@ -26,19 +26,10 @@ import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
+import { uuidSchema } from '@/utils/botValidation';
 import { runSwissNextRound } from '@/utils/swiss/runNextRound';
+import { nextRoundBodySchema } from '@/lib/apiContracts/bot/stages/[stageId]/next-round';
 
-const nextRoundBodySchema = z.object({
-  actorDiscordUserId: discordIdSchema,
-  roundNumber: z.number().int().optional(),
-  scoreConfig: z.record(z.string(), z.number()).optional(),
-  acceptRematches: z.boolean().optional(),
-  dryRun: z.boolean().optional(),
-  // Tri-state préservé : absent → undefined (laisse le défaut interne), présent
-  // → forcé à booléen. Lu via `=== true` dans le handler comme avant.
-  allowRematchesFallback: z.boolean().optional(),
-});
 const nextRoundQuerySchema = z.object({ stageId: uuidSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {

@@ -15,14 +15,11 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff } from '@/utils/botActor';
-import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
+import { uuidSchema } from '@/utils/botValidation';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logger } from '@/utils/logger';
+import { forfeitBodySchema } from '@/lib/apiContracts/bot/matches/[matchId]/forfeit';
 
-const forfeitBodySchema = z.object({
-  actorDiscordUserId: discordIdSchema,
-  forfeitTeamId: uuidSchema,
-});
 const forfeitQuerySchema = z.object({ matchId: uuidSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {

@@ -34,28 +34,8 @@ import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { discordIdSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
-
-/** Même ordre de grandeur que free-players/sync : un guild, pas une fédération. */
-const MAX_MEMBERS = 5000;
-
-const presenceBodySchema = z.object({
-  members: z
-    .array(
-      z.object({
-        discordUserId: discordIdSchema,
-        inGuild: z.boolean(),
-      })
-    )
-    .max(MAX_MEMBERS),
-  /**
-   * Défaut 'replace' : c'est le contrat historique, et un bot d'une version
-   * antérieure (qui n'envoie pas le champ) doit continuer à faire un full
-   * replace de fin de cycle.
-   */
-  mode: z.enum(['replace', 'upsert']).optional().default('replace'),
-});
+import { presenceBodySchema } from '@/lib/apiContracts/bot/role-sync/presence';
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const tenantId = req.botContext.tenantId;

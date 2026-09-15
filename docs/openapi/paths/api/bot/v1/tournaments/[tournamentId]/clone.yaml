@@ -12,16 +12,10 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - actorDiscordUserId
+          x-zod: bot.tournaments/[tournamentId]/clone
           properties:
             actorDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
-            name:
-              type: string
-            slug:
-              type: string
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '201':
       description: Clone cree.

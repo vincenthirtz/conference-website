@@ -45,38 +45,10 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - actorDiscordUserId
-            - name
+          x-zod: bot.tournaments/index
           properties:
             actorDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
-            name:
-              type: string
-            slug:
-              type: string
-            game:
-              type: string
-            status:
-              type: string
-              enum:
-                - draft
-                - published
-                - running
-                - completed
-                - archived
-                - cancelled
-              default: draft
-            start_date:
-              type: string
-              format: date-time
-            end_date:
-              type: string
-              format: date-time
-            max_teams:
-              type: integer
-              minimum: 1
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '201':
       description: Tournoi cree.

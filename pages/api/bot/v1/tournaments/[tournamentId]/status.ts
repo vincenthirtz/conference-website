@@ -15,18 +15,10 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
+import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
+import { statusBodySchema } from '@/lib/apiContracts/bot/tournaments/[tournamentId]/status';
 
-// status est trimmé + minusculisé avant la vérification d'appartenance, comme
-// le faisait le handler historique.
-const statusBodySchema = z.object({
-  actorDiscordUserId: discordIdSchema,
-  status: z
-    .string()
-    .transform((s) => s.trim().toLowerCase())
-    .pipe(z.enum(['draft', 'published'])),
-});
 const statusQuerySchema = z.object({ tournamentId: uuidSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {

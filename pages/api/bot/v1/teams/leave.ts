@@ -8,7 +8,6 @@
 // /transferer-capitaine. Refus aussi si le roster est verrouille par un
 // tournoi en cours.
 
-import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import {
@@ -17,7 +16,6 @@ import {
 } from '@/utils/teams/memberships';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotPlayer } from '@/utils/botActor';
-import { discordIdSchema } from '@/utils/botValidation';
 import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
@@ -25,9 +23,7 @@ import {
 import { emitRoleSyncEvent } from '@/utils/botRoleSync';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
-
-// requireBotPlayer lit actorDiscordUserId dans le body brut (non muté).
-const leaveBodySchema = z.object({ actorDiscordUserId: discordIdSchema });
+import { leaveBodySchema } from '@/lib/apiContracts/bot/teams/leave';
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const body = (req.body ?? {}) as Record<string, unknown>;

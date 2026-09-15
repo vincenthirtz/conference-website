@@ -23,12 +23,7 @@ import crypto from 'crypto';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import {
-  discordIdSchema,
-  uuidSchema,
-  httpUrlSchema,
-  boundedString,
-} from '@/utils/botValidation';
+import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import {
   decodeEvidencePayload,
   buildEvidencePath,
@@ -37,6 +32,7 @@ import {
 } from '@/utils/matches/evidence';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
+import { evidencePostSchema } from '@/lib/apiContracts/bot/matches/[matchId]/evidence';
 
 // Le body peut porter un fichier binaire en base64 (~10 Mo max -> ~13.4 Mo en
 // base64 + overhead JSON). La limite par defaut de Next (1mb) le rejetterait.
@@ -47,33 +43,6 @@ export const config = {
     },
   },
 };
-
-const noteSchema = boundedString(1, 1000).optional();
-
-// Body POST : union discriminee sur `kind`. discordUserId identifie le
-// capitaine (meme champ que report.ts, contrat stable).
-const evidencePostSchema = z.discriminatedUnion('kind', [
-  z.object({
-    kind: z.literal('screenshot'),
-    discordUserId: discordIdSchema,
-    file_base64: z.string().min(1, 'file_base64 requis.'),
-    filename: boundedString(1, 255),
-    note: noteSchema,
-  }),
-  z.object({
-    kind: z.literal('replay_file'),
-    discordUserId: discordIdSchema,
-    file_base64: z.string().min(1, 'file_base64 requis.'),
-    filename: boundedString(1, 255),
-    note: noteSchema,
-  }),
-  z.object({
-    kind: z.literal('replay_url'),
-    discordUserId: discordIdSchema,
-    external_url: httpUrlSchema,
-    note: noteSchema,
-  }),
-]);
 
 // Query : matchId (path) toujours ; actorDiscordUserId requis cote GET.
 const evidenceQuerySchema = z.object({

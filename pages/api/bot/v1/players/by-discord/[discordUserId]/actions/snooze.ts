@@ -19,32 +19,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { discordIdSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
+import { snoozeBodySchema } from '@/lib/apiContracts/bot/players/by-discord/[discordUserId]/actions/snooze';
 
-const MIN_MINUTES = 15;
-const MAX_MINUTES = 1440;
 const DEFAULT_MINUTES = 60;
-// actionKey : derive d'IDs DB, on autorise [a-z0-9:-_] avec UUID. Max 200.
-const ACTION_KEY_RE = /^[A-Za-z0-9:_\-]{3,200}$/;
 
-const snoozeBodySchema = z.object({
-  actorDiscordUserId: discordIdSchema,
-  actionKey: z
-    .string()
-    .transform((s) => s.trim())
-    .refine((s) => ACTION_KEY_RE.test(s), 'actionKey invalide'),
-  // minutes : optionnel/null -> défaut 60 ; sinon entier borné 15..1440.
-  // z.coerce.number reproduit le Number(body.minutes) historique.
-  minutes: z.coerce
-    .number()
-    .int()
-    .min(MIN_MINUTES, {
-      message: `minutes doit etre un entier entre ${MIN_MINUTES} et ${MAX_MINUTES}.`,
-    })
-    .max(MAX_MINUTES, {
-      message: `minutes doit etre un entier entre ${MIN_MINUTES} et ${MAX_MINUTES}.`,
-    })
-    .nullish(),
-});
 const snoozeQuerySchema = z.object({ discordUserId: discordIdSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {

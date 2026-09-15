@@ -12,53 +12,16 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import {
-  discordIdSchema,
-  uuidSchema,
-  isoDateSchema,
-} from '@/utils/botValidation';
+import { uuidSchema } from '@/utils/botValidation';
 import { emitScheduleEvents } from '@/utils/matches/scheduleEvents';
 import { logger } from '@/utils/logger';
+import {
+  matchInputSchema,
+  matchesBodySchema,
+} from '@/lib/apiContracts/bot/scrims/[scrimId]/matches';
 
-const VALID_STATUSES = [
-  'pending',
-  'ongoing',
-  'finished',
-  'cancelled',
-  'walkover',
-  'disputed',
-  'postponed',
-] as const;
-
-// Schéma d'un match d'entrée (single ou élément du batch). Reproduit la
-// validation de normalizeMatch : team*_id UUID nullable, status enum (défaut
-// 'pending' appliqué côté handler), scheduled_at date ISO, best_of entier >= 1.
-const matchInputSchema = z.object({
-  status: z.enum(VALID_STATUSES).optional(),
-  is_bye: z.boolean().optional(),
-  best_of: z
-    .number()
-    .int()
-    .min(1, 'best_of doit etre un entier >= 1')
-    .nullish(),
-  match_format: z.string().nullish(),
-  team1_id: uuidSchema.nullish(),
-  team2_id: uuidSchema.nullish(),
-  scheduled_at: isoDateSchema.nullish(),
-  stream_url: z.string().nullish(),
-  lobby_code: z.string().nullish(),
-  notes: z.string().nullish(),
-});
 type MatchInput = z.infer<typeof matchInputSchema>;
 
-// Body POST : { actorDiscordUserId, match } OU { actorDiscordUserId, matches:[] }.
-// On valide les deux formes ; le handler choisit selon présence (préserve les
-// messages d'erreur "Body doit contenir...", "Aucun match", "Maximum 50").
-const matchesBodySchema = z.object({
-  actorDiscordUserId: discordIdSchema,
-  match: matchInputSchema.optional(),
-  matches: z.array(matchInputSchema).optional(),
-});
 const matchesQuerySchema = z.object({ scrimId: uuidSchema });
 
 function normalizeMatch(

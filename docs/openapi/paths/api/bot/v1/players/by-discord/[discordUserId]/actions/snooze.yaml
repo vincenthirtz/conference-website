@@ -12,13 +12,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          properties:
-            actionId:
-              type: string
-            snoozeUntil:
-              type: string
-              format: date-time
+          x-zod: bot.players/by-discord/[discordUserId]/actions/snooze
   responses:
     '200':
       description: Snooze applique.

@@ -29,17 +29,10 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - actorDiscordUserId
-            - teamId
+          x-zod: bot.tournaments/[tournamentId]/teams
           properties:
             actorDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
-            teamId:
-              $ref: '#/components/schemas/Uuid'
-            stageId:
-              $ref: '#/components/schemas/Uuid'
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '201':
       description: Equipe inscrite.

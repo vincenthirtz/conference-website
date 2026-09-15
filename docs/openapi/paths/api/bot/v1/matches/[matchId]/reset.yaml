@@ -12,12 +12,10 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - actorDiscordUserId
+          x-zod: bot.matches/[matchId]/reset
           properties:
             actorDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '200':
       description: Match reset.

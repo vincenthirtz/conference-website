@@ -25,19 +25,13 @@ import {
   resolveActorPlayer,
   resolveActorStaff,
 } from '@/utils/botActor';
-import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
+import { uuidSchema } from '@/utils/botValidation';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
+import { registerBodySchema } from '@/lib/apiContracts/bot/tournaments/[tournamentId]/teams';
 
 const STAFF_PRIVILEGED = new Set(['admin', 'owner']);
 
-// Body POST (l'inscription). Le bodySchema ne s'applique qu'au POST, donc le
-// GET (liste) n'est pas affecté. stageId est optionnel (toutes phases si absent).
-const registerBodySchema = z.object({
-  actorDiscordUserId: discordIdSchema,
-  teamId: uuidSchema,
-  stageId: uuidSchema.optional(),
-});
 // tournamentId (path param) — partagé GET + POST.
 const teamsQuerySchema = z.object({ tournamentId: uuidSchema });
 

@@ -10,28 +10,14 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - email
-            - discordUserId
+          x-zod: bot.register-user
           properties:
-            email:
-              type: string
-              format: email
             discordUserId:
-              $ref: '#/components/schemas/DiscordId'
+              description: Snowflake Discord (user, guild, channel, role).
             discordUsername:
               type: string
             displayName:
               type: string
-            role:
-              type: string
-              enum:
-                - player
-                - caster
-                - manager
-                - admin
-              default: player
   responses:
     '201':
       description: Compte cree.

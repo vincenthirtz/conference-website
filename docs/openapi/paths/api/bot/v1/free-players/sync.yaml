@@ -16,26 +16,13 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - players
+          x-zod: bot.free-players/sync
           properties:
             players:
-              type: array
-              maxItems: 5000
               items:
-                type: object
-                required:
-                  - discordUserId
                 properties:
                   discordUserId:
-                    $ref: '#/components/schemas/DiscordId'
-                  discordUsername:
-                    type: string
-                    maxLength: 100
-                  displayName:
-                    type: string
-                    maxLength: 100
+                    description: Snowflake Discord (user, guild, channel, role).
   responses:
     '200':
       description: Synchronisation effectuee.

@@ -21,12 +21,10 @@ import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
+import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
+import { ackBodySchema } from '@/lib/apiContracts/bot/cast/[assignmentId]/ack';
 
-const ackBodySchema = z.object({
-  actorDiscordUserId: discordIdSchema,
-});
 const ackQuerySchema = z.object({ assignmentId: uuidSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {

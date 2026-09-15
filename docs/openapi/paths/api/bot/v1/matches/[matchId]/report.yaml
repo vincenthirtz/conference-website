@@ -12,22 +12,10 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - discordUserId
-            - team1Score
-            - team2Score
+          x-zod: bot.matches/[matchId]/report
           properties:
             discordUserId:
-              $ref: '#/components/schemas/DiscordId'
-            team1Score:
-              type: integer
-              minimum: 0
-              maximum: 99
-            team2Score:
-              type: integer
-              minimum: 0
-              maximum: 99
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '200':
       description: |

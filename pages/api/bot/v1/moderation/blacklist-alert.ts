@@ -20,31 +20,8 @@ import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
-
-const matchedOnSchema = z.enum([
-  'battle_tag',
-  'display_name',
-  'discord_user_id',
-]);
-const strengthSchema = z.enum(['strong', 'soft']);
-
-const blacklistAlertBodySchema = z.object({
-  discordUserId: z.string().trim().min(1).max(32),
-  battleTag: z.string().trim().max(190).optional().nullable(),
-  displayName: z.string().trim().max(190).optional().nullable(),
-  matchedOn: matchedOnSchema,
-  strength: strengthSchema,
-  blacklistEntryId: uuidSchema.optional().nullable(),
-  reason: z.string().trim().max(1000).optional().nullable(),
-  criteria: z
-    .array(z.object({ matchedOn: matchedOnSchema, strength: strengthSchema }))
-    .optional()
-    .nullable(),
-  source: z.enum(['bot_scan', 'bot_member_add']),
-  context: z.string().trim().max(190).optional().nullable(),
-});
+import { blacklistAlertBodySchema } from '@/lib/apiContracts/bot/moderation/blacklist-alert';
 
 /** Normalise une valeur texte optionnelle en `string | null` (vide → null). */
 function nullableText(value: string | null | undefined): string | null {

@@ -15,13 +15,8 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - holder
+          x-zod: bot.locks/[name]
           properties:
-            holder:
-              type: string
-              maxLength: 100
             ttlSeconds:
               type: integer
               minimum: 5

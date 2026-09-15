@@ -25,69 +25,10 @@ import {
 } from '@/utils/botActor';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
-import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
+import { profileBodySchema } from '@/lib/apiContracts/bot/players/by-discord/[discordUserId]/profile';
 
-// Source unique partagée avec le site (utils/teams/roleKind) : lettres de
-// tout script + accents, suffixe numérique. Évite qu'un tag accepté par le
-// bot soit refusé par le site (ou l'inverse).
-const BATTLE_TAG_RE = BATTLE_TAG_REGEX;
-const DISPLAY_NAME_MAX = 50;
-const RANK_MAX = 30;
 const STAFF_PRIVILEGED = new Set(['admin', 'owner']);
 
-// displayName : optionnel ; null pour effacer ; sinon string trimmée bornée,
-// vide -> null (efface). Préserve la sémantique inline ('field' in body).
-const displayNameSchema = z
-  .string()
-  .transform((s) => s.trim())
-  .refine((s) => s.length <= DISPLAY_NAME_MAX, {
-    message: `displayName trop long (max ${DISPLAY_NAME_MAX}).`,
-  })
-  .transform((s) => s || null)
-  .nullable()
-  .optional();
-
-// battleTag : null pour effacer ; sinon format Name#0000 (vide autorisé -> null).
-const battleTagSchema = z
-  .string()
-  .transform((s) => s.trim())
-  .refine((s) => s === '' || BATTLE_TAG_RE.test(s), {
-    message: 'Format BattleTag invalide (ex: Pseudo#1234).',
-  })
-  .transform((s) => s || null)
-  .nullable()
-  .optional();
-
-// mainRole : enum Overwatch (lowercased) ; null pour effacer ; vide -> null.
-const ROLE_VALUES = ['tank', 'damage', 'support'] as const;
-const mainRoleSchema = z
-  .string()
-  .transform((s) => s.trim().toLowerCase())
-  .refine((s) => s === '' || (ROLE_VALUES as readonly string[]).includes(s), {
-    message: `mainRole invalide. Valeurs : ${ROLE_VALUES.join(', ')}.`,
-  })
-  .transform((s) => (s || null) as (typeof ROLE_VALUES)[number] | null)
-  .nullable()
-  .optional();
-
-// rank : str libre bornée ; null pour effacer ; vide -> null.
-const rankSchema = z
-  .string()
-  .transform((s) => s.trim())
-  .refine((s) => s.length <= RANK_MAX, {
-    message: `rank trop long (max ${RANK_MAX}).`,
-  })
-  .transform((s) => s || null)
-  .nullable()
-  .optional();
-
-const profileBodySchema = z.object({
-  actorDiscordUserId: discordIdSchema,
-  displayName: displayNameSchema,
-  battleTag: battleTagSchema,
-  mainRole: mainRoleSchema,
-  rank: rankSchema,
-});
 const profileQuerySchema = z.object({ discordUserId: discordIdSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {

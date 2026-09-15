@@ -12,15 +12,10 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - actorDiscordUserId
+          x-zod: bot.stages/[stageId]/finalize
           properties:
             actorDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
-            force:
-              type: boolean
-              default: false
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '200':
       description: Phase finalisee.

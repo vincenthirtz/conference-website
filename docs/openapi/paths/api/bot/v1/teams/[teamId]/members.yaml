@@ -12,15 +12,12 @@ delete:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - actorDiscordUserId
-            - targetDiscordUserId
+          x-zod: bot.teams/[teamId]/members
           properties:
             actorDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
+              description: Snowflake Discord (user, guild, channel, role).
             targetDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '200':
       description: Membre retire.

@@ -11,23 +11,15 @@ import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotPlayer } from '@/utils/botActor';
-import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
+import { uuidSchema } from '@/utils/botValidation';
 import {
   acceptInvitation,
   cancelInvitation,
   rejectInvitation,
 } from '@/utils/teams/invitations';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
+import { invitationBodySchema } from '@/lib/apiContracts/bot/invitations/[demandeId]';
 
-// action : trim + lowercase historique, puis enum strict. actorDiscordUserId
-// est lu par requireBotPlayer sur le body brut ; on le valide aussi ici.
-const invitationBodySchema = z.object({
-  actorDiscordUserId: discordIdSchema,
-  action: z
-    .string()
-    .transform((s) => s.trim().toLowerCase())
-    .pipe(z.enum(['accept', 'reject', 'cancel'])),
-});
 const invitationQuerySchema = z.object({ demandeId: uuidSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {

@@ -12,31 +12,10 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - actorDiscordUserId
-            - name
+          x-zod: bot.tournaments/[tournamentId]/stages
           properties:
             actorDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
-            name:
-              type: string
-            stage_type:
-              type: string
-              enum:
-                - group
-                - bracket
-                - swiss
-                - round_robin
-                - showmatch
-                - other
-              default: other
-            start_date:
-              type: string
-              format: date-time
-            end_date:
-              type: string
-              format: date-time
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '201':
       description: Phase creee.

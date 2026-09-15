@@ -18,6 +18,7 @@
 //     échouer l'assemblage plutôt que de produire une spec appauvrie.
 
 import type { z } from 'zod';
+import { BOT_API_CONTRACT_SCHEMAS } from './bot';
 import { freePlayerSignupBodySchema } from './public/freePlayers';
 import { matchResultBodySchema } from './public/matchResult';
 import { newsletterSubscribeBodySchema } from './public/newsletter';
@@ -39,4 +40,5 @@ export const API_CONTRACT_SCHEMAS: Record<string, ApiContractEntry> = {
     io: 'input',
   },
   'public.v1.matchResult': { schema: matchResultBodySchema, io: 'input' },
+  ...BOT_API_CONTRACT_SCHEMAS,
 };

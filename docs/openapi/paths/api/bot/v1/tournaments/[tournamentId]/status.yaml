@@ -12,18 +12,10 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - actorDiscordUserId
-            - status
+          x-zod: bot.tournaments/[tournamentId]/status
           properties:
             actorDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
-            status:
-              type: string
-              enum:
-                - draft
-                - published
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '200':
       description: Status mis a jour.

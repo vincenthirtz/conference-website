@@ -12,12 +12,10 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - discordUserId
+          x-zod: bot.matches/[matchId]/checkin
           properties:
             discordUserId:
-              $ref: '#/components/schemas/DiscordId'
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '200':
       description: Check-in effectue (ou deja effectue).

@@ -14,44 +14,10 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import {
-  discordIdSchema,
-  uuidSchema,
-  slugSchema,
-  isoDateSchema,
-  boundedString,
-} from '@/utils/botValidation';
+import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
+import { createStageBodySchema } from '@/lib/apiContracts/bot/tournaments/[tournamentId]/stages';
 
-const VALID_STAGE_TYPES = [
-  'group',
-  'bracket',
-  'swiss',
-  'round_robin',
-  'showmatch',
-  'other',
-] as const;
-
-// Le handler accepte les deux casses (snake_case + camelCase) pour
-// stage_type / order_index / is_public / is_active. Le schéma valide chaque
-// alias indépendamment ; la résolution alias→valeur reste dans le handler
-// pour préserver exactement la priorité historique (snake_case d'abord).
-const orderIndexSchema = z.number().int().min(0);
-const createStageBodySchema = z.object({
-  actorDiscordUserId: discordIdSchema,
-  name: boundedString(1, 255),
-  stage_type: z.enum(VALID_STAGE_TYPES).optional(),
-  stageType: z.enum(VALID_STAGE_TYPES).optional(),
-  slug: slugSchema.optional(),
-  start_date: isoDateSchema.optional(),
-  end_date: isoDateSchema.optional(),
-  order_index: orderIndexSchema.optional(),
-  orderIndex: orderIndexSchema.optional(),
-  is_public: z.boolean().optional(),
-  isPublic: z.boolean().optional(),
-  is_active: z.boolean().optional(),
-  isActive: z.boolean().optional(),
-});
 const createStageQuerySchema = z.object({ tournamentId: uuidSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {

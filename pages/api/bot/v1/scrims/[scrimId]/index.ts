@@ -11,22 +11,9 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
-import {
-  discordIdSchema,
-  uuidSchema,
-  gameSlugSchema,
-  isoDateSchema,
-} from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 import { syncScrimRatedMatch } from '@/utils/scrims/ratedMatch';
-
-const VALID_STATUSES = [
-  'draft',
-  'scheduled',
-  'running',
-  'completed',
-  'cancelled',
-] as const;
+import { scrimPatchBodySchema } from '@/lib/apiContracts/bot/scrims/[scrimId]/index';
 
 const PATCHABLE_FIELDS = [
   'name',
@@ -44,24 +31,6 @@ const PATCHABLE_FIELDS = [
 // vérifie juste qu'il est non vide (le handler choisit eq('id') vs eq('slug')).
 const scrimQuerySchema = z.object({
   scrimId: z.string().trim().min(1, 'scrimId requis').max(120),
-});
-
-// PATCH : tous les champs sont optionnels (allowlist PATCHABLE_FIELDS). Les
-// champs absents ne sont pas écrits. status est un enum ; team*_id des UUID
-// nullable ; scheduled_date une date ISO ; game un slug de jeu. Les autres
-// (name, is_public, description, stream_url) restent libres comme dans le
-// handler historique (aucune validation inline au-delà du status/UUID/date).
-const scrimPatchBodySchema = z.object({
-  actorDiscordUserId: discordIdSchema,
-  name: z.string().optional(),
-  status: z.enum(VALID_STATUSES).optional(),
-  team1_id: uuidSchema.nullable().optional(),
-  team2_id: uuidSchema.nullable().optional(),
-  scheduled_date: isoDateSchema.nullable().optional(),
-  is_public: z.union([z.boolean(), z.string()]).optional(),
-  description: z.string().nullable().optional(),
-  stream_url: z.string().nullable().optional(),
-  game: gameSlugSchema.nullable().optional(),
 });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {

@@ -17,19 +17,10 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - actorDiscordUserId
-            - action
+          x-zod: bot.invitations/[demandeId]
           properties:
             actorDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
-            action:
-              type: string
-              enum:
-                - accept
-                - reject
-                - cancel
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '200':
       description: Action effectuee.

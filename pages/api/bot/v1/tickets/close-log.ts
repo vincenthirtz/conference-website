@@ -19,19 +19,9 @@ import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { discordIdSchema, boundedString } from '@/utils/botValidation';
 import { logBotStaffAction } from '@/utils/botActor';
 import { logger } from '@/utils/logger';
-
-const closeLogBodySchema = z.object({
-  closedByDiscordId: discordIdSchema,
-  number: z.number().int().min(0),
-  category: boundedString(1, 100),
-  openerDiscordId: discordIdSchema,
-  claimedByDiscordId: discordIdSchema.nullish(),
-  messageCount: z.number().int().min(0).nullish(),
-  channelName: boundedString(1, 200).nullish(),
-});
+import { closeLogBodySchema } from '@/lib/apiContracts/bot/tickets/close-log';
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const input = req.botInput as z.infer<typeof closeLogBodySchema>;

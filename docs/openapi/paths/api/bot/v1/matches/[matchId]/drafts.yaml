@@ -19,7 +19,15 @@ post:
     content:
       application/json:
         schema:
-          $ref: '#/components/schemas/InitMatchDraftRequest'
+          x-zod: bot.matches/[matchId]/drafts
+          properties:
+            gameIndex:
+              description: 1-based index of the game inside the match (bo3 → 1..3).
+            fearless:
+              description: |
+                Override the default fearless flag from the game's DraftFlow.
+                When true, a hero picked in any prior game of the match cannot
+                be picked again.
   responses:
     '201':
       description: Draft créé + résolution des capitaines.

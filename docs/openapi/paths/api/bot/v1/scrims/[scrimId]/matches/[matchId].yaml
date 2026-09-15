@@ -13,55 +13,10 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - actorDiscordUserId
+          x-zod: bot.scrims/[scrimId]/matches/[matchId]
           properties:
             actorDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
-            team1_score:
-              type: integer
-              minimum: 0
-            team2_score:
-              type: integer
-              minimum: 0
-            winner_team_id:
-              oneOf:
-                - $ref: '#/components/schemas/Uuid'
-                - type: 'null'
-            forfeit_team_id:
-              oneOf:
-                - $ref: '#/components/schemas/Uuid'
-                - type: 'null'
-            status:
-              type: string
-            best_of:
-              type: integer
-            match_format:
-              type: string
-            stream_url:
-              type: [string, 'null']
-            replay_url:
-              type: [string, 'null']
-            lobby_code:
-              type: [string, 'null']
-            notes:
-              type: [string, 'null']
-            scheduled_at:
-              oneOf:
-                - type: string
-                  format: date-time
-                - type: 'null'
-            started_at:
-              oneOf:
-                - type: string
-                  format: date-time
-                - type: 'null'
-            completed_at:
-              oneOf:
-                - type: string
-                  format: date-time
-                - type: 'null'
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '200':
       description: Match mis a jour.

@@ -31,26 +31,8 @@ import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { discordIdSchema, boundedString } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
-
-const USERNAME_MAX = 100;
-const MAX_PLAYERS = 5000;
-
-// Body : { players: [{ discordUserId, discordUsername?, displayName? }] }.
-// displayName est accepté (le bot l'envoie) mais on persiste discordUsername ;
-// si discordUsername est absent on retombe sur displayName.
-const syncBodySchema = z.object({
-  players: z
-    .array(
-      z.object({
-        discordUserId: discordIdSchema,
-        discordUsername: boundedString(1, USERNAME_MAX).optional(),
-        displayName: boundedString(1, USERNAME_MAX).optional(),
-      })
-    )
-    .max(MAX_PLAYERS),
-});
+import { syncBodySchema } from '@/lib/apiContracts/bot/free-players/sync';
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const tenantId = req.botContext.tenantId;

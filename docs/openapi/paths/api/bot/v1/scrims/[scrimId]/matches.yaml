@@ -29,20 +29,10 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - actorDiscordUserId
+          x-zod: bot.scrims/[scrimId]/matches
           properties:
             actorDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
-            match:
-              type: object
-              additionalProperties: true
-            matches:
-              type: array
-              items:
-                type: object
-                additionalProperties: true
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '201':
       description: Match(es) cree(s).

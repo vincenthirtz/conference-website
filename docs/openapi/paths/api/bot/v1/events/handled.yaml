@@ -8,12 +8,8 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - eventId
+          x-zod: bot.events/handled
           properties:
-            eventId:
-              $ref: '#/components/schemas/Uuid'
             source:
               type: string
               maxLength: 32

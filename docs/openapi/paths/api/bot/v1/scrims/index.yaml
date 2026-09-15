@@ -51,37 +51,10 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - actorDiscordUserId
-            - name
+          x-zod: bot.scrims/index
           properties:
             actorDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
-            name:
-              type: string
-            slug:
-              type: string
-            game:
-              type: string
-            status:
-              type: string
-              enum:
-                - draft
-                - scheduled
-                - running
-                - completed
-                - cancelled
-              default: draft
-            team1_id:
-              $ref: '#/components/schemas/Uuid'
-            team2_id:
-              $ref: '#/components/schemas/Uuid'
-            scheduled_date:
-              type: string
-              format: date-time
-            is_public:
-              type: boolean
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '201':
       description: Scrim cree.

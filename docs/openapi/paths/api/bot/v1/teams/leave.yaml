@@ -10,12 +10,10 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - actorDiscordUserId
+          x-zod: bot.teams/leave
           properties:
             actorDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '200':
       description: Equipe quittee.

@@ -12,26 +12,10 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - actorDiscordUserId
+          x-zod: bot.stages/[stageId]/next-round
           properties:
             actorDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
-            dryRun:
-              type: boolean
-              default: false
-            acceptRematches:
-              type: boolean
-              default: false
-            roundNumber:
-              type: integer
-            allowRematchesFallback:
-              type: boolean
-              default: true
-            scoreConfig:
-              type: object
-              additionalProperties: true
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '200':
       description: Preview dry-run.

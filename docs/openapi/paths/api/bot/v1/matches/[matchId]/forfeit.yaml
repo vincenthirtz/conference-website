@@ -12,15 +12,10 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - actorDiscordUserId
-            - forfeitTeamId
+          x-zod: bot.matches/[matchId]/forfeit
           properties:
             actorDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
-            forfeitTeamId:
-              $ref: '#/components/schemas/Uuid'
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '200':
       description: Forfait applique.

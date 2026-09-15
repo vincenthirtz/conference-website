@@ -16,8 +16,9 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
+import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
+import { resetBodySchema } from '@/lib/apiContracts/bot/matches/[matchId]/reset';
 
 const TERMINAL_BEFORE = new Set([
   'finished',
@@ -26,7 +27,6 @@ const TERMINAL_BEFORE = new Set([
   'disputed',
 ]);
 
-const resetBodySchema = z.object({ actorDiscordUserId: discordIdSchema });
 const resetQuerySchema = z.object({ matchId: uuidSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {

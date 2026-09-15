@@ -12,15 +12,12 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - actorDiscordUserId
-            - newCaptainDiscordUserId
+          x-zod: bot.teams/[teamId]/transfer-captain
           properties:
             actorDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
+              description: Snowflake Discord (user, guild, channel, role).
             newCaptainDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '200':
       description: Captainat transfere.

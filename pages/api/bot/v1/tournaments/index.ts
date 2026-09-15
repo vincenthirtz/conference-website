@@ -14,36 +14,13 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { getGame, isGameSlug, GAME_SLUGS } from '@/config/games';
-import {
-  discordIdSchema,
-  slugSchema,
-  isoDateSchema,
-  boundedString,
-  gameSlugSchema,
-} from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
+import {
+  VALID_STATUSES,
+  createBodySchema,
+} from '@/lib/apiContracts/bot/tournaments/index';
 
-const VALID_STATUSES = [
-  'draft',
-  'published',
-  'running',
-  'completed',
-  'archived',
-  'cancelled',
-] as const;
 type Status = (typeof VALID_STATUSES)[number];
-
-// POST body. GET (list) has no body so bodySchema only gates POST.
-const createBodySchema = z.object({
-  actorDiscordUserId: discordIdSchema,
-  name: boundedString(1, 255),
-  slug: slugSchema.optional(),
-  start_date: isoDateSchema.optional(),
-  end_date: isoDateSchema.optional(),
-  status: z.enum(VALID_STATUSES).optional(),
-  max_teams: z.number().int().min(1).optional(),
-  game: gameSlugSchema.optional(),
-});
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   if (req.method === 'GET') return handleList(req, res);

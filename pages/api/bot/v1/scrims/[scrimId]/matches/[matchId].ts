@@ -17,25 +17,12 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import {
-  discordIdSchema,
-  uuidSchema,
-  isoDateSchema,
-} from '@/utils/botValidation';
+import { uuidSchema } from '@/utils/botValidation';
 import { emitBotEvent } from '@/utils/botEvents';
 import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 import { emitScheduleEventsInBackground } from '@/utils/matches/scheduleEvents';
 import { logger } from '@/utils/logger';
-
-const VALID_STATUSES = [
-  'pending',
-  'ongoing',
-  'finished',
-  'cancelled',
-  'walkover',
-  'disputed',
-  'postponed',
-] as const;
+import { scrimMatchPatchBodySchema } from '@/lib/apiContracts/bot/scrims/[scrimId]/matches/[matchId]';
 
 const PATCHABLE_FIELDS = [
   'team1_score',
@@ -54,38 +41,6 @@ const PATCHABLE_FIELDS = [
   'completed_at',
 ] as const;
 
-// scoreSchema (0-99) ne convient pas ici : le handler historique borne juste
-// "entier >= 0" sans plafond. On reproduit cette borne pour ne pas changer la
-// sémantique (un score de scrim peut théoriquement dépasser 99).
-const matchScoreSchema = z
-  .number()
-  .int()
-  .min(0, 'team_score doit etre un entier >= 0');
-
-// PATCH : allowlist PATCHABLE_FIELDS, tous optionnels. Le contrôle
-// winner/forfeit "doit référencer team1/team2 du match" dépend de la row DB →
-// reste inline dans le handler. La dérivation du gagnant idem.
-const scrimMatchPatchBodySchema = z.object({
-  actorDiscordUserId: discordIdSchema,
-  team1_score: matchScoreSchema.nullish(),
-  team2_score: matchScoreSchema.nullish(),
-  winner_team_id: uuidSchema.nullish(),
-  forfeit_team_id: uuidSchema.nullish(),
-  status: z.enum(VALID_STATUSES).optional(),
-  best_of: z
-    .number()
-    .int()
-    .min(1, 'best_of doit etre un entier >= 1')
-    .nullish(),
-  match_format: z.string().nullish(),
-  stream_url: z.string().nullish(),
-  replay_url: z.string().nullish(),
-  lobby_code: z.string().nullish(),
-  notes: z.string().nullish(),
-  scheduled_at: isoDateSchema.nullish(),
-  started_at: isoDateSchema.nullish(),
-  completed_at: isoDateSchema.nullish(),
-});
 const scrimMatchQuerySchema = z.object({
   scrimId: uuidSchema,
   matchId: uuidSchema,

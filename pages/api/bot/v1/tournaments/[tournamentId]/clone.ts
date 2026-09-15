@@ -15,22 +15,10 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import {
-  discordIdSchema,
-  uuidSchema,
-  slugSchema,
-  boundedString,
-} from '@/utils/botValidation';
+import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
+import { cloneBodySchema } from '@/lib/apiContracts/bot/tournaments/[tournamentId]/clone';
 
-// Tighten the previously-weak (trim-only) validation to match the create
-// route's rules : name is a bounded non-empty string, slug must satisfy the
-// shared slug grammar before it is slugify-normalised below.
-const cloneBodySchema = z.object({
-  actorDiscordUserId: discordIdSchema,
-  name: boundedString(1, 255).optional(),
-  slug: slugSchema.optional(),
-});
 const cloneQuerySchema = z.object({ tournamentId: uuidSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {

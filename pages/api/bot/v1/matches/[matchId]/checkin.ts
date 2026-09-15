@@ -15,12 +15,12 @@ import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
+import { uuidSchema } from '@/utils/botValidation';
 import { redeemCheckinToken } from '@/utils/checkin';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
+import { checkinBodySchema } from '@/lib/apiContracts/bot/matches/[matchId]/checkin';
 
-const checkinBodySchema = z.object({ discordUserId: discordIdSchema });
 const checkinQuerySchema = z.object({ matchId: uuidSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {

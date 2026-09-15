@@ -11,8 +11,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: bot.moderation/blacklist-alert
   responses:
     '201':
       description: Alerte enregistree.

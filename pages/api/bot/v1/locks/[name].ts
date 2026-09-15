@@ -19,9 +19,9 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { boundedString } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
+import { lockBodySchema } from '@/lib/apiContracts/bot/locks/[name]';
 
 const NAME_MAX_LEN = 64;
-const HOLDER_MAX_LEN = 100;
 const TTL_MIN = 5;
 const TTL_MAX = 3600;
 
@@ -32,11 +32,6 @@ const TTL_MAX = 3600;
 // laisse donc en z.unknown() pour ne rejeter aucun type que l'ancien code
 // tolérait.
 const lockQuerySchema = z.object({ name: boundedString(1, NAME_MAX_LEN) });
-const lockBodySchema = z.object({
-  holder: boundedString(1, HOLDER_MAX_LEN),
-  ttlSeconds: z.unknown().optional(),
-  action: z.unknown().optional(),
-});
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { name } = req.botQuery as z.infer<typeof lockQuerySchema>;

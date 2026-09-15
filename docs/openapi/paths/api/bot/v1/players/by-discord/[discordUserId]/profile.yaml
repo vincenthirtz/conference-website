@@ -10,8 +10,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: bot.players/by-discord/[discordUserId]/profile
   responses:
     '200':
       description: Profil mis a jour.

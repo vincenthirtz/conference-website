@@ -58,32 +58,10 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - name
-            - captainDiscordUserId
+          x-zod: bot.teams/index
           properties:
-            name:
-              type: string
-              minLength: 2
-              maxLength: 100
             captainDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
-            slug:
-              type: string
-            shortName:
-              type: string
-            logoUrl:
-              type: string
-            description:
-              type: string
-              maxLength: 2000
-            country:
-              type: string
-            discord:
-              type: string
-            website:
-              type: string
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '201':
       description: Equipe creee.

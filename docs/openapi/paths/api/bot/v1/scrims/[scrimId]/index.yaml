@@ -31,37 +31,10 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - actorDiscordUserId
+          x-zod: bot.scrims/[scrimId]/index
           properties:
             actorDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
-            name:
-              type: string
-            status:
-              type: string
-            team1_id:
-              oneOf:
-                - $ref: '#/components/schemas/Uuid'
-                - type: 'null'
-            team2_id:
-              oneOf:
-                - $ref: '#/components/schemas/Uuid'
-                - type: 'null'
-            scheduled_date:
-              oneOf:
-                - type: string
-                  format: date-time
-                - type: 'null'
-            is_public:
-              type: boolean
-            description:
-              type: [string, 'null']
-            stream_url:
-              type: [string, 'null']
-            game:
-              type: [string, 'null']
+              description: Snowflake Discord (user, guild, channel, role).
   responses:
     '200':
       description: Scrim mis a jour.

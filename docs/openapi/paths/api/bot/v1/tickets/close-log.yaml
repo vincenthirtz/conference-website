@@ -16,36 +16,19 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - closedByDiscordId
-            - number
-            - category
-            - openerDiscordId
+          x-zod: bot.tickets/close-log
           properties:
             closedByDiscordId:
-              $ref: '#/components/schemas/DiscordId'
+              description: Snowflake Discord (user, guild, channel, role).
             number:
-              type: integer
-              minimum: 0
               description: Numero du ticket (devient entity_id du log).
-            category:
-              type: string
-              minLength: 1
-              maxLength: 100
             openerDiscordId:
-              $ref: '#/components/schemas/DiscordId'
+              description: Snowflake Discord (user, guild, channel, role).
             claimedByDiscordId:
-              type: [string, 'null']
               description: Snowflake du staff ayant pris le ticket (optionnel).
             messageCount:
-              type: [integer, 'null']
-              minimum: 0
               description: Nombre de messages dans le ticket (optionnel).
             channelName:
-              type: [string, 'null']
-              minLength: 1
-              maxLength: 200
               description: Nom du salon du ticket (optionnel).
   responses:
     '200':

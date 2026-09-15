@@ -13,7 +13,7 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotPlayer, resolveActorPlayer } from '@/utils/botActor';
-import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
+import { uuidSchema } from '@/utils/botValidation';
 import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
@@ -21,12 +21,8 @@ import {
 import { emitRoleSyncEvent } from '@/utils/botRoleSync';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
+import { kickMemberBodySchema } from '@/lib/apiContracts/bot/teams/[teamId]/members';
 
-// actorDiscordUserId lu par requireBotPlayer (body brut, non muté).
-const kickMemberBodySchema = z.object({
-  actorDiscordUserId: discordIdSchema,
-  targetDiscordUserId: discordIdSchema,
-});
 const kickMemberQuerySchema = z.object({ teamId: uuidSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {

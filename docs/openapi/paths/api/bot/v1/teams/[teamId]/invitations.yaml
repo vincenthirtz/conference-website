@@ -53,25 +53,16 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - actorDiscordUserId
-            - targetDiscordUserId
+          x-zod: bot.teams/[teamId]/invitations
           properties:
             actorDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
+              description: Snowflake Discord (user, guild, channel, role).
             targetDiscordUserId:
-              $ref: '#/components/schemas/DiscordId'
-            comment:
-              type: string
-              maxLength: 1000
+              description: Snowflake Discord (user, guild, channel, role).
             role:
-              type: string
-              description: >-
-                Role d'equipe propose. Valide cote API contre la table
-                team_roles ; absent => 'player'.
+              description: Role d'equipe propose. Valide cote API contre la table team_roles ;
+                absent => 'player'.
             battleTag:
-              type: string
               description: BattleTag pre-rempli pour l'invitee.
   responses:
     '201':

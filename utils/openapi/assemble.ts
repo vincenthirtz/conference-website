@@ -21,8 +21,11 @@
 // SCHÉMAS ZOD. Partout où un schéma est attendu, un fragment peut écrire
 // `x-zod: <nom>` : l'assembleur y met le JSON Schema du schéma zod enregistré
 // sous ce nom dans lib/apiContracts (celui-là même que le handler utilise).
-// Les clés voisines de `x-zod` (ex. `description`) complètent le résultat.
-// Nom inconnu ou schéma non représentable : erreur.
+// Les clés voisines de `x-zod` se FUSIONNENT dans le résultat : c'est là que
+// vivent les textes (description, exemples) que zod ne porte pas. La fusion
+// descend dans `properties` et `items` ; documenter une propriété que le
+// schéma zod n'a pas est une erreur (la doc décrirait un champ que le code
+// n'accepte pas). Nom inconnu ou schéma non représentable : erreur.
 //
 // Pas d'alias `@/` ici ni dans les modules importés : l'assembleur tourne
 // aussi dans un script de build (scripts/openapi/build.mjs).
@@ -74,6 +77,42 @@ function isMap(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
+/** Fusionne la documentation rédigée (`overlay`) dans un schéma généré. */
+function mergeOverlay(
+  generated: Record<string, unknown>,
+  overlay: Record<string, unknown>,
+  where: string
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...generated };
+  for (const [key, value] of Object.entries(overlay)) {
+    if (key === 'properties' && isMap(value)) {
+      const props = isMap(generated.properties) ? generated.properties : {};
+      const merged: Record<string, unknown> = { ...props };
+      for (const [prop, doc] of Object.entries(value)) {
+        if (!(prop in props)) {
+          throw new Error(
+            `openapi: x-zod « ${where} » documente \`${prop}\`, absent du schéma zod`
+          );
+        }
+        merged[prop] =
+          isMap(doc) && isMap(props[prop])
+            ? mergeOverlay(
+                props[prop] as Record<string, unknown>,
+                doc,
+                `${where}.${prop}`
+              )
+            : doc;
+      }
+      out.properties = merged;
+    } else if (key === 'items' && isMap(value) && isMap(generated.items)) {
+      out.items = mergeOverlay(generated.items, value, `${where}[]`);
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
 /**
  * Remplace chaque `{ 'x-zod': nom, ...voisins }` par le JSON Schema du contrat
  * nommé. Parcours en profondeur, nouvelles valeurs (le document d'entrée n'est
@@ -109,7 +148,7 @@ export function resolveZodSchemas<T>(
       );
     }
     const { $schema: _dialect, ...schema } = generated;
-    return { ...schema, ...siblings } as T;
+    return mergeOverlay(schema, siblings, String(name)) as T;
   }
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(node)) {

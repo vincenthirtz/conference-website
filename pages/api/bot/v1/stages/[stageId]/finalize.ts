@@ -23,16 +23,12 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
+import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
+import { finalizeBodySchema } from '@/lib/apiContracts/bot/stages/[stageId]/finalize';
 
 const ACTIVE_STATUSES = new Set(['pending', 'ongoing', 'disputed']);
 
-// force : seul `true` explicite bypasse le garde matchs-actifs (défaut false).
-const finalizeBodySchema = z.object({
-  actorDiscordUserId: discordIdSchema,
-  force: z.boolean().optional(),
-});
 const finalizeQuerySchema = z.object({ stageId: uuidSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {

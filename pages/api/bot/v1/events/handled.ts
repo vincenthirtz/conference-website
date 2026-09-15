@@ -18,20 +18,8 @@ import { z } from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';
-import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
-
-// eventId : UUID requis (uuidSchema = ancien isValidUUID + trim).
-// source : optionnel. Sémantique historique = string acceptée seulement si
-// length <= 32, sinon traitée comme `null` (PAS de rejet). On reproduit ça
-// avec un transform qui nullifie les valeurs hors borne plutôt que de 400.
-const handledBodySchema = z.object({
-  eventId: uuidSchema,
-  source: z
-    .unknown()
-    .transform((v) => (typeof v === 'string' && v.length <= 32 ? v : null))
-    .optional(),
-});
+import { handledBodySchema } from '@/lib/apiContracts/bot/events/handled';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const input = req.botInput as z.infer<typeof handledBodySchema>;

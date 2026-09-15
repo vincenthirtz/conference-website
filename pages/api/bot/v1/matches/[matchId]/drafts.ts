@@ -16,18 +16,8 @@ import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { uuidSchema } from '@/utils/botValidation';
 import { initDraft, DraftEngineError } from '@/utils/draftEngine';
 import { logger } from '@/utils/logger';
+import { draftsBodySchema } from '@/lib/apiContracts/bot/matches/[matchId]/drafts';
 
-// gameIndex : entier >= 1. z.coerce reproduit le Number(body.gameIndex) inline
-// (accepte "2" comme 2). fearless : booléen optionnel ; un non-booléen est
-// ignoré (catch(undefined)) pour préserver le `typeof === 'boolean' ? v : undefined`
-// historique qui ne rejetait jamais.
-const draftsBodySchema = z.object({
-  gameIndex: z.coerce
-    .number()
-    .int('gameIndex doit être un entier positif.')
-    .min(1, 'gameIndex doit être un entier positif.'),
-  fearless: z.boolean().optional().catch(undefined),
-});
 const draftsQuerySchema = z.object({ matchId: uuidSchema });
 
 type CaptainInfo = {
