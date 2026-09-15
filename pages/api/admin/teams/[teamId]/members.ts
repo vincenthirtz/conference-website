@@ -14,6 +14,7 @@ import {
 } from '@/utils/apiHelpers';
 import { logger } from '../../../../../utils/logger';
 import { logStaffAction } from '@/utils/staffLogs';
+import { loadTeamInTenant } from '@/utils/teams/loadTeamInTenant';
 import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
@@ -99,6 +100,15 @@ async function handler(
   const { teamId } = req.query;
   if (!teamId || Array.isArray(teamId) || !isValidUUID(teamId)) {
     return res.status(400).json({ error: 'Invalid teamId' });
+  }
+
+  // L'équipe doit appartenir à l'espace de la personne qui agit, pour TOUTES
+  // les méthodes : sans ce contrôle, un staff de n'importe quel espace lisait,
+  // complétait, modifiait ou vidait le roster d'une équipe d'un autre espace
+  // (les requêtes suivantes ne filtrent que par `team_id`).
+  const inTenant = await loadTeamInTenant(teamId, ctx.tenantId);
+  if (!inTenant.ok) {
+    return res.status(inTenant.status).json({ error: inTenant.error });
   }
 
   // GET - Liste des membres

@@ -18,6 +18,7 @@ import { emitScheduleEventsInBackground } from '@/utils/matches/scheduleEvents';
 import { reactToMatchStatus } from '@/utils/broadcast/autoDirector';
 
 import { logger } from '../../../../utils/logger';
+import { readPaidMatchIds } from '@/utils/tcg/paidMatches';
 // Idempotency-Key (optionnel) : l'UI admin (ScoreEntryModal via
 // useIdempotentMutation) envoie une clé sur le PATCH de score. Un rejeu avec
 // la même clé rejoue la réponse cache (5 min) au lieu de re-propager le
@@ -686,6 +687,26 @@ async function handleDelete(
   }
 
   if (hard) {
+    // Un match qui a payé des récompenses TCG ne se supprime pas physiquement :
+    // la suppression effaçait ses paquets (et les cartes ouvertes), et le même
+    // match recréé repayait. On l'ANNULE à la place (suppression douce, sans
+    // `hard`). Lecture en échec = refus : ne jamais conclure « rien payé ».
+    const paidRead = await readPaidMatchIds(ctx.tenantId, [matchId]);
+    if (!paidRead.ok) {
+      return res.status(500).json({
+        error:
+          'Impossible de vérifier les récompenses TCG de ce match : suppression annulée.',
+        code: 'TCG_REWARDS_UNREADABLE',
+      });
+    }
+    if (paidRead.paid.has(matchId)) {
+      return res.status(409).json({
+        error:
+          'Ce match a déjà distribué des récompenses TCG : annule-le plutôt que de le supprimer.',
+        code: 'MATCH_HAS_TCG_REWARDS',
+      });
+    }
+
     const { error } = await supabaseAdmin
       .from('matches')
       .delete()

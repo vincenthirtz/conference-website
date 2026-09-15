@@ -22,6 +22,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, validateRole } from '@/utils/apiHelpers';
 import { validateBattleTag } from '@/utils/teams/addMember';
 import { logStaffAction } from '@/utils/staffLogs';
+import { loadTeamInTenant } from '@/utils/teams/loadTeamInTenant';
 import { logger } from '@/utils/logger';
 
 const MEMBER_SELECT =
@@ -105,17 +106,16 @@ async function handler(
   }
 
   // --- Resolve the captain so we can guard against demote / removal ---
-  const { data: team, error: teamErr } = await supabaseAdmin
-    .from('teams')
-    .select('id, captain_id')
-    .eq('id', teamId)
-    .maybeSingle();
-
-  if (teamErr || !team) {
-    return res.status(404).json({ error: 'Team not found' });
+  // Bornée à l'espace de la personne qui agit : une équipe d'un autre espace
+  // répond 404, comme une équipe inexistante (cf. `loadTeamInTenant`).
+  const teamRead = await loadTeamInTenant<{
+    id: string;
+    captain_id: string | null;
+  }>(String(teamId), ctx.tenantId, 'id, captain_id');
+  if (!teamRead.ok) {
+    return res.status(teamRead.status).json({ error: teamRead.error });
   }
-  const captainUserId: string | null =
-    (team as { captain_id: string | null }).captain_id ?? null;
+  const captainUserId: string | null = teamRead.team.captain_id ?? null;
 
   // --- Normalise the requested member set ---
   // For import_battle_tags the payload is a list of { memberId, battleTag }.

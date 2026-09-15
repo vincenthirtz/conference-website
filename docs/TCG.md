@@ -460,6 +460,22 @@ un compte existant à un roster de son espace sans son consentement
 (`POST /api/admin/teams/[teamId]/members`, par email ou par id) ; le
 rattachement « roster » reste donc fabricable par un staff malveillant. Le
 fermer relève d'un flux d'invitation acceptée.
+**Un match qui a payé ne se supprime plus physiquement** (2026-09-15). Supprimer
+un match terminé effaçait ses paquets en cascade — cartes ouvertes comprises —
+alors que les pièces restaient, et un match recréé repayait. Désormais
+`DELETE /api/admin/matches/[id]?hard=1` et la suppression groupée d'une phase
+répondent `409 MATCH_HAS_TCG_REWARDS` dès qu'il existe un paquet `victory` OU
+une écriture `match_win` pour le match (`utils/tcg/paidMatches.ts`, lecture en
+échec = refus) : on l'annule à la place. La base porte la même règle :
+`tcg_packs.source_match_id` est en `ON DELETE RESTRICT`
+(`tcg_packs_source_match_restrict.sql`), si bien que supprimer un tournoi dont un
+match a payé échoue au lieu de vider les collections.
+
+**Les routes staff d'équipe sont bornées à l'espace** (2026-09-15) :
+`/api/admin/teams/[teamId]/members` (toutes méthodes), `/roster-bulk` et
+`/api/admin/teams/add-member` chargent l'équipe avec `tenant_id = ctx.tenantId`
+(`utils/teams/loadTeamInTenant.ts`) ; une équipe d'un autre espace répond 404.
+
 `source_ref` est du **texte**,
 et non un uuid, parce que les sources n'ont pas toutes la même clé (un match, un
 paquet, une carte `<pack_id>:<position>`, un tournoi, un tenant, un direct,
@@ -1348,21 +1364,8 @@ Quelques conventions transverses :
   négatifs (plafonnés à 0 dans le cache) : `SELECT tenant_id, user_id,
   SUM(amount) FROM tcg_wallet_entries GROUP BY 1, 2 HAVING SUM(amount) < 0`.
 
-- **Matchs de tournoi : la récompense suit encore l'id du match** (gravité
-  moindre, geste staff). `DELETE /api/admin/matches/[matchId]?hard=1` supprime un
-  match terminé : ses paquets partent en cascade (cartes ouvertes comprises),
-  l'écriture `match_win` reste, et un match recréé puis noté repaie paquet et
-  pièces. `generateBracket.ts` ne supprime que des matchs qu'il vient de créer
-  (rollback), sans risque. **Proposition, non faite** : refuser la suppression
-  physique d'un match qui a servi de source à un paquet (`409`, neutralisation
-  `cancelled` à la place — c'est déjà le comportement par défaut sans `hard=1`),
-  puis passer `tcg_packs.source_match_id` en `ON DELETE RESTRICT` une fois ce
-  refus déployé, pour que le schéma porte l'invariant.
 - **Rattachement « roster » fabricable par un owner** : cf. §4, « Qui gère le TCG
   côté staff ». Relève d'un flux d'invitation acceptée.
-- **`POST /api/admin/teams/[teamId]/members` ne vérifie pas le tenant de
-  l'équipe** (lecture `teams` par `id` seul, insertion avec `ctx.tenantId`) :
-  constaté pendant l'audit, hors périmètre TCG, non corrigé.
 - **`applyScrimResult` n'est pas conditionnelle** : deux capitaines qui
   concluent au même instant qu'un staff annule peuvent re-clore un scrim
   annulé. Sans conséquence monétaire depuis la clé stable, non corrigé.

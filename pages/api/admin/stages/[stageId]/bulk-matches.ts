@@ -13,6 +13,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { emitScheduleEvents } from '@/utils/matches/scheduleEvents';
 
 import { logger } from '../../../../../utils/logger';
+import { readPaidMatchIds } from '@/utils/tcg/paidMatches';
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'stage-bulk-matches' }),
   { permission: 'manage_tournaments' }
@@ -439,6 +440,25 @@ async function handleBulkDelete(
   }
 
   if (hard) {
+    // Même règle que la suppression unitaire : un match qui a payé des
+    // récompenses TCG s'annule, il ne se supprime pas. Tout ou rien — on ne
+    // supprime pas les autres en silence en laissant ceux-là de côté.
+    const paidRead = await readPaidMatchIds(ctx.tenantId, matchIds);
+    if (!paidRead.ok) {
+      return res.status(500).json({
+        error:
+          'Impossible de vérifier les récompenses TCG de ces matchs : suppression annulée.',
+        code: 'TCG_REWARDS_UNREADABLE',
+      });
+    }
+    if (paidRead.paid.size > 0) {
+      return res.status(409).json({
+        error: `${paidRead.paid.size} match(s) ont déjà distribué des récompenses TCG : annule-les plutôt que de les supprimer.`,
+        code: 'MATCH_HAS_TCG_REWARDS',
+        paidMatchIds: [...paidRead.paid],
+      });
+    }
+
     const { error } = await supabaseAdmin
       .from('matches')
       .delete()

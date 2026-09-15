@@ -126,6 +126,15 @@ beforeEach(() => {
  * ---------------------------------------------------------*/
 
 describe('/api/admin/teams/[teamId]/members', () => {
+  // Depuis que la route vérifie l'espace de l'équipe AVANT toute méthode
+  // (cf. utils/teams/loadTeamInTenant.ts), l'équipe doit exister dans l'espace
+  // courant. Les cas qui en réécrivent une gardent leur propre seed.
+  beforeEach(() => {
+    store.teams = [
+      { id: TEAM_UUID, name: 'Alpha', tenant_id: DEFAULT_TENANT_ID },
+    ] as any;
+  });
+
   it('400 on invalid teamId', async () => {
     const res = makeRes();
     await membersHandler(
@@ -242,6 +251,7 @@ describe('/api/admin/teams/[teamId]/members', () => {
   });
 
   it('POST 404 when team not found', async () => {
+    store.teams = [] as any;
     const res = makeRes();
     await membersHandler(
       makeAuthedReq({
@@ -255,7 +265,9 @@ describe('/api/admin/teams/[teamId]/members', () => {
   });
 
   it('POST 400 when no userId or email', async () => {
-    store.teams = [{ id: TEAM_UUID, name: 'Alpha' }] as any;
+    store.teams = [
+      { id: TEAM_UUID, name: 'Alpha', tenant_id: DEFAULT_TENANT_ID },
+    ] as any;
     const res = makeRes();
     await membersHandler(
       makeAuthedReq({
@@ -269,7 +281,9 @@ describe('/api/admin/teams/[teamId]/members', () => {
   });
 
   it('POST creates a member by email and sends join email', async () => {
-    store.teams = [{ id: TEAM_UUID, name: 'Alpha' }] as any;
+    store.teams = [
+      { id: TEAM_UUID, name: 'Alpha', tenant_id: DEFAULT_TENANT_ID },
+    ] as any;
     const res = makeRes();
     await membersHandler(
       makeAuthedReq({
@@ -299,7 +313,9 @@ describe('/api/admin/teams/[teamId]/members', () => {
   // (enforce_tenant_id_not_null_and_fk.sql). Le handler l'omettait → 23502 →
   // 400 « Failed to add member » sur TOUT ajout via cet endpoint.
   it('POST stamps tenant_id on the inserted member', async () => {
-    store.teams = [{ id: TEAM_UUID, name: 'Alpha' }] as any;
+    store.teams = [
+      { id: TEAM_UUID, name: 'Alpha', tenant_id: DEFAULT_TENANT_ID },
+    ] as any;
     const res = makeRes();
     await membersHandler(
       makeAuthedReq({
@@ -314,7 +330,14 @@ describe('/api/admin/teams/[teamId]/members', () => {
   });
 
   it('POST creates a member by userId and sets captain', async () => {
-    store.teams = [{ id: TEAM_UUID, name: 'Alpha', captain_id: null }] as any;
+    store.teams = [
+      {
+        id: TEAM_UUID,
+        name: 'Alpha',
+        captain_id: null,
+        tenant_id: DEFAULT_TENANT_ID,
+      },
+    ] as any;
     setAdminUser('user-direct', 'direct@y.com');
     const res = makeRes();
     await membersHandler(
@@ -375,7 +398,9 @@ describe('/api/admin/teams/[teamId]/members', () => {
   });
 
   it('POST passes through with force=true even when locked', async () => {
-    store.teams = [{ id: TEAM_UUID, name: 'Alpha' }] as any;
+    store.teams = [
+      { id: TEAM_UUID, name: 'Alpha', tenant_id: DEFAULT_TENANT_ID },
+    ] as any;
     store.tournament_teams = [
       { team_id: TEAM_UUID, tournament_id: TOUR_UUID },
     ] as any;
@@ -649,7 +674,14 @@ describe('/api/admin/teams/[teamId]/members', () => {
         is_substitute: false,
       },
     ] as any;
-    store.teams = [{ id: TEAM_UUID, name: 'Alpha', captain_id: null }] as any;
+    store.teams = [
+      {
+        id: TEAM_UUID,
+        name: 'Alpha',
+        captain_id: null,
+        tenant_id: DEFAULT_TENANT_ID,
+      },
+    ] as any;
     const res = makeRes();
     await membersHandler(
       makeAuthedReq({

@@ -11,6 +11,7 @@ import {
   setTeamCaptain,
 } from '@/utils/teams/addMember';
 import { logStaffAction } from '@/utils/staffLogs';
+import { loadTeamInTenant } from '@/utils/teams/loadTeamInTenant';
 
 import { logger } from '../../../../utils/logger';
 type AddMemberResponse =
@@ -66,14 +67,18 @@ async function handler(
 
   try {
     // Vérifier l'équipe
-    const { data: team, error: teamErr } = await supabaseAdmin
-      .from('teams')
-      .select('id, name, logo_url')
-      .eq('id', teamId)
-      .maybeSingle();
-    if (teamErr || !team) {
-      return res.status(404).json({ error: 'Team not found' });
+    // Bornée à l'espace : ajouter un compte au roster d'une équipe d'un AUTRE
+    // espace le rattachait à celui de la personne qui agit (l'insertion porte
+    // `ctx.tenantId`), ce qui ouvrait ensuite correction de solde et rattrapage.
+    const teamRead = await loadTeamInTenant<{
+      id: string;
+      name: string;
+      logo_url: string | null;
+    }>(teamId, ctx.tenantId, 'id, name, logo_url');
+    if (!teamRead.ok) {
+      return res.status(teamRead.status).json({ error: teamRead.error });
     }
+    const team = teamRead.team;
 
     // Résoudre l'utilisateur par email si nécessaire (pas de creation cote admin)
     if (!resolvedUserId) {
