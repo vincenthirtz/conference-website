@@ -25,6 +25,11 @@ export default {
   errBattleTagRequired: 'BattleTag is required',
   errAddMember: 'Unable to add the member',
   toastMemberAdded: 'Member added',
+  errReasonRequired:
+    'Enter the reason for adding directly (at least {min} characters).',
+  toastInviteSent: 'Invitation sent: the person has to accept it.',
+  toastInviteNoEmail:
+    'Invitation created, but the email was not sent. Link to pass on: {url}',
   toastMemberEdited: 'Member updated',
   confirmDeleteMember: 'Remove {member} from the team?',
   toastMemberRemoved: 'Member removed',

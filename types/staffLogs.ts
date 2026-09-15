@@ -98,6 +98,7 @@ export type StaffLogAction =
   | 'reopen_match_lineup'
   | 'bulk_roster_update'
   | 'add_team_member'
+  | 'invite_team_member'
   | 'remove_team_member'
   | 'update_team_member'
   | 'kick_member'

@@ -21,6 +21,9 @@ import {
 
 import { logger } from '../../../utils/logger';
 import nsAdminUsersNew from '@/lib/i18n/locales/admin-fr/adminUsersNew';
+import TeamAssignmentSummary, {
+  type AddMemberResponse,
+} from '@/components/admin/users/TeamAssignmentSummary';
 
 type Dict = typeof nsAdminUsersNew.fr;
 
@@ -39,15 +42,6 @@ type CreateUserResponse = {
 type TeamOption = {
   id: string;
   name: string;
-};
-
-type AddMemberResponse = {
-  teamMemberId?: string;
-  teamId: string;
-  userId: string;
-  role: string;
-  captainSet: boolean;
-  info?: string;
 };
 
 const ROLES = [
@@ -453,32 +447,11 @@ function AdminCreateUserPage({ teamRoles }: PageProps) {
                   </div>
 
                   {success.teamAssignment && (
-                    <div className="mt-3 pt-3 border-t border-emerald-500/30">
-                      <p className="font-medium text-emerald-300 mb-1">
-                        {t.teamAssignedTitle}
-                      </p>
-                      <div className="text-sm text-neutral-300 space-y-1">
-                        <p>
-                          {t.teamLabel}{' '}
-                          <span className="text-white">
-                            {selectedTeamName || success.teamAssignment.teamId}
-                          </span>
-                        </p>
-                        <p>
-                          {t.roleLabelColon}{' '}
-                          <span className="text-white">
-                            {teamRoles.find(
-                              (r) => r.value === success.teamAssignment?.role
-                            )?.label ?? success.teamAssignment.role}
-                          </span>
-                        </p>
-                        {success.teamAssignment.captainSet && (
-                          <p className="text-amber-300">
-                            {t.setCaptainSuccess}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                    <TeamAssignmentSummary
+                      assignment={success.teamAssignment}
+                      teamName={selectedTeamName}
+                      teamRoles={teamRoles}
+                    />
                   )}
 
                   <button

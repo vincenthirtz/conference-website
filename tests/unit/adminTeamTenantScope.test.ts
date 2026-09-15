@@ -167,7 +167,13 @@ describe('/api/admin/teams/[teamId]/members — équipe d’un autre espace', ()
       req({
         method: 'POST',
         query: { teamId: TEAM_A },
-        body: { userId: ATTACKER_ALT, battleTag: 'Alt#9999', force: true },
+        body: {
+          userId: ATTACKER_ALT,
+          battleTag: 'Alt#9999',
+          force: true,
+          mode: 'direct',
+          reason: 'Correction du roster',
+        },
       }),
       res
     );

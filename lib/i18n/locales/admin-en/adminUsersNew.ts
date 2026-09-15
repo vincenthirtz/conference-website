@@ -52,6 +52,10 @@ export default {
   emailNotSent:
     "The welcome email could not be sent: nobody knows this account's password. Resend it (a new password will be generated).",
   teamAssignedTitle: 'Added to team',
+  teamInvitedTitle: 'Team invitation sent',
+  teamInvitedHint:
+    'The person will join the team once they accept the invitation (link sent by email, or from their player space).',
+  teamInvitedNoEmail: 'The invitation email was not sent. Link to pass on:',
   teamLabel: 'Team:',
   roleLabelColon: 'Role:',
   setCaptainSuccess: 'Set as captain',

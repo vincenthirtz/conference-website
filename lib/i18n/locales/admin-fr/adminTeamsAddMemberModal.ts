@@ -31,4 +31,16 @@ export default adminNs('adminTeamsAddMemberModal', {
   captainDesc: "Chef d'équipe",
   substitute: 'Remplaçant',
   substituteDesc: 'Joueur de réserve',
+  modeLabel: "Mode d'ajout",
+  modeInvite: 'Envoyer une invitation',
+  modeInviteDesc:
+    "Recommandé. La personne accepte ou refuse : rien n'est ajouté avant son accord.",
+  modeDirect: 'Ajouter directement',
+  modeDirectDesc:
+    'Pour une correction. Motif obligatoire, journalisé ; la personne est prévenue.',
+  reasonLabel: "Motif de l'ajout direct",
+  reasonPlaceholder: "Ex. : roster d'inscription à régulariser",
+  reasonHint: '{min} caractères minimum. Visible dans les journaux staff.',
+  sendInvite: "Envoyer l'invitation",
+  sending: 'Envoi...',
 });

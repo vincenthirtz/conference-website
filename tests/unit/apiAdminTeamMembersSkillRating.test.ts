@@ -191,6 +191,8 @@ describe('POST — niveau déclaré à l’ajout', () => {
           role: 'player',
           battleTag: 'Neuve#1234',
           skillRating: '2500',
+          mode: 'direct',
+          reason: 'Correction du roster',
         },
       }),
       res
@@ -214,6 +216,8 @@ describe('POST — niveau déclaré à l’ajout', () => {
           role: 'player',
           battleTag: 'Neuve#5678',
           skillRating: 99999,
+          mode: 'direct',
+          reason: 'Correction du roster',
         },
       }),
       res

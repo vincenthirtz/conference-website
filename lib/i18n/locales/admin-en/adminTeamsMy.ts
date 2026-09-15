@@ -101,6 +101,9 @@ export default {
   errLoad: 'Unexpected error.',
   errAdd: 'Error while adding',
   memberAddedWithWarning: 'Member added. {warning}',
+  inviteSent: 'Invitation sent: the person has to accept it.',
+  inviteNoEmail:
+    'Invitation created, but the email was not sent. Link to pass on: {url}',
   errGeneric: 'Error',
   errBattleTagInvalid: 'Invalid BattleTag format (e.g. Name#1234).',
   errUpdate: 'Error while updating.',

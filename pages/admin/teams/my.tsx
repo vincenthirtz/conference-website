@@ -20,6 +20,7 @@ import type { Member, SearchResult } from '@/components/admin/teams/my/types';
 import { isValidSkillRating } from '@/utils/overwatchRank';
 
 import { logger } from '../../../utils/logger';
+import { addMemberFeedbackToasts } from '@/components/admin/teams/myAddMemberFeedback';
 import nsAdminTeamsMy from '@/lib/i18n/locales/admin-fr/adminTeamsMy';
 import { withTeamParam } from '@/utils/teamScopeParam';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';
@@ -368,13 +369,8 @@ function MyTeamPage({ staff }: StaffProps) {
         addToast(json?.error || t.errAdd, 'error');
         return;
       }
-      // L'email d'invitation est best-effort cote API : on previent l'admin
-      // si le membre a bien ete ajoute mais que le mail n'est pas parti.
-      if (json?.emailWarning) {
-        addToast(
-          format(t.memberAddedWithWarning, { warning: json.emailWarning }),
-          'warning'
-        );
+      for (const [message, kind] of addMemberFeedbackToasts(json, t)) {
+        addToast(message, kind);
       }
       // Reset and reload
       setShowAddModal(false);

@@ -14,6 +14,13 @@ export type MemberFormState = {
   skillRating: string;
   setCaptain: boolean;
   isSubstitute: boolean;
+  /**
+   * Ajout : invitation (défaut) ou ajout direct sur motif. Ignoré à l'édition
+   * (cf. utils/teams/staffInvitation.ts).
+   */
+  addMode: 'invite' | 'direct';
+  /** Motif de l'ajout direct. */
+  reason: string;
 };
 
 /** Résultat de la recherche de joueurs (API /api/admin/users/search). */

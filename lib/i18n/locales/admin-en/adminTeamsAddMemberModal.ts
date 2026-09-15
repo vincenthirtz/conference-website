@@ -32,4 +32,16 @@ export default {
   captainDesc: 'Team leader',
   substitute: 'Substitute',
   substituteDesc: 'Reserve player',
+  modeLabel: 'How to add',
+  modeInvite: 'Send an invitation',
+  modeInviteDesc:
+    'Recommended. The person accepts or declines: nothing is added before they agree.',
+  modeDirect: 'Add directly',
+  modeDirectDesc:
+    'For corrections. A reason is required and logged; the person is notified.',
+  reasonLabel: 'Reason for adding directly',
+  reasonPlaceholder: 'E.g. registration roster to fix',
+  reasonHint: 'At least {min} characters. Shown in the staff logs.',
+  sendInvite: 'Send invitation',
+  sending: 'Sending...',
 };

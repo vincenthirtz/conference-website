@@ -482,8 +482,15 @@ les appartenances acceptées et, au registre, les seuls gains nés de SON geste 
 victoires, check-ins, palmarès et cadeaux d'accueil sont pilotés par
 l'organisation : un owner pouvait les provoquer pour une personne ajoutée de
 force. Les appartenances antérieures ont reçu `accepted_at = created_at`.
-Reste possible, sans aucune prise TCG : ajouter quelqu'un sans son accord
-(invitation obligatoire = lot suivant).
+**L'ajout staff passe par une invitation** (`utils/teams/staffInvitation.ts`).
+Les deux routes staff (`/api/admin/teams/add-member`, `/api/admin/teams/[teamId]/members`)
+créent par défaut une invitation en attente (`demandes` type `invite`, source
+`staff`) avec lien privé par email : la personne rejoint en acceptant, ce qui pose
+`accepted_at`. L'ajout direct reste ouvert aux corrections (`mode: 'direct'`),
+avec un motif obligatoire journalisé (`staff_logs`) et un email qui rappelle le
+bouton « Quitter l'équipe » de l'espace joueuse ; il laisse `accepted_at` à `NULL`.
+Restent des ajouts directs sans accord, donc sans prise TCG : capitaine
+(`/api/teams/add-member`), Discord et imports de roster.
 
 **Un scrim annulé ne se re-clôt plus.** `applyScrimResult` n'écrit que si le scrim
 n'est ni `completed` ni `cancelled` (409 `SCRIM_CLOSED`, miroir noté non touché) ;

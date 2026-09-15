@@ -40,10 +40,10 @@ const BASELINE: Record<string, number> = {
   // descend jamais finit par ne plus rien geler.
   'pages/admin/tournament/[id]/matches.tsx': 2253,
   'components/admin/communications/CampaignsPanel.tsx': 1164,
-  'pages/admin/teams/my.tsx': 1754,
+  'pages/admin/teams/my.tsx': 1750,
   'pages/admin/demandes/index.tsx': 1614,
   'pages/admin/tournament/[id]/dashboard.tsx': 1614,
-  'pages/admin/teams/[teamId]/edit.tsx': 1516,
+  'pages/admin/teams/[teamId]/edit.tsx': 1503,
   'pages/admin/matches/[matchId]/edit.tsx': 1343,
   'pages/admin/teams/index.tsx': 1445,
   'pages/admin/events/[runId]/director.tsx': 1277,
@@ -64,7 +64,7 @@ const BASELINE: Record<string, number> = {
   // paiera pareil : c'est le prix admis, pas une dérive.
   'pages/admin/tenants/[id]/discord-config/[guildId].tsx': 692,
   'pages/admin/stages/[stageId].tsx': 952,
-  'pages/admin/users/new.tsx': 930,
+  'pages/admin/users/new.tsx': 903,
   'pages/admin/demandes/[id].tsx': 923,
   // 764 écrites : la fiche a rendu ses secrets bot à un panneau (T8), et le
   // plafond suit — un gel qui ne descend jamais finit par ne plus rien geler.

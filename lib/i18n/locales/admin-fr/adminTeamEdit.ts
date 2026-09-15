@@ -24,6 +24,11 @@ export default adminNs('adminTeamEdit', {
   errBattleTagRequired: 'BattleTag est obligatoire',
   errAddMember: "Impossible d'ajouter le membre",
   toastMemberAdded: 'Membre ajouté',
+  errReasonRequired:
+    "Indique le motif de l'ajout direct ({min} caractères minimum).",
+  toastInviteSent: "Invitation envoyée : la personne doit l'accepter.",
+  toastInviteNoEmail:
+    "Invitation créée, mais l'email n'est pas parti. Lien à lui transmettre : {url}",
   toastMemberEdited: 'Membre modifié',
   confirmDeleteMember: "Retirer {member} de l'équipe ?",
   toastMemberRemoved: 'Membre retiré',

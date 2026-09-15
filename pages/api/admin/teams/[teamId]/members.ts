@@ -14,6 +14,10 @@ import {
 } from '@/utils/apiHelpers';
 import { logger } from '../../../../../utils/logger';
 import { logStaffAction } from '@/utils/staffLogs';
+import {
+  createStaffInvitation,
+  parseStaffAddMode,
+} from '@/utils/teams/staffInvitation';
 import { loadTeamInTenant } from '@/utils/teams/loadTeamInTenant';
 import {
   isTeamRosterLocked,
@@ -73,6 +77,18 @@ type MembersResponse =
       info?: string;
     }
   | { success: boolean; info?: string }
+  | {
+      /** Mode par défaut : rien n'est ajouté tant que la personne n'accepte pas. */
+      invited: true;
+      invitation: {
+        id: string;
+        user_id: string;
+        role: string;
+        expires_at: string | null;
+      };
+      invite_url: string;
+      email_sent: boolean;
+    }
   | { error: string };
 
 export default withStaffRoute(handler, { permission: 'manage_teams' });
@@ -186,6 +202,15 @@ async function handler(
       force,
     } = req.body || {};
 
+    // Invitation par défaut ; ajout direct seulement sur motif (cf.
+    // utils/teams/staffInvitation.ts).
+    const addMode = parseStaffAddMode(req.body);
+    if (!addMode.ok) {
+      return res
+        .status(addMode.status)
+        .json({ error: addMode.error, code: addMode.code } as any);
+    }
+
     // Garde roster lock : refus si l'equipe est inscrite a un tournoi avec
     // roster_locked_at <= now() (sauf flag force=true).
     if (force !== true) {
@@ -223,7 +248,7 @@ async function handler(
       // Vérifier l'équipe
       const { data: team, error: teamErr } = await supabaseAdmin
         .from('teams')
-        .select('id, name')
+        .select('id, name, captain_id')
         .eq('id', teamId)
         .maybeSingle();
       if (teamErr || !team) {
@@ -255,6 +280,70 @@ async function handler(
         }
       }
 
+      // S'ajouter soi-même, c'est consentir : ni invitation ni motif.
+      const selfAdd = resolvedUserId === ctx.user.id;
+      const typedEmail =
+        typeof email === 'string' && email.includes('@')
+          ? email.trim().toLowerCase()
+          : null;
+
+      if (addMode.mode === 'invite' && !selfAdd) {
+        let inviteeEmail = typedEmail;
+        if (!inviteeEmail) {
+          const { data: authUser } =
+            await supabaseAdmin.auth.admin.getUserById(resolvedUserId);
+          inviteeEmail = authUser?.user?.email?.toLowerCase() ?? null;
+        }
+        const invite = await createStaffInvitation({
+          tenantId: ctx.tenantId,
+          teamId: String(teamId),
+          teamName: team.name,
+          teamHasCaptain: Boolean(team.captain_id),
+          staffUserId: ctx.user.id,
+          inviteeUserId: resolvedUserId,
+          inviteeEmail,
+          role: validateRole(role),
+          isSubstitute: isSubstitute === true,
+          battleTag: battleTagValue,
+          setCaptain: setCaptain === true,
+        });
+        if (!invite.ok) {
+          return res
+            .status(invite.status)
+            .json({ error: invite.error, code: invite.code } as any);
+        }
+        if (ctx?.staff?.id) {
+          try {
+            await logStaffAction({
+              staff_id: ctx.staff.id,
+              action: 'invite_team_member',
+              entity_type: 'team',
+              entity_id: String(teamId),
+              tenant_id: ctx.tenantId,
+              payload: {
+                memberUserId: resolvedUserId,
+                invitationId: invite.invitationId,
+                role: invite.desiredRole,
+                setCaptain: setCaptain === true,
+              },
+            });
+          } catch (logErr) {
+            logger.error('logStaffAction(invite_team_member) error:', logErr);
+          }
+        }
+        return res.status(202).json({
+          invited: true,
+          invitation: {
+            id: invite.invitationId,
+            user_id: resolvedUserId,
+            role: invite.desiredRole,
+            expires_at: invite.expiresAt,
+          },
+          invite_url: invite.inviteUrl,
+          email_sent: invite.emailSent,
+        });
+      }
+
       // Insérer dans team_members. `tenant_id` est NOT NULL sans default depuis
       // enforce_tenant_id_not_null_and_fk.sql : l'omettre fait échouer l'insert
       // (23502) quel que soit le rôle. Tous les autres chemins d'ajout
@@ -274,6 +363,9 @@ async function handler(
         role: validateRole(role),
         battle_tag: battleTagValue,
         is_substitute: isSubstitute === true,
+        // Ajout direct par un tiers : pas d'accord de la personne, donc
+        // `accepted_at` reste NULL (aucun rattachement TCG à l'espace).
+        ...(selfAdd ? { accepted_at: new Date().toISOString() } : {}),
         ...(isValidSkillRating(parsedSkillRating)
           ? { skill_rating: parsedSkillRating }
           : {}),
@@ -303,10 +395,12 @@ async function handler(
           .eq('id', teamId);
       }
 
-      // Send team join email (non-blocking)
-      const memberEmail =
-        typeof email === 'string' ? email.trim().toLowerCase() : null;
-      if (memberEmail) {
+      // Send team join email (non-blocking). Sans invitation, la personne est
+      // prévenue quand même : elle doit savoir qu'elle figure sur ce roster.
+      const memberEmail = typedEmail;
+      if (selfAdd) {
+        // Rien à annoncer à soi-même.
+      } else if (memberEmail) {
         sendTeamJoinEmail(
           memberEmail,
           team.name,
@@ -347,6 +441,8 @@ async function handler(
               role: memberPayload.role,
               isSubstitute: memberPayload.is_substitute,
               setCaptain: setCaptain === true,
+              mode: selfAdd ? 'self' : 'direct',
+              reason: addMode.reason,
             },
           });
           if (setCaptain) {

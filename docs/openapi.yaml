@@ -20629,7 +20629,21 @@ paths:
           $ref: '#/components/responses/Forbidden'
   /api/admin/teams/add-member:
     post:
-      summary: Add a member to a team (admin action).
+      summary: Invite a member to a team, or add them directly with a reason (admin action).
+      description: |
+        Requires `manage_teams`; the team must belong to the active tenant.
+        By default (`mode` omitted or `invite`) nothing is added: a pending
+        invitation (`demandes` type `invite`, source `staff`) is created, the
+        person receives the private invite link by email and joins when they
+        accept (which sets `team_members.accepted_at`). Response 202 with
+        `invited: true`, `invitationId`, `inviteUrl` (returned once, stored
+        hashed only) and `emailSent`. `setCaptain` on a team that already has a
+        captain is refused with 409 `CAPTAIN_ALREADY_SET`.
+        `mode: direct` inserts the member immediately and requires `reason`
+        (5-500 characters, 400 `REASON_REQUIRED` otherwise), logged in
+        `staff_logs`; the person is notified by email and `accepted_at` stays
+        null (no TCG attachment to the tenant). A staff member adding their
+        own account is always a direct add with `accepted_at` set.
       operationId: adminAddTeamMember
       tags:
         - admin/teams
@@ -20642,14 +20656,34 @@ paths:
             schema:
               type: object
               additionalProperties: true
+              properties:
+                mode:
+                  type: string
+                  enum: [invite, direct]
+                  default: invite
+                reason:
+                  type: string
+                  minLength: 5
+                  maxLength: 500
       responses:
         '200':
-          description: Member added.
+          description: 'Member added directly (`mode: direct`).'
           content:
             application/json:
               schema:
                 type: object
                 additionalProperties: true
+        '202':
+          description: Invitation created; the person has not joined yet.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Pending invitation already exists, or captain already set.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -21345,7 +21379,12 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
     post:
-      summary: Add a member to a team.
+      summary: Invite a member to a team, or add them directly with a reason.
+      description: |
+        Same rules as `POST /api/admin/teams/add-member`: invitation by default
+        (202 with `invited: true`, `invitation`, `invite_url`, `email_sent`),
+        `mode: direct` + `reason` for an immediate add (201, `accepted_at`
+        null). Roster lock applies to both modes unless `force: true`.
       operationId: adminAddTeamMember
       tags:
         - admin/teams
@@ -21358,13 +21397,33 @@ paths:
             schema:
               type: object
               additionalProperties: true
+              properties:
+                mode:
+                  type: string
+                  enum: [invite, direct]
+                  default: invite
+                reason:
+                  type: string
+                  minLength: 5
+                  maxLength: 500
       responses:
         '201':
-          description: Added.
+          description: 'Added directly (`mode: direct`).'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TeamMember'
+        '202':
+          description: Invitation created; the person has not joined yet.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Roster locked, pending invitation already exists, or captain already set.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':

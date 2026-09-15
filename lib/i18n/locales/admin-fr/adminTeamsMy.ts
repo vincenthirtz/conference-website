@@ -102,6 +102,9 @@ export default adminNs('adminTeamsMy', {
   errLoad: 'Erreur inattendue.',
   errAdd: "Erreur lors de l'ajout",
   memberAddedWithWarning: 'Membre ajoute. {warning}',
+  inviteSent: "Invitation envoyée : la personne doit l'accepter.",
+  inviteNoEmail:
+    "Invitation créée, mais l'email n'est pas parti. Lien à lui transmettre : {url}",
   errGeneric: 'Erreur',
   errBattleTagInvalid: 'Format BattleTag invalide (ex: Pseudo#1234).',
   errUpdate: 'Erreur lors de la mise a jour.',

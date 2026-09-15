@@ -4,6 +4,7 @@ import Modal from '@/components/admin/Modal';
 import type { TeamRole } from '@/utils/teamRoles';
 import { roleRequiresBattleTag } from '@/utils/teams/roleKind';
 import type { MemberFormState, SearchResult } from './types';
+import { STAFF_DIRECT_ADD_REASON_MIN } from '@/utils/teams/staffAddMode';
 import nsAdminTeamsAddMemberModal from '@/lib/i18n/locales/admin-fr/adminTeamsAddMemberModal';
 
 type AddMemberModalProps = {
@@ -43,6 +44,7 @@ function AddMemberModalComponent({
   // Coach / manager = encadrement : pas forcément de compte Overwatch, donc
   // pas de BattleTag exigé (même règle que l'API, cf. utils/teams/addMember).
   const battleTagRequired = roleRequiresBattleTag(memberForm.role);
+  const inviting = memberForm.addMode === 'invite';
   return (
     <Modal
       open={open}
@@ -90,7 +92,7 @@ function AddMemberModalComponent({
             {memberSaving ? (
               <>
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                {t.adding}
+                {inviting ? t.sending : t.adding}
               </>
             ) : (
               <>
@@ -107,7 +109,7 @@ function AddMemberModalComponent({
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                {t.addPlayer}
+                {inviting ? t.sendInvite : t.addPlayer}
               </>
             )}
           </button>
@@ -414,6 +416,79 @@ function AddMemberModalComponent({
             </label>
           </div>
         </div>
+
+        {/* Mode d'ajout : l'invitation est le défaut, parce qu'on ne met pas
+            quelqu'un dans une équipe sans son accord. L'ajout direct reste
+            ouvert aux corrections, sur motif journalisé. */}
+        <fieldset>
+          <legend className="block text-sm font-medium text-neutral-200 mb-2">
+            {t.modeLabel}
+          </legend>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {(
+              [
+                ['invite', t.modeInvite, t.modeInviteDesc],
+                ['direct', t.modeDirect, t.modeDirectDesc],
+              ] as const
+            ).map(([value, label, desc]) => {
+              const checked = memberForm.addMode === value;
+              return (
+                <label
+                  key={value}
+                  className={`flex items-start gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all ${
+                    checked
+                      ? 'bg-emerald-500/10 border-emerald-500/60 ring-1 ring-emerald-500/40'
+                      : 'bg-neutral-900/40 border-neutral-700 hover:border-neutral-600'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="add-member-mode"
+                    value={value}
+                    checked={checked}
+                    onChange={() =>
+                      setMemberForm((prev) => ({ ...prev, addMode: value }))
+                    }
+                    className="mt-1 accent-emerald-500"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-white">
+                      {label}
+                    </span>
+                    <span className="block text-xs text-neutral-400">
+                      {desc}
+                    </span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          {!inviting && (
+            <div className="mt-3">
+              <label
+                htmlFor="add-member-reason"
+                className="block text-sm font-medium text-neutral-200 mb-1.5"
+              >
+                {t.reasonLabel} <span className="text-red-400">*</span>
+              </label>
+              <textarea
+                id="add-member-reason"
+                rows={2}
+                maxLength={500}
+                required
+                value={memberForm.reason}
+                onChange={(e) =>
+                  setMemberForm((prev) => ({ ...prev, reason: e.target.value }))
+                }
+                className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
+                placeholder={t.reasonPlaceholder}
+              />
+              <p className="text-xs text-neutral-500 mt-1.5">
+                {format(t.reasonHint, { min: STAFF_DIRECT_ADD_REASON_MIN })}
+              </p>
+            </div>
+          )}
+        </fieldset>
 
         {memberError && (
           <div className="rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2.5 text-sm text-red-200 flex items-start gap-2">

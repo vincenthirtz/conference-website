@@ -97,6 +97,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   reopen_match_lineup: 'Feuille de match rouverte',
   bulk_roster_update: 'Mise à jour roster en masse',
   add_team_member: "Ajout d'un membre d'équipe",
+  invite_team_member: "Invitation d'un membre dans une équipe",
   remove_team_member: "Retrait d'un membre d'équipe",
   update_team_member: "Modification d'un membre d'équipe",
   kick_member: "Exclusion d'un membre",

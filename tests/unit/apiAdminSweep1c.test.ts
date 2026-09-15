@@ -289,7 +289,12 @@ describe('/api/admin/teams/[teamId]/members', () => {
       makeAuthedReq({
         method: 'POST',
         query: { teamId: TEAM_UUID },
-        body: { email: 'new@y.com', battleTag: 'Player#1234' },
+        body: {
+          mode: 'direct',
+          reason: 'Correction du roster',
+          email: 'new@y.com',
+          battleTag: 'Player#1234',
+        },
       }),
       res
     );
@@ -321,7 +326,12 @@ describe('/api/admin/teams/[teamId]/members', () => {
       makeAuthedReq({
         method: 'POST',
         query: { teamId: TEAM_UUID },
-        body: { email: 'tenant@y.com', role: 'manager' },
+        body: {
+          mode: 'direct',
+          reason: 'Correction du roster',
+          email: 'tenant@y.com',
+          role: 'manager',
+        },
       }),
       res
     );
@@ -348,6 +358,8 @@ describe('/api/admin/teams/[teamId]/members', () => {
           userId: 'user-direct',
           battleTag: 'Captain#1234',
           setCaptain: true,
+          mode: 'direct',
+          reason: 'Correction du roster',
         },
       }),
       res
@@ -421,6 +433,8 @@ describe('/api/admin/teams/[teamId]/members', () => {
           email: 'x@y.com',
           battleTag: 'Player#1234',
           force: true,
+          mode: 'direct',
+          reason: 'Correction du roster',
         },
       }),
       res

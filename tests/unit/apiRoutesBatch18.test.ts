@@ -200,6 +200,8 @@ describe('POST /api/admin/teams/add-member', () => {
             role: 'coach',
             battleTag: 'Coach#9876',
             setCaptain: true,
+            mode: 'direct',
+            reason: 'Correction du roster',
           },
         },
         true
@@ -253,6 +255,8 @@ describe('POST /api/admin/teams/add-member', () => {
             teamId: 'team-1',
             userId: 'u-new',
             battleTag: 'Player#1234',
+            mode: 'direct',
+            reason: 'Correction du roster',
           },
         },
         true

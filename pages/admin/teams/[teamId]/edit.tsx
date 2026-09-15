@@ -14,11 +14,12 @@ import MembersSection from '@/components/admin/teams/MembersSection';
 import AddMemberModal from '@/components/admin/teams/AddMemberModal';
 import EditMemberModal from '@/components/admin/teams/EditMemberModal';
 import ImportBattleTagsModal from '@/components/admin/teams/ImportBattleTagsModal';
+import { BATTLE_TAG_REGEX, isNonPlayingTeamRole } from '@/utils/teams/roleKind';
 import {
-  BATTLE_TAG_REGEX,
-  roleRequiresBattleTag,
-  isNonPlayingTeamRole,
-} from '@/utils/teams/roleKind';
+  addMemberSuccessToast,
+  buildAddMemberBody,
+  validateAddMemberForm,
+} from '@/components/admin/teams/staffAddMember';
 import type {
   MemberFormState,
   SearchResult,
@@ -139,6 +140,8 @@ function AdminEditTeamPage({
     skillRating: '',
     setCaptain: false,
     isSubstitute: false,
+    addMode: 'invite',
+    reason: '',
   });
   const [memberSaving, setMemberSaving] = useState(false);
   const [memberError, setMemberError] = useState<string | null>(null);
@@ -407,6 +410,8 @@ function AdminEditTeamPage({
       skillRating: '',
       setCaptain: false,
       isSubstitute: false,
+      addMode: 'invite',
+      reason: '',
     });
     setMemberError(null);
     setSearchQuery('');
@@ -505,6 +510,8 @@ function AdminEditTeamPage({
         member.skill_rating != null ? String(member.skill_rating) : '',
       setCaptain: false,
       isSubstitute: member.is_substitute ?? false,
+      addMode: 'invite',
+      reason: '',
     });
     setMemberError(null);
     setShowEditMemberModal(true);
@@ -512,44 +519,24 @@ function AdminEditTeamPage({
 
   const handleAddMember = useCallback(async () => {
     if (!teamId) return;
-    if (!memberForm.email.trim() && !memberForm.userId.trim()) {
-      setMemberError(t.errEmailOrUserId);
+    const invalid = validateAddMemberForm(memberForm, t);
+    if (invalid) {
+      setMemberError(invalid);
       return;
     }
-    // Coach / manager = encadrement : pas de compte Overwatch exigé, donc pas
-    // de BattleTag (même règle que l'API, cf. utils/teams/addMember).
-    if (
-      !memberForm.battleTag.trim() &&
-      roleRequiresBattleTag(memberForm.role)
-    ) {
-      setMemberError(t.errBattleTagRequired);
-      return;
-    }
-
     setMemberSaving(true);
     setMemberError(null);
-
     try {
       const res = await addMemberMutate(`/api/admin/teams/${teamId}/members`, {
         method: 'POST',
-        body: JSON.stringify({
-          email: memberForm.email.trim() || undefined,
-          userId: memberForm.userId.trim() || undefined,
-          role: memberForm.role.trim() || 'player',
-          battleTag: memberForm.battleTag.trim() || undefined,
-          skillRating: memberForm.skillRating.trim() || undefined,
-          setCaptain: memberForm.setCaptain,
-          isSubstitute: memberForm.isSubstitute,
-        }),
+        body: buildAddMemberBody(memberForm),
       });
-
       const json = await res.json();
       if (!res.ok || json.error) {
         throw new Error(json.error || t.errAddMember);
       }
-
       setShowAddMemberModal(false);
-      addToast(t.toastMemberAdded, 'success');
+      addToast(...addMemberSuccessToast(json, t));
       await fetchMembers();
     } catch (err: unknown) {
       setMemberError((err as Error)?.message ?? t.errUnexpected);

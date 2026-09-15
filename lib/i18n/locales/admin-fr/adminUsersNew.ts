@@ -53,6 +53,11 @@ export default adminNs('adminUsersNew', {
   emailNotSent:
     "L'email de bienvenue n'a pas pu être envoyé : personne ne connaît le mot de passe de ce compte. Relancez l'envoi (le mot de passe sera régénéré).",
   teamAssignedTitle: "Ajouté à l'équipe",
+  teamInvitedTitle: "Invitation à rejoindre l'équipe envoyée",
+  teamInvitedHint:
+    "La personne rejoindra l'équipe quand elle aura accepté l'invitation (lien reçu par email, ou depuis son espace joueuse).",
+  teamInvitedNoEmail:
+    "L'email d'invitation n'est pas parti. Lien à lui transmettre :",
   teamLabel: 'Équipe :',
   roleLabelColon: 'Rôle :',
   setCaptainSuccess: 'Défini comme capitaine',
