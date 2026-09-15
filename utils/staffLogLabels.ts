@@ -135,6 +135,8 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   revoke_tenant_staff: 'Retrait staff du tenant',
   reject_tenant_request: 'Refus demande de tenant',
   expire_tenant_request: 'Expiration demande de tenant',
+  approve_circuit_partner: 'Offre circuit partenaire accordée',
+  reject_circuit_partner: 'Candidature circuit partenaire refusée',
   claim_guild_link: 'Association guilde Discord',
   reject_guild_link: 'Refus association guilde',
   update_tenant_discord_config: 'Config Discord du tenant modifiée',

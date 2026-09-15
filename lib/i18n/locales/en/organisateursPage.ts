@@ -110,5 +110,10 @@ export default {
   ambassadorBannerBody:
     'The Discovery plan is on us, for as long as your commitment lasts. Tell us when you create your space.',
   ambassadorBannerCta: 'See the programme',
+  nicheTitle: 'A women’s or mixed tournament?',
+  nicheBody:
+    'Template rulebook, moderation, player safety, prize pool: our guide is free to use. And women’s and mixed circuits in other games can apply for our partner offer.',
+  nicheGuideCta: 'Read the guide',
+  nicheCircuitsCta: 'Circuits offer',
   offersCustomNeed: 'A need that fits none of the three? Write to us.',
 };

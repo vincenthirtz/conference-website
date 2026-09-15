@@ -261,6 +261,33 @@
       "name",
       "updated_at"
     ],
+    "circuit_partner_applications": [
+      "admin_notes",
+      "commits_code_of_conduct",
+      "commits_safety_lead",
+      "community_url",
+      "contact_name",
+      "created_at",
+      "decided_at",
+      "decided_by",
+      "email",
+      "existing_tenant_slug",
+      "expected_teams",
+      "format",
+      "game",
+      "granted_plan",
+      "granted_tenant_id",
+      "granted_until",
+      "id",
+      "ip_address",
+      "message",
+      "organization_name",
+      "season_start",
+      "status",
+      "updated_at",
+      "user_agent",
+      "website"
+    ],
     "custom_game_presets": [
       "created_at",
       "created_by",
@@ -2069,6 +2096,10 @@
     },
     "caster_presence_tenant_id_fkey": {
       "source": "caster_presence",
+      "target": "tenants"
+    },
+    "circuit_partner_applications_granted_tenant_id_fkey": {
+      "source": "circuit_partner_applications",
       "target": "tenants"
     },
     "custom_game_presets_tenant_id_fkey": {

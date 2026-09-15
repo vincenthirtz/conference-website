@@ -13,6 +13,8 @@ import nsTcgCatalog from './tcgCatalog';
 import nsTcgTrade from './tcgTrade';
 import nsTcgSets from './tcgSets';
 import nsMatchPrediction from './matchPrediction';
+import nsOrganiserFemininPage from './organiserFemininPage';
+import nsCircuitPartnersPage from './circuitPartnersPage';
 import nsTcgShowcase from './tcgShowcase';
 import nsPlayerIndex from './playerIndex';
 import nsSupportAssoCard from './supportAssoCard';
@@ -355,6 +357,8 @@ export const frDict = {
   tcgTrade: nsTcgTrade.fr,
   tcgSets: nsTcgSets.fr,
   matchPrediction: nsMatchPrediction.fr,
+  organiserFemininPage: nsOrganiserFemininPage.fr,
+  circuitPartnersPage: nsCircuitPartnersPage.fr,
   tcgShowcase: nsTcgShowcase.fr,
   playerHeroPrefs: nsPlayerHeroPrefs.fr,
   playerTwitchLink: nsPlayerTwitchLink.fr,

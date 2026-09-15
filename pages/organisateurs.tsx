@@ -183,6 +183,31 @@ function OrganisateursPage() {
         </div>
       </section>
 
+      {/* La niche : le guide et l'offre des circuits féminins et mixtes. Placé
+          avant les prix — c'est notre différence, pas une note de bas de page. */}
+      <section className="mx-auto max-w-5xl px-6 pb-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-pink-400/40 bg-pink-500/[0.07] p-5">
+          <div className="max-w-2xl">
+            <h2 className="font-semibold text-pink-50">{t.nicheTitle}</h2>
+            <p className="mt-1 text-sm text-pink-50/80">{t.nicheBody}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/organisateurs/tournoi-feminin-ou-mixte"
+              className="rounded-lg border border-pink-300/50 px-4 py-2 text-sm font-semibold text-pink-50 transition hover:border-pink-200"
+            >
+              {t.nicheGuideCta}
+            </Link>
+            <Link
+              href="/organisateurs/circuits-feminins"
+              className="rounded-lg bg-pink-500/80 px-4 py-2 text-sm font-semibold text-white transition hover:bg-pink-500"
+            >
+              {t.nicheCircuitsCta}
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Offres */}
       <section id="offres" className="mx-auto max-w-6xl px-6 py-16">
         <h2 className="text-center text-2xl font-bold sm:text-3xl">

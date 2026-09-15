@@ -117,6 +117,11 @@ export default ns('organisateursPage', {
   ambassadorBannerBody:
     'La formule Découverte vous est offerte, aussi longtemps que dure votre engagement. Dites-le-nous à la création de votre espace.',
   ambassadorBannerCta: 'Voir le programme',
+  nicheTitle: 'Un tournoi féminin ou mixte ?',
+  nicheBody:
+    'Règlement type, modération, sécurité des joueuses, cagnotte : notre guide est libre. Et les circuits féminins et mixtes d’autres jeux peuvent candidater à notre offre partenaire.',
+  nicheGuideCta: 'Lire le guide',
+  nicheCircuitsCta: 'Offre circuits',
   offersCustomNeed:
     'Un besoin qui ne rentre dans aucune des trois ? Écrivez-nous.',
 });

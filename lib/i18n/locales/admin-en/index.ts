@@ -83,6 +83,7 @@ import enAdminTenantsNew from './adminTenantsNew';
 import enAdminBilling from './adminBilling';
 import enAdminTenantDetail from './adminTenantDetail';
 import enAdminTenantRequestsList from './adminTenantRequestsList';
+import enAdminCircuitPartners from './adminCircuitPartners';
 import enAdminPartnershipRequestsList from './adminPartnershipRequestsList';
 import enAdminPartnershipRequestDetail from './adminPartnershipRequestDetail';
 import enAdminPendingGuildLinks from './adminPendingGuildLinks';
@@ -275,6 +276,7 @@ const adminEnDict = {
   adminBilling: enAdminBilling,
   adminTenantDetail: enAdminTenantDetail,
   adminTenantRequestsList: enAdminTenantRequestsList,
+  adminCircuitPartners: enAdminCircuitPartners,
   adminPartnershipRequestsList: enAdminPartnershipRequestsList,
   adminPartnershipRequestDetail: enAdminPartnershipRequestDetail,
   adminPendingGuildLinks: enAdminPendingGuildLinks,

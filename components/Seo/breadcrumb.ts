@@ -48,6 +48,7 @@ const INTERMEDIATES: Record<string, { path: string; name: string }> = {
   // /developpeurs redirige vers /organisateurs : le fil pointe sur la cible.
   '/developpeurs': { path: '/organisateurs', name: 'Organisateurs' },
   '/partenaires': { path: '/partenaires', name: 'Partenaires' },
+  '/organisateurs': { path: '/organisateurs', name: 'Organisateurs' },
   '/rejoindre': { path: '/rejoindre', name: 'Trouver une équipe' },
 };
 

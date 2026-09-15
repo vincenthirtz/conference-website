@@ -58,6 +58,12 @@ const getSiteSections = (t: PlanDict): SiteSection[] => [
       { label: t.linkContact, href: '/contact' },
       { label: t.linkSupport, href: '/support' },
       { label: t.linkDonate, href: '/don' },
+      { label: t.linkOrganisers, href: '/organisateurs' },
+      {
+        label: t.linkWomenGuide,
+        href: '/organisateurs/tournoi-feminin-ou-mixte',
+      },
+      { label: t.linkCircuitsOffer, href: '/organisateurs/circuits-feminins' },
     ],
   },
   {

@@ -1,0 +1,30 @@
+post:
+  tags:
+    - public/misc
+  summary: Candidature d'un circuit feminin ou mixte a l'offre partenaire.
+  description: |
+    Enregistre la candidature ; rien n'est accorde ici. L'accord (un plan pose
+    sur un espace pour une duree finie, `config/circuitPartnerOffer.ts`) est un
+    geste du staff de plateforme.
+
+    Anti-spam : honeypot (succes generique), 5 / heure par IP, captcha HMAC,
+    qualite de l'adresse email. Le jeu doit appartenir au registre
+    `config/games` (`400 UNKNOWN_GAME` sinon), et les deux engagements de
+    securite doivent valoir `true`.
+  operationId: submitCircuitPartnerApplication
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: public.circuitPartnerApplication
+  responses:
+    '201':
+      description: Candidature enregistree.
+    '400':
+      description: '`code: VALIDATION`, `CAPTCHA` ou `UNKNOWN_GAME`.'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

@@ -43,6 +43,16 @@ const publicRoutes = [
   // est une page publique indexable (générée depuis la spec) ; l'inscription et
   // la console développeur sont en noindex et restent dehors.
   { path: '/organisateurs', priority: '0.6', changefreq: 'monthly' },
+  {
+    path: '/organisateurs/tournoi-feminin-ou-mixte',
+    priority: '0.6',
+    changefreq: 'monthly',
+  },
+  {
+    path: '/organisateurs/circuits-feminins',
+    priority: '0.6',
+    changefreq: 'monthly',
+  },
   { path: '/developpeurs/reference', priority: '0.5', changefreq: 'weekly' },
   { path: '/leaderboard', priority: '0.7', changefreq: 'daily' },
   { path: '/palmares', priority: '0.7', changefreq: 'weekly' },

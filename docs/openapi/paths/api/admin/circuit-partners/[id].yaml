@@ -1,0 +1,52 @@
+patch:
+  tags:
+    - admin/tenants
+  summary: Decider d'une candidature de circuit partenaire.
+  description: |
+    `review` (en examen), `reject` (motif obligatoire), `approve` (plan offert
+    pose sur l'espace `tenantSlug`). L'accord reserve la decision
+    atomiquement, refuse de retrograder un espace deja mieux couvert
+    (`409 plan_already_covers`) et remet la candidature dans son statut si le
+    plan ne peut pas etre pose. Journalise dans `staff_logs`
+    (`approve_circuit_partner`, `reject_circuit_partner`).
+  operationId: adminDecideCircuitPartnerApplication
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [action]
+          properties:
+            action:
+              type: string
+              enum: [review, reject, approve]
+            notes:
+              type: string
+              maxLength: 3000
+            tenantSlug:
+              type: string
+              description: Requis pour `approve`.
+  responses:
+    '200':
+      description: Decision appliquee.
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      description: Candidature ou espace introuvable.
+    '409':
+      description: '`already_decided` ou `plan_already_covers`.'
+    '500':
+      $ref: '#/components/responses/ServerError'

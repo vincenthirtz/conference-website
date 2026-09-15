@@ -144,6 +144,9 @@ export type StaffLogAction =
   | 'revoke_tenant_staff'
   | 'reject_tenant_request'
   | 'expire_tenant_request'
+  // Offre partenaire des circuits féminins et mixtes
+  | 'approve_circuit_partner'
+  | 'reject_circuit_partner'
   | 'claim_guild_link'
   | 'reject_guild_link'
   | 'update_tenant_discord_config'

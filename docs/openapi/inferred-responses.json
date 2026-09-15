@@ -2855,6 +2855,47 @@
   "GET /api/admin/cast-members/{id}": {
    "200": {}
   },
+  "GET /api/admin/circuit-partners": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "items": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "granted_tenant_slug": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "granted_tenant_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "granted_tenant_slug",
+        "granted_tenant_id"
+       ]
+      }
+     },
+     "counts": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "number"
+      }
+     }
+    },
+    "required": [
+     "items",
+     "counts"
+    ]
+   }
+  },
   "GET /api/admin/comments": {
    "200": {
     "type": "object",
@@ -4051,6 +4092,7 @@
           "advance_teams",
           "apply_template",
           "approve",
+          "approve_circuit_partner",
           "assign",
           "assign_captain",
           "assign_team_captain",
@@ -4196,6 +4238,7 @@
           "reassign_stage",
           "register_team",
           "reject",
+          "reject_circuit_partner",
           "reject_guild_link",
           "reject_tenant_request",
           "remove",
@@ -5328,6 +5371,7 @@
           "advance_teams",
           "apply_template",
           "approve",
+          "approve_circuit_partner",
           "assign",
           "assign_captain",
           "assign_team_captain",
@@ -5473,6 +5517,7 @@
           "reassign_stage",
           "register_team",
           "reject",
+          "reject_circuit_partner",
           "reject_guild_link",
           "reject_tenant_request",
           "remove",
@@ -7275,6 +7320,7 @@
           "advance_teams",
           "apply_template",
           "approve",
+          "approve_circuit_partner",
           "assign",
           "assign_captain",
           "assign_team_captain",
@@ -7420,6 +7466,7 @@
           "reassign_stage",
           "register_team",
           "reject",
+          "reject_circuit_partner",
           "reject_guild_link",
           "reject_tenant_request",
           "remove",
@@ -10106,6 +10153,7 @@
           "advance_teams",
           "apply_template",
           "approve",
+          "approve_circuit_partner",
           "assign",
           "assign_captain",
           "assign_team_captain",
@@ -10251,6 +10299,7 @@
           "reassign_stage",
           "register_team",
           "reject",
+          "reject_circuit_partner",
           "reject_guild_link",
           "reject_tenant_request",
           "remove",
@@ -14713,6 +14762,7 @@
           "advance_teams",
           "apply_template",
           "approve",
+          "approve_circuit_partner",
           "assign",
           "assign_captain",
           "assign_team_captain",
@@ -14858,6 +14908,7 @@
           "reassign_stage",
           "register_team",
           "reject",
+          "reject_circuit_partner",
           "reject_guild_link",
           "reject_tenant_request",
           "remove",
@@ -18627,6 +18678,7 @@
           "advance_teams",
           "apply_template",
           "approve",
+          "approve_circuit_partner",
           "assign",
           "assign_captain",
           "assign_team_captain",
@@ -18772,6 +18824,7 @@
           "reassign_stage",
           "register_team",
           "reject",
+          "reject_circuit_partner",
           "reject_guild_link",
           "reject_tenant_request",
           "remove",
@@ -42286,6 +42339,61 @@
   "PATCH /api/admin/cast-members/{id}": {
    "200": {}
   },
+  "PATCH /api/admin/circuit-partners/{id}": {
+   "200": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "ok": {
+        "type": "boolean"
+       },
+       "status": {
+        "type": "string"
+       },
+       "tenantSlug": {
+        "type": "string"
+       },
+       "plan": {
+        "type": "string",
+        "enum": [
+         "circuit",
+         "discovery",
+         "editor",
+         "foundation",
+         "regie"
+        ]
+       },
+       "grantedUntil": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "ok",
+       "status",
+       "tenantSlug",
+       "plan",
+       "grantedUntil"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "ok": {
+        "type": "boolean"
+       },
+       "status": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "ok",
+       "status"
+      ]
+     }
+    ]
+   }
+  },
   "PATCH /api/admin/comments": {
    "200": {
     "type": "object",
@@ -58741,6 +58849,38 @@
      "teamName",
      "checkedInAt",
      "alreadyCheckedIn"
+    ]
+   }
+  },
+  "POST /api/circuit-partners/apply": {
+   "201": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "ok": {
+        "type": "boolean"
+       },
+       "id": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "ok",
+       "id"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "ok": {
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "ok"
+      ]
+     }
     ]
    }
   },

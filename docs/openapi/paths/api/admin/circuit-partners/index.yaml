@@ -1,0 +1,28 @@
+get:
+  tags:
+    - admin/tenants
+  summary: Candidatures a l'offre partenaire des circuits.
+  description: |
+    Portee plateforme (`manage_tenant`, `scope: platform`) : un proprietaire
+    d'espace tiers ne lit pas ces dossiers. 200 candidatures au plus, les plus
+    recentes d'abord, avec le compte par statut et le slug de l'espace qui a
+    recu l'offre. L'IP et l'agent utilisateur ne sortent pas.
+  operationId: adminListCircuitPartnerApplications
+  security:
+    - StaffSession: []
+  parameters:
+    - name: status
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [new, reviewing, approved, rejected]
+  responses:
+    '200':
+      description: Candidatures et compteurs.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '500':
+      $ref: '#/components/responses/ServerError'

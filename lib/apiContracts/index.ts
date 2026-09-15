@@ -29,6 +29,7 @@ import {
 import { newsletterSubscribeBodySchema } from './public/newsletter';
 import { teamOpeningBodySchema } from './public/teamOpenings';
 import { predictionBodySchema } from './player/predictions/body';
+import { circuitPartnerApplicationBodySchema } from './public/circuitPartners';
 
 export type ApiContractEntry = {
   schema: z.ZodType;
@@ -51,6 +52,10 @@ export const API_CONTRACT_SCHEMAS: Record<string, ApiContractEntry> = {
     io: 'output',
   },
   'player.predictions.set': { schema: predictionBodySchema, io: 'input' },
+  'public.circuitPartnerApplication': {
+    schema: circuitPartnerApplicationBodySchema,
+    io: 'input',
+  },
   ...BOT_API_CONTRACT_SCHEMAS,
   ...PUBLIC_V1_RESPONSE_SCHEMAS,
   ...QUERY_CONTRACT_SCHEMAS,

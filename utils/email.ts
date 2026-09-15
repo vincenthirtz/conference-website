@@ -1479,6 +1479,89 @@ export function sendPartnershipConfirmationEmail(opts: {
 }
 
 /**
+ * Notification staff : nouvelle candidature à l'offre partenaire des circuits
+ * féminins et mixtes (`POST /api/circuit-partners/apply`).
+ */
+export function sendCircuitPartnerStaffEmail(opts: {
+  applicationId: string;
+  organizationName: string;
+  contactName: string;
+  email: string;
+  gameLabel: string;
+  format: 'feminin' | 'mixte';
+  expectedTeams?: number | null;
+  seasonStart?: string | null;
+  existingSpaceSlug?: string | null;
+  message: string;
+}): Promise<SendEmailResult> {
+  const rows: { label: string; value: string }[] = [
+    { label: 'Structure', value: opts.organizationName },
+    { label: 'Contact', value: opts.contactName },
+    { label: 'Email', value: opts.email },
+    { label: 'Jeu', value: opts.gameLabel },
+    {
+      label: 'Format',
+      value: opts.format === 'feminin' ? 'Féminin' : 'Mixte',
+    },
+  ];
+  if (opts.expectedTeams)
+    rows.push({
+      label: 'Équipes attendues',
+      value: String(opts.expectedTeams),
+    });
+  if (opts.seasonStart)
+    rows.push({ label: 'Début de saison', value: opts.seasonStart });
+  if (opts.existingSpaceSlug)
+    rows.push({ label: 'Espace existant', value: opts.existingSpaceSlug });
+
+  return sendEmail({
+    to: STAFF_NOTIFY_EMAIL,
+    subject: `[Circuit partenaire] ${opts.organizationName} — ${opts.gameLabel}`,
+    tags: ['circuit-partner-staff'],
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Nouvelle candidature de circuit</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        Un circuit féminin ou mixte candidate à l&apos;offre partenaire.
+      </p>
+      ${detailsTable(rows)}
+      <p style="margin:0 0 8px;font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Présentation</p>
+      ${preformattedBlock(opts.message)}
+      ${ctaButton(`${SITE_URL}/admin/onboarding?tab=a-traiter`, 'Examiner la candidature')}
+    `),
+  });
+}
+
+/**
+ * Accusé de réception envoyé au circuit candidat.
+ */
+export function sendCircuitPartnerConfirmationEmail(opts: {
+  to: string;
+  contactName: string;
+  organizationName: string;
+}): Promise<SendEmailResult> {
+  return sendEmail({
+    to: opts.to,
+    subject: "Candidature reçue — offre circuits de la OW Women's Cup",
+    tags: ['circuit-partner-confirmation'],
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Merci ${escapeHtml(opts.contactName)} !</h1>
+      <p style="margin:0 0 16px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        Nous avons bien reçu la candidature de
+        <strong style="color:#ffffff;">${escapeHtml(opts.organizationName)}</strong>
+        à l&apos;offre partenaire des circuits féminins et mixtes.
+      </p>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        L&apos;association l&apos;examine et revient vers vous par email.
+        En attendant, le guide d&apos;organisation reste à votre disposition.
+      </p>
+      ${ctaButton(`${SITE_URL}/organisateurs/tournoi-feminin-ou-mixte`, 'Lire le guide')}
+    `),
+  });
+}
+
+/**
  * Password reset email — sent in place of the native Supabase reset email
  * so we control the design. The action link is generated server-side via
  * `supabaseAdmin.auth.admin.generateLink({ type: 'recovery' })`.

@@ -50,6 +50,9 @@ const TenantRequestsPanel = lazyPanel(
 const GuildLinksPanel = lazyPanel(
   () => import('@/components/admin/onboarding/GuildLinksPanel')
 );
+const CircuitPartnersPanel = lazyPanel(
+  () => import('@/components/admin/onboarding/CircuitPartnersPanel')
+);
 
 const ID_BASE = 'admin-onboarding';
 
@@ -85,16 +88,25 @@ function useInboxCount(): number | null {
     let cancelled = false;
     (async () => {
       try {
-        const [requests, guilds] = await Promise.all([
+        const [requests, guilds, circuits] = await Promise.all([
           adminFetchJson<{ total: number }>(
             '/api/admin/tenant-requests?status=pending&limit=1'
           ),
           adminFetchJson<{ links: unknown[] }>(
             '/api/admin/pending-guild-links'
           ),
+          // Candidatures des circuits partenaires : seules les NOUVELLES
+          // attendent une première lecture.
+          adminFetchJson<{ counts: Record<string, number> }>(
+            '/api/admin/circuit-partners?status=new'
+          ).catch(() => ({ counts: {} as Record<string, number> })),
         ]);
         if (cancelled) return;
-        setCount((requests.total ?? 0) + (guilds.links?.length ?? 0));
+        setCount(
+          (requests.total ?? 0) +
+            (guilds.links?.length ?? 0) +
+            (circuits.counts?.new ?? 0)
+        );
       } catch {
         // Un compteur indisponible ne doit pas priver du hub : on n'affiche
         // simplement pas de badge.
@@ -202,6 +214,7 @@ export default function AdminOnboardingPage({ currentStaffDiscordId }: Props) {
                   currentStaffDiscordId={currentStaffDiscordId}
                 />
                 <GuildLinksPanel />
+                <CircuitPartnersPanel />
               </div>
             ) : (
               <TenantReadinessPanel />
