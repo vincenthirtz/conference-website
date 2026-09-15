@@ -383,6 +383,23 @@ describe('POST bot /tasks', () => {
     );
     expect(evt).toBeTruthy();
   });
+
+  it('400 INVALID_BODY sans acteur Discord, avant toute écriture', async () => {
+    // L'acteur fait partie du contrat publié (x-zod: bot.tasks/index) : il est
+    // validé avec le reste du corps, pas lu à côté.
+    const before = (store.tasks ?? []).length;
+    const res = makeRes();
+    await listHandler(
+      makeBotReq(
+        { body: { boardId: BOARD, columnId: COL1, title: 'Sans acteur' } },
+        'POST'
+      ),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).code).toBe('INVALID_BODY');
+    expect((store.tasks ?? []).length).toBe(before);
+  });
 });
 
 describe('PATCH bot /tasks/[id]/move', () => {

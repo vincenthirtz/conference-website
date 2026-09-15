@@ -27,7 +27,9 @@ import { logger } from './logger';
  * Types
  * ------------------------------------------------------------------------- */
 
-export const TASK_PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
+import { TASK_PRIORITIES } from './taskBoardSchemas';
+
+export { TASK_PRIORITIES };
 export type TaskPriority = (typeof TASK_PRIORITIES)[number];
 
 /** Provenance de l'action, injectée dans le payload d'audit. */

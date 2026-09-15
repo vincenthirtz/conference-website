@@ -60,20 +60,8 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required: [actorDiscordUserId, boardId, columnId, title]
-          properties:
-            actorDiscordUserId: {type: string}
-            boardId: {type: string, format: uuid}
-            columnId: {type: string, format: uuid}
-            title: {type: string}
-            description: {type: string}
-            priority: {type: string, enum: [low, medium, high, urgent]}
-            assigneeStaffId: {type: [string, 'null'], format: uuid}
-            dueDate: {type: string}
-            labels:
-              type: array
-              items: {type: string}
+          # Généré depuis le schéma zod du handler (lib/apiContracts).
+          x-zod: bot.tasks/index
   responses:
     '201':
       description: Carte creee.

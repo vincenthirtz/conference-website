@@ -40,6 +40,7 @@ import { createStageBodySchema as s31_tournaments_tournamentId_stages } from './
 import { statusBodySchema as s32_tournaments_tournamentId_status } from './tournaments/[tournamentId]/status';
 import { registerBodySchema as s33_tournaments_tournamentId_teams } from './tournaments/[tournamentId]/teams';
 import { createBodySchema as s34_tournaments_index } from './tournaments/index';
+import { botCreateTaskBodySchema as s_tasks_index } from './tasks/index';
 
 export const BOT_API_CONTRACT_SCHEMAS: Record<string, ApiContractEntry> = {
   'bot.cast/[assignmentId]/ack': {
@@ -152,4 +153,5 @@ export const BOT_API_CONTRACT_SCHEMAS: Record<string, ApiContractEntry> = {
     io: 'input',
   },
   'bot.tournaments/index': { schema: s34_tournaments_index, io: 'input' },
+  'bot.tasks/index': { schema: s_tasks_index, io: 'input' },
 };

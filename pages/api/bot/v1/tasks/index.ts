@@ -20,7 +20,7 @@ import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { createTaskCore, resolveStaffInfo } from '@/utils/taskBoard';
-import { createTaskBodySchema } from '@/utils/taskBoardSchemas';
+import { botCreateTaskBodySchema } from '@/lib/apiContracts/bot/tasks/index';
 import { logger } from '@/utils/logger';
 
 const MAX_LIMIT = 100;
@@ -154,7 +154,7 @@ async function createTask(req: BotTenantRequest, res: NextApiResponse) {
   // Body déjà validé par le middleware (`bodySchema` ci-dessous) : même forme
   // d'erreur 400 INVALID_BODY + `fields` qu'auparavant, mais la garde est
   // désormais déclarative — comme sur les autres routes bot en écriture.
-  const input = req.botInput as z.infer<typeof createTaskBodySchema>;
+  const input = req.botInput as z.infer<typeof botCreateTaskBodySchema>;
 
   const info = await resolveStaffInfo(actor.staffId);
   const result = await createTaskCore({
@@ -189,5 +189,5 @@ export default withBotRoute(handler, {
     perActor: { max: 20, actorField: 'actorDiscordUserId' },
   },
   // Ne s'applique qu'aux méthodes non-safe : le GET (liste) n'est pas concerné.
-  bodySchema: createTaskBodySchema,
+  bodySchema: botCreateTaskBodySchema,
 });

@@ -5,7 +5,13 @@
 // identique des deux côtés — pas de dérive de contrat.
 
 import { z } from 'zod';
-import { TASK_PRIORITIES } from './taskBoard';
+
+/**
+ * Priorités de carte — enum aligné sur le CHECK Postgres. Défini ICI (module
+ * pur) et ré-exporté par utils/taskBoard.ts : les contrats de la spec OpenAPI
+ * importent ce fichier, qui ne doit donc pas tirer Supabase.
+ */
+export const TASK_PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
 
 const uuid = z.string().uuid();
 

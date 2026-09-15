@@ -54,11 +54,9 @@ requestBody:
   TypeScript renvoyé par le handler. `tests/unit/publicV1ResponseContracts.test.ts`
   le vérifie au typecheck (`expectTypeOf`), et les tests de handler valident la
   réponse réelle, champ en trop compris.
-- Couverture au 2026-09-15 : corps des 4 routes publiques d'écriture et de 35
-  des 36 routes bot à corps validé ; réponses de toute l'API publique v1
-  (`lib/apiContracts/public/v1/`). Exception : `bot/v1/tasks/index` lit
-  `actorDiscordUserId` hors de son schéma zod (partagé avec l'admin) ; son
-  corps reste écrit à la main.
+- Couverture au 2026-09-15 : corps des 4 routes publiques d'écriture et de
+  toutes les routes bot à corps validé ; réponses de toute l'API publique v1
+  (`lib/apiContracts/public/v1/`).
 
 ## Où la spec est lue
 
