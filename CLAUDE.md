@@ -225,6 +225,6 @@ Required in `.env.local` (see `example.env.local`):
 - `NETLIFY_SITE_ID` / `NETLIFY_API_TOKEN` — public builds page
 - `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` — Web Push (generate via `npx web-push generate-vapid-keys`)
 - `NEXT_PUBLIC_ENABLE_PWA` — set to `1` ONLY on master/prod to enable SW registration
-- `CAPTCHA_SECRET` — optional override (falls back to service-role key)
+- `CAPTCHA_SECRET` — optional override (falls back to service-role key). Challenges are stored server-side (`captcha_challenges`): the token carries only a signed nonce, a correct answer consumes the challenge, and 3 attempts max are counted.
 - `TURNSTILE_SECRET_KEY` — Cloudflare Turnstile (onboarding)
 - `BOT_API_KEY` — legacy key for **non-v1 routes only** (`/api/news` ingest, `/api/support/ticket`). `/api/bot/v1/*` auth is now 100% per-tenant (`tenant_secrets`); the v1 env fallback + the `BOT_WEBHOOK_SECRET` webhook-signing fallback were removed, so `BOT_WEBHOOK_SECRET` is no longer read by the site.

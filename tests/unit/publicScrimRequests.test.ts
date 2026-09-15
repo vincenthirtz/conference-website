@@ -34,8 +34,9 @@ function makeRes() {
   return res;
 }
 
-function freshCaptcha(): { token: string; answer: number } {
-  const ch = generateChallenge();
+async function freshCaptcha(): Promise<{ token: string; answer: number }> {
+  const ch = await generateChallenge();
+  if (!ch) throw new Error('captcha indisponible');
   const m = ch.question.match(/^(\d+)\s+([+\-×])\s+(\d+)$/)!;
   const a = Number(m[1]);
   const b = Number(m[3]);
@@ -46,10 +47,10 @@ function freshCaptcha(): { token: string; answer: number } {
   return { token: ch.token, answer };
 }
 
-function validBody(
+async function validBody(
   over: Record<string, unknown> = {}
-): Record<string, unknown> {
-  const c = freshCaptcha();
+): Promise<Record<string, unknown>> {
+  const c = await freshCaptcha();
   return {
     targetTeamId: TEAM_ID,
     fromTeamName: 'Visitors',
@@ -77,14 +78,17 @@ describe('POST /api/public/scrim-requests', () => {
 
   it('400 when honeypot is filled', async () => {
     const res = makeRes();
-    await publicScrimHandler(makeReq(validBody({ honeypot: 'spam' })), res);
+    await publicScrimHandler(
+      makeReq(await validBody({ honeypot: 'spam' })),
+      res
+    );
     expect(res.statusCode).toBe(400);
   });
 
   it('400 with invalid captcha', async () => {
     const res = makeRes();
     await publicScrimHandler(
-      makeReq(validBody({ captchaToken: 'invalid', captchaAnswer: '0' })),
+      makeReq(await validBody({ captchaToken: 'invalid', captchaAnswer: '0' })),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -93,7 +97,7 @@ describe('POST /api/public/scrim-requests', () => {
   it('400 with malformed email', async () => {
     const res = makeRes();
     await publicScrimHandler(
-      makeReq(validBody({ requesterEmail: 'not-an-email' })),
+      makeReq(await validBody({ requesterEmail: 'not-an-email' })),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -101,14 +105,17 @@ describe('POST /api/public/scrim-requests', () => {
 
   it('400 with empty fromTeamName', async () => {
     const res = makeRes();
-    await publicScrimHandler(makeReq(validBody({ fromTeamName: '' })), res);
+    await publicScrimHandler(
+      makeReq(await validBody({ fromTeamName: '' })),
+      res
+    );
     expect(res.statusCode).toBe(400);
   });
 
   it('400 when targetTeamId missing and no slug', async () => {
     const res = makeRes();
     await publicScrimHandler(
-      makeReq(validBody({ targetTeamId: undefined })),
+      makeReq(await validBody({ targetTeamId: undefined })),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -118,7 +125,7 @@ describe('POST /api/public/scrim-requests', () => {
     const res = makeRes();
     await publicScrimHandler(
       makeReq(
-        validBody({
+        await validBody({
           targetTeamId: '550e8400-e29b-41d4-a716-446655440999',
         })
       ),
@@ -130,14 +137,17 @@ describe('POST /api/public/scrim-requests', () => {
   it('400 when preferred date is in the past', async () => {
     const res = makeRes();
     const past = new Date(Date.now() - 24 * 60 * 60_000).toISOString();
-    await publicScrimHandler(makeReq(validBody({ preferredDate: past })), res);
+    await publicScrimHandler(
+      makeReq(await validBody({ preferredDate: past })),
+      res
+    );
     expect(res.statusCode).toBe(400);
   });
 
   it('201 inserts a demande with source=public and user_id=null', async () => {
     const res = makeRes();
     await publicScrimHandler(
-      makeReq(validBody({ message: 'Hello, on est dispo ce week-end.' })),
+      makeReq(await validBody({ message: 'Hello, on est dispo ce week-end.' })),
       res
     );
     expect(res.statusCode).toBe(201);
@@ -172,7 +182,7 @@ describe('POST /api/public/scrim-requests', () => {
       },
     ];
     const res = makeRes();
-    await publicScrimHandler(makeReq(validBody()), res);
+    await publicScrimHandler(makeReq(await validBody()), res);
     expect(res.statusCode).toBe(409);
     expect(notifyScrimRequest).not.toHaveBeenCalled();
   });

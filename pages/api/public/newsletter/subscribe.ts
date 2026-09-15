@@ -71,7 +71,7 @@ export default async function handler(
   }
 
   // Captcha check (same server-side HMAC challenge as scrim-requests).
-  const captchaResult = verifyCaptcha(
+  const captchaResult = await verifyCaptcha(
     (body.captchaToken || '').toString(),
     (body.captchaAnswer || '').toString()
   );

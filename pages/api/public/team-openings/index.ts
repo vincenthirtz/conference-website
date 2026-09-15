@@ -138,7 +138,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     return;
   }
 
-  const captchaResult = verifyCaptcha(
+  const captchaResult = await verifyCaptcha(
     (body.captchaToken || '').toString(),
     (body.captchaAnswer || '').toString()
   );

@@ -204,6 +204,14 @@
       "updated_at",
       "wave_size"
     ],
+    "captcha_challenges": [
+      "answer_hash",
+      "attempts",
+      "consumed_at",
+      "created_at",
+      "expires_at",
+      "nonce"
+    ],
     "cast_assignments": [
       "acked_at",
       "briefing_at",

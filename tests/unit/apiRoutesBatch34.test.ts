@@ -56,19 +56,40 @@ import { generateChallenge } from '../../utils/captcha';
  * /api/teams/create-with-member est public et exige désormais un captcha avant
  * toute création de compte ; on l'injecte par défaut dans le body de test.
  */
-function validCaptcha(): { captchaToken: string; captchaAnswer: string } {
-  const { token } = generateChallenge();
-  const decoded = JSON.parse(Buffer.from(token, 'base64url').toString()) as {
-    answer: number;
-  };
-  return { captchaToken: token, captchaAnswer: String(decoded.answer) };
+/** Résout la question du défi : la réponse ne voyage plus dans le jeton. */
+function solveQuestion(question: string): number {
+  const m = question.match(/^(\d+)\s+([+\-×])\s+(\d+)$/);
+  if (!m) throw new Error(`question inattendue : ${question}`);
+  const a = Number(m[1]);
+  const b = Number(m[3]);
+  if (m[2] === '+') return a + b;
+  if (m[2] === '-') return a - b;
+  return a * b;
 }
 
-function makeReq(over: Partial<any> = {}): any {
+/**
+ * Un couple { captchaToken, captchaAnswer } valide.
+ *
+ * Le défi vit désormais en base (`captcha_challenges`) et la réponse ne quitte
+ * plus le serveur : on résout la QUESTION, comme une visiteuse.
+ */
+async function validCaptcha(): Promise<{
+  captchaToken: string;
+  captchaAnswer: string;
+}> {
+  const challenge = await generateChallenge();
+  if (!challenge) throw new Error('captcha indisponible');
+  return {
+    captchaToken: challenge.token,
+    captchaAnswer: String(solveQuestion(challenge.question)),
+  };
+}
+
+async function makeReq(over: Partial<any> = {}): Promise<any> {
   const { body: overBody, ...rest } = over;
   // Captcha valide par défaut, fusionné avec le body fourni par le test.
   // Un test qui veut tester le rejet captcha peut écraser captchaToken/Answer.
-  const body = { ...validCaptcha(), ...(overBody ?? {}) };
+  const body = { ...(await validCaptcha()), ...(overBody ?? {}) };
   return {
     method: 'POST',
     headers: { host: 'h' },
@@ -106,20 +127,20 @@ beforeEach(() => {
 describe('POST /api/teams/create-with-member', () => {
   it('405 on non-POST', async () => {
     const res = makeRes();
-    await createWithMemberHandler(makeReq({ method: 'GET' }), res);
+    await createWithMemberHandler(await makeReq({ method: 'GET' }), res);
     expect(res.statusCode).toBe(405);
   });
 
   it('400 when name too short', async () => {
     const res = makeRes();
-    await createWithMemberHandler(makeReq({ body: { name: 'A' } }), res);
+    await createWithMemberHandler(await makeReq({ body: { name: 'A' } }), res);
     expect(res.statusCode).toBe(400);
   });
 
   it('400 when name too long', async () => {
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({ body: { name: 'a'.repeat(101) } }),
+      await makeReq({ body: { name: 'a'.repeat(101) } }),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -128,7 +149,7 @@ describe('POST /api/teams/create-with-member', () => {
   it('400 when description too long', async () => {
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Alpha',
           description: 'd'.repeat(2001),
@@ -142,7 +163,7 @@ describe('POST /api/teams/create-with-member', () => {
   it('400 when logo_url is invalid', async () => {
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Alpha',
           logo_url: 'javascript:alert(1)',
@@ -160,7 +181,7 @@ describe('POST /api/teams/create-with-member', () => {
     }));
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: { name: 'Alpha', members },
       }),
       res
@@ -172,7 +193,7 @@ describe('POST /api/teams/create-with-member', () => {
     store.teams = [];
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: { name: 'Alpha Team' },
       }),
       res
@@ -186,7 +207,7 @@ describe('POST /api/teams/create-with-member', () => {
     store.teams = [];
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: { name: 'Joinable Team' },
       }),
       res
@@ -203,7 +224,7 @@ describe('POST /api/teams/create-with-member', () => {
     store.teams = [];
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: { name: 'Hello World Team!', country: 'FR' },
       }),
       res
@@ -224,7 +245,7 @@ describe('POST /api/teams/create-with-member', () => {
     });
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'My Team',
           member_email: 'cap@example.com',
@@ -256,7 +277,7 @@ describe('POST /api/teams/create-with-member', () => {
     });
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Welcome Team',
           member_email: 'cap@example.com',
@@ -294,7 +315,7 @@ describe('POST /api/teams/create-with-member', () => {
     ]);
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'My Team',
           members: [
@@ -354,7 +375,7 @@ describe('POST /api/teams/create-with-member', () => {
     store.team_members = [];
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Orphan Team',
           members: [
@@ -374,7 +395,7 @@ describe('POST /api/teams/create-with-member', () => {
   it('400 when set_captain provided without any member', async () => {
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: { name: 'Alpha', set_captain: true },
       }),
       res
@@ -389,7 +410,7 @@ describe('POST /api/teams/create-with-member', () => {
     setAuthListUsers([{ id: 'u1', email: 'p@example.com' }]);
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Alpha',
           member_email: 'p@example.com',
@@ -413,7 +434,7 @@ describe('POST /api/teams/create-with-member', () => {
     ] as any;
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Alpha',
           tournament_id: 'tour-1',
@@ -431,7 +452,7 @@ describe('POST /api/teams/create-with-member', () => {
     setAuthListUsers([{ id: 'u1', email: 'p@example.com' }]);
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Alpha',
           member_email: 'p@example.com',
@@ -453,7 +474,7 @@ describe('POST /api/teams/create-with-member', () => {
     setAuthListUsers([{ id: 'u1', email: 'p1@example.com' }]);
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Alpha',
           members: [
@@ -475,7 +496,7 @@ describe('POST /api/teams/create-with-member', () => {
     ] as any;
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Alpha',
           tournament_id: 'tour-1',
@@ -508,7 +529,7 @@ describe('POST /api/teams/create-with-member', () => {
     store.stage_teams = [];
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Auto Reg Team',
           tournament_id: 'tour-1',
@@ -547,7 +568,7 @@ describe('POST /api/teams/create-with-member', () => {
     store.stage_teams = [];
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Underpowered',
           tournament_id: 'tour-min',
@@ -599,7 +620,7 @@ describe('POST /api/teams/create-with-member', () => {
 
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Declared Five',
           tournament_id: 'tour-apply',
@@ -661,7 +682,7 @@ describe('POST /api/teams/create-with-member', () => {
     store.stage_teams = [];
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'PlayerLed',
           tournament_id: 'tour-coach-ok',
@@ -702,7 +723,7 @@ describe('POST /api/teams/create-with-member', () => {
     store.stage_teams = [];
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'CoachLed',
           tournament_id: 'tour-coach-only',
@@ -730,7 +751,7 @@ describe('POST /api/teams/create-with-member', () => {
     setAdminUser(EXISTING_UID, 'direct@example.com');
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Direct UID Team',
           member_user_id: EXISTING_UID,
@@ -755,7 +776,7 @@ describe('POST /api/teams/create-with-member', () => {
     store.team_members = [];
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Bad UID Team',
           member_user_id: 'u-direct',
@@ -781,7 +802,7 @@ describe('POST /api/teams/create-with-member', () => {
     // Aucun setAdminUser → getUserById renvoie { user: null }.
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Ghost UID Team',
           member_user_id: EXISTING_UID,
@@ -804,7 +825,7 @@ describe('POST /api/teams/create-with-member', () => {
     setAdminUser(EXISTING_UID, 'direct@example.com');
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'BadBT',
           member_user_id: EXISTING_UID,
@@ -825,7 +846,7 @@ describe('POST /api/teams/create-with-member', () => {
     store.demandes = [];
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Mixed Team',
           members: [
@@ -865,7 +886,7 @@ describe('POST /api/teams/create-with-member', () => {
     store.team_members = [];
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Pinned Victim Team',
           members: [
@@ -904,7 +925,7 @@ describe('POST /api/teams/create-with-member', () => {
     store.stage_teams = [];
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Test',
           tournament_id: 'tour-d',
@@ -931,7 +952,7 @@ describe('POST /api/teams/create-with-member', () => {
     store.team_members = [];
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Spec Team',
           members: [
@@ -958,7 +979,7 @@ describe('POST /api/teams/create-with-member', () => {
     store.team_members = [];
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Spec Team 2',
           members: [

@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { generateChallenge } from '@/utils/captcha';
 import { applyRateLimit } from '@/utils/rateLimit';
 
-export default function handler(
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<{ token: string; question: string } | { error: string }>
 ) {
@@ -14,8 +14,13 @@ export default function handler(
   if (applyRateLimit(req, res, { max: 30, windowMs: 60 * 1000 }, 'captcha'))
     return;
 
-  const { token, question } = generateChallenge();
-
+  // Le défi est enregistré côté serveur (`captcha_challenges`) : sans
+  // enregistrement, pas de jeton — il ne serait validable par personne.
+  const challenge = await generateChallenge();
   res.setHeader('Cache-Control', 'no-store');
-  return res.status(200).json({ token, question });
+  if (!challenge) {
+    return res.status(503).json({ error: 'Captcha indisponible' });
+  }
+
+  return res.status(200).json(challenge);
 }

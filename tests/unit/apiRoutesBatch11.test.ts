@@ -179,8 +179,9 @@ describe('/api/cron/checkin-process', () => {
  * ---------------------------------------------------------*/
 
 describe('/api/news/comments', () => {
-  function freshCaptcha(): { token: string; answer: number } {
-    const ch = generateChallenge();
+  async function freshCaptcha(): Promise<{ token: string; answer: number }> {
+    const ch = await generateChallenge();
+    if (!ch) throw new Error('captcha indisponible');
     // Solve the math question (format: "a OP b" with OP in {+, -, ×})
     const m = ch.question.match(/^(\d+)\s+([+\-×])\s+(\d+)$/)!;
     const a = Number(m[1]);
@@ -225,7 +226,7 @@ describe('/api/news/comments', () => {
   });
 
   it('POST 400 with honeypot filled', async () => {
-    const { token, answer } = freshCaptcha();
+    const { token, answer } = await freshCaptcha();
     const res = makeRes();
     await newsCommentsHandler(
       makeReq({
@@ -261,7 +262,7 @@ describe('/api/news/comments', () => {
   });
 
   it('POST 400 when content too short', async () => {
-    const { token, answer } = freshCaptcha();
+    const { token, answer } = await freshCaptcha();
     const res = makeRes();
     await newsCommentsHandler(
       makeReq({
@@ -279,7 +280,7 @@ describe('/api/news/comments', () => {
   });
 
   it('POST 201 inserts a valid comment', async () => {
-    const { token, answer } = freshCaptcha();
+    const { token, answer } = await freshCaptcha();
     // Le handler vérifie désormais que l'article existe + est publié pour le
     // tenant résolu avant d'insérer. On seede la news ciblée en 'published'.
     store.news = [{ id: 'n1', status: 'published' }] as any;
@@ -304,7 +305,7 @@ describe('/api/news/comments', () => {
   });
 
   it('POST 404 when the target news does not exist', async () => {
-    const { token, answer } = freshCaptcha();
+    const { token, answer } = await freshCaptcha();
     store.news = [];
     store.news_comments = [];
     const res = makeRes();
@@ -325,7 +326,7 @@ describe('/api/news/comments', () => {
   });
 
   it('POST 403 when the target news is a draft', async () => {
-    const { token, answer } = freshCaptcha();
+    const { token, answer } = await freshCaptcha();
     store.news = [{ id: 'n-draft', status: 'draft' }] as any;
     store.news_comments = [];
     const res = makeRes();

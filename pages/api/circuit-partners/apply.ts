@@ -63,7 +63,7 @@ export default async function handler(
     return;
   }
 
-  const captcha = verifyCaptcha(
+  const captcha = await verifyCaptcha(
     (body.captchaToken || '').toString(),
     (body.captchaAnswer || '').toString()
   );

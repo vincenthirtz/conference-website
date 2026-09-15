@@ -106,7 +106,7 @@ async function createComment(
   }
 
   // Verify CAPTCHA challenge-response
-  const captchaResult = verifyCaptcha(
+  const captchaResult = await verifyCaptcha(
     (captchaToken || '').toString(),
     (captchaAnswer || '').toString()
   );

@@ -67,7 +67,7 @@ export default async function handler(
     return bad(res, 'Bot detected');
   }
 
-  const captchaResult = verifyCaptcha(
+  const captchaResult = await verifyCaptcha(
     (body.captchaToken || '').toString(),
     (body.captchaAnswer || '').toString()
   );

@@ -230,7 +230,7 @@ export default async function handler(
   if (body.honeypot && `${body.honeypot}`.trim().length > 0) {
     return res.status(400).json({ error: 'Bot detected', code: 'HONEYPOT' });
   }
-  const captchaResult = verifyCaptcha(
+  const captchaResult = await verifyCaptcha(
     (body.captchaToken || '').toString(),
     (body.captchaAnswer || '').toString()
   );

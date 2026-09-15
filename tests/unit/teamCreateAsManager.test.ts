@@ -66,17 +66,38 @@ import {
 import createWithMemberHandler from '../../pages/api/teams/create-with-member';
 import { generateChallenge } from '../../utils/captcha';
 
-function validCaptcha() {
-  const { token, question: _q } = generateChallenge();
-  const decoded = JSON.parse(
-    Buffer.from(token.split('.')[0], 'base64url').toString()
-  ) as { answer: number };
-  return { captchaToken: token, captchaAnswer: String(decoded.answer) };
+/** Résout la question du défi : la réponse ne voyage plus dans le jeton. */
+function solveQuestion(question: string): number {
+  const m = question.match(/^(\d+)\s+([+\-×])\s+(\d+)$/);
+  if (!m) throw new Error(`question inattendue : ${question}`);
+  const a = Number(m[1]);
+  const b = Number(m[3]);
+  if (m[2] === '+') return a + b;
+  if (m[2] === '-') return a - b;
+  return a * b;
 }
 
-function makeReq(over: Partial<any> = {}): any {
+/**
+ * Un couple { captchaToken, captchaAnswer } valide.
+ *
+ * Le défi vit désormais en base (`captcha_challenges`) et la réponse ne quitte
+ * plus le serveur : on résout la QUESTION, comme une visiteuse.
+ */
+async function validCaptcha(): Promise<{
+  captchaToken: string;
+  captchaAnswer: string;
+}> {
+  const challenge = await generateChallenge();
+  if (!challenge) throw new Error('captcha indisponible');
+  return {
+    captchaToken: challenge.token,
+    captchaAnswer: String(solveQuestion(challenge.question)),
+  };
+}
+
+async function makeReq(over: Partial<any> = {}): Promise<any> {
   const { body: overBody, ...rest } = over;
-  const body = { ...validCaptcha(), ...(overBody ?? {}) };
+  const body = { ...(await validCaptcha()), ...(overBody ?? {}) };
   return {
     method: 'POST',
     headers: { host: 'h' },
@@ -122,7 +143,7 @@ describe('POST /api/teams/create-with-member — mode manager', () => {
   it('insère le manager, laisse captain_id NULL et invite tout le roster', async () => {
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Managed Team',
           manager_email: 'mgr@example.com',
@@ -181,7 +202,7 @@ describe('POST /api/teams/create-with-member — mode manager', () => {
   it('envoie à chaque invitée son lien privé (sinon personne ne sait qu’elle est invitée)', async () => {
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Managed Team',
           manager_email: 'mgr@example.com',
@@ -233,7 +254,7 @@ describe('POST /api/teams/create-with-member — mode manager', () => {
   it("envoie le magic-link au manager, sans l'onboarding Battle.net", async () => {
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Managed Team',
           manager_email: 'mgr@example.com',
@@ -271,7 +292,7 @@ describe('POST /api/teams/create-with-member — mode manager', () => {
   it('accepte un roster sans capitaine désignée (elle sera désignée plus tard)', async () => {
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'No Captain Yet',
           manager_email: 'mgr@example.com',
@@ -304,7 +325,7 @@ describe('POST /api/teams/create-with-member — mode manager', () => {
   it('400 MANAGER_DUPLICATE quand le manager figure aussi dans le roster', async () => {
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Dup Team',
           manager_email: 'cap@example.com',
@@ -331,7 +352,7 @@ describe('POST /api/teams/create-with-member — mode manager', () => {
   it('400 MANAGER_EMAIL_INVALID quand l’email du manager est mal formé', async () => {
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: { name: 'Bad Email', manager_email: 'pas-un-email' },
       }),
       res
@@ -348,7 +369,7 @@ describe('POST /api/teams/create-with-member — mode manager', () => {
     ] as any;
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Managed Signup',
           manager_email: 'mgr@example.com',
@@ -400,7 +421,7 @@ describe('POST /api/teams/create-with-member — mode manager', () => {
     ] as any;
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Too Small',
           manager_email: 'mgr@example.com',
@@ -462,7 +483,7 @@ describe('POST /api/teams/create-with-member — mode manager', () => {
 
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Late Comer',
           manager_email: 'mgr@example.com',

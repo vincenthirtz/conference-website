@@ -42,22 +42,43 @@ import {
 import createWithMemberHandler from '../../pages/api/teams/create-with-member';
 import { generateChallenge } from '../../utils/captcha';
 
-function validCaptcha() {
-  const { token } = generateChallenge();
-  const decoded = JSON.parse(
-    Buffer.from(token.split('.')[0], 'base64url').toString()
-  ) as { answer: number };
-  return { captchaToken: token, captchaAnswer: String(decoded.answer) };
+/** Résout la question du défi : la réponse ne voyage plus dans le jeton. */
+function solveQuestion(question: string): number {
+  const m = question.match(/^(\d+)\s+([+\-×])\s+(\d+)$/);
+  if (!m) throw new Error(`question inattendue : ${question}`);
+  const a = Number(m[1]);
+  const b = Number(m[3]);
+  if (m[2] === '+') return a + b;
+  if (m[2] === '-') return a - b;
+  return a * b;
 }
 
-function makeReq(over: Partial<any> = {}): any {
+/**
+ * Un couple { captchaToken, captchaAnswer } valide.
+ *
+ * Le défi vit désormais en base (`captcha_challenges`) et la réponse ne quitte
+ * plus le serveur : on résout la QUESTION, comme une visiteuse.
+ */
+async function validCaptcha(): Promise<{
+  captchaToken: string;
+  captchaAnswer: string;
+}> {
+  const challenge = await generateChallenge();
+  if (!challenge) throw new Error('captcha indisponible');
+  return {
+    captchaToken: challenge.token,
+    captchaAnswer: String(solveQuestion(challenge.question)),
+  };
+}
+
+async function makeReq(over: Partial<any> = {}): Promise<any> {
   const { body: overBody, ...rest } = over;
   return {
     method: 'POST',
     headers: { host: 'h' },
     query: {},
     ...rest,
-    body: { ...validCaptcha(), ...(overBody ?? {}) },
+    body: { ...(await validCaptcha()), ...(overBody ?? {}) },
   };
 }
 
@@ -103,7 +124,7 @@ describe('le plafond compte les joueuses, pas les lignes', () => {
   it('accepte 5 joueuses + un coach + un manager — le cas signalé', async () => {
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Roster Complet',
           manager_email: 'mgr@example.com',
@@ -122,7 +143,7 @@ describe('le plafond compte les joueuses, pas les lignes', () => {
   it('refuse toujours 6 JOUEUSES', async () => {
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({ body: { name: 'Trop', members: players(6) } }),
+      await makeReq({ body: { name: 'Trop', members: players(6) } }),
       res
     );
     expect(res.statusCode).toBe(400);
@@ -134,7 +155,7 @@ describe('le plafond compte les joueuses, pas les lignes', () => {
     // exactement ce que le compte de lignes cassait.
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Cinq Plus Coach',
           members: [
@@ -153,7 +174,7 @@ describe('le plafond compte les joueuses, pas les lignes', () => {
     // chaque email reçu peut créer un compte auth.
     const res = makeRes();
     await createWithMemberHandler(
-      makeReq({
+      await makeReq({
         body: {
           name: 'Abus',
           members: Array.from({ length: 11 }, (_, i) => ({

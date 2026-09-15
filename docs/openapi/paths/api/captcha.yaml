@@ -1,12 +1,20 @@
 get:
   tags:
     - public/misc
-  summary: Genere un challenge captcha mathematique (jeton + question).
+  summary: Genere un defi captcha (jeton + question).
+  description: |
+    Le defi est enregistre CÔTÉ SERVEUR (`captcha_challenges`) : le jeton ne
+    transporte qu'un nonce signe, jamais la reponse. Une bonne reponse consomme
+    le defi (usage unique) et trois tentatives au plus sont comptees, meme
+    fausses. Duree de vie : 5 minutes. 30 defis / minute / IP.
+
+    `503` si le defi n'a pas pu etre enregistre : mieux vaut un formulaire qui
+    refuse qu'un captcha que personne ne pourra valider.
   operationId: getCaptchaChallenge
   security: []
   responses:
     '200':
-      description: Challenge captcha.
+      description: Defi captcha.
       content:
         application/json:
           schema:
@@ -17,7 +25,10 @@ get:
             properties:
               token:
                 type: string
+                description: '`<nonce>.<signature>` — ne contient pas la reponse.'
               question:
                 type: string
     '429':
       $ref: '#/components/responses/RateLimited'
+    '503':
+      description: Captcha indisponible (defi non enregistre).
