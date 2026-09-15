@@ -28,6 +28,12 @@ jobs:
       - name: Lint + format (Biome)
         run: npx biome ci .
 
+      # Lint de la spec OpenAPI. Redocly n'est PAS une dépendance du repo
+      # (zero-dependency policy) : version épinglée, exécutée à la volée.
+      # Bloquant sur les erreurs, les avertissements n'échouent pas.
+      - name: Lint OpenAPI (Redocly)
+        run: npx --yes @redocly/cli@2.53.1 lint docs/openapi.yaml --config docs/redocly.yaml
+
       # TypeScript 7 natif (~22 s à froid contre ~95 s pour tsc 6). Passer par
       # le script : `npx tsc` peut résoudre le tsc 6 hissé par
       # @typescript/typescript6 (cf. scripts/verify.mjs).

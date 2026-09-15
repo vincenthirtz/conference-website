@@ -58,6 +58,36 @@ function schemaNameFromRef(ref: string): string {
 function TypeLabel({ schema }: { schema: Json | undefined }) {
   if (!schema) return <span className="text-gray-500">—</span>;
 
+  // OpenAPI 3.1 : « nullable » s'écrit `type: [x, 'null']`, ou
+  // `anyOf: [<schéma>, { type: 'null' }]` autour d'une référence.
+  if (Array.isArray(schema.anyOf)) {
+    const nonNull = schema.anyOf.filter((s: Json) => s?.type !== 'null');
+    if (nonNull.length === 1 && nonNull.length < schema.anyOf.length) {
+      return (
+        <span className="text-gray-300">
+          <TypeLabel schema={nonNull[0]} /> | null
+        </span>
+      );
+    }
+  }
+  if (Array.isArray(schema.type) && schema.type.includes('null')) {
+    const rest = schema.type.filter((t: string) => t !== 'null');
+    return (
+      <span className="text-gray-300">
+        <TypeLabel
+          schema={{
+            ...schema,
+            type: rest.length === 1 ? rest[0] : rest.join(' | '),
+            enum: Array.isArray(schema.enum)
+              ? schema.enum.filter((v: unknown) => v !== null)
+              : schema.enum,
+          }}
+        />{' '}
+        | null
+      </span>
+    );
+  }
+
   if (typeof schema.$ref === 'string') {
     const name = schemaNameFromRef(schema.$ref);
     return (
@@ -91,12 +121,10 @@ function TypeLabel({ schema }: { schema: Json | undefined }) {
   }
   const base = schema.type ?? (schema.properties ? 'object' : 'any');
   const suffix = schema.format ? ` <${schema.format}>` : '';
-  const nullable = schema.nullable ? ' | null' : '';
   return (
     <span className="text-gray-300">
       {base}
       {suffix}
-      {nullable}
     </span>
   );
 }

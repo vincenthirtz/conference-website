@@ -23,7 +23,7 @@ info:
   license:
     name: Proprietary
 servers:
-  - url: https://www.lacotedazurelympique.fr
+  - url: https://owwomenscup.fr
     description: Production
   - url: http://localhost:3000
     description: Local dev
@@ -51,28 +51,45 @@ tags:
   - name: bot/misc
     description: Autres endpoints bot (twitch, reminders, role-sync, locks, etc.).
   - name: admin/matches
+    description: 'Matchs côté staff (planification, scores, litiges, feuilles de match).'
   - name: admin/teams
+    description: 'Équipes et rosters côté staff.'
   - name: admin/tournaments
+    description: 'Tournois côté staff (création, inscriptions, résultats).'
   - name: admin/stages
+    description: 'Phases de tournoi (poules, brackets).'
   - name: admin/scrims
+    description: 'Scrims côté staff.'
   - name: admin/events
     description: Run-of-show admin (cues, segments, presence).
   - name: admin/broadcast
+    description: 'Régie de diffusion (scènes, overlays, auto-director).'
   - name: admin/tenants
+    description: 'Espaces (tenants) et leur configuration.'
   - name: admin/users
+    description: 'Comptes utilisateurs côté staff.'
   - name: admin/content
     description: News, partners, cast members, etc.
   - name: admin/misc
+    description: 'Autres endpoints admin.'
   - name: cron
+    description: 'Tâches planifiées appelées par les fonctions Netlify.'
   - name: public/teams
+    description: 'Équipes : pages publiques et gestion par la capitaine.'
   - name: public/tournaments
+    description: 'Tournois publics.'
   - name: public/scrims
+    description: 'Scrims côté joueuses et capitaines.'
   - name: public/news
+    description: 'Actualités.'
   - name: public/auth
+    description: 'Authentification (OAuth Twitch, Battle.net, sessions).'
   - name: public/caster
     description: Endpoints joueurs/casters (auth Bearer).
   - name: public/onboard
+    description: 'Inscription d''un nouvel espace.'
   - name: public/misc
+    description: 'Autres endpoints publics.'
   - name: public/v1
     description: >-
       API publique read-only versionnée (`/api/public/v1/*`) — parité avec
@@ -81,6 +98,44 @@ tags:
       (120 req/min par IP, bucket par endpoint), CORS `*`. Toutes les réponses
       utilisent l'enveloppe `{ data }` / `{ data, pagination }` ; erreurs
       `{ error, code? }`.
+  - name: bot
+    description: 'Endpoints bot transverses (hors familles dédiées).'
+  - name: bot/tickets
+    description: 'Tickets de support ouverts depuis Discord.'
+  - name: bot/tasks
+    description: 'Kanban staff piloté par la commande /kanban.'
+  - name: admin
+    description: 'Endpoints admin transverses.'
+  - name: admin/demandes
+    description: 'Demandes (rejoindre, quitter, transfert, capitanat, inscription).'
+  - name: admin/caster
+    description: 'Gestion des casters et de la régie côté staff.'
+  - name: admin/tasks
+    description: 'Kanban interne du staff.'
+  - name: admin/staff
+    description: 'Membres du staff et permissions.'
+  - name: admin/association
+    description: "Vie de l'association (adhésions, cotisations)."
+  - name: admin/communications
+    description: 'Campagnes email et annonces.'
+  - name: admin/twitch
+    description: 'Intégration Twitch (chaîne, prédictions, récompenses).'
+  - name: admin/tcg
+    description: 'TCG : soldes, corrections, modération des cartes.'
+  - name: admin/ratings
+    description: 'Rating Glicko-2 des joueuses.'
+  - name: admin/leagues
+    description: 'Ligues et saisons.'
+  - name: teams
+    description: 'Espace équipe (capitaine, manager, membres).'
+  - name: public
+    description: 'Endpoints publics transverses.'
+  - name: public/players
+    description: 'Profils publics des joueuses.'
+  - name: public/leagues
+    description: 'Classements publics des ligues.'
+  - name: webhooks
+    description: 'Webhooks entrants (paiements, Twitch, services tiers).'
 components:
   securitySchemes:
     BotApiKey:
@@ -131,15 +186,6 @@ components:
         révoqué) ; le tenant est autoritaire, les `scopes` (`resource:action`,
         ex. `matches:write`) gouvernent l'accès. CSRF-immune (bearer).
   parameters:
-    XApiKey:
-      $ref: '#/components/parameters/__hoist_BotApiKey'
-    __hoist_BotApiKey:
-      name: x-api-key
-      in: header
-      required: true
-      schema:
-        type: string
-      description: Bot API key (per-tenant ou env legacy).
     XTenantId:
       name: x-tenant-id
       in: header
@@ -382,14 +428,11 @@ components:
           type: string
           enum: [map_mode, tournament_teams, team_roster]
         mode:
-          type: string
-          nullable: true
+          type: [string, 'null']
         tournamentName:
-          type: string
-          nullable: true
+          type: [string, 'null']
         teamName:
-          type: string
-          nullable: true
+          type: [string, 'null']
         coins:
           type: integer
     TcgShowcaseState:
@@ -417,23 +460,17 @@ components:
               teamId:
                 type: string
               slug:
-                type: string
-                nullable: true
+                type: [string, 'null']
               displayName:
-                type: string
-                nullable: true
+                type: [string, 'null']
               name:
-                type: string
-                nullable: true
+                type: [string, 'null']
               imageUrl:
-                type: string
-                nullable: true
+                type: [string, 'null']
               logoUrl:
-                type: string
-                nullable: true
+                type: [string, 'null']
               cardImageUrl:
-                type: string
-                nullable: true
+                type: [string, 'null']
               rarity:
                 type: string
                 enum: [common, rare, epic, legendary]
@@ -445,8 +482,7 @@ components:
         maxCards:
           type: integer
         publicProfileUrl:
-          type: string
-          nullable: true
+          type: [string, 'null']
     PlayerTwitchStatus:
       type: object
       description: >-
@@ -466,12 +502,10 @@ components:
         linked:
           type: boolean
         twitchLogin:
-          type: string
-          nullable: true
+          type: [string, 'null']
         linkedAt:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
     TcgOverlayTokenState:
       type: object
       description: >-
@@ -482,17 +516,14 @@ components:
         - url
       properties:
         url:
-          type: string
-          nullable: true
+          type: [string, 'null']
           description: URL complete a coller dans OBS, ou `null` si aucun lien actif.
         createdAt:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
         lastUsedAt:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
           description: >-
             Dernier appel de l'overlay. Permet de constater qu'un lien oublie
             sert encore, donc de le revoquer en connaissance de cause.
@@ -549,22 +580,19 @@ components:
         discoverable:
           type: boolean
         displayName:
-          type: string
-          nullable: true
+          type: [string, 'null']
         avatarUrl:
-          type: string
-          nullable: true
+          type: [string, 'null']
         tagline:
-          type: string
-          nullable: true
+          type: [string, 'null']
         showRatings:
           type: boolean
         showTeams:
           type: boolean
         optedInAt:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Timestamp'
-          nullable: true
+            - type: 'null'
     DirectoryPlayer:
       type: object
       description: >-
@@ -585,14 +613,11 @@ components:
         displayName:
           type: string
         avatarUrl:
-          type: string
-          nullable: true
+          type: [string, 'null']
         tagline:
-          type: string
-          nullable: true
+          type: [string, 'null']
         discordUsername:
-          type: string
-          nullable: true
+          type: [string, 'null']
         stats:
           type: object
           required:
@@ -620,8 +645,7 @@ components:
               name:
                 type: string
               slug:
-                type: string
-                nullable: true
+                type: [string, 'null']
         isFollowing:
           type: boolean
           description: True si le caller suit ce joueur.
@@ -650,17 +674,15 @@ components:
           type: boolean
           description: True si le joueur a un BattleTag verifie lie a son profil.
         battleTag:
-          type: string
-          nullable: true
+          type: [string, 'null']
           description: BattleTag verifie (ex. `Player#1234`), ou `null` si non lie.
         verifiedAt:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Timestamp'
-          nullable: true
+            - type: 'null'
           description: Horodatage de la verification, ou `null` si non lie.
         reward:
-          type: object
-          nullable: true
+          type: [object, 'null']
           description: >-
             Ajout additif (2026-09-15). La recompense TCG de la verification,
             pour que la carte l'annonce sans ecrire de nombre : `coins` vient du
@@ -724,18 +746,16 @@ components:
         - createdAt
       properties:
         name:
-          type: string
-          nullable: true
+          type: [string, 'null']
           description: Nom affiché, ou `null` si la contribution est anonyme.
         amountCents:
           type: integer
         message:
-          type: string
-          nullable: true
+          type: [string, 'null']
         createdAt:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Timestamp'
-          nullable: true
+            - type: 'null'
     PrizePoolPublic:
       type: object
       description: >-
@@ -770,8 +790,7 @@ components:
           type: integer
           description: '`baseAmountCents` + `raisedAmountCents`.'
         goalAmountCents:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
           description: Objectif de collecte, ou `null` si non défini.
         contributorCount:
           type: integer
@@ -807,13 +826,11 @@ components:
         tenant_id:
           $ref: '#/components/schemas/Uuid'
         title:
-          type: string
-          nullable: true
+          type: [string, 'null']
         currency:
           type: string
         goal_amount_cents:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
         base_amount_cents:
           type: integer
         raised_amount_cents:
@@ -847,19 +864,15 @@ components:
         amount_cents:
           type: integer
         contributor_name:
-          type: string
-          nullable: true
+          type: [string, 'null']
         is_anonymous:
           type: boolean
         message:
-          type: string
-          nullable: true
+          type: [string, 'null']
         helloasso_payment_id:
-          type: string
-          nullable: true
+          type: [string, 'null']
         checkout_intent_id:
-          type: string
-          nullable: true
+          type: [string, 'null']
         created_at:
           $ref: '#/components/schemas/Timestamp'
     PrizePoolUpsertRequest:
@@ -870,13 +883,11 @@ components:
         `raised_amount_cents` n'est jamais modifiable ici.
       properties:
         title:
-          type: string
+          type: [string, 'null']
           maxLength: 200
-          nullable: true
         goal_amount_cents:
-          type: integer
+          type: [integer, 'null']
           minimum: 1
-          nullable: true
         base_amount_cents:
           type: integer
           minimum: 0
@@ -953,11 +964,11 @@ components:
         id:
           $ref: '#/components/schemas/Uuid'
         teamSide:
-          type: integer
+          type: [integer, 'null']
           enum:
             - 1
             - 2
-          nullable: true
+            - null
           description: |
             Camp du capitaine ayant soumis la preuve (1 ou 2). `null` pour une
             preuve neutre attachée par le staff.
@@ -968,32 +979,26 @@ components:
             - replay_file
             - replay_url
         externalUrl:
-          type: string
+          type: [string, 'null']
           format: uri
-          nullable: true
           description: Lien externe (VOD/replay hébergé) pour `kind=replay_url`, sinon null.
         signedUrl:
-          type: string
+          type: [string, 'null']
           format: uri
-          nullable: true
           description: URL signée ~10 min vers le binaire privé ; null pour `replay_url`.
         mimeType:
-          type: string
-          nullable: true
+          type: [string, 'null']
         sizeBytes:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
         sha256:
-          type: string
-          nullable: true
+          type: [string, 'null']
           description: SHA-256 hex du binaire ; null pour `replay_url`.
         note:
-          type: string
-          nullable: true
+          type: [string, 'null']
         createdAt:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Timestamp'
-          nullable: true
+            - type: 'null'
     AdminMatchEvidenceItem:
       description: |
         Item de preuve enrichi pour la vue staff : ajoute l'identité du
@@ -1006,13 +1011,12 @@ components:
             - submittedByAuthUserId
           properties:
             submittedByDiscordUserId:
-              type: string
-              nullable: true
+              type: [string, 'null']
               description: Discord user id du capitaine soumetteur ; null si preuve staff.
             submittedByAuthUserId:
-              allOf:
+              anyOf:
                 - $ref: '#/components/schemas/Uuid'
-              nullable: true
+                - type: 'null'
               description: Compte auth du soumetteur (capitaine ou membre staff) ; null possible.
     MatchEvidenceCreateResult:
       type: object
@@ -1056,18 +1060,17 @@ components:
         slug:
           type: string
         logoUrl:
-          type: string
-          nullable: true
+          type: [string, 'null']
         captainUserId:
           $ref: '#/components/schemas/Uuid'
         discordRoleId:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/DiscordId'
-          nullable: true
+            - type: 'null'
         discordChannelId:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/DiscordId'
-          nullable: true
+            - type: 'null'
         joinable:
           type: boolean
         tenantId:
@@ -1083,12 +1086,11 @@ components:
         displayName:
           type: string
         battleTag:
-          type: string
-          nullable: true
+          type: [string, 'null']
         discordUserId:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/DiscordId'
-          nullable: true
+            - type: 'null'
         role:
           type: string
           enum:
@@ -1109,31 +1111,29 @@ components:
         id:
           $ref: '#/components/schemas/Uuid'
         tournamentId:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Uuid'
-          nullable: true
+            - type: 'null'
         scrimId:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Uuid'
-          nullable: true
+            - type: 'null'
         stageId:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Uuid'
-          nullable: true
+            - type: 'null'
         team1Id:
           $ref: '#/components/schemas/Uuid'
         team2Id:
           $ref: '#/components/schemas/Uuid'
         team1Score:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
         team2Score:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
         winnerTeamId:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Uuid'
-          nullable: true
+            - type: 'null'
         status:
           type: string
           enum:
@@ -1145,24 +1145,22 @@ components:
             - forfeit
             - cancelled
         scheduledAt:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Timestamp'
-          nullable: true
+            - type: 'null'
         lobbyInfo:
-          type: object
-          nullable: true
+          type: [object, 'null']
           properties:
             host:
               type: string
             password:
               type: string
         streamUrl:
-          type: string
-          nullable: true
+          type: [string, 'null']
         discordThreadId:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/DiscordId'
-          nullable: true
+            - type: 'null'
     Tournament:
       type: object
       required:
@@ -1185,16 +1183,15 @@ components:
             - finished
             - archived
         startsAt:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Timestamp'
-          nullable: true
+            - type: 'null'
         endsAt:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Timestamp'
-          nullable: true
+            - type: 'null'
         prizePoolEur:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
     Stage:
       type: object
       required:
@@ -1228,8 +1225,7 @@ components:
         id:
           $ref: '#/components/schemas/Uuid'
         name:
-          type: string
-          nullable: true
+          type: [string, 'null']
         status:
           type: string
           enum:
@@ -1240,15 +1236,15 @@ components:
             - finished
             - cancelled
         scheduledAt:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Timestamp'
-          nullable: true
+            - type: 'null'
         teamAId:
           $ref: '#/components/schemas/Uuid'
         teamBId:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Uuid'
-          nullable: true
+            - type: 'null'
     CastAssignment:
       type: object
       required:
@@ -1273,32 +1269,9 @@ components:
             - observer
             - director
         confirmedAt:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Timestamp'
-          nullable: true
-    PendingEvent:
-      type: object
-      required:
-        - id
-        - eventId
-        - eventName
-        - payload
-        - tenantId
-      properties:
-        id:
-          $ref: '#/components/schemas/Uuid'
-        eventId:
-          $ref: '#/components/schemas/Uuid'
-        eventName:
-          type: string
-          example: match.starting
-        tenantId:
-          $ref: '#/components/schemas/Uuid'
-        payload:
-          type: object
-          additionalProperties: true
-        createdAt:
-          $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
     EventRun:
       type: object
       required:
@@ -1320,13 +1293,13 @@ components:
             - live
             - done
         startedAt:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Timestamp'
-          nullable: true
+            - type: 'null'
         endedAt:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Timestamp'
-          nullable: true
+            - type: 'null'
     EventSegment:
       type: object
       required:
@@ -1356,9 +1329,9 @@ components:
         durationMin:
           type: integer
         matchId:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Uuid'
-          nullable: true
+            - type: 'null'
         status:
           type: string
           enum:
@@ -1367,8 +1340,7 @@ components:
             - done
             - skipped
         obs_scene:
-          type: string
-          nullable: true
+          type: [string, 'null']
           maxLength: 200
           description: |
             Nom de la scène OBS mise à l'antenne au démarrage du segment.
@@ -1395,12 +1367,11 @@ components:
         title:
           type: string
         planned_start_at:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Timestamp'
-          nullable: true
+            - type: 'null'
         duration_min:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
         status:
           type: string
           enum:
@@ -1409,13 +1380,13 @@ components:
             - done
             - skipped
         started_at:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Timestamp'
-          nullable: true
+            - type: 'null'
         ended_at:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Timestamp'
-          nullable: true
+            - type: 'null'
     EventStation:
       type: object
       required:
@@ -1436,11 +1407,9 @@ components:
         name:
           type: string
         stream_url:
-          type: string
-          nullable: true
+          type: [string, 'null']
         notes:
-          type: string
-          nullable: true
+          type: [string, 'null']
         status:
           type: string
     AutocompleteResult:
@@ -1483,12 +1452,11 @@ components:
         pushAttempts:
           type: integer
         lastPushError:
-          type: string
-          nullable: true
+          type: [string, 'null']
         lastPushAt:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Timestamp'
-          nullable: true
+            - type: 'null'
         createdAt:
           $ref: '#/components/schemas/Timestamp'
     BracketView:
@@ -1511,8 +1479,7 @@ components:
               name:
                 type: string
               slug:
-                type: string
-                nullable: true
+                type: [string, 'null']
               stageType:
                 type: string
               orderIndex:
@@ -1537,13 +1504,13 @@ components:
         id:
           $ref: '#/components/schemas/Uuid'
         userId:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Uuid'
-          nullable: true
+            - type: 'null'
         teamId:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Uuid'
-          nullable: true
+            - type: 'null'
         type:
           type: string
           enum:
@@ -1557,21 +1524,18 @@ components:
             - rejected
             - cancelled
         comment:
-          type: string
-          nullable: true
+          type: [string, 'null']
         source:
-          type: string
-          nullable: true
+          type: [string, 'null']
         payload:
-          type: object
+          type: [object, 'null']
           additionalProperties: true
-          nullable: true
         createdAt:
           $ref: '#/components/schemas/Timestamp'
         processedAt:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Timestamp'
-          nullable: true
+            - type: 'null'
     LeaderboardEntry:
       type: object
       required:
@@ -1602,12 +1566,11 @@ components:
         released:
           type: boolean
         currentHolder:
-          type: string
-          nullable: true
+          type: [string, 'null']
         expiresAt:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Timestamp'
-          nullable: true
+            - type: 'null'
     PlayerAction:
       type: object
       required:
@@ -1622,19 +1585,16 @@ components:
         action:
           type: string
         entityType:
-          type: string
-          nullable: true
+          type: [string, 'null']
         entityId:
-          type: string
-          nullable: true
+          type: [string, 'null']
         targetAuthUserId:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Uuid'
-          nullable: true
+            - type: 'null'
         payload:
-          type: object
+          type: [object, 'null']
           additionalProperties: true
-          nullable: true
         createdAt:
           $ref: '#/components/schemas/Timestamp'
     Reminder:
@@ -1654,24 +1614,23 @@ components:
         discordUserId:
           $ref: '#/components/schemas/DiscordId'
         discordUsername:
-          type: string
-          nullable: true
+          type: [string, 'null']
         matchId:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Uuid'
-          nullable: true
+            - type: 'null'
         tournamentId:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Uuid'
-          nullable: true
+            - type: 'null'
         assignmentId:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Uuid'
-          nullable: true
+            - type: 'null'
         scheduledAt:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/Timestamp'
-          nullable: true
+            - type: 'null'
         payload:
           type: object
           additionalProperties: true
@@ -1721,11 +1680,9 @@ components:
         team2Id:
           $ref: '#/components/schemas/Uuid'
         team1Name:
-          type: string
-          nullable: true
+          type: [string, 'null']
         team2Name:
-          type: string
-          nullable: true
+          type: [string, 'null']
         flow:
           type: array
           items:
@@ -1754,13 +1711,11 @@ components:
           type: string
           format: uuid
         tournament_id:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         stage_id:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         status:
           type: string
           enum:
@@ -1772,120 +1727,93 @@ components:
             - walkover
             - disputed
         is_bye:
-          type: boolean
-          nullable: true
+          type: [boolean, 'null']
         match_format:
-          type: string
-          nullable: true
+          type: [string, 'null']
         round_name:
-          type: string
-          nullable: true
+          type: [string, 'null']
         round_number:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
         bracket_side:
-          type: string
+          type: [string, 'null']
           enum:
             - wb
             - lb
             - final
             - none
-          nullable: true
+            - null
         group_key:
-          type: string
-          nullable: true
+          type: [string, 'null']
         team1_id:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         team2_id:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         team1_score:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
         team2_score:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
         winner_team_id:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         forfeit_team_id:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         scheduled_at:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
         completed_at:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
         updated_at:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
         stream_url:
-          type: string
-          nullable: true
+          type: [string, 'null']
         replay_url:
-          type: string
-          nullable: true
+          type: [string, 'null']
         lobby_code:
-          type: string
-          nullable: true
+          type: [string, 'null']
         notes:
-          type: string
-          nullable: true
+          type: [string, 'null']
         next_match_win_id:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         next_match_win_slot:
-          type: integer
+          type: [integer, 'null']
           enum:
             - 1
             - 2
-          nullable: true
+            - null
         next_match_lose_id:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         next_match_lose_slot:
-          type: integer
+          type: [integer, 'null']
           enum:
             - 1
             - 2
-          nullable: true
+            - null
         dispute_reason:
-          type: string
-          nullable: true
+          type: [string, 'null']
         dispute_opened_by:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         dispute_opened_at:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
         dispute_resolution:
-          type: string
-          nullable: true
+          type: [string, 'null']
         dispute_resolved_by:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         dispute_resolved_at:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
         veto_locked_at:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
         team1:
           type: object
           additionalProperties: true
@@ -1943,82 +1871,67 @@ components:
             - postponed
             - walkover
         tournament_id:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         stage_id:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         is_bye:
           type: boolean
         match_format:
           type: string
         round_name:
-          type: string
-          nullable: true
+          type: [string, 'null']
         round_number:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
         bracket_side:
-          type: string
+          type: [string, 'null']
           enum:
             - wb
             - lb
             - final
             - none
-          nullable: true
+            - null
         group_key:
-          type: string
-          nullable: true
+          type: [string, 'null']
         team1_id:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         team2_id:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         scheduled_at:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
         completed_at:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
         stream_url:
-          type: string
-          nullable: true
+          type: [string, 'null']
         replay_url:
-          type: string
-          nullable: true
+          type: [string, 'null']
         lobby_code:
-          type: string
-          nullable: true
+          type: [string, 'null']
         notes:
-          type: string
-          nullable: true
+          type: [string, 'null']
         next_match_win_id:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         next_match_win_slot:
-          type: integer
+          type: [integer, 'null']
           enum:
             - 1
             - 2
-          nullable: true
+            - null
         next_match_lose_id:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         next_match_lose_slot:
-          type: integer
+          type: [integer, 'null']
           enum:
             - 1
             - 2
-          nullable: true
+            - null
     AdminTournamentDashboard:
       type: object
       description: |
@@ -2051,16 +1964,15 @@ components:
       description: Aggregate live broadcast state of the single live event_run.
       properties:
         run:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/EventRun'
-          nullable: true
+            - type: 'null'
         currentSegment:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/EventSegment'
-          nullable: true
+            - type: 'null'
         match:
-          type: object
-          nullable: true
+          type: [object, 'null']
           additionalProperties: true
           properties:
             matchId:
@@ -2107,8 +2019,7 @@ components:
           type: boolean
           description: Whether the program feed is live to air.
         lower_third:
-          type: string
-          nullable: true
+          type: [string, 'null']
           description: Free lower-third caption, or null when hidden.
         pip:
           type: object
@@ -2126,9 +2037,8 @@ components:
             match status changes. When false, scene changes are operator-driven
             only.
         scene_updated_at:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
           description: ISO timestamp of the last `scene` change, or null.
     BroadcastScene:
       type: string
@@ -2183,8 +2093,7 @@ components:
         onAir:
           type: boolean
         lowerThird:
-          type: string
-          nullable: true
+          type: [string, 'null']
         pip:
           type: object
           required:
@@ -2193,9 +2102,9 @@ components:
             enabled:
               type: boolean
         match:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/OverlayMatch'
-          nullable: true
+            - type: 'null'
         sponsors:
           type: array
           items:
@@ -2210,20 +2119,18 @@ components:
         - status
       properties:
         team1:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/OverlayTeam'
-          nullable: true
+            - type: 'null'
         team2:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/OverlayTeam'
-          nullable: true
+            - type: 'null'
         format:
-          type: string
-          nullable: true
+          type: [string, 'null']
           description: Match format (e.g. `bo1`, `bo3`), or null.
         status:
-          type: string
-          nullable: true
+          type: [string, 'null']
           description: Match status (e.g. `ongoing`, `finished`), or null.
     OverlayTeam:
       type: object
@@ -2235,11 +2142,9 @@ components:
         name:
           type: string
         logoUrl:
-          type: string
-          nullable: true
+          type: [string, 'null']
         score:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
     OverlaySponsor:
       type: object
       required:
@@ -2250,11 +2155,9 @@ components:
         name:
           type: string
         logoUrl:
-          type: string
-          nullable: true
+          type: [string, 'null']
         websiteUrl:
-          type: string
-          nullable: true
+          type: [string, 'null']
     CreateEventSegmentInput:
       type: object
       required:
@@ -2277,20 +2180,16 @@ components:
           type: integer
           minimum: 0
         match_id:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         duration_min:
-          type: integer
+          type: [integer, 'null']
           minimum: 1
-          nullable: true
         planned_start_at:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
         broadcast_message:
-          type: object
-          nullable: true
+          type: [object, 'null']
           additionalProperties: false
           properties:
             discord:
@@ -2322,13 +2221,11 @@ components:
                 minLength: 1
                 maxLength: 200
               checked_by_user_id:
-                type: string
+                type: [string, 'null']
                 format: uuid
-                nullable: true
               checked_at:
-                type: string
+                type: [string, 'null']
                 format: date-time
-                nullable: true
     CheckinNudgePayload:
       type: object
       required:
@@ -2358,25 +2255,20 @@ components:
         - isCaptain
       properties:
         pseudo:
-          type: string
-          nullable: true
+          type: [string, 'null']
           description: >-
             Team display name, else account display name, else BattleTag
             before `#`, else Discord username.
         battleTag:
-          type: string
-          nullable: true
+          type: [string, 'null']
         discord:
-          type: string
-          nullable: true
+          type: [string, 'null']
           description: user_discord_links.discord_username
         role:
-          type: string
-          nullable: true
+          type: [string, 'null']
           description: team_members.role (player, coach, manager…)
         specialty:
-          type: string
-          nullable: true
+          type: [string, 'null']
           description: tank / dps / support / flex
         isCaptain:
           type: boolean
@@ -2426,16 +2318,13 @@ components:
         name:
           type: string
         details:
-          type: string
-          nullable: true
+          type: [string, 'null']
         deleted_at:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
         tournament_id:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
     BroadcastWaveResult:
       type: object
       description: |
@@ -2573,18 +2462,14 @@ components:
           type: integer
           description: Hard cap on the sample (10 000).
         p50:
-          type: number
-          nullable: true
+          type: [number, 'null']
           description: Median in ms.
         p95:
-          type: number
-          nullable: true
+          type: [number, 'null']
         p99:
-          type: number
-          nullable: true
+          type: [number, 'null']
         max:
-          type: number
-          nullable: true
+          type: [number, 'null']
     CronOutboxMaintenanceStats:
       type: object
       required:
@@ -2598,8 +2483,7 @@ components:
           minimum: 0
           description: Rows currently `status='pending'`.
         oldestPendingAgeSec:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
           description: Age of the oldest pending row in seconds (null if none).
         delivered24h:
           type: integer
@@ -2869,15 +2753,13 @@ components:
         name:
           type: string
         title:
-          type: string
-          nullable: true
+          type: [string, 'null']
         roles:
           type: array
           items:
             type: string
         attribute:
-          type: string
-          nullable: true
+          type: [string, 'null']
           enum:
             - strength
             - agility
@@ -2889,9 +2771,8 @@ components:
           format: uri
           description: Splash art URL on the upstream CDN.
         iconUrl:
-          type: string
+          type: [string, 'null']
           format: uri
-          nullable: true
     GameHeroesResponse:
       type: object
       required:
@@ -3063,8 +2944,7 @@ components:
             - lol
             - dota2
         team1_side:
-          type: string
-          nullable: true
+          type: [string, 'null']
           enum:
             - blue
             - red
@@ -3072,8 +2952,7 @@ components:
             - dire
             - null
         team2_side:
-          type: string
-          nullable: true
+          type: [string, 'null']
           enum:
             - blue
             - red
@@ -3095,13 +2974,11 @@ components:
         pick_timer_seconds:
           type: integer
         started_at:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
         completed_at:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
         tenant_id:
           $ref: '#/components/schemas/Uuid'
         created_at:
@@ -3145,13 +3022,11 @@ components:
             - $ref: '#/components/schemas/Uuid'
             - type: 'null'
         committed_at:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
         deadline_at:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
         auto_picked:
           type: boolean
         created_at:
@@ -3208,11 +3083,9 @@ components:
             polish). Public endpoint only — admin GET omits this field.
           properties:
             team1Name:
-              type: string
-              nullable: true
+              type: [string, 'null']
             team2Name:
-              type: string
-              nullable: true
+              type: [string, 'null']
     DeleteMatchDraftResponse:
       type: object
       required:
@@ -3265,13 +3138,11 @@ components:
               teamId:
                 $ref: '#/components/schemas/Uuid'
               teamName:
-                type: string
-                nullable: true
+                type: [string, 'null']
               authUserId:
                 $ref: '#/components/schemas/Uuid'
               discordUserId:
-                type: string
-                nullable: true
+                type: [string, 'null']
                 description: Snowflake or null when the captain hasn't linked Discord.
     DraftAutoPickResponse:
       type: object
@@ -3384,8 +3255,7 @@ components:
         name:
           type: string
         description:
-          type: string
-          nullable: true
+          type: [string, 'null']
         scheduledAt:
           oneOf:
             - $ref: '#/components/schemas/Timestamp'
@@ -3427,11 +3297,9 @@ components:
             - interview
             - segment
         title:
-          type: string
-          nullable: true
+          type: [string, 'null']
         durationMin:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
         matchId:
           oneOf:
             - $ref: '#/components/schemas/Uuid'
@@ -3464,14 +3332,11 @@ components:
         name:
           type: string
         short_name:
-          type: string
-          nullable: true
+          type: [string, 'null']
         logo_url:
-          type: string
-          nullable: true
+          type: [string, 'null']
         country:
-          type: string
-          nullable: true
+          type: [string, 'null']
         member_count:
           type: integer
         is_joinable:
@@ -3498,11 +3363,9 @@ components:
             type: string
             format: date-time
         format:
-          type: string
-          nullable: true
+          type: [string, 'null']
         note:
-          type: string
-          nullable: true
+          type: [string, 'null']
         status:
           type: string
           enum: [active, fulfilled, cancelled]
@@ -3523,17 +3386,13 @@ components:
         name:
           type: string
         short_name:
-          type: string
-          nullable: true
+          type: [string, 'null']
         logo_url:
-          type: string
-          nullable: true
+          type: [string, 'null']
         slug:
-          type: string
-          nullable: true
+          type: [string, 'null']
         country:
-          type: string
-          nullable: true
+          type: [string, 'null']
         member_count:
           type: integer
         is_joinable:
@@ -3541,8 +3400,7 @@ components:
         is_full:
           type: boolean
         rating:
-          type: number
-          nullable: true
+          type: [number, 'null']
         reliability:
           type: object
           description: >-
@@ -3556,14 +3414,11 @@ components:
             ignored:
               type: integer
             responseRate:
-              type: integer
-              nullable: true
+              type: [integer, 'null']
             medianResponseHours:
-              type: number
-              nullable: true
+              type: [number, 'null']
         scrim_search:
-          nullable: true
-          type: object
+          type: [object, 'null']
           properties:
             slots:
               type: array
@@ -3571,11 +3426,9 @@ components:
                 type: string
                 format: date-time
             format:
-              type: string
-              nullable: true
+              type: [string, 'null']
             note:
-              type: string
-              nullable: true
+              type: [string, 'null']
             expires_at:
               type: string
               format: date-time
@@ -3612,17 +3465,13 @@ components:
               type: object
               properties:
                 slots:
-                  type: number
-                  nullable: true
+                  type: [number, 'null']
                 level:
-                  type: number
-                  nullable: true
+                  type: [number, 'null']
                 reliability:
-                  type: number
-                  nullable: true
+                  type: [number, 'null']
                 novelty:
-                  type: number
-                  nullable: true
+                  type: [number, 'null']
             reasons:
               type: array
               description: Codes de raison, traduits cote UI. Trois au maximum.
@@ -3653,12 +3502,10 @@ components:
         - coreSlots
       properties:
         teamId:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         teamName:
-          type: string
-          nullable: true
+          type: [string, 'null']
         referenceTimezone:
           type: string
         mySlots:
@@ -3701,8 +3548,7 @@ components:
             type: string
             format: date-time
         suggestion:
-          type: object
-          nullable: true
+          type: [object, 'null']
           description: >-
             Creneau d'entrainement suggere : appartient au noyau, n'est pas
             couvert par l'annonce vivante, et n'a pas ete joue plus d'une fois.
@@ -3735,23 +3581,18 @@ components:
         - milestones
       properties:
         teamId:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         teamName:
-          type: string
-          nullable: true
+          type: [string, 'null']
         rating:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
           description: Niveau courant. `null` si jamais notee.
         peak:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
           description: Meilleur niveau atteint, courant compris.
         delta:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
           description: >-
             Variation entre le premier et le dernier point de la serie
             affichee. `null` sous deux mesures — `0` signifierait « n'a pas
@@ -3831,20 +3672,15 @@ components:
             name:
               type: string
             shortName:
-              type: string
-              nullable: true
+              type: [string, 'null']
             logoUrl:
-              type: string
-              nullable: true
+              type: [string, 'null']
             slug:
-              type: string
-              nullable: true
+              type: [string, 'null']
             country:
-              type: string
-              nullable: true
+              type: [string, 'null']
             rating:
-              type: number
-              nullable: true
+              type: [number, 'null']
             reliability:
               type: object
               description: Identique a celle exposee par l'annuaire.
@@ -3856,11 +3692,9 @@ components:
                 ignored:
                   type: integer
                 responseRate:
-                  type: integer
-                  nullable: true
+                  type: [integer, 'null']
                 medianResponseHours:
-                  type: number
-                  nullable: true
+                  type: [number, 'null']
         myNotes:
           type: array
           description: >-
@@ -3876,15 +3710,12 @@ components:
                 type: string
                 format: uuid
               playedAt:
-                type: string
+                type: [string, 'null']
                 format: date-time
-                nullable: true
               vodUrl:
-                type: string
-                nullable: true
+                type: [string, 'null']
               notes:
-                type: string
-                nullable: true
+                type: [string, 'null']
         report:
           type: object
           properties:
@@ -3911,28 +3742,23 @@ components:
                         type: string
                         format: uuid
                       playedAt:
-                        type: string
+                        type: [string, 'null']
                         format: date-time
-                        nullable: true
                       result:
                         type: string
                         enum: [win, loss, draw]
                       myScore:
-                        type: integer
-                        nullable: true
+                        type: [integer, 'null']
                       opponentScore:
-                        type: integer
-                        nullable: true
+                        type: [integer, 'null']
             recentForm:
-              type: array
-              nullable: true
+              type: [array, 'null']
               description: "`null` sous le seuil d'echantillon."
               items:
                 type: string
                 enum: [win, loss, draw]
             record:
-              type: object
-              nullable: true
+              type: [object, 'null']
               properties:
                 played:
                   type: integer
@@ -3957,8 +3783,7 @@ components:
                   theirLosses:
                     type: integer
             usualSlots:
-              type: array
-              nullable: true
+              type: [array, 'null']
               description: >-
                 Derives des heures REELLEMENT jouees. `null` sous le seuil
                 d'echantillon.
@@ -3984,12 +3809,10 @@ components:
         - blockingCount
       properties:
         teamId:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         teamName:
-          type: string
-          nullable: true
+          type: [string, 'null']
         blockingCount:
           type: integer
         memberCount:
@@ -4043,12 +3866,10 @@ components:
         - reviewedCount
       properties:
         teamId:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         teamName:
-          type: string
-          nullable: true
+          type: [string, 'null']
         reviewedCount:
           type: integer
         opponents:
@@ -4078,47 +3899,35 @@ components:
                 type: string
                 format: uuid
               playedAt:
-                type: string
+                type: [string, 'null']
                 format: date-time
-                nullable: true
               opponentTeamId:
-                type: string
+                type: [string, 'null']
                 format: uuid
-                nullable: true
               opponentName:
-                type: string
-                nullable: true
+                type: [string, 'null']
               myScore:
-                type: integer
-                nullable: true
+                type: [integer, 'null']
               opponentScore:
-                type: integer
-                nullable: true
+                type: [integer, 'null']
               result:
-                type: string
-                nullable: true
+                type: [string, 'null']
                 enum: [win, loss, draw, null]
               label:
-                type: string
-                nullable: true
+                type: [string, 'null']
               review:
-                nullable: true
-                type: object
+                type: [object, 'null']
                 properties:
                   vodUrl:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
                   notes:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
                   updatedAt:
-                    type: string
+                    type: [string, 'null']
                     format: date-time
-                    nullable: true
                   updatedBy:
-                    type: string
+                    type: [string, 'null']
                     format: uuid
-                    nullable: true
     PlayerScrim:
       type: object
       required:
@@ -4129,12 +3938,10 @@ components:
         id:
           $ref: '#/components/schemas/Uuid'
         name:
-          type: string
-          nullable: true
+          type: [string, 'null']
         scheduledDate:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
         status:
           type: string
         ranked:
@@ -4142,24 +3949,18 @@ components:
         isTeam1:
           type: boolean
         opponentName:
-          type: string
-          nullable: true
+          type: [string, 'null']
         team1Score:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
         team2Score:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
         winnerTeamId:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         disputeReason:
-          type: string
-          nullable: true
+          type: [string, 'null']
         myReport:
-          nullable: true
-          type: object
+          type: [object, 'null']
           properties:
             team1Score:
               type: integer
@@ -4179,11 +3980,9 @@ components:
         teamName:
           type: string
         slug:
-          type: string
-          nullable: true
+          type: [string, 'null']
         logoUrl:
-          type: string
-          nullable: true
+          type: [string, 'null']
         played:
           type: integer
         won:
@@ -4210,19 +4009,15 @@ components:
         name:
           type: string
         slug:
-          type: string
-          nullable: true
+          type: [string, 'null']
         short_name:
-          type: string
-          nullable: true
+          type: [string, 'null']
         game:
-          type: string
-          nullable: true
+          type: [string, 'null']
         status:
           type: string
         format:
-          type: string
-          nullable: true
+          type: [string, 'null']
         start_date:
           oneOf:
             - $ref: '#/components/schemas/Timestamp'
@@ -4232,14 +4027,11 @@ components:
             - $ref: '#/components/schemas/Timestamp'
             - type: 'null'
         max_teams:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
         logo_url:
-          type: string
-          nullable: true
+          type: [string, 'null']
         banner_url:
-          type: string
-          nullable: true
+          type: [string, 'null']
         team_count:
           type: integer
         created_at:
@@ -4253,14 +4045,11 @@ components:
         id:
           $ref: '#/components/schemas/Uuid'
         name:
-          type: string
-          nullable: true
+          type: [string, 'null']
         slug:
-          type: string
-          nullable: true
+          type: [string, 'null']
         game:
-          type: string
-          nullable: true
+          type: [string, 'null']
         status:
           type: string
           enum:
@@ -4274,20 +4063,15 @@ components:
             - $ref: '#/components/schemas/Timestamp'
             - type: 'null'
         timezone:
-          type: string
-          nullable: true
+          type: [string, 'null']
         logo_url:
-          type: string
-          nullable: true
+          type: [string, 'null']
         banner_url:
-          type: string
-          nullable: true
+          type: [string, 'null']
         description:
-          type: string
-          nullable: true
+          type: [string, 'null']
         stream_url:
-          type: string
-          nullable: true
+          type: [string, 'null']
         team1_id:
           $ref: '#/components/schemas/Uuid'
         team2_id:
@@ -4298,9 +4082,8 @@ components:
           type: object
           additionalProperties: true
         team2:
-          type: object
+          type: [object, 'null']
           additionalProperties: true
-          nullable: true
     PublicScrimRequestInput:
       type: object
       required:
@@ -4438,18 +4221,14 @@ components:
             type: string
             enum: [tank, dps, support, flex]
         level:
-          type: string
-          nullable: true
+          type: [string, 'null']
         availability:
-          type: string
-          nullable: true
+          type: [string, 'null']
         note:
-          type: string
-          nullable: true
+          type: [string, 'null']
         since:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
     PublicTeamOpeningInput:
       type: object
       required:
@@ -4537,18 +4316,14 @@ components:
             type: string
             enum: [tank, dps, support, flex]
         level:
-          type: string
-          nullable: true
+          type: [string, 'null']
         availability:
-          type: string
-          nullable: true
+          type: [string, 'null']
         note:
-          type: string
-          nullable: true
+          type: [string, 'null']
         since:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
     ContactTeamOpening:
       allOf:
         - $ref: '#/components/schemas/PublicTeamOpening'
@@ -4560,19 +4335,16 @@ components:
             - contact
           properties:
             teamId:
-              type: string
+              type: [string, 'null']
               format: uuid
-              nullable: true
               description: Equipe du site quand l'annonce vient d'un espace capitaine.
             contact:
               type: object
               properties:
                 email:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 discord:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
     PublicNewsItem:
       type: object
       required:
@@ -4587,17 +4359,13 @@ components:
         slug:
           type: string
         tag:
-          type: string
-          nullable: true
+          type: [string, 'null']
         excerpt:
-          type: string
-          nullable: true
+          type: [string, 'null']
         content:
-          type: string
-          nullable: true
+          type: [string, 'null']
         imageUrl:
-          type: string
-          nullable: true
+          type: [string, 'null']
         createdAt:
           $ref: '#/components/schemas/Timestamp'
         publishedAt:
@@ -4621,8 +4389,7 @@ components:
         news_id:
           $ref: '#/components/schemas/Uuid'
         author_name:
-          type: string
-          nullable: true
+          type: [string, 'null']
         content:
           type: string
         created_at:
@@ -4643,9 +4410,8 @@ components:
           minLength: 3
           maxLength: 2000
         authorName:
-          type: string
+          type: [string, 'null']
           maxLength: 50
-          nullable: true
         honeypot:
           type: string
           description: Doit etre vide (anti-bot).
@@ -4699,15 +4465,13 @@ components:
         requested_name:
           type: string
         botInviteUrl:
-          type: string
-          nullable: true
+          type: [string, 'null']
         tenantId:
           oneOf:
             - $ref: '#/components/schemas/Uuid'
             - type: 'null'
         secretsRevealToken:
-          type: string
-          nullable: true
+          type: [string, 'null']
           description: Token a passer a /api/onboard/secrets/{token} pour reveal one-shot.
         createdAt:
           $ref: '#/components/schemas/Timestamp'
@@ -4841,15 +4605,13 @@ components:
             - $ref: '#/components/schemas/Uuid'
             - type: 'null'
         battleTag:
-          type: string
-          nullable: true
+          type: [string, 'null']
         teamId:
           oneOf:
             - $ref: '#/components/schemas/Uuid'
             - type: 'null'
         teamName:
-          type: string
-          nullable: true
+          type: [string, 'null']
         mvpCount:
           type: integer
         matchIds:
@@ -4862,8 +4624,7 @@ components:
         matchId:
           $ref: '#/components/schemas/Uuid'
         roundName:
-          type: string
-          nullable: true
+          type: [string, 'null']
         completedAt:
           oneOf:
             - $ref: '#/components/schemas/Timestamp'
@@ -4873,15 +4634,13 @@ components:
             - $ref: '#/components/schemas/Uuid'
             - type: 'null'
         battleTag:
-          type: string
-          nullable: true
+          type: [string, 'null']
         teamId:
           oneOf:
             - $ref: '#/components/schemas/Uuid'
             - type: 'null'
         teamName:
-          type: string
-          nullable: true
+          type: [string, 'null']
     CasterMe:
       type: object
       required:
@@ -4899,17 +4658,13 @@ components:
             name:
               type: string
             title:
-              type: string
-              nullable: true
+              type: [string, 'null']
             imageUrl:
-              type: string
-              nullable: true
+              type: [string, 'null']
             twitchUrl:
-              type: string
-              nullable: true
+              type: [string, 'null']
             city:
-              type: string
-              nullable: true
+              type: [string, 'null']
         upcomingAssignments:
           type: array
           items:
@@ -4926,18 +4681,15 @@ components:
               assignmentId:
                 $ref: '#/components/schemas/Uuid'
               role:
-                type: string
-                nullable: true
+                type: [string, 'null']
               startsAt:
                 $ref: '#/components/schemas/Timestamp'
               match:
-                type: object
+                type: [object, 'null']
                 additionalProperties: true
-                nullable: true
               scrim:
-                type: object
+                type: [object, 'null']
                 additionalProperties: true
-                nullable: true
     CasterBriefing:
       type: object
       required:
@@ -4961,22 +4713,18 @@ components:
             status:
               type: string
             matchFormat:
-              type: string
-              nullable: true
+              type: [string, 'null']
             roundName:
-              type: string
-              nullable: true
+              type: [string, 'null']
             tournament:
-              type: object
-              nullable: true
+              type: [object, 'null']
               properties:
                 id:
                   $ref: '#/components/schemas/Uuid'
                 name:
                   type: string
                 slug:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
         teams:
           type: array
           items:
@@ -4987,14 +4735,11 @@ components:
               name:
                 type: string
               shortName:
-                type: string
-                nullable: true
+                type: [string, 'null']
               logoUrl:
-                type: string
-                nullable: true
+                type: [string, 'null']
               country:
-                type: string
-                nullable: true
+                type: [string, 'null']
               members:
                 type: array
                 items:
@@ -5003,8 +4748,7 @@ components:
                     id:
                       $ref: '#/components/schemas/Uuid'
                     battle_tag:
-                      type: string
-                      nullable: true
+                      type: [string, 'null']
                     role:
                       type: string
                     is_substitute:
@@ -5053,15 +4797,13 @@ components:
               slug:
                 type: string
               tag:
-                type: string
-                nullable: true
+                type: [string, 'null']
               publishedAt:
                 oneOf:
                   - $ref: '#/components/schemas/Timestamp'
                   - type: 'null'
               excerpt:
-                type: string
-                nullable: true
+                type: [string, 'null']
     CasterCueAck:
       type: object
       required:
@@ -5096,8 +4838,7 @@ components:
         retournent `null`. Sinon, payload complet ci-dessous.
       properties:
         match:
-          type: object
-          nullable: true
+          type: [object, 'null']
           properties:
             id:
               $ref: '#/components/schemas/Uuid'
@@ -5108,20 +4849,15 @@ components:
             status:
               type: string
             format:
-              type: string
-              nullable: true
+              type: [string, 'null']
             roundName:
-              type: string
-              nullable: true
+              type: [string, 'null']
             streamUrl:
-              type: string
-              nullable: true
+              type: [string, 'null']
             bestOf:
-              type: integer
-              nullable: true
+              type: [integer, 'null']
         team:
-          type: object
-          nullable: true
+          type: [object, 'null']
           properties:
             id:
               $ref: '#/components/schemas/Uuid'
@@ -5133,31 +4869,26 @@ components:
                 - 1
                 - 2
         opponent:
-          type: object
-          nullable: true
+          type: [object, 'null']
           properties:
             id:
               $ref: '#/components/schemas/Uuid'
             name:
               type: string
         tournament:
-          type: object
-          nullable: true
+          type: [object, 'null']
           properties:
             id:
               $ref: '#/components/schemas/Uuid'
             name:
               type: string
             slug:
-              type: string
-              nullable: true
+              type: [string, 'null']
         checkin:
-          type: object
-          nullable: true
+          type: [object, 'null']
           properties:
             token:
-              type: string
-              nullable: true
+              type: [string, 'null']
             alreadyCheckedIn:
               type: boolean
             checkedInAt:
@@ -5200,26 +4931,20 @@ components:
         userId:
           type: string
         displayName:
-          type: string
-          nullable: true
+          type: [string, 'null']
         battleTag:
-          type: string
-          nullable: true
+          type: [string, 'null']
         avatarUrl:
-          type: string
-          nullable: true
+          type: [string, 'null']
         teamName:
-          type: string
-          nullable: true
+          type: [string, 'null']
           description: >-
             Nom de l'equipe la plus recente de la joueuse. Sert de contexte
             d'affichage, pas de filtre.
         teamSlug:
-          type: string
-          nullable: true
+          type: [string, 'null']
         teamLogoUrl:
-          type: string
-          nullable: true
+          type: [string, 'null']
           description: >-
             Logo de l'equipe, utilise comme repli d'avatar quand `avatarUrl`
             est nul.
@@ -5269,14 +4994,11 @@ components:
             userId:
               type: string
             displayName:
-              type: string
-              nullable: true
+              type: [string, 'null']
             battleTag:
-              type: string
-              nullable: true
+              type: [string, 'null']
             avatarUrl:
-              type: string
-              nullable: true
+              type: [string, 'null']
             rating:
               type: number
             rd:
@@ -5301,8 +5023,7 @@ components:
               matchId:
                 type: string
               tournamentId:
-                type: string
-                nullable: true
+                type: [string, 'null']
               occurredAt:
                 type: string
               ratingBefore:
@@ -5316,8 +5037,7 @@ components:
                   - loss
                   - draw
               opponentAvgRating:
-                type: number
-                nullable: true
+                type: [number, 'null']
         recentMatches:
           type: array
           items:
@@ -5326,8 +5046,7 @@ components:
               matchId:
                 type: string
               tournamentId:
-                type: string
-                nullable: true
+                type: [string, 'null']
               occurredAt:
                 type: string
               result:
@@ -5337,11 +5056,9 @@ components:
                   - loss
                   - draw
               opponentTeamId:
-                type: string
-                nullable: true
+                type: [string, 'null']
               opponentTeamName:
-                type: string
-                nullable: true
+                type: [string, 'null']
         h2h:
           type: array
           items:
@@ -5350,11 +5067,9 @@ components:
               opponentUserId:
                 type: string
               opponentDisplayName:
-                type: string
-                nullable: true
+                type: [string, 'null']
               opponentBattleTag:
-                type: string
-                nullable: true
+                type: [string, 'null']
               wins:
                 type: integer
               losses:
@@ -5390,13 +5105,13 @@ components:
                   description:
                     type: string
                   tier:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
                     enum:
                       - bronze
                       - silver
                       - gold
                       - platinum
+                      - null
             palmares:
               type: array
               items:
@@ -5409,21 +5124,17 @@ components:
                   tournamentId:
                     type: string
                   tournamentName:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
                   tournamentSlug:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
                   teamId:
                     type: string
                   teamName:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
                   rank:
                     type: integer
                   date:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
             seasons:
               type: array
               items:
@@ -5436,19 +5147,15 @@ components:
                   leagueId:
                     type: string
                   leagueName:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
                   leagueSlug:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
                   teamId:
                     type: string
                   teamName:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
                   rank:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
                   points:
                     type: number
     League:
@@ -5473,11 +5180,9 @@ components:
         slug:
           type: string
         description:
-          type: string
-          nullable: true
+          type: [string, 'null']
         game:
-          type: string
-          nullable: true
+          type: [string, 'null']
         status:
           type: string
           enum:
@@ -5486,11 +5191,9 @@ components:
             - finished
             - archived
         start_date:
-          type: string
-          nullable: true
+          type: [string, 'null']
         end_date:
-          type: string
-          nullable: true
+          type: [string, 'null']
         points_table:
           type: object
           additionalProperties:
@@ -5513,17 +5216,13 @@ components:
           type: string
           pattern: '^[a-z0-9-]+$'
         description:
-          type: string
-          nullable: true
+          type: [string, 'null']
         game:
-          type: string
-          nullable: true
+          type: [string, 'null']
         start_date:
-          type: string
-          nullable: true
+          type: [string, 'null']
         end_date:
-          type: string
-          nullable: true
+          type: [string, 'null']
         points_table:
           type: object
           additionalProperties:
@@ -5539,11 +5238,9 @@ components:
           type: string
           pattern: '^[a-z0-9-]+$'
         description:
-          type: string
-          nullable: true
+          type: [string, 'null']
         game:
-          type: string
-          nullable: true
+          type: [string, 'null']
         status:
           type: string
           enum:
@@ -5552,11 +5249,9 @@ components:
             - finished
             - archived
         start_date:
-          type: string
-          nullable: true
+          type: [string, 'null']
         end_date:
-          type: string
-          nullable: true
+          type: [string, 'null']
         points_table:
           type: object
           additionalProperties:
@@ -5594,21 +5289,17 @@ components:
               teamId:
                 type: string
               teamName:
-                type: string
-                nullable: true
+                type: [string, 'null']
               teamSlug:
-                type: string
-                nullable: true
+                type: [string, 'null']
               logoUrl:
-                type: string
-                nullable: true
+                type: [string, 'null']
               points:
                 type: number
               tournamentsCounted:
                 type: integer
               bestRank:
-                type: integer
-                nullable: true
+                type: [integer, 'null']
               rank:
                 type: integer
         tournaments:
@@ -5619,11 +5310,9 @@ components:
               id:
                 type: string
               name:
-                type: string
-                nullable: true
+                type: [string, 'null']
               slug:
-                type: string
-                nullable: true
+                type: [string, 'null']
               weight:
                 type: number
     LeagueStandingsResponse:
@@ -5640,21 +5329,17 @@ components:
               teamId:
                 type: string
               teamName:
-                type: string
-                nullable: true
+                type: [string, 'null']
               teamSlug:
-                type: string
-                nullable: true
+                type: [string, 'null']
               logoUrl:
-                type: string
-                nullable: true
+                type: [string, 'null']
               points:
                 type: number
               tournamentsCounted:
                 type: integer
               bestRank:
-                type: integer
-                nullable: true
+                type: [integer, 'null']
               rank:
                 type: integer
         tournaments:
@@ -5665,11 +5350,9 @@ components:
               id:
                 type: string
               name:
-                type: string
-                nullable: true
+                type: [string, 'null']
               slug:
-                type: string
-                nullable: true
+                type: [string, 'null']
               weight:
                 type: number
     # -----------------------------------------------------------------------
@@ -5704,22 +5387,17 @@ components:
         name:
           type: string
         slug:
-          type: string
-          nullable: true
+          type: [string, 'null']
         game:
-          type: string
-          nullable: true
+          type: [string, 'null']
         status:
           type: string
         start_date:
-          type: string
-          nullable: true
+          type: [string, 'null']
         end_date:
-          type: string
-          nullable: true
+          type: [string, 'null']
         format:
-          type: string
-          nullable: true
+          type: [string, 'null']
     PublicV1StageSummary:
       type: object
       required:
@@ -5730,11 +5408,9 @@ components:
           type: string
           format: uuid
         name:
-          type: string
-          nullable: true
+          type: [string, 'null']
         stage_type:
-          type: string
-          nullable: true
+          type: [string, 'null']
         status:
           type: string
           description: Dérivé de `is_active` (active | inactive).
@@ -5759,66 +5435,48 @@ components:
           type: string
           format: uuid
         stage_id:
-          type: string
-          nullable: true
+          type: [string, 'null']
         round_number:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
         bracket_side:
-          type: string
-          nullable: true
+          type: [string, 'null']
         team1_id:
-          type: string
-          nullable: true
+          type: [string, 'null']
         team1_name:
-          type: string
-          nullable: true
+          type: [string, 'null']
         team1_logo_url:
-          type: string
-          nullable: true
+          type: [string, 'null']
           description: Public team logo URL (may be null).
         team2_id:
-          type: string
-          nullable: true
+          type: [string, 'null']
         team2_name:
-          type: string
-          nullable: true
+          type: [string, 'null']
         team2_logo_url:
-          type: string
-          nullable: true
+          type: [string, 'null']
           description: Public team logo URL (may be null).
         team1_score:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
         team2_score:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
         winner_team_id:
-          type: string
-          nullable: true
+          type: [string, 'null']
         status:
           type: string
         scheduled_at:
-          type: string
-          nullable: true
+          type: [string, 'null']
     PublicV1MatchGame:
       type: object
       properties:
         map_name:
-          type: string
-          nullable: true
+          type: [string, 'null']
         map_order:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
         team1_score:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
         team2_score:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
         winner_team_id:
-          type: string
-          nullable: true
+          type: [string, 'null']
     PublicV1MatchDetail:
       allOf:
         - $ref: '#/components/schemas/PublicV1Match'
@@ -5842,17 +5500,13 @@ components:
           type: string
           format: uuid
         teamName:
-          type: string
-          nullable: true
+          type: [string, 'null']
         teamSlug:
-          type: string
-          nullable: true
+          type: [string, 'null']
         logoUrl:
-          type: string
-          nullable: true
+          type: [string, 'null']
         prize:
-          type: string
-          nullable: true
+          type: [string, 'null']
     PublicV1ArbitrationMetrics:
       type: object
       description: >
@@ -5877,19 +5531,16 @@ components:
           type: integer
           description: Litiges avec un timestamp de résolution.
         avgResolutionMinutes:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
           description: Temps moyen de résolution (minutes) sur les résolus ; null si aucun.
         medianResolutionMinutes:
-          type: integer
-          nullable: true
+          type: [integer, 'null']
           description: Temps médian de résolution (minutes) sur les résolus ; null si aucun.
         withinSlaCount:
           type: integer
           description: Litiges résolus dans le SLA (durée <= slaMinutes).
         slaComplianceRate:
-          type: number
-          nullable: true
+          type: [number, 'null']
           description: withinSlaCount / resolved (0..1) ; null si resolved=0.
         openBreakdown:
           type: object
@@ -5921,19 +5572,16 @@ components:
         tournamentName:
           type: string
         tournamentSlug:
-          type: string
-          nullable: true
+          type: [string, 'null']
         metrics:
           $ref: '#/components/schemas/PublicV1ArbitrationMetrics'
     PublicV1TeamMember:
       type: object
       properties:
         display_name:
-          type: string
-          nullable: true
+          type: [string, 'null']
         role:
-          type: string
-          nullable: true
+          type: [string, 'null']
         is_substitute:
           type: boolean
     PublicV1Team:
@@ -5949,14 +5597,11 @@ components:
         name:
           type: string
         short_name:
-          type: string
-          nullable: true
+          type: [string, 'null']
         slug:
-          type: string
-          nullable: true
+          type: [string, 'null']
         logo_url:
-          type: string
-          nullable: true
+          type: [string, 'null']
         roster:
           type: array
           items:
@@ -5994,24 +5639,23 @@ paths:
                       is_bye:
                         type: boolean
                       scheduled_at:
-                        allOf:
+                        anyOf:
                           - $ref: '#/components/schemas/Timestamp'
-                        nullable: true
+                          - type: 'null'
                       match_format:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       tournament_id:
-                        allOf:
+                        anyOf:
                           - $ref: '#/components/schemas/Uuid'
-                        nullable: true
+                          - type: 'null'
                       scrim_id:
-                        allOf:
+                        anyOf:
                           - $ref: '#/components/schemas/Uuid'
-                        nullable: true
+                          - type: 'null'
                       stage_id:
-                        allOf:
+                        anyOf:
                           - $ref: '#/components/schemas/Uuid'
-                        nullable: true
+                          - type: 'null'
                       team1:
                         type: object
                         properties:
@@ -6020,8 +5664,7 @@ paths:
                           name:
                             type: string
                           short_name:
-                            type: string
-                            nullable: true
+                            type: [string, 'null']
                       team2:
                         type: object
                         properties:
@@ -6030,8 +5673,7 @@ paths:
                           name:
                             type: string
                           short_name:
-                            type: string
-                            nullable: true
+                            type: [string, 'null']
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
@@ -6061,15 +5703,12 @@ paths:
                     - $ref: '#/components/schemas/Timestamp'
                     - type: 'null'
                 lobbyCode:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                   maxLength: 200
                 streamUrl:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 notes:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                   maxLength: 2000
       responses:
         '200':
@@ -6089,18 +5728,15 @@ paths:
                       status:
                         type: string
                       scheduled_at:
-                        allOf:
+                        anyOf:
                           - $ref: '#/components/schemas/Timestamp'
-                        nullable: true
+                          - type: 'null'
                       lobby_code:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       stream_url:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       notes:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       updated_at:
                         $ref: '#/components/schemas/Timestamp'
         '400':
@@ -6395,9 +6031,9 @@ paths:
                   status:
                     type: string
                   openedAt:
-                    allOf:
+                    anyOf:
                       - $ref: '#/components/schemas/Timestamp'
-                    nullable: true
+                      - type: 'null'
                   reports:
                     type: array
                     items:
@@ -6406,34 +6042,28 @@ paths:
                         teamId:
                           $ref: '#/components/schemas/Uuid'
                         teamName:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         submittedBy:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         scoreA:
                           type: integer
                         scoreB:
                           type: integer
                         submittedAt:
-                          allOf:
+                          anyOf:
                             - $ref: '#/components/schemas/Timestamp'
-                          nullable: true
+                            - type: 'null'
                   staffNote:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
                   resolution:
-                    type: object
-                    nullable: true
+                    type: [object, 'null']
                     properties:
                       resolvedAt:
                         $ref: '#/components/schemas/Timestamp'
                       decidedScoreA:
-                        type: integer
-                        nullable: true
+                        type: [integer, 'null']
                       decidedScoreB:
-                        type: integer
-                        nullable: true
+                        type: [integer, 'null']
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
@@ -6479,19 +6109,18 @@ paths:
                   matchId:
                     $ref: '#/components/schemas/Uuid'
                   tournamentId:
-                    allOf:
+                    anyOf:
                       - $ref: '#/components/schemas/Uuid'
-                    nullable: true
+                      - type: 'null'
                   stageId:
-                    allOf:
+                    anyOf:
                       - $ref: '#/components/schemas/Uuid'
-                    nullable: true
+                      - type: 'null'
                   game:
                     type: string
                     description: GameSlug du tournoi, `overwatch` par defaut (scrims).
                   preset:
-                    type: object
-                    nullable: true
+                    type: [object, 'null']
                     required:
                       - id
                       - name
@@ -6508,8 +6137,7 @@ paths:
                         type: string
                         description: Code d'import genere par le jeu (Overwatch = alphanumerique majuscules).
                       description:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       mapPool:
                         type: array
                         items:
@@ -6519,13 +6147,13 @@ paths:
                         type: string
                         enum: [stage, tournament, tenant]
                       tournamentId:
-                        allOf:
+                        anyOf:
                           - $ref: '#/components/schemas/Uuid'
-                        nullable: true
+                          - type: 'null'
                       stageId:
-                        allOf:
+                        anyOf:
                           - $ref: '#/components/schemas/Uuid'
-                        nullable: true
+                          - type: 'null'
                   lines:
                     type: array
                     items:
@@ -6718,14 +6346,11 @@ paths:
                   winnerTeamId:
                     $ref: '#/components/schemas/Uuid'
                   team1_score:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
                   team2_score:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
                   status:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
@@ -6792,27 +6417,26 @@ paths:
                       - finalized
                       - disputed
                   resolution:
-                    type: string
+                    type: [string, 'null']
                     enum:
                       - agreed
                       - auto_resolved
-                    nullable: true
+                      - null
                     description: |
                       Présent (non null) uniquement quand `status=finalized` :
                       `agreed` si les deux reports concordent, `auto_resolved`
                       si un report unilateral a été appliqué sur silence adverse.
                   reason:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
                     description: |
                       Motif de l'auto-resolution, renseigné uniquement quand
                       `resolution=auto_resolved` ; null sinon.
                   matchId:
                     $ref: '#/components/schemas/Uuid'
                   scrimId:
-                    allOf:
+                    anyOf:
                       - $ref: '#/components/schemas/Uuid'
-                    nullable: true
+                      - type: 'null'
                   mySide:
                     type: integer
                     enum:
@@ -6828,9 +6452,9 @@ paths:
                   team2Score:
                     type: integer
                   winnerTeamId:
-                    allOf:
+                    anyOf:
                       - $ref: '#/components/schemas/Uuid'
-                    nullable: true
+                      - type: 'null'
                   myReport:
                     type: object
                     additionalProperties: true
@@ -7136,19 +6760,16 @@ paths:
                 openerDiscordId:
                   $ref: '#/components/schemas/DiscordId'
                 claimedByDiscordId:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                   description: Snowflake du staff ayant pris le ticket (optionnel).
                 messageCount:
-                  type: integer
+                  type: [integer, 'null']
                   minimum: 0
-                  nullable: true
                   description: Nombre de messages dans le ticket (optionnel).
                 channelName:
-                  type: string
+                  type: [string, 'null']
                   minLength: 1
                   maxLength: 200
-                  nullable: true
                   description: Nom du salon du ticket (optionnel).
       responses:
         '200':
@@ -7330,20 +6951,16 @@ paths:
                   minLength: 2
                   maxLength: 100
                 shortName:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                   maxLength: 20
                 description:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                   maxLength: 2000
                 discord:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                   maxLength: 200
                 website:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 isJoinable:
                   type: boolean
       responses:
@@ -7500,8 +7117,7 @@ paths:
                   invitation:
                     $ref: '#/components/schemas/Invitation'
                   teamName:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
@@ -8386,12 +8002,10 @@ paths:
                   type: string
                   enum: [accept, approve, counter, reject, report]
                 slot:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                   description: '`accept` : ISO 8601 du creneau retenu. Facultatif si un seul en lice.'
                 slots:
-                  type: array
-                  nullable: true
+                  type: [array, 'null']
                   maxItems: 5
                   items:
                     type: string
@@ -8470,14 +8084,11 @@ paths:
                 is_public:
                   type: boolean
                 description:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 stream_url:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 game:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
       responses:
         '200':
           description: Scrim mis a jour.
@@ -8599,17 +8210,13 @@ paths:
                 match_format:
                   type: string
                 stream_url:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 replay_url:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 lobby_code:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 notes:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 scheduled_at:
                   oneOf:
                     - type: string
@@ -8773,35 +8380,28 @@ paths:
                   discordUserId:
                     $ref: '#/components/schemas/DiscordId'
                   match:
-                    type: object
-                    nullable: true
+                    type: [object, 'null']
                     properties:
                       id:
                         $ref: '#/components/schemas/Uuid'
                       scheduledAt:
-                        allOf:
+                        anyOf:
                           - $ref: '#/components/schemas/Timestamp'
-                        nullable: true
+                          - type: 'null'
                       status:
                         type: string
                       format:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       bestOf:
-                        type: integer
-                        nullable: true
+                        type: [integer, 'null']
                       roundName:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       streamUrl:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       lobbyCode:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                   team:
-                    type: object
-                    nullable: true
+                    type: [object, 'null']
                     properties:
                       id:
                         $ref: '#/components/schemas/Uuid'
@@ -8813,44 +8413,40 @@ paths:
                           - 1
                           - 2
                   opponent:
-                    type: object
-                    nullable: true
+                    type: [object, 'null']
                     properties:
                       id:
                         $ref: '#/components/schemas/Uuid'
                       name:
                         type: string
                   tournament:
-                    type: object
-                    nullable: true
+                    type: [object, 'null']
                     properties:
                       id:
                         $ref: '#/components/schemas/Uuid'
                       name:
                         type: string
                       slug:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                   checkin:
-                    type: object
-                    nullable: true
+                    type: [object, 'null']
                     properties:
                       tokenAvailable:
                         type: boolean
                       alreadyCheckedIn:
                         type: boolean
                       checkedInAt:
-                        allOf:
+                        anyOf:
                           - $ref: '#/components/schemas/Timestamp'
-                        nullable: true
+                          - type: 'null'
                       opensAt:
-                        allOf:
+                        anyOf:
                           - $ref: '#/components/schemas/Timestamp'
-                        nullable: true
+                          - type: 'null'
                       closesAt:
-                        allOf:
+                        anyOf:
                           - $ref: '#/components/schemas/Timestamp'
-                        nullable: true
+                          - type: 'null'
                       isOpen:
                         type: boolean
                       isPassed:
@@ -8991,9 +8587,8 @@ paths:
                         type: integer
                         description: Exemplaires, doublons compris.
                       bestRarity:
-                        type: string
-                        nullable: true
-                        enum: [common, rare, epic, legendary]
+                        type: [string, 'null']
+                        enum: [common, rare, epic, legendary, null]
         '400':
           description: discordUserId invalide.
         '404':
@@ -9015,9 +8610,9 @@ paths:
                 type: object
                 properties:
                   team:
-                    allOf:
+                    anyOf:
                       - $ref: '#/components/schemas/Team'
-                    nullable: true
+                      - type: 'null'
   /api/bot/v1/player-actions:
     get:
       tags:
@@ -9384,9 +8979,9 @@ paths:
                     enum:
                       - false
                   handledAt:
-                    allOf:
+                    anyOf:
                       - $ref: '#/components/schemas/Timestamp'
-                    nullable: true
+                      - type: 'null'
         '201':
           description: Event claim pour la premiere fois (wasNew=true).
           content:
@@ -9401,9 +8996,9 @@ paths:
                     enum:
                       - true
                   handledAt:
-                    allOf:
+                    anyOf:
                       - $ref: '#/components/schemas/Timestamp'
-                    nullable: true
+                      - type: 'null'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -9541,8 +9136,7 @@ paths:
                 requesterDiscordUserId:
                   $ref: '#/components/schemas/DiscordId'
                 requesterDiscordDisplayName:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                   maxLength: 200
                 requesterEmail:
                   type: string
@@ -9946,19 +9540,16 @@ paths:
                           type: string
                           format: uuid
                         name:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         slug:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         isActive:
                           type: boolean
                         stored:
                           type: object
                           description: Ce que le site a enregistre.
                         live:
-                          type: object
-                          nullable: true
+                          type: [object, 'null']
                           description: Ce que le bot a vu, avec sa date de capture.
                         roster:
                           type: array
@@ -9972,22 +9563,17 @@ paths:
                             type: object
                             properties:
                               userId:
-                                type: string
-                                nullable: true
+                                type: [string, 'null']
                               label:
-                                type: string
-                                nullable: true
+                                type: [string, 'null']
                               role:
-                                type: string
-                                nullable: true
+                                type: [string, 'null']
                               discordUserId:
-                                type: string
-                                nullable: true
+                                type: [string, 'null']
                               isCaptain:
                                 type: boolean
                               hasAccess:
-                                type: boolean
-                                nullable: true
+                                type: [boolean, 'null']
     post:
       tags:
         - admin
@@ -10093,27 +9679,21 @@ paths:
                         type: string
                         format: uuid
                       roleId:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       roleName:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       roleExists:
                         type: boolean
                       textChannelId:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       textChannelName:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       textChannelExists:
                         type: boolean
                       voiceChannelId:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       voiceChannelName:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       voiceChannelExists:
                         type: boolean
                       access:
@@ -10124,8 +9704,7 @@ paths:
                             discordUserId:
                               type: string
                             username:
-                              type: string
-                              nullable: true
+                              type: [string, 'null']
                             source:
                               type: string
                               enum: [role, text, voice]
@@ -10189,8 +9768,7 @@ paths:
                       `running`). Le cron bot saute alors entierement le run
                       (aucune modification de salon pendant un tournoi).
                   knownChannelIds:
-                    type: array
-                    nullable: true
+                    type: [array, 'null']
                     items:
                       type: string
                     description: >-
@@ -10210,23 +9788,17 @@ paths:
                           type: string
                           format: uuid
                         name:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         slug:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         discordRoleId:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         discordChannelId:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         discordVoiceChannelId:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         captainDiscordUserId:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         members:
                           type: array
                           items:
@@ -10522,9 +10094,9 @@ paths:
                 type: object
                 properties:
                   run:
-                    allOf:
+                    anyOf:
                       - $ref: '#/components/schemas/EventRun'
-                    nullable: true
+                      - type: 'null'
                   segments:
                     type: array
                     items:
@@ -10563,8 +10135,7 @@ paths:
                     description: >-
                       Present uniquement avec withAlerted. Tableau des
                       discord_user_id deja alertes, ou null si le lookup a echoue.
-                    nullable: true
-                    type: array
+                    type: [array, 'null']
                     items:
                       type: string
     post:
@@ -10718,7 +10289,7 @@ paths:
                 title: { type: string }
                 description: { type: string }
                 priority: { type: string, enum: [low, medium, high, urgent] }
-                assigneeStaffId: { type: string, format: uuid, nullable: true }
+                assigneeStaffId: { type: [string, 'null'], format: uuid }
                 dueDate: { type: string }
                 labels:
                   type: array
@@ -10842,8 +10413,8 @@ paths:
                                       type: string,
                                       enum: [low, medium, high, urgent],
                                     }
-                                  assigneeName: { type: string, nullable: true }
-                                  dueDate: { type: string, nullable: true }
+                                  assigneeName: { type: [string, 'null'] }
+                                  dueDate: { type: [string, 'null'] }
                                   checklist:
                                     type: object
                                     required: [done, total]
@@ -10861,7 +10432,7 @@ paths:
                                       required: [name, color]
                                       properties:
                                         name: { type: string }
-                                        color: { type: string, nullable: true }
+                                        color: { type: [string, 'null'] }
         '400':
           description: boardId absent ou invalide (INVALID_QUERY).
         '401':
@@ -10923,7 +10494,7 @@ paths:
               properties:
                 actorDiscordUserId: { type: string }
                 assignSelf: { type: boolean }
-                assigneeStaffId: { type: string, format: uuid, nullable: true }
+                assigneeStaffId: { type: [string, 'null'], format: uuid }
                 assigneeDiscordUserId: { type: string }
       responses:
         '200':
@@ -11160,12 +10731,12 @@ paths:
                 type: object
                 properties:
                   activeTenantId:
-                    type: string
+                    type: [string, 'null']
                     format: uuid
-                    nullable: true
                   tenant:
-                    $ref: '#/components/schemas/Tenant'
-                    nullable: true
+                    anyOf:
+                      - $ref: '#/components/schemas/Tenant'
+                      - type: 'null'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -11279,8 +10850,7 @@ paths:
                       used:
                         type: integer
                       limit:
-                        type: integer
-                        nullable: true
+                        type: [integer, 'null']
                         description: Per-minute rate limit; `null` = unlimited.
                   month:
                     type: object
@@ -11292,8 +10862,7 @@ paths:
                       used:
                         type: integer
                       limit:
-                        type: integer
-                        nullable: true
+                        type: [integer, 'null']
                         description: Monthly quota; `null` = unlimited.
                       key:
                         type: string
@@ -11410,12 +10979,10 @@ paths:
                         email:
                           type: string
                         label:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         unsubscribedAt:
-                          type: string
+                          type: [string, 'null']
                           format: date-time
-                          nullable: true
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -11471,9 +11038,8 @@ paths:
                 on_air:
                   type: boolean
                 lower_third:
-                  type: string
+                  type: [string, 'null']
                   maxLength: 500
-                  nullable: true
                 pip:
                   type: object
                   required:
@@ -12320,7 +11886,7 @@ paths:
               type: object
               properties:
                 name: { type: string }
-                description: { type: string, nullable: true }
+                description: { type: [string, 'null'] }
                 position: { type: integer }
                 is_archived: { type: boolean }
       responses:
@@ -12381,7 +11947,7 @@ paths:
               properties:
                 boardId: { type: string, format: uuid }
                 name: { type: string }
-                wipLimit: { type: integer, nullable: true }
+                wipLimit: { type: [integer, 'null'] }
                 isDone: { type: boolean }
       responses:
         '201':
@@ -12416,7 +11982,7 @@ paths:
               type: object
               properties:
                 name: { type: string }
-                wipLimit: { type: integer, nullable: true }
+                wipLimit: { type: [integer, 'null'] }
                 isDone: { type: boolean }
                 position: { type: integer, minimum: 0 }
       responses:
@@ -12487,7 +12053,7 @@ paths:
                 title: { type: string }
                 description: { type: string }
                 priority: { type: string, enum: [low, medium, high, urgent] }
-                assigneeStaffId: { type: string, format: uuid, nullable: true }
+                assigneeStaffId: { type: [string, 'null'], format: uuid }
                 dueDate: { type: string }
                 labels:
                   type: array
@@ -12551,9 +12117,9 @@ paths:
               type: object
               properties:
                 title: { type: string }
-                description: { type: string, nullable: true }
+                description: { type: [string, 'null'] }
                 priority: { type: string, enum: [low, medium, high, urgent] }
-                dueDate: { type: string, nullable: true }
+                dueDate: { type: [string, 'null'] }
                 labels:
                   type: array
                   items: { type: string }
@@ -12655,7 +12221,7 @@ paths:
               type: object
               required: [assigneeStaffId]
               properties:
-                assigneeStaffId: { type: string, format: uuid, nullable: true }
+                assigneeStaffId: { type: [string, 'null'], format: uuid }
       responses:
         '200':
           description: Carte (des)assignee.
@@ -13358,9 +12924,8 @@ paths:
                   type: string
                   maxLength: 200
                 description:
-                  type: string
+                  type: [string, 'null']
                   maxLength: 2000
-                  nullable: true
                 scheduled_at:
                   type: string
                   format: date-time
@@ -13683,12 +13248,10 @@ paths:
                 title:
                   type: string
                 planned_start_at:
-                  type: string
+                  type: [string, 'null']
                   format: date-time
-                  nullable: true
                 duration_min:
-                  type: integer
-                  nullable: true
+                  type: [integer, 'null']
                 ord:
                   type: integer
                   minimum: 0
@@ -13803,12 +13366,10 @@ paths:
                 title:
                   type: string
                 planned_start_at:
-                  type: string
+                  type: [string, 'null']
                   format: date-time
-                  nullable: true
                 duration_min:
-                  type: integer
-                  nullable: true
+                  type: [integer, 'null']
                 status:
                   type: string
                   enum:
@@ -13817,13 +13378,11 @@ paths:
                     - done
                     - skipped
                 started_at:
-                  type: string
+                  type: [string, 'null']
                   format: date-time
-                  nullable: true
                 ended_at:
-                  type: string
+                  type: [string, 'null']
                   format: date-time
-                  nullable: true
       responses:
         '200':
           description: Updated.
@@ -13956,11 +13515,9 @@ paths:
                 name:
                   type: string
                 stream_url:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 notes:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 ord:
                   type: integer
                   minimum: 0
@@ -14011,11 +13568,9 @@ paths:
                 name:
                   type: string
                 stream_url:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 notes:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 status:
                   type: string
                 ord:
@@ -15030,11 +14585,9 @@ paths:
                         name:
                           type: string
                         type:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         image:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                   source:
                     type: string
                     enum: [tournament, tenant, defaults]
@@ -15158,11 +14711,9 @@ paths:
                     - finished
                     - walkover
                 team1Score:
-                  type: integer
-                  nullable: true
+                  type: [integer, 'null']
                 team2Score:
-                  type: integer
-                  nullable: true
+                  type: [integer, 'null']
       responses:
         '200':
           description: Resolved.
@@ -16240,8 +15791,7 @@ paths:
                       type: object
                       additionalProperties: true
                   nextCursor:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -16490,40 +16040,31 @@ paths:
                 additionalProperties: false
                 properties:
                   accounts:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
                     description: Comptes existants (auth.users, via RPC).
                   discordLinkedGlobal:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
                     description: Comptes ayant lié Discord (GLOBAL).
                   battlenetLinkedGlobal:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
                     description: Comptes ayant vérifié leur BattleTag (GLOBAL).
                   discoveryProfilesGlobal:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
                     description: Cartes joueuses créées, visibles ou non (GLOBAL).
                   discoverableGlobal:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
                     description: Cartes joueuses réellement visibles (GLOBAL).
                   followsGlobal:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
                     description: Arêtes de suivi (GLOBAL).
                   freePlayers:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
                     description: Fiches « je cherche une équipe » actives (tenant).
                   teamOpenings:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
                     description: Annonces « on recrute » actives (tenant).
                   scrimRequests:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
                     description: Demandes de scrim, tous statuts (tenant).
         '405':
           description: Méthode non autorisée.
@@ -16554,30 +16095,24 @@ paths:
                 additionalProperties: false
                 properties:
                   tournamentsActive:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
                     description: Tournaments with status='running' (tenant-scoped).
                   teams:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
                     description: Total teams (tenant-scoped).
                   demandesPending:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
                     description: Demandes with status='pending' (tenant-scoped).
                   supportOpen:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
                     description: Support tickets with status='open' (GLOBAL, not tenant-scoped).
                   supportHigh:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
                     description: >
                       Support tickets severity='high' AND status not in
                       (resolved, closed) (GLOBAL, not tenant-scoped).
                   disputesOpen:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
                     description: Matches with status='disputed' (tenant-scoped).
                 required:
                   - tournamentsActive
@@ -17080,8 +16615,7 @@ paths:
                   folderId:
                     type: string
                   folderName:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
                   breadcrumb:
                     type: array
                     items:
@@ -17105,18 +16639,14 @@ paths:
                         isFolder:
                           type: boolean
                         size:
-                          type: integer
-                          nullable: true
+                          type: [integer, 'null']
                         modifiedTime:
-                          type: string
+                          type: [string, 'null']
                           format: date-time
-                          nullable: true
                         modifiedBy:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         webViewLink:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
         '400':
           description: Dossier hors de l'arborescence configuree, ou cle illisible.
         '429':
@@ -17157,8 +16687,7 @@ paths:
                 contentBase64:
                   type: string
                 folderId:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
       responses:
         '201':
           description: Fichier depose.
@@ -20449,9 +19978,8 @@ paths:
                   maxLength: 8000
                   description: Texte commun, dont chaque cible herite sans surcharge.
                 imageUrl:
-                  type: string
+                  type: [string, 'null']
                   format: uri
-                  nullable: true
                 targets:
                   type: array
                   minItems: 1
@@ -20463,20 +19991,16 @@ paths:
                         type: string
                         enum: [site_news, discord_announce, bluesky, instagram]
                       textOverride:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                         description: null = herite ; une chaine vide est refusee.
                       imageOverride:
-                        type: string
+                        type: [string, 'null']
                         format: uri
-                        nullable: true
                       titleOverride:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                         description: Cible `site_news` seulement ; deduit du texte si absent.
                       hashtags:
-                        type: array
-                        nullable: true
+                        type: [array, 'null']
                         maxItems: 50
                         items:
                           type: string
@@ -20794,8 +20318,7 @@ paths:
                     type: string
                     format: date-time
                   tournament:
-                    type: object
-                    nullable: true
+                    type: [object, 'null']
                     properties:
                       id:
                         type: string
@@ -20815,14 +20338,11 @@ paths:
                         name:
                           type: string
                         shortName:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         logoUrl:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         registrationStatus:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         members:
                           type: object
                           properties:
@@ -21385,7 +20905,7 @@ paths:
         (202 with `invited: true`, `invitation`, `invite_url`, `email_sent`),
         `mode: direct` + `reason` for an immediate add (201, `accepted_at`
         null). Roster lock applies to both modes unless `force: true`.
-      operationId: adminAddTeamMember
+      operationId: adminAddTeamMemberToTeam
       tags:
         - admin/teams
       security:
@@ -21926,8 +21446,7 @@ paths:
                   type: boolean
                   description: Exemption partenaire (owner requis pour l'activer).
                 comp_note:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                   description: Note libre traçant le partenaire / la raison.
       responses:
         '200':
@@ -22048,20 +21567,17 @@ paths:
                 game:
                   type: string
                 tournament_id:
-                  type: string
+                  type: [string, 'null']
                   format: uuid
-                  nullable: true
                 stage_id:
-                  type: string
+                  type: [string, 'null']
                   format: uuid
-                  nullable: true
                 name:
                   type: string
                 import_code:
                   type: string
                 description:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 map_pool:
                   type: array
                   items:
@@ -22121,8 +21637,7 @@ paths:
                 import_code:
                   type: string
                 description:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 map_pool:
                   type: array
                   items:
@@ -22233,16 +21748,13 @@ paths:
                 map_name:
                   type: string
                 map_type:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 image_url:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 enabled:
                   type: boolean
                 order_index:
-                  type: integer
-                  nullable: true
+                  type: [integer, 'null']
       responses:
         '201':
           description: Map créée.
@@ -22290,16 +21802,13 @@ paths:
                 map_name:
                   type: string
                 map_type:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 image_url:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 enabled:
                   type: boolean
                 order_index:
-                  type: integer
-                  nullable: true
+                  type: [integer, 'null']
       responses:
         '200':
           description: Map mise à jour.
@@ -23516,16 +23025,15 @@ paths:
                   planStatus:
                     type: string
                   planStartedAt:
-                    allOf:
+                    anyOf:
                       - $ref: '#/components/schemas/Timestamp'
-                    nullable: true
+                      - type: 'null'
                   planExpiresAt:
-                    allOf:
+                    anyOf:
                       - $ref: '#/components/schemas/Timestamp'
-                    nullable: true
+                      - type: 'null'
                   daysRemaining:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
                   effectivePlan:
                     type: string
                   capabilities:
@@ -24743,11 +24251,9 @@ paths:
                         type: integer
                         minimum: 1
                       prize:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       notes:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                 force:
                   type: boolean
                   default: false
@@ -24784,11 +24290,9 @@ paths:
                         rank:
                           type: integer
                         prize:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         notes:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         frozen_at:
                           type: string
                           format: date-time
@@ -26362,11 +25866,9 @@ paths:
                 type: object
                 properties:
                   id:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
                   edit_url:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -26763,8 +26265,7 @@ paths:
                     type: object
                     additionalProperties: true
                   team:
-                    type: object
-                    nullable: true
+                    type: [object, 'null']
                     additionalProperties: true
         '400':
           description: userId invalide.
@@ -27128,8 +26629,7 @@ paths:
                           type: string
                           enum: [twitch_drop, match_win, scrim_win]
                         twitchLogin:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                           description: >-
                             Pseudo Twitch, ou `null` si le compte n'est pas
                             rattache. Aucun autre nom n'est jamais rendu.
@@ -28263,23 +27763,17 @@ paths:
                   type: string
                   maxLength: 100
                 short_name:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 logo_url:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 country:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 description:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 discord:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 website:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
       responses:
         '200':
           description: Equipe creee.
@@ -28668,9 +28162,8 @@ paths:
                     - draft
                     - published
                 publishedAt:
-                  type: string
+                  type: [string, 'null']
                   format: date-time
-                  nullable: true
       responses:
         '201':
           description: Article cree.
@@ -29018,8 +28511,7 @@ paths:
                   discordUserId:
                     $ref: '#/components/schemas/DiscordId'
                   discordUsername:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -29458,8 +28950,7 @@ paths:
                     items:
                       $ref: '#/components/schemas/PublicTeamSummary'
                   total:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
         '429':
           $ref: '#/components/responses/RateLimited'
   /api/teams/{teamId}:
@@ -29507,43 +28998,32 @@ paths:
                 name:
                   type: string
                 short_name:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 logo_url:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 country:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 description:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 discord:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 website:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 member_email:
-                  type: string
+                  type: [string, 'null']
                   format: email
-                  nullable: true
                 member_role:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 member_user_id:
-                  type: string
+                  type: [string, 'null']
                   format: uuid
-                  nullable: true
                 member_battle_tag:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 set_captain:
                   type: boolean
                 tournament_id:
-                  type: string
+                  type: [string, 'null']
                   format: uuid
-                  nullable: true
                 members:
                   type: array
                   items:
@@ -29644,23 +29124,18 @@ paths:
                         discordUserId:
                           $ref: '#/components/schemas/DiscordId'
                         discordUsername:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         linked:
                           type: boolean
                         authUserId:
-                          type: string
+                          type: [string, 'null']
                           format: uuid
-                          nullable: true
                         displayName:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         battleTag:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         specialty:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -29757,8 +29232,7 @@ paths:
                   - link
                 properties:
                   link:
-                    type: object
-                    nullable: true
+                    type: [object, 'null']
         '403':
           description: L'appelante ne gere pas cette equipe.
     post:
@@ -29788,10 +29262,9 @@ paths:
                   type: string
                   description: Role attribue a qui entre par ce lien. Fige.
                 max_uses:
-                  type: integer
+                  type: [integer, 'null']
                   minimum: 1
                   maximum: 50
-                  nullable: true
                   description: Nombre d'entrees autorisees. null = illimite.
                 ttl_days:
                   type: integer
@@ -29844,8 +29317,7 @@ paths:
                 type: object
                 properties:
                   link:
-                    type: object
-                    nullable: true
+                    type: [object, 'null']
                   revoked:
                     type: boolean
   /api/teams/invite-links/by-token:
@@ -29881,14 +29353,11 @@ paths:
                       name:
                         type: string
                       short_name:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       logo_url:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       slug:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                   role:
                     type: string
                   battle_tag_required:
@@ -29897,8 +29366,7 @@ paths:
                     type: string
                     format: date-time
                   remaining_uses:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
         '404':
           description: Lien inconnu.
         '410':
@@ -29928,13 +29396,11 @@ paths:
                 token:
                   type: string
                 battle_tag:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                   description: Exige pour les roles JOUANTS.
                 specialty:
-                  type: string
-                  nullable: true
-                  enum: [tank, dps, support, flex]
+                  type: [string, 'null']
+                  enum: [tank, dps, support, flex, null]
       responses:
         '200':
           description: Inscrite, ou deja membre.
@@ -29955,8 +29421,7 @@ paths:
                       name:
                         type: string
                       slug:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
         '400':
           description: BattleTag manquant (BATTLE_TAG_REQUIRED), ou deja dans une equipe (ALREADY_IN_TEAM).
         '401':
@@ -30009,34 +29474,28 @@ paths:
                           type: string
                           format: uuid
                         email:
-                          type: string
+                          type: [string, 'null']
                           format: email
-                          nullable: true
                         role:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         battle_tag:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         specialty:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         set_captain:
                           type: boolean
                         created_at:
                           type: string
                           format: date-time
                         expires_at:
-                          type: string
+                          type: [string, 'null']
                           format: date-time
-                          nullable: true
                         expired:
                           type: boolean
                         has_invite_link:
                           type: boolean
                         source:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -30084,18 +29543,15 @@ paths:
                   enum: [player, substitute, coach, manager]
                   default: player
                 battle_tag:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 specialty:
-                  type: string
-                  enum: [tank, dps, support, flex]
-                  nullable: true
+                  type: [string, 'null']
+                  enum: [tank, dps, support, flex, null]
                 set_captain:
                   type: boolean
                   default: false
                 comment:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
       responses:
         '201':
           description: Invitation créée. Le jeton en clair n'est renvoyé qu'ici.
@@ -30125,9 +29581,8 @@ paths:
                       set_captain:
                         type: boolean
                       expires_at:
-                        type: string
+                        type: [string, 'null']
                         format: date-time
-                        nullable: true
                   invite_url:
                     type: string
                     format: uri
@@ -30201,9 +29656,8 @@ paths:
                   email_sent:
                     type: boolean
                   expires_at:
-                    type: string
+                    type: [string, 'null']
                     format: date-time
-                    nullable: true
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -30282,32 +29736,25 @@ paths:
                     type: object
                     properties:
                       team_name:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       team_slug:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       team_logo_url:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       role:
                         type: string
                       as_captain:
                         type: boolean
                       battle_tag:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       specialty:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       invited_email:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                         description: Adresse masquée (a***@domain.tld).
                       expires_at:
-                        type: string
+                        type: [string, 'null']
                         format: date-time
-                        nullable: true
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -30406,8 +29853,9 @@ paths:
                 type: object
                 properties:
                   search:
-                    nullable: true
-                    $ref: '#/components/schemas/ScrimSearch'
+                    anyOf:
+                      - $ref: '#/components/schemas/ScrimSearch'
+                      - type: 'null'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -30448,12 +29896,10 @@ paths:
                     type: string
                     format: date-time
                 format:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 note:
-                  type: string
+                  type: [string, 'null']
                   maxLength: 280
-                  nullable: true
       responses:
         '201':
           description: Annonce publiee.
@@ -30495,8 +29941,7 @@ paths:
                   success:
                     type: boolean
                   search:
-                    nullable: true
-                    type: object
+                    type: [object, 'null']
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -30539,9 +29984,8 @@ paths:
                     items:
                       $ref: '#/components/schemas/PlayerScrim'
                   teamId:
-                    type: string
+                    type: [string, 'null']
                     format: uuid
-                    nullable: true
         '401':
           $ref: '#/components/responses/Unauthorized'
         '429':
@@ -30607,9 +30051,8 @@ paths:
                   scrimStatus:
                     type: string
                   winnerTeamId:
-                    type: string
+                    type: [string, 'null']
                     format: uuid
-                    nullable: true
                   reason:
                     type: string
         '400':
@@ -30727,9 +30170,8 @@ paths:
                     items:
                       $ref: '#/components/schemas/DirectoryTeam'
                   myTeamId:
-                    type: string
+                    type: [string, 'null']
                     format: uuid
-                    nullable: true
                   hasOwnSearch:
                     type: boolean
         '401':
@@ -31005,13 +30447,11 @@ paths:
                   type: string
                   format: uuid
                 vodUrl:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                   maxLength: 500
                   description: URL http(s) uniquement.
                 notes:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                   maxLength: 4000
       responses:
         '200':
@@ -31026,15 +30466,12 @@ paths:
                   ok:
                     type: boolean
                   review:
-                    nullable: true
-                    type: object
+                    type: [object, 'null']
                     properties:
                       vodUrl:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       notes:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -31417,14 +30854,11 @@ paths:
                         id:
                           $ref: '#/components/schemas/Uuid'
                         email:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         display_name:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         battle_tag:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         has_team:
                           type: boolean
         '400':
@@ -31795,8 +31229,7 @@ paths:
                   type: string
                   format: uuid
                 specialty:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                   enum: [tank, dps, support, flex, null]
       responses:
         '200':
@@ -32000,8 +31433,7 @@ paths:
                 type: object
                 properties:
                   url:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
                   path:
                     type: string
         '400':
@@ -32034,8 +31466,7 @@ paths:
                 type: object
                 properties:
                   url:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -32146,8 +31577,7 @@ paths:
                     items:
                       $ref: '#/components/schemas/PublicTournamentSummary'
                   total:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
   /api/tournaments/{id}/mvp-leaderboard:
     parameters:
       - name: id
@@ -32177,8 +31607,7 @@ paths:
                   tournamentId:
                     $ref: '#/components/schemas/Uuid'
                   tournamentName:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
                   totalMvpAwards:
                     type: integer
                   totalFinishedMatches:
@@ -32583,8 +32012,7 @@ paths:
                 type: object
                 properties:
                   name:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
@@ -32724,8 +32152,7 @@ paths:
                 type: object
                 properties:
                   teamName:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
@@ -33694,8 +33121,7 @@ paths:
                 type: object
                 properties:
                   application:
-                    nullable: true
-                    type: object
+                    type: [object, 'null']
                     properties:
                       id:
                         type: string
@@ -33703,15 +33129,13 @@ paths:
                       status:
                         type: string
                       comment:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
                       created_at:
                         type: string
                         format: date-time
                       processed_at:
-                        type: string
+                        type: [string, 'null']
                         format: date-time
-                        nullable: true
         '401':
           $ref: '#/components/responses/Unauthorized'
     post:
@@ -34077,12 +33501,10 @@ paths:
                   linked:
                     type: boolean
                   twitchLogin:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
                   linkedAt:
-                    type: string
+                    type: [string, 'null']
                     format: date-time
-                    nullable: true
                   ctaUrl:
                     type: string
                     format: uri
@@ -34345,8 +33767,7 @@ paths:
                 type: object
                 properties:
                   team:
-                    type: object
-                    nullable: true
+                    type: [object, 'null']
                     additionalProperties: true
                   matches:
                     type: array
@@ -34733,24 +34154,19 @@ paths:
                           type: string
                           format: uuid
                         teamId:
-                          type: string
+                          type: [string, 'null']
                           format: uuid
-                          nullable: true
                         teamName:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         role:
                           type: string
                         specialty:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         battleTag:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         expiresAt:
-                          type: string
+                          type: [string, 'null']
                           format: date-time
-                          nullable: true
                         createdAt:
                           type: string
                           format: date-time
@@ -34808,13 +34224,11 @@ paths:
                       - accept
                       - reject
                   teamId:
-                    type: string
+                    type: [string, 'null']
                     format: uuid
-                    nullable: true
                   memberId:
-                    type: string
+                    type: [string, 'null']
                     format: uuid
-                    nullable: true
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -34887,13 +34301,11 @@ paths:
                     type: string
                     enum: [none, pending, approved, rejected]
                   photoUrl:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
                   optedIn:
                     type: boolean
                   rejectedReason:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
         '401':
           $ref: '#/components/responses/Unauthorized'
     post:
@@ -35488,14 +34900,12 @@ paths:
                       properties:
                         id: { type: string, format: uuid }
                         email:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                           description: Toujours `null` (champ garde pour la forme partagee avec `/api/admin/users/search`).
-                        display_name: { type: string, nullable: true }
-                        battle_tag: { type: string, nullable: true }
+                        display_name: { type: [string, 'null'] }
+                        battle_tag: { type: [string, 'null'] }
                         team_name:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                           description: Une equipe DE CET ESPACE.
         '400':
           $ref: '#/components/responses/BadRequest'
@@ -35736,63 +35146,57 @@ paths:
                   packs:
                     type: object
                     properties:
-                      granted: { type: integer, nullable: true }
-                      opened: { type: integer, nullable: true }
+                      granted: { type: [integer, 'null'] }
+                      opened: { type: [integer, 'null'] }
                       pending:
-                        type: integer
-                        nullable: true
+                        type: [integer, 'null']
                         description: Distribues mais jamais ouverts.
                       bySource:
                         type: object
                         properties:
-                          victory: { type: integer, nullable: true }
-                          purchase: { type: integer, nullable: true }
-                          welcome: { type: integer, nullable: true }
-                          drop: { type: integer, nullable: true }
-                          placement: { type: integer, nullable: true }
-                          streak: { type: integer, nullable: true }
+                          victory: { type: [integer, 'null'] }
+                          purchase: { type: [integer, 'null'] }
+                          welcome: { type: [integer, 'null'] }
+                          drop: { type: [integer, 'null'] }
+                          placement: { type: [integer, 'null'] }
+                          streak: { type: [integer, 'null'] }
                   coins:
                     type: object
                     properties:
                       inCirculation:
-                        type: integer
-                        nullable: true
+                        type: [integer, 'null']
                         description: Somme des soldes — ce qui est detenu.
-                      earned: { type: integer, nullable: true }
+                      earned: { type: [integer, 'null'] }
                       spent:
-                        type: integer
-                        nullable: true
+                        type: [integer, 'null']
                         description: Cumul des debits, en valeur ABSOLUE.
-                      wallets: { type: integer, nullable: true }
+                      wallets: { type: [integer, 'null'] }
                       boosterPrice: { type: integer }
                       truncated: { type: boolean }
                   cards:
                     type: object
                     properties:
                       total:
-                        type: integer
-                        nullable: true
+                        type: [integer, 'null']
                         description: Encore possedees (recyclees exclues).
-                      foil: { type: integer, nullable: true }
-                      recycled: { type: integer, nullable: true }
+                      foil: { type: [integer, 'null'] }
+                      recycled: { type: [integer, 'null'] }
                       drawn:
-                        type: integer
-                        nullable: true
+                        type: [integer, 'null']
                         description: Toutes les cartes tirees, recyclees comprises.
                       byRarity:
                         type: object
                         additionalProperties:
-                          type: integer
-                          nullable: true
+                          type: [integer, 'null']
                       truncated: { type: boolean }
                   photos:
                     type: object
                     properties:
-                      pending: { type: integer, nullable: true }
-                      approved: { type: integer, nullable: true }
-                      rejected: { type: integer, nullable: true }
-                      optedIn: { type: integer, nullable: true }
-                      revoked: { type: integer, nullable: true }
+                      pending: { type: [integer, 'null'] }
+                      approved: { type: [integer, 'null'] }
+                      rejected: { type: [integer, 'null'] }
+                      optedIn: { type: [integer, 'null'] }
+                      revoked: { type: [integer, 'null'] }
                   topSubjects:
                     type: array
                     description: |
@@ -35813,11 +35217,10 @@ paths:
                           type: string
                           description: Cartes `team` seulement.
                         slug:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                           description: Cartes `team` seulement.
-                        name: { type: string, nullable: true }
-                        imageUrl: { type: string, nullable: true }
+                        name: { type: [string, 'null'] }
+                        imageUrl: { type: [string, 'null'] }
                         count: { type: integer }
                         foilCount: { type: integer }
                   generatedAt: { type: string }
@@ -36071,8 +35474,7 @@ paths:
                           type: string
                           description: Identifiant de l'objet source, en texte (match, paquet…).
                         note:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                           description: Motif d'une correction de l'equipe (`admin_grant`), ecrit par le staff et visible par la joueuse. `null` pour toute autre source.
                         createdAt:
                           type: string
@@ -36172,35 +35574,28 @@ paths:
                           type: string
                           enum: [player, team, map]
                         userId:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         teamId:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         displayName:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         name:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                           description: Cartes `team` et `map`.
                         slug:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                           description: >-
                             Adresse publique pour une carte `team` ; pour une
                             carte `map`, c'est l'IDENTIFIANT lui-meme, les maps
                             vivant dans un registre et non dans une table.
                         imageUrl:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                           description: >-
                             Cartes `player` et `map`. Pour une map, la maquette
                             voxel pre-rendue ; `null` si la map a quitte le
                             registre.
                         logoUrl:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                           description: Cartes `team` seulement.
                         rarity:
                           type: string
@@ -36215,8 +35610,7 @@ paths:
                         count:
                           type: integer
                         recyclable:
-                          type: object
-                          nullable: true
+                          type: [object, 'null']
                           description: >-
                             L'exemplaire propose au recyclage, ou `null` des
                             qu'il n'y en a qu'un — la route de recyclage refuse
@@ -36236,8 +35630,7 @@ paths:
                     type: integer
                     description: Exemplaires de la collection ENTIERE, doublons compris.
                   pool:
-                    type: object
-                    nullable: true
+                    type: [object, 'null']
                     description: >-
                       Le vivier (sujets existants), `null` si illisible. Absent
                       quand la collection est vide.
@@ -36245,8 +35638,7 @@ paths:
                       distinct:
                         type: integer
                   nextCursor:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
                     description: >-
                       Curseur de la page suivante ; `null` sur la derniere page
                       ou quand la collection est servie en entier.
@@ -36328,14 +35720,12 @@ paths:
                         grantedAt:
                           type: string
                         openedAt:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                   unopened:
                     type: integer
                     description: Nombre TOTAL de paquets fermes, quels que soient la page et le filtre.
                   nextCursor:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
                     description: Curseur de la page suivante ; `null` sur la derniere.
                   balance:
                     type: integer
@@ -36477,35 +35867,28 @@ paths:
                           type: string
                           enum: [player, team, map]
                         userId:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         teamId:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         displayName:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                           description: Cartes `player` seulement.
                         imageUrl:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                           description: >-
                             Cartes `player` et `map`. Pour une map, la maquette
                             voxel pre-rendue ; `null` si la map a quitte le
                             registre.
                         name:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                           description: Cartes `team` et `map`.
                         slug:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                           description: >-
                             Adresse publique pour une carte `team` ; pour une
                             carte `map`, c'est l'IDENTIFIANT lui-meme.
                         logoUrl:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                           description: Cartes `team` seulement.
                         rarity:
                           type: string
@@ -36595,20 +35978,15 @@ paths:
                           type: string
                           enum: [map_mode, tournament_teams, team_roster]
                         mode:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         tournamentId:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         tournamentName:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         teamId:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         teamName:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         total:
                           type: integer
                         owned:
@@ -36626,14 +36004,12 @@ paths:
                               id:
                                 type: string
                               name:
-                                type: string
-                                nullable: true
+                                type: [string, 'null']
                         missingPlayers:
                           type: integer
                           description: Nombre de cartes de joueuses manquantes — jamais lesquelles.
                         rewarded:
-                          type: boolean
-                          nullable: true
+                          type: [boolean, 'null']
                           description: '`null` = registre illisible : on ne sait pas.'
                         justRewarded:
                           type: boolean
@@ -36865,13 +36241,13 @@ paths:
                           type: string
                           enum: [pending, accepted, declined, cancelled, expired]
                         reason:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                           enum:
                             - proposer_cancelled
                             - offered_unavailable
                             - card_unavailable
                             - trading_disabled
+                            - null
                         createdAt:
                           type: string
                           format: date-time
@@ -36879,9 +36255,8 @@ paths:
                           type: string
                           format: date-time
                         resolvedAt:
-                          type: string
+                          type: [string, 'null']
                           format: date-time
-                          nullable: true
                         counterpart:
                           type: object
                           properties:
@@ -36889,8 +36264,7 @@ paths:
                               type: string
                               format: uuid
                             displayName:
-                              type: string
-                              nullable: true
+                              type: [string, 'null']
                         offered:
                           type: array
                           items:
@@ -36905,8 +36279,7 @@ paths:
                             type: object
                             additionalProperties: true
                   nextCursor:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
         '400':
           description: '`code: invalid_box | invalid_state | invalid_limit | invalid_cursor`.'
         '401':
@@ -37278,29 +36651,24 @@ paths:
                           type: string
                           format: uuid
                         displayName:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                           description: |
                             Pseudo du compte (`display_name`, sinon
                             `full_name`). `null` si la resolution echoue.
                         email:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                           description: |
                             `null` si la resolution echoue.
                         photoPath:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                           description: |
                             Chemin du fichier AFFICHE dans le bucket. A renvoyer
                             tel quel dans le PATCH : la decision porte sur ce
                             fichier-la, jamais sur un remplacement.
                         photoUrl:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         submittedAt:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                   total:
                     type: integer
         '401':
@@ -37352,8 +36720,7 @@ paths:
                   maxLength: 512
                   description: Le `photoPath` de l'element affiche (GET).
                 reason:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                   maxLength: 500
       responses:
         '200':
@@ -37604,12 +36971,11 @@ paths:
                         status:
                           type: string
                         start_date:
-                          allOf:
+                          anyOf:
                             - $ref: '#/components/schemas/Timestamp'
-                          nullable: true
+                            - type: 'null'
                         format_type:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
         '500':
           $ref: '#/components/responses/ServerError'
   /api/caster/tournaments/{id}/maps:
@@ -37653,11 +37019,9 @@ paths:
                         map_name:
                           type: string
                         map_type:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         image_url:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -37746,17 +37110,13 @@ paths:
                         id:
                           $ref: '#/components/schemas/Uuid'
                         map_name:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         map_order:
-                          type: integer
-                          nullable: true
+                          type: [integer, 'null']
                         team1_score:
-                          type: integer
-                          nullable: true
+                          type: [integer, 'null']
                         team2_score:
-                          type: integer
-                          nullable: true
+                          type: [integer, 'null']
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
@@ -37802,12 +37162,11 @@ paths:
                         status:
                           type: string
                         start_date:
-                          allOf:
+                          anyOf:
                             - $ref: '#/components/schemas/Timestamp'
-                          nullable: true
+                            - type: 'null'
                         format_type:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
         '429':
           $ref: '#/components/responses/RateLimited'
         '500':
@@ -37849,11 +37208,9 @@ paths:
                         map_name:
                           type: string
                         map_type:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         image_url:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
         '400':
           $ref: '#/components/responses/BadRequest'
         '429':
@@ -37942,17 +37299,13 @@ paths:
                         id:
                           $ref: '#/components/schemas/Uuid'
                         map_name:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         map_order:
-                          type: integer
-                          nullable: true
+                          type: [integer, 'null']
                         team1_score:
-                          type: integer
-                          nullable: true
+                          type: [integer, 'null']
                         team2_score:
-                          type: integer
-                          nullable: true
+                          type: [integer, 'null']
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
@@ -38103,9 +37456,8 @@ paths:
                           type: string
                           maxLength: 256
                 user_agent:
-                  type: string
+                  type: [string, 'null']
                   maxLength: 512
-                  nullable: true
       responses:
         '200':
           description: Subscription existante mise à jour.
@@ -38290,17 +37642,14 @@ paths:
                 discoverable:
                   type: boolean
                 displayName:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                   maxLength: 80
                 avatarUrl:
-                  type: string
+                  type: [string, 'null']
                   format: uri
-                  nullable: true
                   maxLength: 500
                 tagline:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                   maxLength: 160
                 showRatings:
                   type: boolean
@@ -38377,8 +37726,7 @@ paths:
                         name:
                           type: string
                         slug:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
         '405':
           description: Méthode non autorisée.
   /api/player/discovery/search:
@@ -38526,17 +37874,15 @@ paths:
                           type: string
                           format: uuid
                         tenantId:
-                          type: string
+                          type: [string, 'null']
                           format: uuid
-                          nullable: true
                         tournamentId:
-                          type: string
+                          type: [string, 'null']
                           format: uuid
-                          nullable: true
                         date:
-                          allOf:
+                          anyOf:
                             - $ref: '#/components/schemas/Timestamp'
-                          nullable: true
+                            - type: 'null'
                         winner:
                           type: string
                           enum:
@@ -38876,15 +38222,12 @@ paths:
                           type: string
                           enum: [no_participants, one_side_only, unknown]
                         team1:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         team2:
-                          type: string
-                          nullable: true
+                          type: [string, 'null']
                         completedAt:
-                          type: string
+                          type: [string, 'null']
                           format: date-time
-                          nullable: true
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -39106,8 +38449,7 @@ paths:
                   format: uuid
                 weight:
                   type: number
-                  minimum: 0
-                  exclusiveMinimum: true
+                  exclusiveMinimum: 0
       responses:
         '201':
           description: Lien créé.
@@ -39642,8 +38984,7 @@ paths:
                       team2Score:
                         type: integer
                       winnerTeamId:
-                        type: string
-                        nullable: true
+                        type: [string, 'null']
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':

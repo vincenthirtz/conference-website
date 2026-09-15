@@ -531,8 +531,14 @@ describe('OpenAPI ↔ handlers', () => {
   });
 });
 
+// En CI, le repo voisin `docker-box` n'est pas récupéré : exiger sa présence y
+// faisait échouer la suite à coup sûr. Hors CI (poste de dev), son absence reste
+// une erreur — c'est là que la vérification cross-repo a un sens.
+const BOT_ROOT_OPTIONAL =
+  Boolean(process.env.CI) && !process.env.BOT_CLIENT_ROOT;
+
 describe('OpenAPI ↔ bot client (cross-repo)', () => {
-  it('the bot client root is reachable', () => {
+  it.skipIf(BOT_ROOT_OPTIONAL)('the bot client root is reachable', () => {
     expect(
       fs.existsSync(BOT_CLIENT_ROOT),
       `BOT_CLIENT_ROOT not found: ${BOT_CLIENT_ROOT}\n` +

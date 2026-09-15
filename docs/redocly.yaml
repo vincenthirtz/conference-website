@@ -1,0 +1,15 @@
+# Lint de docs/openapi.yaml — exécuté en CI seulement (`npx @redocly/cli`), sans
+# dépendance dans le repo (CLAUDE.md : zero-dependency policy).
+# Base « recommended » ; les écarts ci-dessous sont VOULUS, pas des oublis.
+extends:
+  - recommended
+rules:
+  # Next.js résout un segment statique avant un segment dynamique :
+  # /api/teams/invitations/{id} et /api/teams/{teamId}/members coexistent.
+  no-ambiguous-paths: off
+  # Les débuts et retours OAuth répondent par une redirection (302), pas un 2xx.
+  operation-2xx-response: off
+  # Code propriétaire : pas d'URL ni d'identifiant SPDX de licence.
+  info-license-strict: off
+  # Le serveur localhost est documenté exprès pour le développement.
+  no-server-example.com: off
