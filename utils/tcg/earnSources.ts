@@ -456,7 +456,7 @@ export const TCG_EARN_SOURCES: readonly TcgEarnSource[] = [
   },
   {
     // Écrite par `utils/predictions/settle.ts` quand `applyMatchScore` rend un
-    // résultat. Migration `match_predictions.sql` (NON appliquée au
+    // résultat. Migration `match_predictions.sql` (appliquée le
     // 2026-09-15) : elle crée aussi la table des pronostics, sans laquelle la
     // route refuse d'en enregistrer — rien ne peut donc être dû avant elle.
     key: 'match_prediction',

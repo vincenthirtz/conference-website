@@ -56,7 +56,7 @@
 --     public.match_predictions_guard() ; recréer le CHECK à douze valeurs —
 --     seulement après avoir supprimé ou requalifié les lignes
 --     `match_prediction` du porte-monnaie.
---   - NON APPLIQUÉE à la rédaction (2026-09-15).
+--   - APPLIQUÉE en production le 2026-09-15.
 
 BEGIN;
 

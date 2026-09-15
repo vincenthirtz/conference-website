@@ -280,7 +280,7 @@ describe('schemaReady', () => {
       // levé avec le code, comme `battlenet_verified` — sans la migration,
       // l'écriture est refusée et la lecture suivante des séries retente.
       'collection_set',
-      // `match_predictions.sql` (2026-09-15, NON appliquée à la rédaction) :
+      // `match_predictions.sql` (appliquée le 2026-09-15) :
       // levé avec le code. Sans la migration, la table des pronostics n'existe
       // pas : aucun pronostic ne s'enregistre, donc aucun n'est dû.
       'match_prediction',
