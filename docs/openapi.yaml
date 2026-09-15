@@ -337,12 +337,116 @@ components:
           type: boolean
           enum:
             - true
+    TcgTradeSubject:
+      description: |
+        Un SUJET de carte TCG dans une proposition d'echange : joueuse ou equipe
+        par UUID, map par slug du registre. Jamais un exemplaire, jamais une
+        image : l'exemplaire est choisi par la base, la face relue a l'affichage.
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [kind, id]
+          properties:
+            kind:
+              type: string
+              enum: [player, team]
+            id:
+              type: string
+              format: uuid
+        - type: object
+          additionalProperties: false
+          required: [kind, id]
+          properties:
+            kind:
+              type: string
+              enum: [map]
+            id:
+              type: string
+              pattern: ^[a-z0-9-]{1,64}$
     Uuid:
       type: string
       format: uuid
     Timestamp:
       type: string
       format: date-time
+    TcgSetCompletedNotice:
+      type: object
+      description: >-
+        Une serie TCG dont la recompense vient d'etre ecrite par l'appel en
+        cours. Faits bruts (l'interface formule le libelle) ; aucun nom de
+        joueuse.
+      properties:
+        key:
+          type: string
+        kind:
+          type: string
+          enum: [map_mode, tournament_teams, team_roster]
+        mode:
+          type: string
+          nullable: true
+        tournamentName:
+          type: string
+          nullable: true
+        teamName:
+          type: string
+          nullable: true
+        coins:
+          type: integer
+    TcgShowcaseState:
+      type: object
+      description: >-
+        Etat de la vitrine TCG d'une joueuse. `cards` = cartes ENCORE possedees
+        parmi celles choisies, dans l'ordre choisi, faces filtrees par le
+        consentement ; `unavailable` = cartes choisies qui ne le sont plus.
+      properties:
+        enabled:
+          type: boolean
+        cards:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+                description: '`player:<uuid>`, `team:<uuid>` ou `map:<slug>`.'
+              kind:
+                type: string
+                enum: [player, team, map]
+              userId:
+                type: string
+              teamId:
+                type: string
+              slug:
+                type: string
+                nullable: true
+              displayName:
+                type: string
+                nullable: true
+              name:
+                type: string
+                nullable: true
+              imageUrl:
+                type: string
+                nullable: true
+              logoUrl:
+                type: string
+                nullable: true
+              cardImageUrl:
+                type: string
+                nullable: true
+              rarity:
+                type: string
+                enum: [common, rare, epic, legendary]
+                description: Meilleure rarete ENCORE possedee pour ce sujet.
+              isFoil:
+                type: boolean
+        unavailable:
+          type: integer
+        maxCards:
+          type: integer
+        publicProfileUrl:
+          type: string
+          nullable: true
     PlayerTwitchStatus:
       type: object
       description: >-
@@ -27298,6 +27402,54 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/ServerError'
+  /api/cron/tcg-trades-expire:
+    get:
+      tags:
+        - cron
+      summary: Expire les propositions d'echange TCG echues.
+      operationId: cronTcgTradesExpireGet
+      description: |
+        Schedule: hourly (`17 * * * *`) via Netlify scheduled function
+        `tcg-trades-expire-cron`.
+
+        Passe en `expired` toute proposition `pending` dont `expires_at` est
+        depasse (tous tenants) et emet `tcg.trade_resolved` (outcome
+        `expired`) a chaque proposante, dans l'outbox de son espace. Ecriture
+        conditionnelle `status = 'pending'` : un second passage, ou
+        l'expiration paresseuse des routes joueuse, ne reannonce rien.
+
+        Auth: `Authorization: Bearer <CRON_SECRET>` header OR
+        `?secret=<CRON_SECRET>` query string (constant-time). Both GET and POST
+        accepted.
+      security:
+        - CronSecret: []
+      responses:
+        '200':
+          description: '`{ expired, duration_ms }`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  expired:
+                    type: integer
+                  duration_ms:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags:
+        - cron
+      summary: Expire les propositions d'echange TCG echues.
+      operationId: cronTcgTradesExpirePost
+      description: Same as `GET /api/cron/tcg-trades-expire`.
+      security:
+        - CronSecret: []
+      responses:
+        '200':
+          description: '`{ expired, duration_ms }`.'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/cron/task-due-reminders:
     get:
       tags:
@@ -30343,8 +30495,14 @@ paths:
       description: >-
         Decalque du report de match : un seul report -> `awaiting_opponent` ;
         deux concordants -> scrim clos (`completed`, vainqueur calcule) ; deux
-        divergents -> `disputed`. Re-soumission supportee (un report par camp) :
-        une correction qui rejoint l'adversaire referme le litige.
+        divergents -> `disputed`. Re-soumission supportee (un report par camp)
+        TANT QUE LE SCRIM N'EST PAS CLOS : une correction qui rejoint
+        l'adversaire referme le litige. Un scrim `completed` (ou `cancelled`)
+        ne se re-rapporte plus : `409 SCRIM_CLOSED`, contestation par le staff
+        (correctif du 2026-09-15 — le re-rapport d'un scrim clos permettait de
+        recreer son match miroir et d'encaisser a nouveau les recompenses TCG).
+        La bascule en litige est conditionnelle : un scrim clos entre la
+        lecture et le report divergent rend aussi `409 SCRIM_CLOSED`.
         Permission requise : `manage_scrims` sur une des deux equipes.
       operationId: playerReportScrimScore
       security:
@@ -34735,6 +34893,12 @@ paths:
                     type: integer
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: |
+            Lecture de la photo precedente en echec (rien n'est envoye au
+            bucket : ecraser `photo_path` sans connaitre l'ancien fichier le
+            laisserait orphelin dans un bucket public), ou echec d'envoi /
+            d'enregistrement.
     delete:
       tags:
         - public/auth
@@ -34743,6 +34907,11 @@ paths:
         Retrait RETROACTIF : `tcg_pack_cards` ne reference que la joueuse,
         jamais son image, donc la photo disparait aussi des cartes deja
         distribuees. Le fichier est supprime du bucket. Rate-limit 10 / min.
+
+        L'effacement est CONDITIONNEL au chemin lu (2026-09-15) : une lecture
+        en echec rend 500 sans rien ecrire, et un depot intercale est relu
+        (jusqu'a 3 fois) au lieu de dereferencer un fichier qu'on ne
+        supprimerait pas.
       operationId: revokePlayerTcgPhoto
       security:
         - PlayerBearer: []
@@ -34759,6 +34928,12 @@ paths:
                     enum: [revoked]
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: |
+            `code: PHOTO_CHANGED` — la photo a change a chaque tentative
+            pendant le retrait. Reessayer est sur.
+        '500':
+          description: Lecture ou ecriture de la carte en echec ; rien n'est retire.
   /api/webhooks/twitch/tcg-drop:
     post:
       tags:
@@ -35210,10 +35385,19 @@ paths:
         que la correction. Existe pour ne pas exiger `manage_staff`
         (`/api/admin/users/search`) de qui corrige seulement un solde.
 
-        Reutilise la RPC `admin_search_users` (email, pseudo, BattleTag,
-        jointure equipe) et ne rend que ce qu'il faut pour distinguer deux
-        homonymes. 20 resultats au plus. Une recherche en echec rend 500,
-        jamais une liste vide. Rate-limit 60 / min.
+        CANTONNEE A L'ESPACE DU STAFF (correctif du 2026-09-15). La route
+        appelait la RPC GLOBALE `admin_search_users` : tout owner d'espace — y
+        compris un espace developpeur cree en libre-service — lisait email,
+        BattleTag et equipe de tous les comptes de la plateforme. Elle appelle
+        desormais `admin_search_tcg_players(p_tenant_id, p_query)`
+        (migration `tcg_admin_search_players_scoped.sql`), qui filtre EN BASE
+        sur les comptes rattaches au tenant : roster du tenant, ou gain reel
+        au registre du tenant (`admin_grant`, `booster_purchase` et
+        `card_recycled` exclus). Recherche par pseudo et BattleTag ; l'email
+        n'est ni cherche ni rendu (`email` vaut toujours `null`).
+        20 resultats au plus. Une recherche en echec rend 500, jamais une liste
+        vide ; fonction SQL absente → 503 `SEARCH_UNAVAILABLE`, sans repli sur
+        la RPC globale. `private, no-store`. Rate-limit 60 / min.
       operationId: adminSearchTcgPlayers
       tags:
         - admin/tcg
@@ -35244,10 +35428,16 @@ paths:
                       required: [id]
                       properties:
                         id: { type: string, format: uuid }
-                        email: { type: string, nullable: true }
+                        email:
+                          type: string
+                          nullable: true
+                          description: Toujours `null` (champ garde pour la forme partagee avec `/api/admin/users/search`).
                         display_name: { type: string, nullable: true }
                         battle_tag: { type: string, nullable: true }
-                        team_name: { type: string, nullable: true }
+                        team_name:
+                          type: string
+                          nullable: true
+                          description: Une equipe DE CET ESPACE.
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -35260,6 +35450,10 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '500':
           $ref: '#/components/responses/ServerError'
+        '503':
+          description: |
+            `code: SEARCH_UNAVAILABLE` — la fonction SQL cantonnee a l'espace
+            n'est pas encore deployee. Jamais de repli sur la recherche globale.
   /api/admin/tcg/grant:
     post:
       summary: Corriger le solde de pieces TCG d'une joueuse (credit ou retrait).
@@ -35285,11 +35479,22 @@ paths:
         montant est refusee en 400 (`INVALID_BODY`) : repondre « deja fait »
         masquerait une correction jamais appliquee.
 
-        UN RETRAIT NE REND JAMAIS UN SOLDE NEGATIF. Le disponible est le MINIMUM
-        du cache et du registre (un achat de booster debite le cache avant
-        d'ecrire au registre), et le cache est reserve CONDITIONNELLEMENT
-        (`.eq('balance', avant)`) avant l'ecriture — meme discipline que
-        `POST /api/player/tcg/booster`. Une ecriture refusee rend la reservation.
+        UN RETRAIT NE REND JAMAIS UN SOLDE NEGATIF. Depuis le 2026-09-15 il
+        passe par la fonction SQL `tcg_admin_debit` (migration
+        `tcg_wallet_atomic_balance.sql`) : verrou de la ligne de porte-monnaie,
+        solde relu par `SUM(amount)` sur le registre, ecriture et cache dans
+        UNE transaction — meme principe que `POST /api/player/tcg/booster`.
+        Fonction absente → 503 `WITHDRAWAL_UNAVAILABLE` (un credit reste
+        possible). Le solde rendu est calcule par la base, sans plafond de
+        1000 lignes.
+
+        UNE JOUEUSE DE L'ESPACE SEULEMENT (2026-09-15). `userId` doit etre
+        rattache au tenant du staff : roster du tenant, ou gain reel au registre
+        du tenant (`admin_grant` ne compte pas). Sinon `404 USER_NOT_FOUND`, la
+        meme reponse qu'un compte inexistant, rendue AVANT toute lecture du
+        compte. Sans cette garde, un owner d'espace tiers creditait une
+        etrangere, ce qui lui creait un porte-monnaie que le rattrapage
+        Battle.net prenait pour un rattachement.
 
         UNE ERREUR N'EST PAS UNE ABSENCE : une lecture de compte en echec rend
         500, jamais `USER_NOT_FOUND` ; une insertion en erreur est relue par la
@@ -35364,7 +35569,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           description: |
-            `code: USER_NOT_FOUND` — aucun compte pour `userId`.
+            `code: USER_NOT_FOUND` — aucun compte pour `userId`, ou compte NON
+            rattache a l'espace du staff (indiscernables a dessein).
           content:
             application/json:
               schema:
@@ -35372,9 +35578,9 @@ paths:
         '409':
           description: |
             `code: INSUFFICIENT_BALANCE` — le retrait rendrait le solde negatif
-            (la reponse porte `balance`, le disponible). Rare :
-            `code: BALANCE_CHANGED` — le solde a bouge trois fois de suite
-            pendant la reservation ; reessayer avec la MEME cle est sur.
+            (la reponse porte `balance`, le disponible selon le registre). Rare :
+            `code: BALANCE_CHANGED` — verrou du porte-monnaie non obtenu ;
+            reessayer avec la MEME cle est sur.
           content:
             application/json:
               schema:
@@ -35384,7 +35590,10 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
         '503':
-          description: Service indisponible (client service-role absent).
+          description: |
+            Service indisponible (client service-role absent), ou
+            `code: WITHDRAWAL_UNAVAILABLE` — retrait demande alors que la
+            fonction SQL `tcg_admin_debit` n'est pas deployee.
   /api/admin/tcg/overview:
     get:
       tags:
@@ -35797,6 +36006,7 @@ paths:
                               checkin_streak,
                               tournament_placement,
                               battlenet_verified,
+                              collection_set,
                             ]
                         sourceRef:
                           type: string
@@ -36091,6 +36301,36 @@ paths:
                         type: integer
                       scrimWin:
                         type: integer
+                      welcomeGift:
+                        type: integer
+                      twitchDrop:
+                        type: integer
+                        description: Absent si aucun drop n'est branche.
+                      checkinStreak:
+                        type: object
+                        properties:
+                          length: { type: integer }
+                          coins: { type: integer }
+                          packs: { type: integer }
+                      placement:
+                        type: array
+                        description: Paliers du palmares, du rang 1 au top cut.
+                        items:
+                          type: object
+                          properties:
+                            maxRank: { type: integer }
+                            coins: { type: integer }
+                            packs: { type: integer }
+                      battlenetVerified:
+                        type: object
+                        properties:
+                          coins: { type: integer }
+                          packs: { type: integer }
+                      collectionSet:
+                        type: object
+                        properties:
+                          coins: { type: integer }
+                          packs: { type: integer }
         '400':
           description: '`code` parmi `invalid_limit`, `invalid_cursor`, `invalid_status`.'
         '401':
@@ -36140,6 +36380,18 @@ paths:
                     type: string
                   openedAt:
                     type: string
+                  setsCompleted:
+                    description: |
+                      AJOUT RETROCOMPATIBLE (2026-09-15). Les series que CE
+                      paquet vient de completer ET dont la recompense vient
+                      d'etre ecrite (`collection_set`, cf.
+                      `GET /api/player/tcg/sets`). Vide sur un rejeu, et vide si
+                      la verification a echoue — elle est alors rattrapee a la
+                      lecture suivante des series, sans double credit (cle du
+                      registre). Aucun nom de joueuse.
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TcgSetCompletedNotice'
                   cards:
                     description: |
                       Les cartes tirees, AVEC leur face (nom, image) : sans
@@ -36229,6 +36481,197 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '500':
           $ref: '#/components/responses/ServerError'
+  /api/player/tcg/sets:
+    get:
+      tags:
+        - public/auth
+      summary: Mes series TCG — progression et recompense d'une serie completee.
+      description: |
+        Une SERIE est un ensemble de cartes a completer, DERIVE des donnees
+        existantes (jamais saisi a la main) : toutes les maps d'un mode
+        (`map_mode`, registre des maps), toutes les equipes engagees dans une
+        edition (`tournament_teams`, `stage_teams`), le roster d'une equipe
+        pour une edition (`team_roster` : `match_participants` si l'edition est
+        `completed`, sinon `team_members` hors encadrement). Seuls les tournois
+        `published` / `running` / `completed` comptent (10 plus recents). Une
+        serie compte au moins 3 cartes.
+
+        JAMAIS INCOMPLETABLE : chaque carte appartient au vivier du tirage (lu
+        par le module partage `readDrawPool`). Le consentement photo ne touche
+        pas l'appartenance a une serie, seulement la face.
+
+        ON NE NOMME PAS LES JOUEUSES MANQUANTES : `missingNamed` ne porte que des
+        equipes et des maps ; pour les joueuses, `missingPlayers` est un nombre.
+
+        UNE LECTURE QUI PEUT ECRIRE : chaque appel recompense les series
+        completes pas encore recompensees (`COLLECTION_SET_COINS` pieces, sans
+        paquet, `source_kind = collection_set`, `source_ref` = `key`). La cle
+        d'unicite du registre fait la limite : un rejeu, deux onglets ou une
+        ouverture de paquet simultanee ne creditent qu'une fois, et seule
+        l'ecriture reelle emet `tcg.set_completed`. Recycler une carte apres la
+        recompense ne la reprend pas ; recompleter la serie ne la reverse pas.
+        Pas de `?as=`. `Cache-Control: private, no-store`. Rate-limit 30 / min.
+      operationId: readPlayerTcgSets
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Progression de chaque serie.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sets:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                          description: >-
+                            Identifiant stable : `maps:<mode>`,
+                            `tournament:<tournoi>` ou `roster:<tournoi>:<equipe>`.
+                        kind:
+                          type: string
+                          enum: [map_mode, tournament_teams, team_roster]
+                        mode:
+                          type: string
+                          nullable: true
+                        tournamentId:
+                          type: string
+                          nullable: true
+                        tournamentName:
+                          type: string
+                          nullable: true
+                        teamId:
+                          type: string
+                          nullable: true
+                        teamName:
+                          type: string
+                          nullable: true
+                        total:
+                          type: integer
+                        owned:
+                          type: integer
+                        complete:
+                          type: boolean
+                        missingNamed:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              kind:
+                                type: string
+                                enum: [team, map]
+                              id:
+                                type: string
+                              name:
+                                type: string
+                                nullable: true
+                        missingPlayers:
+                          type: integer
+                          description: Nombre de cartes de joueuses manquantes — jamais lesquelles.
+                        rewarded:
+                          type: boolean
+                          nullable: true
+                          description: '`null` = registre illisible : on ne sait pas.'
+                        justRewarded:
+                          type: boolean
+                  rewardCoins:
+                    type: integer
+                  newlyRewarded:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TcgSetCompletedNotice'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '405':
+          description: Methode non autorisee.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          description: '`code: sets_unreadable` — une progression illisible n''est pas « aucune serie », et rien n''est ecrit.'
+  /api/player/tcg/showcase:
+    get:
+      tags:
+        - public/auth
+      summary: Ma vitrine TCG (opt-in) — cartes exposees sur ma fiche publique.
+      description: |
+        La vitrine montre jusqu'a `maxCards` (3) cartes choisies par la joueuse
+        sur SA fiche publique `/player/[userId]`. DESACTIVEE PAR DEFAUT : sans
+        reglage, `enabled: false`. Seules des REFERENCES de sujet sont stockees
+        (`tcg_showcases.subject_keys`) ; les cartes sont RELUES contre la
+        possession reelle a chaque lecture (une carte recyclee ou echangee en
+        sort) et leurs faces passent par le filtre de consentement
+        (`readCardFaces`). `publicProfileUrl` est `null` quand la fiche publique
+        n'existe pas (ni classee ni sur un roster). `Cache-Control: private,
+        no-store`. Rate-limit 60 / min.
+      operationId: readPlayerTcgShowcase
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Etat de la vitrine.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TcgShowcaseState'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags:
+        - public/auth
+      summary: Regler ma vitrine TCG.
+      description: |
+        `enabled` et la liste COMPLETE des cartes (0 a 3 cles de sujet
+        `player:<uuid>`, `team:<uuid>`, `map:<slug>`, dedoublonnees). Activer
+        exige de posseder chaque carte (`409 not_owned`) ; DESACTIVER n'exige
+        rien — un retrait ne doit jamais etre bloque. La fiche publique est
+        regeneree immediatement (`revalidatePlayerCard`), qui regenere aussi les
+        vitrines exposant la carte d'une joueuse dont la photo change. Rend
+        l'etat relu. Pas de `?as=`. Rate-limit 20 / min.
+      operationId: updatePlayerTcgShowcase
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled, cards]
+              properties:
+                enabled:
+                  type: boolean
+                cards:
+                  type: array
+                  maxItems: 3
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Vitrine enregistree, etat relu.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TcgShowcaseState'
+        '400':
+          description: '`code: invalid_body` (forme, plus de 3 cartes) ou `invalid_card` (cle de sujet mal formee).'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '405':
+          description: Methode non autorisee.
+        '409':
+          description: '`code: not_owned` — une carte a activer n''est pas dans la collection.'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /api/player/tcg/booster:
     post:
       tags:
@@ -36240,10 +36683,13 @@ paths:
         contenu aleatoire formerait une loot box payante.
 
         L'achat ne cree qu'un paquet FERME ; le tirage appartient a
-        l'ouverture. Le debit est CONDITIONNEL au solde lu (`.eq('balance',
-        avant)`) : deux achats simultanes ne peuvent pas depenser deux fois les
-        memes pieces, le second recoit 409. Si l'ecriture au registre echoue,
-        le paquet est supprime — ni pieces prelevees, ni paquet livre.
+        l'ouverture. Depuis le 2026-09-15, l'achat est UNE transaction SQL
+        (`tcg_purchase_booster`, migration `tcg_wallet_atomic_balance.sql`) :
+        verrou de la ligne de porte-monnaie, solde relu par `SUM(amount)` sur le
+        registre, paquet, ecriture `booster_purchase` et cache — tout ou rien.
+        L'ancien enchainement en trois requetes laissait un recalcul concurrent
+        effacer le debit (3 boosters pour le prix de 2). Un 500 ne laisse donc
+        jamais un paquet gratuit ni des pieces prelevees sans paquet.
         Rate-limit 20 / min.
       operationId: buyPlayerTcgBooster
       security:
@@ -36282,10 +36728,457 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '409':
           description: |
-            `code: balance_changed` — le solde a bouge entre la lecture et le
-            debit (achat concurrent). Reessayer est sur.
+            `code: balance_changed` — verrou du porte-monnaie non obtenu
+            (mouvement concurrent). Reessayer est sur.
         '429':
           $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          description: |
+            `code: purchase_unavailable` — la fonction SQL d'achat n'est pas
+            deployee : l'achat est REFUSE plutot que fait sans verrou.
+  /api/player/tcg/trades:
+    get:
+      tags:
+        - public/auth
+      summary: Mes propositions d'echange TCG, recues ou envoyees.
+      description: |
+        Boite `received` (defaut) ou `sent`, etat `open` (en attente, defaut)
+        ou `closed` (historique). Pagination par curseur (`created_at`, `id`
+        decroissants), meme forme que les paquets ; un curseur forge rend
+        `400 invalid_cursor`.
+
+        EXPIRATION PARESSEUSE avant lecture : une proposition echue n'est
+        jamais servie comme acceptable ; sa transition est annoncee une seule
+        fois (`tcg.trade_resolved`, outcome `expired`).
+
+        Les faces sont RELUES par `readCardFaces` (filtre de consentement) :
+        une photo retiree ne ressort pas, meme sur une carte d'une proposition.
+        Une proposition RECUE en attente porte, sur chaque carte demandee,
+        `ownedCopies` et `tradeableCopies` de l'APPELANTE (pour avertir d'un
+        dernier exemplaire) ; cote proposante, rien de la collection de
+        l'autre. Aucun email. `Cache-Control: private, no-store`. 60 / min.
+      operationId: listPlayerTcgTrades
+      security:
+        - PlayerBearer: []
+      parameters:
+        - name: box
+          in: query
+          schema:
+            type: string
+            enum: [received, sent]
+        - name: state
+          in: query
+          schema:
+            type: string
+            enum: [open, closed]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+        - name: cursor
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Une page de propositions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trades:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        direction:
+                          type: string
+                          enum: [received, sent]
+                        status:
+                          type: string
+                          enum: [pending, accepted, declined, cancelled, expired]
+                        reason:
+                          type: string
+                          nullable: true
+                          enum:
+                            - proposer_cancelled
+                            - offered_unavailable
+                            - card_unavailable
+                            - trading_disabled
+                        createdAt:
+                          type: string
+                          format: date-time
+                        expiresAt:
+                          type: string
+                          format: date-time
+                        resolvedAt:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        counterpart:
+                          type: object
+                          properties:
+                            userId:
+                              type: string
+                              format: uuid
+                            displayName:
+                              type: string
+                              nullable: true
+                        offered:
+                          type: array
+                          items:
+                            type: object
+                            additionalProperties: true
+                            description: |
+                              Carte (`kind` player | team | map + face relue,
+                              `rarity`, `isFoil`), memes champs que la collection.
+                        requested:
+                          type: array
+                          items:
+                            type: object
+                            additionalProperties: true
+                  nextCursor:
+                    type: string
+                    nullable: true
+        '400':
+          description: '`code: invalid_box | invalid_state | invalid_limit | invalid_cursor`.'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - public/auth
+      summary: Proposer un echange de cartes TCG (carte contre carte).
+      description: |
+        CARTE CONTRE CARTE, RIEN D'AUTRE : le corps est strict (aucun champ
+        pour des pieces, un paquet ferme ou un message — pas de canal de
+        harcelement), 1 a 5 cartes de chaque cote, A PARITE, sujets distincts,
+        aucun sujet des deux cotes. Les cartes offertes sont des SUJETS de ma
+        collection (l'exemplaire le moins precieux, non engage ailleurs, est
+        choisi et fige par la base) ; les cartes demandees sont des sujets que
+        la destinataire montre en DOUBLE (`GET /api/player/tcg/trades/cards`).
+
+        Ecrit en UNE transaction par la fonction SQL `tcg_propose_trade`
+        (verrous consultatifs sur les deux joueuses) : consentements des deux,
+        anciennete du compte (14 j) et de la collection (7 j), plafonds PAR
+        COMPTE (5 envoyees, 10 recues en attente), une seule en attente par
+        paire, 24 h apres un refus, possession et echangeabilite (seuls les
+        paquets `victory`, `placement`, `purchase`, `trade`), expiration 72 h.
+        Le rate-limit HTTP (10 / min) n'est qu'un amortisseur.
+
+        Emet `tcg.trade_proposed` a la destinataire sur la seule creation.
+      operationId: proposePlayerTcgTrade
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [recipientId, offered, requested]
+              properties:
+                recipientId:
+                  $ref: '#/components/schemas/Uuid'
+                offered:
+                  type: array
+                  minItems: 1
+                  maxItems: 5
+                  items:
+                    $ref: '#/components/schemas/TcgTradeSubject'
+                requested:
+                  type: array
+                  minItems: 1
+                  maxItems: 5
+                  items:
+                    $ref: '#/components/schemas/TcgTradeSubject'
+      responses:
+        '201':
+          description: Proposition creee.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trade:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      expiresAt:
+                        type: string
+                        format: date-time
+        '400':
+          description: '`code: invalid_body | invalid_items | self_trade`.'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: '`code: trading_disabled | collection_too_recent`.'
+        '409':
+          description: |
+            `code: recipient_unavailable` (n'accepte pas, compte trop recent ou
+            absente de l'espace — une seule reponse pour les trois) `|
+            recipient_inbox_full | too_many_pending | already_pending |
+            recently_declined | offered_not_owned | requested_not_available`.
+            `subject: { kind, id }` designe la carte en cause quand la base le dit.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/player/tcg/trades/{tradeId}:
+    post:
+      tags:
+        - public/auth
+      summary: Accepter, refuser ou retirer une proposition d'echange TCG.
+      description: |
+        `accept` (destinataire) : fonction SQL `tcg_accept_trade`, UNE
+        transaction — verrous consultatifs sur les deux joueuses, verrous de
+        ligne sur les cartes, possession REVERIFIEE au moment meme (paquet
+        ouvert, non recyclee, echangeable, meme sujet), plafond de 3 echanges
+        acceptes par 24 h pour chacune, puis deplacement des LIGNES de carte
+        vers deux paquets `trade` ouverts. Aucune piece ne bouge. Les autres
+        propositions qui offraient une carte deplacee sont annulees par le
+        systeme (et annoncees). IDEMPOTENT : une proposition deja acceptee
+        rend `200 { replayed: true }` sans rien reecrire ni reannoncer.
+
+        `decline` (destinataire) et `cancel` (proposante) : ecriture
+        conditionnelle `status = 'pending'` ; un rejeu rend `replayed: true`.
+        Un refus est annonce (`declined`) ; un retrait par la proposante ne
+        l'est pas (`resolution_reason = proposer_cancelled`).
+
+        404 plutot que 403 pour une proposition d'une autre personne ou d'un
+        autre espace. 30 / min.
+      operationId: actPlayerTcgTrade
+      security:
+        - PlayerBearer: []
+      parameters:
+        - name: tradeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [accept, decline, cancel]
+      responses:
+        '200':
+          description: 'Transition faite, ou rejeu (`replayed: true`).'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trade:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      status:
+                        type: string
+                        enum: [accepted, declined, cancelled]
+                  replayed:
+                    type: boolean
+        '400':
+          description: '`code: invalid_trade_id | invalid_body`.'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: '`code: not_eligible` (un des deux comptes trop recent).'
+        '404':
+          description: '`code: not_found`.'
+        '409':
+          description: |
+            `code: not_pending | expired | stale` (carte offerte indisponible :
+            proposition annulee et annoncee) `| requested_unavailable` (la
+            destinataire n'a plus la carte : rien n'est change ni annonce) `|
+            partner_daily_limit`.
+        '429':
+          description: '`code: daily_limit` (plafond par compte en base), ou rate-limit HTTP.'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/player/tcg/trades/settings:
+    get:
+      tags:
+        - public/auth
+      summary: Ma preference d'echanges TCG, mon eligibilite et les plafonds.
+      description: |
+        `acceptsProposals` vaut `false` sans ligne (OPT-IN : etre sollicitable
+        est un choix). `eligible` / `eligibleAt` / `eligibilityReason`
+        (`no_account | no_collection | too_recent`) viennent de la fonction SQL
+        `tcg_trade_eligibility` (anciennete du compte ET de la collection) ;
+        `null` = non mesurable. `limits` = `TRADE_LIMITS`. `pending` = mes
+        propositions en attente, `null` si illisible. 60 / min.
+      operationId: getPlayerTcgTradeSettings
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Preference et regles.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags:
+        - public/auth
+      summary: Activer ou desactiver les echanges TCG.
+      description: |
+        Activer exige l'eligibilite (`409 collection_too_recent` avec
+        `eligibleAt`). Activer rend visible des autres volontaires de l'espace
+        (pseudo + doubles echangeables). DESACTIVER ne laisse rien en attente :
+        propositions RECUES annulees par le systeme (`trading_disabled`,
+        annoncees aux proposantes), ENVOYEES retirees (`proposer_cancelled`,
+        sans annonce). 10 / min.
+      operationId: putPlayerTcgTradeSettings
+      security:
+        - PlayerBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [acceptsProposals]
+              properties:
+                acceptsProposals:
+                  type: boolean
+      responses:
+        '200':
+          description: Preference ecrite.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  acceptsProposals:
+                    type: boolean
+                  cancelled:
+                    type: object
+                    properties:
+                      received:
+                        type: integer
+                      sent:
+                        type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: '`code: collection_too_recent`, `eligibleAt`, `reason`.'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/player/tcg/trades/partners:
+    get:
+      tags:
+        - public/auth
+      summary: Les collectionneuses de mon espace qui acceptent des echanges.
+      description: |
+        PAS UN ANNUAIRE : seulement les comptes du tenant ayant ACTIVE les
+        echanges, servis a une appelante qui l'a fait elle-meme (sinon
+        `403 trading_disabled`). Borne au tenant par `tcg_trade_settings` ;
+        aucune recherche plateforme, aucun email (le pseudo seul, BattleTag
+        masque en repli ; un compte sans nom est ecarte). Trie par pseudo.
+        30 / min.
+      operationId: listPlayerTcgTradePartners
+      security:
+        - PlayerBearer: []
+      responses:
+        '200':
+          description: Partenaires.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  partners:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        userId:
+                          type: string
+                          format: uuid
+                        displayName:
+                          type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: '`code: trading_disabled`.'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/player/tcg/trades/cards:
+    get:
+      tags:
+        - public/auth
+      summary: Mes cartes a offrir, ou les doubles echangeables d'une partenaire.
+      description: |
+        Sans `userId` : MES cartes, chacune avec `copies`, `tradeableCopies`
+        (exemplaires issus de paquets echangeables) et `available` (non deja
+        promis dans une proposition en attente).
+
+        Avec `userId` : les DOUBLES ECHANGEABLES de la partenaire (au moins
+        deux exemplaires et au moins un echangeable), a la rarete de
+        l'exemplaire qui partirait. Jamais ses cartes uniques, ses comptes
+        d'exemplaires ni ses cartes de paquets cadeau : on ne voit pas la
+        collection d'une autre. Reciprocite : `403 trading_disabled` si
+        l'appelante n'a pas active les echanges ; `404 partner_not_found` si la
+        partenaire ne les accepte pas (ou n'existe pas dans l'espace). Faces
+        relues par `readCardFaces`. 60 / min.
+      operationId: listPlayerTcgTradeCards
+      security:
+        - PlayerBearer: []
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Cartes.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: '`code: invalid_user_id`.'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: '`code: trading_disabled`.'
+        '404':
+          description: '`code: partner_not_found`.'
         '500':
           $ref: '#/components/responses/ServerError'
   /api/admin/tcg/photos:
@@ -36336,6 +37229,13 @@ paths:
                           nullable: true
                           description: |
                             `null` si la resolution echoue.
+                        photoPath:
+                          type: string
+                          nullable: true
+                          description: |
+                            Chemin du fichier AFFICHE dans le bucket. A renvoyer
+                            tel quel dans le PATCH : la decision porte sur ce
+                            fichier-la, jamais sur un remplacement.
                         photoUrl:
                           type: string
                           nullable: true
@@ -36359,7 +37259,15 @@ paths:
         refuse — precisement parce qu'il pose probleme — y resterait sinon
         atteignable par son URL. La joueuse garde le motif et peut redeposer.
         Journalise (`tcg_photo_approve` / `tcg_photo_reject`).
-        Rate-limit 30 / min.
+
+        ON N'APPROUVE QUE LA PHOTO VUE (2026-09-15). `photoPath` (rendu par le
+        GET) est OBLIGATOIRE ; l'ecriture est conditionnelle a
+        `photo_status = 'pending' AND photo_path = photoPath`. Si la joueuse a
+        remplace sa photo depuis l'affichage, rien n'est approuve ni supprime
+        (`409 PHOTO_CHANGED`) — sans quoi une photo jamais vue etait publiee,
+        et un refus concurrent laissait la nouvelle orpheline dans le bucket
+        public. Le fichier supprime au refus est celui que l'ecriture a
+        confirme. Rate-limit 30 / min.
       operationId: adminTcgPhotosDecide
       tags:
         - admin/misc
@@ -36371,7 +37279,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [userId, decision]
+              required: [userId, decision, photoPath]
               properties:
                 userId:
                   type: string
@@ -36379,6 +37287,11 @@ paths:
                 decision:
                   type: string
                   enum: [approve, reject]
+                photoPath:
+                  type: string
+                  minLength: 1
+                  maxLength: 512
+                  description: Le `photoPath` de l'element affiche (GET).
                 reason:
                   type: string
                   nullable: true
@@ -36402,9 +37315,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '409':
           description: |
-            La photo n'est plus en attente — la joueuse l'a peut-etre retiree
-            pendant la relecture. Sa decision prime : le panneau rafraichit au
-            lieu d'ecraser. `code: NOT_PENDING`.
+            `code: NOT_PENDING` — la photo n'est plus en attente (la joueuse l'a
+            peut-etre retiree pendant la relecture ; sa decision prime).
+            `code: PHOTO_CHANGED` — la photo a ete remplacee depuis l'affichage
+            (y compris entre la relecture et l'ecriture) : la nouvelle doit etre
+            relue. Dans les deux cas rien n'est ecrit ni supprime, le panneau
+            rafraichit la file.
         '429':
           $ref: '#/components/responses/RateLimited'
         '500':

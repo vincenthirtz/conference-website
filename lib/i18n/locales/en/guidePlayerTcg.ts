@@ -27,13 +27,23 @@ export default {
 
   earnTitle: 'How you get packs',
   earnIntro:
-    'Every path gives a pack AND coins. The amounts below are the ones actually applied, read from the server — not examples.',
+    'Every path gives coins, and most also give a pack. The amounts below are the ones actually applied, read from the server — not examples.',
   earnMatchWin: 'Tournament match win',
   earnScrimWin: 'Ranked scrim win',
   earnWelcome: 'Welcome gift, once',
   earnTwitchDrop: 'Card claimed during a stream',
   earnCoins: '+{coins} coins',
   earnPackToo: 'and a pack',
+  earnPacksMany: 'and {n} packs',
+  earnCheckinStreak: '{length} team check-ins in a row',
+  earnPlacementTitle: 'Final tournament standings',
+  earnPlacementFirst: '1st place',
+  earnPlacementRank: 'Place {rank}',
+  earnPlacementTop: 'Up to place {rank}',
+  earnPlacementNote:
+    'Standings reward the starters who played for the team in that tournament, once per tournament, at their best rank.',
+  earnBattlenet: 'Verified Battle.net account, once',
+  earnCollectionSet: 'Completed collection set, once per set',
   earnTwitchOff:
     'The live drop is not active right now. It will only appear here once a channel is connected and a reward is attached to it — no need to look for it before then.',
   earnTwitchHow:
@@ -54,6 +64,29 @@ export default {
     'A duplicate can be recycled for {refund} coins. Your last copy of a card is untouchable — without that rule, “recycle a duplicate” would become “destroy your collection for currency”.',
   loopRecycleWhich:
     'When you recycle, it is always the LEAST valuable copy that goes: the lowest rarity, and the non-foil version at equal rarity. Your best copy stays with you.',
+
+  setsTitle: 'Sets',
+  setsBody:
+    'A set is a group of cards to collect: every map of a mode, every team of an edition, or a team’s full roster. Your progress is on your collection page, and a completed set earns you coins, only once.',
+  setsPrivacy:
+    'When you are missing a player card, the page tells you how many, never which one: a set must not turn into a wanted poster.',
+  setsTraded:
+    'Only cards you drew yourself count. A card received through a trade joins your collection but not your sets — otherwise several accounts could pass a set around to each claim the reward.',
+
+  tradesTitle: 'Trades',
+  tradesBody:
+    'You can trade cards with another collector in your space: card for card, never coins or packs. Trading is off by default — no one can send you an offer until you turn it on.',
+  tradesRules:
+    'An offer expires after {ttl} h. You can accept up to {perDay} trades a day, provided your account is at least {accountDays} days old and your collection at least {collectionDays}.',
+  tradesWhat:
+    'You never see another player’s collection, only her tradeable duplicates. Cards from gifts, drops and sets cannot be traded. Your least valuable copy is always the one that goes.',
+  tradesPhoto:
+    'A traded card carries no photo: if a player removes hers, it also disappears from cards already traded.',
+  tradesLink: 'See my trades',
+
+  showcaseTitle: 'Your showcase',
+  showcaseBody:
+    'You can pick up to three of your cards to show on your public profile. The showcase is off by default, and removing it takes effect immediately. Your full collection stays private.',
 
   rarityTitle: 'Where rarity comes from',
   rarityBody:

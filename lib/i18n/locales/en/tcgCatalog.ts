@@ -15,7 +15,16 @@ export default {
     'A pack of five cards is granted on every win, to the players on the winning side — in tournaments and in ranked scrims alike.',
   howDropTitle: 'By watching a stream',
   howDropBody:
-    'During a live stream, Twitch channel points grant coins. No team required: this is the supporters’ path.',
+    'During a stream, Twitch channel points give a pack and coins. No team needed: it is the supporters’ way in.',
+  howPlacementTitle: 'By finishing high',
+  howPlacementBody:
+    'At the end of a tournament, players of the top 8 teams receive coins and up to three packs depending on their rank.',
+  howStreakTitle: 'By showing up',
+  howStreakBody:
+    'A team that checks in for several matches in a row earns its starters a pack and coins.',
+  howBattlenetTitle: 'By verifying your Battle.net account',
+  howBattlenetBody:
+    'Linking your Battle.net account to the site earns coins, only once.',
   howShopTitle: 'By spending coins',
   howShopBody:
     'Coins buy boosters. They are earned, never bought — supporting the association and collecting cards remain two separate things.',
@@ -29,6 +38,17 @@ export default {
   rarityLegendaryWhat: 'A title: first place, or the top of the standings.',
   foilNote:
     'Foil is a print variant, not one more tier: a foil card is scarce without being worth more.',
+
+  doTitle: 'What you do with your cards',
+  doSetsTitle: 'Complete sets',
+  doSetsBody:
+    'Every map of a mode, every team of an edition, a team’s roster: each completed set earns coins, once.',
+  doTradesTitle: 'Trade',
+  doTradesBody:
+    'Card for card, between collectors of the same space who opted in. Never coins or packs in a trade.',
+  doShowcaseTitle: 'Show your showcase',
+  doShowcaseBody:
+    'Up to three favourite cards on your public profile, if you want. The rest of your collection stays private.',
 
   catalogTitle: 'The catalogue',
   filterAll: 'All',

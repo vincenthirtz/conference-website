@@ -91,8 +91,20 @@ function TcgCatalogPage({ cards, playerCount }: Props) {
 
   const earnSteps = [
     { title: t.howEarnTitle, body: t.howEarnBody },
+    { title: t.howPlacementTitle, body: t.howPlacementBody },
+    { title: t.howStreakTitle, body: t.howStreakBody },
     { title: t.howDropTitle, body: t.howDropBody },
+    { title: t.howBattlenetTitle, body: t.howBattlenetBody },
     { title: t.howShopTitle, body: t.howShopBody },
+  ];
+
+  // Ce qu'une collection permet, une fois les cartes obtenues. Aucun montant
+  // ici : la page est publique et statique, le barème chiffré vit dans le guide
+  // de l'espace joueuse, lu depuis le serveur.
+  const doItems = [
+    { title: t.doSetsTitle, body: t.doSetsBody },
+    { title: t.doTradesTitle, body: t.doTradesBody },
+    { title: t.doShowcaseTitle, body: t.doShowcaseBody },
   ];
 
   // `rarity` en plus du libellé : la légende doit porter le MÊME repère que les
@@ -149,6 +161,24 @@ function TcgCatalogPage({ cards, playerCount }: Props) {
               </li>
             ))}
           </ol>
+        </section>
+
+        {/* Ce qu'on fait de ses cartes */}
+        <section className="mt-14">
+          <h2 className="text-2xl font-bold text-white">{t.doTitle}</h2>
+          <ul className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+            {doItems.map((item) => (
+              <li
+                key={item.title}
+                className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"
+              >
+                <h3 className="font-semibold text-white">{item.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-gray-400">
+                  {item.body}
+                </p>
+              </li>
+            ))}
+          </ul>
         </section>
 
         {/* L'échelle de rareté */}
@@ -295,8 +325,8 @@ const tcgCatalogSeoFallback: SeoProps = {
     en: 'The Women’s Cup TCG — every card',
   },
   description: {
-    fr: 'Les cartes à collectionner de la Women’s Cup : équipes, maps, et comment on les gagne.',
-    en: 'The Women’s Cup trading cards: teams, maps, and how to earn them.',
+    fr: 'Les cartes à collectionner de la Women’s Cup : équipes, maps, comment on les gagne, séries, échanges et vitrine.',
+    en: 'The Women’s Cup trading cards: teams, maps, how to earn them, sets, trades and showcase.',
   },
 };
 

@@ -21,7 +21,16 @@ export default ns('tcgCatalog', {
     'Un paquet de cinq cartes est offert à chaque victoire, aux joueuses du camp gagnant — en tournoi comme en scrim classé.',
   howDropTitle: 'En suivant un direct',
   howDropBody:
-    'Pendant un stream, les points de chaîne Twitch donnent des pièces. Aucune équipe requise : c’est la voie des supportrices.',
+    'Pendant un stream, les points de chaîne Twitch donnent un paquet et des pièces. Aucune équipe requise : c’est la voie des supportrices.',
+  howPlacementTitle: 'En finissant bien classée',
+  howPlacementBody:
+    'À la fin d’un tournoi, les joueuses des équipes du top 8 reçoivent des pièces et jusqu’à trois paquets selon leur rang.',
+  howStreakTitle: 'En étant au rendez-vous',
+  howStreakBody:
+    'Une équipe qui fait ses check-ins plusieurs matchs d’affilée fait gagner un paquet et des pièces à ses titulaires.',
+  howBattlenetTitle: 'En vérifiant son compte Battle.net',
+  howBattlenetBody:
+    'Relier son compte Battle.net au site rapporte des pièces, une seule fois.',
   howShopTitle: 'En échangeant des pièces',
   howShopBody:
     'Les pièces s’échangent contre des boosters. Elles se gagnent, jamais ne s’achètent — soutenir l’association et collectionner restent deux choses distinctes.',
@@ -35,6 +44,17 @@ export default ns('tcgCatalog', {
   rarityLegendaryWhat: 'Un titre : première place, ou le haut du classement.',
   foilNote:
     'La brillance est une variante d’impression, pas un palier de plus : une carte brillante est rare sans valoir davantage.',
+
+  doTitle: 'Ce qu’on fait de ses cartes',
+  doSetsTitle: 'Compléter des séries',
+  doSetsBody:
+    'Toutes les maps d’un mode, toutes les équipes d’une édition, le roster d’une équipe : chaque série complétée rapporte des pièces, une fois.',
+  doTradesTitle: 'Échanger',
+  doTradesBody:
+    'Carte contre carte, entre collectionneuses du même espace qui l’ont choisi. Jamais de pièces ni de paquets dans un échange.',
+  doShowcaseTitle: 'Montrer sa vitrine',
+  doShowcaseBody:
+    'Jusqu’à trois cartes favorites sur sa fiche publique, si on le souhaite. Le reste de la collection reste privé.',
 
   catalogTitle: 'Le catalogue',
   filterAll: 'Tout',

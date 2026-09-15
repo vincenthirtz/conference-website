@@ -13,7 +13,10 @@
 > `tcg_twitch_drop.sql`, `add_tcg_overlay_tokens.sql`, `tcg_overlay_theme.sql`,
 > `tcg_welcome_gift.sql`, `tcg_welcome_gift_pack_coherence.sql`,
 > `tcg_supporter_welcome.sql`, `tcg_earn_sources_drop_streak_placement.sql`,
-> `tcg_battlenet_verified.sql`,
+> `tcg_battlenet_verified.sql`, `tcg_collection_set.sql`, `tcg_showcases.sql`,
+> `tcg_card_trades.sql` (échanges, cf. §4 « Les échanges »),
+> `tcg_wallet_atomic_balance.sql`, `tcg_admin_search_players_scoped.sql` et
+> `tcg_scrim_win_stable_ref.sql` (correctifs de sécurité du 2026-09-15, §7),
 > [`components/tcg/TcgCard.tsx`](../components/tcg/TcgCard.tsx),
 > [`components/overlay/TcgAnnouncement.tsx`](../components/overlay/TcgAnnouncement.tsx) et
 > [`pages/player/tcg.tsx`](../pages/player/tcg.tsx).
@@ -43,8 +46,9 @@ sur 97 n'étaient ni sur un roster ni staff, sans que rien ne les désigne.
 Ce que la révision ne change PAS. La page reste en `noindex` (une collection
 personnelle n'a rien à faire dans un moteur de recherche) ; les deux seuls
 endroits publics où une carte apparaît restent la fiche d'une joueuse
-(`/player/[userId]`, sa propre carte, sans lien vers elle-même) et la fiche
-d'une équipe (`/team/[slug]`) ; et surtout **la monnaie reste gagnée, jamais
+(`/player/[userId]`, sa propre carte, sans lien vers elle-même — plus, depuis le
+2026-09-15 et **seulement si elle l'active**, sa vitrine de trois cartes, cf.
+§2.5) et la fiche d'une équipe (`/team/[slug]`) ; et surtout **la monnaie reste gagnée, jamais
 achetée**. Une supportrice n'a aucune victoire à son actif : sa voie est le
 **drop Twitch** pendant un direct, qui n'exige pas d'équipe et fonctionne déjà.
 Faire un don ne crédite RIEN — soutenir l'association et collectionner sont deux
@@ -107,6 +111,18 @@ Deux asymétries assumées :
   (`NOT_PENDING`) : **sa décision prime** sur celle du staff, l'écran rafraîchit
   au lieu d'écraser.
 
+**On n'approuve que la photo qu'on a vue** (correctif de sécurité du
+2026-09-15). La décision désignait la joueuse, pas le fichier : la relectrice
+voyait A, la joueuse la remplaçait par B (de nouveau `pending`), et « approuver »
+publiait B, que personne n'avait regardée — la modération contournée par un
+simple remplacement. Symétriquement, un refus concurrent vidait le chemin de B
+et supprimait A : B restait orpheline dans le bucket public. Le `GET` rend donc
+`photoPath`, le `PATCH` l'exige, et l'écriture est **conditionnelle** :
+`photo_status = 'pending' AND photo_path = <affiché>`, avec `.select()` pour
+savoir si une ligne a été touchée. Zéro ligne → `409 PHOTO_CHANGED`, rien n'est
+écrit ni supprimé, l'écran rafraîchit. Le fichier supprimé au refus est le
+chemin que l'écriture a **confirmé**, jamais une relecture antérieure.
+
 Le contenu du fichier est vérifié par ses **magic bytes**, pas par le `mimeType`
 déclaré (2 Mio maximum, PNG/JPEG/WebP, pas de SVG) : le `mimeType` est une
 affirmation du client, et le bucket est public. Cf.
@@ -121,6 +137,15 @@ d'écriture laisserait une ligne pointant vers un fichier disparu, c'est-à-dire
 une carte cassée plutôt qu'une carte sans photo. La ligne, elle, est conservée :
 `revoked_at` et `opted_in_at` sont deux faits à garder, et effacer la ligne
 effacerait cette histoire.
+
+**Une lecture ratée n'est pas une absence** (2026-09-15). Le retrait lisait le
+chemin du fichier sans regarder l'erreur : sur un 504, il vidait quand même la
+colonne, et le fichier restait dans le bucket public sans plus aucune ligne pour
+le désigner — impossible à retirer, ni par la joueuse ni par le staff. Il rend
+désormais `500` sans rien écrire, et son effacement est conditionnel au chemin lu
+(un dépôt intercalé est relu, `409 PHOTO_CHANGED` après trois courses). Le dépôt,
+de même, lit l'ancienne photo **avant** d'envoyer la nouvelle et s'arrête en
+`500` si cette lecture échoue.
 
 Le retrait atteint les cartes **déjà distribuées**, et c'est une propriété du
 modèle, pas une opération de rattrapage :
@@ -179,6 +204,55 @@ le remplacement supprime le fichier précédent.
 qu'un logo n'est pas fait pour être rogné, là où une illustration remplit son
 cadre. Les deux champs restent donc distincts jusqu'au rendu, au lieu d'être
 fusionnés à la lecture.
+
+### 2.5 La vitrine : montrer ses cartes, en opt-in
+
+Une joueuse peut exposer **jusqu'à trois cartes** de sa collection sur SA fiche
+publique (`/player/[userId]`) —
+[`utils/tcg/showcase.ts`](../utils/tcg/showcase.ts),
+[`pages/api/player/tcg/showcase.ts`](../pages/api/player/tcg/showcase.ts),
+[`components/tcg/TcgShowcaseEditor.tsx`](../components/tcg/TcgShowcaseEditor.tsx)
+(réglage sur `/player/tcg`) et
+[`components/tcg/TcgShowcaseSection.tsx`](../components/tcg/TcgShowcaseSection.tsx)
+(affichage). C'est l'interaction qui donne un public à une collection ; elle
+touche des photos de personnes, d'où les mêmes exigences qu'aux trois
+garde-fous ci-dessus.
+
+- **Désactivée par défaut.** Sans ligne `tcg_showcases`, ou `enabled = false`,
+  la fiche n'en montre rien — pas même un titre vide. Le reste de la collection
+  reste privé et `/player/tcg` reste `noindex`.
+- **Désactiver ne s'attend pas et ne se refuse pas.** La case se sauvegarde dès
+  qu'on la décoche (le choix des cartes, lui, s'enregistre explicitement), et le
+  `PUT enabled: false` ne vérifie RIEN — ni collection lisible, ni cartes encore
+  possédées : un retrait refusé laisserait en ligne ce qu'on demande de retirer.
+  La fiche est régénérée tout de suite (`revalidatePlayerCard`), comme pour une
+  photo.
+- **Des références, jamais des images.** `subject_keys` porte `player:<uuid>`,
+  `team:<uuid>` ou `map:<slug>` — un SUJET, pas un exemplaire : céder une copie
+  dont on garde un double ne vide pas la vitrine.
+- **Relue contre la possession réelle, à chaque affichage.** Une carte recyclée
+  jusqu'au dernier exemplaire ou **échangée** (lot « échanges ») sort de la
+  vitrine sans que personne ne nettoie la ligne ; la rareté montrée est la
+  meilleure encore possédée. Activer exige de posséder chaque carte
+  (`409 not_owned`).
+- **Les faces passent par `readCardFaces`.** Une joueuse exposée dans la
+  vitrine d'une AUTRE qui retire sa photo y retombe sur son avatar ou l'aplat.
+  Et parce que la fiche est en ISR, `revalidatePlayerCard` régénère désormais
+  aussi les fiches dont la vitrine ACTIVE expose sa carte (lecture
+  `readShowcaseOwnersShowing`, index GIN partiel) — sinon la photo retirée
+  resterait jusqu'à cinq minutes chez les autres. Tous tenants confondus : une
+  page régénérée de trop ne coûte rien.
+- **Dans le doute, rien.** Une lecture en échec au rendu de la fiche rend
+  `null` : pas de vitrine plutôt qu'une vitrine invérifiable.
+- **Hors de `PlayerProfileResponse`**, comme la photo : ce type nourrit l'API
+  partenaire `/api/public/v1/players/[userId]`, où la vitrine n'a pas été
+  consentie.
+
+Limites connues : la fiche publique lit l'espace par défaut et n'existe que
+pour une joueuse classée ou sur un roster — une supportrice peut régler sa
+vitrine, l'écran lui dit qu'elle ne s'affiche encore nulle part
+(`publicProfileUrl: null`). Un **échange** ne régénère pas la fiche de la
+cédante : la carte cédée disparaît à la prochaine régénération ISR (≤ 300 s).
 
 ## 3. Le barème de rareté
 
@@ -271,6 +345,7 @@ ne remplace pas la première.
 | `CHECKIN_STREAK_COINS` | 50     | `SCRIM_WIN_COINS` — + un paquet, tous les 5 check-ins  |
 | `PLACEMENT_TIERS`      | 1→8    | rang 1 : 500 + 3 paquets · 2 : 300 + 2 · 3 : 200 + 1 · 4-8 : 100 + 1 |
 | `BATTLENET_VERIFIED_COINS` | 100 | `MATCH_WIN_COINS`, **sans paquet** — une fois à vie, compte Battle.net prouvé |
+| `COLLECTION_SET_COINS` | 100 | `MATCH_WIN_COINS`, **sans paquet** — une fois par série complétée (cf. « Les séries ») |
 
 Aucun de ces montants n'est écrit en dur ailleurs : **le rapport scrim/match est
 importé, pas recopié.** Le dépôt pondère déjà un scrim à `SCRIM_RATING_WEIGHT`
@@ -312,6 +387,20 @@ passage suivant. Une somme négative — signe d'un registre incohérent — est
 plafonnée à zéro plutôt que de faire échouer l'écriture et de laisser le cache
 figé sur une valeur encore plus fausse.
 
+**La somme est faite par la base, sous verrou** (correctif de sécurité du
+2026-09-15, migration `tcg_wallet_atomic_balance.sql`). `refreshBalance` sommait
+en JavaScript un `select('amount')` **non paginé** : PostgREST coupe à 1000
+lignes, le solde se figeait au-delà, sans erreur. Il appelle désormais
+`tcg_refresh_wallet_balance(tenant, user)` : `SELECT … FOR UPDATE` de la ligne de
+porte-monnaie, `SUM(amount)` du registre, réécriture du cache — une transaction.
+Le verrou le fait attendre derrière un achat en vol au lieu d'écraser son débit
+([`utils/tcg/walletRpc.ts`](../utils/tcg/walletRpc.ts)). Fonction absente →
+repli sur une somme **paginée** (le plafond est levé, la course résiduelle ne
+touche que le cache) ; une **panne** de la fonction, elle, n'écrit rien : on ne
+se replie pas sur un chemin moins sûr à cause d'un 504. Toute écriture qui
+**décide** sur un solde (achat, retrait staff) passe par une fonction SQL et ne
+se replie jamais.
+
 `source_kind` accepté par le schéma : `match_win`, `scrim_win`,
 `booster_purchase`, `admin_grant`, `card_recycled`, `twitch_drop`
 (`tcg_twitch_drop.sql`, 2026-09-13), `welcome_gift` (`tcg_welcome_gift.sql`,
@@ -319,7 +408,8 @@ figé sur une valeur encore plus fausse.
 `checkin_streak` et `tournament_placement`
 (`tcg_earn_sources_drop_streak_placement.sql`, appliquée le 2026-09-15), et
 `battlenet_verified` (`tcg_battlenet_verified.sql`, **non appliquée** à la
-rédaction, 2026-09-15). Côté paquets, `tcg_packs.source_kind` admet `victory`, `purchase`,
+rédaction, 2026-09-15), et `collection_set` (`tcg_collection_set.sql`, **non
+appliquée** à la rédaction, 2026-09-15). Côté paquets, `tcg_packs.source_kind` admet `victory`, `purchase`,
 `welcome`, et avec la même migration `drop`, `placement` et `streak`.
 `admin_grant` est écrit par `POST /api/admin/tcg/grant` (correction tracée
 par l'équipe, `source_ref` = clé d'idempotence). Son **motif est lisible par
@@ -337,6 +427,39 @@ accorder le support ouvrait du même geste la correction des soldes et la
 relecture des photos. La recherche de comptes de la carte d'ajustement passe par
 `/api/admin/tcg/players`, sous le même droit, plutôt que par
 `/api/admin/users/search` (`manage_staff`).
+
+⚠️ **`manage_tcg` n'est pas un droit de confiance plateforme** (audit du
+2026-09-15) : tout `owner` d'espace l'a par rôle, y compris l'owner d'un espace
+**développeur** créé en libre-service. Deux routes le traitaient comme tel :
+
+- la recherche appelait la RPC **globale** `admin_search_users` — emails,
+  BattleTags et équipes de **tous** les comptes. Elle appelle désormais
+  `admin_search_tcg_players(tenant, q)` (migration
+  `tcg_admin_search_players_scoped.sql`), filtrée **en base** sur les comptes
+  rattachés à l'espace, par pseudo et BattleTag ; l'email n'est ni cherché ni
+  rendu. Fonction absente → `503 SEARCH_UNAVAILABLE`, jamais de repli global ;
+- la correction acceptait **n'importe quel** `userId`. Un owner tiers créditait
+  +1 pièce à une étrangère — ce qui lui créait un porte-monnaie chez lui — puis
+  son rattrapage Battle.net (qui tenait « un porte-monnaie » pour un
+  rattachement) consommait chez lui la récompense **unique** de la joueuse. La
+  cible doit désormais être rattachée, sinon `404 USER_NOT_FOUND`, indiscernable
+  d'un compte inexistant et rendu avant toute lecture GoTrue.
+
+**« Rattachée à l'espace »** a une seule définition,
+[`utils/tcg/tenantAttachment.ts`](../utils/tcg/tenantAttachment.ts), recopiée à
+l'identique dans la fonction SQL (un test compare les deux listes) : une ligne de
+**roster** du tenant, **ou** un **gain réel** au registre du tenant — liste
+blanche `match_win`, `scrim_win`, `twitch_drop`, `welcome_gift`,
+`supporter_welcome`, `checkin_streak`, `tournament_placement`,
+`battlenet_verified`. Exclus : `admin_grant` (le geste même qu'on empêche de
+fabriquer un rattachement), `booster_purchase` et `card_recycled` (dérivés de
+pièces qui peuvent venir d'un `admin_grant`), et toute source future tant que
+personne ne l'a ajoutée exprès — une liste blanche oublie une joueuse, elle
+n'invite jamais une étrangère. **Limite connue** : un owner peut encore ajouter
+un compte existant à un roster de son espace sans son consentement
+(`POST /api/admin/teams/[teamId]/members`, par email ou par id) ; le
+rattachement « roster » reste donc fabricable par un staff malveillant. Le
+fermer relève d'un flux d'invitation acceptée.
 `source_ref` est du **texte**,
 et non un uuid, parce que les sources n'ont pas toutes la même clé (un match, un
 paquet, une carte `<pack_id>:<position>`, un tournoi, un tenant, un direct,
@@ -367,11 +490,20 @@ refus, ce qui est là que ce genre d'incident se joue.
 - **L'achat ne crée qu'un paquet fermé.** Le tirage appartient à l'ouverture :
   séparer les deux permet de montrer « tu as N paquets » sans avoir figé leur
   contenu, et de rejouer une ouverture ratée sans re-débiter.
-- **Le débit est conditionnel au solde lu** (`.eq('balance', avant)`), et non une
-  lecture puis une écriture : deux achats simultanés ne peuvent pas dépenser deux
-  fois les mêmes pièces — le second reçoit `409 balance_changed`. La contrainte
-  d'unicité du registre ne protège pas de ce cas, chaque achat ayant sa propre
-  référence.
+- **L'achat est une transaction SQL** (`tcg_purchase_booster`, correctif de
+  sécurité du 2026-09-15). L'ancien débit « conditionnel au solde lu »
+  (`.eq('balance', avant)`) enchaînait trois requêtes — débit du cache, paquet,
+  registre — et ne protégeait que de deux achats lisant la même valeur : un
+  recalcul intercalé (un gain, un recyclage, un autre achat) relisait un registre
+  pas encore débité et **écrasait** le débit. Trois achats rapides en livraient
+  trois pour le prix de deux, le registre passait sous zéro, et le plafond du
+  recalcul le ramenait silencieusement à 0. La fonction verrouille la ligne de
+  porte-monnaie (`FOR UPDATE`), relit le solde par `SUM(amount)` sur le
+  **registre**, crée le paquet, écrit la dépense et le cache — tout ou rien. Le
+  contrat HTTP est inchangé (`400 insufficient_funds`, `409 balance_changed` si le
+  verrou n'est pas obtenu) ; fonction absente → `503 purchase_unavailable` : on
+  **refuse** plutôt que d'acheter sans verrou. Un 504 après commit ne laisse plus
+  ni paquet gratuit ni remboursement à orchestrer.
 - **Le tirage précède la consommation.** Un vivier vide ne coûte pas son paquet
   (`409 empty_pool`, paquet toujours fermé). La réservation est atomique
   (`opened_at IS NULL`) et **relâchée** si l'écriture des cartes échoue : mieux
@@ -402,12 +534,18 @@ refus, ce qui est là que ce genre d'incident se joue.
   « détruire sa collection contre de la monnaie ». La carte n'est pas supprimée
   mais **marquée** (`recycled_at`), ce qui garde le crédit correspondant
   explicable dans l'historique ; les lecteurs de collection l'ignorent.
+  **Recompte après réservation** (2026-09-15) : le contrôle « au moins deux
+  exemplaires » est une lecture, et `recycled_at IS NULL` protège une carte, pas
+  un sujet — deux recyclages simultanés des deux derniers exemplaires passaient
+  tous les deux. La route recompte donc **après** avoir réservé sa carte ; s'il ne
+  reste plus aucun exemplaire, elle relâche sa réservation (conditionnée à son
+  horodatage) et refuse. Deux requêtes croisées peuvent se refuser toutes les
+  deux — un refus rejouable, jamais la dernière carte détruite.
 
-L'ordre des écritures diffère volontairement entre les deux gestes : l'achat
-**débite avant de livrer**, le recyclage **marque avant de créditer**. Même
-raison dans les deux cas — mieux vaut un état réparable (des pièces prélevées
-sans paquet, une carte retirée sans crédit ; les deux sont relâchés en cas
-d'échec) que de la monnaie ou un paquet créés à partir de rien.
+L'achat n'a plus d'ordre d'écriture à arbitrer : sa transaction est tout ou
+rien. Le recyclage, lui, **marque avant de créditer** — mieux vaut un état
+réparable (une carte retirée sans crédit, relâchée en cas d'échec) que de la
+monnaie créée à partir de rien.
 
 ### Le drop Twitch : des pièces et un paquet
 
@@ -674,10 +812,14 @@ sûre.
 Battle.net sont globaux, le crédit va dans `ctx.tenantId`, et l'index « une fois
 par personne » est global : rattraper depuis l'espace A une joueuse qui ne joue
 que dans B **consommerait dans A** sa récompense unique, et B ne pourrait plus la
-lui verser. Sont donc rattrapés les seuls comptes rattachés au tenant par **une
+lui verser. Sont donc rattrapés les seuls comptes **rattachés** au tenant au sens
+de [`utils/tcg/tenantAttachment.ts`](../utils/tcg/tenantAttachment.ts) : **une
 ligne de roster** (`team_members`, la définition de « participante » des deux
-cadeaux d'accueil) **ou un porte-monnaie TCG** (`tcg_wallets` : elle collectionne
-déjà ici — supportrice, drop — sans roster). Les liens écartés sont comptés
+cadeaux d'accueil) **ou un gain réel au registre** (elle collectionne déjà ici —
+supportrice, drop — sans roster). ⚠️ **Plus « un porte-monnaie »** depuis le
+2026-09-15 : un porte-monnaie naît du premier crédit, `admin_grant` compris, et un
+owner tiers s'en servait pour détourner la récompense unique d'une étrangère (cf.
+« Qui gère le TCG côté staff »). Les liens écartés sont comptés
 (`outsideSpace`) plutôt que tus. Limite assumée : un compte vérifié sans roster
 ni collection dans l'espace n'est rattrapable nulle part tant qu'il n'y entre
 pas — il peut aussi le rattacher lui-même en collectionnant, puis être rattrapé.
@@ -707,6 +849,220 @@ un paramètre forgé ne crédite rien et n'affiche qu'à son auteur un montant
 exact. Le paramètre est retiré de l'URL avec `battlenet`, seulement s'il porte
 cette valeur.
 
+### Les séries (collections à compléter)
+
+[`utils/tcg/collectionSets.ts`](../utils/tcg/collectionSets.ts) (calcul pur),
+[`utils/tcg/readCollectionSets.ts`](../utils/tcg/readCollectionSets.ts)
+(lecture), [`utils/tcg/grantCollectionSets.ts`](../utils/tcg/grantCollectionSets.ts)
+(récompense et annonce), [`components/tcg/TcgSetsPanel.tsx`](../components/tcg/TcgSetsPanel.tsx)
+(progression sur `/player/tcg`). Une série est un ensemble de cartes à réunir ;
+la compléter rapporte `COLLECTION_SET_COINS` — **100 pièces, sans paquet, une
+fois par série et par joueuse**.
+
+**Une série se dérive, elle ne se saisit pas.** Trois types, calculés sur les
+tables existantes :
+
+| Type | Cartes | `source_ref` |
+| --- | --- | --- |
+| `map_mode` | toutes les maps d'un mode (registre `config/maps/overwatch.ts`) | `maps:<mode>` |
+| `tournament_teams` | toutes les équipes engagées dans une édition (`stage_teams` de ses phases non supprimées) | `tournament:<tournoi>` |
+| `team_roster` | la carte d'une équipe + ses joueuses POUR l'édition | `roster:<tournoi>:<équipe>` |
+
+Pourquoi ceux-là : les maps ne représentent personne et sont complétables par
+construction ; les équipes d'une édition sont des sujets publics rattachés à un
+moment vécu ; le roster est la série la plus parlante (« j'ai toute mon
+équipe »). **Écartés** : « toutes les joueuses d'un tournoi » (une chasse aux
+personnes à grande échelle, sans le lien du roster) et les séries par rareté
+(figée au tirage, elle varie d'un exemplaire à l'autre). Seuls comptent les
+tournois visibles (`published`, `running`, `completed`, les 10 plus récents),
+et une série a au moins **3 cartes** — un roster sans joueuse tirable, créé en
+deux clics depuis `/team/create`, ne rapporte donc rien.
+
+**L'effectif d'une édition** : `match_participants` du tournoi s'il est
+`completed` (qui a réellement joué, la définition du palmarès), sinon
+`team_members` hors encadrement (aucune feuille de match n'existe avant le
+début). Quand l'édition se termine, un roster peut changer de contenu : une
+récompense versée reste acquise, une série incomplète suit le nouvel effectif.
+
+**Jamais incomplétable.** Chaque carte d'une série appartient au vivier du
+tirage, lu par le module partagé
+[`utils/tcg/readDrawPool.ts`](../utils/tcg/readDrawPool.ts) — que l'ouverture de
+paquet utilise désormais aussi : une lecture, deux usages, aucune série qui
+exigerait une carte qu'aucun paquet ne peut donner. Une équipe inactive ou une
+joueuse sans ligne `player_ratings` sort de la série au lieu de la bloquer.
+
+**Consentement.** Une joueuse qui refuse ou retire sa photo garde sa carte
+(avatar, aplat), donc sa place dans la série : le consentement n'est même pas
+une entrée du calcul. Et **les joueuses manquantes ne sont jamais nommées** —
+l'API rend `missingPlayers` (un nombre), seules les équipes et maps manquantes
+sont nommées (`missingNamed`). Nommer « il te manque X » ferait de la série un
+avis de recherche. Limite assumée : le roster d'une équipe est public sur sa
+fiche, une déduction reste possible ; aucun écran ne la fait à la place de la
+collectionneuse. Il **n'existe pas** au 2026-09-15 de mécanisme permettant à une
+joueuse de ne pas figurer dans le TCG ; s'il est créé en la retirant du vivier
+du tirage, elle sortira d'office de toutes les séries, qui rétréciront.
+
+**Deux déclencheurs, une clé.** À l'ouverture d'un paquet (le moment où la
+série se complète ; la réponse porte `setsCompleted`) ET à chaque lecture de
+`GET /api/player/tcg/sets` (vérification paresseuse : séries déjà complètes
+avant la fonctionnalité, migration appliquée après coup, effet de bord raté).
+Les deux passent par `checkCollectionSets` → `grantCoinsThenPacks`
+(`packSourceKind: null`), un appel par série. La lecture préalable des séries
+déjà récompensées ne sert qu'à l'affichage : seul le `RETURNING` décide qu'on
+a crédité, et seul lui déclenche l'annonce.
+
+- **Recycler après la récompense ne la reprend pas** : la série se relit sur ce
+  qu'on possède (le compteur redescend, `rewarded` reste vrai), la récompense
+  vit dans le registre. **Recompléter ne la reverse pas** : la clé est prise.
+- **Lecture partielle = aucune écriture** : une phase, un effectif ou le vivier
+  illisible rend `500 sets_unreadable` ; un roster lu à moitié paraîtrait
+  complet.
+- **Migration absente** : l'écriture est refusée en `23514` et journalisée ; la
+  lecture suivante retente, rien n'est perdu. Le drapeau `schemaReady` est levé
+  avec le code, comme `battlenet_verified`.
+- **Pas de `?as=`** : une inspection staff ne récompense pas au nom de
+  quelqu'un.
+
+**Le montant.** Une victoire de match, un tiers de booster. Pas de paquet : la
+série se complète en ouvrant des paquets, en rendre un nourrirait la boucle
+qu'on récompense. Un espace d'une quinzaine de séries plafonne ce gain à ~5
+boosters sur toute la vie d'un compte, là où les compléter toutes demande des
+dizaines de paquets.
+
+**Annonce.** `tcg.set_completed`
+`{ userId, discordUserId, discordUsername, setKey, setLabel, coins, ctaUrl }`,
+un par joueuse, sur la seule écriture réelle. `setLabel` est composé en français
+par le site (`Maps — Contrôle`, `Équipes — Cup 2026`,
+`Roster Hinode Sparkles — Cup 2026`) et **ne nomme jamais une joueuse** : un DM
+se lit par-dessus l'épaule. Événement distinct de `tcg.reward_granted` : une
+série n'a ni tournoi obligatoire, ni rang, ni paquet.
+
+### Les échanges : carte contre carte
+
+La première interaction entre collectionneuses
+([`utils/tcg/tradeRules.ts`](../utils/tcg/tradeRules.ts),
+[`utils/tcg/trades.ts`](../utils/tcg/trades.ts),
+[`pages/api/player/tcg/trades/`](../pages/api/player/tcg/trades),
+[`pages/player/tcg/echanges.tsx`](../pages/player/tcg/echanges.tsx), migration
+`tcg_card_trades.sql`, **non appliquée** au 2026-09-15). Une joueuse propose des
+cartes à elle contre des cartes qu'une autre montre en double ; l'autre accepte,
+refuse ou laisse expirer.
+
+**Carte contre carte, rien d'autre.** Aucune pièce, aucun paquet fermé, aucun
+don : le corps d'une proposition est strict (zod `.strict()`), il n'a pas de
+champ pour un montant, un paquet ou un message, et la migration n'écrit jamais
+`tcg_wallet_entries`. Les deux côtés portent **au moins une carte et autant de
+cartes** (1 à 5, parité). La monnaie reste gagnée, jamais transférée — un marché
+de pièces rouvrirait la revente contre de l'argent réel (cf. « La monnaie se
+gagne »).
+
+**La carte se déplace, elle n'est pas recopiée.** À l'acceptation, la LIGNE de
+`tcg_pack_cards` change de paquet : elle rejoint un paquet d'origine `trade`,
+**ouvert dès sa création**, de la receveuse. Conséquences voulues :
+
+- rareté et brillance restent celles du tirage (c'est la même ligne) ;
+- aucun lecteur de collection n'a changé : « ce que je possède » se déduit
+  toujours des paquets ouverts, et une carte ne peut pas compter deux fois ;
+- un recyclage concurrent échoue proprement — son `UPDATE` exige l'ancien
+  `pack_id` ;
+- **aucune image ne voyage** : la face est relue par `readCardFaces` partout, y
+  compris dans les propositions ; une photo retirée disparaît aussi chez la
+  nouvelle propriétaire.
+
+La provenance est gardée dans `tcg_trade_items` (`from_*` → `to_*`). Les paquets
+`trade` sont **exclus des compteurs de paquets** (liste des paquets, vue
+d'ensemble staff, route bot) : ils ne sortent d'aucune victoire ni d'aucun achat.
+
+**Atomicité réelle.** PostgREST ne fait pas de transaction multi-requêtes ; deux
+`update` successifs pourraient laisser une carte partie sans que l'autre arrive.
+Proposer et accepter sont donc deux fonctions SQL `SECURITY DEFINER`
+(`tcg_propose_trade`, `tcg_accept_trade`), exécutables par `service_role`
+seule. L'acceptation, dans cet ordre : lecture de la paire sans verrou → verrous
+consultatifs sur les **deux** joueuses, ordre stable (pas d'interblocage entre
+deux acceptations qui partagent quelqu'un) → verrou de la proposition →
+plafonds → **revérification de la possession sous verrou de ligne** (paquet
+ouvert à elle, non recyclée, échangeable, même sujet) → deux paquets `trade` →
+déplacements → statut. Une proposition déjà acceptée rend `already_accepted`
+avant toute écriture : **double clic et retry sont idempotents**, sans seconde
+annonce. Un 504 après commit se rattrape de la même façon.
+
+**Engagement d'une carte : la caducité, pas le gel.** Une carte OFFERTE est un
+exemplaire précis, figé à la proposition ; elle ne peut pas être promise dans
+une seconde proposition en attente (vérifié sous le verrou de la proposante).
+Elle **n'est pas gelée** pour autant : recycler reste possible, et la
+proposition devient **caduque proprement** — à l'acceptation, l'exemplaire
+manquant fait annuler la proposition par le système (`offered_unavailable`),
+annoncée à la proposante. Quand un échange accepté déplace un exemplaire offert
+ailleurs, ces autres propositions sont annulées sur-le-champ
+(`card_unavailable`). Les cartes DEMANDÉES ne sont jamais verrouillées chez la
+destinataire : sinon demander une carte suffirait à empêcher quelqu'un de la
+recycler. Si elle ne l'a plus au moment d'accepter, la réponse est
+`409 requested_unavailable` **sans rien changer ni annoncer** — l'annonce
+apprendrait à la proposante ce que l'autre ne possède plus.
+
+**Vie privée : on ne voit pas la collection d'une autre.** Trois choix liés :
+
+- **opt-in, désactivé par défaut** (`tcg_trade_settings.accepts_proposals`) :
+  dans un milieu où les joueuses subissent du harcèlement, être sollicitable est
+  une décision. Même règle que la photo et que la découverte joueuse ;
+- la liste des partenaires ne contient **que les volontaires du tenant**, servie
+  à une volontaire (réciprocité), sans email, sans recherche plateforme ni RPC
+  staff — ce n'est pas un annuaire ;
+- d'une partenaire, on ne voit que ses **doubles échangeables** (au moins deux
+  exemplaires, dont un échangeable), à la rareté de l'exemplaire qui partirait.
+  Une demande « à l'aveugle » dans tout le catalogue aurait exigé de lister
+  toutes les joueuses de l'espace et aurait sondé sa collection proposition
+  après proposition. Côté destinataire, l'exemplaire cédé est le **moins
+  précieux** (même règle que le recyclage), et l'écran avertit d'un dernier
+  exemplaire.
+
+**Anti-harcèlement.** Pas de texte libre ; une seule proposition en attente par
+paire (index unique partiel) ; 5 envoyées et 10 reçues en attente au plus ;
+**24 h après un refus** avant de reproposer à la même personne ; expiration à
+**72 h** ; pas d'échange avec soi-même (`CHECK`). Désactiver les échanges ne
+laisse rien en attente : reçues annulées par le système (annoncées), envoyées
+retirées (non annoncées).
+
+**Anti-abus multi-comptes** (retour de l'audit sécurité du 2026-09-15). Le rôle
+`supporter` s'auto-attribue et rapporte un paquet par compte ; un roster se
+gonfle de comptes secondaires avant un 5e check-in. L'échange en ferait un
+filon. Gardes, **toutes par compte et portées par la base** (le rate-limit HTTP
+lit une IP fournie par le client, il ne protège de rien seul) :
+
+| Garde | Où |
+| --- | --- |
+| Seules les cartes de paquets `victory`, `placement`, `purchase`, `trade` s'échangent — **pas** `welcome` (cadeaux), `streak` (roster gonflable), `drop` (compte Twitch gratuit) | `tcg_pack_source_tradeable` ↔ `TRADEABLE_PACK_SOURCES` (test qui lit le SQL) |
+| Compte d'au moins **14 jours** ET collection (premier paquet gagné) d'au moins **7 jours**, pour activer, proposer et accepter | `tcg_trade_eligibility` (lit `auth.users.created_at`) |
+| Parité du nombre de cartes | `tcg_propose_trade` + zod |
+| **3 échanges acceptés par 24 h glissantes**, par personne, des deux côtés | `tcg_accept_trade`, sous verrous consultatifs |
+| Une carte reçue par échange **ne compte pas pour les séries** (ni récompense, ni progression) | `readOwnedCardRows(…, { excludeTradedIn: true })` dans `checkCollectionSets` |
+
+`purchase` reste échangeable : un booster coûte 300 pièces gagnées, le cadeau
+d'accueil (100) n'y suffit pas seul. Limite assumée : des comptes secondaires
+qui GAGNENT réellement des matchs, patients, peuvent encore faire converger des
+cartes — à parité, trois échanges par jour, cartes communes contre rares. La
+valeur n'est pas équilibrée (cf. §7).
+
+**Expiration : paresseuse ET planifiée.** Chaque route d'échange expire ce qui
+concerne l'appelante avant de lire ; le cron horaire
+[`/api/cron/tcg-trades-expire`](../pages/api/cron/tcg-trades-expire.ts)
+(`netlify/functions/tcg-trades-expire-cron.ts`, `17 * * * *`) garantit que
+l'annonce part à temps même si personne ne revient. L'écriture est
+conditionnelle (`status = 'pending'`) : deux déclencheurs ne peuvent pas faire
+basculer la même ligne, donc **une seule annonce**.
+
+**Annonces bot** (contrat fixe, `docs/BOT_API_CONTRACT.md`) :
+`tcg.trade_proposed` à la destinataire à la création, `tcg.trade_resolved` à la
+proposante (`accepted`, `declined`, `expired`, et `cancelled` **seulement** si
+le système annule). Aucune image, aucun sujet de carte dans la charge. Hors
+`WEB_PUSH_EVENT_TYPES`. Accepter régénère aussi la fiche publique des deux
+joueuses (`revalidatePlayerCard`, vitrine), en best-effort.
+
+**Journalisation.** Les tables sont le journal durable (création, résolution,
+motif, provenance de chaque carte) ; chaque transition est aussi journalisée
+côté serveur (`[tcg/trades]`). Pas de `staff_logs` : ce sont des gestes de
+joueuses.
+
 ### Ce que la victoire déclenche
 
 [`utils/tcg/grantVictoryRewards.ts`](../utils/tcg/grantVictoryRewards.ts) est
@@ -721,6 +1077,46 @@ Les **remplaçantes sont récompensées** : elles figurent dans
 Inventer ici une seconde définition de « avoir joué » ferait diverger deux
 systèmes qui décrivent la même rencontre.
 
+**Un scrim paie une fois, quel que soit son miroir** (correctif de sécurité du
+2026-09-15). Un scrim classé est noté via un match **miroir**
+([`utils/scrims/ratedMatch.ts`](../utils/scrims/ratedMatch.ts)), et la récompense
+était clée sur l'id de ce miroir — pièces (`source_ref`) comme paquet
+(`source_match_id`). Or le miroir était **supprimé** dès que le scrim cessait
+d'être éligible, puis **recréé** sous un autre id. La boucle, sans complice : A
+gagne, reports concordants → miroir M1 → paquet + 50 pièces ; la capitaine A
+re-rapporte 0-1 → litige → M1 supprimé (le paquet part en cascade) ; elle
+re-rapporte 1-0 → accord avec le report de B resté en base → M2 → nouveau paquet,
+nouvelles pièces. À l'infini. Trois correctifs, chacun suffisant contre la
+boucle des capitaines :
+
+1. **La clé est le scrim.** Pièces `scrim_win` sous `source_ref = scrim:<scrimId>`
+   (`refKind: 'scrim'` dans `earnSources.ts`), écrites **d'abord**, et paquet
+   accordé aux **seules** joueuses que cette écriture vient de créditer — la
+   discipline de `grantCoinsThenPacks`. Un scrim déjà payé, sous ce miroir ou un
+   autre, ne rend aucune ligne, donc aucun paquet ni annonce. Une victoire de
+   scrim sans `scrimId` ne paie **rien** plutôt que de retomber sur le miroir.
+   Un arbitrage qui change de vainqueur paie les nouvelles gagnantes, sans rien
+   reprendre aux anciennes (un paquet ouvert ne se reprend pas).
+2. **Un scrim `completed` ne se re-rapporte plus.** `409 SCRIM_CLOSED` : un
+   résultat validé par les deux équipes n'a pas à être défait par une seule ;
+   une contestation passe par le staff. La bascule en litige est en outre
+   **conditionnelle** (`status NOT IN (completed, cancelled)`) : un scrim clos
+   entre la lecture et un report divergent n'est pas rouvert.
+3. **Un miroir qui a payé est neutralisé, plus supprimé.** S'il a servi de source
+   à un paquet (ou si on ne peut pas le lire), il passe `disputed` (scrim en
+   litige) ou `cancelled`, sans vainqueur, et perd historique de rating et
+   feuille ; il redevient `finished` **sous le même id** si le scrim redevient
+   éligible. Les paquets — et les cartes déjà ouvertes, éventuellement échangées —
+   ne partent plus en cascade. Un miroir neutralisé reste visible dans la liste
+   des matchs du scrim (statut annulé / litige) : c'est le prix assumé.
+
+Les gains versés **avant** le correctif portent l'id du miroir : la migration de
+données `tcg_scrim_win_stable_ref.sql` les réécrit sous `scrim:<id>` quand le
+miroir existe encore (cf. §7 pour l'ordre et ce qu'elle ne peut pas rattraper).
+Les **matchs de tournoi** gardent leur clé (l'id du match) : le report d'un match
+ne supprime pas le match, et le paquet reste accordé à toutes les gagnantes,
+son unicité suffisant contre un rejeu.
+
 L'annonce (`tcg.pack_granted`, un événement **par gagnante**) n'est émise que
 pour les paquets **réellement insérés** : l'`upsert ... ignoreDuplicates` ne rend
 que les lignes nouvellement créées, donc un rejeu ne renotifie personne. Le lien
@@ -733,7 +1129,7 @@ la page.
 
 ## 5. Modèle de données et invariants portés par le schéma
 
-Cinq tables, toutes en RLS `service_role` seul — rien n'est lu par le client en
+Neuf tables, toutes en RLS `service_role` seul — rien n'est lu par le client en
 direct, tout passe par les routes serveur.
 
 | Table                | Clé                    | Rôle                                                  |
@@ -743,6 +1139,10 @@ direct, tout passe par les routes serveur.
 | `tcg_pack_cards`     | `(pack_id, position)`  | contenu figé d'un paquet ouvert                       |
 | `tcg_wallets`        | `(tenant_id, user_id)` | solde — **cache** du registre, `CHECK (balance >= 0)` |
 | `tcg_wallet_entries` | `id`                   | registre des mouvements — **source de vérité**        |
+| `tcg_showcases`      | `(tenant_id, user_id)` | vitrine opt-in : `enabled` (défaut `false`) + ≤ 3 références de sujet (`tcg_showcases.sql`, **non appliquée** au 2026-09-15) |
+| `tcg_trade_settings` | `(tenant_id, user_id)` | « recevoir des propositions » — opt-in, défaut `false` (`tcg_card_trades.sql`, **non appliquée**) |
+| `tcg_trades`         | `id`                   | une proposition d'échange et son issue (`pending`, `accepted`, `declined`, `cancelled` + motif, `expired`) |
+| `tcg_trade_items`    | `(trade_id, side, ordinal)` | ses cartes : offerte = exemplaire figé ; demandée = sujet, exemplaire choisi à l'acceptation ; provenance `from_*` → `to_*`, aucune image |
 
 **Les invariants sont dans le schéma, pas dans la prudence de l'appelant.** C'est
 la leçon explicitement citée par les trois migrations : le 2026-09-12, quatre
@@ -753,7 +1153,17 @@ entre la lecture et l'écriture.
 - `UNIQUE (tenant_id, user_id, source_match_id)` sur `tcg_packs` : un match ne
   peut pas offrir deux paquets à la même joueuse. L'attribution s'écrit donc en
   `upsert(..., ignoreDuplicates: true)` — un rejeu (reprise de cron, correction
-  de score, double appel) ne crée rien et n'échoue pas.
+  de score, double appel) ne crée rien et n'échoue pas. ⚠️ **Elle suit l'id du
+  match, pas la rencontre** : `source_match_id` est en `ON DELETE CASCADE`, et un
+  match supprimé puis recréé rouvre la récompense. C'est pourquoi la victoire de
+  **scrim** s'ancre sur le registre (`scrim:<scrimId>`) et que son miroir n'est
+  plus supprimé (cf. « Ce que la victoire déclenche ») ; le cas des matchs de
+  tournoi est au §7.
+- **Toute dépense se décide sous verrou** : `tcg_purchase_booster` et
+  `tcg_admin_debit` verrouillent la ligne `tcg_wallets` (`FOR UPDATE`), relisent
+  `SUM(amount)` et écrivent dans la même transaction ; `tcg_refresh_wallet_balance`
+  prend le même verrou avant de réécrire le cache. Un gain n'a pas besoin du
+  verrou pour s'écrire (il ne peut rien rendre négatif), seulement pour recalculer.
 - `UNIQUE (tenant_id, user_id, source_kind, source_ref)` sur
   `tcg_wallet_entries` : une source ne peut créditer ou débiter qu'une fois. Pour
   le recyclage, `source_ref = <pack_id>:<position>` désigne **la** carte, ce qui
@@ -784,12 +1194,24 @@ entre la lecture et l'écriture.
 - L'ouverture d'un paquet nullifie sa réservation via `opened_at IS NULL` dans le
   `WHERE`, et le recyclage via `recycled_at IS NULL` : deux clics simultanés ne
   peuvent pas réussir tous les deux, le second ne touche aucune ligne.
+- **Échanges** (`tcg_card_trades.sql`) : `CHECK (proposer_id <> recipient_id)` ;
+  index unique partiel `(tenant_id, proposer_id, recipient_id) WHERE status =
+  'pending'` (une proposition en attente par paire) ; `CHECK` de cohérence
+  statut / `resolved_at` / motif d'annulation ; aucune colonne de texte libre ni
+  de montant. L'origine `trade` est ajoutée aux **deux** contraintes de
+  `tcg_packs` (listes recopiées en entier — énumérer avant d'appliquer). La
+  possession se revérifie **sous verrou** dans `tcg_accept_trade`, jamais par
+  une relecture applicative.
 
 Deux décisions de modélisation méritent d'être connues avant d'y toucher :
 
 - **pas de table `collection`.** Ce qu'une joueuse possède se déduit de ses
   paquets ouverts. Un agrégat finit par diverger du détail qui le nourrit, et au
   volume attendu le comptage à la lecture est gratuit.
+- **pas de table « séries ».** Une série se dérive du registre des maps, des
+  équipes engagées et des effectifs ; seule sa RÉCOMPENSE est stockée, dans le
+  registre (`collection_set`). La vitrine, elle, stocke des références de sujet
+  et se relit contre la possession : aucune des deux ne copie une carte.
 - **rien n'est supprimé, tout est marqué.** `revoked_at` conserve l'accord passé,
   `recycled_at` garde le crédit explicable, le registre justifie le solde ligne à
   ligne. Effacer serait plus court et rendrait l'histoire illisible.
@@ -806,23 +1228,31 @@ joueuse) et scopées au tenant résolu par `resolveTenantIdForUserRequest`.
 
 | Route                                                | Méthodes          | Auth                                 | Rôle                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | ---------------------------------------------------- | ----------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/api/player/tcg/photo`                              | GET, POST, DELETE | joueuse                              | L'état de **ma** carte ; déposer une photo (vaut consentement, repasse en `pending`) ; retirer son accord. 5/min en POST, 10/min en DELETE.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `/api/player/tcg/photo`                              | GET, POST, DELETE | joueuse                              | L'état de **ma** carte ; déposer une photo (vaut consentement, repasse en `pending`) ; retirer son accord. Une lecture en échec rend `500` sans rien écrire ; retrait conditionnel au chemin lu (`409 PHOTO_CHANGED` après trois courses). 5/min en POST, 10/min en DELETE.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `/api/player/tcg/packs`                              | GET, POST         | joueuse                              | Mes paquets + solde + `boosterPrice`, `earn`, `recycleRefund` (GET, 60/min) — **paginé** : `limit` (1..200, défaut 200), `cursor`, `status=unopened\|opened`, `nextCursor` ; `unopened` compte TOUS les paquets fermés. Ouvrir un paquet et **révéler** ses cartes, faces comprises, chacune avec `isNew` (POST, 30/min).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `/api/player/tcg/collection`                         | GET               | joueuse                              | Ma collection, déduite des paquets ouverts, recyclées exclues, agrégée par sujet, les plus rares d'abord. Chaque carte porte `recyclable` : le couple `{ packId, position }` d'un exemplaire à recycler, ou `null` dès qu'il n'y en a qu'un — la route de recyclage refuse le dernier, et un bouton qu'elle rejetterait promettrait un geste impossible. L'exemplaire désigné est le **moins précieux** (plus basse rareté, non brillant à rareté égale) : la carte s'affiche avec sa MEILLEURE rareté, et recycler « ce doublon » ne doit jamais coûter la meilleure des copies. **Paginée** : `limit` (1..200), `cursor`, `nextCursor` ; sans paramètre, tout comme avant. 60/min.                                                                                                                                       |
-| `/api/player/tcg/booster`                            | POST              | joueuse                              | Acheter un paquet **fermé** avec ses pièces. 20/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `/api/player/tcg/booster`                            | POST              | joueuse                              | Acheter un paquet **fermé** avec ses pièces — **une transaction SQL** (`tcg_purchase_booster`) ; `503 purchase_unavailable` sans la migration. 20/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `/api/player/tcg/recycle`                            | POST              | joueuse                              | Recycler un **doublon** contre `RECYCLE_REFUND_COINS`. 30/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `/api/player/tcg/wallet`                             | GET               | joueuse                              | « D'où viennent mes pièces ? » — 50 derniers mouvements, `shownTotal`, `truncated`. 60/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `/api/admin/tcg/photos`                              | GET, PATCH        | staff, permission `manage_tcg`       | La file de relecture (`pending`, la plus ancienne d'abord) ; approuver ou refuser. Chaque élément porte `displayName` et `email`, résolus en un appel par la RPC `fetchAdminUserProfiles` — un **enrichissement, jamais une condition** : une résolution en échec rend `null` et la file reste servie, parce qu'une relectrice doit d'abord voir l'image. Journalisé. 60/min en GET, 30/min en PATCH. |
+| `/api/admin/tcg/photos`                              | GET, PATCH        | staff, permission `manage_tcg`       | La file de relecture (`pending`, la plus ancienne d'abord) ; approuver ou refuser. Chaque élément porte `displayName` et `email`, résolus en un appel par la RPC `fetchAdminUserProfiles` — un **enrichissement, jamais une condition** : une résolution en échec rend `null` et la file reste servie, parce qu'une relectrice doit d'abord voir l'image. Chaque élément porte aussi `photoPath`, **exigé** par le `PATCH` : l'écriture est conditionnelle au fichier affiché, `409 PHOTO_CHANGED` s'il a été remplacé. Journalisé. 60/min en GET, 30/min en PATCH. |
 | `/api/admin/tcg/overview`                            | GET               | staff, permission `manage_tcg`       | État de l'économie en un appel : paquets, pièces, cartes par rareté, photos, sujets les plus distribués. Tout est agrégé côté serveur — aucune ligne de détail ne sort. `null` ≠ `0` : une clé en échec vaut « pas mesurable », jamais « mesuré et vide ». 30/min, `Cache-Control: private, max-age=30`.                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `/api/bot/v1/players/by-discord/{discordUserId}/tcg` | GET               | bot, `x-api-key` par tenant          | Solde, paquets en attente et **résumé** de collection pour Discord. `discordUserId` : 15 à 25 chiffres (la spec est alignée sur le code, des identifiants courts existant chez les comptes anciens). 60/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `/api/webhooks/twitch/tcg-drop`                      | POST              | signature HMAC Twitch EventSub       | Webhook entrant : créditer une spectatrice qui échange des points de chaîne. Corps lu brut (`bodyParser: false`), signature vérifiée **avant** tout parsing, fenêtre anti-rejeu de 10 min, tenant résolu par la chaîne et non par `x-tenant-id`. **En service** depuis le 2026-09-13. Une `revocation` est lue et non seulement acquittée : son `status` dit laquelle des trois causes s'applique. Crédite **pièces + un paquet `drop`** (pièces d'abord) ; `packGranted` dans la réponse, `pack: { id } \| null` dans `tcg.drop_granted`. 600/min.                                                                                                                                                                                                                                                                                                                     |
 | `/api/admin/tcg/overlay-token`                       | GET, POST, DELETE | staff, permission `manage_tcg`       | Le lien de la source navigateur OBS. Un seul jeton actif par espace : émettre révoque le précédent. Journalisé **sans** le jeton. 30/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `/api/admin/tcg/overlay-theme`                       | GET, PUT          | staff, permission `manage_tcg`       | L'habillage de l'overlay (couleur, position, deux formulations, image ou vidéo). **Patch partiel** ; `null` = revenir au défaut. Média validé par **magic bytes** avant dépôt en bucket public. 30/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `/api/admin/tcg/welcome-gift`                        | GET, POST         | staff, permission `manage_tcg`       | Simuler puis distribuer le cadeau d'accueil de l'édition en cours. `GET` n'écrit rien. `POST` honore `Idempotency-Key`. Journalisé. 20/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `/api/admin/tcg/grant`                               | POST              | staff, permission `manage_tcg`       | Corriger le solde d'une joueuse (`admin_grant`, crédit ou retrait, valeur absolue ≤ 10 000, motif obligatoire). **Une correction tracée, pas une vente.** Registre d'abord, `source_ref` = `idempotencyKey` : l'unicité du registre porte l'idempotence, un rejeu rend `replayed: true` sans double crédit. Un retrait ne passe jamais sous zéro (`409 INSUFFICIENT_BALANCE`) : réservation conditionnelle du cache, disponible = minimum du cache et du registre. Motif journalisé `tcg_admin_grant` (le registre n'a pas de colonne pour lui). 30/min. |
-| `/api/admin/tcg/battlenet-backfill`                  | GET, POST         | staff, permission `manage_tcg`       | Rattraper la récompense Battle.net des comptes liés avant elle, **dans l'espace du staff** (roster ou porte-monnaie du tenant). `GET` simule (`eligible`, `alreadyRewarded`, `wouldGrant`, `discordDms`, `outsideSpace`, `ready`, `reward`) ; `POST` passe chaque lien par l'écrivain du callback, rend `{ eligible, granted, already, errors, reward }`. Audience illisible → `500`, rien écrit. `Idempotency-Key`. Journalisé `tcg_battlenet_backfill`. 20/min. |
-| `/api/admin/tcg/players`                             | GET               | staff, permission `manage_tcg`       | Recherche de comptes pour la carte « Ajuster un solde » (RPC `admin_search_users`, 20 résultats), sans exiger `manage_staff`. |
+| `/api/admin/tcg/grant`                               | POST              | staff, permission `manage_tcg`       | Corriger le solde d'une joueuse (`admin_grant`, crédit ou retrait, valeur absolue ≤ 10 000, motif obligatoire). **Une correction tracée, pas une vente.** Registre d'abord, `source_ref` = `idempotencyKey` : l'unicité du registre porte l'idempotence, un rejeu rend `replayed: true` sans double crédit. **Joueuse rattachée à l'espace seulement** (sinon `404 USER_NOT_FOUND`). Un retrait ne passe jamais sous zéro (`409 INSUFFICIENT_BALANCE`) : fonction SQL `tcg_admin_debit`, sous verrou ; `503 WITHDRAWAL_UNAVAILABLE` sans la migration. Motif journalisé `tcg_admin_grant` (le registre n'a pas de colonne pour lui). 30/min. |
+| `/api/admin/tcg/battlenet-backfill`                  | GET, POST         | staff, permission `manage_tcg`       | Rattraper la récompense Battle.net des comptes liés avant elle, **dans l'espace du staff** (roster ou gain réel au registre du tenant — plus un simple porte-monnaie). `GET` simule (`eligible`, `alreadyRewarded`, `wouldGrant`, `discordDms`, `outsideSpace`, `ready`, `reward`) ; `POST` passe chaque lien par l'écrivain du callback, rend `{ eligible, granted, already, errors, reward }`. Audience illisible → `500`, rien écrit. `Idempotency-Key`. Journalisé `tcg_battlenet_backfill`. 20/min. |
+| `/api/admin/tcg/players`                             | GET               | staff, permission `manage_tcg`       | Recherche de comptes pour la carte « Ajuster un solde », **cantonnée à l'espace** (RPC `admin_search_tcg_players`, pseudo + BattleTag, 20 résultats, `email` toujours `null`), sans exiger `manage_staff`. `503 SEARCH_UNAVAILABLE` sans la migration. |
 | `/api/player/tcg/welcome-gift`                       | GET, POST         | joueuse (**`withSubjectRoute`**)     | `GET` : « Ai-je reçu un cadeau ? » — `{ gift: { coins, receivedAt } \| null, supporterClaimable }`, les DEUX accueils confondus (`welcome_gift` et `supporter_welcome`) ; `supporterClaimable` vient de `grantSupporterWelcome({ dryRun: true })`, donc des conditions EXACTES du POST — proposer un bouton que le serveur refuserait serait pire que ne rien proposer. `POST` : réclamer le cadeau **supportrice**, une fois par compte, `{ status, coins, packGranted }` — `packGranted: false` DIT l'écriture partielle au lieu de la masquer. Seule route `tcg/` à honorer `?as=`, mais **sans `allowActAs`** : le `POST` est donc refusé en inspection, un cadeau réclamé ne se rendant pas. 60/min en GET, 6/min en POST. |
+| `/api/player/tcg/sets`                               | GET               | joueuse                              | Mes séries : `{ sets[], rewardCoins, newlyRewarded[] }`. Chaque série : `key`, `kind`, faits bruts (`mode`, `tournamentName`, `teamName`), `total`, `owned`, `complete`, `missingNamed` (équipes et maps SEULEMENT), `missingPlayers` (un nombre), `rewarded`, `justRewarded`. **Lecture qui peut écrire** (récompense idempotente, `tcg.set_completed`). Lecture partielle → `500 sets_unreadable`, rien d'écrit. Pas de `?as=`. 30/min. |
+| `/api/player/tcg/trades`                             | GET, POST         | joueuse                              | **Échanges.** GET : mes propositions `box=received\|sent`, `state=open\|closed`, curseur ; expiration paresseuse avant lecture ; faces relues ; `ownedCopies` de l'appelante sur les cartes demandées d'une reçue en attente, rien de la collection de l'autre. POST : proposer (corps strict, parité, 1..5) par `tcg_propose_trade` — `201`, annonce `tcg.trade_proposed`. 60/min, 10/min. |
+| `/api/player/tcg/trades/{tradeId}`                   | POST              | joueuse                              | `accept` (`tcg_accept_trade`, atomique, **idempotent**), `decline`, `cancel`. 404 hors de la paire ou du tenant. Annonce `tcg.trade_resolved`. 30/min. |
+| `/api/player/tcg/trades/settings`                    | GET, PUT          | joueuse                              | Opt-in (défaut `false`), éligibilité (compte 14 j + collection 7 j), plafonds, compteurs. Désactiver annule tout ce qui est en attente. 60/min, 10/min. |
+| `/api/player/tcg/trades/partners`                    | GET               | joueuse (volontaire)                 | Les volontaires du tenant, pseudo seul, jamais d'email. 30/min. |
+| `/api/player/tcg/trades/cards`                       | GET               | joueuse                              | Mes cartes (`copies`, `tradeableCopies`, `available`), ou les doubles échangeables d'une partenaire volontaire. 60/min. |
+| `/api/cron/tcg-trades-expire`                        | GET, POST         | `CRON_SECRET`                        | Expire les propositions échues, tous tenants, une annonce par proposition. Horaire. |
+| `/api/player/tcg/showcase`                           | GET, PUT          | joueuse                              | Ma vitrine : `{ enabled, cards[], unavailable, maxCards, publicProfileUrl }`, désactivée par défaut. `PUT { enabled, cards }` (≤ 3 clés de sujet) : `409 not_owned` pour activer une carte non possédée, désactivation jamais bloquée, fiche régénérée. 60/min en GET, 20/min en PUT. |
 | `/api/overlay/tcg/{token}`                           | GET               | **public**, porté par le jeton       | Le flux d'annonces d'une source navigateur OBS, plus l'habillage. Réduit au déjà-public : pseudo Twitch et origine d'événement, jamais un nom de compte ni une photo. `s-maxage=5`. 120/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
 Quelques conventions transverses :
@@ -835,11 +1265,17 @@ Quelques conventions transverses :
   (vérification Battle.net, redirection inchangée). Toutes annoncent le gain par
   `tcg.reward_granted` (`utils/tcg/announceReward.ts`), un événement par
   joueuse créditée, jamais sur un rejeu — le bot en fait un DM.
+- **L'ouverture d'un paquet récompense aussi les séries** qu'elle complète
+  (`POST /api/player/tcg/packs`, champ additif `setsCompleted`), avec
+  `tcg.set_completed` — cf. « Les séries ».
 
 - **404 plutôt que 403** sur un paquet ou une carte qui n'est pas le sien : on ne
   confirme pas l'existence de ce qui n'appartient pas à l'appelante.
 - **Codes stables** (`already_opened`, `empty_pool`, `insufficient_funds`,
-  `balance_changed`, `not_a_duplicate`, `already_recycled`, `NOT_PENDING`) : c'est
+  `balance_changed`, `not_a_duplicate`, `already_recycled`, `NOT_PENDING`,
+  `PHOTO_CHANGED`, `purchase_unavailable`, `SEARCH_UNAVAILABLE`,
+  `WITHDRAWAL_UNAVAILABLE`, `SCRIM_CLOSED`,
+  `sets_unreadable`, `invalid_body`, `invalid_card`, `not_owned`) : c'est
   l'interface qui traduit, le message n'est qu'un repli.
 - **L'API rend le fait, l'interface le formule.** `sourceKind` part brut, jamais
   un libellé : traduire au serveur l'obligerait à connaître la langue de la
@@ -874,6 +1310,101 @@ Quelques conventions transverses :
   relecture de toute la collection ; omis si la lecture échoue.
 
 ## 7. Ce qui reste à faire
+
+- **Correctifs de sécurité du 2026-09-15 : livrés, migrations NON appliquées.**
+  Ordre de déploiement :
+  1. appliquer `tcg_wallet_atomic_balance.sql` et
+     `tcg_admin_search_players_scoped.sql` **avant** le site (fonctions seules,
+     aucune table touchée) ;
+  2. déployer le site ;
+  3. appliquer `tcg_scrim_win_stable_ref.sql` **juste après** (données,
+     rejouable — elle peut aussi passer avant ET après).
+
+  Site déployé **sans** les deux premières : le recalcul de solde se replie sur
+  une somme paginée (sans danger) ; l'achat de booster et le retrait staff sont
+  **refusés** (`503`), la recherche de joueuses aussi — jamais un achat sans
+  verrou ni une recherche globale. Tant que la troisième manque, un scrim déjà
+  payé qui repasse de « litige » à « terminé » (geste staff désormais) crédite
+  **une** fois de plus ses pièces, sans paquet.
+
+  **Ce que la migration de données ne rattrape pas** : les gains `scrim_win` dont
+  le miroir a déjà été supprimé (litiges passés, ou exploitation de la boucle) ne
+  disent plus à quel scrim ils appartiennent. Les repérer pour audit — plusieurs
+  lignes orphelines rapprochées pour la même joueuse sont la signature de
+  l'exploitation :
+
+  ```sql
+  SELECT e.tenant_id, e.user_id, e.source_ref, e.amount, e.created_at
+  FROM public.tcg_wallet_entries e
+  LEFT JOIN public.matches m ON m.id::text = e.source_ref
+  WHERE e.source_kind = 'scrim_win' AND e.source_ref NOT LIKE 'scrim:%'
+    AND m.id IS NULL
+  ORDER BY e.user_id, e.created_at;
+  ```
+
+  Les paquets correspondants ont disparu en cascade avec leur miroir ; seules
+  les pièces restent, corrigeables par `admin_grant` négatif si l'abus est avéré.
+  De même, un **solde gonflé** par la course des achats a laissé des registres
+  négatifs (plafonnés à 0 dans le cache) : `SELECT tenant_id, user_id,
+  SUM(amount) FROM tcg_wallet_entries GROUP BY 1, 2 HAVING SUM(amount) < 0`.
+
+- **Matchs de tournoi : la récompense suit encore l'id du match** (gravité
+  moindre, geste staff). `DELETE /api/admin/matches/[matchId]?hard=1` supprime un
+  match terminé : ses paquets partent en cascade (cartes ouvertes comprises),
+  l'écriture `match_win` reste, et un match recréé puis noté repaie paquet et
+  pièces. `generateBracket.ts` ne supprime que des matchs qu'il vient de créer
+  (rollback), sans risque. **Proposition, non faite** : refuser la suppression
+  physique d'un match qui a servi de source à un paquet (`409`, neutralisation
+  `cancelled` à la place — c'est déjà le comportement par défaut sans `hard=1`),
+  puis passer `tcg_packs.source_match_id` en `ON DELETE RESTRICT` une fois ce
+  refus déployé, pour que le schéma porte l'invariant.
+- **Rattachement « roster » fabricable par un owner** : cf. §4, « Qui gère le TCG
+  côté staff ». Relève d'un flux d'invitation acceptée.
+- **`POST /api/admin/teams/[teamId]/members` ne vérifie pas le tenant de
+  l'équipe** (lecture `teams` par `id` seul, insertion avec `ctx.tenantId`) :
+  constaté pendant l'audit, hors périmètre TCG, non corrigé.
+- **`applyScrimResult` n'est pas conditionnelle** : deux capitaines qui
+  concluent au même instant qu'un staff annule peuvent re-clore un scrim
+  annulé. Sans conséquence monétaire depuis la clé stable, non corrigé.
+
+- **Séries et vitrine : livrées (2026-09-15), pas encore en service.** Ordre de
+  déploiement : (1) le bot apprend `tcg.set_completed` ; (2) appliquer
+  `tcg_collection_set.sql` (après avoir énuméré les `CHECK` en place : la liste
+  recopiée est celle des onze valeurs en production) et `tcg_showcases.sql`,
+  puis `node scripts/refresh-schema-snapshot.mjs` ; (3) déployer le site. Site
+  sans migration : les séries s'affichent, les récompenses sont refusées et
+  retentées à chaque lecture ; la vitrine répond `500` (écran d'erreur dans
+  l'espace joueuse) et la fiche
+  publique n'en montre aucune. Ni l'une ni l'autre n'a été vue en navigateur
+  (aucun `next dev` pendant le lot) : relire `/player/tcg` et une fiche
+  `/player/[userId]` à 360 / 768 / 1280 px, clavier et lecteur d'écran.
+- **Échanges × séries : tranché (2026-09-15).** Une carte reçue par échange
+  (paquet `trade`) ne compte ni pour la récompense ni pour la progression d'une
+  série (`readOwnedCardRows(…, { excludeTradedIn: true })`). La règle est dite
+  sur la page des échanges ; le panneau des séries, lui, ne l'explique pas
+  encore.
+- **Échanges × vitrine : fait.** Accepter régénère les fiches des deux
+  joueuses (`revalidatePlayerCard`).
+- **Échanges : livrés (2026-09-15), pas encore en service.** Ordre : (1) le bot
+  apprend `tcg.trade_proposed` et `tcg.trade_resolved` ; (2) énumérer les
+  `CHECK` de `tcg_packs` en place, puis appliquer `tcg_card_trades.sql` et
+  `node scripts/refresh-schema-snapshot.mjs` ; (3) déployer le site (le cron
+  horaire part avec). Site sans migration : les routes d'échange répondent
+  `500`, rien d'autre n'est touché. **Le SQL n'a été exécuté nulle part** (aucun
+  Postgres pendant le lot, tests par lecture du fichier) : le jouer sur une
+  base LOCALE avec deux comptes — proposer, recycler la carte offerte, accepter
+  (doit annuler), double-cliquer accepter, accepter deux échanges croisés en
+  parallèle. Page non vue en navigateur (360 / 768 / 1280 px, clavier, lecteur
+  d'écran).
+- **Échanges : décisions laissées à l'humain.** (a) Aucun équilibre de VALEUR :
+  la parité porte sur le nombre de cartes, pas sur la rareté — une commune
+  contre une légendaire passe si la destinataire accepte ; (b) pas de blocage
+  d'une personne précise (seulement le refus + 24 h, et la désactivation
+  globale) ; (c) les seuils (72 h, 5/10, 3 par jour, 14 j / 7 j) sont des
+  défauts prudents, non mesurés ; (d) `drop` exclu des échanges prive une
+  supportrice sans achat de tout échange.
+- **Un mécanisme « ne pas figurer dans le TCG »** n'existe pas. S'il est créé,
+  le brancher sur `readDrawPool` : les séries suivront d'elles-mêmes.
 
 - **Récompense de vérification Battle.net : pas encore en service.** Ordre de
   déploiement imposé : (1) le bot apprend `reason: 'battlenet_verified'` sans

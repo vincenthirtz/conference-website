@@ -35,6 +35,12 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { logger } from '../../utils/logger';
+import {
+  TRADE_MAX_ACCEPTED_PER_DAY,
+  TRADE_MIN_ACCOUNT_AGE_DAYS,
+  TRADE_MIN_COLLECTION_AGE_DAYS,
+  TRADE_TTL_HOURS,
+} from '@/utils/tcg/tradeRules';
 import nsGuidePlayerTcg from '@/lib/i18n/locales/fr/guidePlayerTcg';
 
 /** Le barème, tel que le rend `GET /api/player/tcg/packs`. */
@@ -48,6 +54,12 @@ type Bareme = {
     twitchDrop?: number;
     /** Absent tant que l'API ne le rend pas — le guide s'en passe alors. */
     welcomeGift?: number;
+    // Voies ajoutées le 2026-09-15. Optionnelles : une API plus ancienne
+    // (déploiement en cours) ne les rend pas, et le guide les omet alors.
+    checkinStreak?: { length: number; coins: number; packs: number };
+    placement?: Array<{ maxRank: number; coins: number; packs: number }>;
+    battlenetVerified?: { coins: number; packs: number };
+    collectionSet?: { coins: number; packs: number };
   };
 };
 
@@ -79,21 +91,47 @@ function Section({
 function EarnRow({
   label,
   coins,
+  packs = 1,
   t,
 }: {
   label: string;
   coins: number;
+  /** Paquets accompagnant les pièces. 0 = pièces seules (vérification, séries). */
+  packs?: number;
   t: typeof nsGuidePlayerTcg.fr;
 }): JSX.Element {
+  const packText =
+    packs > 1
+      ? format(t.earnPacksMany, { n: packs })
+      : packs === 1
+        ? t.earnPackToo
+        : null;
   return (
     <li className="flex flex-wrap items-baseline justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5">
       <span className="text-gray-200">{label}</span>
       <span className="text-sm font-semibold text-purple-200">
-        {format(t.earnCoins, { coins })}{' '}
-        <span className="font-normal text-gray-400">{t.earnPackToo}</span>
+        {format(t.earnCoins, { coins })}
+        {packText ? (
+          <>
+            {' '}
+            <span className="font-normal text-gray-400">{packText}</span>
+          </>
+        ) : null}
       </span>
     </li>
   );
+}
+
+/** « 1re place », « 2e place », « Jusqu'à la 8e place ». */
+function placementLabel(
+  maxRank: number,
+  previousMax: number,
+  t: typeof nsGuidePlayerTcg.fr
+): string {
+  if (maxRank === 1) return t.earnPlacementFirst;
+  if (maxRank === previousMax + 1)
+    return format(t.earnPlacementRank, { rank: maxRank });
+  return format(t.earnPlacementTop, { rank: maxRank });
 }
 
 function TcgGuide(): JSX.Element {
@@ -167,7 +205,56 @@ function TcgGuide(): JSX.Element {
                   t={t}
                 />
               )}
+              {earn.checkinStreak && (
+                <EarnRow
+                  label={format(t.earnCheckinStreak, {
+                    length: earn.checkinStreak.length,
+                  })}
+                  coins={earn.checkinStreak.coins}
+                  packs={earn.checkinStreak.packs}
+                  t={t}
+                />
+              )}
+              {earn.battlenetVerified && (
+                <EarnRow
+                  label={t.earnBattlenet}
+                  coins={earn.battlenetVerified.coins}
+                  packs={earn.battlenetVerified.packs}
+                  t={t}
+                />
+              )}
+              {earn.collectionSet && (
+                <EarnRow
+                  label={t.earnCollectionSet}
+                  coins={earn.collectionSet.coins}
+                  packs={earn.collectionSet.packs}
+                  t={t}
+                />
+              )}
             </ul>
+          )}
+          {earn?.placement && earn.placement.length > 0 && (
+            <>
+              <h3 className="pt-2 font-semibold text-white">
+                {t.earnPlacementTitle}
+              </h3>
+              <ul className="space-y-2">
+                {earn.placement.map((tier, i, all) => (
+                  <EarnRow
+                    key={tier.maxRank}
+                    label={placementLabel(
+                      tier.maxRank,
+                      i > 0 ? all[i - 1].maxRank : 0,
+                      t
+                    )}
+                    coins={tier.coins}
+                    packs={tier.packs}
+                    t={t}
+                  />
+                ))}
+              </ul>
+              <p className="text-gray-400">{t.earnPlacementNote}</p>
+            </>
           )}
           {/* Dire que la voie est éteinte vaut mieux que la passer sous
               silence : c'est la seule ouverte à qui ne joue pas. */}
@@ -194,7 +281,37 @@ function TcgGuide(): JSX.Element {
           <p>{t.loopRecycleWhich}</p>
         </Section>
 
-        <Section index={5} title={t.rarityTitle} t={t}>
+        <Section index={5} title={t.setsTitle} t={t}>
+          <p>{t.setsBody}</p>
+          <p>{t.setsPrivacy}</p>
+          <p>{t.setsTraded}</p>
+        </Section>
+
+        <Section index={6} title={t.tradesTitle} t={t}>
+          <p>{t.tradesBody}</p>
+          <p>
+            {format(t.tradesRules, {
+              ttl: TRADE_TTL_HOURS,
+              perDay: TRADE_MAX_ACCEPTED_PER_DAY,
+              accountDays: TRADE_MIN_ACCOUNT_AGE_DAYS,
+              collectionDays: TRADE_MIN_COLLECTION_AGE_DAYS,
+            })}
+          </p>
+          <p>{t.tradesWhat}</p>
+          <p>{t.tradesPhoto}</p>
+          <Link
+            href="/player/tcg/echanges"
+            className="inline-flex items-center text-sm font-medium text-purple-300 transition hover:text-purple-200"
+          >
+            {t.tradesLink}
+          </Link>
+        </Section>
+
+        <Section index={7} title={t.showcaseTitle} t={t}>
+          <p>{t.showcaseBody}</p>
+        </Section>
+
+        <Section index={8} title={t.rarityTitle} t={t}>
           <p>{t.rarityBody}</p>
           <ul className="space-y-1.5 pl-4">
             <li className="list-disc">{t.rarityCommon}</li>
@@ -205,7 +322,7 @@ function TcgGuide(): JSX.Element {
           <p>{t.rarityFoil}</p>
         </Section>
 
-        <Section index={6} title={t.photoTitle} t={t}>
+        <Section index={9} title={t.photoTitle} t={t}>
           <p>{t.photoIntro}</p>
           <div className="space-y-3">
             {[
@@ -224,7 +341,7 @@ function TcgGuide(): JSX.Element {
           </div>
         </Section>
 
-        <Section index={7} title={t.supporterTitle} t={t}>
+        <Section index={10} title={t.supporterTitle} t={t}>
           <p>{t.supporterBody}</p>
           <Link
             href="/player/tcg"
@@ -257,8 +374,8 @@ const guideSeo: SeoProps = {
     en: 'How the TCG works',
   },
   description: {
-    fr: 'Guide du TCG OW Women’s Cup : comment obtenir des paquets, la monnaie, le recyclage, la rareté et ce que tu contrôles sur ta photo.',
-    en: 'OW Women’s Cup TCG guide: how to get packs, the currency, recycling, rarity and what you control on your photo.',
+    fr: 'Guide du TCG OW Women’s Cup : comment obtenir des paquets et des pièces, les séries, les échanges, la vitrine, la rareté et ce que tu contrôles sur ta photo.',
+    en: 'OW Women’s Cup TCG guide: how to get packs and coins, sets, trades, the showcase, rarity and what you control on your photo.',
   },
   noindex: true,
 };

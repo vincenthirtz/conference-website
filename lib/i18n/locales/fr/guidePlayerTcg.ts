@@ -35,7 +35,7 @@ export default ns('guidePlayerTcg', {
   // ── 2. Comment on en gagne ─────────────────────────────────────────
   earnTitle: 'Comment on obtient des paquets',
   earnIntro:
-    'Chaque voie donne un paquet ET des pièces. Les montants ci-dessous sont ceux réellement appliqués, lus depuis le serveur — pas des exemples.',
+    'Chaque voie donne des pièces, et la plupart un paquet en plus. Les montants ci-dessous sont ceux réellement appliqués, lus depuis le serveur — pas des exemples.',
   earnMatchWin: 'Victoire en match de tournoi',
   earnScrimWin: 'Victoire en scrim classé',
   earnWelcome: 'Cadeau de bienvenue, une fois',
@@ -43,6 +43,20 @@ export default ns('guidePlayerTcg', {
   /** Interpole `{coins}`. */
   earnCoins: '+{coins} pièces',
   earnPackToo: 'et un paquet',
+  /** Interpole `{n}` (2 et plus). */
+  earnPacksMany: 'et {n} paquets',
+  /** Interpole `{length}`. */
+  earnCheckinStreak: 'Série de {length} check-ins d’équipe d’affilée',
+  earnPlacementTitle: 'Classement final d’un tournoi',
+  earnPlacementFirst: '1re place',
+  /** Interpole `{rank}`. */
+  earnPlacementRank: '{rank}e place',
+  /** Interpole `{rank}`. */
+  earnPlacementTop: 'Jusqu’à la {rank}e place',
+  earnPlacementNote:
+    'Le classement récompense les titulaires qui ont joué pour l’équipe dans ce tournoi, une fois par tournoi, à leur meilleur rang.',
+  earnBattlenet: 'Compte Battle.net vérifié, une fois',
+  earnCollectionSet: 'Série de collection complétée, une fois par série',
   earnTwitchOff:
     'Le drop en direct n’est pas actif en ce moment. Il n’apparaîtra ici que lorsqu’une chaîne sera connectée et qu’une récompense lui sera associée — inutile de le chercher d’ici là.',
   earnTwitchHow:
@@ -69,6 +83,30 @@ export default ns('guidePlayerTcg', {
     'Quand tu recycles, c’est toujours l’exemplaire le MOINS précieux qui part : la plus basse rareté, et la version non brillante à rareté égale. Ta meilleure copie reste chez toi.',
 
   // ── 5. La rareté ───────────────────────────────────────────────────
+  setsTitle: 'Les séries',
+  setsBody:
+    'Une série est un ensemble de cartes à réunir : toutes les maps d’un mode, toutes les équipes d’une édition, ou le roster complet d’une équipe. Ta progression est sur ta page de collection, et une série complétée te rapporte des pièces, une seule fois.',
+  setsPrivacy:
+    'Quand il te manque une carte de joueuse, la page te dit combien, jamais laquelle : une série ne doit pas devenir un avis de recherche.',
+  setsTraded:
+    'Seules les cartes que tu as tirées toi-même comptent. Une carte reçue par échange s’ajoute à ta collection mais pas à tes séries — sinon plusieurs comptes pourraient se passer une série pour toucher chacun la récompense.',
+
+  tradesTitle: 'Les échanges',
+  tradesBody:
+    'Tu peux échanger des cartes avec une autre collectionneuse de ton espace : carte contre carte, jamais de pièces ni de paquets. Les échanges sont désactivés par défaut — personne ne peut te faire de proposition tant que tu ne les as pas activés.',
+  /** Interpole `{ttl}`, `{perDay}`, `{accountDays}`, `{collectionDays}`. */
+  tradesRules:
+    'Une proposition expire au bout de {ttl} h. Tu peux accepter jusqu’à {perDay} échanges par jour, à condition que ton compte ait au moins {accountDays} jours et ta collection au moins {collectionDays}.',
+  tradesWhat:
+    'On ne voit jamais la collection d’une autre joueuse, seulement ses doubles échangeables. Les cartes de cadeaux, de drops et de séries ne s’échangent pas. C’est toujours ton exemplaire le moins précieux qui part.',
+  tradesPhoto:
+    'Une carte échangée ne transporte pas de photo : si une joueuse retire la sienne, elle disparaît aussi des cartes déjà échangées.',
+  tradesLink: 'Voir mes échanges',
+
+  showcaseTitle: 'Ta vitrine',
+  showcaseBody:
+    'Tu peux choisir jusqu’à trois de tes cartes pour les montrer sur ta fiche publique. La vitrine est désactivée par défaut, et la retirer la retire tout de suite. Ta collection complète, elle, reste privée.',
+
   rarityTitle: 'D’où vient la rareté',
   rarityBody:
     'La rareté d’une carte de joueuse vient de ses badges — les mêmes que sur sa fiche. Un titre (championne d’un tournoi, première d’une saison de ligue) donne le palier le plus haut ; sinon le palier du meilleur badge décide.',
