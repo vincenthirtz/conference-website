@@ -1,0 +1,126 @@
+AutocompleteResult:
+  type: object
+  required:
+    - results
+  properties:
+    results:
+      type: array
+      items:
+        type: object
+        required:
+          - value
+          - label
+        properties:
+          value:
+            type: string
+          label:
+            type: string
+BotEventOutboxRow:
+  type: object
+  required:
+    - id
+    - eventId
+    - eventName
+    - tenantId
+    - payload
+  properties:
+    id:
+      type: integer
+    eventId:
+      $ref: '#/components/schemas/Uuid'
+    eventName:
+      type: string
+    tenantId:
+      $ref: '#/components/schemas/Uuid'
+    payload:
+      type: object
+      additionalProperties: true
+    pushAttempts:
+      type: integer
+    lastPushError:
+      type: [string, 'null']
+    lastPushAt:
+      anyOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+    createdAt:
+      $ref: '#/components/schemas/Timestamp'
+Lock:
+  type: object
+  properties:
+    acquired:
+      type: boolean
+    released:
+      type: boolean
+    currentHolder:
+      type: [string, 'null']
+    expiresAt:
+      anyOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+Reminder:
+  type: object
+  required:
+    - kind
+    - id
+  properties:
+    kind:
+      type: string
+      enum:
+        - match_checkin
+        - tournament_j1
+        - cast_briefing
+    id:
+      type: string
+    discordUserId:
+      $ref: '#/components/schemas/DiscordId'
+    discordUsername:
+      type: [string, 'null']
+    matchId:
+      anyOf:
+        - $ref: '#/components/schemas/Uuid'
+        - type: 'null'
+    tournamentId:
+      anyOf:
+        - $ref: '#/components/schemas/Uuid'
+        - type: 'null'
+    assignmentId:
+      anyOf:
+        - $ref: '#/components/schemas/Uuid'
+        - type: 'null'
+    scheduledAt:
+      anyOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+    payload:
+      type: object
+      additionalProperties: true
+TenantConfigEntry:
+  type: object
+  required:
+    - tenant
+    - guildId
+  properties:
+    guildId:
+      $ref: '#/components/schemas/DiscordId'
+    isPrimary:
+      type: boolean
+    tenant:
+      $ref: '#/components/schemas/Tenant'
+    config:
+      type: object
+      additionalProperties: true
+      description: |
+        Tenant Discord config (channel ids, role ids, forum tag ids, etc.).
+        Inclut l'accueil des nouveaux arrivants : `welcome_enabled`
+        (boolean, defaut false), `welcome_channel_id` (snowflake nullable),
+        `welcome_message` et `welcome_dm_message` (string nullable), ainsi
+        que `member_leave_channel_id` (snowflake nullable) — salon de
+        notification des départs de membres — et
+        `free_players_channel_id` (snowflake nullable) — salon où annoncer
+        les joueuses inscrites « sans équipe » (event
+        `free_player.registered`) — et son miroir
+        `team_openings_channel_id` (snowflake nullable), salon où annoncer
+        les équipes qui cherchent une joueuse (event
+        `team_opening.published`). NULL = pas d'annonce.
+        Voir `tenant_discord_config` pour la liste exhaustive.

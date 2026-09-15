@@ -6,8 +6,8 @@ La spec OpenAPI 3.1 de `pages/api/*` est découpée ici, puis assemblée par
 | Emplacement | Contenu |
 |---|---|
 | `root.yaml` | `openapi`, `info`, `servers`, `tags`, `security` global |
-| `components/<section>.yaml` | une section de `components` (`schemas`, `parameters`, `responses`, `securitySchemes`) |
-| `components/<section>/<nom>.yaml` | la même section découpée en plusieurs fichiers (fusionnés, doublons refusés) |
+| `components/<section>.yaml` | une section de `components` (`parameters`, `responses`, `securitySchemes`) |
+| `components/schemas/<domaine>.yaml` | les schémas, par domaine : `common`, `competition`, `teams-players`, `rankings`, `draft`, `broadcast`, `prize-pool`, `tcg`, `public`, `public-v1`, `bot`, `cron`, `admin` (fusionnés à l'assemblage, doublons refusés) |
 | `paths/api/…/<route>.yaml` | l'objet « path item » d'UNE route, au même emplacement que son handler |
 
 **L'URL se déduit de l'emplacement**, comme le routage Next : le fragment de

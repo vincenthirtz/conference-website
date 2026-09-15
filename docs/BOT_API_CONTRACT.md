@@ -3796,7 +3796,7 @@ Source de mapping pure : [`utils/gameHeroesSync.ts`](../utils/gameHeroesSync.ts)
 Tous sous `pages/api/admin/matches/[matchId]/drafts/...`, wrappés par
 `withStaffRoute(handler, 'admin') + withAdminIdempotency(...)`.
 Erreurs structurées : `DraftEngineError` (18 codes machine-readable,
-détaillés dans `components.schemas.DraftEngineError` de la spec OpenAPI, `docs/openapi/components/schemas.yaml`).
+détaillés dans `components.schemas.DraftEngineError` de la spec OpenAPI, `docs/openapi/components/schemas/draft.yaml`).
 
 | Route                                                                                               | Methods     | Min role | Notes                                                                                                                                                                                        |
 | --------------------------------------------------------------------------------------------------- | ----------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

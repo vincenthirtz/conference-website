@@ -1,0 +1,891 @@
+MatchEvidenceItem:
+  type: object
+  description: |
+    Une preuve rattachée à un match (capture d'écran, fichier replay, ou
+    lien externe). Pour les preuves binaires (`screenshot`, `replay_file`),
+    `signedUrl` est une URL signée courte-durée (~10 min) vers l'objet dans
+    le bucket privé `match-evidence` — jamais le chemin de stockage brut.
+    Pour `replay_url`, `signedUrl` est null et `externalUrl` porte le lien.
+  required:
+    - id
+    - teamSide
+    - kind
+    - externalUrl
+    - signedUrl
+    - mimeType
+    - sizeBytes
+    - sha256
+    - note
+    - createdAt
+  properties:
+    id:
+      $ref: '#/components/schemas/Uuid'
+    teamSide:
+      type: [integer, 'null']
+      enum:
+        - 1
+        - 2
+        - null
+      description: |
+        Camp du capitaine ayant soumis la preuve (1 ou 2). `null` pour une
+        preuve neutre attachée par le staff.
+    kind:
+      type: string
+      enum:
+        - screenshot
+        - replay_file
+        - replay_url
+    externalUrl:
+      type: [string, 'null']
+      format: uri
+      description: Lien externe (VOD/replay hébergé) pour `kind=replay_url`, sinon null.
+    signedUrl:
+      type: [string, 'null']
+      format: uri
+      description: URL signée ~10 min vers le binaire privé ; null pour `replay_url`.
+    mimeType:
+      type: [string, 'null']
+    sizeBytes:
+      type: [integer, 'null']
+    sha256:
+      type: [string, 'null']
+      description: SHA-256 hex du binaire ; null pour `replay_url`.
+    note:
+      type: [string, 'null']
+    createdAt:
+      anyOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+AdminMatchEvidenceItem:
+  description: |
+    Item de preuve enrichi pour la vue staff : ajoute l'identité du
+    soumetteur (capitaine Discord ou compte auth).
+  allOf:
+    - $ref: '#/components/schemas/MatchEvidenceItem'
+    - type: object
+      required:
+        - submittedByDiscordUserId
+        - submittedByAuthUserId
+      properties:
+        submittedByDiscordUserId:
+          type: [string, 'null']
+          description: Discord user id du capitaine soumetteur ; null si preuve staff.
+        submittedByAuthUserId:
+          anyOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+          description: Compte auth du soumetteur (capitaine ou membre staff) ; null
+            possible.
+MatchEvidenceCreateResult:
+  type: object
+  required:
+    - id
+    - kind
+  properties:
+    id:
+      $ref: '#/components/schemas/Uuid'
+    kind:
+      type: string
+      enum:
+        - screenshot
+        - replay_file
+        - replay_url
+Match:
+  type: object
+  required:
+    - id
+    - status
+    - team1Id
+    - team2Id
+  properties:
+    id:
+      $ref: '#/components/schemas/Uuid'
+    tournamentId:
+      anyOf:
+        - $ref: '#/components/schemas/Uuid'
+        - type: 'null'
+    scrimId:
+      anyOf:
+        - $ref: '#/components/schemas/Uuid'
+        - type: 'null'
+    stageId:
+      anyOf:
+        - $ref: '#/components/schemas/Uuid'
+        - type: 'null'
+    team1Id:
+      $ref: '#/components/schemas/Uuid'
+    team2Id:
+      $ref: '#/components/schemas/Uuid'
+    team1Score:
+      type: [integer, 'null']
+    team2Score:
+      type: [integer, 'null']
+    winnerTeamId:
+      anyOf:
+        - $ref: '#/components/schemas/Uuid'
+        - type: 'null'
+    status:
+      type: string
+      enum:
+        - pending
+        - scheduled
+        - ongoing
+        - finished
+        - disputed
+        - forfeit
+        - cancelled
+    scheduledAt:
+      anyOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+    lobbyInfo:
+      type: [object, 'null']
+      properties:
+        host:
+          type: string
+        password:
+          type: string
+    streamUrl:
+      type: [string, 'null']
+    discordThreadId:
+      anyOf:
+        - $ref: '#/components/schemas/DiscordId'
+        - type: 'null'
+Tournament:
+  type: object
+  required:
+    - id
+    - name
+    - status
+  properties:
+    id:
+      $ref: '#/components/schemas/Uuid'
+    name:
+      type: string
+    slug:
+      type: string
+    status:
+      type: string
+      enum:
+        - draft
+        - published
+        - ongoing
+        - finished
+        - archived
+    startsAt:
+      anyOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+    endsAt:
+      anyOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+    prizePoolEur:
+      type: [integer, 'null']
+Stage:
+  type: object
+  required:
+    - id
+    - tournamentId
+    - name
+    - kind
+  properties:
+    id:
+      $ref: '#/components/schemas/Uuid'
+    tournamentId:
+      $ref: '#/components/schemas/Uuid'
+    name:
+      type: string
+    kind:
+      type: string
+      enum:
+        - group
+        - swiss
+        - single_elim
+        - double_elim
+        - round_robin
+    order:
+      type: integer
+Scrim:
+  type: object
+  required:
+    - id
+    - status
+  properties:
+    id:
+      $ref: '#/components/schemas/Uuid'
+    name:
+      type: [string, 'null']
+    status:
+      type: string
+      enum:
+        - draft
+        - open
+        - scheduled
+        - in_progress
+        - finished
+        - cancelled
+    scheduledAt:
+      anyOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+    teamAId:
+      $ref: '#/components/schemas/Uuid'
+    teamBId:
+      anyOf:
+        - $ref: '#/components/schemas/Uuid'
+        - type: 'null'
+BracketView:
+  type: object
+  required:
+    - tournamentId
+    - stages
+  properties:
+    tournamentId:
+      $ref: '#/components/schemas/Uuid'
+    tournamentName:
+      type: string
+    stages:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            $ref: '#/components/schemas/Uuid'
+          name:
+            type: string
+          slug:
+            type: [string, 'null']
+          stageType:
+            type: string
+          orderIndex:
+            type: integer
+          matches:
+            type: array
+            items:
+              type: object
+              additionalProperties: true
+          standings:
+            type: array
+            items:
+              type: object
+              additionalProperties: true
+VetoState:
+  type: object
+  required:
+    - matchId
+    - format
+    - flow
+    - steps
+  properties:
+    matchId:
+      $ref: '#/components/schemas/Uuid'
+    format:
+      type: string
+    team1Id:
+      $ref: '#/components/schemas/Uuid'
+    team2Id:
+      $ref: '#/components/schemas/Uuid'
+    team1Name:
+      type: [string, 'null']
+    team2Name:
+      type: [string, 'null']
+    flow:
+      type: array
+      items:
+        type: object
+        additionalProperties: true
+    steps:
+      type: array
+      items:
+        type: object
+        additionalProperties: true
+    currentStepIndex:
+      type: integer
+    isComplete:
+      type: boolean
+    pickedMaps:
+      type: array
+      items:
+        type: object
+        additionalProperties: true
+AdminMatchDetail:
+  type: object
+  description: Admin view of a match (includes dispute fields, bracket links, audit).
+  additionalProperties: true
+  properties:
+    id:
+      type: string
+      format: uuid
+    tournament_id:
+      type: [string, 'null']
+      format: uuid
+    stage_id:
+      type: [string, 'null']
+      format: uuid
+    status:
+      type: string
+      enum:
+        - pending
+        - ongoing
+        - finished
+        - cancelled
+        - postponed
+        - walkover
+        - disputed
+    is_bye:
+      type: [boolean, 'null']
+    match_format:
+      type: [string, 'null']
+    round_name:
+      type: [string, 'null']
+    round_number:
+      type: [integer, 'null']
+    bracket_side:
+      type: [string, 'null']
+      enum:
+        - wb
+        - lb
+        - final
+        - none
+        - null
+    group_key:
+      type: [string, 'null']
+    team1_id:
+      type: [string, 'null']
+      format: uuid
+    team2_id:
+      type: [string, 'null']
+      format: uuid
+    team1_score:
+      type: [integer, 'null']
+    team2_score:
+      type: [integer, 'null']
+    winner_team_id:
+      type: [string, 'null']
+      format: uuid
+    forfeit_team_id:
+      type: [string, 'null']
+      format: uuid
+    scheduled_at:
+      type: [string, 'null']
+      format: date-time
+    completed_at:
+      type: [string, 'null']
+      format: date-time
+    updated_at:
+      type: [string, 'null']
+      format: date-time
+    stream_url:
+      type: [string, 'null']
+    replay_url:
+      type: [string, 'null']
+    lobby_code:
+      type: [string, 'null']
+    notes:
+      type: [string, 'null']
+    next_match_win_id:
+      type: [string, 'null']
+      format: uuid
+    next_match_win_slot:
+      type: [integer, 'null']
+      enum:
+        - 1
+        - 2
+        - null
+    next_match_lose_id:
+      type: [string, 'null']
+      format: uuid
+    next_match_lose_slot:
+      type: [integer, 'null']
+      enum:
+        - 1
+        - 2
+        - null
+    dispute_reason:
+      type: [string, 'null']
+    dispute_opened_by:
+      type: [string, 'null']
+      format: uuid
+    dispute_opened_at:
+      type: [string, 'null']
+      format: date-time
+    dispute_resolution:
+      type: [string, 'null']
+    dispute_resolved_by:
+      type: [string, 'null']
+      format: uuid
+    dispute_resolved_at:
+      type: [string, 'null']
+      format: date-time
+    veto_locked_at:
+      type: [string, 'null']
+      format: date-time
+    team1:
+      type: object
+      additionalProperties: true
+    team2:
+      type: object
+      additionalProperties: true
+    stage:
+      type: object
+      additionalProperties: true
+    tournament:
+      type: object
+      additionalProperties: true
+    games:
+      type: array
+      items:
+        type: object
+        additionalProperties: true
+AdminMatchPatchInput:
+  type: object
+  description: |
+    Discriminated by `mode`. Score mode applies via applyMatchScore (with
+    optional bracket propagation). Meta mode whitelists planning, lobby and
+    bracket linkage fields. `expected_updated_at` enables optimistic locking.
+  properties:
+    mode:
+      type: string
+      enum:
+        - score
+        - meta
+    expected_updated_at:
+      type: string
+      format: date-time
+    team1Score:
+      type: integer
+      minimum: 0
+    team2Score:
+      type: integer
+      minimum: 0
+    winnerTeamId:
+      type: string
+      format: uuid
+    forfeit_team_id:
+      type: string
+      format: uuid
+    propagate:
+      type: boolean
+      default: true
+    status:
+      type: string
+      enum:
+        - pending
+        - ongoing
+        - finished
+        - cancelled
+        - postponed
+        - walkover
+    tournament_id:
+      type: [string, 'null']
+      format: uuid
+    stage_id:
+      type: [string, 'null']
+      format: uuid
+    is_bye:
+      type: boolean
+    match_format:
+      type: string
+    round_name:
+      type: [string, 'null']
+    round_number:
+      type: [integer, 'null']
+    bracket_side:
+      type: [string, 'null']
+      enum:
+        - wb
+        - lb
+        - final
+        - none
+        - null
+    group_key:
+      type: [string, 'null']
+    team1_id:
+      type: [string, 'null']
+      format: uuid
+    team2_id:
+      type: [string, 'null']
+      format: uuid
+    scheduled_at:
+      type: [string, 'null']
+      format: date-time
+    completed_at:
+      type: [string, 'null']
+      format: date-time
+    stream_url:
+      type: [string, 'null']
+    replay_url:
+      type: [string, 'null']
+    lobby_code:
+      type: [string, 'null']
+    notes:
+      type: [string, 'null']
+    next_match_win_id:
+      type: [string, 'null']
+      format: uuid
+    next_match_win_slot:
+      type: [integer, 'null']
+      enum:
+        - 1
+        - 2
+        - null
+    next_match_lose_id:
+      type: [string, 'null']
+      format: uuid
+    next_match_lose_slot:
+      type: [integer, 'null']
+      enum:
+        - 1
+        - 2
+        - null
+AdminTournamentDashboard:
+  type: object
+  description: |
+    Mega-dashboard payload assembled by fetchDashboardData. Shape is
+    intentionally permissive — see utils/dashboard/buildTournamentDashboard.ts
+    for the canonical type.
+  additionalProperties: true
+  properties:
+    kpis:
+      type: object
+      additionalProperties: true
+    signals:
+      type: array
+      items:
+        type: object
+        additionalProperties: true
+    guards:
+      type: object
+      additionalProperties: true
+    velocity:
+      type: object
+      additionalProperties: true
+    recentActivity:
+      type: array
+      items:
+        type: object
+        additionalProperties: true
+CheckinNudgePayload:
+  type: object
+  required:
+    - teamSide
+  properties:
+    teamSide:
+      oneOf:
+        - type: integer
+          enum:
+            - 1
+            - 2
+        - type: string
+          enum:
+            - both
+      description: Side(s) of the match to ping (1, 2, or 'both').
+ScrimSearch:
+  type: object
+  required:
+    - id
+    - team_id
+    - slots
+    - status
+    - expires_at
+  properties:
+    id:
+      $ref: '#/components/schemas/Uuid'
+    team_id:
+      $ref: '#/components/schemas/Uuid'
+    slots:
+      type: array
+      items:
+        type: string
+        format: date-time
+    format:
+      type: [string, 'null']
+    note:
+      type: [string, 'null']
+    status:
+      type: string
+      enum: [active, fulfilled, cancelled]
+    expires_at:
+      type: string
+      format: date-time
+PlayerScrim:
+  type: object
+  required:
+    - id
+    - status
+    - isTeam1
+  properties:
+    id:
+      $ref: '#/components/schemas/Uuid'
+    name:
+      type: [string, 'null']
+    scheduledDate:
+      type: [string, 'null']
+      format: date-time
+    status:
+      type: string
+    ranked:
+      type: boolean
+    isTeam1:
+      type: boolean
+    opponentName:
+      type: [string, 'null']
+    team1Score:
+      type: [integer, 'null']
+    team2Score:
+      type: [integer, 'null']
+    winnerTeamId:
+      type: [string, 'null']
+      format: uuid
+    disputeReason:
+      type: [string, 'null']
+    myReport:
+      type: [object, 'null']
+      properties:
+        team1Score:
+          type: integer
+        team2Score:
+          type: integer
+PublicTournamentSummary:
+  type: object
+  required:
+    - id
+    - name
+    - status
+  properties:
+    id:
+      $ref: '#/components/schemas/Uuid'
+    name:
+      type: string
+    slug:
+      type: [string, 'null']
+    short_name:
+      type: [string, 'null']
+    game:
+      type: [string, 'null']
+    status:
+      type: string
+    format:
+      type: [string, 'null']
+    start_date:
+      oneOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+    end_date:
+      oneOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+    max_teams:
+      type: [integer, 'null']
+    logo_url:
+      type: [string, 'null']
+    banner_url:
+      type: [string, 'null']
+    team_count:
+      type: integer
+    created_at:
+      $ref: '#/components/schemas/Timestamp'
+PublicScrim:
+  type: object
+  required:
+    - id
+    - status
+  properties:
+    id:
+      $ref: '#/components/schemas/Uuid'
+    name:
+      type: [string, 'null']
+    slug:
+      type: [string, 'null']
+    game:
+      type: [string, 'null']
+    status:
+      type: string
+      enum:
+        - draft
+        - scheduled
+        - running
+        - completed
+        - cancelled
+    scheduled_date:
+      oneOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+    timezone:
+      type: [string, 'null']
+    logo_url:
+      type: [string, 'null']
+    banner_url:
+      type: [string, 'null']
+    description:
+      type: [string, 'null']
+    stream_url:
+      type: [string, 'null']
+    team1_id:
+      $ref: '#/components/schemas/Uuid'
+    team2_id:
+      oneOf:
+        - $ref: '#/components/schemas/Uuid'
+        - type: 'null'
+    team1:
+      type: object
+      additionalProperties: true
+    team2:
+      type: [object, 'null']
+      additionalProperties: true
+PublicScrimRequestInput:
+  type: object
+  required:
+    - requesterName
+    - message
+  properties:
+    targetTeamId:
+      type: string
+      format: uuid
+    targetTeamSlug:
+      type: string
+    fromTeamName:
+      type: string
+      maxLength: 80
+    requesterName:
+      type: string
+      maxLength: 80
+    requesterEmail:
+      type: string
+      format: email
+      maxLength: 200
+    requesterDiscord:
+      type: string
+      maxLength: 100
+    preferredDate:
+      type: string
+      format: date-time
+    format:
+      type: string
+      maxLength: 50
+    message:
+      type: string
+      maxLength: 1000
+    honeypot:
+      type: string
+      description: Doit etre vide (anti-bot).
+    captchaToken:
+      type: string
+    captchaAnswer:
+      type: string
+CheckinTokenStatus:
+  type: object
+  required:
+    - ok
+  properties:
+    ok:
+      type: boolean
+    error:
+      type: string
+    match:
+      type: object
+      additionalProperties: true
+    team:
+      type: object
+      additionalProperties: true
+    alreadyCheckedIn:
+      type: boolean
+    checkedInAt:
+      oneOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+    opensAt:
+      oneOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+    closesAt:
+      oneOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+    isOpen:
+      type: boolean
+    isPassed:
+      type: boolean
+PlayerNextMatch:
+  type: object
+  required:
+    - match
+    - team
+    - opponent
+    - tournament
+    - checkin
+  description: |
+    Si le joueur n'a pas d'equipe ou pas de match a venir, tous les champs
+    retournent `null`. Sinon, payload complet ci-dessous.
+  properties:
+    match:
+      type: [object, 'null']
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        scheduledAt:
+          oneOf:
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
+        status:
+          type: string
+        format:
+          type: [string, 'null']
+        roundName:
+          type: [string, 'null']
+        streamUrl:
+          type: [string, 'null']
+        bestOf:
+          type: [integer, 'null']
+    team:
+      type: [object, 'null']
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+        slot:
+          type: integer
+          enum:
+            - 1
+            - 2
+    opponent:
+      type: [object, 'null']
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+    tournament:
+      type: [object, 'null']
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+        slug:
+          type: [string, 'null']
+    checkin:
+      type: [object, 'null']
+      properties:
+        token:
+          type: [string, 'null']
+        alreadyCheckedIn:
+          type: boolean
+        checkedInAt:
+          oneOf:
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
+        opensAt:
+          oneOf:
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
+        closesAt:
+          oneOf:
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
+        isOpen:
+          type: boolean
+        isPassed:
+          type: boolean

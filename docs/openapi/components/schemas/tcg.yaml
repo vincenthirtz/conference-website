@@ -1,0 +1,114 @@
+TcgTradeSubject:
+  description: |
+    Un SUJET de carte TCG dans une proposition d'echange : joueuse ou equipe
+    par UUID, map par slug du registre. Jamais un exemplaire, jamais une
+    image : l'exemplaire est choisi par la base, la face relue a l'affichage.
+  oneOf:
+    - type: object
+      additionalProperties: false
+      required: [kind, id]
+      properties:
+        kind:
+          type: string
+          enum: [player, team]
+        id:
+          type: string
+          format: uuid
+    - type: object
+      additionalProperties: false
+      required: [kind, id]
+      properties:
+        kind:
+          type: string
+          enum: [map]
+        id:
+          type: string
+          pattern: ^[a-z0-9-]{1,64}$
+TcgSetCompletedNotice:
+  type: object
+  description: >-
+    Une serie TCG dont la recompense vient d'etre ecrite par l'appel en cours.
+    Faits bruts (l'interface formule le libelle) ; aucun nom de joueuse.
+  properties:
+    key:
+      type: string
+    kind:
+      type: string
+      enum: [map_mode, tournament_teams, team_roster]
+    mode:
+      type: [string, 'null']
+    tournamentName:
+      type: [string, 'null']
+    teamName:
+      type: [string, 'null']
+    coins:
+      type: integer
+TcgShowcaseState:
+  type: object
+  description: >-
+    Etat de la vitrine TCG d'une joueuse. `cards` = cartes ENCORE possedees
+    parmi celles choisies, dans l'ordre choisi, faces filtrees par le
+    consentement ; `unavailable` = cartes choisies qui ne le sont plus.
+  properties:
+    enabled:
+      type: boolean
+    cards:
+      type: array
+      items:
+        type: object
+        properties:
+          key:
+            type: string
+            description: '`player:<uuid>`, `team:<uuid>` ou `map:<slug>`.'
+          kind:
+            type: string
+            enum: [player, team, map]
+          userId:
+            type: string
+          teamId:
+            type: string
+          slug:
+            type: [string, 'null']
+          displayName:
+            type: [string, 'null']
+          name:
+            type: [string, 'null']
+          imageUrl:
+            type: [string, 'null']
+          logoUrl:
+            type: [string, 'null']
+          cardImageUrl:
+            type: [string, 'null']
+          rarity:
+            type: string
+            enum: [common, rare, epic, legendary]
+            description: Meilleure rarete ENCORE possedee pour ce sujet.
+          isFoil:
+            type: boolean
+    unavailable:
+      type: integer
+    maxCards:
+      type: integer
+    publicProfileUrl:
+      type: [string, 'null']
+TcgOverlayTokenState:
+  type: object
+  description: >-
+    Le lien de la source navigateur OBS du TCG. `url` est un SECRET PORTEUR :
+    quiconque l'a voit les annonces. Il n'y en a qu'un actif par espace —
+    emettre revoque le precedent.
+  required:
+    - url
+  properties:
+    url:
+      type: [string, 'null']
+      description: URL complete a coller dans OBS, ou `null` si aucun lien actif.
+    createdAt:
+      type: [string, 'null']
+      format: date-time
+    lastUsedAt:
+      type: [string, 'null']
+      format: date-time
+      description: >-
+        Dernier appel de l'overlay. Permet de constater qu'un lien oublie sert
+        encore, donc de le revoquer en connaissance de cause.

@@ -1,0 +1,53 @@
+ImportCsvResult:
+  type: object
+  description: Common shape returned by /admin/teams/bulk, import-csv and import-platform.
+  properties:
+    created:
+      type: integer
+    skipped:
+      type: integer
+    errors:
+      type: array
+      items:
+        type: object
+        additionalProperties: true
+        properties:
+          row:
+            type: integer
+          message:
+            type: string
+    teams:
+      type: array
+      items:
+        $ref: '#/components/schemas/Team'
+RecycleBinEntry:
+  type: object
+  required:
+    - id
+    - type
+    - name
+  properties:
+    id:
+      type: string
+      format: uuid
+    type:
+      type: string
+      enum:
+        - stage
+        - team
+        - match
+        - partner
+        - cast_member
+        - adherent
+        - staff
+        - scrim
+    name:
+      type: string
+    details:
+      type: [string, 'null']
+    deleted_at:
+      type: [string, 'null']
+      format: date-time
+    tournament_id:
+      type: [string, 'null']
+      format: uuid

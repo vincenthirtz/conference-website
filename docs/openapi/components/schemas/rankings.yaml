@@ -1,0 +1,397 @@
+LeaderboardEntry:
+  type: object
+  required:
+    - teamId
+    - teamName
+    - wins
+    - losses
+  properties:
+    rank:
+      type: integer
+    teamId:
+      $ref: '#/components/schemas/Uuid'
+    teamName:
+      type: string
+    wins:
+      type: integer
+    draws:
+      type: integer
+    losses:
+      type: integer
+    points:
+      type: number
+LadderRow:
+  type: object
+  required:
+    - teamId
+    - teamName
+    - played
+    - points
+    - rank
+  properties:
+    teamId:
+      $ref: '#/components/schemas/Uuid'
+    teamName:
+      type: string
+    slug:
+      type: [string, 'null']
+    logoUrl:
+      type: [string, 'null']
+    played:
+      type: integer
+    won:
+      type: integer
+    drawn:
+      type: integer
+    lost:
+      type: integer
+    scoreDiff:
+      type: integer
+    points:
+      type: integer
+    rank:
+      type: integer
+MapStats:
+  type: object
+  properties:
+    tournamentId:
+      oneOf:
+        - $ref: '#/components/schemas/Uuid'
+        - type: 'null'
+    maps:
+      type: array
+      items:
+        type: object
+        properties:
+          mapName:
+            type: string
+          gamesPlayed:
+            type: integer
+          wins:
+            type: integer
+          losses:
+            type: integer
+          winrate:
+            type: number
+          roundsFor:
+            type: integer
+          roundsAgainst:
+            type: integer
+          overtimeCount:
+            type: integer
+          tiebreakerCount:
+            type: integer
+    vetoStats:
+      type: array
+      items:
+        type: object
+        additionalProperties: true
+    teamWinrates:
+      type: array
+      items:
+        type: object
+        additionalProperties: true
+MvpLeaderboardEntry:
+  type: object
+  required:
+    - mvpCount
+  properties:
+    memberId:
+      oneOf:
+        - $ref: '#/components/schemas/Uuid'
+        - type: 'null'
+    battleTag:
+      type: [string, 'null']
+    teamId:
+      oneOf:
+        - $ref: '#/components/schemas/Uuid'
+        - type: 'null'
+    teamName:
+      type: [string, 'null']
+    mvpCount:
+      type: integer
+    matchIds:
+      type: array
+      items:
+        $ref: '#/components/schemas/Uuid'
+MvpPerMatchEntry:
+  type: object
+  properties:
+    matchId:
+      $ref: '#/components/schemas/Uuid'
+    roundName:
+      type: [string, 'null']
+    completedAt:
+      oneOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+    memberId:
+      oneOf:
+        - $ref: '#/components/schemas/Uuid'
+        - type: 'null'
+    battleTag:
+      type: [string, 'null']
+    teamId:
+      oneOf:
+        - $ref: '#/components/schemas/Uuid'
+        - type: 'null'
+    teamName:
+      type: [string, 'null']
+RatingRebuildResult:
+  type: object
+  required:
+    - players
+    - matches
+  properties:
+    players:
+      type: integer
+    matches:
+      type: integer
+LeaderboardPlayer:
+  type: object
+  required:
+    - userId
+    - rating
+    - rd
+    - gamesPlayed
+    - wins
+    - losses
+    - rank
+  properties:
+    userId:
+      type: string
+    displayName:
+      type: [string, 'null']
+    battleTag:
+      type: [string, 'null']
+    avatarUrl:
+      type: [string, 'null']
+    teamName:
+      type: [string, 'null']
+      description: >-
+        Nom de l'equipe la plus recente de la joueuse. Sert de contexte
+        d'affichage, pas de filtre.
+    teamSlug:
+      type: [string, 'null']
+    teamLogoUrl:
+      type: [string, 'null']
+      description: >-
+        Logo de l'equipe, utilise comme repli d'avatar quand `avatarUrl` est nul.
+    rating:
+      type: number
+    rd:
+      type: number
+    gamesPlayed:
+      type: integer
+    wins:
+      type: integer
+    losses:
+      type: integer
+    rank:
+      type: integer
+LeaderboardResponse:
+  type: object
+  required:
+    - players
+  properties:
+    players:
+      type: array
+      items:
+        $ref: '#/components/schemas/LeaderboardPlayer'
+League:
+  type: object
+  required:
+    - id
+    - tenant_id
+    - name
+    - slug
+    - status
+    - points_table
+    - is_public
+  properties:
+    id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    name:
+      type: string
+    slug:
+      type: string
+    description:
+      type: [string, 'null']
+    game:
+      type: [string, 'null']
+    status:
+      type: string
+      enum:
+        - draft
+        - active
+        - finished
+        - archived
+    start_date:
+      type: [string, 'null']
+    end_date:
+      type: [string, 'null']
+    points_table:
+      type: object
+      additionalProperties:
+        type: number
+    is_public:
+      type: boolean
+    created_at:
+      type: string
+    updated_at:
+      type: string
+LeagueCreateInput:
+  type: object
+  required:
+    - name
+    - slug
+  properties:
+    name:
+      type: string
+    slug:
+      type: string
+      pattern: '^[a-z0-9-]+$'
+    description:
+      type: [string, 'null']
+    game:
+      type: [string, 'null']
+    start_date:
+      type: [string, 'null']
+    end_date:
+      type: [string, 'null']
+    points_table:
+      type: object
+      additionalProperties:
+        type: number
+    is_public:
+      type: boolean
+LeaguePatchInput:
+  type: object
+  properties:
+    name:
+      type: string
+    slug:
+      type: string
+      pattern: '^[a-z0-9-]+$'
+    description:
+      type: [string, 'null']
+    game:
+      type: [string, 'null']
+    status:
+      type: string
+      enum:
+        - draft
+        - active
+        - finished
+        - archived
+    start_date:
+      type: [string, 'null']
+    end_date:
+      type: [string, 'null']
+    points_table:
+      type: object
+      additionalProperties:
+        type: number
+    is_public:
+      type: boolean
+LeagueTournamentLink:
+  type: object
+  properties:
+    league_id:
+      type: string
+      format: uuid
+    tournament_id:
+      type: string
+      format: uuid
+    tenant_id:
+      type: string
+      format: uuid
+    weight:
+      type: number
+LeagueDetailResponse:
+  type: object
+  required:
+    - league
+    - standings
+    - tournaments
+  properties:
+    league:
+      $ref: '#/components/schemas/League'
+    standings:
+      type: array
+      items:
+        type: object
+        properties:
+          teamId:
+            type: string
+          teamName:
+            type: [string, 'null']
+          teamSlug:
+            type: [string, 'null']
+          logoUrl:
+            type: [string, 'null']
+          points:
+            type: number
+          tournamentsCounted:
+            type: integer
+          bestRank:
+            type: [integer, 'null']
+          rank:
+            type: integer
+    tournaments:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: [string, 'null']
+          slug:
+            type: [string, 'null']
+          weight:
+            type: number
+LeagueStandingsResponse:
+  type: object
+  required:
+    - standings
+    - tournaments
+  properties:
+    standings:
+      type: array
+      items:
+        type: object
+        properties:
+          teamId:
+            type: string
+          teamName:
+            type: [string, 'null']
+          teamSlug:
+            type: [string, 'null']
+          logoUrl:
+            type: [string, 'null']
+          points:
+            type: number
+          tournamentsCounted:
+            type: integer
+          bestRank:
+            type: [integer, 'null']
+          rank:
+            type: integer
+    tournaments:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: [string, 'null']
+          slug:
+            type: [string, 'null']
+          weight:
+            type: number

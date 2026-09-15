@@ -1,0 +1,453 @@
+BroadcastWaveResult:
+  type: object
+  description: |
+    Per-campaign result of one wave processed by `processCampaignWave`.
+    The success-path shape is whatever `processCampaignWave` returns
+    (typically counts of sent/queued/skipped); the failure shape carries
+    `campaignId` + `error`.
+  properties:
+    campaignId:
+      type: string
+      format: uuid
+      description: Campaign whose wave failed (only present on error).
+    error:
+      type: string
+      description: Error message captured during the wave (only on error).
+  additionalProperties: true
+CronBroadcastResult:
+  type: object
+  required:
+    - success
+    - processed
+    - results
+  properties:
+    success:
+      type: boolean
+      enum:
+        - true
+    processed:
+      type: integer
+      minimum: 0
+      description: Number of `broadcast_schedules` rows examined this tick.
+    results:
+      type: array
+      description: One entry per scheduled campaign (success or error).
+      items:
+        $ref: '#/components/schemas/BroadcastWaveResult'
+CronEmailDigestResult:
+  type: object
+  required:
+    - success
+    - candidates
+    - emailsSent
+    - recipients
+    - skipped
+  description: |
+    Summary returned by `runEmailDispatcher()`. `candidates` = outbox events
+    examined this run, `emailsSent` = digest emails actually sent,
+    `recipients` = distinct users emailed, `skipped` = (event,user) pairs
+    deduped / dropped (already delivered, no email, no opt-in, etc.).
+  properties:
+    success:
+      type: boolean
+      enum:
+        - true
+    candidates:
+      type: integer
+      minimum: 0
+    emailsSent:
+      type: integer
+      minimum: 0
+    recipients:
+      type: integer
+      minimum: 0
+    skipped:
+      type: integer
+      minimum: 0
+CronCheckinResult:
+  type: object
+  required:
+    - success
+    - scanned
+    - acted
+    - errors
+  description: |
+    Summary returned by `processCheckinForUpcomingMatches`. Cross-tenant
+    tick — `scanned` counts every upcoming match across tenants, `acted`
+    counts the ones that triggered an action (email/Discord/forfeit),
+    `errors` counts handler-level failures (route still returns 200).
+  properties:
+    success:
+      type: boolean
+      enum:
+        - true
+    scanned:
+      type: integer
+      minimum: 0
+    acted:
+      type: integer
+      minimum: 0
+    errors:
+      type: integer
+      minimum: 0
+  additionalProperties: true
+CronDisputeSlaResult:
+  type: object
+  required:
+    - tenants_scanned
+    - breaches_found
+    - events_emitted
+    - duration_ms
+  properties:
+    tenants_scanned:
+      type: integer
+      minimum: 0
+      description: Number of active tenants scanned this tick.
+    breaches_found:
+      type: integer
+      minimum: 0
+      description: Total disputes past SLA across all tenants.
+    events_emitted:
+      type: integer
+      minimum: 0
+      description: |
+        `dispute.sla_breached` events successfully written to
+        `bot_event_outbox`. Matches whose emit failed are NOT stamped, so
+        they are retried next tick.
+    duration_ms:
+      type: integer
+      minimum: 0
+      description: Wall-clock duration of the tick.
+CronOutboxMaintenanceLatency:
+  type: object
+  required:
+    - sampleSize
+    - sampleCap
+  description: |
+    Delivery-latency percentiles computed over `created_at → delivered_at`
+    for rows delivered in the last 24h. `null` when no sample.
+  properties:
+    sampleSize:
+      type: integer
+      minimum: 0
+      description: Number of rows actually sampled (≤ `sampleCap`).
+    sampleCap:
+      type: integer
+      description: Hard cap on the sample (10 000).
+    p50:
+      type: [number, 'null']
+      description: Median in ms.
+    p95:
+      type: [number, 'null']
+    p99:
+      type: [number, 'null']
+    max:
+      type: [number, 'null']
+CronOutboxMaintenanceStats:
+  type: object
+  required:
+    - pendingCount
+    - delivered24h
+    - failed24h
+    - latencyMs
+  properties:
+    pendingCount:
+      type: integer
+      minimum: 0
+      description: Rows currently `status='pending'`.
+    oldestPendingAgeSec:
+      type: [integer, 'null']
+      description: Age of the oldest pending row in seconds (null if none).
+    delivered24h:
+      type: integer
+      minimum: 0
+      description: Rows delivered in the last 24h.
+    failed24h:
+      type: integer
+      minimum: 0
+      description: Rows that hit `status='failed'` (`last_push_at`) last 24h.
+    latencyMs:
+      $ref: '#/components/schemas/CronOutboxMaintenanceLatency'
+CronOutboxMaintenanceResult:
+  type: object
+  required:
+    - success
+    - config
+    - markedFailed
+    - deleted
+    - stats
+  properties:
+    success:
+      type: boolean
+      enum:
+        - true
+    config:
+      type: object
+      required:
+        - failedAfterHours
+        - deleteAfterDays
+      properties:
+        failedAfterHours:
+          type: number
+          description: |
+            Threshold for poison-pill (`OUTBOX_FAILED_AFTER_HOURS`).
+            Default 6.
+        deleteAfterDays:
+          type: number
+          description: |
+            Retention for delivered/failed rows
+            (`OUTBOX_DELETE_AFTER_DAYS`). Default 7.
+    markedFailed:
+      type: integer
+      minimum: 0
+      description: Pending rows promoted to `failed` this tick.
+    deleted:
+      type: integer
+      minimum: 0
+      description: Delivered/failed rows older than cutoff deleted this tick.
+    stats:
+      $ref: '#/components/schemas/CronOutboxMaintenanceStats'
+CronOverrunCheckResult:
+  type: object
+  required:
+    - success
+    - runs_examined
+    - segments_examined
+    - escalated
+    - deduped
+    - errors
+    - truncated_by_time_budget
+    - duration_ms
+  properties:
+    success:
+      type: boolean
+      enum:
+        - true
+    runs_examined:
+      type: integer
+      minimum: 0
+      description: Number of `event_runs` with `status='live'` scanned.
+    segments_examined:
+      type: integer
+      minimum: 0
+      description: Live segments inspected for overrun.
+    escalated:
+      type: integer
+      minimum: 0
+      description: New `event_cues` rows inserted this tick.
+    deduped:
+      type: integer
+      minimum: 0
+      description: |
+        Inserts that hit `23505` on `uq_event_cues_dedup_key` — a cue with
+        the same `auto-overrun:{runId}:{segId}` already exists.
+    errors:
+      type: integer
+      minimum: 0
+      description: Cue insert errors not classified as dedup.
+    truncated_by_time_budget:
+      type: boolean
+      description: |
+        `true` when the 20s soft time budget was exceeded and the loop
+        broke early. Remaining work picked up next tick.
+    duration_ms:
+      type: integer
+      minimum: 0
+CronWebPushDispatchResult:
+  type: object
+  required:
+    - success
+    - processed
+    - sent
+    - skipped_already_delivered
+    - skipped_max_attempts
+    - skipped_prefs
+    - expired_removed
+    - failed
+    - events_examined
+    - duration_ms
+    - truncated_by_time_budget
+  properties:
+    success:
+      type: boolean
+      enum:
+        - true
+    events_examined:
+      type: integer
+      minimum: 0
+      description: |
+        Outbox events loaded as candidates (filtered by event_name and
+        `WEB_PUSH_WINDOW_HOURS`, capped by `WEB_PUSH_BATCH_LIMIT`).
+    processed:
+      type: integer
+      minimum: 0
+      description: Events for which at least one delivery was attempted.
+    sent:
+      type: integer
+      minimum: 0
+      description: Successful `webpush.sendNotification` calls.
+    skipped_already_delivered:
+      type: integer
+      minimum: 0
+      description: |
+        (event, subscription) pairs with existing
+        `status='delivered'` or `'expired'`.
+    skipped_max_attempts:
+      type: integer
+      minimum: 0
+      description: |
+        Pairs whose previous attempts reached `MAX_ATTEMPTS_BEFORE_GIVING_UP`
+        (5). No further retries.
+    skipped_prefs:
+      type: integer
+      minimum: 0
+      description: |
+        Recipients excluded because of opt-out rows in
+        `notification_prefs`.
+    expired_removed:
+      type: integer
+      minimum: 0
+      description: |
+        Subscriptions that returned 410/404 and were deleted from
+        `push_subscriptions` (CASCADE drops `web_push_deliveries`).
+    failed:
+      type: integer
+      minimum: 0
+      description: |
+        Transient/5xx errors. Row stays `failed`, `attempts` incremented,
+        retried next tick until threshold.
+    duration_ms:
+      type: integer
+      minimum: 0
+    truncated_by_time_budget:
+      type: boolean
+      description: |
+        `true` when the 8s soft time budget was exceeded. The rest of the
+        batch is picked up on the next 1-minute tick.
+CronWebPushInFlightSkip:
+  type: object
+  description: |
+    Returned when a previous tick is still running inside the same
+    Netlify worker. Cross-instance contention is handled by the
+    `UNIQUE(outbox_event_id, subscription_id)` constraint on
+    `web_push_deliveries`.
+  required:
+    - success
+    - skipped
+  properties:
+    success:
+      type: boolean
+      enum:
+        - true
+    skipped:
+      type: string
+      enum:
+        - in_flight
+CronSyncGameHeroesResult:
+  type: object
+  description: |
+    Summary returned by `syncAllGameHeroes()`. `success=false` indicates
+    at least one upstream sync failed (HTTP status will be 207 in that
+    case so the heartbeat write still happens).
+  required:
+    - success
+    - startedAt
+    - finishedAt
+    - durationMs
+    - games
+  properties:
+    success:
+      type: boolean
+    startedAt:
+      type: string
+      format: date-time
+    finishedAt:
+      type: string
+      format: date-time
+    durationMs:
+      type: integer
+      minimum: 0
+    games:
+      type: array
+      items:
+        type: object
+        required:
+          - game
+          - ok
+          - fetched
+          - upserted
+        properties:
+          game:
+            type: string
+            enum:
+              - lol
+              - dota2
+          ok:
+            type: boolean
+          fetched:
+            type: integer
+            minimum: 0
+            description: Number of rows received from the upstream API.
+          upserted:
+            type: integer
+            minimum: 0
+            description: Number of rows written to `game_heroes`.
+          error:
+            type: string
+            description: Only present when `ok=false`.
+CronDraftAutoPickResult:
+  type: object
+  description: |
+    Tick summary returned by `/api/cron/draft-auto-pick`. `success` is
+    false only if at least one individual draft errored; per-draft
+    errors are caught so one bad row never blocks the rest.
+  required:
+    - success
+    - scanned
+    - autoPicked
+    - errors
+  properties:
+    success:
+      type: boolean
+    scanned:
+      type: integer
+      minimum: 0
+      description: |
+        Number of distinct drafts whose current step deadline_at was
+        in the past at the start of the tick.
+    autoPicked:
+      type: integer
+      minimum: 0
+    errors:
+      type: integer
+      minimum: 0
+CronPlanRenewalResult:
+  type: object
+  description: |
+    Résumé du tick de `/api/cron/plan-renewal`. `checked` = tenants aux plans
+    payants examinés ; `markedPastDue` = bascules expiration → past_due ;
+    `remindersSent` = relances de renouvellement envoyées ; `errors` =
+    échecs par-tenant non fatals.
+  required:
+    - success
+    - checked
+    - markedPastDue
+    - remindersSent
+    - errors
+  properties:
+    success:
+      type: boolean
+      enum:
+        - true
+    checked:
+      type: integer
+      minimum: 0
+    markedPastDue:
+      type: integer
+      minimum: 0
+    remindersSent:
+      type: integer
+      minimum: 0
+    errors:
+      type: integer
+      minimum: 0

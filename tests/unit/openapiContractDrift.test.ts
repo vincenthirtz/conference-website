@@ -18,6 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { loadFullSpec } from '../../utils/openapi/loadSpec';
+import { fragmentToApiPath } from '../../utils/openapi/assemble';
 
 // ---------------------------------------------------------------------------
 // Roots
@@ -25,6 +26,7 @@ import { loadFullSpec } from '../../utils/openapi/loadSpec';
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const API_ROOT = path.join(REPO_ROOT, 'pages', 'api');
+const FRAGMENTS_ROOT = path.join(REPO_ROOT, 'docs', 'openapi', 'paths');
 const BOT_CLIENT_ROOT =
   process.env.BOT_CLIENT_ROOT ??
   path.resolve(REPO_ROOT, '..', 'docker-box', 'services', 'discord-bot');
@@ -420,37 +422,56 @@ const HANDLERS = listHandlers();
 const BOT_CALLS = listBotCalls();
 
 describe('OpenAPI ↔ handlers', () => {
-  it('every handler file has a matching openapi path', () => {
-    const specPaths = new Set(SPEC_OPS.map((o) => o.apiPath));
+  // La spec est découpée en un fragment par handler, au même emplacement
+  // (docs/openapi/paths/api/… ↔ pages/api/…, cf. utils/openapi/assemble.ts).
+  // La correspondance se vérifie donc sur l'ARBORESCENCE, sans rapprocher des
+  // URL par regex : un fragment mal placé ou orphelin se voit tel quel.
+  it('every handler file has its OpenAPI fragment at the same place', () => {
     const missing: string[] = [];
     for (const h of HANDLERS) {
       if (ALLOWLIST_HANDLER_WITHOUT_SPEC.has(h.apiPath)) continue;
       if (h.methods.length === 0) continue; // not a route handler (helper file)
-      const hit = [...specPaths].some((p) =>
-        pathTemplateEquivalent(p, h.apiPath)
-      );
-      if (!hit) missing.push(h.apiPath);
+      const rel = path
+        .relative(path.join(REPO_ROOT, 'pages'), h.file)
+        .replace(/\\/g, '/')
+        .replace(/\.ts$/, '.yaml');
+      if (!fs.existsSync(path.join(FRAGMENTS_ROOT, rel))) {
+        missing.push(
+          `pages/${rel.replace(/\.yaml$/, '.ts')} → docs/openapi/paths/${rel}`
+        );
+      }
     }
     expect(
       missing,
-      `${missing.length} handler(s) missing from the OpenAPI spec:\n  ${missing.join('\n  ')}`
+      `${missing.length} handler(s) without OpenAPI fragment:\n  ${missing.join('\n  ')}`
     ).toEqual([]);
   });
 
-  it('every openapi path has a matching handler file', () => {
-    const handlerPaths = new Set(HANDLERS.map((h) => h.apiPath));
-    const phantom: string[] = [];
-    for (const op of SPEC_OPS) {
-      if (ALLOWLIST_SPEC_WITHOUT_HANDLER.has(op.apiPath)) continue;
-      const hit = [...handlerPaths].some((p) =>
-        pathTemplateEquivalent(p, op.apiPath)
-      );
-      if (!hit) phantom.push(op.apiPath);
-    }
-    const unique = [...new Set(phantom)].sort();
+  it('every OpenAPI fragment sits next to a handler file', () => {
+    const orphans: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walk(p);
+          continue;
+        }
+        if (!entry.name.endsWith('.yaml')) continue;
+        const rel = path.relative(FRAGMENTS_ROOT, p).replace(/\\/g, '/');
+        if (ALLOWLIST_SPEC_WITHOUT_HANDLER.has(fragmentToApiPath(rel)))
+          continue;
+        const handler = path.join(
+          REPO_ROOT,
+          'pages',
+          rel.replace(/\.yaml$/, '.ts')
+        );
+        if (!fs.existsSync(handler)) orphans.push(`docs/openapi/paths/${rel}`);
+      }
+    };
+    walk(FRAGMENTS_ROOT);
     expect(
-      unique,
-      `${unique.length} phantom path(s) in the OpenAPI spec (no handler file):\n  ${unique.join('\n  ')}`
+      orphans,
+      `${orphans.length} fragment(s) without handler file:\n  ${orphans.join('\n  ')}`
     ).toEqual([]);
   });
 

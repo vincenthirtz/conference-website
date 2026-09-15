@@ -1,0 +1,202 @@
+PrizeCheckoutRequest:
+  type: object
+  description: >-
+    Corps de `POST /api/helloasso/prize-checkout` (« Profondeur de la
+    monétisation », cash-prize crowdfundé). Au moins un de `tournamentId` /
+    `prizePoolId` doit être fourni ; si les deux le sont, `prizePoolId` fait
+    foi. `contributorName` / `email` / `message` / `isAnonymous` sont capturés
+    dans `prize_pool_checkouts` (l'`email` reste privé, jamais réexposé).
+    Montant en CENTIMES (cohérent avec le checkout générique, HelloAsso et le
+    schéma DB).
+  required:
+    - amountCents
+  properties:
+    tournamentId:
+      $ref: '#/components/schemas/Uuid'
+    prizePoolId:
+      $ref: '#/components/schemas/Uuid'
+    amountCents:
+      type: integer
+      minimum: 100
+      maximum: 10000000
+      description: Montant de la contribution en centimes (1 € à 100 000 €).
+    contributorName:
+      type: string
+      minLength: 1
+      maxLength: 100
+    email:
+      type: string
+      format: email
+      maxLength: 254
+      description: Email privé du contributeur — jamais réexposé publiquement.
+    message:
+      type: string
+      maxLength: 500
+    isAnonymous:
+      type: boolean
+      default: false
+PrizeRecentContributor:
+  type: object
+  description: >-
+    Contribution récente exposée publiquement (jauge de cagnotte). N'expose
+    JAMAIS l'email ; `name` est `null` pour une contribution anonyme.
+  required:
+    - name
+    - amountCents
+    - message
+    - createdAt
+  properties:
+    name:
+      type: [string, 'null']
+      description: Nom affiché, ou `null` si la contribution est anonyme.
+    amountCents:
+      type: integer
+    message:
+      type: [string, 'null']
+    createdAt:
+      anyOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+PrizePoolPublic:
+  type: object
+  description: >-
+    Vue publique de la cagnotte d'un tournoi. Si aucune cagnotte n'existe, même
+    forme avec `exists:false`, montants à zéro et `recentContributors:[]`.
+  required:
+    - exists
+    - isOpen
+    - currency
+    - baseAmountCents
+    - raisedAmountCents
+    - totalCents
+    - goalAmountCents
+    - contributorCount
+    - recentContributors
+  properties:
+    exists:
+      type: boolean
+    isOpen:
+      type: boolean
+    currency:
+      type: string
+      description: Code ISO 4217 (ex. `EUR`).
+    baseAmountCents:
+      type: integer
+      description: Dotation de base (fixée par l'orga), en centimes.
+    raisedAmountCents:
+      type: integer
+      description: Total des contributions confirmées, en centimes.
+    totalCents:
+      type: integer
+      description: '`baseAmountCents` + `raisedAmountCents`.'
+    goalAmountCents:
+      type: [integer, 'null']
+      description: Objectif de collecte, ou `null` si non défini.
+    contributorCount:
+      type: integer
+    recentContributors:
+      type: array
+      items:
+        $ref: '#/components/schemas/PrizeRecentContributor'
+PrizePoolAdmin:
+  type: object
+  description: >-
+    Configuration complète de la cagnotte (vue organisateur). `total_cents` (=
+    `base_amount_cents` + `raised_amount_cents`) n'est présent que dans la
+    réponse GET ; les réponses PUT/POST renvoient la row brute (sans
+    `total_cents`). `raised_amount_cents` est dénormalisé et géré exclusivement
+    par le webhook HelloAsso.
+  required:
+    - id
+    - tournament_id
+    - tenant_id
+    - title
+    - currency
+    - goal_amount_cents
+    - base_amount_cents
+    - raised_amount_cents
+    - is_open
+    - created_at
+    - updated_at
+  properties:
+    id:
+      $ref: '#/components/schemas/Uuid'
+    tournament_id:
+      $ref: '#/components/schemas/Uuid'
+    tenant_id:
+      $ref: '#/components/schemas/Uuid'
+    title:
+      type: [string, 'null']
+    currency:
+      type: string
+    goal_amount_cents:
+      type: [integer, 'null']
+    base_amount_cents:
+      type: integer
+    raised_amount_cents:
+      type: integer
+    is_open:
+      type: boolean
+    total_cents:
+      type: integer
+      description: Présent uniquement dans la réponse GET.
+    created_at:
+      $ref: '#/components/schemas/Timestamp'
+    updated_at:
+      $ref: '#/components/schemas/Timestamp'
+PrizeContributionAdmin:
+  type: object
+  description: >-
+    Contribution telle que vue par l'organisateur (inclut les identifiants de
+    corrélation HelloAsso). Toujours scopée par tenant. N'inclut pas l'email.
+  required:
+    - id
+    - amount_cents
+    - contributor_name
+    - is_anonymous
+    - message
+    - helloasso_payment_id
+    - checkout_intent_id
+    - created_at
+  properties:
+    id:
+      $ref: '#/components/schemas/Uuid'
+    amount_cents:
+      type: integer
+    contributor_name:
+      type: [string, 'null']
+    is_anonymous:
+      type: boolean
+    message:
+      type: [string, 'null']
+    helloasso_payment_id:
+      type: [string, 'null']
+    checkout_intent_id:
+      type: [string, 'null']
+    created_at:
+      $ref: '#/components/schemas/Timestamp'
+PrizePoolUpsertRequest:
+  type: object
+  description: >-
+    Corps de `PUT`/`POST /api/admin/tournaments/{id}/prize-pool`. Tous les
+    champs sont optionnels ; seuls ceux fournis sont écrasés.
+    `raised_amount_cents` n'est jamais modifiable ici.
+  properties:
+    title:
+      type: [string, 'null']
+      maxLength: 200
+    goal_amount_cents:
+      type: [integer, 'null']
+      minimum: 1
+    base_amount_cents:
+      type: integer
+      minimum: 0
+    is_open:
+      type: boolean
+PrizePoolUpsertResponse:
+  type: object
+  required:
+    - pool
+  properties:
+    pool:
+      $ref: '#/components/schemas/PrizePoolAdmin'

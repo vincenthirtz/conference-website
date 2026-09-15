@@ -1,0 +1,51 @@
+Error:
+  type: object
+  required:
+    - error
+  properties:
+    error:
+      type: string
+      description: Message lisible côté client.
+    code:
+      type: string
+      description: Code machine (ex. `MISSING_TENANT_ID`, `UNKNOWN_TENANT`).
+    details:
+      type: object
+      additionalProperties: true
+  example:
+    error: Invalid or missing API key.
+    code: MISSING_TENANT_ID
+Ok:
+  type: object
+  required:
+    - ok
+  properties:
+    ok:
+      type: boolean
+      enum:
+        - true
+Uuid:
+  type: string
+  format: uuid
+Timestamp:
+  type: string
+  format: date-time
+DiscordId:
+  type: string
+  pattern: ^[0-9]{17,20}$
+  description: Snowflake Discord (user, guild, channel, role).
+Tenant:
+  type: object
+  required:
+    - id
+    - slug
+    - name
+  properties:
+    id:
+      $ref: '#/components/schemas/Uuid'
+    slug:
+      type: string
+    name:
+      type: string
+    createdAt:
+      $ref: '#/components/schemas/Timestamp'

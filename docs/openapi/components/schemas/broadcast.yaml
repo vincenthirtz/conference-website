@@ -1,0 +1,695 @@
+CastAssignment:
+  type: object
+  required:
+    - id
+    - matchId
+    - casterUserId
+    - role
+  properties:
+    id:
+      $ref: '#/components/schemas/Uuid'
+    matchId:
+      $ref: '#/components/schemas/Uuid'
+    casterUserId:
+      $ref: '#/components/schemas/Uuid'
+    casterDisplayName:
+      type: string
+    role:
+      type: string
+      enum:
+        - play_by_play
+        - color
+        - observer
+        - director
+    confirmedAt:
+      anyOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+EventRun:
+  type: object
+  required:
+    - id
+    - name
+    - status
+  properties:
+    id:
+      $ref: '#/components/schemas/Uuid'
+    slug:
+      type: string
+    name:
+      type: string
+    status:
+      type: string
+      enum:
+        - draft
+        - scheduled
+        - live
+        - done
+    startedAt:
+      anyOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+    endedAt:
+      anyOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+EventSegment:
+  type: object
+  required:
+    - id
+    - runId
+    - ord
+    - type
+    - status
+  properties:
+    id:
+      $ref: '#/components/schemas/Uuid'
+    runId:
+      $ref: '#/components/schemas/Uuid'
+    ord:
+      type: integer
+    type:
+      type: string
+      enum:
+        - match
+        - intermission
+        - intro
+        - outro
+        - interview
+        - segment
+    title:
+      type: string
+    durationMin:
+      type: integer
+    matchId:
+      anyOf:
+        - $ref: '#/components/schemas/Uuid'
+        - type: 'null'
+    status:
+      type: string
+      enum:
+        - upcoming
+        - live
+        - done
+        - skipped
+    obs_scene:
+      type: [string, 'null']
+      maxLength: 200
+      description: |
+        Nom de la scène OBS mise à l'antenne au démarrage du segment.
+        `null` = pas de bascule automatique. C'est un nom, pas un
+        identifiant : obs-websocket adresse les scènes par nom, et rien
+        côté serveur ne peut valider qu'elle existe.
+EventWave:
+  type: object
+  required:
+    - id
+    - event_run_id
+    - ord
+    - title
+    - status
+  properties:
+    id:
+      $ref: '#/components/schemas/Uuid'
+    tenant_id:
+      $ref: '#/components/schemas/Uuid'
+    event_run_id:
+      $ref: '#/components/schemas/Uuid'
+    ord:
+      type: integer
+    title:
+      type: string
+    planned_start_at:
+      anyOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+    duration_min:
+      type: [integer, 'null']
+    status:
+      type: string
+      enum:
+        - upcoming
+        - live
+        - done
+        - skipped
+    started_at:
+      anyOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+    ended_at:
+      anyOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+EventStation:
+  type: object
+  required:
+    - id
+    - event_run_id
+    - ord
+    - name
+    - status
+  properties:
+    id:
+      $ref: '#/components/schemas/Uuid'
+    tenant_id:
+      $ref: '#/components/schemas/Uuid'
+    event_run_id:
+      $ref: '#/components/schemas/Uuid'
+    ord:
+      type: integer
+    name:
+      type: string
+    stream_url:
+      type: [string, 'null']
+    notes:
+      type: [string, 'null']
+    status:
+      type: string
+BroadcastState:
+  type: object
+  description: Aggregate live broadcast state of the single live event_run.
+  properties:
+    run:
+      anyOf:
+        - $ref: '#/components/schemas/EventRun'
+        - type: 'null'
+    currentSegment:
+      anyOf:
+        - $ref: '#/components/schemas/EventSegment'
+        - type: 'null'
+    match:
+      type: [object, 'null']
+      additionalProperties: true
+      properties:
+        matchId:
+          type: string
+          format: uuid
+        team1:
+          type: object
+          additionalProperties: true
+        team2:
+          type: object
+          additionalProperties: true
+    casters:
+      type: array
+      items:
+        $ref: '#/components/schemas/CastAssignment'
+    state:
+      allOf:
+        - $ref: '#/components/schemas/BroadcastStateV1'
+      description: >-
+        The persisted `event_runs.broadcast_state` JSONB, normalised on read
+        (missing fields backfilled with defaults).
+BroadcastStateV1:
+  type: object
+  description: |
+    Versioned overlay state stored in `event_runs.broadcast_state` (JSONB,
+    freeform — no dedicated columns). Always normalised on read: absent
+    fields are backfilled with defaults (`scene` → `'starting'`,
+    `auto_director` → `true`, `on_air` → `false`, `pip.enabled` → `false`).
+  required:
+    - v
+    - on_air
+    - lower_third
+    - pip
+    - scene
+    - auto_director
+    - scene_updated_at
+  properties:
+    v:
+      type: integer
+      enum:
+        - 1
+      description: Schema version (always 1).
+    on_air:
+      type: boolean
+      description: Whether the program feed is live to air.
+    lower_third:
+      type: [string, 'null']
+      description: Free lower-third caption, or null when hidden.
+    pip:
+      type: object
+      required:
+        - enabled
+      properties:
+        enabled:
+          type: boolean
+    scene:
+      $ref: '#/components/schemas/BroadcastScene'
+    auto_director:
+      type: boolean
+      description: >-
+        When true (default), the auto-director reactor switches `scene` on match
+        status changes. When false, scene changes are operator-driven only.
+    scene_updated_at:
+      type: [string, 'null']
+      format: date-time
+      description: ISO timestamp of the last `scene` change, or null.
+BroadcastScene:
+  type: string
+  description: The overlay scene the OBS browser-source renders.
+  enum:
+    - starting
+    - match
+    - pause
+    - results
+    - end
+    - custom
+NextMatchResult:
+  type: object
+  description: Result of the one-click "next match" broadcast transition.
+  required:
+    - segment
+    - alreadyStarted
+    - runId
+  properties:
+    segment:
+      allOf:
+        - $ref: '#/components/schemas/EventSegment'
+      description: The segment now promoted to `status='live'`.
+    alreadyStarted:
+      type: boolean
+      description: >-
+        True when the target segment was already live (idempotent no-op swap),
+        false when it was promoted from `upcoming`.
+    runId:
+      type: string
+      format: uuid
+      description: The live run the transition happened on.
+OverlayState:
+  type: object
+  description: |
+    Chrome-less overlay payload for a run's OBS browser source. PUBLIC and
+    cacheable (`Cache-Control: s-maxage=5, stale-while-revalidate`); never
+    exposes staff-only fields (`auto_director`, casters, stream URLs,
+    checklists, broadcast messages…). When the run is unknown or not live,
+    a safe empty-ish shape is returned (scene `'starting'`, `match` null,
+    `onAir` false) with a 200 so the browser source never errors mid-show.
+  required:
+    - scene
+    - onAir
+    - lowerThird
+    - pip
+    - match
+    - sponsors
+  properties:
+    scene:
+      $ref: '#/components/schemas/BroadcastScene'
+    onAir:
+      type: boolean
+    lowerThird:
+      type: [string, 'null']
+    pip:
+      type: object
+      required:
+        - enabled
+      properties:
+        enabled:
+          type: boolean
+    match:
+      anyOf:
+        - $ref: '#/components/schemas/OverlayMatch'
+        - type: 'null'
+    sponsors:
+      type: array
+      items:
+        $ref: '#/components/schemas/OverlaySponsor'
+OverlayMatch:
+  type: object
+  description: The current match block rendered by the overlay.
+  required:
+    - team1
+    - team2
+    - format
+    - status
+  properties:
+    team1:
+      anyOf:
+        - $ref: '#/components/schemas/OverlayTeam'
+        - type: 'null'
+    team2:
+      anyOf:
+        - $ref: '#/components/schemas/OverlayTeam'
+        - type: 'null'
+    format:
+      type: [string, 'null']
+      description: Match format (e.g. `bo1`, `bo3`), or null.
+    status:
+      type: [string, 'null']
+      description: Match status (e.g. `ongoing`, `finished`), or null.
+OverlayTeam:
+  type: object
+  required:
+    - name
+    - logoUrl
+    - score
+  properties:
+    name:
+      type: string
+    logoUrl:
+      type: [string, 'null']
+    score:
+      type: [integer, 'null']
+OverlaySponsor:
+  type: object
+  required:
+    - name
+    - logoUrl
+    - websiteUrl
+  properties:
+    name:
+      type: string
+    logoUrl:
+      type: [string, 'null']
+    websiteUrl:
+      type: [string, 'null']
+CreateEventSegmentInput:
+  type: object
+  required:
+    - type
+    - title
+  properties:
+    type:
+      type: string
+      enum:
+        - match
+        - break
+        - intro
+        - outro
+        - custom
+    title:
+      type: string
+      minLength: 1
+      maxLength: 200
+    ord:
+      type: integer
+      minimum: 0
+    match_id:
+      type: [string, 'null']
+      format: uuid
+    duration_min:
+      type: [integer, 'null']
+      minimum: 1
+    planned_start_at:
+      type: [string, 'null']
+      format: date-time
+    broadcast_message:
+      type: [object, 'null']
+      additionalProperties: false
+      properties:
+        discord:
+          type: string
+          maxLength: 2000
+        push_title:
+          type: string
+          maxLength: 200
+        push_body:
+          type: string
+          maxLength: 500
+        email_subject:
+          type: string
+          maxLength: 200
+    caster_checklist:
+      type: array
+      items:
+        type: object
+        required:
+          - key
+          - label
+        properties:
+          key:
+            type: string
+            minLength: 1
+            maxLength: 80
+          label:
+            type: string
+            minLength: 1
+            maxLength: 200
+          checked_by_user_id:
+            type: [string, 'null']
+            format: uuid
+          checked_at:
+            type: [string, 'null']
+            format: date-time
+PublicEventRun:
+  type: object
+  required:
+    - id
+    - name
+    - status
+  properties:
+    id:
+      $ref: '#/components/schemas/Uuid'
+    slug:
+      type: string
+    name:
+      type: string
+    description:
+      type: [string, 'null']
+    scheduledAt:
+      oneOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+    status:
+      type: string
+      enum:
+        - draft
+        - scheduled
+        - live
+        - done
+    startedAt:
+      oneOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+    endedAt:
+      oneOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+PublicEventSegment:
+  type: object
+  required:
+    - id
+    - ord
+    - type
+    - status
+  properties:
+    id:
+      $ref: '#/components/schemas/Uuid'
+    ord:
+      type: integer
+    type:
+      type: string
+      enum:
+        - match
+        - intermission
+        - intro
+        - outro
+        - interview
+        - segment
+    title:
+      type: [string, 'null']
+    durationMin:
+      type: [integer, 'null']
+    matchId:
+      oneOf:
+        - $ref: '#/components/schemas/Uuid'
+        - type: 'null'
+    status:
+      type: string
+      enum:
+        - upcoming
+        - live
+        - done
+        - skipped
+    startedAt:
+      oneOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+    endedAt:
+      oneOf:
+        - $ref: '#/components/schemas/Timestamp'
+        - type: 'null'
+CasterMe:
+  type: object
+  required:
+    - caster
+    - upcomingAssignments
+  properties:
+    caster:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+        title:
+          type: [string, 'null']
+        imageUrl:
+          type: [string, 'null']
+        twitchUrl:
+          type: [string, 'null']
+        city:
+          type: [string, 'null']
+    upcomingAssignments:
+      type: array
+      items:
+        type: object
+        required:
+          - kind
+          - assignmentId
+        properties:
+          kind:
+            type: string
+            enum:
+              - match
+              - scrim
+          assignmentId:
+            $ref: '#/components/schemas/Uuid'
+          role:
+            type: [string, 'null']
+          startsAt:
+            $ref: '#/components/schemas/Timestamp'
+          match:
+            type: [object, 'null']
+            additionalProperties: true
+          scrim:
+            type: [object, 'null']
+            additionalProperties: true
+CasterBriefing:
+  type: object
+  required:
+    - match
+    - teams
+    - headToHead
+    - recentNews
+  properties:
+    match:
+      type: object
+      required:
+        - id
+        - status
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        scheduledAt:
+          oneOf:
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
+        status:
+          type: string
+        matchFormat:
+          type: [string, 'null']
+        roundName:
+          type: [string, 'null']
+        tournament:
+          type: [object, 'null']
+          properties:
+            id:
+              $ref: '#/components/schemas/Uuid'
+            name:
+              type: string
+            slug:
+              type: [string, 'null']
+    teams:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            $ref: '#/components/schemas/Uuid'
+          name:
+            type: string
+          shortName:
+            type: [string, 'null']
+          logoUrl:
+            type: [string, 'null']
+          country:
+            type: [string, 'null']
+          members:
+            type: array
+            items:
+              type: object
+              properties:
+                id:
+                  $ref: '#/components/schemas/Uuid'
+                battle_tag:
+                  type: [string, 'null']
+                role:
+                  type: string
+                is_substitute:
+                  type: boolean
+                is_captain:
+                  type: boolean
+                is_manager:
+                  type: boolean
+    headToHead:
+      type: object
+      required:
+        - totalMeetings
+        - aWins
+        - bWins
+        - draws
+      properties:
+        totalMeetings:
+          type: integer
+        aWins:
+          type: integer
+        bWins:
+          type: integer
+        draws:
+          type: integer
+        lastPlayedAt:
+          oneOf:
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
+        lastMatchId:
+          oneOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+    recentNews:
+      type: array
+      items:
+        type: object
+        required:
+          - id
+          - title
+          - slug
+        properties:
+          id:
+            $ref: '#/components/schemas/Uuid'
+          title:
+            type: string
+          slug:
+            type: string
+          tag:
+            type: [string, 'null']
+          publishedAt:
+            oneOf:
+              - $ref: '#/components/schemas/Timestamp'
+              - type: 'null'
+          excerpt:
+            type: [string, 'null']
+CasterCueAck:
+  type: object
+  required:
+    - ack
+    - alreadyAcked
+  properties:
+    ack:
+      type: object
+      required:
+        - cue_id
+        - cast_member_id
+        - acked_at
+      properties:
+        cue_id:
+          $ref: '#/components/schemas/Uuid'
+        cast_member_id:
+          $ref: '#/components/schemas/Uuid'
+        acked_at:
+          $ref: '#/components/schemas/Timestamp'
+    alreadyAcked:
+      type: boolean
