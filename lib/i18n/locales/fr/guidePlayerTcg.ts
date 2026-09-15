@@ -57,6 +57,7 @@ export default ns('guidePlayerTcg', {
     'Le classement récompense les titulaires qui ont joué pour l’équipe dans ce tournoi, une fois par tournoi, à leur meilleur rang.',
   earnBattlenet: 'Compte Battle.net vérifié, une fois',
   earnCollectionSet: 'Série de collection complétée, une fois par série',
+  earnMatchPrediction: 'Pronostic juste sur un match de tournoi (gratuit)',
   earnTwitchOff:
     'Le drop en direct n’est pas actif en ce moment. Il n’apparaîtra ici que lorsqu’une chaîne sera connectée et qu’une récompense lui sera associée — inutile de le chercher d’ici là.',
   earnTwitchHow:

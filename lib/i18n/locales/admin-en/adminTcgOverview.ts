@@ -55,6 +55,7 @@ export default {
   coinsSourceTournamentPlacement: 'Tournament placement',
   coinsSourceBattlenetVerified: 'Verified Battle.net accounts',
   coinsSourceCollectionSet: 'Completed sets',
+  coinsSourceMatchPrediction: 'Correct predictions',
   coinsSourceUnknown: 'Other ({kind})',
 
   cardsTitle: 'Cards',

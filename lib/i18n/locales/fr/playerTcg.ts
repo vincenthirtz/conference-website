@@ -234,6 +234,7 @@ export default ns('playerTcg', {
   // Une fois à vie : la ligne doit dire QUEL geste l'a rapportée.
   walletBattlenetVerified: 'Compte Battle.net vérifié',
   walletCollectionSet: 'Série complétée',
+  walletMatchPrediction: 'Pronostic juste',
 
   // Rattachement Twitch, contextualisé : ce qu'on gagne, en une phrase. Affiché
   // SEULEMENT si le drop est réellement branché (montant rendu par l'API).

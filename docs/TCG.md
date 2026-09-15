@@ -346,6 +346,7 @@ ne remplace pas la première.
 | `PLACEMENT_TIERS`      | 1→8    | rang 1 : 500 + 3 paquets · 2 : 300 + 2 · 3 : 200 + 1 · 4-8 : 100 + 1 |
 | `BATTLENET_VERIFIED_COINS` | 100 | `MATCH_WIN_COINS`, **sans paquet** — une fois à vie, compte Battle.net prouvé |
 | `COLLECTION_SET_COINS` | 100 | `MATCH_WIN_COINS`, **sans paquet** — une fois par série complétée (cf. « Les séries ») |
+| `MATCH_PREDICTION_COINS` | 25 | `SCRIM_WIN_COINS / 2`, plancher à 1, **sans paquet** — un pronostic juste par match (cf. « Les pronostics ») |
 
 Aucun de ces montants n'est écrit en dur ailleurs : **le rapport scrim/match est
 importé, pas recopié.** Le dépôt pondère déjà un scrim à `SCRIM_RATING_WEIGHT`
@@ -1106,6 +1107,62 @@ motif, provenance de chaque carte) ; chaque transition est aussi journalisée
 côté serveur (`[tcg/trades]`). Pas de `staff_logs` : ce sont des gestes de
 joueuses.
 
+### Les pronostics sur les matchs de tournoi
+
+[`utils/predictions/rules.ts`](../utils/predictions/rules.ts) (règles pures),
+[`utils/predictions/eligibility.ts`](../utils/predictions/eligibility.ts)
+(exclusions), [`utils/predictions/settle.ts`](../utils/predictions/settle.ts)
+(règlement et crédit), [`utils/predictions/readState.ts`](../utils/predictions/readState.ts)
+(lectures), [`components/predictions/`](../components/predictions/) (carte de la
+page match, panneau de `/player/tcg`). Migration
+[`match_predictions.sql`](../database/migrations/match_predictions.sql).
+
+Avant un match de tournoi, une personne connectée choisit l'équipe qu'elle voit
+gagner. Un pronostic juste rapporte `MATCH_PREDICTION_COINS` — **25 pièces, sans
+paquet, une fois par match et par personne**.
+
+**Un pronostic, pas un pari.** Il ne coûte rien et les pièces ne s'achètent pas :
+sans mise ni gain monétisable, ce n'est pas un jeu d'argent (ANJ). L'interface
+n'emploie ni « mise », ni « parier », ni « cote ». Faire payer l'entrée, même en
+pièces, changerait la nature de la fonctionnalité : une décision produit, pas un
+réglage.
+
+**Qui ne pronostique pas.** Les membres des deux rosters (accepté ou non) et
+leurs capitaines, les personnes sur la feuille de match, le staff actif. C'est
+vérifié à l'écriture (`403 participant` / `403 staff`) ET au règlement : une
+remplaçante ajoutée après son pronostic est réglée `void`.
+
+**Le verrou est en base.** Ouvert tant que le match est `pending`, non lancé
+(`started_at` nul) et avant son heure prévue. Le déclencheur
+`match_predictions_guard` relit le match dans la transaction d'écriture et
+refuse un match verrouillé, un bye, un miroir de scrim, un match supprimé ou une
+équipe hors match ; il pose `updated_at` lui-même. Le règlement ignore en plus
+tout pronostic postérieur au lancement réel (défense en profondeur). La
+répartition des pronostics n'est rendue qu'une fois le match verrouillé, pour
+ne pas pousser à suivre la foule.
+
+**Le règlement.** `applyMatchScore` appelle `settleMatchPredictions` après le
+rating, sans jamais lever. Issue `finished` avec vainqueur → `won` / `lost` ;
+forfait, walkover, annulation ou vainqueur illisible → `void` pour tout le monde
+(sinon une équipe offrirait des pièces à qui a pronostiqué l'adversaire en
+déclarant forfait) ; `ongoing` ou `disputed` → rien, on attend l'issue. Les
+pièces passent par `grantCoinsThenPacks` (`source_ref = <matchId>`,
+`packSourceKind: null`) **avant** le marquage : un crédit refusé ne marque rien
+et le règlement suivant paie, un rejeu ne recrédite personne.
+
+- **Le premier résultat règle.** Une correction de score ne reprend pas des
+  pièces versées et ne rouvre pas les pronostics réglés — même posture que la
+  victoire.
+- **Pas de DM.** Un message par match juste serait du bruit : le gain apparaît
+  dans l'historique du porte-monnaie et sur la carte du match. Aucun événement
+  bot, donc aucun ordre de déploiement bot/site.
+- **Pas de plafond par jour ou par tournoi.** La limite est la clé (un par
+  match). Un tournoi de 60 matchs rapporte au mieux 1 500 pièces à qui les
+  devine tous, soit 5 boosters — moins que le palmarès d'une championne. À
+  revoir si l'usage montre du « farm ».
+- **Ne rattache pas à l'espace** (`tenantAttachment.ts`) : l'issue est pilotée
+  par l'organisation.
+
 ### Ce que la victoire déclenche
 
 [`utils/tcg/grantVictoryRewards.ts`](../utils/tcg/grantVictoryRewards.ts) est
@@ -1296,6 +1353,8 @@ joueuse) et scopées au tenant résolu par `resolveTenantIdForUserRequest`.
 | `/api/player/tcg/trades/cards`                       | GET               | joueuse                              | Mes cartes (`copies`, `tradeableCopies`, `available`), ou les doubles échangeables d'une partenaire volontaire. 60/min. |
 | `/api/cron/tcg-trades-expire`                        | GET, POST         | `CRON_SECRET`                        | Expire les propositions échues, tous tenants, une annonce par proposition. Horaire. |
 | `/api/player/tcg/showcase`                           | GET, PUT          | joueuse                              | Ma vitrine : `{ enabled, cards[], unavailable, maxCards, publicProfileUrl }`, désactivée par défaut. `PUT { enabled, cards }` (≤ 3 clés de sujet) : `409 not_owned` pour activer une carte non possédée, désactivation jamais bloquée, fiche régénérée. 60/min en GET, 20/min en PUT. |
+| `/api/player/predictions`                            | GET               | joueuse                              | **Pronostics.** Matchs à venir encore ouverts (hors matchs de ses équipes, rien pour le staff) et ses 20 derniers pronostics avec résultat. Affiche, ne décide pas. |
+| `/api/player/predictions/{matchId}`                  | GET, PUT, DELETE  | joueuse                              | État (`window`, `locksAt`, `reward`, `ineligibility`, `prediction`, `distribution` une fois verrouillé) ; pronostiquer `{ teamId }` ou changer d'avis ; retirer. `409 locked\|not_predictable`, `403 participant\|staff`, `400 invalid_team`, 404 hors tenant. Gratuit, crédité au résultat. 30/min en écriture. |
 | `/api/overlay/tcg/{token}`                           | GET               | **public**, porté par le jeton       | Le flux d'annonces d'une source navigateur OBS, plus l'habillage. Réduit au déjà-public : pseudo Twitch et origine d'événement, jamais un nom de compte ni une photo. `s-maxage=5`. 120/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
 Quelques conventions transverses :

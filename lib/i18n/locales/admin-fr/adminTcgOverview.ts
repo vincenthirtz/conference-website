@@ -66,6 +66,7 @@ export default adminNs('adminTcgOverview', {
   coinsSourceTournamentPlacement: 'Palmarès de tournoi',
   coinsSourceBattlenetVerified: 'Comptes Battle.net vérifiés',
   coinsSourceCollectionSet: 'Séries complétées',
+  coinsSourceMatchPrediction: 'Pronostics justes',
   // Repli pour une origine que ce panneau ne connaît pas encore : on affiche sa
   // clé brute plutôt que de la masquer, sinon le total ventilé cesserait de
   // correspondre au cumul affiché juste au-dessus.

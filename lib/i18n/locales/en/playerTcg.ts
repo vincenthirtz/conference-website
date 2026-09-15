@@ -182,6 +182,7 @@ export default {
   walletTournamentPlacement: 'Tournament placement',
   walletBattlenetVerified: 'Battle.net account verified',
   walletCollectionSet: 'Set completed',
+  walletMatchPrediction: 'Correct prediction',
 
   twitchPitchTitle: 'Earn coins by watching our streams',
   twitchPitchBody:

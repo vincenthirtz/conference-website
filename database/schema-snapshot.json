@@ -683,6 +683,17 @@
       "tournament_id",
       "user_id"
     ],
+    "match_predictions": [
+      "created_at",
+      "id",
+      "match_id",
+      "predicted_winner_team_id",
+      "result",
+      "settled_at",
+      "tenant_id",
+      "updated_at",
+      "user_id"
+    ],
     "match_score_reports": [
       "discord_user_id",
       "id",
@@ -2371,6 +2382,14 @@
     "match_participants_tournament_id_fkey": {
       "source": "match_participants",
       "target": "tournaments"
+    },
+    "match_predictions_match_id_fkey": {
+      "source": "match_predictions",
+      "target": "matches"
+    },
+    "match_predictions_tenant_id_fkey": {
+      "source": "match_predictions",
+      "target": "tenants"
     },
     "match_score_reports_match_id_fkey": {
       "source": "match_score_reports",

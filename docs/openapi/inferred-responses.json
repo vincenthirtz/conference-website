@@ -34958,6 +34958,396 @@
     ]
    }
   },
+  "GET /api/player/predictions": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "reward": {
+      "type": "number"
+     },
+     "open": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "matchId": {
+         "type": "string"
+        },
+        "tournamentName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "scheduledAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team1": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "name": {
+           "type": "string"
+          },
+          "logoUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "id",
+          "name",
+          "logoUrl"
+         ]
+        },
+        "team2": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "name": {
+           "type": "string"
+          },
+          "logoUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "id",
+          "name",
+          "logoUrl"
+         ]
+        },
+        "winnerTeamId": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "prediction": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "teamId": {
+           "type": "string"
+          },
+          "result": {
+           "type": [
+            "string",
+            "null"
+           ],
+           "enum": [
+            "lost",
+            "void",
+            "won",
+            null
+           ]
+          },
+          "updatedAt": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "teamId",
+          "result",
+          "updatedAt"
+         ]
+        }
+       },
+       "required": [
+        "matchId",
+        "tournamentName",
+        "scheduledAt",
+        "team1",
+        "team2",
+        "winnerTeamId",
+        "prediction"
+       ]
+      }
+     },
+     "recent": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "matchId": {
+         "type": "string"
+        },
+        "tournamentName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "scheduledAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team1": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "name": {
+           "type": "string"
+          },
+          "logoUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "id",
+          "name",
+          "logoUrl"
+         ]
+        },
+        "team2": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "name": {
+           "type": "string"
+          },
+          "logoUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "id",
+          "name",
+          "logoUrl"
+         ]
+        },
+        "winnerTeamId": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "prediction": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "teamId": {
+           "type": "string"
+          },
+          "result": {
+           "type": [
+            "string",
+            "null"
+           ],
+           "enum": [
+            "lost",
+            "void",
+            "won",
+            null
+           ]
+          },
+          "updatedAt": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "teamId",
+          "result",
+          "updatedAt"
+         ]
+        }
+       },
+       "required": [
+        "matchId",
+        "tournamentName",
+        "scheduledAt",
+        "team1",
+        "team2",
+        "winnerTeamId",
+        "prediction"
+       ]
+      }
+     },
+     "ineligibility": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "participant",
+       "staff",
+       null
+      ]
+     }
+    },
+    "required": [
+     "reward",
+     "open",
+     "recent",
+     "ineligibility"
+    ]
+   }
+  },
+  "GET /api/player/predictions/{matchId}": {
+   "200": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "matchId": {
+        "type": "string"
+       },
+       "window": {
+        "type": "string",
+        "enum": [
+         "locked",
+         "not_predictable",
+         "open"
+        ]
+       },
+       "locksAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "reward": {
+        "type": "number"
+       },
+       "team1Id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "team2Id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "ineligibility": {
+        "type": [
+         "string",
+         "null"
+        ],
+        "enum": [
+         "participant",
+         "staff",
+         null
+        ]
+       },
+       "prediction": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "properties": {
+         "teamId": {
+          "type": "string"
+         },
+         "result": {
+          "type": [
+           "string",
+           "null"
+          ],
+          "enum": [
+           "lost",
+           "void",
+           "won",
+           null
+          ]
+         },
+         "updatedAt": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "teamId",
+         "result",
+         "updatedAt"
+        ]
+       },
+       "distribution": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "properties": {
+         "team1": {
+          "type": "number"
+         },
+         "team2": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "team1",
+         "team2"
+        ]
+       }
+      },
+      "required": [
+       "matchId",
+       "window",
+       "locksAt",
+       "reward",
+       "team1Id",
+       "team2Id",
+       "ineligibility",
+       "prediction",
+       "distribution"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "ok": {
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "ok"
+      ]
+     }
+    ]
+   }
+  },
   "GET /api/player/progression": {
    "200": {
     "anyOf": [
@@ -36300,6 +36690,21 @@
          "coins",
          "packs"
         ]
+       },
+       "matchPrediction": {
+        "type": "object",
+        "properties": {
+         "coins": {
+          "type": "number"
+         },
+         "packs": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "coins",
+         "packs"
+        ]
        }
       },
       "required": [
@@ -36309,7 +36714,8 @@
        "checkinStreak",
        "placement",
        "battlenetVerified",
-       "collectionSet"
+       "collectionSet",
+       "matchPrediction"
       ]
      },
      "recycleRefund": {
@@ -62882,6 +63288,7 @@
   "pages/api/cron/quota-alerts.ts:211",
   "pages/api/cron/tenant-purge.ts:163",
   "pages/api/invitations/[token].ts:143",
+  "pages/api/player/predictions/[matchId].ts:193",
   "pages/api/player/team-reviews.ts:395",
   "pages/api/teams/invitations/index.ts:314",
   "pages/api/teams/invite-links/by-token.ts:229",

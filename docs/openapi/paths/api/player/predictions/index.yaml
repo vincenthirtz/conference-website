@@ -1,0 +1,23 @@
+get:
+  tags:
+    - public/auth
+  summary: Matchs a pronostiquer et derniers pronostics de la joueuse.
+  description: |
+    Alimente le panneau « Pronostics » de la page TCG : les matchs de tournoi
+    a venir encore ouverts (hors matchs de ses propres equipes, et rien pour
+    le staff), et ses derniers pronostics avec leur resultat.
+
+    GRATUIT : un pronostic n'engage aucune piece. Un pronostic juste rapporte
+    `MATCH_PREDICTION_COINS` au reglement du match. La liste affiche, elle ne
+    decide pas : l'autorite reste `PUT /api/player/predictions/{matchId}` et le
+    declencheur en base.
+  operationId: listPlayerPredictions
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Matchs ouverts et derniers pronostics.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'

@@ -1,0 +1,98 @@
+parameters:
+  - name: matchId
+    in: path
+    required: true
+    schema:
+      $ref: '#/components/schemas/Uuid'
+get:
+  tags:
+    - public/auth
+  summary: Etat du pronostic de la joueuse sur un match.
+  description: |
+    Fenetre (`open`, `locked`, `not_predictable`), heure de fermeture, montant
+    d'un pronostic juste, motif d'exclusion (`participant`, `staff`), pronostic
+    de la joueuse et, UNE FOIS LE MATCH VERROUILLE SEULEMENT, la repartition des
+    pronostics par equipe — la montrer pendant que c'est ouvert pousserait a
+    suivre la foule.
+  operationId: getPlayerMatchPrediction
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Etat du pronostic.
+    '400':
+      description: '`code: invalid_match`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      description: Match introuvable dans cet espace.
+    '500':
+      $ref: '#/components/responses/ServerError'
+put:
+  tags:
+    - public/auth
+  summary: Pronostiquer le vainqueur d'un match, ou changer d'avis.
+  description: |
+    GRATUIT, ET C'EST CE QUI EN FAIT UN PRONOSTIC ET PAS UN PARI : aucune piece
+    n'est engagee. Un pronostic juste rapporte `MATCH_PREDICTION_COINS` quand
+    le resultat est applique ; forfait et walkover ne paient personne.
+
+    Refuse : un match lance, dont l'heure prevue est passee ou qui n'est plus
+    `pending` (`409 locked`) ; un bye, un miroir de scrim ou une equipe inconnue
+    (`409 not_predictable`) ; une joueuse d'un des deux rosters ou leur
+    capitaine (`403 participant`) ; le staff actif (`403 staff`). Le declencheur
+    `match_predictions_guard` refait le controle du verrou et de l'equipe DANS
+    la transaction d'ecriture. Rate-limit 30 / min.
+  operationId: putPlayerMatchPrediction
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: player.predictions.set
+          properties:
+            teamId:
+              description: L'une des deux equipes du match.
+  responses:
+    '200':
+      description: Pronostic enregistre.
+    '400':
+      description: '`code: invalid_match` ou `invalid_team`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: '`code: participant` ou `staff`.'
+    '404':
+      description: Match introuvable dans cet espace.
+    '409':
+      description: '`code: locked` ou `not_predictable`.'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+delete:
+  tags:
+    - public/auth
+  summary: Retirer son pronostic tant que le match est ouvert.
+  operationId: deletePlayerMatchPrediction
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Pronostic retire (ou deja absent).
+    '400':
+      description: '`code: invalid_match`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: '`code: participant` ou `staff`.'
+    '404':
+      description: Match introuvable dans cet espace.
+    '409':
+      description: '`code: locked` ou `not_predictable`.'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

@@ -28,6 +28,7 @@ import {
 } from './public/matchResult';
 import { newsletterSubscribeBodySchema } from './public/newsletter';
 import { teamOpeningBodySchema } from './public/teamOpenings';
+import { predictionBodySchema } from './player/predictions/body';
 
 export type ApiContractEntry = {
   schema: z.ZodType;
@@ -49,6 +50,7 @@ export const API_CONTRACT_SCHEMAS: Record<string, ApiContractEntry> = {
     schema: matchResultResponseSchema,
     io: 'output',
   },
+  'player.predictions.set': { schema: predictionBodySchema, io: 'input' },
   ...BOT_API_CONTRACT_SCHEMAS,
   ...PUBLIC_V1_RESPONSE_SCHEMAS,
   ...QUERY_CONTRACT_SCHEMAS,

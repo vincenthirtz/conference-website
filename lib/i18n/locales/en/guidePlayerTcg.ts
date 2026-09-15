@@ -44,6 +44,7 @@ export default {
     'Standings reward the starters who played for the team in that tournament, once per tournament, at their best rank.',
   earnBattlenet: 'Verified Battle.net account, once',
   earnCollectionSet: 'Completed collection set, once per set',
+  earnMatchPrediction: 'Correct prediction on a tournament match (free)',
   earnTwitchOff:
     'The live drop is not active right now. It will only appear here once a channel is connected and a reward is attached to it — no need to look for it before then.',
   earnTwitchHow:

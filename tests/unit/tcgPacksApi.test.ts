@@ -45,6 +45,7 @@ import {
   CHECKIN_STREAK_COINS,
   CHECKIN_STREAK_LENGTH,
   COLLECTION_SET_COINS,
+  MATCH_PREDICTION_COINS,
   PLACEMENT_TIERS,
   TWITCH_DROP_COINS,
   WELCOME_GIFT_COINS,
@@ -178,6 +179,10 @@ describe('GET /api/player/tcg/packs', () => {
       collectionSet: {
         coins: COLLECTION_SET_COINS,
         packs: earnReward('collection_set').packs,
+      },
+      matchPrediction: {
+        coins: MATCH_PREDICTION_COINS,
+        packs: earnReward('match_prediction').packs,
       },
     });
   });

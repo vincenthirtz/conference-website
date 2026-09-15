@@ -37,6 +37,7 @@ import TcgCollectionProgress from '@/components/tcg/TcgCollectionProgress';
 import TcgSetsPanel, {
   type TcgSetCompletedNotice,
 } from '@/components/tcg/TcgSetsPanel';
+import PredictionsPanel from '@/components/predictions/PredictionsPanel';
 import TcgShowcaseEditor from '@/components/tcg/TcgShowcaseEditor';
 import TcgPackReveal, {
   type TcgRevealCard,
@@ -683,6 +684,8 @@ function PlayerTcg() {
           return t.walletBattlenetVerified;
         case 'collection_set':
           return t.walletCollectionSet;
+        case 'match_prediction':
+          return t.walletMatchPrediction;
         default:
           return t.walletUnknownSource;
       }
@@ -1269,6 +1272,9 @@ function PlayerTcg() {
             celebrate={setsCompleted}
           />
         )}
+
+        {/* Pronostics : composant autonome, gratuit, crédité au résultat. */}
+        {loadState === 'ready' && <PredictionsPanel className="mt-8" />}
 
         {/* Collection */}
         <section className="mt-8" aria-labelledby="tcg-collection-title">

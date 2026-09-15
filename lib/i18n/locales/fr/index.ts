@@ -12,6 +12,7 @@ import nsPlayerTcg from './playerTcg';
 import nsTcgCatalog from './tcgCatalog';
 import nsTcgTrade from './tcgTrade';
 import nsTcgSets from './tcgSets';
+import nsMatchPrediction from './matchPrediction';
 import nsTcgShowcase from './tcgShowcase';
 import nsPlayerIndex from './playerIndex';
 import nsSupportAssoCard from './supportAssoCard';
@@ -353,6 +354,7 @@ export const frDict = {
   tcgCatalog: nsTcgCatalog.fr,
   tcgTrade: nsTcgTrade.fr,
   tcgSets: nsTcgSets.fr,
+  matchPrediction: nsMatchPrediction.fr,
   tcgShowcase: nsTcgShowcase.fr,
   playerHeroPrefs: nsPlayerHeroPrefs.fr,
   playerTwitchLink: nsPlayerTwitchLink.fr,

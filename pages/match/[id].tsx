@@ -21,6 +21,7 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 
 import { logger } from '../../utils/logger';
+import MatchPredictionCard from '@/components/predictions/MatchPredictionCard';
 import nsMatchDetail from '@/lib/i18n/locales/fr/matchDetail';
 
 type MatchDict = typeof nsMatchDetail.fr;
@@ -610,6 +611,16 @@ export default function MatchPage({ match, lineups, mvp }: Props) {
             </div>
           </div>
         </section>
+
+        {/* Pronostic : chargé côté client, propre à chaque visiteuse. */}
+        {!isBye && t1 && t2 && (
+          <MatchPredictionCard
+            matchId={match.id}
+            team1={{ id: t1.id, name: t1Name }}
+            team2={{ id: t2.id, name: t2Name }}
+            status={match.status}
+          />
+        )}
 
         {/* Compositions + MVP */}
         <MvpBanner match={match} lineups={lineups} mvp={mvp} t={t} />

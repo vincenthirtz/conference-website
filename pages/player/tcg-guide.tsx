@@ -60,6 +60,7 @@ type Bareme = {
     placement?: Array<{ maxRank: number; coins: number; packs: number }>;
     battlenetVerified?: { coins: number; packs: number };
     collectionSet?: { coins: number; packs: number };
+    matchPrediction?: { coins: number; packs: number };
   };
 };
 
@@ -228,6 +229,14 @@ function TcgGuide(): JSX.Element {
                   label={t.earnCollectionSet}
                   coins={earn.collectionSet.coins}
                   packs={earn.collectionSet.packs}
+                  t={t}
+                />
+              )}
+              {earn.matchPrediction && (
+                <EarnRow
+                  label={t.earnMatchPrediction}
+                  coins={earn.matchPrediction.coins}
+                  packs={earn.matchPrediction.packs}
                   t={t}
                 />
               )}

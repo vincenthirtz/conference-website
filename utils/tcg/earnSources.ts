@@ -186,6 +186,29 @@ export const BATTLENET_VERIFIED_COINS = MATCH_WIN_COINS;
  */
 export const COLLECTION_SET_COINS = MATCH_WIN_COINS;
 
+/**
+ * Ce que rapporte un PRONOSTIC JUSTE sur un match de tournoi
+ * (`utils/predictions/settle.ts`), une fois par match et par personne.
+ *
+ * LE MONTANT DU DROP, ET POUR LA MÊME RAISON : pronostiquer n'est pas jouer.
+ * Deviser sur un match doit rester sous la plus petite victoire (le scrim),
+ * sinon suivre la compétition paierait mieux que la disputer. On le dérive
+ * donc du scrim plutôt que d'écrire « 25 », comme `TWITCH_DROP_COINS`.
+ *
+ * AUCUNE MISE, ET C'EST LE GARDE-FOU LÉGAL. Un pronostic ne coûte rien et les
+ * pièces ne s'achètent pas : sans mise ni gain monétisable, ce n'est pas un
+ * pari (ANJ). En faire payer l'entrée, même en pièces, changerait la nature de
+ * la fonctionnalité — une décision produit, pas un réglage de ce barème.
+ *
+ * DES PIÈCES SEULES. Un paquet par match bien deviné ferait d'un tournoi de
+ * soixante matchs une pluie de paquets pour qui ne joue pas, et aurait exigé
+ * d'élargir les deux contraintes de `tcg_packs`.
+ */
+export const MATCH_PREDICTION_COINS = Math.max(
+  1,
+  Math.round(SCRIM_WIN_COINS / 2)
+);
+
 export const PLACEMENT_TIERS: ReadonlyArray<{
   /** Rang maximal (inclus) ouvrant ce palier. */
   maxRank: number;
@@ -214,7 +237,8 @@ export type TcgEarnSourceKey =
   | 'welcome_gift'
   | 'supporter_welcome'
   | 'battlenet_verified'
-  | 'collection_set';
+  | 'collection_set'
+  | 'match_prediction';
 
 /**
  * Ce que `source_ref` doit contenir — donc ce qu'« une occurrence » veut dire.
@@ -427,6 +451,20 @@ export const TCG_EARN_SOURCES: readonly TcgEarnSource[] = [
     packs: 0,
     coins: COLLECTION_SET_COINS,
     refKind: 'collection_set',
+    maxPerRef: 1,
+    schemaReady: true,
+  },
+  {
+    // Écrite par `utils/predictions/settle.ts` quand `applyMatchScore` rend un
+    // résultat. Migration `match_predictions.sql` (NON appliquée au
+    // 2026-09-15) : elle crée aussi la table des pronostics, sans laquelle la
+    // route refuse d'en enregistrer — rien ne peut donc être dû avant elle.
+    key: 'match_prediction',
+    packs: 0,
+    coins: MATCH_PREDICTION_COINS,
+    // `source_ref` = le MATCH : un pronostic payé par match et par personne.
+    // Un match se corrige mais ne se recrée pas sous un autre id.
+    refKind: 'match',
     maxPerRef: 1,
     schemaReady: true,
   },

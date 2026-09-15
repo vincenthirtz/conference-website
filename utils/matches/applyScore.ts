@@ -22,6 +22,7 @@ import {
 import { emitBotEvent } from '../botEvents';
 import { enrichMatchEvent } from './botEventEnrich';
 import { applyMatchRatingIncremental } from '../rating/applyMatchRating';
+import { settleMatchPredictions } from '../predictions/settle';
 import { reactToMatchStatus } from '../broadcast/autoDirector';
 import type { PropagationResult } from '../../types/bracket';
 import { logger } from '../logger';
@@ -440,6 +441,13 @@ export async function applyMatchScore(
   //     board reflète le match dès que la réponse part.
   await applyMatchRatingIncremental(tenantId, matchId).catch((e) =>
     logger.error('[rating] applyMatchRatingIncremental hook error', e)
+  );
+
+  // 9d) Pronostics : régler et créditer les pronostics justes (best-effort,
+  //     idempotent). Ne règle qu'une issue définitive (`finished`, forfait,
+  //     annulation) ; ne lève pas d'elle-même, enveloppée par sécurité.
+  await settleMatchPredictions(tenantId, matchId).catch((e) =>
+    logger.error('[predictions] settleMatchPredictions hook error', e)
   );
 
   // 10) Propagation du vainqueur/perdant dans le bracket

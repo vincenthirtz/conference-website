@@ -22,6 +22,7 @@ import {
 import {
   BATTLENET_VERIFIED_COINS,
   CHECKIN_STREAK_COINS,
+  MATCH_PREDICTION_COINS,
   CHECKIN_STREAK_LENGTH,
   PLACEMENT_TIERS,
   TCG_EARN_SOURCES,
@@ -49,6 +50,7 @@ describe('intégrité du registre', () => {
         'supporter_welcome',
         'battlenet_verified',
         'collection_set',
+        'match_prediction',
       ])
     );
   });
@@ -81,7 +83,7 @@ describe('intégrité du registre', () => {
     expect(debits[0].coins).toBe(-BOOSTER_PRICE_COINS);
   });
 
-  it('fait apparaître un paquet dans toute source sauf le palmarès variable, la vérification Battle.net et les séries', () => {
+  it('fait apparaître un paquet dans toute source sauf le palmarès variable, la vérification Battle.net, les séries et les pronostics', () => {
     // Deux exceptions, et seulement deux. Le palmarès résout ses paquets par
     // rang ; la vérification Battle.net n'ouvre pas la porte du TCG (c'est le
     // rôle des cadeaux d'accueil), elle récompense un geste d'identité — et un
@@ -95,6 +97,12 @@ describe('intégrité du registre', () => {
       // Une série se complète EN OUVRANT des paquets : en rendre un nourrirait
       // la boucle qu'on récompense (cf. `COLLECTION_SET_COINS`).
       if (source.key === 'collection_set') {
+        expect(source.packs).toBe(0);
+        continue;
+      }
+      // Un paquet par match bien deviné pleuvrait sur qui ne joue pas
+      // (cf. `MATCH_PREDICTION_COINS`).
+      if (source.key === 'match_prediction') {
         expect(source.packs).toBe(0);
         continue;
       }
@@ -133,6 +141,29 @@ describe('montants dérivés', () => {
       expect(tier.coins % MATCH_WIN_COINS).toBe(0);
       expect(tier.coins / MATCH_WIN_COINS).toBeGreaterThanOrEqual(1);
     }
+  });
+});
+
+describe('pronostic juste', () => {
+  it('rapporte le montant du drop, dérivé du scrim, en pièces seules', () => {
+    expect(MATCH_PREDICTION_COINS).toBe(
+      Math.max(1, Math.round(SCRIM_WIN_COINS / 2))
+    );
+    expect(earnReward('match_prediction')).toEqual({
+      packs: 0,
+      coins: MATCH_PREDICTION_COINS,
+    });
+  });
+
+  it('paie moins que jouer', () => {
+    // Pronostiquer n'est pas jouer : sans cet ordre, suivre la compétition
+    // paierait mieux que la disputer.
+    expect(MATCH_PREDICTION_COINS).toBeLessThan(SCRIM_WIN_COINS);
+  });
+
+  it('attache la récompense au match, une fois par personne', () => {
+    expect(getEarnSource('match_prediction')?.refKind).toBe('match');
+    expect(getEarnSource('match_prediction')?.maxPerRef).toBe(1);
   });
 });
 
@@ -249,6 +280,10 @@ describe('schemaReady', () => {
       // levé avec le code, comme `battlenet_verified` — sans la migration,
       // l'écriture est refusée et la lecture suivante des séries retente.
       'collection_set',
+      // `match_predictions.sql` (2026-09-15, NON appliquée à la rédaction) :
+      // levé avec le code. Sans la migration, la table des pronostics n'existe
+      // pas : aucun pronostic ne s'enregistre, donc aucun n'est dû.
+      'match_prediction',
       'match_win',
       'scrim_win',
       'supporter_welcome',

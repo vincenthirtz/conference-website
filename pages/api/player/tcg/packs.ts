@@ -45,6 +45,7 @@ import {
   CHECKIN_STREAK_COINS,
   CHECKIN_STREAK_LENGTH,
   COLLECTION_SET_COINS,
+  MATCH_PREDICTION_COINS,
   PLACEMENT_TIERS,
   earnReward,
   TWITCH_DROP_COINS,
@@ -261,6 +262,11 @@ async function listPacks(
       collectionSet: {
         coins: COLLECTION_SET_COINS,
         packs: earnReward('collection_set').packs,
+      },
+      // Pronostic juste : gratuit, en pièces seules (`MATCH_PREDICTION_COINS`).
+      matchPrediction: {
+        coins: MATCH_PREDICTION_COINS,
+        packs: earnReward('match_prediction').packs,
       },
       // Le drop en direct n'est annoncé QUE s'il est réellement branché.
       // Promettre « et N pièces sur le stream » à un espace sans chaîne

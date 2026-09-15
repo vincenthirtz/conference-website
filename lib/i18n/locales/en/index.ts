@@ -18,6 +18,7 @@ import enPlayerTcg from './playerTcg';
 import enTcgCatalog from './tcgCatalog';
 import enTcgTrade from './tcgTrade';
 import enTcgSets from './tcgSets';
+import enMatchPrediction from './matchPrediction';
 import enTcgShowcase from './tcgShowcase';
 import enPlayerIndex from './playerIndex';
 import enSupportAssoCard from './supportAssoCard';
@@ -359,6 +360,7 @@ const enDict = {
   tcgCatalog: enTcgCatalog,
   tcgTrade: enTcgTrade,
   tcgSets: enTcgSets,
+  matchPrediction: enMatchPrediction,
   tcgShowcase: enTcgShowcase,
   playerHeroPrefs: enPlayerHeroPrefs,
   playerTwitchLink: enPlayerTwitchLink,
