@@ -21,3 +21,4 @@ patch:
             additionalProperties: true
     '400':
       $ref: '#/components/responses/BadRequest'
+  x-zod-query: bot.players/by-discord/[discordUserId]/profile.query

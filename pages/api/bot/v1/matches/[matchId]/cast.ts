@@ -15,15 +15,8 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
-import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
-
-// Multi-méthode aux bodies divergents : POST = { actorDiscordUserId, castMemberId,
-// briefingAt? } et DELETE = { actorDiscordUserId, assignmentId? | castMemberId? }
-// (au moins un des deux, sémantique « ou exclusif » modélisée par des checks
-// inline). Pas de discriminant propre pour un z.union, donc on valide seulement
-// la query et on conserve la validation body inline dans handleAssign/handleUnassign.
-const castQuerySchema = z.object({ matchId: uuidSchema });
+import { castQuerySchema } from '@/lib/apiContracts/bot/matches/[matchId]/cast.query';
 
 const SELECT = `id, match_id, cast_member_id, briefing_at, briefing_reminder_sent_at,
    created_at,

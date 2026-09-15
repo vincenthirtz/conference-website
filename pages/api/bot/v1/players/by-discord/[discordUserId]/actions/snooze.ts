@@ -17,13 +17,11 @@ import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { discordIdSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 import { snoozeBodySchema } from '@/lib/apiContracts/bot/players/by-discord/[discordUserId]/actions/snooze';
+import { snoozeQuerySchema } from '@/lib/apiContracts/bot/players/by-discord/[discordUserId]/actions/snooze.query';
 
 const DEFAULT_MINUTES = 60;
-
-const snoozeQuerySchema = z.object({ discordUserId: discordIdSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { discordUserId: pathDiscordUserId } = req.botQuery as z.infer<

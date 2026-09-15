@@ -25,7 +25,6 @@ import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { uuidSchema } from '@/utils/botValidation';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { reconcileMatchResult } from '@/utils/matches/reconcile';
 import { getSlaMinutes } from '@/utils/disputes/slaBreaches';
@@ -35,8 +34,7 @@ import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 import { reportBodySchema } from '@/lib/apiContracts/bot/matches/[matchId]/report';
-
-const reportQuerySchema = z.object({ matchId: uuidSchema });
+import { reportQuerySchema } from '@/lib/apiContracts/bot/matches/[matchId]/report.query';
 
 const SITE_URL =
   process.env.SITE_URL ||

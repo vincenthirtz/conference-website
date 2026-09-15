@@ -42,3 +42,4 @@ delete:
       $ref: '#/components/responses/NotFound'
     '409':
       $ref: '#/components/responses/Conflict'
+  x-zod-query: bot.teams/[teamId]/members.query

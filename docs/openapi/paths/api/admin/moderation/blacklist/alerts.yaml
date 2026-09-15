@@ -54,3 +54,4 @@ get:
       $ref: '#/components/responses/Unauthorized'
     '403':
       $ref: '#/components/responses/Forbidden'
+  x-zod-query: admin.moderation/blacklist/alerts.query

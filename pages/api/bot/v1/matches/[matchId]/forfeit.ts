@@ -15,12 +15,10 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff } from '@/utils/botActor';
-import { uuidSchema } from '@/utils/botValidation';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logger } from '@/utils/logger';
 import { forfeitBodySchema } from '@/lib/apiContracts/bot/matches/[matchId]/forfeit';
-
-const forfeitQuerySchema = z.object({ matchId: uuidSchema });
+import { forfeitQuerySchema } from '@/lib/apiContracts/bot/matches/[matchId]/forfeit.query';
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { matchId } = req.botQuery as z.infer<typeof forfeitQuerySchema>;

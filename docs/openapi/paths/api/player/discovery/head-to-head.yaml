@@ -101,3 +101,4 @@ get:
       $ref: '#/components/responses/RateLimited'
     '500':
       $ref: '#/components/responses/ServerError'
+  x-zod-query: player.discovery/head-to-head.query

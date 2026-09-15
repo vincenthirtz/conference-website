@@ -19,11 +19,9 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 import { discordWritebackBodySchema } from '@/lib/apiContracts/bot/teams/[teamId]/discord';
-
-const discordQuerySchema = z.object({ teamId: uuidSchema });
+import { discordQuerySchema } from '@/lib/apiContracts/bot/teams/[teamId]/discord.query';
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { teamId } = req.botQuery as z.infer<typeof discordQuerySchema>;

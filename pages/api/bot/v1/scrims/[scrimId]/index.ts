@@ -14,6 +14,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
 import { syncScrimRatedMatch } from '@/utils/scrims/ratedMatch';
 import { scrimPatchBodySchema } from '@/lib/apiContracts/bot/scrims/[scrimId]/index';
+import { scrimQuerySchema } from '@/lib/apiContracts/bot/scrims/[scrimId]/index.query';
 
 const PATCHABLE_FIELDS = [
   'name',
@@ -26,12 +27,6 @@ const PATCHABLE_FIELDS = [
   'stream_url',
   'game',
 ] as const;
-
-// scrimId est un id OU un slug : on ne peut pas le contraindre à un UUID. On
-// vérifie juste qu'il est non vide (le handler choisit eq('id') vs eq('slug')).
-const scrimQuerySchema = z.object({
-  scrimId: z.string().trim().min(1, 'scrimId requis').max(120),
-});
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { scrimId: idOrSlug } = req.botQuery as z.infer<

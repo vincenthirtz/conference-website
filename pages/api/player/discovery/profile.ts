@@ -25,7 +25,6 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type { User } from '@supabase/supabase-js';
-import { z } from 'zod';
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
@@ -35,8 +34,7 @@ import {
   buildDirectoryPlayers,
   type DiscoveryProfileRow,
 } from '@/utils/playerDiscoveryEnrich';
-
-const querySchema = z.object({ userId: z.string().uuid() });
+import { querySchema } from '@/lib/apiContracts/player/discovery/profile.query';
 
 const PROFILE_COLS =
   'auth_user_id, display_name, avatar_url, tagline, show_ratings, show_teams';

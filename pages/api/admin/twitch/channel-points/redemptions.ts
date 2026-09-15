@@ -23,17 +23,10 @@ import {
   helixFetch,
   hasScope,
 } from '@/utils/twitchBroadcaster';
+import { GetQuerySchema } from '@/lib/apiContracts/admin/twitch/channel-points/redemptions.query';
 
 const REDEMPTIONS_READ_SCOPE = 'channel:read:redemptions';
 const REDEMPTIONS_MANAGE_SCOPE = 'channel:manage:redemptions';
-
-const GetQuerySchema = z.object({
-  reward_id: z.string().trim().min(1),
-  status: z
-    .enum(['UNFULFILLED', 'FULFILLED', 'CANCELED'])
-    .optional()
-    .default('UNFULFILLED'),
-});
 
 const PatchSchema = z.object({
   reward_id: z.string().trim().min(1),

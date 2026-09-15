@@ -13,7 +13,6 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotPlayer, resolveActorPlayer } from '@/utils/botActor';
-import { uuidSchema } from '@/utils/botValidation';
 import {
   isTeamRosterLocked,
   rosterLockErrorMessage,
@@ -22,8 +21,7 @@ import { emitRoleSyncEvent } from '@/utils/botRoleSync';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 import { transferCaptainBodySchema } from '@/lib/apiContracts/bot/teams/[teamId]/transfer-captain';
-
-const transferCaptainQuerySchema = z.object({ teamId: uuidSchema });
+import { transferCaptainQuerySchema } from '@/lib/apiContracts/bot/teams/[teamId]/transfer-captain.query';
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { teamId } = req.botQuery as z.infer<typeof transferCaptainQuerySchema>;

@@ -15,7 +15,6 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type { User } from '@supabase/supabase-js';
-import { z } from 'zod';
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
@@ -25,12 +24,7 @@ import {
   buildDirectoryPlayers,
   type DiscoveryProfileRow,
 } from '@/utils/playerDiscoveryEnrich';
-
-const searchQuerySchema = z.object({
-  q: z.string().trim().max(80).optional(),
-  limit: z.coerce.number().int().min(1).max(50).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
-});
+import { searchQuerySchema } from '@/lib/apiContracts/player/discovery/search.query';
 
 async function handler(
   req: NextApiRequest,

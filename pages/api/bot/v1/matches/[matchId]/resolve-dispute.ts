@@ -22,21 +22,12 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
-import { uuidSchema } from '@/utils/botValidation';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { emitBotEvent } from '@/utils/botEvents';
 import { logger } from '@/utils/logger';
+import { resolveDisputeQuerySchema } from '@/lib/apiContracts/bot/matches/[matchId]/resolve-dispute.query';
 
 const VALID_RESUME = new Set(['pending', 'ongoing', 'finished', 'walkover']);
-
-// Body conservé inline : la validation est fortement cross-champs et non
-// modélisable proprement en un seul schéma sans changer le comportement —
-// `hasScoreOverride` exige team1Score ET team2Score entiers >=0, `forfeitTeamId`
-// non-UUID est silencieusement ignoré (jamais 400), `winnerTeamId` "" = absent
-// mais non-vide non-UUID = 400, et l'obligation score|forfeit dépend de
-// resumeStatus. On valide donc seulement la query ici. actorDiscordUserId reste
-// validé par requireBotStaff.
-const resolveDisputeQuerySchema = z.object({ matchId: uuidSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { matchId } = req.botQuery as z.infer<typeof resolveDisputeQuerySchema>;

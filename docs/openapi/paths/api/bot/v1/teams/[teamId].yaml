@@ -27,6 +27,7 @@ get:
                   $ref: '#/components/schemas/TeamMember'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: bot.teams/[teamId].query
 patch:
   tags:
     - bot/teams
@@ -84,3 +85,4 @@ patch:
       $ref: '#/components/responses/Forbidden'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: bot.teams/[teamId].query

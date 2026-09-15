@@ -54,9 +54,15 @@ requestBody:
   TypeScript renvoyé par le handler. `tests/unit/publicV1ResponseContracts.test.ts`
   le vérifie au typecheck (`expectTypeOf`), et les tests de handler valident la
   réponse réelle, champ en trop compris.
+- **Paramètres** : une opération qui porte `x-zod-query: <nom>` voit ses
+  paramètres générés depuis le `z.object` de query du handler (propriété
+  présente dans l'URL → `in: path`, sinon `in: query`). Les textes des
+  paramètres écrits sont gardés ; un paramètre de requête documenté mais
+  absent du schéma fait échouer l'assemblage.
 - Couverture au 2026-09-15 : corps des 4 routes publiques d'écriture et de
   toutes les routes bot à corps validé ; réponses de toute l'API publique v1
-  (`lib/apiContracts/public/v1/`).
+  (`lib/apiContracts/public/v1/`) ; paramètres de requête des 36 routes bot à
+  `querySchema` et des 8 routes admin/joueuse qui valident leur query avec zod.
 
 ## Où la spec est lue
 

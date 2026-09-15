@@ -12,17 +12,15 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { uuidSchema } from '@/utils/botValidation';
 import { emitScheduleEvents } from '@/utils/matches/scheduleEvents';
 import { logger } from '@/utils/logger';
 import {
   matchInputSchema,
   matchesBodySchema,
 } from '@/lib/apiContracts/bot/scrims/[scrimId]/matches';
+import { matchesQuerySchema } from '@/lib/apiContracts/bot/scrims/[scrimId]/matches.query';
 
 type MatchInput = z.infer<typeof matchInputSchema>;
-
-const matchesQuerySchema = z.object({ scrimId: uuidSchema });
 
 function normalizeMatch(
   scrimId: string,

@@ -34,3 +34,4 @@ post:
       $ref: '#/components/responses/NotFound'
     '409':
       $ref: '#/components/responses/Conflict'
+  x-zod-query: bot.tournaments/[tournamentId]/status.query

@@ -38,12 +38,12 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type { User } from '@supabase/supabase-js';
-import { z } from 'zod';
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { logger } from '@/utils/logger';
+import { querySchema } from '@/lib/apiContracts/player/discovery/head-to-head.query';
 
 const RECENT_LIMIT = 10;
 
@@ -84,10 +84,6 @@ type MatchRow = {
   winner_team_id: string | null;
   completed_at: string | null;
 };
-
-const querySchema = z.object({
-  opponentId: z.string().uuid(),
-});
 
 /**
  * Réduit les participations d'UN joueur (toutes tenants) en une map

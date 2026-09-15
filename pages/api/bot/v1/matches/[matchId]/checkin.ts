@@ -15,13 +15,11 @@ import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { uuidSchema } from '@/utils/botValidation';
 import { redeemCheckinToken } from '@/utils/checkin';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 import { checkinBodySchema } from '@/lib/apiContracts/bot/matches/[matchId]/checkin';
-
-const checkinQuerySchema = z.object({ matchId: uuidSchema });
+import { checkinQuerySchema } from '@/lib/apiContracts/bot/matches/[matchId]/checkin.query';
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { matchId } = req.botQuery as z.infer<typeof checkinQuerySchema>;

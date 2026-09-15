@@ -28,3 +28,4 @@ post:
       $ref: '#/components/responses/BadRequest'
     '403':
       $ref: '#/components/responses/Forbidden'
+  x-zod-query: bot.stages/[stageId]/auto-byes.query

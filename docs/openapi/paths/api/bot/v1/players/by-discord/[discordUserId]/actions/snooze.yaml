@@ -22,3 +22,4 @@ post:
             $ref: '#/components/schemas/Ok'
     '400':
       $ref: '#/components/responses/BadRequest'
+  x-zod-query: bot.players/by-discord/[discordUserId]/actions/snooze.query

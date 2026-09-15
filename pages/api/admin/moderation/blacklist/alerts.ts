@@ -13,30 +13,15 @@
 // réservée au rôle `manager` (aligné sur l'endpoint blacklist admin existant).
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { z } from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { formatZodError } from '@/utils/validation';
 import { logger } from '@/utils/logger';
+import { querySchema } from '@/lib/apiContracts/admin/moderation/blacklist/alerts.query';
 
 const SELECT_COLS =
   'id, created_at, discord_user_id, battle_tag, display_name, matched_on, strength, source, context, reason, blacklist_entry_id';
-
-// Query : tous les champs proviennent de req.query (string|string[]). On valide
-// via zod (parse + extraction typée) plutôt qu'avec des guards inline — meilleur
-// pour le suivi de taint statique.
-const querySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(200).optional().default(50),
-  before: z
-    .string()
-    .trim()
-    .refine((s) => Number.isFinite(Date.parse(s)), 'Curseur invalide.')
-    .optional(),
-  strength: z.enum(['strong', 'soft']).optional(),
-  source: z.enum(['bot_scan', 'bot_member_add', 'registration']).optional(),
-  discordUserId: z.string().trim().min(1).max(32).optional(),
-});
 
 type AlertRow = {
   id: string;

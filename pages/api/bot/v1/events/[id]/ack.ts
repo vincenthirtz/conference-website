@@ -22,15 +22,7 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotCrossTenantRequest } from '@/utils/botAuth';
 import { logger } from '@/utils/logger';
-
-// L'`id` dans l'URL est l'integer PK de bot_event_outbox (pas l'event_id UUID).
-// req.query.id est une string → z.coerce.number().int().positive() reproduit
-// exactement le check historique `Number.isInteger(id) && id > 0`.
-// Pas de bodySchema : le body est vide pour cette route (on n'en rejette pas
-// l'absence).
-const ackQuerySchema = z.object({
-  id: z.coerce.number().int().positive(),
-});
+import { ackQuerySchema } from '@/lib/apiContracts/bot/events/[id]/ack.query';
 
 async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
   const { id } = req.botQuery as z.infer<typeof ackQuerySchema>;

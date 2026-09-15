@@ -59,3 +59,4 @@ post:
             $ref: '#/components/schemas/DraftEngineError'
     '500':
       $ref: '#/components/responses/ServerError'
+  x-zod-query: bot.matches/[matchId]/drafts.query

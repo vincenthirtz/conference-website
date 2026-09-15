@@ -16,9 +16,9 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 import { resetBodySchema } from '@/lib/apiContracts/bot/matches/[matchId]/reset';
+import { resetQuerySchema } from '@/lib/apiContracts/bot/matches/[matchId]/reset.query';
 
 const TERMINAL_BEFORE = new Set([
   'finished',
@@ -26,8 +26,6 @@ const TERMINAL_BEFORE = new Set([
   'cancelled',
   'disputed',
 ]);
-
-const resetQuerySchema = z.object({ matchId: uuidSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { matchId } = req.botQuery as z.infer<typeof resetQuerySchema>;

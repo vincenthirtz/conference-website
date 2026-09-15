@@ -34,15 +34,10 @@ import {
   buildDirectoryPlayers,
   type DiscoveryProfileRow,
 } from '@/utils/playerDiscoveryEnrich';
+import { listQuerySchema } from '@/lib/apiContracts/player/follows/index.query';
 
 const followBodySchema = z.object({
   followeeId: z.string().uuid(),
-});
-
-const listQuerySchema = z.object({
-  type: z.enum(['following', 'followers']).default('following'),
-  limit: z.coerce.number().int().min(1).max(50).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
 });
 
 const PROFILE_COLS =

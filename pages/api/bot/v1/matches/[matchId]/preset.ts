@@ -20,11 +20,9 @@
 import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { uuidSchema } from '@/utils/botValidation';
 import { resolveMatchPreset } from '@/utils/matches/resolveMatchPreset';
 import { formatPresetLines } from '@/utils/customGamePresets';
-
-const presetQuerySchema = z.object({ matchId: uuidSchema });
+import { presetQuerySchema } from '@/lib/apiContracts/bot/matches/[matchId]/preset.query';
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { matchId } = req.botQuery as z.infer<typeof presetQuerySchema>;

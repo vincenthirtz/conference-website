@@ -15,15 +15,13 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { uuidSchema } from '@/utils/botValidation';
 import {
   resetPropagationForMatch,
   propagateBracketForMatch,
 } from '@/utils/bracket/propagate';
 import { logger } from '@/utils/logger';
 import { autoByesBodySchema } from '@/lib/apiContracts/bot/stages/[stageId]/auto-byes';
-
-const autoByesQuerySchema = z.object({ stageId: uuidSchema });
+import { autoByesQuerySchema } from '@/lib/apiContracts/bot/stages/[stageId]/auto-byes.query';
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { stageId } = req.botQuery as z.infer<typeof autoByesQuerySchema>;

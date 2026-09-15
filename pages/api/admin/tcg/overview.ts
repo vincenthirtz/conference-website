@@ -59,7 +59,6 @@
 // présenté comme sûr est pire que pas de chiffre.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { z } from 'zod';
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
@@ -71,6 +70,7 @@ import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
 import { readMapFaces } from '@/utils/tcg/readMapFaces';
 import { cardSubjectKey } from '@/utils/tcg/subjectKey';
 import { logger } from '@/utils/logger';
+import { querySchema } from '@/lib/apiContracts/admin/tcg/overview.query';
 
 /* -------------------------------------------------------------------------- */
 /* Bornes                                                                      */
@@ -84,9 +84,6 @@ const MAX_PACKS = 5000;
 const MAX_CARDS = 20000;
 const MAX_WALLETS = 2000;
 const MAX_ENTRIES = 10000;
-
-/** Sujets les plus distribués rendus par défaut. */
-const DEFAULT_TOP = 10;
 
 /* -------------------------------------------------------------------------- */
 /* Forme de la réponse                                                         */
@@ -213,13 +210,6 @@ type ApiResponse = TcgOverview | { error: string; code?: string };
 /* -------------------------------------------------------------------------- */
 /* Entrée                                                                      */
 /* -------------------------------------------------------------------------- */
-
-// Le seul paramètre accepté. Validé par schéma plutôt que par un `if` : la
-// borne haute est ici une garantie, pas une intention — `?top=100000` ne doit
-// pas pouvoir dicter la taille de la réponse ni le nombre de faces à résoudre.
-const querySchema = z.object({
-  top: z.coerce.number().int().min(1).max(25).default(DEFAULT_TOP),
-});
 
 /* -------------------------------------------------------------------------- */
 

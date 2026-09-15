@@ -25,15 +25,12 @@ import {
   resolveActorPlayer,
   resolveActorStaff,
 } from '@/utils/botActor';
-import { uuidSchema } from '@/utils/botValidation';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 import { registerBodySchema } from '@/lib/apiContracts/bot/tournaments/[tournamentId]/teams';
+import { teamsQuerySchema } from '@/lib/apiContracts/bot/tournaments/[tournamentId]/teams.query';
 
 const STAFF_PRIVILEGED = new Set(['admin', 'owner']);
-
-// tournamentId (path param) — partagé GET + POST.
-const teamsQuerySchema = z.object({ tournamentId: uuidSchema });
 
 async function handleList(
   req: BotTenantRequest,

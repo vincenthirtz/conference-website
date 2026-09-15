@@ -51,6 +51,7 @@ get:
           schema:
             type: object
             additionalProperties: true
+  x-zod-query: admin.twitch/channel-points/redemptions.query
 patch:
   summary: Fulfill or cancel channel-point redemptions.
   description: |

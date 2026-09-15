@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { API_CONTRACT_SCHEMAS } from '../../lib/apiContracts';
 import {
   assembleSpec,
+  expandZodQueryParameters,
   fragmentToApiPath,
   newZodResolution,
   resolveZodSchemas,
@@ -219,7 +220,7 @@ describe('x-zod : schémas générés depuis lib/apiContracts', () => {
             .map((e) =>
               fs.readFileSync(path.join(e.parentPath, e.name), 'utf8')
             )
-            .flatMap((src) => [...src.matchAll(/x-zod:\s*(\S+)/g)])
+            .flatMap((src) => [...src.matchAll(/x-zod(?:-query)?:\s*(\S+)/g)])
             .map((m) => ({ 'x-zod': m[1] }))
         )
       ),
@@ -230,5 +231,79 @@ describe('x-zod : schémas générés depuis lib/apiContracts', () => {
       (name) => !ctx.used.has(name)
     );
     expect(unused, 'contrat zod enregistré mais jamais référencé').toEqual([]);
+  });
+});
+
+describe('x-zod-query : paramètres générés depuis le querySchema', () => {
+  const contracts = {
+    q: {
+      schema: z.object({
+        matchId: z.uuid(),
+        limit: z.coerce.number().int().min(1).max(50).optional(),
+        tenant: z.string(),
+      }),
+      io: 'input' as const,
+    },
+  };
+
+  it('chemin → in: path requis, le reste en query ; les textes écrits restent', () => {
+    const out = expandZodQueryParameters(
+      '/api/x/{matchId}',
+      {
+        get: {
+          'x-zod-query': 'q',
+          parameters: [
+            { name: 'limit', in: 'query', description: 'Taille de page' },
+            { name: 'x-api-key', in: 'header', required: true },
+          ],
+        },
+      },
+      contracts
+    ) as any;
+    const params = out.get.parameters;
+    expect(out.get['x-zod-query']).toBeUndefined();
+    expect(params.find((p: any) => p.name === 'matchId')).toMatchObject({
+      in: 'path',
+      required: true,
+      schema: { type: 'string', format: 'uuid' },
+    });
+    expect(params.find((p: any) => p.name === 'limit')).toMatchObject({
+      in: 'query',
+      required: false,
+      description: 'Taille de page',
+      schema: { type: 'integer', minimum: 1, maximum: 50 },
+    });
+    expect(params.find((p: any) => p.name === 'tenant').required).toBe(true);
+    expect(params.find((p: any) => p.in === 'header')).toBeTruthy();
+  });
+
+  it('ne redouble pas un paramètre de chemin déclaré au niveau du chemin', () => {
+    const out = expandZodQueryParameters(
+      '/api/x/{matchId}',
+      {
+        parameters: [{ name: 'matchId', in: 'path', required: true }],
+        get: { 'x-zod-query': 'q' },
+      },
+      contracts
+    ) as any;
+    expect(out.get.parameters.map((p: any) => p.name)).toEqual([
+      'limit',
+      'tenant',
+    ]);
+  });
+
+  it('refuse un paramètre de requête documenté que le code ignore', () => {
+    expect(() =>
+      expandZodQueryParameters(
+        '/api/x/{matchId}',
+        {
+          get: {
+            'x-zod-query': 'q',
+            parameters: [{ name: 'sort', in: 'query' }],
+          },
+        },
+        contracts
+      )
+    ).toThrow(/sort.*absent du schéma zod/);
   });
 });

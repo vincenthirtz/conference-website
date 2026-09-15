@@ -26,11 +26,9 @@ import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { uuidSchema } from '@/utils/botValidation';
 import { runSwissNextRound } from '@/utils/swiss/runNextRound';
 import { nextRoundBodySchema } from '@/lib/apiContracts/bot/stages/[stageId]/next-round';
-
-const nextRoundQuerySchema = z.object({ stageId: uuidSchema });
+import { nextRoundQuerySchema } from '@/lib/apiContracts/bot/stages/[stageId]/next-round.query';
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { stageId } = req.botQuery as z.infer<typeof nextRoundQuerySchema>;

@@ -17,12 +17,12 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { uuidSchema } from '@/utils/botValidation';
 import { emitBotEvent } from '@/utils/botEvents';
 import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 import { emitScheduleEventsInBackground } from '@/utils/matches/scheduleEvents';
 import { logger } from '@/utils/logger';
 import { scrimMatchPatchBodySchema } from '@/lib/apiContracts/bot/scrims/[scrimId]/matches/[matchId]';
+import { scrimMatchQuerySchema } from '@/lib/apiContracts/bot/scrims/[scrimId]/matches/[matchId].query';
 
 const PATCHABLE_FIELDS = [
   'team1_score',
@@ -40,11 +40,6 @@ const PATCHABLE_FIELDS = [
   'started_at',
   'completed_at',
 ] as const;
-
-const scrimMatchQuerySchema = z.object({
-  scrimId: uuidSchema,
-  matchId: uuidSchema,
-});
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { scrimId, matchId } = req.botQuery as z.infer<

@@ -21,6 +21,7 @@ get:
                   $ref: '#/components/schemas/CastAssignment'
     '500':
       $ref: '#/components/responses/ServerError'
+  x-zod-query: bot.matches/[matchId]/cast.query
 post:
   tags:
     - bot/matches
@@ -60,6 +61,7 @@ post:
       $ref: '#/components/responses/Forbidden'
     '500':
       $ref: '#/components/responses/ServerError'
+  x-zod-query: bot.matches/[matchId]/cast.query
 delete:
   tags:
     - bot/matches
@@ -93,3 +95,4 @@ delete:
       $ref: '#/components/responses/Forbidden'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: bot.matches/[matchId]/cast.query

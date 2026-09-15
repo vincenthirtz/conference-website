@@ -15,11 +15,9 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 import { statusBodySchema } from '@/lib/apiContracts/bot/tournaments/[tournamentId]/status';
-
-const statusQuerySchema = z.object({ tournamentId: uuidSchema });
+import { statusQuerySchema } from '@/lib/apiContracts/bot/tournaments/[tournamentId]/status.query';
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { tournamentId } = req.botQuery as z.infer<typeof statusQuerySchema>;

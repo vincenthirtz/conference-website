@@ -19,6 +19,7 @@
 
 import type { z } from 'zod';
 import { BOT_API_CONTRACT_SCHEMAS } from './bot';
+import { QUERY_CONTRACT_SCHEMAS } from './queries';
 import { freePlayerSignupBodySchema } from './public/freePlayers';
 import { PUBLIC_V1_RESPONSE_SCHEMAS } from './public/v1';
 import {
@@ -50,4 +51,5 @@ export const API_CONTRACT_SCHEMAS: Record<string, ApiContractEntry> = {
   },
   ...BOT_API_CONTRACT_SCHEMAS,
   ...PUBLIC_V1_RESPONSE_SCHEMAS,
+  ...QUERY_CONTRACT_SCHEMAS,
 };

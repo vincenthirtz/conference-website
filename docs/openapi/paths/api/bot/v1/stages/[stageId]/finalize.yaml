@@ -29,3 +29,4 @@ post:
       $ref: '#/components/responses/NotFound'
     '409':
       $ref: '#/components/responses/Conflict'
+  x-zod-query: bot.stages/[stageId]/finalize.query

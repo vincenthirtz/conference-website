@@ -23,7 +23,6 @@ import crypto from 'crypto';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import {
   decodeEvidencePayload,
   buildEvidencePath,
@@ -33,6 +32,7 @@ import {
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 import { evidencePostSchema } from '@/lib/apiContracts/bot/matches/[matchId]/evidence';
+import { evidenceQuerySchema } from '@/lib/apiContracts/bot/matches/[matchId]/evidence.query';
 
 // Le body peut porter un fichier binaire en base64 (~10 Mo max -> ~13.4 Mo en
 // base64 + overhead JSON). La limite par defaut de Next (1mb) le rejetterait.
@@ -43,12 +43,6 @@ export const config = {
     },
   },
 };
-
-// Query : matchId (path) toujours ; actorDiscordUserId requis cote GET.
-const evidenceQuerySchema = z.object({
-  matchId: uuidSchema,
-  actorDiscordUserId: discordIdSchema.optional(),
-});
 
 type MatchTeam = {
   id: string;

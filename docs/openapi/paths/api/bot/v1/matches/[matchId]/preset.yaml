@@ -92,3 +92,4 @@ get:
       $ref: '#/components/responses/BadRequest'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: bot.matches/[matchId]/preset.query

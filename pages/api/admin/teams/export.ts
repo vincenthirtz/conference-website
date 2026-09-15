@@ -15,12 +15,10 @@
 // de jeu (pseudo, BattleTag, pseudo Discord) — voir l'en-tête de ce module.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { z } from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { sanitizeSearch } from '@/utils/apiHelpers';
-import { uuidSchema } from '@/utils/botValidation';
 import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
 import {
   applyAdminTeamsFilters,
@@ -38,21 +36,9 @@ import {
   type TeamsExportPayload,
 } from '@/utils/teams/teamExport';
 import { logger } from '@/utils/logger';
+import { querySchema } from '@/lib/apiContracts/admin/teams/export.query';
 
 export default withStaffRoute(handler, { permission: 'manage_teams' });
-
-/** Un paramètre vide (`?tournamentId=`) vaut « pas de filtre », pas un 400. */
-function optionalParam<T extends z.ZodTypeAny>(schema: T) {
-  return z.preprocess((v) => (v === '' ? undefined : v), schema.optional());
-}
-
-const querySchema = z.object({
-  teamId: optionalParam(uuidSchema),
-  tournamentId: optionalParam(uuidSchema),
-  search: optionalParam(z.string()),
-  isActive: optionalParam(z.string()),
-  format: optionalParam(z.enum(['csv', 'json'])),
-});
 
 /** PostgREST plafonne une réponse à 1000 lignes (`max_rows` Supabase). */
 const PAGE_SIZE = 1000;

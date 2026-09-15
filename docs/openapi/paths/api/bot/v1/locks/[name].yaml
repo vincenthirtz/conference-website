@@ -47,3 +47,4 @@ post:
       $ref: '#/components/responses/BadRequest'
     '500':
       $ref: '#/components/responses/ServerError'
+  x-zod-query: bot.locks/[name].query

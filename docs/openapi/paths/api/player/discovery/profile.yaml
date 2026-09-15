@@ -56,3 +56,4 @@ get:
                       type: [string, 'null']
     '405':
       description: Méthode non autorisée.
+  x-zod-query: player.discovery/profile.query

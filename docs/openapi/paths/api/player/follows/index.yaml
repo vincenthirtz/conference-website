@@ -72,6 +72,7 @@ get:
       $ref: '#/components/responses/RateLimited'
     '500':
       $ref: '#/components/responses/ServerError'
+  x-zod-query: player.follows/index.query
 post:
   summary: Suivre un joueur découvrable (idempotent).
   description: |

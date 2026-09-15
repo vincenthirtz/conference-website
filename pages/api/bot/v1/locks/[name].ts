@@ -17,21 +17,12 @@ import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { boundedString } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 import { lockBodySchema } from '@/lib/apiContracts/bot/locks/[name]';
+import { lockQuerySchema } from '@/lib/apiContracts/bot/locks/[name].query';
 
-const NAME_MAX_LEN = 64;
 const TTL_MIN = 5;
 const TTL_MAX = 3600;
-
-// name (path) : string non vide ≤ 64 (trim). holder (body) : string non vide
-// ≤ 100 (trim). ttlSeconds / action : sémantique historique PERMISSIVE — pas
-// de rejet, `ttlSeconds` est coercé via Number() (défaut 60 si non fini) et
-// `action` vaut 'release' seulement si === 'release', sinon 'claim'. On les
-// laisse donc en z.unknown() pour ne rejeter aucun type que l'ancien code
-// tolérait.
-const lockQuerySchema = z.object({ name: boundedString(1, NAME_MAX_LEN) });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { name } = req.botQuery as z.infer<typeof lockQuerySchema>;

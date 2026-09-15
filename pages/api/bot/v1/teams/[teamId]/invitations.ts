@@ -15,11 +15,11 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotPlayer, resolveActorPlayer } from '@/utils/botActor';
-import { uuidSchema } from '@/utils/botValidation';
 import { createInvitation } from '@/utils/teams/invitations';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 import { createInvitationBodySchema } from '@/lib/apiContracts/bot/teams/[teamId]/invitations';
+import { invitationsQuerySchema } from '@/lib/apiContracts/bot/teams/[teamId]/invitations.query';
 
 const COMMENT_MAX = 1000;
 const MAX_LIMIT = 100;
@@ -31,16 +31,6 @@ const VALID_STATUSES = new Set([
   'cancelled',
   'all',
 ]);
-
-// querySchema (GET + POST) : teamId UUID requis. Les filtres GET (status/type/
-// limit) gardent leur parsing inline dans handleList pour préserver le message
-// d'erreur custom sur status et les valeurs par défaut.
-const invitationsQuerySchema = z.object({
-  teamId: uuidSchema,
-  status: z.string().optional(),
-  type: z.string().optional(),
-  limit: z.string().optional(),
-});
 
 async function handleList(
   req: BotTenantRequest,

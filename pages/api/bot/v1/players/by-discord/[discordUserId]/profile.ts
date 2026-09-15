@@ -17,7 +17,6 @@ import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { discordIdSchema } from '@/utils/botValidation';
 import {
   requireBotPlayer,
   resolveActorPlayer,
@@ -26,10 +25,9 @@ import {
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 import { profileBodySchema } from '@/lib/apiContracts/bot/players/by-discord/[discordUserId]/profile';
+import { profileQuerySchema } from '@/lib/apiContracts/bot/players/by-discord/[discordUserId]/profile.query';
 
 const STAFF_PRIVILEGED = new Set(['admin', 'owner']);
-
-const profileQuerySchema = z.object({ discordUserId: discordIdSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { discordUserId: targetDiscordUserId } = req.botQuery as z.infer<

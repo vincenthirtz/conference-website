@@ -19,7 +19,6 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
-import { uuidSchema } from '@/utils/botValidation';
 import { VETO_FLOWS } from '@/types/veto';
 import type { VetoStep, VetoAction } from '@/types/veto';
 import { logger } from '@/utils/logger';
@@ -28,14 +27,7 @@ import {
   clearGamesFromVeto,
   type VetoStepLike,
 } from '@/utils/matches/gamesFromVeto';
-
-// Multi-méthode aux bodies divergents : POST = { actorDiscordUserId, mapName,
-// action, teamId?, mapType? } avec normalisation (action.toLowerCase(), trims),
-// DELETE = { actorDiscordUserId } seul. Un z.union ne discrimine pas proprement
-// (pas de champ discriminant) et perdrait la normalisation casse de `action`.
-// On valide donc seulement la query ici et on conserve la validation body inline
-// dans handlePost/handleDelete. actorDiscordUserId reste validé par requireBotStaff.
-const vetoQuerySchema = z.object({ matchId: uuidSchema });
+import { vetoQuerySchema } from '@/lib/apiContracts/bot/matches/[matchId]/veto.query';
 
 async function handleGet(
   res: NextApiResponse,

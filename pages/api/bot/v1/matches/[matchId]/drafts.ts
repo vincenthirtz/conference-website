@@ -13,12 +13,10 @@ import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { uuidSchema } from '@/utils/botValidation';
 import { initDraft, DraftEngineError } from '@/utils/draftEngine';
 import { logger } from '@/utils/logger';
 import { draftsBodySchema } from '@/lib/apiContracts/bot/matches/[matchId]/drafts';
-
-const draftsQuerySchema = z.object({ matchId: uuidSchema });
+import { draftsQuerySchema } from '@/lib/apiContracts/bot/matches/[matchId]/drafts.query';
 
 type CaptainInfo = {
   teamSlot: 1 | 2;

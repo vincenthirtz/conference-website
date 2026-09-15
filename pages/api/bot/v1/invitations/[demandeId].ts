@@ -11,7 +11,6 @@ import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotPlayer } from '@/utils/botActor';
-import { uuidSchema } from '@/utils/botValidation';
 import {
   acceptInvitation,
   cancelInvitation,
@@ -19,8 +18,7 @@ import {
 } from '@/utils/teams/invitations';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { invitationBodySchema } from '@/lib/apiContracts/bot/invitations/[demandeId]';
-
-const invitationQuerySchema = z.object({ demandeId: uuidSchema });
+import { invitationQuerySchema } from '@/lib/apiContracts/bot/invitations/[demandeId].query';
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { demandeId } = req.botQuery as z.infer<typeof invitationQuerySchema>;

@@ -14,6 +14,7 @@ get:
             $ref: '#/components/schemas/VetoState'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: bot.matches/[matchId]/veto.query
 post:
   tags:
     - bot/matches
@@ -57,6 +58,7 @@ post:
       $ref: '#/components/responses/Forbidden'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: bot.matches/[matchId]/veto.query
 delete:
   tags:
     - bot/matches
@@ -84,3 +86,4 @@ delete:
       $ref: '#/components/responses/Forbidden'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: bot.matches/[matchId]/veto.query

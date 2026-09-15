@@ -23,13 +23,11 @@ import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
-import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
 import { finalizeBodySchema } from '@/lib/apiContracts/bot/stages/[stageId]/finalize';
+import { finalizeQuerySchema } from '@/lib/apiContracts/bot/stages/[stageId]/finalize.query';
 
 const ACTIVE_STATUSES = new Set(['pending', 'ongoing', 'disputed']);
-
-const finalizeQuerySchema = z.object({ stageId: uuidSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { stageId } = req.botQuery as z.infer<typeof finalizeQuerySchema>;

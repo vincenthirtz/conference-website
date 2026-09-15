@@ -41,3 +41,4 @@ post:
       $ref: '#/components/responses/Forbidden'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: bot.cast/[assignmentId]/ack.query

@@ -23,16 +23,7 @@ import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { emitBotEvent } from '@/utils/botEvents';
 import { logger } from '@/utils/logger';
 import { createTeamBodySchema } from '@/lib/apiContracts/bot/teams/index';
-
-// GET filtres (tous optionnels, coercition côté handler conservée).
-const listTeamsQuerySchema = z.object({
-  limit: z.string().optional(),
-  offset: z.string().optional(),
-  search: z.string().optional(),
-  country: z.string().optional(),
-  isActive: z.string().optional(),
-  isJoinable: z.string().optional(),
-});
+import { listTeamsQuerySchema } from '@/lib/apiContracts/bot/teams/index.query';
 
 async function handleList(req: BotTenantRequest, res: NextApiResponse) {
   const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));

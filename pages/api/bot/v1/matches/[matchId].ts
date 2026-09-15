@@ -20,18 +20,12 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { sanitizeUrl } from '@/utils/apiHelpers';
-import { uuidSchema } from '@/utils/botValidation';
 import { emitScheduleEventsInBackground } from '@/utils/matches/scheduleEvents';
 import { logger } from '@/utils/logger';
+import { metaQuerySchema } from '@/lib/apiContracts/bot/matches/[matchId].query';
 
 const NOTES_MAX = 2000;
 const LOBBY_MAX = 200;
-
-// matchId (path) seulement. Le body PATCH conserve sa validation inline : la
-// distinction « clé absente » (champ non touché) vs « clé = null » (efface la
-// colonne) repose sur l'opérateur `in`, que zod ne modélise pas proprement avec
-// .optional().nullable(). On valide donc uniquement la query ici.
-const metaQuerySchema = z.object({ matchId: uuidSchema });
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { matchId } = req.botQuery as z.infer<typeof metaQuerySchema>;

@@ -37,3 +37,4 @@ post:
       $ref: '#/components/responses/BadRequest'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: bot.events/[id]/ack.query

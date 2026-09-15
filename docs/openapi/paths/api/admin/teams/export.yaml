@@ -129,3 +129,4 @@ get:
       description: >-
         `TEAM_NOT_FOUND` (teamId) or `TOURNAMENT_NOT_FOUND` (tournamentId) in
         the active tenant.
+  x-zod-query: admin.teams/export.query

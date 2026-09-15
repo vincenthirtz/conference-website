@@ -79,3 +79,4 @@ get:
       $ref: '#/components/responses/Unauthorized'
     '404':
       description: Board introuvable dans le tenant (code board_not_found).
+  x-zod-query: bot.tasks/board-snapshot.query

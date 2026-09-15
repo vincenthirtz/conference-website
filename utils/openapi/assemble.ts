@@ -216,6 +216,114 @@ export function resolveZodSchemas<T>(
   return out as T;
 }
 
+const HTTP_METHODS = [
+  'get',
+  'put',
+  'post',
+  'delete',
+  'options',
+  'head',
+  'patch',
+  'trace',
+] as const;
+
+/**
+ * PARAMÈTRES depuis zod. Une opération qui porte `x-zod-query: <nom>` voit ses
+ * paramètres générés depuis ce `z.object` (celui que le handler passe en
+ * `querySchema`) :
+ *   - propriété présente dans l'URL (`{matchId}`) → `in: path`, requise ;
+ *     les autres → `in: query`, requises selon le schéma ;
+ *   - un paramètre déjà écrit (même `name` + `in`) garde ses textes
+ *     (description, exemple) mais prend le schéma et `required` générés ;
+ *   - un paramètre `in: query` écrit à la main mais absent du schéma zod est
+ *     une ERREUR (la doc annoncerait un filtre que le code ignore) ;
+ *   - un paramètre de chemin déjà déclaré au niveau du chemin n'est pas
+ *     redoublé.
+ */
+export function expandZodQueryParameters(
+  apiPath: string,
+  item: Record<string, unknown>,
+  contracts: Record<string, ApiContractEntry> = API_CONTRACT_SCHEMAS,
+  used?: Set<string>
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...item };
+  const pathParams = new Set(
+    [...apiPath.matchAll(/\{([^}]+)\}/g)].map((m) => m[1])
+  );
+  const declaredAtPath = new Set(
+    (Array.isArray(item.parameters) ? item.parameters : [])
+      .filter((p) => isMap(p) && p.in === 'path')
+      .map((p) => (p as Record<string, unknown>).name)
+  );
+  for (const method of HTTP_METHODS) {
+    const op = item[method];
+    if (!isMap(op) || !('x-zod-query' in op)) continue;
+    const { 'x-zod-query': name, ...rest } = op;
+    const where = `${method.toUpperCase()} ${apiPath}`;
+    const entry = typeof name === 'string' ? contracts[name] : undefined;
+    if (!entry) {
+      throw new Error(
+        `openapi: x-zod-query « ${String(name)} » absent de lib/apiContracts (${where})`
+      );
+    }
+    used?.add(name as string);
+    let generated: Record<string, unknown>;
+    try {
+      generated = z.toJSONSchema(entry.schema, { io: 'input' }) as Record<
+        string,
+        unknown
+      >;
+    } catch (err) {
+      throw new Error(
+        `openapi: x-zod-query « ${String(name)} » non représentable (${(err as Error).message})`
+      );
+    }
+    if (generated.type !== 'object' || !isMap(generated.properties)) {
+      throw new Error(
+        `openapi: x-zod-query « ${String(name)} » doit être un z.object (${where})`
+      );
+    }
+    const required = new Set(
+      Array.isArray(generated.required) ? generated.required : []
+    );
+    const written = (Array.isArray(op.parameters) ? op.parameters : []).filter(
+      isMap
+    );
+    const byKey = new Map(
+      written.map((p) => [`${String(p.in)}:${String(p.name)}`, p])
+    );
+    const params: Record<string, unknown>[] = [];
+    const seen = new Set<string>();
+    for (const [prop, schema] of Object.entries(generated.properties)) {
+      const inPath = pathParams.has(prop);
+      if (inPath && declaredAtPath.has(prop)) continue;
+      const key = `${inPath ? 'path' : 'query'}:${prop}`;
+      seen.add(key);
+      const doc = byKey.get(key) ?? {};
+      const { schema: _hand, required: _req, ...texts } = doc;
+      params.push({
+        name: prop,
+        in: inPath ? 'path' : 'query',
+        ...texts,
+        required: inPath || required.has(prop),
+        schema,
+      });
+    }
+    for (const p of written) {
+      const key = `${String(p.in)}:${String(p.name)}`;
+      if (seen.has(key)) continue;
+      if (p.in === 'query') {
+        throw new Error(
+          `openapi: ${where} documente le paramètre de requête \`${String(p.name)}\`, absent du schéma zod « ${String(name)} »`
+        );
+      }
+      params.push(p); // en-têtes, cookies, chemin : hors du schéma de query
+    }
+    out[method] = { ...rest, parameters: params };
+  }
+  return out;
+}
+
 export function assembleSpec(root: string = process.cwd()): OpenApiDoc {
   const base = path.join(root, FRAGMENTS_DIR);
   const doc = readYaml(path.join(base, 'root.yaml'));
@@ -262,6 +370,7 @@ export function assembleSpec(root: string = process.cwd()): OpenApiDoc {
   const pathsDir = path.join(base, 'paths');
   const paths: Record<string, unknown> = {};
   const origin = new Map<string, string>();
+  const zodQueryUsed = new Set<string>();
   for (const file of walkYaml(pathsDir)) {
     const rel = path.relative(pathsDir, file);
     const apiPath = fragmentToApiPath(rel);
@@ -273,10 +382,16 @@ export function assembleSpec(root: string = process.cwd()): OpenApiDoc {
       );
     }
     origin.set(apiPath, rel);
-    paths[apiPath] = item;
+    paths[apiPath] = expandZodQueryParameters(
+      apiPath,
+      item,
+      undefined,
+      zodQueryUsed
+    );
   }
 
   const ctx = newZodResolution();
+  for (const name of zodQueryUsed) ctx.used.add(name);
   const resolved = resolveZodSchemas(
     { ...doc, components, paths },
     undefined,

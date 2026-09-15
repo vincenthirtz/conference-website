@@ -23,16 +23,10 @@ import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
+import { discordQuerySchema } from '@/lib/apiContracts/bot/matches/[matchId]/discord.query';
 
 const DISCORD_SNOWFLAKE_RE = /^[0-9]{15,25}$/;
-
-// matchId (path) seulement. Le body PATCH garde sa validation inline : la
-// distinction « clé absente » (champ non touché) vs « clé = null » (efface la
-// colonne) repose sur `key in body` via readSnowflake(), non modélisable
-// proprement en zod avec .optional().nullable().
-const discordQuerySchema = z.object({ matchId: uuidSchema });
 
 function readSnowflake(
   body: Record<string, unknown>,

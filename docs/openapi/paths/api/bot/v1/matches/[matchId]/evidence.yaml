@@ -34,6 +34,7 @@ get:
       $ref: '#/components/responses/Forbidden'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: bot.matches/[matchId]/evidence.query
 post:
   tags:
     - bot/matches
@@ -71,3 +72,4 @@ post:
       $ref: '#/components/responses/RateLimited'
     '500':
       $ref: '#/components/responses/ServerError'
+  x-zod-query: bot.matches/[matchId]/evidence.query

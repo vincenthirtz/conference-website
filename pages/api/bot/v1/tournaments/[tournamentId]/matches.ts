@@ -16,14 +16,8 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
-import { uuidSchema } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
-
-// Le body (single { match } | batch { matches }) garde sa validation inline :
-// elle produit des erreurs indexées par élément (`match[i]: ...`) que ni un
-// z.union ni un z.discriminatedUnion ne reproduiraient à l'identique. On ne
-// migre donc que la query du path param ici.
-const matchesQuerySchema = z.object({ tournamentId: uuidSchema });
+import { matchesQuerySchema } from '@/lib/apiContracts/bot/tournaments/[tournamentId]/matches.query';
 
 const VALID_STATUSES = [
   'pending',
