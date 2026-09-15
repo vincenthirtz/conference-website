@@ -20,7 +20,11 @@
 // signalé comme ignoré, jamais deviné. Un faux positif ferait rougir la CI sur
 // du code correct, et le garde-fou serait désactivé dans la semaine.
 
-import ts from 'typescript';
+// `@typescript/typescript6` et non `typescript` : depuis TypeScript 7 (compilateur
+// natif en Go), le paquet `typescript` ne livre plus l'API JavaScript du
+// compilateur (`createSourceFile`, `SyntaxKind`…). Le typecheck tourne sur 7 ;
+// ce parseur reste sur le paquet de compatibilité officiel, qui réexporte 6.x.
+import ts from '@typescript/typescript6';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, extname } from 'node:path';
 

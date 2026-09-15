@@ -3,8 +3,13 @@
   publish = ".next"
 
 [build.environment]
-  NODE_VERSION = "20.18.1"
-  NPM_VERSION = "10.8.2"
+  # Node 24 (LTS) partout : .nvmrc, CI, Netlify. Ce n'est plus un confort :
+  # @supabase/supabase-js >= 2.116 déclare `node >= 22`, @netlify/functions 6 et
+  # Vitest 5 exigent >= 22.12. Les fonctions Netlify
+  # (crons, handlers Next) tournent sur la version de Node du build.
+  # Plus de NPM_VERSION épinglé (10.8.2 était le npm de Node 20) : on prend le
+  # npm 11 livré avec Node 24, comme en local.
+  NODE_VERSION = "24"
   # `next build` (Turbopack + TypeScript) peut dépasser le heap Node par défaut
   # (~2 Go) sur la machine de build : la surface de types i18n (locales JSON
   # volumineuses + assertions de parité `typeof fr` + génériques useT/useAdminT)
