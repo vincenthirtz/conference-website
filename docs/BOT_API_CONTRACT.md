@@ -913,6 +913,111 @@ Resource paths grouped below. Click through for the actual handler — request
 body shapes live there. `Idem.` means the route honours `Idempotency-Key`.
 `Rate-key` is the bucket identifier in `utils/rateLimit`.
 
+### Vue d'ensemble (générée)
+
+Méthodes, idempotence, rate-limit, portée et plan de CHAQUE route, lus dans le
+code. Les tableaux par domaine ci-dessous gardent le contexte rédigé ; un test
+(`tests/unit/botContractInventory.test.ts`) vérifie qu'ils ne contredisent pas
+ce tableau.
+
+<!-- BEGIN GENERATED: bot-inventory -->
+_Tableau généré depuis les options `withBotRoute` des handlers — ne pas éditer à la main : `npm run contract:bot-inventory`. 91 routes._
+
+| Route | Méthodes | Idem. | Rate-key | Plafond | Portée / plan |
+| --- | --- | --- | --- | --- | --- |
+| [`autocomplete/cast-members.ts`](../pages/api/bot/v1/autocomplete/cast-members.ts) | GET | — | `bot-ac-cast-members` | 240/min | — |
+| [`autocomplete/matches.ts`](../pages/api/bot/v1/autocomplete/matches.ts) | GET | — | `bot-ac-matches` | 240/min | — |
+| [`autocomplete/stages.ts`](../pages/api/bot/v1/autocomplete/stages.ts) | GET | — | `bot-ac-stages` | 240/min | — |
+| [`autocomplete/teams.ts`](../pages/api/bot/v1/autocomplete/teams.ts) | GET | — | `bot-ac-teams` | 240/min | — |
+| [`autocomplete/tournaments.ts`](../pages/api/bot/v1/autocomplete/tournaments.ts) | GET | — | `bot-ac-tournaments` | 240/min | — |
+| [`cast/[assignmentId]/ack.ts`](../pages/api/bot/v1/cast/[assignmentId]/ack.ts) | POST | oui | `cast.ack` | 30/min | plan `discordEventOps:full` |
+| [`cast/assignments.ts`](../pages/api/bot/v1/cast/assignments.ts) | GET | — | `bot-cast-assignments` | 30/min | plan `discordEventOps:full` |
+| [`cast/upcoming.ts`](../pages/api/bot/v1/cast/upcoming.ts) | GET | — | `bot-cast-upcoming` | 60/min | `crossTenant` |
+| [`demandes.ts`](../pages/api/bot/v1/demandes.ts) | GET | — | `bot-demandes` | 30/min | — |
+| [`disputes.ts`](../pages/api/bot/v1/disputes.ts) | GET | — | `bot-disputes` | 30/min | plan `arbitration` |
+| [`disputes/escalations.ts`](../pages/api/bot/v1/disputes/escalations.ts) | GET | — | `bot-disputes-escalations` | 30/min | plan `arbitration` |
+| [`events/[id]/ack.ts`](../pages/api/bot/v1/events/[id]/ack.ts) | POST | oui | `bot-events-ack` | 120/min | `crossTenant` |
+| [`events/handled.ts`](../pages/api/bot/v1/events/handled.ts) | POST | — | `bot-events-handled` | 240/min | — |
+| [`events/pending.ts`](../pages/api/bot/v1/events/pending.ts) | GET | — | `bot-events-pending` | 60/min | `crossTenant` |
+| [`free-players/sync.ts`](../pages/api/bot/v1/free-players/sync.ts) | POST | oui | `bot-free-players-sync` | 30/min | — |
+| [`invitations/[demandeId].ts`](../pages/api/bot/v1/invitations/[demandeId].ts) | POST | oui | `bot-invitations-action` | 30/min | — |
+| [`leaderboards/teams.ts`](../pages/api/bot/v1/leaderboards/teams.ts) | GET | — | `bot-leaderboards-teams` | 30/min | — |
+| [`locks/[name].ts`](../pages/api/bot/v1/locks/[name].ts) | POST | — | `bot-locks` | 120/min | — |
+| [`matches/[matchId].ts`](../pages/api/bot/v1/matches/[matchId].ts) | GET, PATCH | oui | `bot-match-meta` | 30/min | — |
+| [`matches/[matchId]/cast.ts`](../pages/api/bot/v1/matches/[matchId]/cast.ts) | GET, POST, DELETE | oui | `bot-match-cast` | 30/min (+5/acteur) | plan `discordEventOps:full` |
+| [`matches/[matchId]/checkin.ts`](../pages/api/bot/v1/matches/[matchId]/checkin.ts) | POST | oui | `bot-match-checkin` | 60/min (+10/acteur) | — |
+| [`matches/[matchId]/discord.ts`](../pages/api/bot/v1/matches/[matchId]/discord.ts) | PATCH | oui | `bot-match-discord` | 60/min | plan `discordEventOps:full` |
+| [`matches/[matchId]/dispute.ts`](../pages/api/bot/v1/matches/[matchId]/dispute.ts) | GET | — | `bot-match-dispute` | 60/min | plan `arbitration` |
+| [`matches/[matchId]/drafts.ts`](../pages/api/bot/v1/matches/[matchId]/drafts.ts) | POST | oui | `bot-match-draft-init` | 30/min | plan `discordEventOps:full` |
+| [`matches/[matchId]/evidence.ts`](../pages/api/bot/v1/matches/[matchId]/evidence.ts) | GET, POST | oui | `bot-match-evidence` | 40/min (+10/acteur) | — |
+| [`matches/[matchId]/forfeit.ts`](../pages/api/bot/v1/matches/[matchId]/forfeit.ts) | POST | oui | `bot-match-forfeit` | 20/min (+5/acteur) | — |
+| [`matches/[matchId]/preset.ts`](../pages/api/bot/v1/matches/[matchId]/preset.ts) | GET | — | `bot-match-preset` | 60/min | — |
+| [`matches/[matchId]/report.ts`](../pages/api/bot/v1/matches/[matchId]/report.ts) | POST | oui | `bot-match-report` | 30/min (+5/acteur) | — |
+| [`matches/[matchId]/reset.ts`](../pages/api/bot/v1/matches/[matchId]/reset.ts) | POST | oui | `bot-match-reset` | 20/min (+5/acteur) | — |
+| [`matches/[matchId]/resolve-dispute.ts`](../pages/api/bot/v1/matches/[matchId]/resolve-dispute.ts) | POST | oui | `bot-match-resolve-dispute` | 20/min (+5/acteur) | plan `arbitration` |
+| [`matches/[matchId]/veto.ts`](../pages/api/bot/v1/matches/[matchId]/veto.ts) | GET, POST, DELETE | oui | `bot-match-veto` | 30/min (+5/acteur) | plan `discordEventOps:full` |
+| [`moderation/blacklist.ts`](../pages/api/bot/v1/moderation/blacklist.ts) | GET, POST, DELETE | oui | `bot-moderation` | 30/min (+10/acteur) | — |
+| [`moderation/blacklist-alert.ts`](../pages/api/bot/v1/moderation/blacklist-alert.ts) | POST | oui | `bot-moderation` | 30/min | plan `arbitration` |
+| [`player-actions.ts`](../pages/api/bot/v1/player-actions.ts) | GET | — | `bot-player-actions` | 30/min | — |
+| [`players/by-discord/[discordUserId]/actions.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/actions.ts) | GET | — | `bot-player-actions` | 60/min | — |
+| [`players/by-discord/[discordUserId]/actions-todo.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/actions-todo.ts) | GET | — | `bot-player-actions-todo` | 60/min | — |
+| [`players/by-discord/[discordUserId]/actions/snooze.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/actions/snooze.ts) | POST | oui | `actions.snooze` | 30/min | — |
+| [`players/by-discord/[discordUserId]/history.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/history.ts) | GET | — | `bot-player-history` | 60/min | — |
+| [`players/by-discord/[discordUserId]/invitations.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/invitations.ts) | GET | — | `bot-player-invitations` | 60/min | — |
+| [`players/by-discord/[discordUserId]/next-match.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/next-match.ts) | GET | — | `bot-player-next-match` | 60/min | — |
+| [`players/by-discord/[discordUserId]/profile.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/profile.ts) | PATCH | oui | `bot-player-profile` | 20/min | — |
+| [`players/by-discord/[discordUserId]/reminders.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/reminders.ts) | GET | — | `bot-player-reminders` | 60/min | — |
+| [`players/by-discord/[discordUserId]/stats.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/stats.ts) | GET | — | `bot-player-stats` | 60/min | — |
+| [`players/by-discord/[discordUserId]/tcg.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/tcg.ts) | GET | — | `bot-player-tcg` | 60/min | — |
+| [`players/by-discord/[discordUserId]/team.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/team.ts) | GET | — | `bot-player-team` | 60/min | — |
+| [`players/by-discord/[discordUserId]/twitch.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/twitch.ts) | GET | — | `bot-player-twitch` | 60/min | — |
+| [`reconcile/discord-orphans.ts`](../pages/api/bot/v1/reconcile/discord-orphans.ts) | GET | — | `bot-reconcile-orphans` | 30/min | — |
+| [`reconcile/team-channels.ts`](../pages/api/bot/v1/reconcile/team-channels.ts) | GET | — | `bot-reconcile-team-channels` | 30/min | — |
+| [`register-user.ts`](../pages/api/bot/v1/register-user.ts) | POST | oui | `bot-register` | 20/min | — |
+| [`reminders/index.ts`](../pages/api/bot/v1/reminders/index.ts) | GET | — | `bot-reminders` | 60/min | — |
+| [`role-sync/presence.ts`](../pages/api/bot/v1/role-sync/presence.ts) | POST | oui | `bot-role-sync-presence` | 120/min | — |
+| [`role-sync/snapshot.ts`](../pages/api/bot/v1/role-sync/snapshot.ts) | GET | — | `bot-role-sync-snapshot` | 12/min | — |
+| [`runs/current.ts`](../pages/api/bot/v1/runs/current.ts) | GET | — | `bot-runs-current` | 60/min | plan `discordEventOps:full` |
+| [`scrims/[scrimId]/index.ts`](../pages/api/bot/v1/scrims/[scrimId]/index.ts) | GET, PATCH | oui | `bot-scrim-id` | 60/min | — |
+| [`scrims/[scrimId]/matches.ts`](../pages/api/bot/v1/scrims/[scrimId]/matches.ts) | GET, POST | oui | `bot-scrim-matches` | 60/min | — |
+| [`scrims/[scrimId]/matches/[matchId].ts`](../pages/api/bot/v1/scrims/[scrimId]/matches/[matchId].ts) | PATCH | oui | `bot-scrim-match-patch` | 60/min | — |
+| [`scrims/index.ts`](../pages/api/bot/v1/scrims/index.ts) | GET, POST | oui | `bot-scrims` | 60/min | — |
+| [`scrims/requests.ts`](../pages/api/bot/v1/scrims/requests.ts) | POST | oui | `bot-scrim-requests` | 30/min | — |
+| [`staff-logs.ts`](../pages/api/bot/v1/staff-logs.ts) | GET | — | `bot-staff-logs` | 30/min | — |
+| [`stages/[stageId]/auto-byes.ts`](../pages/api/bot/v1/stages/[stageId]/auto-byes.ts) | POST | oui | `bot-stage-auto-byes` | 10/min | — |
+| [`stages/[stageId]/finalize.ts`](../pages/api/bot/v1/stages/[stageId]/finalize.ts) | POST | oui | `bot-stage-finalize` | 10/min (+5/acteur) | — |
+| [`stages/[stageId]/next-round.ts`](../pages/api/bot/v1/stages/[stageId]/next-round.ts) | POST | oui | `bot-stage-next-round` | 10/min (+5/acteur) | — |
+| [`tasks/[id]/assign.ts`](../pages/api/bot/v1/tasks/[id]/assign.ts) | PATCH | oui | `bot-tasks-assign` | 40/min (+20/acteur) | — |
+| [`tasks/[id]/move.ts`](../pages/api/bot/v1/tasks/[id]/move.ts) | PATCH | oui | `bot-tasks-move` | 40/min (+20/acteur) | — |
+| [`tasks/board-snapshot.ts`](../pages/api/bot/v1/tasks/board-snapshot.ts) | GET | — | `bot-tasks-snapshot` | 60/min | — |
+| [`tasks/boards.ts`](../pages/api/bot/v1/tasks/boards.ts) | GET | — | `bot-tasks-boards` | 40/min | — |
+| [`tasks/columns.ts`](../pages/api/bot/v1/tasks/columns.ts) | GET | — | `bot-tasks-columns` | 40/min | — |
+| [`tasks/index.ts`](../pages/api/bot/v1/tasks/index.ts) | GET, POST | — | `bot-tasks` | 40/min (+20/acteur) | — |
+| [`team-channels/snapshot.ts`](../pages/api/bot/v1/team-channels/snapshot.ts) | POST | oui | `bot-team-channels-snapshot` | 60/min | — |
+| [`teams/[teamId].ts`](../pages/api/bot/v1/teams/[teamId].ts) | GET, PATCH | — | `bot-team-id` | 60/min | — |
+| [`teams/[teamId]/discord.ts`](../pages/api/bot/v1/teams/[teamId]/discord.ts) | PATCH | oui | `bot-team-discord` | 30/min | — |
+| [`teams/[teamId]/invitations.ts`](../pages/api/bot/v1/teams/[teamId]/invitations.ts) | GET, POST | oui | `bot-team-invitations` | 60/min | — |
+| [`teams/[teamId]/members.ts`](../pages/api/bot/v1/teams/[teamId]/members.ts) | DELETE | oui | `bot-team-members-kick` | 20/min | — |
+| [`teams/[teamId]/transfer-captain.ts`](../pages/api/bot/v1/teams/[teamId]/transfer-captain.ts) | POST | oui | `bot-team-transfer-captain` | 10/min | — |
+| [`teams/index.ts`](../pages/api/bot/v1/teams/index.ts) | GET, POST | oui | `bot-teams` | 60/min | — |
+| [`teams/leave.ts`](../pages/api/bot/v1/teams/leave.ts) | POST | oui | `bot-team-leave` | 10/min | — |
+| [`teams/messages.ts`](../pages/api/bot/v1/teams/messages.ts) | POST | oui | `bot-team-messages` | 10/min (+3/acteur) | — |
+| [`tenants/all-configs.ts`](../pages/api/bot/v1/tenants/all-configs.ts) | GET | — | `bot-tenants-all-configs` | 30/min | `crossTenant` |
+| [`tenants/by-guild/[guildId].ts`](../pages/api/bot/v1/tenants/by-guild/[guildId].ts) | GET | — | `bot-tenants-by-guild` | 120/min | `crossTenant` |
+| [`tenants/link-guild.ts`](../pages/api/bot/v1/tenants/link-guild.ts) | POST | oui | `bot-tenants-link-guild` | 30/min | `crossTenant` |
+| [`tenants/request-onboard.ts`](../pages/api/bot/v1/tenants/request-onboard.ts) | POST | oui | `bot-tenants-request-onboard` | 30/min | `crossTenant` |
+| [`tickets/close-log.ts`](../pages/api/bot/v1/tickets/close-log.ts) | POST | — | `bot-tickets-close-log` | 30/min | — |
+| [`tournament-help/inventory.ts`](../pages/api/bot/v1/tournament-help/inventory.ts) | GET | — | `bot-tournament-help-inventory` | 30/min | — |
+| [`tournaments/[tournamentId]/bracket.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/bracket.ts) | GET | — | `bot-tournament-bracket` | 30/min | — |
+| [`tournaments/[tournamentId]/clone.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/clone.ts) | POST | oui | `bot-tournament-clone` | 10/min | — |
+| [`tournaments/[tournamentId]/matches.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/matches.ts) | POST | oui | `bot-matches` | 30/min | — |
+| [`tournaments/[tournamentId]/stages.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/stages.ts) | POST | oui | `bot-stages` | 30/min | — |
+| [`tournaments/[tournamentId]/status.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/status.ts) | POST | oui | `bot-tournament-status` | 10/min (+5/acteur) | — |
+| [`tournaments/[tournamentId]/teams.ts`](../pages/api/bot/v1/tournaments/[tournamentId]/teams.ts) | GET, POST | oui | `bot-tournament-teams` | 30/min | — |
+| [`tournaments/index.ts`](../pages/api/bot/v1/tournaments/index.ts) | GET, POST | oui | `bot-tournaments` | 60/min | — |
+| [`twitch/live.ts`](../pages/api/bot/v1/twitch/live.ts) | GET | — | `bot-twitch-live` | 60/min | — |
+<!-- END GENERATED: bot-inventory -->
+
 ### Moderation
 
 | Route                                                                                | Methods         | Idem.  | Rate-key                   |

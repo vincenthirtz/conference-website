@@ -24,6 +24,25 @@ ls ../docker-box ../conference-website 2>/dev/null
 
 The two repos are sibling directories: typically `/Users/.../Vincent/docker-box/` and `/Users/.../Vincent/conference-website/`. If only one is reachable, stop and tell the user — partial audit produces misleading reports.
 
+## Step 0b — let the tests do the mechanical part
+
+Methods, idempotency, rate-limit keys, `crossTenant` and plan capability of every
+route are already checked mechanically in `conference-website`:
+
+```bash
+npx vitest run tests/unit/botContractInventory.test.ts tests/unit/openapiContractDrift.test.ts
+npm run contract:bot-inventory   # regenerates the summary table in BOT_API_CONTRACT.md
+```
+
+- `botContractInventory` — the generated summary table (between
+  `<!-- BEGIN/END GENERATED: bot-inventory -->`) is up to date with the
+  `withBotRoute` options, and the hand-written per-domain tables don't contradict them.
+- `openapiContractDrift` — one OpenAPI fragment per handler
+  (`docs/openapi/paths/api/…`), methods/auth match, every bot client call is documented.
+
+The steps below remain useful for what tests can't see: request/response
+SHAPES and the bot client's expectations.
+
 ## Step 1 — enumerate handlers (canonical source)
 
 ```bash

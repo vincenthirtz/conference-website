@@ -482,8 +482,9 @@ export type BotRouteOptions = {
    *   - aucun round-trip d'existence n'est fait,
    *   - `req.botContext.tenantId` reste `undefined` — c'est volontaire et
    *     contractuel : si un handler `crossTenant` lit cette valeur, c'est
-   *     un bug d'implementation. La table d'inventaire dans
-   *     docs/BOT_API_CONTRACT.md liste les 5 routes flaggees.
+   *     un bug d'implementation. L'inventaire GÉNÉRÉ de
+   *     docs/BOT_API_CONTRACT.md (`npm run contract:bot-inventory`) liste
+   *     les routes flaggees.
    */
   crossTenant?: boolean;
   /**
