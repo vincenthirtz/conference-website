@@ -30,24 +30,8 @@ post:
       content:
         application/json:
           schema:
-            type: object
-            required:
-              - data
-            properties:
-              data:
-                type: object
-                properties:
-                  matchId:
-                    type: string
-                    format: uuid
-                  status:
-                    type: string
-                  team1Score:
-                    type: integer
-                  team2Score:
-                    type: integer
-                  winnerTeamId:
-                    type: [string, 'null']
+            # Généré depuis le contrat zod ; le handler construit sa réponse avec ce type.
+            x-zod: public.v1.matchResult.response
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':

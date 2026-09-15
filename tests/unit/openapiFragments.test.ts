@@ -10,6 +10,7 @@ import { API_CONTRACT_SCHEMAS } from '../../lib/apiContracts';
 import {
   assembleSpec,
   fragmentToApiPath,
+  newZodResolution,
   resolveZodSchemas,
 } from '../../utils/openapi/assemble';
 
@@ -90,14 +91,14 @@ describe('x-zod : schémas générés depuis lib/apiContracts', () => {
   };
 
   it('remplace la référence par le JSON Schema, voisins en complément', () => {
-    const used = new Set<string>();
+    const ctx = newZodResolution();
     const out = resolveZodSchemas(
       {
         a: { 'x-zod': 'body', description: 'Corps' },
         b: [{ 'x-zod': 'reply' }],
       },
       contracts,
-      used
+      ctx
     ) as any;
     expect(out.a).toMatchObject({
       type: 'object',
@@ -112,7 +113,7 @@ describe('x-zod : schémas générés depuis lib/apiContracts', () => {
     // Sortie : zod ferme l'objet ; entrée : non.
     expect(out.b[0].additionalProperties).toBe(false);
     expect(out.a.additionalProperties).toBeUndefined();
-    expect([...used].sort()).toEqual(['body', 'reply']);
+    expect([...ctx.used].sort()).toEqual(['body', 'reply']);
   });
 
   it('fusionne la documentation rédigée dans les propriétés générées', () => {
@@ -141,6 +142,56 @@ describe('x-zod : schémas générés depuis lib/apiContracts', () => {
     ).toThrow(/absent du schéma zod/);
   });
 
+  it('remonte les sous-schémas nommés dans components.schemas', () => {
+    const Stage = z.object({ id: z.string() }).meta({ id: 'FixtureStage' });
+    const Detail = z
+      .object({ stages: z.array(Stage) })
+      .meta({ id: 'FixtureDetail' });
+    const named = {
+      detail: { schema: Detail, io: 'output' as const },
+      envelope: {
+        schema: z.object({ data: Detail }),
+        io: 'output' as const,
+      },
+    };
+    const ctx = newZodResolution();
+    const out = resolveZodSchemas(
+      {
+        schemas: { FixtureDetail: { 'x-zod': 'detail', description: 'Doc' } },
+        inline: { 'x-zod': 'envelope' },
+      },
+      named,
+      ctx
+    ) as any;
+    // Déclaré sous son propre nom : le composant porte le corps, pas un $ref.
+    expect(out.schemas.FixtureDetail).toMatchObject({
+      type: 'object',
+      description: 'Doc',
+      properties: {
+        stages: { items: { $ref: '#/components/schemas/FixtureStage' } },
+      },
+    });
+    expect(out.inline.properties.data).toEqual({
+      $ref: '#/components/schemas/FixtureDetail',
+    });
+    expect([...ctx.named.keys()].sort()).toEqual([
+      'FixtureDetail',
+      'FixtureStage',
+    ]);
+    expect([...ctx.declared]).toEqual(['FixtureDetail']);
+  });
+
+  it('refuse deux schémas zod différents sous le même id', () => {
+    const a = z.object({ x: z.string() }).meta({ id: 'Clash' });
+    const b = z.object({ y: z.number() }).meta({ id: 'Clash' });
+    expect(() =>
+      resolveZodSchemas([{ 'x-zod': 'a' }, { 'x-zod': 'b' }], {
+        a: { schema: z.object({ v: a }), io: 'output' },
+        b: { schema: z.object({ v: b }), io: 'output' },
+      })
+    ).toThrow(/même|l'id « Clash »/);
+  });
+
   it('refuse un nom inconnu', () => {
     expect(() => resolveZodSchemas({ 'x-zod': 'nope' }, contracts)).toThrow(
       /absent de lib\/apiContracts/
@@ -154,7 +205,7 @@ describe('x-zod : schémas générés depuis lib/apiContracts', () => {
   });
 
   it('chaque contrat enregistré est référencé par la spec réelle', () => {
-    const used = new Set<string>();
+    const ctx = newZodResolution();
     resolveZodSchemas(
       // Document brut (avant résolution) : on relit les fragments tels quels.
       JSON.parse(
@@ -173,10 +224,10 @@ describe('x-zod : schémas générés depuis lib/apiContracts', () => {
         )
       ),
       API_CONTRACT_SCHEMAS,
-      used
+      ctx
     );
     const unused = Object.keys(API_CONTRACT_SCHEMAS).filter(
-      (name) => !used.has(name)
+      (name) => !ctx.used.has(name)
     );
     expect(unused, 'contrat zod enregistré mais jamais référencé').toEqual([]);
   });

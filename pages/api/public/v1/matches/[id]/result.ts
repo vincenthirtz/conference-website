@@ -24,6 +24,7 @@ import {
 import {
   matchResultBodySchema,
   matchResultQuerySchema,
+  type MatchResultResponse,
 } from '@/lib/apiContracts/public/matchResult';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logger } from '@/utils/logger';
@@ -86,7 +87,8 @@ async function handler(
       propagateBracket: true,
     });
 
-    return res.status(200).json({
+    // Typée par le contrat publié dans la spec (lib/apiContracts).
+    const body: MatchResultResponse = {
       data: {
         matchId,
         status: 'finished',
@@ -94,7 +96,8 @@ async function handler(
         team2Score,
         winnerTeamId: result.winnerTeamId,
       },
-    });
+    };
+    return res.status(200).json(body);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     logger.error('[public/v1/matches/result] applyMatchScore error', e);

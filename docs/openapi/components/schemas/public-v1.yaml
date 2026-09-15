@@ -1,248 +1,36 @@
 PublicV1Pagination:
-  type: object
-  required:
-    - limit
-    - offset
-    - count
-  properties:
-    limit:
-      type: integer
-    offset:
-      type: integer
-    count:
-      type: integer
-      description: >-
-        Nombre total d'éléments avant pagination (tournois) ou nombre d'éléments
-        retournés dans la page (leaderboard).
+  # Généré depuis lib/apiContracts/public/v1 (type TS du handler vérifié par test).
+  x-zod: response.PublicV1Pagination
 PublicV1TournamentSummary:
-  type: object
-  required:
-    - id
-    - name
-    - status
-  properties:
-    id:
-      type: string
-      format: uuid
-    name:
-      type: string
-    slug:
-      type: [string, 'null']
-    game:
-      type: [string, 'null']
-    status:
-      type: string
-    start_date:
-      type: [string, 'null']
-    end_date:
-      type: [string, 'null']
-    format:
-      type: [string, 'null']
+  # Généré depuis lib/apiContracts/public/v1 (type TS du handler vérifié par test).
+  x-zod: response.PublicV1TournamentSummary
 PublicV1StageSummary:
-  type: object
-  required:
-    - id
-    - status
-  properties:
-    id:
-      type: string
-      format: uuid
-    name:
-      type: [string, 'null']
-    stage_type:
-      type: [string, 'null']
-    status:
-      type: string
-      description: Dérivé de `is_active` (active | inactive).
+  # Généré depuis lib/apiContracts/public/v1 (type TS du handler vérifié par test).
+  x-zod: response.PublicV1StageSummary
 PublicV1TournamentDetail:
-  allOf:
-    - $ref: '#/components/schemas/PublicV1TournamentSummary'
-    - type: object
-      required:
-        - stages
-      properties:
-        stages:
-          type: array
-          items:
-            $ref: '#/components/schemas/PublicV1StageSummary'
+  # Généré depuis lib/apiContracts/public/v1 (type TS du handler vérifié par test).
+  x-zod: response.PublicV1TournamentDetail
 PublicV1Match:
-  type: object
-  required:
-    - id
-    - status
-  properties:
-    id:
-      type: string
-      format: uuid
-    stage_id:
-      type: [string, 'null']
-    round_number:
-      type: [integer, 'null']
-    bracket_side:
-      type: [string, 'null']
-    team1_id:
-      type: [string, 'null']
-    team1_name:
-      type: [string, 'null']
-    team1_logo_url:
-      type: [string, 'null']
-      description: Public team logo URL (may be null).
-    team2_id:
-      type: [string, 'null']
-    team2_name:
-      type: [string, 'null']
-    team2_logo_url:
-      type: [string, 'null']
-      description: Public team logo URL (may be null).
-    team1_score:
-      type: [integer, 'null']
-    team2_score:
-      type: [integer, 'null']
-    winner_team_id:
-      type: [string, 'null']
-    status:
-      type: string
-    scheduled_at:
-      type: [string, 'null']
+  # Généré depuis lib/apiContracts/public/v1 (type TS du handler vérifié par test).
+  x-zod: response.PublicV1Match
 PublicV1MatchGame:
-  type: object
-  properties:
-    map_name:
-      type: [string, 'null']
-    map_order:
-      type: [integer, 'null']
-    team1_score:
-      type: [integer, 'null']
-    team2_score:
-      type: [integer, 'null']
-    winner_team_id:
-      type: [string, 'null']
+  # Généré depuis lib/apiContracts/public/v1 (type TS du handler vérifié par test).
+  x-zod: response.PublicV1MatchGame
 PublicV1MatchDetail:
-  allOf:
-    - $ref: '#/components/schemas/PublicV1Match'
-    - type: object
-      required:
-        - games
-      properties:
-        games:
-          type: array
-          items:
-            $ref: '#/components/schemas/PublicV1MatchGame'
+  # Généré depuis lib/apiContracts/public/v1 (type TS du handler vérifié par test).
+  x-zod: response.PublicV1MatchDetail
 PublicV1Standing:
-  type: object
-  required:
-    - rank
-    - teamId
-  properties:
-    rank:
-      type: integer
-    teamId:
-      type: string
-      format: uuid
-    teamName:
-      type: [string, 'null']
-    teamSlug:
-      type: [string, 'null']
-    logoUrl:
-      type: [string, 'null']
-    prize:
-      type: [string, 'null']
+  # Généré depuis lib/apiContracts/public/v1 (type TS du handler vérifié par test).
+  x-zod: response.PublicV1Standing
 PublicV1ArbitrationMetrics:
-  type: object
-  description: >
-    Métriques d'arbitrage AGRÉGÉES et NON-NOMINATIVES d'un tournoi. Aucun
-    identifiant (équipe / match / joueur), aucune raison de litige : que des
-    compteurs, durées et taux.
-  required:
-    - totalDisputes
-    - open
-    - resolved
-    - withinSlaCount
-    - openBreakdown
-    - slaMinutes
-  properties:
-    totalDisputes:
-      type: integer
-      description: Matchs ayant eu un litige (opened_at set OU status=disputed OU résolus).
-    open:
-      type: integer
-      description: Litiges non résolus (status=disputed).
-    resolved:
-      type: integer
-      description: Litiges avec un timestamp de résolution.
-    avgResolutionMinutes:
-      type: [integer, 'null']
-      description: Temps moyen de résolution (minutes) sur les résolus ; null si aucun.
-    medianResolutionMinutes:
-      type: [integer, 'null']
-      description: Temps médian de résolution (minutes) sur les résolus ; null si aucun.
-    withinSlaCount:
-      type: integer
-      description: Litiges résolus dans le SLA (durée <= slaMinutes).
-    slaComplianceRate:
-      type: [number, 'null']
-      description: withinSlaCount / resolved (0..1) ; null si resolved=0.
-    openBreakdown:
-      type: object
-      description: Répartition SLA des litiges OUVERTS.
-      required:
-        - breached
-        - approaching
-        - fresh
-      properties:
-        breached:
-          type: integer
-        approaching:
-          type: integer
-        fresh:
-          type: integer
-    slaMinutes:
-      type: integer
-      description: Fenêtre SLA (minutes) du tenant utilisée pour le calcul.
+  # Généré depuis lib/apiContracts/public/v1 (type TS du handler vérifié par test).
+  x-zod: response.PublicV1ArbitrationMetrics
 PublicV1TournamentArbitration:
-  type: object
-  required:
-    - tournamentId
-    - tournamentName
-    - metrics
-  properties:
-    tournamentId:
-      type: string
-      format: uuid
-    tournamentName:
-      type: string
-    tournamentSlug:
-      type: [string, 'null']
-    metrics:
-      $ref: '#/components/schemas/PublicV1ArbitrationMetrics'
+  # Généré depuis lib/apiContracts/public/v1 (type TS du handler vérifié par test).
+  x-zod: response.PublicV1TournamentArbitration
 PublicV1TeamMember:
-  type: object
-  properties:
-    display_name:
-      type: [string, 'null']
-    role:
-      type: [string, 'null']
-    is_substitute:
-      type: boolean
+  # Généré depuis lib/apiContracts/public/v1 (type TS du handler vérifié par test).
+  x-zod: response.PublicV1TeamMember
 PublicV1Team:
-  type: object
-  required:
-    - id
-    - name
-    - roster
-  properties:
-    id:
-      type: string
-      format: uuid
-    name:
-      type: string
-    short_name:
-      type: [string, 'null']
-    slug:
-      type: [string, 'null']
-    logo_url:
-      type: [string, 'null']
-    roster:
-      type: array
-      items:
-        $ref: '#/components/schemas/PublicV1TeamMember'
+  # Généré depuis lib/apiContracts/public/v1 (type TS du handler vérifié par test).
+  x-zod: response.PublicV1Team

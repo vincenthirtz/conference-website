@@ -148,47 +148,8 @@ RatingRebuildResult:
     matches:
       type: integer
 LeaderboardPlayer:
-  type: object
-  required:
-    - userId
-    - rating
-    - rd
-    - gamesPlayed
-    - wins
-    - losses
-    - rank
-  properties:
-    userId:
-      type: string
-    displayName:
-      type: [string, 'null']
-    battleTag:
-      type: [string, 'null']
-    avatarUrl:
-      type: [string, 'null']
-    teamName:
-      type: [string, 'null']
-      description: >-
-        Nom de l'equipe la plus recente de la joueuse. Sert de contexte
-        d'affichage, pas de filtre.
-    teamSlug:
-      type: [string, 'null']
-    teamLogoUrl:
-      type: [string, 'null']
-      description: >-
-        Logo de l'equipe, utilise comme repli d'avatar quand `avatarUrl` est nul.
-    rating:
-      type: number
-    rd:
-      type: number
-    gamesPlayed:
-      type: integer
-    wins:
-      type: integer
-    losses:
-      type: integer
-    rank:
-      type: integer
+  # Généré depuis lib/apiContracts/public/v1 (type TS du handler vérifié par test).
+  x-zod: response.LeaderboardPlayer
 LeaderboardResponse:
   type: object
   required:
@@ -199,51 +160,8 @@ LeaderboardResponse:
       items:
         $ref: '#/components/schemas/LeaderboardPlayer'
 League:
-  type: object
-  required:
-    - id
-    - tenant_id
-    - name
-    - slug
-    - status
-    - points_table
-    - is_public
-  properties:
-    id:
-      type: string
-      format: uuid
-    tenant_id:
-      type: string
-      format: uuid
-    name:
-      type: string
-    slug:
-      type: string
-    description:
-      type: [string, 'null']
-    game:
-      type: [string, 'null']
-    status:
-      type: string
-      enum:
-        - draft
-        - active
-        - finished
-        - archived
-    start_date:
-      type: [string, 'null']
-    end_date:
-      type: [string, 'null']
-    points_table:
-      type: object
-      additionalProperties:
-        type: number
-    is_public:
-      type: boolean
-    created_at:
-      type: string
-    updated_at:
-      type: string
+  # Généré depuis lib/apiContracts/public/v1 (type TS du handler vérifié par test).
+  x-zod: response.League
 LeagueCreateInput:
   type: object
   required:
@@ -313,48 +231,8 @@ LeagueTournamentLink:
     weight:
       type: number
 LeagueDetailResponse:
-  type: object
-  required:
-    - league
-    - standings
-    - tournaments
-  properties:
-    league:
-      $ref: '#/components/schemas/League'
-    standings:
-      type: array
-      items:
-        type: object
-        properties:
-          teamId:
-            type: string
-          teamName:
-            type: [string, 'null']
-          teamSlug:
-            type: [string, 'null']
-          logoUrl:
-            type: [string, 'null']
-          points:
-            type: number
-          tournamentsCounted:
-            type: integer
-          bestRank:
-            type: [integer, 'null']
-          rank:
-            type: integer
-    tournaments:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          name:
-            type: [string, 'null']
-          slug:
-            type: [string, 'null']
-          weight:
-            type: number
+  # Généré depuis lib/apiContracts/public/v1 (type TS du handler vérifié par test).
+  x-zod: response.LeagueDetailResponse
 LeagueStandingsResponse:
   type: object
   required:

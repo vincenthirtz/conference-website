@@ -10,3 +10,15 @@ export const matchResultBodySchema = z.object({
 });
 
 export const matchResultQuerySchema = z.object({ id: uuidSchema });
+
+/** Réponse 200 : le handler construit sa réponse avec ce type (vérifié au typecheck). */
+export const matchResultResponseSchema = z.object({
+  data: z.object({
+    matchId: z.uuid(),
+    status: z.literal('finished'),
+    team1Score: z.number().int(),
+    team2Score: z.number().int(),
+    winnerTeamId: z.string().nullable(),
+  }),
+});
+export type MatchResultResponse = z.output<typeof matchResultResponseSchema>;

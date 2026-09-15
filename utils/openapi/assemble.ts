@@ -113,18 +113,53 @@ function mergeOverlay(
   return out;
 }
 
+/** État partagé d'une résolution `x-zod` sur tout un document. */
+export type ZodResolution = {
+  /** Noms de contrats référencés. */
+  used: Set<string>;
+  /**
+   * Sous-schémas NOMMÉS (`.meta({ id })`) rencontrés : zod les extrait en
+   * `$defs`, l'assembleur les remonte dans `components.schemas` pour que la
+   * doc garde des types nommés et liés entre eux.
+   */
+  named: Map<string, { schema: unknown; from: string }>;
+  /** Composants écrits `Nom: { x-zod }` dont le schéma racine porte l'id `Nom`. */
+  declared: Set<string>;
+};
+
+export function newZodResolution(): ZodResolution {
+  return { used: new Set(), named: new Map(), declared: new Set() };
+}
+
+const ZOD_DEFS = '#/$defs/';
+const COMPONENT_SCHEMAS = '#/components/schemas/';
+
+function rewriteDefRefs(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(rewriteDefRefs);
+  if (!isMap(node)) return node;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(node)) {
+    out[k] =
+      k === '$ref' && typeof v === 'string' && v.startsWith(ZOD_DEFS)
+        ? COMPONENT_SCHEMAS + v.slice(ZOD_DEFS.length)
+        : rewriteDefRefs(v);
+  }
+  return out;
+}
+
 /**
  * Remplace chaque `{ 'x-zod': nom, ...voisins }` par le JSON Schema du contrat
  * nommé. Parcours en profondeur, nouvelles valeurs (le document d'entrée n'est
- * pas muté). Rend aussi l'ensemble des noms utilisés.
+ * pas muté). Les sous-schémas nommés sont collectés dans `ctx.named`.
  */
 export function resolveZodSchemas<T>(
   node: T,
   contracts: Record<string, ApiContractEntry> = API_CONTRACT_SCHEMAS,
-  used: Set<string> = new Set()
+  ctx: ZodResolution = newZodResolution(),
+  key?: string
 ): T {
   if (Array.isArray(node)) {
-    return node.map((n) => resolveZodSchemas(n, contracts, used)) as T;
+    return node.map((n) => resolveZodSchemas(n, contracts, ctx)) as T;
   }
   if (!isMap(node)) return node;
   if ('x-zod' in node) {
@@ -135,7 +170,7 @@ export function resolveZodSchemas<T>(
         `openapi: x-zod « ${String(name)} » absent de lib/apiContracts`
       );
     }
-    used.add(name as string);
+    ctx.used.add(name as string);
     let generated: Record<string, unknown>;
     try {
       generated = z.toJSONSchema(entry.schema, { io: entry.io }) as Record<
@@ -147,12 +182,36 @@ export function resolveZodSchemas<T>(
         `openapi: x-zod « ${String(name)} » non représentable en JSON Schema (${(err as Error).message})`
       );
     }
-    const { $schema: _dialect, ...schema } = generated;
+    const { $schema: _dialect, $defs, ...rawRoot } = generated;
+    const defs = (rewriteDefRefs($defs ?? {}) ?? {}) as Record<string, unknown>;
+    for (const [id, def] of Object.entries(defs)) {
+      const known = ctx.named.get(id);
+      if (known && JSON.stringify(known.schema) !== JSON.stringify(def)) {
+        throw new Error(
+          `openapi: deux schémas zod différents portent l'id « ${id} » (${known.from}, ${String(name)})`
+        );
+      }
+      if (!known) ctx.named.set(id, { schema: def, from: String(name) });
+    }
+    let schema = rewriteDefRefs(rawRoot) as Record<string, unknown>;
+    const rootRef =
+      Object.keys(schema).length === 1 && typeof schema.$ref === 'string'
+        ? schema.$ref
+        : null;
+    if (rootRef?.startsWith(COMPONENT_SCHEMAS)) {
+      const id = rootRef.slice(COMPONENT_SCHEMAS.length);
+      // `Nom: { x-zod }` dont la racine s'appelle `Nom` : le composant EST ce
+      // schéma, on y met son corps plutôt qu'une référence à lui-même.
+      if (key === id) {
+        ctx.declared.add(id);
+        schema = defs[id] as Record<string, unknown>;
+      }
+    }
     return mergeOverlay(schema, siblings, String(name)) as T;
   }
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(node)) {
-    out[k] = resolveZodSchemas(v, contracts, used);
+    out[k] = resolveZodSchemas(v, contracts, ctx, k);
   }
   return out as T;
 }
@@ -217,5 +276,22 @@ export function assembleSpec(root: string = process.cwd()): OpenApiDoc {
     paths[apiPath] = item;
   }
 
-  return resolveZodSchemas({ ...doc, components, paths });
+  const ctx = newZodResolution();
+  const resolved = resolveZodSchemas(
+    { ...doc, components, paths },
+    undefined,
+    ctx
+  );
+  const schemas = ((resolved.components as Record<string, unknown>).schemas ??=
+    {}) as Record<string, unknown>;
+  for (const [id, { from }] of ctx.named) {
+    if (ctx.declared.has(id)) continue;
+    if (id in schemas) {
+      throw new Error(
+        `openapi: le schéma zod nommé « ${id} » (${from}) entre en conflit avec le composant écrit à la main du même nom`
+      );
+    }
+    schemas[id] = ctx.named.get(id)?.schema;
+  }
+  return resolved;
 }

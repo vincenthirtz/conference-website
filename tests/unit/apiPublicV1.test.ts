@@ -14,6 +14,24 @@ vi.mock('@/utils/supabase', async () => {
 });
 
 import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import { z } from 'zod';
+import { publicV1PaginationSchema } from '../../lib/apiContracts/public/v1/common';
+import {
+  publicV1StandingSchema,
+  publicV1TournamentDetailSchema,
+  publicV1TournamentSummarySchema,
+} from '../../lib/apiContracts/public/v1/tournaments';
+import {
+  publicV1MatchDetailSchema,
+  publicV1MatchSchema,
+} from '../../lib/apiContracts/public/v1/matches';
+import { publicV1TeamSchema } from '../../lib/apiContracts/public/v1/teams';
+import {
+  leagueDetailResponseSchema,
+  leagueSchema,
+} from '../../lib/apiContracts/public/v1/leagues';
+import { publicV1TournamentArbitrationSchema } from '../../lib/apiContracts/public/v1/arbitration';
+import { leaderboardPlayerSchema } from '../../lib/apiContracts/public/v1/rating';
 
 import tournamentsList from '../../pages/api/public/v1/tournaments/index';
 import tournamentDetail from '../../pages/api/public/v1/tournaments/[id]/index';
@@ -23,12 +41,40 @@ import matchDetail from '../../pages/api/public/v1/matches/[id]';
 import teamDetail from '../../pages/api/public/v1/teams/[id]';
 import leaderboard from '../../pages/api/public/v1/leaderboard';
 import leaguesList from '../../pages/api/public/v1/leagues/index';
+import leagueDetail from '../../pages/api/public/v1/leagues/[slug]';
+import tournamentArbitration from '../../pages/api/public/v1/tournaments/[id]/arbitration';
 
 const TENANT = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 const TOURN = '22222222-2222-4222-8222-22222222aaaa';
 const MATCH = '11111111-1111-4111-8111-111111111111';
 const TEAM1 = '33333333-3333-4333-8333-333333330001';
 const TEAM2 = '33333333-3333-4333-8333-333333330002';
+
+/**
+ * La réponse respecte le schéma publié dans la spec OpenAPI (lib/apiContracts).
+ * zod RETIRE les clés inconnues : comparer le résultat au corps brut détecte
+ * donc aussi un champ en trop, à n'importe quelle profondeur (fuite d'une
+ * colonne interne).
+ */
+function expectContract(
+  body: unknown,
+  item: z.ZodType,
+  kind: 'list' | 'single'
+) {
+  const envelope =
+    kind === 'list'
+      ? z.object({
+          data: z.array(item),
+          pagination: publicV1PaginationSchema.optional(),
+        })
+      : z.object({ data: item });
+  const parsed = envelope.safeParse(body);
+  expect(
+    parsed.success,
+    parsed.success ? '' : z.prettifyError(parsed.error)
+  ).toBe(true);
+  expect(parsed.data).toEqual(body);
+}
 
 let ipCounter = 0;
 function makeReq(over: Partial<any> = {}): any {
@@ -130,6 +176,7 @@ describe('GET /api/public/v1/tournaments', () => {
     const res = makeRes();
     await tournamentsList(req, res);
     expect(res.statusCode).toBe(200);
+    expectContract(res.body, publicV1TournamentSummarySchema, 'list');
     expect((res.body as any).data).toEqual([]);
     expect((res.body as any).pagination).toEqual({
       limit: 50,
@@ -159,6 +206,7 @@ describe('GET /api/public/v1/tournaments', () => {
     const res = makeRes();
     await tournamentsList(req, res);
     expect(res.statusCode).toBe(200);
+    expectContract(res.body, publicV1TournamentSummarySchema, 'list');
     const rows = (res.body as any).data;
     expect(rows).toHaveLength(1);
     expect(rows[0]).toEqual({
@@ -215,7 +263,7 @@ describe('GET /api/public/v1/tournaments/{id}', () => {
     ];
     store.tournament_stages = [
       {
-        id: 'stage-1',
+        id: '55555555-5555-4555-8555-555555550001',
         tenant_id: TENANT,
         tournament_id: TOURN,
         name: 'Groups',
@@ -224,7 +272,7 @@ describe('GET /api/public/v1/tournaments/{id}', () => {
         order_index: 0,
       },
       {
-        id: 'stage-2',
+        id: '55555555-5555-4555-8555-555555550002',
         tenant_id: TENANT,
         tournament_id: TOURN,
         name: 'Playoffs',
@@ -237,11 +285,12 @@ describe('GET /api/public/v1/tournaments/{id}', () => {
     const res = makeRes();
     await tournamentDetail(req, res);
     expect(res.statusCode).toBe(200);
+    expectContract(res.body, publicV1TournamentDetailSchema, 'single');
     const data = (res.body as any).data;
     expect(data.id).toBe(TOURN);
     expect(data.stages).toHaveLength(2);
     expect(data.stages[0]).toEqual({
-      id: 'stage-1',
+      id: '55555555-5555-4555-8555-555555550001',
       name: 'Groups',
       stage_type: 'group',
       status: 'inactive',
@@ -268,7 +317,7 @@ describe('GET /api/public/v1/tournaments/{id}/matches', () => {
         id: MATCH,
         tenant_id: TENANT,
         tournament_id: TOURN,
-        stage_id: 'stage-1',
+        stage_id: '55555555-5555-4555-8555-555555550001',
         round_number: 1,
         bracket_side: 'winners',
         team1_id: TEAM1,
@@ -284,6 +333,7 @@ describe('GET /api/public/v1/tournaments/{id}/matches', () => {
     const res = makeRes();
     await tournamentMatches(req, res);
     expect(res.statusCode).toBe(200);
+    expectContract(res.body, publicV1MatchSchema, 'list');
     const rows = (res.body as any).data;
     expect(rows).toHaveLength(1);
     expect(rows[0].team1_name).toBe('Alpha');
@@ -314,6 +364,7 @@ describe('GET /api/public/v1/tournaments/{id}/standings', () => {
     const res = makeRes();
     await tournamentStandings(req, res);
     expect(res.statusCode).toBe(200);
+    expectContract(res.body, publicV1StandingSchema, 'list');
     expect((res.body as any).data).toEqual([]);
   });
 
@@ -359,6 +410,7 @@ describe('GET /api/public/v1/tournaments/{id}/standings', () => {
     const res = makeRes();
     await tournamentStandings(req, res);
     expect(res.statusCode).toBe(200);
+    expectContract(res.body, publicV1StandingSchema, 'list');
     const rows = (res.body as any).data;
     expect(rows.map((r: any) => r.rank)).toEqual([1, 2]);
     expect(rows[0].teamName).toBe('Alpha');
@@ -424,6 +476,7 @@ describe('GET /api/public/v1/matches/{id}', () => {
     const res = makeRes();
     await matchDetail(req, res);
     expect(res.statusCode).toBe(200);
+    expectContract(res.body, publicV1MatchDetailSchema, 'single');
     const data = (res.body as any).data;
     expect(data.team1_name).toBe('Alpha');
     expect(data.games).toHaveLength(1);
@@ -463,6 +516,7 @@ describe('GET /api/public/v1/teams/{id}', () => {
     const res = makeRes();
     await teamDetail(req, res);
     expect(res.statusCode).toBe(200);
+    expectContract(res.body, publicV1TeamSchema, 'single');
     const data = (res.body as any).data;
     expect(data.name).toBe('Alpha');
     expect(data.roster).toHaveLength(1);
@@ -519,6 +573,7 @@ describe('GET /api/public/v1/leaderboard', () => {
     const res = makeRes();
     await leaderboard(req, res);
     expect(res.statusCode).toBe(200);
+    expectContract(res.body, leaderboardPlayerSchema, 'list');
     const rows = (res.body as any).data;
     expect(rows[0].userId).toBe('u1');
     expect(rows[0].rank).toBe(1);
@@ -535,28 +590,155 @@ describe('GET /api/public/v1/leagues', () => {
   it('returns only public, non-draft leagues in { data }', async () => {
     store.leagues = [
       {
-        id: 'l1',
+        id: '44444444-4444-4444-8444-444444440001',
         tenant_id: TENANT,
         name: 'Pro League',
         slug: 'pro',
         is_public: true,
         status: 'active',
+        description: null,
+        game: 'overwatch',
+        start_date: '2026-09-01',
+        end_date: null,
+        points_table: { '1': 10, '2': 6 },
+        created_at: '2026-08-01T00:00:00.000Z',
+        updated_at: '2026-08-01T00:00:00.000Z',
       },
       {
-        id: 'l2',
+        id: '44444444-4444-4444-8444-444444440002',
         tenant_id: TENANT,
         name: 'Hidden',
         slug: 'hidden',
         is_public: true,
         status: 'draft',
+        description: null,
+        game: 'overwatch',
+        start_date: '2026-09-01',
+        end_date: null,
+        points_table: { '1': 10, '2': 6 },
+        created_at: '2026-08-01T00:00:00.000Z',
+        updated_at: '2026-08-01T00:00:00.000Z',
       },
     ];
     const req = makeReq();
     const res = makeRes();
     await leaguesList(req, res);
     expect(res.statusCode).toBe(200);
+    expectContract(res.body, leagueSchema, 'list');
     const rows = (res.body as any).data;
     expect(rows).toHaveLength(1);
     expect(rows[0].slug).toBe('pro');
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * Contrats de réponse des routes sans autre test de handler
+ * ------------------------------------------------------------------ */
+
+describe('GET /api/public/v1/leagues/{slug}', () => {
+  const LEAGUE = '44444444-4444-4444-8444-444444440010';
+
+  it('renvoie ligue, classement et tournois liés conformes au contrat', async () => {
+    store.leagues = [
+      {
+        id: LEAGUE,
+        tenant_id: TENANT,
+        name: 'Saison 1',
+        slug: 'saison-1',
+        description: 'Première saison',
+        game: 'overwatch',
+        status: 'active',
+        start_date: '2026-09-01',
+        end_date: null,
+        points_table: { '1': 10 },
+        is_public: true,
+        created_at: '2026-08-01T00:00:00.000Z',
+        updated_at: '2026-08-02T00:00:00.000Z',
+      },
+    ] as any;
+    store.league_standings = [
+      {
+        tenant_id: TENANT,
+        league_id: LEAGUE,
+        team_id: TEAM1,
+        points: 10,
+        tournaments_counted: 1,
+        scrims_counted: 0,
+        best_rank: 1,
+        rank: 1,
+      },
+    ] as any;
+    store.teams = [
+      {
+        id: TEAM1,
+        tenant_id: TENANT,
+        name: 'Alpha',
+        slug: 'alpha',
+        logo_url: null,
+      },
+    ] as any;
+    store.league_tournaments = [
+      { tenant_id: TENANT, league_id: LEAGUE, tournament_id: TOURN, weight: 1 },
+    ] as any;
+    store.tournaments = [
+      { id: TOURN, tenant_id: TENANT, name: 'Summer Cup', slug: 'summer-cup' },
+    ] as any;
+    store.league_scrims = [] as any;
+
+    const res = makeRes();
+    await leagueDetail(makeReq({ query: { slug: 'saison-1' } }), res);
+    expect(res.statusCode).toBe(200);
+    expectContract(res.body, leagueDetailResponseSchema, 'single');
+    expect((res.body as any).data.standings[0]).toMatchObject({
+      teamName: 'Alpha',
+      scrimsCounted: 0,
+    });
+  });
+});
+
+describe('GET /api/public/v1/tournaments/{id}/arbitration', () => {
+  it('renvoie des métriques agrégées conformes au contrat', async () => {
+    store.tournaments = [
+      {
+        id: TOURN,
+        tenant_id: TENANT,
+        name: 'Summer Cup',
+        slug: 'summer-cup',
+        game: 'overwatch',
+        status: 'running',
+        start_date: '2026-07-01',
+        end_date: null,
+        format: 'single_elim',
+      },
+    ] as any;
+    store.tournament_stages = [] as any;
+    store.matches = [
+      {
+        id: MATCH,
+        tenant_id: TENANT,
+        tournament_id: TOURN,
+        status: 'finished',
+        dispute_opened_at: '2026-07-02T10:00:00.000Z',
+        dispute_resolved_at: '2026-07-02T10:45:00.000Z',
+      },
+      {
+        id: '11111111-1111-4111-8111-111111111112',
+        tenant_id: TENANT,
+        tournament_id: TOURN,
+        status: 'disputed',
+        dispute_opened_at: '2026-07-02T11:00:00.000Z',
+        dispute_resolved_at: null,
+      },
+    ] as any;
+
+    const res = makeRes();
+    await tournamentArbitration(makeReq({ query: { id: TOURN } }), res);
+    expect(res.statusCode).toBe(200);
+    expectContract(res.body, publicV1TournamentArbitrationSchema, 'single');
+    expect((res.body as any).data.metrics).toMatchObject({
+      totalDisputes: 2,
+      open: 1,
+      resolved: 1,
+    });
   });
 });

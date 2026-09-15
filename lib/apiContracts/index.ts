@@ -20,7 +20,11 @@
 import type { z } from 'zod';
 import { BOT_API_CONTRACT_SCHEMAS } from './bot';
 import { freePlayerSignupBodySchema } from './public/freePlayers';
-import { matchResultBodySchema } from './public/matchResult';
+import { PUBLIC_V1_RESPONSE_SCHEMAS } from './public/v1';
+import {
+  matchResultBodySchema,
+  matchResultResponseSchema,
+} from './public/matchResult';
 import { newsletterSubscribeBodySchema } from './public/newsletter';
 import { teamOpeningBodySchema } from './public/teamOpenings';
 
@@ -40,5 +44,10 @@ export const API_CONTRACT_SCHEMAS: Record<string, ApiContractEntry> = {
     io: 'input',
   },
   'public.v1.matchResult': { schema: matchResultBodySchema, io: 'input' },
+  'public.v1.matchResult.response': {
+    schema: matchResultResponseSchema,
+    io: 'output',
+  },
   ...BOT_API_CONTRACT_SCHEMAS,
+  ...PUBLIC_V1_RESPONSE_SCHEMAS,
 };

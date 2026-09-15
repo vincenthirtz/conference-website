@@ -19,6 +19,21 @@ import { invalidateStaffCache } from '../../utils/staff';
 
 import leaderboardHandler from '../../pages/api/players/leaderboard';
 import profileHandler from '../../pages/api/players/[userId]/profile';
+import { z } from 'zod';
+import { playerProfileResponseSchema } from '../../lib/apiContracts/public/v1/rating';
+
+/**
+ * Le profil respecte le schéma publié (spec OpenAPI, /api/public/v1/players) ;
+ * zod retire les clés inconnues, l'égalité détecte donc aussi un champ en trop.
+ */
+function expectProfileContract(body: unknown) {
+  const parsed = playerProfileResponseSchema.safeParse(body);
+  expect(
+    parsed.success,
+    parsed.success ? '' : z.prettifyError(parsed.error)
+  ).toBe(true);
+  expect(parsed.data).toEqual(body);
+}
 import recomputeHandler from '../../pages/api/admin/leagues/[id]/recompute';
 
 const TENANT = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
@@ -173,6 +188,7 @@ describe('GET /api/players/[userId]/profile', () => {
     const res = makeRes();
     await profileHandler(makeReq({ query: { userId: 'u-1' } }), res);
     expect(res.statusCode).toBe(200);
+    expectProfileContract(res.body);
     const body = res.body as any;
     expect(body.player.userId).toBe('u-1');
     expect(body.player.rank).toBe(1);
@@ -255,6 +271,7 @@ describe('GET /api/players/[userId]/profile', () => {
     const res = makeRes();
     await profileHandler(makeReq({ query: { userId: 'u-champ' } }), res);
     expect(res.statusCode).toBe(200);
+    expectProfileContract(res.body);
     const body = res.body as any;
     const badgeKeys = body.achievements.badges.map((b: any) => b.key);
     expect(badgeKeys).toContain('champion');

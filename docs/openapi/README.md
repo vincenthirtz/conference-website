@@ -45,8 +45,18 @@ requestBody:
   exemples) sont fusionnées. Documenter une propriété absente du schéma zod,
   référencer un nom inconnu, ou utiliser un schéma non représentable fait
   échouer l'assemblage.
-- Couverture au 2026-09-15 : les 4 routes publiques d'écriture et 35 des 36
-  routes bot à corps validé. Exception : `bot/v1/tasks/index` lit
+- **Schémas nommés** : un schéma zod marqué `.meta({ id: 'Nom' })` devient le
+  composant `#/components/schemas/Nom` (zod le sort en `$defs`, l'assembleur le
+  remonte). Déclarer `Nom: { x-zod: … }` dans `components/schemas/` n'est utile
+  que pour y ajouter de la doc ; deux schémas différents sous le même id, ou un
+  id qui heurte un composant écrit à la main, font échouer l'assemblage.
+- **Réponses** (`io: 'output'`) : le schéma doit décrire EXACTEMENT le type
+  TypeScript renvoyé par le handler. `tests/unit/publicV1ResponseContracts.test.ts`
+  le vérifie au typecheck (`expectTypeOf`), et les tests de handler valident la
+  réponse réelle, champ en trop compris.
+- Couverture au 2026-09-15 : corps des 4 routes publiques d'écriture et de 35
+  des 36 routes bot à corps validé ; réponses de toute l'API publique v1
+  (`lib/apiContracts/public/v1/`). Exception : `bot/v1/tasks/index` lit
   `actorDiscordUserId` hors de son schéma zod (partagé avec l'admin) ; son
   corps reste écrit à la main.
 
