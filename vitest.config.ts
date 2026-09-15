@@ -13,6 +13,25 @@ export default defineConfig({
     // Ce n'est PAS une licence pour écrire des tests lents : c'est la marge
     // qu'exigent quelques tests de calcul déjà existants.
     testTimeout: 20_000,
+    // `threads` (worker_threads) au lieu de `forks` (processus enfants, défaut
+    // de Vitest). MESURÉ sur la suite complète (538 fichiers, i7 4 cœurs/8
+    // threads), en alternance et à charge étrangère comparable : 59 s contre
+    // 68 s, puis 74-77 s contre 87-90 s — environ 13 % de moins, sans aucun
+    // test en échec. Un worker thread démarre plus vite qu'un processus Node
+    // et l'isolation par fichier reste active (`isolate` n'est PAS touché :
+    // c'est lui qui garantit qu'un `vi.mock` ne fuit pas d'un fichier à
+    // l'autre). Si un test a un jour besoin de `process.chdir()` ou d'un
+    // module natif non thread-safe, l'isoler dans un projet `forks` dédié
+    // (`test.projects`) plutôt que de rebasculer toute la suite.
+    pool: 'threads',
+    // Cache disque des modules transformés (node_modules/.vitest-cache), clé =
+    // contenu du fichier + config + lockfile : toute mise à jour de dépendance
+    // le purge. MESURÉ : la phase « transform » passe de ~55-75 s cumulées à
+    // ~8-14 s ; sur machine calme, suite complète (Vitest 5, threads) en 46 s
+    // à chaud contre 53 s à froid. Désactivé en CI : le cache y part vide à
+    // chaque job et l'amorçage coûte un peu plus qu'un run sans cache.
+    // En cas de doute sur un résultat : `npx vitest --clearCache`.
+    fsModuleCache: !process.env.CI,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'json-summary'],

@@ -17,7 +17,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Aligné sur .nvmrc et netlify.toml : supabase-js >= 2.116 exige
+          # Node >= 22, Vitest 5 et @netlify/functions 6 exigent >= 22.12.
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
@@ -26,17 +28,20 @@ jobs:
       - name: Lint + format (Biome)
         run: npx biome ci .
 
+      # TypeScript 7 natif (~22 s à froid contre ~95 s pour tsc 6). Passer par
+      # le script : `npx tsc` peut résoudre le tsc 6 hissé par
+      # @typescript/typescript6 (cf. scripts/verify.mjs).
       - name: Type check
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
-      - name: Unit tests
-        run: npm run test:unit
-
-      - name: Install coverage tool (CI-only)
-        run: npm install --no-save --no-package-lock @vitest/coverage-v8@^4
-
-      - name: Unit tests coverage
-        run: npx vitest run --coverage --no-isolate
+      # UN seul passage, isolé ET instrumenté. Avant : un run simple puis un
+      # run `--coverage --no-isolate`, soit la suite deux fois (~68 s + ~56 s
+      # en local) — et le second ÉCHOUAIT (137 tests dans 28 fichiers au
+      # 2026-09-15 : ces suites supposent l'isolation par fichier). Le run
+      # couvert isolé passe. @vitest/coverage-v8 est déjà en devDependencies :
+      # plus besoin de l'installer à la volée.
+      - name: Unit tests + coverage
+        run: npx vitest run --coverage
 
       - name: Upload coverage report
         if: always()
@@ -45,6 +50,17 @@ jobs:
           name: coverage-report
           path: coverage/
           retention-days: 14
+
+      # Next 16.3 persiste le cache Turbopack de `next build` dans .next/cache
+      # (turbopackFileSystemCacheForBuild, actif par défaut) : il ne sert en CI
+      # que s'il est restauré d'un job à l'autre.
+      - name: Restore Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.ts', '**/*.tsx', '**/*.js', '**/*.css', '!node_modules/**') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
 
       - name: Build
         run: npm run build

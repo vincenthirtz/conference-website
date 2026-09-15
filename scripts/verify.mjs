@@ -18,8 +18,12 @@
 // vitest aux cœurs physiques (2 workers au lieu de son défaut) fait passer le
 // run de 60,6 s à 88,2 s pour un load identique (12,9 → 11,9). Le parallélisme
 // par défaut est le bon réglage ; ce sont les runs à CACHE FROID qui coûtent
-// cher (typecheck : 11 s à chaud, 177 s à froid). Si le total explose, vérifier
-// `tsconfig.tsbuildinfo` avant de soupçonner la concurrence.
+// cher. Depuis TypeScript 7 (natif), le typecheck n'est plus le mur : 3 s à
+// chaud, ~22 s à froid (contre 11 s / 95-177 s avec `tsc` 6). Le mur, ce sont
+// de nouveau les tests — Vitest 5, `pool: 'threads'` et le cache disque de
+// modules (cf. vitest.config.ts) les ont fait passer de ~61 s à ~46 s sur
+// machine calme. Mesuré le 2026-09-15 : verify complet 66 s → 48 s à chaud,
+// 141 s → ~56 s après une mise à jour de dépendances (caches purgés).
 //
 // Les garde-fous ci-dessous restent disponibles à la demande, pour une machine
 // déjà chaude ou occupée — mais ils ne sont PAS le défaut.
@@ -63,7 +67,19 @@ const TASKS = [
           ],
         },
       ]),
-  { name: 'typecheck', cmd: 'npx', args: ['tsc', '--noEmit'] },
+  // TypeScript 7 (compilateur natif en Go) : MESURÉ sur ce dépôt, 22 s à froid
+  // contre 95-98 s pour `tsc` 6, et 3 s à chaud contre 10-12 s — mêmes
+  // diagnostics à l'identique (sonde volontaire de 16 erreurs : type, strict,
+  // noUnused*, noImplicitReturns/Override, fallthrough, code mort).
+  // Chemin EXPLICITE et non `npx tsc` : `@typescript/typescript6` (gardé pour
+  // l'API JS du parseur, cf. tests/unit/__helpers__/supabaseSelectScan.ts)
+  // hisse un `typescript@6` dont le binaire `tsc` peut gagner le lien
+  // `node_modules/.bin/tsc`. `npx tsc` risquerait donc de relancer l'ancien.
+  {
+    name: 'typecheck',
+    cmd: 'node',
+    args: ['node_modules/typescript/bin/tsc', '--noEmit'],
+  },
   {
     name: 'biome',
     cmd: 'npx',
