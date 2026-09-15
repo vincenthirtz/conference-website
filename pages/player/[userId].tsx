@@ -52,6 +52,8 @@ import TcgCard from '@/components/tcg/TcgCard';
 import { cardRarity } from '@/utils/tcg/rarity';
 import { readPlayerFaces } from '@/utils/tcg/readCardFaces';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
+import TcgShowcaseSection from '@/components/tcg/TcgShowcaseSection';
+import { readPublicShowcase, type ShowcaseCard } from '@/utils/tcg/showcase';
 
 type PlayerProfileDict = typeof nsPlayerPublicProfile.fr;
 
@@ -76,6 +78,7 @@ function formatDate(iso: string, locale: string): string {
 export default function PlayerProfilePage({
   profile,
   tcgPhotoUrl,
+  tcgShowcase,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
   const t = useT(nsPlayerPublicProfile);
   const router = useRouter();
@@ -130,7 +133,11 @@ export default function PlayerProfilePage({
         {state.status === 'notfound' && <NotFoundState />}
         {state.status === 'error' && <ErrorState onRetry={refresh} />}
         {state.status === 'ok' && (
-          <Profile data={state.data} tcgPhotoUrl={tcgPhotoUrl ?? null} />
+          <Profile
+            data={state.data}
+            tcgPhotoUrl={tcgPhotoUrl ?? null}
+            tcgShowcase={tcgShowcase ?? null}
+          />
         )}
       </main>
     </div>
@@ -140,9 +147,11 @@ export default function PlayerProfilePage({
 function Profile({
   data,
   tcgPhotoUrl,
+  tcgShowcase,
 }: {
   data: PlayerProfileResponse;
   tcgPhotoUrl: string | null;
+  tcgShowcase: ShowcaseCard[] | null;
 }) {
   const t = useT(nsPlayerPublicProfile);
   const { player, history, recentMatches, h2h, achievements } = data;
@@ -160,6 +169,10 @@ function Profile({
         badges={achievements.badges}
         tcgPhotoUrl={tcgPhotoUrl}
       />
+
+      {/* La vitrine n'existe que si la joueuse l'a ACTIVÉE : `null` sinon, et
+          la section ne rend rien. Cf. `utils/tcg/showcase.ts`. */}
+      <TcgShowcaseSection cards={tcgShowcase} />
 
       {/* Une courbe vide n'apprend rien et occupe le haut de la fiche d'une
           joueuse qui n'a pas encore joué. */}
@@ -1471,6 +1484,7 @@ export const getStaticProps: GetStaticProps<{
   profile: PlayerProfileResponse;
   seo: SeoProps;
   tcgPhotoUrl: string | null;
+  tcgShowcase: ShowcaseCard[] | null;
 }> = async (ctx) => {
   const rawUserId = ctx.params?.userId;
   const userId = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId;
@@ -1530,8 +1544,21 @@ export const getStaticProps: GetStaticProps<{
     /* la carte s'affichera avec l'avatar public — dégradé, jamais cassé */
   }
 
+  // Vitrine TCG — OPT-IN : `null` tant que la joueuse ne l'a pas activée, et
+  // aussi sur toute lecture en échec (dans le doute, rien n'est exposé). Même
+  // raisonnement que la photo : HORS de `PlayerProfileResponse`, qui nourrit
+  // l'API partenaire. Les cartes sont relues contre la possession réelle et
+  // leurs faces passent par le filtre de consentement ; un réglage ou un
+  // retrait de photo régénère la page (`revalidatePlayerCard`).
+  const tcgShowcase = await readPublicShowcase(DEFAULT_TENANT_ID, userId);
+
   return {
-    props: { profile, seo: buildPlayerSeo(profile, discoverable), tcgPhotoUrl },
+    props: {
+      profile,
+      seo: buildPlayerSeo(profile, discoverable),
+      tcgPhotoUrl,
+      tcgShowcase,
+    },
     revalidate: 300,
   };
 };

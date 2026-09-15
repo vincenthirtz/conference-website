@@ -34,7 +34,8 @@
 //
 // TOUTES LES SOURCES SONT DÉSORMAIS ACCEPTÉES PAR LE SCHÉMA — à condition que
 // `tcg_earn_sources_drop_streak_placement.sql` (2026-09-15) soit appliquée,
-// et, pour `battlenet_verified`, `tcg_battlenet_verified.sql` (même jour).
+// et, pour `battlenet_verified`, `tcg_battlenet_verified.sql` (même jour), et
+// pour `collection_set`, `tcg_collection_set.sql` (non appliquée au 2026-09-15).
 // Le CHECK `tcg_wallet_entries_source_kind_check` y liste match_win,
 // scrim_win, booster_purchase, admin_grant, card_recycled, twitch_drop,
 // welcome_gift, supporter_welcome, checkin_streak et tournament_placement ;
@@ -163,6 +164,28 @@ export const WELCOME_GIFT_COINS = MATCH_WIN_COINS;
  */
 export const BATTLENET_VERIFIED_COINS = MATCH_WIN_COINS;
 
+/**
+ * Ce que rapporte une SÉRIE complétée (`utils/tcg/collectionSets.ts`), UNE FOIS
+ * par série et par joueuse.
+ *
+ * DES PIÈCES SEULES. Compléter une série se fait en OUVRANT des paquets : en
+ * rendre un aurait nourri la boucle qu'on récompense (plus de paquets, donc
+ * plus de séries complétées, donc plus de paquets). Et un paquet aurait exigé
+ * d'élargir les deux contraintes de `tcg_packs` — celles des 58 paquets du
+ * 2026-09-14.
+ *
+ * UNE VICTOIRE DE MATCH, soit UN TIERS DE BOOSTER. Prudent par construction :
+ * une série de six cartes demande, au hasard du tirage, bien plus de six
+ * paquets — la récompense rembourse une fraction de l'effort, elle ne le paie
+ * pas. Un espace comptant ~15 séries (5 modes de maps, une série d'équipes et
+ * une dizaine de rosters par édition) plafonne donc ce gain à ~5 boosters sur
+ * TOUTE la vie d'un compte, là où les compléter toutes réclame des dizaines de
+ * paquets ouverts.
+ *
+ * DÉRIVÉ, JAMAIS ÉCRIT EN DUR, comme tout le barème.
+ */
+export const COLLECTION_SET_COINS = MATCH_WIN_COINS;
+
 export const PLACEMENT_TIERS: ReadonlyArray<{
   /** Rang maximal (inclus) ouvrant ce palier. */
   maxRank: number;
@@ -190,7 +213,8 @@ export type TcgEarnSourceKey =
   | 'tournament_placement'
   | 'welcome_gift'
   | 'supporter_welcome'
-  | 'battlenet_verified';
+  | 'battlenet_verified'
+  | 'collection_set';
 
 /**
  * Ce que `source_ref` doit contenir — donc ce qu'« une occurrence » veut dire.
@@ -200,6 +224,13 @@ export type TcgEarnSourceKey =
  */
 export type TcgSourceRefKind =
   | 'match'
+  /**
+   * `scrim:<scrimId>` — le SCRIM, jamais son match miroir. Le miroir se retire
+   * et se recrée sous un autre id (litige, dé-classement) : clée sur lui, la
+   * victoire se repayait à chaque recréation (boucle corrigée le 2026-09-15,
+   * cf. `grantVictoryRewards.ts`).
+   */
+  | 'scrim'
   /** L'identifiant du paquet acheté : chaque achat est sa propre occurrence. */
   | 'pack'
   /** L'identifiant du direct (event run / session de stream). */
@@ -231,7 +262,14 @@ export type TcgSourceRefKind =
    * (`tcg_battlenet_verified.sql`) portent ces règles : une fois par
    * personne, une fois par compte Blizzard, tous tenants confondus.
    */
-  | 'blizzard_account';
+  | 'blizzard_account'
+  /**
+   * L'identifiant STABLE d'une série : `maps:<mode>`, `tournament:<tournoi>`
+   * ou `roster:<tournoi>:<équipe>` (cf. `utils/tcg/collectionSets.ts`). Des
+   * identifiants seulement, jamais un nom : renommer une équipe ne rouvre pas
+   * une récompense déjà versée.
+   */
+  | 'collection_set';
 
 export type TcgEarnSource = {
   key: TcgEarnSourceKey;
@@ -278,7 +316,7 @@ export const TCG_EARN_SOURCES: readonly TcgEarnSource[] = [
     key: 'scrim_win',
     packs: 1,
     coins: SCRIM_WIN_COINS,
-    refKind: 'match',
+    refKind: 'scrim',
     maxPerRef: 1,
     schemaReady: true,
   },
@@ -374,6 +412,21 @@ export const TCG_EARN_SOURCES: readonly TcgEarnSource[] = [
     packs: 0,
     coins: BATTLENET_VERIFIED_COINS,
     refKind: 'blizzard_account',
+    maxPerRef: 1,
+    schemaReady: true,
+  },
+  {
+    // Écrite par `utils/tcg/grantCollectionSets.ts` : à l'ouverture d'un paquet
+    // qui complète une série, et par vérification paresseuse à la lecture des
+    // séries (rattrapage). Migration `tcg_collection_set.sql` (NON appliquée
+    // au 2026-09-15). Même choix que `battlenet_verified` : le drapeau est levé
+    // avec le code ; tant que la migration manque, l'écriture est refusée en
+    // 23514, journalisée, et la lecture suivante RETENTE — rien n'est perdu.
+    key: 'collection_set',
+    // Pas de paquet : cf. `COLLECTION_SET_COINS`.
+    packs: 0,
+    coins: COLLECTION_SET_COINS,
+    refKind: 'collection_set',
     maxPerRef: 1,
     schemaReady: true,
   },

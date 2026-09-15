@@ -48,6 +48,7 @@ describe('intégrité du registre', () => {
         'welcome_gift',
         'supporter_welcome',
         'battlenet_verified',
+        'collection_set',
       ])
     );
   });
@@ -80,7 +81,7 @@ describe('intégrité du registre', () => {
     expect(debits[0].coins).toBe(-BOOSTER_PRICE_COINS);
   });
 
-  it('fait apparaître un paquet dans toute source sauf le palmarès variable et la vérification Battle.net', () => {
+  it('fait apparaître un paquet dans toute source sauf le palmarès variable, la vérification Battle.net et les séries', () => {
     // Deux exceptions, et seulement deux. Le palmarès résout ses paquets par
     // rang ; la vérification Battle.net n'ouvre pas la porte du TCG (c'est le
     // rôle des cadeaux d'accueil), elle récompense un geste d'identité — et un
@@ -88,6 +89,12 @@ describe('intégrité du registre', () => {
     for (const source of TCG_EARN_SOURCES) {
       if (source.key === 'tournament_placement') continue;
       if (source.key === 'battlenet_verified') {
+        expect(source.packs).toBe(0);
+        continue;
+      }
+      // Une série se complète EN OUVRANT des paquets : en rendre un nourrirait
+      // la boucle qu'on récompense (cf. `COLLECTION_SET_COINS`).
+      if (source.key === 'collection_set') {
         expect(source.packs).toBe(0);
         continue;
       }
@@ -203,11 +210,13 @@ describe('limites anti-abus', () => {
     expect(getEarnSource('checkin_streak')?.refKind).toBe('streak_window');
   });
 
-  it('attache victoires et scrims au match, l’achat au paquet', () => {
-    // Ce sont les clés déjà utilisées en base par grantVictoryRewards et
-    // l'endpoint booster : les changer casserait l'idempotence existante.
+  it('attache les victoires au match, les scrims AU SCRIM, l’achat au paquet', () => {
+    // Ce sont les clés utilisées en base par grantVictoryRewards et l'endpoint
+    // booster. Un scrim est clé sur lui-même et PAS sur son match miroir, qui se
+    // recrée sous un autre id : c'était une boucle de gains infinis (2026-09-15,
+    // migration de données `tcg_scrim_win_stable_ref.sql`).
     expect(getEarnSource('match_win')?.refKind).toBe('match');
-    expect(getEarnSource('scrim_win')?.refKind).toBe('match');
+    expect(getEarnSource('scrim_win')?.refKind).toBe('scrim');
     expect(getEarnSource('booster_purchase')?.refKind).toBe('pack');
   });
 });
@@ -236,6 +245,10 @@ describe('schemaReady', () => {
       'battlenet_verified',
       'booster_purchase',
       'checkin_streak',
+      // `tcg_collection_set.sql` (2026-09-15, NON appliquée à la rédaction) :
+      // levé avec le code, comme `battlenet_verified` — sans la migration,
+      // l'écriture est refusée et la lecture suivante des séries retente.
+      'collection_set',
       'match_win',
       'scrim_win',
       'supporter_welcome',

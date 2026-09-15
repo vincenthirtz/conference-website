@@ -54,6 +54,7 @@ export default {
   coinsSourceCheckinStreak: 'Check-in streaks',
   coinsSourceTournamentPlacement: 'Tournament placement',
   coinsSourceBattlenetVerified: 'Verified Battle.net accounts',
+  coinsSourceCollectionSet: 'Completed sets',
   coinsSourceUnknown: 'Other ({kind})',
 
   cardsTitle: 'Cards',
