@@ -16,6 +16,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
+import { canCollectForTenant } from '@/utils/billing/helloassoAccount';
 import { logger } from '@/utils/logger';
 
 const RECENT_LIMIT = 10;
@@ -30,6 +31,12 @@ type PublicContributor = {
 type PrizePoolResponse = {
   exists: boolean;
   isOpen: boolean;
+  /**
+   * L'espace peut-il ENCAISSER ? (compte HelloAsso relié). Une cagnotte ouverte
+   * sans compte relié s'affiche, mais le bouton « contribuer » ne promet pas un
+   * paiement que la route refuserait.
+   */
+  fundingReady: boolean;
   currency: string;
   baseAmountCents: number;
   raisedAmountCents: number;
@@ -51,6 +58,7 @@ function emptyShape(): PrizePoolResponse {
     goalAmountCents: null,
     contributorCount: 0,
     recentContributors: [],
+    fundingReady: false,
   };
 }
 
@@ -142,6 +150,9 @@ export default async function handler(
     return res.status(200).json({
       exists: true,
       isOpen: Boolean(pool.is_open),
+      // Lecture légère (présence des secrets), pas de déchiffrement : c'est un
+      // état d'écran, pas une autorisation — la route de paiement retranche.
+      fundingReady: await canCollectForTenant(tenantId),
       currency: (pool.currency as string) ?? 'EUR',
       baseAmountCents: base,
       raisedAmountCents: raised,

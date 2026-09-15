@@ -272,6 +272,19 @@
     ]
    }
   },
+  "DELETE /api/admin/helloasso/credentials": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "connected": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "connected"
+    ]
+   }
+  },
   "DELETE /api/admin/lobbies/{lobbyId}": {
    "200": {
     "type": "object",
@@ -5055,6 +5068,75 @@
     },
     "required": [
      "items"
+    ]
+   }
+  },
+  "GET /api/admin/helloasso/credentials": {
+   "200": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "usesPlatformAccount": {
+        "type": "boolean"
+       },
+       "connected": {
+        "type": "boolean"
+       },
+       "organizationSlug": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "notificationUrl": {
+        "type": "null"
+       },
+       "encryptionReady": {
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "usesPlatformAccount",
+       "connected",
+       "organizationSlug",
+       "notificationUrl",
+       "encryptionReady"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "usesPlatformAccount": {
+        "type": "boolean"
+       },
+       "connected": {
+        "type": "boolean"
+       },
+       "organizationSlug": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "notificationUrl": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "encryptionReady": {
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "usesPlatformAccount",
+       "connected",
+       "organizationSlug",
+       "notificationUrl",
+       "encryptionReady"
+      ]
+     }
     ]
    }
   },
@@ -42035,6 +42117,9 @@
        "isOpen": {
         "type": "boolean"
        },
+       "fundingReady": {
+        "type": "boolean"
+       },
        "currency": {
         "type": "string"
        },
@@ -42095,6 +42180,7 @@
       "required": [
        "exists",
        "isOpen",
+       "fundingReady",
        "currency",
        "baseAmountCents",
        "raisedAmountCents",
@@ -42113,6 +42199,9 @@
        "isOpen": {
         "type": "boolean"
        },
+       "fundingReady": {
+        "type": "boolean"
+       },
        "currency": {
         "type": "string"
        },
@@ -42173,6 +42262,7 @@
       "required": [
        "exists",
        "isOpen",
+       "fundingReady",
        "currency",
        "baseAmountCents",
        "raisedAmountCents",
@@ -62049,6 +62139,37 @@
     },
     "required": [
      "wave"
+    ]
+   }
+  },
+  "PUT /api/admin/helloasso/credentials": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "connected": {
+      "type": "boolean"
+     },
+     "organizationSlug": {
+      "type": "string"
+     },
+     "organizationName": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "notificationUrl": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "connected",
+     "organizationSlug",
+     "organizationName",
+     "notificationUrl"
     ]
    }
   },

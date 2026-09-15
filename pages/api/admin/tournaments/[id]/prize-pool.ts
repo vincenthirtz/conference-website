@@ -22,6 +22,7 @@ import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { formatZodError } from '@/utils/validation';
 import { logStaffAction } from '@/utils/staffLogs';
+import { canCollectForTenant } from '@/utils/billing/helloassoAccount';
 import { logger } from '@/utils/logger';
 
 const upsertSchema = z.object({
@@ -142,6 +143,18 @@ async function handleUpsert(
       .json({ error: formatZodError(parsed.error), code: 'INVALID_BODY' });
   }
   const body = parsed.data;
+
+  // OUVRIR une cagnotte, c'est encaisser : l'espace doit avoir connecté SON
+  // compte HelloAsso (la Coupe utilise celui de l'association). Sans lui, les
+  // contributions arriveraient chez nous sans moyen de les reverser (Q036).
+  // Préparer la cagnotte fermée reste possible — c'est l'ouverture qui engage.
+  if (body.is_open === true && !(await canCollectForTenant(tenantId))) {
+    return res.status(409).json({
+      error:
+        'Reliez d’abord votre compte HelloAsso (Réglages › Encaissement) : sans lui, les contributions ne peuvent pas être encaissées par votre structure.',
+      code: 'HELLOASSO_NOT_CONNECTED',
+    });
+  }
 
   const { data: existing, error: exErr } = await supabaseAdmin
     .from('tournament_prize_pools')

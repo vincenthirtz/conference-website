@@ -46,6 +46,38 @@ export default {
   tabGeneral: 'Général',
   tabDiscord: 'Discord',
   tabTeamRoles: 'Rôles d’équipe',
+  helloassoHeading: 'Encaissement (HelloAsso)',
+  helloassoIntro:
+    'Reliez le compte HelloAsso de votre association : les contributions aux cagnottes de vos tournois y arrivent directement. Sans compte relié, une cagnotte ne peut pas être ouverte.',
+  helloassoPlatformNotice:
+    'Cet espace encaisse sur le compte de l’association OW Women’s Cup, configuré côté plateforme. Rien à relier ici.',
+  helloassoConnected: 'Compte relié. Organisation :',
+  helloassoNotConnected:
+    'Aucun compte relié : les cagnottes de cet espace ne peuvent pas encaisser.',
+  helloassoNoEncryption:
+    'SECRETS_ENC_KEY absente de l’environnement : impossible d’enregistrer des identifiants chiffrés.',
+  helloassoClientIdLabel: 'Identifiant client (clientId)',
+  helloassoClientIdHelp:
+    'Dans HelloAsso : Mon compte › Intégrations et API. Le privilège « Checkout » est nécessaire.',
+  helloassoClientSecretLabel: 'Clé secrète (clientSecret)',
+  helloassoOrgSlugLabel: 'Slug de votre organisation',
+  helloassoOrgSlugHelp:
+    'La fin de l’adresse de votre page HelloAsso : helloasso.com/associations/VOTRE-SLUG.',
+  helloassoNotificationLabel: 'URL de notification à coller dans HelloAsso',
+  helloassoNotificationHelp:
+    'Dans HelloAsso : Mon compte › Intégrations et API › Notifications. Sans elle, les paiements n’arrivent jamais jusqu’à la jauge de la cagnotte. Ne la partagez pas : elle vaut pour votre espace seul.',
+  helloassoCopy: 'Copier l’URL',
+  helloassoCopied: 'URL copiée.',
+  helloassoCopyError: 'Copie impossible : sélectionnez l’URL à la main.',
+  helloassoSave: 'Relier le compte',
+  helloassoSaving: 'Vérification…',
+  helloassoSaved: 'Compte HelloAsso relié.',
+  helloassoSaveError: 'Enregistrement impossible.',
+  helloassoClear: 'Délier le compte',
+  helloassoCleared: 'Compte HelloAsso délié.',
+  helloassoLoading: 'Chargement…',
+  helloassoLoadError: 'État de l’encaissement indisponible.',
+  tabHelloAsso: 'Encaissement',
   emailSenderHeading: 'Email sending',
   emailSenderIntro:
     'This space sends its emails from ITS OWN Brevo account: the sender address, the daily quota and the sender reputation are its own. Until an account is registered, no email is sent — the bot, the site and Discord keep working normally.',

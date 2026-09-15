@@ -12,13 +12,24 @@ import {
   resolvePrizeCorrelation,
   applyPrizeContribution,
 } from '@/utils/billing/prizePoolFunding';
+import {
+  isValidWebhookToken,
+  tenantIdBySlugForWebhook,
+} from '@/utils/billing/helloassoAccount';
 
 import { logger } from '../../../utils/logger';
 /**
  * HelloAsso webhook endpoint.
  *
  * Configure this URL in the HelloAsso dashboard:
- *   https://yoursite.com/api/helloasso/webhook?token=<HELLOASSO_WEBHOOK_SECRET>
+ *   - compte de l'ASSOCIATION :
+ *       https://yoursite.com/api/helloasso/webhook?token=<HELLOASSO_WEBHOOK_SECRET>
+ *   - compte d'un ESPACE TIERS (sa propre association) :
+ *       https://yoursite.com/api/helloasso/webhook?tenant=<slug>&token=<jeton dérivé>
+ *     Le jeton est dérivé par espace (`utils/billing/helloassoAccount.ts`) et
+ *     affiché dans l'écran de connexion HelloAsso de l'espace. Un secret
+ *     PARTAGÉ entre associations aurait permis à chacune de déclarer des
+ *     paiements pour les autres.
  *
  * HelloAsso sends POST requests for payment events.
  *
@@ -98,7 +109,31 @@ export default async function handler(
   }
 
   const provided = extractProvidedSecret(req);
-  if (!provided || !constantTimeEqual(provided, expectedSecret)) {
+  if (!provided) {
+    logger.warn('[helloasso/webhook] rejected: missing secret');
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  // POUR QUI cette notification parle-t-elle ? Sans `tenant`, c'est le compte
+  // de l'association (secret plateforme). Avec, c'est celui d'un espace tiers,
+  // et le jeton est le sien — dérivé, jamais partagé.
+  const rawTenant = req.query.tenant;
+  const tenantSlug = Array.isArray(rawTenant) ? rawTenant[0] : rawTenant;
+  let authTenantId = DEFAULT_TENANT_ID;
+  let authSource: 'platform' | 'tenant' = 'platform';
+
+  if (typeof tenantSlug === 'string' && tenantSlug.length > 0) {
+    const tenantId = await tenantIdBySlugForWebhook(tenantSlug);
+    if (!tenantId || !isValidWebhookToken(tenantId, provided)) {
+      logger.warn(
+        '[helloasso/webhook] rejected: invalid tenant token (slug=%s)',
+        tenantSlug
+      );
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    authTenantId = tenantId;
+    authSource = 'tenant';
+  } else if (!constantTimeEqual(provided, expectedSecret)) {
     logger.warn('[helloasso/webhook] rejected: invalid or missing secret');
     return res.status(401).json({ error: 'Unauthorized' });
   }
@@ -128,7 +163,7 @@ export default async function handler(
         payer_name: payerName || null,
         payer_email: event.data.payer?.email ?? null,
       },
-      DEFAULT_TENANT_ID
+      authTenantId
     ).catch((err) =>
       logger.warn(
         '[helloasso/webhook] helloasso.payment.received emit failed',
@@ -141,7 +176,10 @@ export default async function handler(
     // mapping tenant_plan_checkouts (fallback). Un don GÉNÉRIQUE (sans
     // metadata plan) ne matche pas → comportement inchangé.
     try {
-      const correlation = await resolvePlanCorrelation(event);
+      // Les abonnements de plan se paient à L'ASSOCIATION : une notification
+      // venue du compte d'un espace tiers n'a rien à y appliquer.
+      const correlation =
+        authSource === 'platform' ? await resolvePlanCorrelation(event) : null;
       if (correlation) {
         const result = await applyTenantPlanPayment({
           helloassoPaymentId: event.data.id,
@@ -170,7 +208,16 @@ export default async function handler(
     // (colonne TEXT), d'où le String(...).
     try {
       const prize = await resolvePrizeCorrelation(event);
-      if (prize) {
+      // La cagnotte doit appartenir à l'espace qui s'authentifie : sinon une
+      // association pourrait créditer la cagnotte d'une autre avec un paiement
+      // encaissé chez elle.
+      if (prize && prize.tenantId !== authTenantId) {
+        logger.warn(
+          '[helloasso/webhook] cagnotte %s hors de l’espace authentifié (%s)',
+          prize.prizePoolId,
+          authTenantId
+        );
+      } else if (prize) {
         const result = await applyPrizeContribution(
           prize,
           String(event.data.id),

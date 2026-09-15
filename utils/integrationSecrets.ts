@@ -56,6 +56,15 @@ export const INTEGRATION_SECRET_KEYS = [
   // pour que l'intégration se branche d'un seul endroit et sans redéployer.
   'tiktok_client_key',
   'tiktok_client_secret',
+  // Compte HelloAsso DE L'ESPACE, qui encaisse ses cagnottes de tournoi.
+  // Les identifiants d'environnement décrivent le compte de l'association : les
+  // utiliser pour un tournoi tiers ferait arriver l'argent d'une autre
+  // structure sur notre compte, sans moyen de le lui reverser. Le slug n'est
+  // pas secret — il vit ici pour que la connexion soit d'un seul tenant (même
+  // raison que le handle Bluesky).
+  'helloasso_client_id',
+  'helloasso_client_secret',
+  'helloasso_org_slug',
 ] as const;
 
 export type IntegrationSecretKey = (typeof INTEGRATION_SECRET_KEYS)[number];

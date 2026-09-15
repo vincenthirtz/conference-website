@@ -19,6 +19,9 @@ const DiscordWebhooksPanel = lazyPanel(
 const TeamRolesPanel = lazyPanel(
   () => import('@/components/admin/site-settings/TeamRolesPanel')
 );
+const HelloAssoAccountPanel = lazyPanel(
+  () => import('@/components/admin/site-settings/HelloAssoAccountPanel')
+);
 const EmailSenderPanel = lazyPanel(
   () => import('@/components/admin/site-settings/EmailSenderPanel')
 );
@@ -45,6 +48,9 @@ export default function AdminSiteSettingsPage(_: StaffProps) {
     // Compte d'envoi de l'espace : sans lui, un espace tiers n'envoie aucun
     // email (il n'emprunte pas celui de la plateforme).
     { id: 'email-sender', label: t.tabEmailSender },
+    // Compte d'encaissement de l'espace : sans lui, aucune cagnotte de tournoi
+    // ne peut être ouverte (l'argent n'irait pas à la bonne structure).
+    { id: 'helloasso', label: t.tabHelloAsso },
   ];
   const [active, setActive] = useQueryTab(tabs);
 
@@ -81,6 +87,7 @@ export default function AdminSiteSettingsPage(_: StaffProps) {
             {active === 'discord' && <DiscordWebhooksPanel />}
             {active === 'team-roles' && <TeamRolesPanel />}
             {active === 'email-sender' && <EmailSenderPanel />}
+            {active === 'helloasso' && <HelloAssoAccountPanel />}
           </div>
         </div>
       </div>

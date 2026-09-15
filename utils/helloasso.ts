@@ -2,18 +2,42 @@
 // HelloAsso API v5 client — OAuth2 client_credentials + checkout intents.
 // Docs: https://dev.helloasso.com/docs
 //
-// Required env vars:
-//   HELLOASSO_CLIENT_ID     – OAuth2 client ID
-//   HELLOASSO_CLIENT_SECRET – OAuth2 client secret
-//   HELLOASSO_ORG_SLUG      – Organization slug on HelloAsso
+// DEUX COMPTES POSSIBLES, ET C'EST LE CŒUR DU FICHIER DEPUIS LE 2026-09-16.
+// Les identifiants d'environnement décrivent le compte de L'ASSOCIATION :
+//   HELLOASSO_CLIENT_ID / HELLOASSO_CLIENT_SECRET / HELLOASSO_ORG_SLUG
+// Ils encaissent ce qui NOUS est dû (adhésions, dons, abonnements de plan).
+// Un espace tiers, lui, apporte les SIENS (`utils/billing/helloassoAccount.ts`,
+// secrets chiffrés par tenant) : l'argent d'une cagnotte doit arriver sur le
+// compte de l'organisation qui organise le tournoi, pas sur le nôtre. Chaque
+// association obtient ses identifiants depuis son back-office HelloAsso
+// (« Mon compte › Intégrations et API ») ; le privilège `Checkout` qu'ils
+// portent suffit à créer un intent de paiement.
+//
+// D'où le paramètre `credentials` : le défaut reste le compte de la
+// plateforme, et un appelant qui collecte POUR quelqu'un d'autre doit le dire.
 
 const API_BASE = 'https://api.helloasso.com';
 
 // ─── OAuth2 token cache ────────────────────────────────────────
 
-let cachedToken: { accessToken: string; expiresAt: number } | null = null;
+/** Un compte HelloAsso : celui de l'association, ou celui d'un espace tiers. */
+export type HelloAssoCredentials = {
+  clientId: string;
+  clientSecret: string;
+  orgSlug: string;
+};
 
-function getConfig() {
+/**
+ * Jetons en cache PAR COMPTE. Une seule variable suffisait tant qu'un seul
+ * compte existait ; avec plusieurs, elle rendrait le jeton d'une association à
+ * une autre — c'est-à-dire un paiement encaissé au mauvais endroit.
+ */
+const tokenCache = new Map<
+  string,
+  { accessToken: string; expiresAt: number }
+>();
+
+export function getPlatformConfig(): HelloAssoCredentials {
   const clientId = process.env.HELLOASSO_CLIENT_ID;
   const clientSecret = process.env.HELLOASSO_CLIENT_SECRET;
   const orgSlug = process.env.HELLOASSO_ORG_SLUG;
@@ -27,16 +51,28 @@ function getConfig() {
   return { clientId, clientSecret, orgSlug };
 }
 
+/** Le compte de la plateforme est-il configuré ? (sans lever). */
+export function isPlatformHelloAssoConfigured(): boolean {
+  return Boolean(
+    process.env.HELLOASSO_CLIENT_ID &&
+      process.env.HELLOASSO_CLIENT_SECRET &&
+      process.env.HELLOASSO_ORG_SLUG
+  );
+}
+
 /**
  * Obtain an OAuth2 access token via client_credentials grant.
- * Tokens are cached in memory and refreshed 60 s before expiry.
+ * Tokens are cached in memory (per account) and refreshed 60 s before expiry.
  */
-async function getAccessToken(): Promise<string> {
-  if (cachedToken && Date.now() < cachedToken.expiresAt) {
-    return cachedToken.accessToken;
+async function getAccessToken(
+  credentials: HelloAssoCredentials = getPlatformConfig()
+): Promise<string> {
+  const cached = tokenCache.get(credentials.clientId);
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.accessToken;
   }
 
-  const { clientId, clientSecret } = getConfig();
+  const { clientId, clientSecret } = credentials;
 
   const res = await fetch(`${API_BASE}/oauth2/token`, {
     method: 'POST',
@@ -58,13 +94,13 @@ async function getAccessToken(): Promise<string> {
     expires_in: number;
   };
 
-  cachedToken = {
+  tokenCache.set(clientId, {
     accessToken: data.access_token,
     // Refresh 60 s before actual expiry to avoid race conditions
     expiresAt: Date.now() + (data.expires_in - 60) * 1000,
-  };
+  });
 
-  return cachedToken.accessToken;
+  return data.access_token;
 }
 
 // ─── Checkout intent ───────────────────────────────────────────
@@ -96,6 +132,12 @@ export type CheckoutInitRequest = {
    * @see https://dev.helloasso.com/docs/checkout — "metadata"
    */
   metadata?: Record<string, unknown>;
+  /**
+   * Compte qui ENCAISSE. Absent = celui de l'association (environnement).
+   * Une cagnotte d'espace tiers passe le sien : l'argent doit arriver chez
+   * l'organisation qui organise le tournoi.
+   */
+  credentials?: HelloAssoCredentials;
 };
 
 export type CheckoutInitResponse = {
@@ -112,8 +154,9 @@ export type CheckoutInitResponse = {
 export async function createCheckoutIntent(
   opts: CheckoutInitRequest
 ): Promise<CheckoutInitResponse> {
-  const token = await getAccessToken();
-  const { orgSlug } = getConfig();
+  const credentials = opts.credentials ?? getPlatformConfig();
+  const token = await getAccessToken(credentials);
+  const { orgSlug } = credentials;
 
   const body: Record<string, unknown> = {
     totalAmount: opts.totalAmount,
@@ -158,6 +201,100 @@ export async function createCheckoutIntent(
   const data = (await res.json()) as { id: number; redirectUrl: string };
 
   return { id: data.id, redirectUrl: data.redirectUrl };
+}
+
+/* ---------------------------------------------------------------------------
+ * Vérification d'un compte
+ * ------------------------------------------------------------------------- */
+
+export type HelloAssoCheck =
+  | { ok: true; organizationName: string | null }
+  | {
+      ok: false;
+      error: string;
+      code: 'BAD_CREDENTIALS' | 'BAD_ORG' | 'UNREACHABLE';
+    };
+
+/**
+ * Les identifiants d'une association sont-ils valides, et donnent-ils accès à
+ * l'organisation annoncée ?
+ *
+ * DEUX QUESTIONS, PAS UNE. Une clé acceptée mais un slug d'organisation faux
+ * produirait des paiements créés ailleurs — ou plus vraisemblablement un 404 au
+ * premier don, devant une contributrice. On vérifie donc le jeton PUIS l'accès
+ * à l'organisation.
+ *
+ * Ne lève jamais : l'appelant est un écran de configuration, pas un traitement.
+ */
+export async function verifyHelloAssoCredentials(
+  credentials: HelloAssoCredentials
+): Promise<HelloAssoCheck> {
+  let token: string;
+  try {
+    // Jamais le cache : on VÉRIFIE des identifiants qu'on vient de recevoir.
+    const res = await fetch(`${API_BASE}/oauth2/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: credentials.clientId,
+        client_secret: credentials.clientSecret,
+      }),
+    });
+    if (res.status === 400 || res.status === 401) {
+      return {
+        ok: false,
+        code: 'BAD_CREDENTIALS',
+        error: 'Identifiants refusés par HelloAsso.',
+      };
+    }
+    if (!res.ok) {
+      return {
+        ok: false,
+        code: 'UNREACHABLE',
+        error: `HelloAsso a répondu HTTP ${res.status}.`,
+      };
+    }
+    token = ((await res.json()) as { access_token: string }).access_token;
+  } catch (err) {
+    return {
+      ok: false,
+      code: 'UNREACHABLE',
+      error: `HelloAsso injoignable : ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+
+  try {
+    const res = await fetch(
+      `${API_BASE}/v5/organizations/${encodeURIComponent(credentials.orgSlug)}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (res.status === 403 || res.status === 404) {
+      return {
+        ok: false,
+        code: 'BAD_ORG',
+        error:
+          'Ces identifiants ne donnent pas accès à cette organisation HelloAsso.',
+      };
+    }
+    if (!res.ok) {
+      return {
+        ok: false,
+        code: 'UNREACHABLE',
+        error: `HelloAsso a répondu HTTP ${res.status}.`,
+      };
+    }
+    const data = (await res.json().catch(() => null)) as {
+      name?: string;
+    } | null;
+    return { ok: true, organizationName: data?.name ?? null };
+  } catch (err) {
+    return {
+      ok: false,
+      code: 'UNREACHABLE',
+      error: `HelloAsso injoignable : ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
 }
 
 // ─── Fetch organization data ──────────────────────────────────
@@ -207,8 +344,10 @@ export async function fetchMemberships(
   pageIndex = 1,
   pageSize = 100
 ): Promise<HelloAssoPaginatedResponse<HelloAssoMembership>> {
+  // Lecture des données de L'ASSOCIATION (adhésions, paiements, formulaires) :
+  // toujours le compte de la plateforme.
   const token = await getAccessToken();
-  const { orgSlug } = getConfig();
+  const { orgSlug } = getPlatformConfig();
 
   const params = new URLSearchParams({
     pageIndex: String(pageIndex),
@@ -240,8 +379,10 @@ export async function fetchPayments(opts?: {
   pageIndex?: number;
   pageSize?: number;
 }): Promise<HelloAssoPaginatedResponse<HelloAssoMembership>> {
+  // Lecture des données de L'ASSOCIATION (adhésions, paiements, formulaires) :
+  // toujours le compte de la plateforme.
   const token = await getAccessToken();
-  const { orgSlug } = getConfig();
+  const { orgSlug } = getPlatformConfig();
 
   const params = new URLSearchParams({
     pageIndex: String(opts?.pageIndex ?? 1),
@@ -271,8 +412,10 @@ export async function fetchPayments(opts?: {
 export async function fetchForms(): Promise<
   Array<{ formSlug: string; formType: string; title: string; state: string }>
 > {
+  // Lecture des données de L'ASSOCIATION (adhésions, paiements, formulaires) :
+  // toujours le compte de la plateforme.
   const token = await getAccessToken();
-  const { orgSlug } = getConfig();
+  const { orgSlug } = getPlatformConfig();
 
   const res = await fetch(
     `${API_BASE}/v5/organizations/${encodeURIComponent(orgSlug)}/forms?pageSize=100`,

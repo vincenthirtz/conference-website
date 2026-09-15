@@ -25,6 +25,7 @@ import { createCheckoutIntent } from '@/utils/helloasso';
 import { formatZodError } from '@/utils/validation';
 import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { buildPrizeCheckoutMetadata } from '@/utils/billing/prizePoolFunding';
+import { resolveCollectingAccount } from '@/utils/billing/helloassoAccount';
 import { logger } from '@/utils/logger';
 
 // Bornes de sécurité : 1 € min, 100 000 € max (miroir du checkout générique).
@@ -125,6 +126,31 @@ export default async function handler(
     });
   }
 
+  // ── Qui encaisse ? ────────────────────────────────────────────────────────
+  // L'espace doit avoir connecté SON compte HelloAsso (la Coupe encaisse sur
+  // celui de l'association). Sans compte, on refuse : l'argent d'un tournoi
+  // tiers ne doit pas arriver chez nous, sans moyen de le reverser (Q036).
+  const account = await resolveCollectingAccount(pool.tenant_id);
+  if (!account) {
+    return res.status(409).json({
+      error:
+        'Cette cagnotte n’est pas encore reliée à un compte HelloAsso : les contributions sont fermées.',
+      code: 'HELLOASSO_NOT_CONNECTED',
+    });
+  }
+
+  // Le NOM DU TOURNOI part avec le paiement : c'est ce que l'association verra
+  // dans son back-office HelloAsso, et ce qui lui permet d'affecter la somme.
+  const { data: tournamentRow } = await supabaseAdmin
+    .from('tournaments')
+    .select('name')
+    .eq('tenant_id', pool.tenant_id)
+    .eq('id', pool.tournament_id)
+    .maybeSingle();
+  const tournamentName = (
+    (tournamentRow as { name?: string | null } | null)?.name ?? ''
+  ).trim();
+
   // Callback URLs vers la page publique du tournoi.
   const proto = req.headers['x-forwarded-proto'] || 'https';
   const host = req.headers.host;
@@ -137,8 +163,11 @@ export default async function handler(
       totalAmount: amountCents,
       returnUrl: `${tournamentUrl}?prize=success`,
       errorUrl: `${tournamentUrl}?prize=error`,
-      itemName: 'Contribution au prize pool',
+      itemName: tournamentName
+        ? `Cagnotte — ${tournamentName}`.slice(0, 255)
+        : 'Contribution à la cagnotte',
       metadata: buildPrizeCheckoutMetadata(pool.id, pool.tenant_id),
+      credentials: account.credentials,
     });
   } catch (err) {
     logger.error('[helloasso/prize-checkout] checkout create error', err);

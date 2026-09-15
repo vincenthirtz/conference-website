@@ -11,6 +11,10 @@
 //   - loading / error / exists:false → section masquée (return null)
 //   - exists:true, isOpen:true       → total + jauge + bouton « Contribuer »
 //   - exists:true, isOpen:false       → total + pastille « Cagnotte clôturée »
+//   - exists:true, fundingReady:false → idem clôturée : l'espace n'a pas relié
+//     son compte HelloAsso, et la route de paiement refuserait
+//     (`HELLOASSO_NOT_CONNECTED`). Un bouton qui mène à un refus promet un
+//     geste impossible.
 //
 // Le paiement passe par une modale de contribution → POST prize-checkout →
 // redirection navigateur vers HelloAsso. Au retour, ?prize=success déclenche un
@@ -45,6 +49,8 @@ type PrizePool = {
   goalAmountCents: number | null;
   contributorCount: number;
   recentContributors: PublicContributor[];
+  /** L'espace a-t-il un compte HelloAsso qui encaisse ? */
+  fundingReady?: boolean;
 };
 
 type FetchState =
@@ -224,7 +230,7 @@ export default function PrizePoolCard({
 
           {/* CTA contribuer / état clôturé */}
           <div className="mt-7 flex justify-center">
-            {pool.isOpen ? (
+            {pool.isOpen && pool.fundingReady !== false ? (
               <button
                 type="button"
                 onClick={() => setModalOpen(true)}
@@ -293,7 +299,7 @@ export default function PrizePoolCard({
         </GlassCard>
       </Reveal>
 
-      {modalOpen && pool.isOpen && (
+      {modalOpen && pool.isOpen && pool.fundingReady !== false && (
         <ContributeModal
           tournamentId={tournamentId}
           currency={pool.currency}

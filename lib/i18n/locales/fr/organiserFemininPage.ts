@@ -114,12 +114,12 @@ export default ns('organiserFemininPage', {
   prizeGaugeTitle: 'Une jauge publique',
   prizeGaugeBody:
     'Un montant de départ, un objectif, le total et les derniers soutiens. Chaque contributrice ou contributeur peut rester anonyme, et son adresse e-mail n’est jamais publiée.',
-  prizeHelloassoTitle: 'Encaissée par l’association',
+  prizeHelloassoTitle: 'Encaissée par votre association',
   prizeHelloassoBody:
-    'Les contributions passent par HelloAsso et sont encaissées par l’association OW Women’s Cup. La plateforme les enregistre : elle ne verse rien elle-même.',
-  prizeAgreementTitle: 'Sur convention hors de la Coupe',
+    'Reliez le compte HelloAsso de votre structure (Réglages › Encaissement) : les contributions y arrivent directement, et chaque paiement porte le nom du tournoi. La plateforme enregistre les contributions, elle ne détient jamais l’argent.',
+  prizeAgreementTitle: 'Sans compte relié, pas de cagnotte',
   prizeAgreementBody:
-    'Pour un tournoi organisé par une autre structure, la cagnotte s’ouvre après accord écrit avec l’association, qui fixe la remise du cash-prize. Écrivez-nous avant de l’annoncer.',
+    'Tant qu’aucun compte n’est relié, la cagnotte ne peut pas être ouverte et aucun bouton de contribution n’apparaît. Les tournois de la Coupe, eux, encaissent sur le compte de l’association.',
   prizeContact: 'Nous écrire',
   prizeLegal:
     'Avant d’annoncer un cash-prize, vérifiez le cadre des compétitions de jeux vidéo (décret n° 2017-871 du 9 mai 2017), en particulier pour les participantes mineures.',

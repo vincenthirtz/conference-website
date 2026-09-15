@@ -72,11 +72,18 @@ PrizePoolPublic:
     - goalAmountCents
     - contributorCount
     - recentContributors
+    - fundingReady
   properties:
     exists:
       type: boolean
     isOpen:
       type: boolean
+    fundingReady:
+      type: boolean
+      description: >-
+        L'espace a-t-il relie un compte HelloAsso qui encaisse ? Faux =
+        la page masque le bouton « contribuer », et le paiement serait refuse
+        (`409 HELLOASSO_NOT_CONNECTED`).
     currency:
       type: string
       description: Code ISO 4217 (ex. `EUR`).

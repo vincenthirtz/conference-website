@@ -99,12 +99,12 @@ export default {
   prizeGaugeTitle: 'A public gauge',
   prizeGaugeBody:
     'A starting amount, a goal, the total and the latest supporters. Every contributor can stay anonymous, and their email address is never published.',
-  prizeHelloassoTitle: 'Collected by the association',
+  prizeHelloassoTitle: 'Collected by your own organisation',
   prizeHelloassoBody:
-    'Contributions go through HelloAsso and are collected by the OW Women’s Cup association. The platform records them: it doesn’t pay anything out itself.',
-  prizeAgreementTitle: 'By agreement outside the Cup',
+    'Connect your organisation’s HelloAsso account (Settings › Payments): contributions land there directly, and every payment carries the tournament name. The platform records contributions, it never holds the money.',
+  prizeAgreementTitle: 'No connected account, no prize pool',
   prizeAgreementBody:
-    'For a tournament run by another organisation, the prize pool opens after a written agreement with the association, which sets how the cash prize is handed over. Write to us before announcing it.',
+    'Until an account is connected, the prize pool can’t be opened and no contribute button shows. Cup tournaments collect on the association’s own account.',
   prizeContact: 'Write to us',
   prizeLegal:
     'Before announcing a cash prize, check the French rules on video game competitions (decree no. 2017-871 of 9 May 2017), especially for underage participants.',

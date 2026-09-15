@@ -95,7 +95,7 @@ The site sits at the center of a small ecosystem:
 - `draftEngine.ts` — MOBA pick/ban draft engine.
 - `castEvents.ts` + `broadcast/liveState.ts` + `broadcasts.ts` — caster/cockpit + broadcast workflows.
 - `discord.ts` + `discordLinks.ts` — Discord helpers + link tokens.
-- `helloasso.ts` — HelloAsso integration.
+- `helloasso.ts` — HelloAsso integration. **Two accounts, never mix them**: the env vars (`HELLOASSO_CLIENT_ID/SECRET/ORG_SLUG`) are the ASSOCIATION's account (memberships, donations, plan payments); a third-party space connects its own credentials (encrypted per tenant, `utils/billing/helloassoAccount.ts`, admin screen « Réglages › Encaissement ») so its tournament prize pools are collected by its own structure. No connected account → a prize pool can't be opened (`409 HELLOASSO_NOT_CONNECTED`). The payment webhook takes a per-tenant derived token (`?tenant=<slug>&token=…`) and only applies a contribution to a pool of that same space.
 - `twitch.ts` — Twitch OAuth + live status.
 - `validation.ts` — zod schemas for API inputs.
 
