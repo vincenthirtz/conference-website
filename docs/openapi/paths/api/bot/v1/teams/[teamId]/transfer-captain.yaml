@@ -1,0 +1,38 @@
+parameters:
+  - $ref: '#/components/parameters/TeamId'
+post:
+  tags:
+    - bot/teams
+  summary: Le capitaine actuel transfere le role a un autre membre.
+  operationId: botTransferTeamCaptain
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+            - newCaptainDiscordUserId
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            newCaptainDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+  responses:
+    '200':
+      description: Captainat transfere.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Ok'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'

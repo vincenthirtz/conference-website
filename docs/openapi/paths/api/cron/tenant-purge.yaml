@@ -1,0 +1,24 @@
+post:
+  summary: Erase tenants whose scheduled purge is due.
+  description: |
+    CRON_SECRET-authenticated, and the only irreversible operation of the
+    domain. Three locks: state must be `purge_scheduled`, `purge_after` must
+    be past, and the platform tenant is excluded by query. Deletion follows
+    the tenant-tables manifest, looping while progress is made because the
+    foreign-key order is not known in advance; whatever resists is NAMED in
+    the report. Player accounts and global Discord links are never touched —
+    they are not the tenant's property.
+  operationId: cronPurgeTenants
+  tags:
+    - cron
+  security: []
+  responses:
+    '200':
+      description: Purge report.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'

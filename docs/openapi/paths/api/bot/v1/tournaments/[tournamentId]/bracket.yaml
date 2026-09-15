@@ -1,0 +1,23 @@
+parameters:
+  - $ref: '#/components/parameters/TournamentId'
+get:
+  tags:
+    - bot/tournaments
+  summary: Vue agregée des phases + matchs + standings d'un tournoi.
+  operationId: botGetTournamentBracket
+  parameters:
+    - name: stageId
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+  responses:
+    '200':
+      description: Vue bracket.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BracketView'
+    '404':
+      $ref: '#/components/responses/NotFound'

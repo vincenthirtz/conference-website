@@ -1,0 +1,126 @@
+get:
+  tags:
+    - public/auth
+  summary: Etat de ma carte TCG (photo, statut de moderation, consentement).
+  operationId: getPlayerTcgPhoto
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: |
+        Etat courant. La joueuse voit sa propre photo meme `pending` ou
+        `rejected` : c'est son ecran. Le filtrage public (n'afficher que
+        `approved`) appartient au lecteur public des cartes.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [none, pending, approved, rejected]
+              photoUrl:
+                type: [string, 'null']
+              optedIn:
+                type: boolean
+              rejectedReason:
+                type: [string, 'null']
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+post:
+  tags:
+    - public/auth
+  summary: Depose une photo de carte TCG (vaut consentement).
+  description: |
+    Le premier depot VAUT accord explicite. Toute photo, y compris en
+    remplacement d'une photo deja approuvee, repasse par la moderation
+    (`pending`) : sans cela il suffirait de substituer un cliche valide.
+    Rate-limit 5 / min.
+  operationId: submitPlayerTcgPhoto
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [data, mimeType]
+          properties:
+            data:
+              type: string
+              description: Image en base64 (prefixe `data:` accepte), 2 Mio max.
+            mimeType:
+              type: string
+              enum: [image/png, image/jpeg, image/webp]
+  responses:
+    '200':
+      description: Photo enregistree, en attente de relecture.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [pending]
+    '400':
+      description: |
+        Photo refusee. `code` : `missing_data`, `unsupported_type`,
+        `invalid_base64`, `too_large` ou `content_mismatch` (le contenu ne
+        correspond pas au type declare : le bucket est public, les magic
+        bytes sont verifies).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+              maxBytes:
+                type: integer
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      description: |
+        Lecture de la photo precedente en echec (rien n'est envoye au
+        bucket : ecraser `photo_path` sans connaitre l'ancien fichier le
+        laisserait orphelin dans un bucket public), ou echec d'envoi /
+        d'enregistrement.
+delete:
+  tags:
+    - public/auth
+  summary: Retire la photo et le consentement.
+  description: |
+    Retrait RETROACTIF : `tcg_pack_cards` ne reference que la joueuse,
+    jamais son image, donc la photo disparait aussi des cartes deja
+    distribuees. Le fichier est supprime du bucket. Rate-limit 10 / min.
+
+    L'effacement est CONDITIONNEL au chemin lu (2026-09-15) : une lecture
+    en echec rend 500 sans rien ecrire, et un depot intercale est relu
+    (jusqu'a 3 fois) au lieu de dereferencer un fichier qu'on ne
+    supprimerait pas.
+  operationId: revokePlayerTcgPhoto
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Photo retiree.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [revoked]
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '409':
+      description: |
+        `code: PHOTO_CHANGED` — la photo a change a chaque tentative
+        pendant le retrait. Reessayer est sur.
+    '500':
+      description: Lecture ou ecriture de la carte en echec ; rien n'est retire.

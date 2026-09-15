@@ -1,0 +1,30 @@
+post:
+  tags:
+    - public/misc
+  summary: Soumet un message via le formulaire de contact (email staff).
+  operationId: submitContactForm
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/ContactFormSubmission'
+  responses:
+    '201':
+      description: Message envoye.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              ok:
+                type: boolean
+              message:
+                type: string
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

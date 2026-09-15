@@ -1,0 +1,62 @@
+post:
+  tags:
+    - public/teams
+  summary: Cree une equipe avec capitaine + roster initial (route publique
+    self-service).
+  operationId: createTeamWithMember
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - name
+          properties:
+            name:
+              type: string
+            short_name:
+              type: [string, 'null']
+            logo_url:
+              type: [string, 'null']
+            country:
+              type: [string, 'null']
+            description:
+              type: [string, 'null']
+            discord:
+              type: [string, 'null']
+            website:
+              type: [string, 'null']
+            member_email:
+              type: [string, 'null']
+              format: email
+            member_role:
+              type: [string, 'null']
+            member_user_id:
+              type: [string, 'null']
+              format: uuid
+            member_battle_tag:
+              type: [string, 'null']
+            set_captain:
+              type: boolean
+            tournament_id:
+              type: [string, 'null']
+              format: uuid
+            members:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+  responses:
+    '200':
+      description: Equipe + membres crees.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '500':
+      $ref: '#/components/responses/ServerError'

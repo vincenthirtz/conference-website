@@ -1,0 +1,47 @@
+get:
+  tags:
+    - cron
+  summary: Expire les propositions d'echange TCG echues.
+  operationId: cronTcgTradesExpireGet
+  description: |
+    Schedule: hourly (`17 * * * *`) via Netlify scheduled function
+    `tcg-trades-expire-cron`.
+
+    Passe en `expired` toute proposition `pending` dont `expires_at` est
+    depasse (tous tenants) et emet `tcg.trade_resolved` (outcome
+    `expired`) a chaque proposante, dans l'outbox de son espace. Ecriture
+    conditionnelle `status = 'pending'` : un second passage, ou
+    l'expiration paresseuse des routes joueuse, ne reannonce rien.
+
+    Auth: `Authorization: Bearer <CRON_SECRET>` header OR
+    `?secret=<CRON_SECRET>` query string (constant-time). Both GET and POST
+    accepted.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: '`{ expired, duration_ms }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              expired:
+                type: integer
+              duration_ms:
+                type: integer
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+post:
+  tags:
+    - cron
+  summary: Expire les propositions d'echange TCG echues.
+  operationId: cronTcgTradesExpirePost
+  description: Same as `GET /api/cron/tcg-trades-expire`.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: '`{ expired, duration_ms }`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'

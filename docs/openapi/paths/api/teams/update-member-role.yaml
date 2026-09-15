@@ -1,0 +1,40 @@
+patch:
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+    - $ref: '#/components/parameters/SubjectAs'
+    - $ref: '#/components/parameters/ActAs'
+  tags:
+    - public/teams
+  summary: Le capitaine met a jour le role d'un membre de son equipe.
+  operationId: updateMemberRole
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - memberId
+            - role
+          properties:
+            memberId:
+              type: string
+              format: uuid
+            role:
+              type: string
+  responses:
+    '200':
+      description: Role mis a jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

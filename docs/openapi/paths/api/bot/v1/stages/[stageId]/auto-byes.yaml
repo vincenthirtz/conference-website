@@ -1,0 +1,41 @@
+parameters:
+  - $ref: '#/components/parameters/StageId'
+post:
+  tags:
+    - bot/tournaments
+  summary: Marque BYE les matchs incomplets d'un stage et propage le bracket.
+  operationId: botStageAutoByes
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            roundNumber:
+              type: integer
+            scoreForBye:
+              type: integer
+              minimum: 0
+              default: 1
+            propagate:
+              type: boolean
+              default: true
+  responses:
+    '200':
+      description: Auto-byes appliques.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'

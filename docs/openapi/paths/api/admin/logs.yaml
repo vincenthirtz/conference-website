@@ -1,0 +1,38 @@
+get:
+  summary: Read staff_logs (audit trail).
+  operationId: adminListStaffLogs
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  parameters:
+    - in: query
+      name: limit
+      schema:
+        type: integer
+        default: 50
+    - in: query
+      name: offset
+      schema:
+        type: integer
+        default: 0
+    - in: query
+      name: action
+      schema:
+        type: string
+    - in: query
+      name: entity_type
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Staff log entries.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

@@ -1,0 +1,61 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+get:
+  summary: Read MVP vote for a match.
+  operationId: adminGetMatchMvp
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: MVP state.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Set the MVP for a match.
+  operationId: adminSetMatchMvp
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: MVP set.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  summary: Clear the MVP for a match.
+  operationId: adminDeleteMatchMvp
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  responses:
+    '204':
+      description: Cleared.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

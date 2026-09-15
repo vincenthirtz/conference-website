@@ -1,0 +1,39 @@
+parameters:
+  - $ref: '#/components/parameters/RunId'
+  - $ref: '#/components/parameters/SegId'
+post:
+  summary: Start a segment (transition upcoming → live).
+  description: |
+    Requires `manager` role. Idempotent (re-call returns alreadyStarted=true).
+    Closes any other live segment in the same run (one-live-at-a-time
+    invariant). Emits `event_segment.transitioned` to the bot outbox.
+  operationId: adminStartEventSegment
+  tags:
+    - admin/events
+  security:
+    - StaffSession: []
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  responses:
+    '200':
+      description: Segment started (or already live).
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - segment
+              - alreadyStarted
+            properties:
+              segment:
+                $ref: '#/components/schemas/EventSegment'
+              alreadyStarted:
+                type: boolean
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'

@@ -1,0 +1,74 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: List the invitations of a tenant.
+  description: |
+    Requires `admin`+ globally, or staff attached to this tenant. Status is
+    computed (`pending` / `accepted` / `revoked` / `expired`) rather than
+    stored: an expiry needs a date, not a cron.
+  operationId: adminListTenantInvitations
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Invitations.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Invite an email address to join a tenant.
+  description: |
+    Creates a single-use invitation (14 days) and emails it with the
+    TENANT's sender account. The token is stored hashed. Any live invitation
+    for the same address is revoked first, so a single revoke always closes
+    the door. The invited role may not exceed the inviter's own role.
+  operationId: adminCreateTenantInvitation
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [email, role]
+          properties:
+            email:
+              type: string
+              format: email
+            role:
+              type: string
+              enum: [owner, admin, caster]
+  responses:
+    '201':
+      description: Invitation created (email may still have failed — see `emailSent`).
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      description: Already a member of this tenant.

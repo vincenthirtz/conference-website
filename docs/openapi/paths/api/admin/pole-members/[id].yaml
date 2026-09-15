@@ -1,0 +1,68 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: Pole member detail.
+  operationId: adminGetPoleMember
+  tags:
+    - admin/users
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Pole member.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+patch:
+  summary: Update a pole member.
+  operationId: adminUpdatePoleMember
+  tags:
+    - admin/users
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Updated.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  summary: Delete a pole member.
+  operationId: adminDeletePoleMember
+  tags:
+    - admin/users
+  security:
+    - StaffSession: []
+  responses:
+    '204':
+      description: Deleted.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

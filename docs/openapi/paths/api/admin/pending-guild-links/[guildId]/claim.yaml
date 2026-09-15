@@ -1,0 +1,34 @@
+parameters:
+  - in: path
+    name: guildId
+    required: true
+    schema:
+      type: string
+      pattern: ^[0-9]{17,20}$
+post:
+  summary: Claim ownership of a pending guild link.
+  description: Requires `owner` role.
+  operationId: adminClaimPendingGuildLink
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Claim accepted.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

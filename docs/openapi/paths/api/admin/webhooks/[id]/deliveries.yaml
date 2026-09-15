@@ -1,0 +1,21 @@
+parameters:
+  - name: id
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  tags:
+    - admin/misc
+  summary: Dernières livraisons d'un abonnement webhook (debug).
+  operationId: adminListWebhookDeliveries
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Jusqu'à 50 livraisons récentes (event, statut, HTTP, erreur).
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      $ref: '#/components/responses/NotFound'

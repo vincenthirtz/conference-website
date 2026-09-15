@@ -1,0 +1,50 @@
+post:
+  summary: Send a chat message on the broadcaster channel.
+  description: |
+    Requires `manager` role and the `user:write:chat` scope.
+    `409 NOT_CONNECTED` if the channel is not connected, `403 MISSING_SCOPE`
+    if the granted scope lacks `user:write:chat`.
+  operationId: adminTwitchSendChat
+  tags:
+    - admin/twitch
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - message
+          properties:
+            message:
+              type: string
+              minLength: 1
+              maxLength: 500
+  responses:
+    '200':
+      description: Message sent.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: 'Missing scope (code MISSING_SCOPE) or forbidden role.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '409':
+      description: 'No broadcaster channel connected (code NOT_CONNECTED).'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

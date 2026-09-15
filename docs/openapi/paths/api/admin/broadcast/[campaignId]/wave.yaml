@@ -1,0 +1,26 @@
+parameters:
+  - in: path
+    name: campaignId
+    required: true
+    schema:
+      type: string
+      format: uuid
+post:
+  summary: Trigger processing of one broadcast wave for a campaign.
+  operationId: adminProcessBroadcastWave
+  tags:
+    - admin/broadcast
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Wave processed.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

@@ -1,0 +1,21 @@
+parameters:
+  - $ref: '#/components/parameters/RunId'
+get:
+  summary: Realtime presence (who is connected to the cockpit).
+  operationId: adminGetEventPresence
+  tags:
+    - admin/events
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Presence snapshot.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

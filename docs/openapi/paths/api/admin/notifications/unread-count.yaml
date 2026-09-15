@@ -1,0 +1,31 @@
+get:
+  summary: Compteur de notifications Web Push délivrées mais non-acquittées.
+  description: |
+    Source de vérité pour `setAppBadge(n)`. Compte les deliveries `delivered`
+    avec `acked_at IS NULL` pour les subscriptions du user staff courant.
+    `withStaffRoute(handler, 'caster')`.
+  operationId: adminNotificationsUnreadCount
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Nombre de notifications non-lues.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - count
+            properties:
+              count:
+                type: integer
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

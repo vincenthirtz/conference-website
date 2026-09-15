@@ -1,0 +1,111 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+post:
+  tags:
+    - bot/matches
+  summary: Capitaine soumet le score final d'un match (resoud dispute si accord).
+  operationId: botReportMatchScore
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - discordUserId
+            - team1Score
+            - team2Score
+          properties:
+            discordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            team1Score:
+              type: integer
+              minimum: 0
+              maximum: 99
+            team2Score:
+              type: integer
+              minimum: 0
+              maximum: 99
+  responses:
+    '200':
+      description: |
+        Report enregistre. Trois etats possibles :
+        - `awaiting_opponent` : un seul report, on attend l'autre cote.
+        - `finalized` : match finalise. `resolution` precise la voie —
+          `agreed` (les deux reports concordent) ou `auto_resolved`
+          (report unilateral emporté sur silence adverse + preuve, avec
+          `reason` renseigné).
+        - `disputed` : conflit — desaccord des deux capitaines OU report
+          unilateral non confirme au-dela du delai SLA (silence adverse
+          sans preuve). Le motif est stocké et exposé au staff.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - status
+              - matchId
+            properties:
+              status:
+                type: string
+                enum:
+                  - awaiting_opponent
+                  - finalized
+                  - disputed
+              resolution:
+                type: [string, 'null']
+                enum:
+                  - agreed
+                  - auto_resolved
+                  - null
+                description: |
+                  Présent (non null) uniquement quand `status=finalized` :
+                  `agreed` si les deux reports concordent, `auto_resolved`
+                  si un report unilateral a été appliqué sur silence adverse.
+              reason:
+                type: [string, 'null']
+                description: |
+                  Motif de l'auto-resolution, renseigné uniquement quand
+                  `resolution=auto_resolved` ; null sinon.
+              matchId:
+                $ref: '#/components/schemas/Uuid'
+              scrimId:
+                anyOf:
+                  - $ref: '#/components/schemas/Uuid'
+                  - type: 'null'
+              mySide:
+                type: integer
+                enum:
+                  - 1
+                  - 2
+              opponentSide:
+                type: integer
+                enum:
+                  - 1
+                  - 2
+              team1Score:
+                type: integer
+              team2Score:
+                type: integer
+              winnerTeamId:
+                anyOf:
+                  - $ref: '#/components/schemas/Uuid'
+                  - type: 'null'
+              myReport:
+                type: object
+                additionalProperties: true
+              opponentReport:
+                type: object
+                additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'
+    '500':
+      $ref: '#/components/responses/ServerError'

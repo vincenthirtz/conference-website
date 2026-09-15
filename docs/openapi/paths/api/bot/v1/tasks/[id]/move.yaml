@@ -1,0 +1,32 @@
+patch:
+  tags:
+    - bot/tasks
+  summary: Deplace une carte Kanban (moveTaskCore). Emet task.moved +
+    task.board_changed. Idempotent.
+  operationId: botMoveTask
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [actorDiscordUserId, columnId]
+          properties:
+            actorDiscordUserId: {type: string}
+            columnId: {type: string, format: uuid}
+            position: {type: integer, minimum: 0}
+  responses:
+    '200':
+      description: Carte deplacee.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

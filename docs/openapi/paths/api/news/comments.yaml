@@ -1,0 +1,74 @@
+get:
+  tags:
+    - public/news
+  summary: Liste les commentaires d'un article (par newsId).
+  operationId: listNewsComments
+  security: []
+  parameters:
+    - name: newsId
+      in: query
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+  responses:
+    '200':
+      description: Commentaires les plus recents en premier.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - items
+            properties:
+              items:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NewsComment'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - public/news
+  summary: Poste un commentaire (captcha + honeypot + rate-limit IP).
+  operationId: createNewsComment
+  description: |
+    L'article cible (newsId) doit exister pour le tenant resolu ET etre
+    publie : sinon 404 (inconnu) ou 403 (brouillon / commentaires fermes).
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/NewsCommentInput'
+  responses:
+    '201':
+      description: Commentaire cree.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - comment
+            properties:
+              comment:
+                $ref: '#/components/schemas/NewsComment'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'

@@ -1,0 +1,51 @@
+get:
+  tags:
+    - cron
+  summary: Process scheduled broadcast email waves (daily).
+  operationId: cronBroadcastProcessGet
+  description: |
+    Schedule: every day at 10:00 UTC (`0 10 * * *`) via Netlify
+    scheduled function `broadcast-cron`. The hour is tuned to fit the
+    free Brevo quota (300 emails/day) at 12h Paris winter / 11h summer.
+
+    For each row in `broadcast_schedules` where `status='scheduled'`,
+    calls `processCampaignWave(campaignId)` which sends the next
+    `wave_size` emails of the campaign. Returns the per-campaign result
+    set (`error` field present when a wave failed).
+
+    Auth: `Authorization: Bearer <CRON_SECRET>` header OR
+    `?secret=<CRON_SECRET>` query string. Both GET and POST are accepted.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Wave processing summary.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CronBroadcastResult'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - cron
+  summary: Process scheduled broadcast email waves (daily).
+  operationId: cronBroadcastProcessPost
+  description: |
+    Same as `GET /api/cron/broadcast-process`. POST is the method used
+    by the Netlify scheduled function; GET is allowed for manual ops.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Wave processing summary.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CronBroadcastResult'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'

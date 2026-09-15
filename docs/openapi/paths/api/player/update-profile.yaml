@@ -1,0 +1,34 @@
+patch:
+  tags:
+    - public/auth
+  summary: Met a jour le profil du joueur (battle_tag, display_name, etc.).
+  operationId: updatePlayerProfile
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            displayName:
+              type: string
+            battleTag:
+              type: string
+            bio:
+              type: string
+            avatarUrl:
+              type: string
+  responses:
+    '200':
+      description: Profil mis a jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'

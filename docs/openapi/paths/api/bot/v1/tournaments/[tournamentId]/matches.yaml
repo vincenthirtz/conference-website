@@ -1,0 +1,44 @@
+parameters:
+  - $ref: '#/components/parameters/TournamentId'
+post:
+  tags:
+    - bot/tournaments
+  summary: Cree un ou plusieurs matches dans un tournoi (single ou batch).
+  operationId: botCreateTournamentMatches
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            match:
+              type: object
+              additionalProperties: true
+            matches:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+  responses:
+    '201':
+      description: Match(es) cree(s).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              matches:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Match'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'

@@ -1,0 +1,69 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+get:
+  tags:
+    - bot/matches
+  summary: Vue capitaine d'une dispute en cours sur un de ses matches.
+  operationId: botGetMatchDispute
+  parameters:
+    - name: actorDiscordUserId
+      in: query
+      required: true
+      schema:
+        $ref: '#/components/schemas/DiscordId'
+  responses:
+    '200':
+      description: Etat de la dispute filtre pour le capitaine.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - matchId
+              - status
+              - reports
+            properties:
+              matchId:
+                $ref: '#/components/schemas/Uuid'
+              status:
+                type: string
+              openedAt:
+                anyOf:
+                  - $ref: '#/components/schemas/Timestamp'
+                  - type: 'null'
+              reports:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    teamId:
+                      $ref: '#/components/schemas/Uuid'
+                    teamName:
+                      type: [string, 'null']
+                    submittedBy:
+                      type: [string, 'null']
+                    scoreA:
+                      type: integer
+                    scoreB:
+                      type: integer
+                    submittedAt:
+                      anyOf:
+                        - $ref: '#/components/schemas/Timestamp'
+                        - type: 'null'
+              staffNote:
+                type: [string, 'null']
+              resolution:
+                type: [object, 'null']
+                properties:
+                  resolvedAt:
+                    $ref: '#/components/schemas/Timestamp'
+                  decidedScoreA:
+                    type: [integer, 'null']
+                  decidedScoreB:
+                    type: [integer, 'null']
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

@@ -1,0 +1,47 @@
+parameters:
+  - $ref: '#/components/parameters/TeamId'
+delete:
+  tags:
+    - bot/teams
+  summary: Le capitaine retire une joueuse de son equipe.
+  operationId: botKickTeamMember
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+            - targetDiscordUserId
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            targetDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+  responses:
+    '200':
+      description: Membre retire.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              teamId:
+                $ref: '#/components/schemas/Uuid'
+              removedAuthUserId:
+                $ref: '#/components/schemas/Uuid'
+              targetDiscordUserId:
+                $ref: '#/components/schemas/DiscordId'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'

@@ -1,0 +1,73 @@
+parameters:
+  - $ref: '#/components/parameters/StageId'
+get:
+  summary: List bracket snapshots for a stage.
+  operationId: adminListStageSnapshots
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Snapshots.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Create a manual bracket snapshot.
+  operationId: adminCreateStageSnapshot
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '201':
+      description: Snapshot created.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+patch:
+  summary: Restore a stage to a snapshot.
+  operationId: adminRestoreStageSnapshot
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Restored.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

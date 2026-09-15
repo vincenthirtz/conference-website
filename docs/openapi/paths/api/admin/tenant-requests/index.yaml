@@ -1,0 +1,20 @@
+get:
+  summary: List incoming tenant-creation requests.
+  description: Requires `owner` role.
+  operationId: adminListTenantRequests
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Tenant requests.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

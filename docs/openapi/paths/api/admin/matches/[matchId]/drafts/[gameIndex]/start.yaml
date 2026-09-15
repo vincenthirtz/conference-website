@@ -1,0 +1,43 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+  - name: gameIndex
+    in: path
+    required: true
+    schema:
+      type: integer
+      minimum: 1
+post:
+  tags:
+    - admin/matches
+  summary: Arm the draft timer (Lot 3) — transition pending to in_progress.
+  operationId: adminStartMatchDraft
+  description: |
+    Stamps `started_at` + sets `deadline_at` on step 1 = now +
+    pick_timer_seconds so the captain UI / spectator UI / cron can
+    race against the clock. Requires sides to be assigned and
+    current_step = 0 (i.e. no commit yet).
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Draft transitioned to in_progress with deadline armed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MatchDraftStateResponse'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      description: Match or draft not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DraftEngineError'
+    '409':
+      description: Sides not set yet, or draft already started/completed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DraftEngineError'

@@ -1,0 +1,25 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+post:
+  summary: Mark a tenant request as expired.
+  operationId: adminExpireTenantRequest
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Expired.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Ok'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

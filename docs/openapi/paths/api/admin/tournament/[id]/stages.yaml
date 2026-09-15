@@ -1,0 +1,81 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: List stages of a tournament.
+  operationId: adminListTournamentStages
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Stages.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              stages:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Stage'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Add a stage to a tournament.
+  operationId: adminCreateTournamentStage
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '201':
+      description: Created.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Stage'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+patch:
+  summary: Reorder / patch stages of a tournament.
+  operationId: adminPatchTournamentStages
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Updated.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

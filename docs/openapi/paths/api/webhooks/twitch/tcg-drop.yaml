@@ -1,0 +1,85 @@
+post:
+  tags:
+    - webhooks
+  summary: Drop TCG en direct — reception EventSub Twitch.
+  description: |
+    PREMIER RECEPTEUR EventSub WEBHOOK du depot. L'EventSub existant
+    (`/api/admin/twitch/eventsub/subscribe`) utilise le transport WEBSOCKET,
+    pilote par le navigateur de la regie : rien ne recevait d'evenement
+    serveur. Ce webhook est donc le seul chemin qui fonctionne cockpit
+    ferme.
+
+    `bodyParser: false` — sans precedent ici, et necessaire : le HMAC couvre
+    les OCTETS EXACTS du corps. Signature `sha256=` sur
+    `id + timestamp + corps brut`, comparee en temps constant, verifiee
+    AVANT tout parsing et tout acces base. Fail-closed en 503 si
+    `TWITCH_EVENTSUB_SECRET` est absent. Horodatage hors +/-10 min rejete
+    (anti-rejeu).
+
+    `security: []` A DESSEIN : la garde est cryptographique, pas un schema
+    OpenAPI. Aucune cle bot, aucune session ne donne acces a cette route.
+
+    TOUT CAS NON TRAITABLE EST ACQUITTE EN 200. Un non-2xx fait retenter
+    Twitch, puis DESACTIVER la souscription : un compte non lie ou un
+    evenement hors perimetre ne doit pas couper le canal. Seuls les echecs
+    reellement transitoires rendent 503 + `Retry-After`.
+
+    `source_ref` = le DIRECT (`<broadcaster>:<startedAt>`), pas l'echange :
+    le registre `utils/tcg/earnSources.ts` impose « un drop par live et par
+    personne », et l'unicite du registre porte cette garantie.
+
+    LA DEMANDE EST RESOLUE, PAS LAISSEE EN ATTENTE. Sans cela, une
+    spectatrice qui echange ses points sans compte rattache perdait ses
+    points ET n'avait pas de carte. Matrice :
+      - `granted` → FULFILLED (la carte est donnee, la demande est honoree) ;
+      - identite non rattachee, hors direct, recompense non configuree →
+        CANCELED, ce qui REND les points ;
+      - `replayed` → RIEN : la carte a deja ete donnee une fois, rembourser
+        offrirait la carte ET les points ;
+      - autre recompense → RIEN, elle ne nous appartient pas ;
+      - panne transitoire → RIEN, Twitch reessaiera.
+    Exige le scope `channel:manage:redemptions`. La resolution est NON
+    BLOQUANTE : une annulation qui echoue laisse la demande en attente
+    (l'etat d'avant) mais ne transforme jamais une attribution reussie en
+    503, ce qui ferait retenter Twitch et pourrait distribuer deux fois.
+
+    Les deux prerequis d'origine sont LEVES depuis le 2026-09-13 :
+    `user_twitch_links` existe et est alimentee par OAuth
+    (`/api/auth/twitch/*`), et le CHECK de `source_kind` admet
+    `twitch_drop` (`schemaReady: true`).
+
+    UN PAQUET EN PLUS DES PIECES (2026-09-15). Le registre attribue au drop
+    `TWITCH_DROP_COINS` ET un paquet d'origine `drop` (sans match). Ordre
+    d'ecriture impose par `utils/tcg/grantCoinsThenPacks.ts` : les pieces
+    en `ON CONFLICT DO NOTHING ... RETURNING`, puis le paquet a la seule
+    ligne rendue. Un retry Twitch (autre `message-id`, meme direct) rend
+    `replayed` et ne cree NI pieces NI paquet. Si le paquet est refuse (ex.
+    migration `tcg_earn_sources_drop_streak_placement.sql` non appliquee),
+    le drop reste `granted` en pieces seules : pas de 503, qui ferait
+    retenter Twitch sans jamais honorer la demande.
+
+    L'evenement bot `tcg.drop_granted` porte, en AJOUT RETROCOMPATIBLE,
+    `pack: { id: string } | null` — `null` quand aucun paquet n'a ete cree.
+  operationId: twitchTcgDropWebhook
+  security: []
+  responses:
+    '200':
+      description: |
+        Acquittement. Soit le `challenge` en text/plain
+        (`webhook_callback_verification`), soit `{ ok, status }` ou `status`
+        vaut `granted`, `replayed`, `identity_not_linked`, `not_live`,
+        `unknown_channel`, `ignored_event_type`, `revoked`… Sur
+        `granted` seulement, `packGranted: boolean` dit si le paquet a ete
+        cree (diagnostic ; Twitch ignore le corps).
+    '400':
+      description: '`MISSING_HEADERS`, `INVALID_TIMESTAMP`, `INVALID_JSON`,
+        `INVALID_PAYLOAD`.'
+    '403':
+      description: '`INVALID_SIGNATURE` ou `STALE_MESSAGE` (hors fenetre anti-rejeu).'
+    '413':
+      description: '`PAYLOAD_TOO_LARGE` — corps > 64 Ko.'
+    '503':
+      description: |
+        `WEBHOOK_NOT_CONFIGURED` (secret absent, fail-closed) ou echec
+        transitoire (`DATABASE_UNAVAILABLE`, `GRANT_FAILED`…), avec
+        `Retry-After`.

@@ -1,0 +1,139 @@
+post:
+  summary: Corriger le solde de pieces TCG d'une joueuse (credit ou retrait).
+  description: |
+    `withStaffRoute(handler, { permission: 'manage_tcg' })` — meme
+    permission que le reste de l'economie du TCG (cadeau d'accueil, vue
+    d'ensemble). L'ecrivain de `source_kind = 'admin_grant'`.
+
+    UNE CORRECTION, PAS UNE VENTE. La monnaie du TCG se gagne, elle ne
+    s'achete pas : cette route ne connait aucun moyen de paiement ni aucun
+    don. Elle repare un solde que le jeu a mal tenu, et laisse une trace.
+
+    LE REGISTRE D'ABORD. Une ligne `tcg_wallet_entries` (source de verite)
+    `{ amount, source_kind: 'admin_grant', source_ref: idempotencyKey }`,
+    puis `refreshBalance` recalcule le cache `tcg_wallets.balance`.
+    `balance` rendu = somme du registre, plafonnee a zero.
+
+    IDEMPOTENCE PORTEE PAR LA BASE, sans migration : `idempotencyKey` est
+    la `source_ref`, et l'unicite `(tenant_id, user_id, source_kind,
+    source_ref)` interdit la seconde ecriture. Rejouer la meme cle rend
+    l'ecriture existante avec `replayed: true`, sans double credit ni
+    second journal. Une cle deja appliquee a une AUTRE joueuse ou a un AUTRE
+    montant est refusee en 400 (`INVALID_BODY`) : repondre « deja fait »
+    masquerait une correction jamais appliquee.
+
+    UN RETRAIT NE REND JAMAIS UN SOLDE NEGATIF. Depuis le 2026-09-15 il
+    passe par la fonction SQL `tcg_admin_debit` (migration
+    `tcg_wallet_atomic_balance.sql`) : verrou de la ligne de porte-monnaie,
+    solde relu par `SUM(amount)` sur le registre, ecriture et cache dans
+    UNE transaction — meme principe que `POST /api/player/tcg/booster`.
+    Fonction absente → 503 `WITHDRAWAL_UNAVAILABLE` (un credit reste
+    possible). Le solde rendu est calcule par la base, sans plafond de
+    1000 lignes.
+
+    UNE JOUEUSE DE L'ESPACE SEULEMENT (2026-09-15). `userId` doit etre
+    rattache au tenant du staff : roster du tenant, ou gain reel au registre
+    du tenant (`admin_grant` ne compte pas). Sinon `404 USER_NOT_FOUND`, la
+    meme reponse qu'un compte inexistant, rendue AVANT toute lecture du
+    compte. Sans cette garde, un owner d'espace tiers creditait une
+    etrangere, ce qui lui creait un porte-monnaie que le rattrapage
+    Battle.net prenait pour un rattachement.
+
+    UNE ERREUR N'EST PAS UNE ABSENCE : une lecture de compte en echec rend
+    500, jamais `USER_NOT_FOUND` ; une insertion en erreur est relue par la
+    cle avant de conclure a l'echec (504 apres commit).
+
+    LE MOTIF EST VISIBLE PAR LA JOUEUSE : recopie dans
+    `tcg_wallet_entries.note` (migration `tcg_wallet_entries_note.sql`) et
+    rendu par `GET /api/player/tcg/wallet` pour cette seule source. Il est
+    aussi journalise `tcg_admin_grant` dans `staff_logs`, payload
+    `{ userId, amount, reason, entryId }`. `private, no-store`.
+    Rate-limit 30 / min.
+  operationId: adminGrantTcgCoins
+  tags:
+    - admin/tcg
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [userId, amount, reason, idempotencyKey]
+          properties:
+            userId:
+              type: string
+              format: uuid
+            amount:
+              type: integer
+              minimum: -10000
+              maximum: 10000
+              description: Entier non nul. Negatif = retrait.
+            reason:
+              type: string
+              minLength: 3
+              maxLength: 500
+              description: Rogne (trim) avant validation.
+            idempotencyKey:
+              type: string
+              format: uuid
+  responses:
+    '200':
+      description: Correction appliquee, ou rejeu d'une correction deja appliquee.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [ok, entryId, balance, replayed]
+            properties:
+              ok:
+                type: boolean
+                enum: [true]
+              entryId:
+                type: string
+                format: uuid
+              balance:
+                type: integer
+                minimum: 0
+              replayed:
+                type: boolean
+    '400':
+      description: |
+        `code: INVALID_BODY` — corps invalide, ou cle d'idempotence deja
+        utilisee pour une autre joueuse / un autre montant.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      description: |
+        `code: USER_NOT_FOUND` — aucun compte pour `userId`, ou compte NON
+        rattache a l'espace du staff (indiscernables a dessein).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    '409':
+      description: |
+        `code: INSUFFICIENT_BALANCE` — le retrait rendrait le solde negatif
+        (la reponse porte `balance`, le disponible selon le registre). Rare :
+        `code: BALANCE_CHANGED` — verrou du porte-monnaie non obtenu ;
+        reessayer avec la MEME cle est sur.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+    '503':
+      description: |
+        Service indisponible (client service-role absent), ou
+        `code: WITHDRAWAL_UNAVAILABLE` — retrait demande alors que la
+        fonction SQL `tcg_admin_debit` n'est pas deployee.

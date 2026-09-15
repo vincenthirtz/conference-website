@@ -1,0 +1,19 @@
+parameters:
+  - $ref: '#/components/parameters/DiscordUserId'
+get:
+  tags:
+    - bot/players
+  summary: Historique des actions player de ce compte Discord.
+  operationId: botGetPlayerActionsByDiscord
+  responses:
+    '200':
+      description: Liste des actions.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              actions:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlayerAction'

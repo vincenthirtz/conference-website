@@ -1,0 +1,63 @@
+get:
+  tags:
+    - admin/tasks
+  summary: Fil de commentaires d'une carte (triés created_at asc).
+  operationId: adminListTaskComments
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  responses:
+    '200':
+      description: Liste des commentaires de la carte.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+post:
+  tags:
+    - admin/tasks
+  summary: Ajoute un commentaire (auteur = staff courant). Loggue task_comment_create.
+  operationId: adminCreateTaskComment
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [body]
+          properties:
+            body: {type: string, minLength: 1, maxLength: 5000}
+  responses:
+    '201':
+      description: Commentaire cree.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

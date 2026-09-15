@@ -1,0 +1,55 @@
+get:
+  tags:
+    - public/teams
+  summary: Dossier d'adversaire — preparation d'un affrontement.
+  description: >-
+    Recompose, pour l'equipe cible : bilan des confrontations directes, forme et
+    bilan recents, adversaires communs avec resultats croises, creneaux
+    habituels, rating et fiabilite.
+
+    CONFIDENTIALITE — ce qui vient de l'adversaire se limite a des RESULTATS
+    (publics, connus des deux camps) : jamais ses revues, jamais son rythme
+    declare, jamais son roster. Ses creneaux habituels sont derives des heures
+    REELLEMENT jouees, pas d'une disponibilite declaree. En revanche `myNotes`
+    porte les revues de l'equipe APPELANTE sur cette cible, qui lui
+    appartiennent.
+
+    Chaque section se tait sous le seuil d'echantillon (meme regle que la
+    fiabilite) : `recentForm`, `record` et `usualSlots` valent alors `null`.
+  operationId: playerScouting
+  security:
+    - PlayerBearer: []
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+    - in: query
+      name: team
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Equipe cible. Doit differer de celle de l'appelant.
+    - in: query
+      name: tz
+      required: false
+      schema:
+        type: string
+      description: >-
+        Fuseau IANA de repli pour lire les creneaux habituels, utilise seulement
+        si l'appelant n'a rien declare.
+  responses:
+    '200':
+      description: Dossier de l'equipe cible.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ScoutingReport'
+    '400':
+      description: Equipe cible manquante, ou identique a celle de l'appelant.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: L'appelant n'appartient a aucune equipe active.
+    '404':
+      description: Equipe cible introuvable dans ce tenant.
+    '429':
+      $ref: '#/components/responses/RateLimited'

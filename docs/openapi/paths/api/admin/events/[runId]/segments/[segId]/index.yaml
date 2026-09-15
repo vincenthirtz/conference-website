@@ -1,0 +1,87 @@
+parameters:
+  - $ref: '#/components/parameters/RunId'
+  - $ref: '#/components/parameters/SegId'
+get:
+  summary: Segment detail.
+  operationId: adminGetEventSegment
+  tags:
+    - admin/events
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Segment.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EventSegment'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+patch:
+  summary: Patch segment fields.
+  operationId: adminPatchEventSegment
+  tags:
+    - admin/events
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Updated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EventSegment'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+put:
+  summary: Replace a segment.
+  operationId: adminReplaceEventSegment
+  tags:
+    - admin/events
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Replaced.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EventSegment'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  summary: Delete a segment.
+  operationId: adminDeleteEventSegment
+  tags:
+    - admin/events
+  security:
+    - StaffSession: []
+  responses:
+    '204':
+      description: Deleted.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

@@ -1,0 +1,90 @@
+get:
+  tags:
+    - admin/tasks
+  summary: Board complet (colonnes ordonnees, cartes triees par position).
+  operationId: adminGetTaskBoard
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  responses:
+    '200':
+      description: Board complet.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+patch:
+  tags:
+    - admin/tasks
+  summary: Edite un board (name, description, position, is_archived). Emet
+    task.board_changed.
+  operationId: adminUpdateTaskBoard
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            name: {type: string}
+            description: {type: [string, 'null']}
+            position: {type: integer}
+            is_archived: {type: boolean}
+  responses:
+    '200':
+      description: Board mis a jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+delete:
+  tags:
+    - admin/tasks
+  summary: Supprime un board (CASCADE colonnes + cartes).
+  operationId: adminDeleteTaskBoard
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  responses:
+    '200':
+      description: Board supprime.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

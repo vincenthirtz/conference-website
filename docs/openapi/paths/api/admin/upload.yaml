@@ -1,0 +1,30 @@
+post:
+  summary: Upload an asset (multipart) or request a presigned URL.
+  operationId: adminUpload
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+      multipart/form-data:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Upload result (asset URL or presigned URL).
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

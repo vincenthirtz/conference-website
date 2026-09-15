@@ -1,0 +1,55 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: List matches of a tournament.
+  operationId: adminListTournamentMatches
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Matches.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              matches:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Match'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Create a match in a tournament.
+  operationId: adminCreateTournamentMatch
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '201':
+      description: Created.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Match'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

@@ -1,0 +1,19 @@
+parameters:
+  - $ref: '#/components/parameters/DiscordUserId'
+get:
+  tags:
+    - bot/players
+  summary: Invitations pending recues par ce joueur.
+  operationId: botGetPlayerInvitations
+  responses:
+    '200':
+      description: Liste des invitations.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              invitations:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invitation'

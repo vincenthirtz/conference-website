@@ -1,0 +1,53 @@
+get:
+  tags:
+    - cron
+  summary: Send the notification email digest (twice daily).
+  operationId: cronEmailDigestGet
+  description: |
+    Schedule: twice daily at 07:00 and 17:00 UTC (`0 7,17 * * *`) via the
+    Netlify scheduled function `email-digest-cron` (≈ 08h/18h Paris in
+    winter). Twice-daily cadence keeps it a true digest and stays under the
+    free Brevo quota (300 emails/day).
+
+    Delegates to `runEmailDispatcher()`: reads `bot_event_outbox`, resolves
+    the OPT-IN email audience, dedups via `email_deliveries`, aggregates
+    pending events per user into one digest email and sends via Brevo.
+    Returns the run stats (`candidates`, `emailsSent`, `recipients`,
+    `skipped`).
+
+    Auth: `Authorization: Bearer <CRON_SECRET>` header OR
+    `?secret=<CRON_SECRET>` query string. Both GET and POST are accepted.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Digest run summary.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CronEmailDigestResult'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - cron
+  summary: Send the notification email digest (twice daily).
+  operationId: cronEmailDigestPost
+  description: |
+    Same as `GET /api/cron/email-digest`. POST is the method used by the
+    Netlify scheduled function; GET is allowed for manual ops.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Digest run summary.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CronEmailDigestResult'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'

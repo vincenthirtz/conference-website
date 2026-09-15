@@ -1,0 +1,25 @@
+post:
+  summary: Import teams from an external platform connector.
+  operationId: adminImportPlatformTeams
+  tags:
+    - admin/teams
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Import result.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ImportCsvResult'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

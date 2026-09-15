@@ -1,0 +1,50 @@
+patch:
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+    - $ref: '#/components/parameters/SubjectAs'
+    - $ref: '#/components/parameters/ActAs'
+  tags:
+    - public/teams
+  summary: Le capitaine met a jour un membre de son equipe (role / battle_tag /
+    remplacant).
+  description: |
+    Le capitaine (ou un role manager) met a jour un membre de l'equipe qu'il
+    gere : correction du BattleTag (Name#0000), (de)marquage remplacant
+    (is_substitute) et/ou changement de role. Au moins un champ requis.
+  operationId: updateTeamMember
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - memberId
+          properties:
+            memberId:
+              type: string
+              format: uuid
+            role:
+              type: string
+            battle_tag:
+              type: string
+            is_substitute:
+              type: boolean
+  responses:
+    '200':
+      description: Membre mis a jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

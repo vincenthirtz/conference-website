@@ -1,0 +1,24 @@
+get:
+  tags:
+    - public/auth
+  summary: Etat de verification Battle.net du joueur connecte.
+  operationId: getPlayerBattlenetStatus
+  description: |
+    Auth Bearer joueur (`withAuthRoute`). Indique si la feature est
+    configuree cote serveur (`configured`) et si le joueur a deja lie un
+    BattleTag verifie (`linked` / `battleTag` / `verifiedAt`). Porte en
+    plus `reward: { coins, claimable } | null` (ajout additif 2026-09-15),
+    la recompense TCG de la verification. Rate-limit 30 req/min.
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Etat de verification Battle.net.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BattlenetStatus'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'

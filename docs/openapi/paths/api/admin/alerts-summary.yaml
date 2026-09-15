@@ -1,0 +1,28 @@
+get:
+  summary: Aggregated counts of pending alerts (for navbar badges).
+  operationId: adminGetAlertsSummary
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Counters by category.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+            properties:
+              disputes:
+                type: integer
+              supportTickets:
+                type: integer
+              partnershipRequests:
+                type: integer
+              tenantRequests:
+                type: integer
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

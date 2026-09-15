@@ -1,0 +1,47 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+post:
+  tags:
+    - bot/matches
+  summary: Valide le check-in d'un capitaine via le bouton DM Discord.
+  operationId: botMatchCheckin
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - discordUserId
+          properties:
+            discordUserId:
+              $ref: '#/components/schemas/DiscordId'
+  responses:
+    '200':
+      description: Check-in effectue (ou deja effectue).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              matchId:
+                $ref: '#/components/schemas/Uuid'
+              alreadyCheckedIn:
+                type: boolean
+              side:
+                type: integer
+                enum:
+                  - 1
+                  - 2
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '500':
+      $ref: '#/components/responses/ServerError'

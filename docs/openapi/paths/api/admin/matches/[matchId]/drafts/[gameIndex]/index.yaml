@@ -1,0 +1,78 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+  - name: gameIndex
+    in: path
+    required: true
+    schema:
+      type: integer
+      minimum: 1
+get:
+  tags:
+    - admin/matches
+  summary: Read the assembled draft state for (matchId, gameIndex).
+  operationId: adminGetMatchDraft
+  description: |
+    Returns `{ draft: null }` when no draft has been initialised yet,
+    otherwise the full `DraftState` including the flow, the seeded
+    steps, the heroes resolved per ban/pick, and `nextStepIndex`.
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Draft state (or null if not initialised).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MatchDraftStateResponse'
+    '400':
+      description: Invalid matchId or gameIndex.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  tags:
+    - admin/matches
+  summary: Drop a draft + its steps (recovery from a bad init).
+  operationId: adminDeleteMatchDraft
+  description: |
+    Removes the draft row and all its steps so the operator can
+    re-init with the right gameIndex / fearless flag without
+    dropping into SQL. Refuses to delete an `in_progress` draft
+    unless `?force=1` is passed.
+  security:
+    - StaffSession: []
+  parameters:
+    - name: force
+      in: query
+      required: false
+      description: Pass `1` or `true` to bypass the in_progress guard.
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Draft + steps deleted.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DeleteMatchDraftResponse'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      description: Draft not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DraftEngineError'
+    '409':
+      description: Refused — in_progress draft without force.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DraftEngineError'

@@ -1,0 +1,32 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+post:
+  summary: Clone a tournament (stages + matches scaffolding, no scores).
+  operationId: adminCloneTournament
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '201':
+      description: Cloned.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Tournament'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

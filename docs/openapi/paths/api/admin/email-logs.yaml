@@ -1,0 +1,19 @@
+get:
+  summary: Outgoing email log (transactional + campaigns).
+  operationId: adminListEmailLogs
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Email log entries.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

@@ -1,0 +1,110 @@
+get:
+  tags:
+    - public/teams
+  summary: Metadonnees publiques d'un lien d'auto-inscription.
+  description: >-
+    PUBLIC (aucune session) : la page /rejoindre/[token] doit pouvoir presenter
+    l'equipe AVANT de demander a quelqu'un de se connecter. Le lien
+    n'authentifie pas. Un lien inconnu, revoque, expire ou epuise repond le MEME
+    message — il ne doit pas devenir un oracle confirmant l'existence d'une
+    equipe.
+  operationId: getTeamInviteLinkByToken
+  security: []
+  parameters:
+    - in: query
+      name: token
+      required: true
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Description de l'equipe et du role propose.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              team:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  short_name:
+                    type: [string, 'null']
+                  logo_url:
+                    type: [string, 'null']
+                  slug:
+                    type: [string, 'null']
+              role:
+                type: string
+              battle_tag_required:
+                type: boolean
+              expires_at:
+                type: string
+                format: date-time
+              remaining_uses:
+                type: [integer, 'null']
+    '404':
+      description: Lien inconnu.
+    '410':
+      description: Lien revoque, expire ou epuise.
+post:
+  tags:
+    - public/teams
+  summary: S'inscrire au roster via le lien d'equipe.
+  description: >-
+    Session OBLIGATOIRE : c'est le seul endroit ou le lien agit. Rejoue les
+    memes gardes qu'une acceptation d'invitation (une seule equipe par joueuse,
+    roster verrouille, quota d'equipe) et consomme une entree du lien de facon
+    atomique — deux personnes sur un lien a usage unique ne peuvent pas entrer
+    toutes les deux.
+  operationId: joinTeamByInviteLink
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - token
+          properties:
+            token:
+              type: string
+            battle_tag:
+              type: [string, 'null']
+              description: Exige pour les roles JOUANTS.
+            specialty:
+              type: [string, 'null']
+              enum: [tank, dps, support, flex, null]
+  responses:
+    '200':
+      description: Inscrite, ou deja membre.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              joined:
+                type: boolean
+              already_member:
+                type: boolean
+              role:
+                type: string
+              team:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  slug:
+                    type: [string, 'null']
+    '400':
+      description: BattleTag manquant (BATTLE_TAG_REQUIRED), ou deja dans une equipe
+        (ALREADY_IN_TEAM).
+    '401':
+      description: Aucune session — le lien n'authentifie pas.
+    '409':
+      description: Roster verrouille, ou lien epuise entre-temps (LINK_EXHAUSTED).
+    '410':
+      description: Lien revoque, expire ou epuise.

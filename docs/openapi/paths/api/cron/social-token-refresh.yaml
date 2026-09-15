@@ -1,0 +1,48 @@
+get:
+  summary: Rafraichit les jetons longue duree des comptes reseaux.
+  operationId: cronSocialTokenRefreshGet
+  tags:
+    - cron
+  description: |
+    Voir la variante POST : meme handler, GET et POST acceptes.
+
+    Auth : `Authorization: Bearer <CRON_SECRET>` ou `?secret=`.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: '`{ refreshed, skipped, failed }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      description: CRON_SECRET absent ou invalide.
+post:
+  summary: Rafraichit les jetons longue duree des comptes reseaux.
+  operationId: cronSocialTokenRefresh
+  tags:
+    - cron
+  security:
+    - CronSecret: []
+  description: |
+    Quotidien (Netlify, 06:00 UTC). Rafraichit les jetons dont l'echeance
+    tombe dans moins de 10 jours.
+
+    Le rafraichissement Instagram exige un jeton ENCORE VALIDE et age d'au
+    moins 24 h : passe l'echeance il n'y a plus de rattrapage automatique,
+    d'où la fenetre d'avance. Un echec isole n'ecrit PAS `status: expired` —
+    une panne reseau chez Meta marquerait un compte valide comme mort.
+
+    Auth : `Authorization: Bearer <CRON_SECRET>` ou `?secret=`.
+  responses:
+    '200':
+      description: '`{ refreshed, skipped, failed }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      description: CRON_SECRET absent ou invalide.

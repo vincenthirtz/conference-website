@@ -1,0 +1,40 @@
+parameters:
+  - $ref: '#/components/parameters/TournamentId'
+post:
+  tags:
+    - bot/tournaments
+  summary: Duplique un tournoi (structure uniquement, sans equipes ni matches).
+  operationId: botCloneTournament
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            name:
+              type: string
+            slug:
+              type: string
+  responses:
+    '201':
+      description: Clone cree.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              tournament:
+                $ref: '#/components/schemas/Tournament'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

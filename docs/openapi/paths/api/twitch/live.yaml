@@ -1,0 +1,42 @@
+get:
+  tags:
+    - public/misc
+  summary: Statut live des channels Twitch (Helix API, agrege).
+  operationId: getTwitchLiveStatuses
+  security: []
+  parameters:
+    - name: channels
+      in: query
+      required: true
+      schema:
+        type: string
+      description: Liste de logins Twitch separes par virgules (max 100).
+  responses:
+    '200':
+      description: Map channel → status.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - statuses
+            properties:
+              statuses:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    live:
+                      type: boolean
+                    title:
+                      type: string
+                    viewer_count:
+                      type: integer
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '503':
+      description: Twitch creds non configures.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

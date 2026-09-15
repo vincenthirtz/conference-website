@@ -1,0 +1,70 @@
+get:
+  summary: API usage / quota panel for the self-serve developer portal.
+  description: |
+    Read-only. Requires `admin` role, scoped to the caller's active tenant.
+    Reports the tenant's billed + effective plan, its API entitlements
+    (`apiRead` / `apiWrite`), and how much of the authenticated-API quota it
+    has consumed for the current minute + month windows. `limit: null` means
+    unlimited. No counter is created here (a missing row simply means
+    `used: 0`).
+  operationId: adminGetApiUsage
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Current plan entitlements + usage windows.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - plan
+              - effectivePlan
+              - apiRead
+              - apiWrite
+              - minute
+              - month
+              - tokensHint
+            properties:
+              plan:
+                type: string
+              effectivePlan:
+                type: string
+              apiRead:
+                type: boolean
+              apiWrite:
+                type: boolean
+              minute:
+                type: object
+                required:
+                  - used
+                  - limit
+                properties:
+                  used:
+                    type: integer
+                  limit:
+                    type: [integer, 'null']
+                    description: Per-minute rate limit; `null` = unlimited.
+              month:
+                type: object
+                required:
+                  - used
+                  - limit
+                  - key
+                properties:
+                  used:
+                    type: integer
+                  limit:
+                    type: [integer, 'null']
+                    description: Monthly quota; `null` = unlimited.
+                  key:
+                    type: string
+                    description: Fixed-window key for the current month.
+              tokensHint:
+                type: string
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

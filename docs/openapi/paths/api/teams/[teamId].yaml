@@ -1,0 +1,25 @@
+parameters:
+  - $ref: '#/components/parameters/TeamId'
+get:
+  tags:
+    - public/teams
+  summary: Detail public d'une equipe (toutes colonnes du tenant).
+  operationId: getPublicTeamById
+  security: []
+  responses:
+    '200':
+      description: Equipe trouvee.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - team
+            properties:
+              team:
+                type: object
+                additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'

@@ -1,0 +1,120 @@
+parameters:
+  - $ref: '#/components/parameters/TeamId'
+get:
+  summary: List members of a team.
+  operationId: adminListTeamMembers
+  tags:
+    - admin/teams
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Members.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              members:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TeamMember'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Invite a member to a team, or add them directly with a reason.
+  description: |
+    Same rules as `POST /api/admin/teams/add-member`: invitation by default
+    (202 with `invited: true`, `invitation`, `invite_url`, `email_sent`),
+    `mode: direct` + `reason` for an immediate add (201, `accepted_at`
+    null). Roster lock applies to both modes unless `force: true`.
+  operationId: adminAddTeamMemberToTeam
+  tags:
+    - admin/teams
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+          properties:
+            mode:
+              type: string
+              enum: [invite, direct]
+              default: invite
+            reason:
+              type: string
+              minLength: 5
+              maxLength: 500
+  responses:
+    '201':
+      description: 'Added directly (`mode: direct`).'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TeamMember'
+    '202':
+      description: Invitation created; the person has not joined yet.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '409':
+      description: Roster locked, pending invitation already exists, or captain already set.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+patch:
+  summary: Update a team member (role, ranks, etc.).
+  operationId: adminPatchTeamMember
+  tags:
+    - admin/teams
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Updated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TeamMember'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  summary: Remove a member from a team.
+  operationId: adminRemoveTeamMember
+  tags:
+    - admin/teams
+  security:
+    - StaffSession: []
+  parameters:
+    - in: query
+      name: userId
+      schema:
+        type: string
+        format: uuid
+  responses:
+    '204':
+      description: Removed.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

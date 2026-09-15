@@ -1,0 +1,49 @@
+parameters:
+  - $ref: '#/components/parameters/StageId'
+get:
+  summary: Preview rating-based bracket seeding without applying it.
+  description: |
+    Requires `manager` role. Read-only preview of the plan
+    `/rating-seed` would write, with a per-team breakdown
+    (rating, rd, sos, score, rank, provisional) and a `lock` object so the
+    UI can grey out the apply button. Does not block on lock.
+  operationId: adminGetStageRatingSeedingPreview
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  parameters:
+    - in: query
+      name: method
+      schema:
+        type: string
+        enum:
+          - rating
+          - rating_sos
+        default: rating_sos
+    - in: query
+      name: pattern
+      schema:
+        type: string
+        enum:
+          - standard
+          - sequential
+        default: standard
+    - in: query
+      name: sosWeight
+      schema:
+        type: number
+  responses:
+    '200':
+      description: Preview.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

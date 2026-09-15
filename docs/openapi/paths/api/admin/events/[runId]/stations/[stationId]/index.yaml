@@ -1,0 +1,110 @@
+parameters:
+  - $ref: '#/components/parameters/RunId'
+  - name: stationId
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+patch:
+  summary: Patch station fields.
+  description: Requires `manager` role. Partial update.
+  operationId: adminPatchEventStation
+  tags:
+    - admin/events
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+            stream_url:
+              type: [string, 'null']
+            notes:
+              type: [string, 'null']
+            status:
+              type: string
+            ord:
+              type: integer
+              minimum: 0
+  responses:
+    '200':
+      description: Updated.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - station
+            properties:
+              station:
+                $ref: '#/components/schemas/EventStation'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+put:
+  summary: Patch station fields (alias of PATCH).
+  description: Requires `manager` role. Same partial-update semantics as PATCH.
+  operationId: adminReplaceEventStation
+  tags:
+    - admin/events
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Updated.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - station
+            properties:
+              station:
+                $ref: '#/components/schemas/EventStation'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+delete:
+  summary: Delete a station.
+  description: Requires `manager` role. Hard delete.
+  operationId: adminDeleteEventStation
+  tags:
+    - admin/events
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Deleted.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Ok'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

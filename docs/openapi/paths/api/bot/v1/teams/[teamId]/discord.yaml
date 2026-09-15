@@ -1,0 +1,46 @@
+parameters:
+  - $ref: '#/components/parameters/TeamId'
+patch:
+  tags:
+    - bot/teams
+  summary: Persiste les IDs Discord (role, channel, voice channel) d'une equipe.
+  operationId: botUpdateTeamDiscordIds
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            discordRoleId:
+              oneOf:
+                - $ref: '#/components/schemas/DiscordId'
+                - type: 'null'
+            discordChannelId:
+              oneOf:
+                - $ref: '#/components/schemas/DiscordId'
+                - type: 'null'
+            discordVoiceChannelId:
+              oneOf:
+                - $ref: '#/components/schemas/DiscordId'
+                - type: 'null'
+  responses:
+    '200':
+      description: IDs persistes.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              team:
+                $ref: '#/components/schemas/Team'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

@@ -1,0 +1,34 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+post:
+  summary: Send a Discord DM check-in reminder to one or both captains.
+  description: |
+    Requires `manager` role. Emits `checkin.nudge` event to the bot outbox.
+    Soft idempotency (5 min) — same admin click within window is no-op.
+  operationId: adminCheckinNudge
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/CheckinNudgePayload'
+  responses:
+    '200':
+      description: Nudge enqueued.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

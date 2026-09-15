@@ -1,0 +1,166 @@
+get:
+  tags:
+    - admin/misc
+  # `withStaffRoute(handler, { permission: 'manage_tcg' })`. SANS ce
+  # bloc, la spec héritait du défaut global (BotApiKey + BotTenantId) et
+  # annonçait donc qu'une clé bot ouvre un agrégat exposant qui possède
+  # quoi. Le garde-fou de dérive l'a rattrapé.
+  security:
+    - StaffSession: []
+  summary: Etat de l'economie du TCG, en un appel.
+  description: |
+    Le seul ecran TCG du staff etait la file de moderation des photos : on
+    savait ce qu'il restait a relire, rien de ce qui circule. Une economie
+    fermee (gagner → ouvrir → recycler → racheter) derive sans prevenir, et
+    sans mesure la derive ne se voit qu'une fois installee.
+
+    `null` N'EST PAS `0`. `0` veut dire « mesure, et vide » ; `null` veut
+    dire « pas mesurable maintenant ». Confondre les deux ferait lire une
+    panne de lecture comme un effondrement de l'economie. Une lecture en
+    echec degrade donc SA cle, et le reste part quand meme en 200.
+
+    LES CARTES N'ONT PAS DE `tenant_id` : `tcg_pack_cards` est cadree par
+    son paquet. Les comptages passent par les identifiants des paquets du
+    tenant — un `.select()` direct compterait les cartes de tous les
+    tenants sans que rien ne le signale.
+
+    Les cartes RECYCLEES sont exclues des comptages de cartes possedees et
+    rendues a part : c'est l'indicateur le plus direct d'une derive de la
+    boucle economique.
+
+    PostgREST ne sait pas faire `SUM()` sans RPC : les totaux de pieces se
+    lisent ligne a ligne, donc bornes — un plafond atteint leve `truncated`
+    plutot que de faire passer un total tronque pour un total exact.
+
+    `coins.earnedBySource` VENTILE `earned` PAR ORIGINE (`source_kind`
+    brut), credits seulement. `earned` seul repond « combien », jamais
+    « d'ou » — or c'est la question qu'on se pose en surveillant une
+    economie. Les drops en direct n'apparaissaient nulle part ailleurs :
+    ils ne creent AUCUN paquet, donc la ventilation des paquets ne pouvait
+    pas les montrer.
+
+    Les cles ne sont PAS closes : ce sont les `source_kind` reellement
+    presents, jamais une ligne a zero pour une origine inutilisee. Un
+    consommateur doit donc savoir afficher une cle qu'il ne connait pas.
+    `null` = registre non lisible (meme convention que `earned`) ; `{}` =
+    lu et sans aucun credit. La ventilation totalise exactement `earned` —
+    une origine illisible tombe sous `unknown` plutot que d'etre ecartee,
+    sinon l'ecart se lirait comme une perte. Calculee dans la boucle qui
+    somme deja les ecritures : aucune requete supplementaire, et elle herite
+    du meme `truncated`.
+
+    `packs.bySource` porte aussi `welcome` (cadeau d'accueil), `drop`
+    (drop Twitch), `placement` (palmares de tournoi) et `streak` (serie de
+    check-ins). Chaque origine est COMPTEE pour elle-meme, jamais deduite de
+    `granted` moins les autres : la convention `null` ≠ `0` interdit
+    l'arithmetique entre compteurs, puisqu'une cle en echec vaut `null` et
+    qu'une soustraction produirait un nombre invente.
+
+    Permission `manage_tcg`, la meme que la file de moderation.
+    Rate-limit 30 / min.
+  operationId: readAdminTcgOverview
+  parameters:
+    - in: query
+      name: top
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 25
+        default: 10
+      description: Sujets les plus distribues a renvoyer.
+  responses:
+    '200':
+      description: Agregat de l'economie TCG.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              packs:
+                type: object
+                properties:
+                  granted: {type: [integer, 'null']}
+                  opened: {type: [integer, 'null']}
+                  pending:
+                    type: [integer, 'null']
+                    description: Distribues mais jamais ouverts.
+                  bySource:
+                    type: object
+                    properties:
+                      victory: {type: [integer, 'null']}
+                      purchase: {type: [integer, 'null']}
+                      welcome: {type: [integer, 'null']}
+                      drop: {type: [integer, 'null']}
+                      placement: {type: [integer, 'null']}
+                      streak: {type: [integer, 'null']}
+              coins:
+                type: object
+                properties:
+                  inCirculation:
+                    type: [integer, 'null']
+                    description: Somme des soldes — ce qui est detenu.
+                  earned: {type: [integer, 'null']}
+                  spent:
+                    type: [integer, 'null']
+                    description: Cumul des debits, en valeur ABSOLUE.
+                  wallets: {type: [integer, 'null']}
+                  boosterPrice: {type: integer}
+                  truncated: {type: boolean}
+              cards:
+                type: object
+                properties:
+                  total:
+                    type: [integer, 'null']
+                    description: Encore possedees (recyclees exclues).
+                  foil: {type: [integer, 'null']}
+                  recycled: {type: [integer, 'null']}
+                  drawn:
+                    type: [integer, 'null']
+                    description: Toutes les cartes tirees, recyclees comprises.
+                  byRarity:
+                    type: object
+                    additionalProperties:
+                      type: [integer, 'null']
+                  truncated: {type: boolean}
+              photos:
+                type: object
+                properties:
+                  pending: {type: [integer, 'null']}
+                  approved: {type: [integer, 'null']}
+                  rejected: {type: [integer, 'null']}
+                  optedIn: {type: [integer, 'null']}
+                  revoked: {type: [integer, 'null']}
+              topSubjects:
+                type: array
+                description: |
+                  Union discriminee par `kind` : une carte de joueuse porte
+                  `userId`, une carte d'equipe `teamId` et `slug`. Le panneau
+                  ne fabrique jamais d'URL a partir d'un uuid — sans `slug`,
+                  l'equipe n'est pas cliquable (le 404 deja paye par TcgCard).
+                items:
+                  type: object
+                  properties:
+                    kind:
+                      type: string
+                      enum: [player, team]
+                    userId:
+                      type: string
+                      description: Cartes `player` seulement.
+                    teamId:
+                      type: string
+                      description: Cartes `team` seulement.
+                    slug:
+                      type: [string, 'null']
+                      description: Cartes `team` seulement.
+                    name: {type: [string, 'null']}
+                    imageUrl: {type: [string, 'null']}
+                    count: {type: integer}
+                    foilCount: {type: integer}
+              generatedAt: {type: string}
+    '400':
+      description: '`code: INVALID_QUERY`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'

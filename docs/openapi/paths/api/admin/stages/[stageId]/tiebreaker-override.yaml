@@ -1,0 +1,61 @@
+parameters:
+  - $ref: '#/components/parameters/StageId'
+get:
+  summary: Read tiebreaker overrides for a stage.
+  operationId: adminGetStageTiebreaker
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Tiebreaker state.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Set a manual tiebreaker override.
+  operationId: adminSetStageTiebreaker
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Saved.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  summary: Clear tiebreaker overrides for a stage.
+  operationId: adminDeleteStageTiebreaker
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  responses:
+    '204':
+      description: Cleared.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

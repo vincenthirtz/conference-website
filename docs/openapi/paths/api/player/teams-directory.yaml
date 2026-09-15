@@ -1,0 +1,37 @@
+get:
+  tags:
+    - public/teams
+  summary: Annuaire connecte — qui cherche un scrim, qui recrute, a quel niveau.
+  description: >-
+    Croise les equipes actives avec leur recherche de scrim vivante, leur rating
+    d'equipe et leur etat de recrutement. Trie par creneaux EN COMMUN avec ma
+    propre annonce, puis par presence d'annonce, puis alphabetique. Purge au
+    passage les annonces perimees.
+  operationId: playerTeamsDirectory
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Annuaire du tenant courant.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - teams
+            properties:
+              teams:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DirectoryTeam'
+              myTeamId:
+                type: [string, 'null']
+                format: uuid
+              hasOwnSearch:
+                type: boolean
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'

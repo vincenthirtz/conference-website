@@ -1,0 +1,79 @@
+parameters:
+  - $ref: '#/components/parameters/RunId'
+get:
+  summary: List waves of an event run.
+  description: Requires `manager` role. Waves are sorted by `ord` asc.
+  operationId: adminListEventWaves
+  tags:
+    - admin/events
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Waves.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - waves
+            properties:
+              waves:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventWave'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+post:
+  summary: Append a wave to an event run.
+  description: |
+    Requires `manager` role. If `ord` is omitted the API picks MAX(ord)+1
+    (0 when the run has no wave yet). `status` defaults to `upcoming`.
+  operationId: adminCreateEventWave
+  tags:
+    - admin/events
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - title
+          properties:
+            title:
+              type: string
+            planned_start_at:
+              type: [string, 'null']
+              format: date-time
+            duration_min:
+              type: [integer, 'null']
+            ord:
+              type: integer
+              minimum: 0
+  responses:
+    '201':
+      description: Wave created.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - wave
+            properties:
+              wave:
+                $ref: '#/components/schemas/EventWave'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

@@ -1,0 +1,81 @@
+get:
+  summary: Héros préférés et évités de la joueuse courante.
+  description: |
+    Trois héros préférés, trois héros évités. Ces listes sont GLOBALES au
+    compte (clavées sur l'utilisateur seul, comme les liens Discord) : une
+    joueuse les conserve en changeant d'équipe. N'avoir rien choisi est
+    l'état normal — la réponse rend alors deux listes vides plutôt qu'un
+    404. `slots` est rendu par l'API pour que l'interface borne ses
+    emplacements sans recopier le nombre. `withAuthRoute`.
+  operationId: playerGetHeroPreferences
+  tags:
+    - public/auth
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Préférences de héros de la joueuse.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PlayerHeroPreferences'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+put:
+  summary: Remplacer les héros préférés et évités.
+  description: |
+    Remplacement COMPLET des deux listes, jamais un patch partiel : elles
+    sont liées (un héros ne peut pas être à la fois préféré et évité) et une
+    écriture partielle laisserait passer un état contradictoire entre deux
+    appels.
+
+    Le schéma borne à trois et interdit qu'un héros figure dans les deux
+    listes ; il ne peut PAS vérifier l'unicité intra-liste (Postgres refuse
+    toute sous-requête dans un CHECK) ni l'existence d'un héros. Ces deux
+    règles sont donc tenues ici, au seul point d'écriture, contre le
+    référentiel `utils/heroes/overwatch.ts`. La réponse est RELUE en base
+    après écriture, pas recopiée depuis la requête. `withAuthRoute`.
+  operationId: playerPutHeroPreferences
+  tags:
+    - public/auth
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            picks:
+              type: array
+              maxItems: 3
+              items:
+                type: string
+              description: >-
+                Noms de héros du référentiel Overwatch, sans doublon, dans
+                l'ordre de préférence décroissant.
+            bans:
+              type: array
+              maxItems: 3
+              items:
+                type: string
+  responses:
+    '200':
+      description: Préférences enregistrées, relues en base.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PlayerHeroPreferences'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

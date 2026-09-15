@@ -1,0 +1,104 @@
+get:
+  tags:
+    - public/auth
+  summary: Mes series TCG — progression et recompense d'une serie completee.
+  description: |
+    Une SERIE est un ensemble de cartes a completer, DERIVE des donnees
+    existantes (jamais saisi a la main) : toutes les maps d'un mode
+    (`map_mode`, registre des maps), toutes les equipes engagees dans une
+    edition (`tournament_teams`, `stage_teams`), le roster d'une equipe
+    pour une edition (`team_roster` : `match_participants` si l'edition est
+    `completed`, sinon `team_members` hors encadrement). Seuls les tournois
+    `published` / `running` / `completed` comptent (10 plus recents). Une
+    serie compte au moins 3 cartes.
+
+    JAMAIS INCOMPLETABLE : chaque carte appartient au vivier du tirage (lu
+    par le module partage `readDrawPool`). Le consentement photo ne touche
+    pas l'appartenance a une serie, seulement la face.
+
+    ON NE NOMME PAS LES JOUEUSES MANQUANTES : `missingNamed` ne porte que des
+    equipes et des maps ; pour les joueuses, `missingPlayers` est un nombre.
+
+    UNE LECTURE QUI PEUT ECRIRE : chaque appel recompense les series
+    completes pas encore recompensees (`COLLECTION_SET_COINS` pieces, sans
+    paquet, `source_kind = collection_set`, `source_ref` = `key`). La cle
+    d'unicite du registre fait la limite : un rejeu, deux onglets ou une
+    ouverture de paquet simultanee ne creditent qu'une fois, et seule
+    l'ecriture reelle emet `tcg.set_completed`. Recycler une carte apres la
+    recompense ne la reprend pas ; recompleter la serie ne la reverse pas.
+    Pas de `?as=`. `Cache-Control: private, no-store`. Rate-limit 30 / min.
+  operationId: readPlayerTcgSets
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Progression de chaque serie.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              sets:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    key:
+                      type: string
+                      description: >-
+                        Identifiant stable : `maps:<mode>`,
+                        `tournament:<tournoi>` ou `roster:<tournoi>:<equipe>`.
+                    kind:
+                      type: string
+                      enum: [map_mode, tournament_teams, team_roster]
+                    mode:
+                      type: [string, 'null']
+                    tournamentId:
+                      type: [string, 'null']
+                    tournamentName:
+                      type: [string, 'null']
+                    teamId:
+                      type: [string, 'null']
+                    teamName:
+                      type: [string, 'null']
+                    total:
+                      type: integer
+                    owned:
+                      type: integer
+                    complete:
+                      type: boolean
+                    missingNamed:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          kind:
+                            type: string
+                            enum: [team, map]
+                          id:
+                            type: string
+                          name:
+                            type: [string, 'null']
+                    missingPlayers:
+                      type: integer
+                      description: Nombre de cartes de joueuses manquantes — jamais lesquelles.
+                    rewarded:
+                      type: [boolean, 'null']
+                      description: '`null` = registre illisible : on ne sait pas.'
+                    justRewarded:
+                      type: boolean
+              rewardCoins:
+                type: integer
+              newlyRewarded:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TcgSetCompletedNotice'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '405':
+      description: Methode non autorisee.
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      description: '`code: sets_unreadable` — une progression illisible n''est pas «
+        aucune serie », et rien n''est ecrit.'

@@ -1,0 +1,84 @@
+get:
+  summary: Le lien de la source navigateur OBS du TCG.
+  description: |
+    Rend le lien ACTIF de l'espace, ou `url: null` si aucun n'a ete emis.
+    `private, no-store` : un lien porteur ne se met en cache nulle part.
+    Permission `manage_tcg` — la meme que la vue d'ensemble TCG, parce
+    que c'est l'exposition de donnees TCG qui decide du seuil, pas la
+    diffusion. Rate-limit 30 / min.
+  operationId: adminGetTcgOverlayToken
+  tags:
+    - admin/tcg
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Lien actif, ou `null`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TcgOverlayTokenState'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  summary: Emettre un lien d'overlay neuf (revoque le precedent).
+  description: |
+    REGENERER EST LE GESTE « le lien a circule ». Il n'y a qu'un jeton actif
+    par espace (index partiel) : emettre revoque le precedent, donc un
+    overlay deja configure dans OBS devient muet jusqu'a ce qu'on y colle le
+    nouveau lien. L'ecran le dit avant de laisser cliquer.
+
+    Journalise SANS le jeton : un journal se relit, un secret ne s'y met pas.
+    Rate-limit 30 / min.
+  operationId: adminRotateTcgOverlayToken
+  tags:
+    - admin/tcg
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Lien neuf emis.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TcgOverlayTokenState'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+delete:
+  summary: Revoquer le lien d'overlay, sans en emettre.
+  operationId: adminRevokeTcgOverlayToken
+  tags:
+    - admin/tcg
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: 'Lien revoque : `url` vaut null.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TcgOverlayTokenState'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

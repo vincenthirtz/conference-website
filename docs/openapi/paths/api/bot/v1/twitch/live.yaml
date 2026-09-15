@@ -1,0 +1,24 @@
+get:
+  tags:
+    - bot/misc
+  summary: Channels Twitch enregistres + statut live courant (cache 60s).
+  operationId: botGetTwitchLive
+  parameters:
+    - name: includeOffline
+      in: query
+      schema:
+        type: boolean
+        default: false
+  responses:
+    '200':
+      description: Liste live (+ offline si demande).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              channels:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true

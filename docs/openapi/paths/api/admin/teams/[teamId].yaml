@@ -1,0 +1,86 @@
+parameters:
+  - $ref: '#/components/parameters/TeamId'
+get:
+  summary: Team detail.
+  operationId: adminGetTeam
+  tags:
+    - admin/teams
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Team.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Team'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+patch:
+  summary: Patch team fields.
+  operationId: adminPatchTeam
+  tags:
+    - admin/teams
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Updated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Team'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+put:
+  summary: Replace a team.
+  operationId: adminReplaceTeam
+  tags:
+    - admin/teams
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Replaced.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Team'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  summary: Soft-delete a team.
+  operationId: adminDeleteTeam
+  tags:
+    - admin/teams
+  security:
+    - StaffSession: []
+  responses:
+    '204':
+      description: Deleted.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

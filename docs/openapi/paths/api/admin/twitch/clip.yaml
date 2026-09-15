@@ -1,0 +1,38 @@
+post:
+  summary: Capture a clip (~last 30s) on the broadcaster channel.
+  description: |
+    Requires `manager` role and the `clips:edit` scope. Returns
+    `{ id, edit_url }`. `409 NOT_CONNECTED` / `403 MISSING_SCOPE`.
+  operationId: adminTwitchCreateClip
+  tags:
+    - admin/twitch
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Clip captured.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              id:
+                type: [string, 'null']
+              edit_url:
+                type: [string, 'null']
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: 'Missing scope (code MISSING_SCOPE) or forbidden role.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '409':
+      description: 'No broadcaster channel connected (code NOT_CONNECTED).'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

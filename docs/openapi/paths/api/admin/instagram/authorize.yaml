@@ -1,0 +1,23 @@
+get:
+  summary: Depart du consentement Instagram (redirection vers Meta).
+  operationId: adminInstagramAuthorize
+  tags:
+    - admin/communications
+  description: |
+    Redirige le staff vers l'ecran d'autorisation Meta avec un `state` signe
+    HMAC (CSRF + binding tenant, TTL 10 min). Scopes demandes :
+    `instagram_business_basic`, `instagram_business_content_publish`.
+
+    Repond 503 si `INSTAGRAM_APP_ID` est absent — la cible Instagram est
+    alors simplement dormante, pas en panne.
+  security:
+    - StaffSession: []
+  responses:
+    '302':
+      description: Redirection vers https://www.instagram.com/oauth/authorize.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '503':
+      description: Instagram non configure (INSTAGRAM_APP_ID absent).

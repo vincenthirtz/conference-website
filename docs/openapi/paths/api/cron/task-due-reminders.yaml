@@ -1,0 +1,50 @@
+get:
+  tags:
+    - cron
+  summary: Rappel J-1 des cartes Kanban dues demain (emet task.due_soon).
+  operationId: cronTaskDueRemindersGet
+  description: |
+    Netlify scheduled function. Sélectionne les cartes (`tasks`) avec
+    `deleted_at IS NULL` et `due_date = CURRENT_DATE + 1` (rappel J-1) qui ne
+    sont PAS dans une colonne terminale (`task_columns.is_done`). Pour chaque
+    carte, émet un event outbox `task.due_soon`
+    (`{ taskId, boardName, title, dueDate, columnName, priority,
+    assigneeStaffId?, assigneeName?, assigneeDiscordUserId? }`). Déduplication
+    naturelle par la date (une notif/carte le jour J-1).
+
+    Auth : `Authorization: Bearer <CRON_SECRET>` header OU
+    `?secret=<CRON_SECRET>` query string. GET et POST acceptés.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: '`{ processed, emitted }` du tick.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - cron
+  summary: Rappel J-1 des cartes Kanban dues demain (emet task.due_soon).
+  operationId: cronTaskDueRemindersPost
+  description: Same as `GET /api/cron/task-due-reminders`.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: '`{ processed, emitted }` du tick.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'

@@ -1,0 +1,41 @@
+get:
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+    - $ref: '#/components/parameters/SubjectAs'
+  tags:
+    - public/teams
+  summary: Les scrims de mon equipe (a rapporter, a venir, recents).
+  description: >-
+    Surface qui manquait : le tableau de bord montrait les negociations et les
+    grilles de dispo, jamais les scrims eux-memes. `toReport` regroupe ceux qui
+    appellent une action (dates passees, en cours, ou en litige).
+  operationId: playerMyScrims
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Scrims de l'equipe geree (listes vides si aucune equipe).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              toReport:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlayerScrim'
+              upcoming:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlayerScrim'
+              recent:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlayerScrim'
+              teamId:
+                type: [string, 'null']
+                format: uuid
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'

@@ -1,0 +1,52 @@
+get:
+  tags:
+    - public/auth
+  summary: Demarre le flux OAuth Battle.net (verification BattleTag, anti-smurf).
+  operationId: battlenetOauthStart
+  description: |
+    Auth via session cookie Supabase (joueur connecte, `getServerClient`) —
+    navigation pleine page, pas de Bearer. Redirige (302) vers l'URL
+    authorize de Blizzard et pose un cookie httpOnly `bn_oauth_state`
+    (anti-CSRF, recroise au callback). Feature dormante si les creds
+    Blizzard sont absents (503 `BATTLENET_NOT_CONFIGURED`). Rate-limit
+    20 req/min par IP.
+  security: []
+  parameters:
+    - name: returnTo
+      in: query
+      required: false
+      schema:
+        type: string
+        default: /player/profile
+      description: |
+        Chemin interne de retour apres le callback (sanitize : doit
+        commencer par `/`, ni `//` ni scheme externe). Defaut
+        `/player/profile`.
+  responses:
+    '302':
+      description: |
+        Redirection vers l'URL authorize Battle.net ; pose le cookie
+        httpOnly `bn_oauth_state`.
+      headers:
+        Location:
+          schema:
+            type: string
+          description: URL authorize Battle.net (`oauth.battle.net/authorize`).
+        Set-Cookie:
+          schema:
+            type: string
+          description: Cookie httpOnly `bn_oauth_state` (state anti-CSRF).
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '503':
+      description: |
+        Feature dormante : creds Blizzard (client id/secret) absents.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Battle.net verification is not configured.
+            code: BATTLENET_NOT_CONFIGURED

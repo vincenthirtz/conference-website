@@ -1,0 +1,38 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: Aggregate analytics for a tournament (matches, games, timing).
+  description: Requires `manager` role.
+  operationId: adminGetTournamentAnalytics
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Tournament analytics.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - tournament
+              - analytics
+            properties:
+              tournament:
+                type: object
+                additionalProperties: true
+              analytics:
+                type: object
+                additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

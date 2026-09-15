@@ -1,0 +1,47 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: "[DEPRECATED] Maps activées d'un tournoi (app caster)."
+  deprecated: true
+  description: |
+    **Déprécié** (Sunset 2026-12-23). Alias de
+    `/api/caster/v1/tournaments/{id}/maps`. Lecture publique tenant-scopée
+    (`x-tenant-id`).
+  operationId: casterListTournamentMaps
+  tags:
+    - public
+  security: []
+  parameters:
+    - $ref: '#/components/parameters/XTenantId'
+  responses:
+    '200':
+      description: Liste des maps activées.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - maps
+            properties:
+              maps:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      $ref: '#/components/schemas/Uuid'
+                    map_name:
+                      type: string
+                    map_type:
+                      type: [string, 'null']
+                    image_url:
+                      type: [string, 'null']
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '500':
+      $ref: '#/components/responses/ServerError'

@@ -1,0 +1,17 @@
+get:
+  tags:
+    - bot/misc
+  summary: Reminders dus (match_checkin, tournament_j1, cast_briefing) — atomic claim.
+  operationId: botListReminders
+  responses:
+    '200':
+      description: Liste reminders.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              reminders:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reminder'

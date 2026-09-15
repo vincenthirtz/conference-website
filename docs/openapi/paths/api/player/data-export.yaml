@@ -1,0 +1,17 @@
+get:
+  tags:
+    - public/auth
+  summary: Export RGPD des donnees du joueur (JSON complet).
+  operationId: playerDataExport
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Export complet (profil, demandes, team_members, etc.).
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'

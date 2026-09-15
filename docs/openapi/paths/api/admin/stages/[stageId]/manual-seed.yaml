@@ -1,0 +1,28 @@
+parameters:
+  - $ref: '#/components/parameters/StageId'
+post:
+  summary: Apply a manual seeding override.
+  operationId: adminManualSeedStage
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Seeded.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

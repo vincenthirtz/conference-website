@@ -1,0 +1,32 @@
+parameters:
+  - $ref: '#/components/parameters/StageId'
+post:
+  summary: Advance a stage (close round, propagate winners).
+  operationId: adminAdvanceStage
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Advanced.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      $ref: '#/components/responses/Conflict'

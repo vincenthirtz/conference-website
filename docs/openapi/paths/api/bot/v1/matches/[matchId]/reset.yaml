@@ -1,0 +1,34 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+post:
+  tags:
+    - bot/matches
+  summary: Reset un match (scores nuls, status pending, clear dispute/forfait/winner).
+  operationId: botResetMatch
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+  responses:
+    '200':
+      description: Match reset.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

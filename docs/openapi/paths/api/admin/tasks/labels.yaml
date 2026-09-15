@@ -1,0 +1,49 @@
+post:
+  tags:
+    - admin/tasks
+  summary: Cree une definition de label coloree pour un board (position=max+1).
+  operationId: adminCreateTaskLabel
+  description: |
+    Catalogue de labels colores (table `task_labels`). Le lien carte <-> label
+    se fait par NOM : `tasks.labels[]` stocke les noms bruts, cette table porte
+    la couleur/position de chaque nom. 409 `label_exists` si (board, name) est
+    deja pris.
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [boardId, name, color]
+          properties:
+            boardId: {type: string, format: uuid}
+            name: {type: string, minLength: 1, maxLength: 40}
+            color:
+              type: string
+              pattern: '^#[0-9a-fA-F]{6}$'
+              description: Couleur hex '#rrggbb'.
+  responses:
+    '201':
+      description: '`{ label: { id, name, color, position } }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      description: '`{ error, code: "label_exists" }` — (board, name) deja pris.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

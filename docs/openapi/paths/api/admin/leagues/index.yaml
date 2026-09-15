@@ -1,0 +1,53 @@
+get:
+  summary: Liste des leagues du tenant.
+  operationId: adminListLeagues
+  tags:
+    - admin/leagues
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Leagues.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - leagues
+            properties:
+              leagues:
+                type: array
+                items:
+                  $ref: '#/components/schemas/League'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Crée une league.
+  operationId: adminCreateLeague
+  tags:
+    - admin/leagues
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/LeagueCreateInput'
+  responses:
+    '201':
+      description: League créée.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/League'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      $ref: '#/components/responses/Conflict'

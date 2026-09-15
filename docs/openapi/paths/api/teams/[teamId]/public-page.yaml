@@ -1,0 +1,28 @@
+parameters:
+  - $ref: '#/components/parameters/TeamId'
+patch:
+  tags:
+    - public/teams
+  summary: Met a jour la page publique d'une equipe (description, liens, etc.).
+  operationId: updateTeamPublicPage
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Page mise a jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

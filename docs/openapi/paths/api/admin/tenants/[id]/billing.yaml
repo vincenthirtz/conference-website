@@ -1,0 +1,106 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: Read a tenant's billing / subscription state (« Régie solidaire »).
+  description: |
+    Read-only. Requires `admin` role. Returns the billed plan + status, the
+    EFFECTIVE plan (a paid plan that is expired / past_due falls back to
+    `discovery`), the resulting capabilities, the self-serve catalog, and the
+    recent payment history. Scoped to the staff's active tenant unless the
+    caller is a cross-tenant pole-admin (else 403).
+  operationId: adminGetTenantBilling
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Tenant billing state.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - plan
+              - planLabel
+              - planStatus
+              - planStartedAt
+              - planExpiresAt
+              - daysRemaining
+              - effectivePlan
+              - capabilities
+              - catalog
+              - payments
+            properties:
+              plan:
+                type: string
+              planLabel:
+                type: string
+              planStatus:
+                type: string
+              planStartedAt:
+                anyOf:
+                  - $ref: '#/components/schemas/Timestamp'
+                  - type: 'null'
+              planExpiresAt:
+                anyOf:
+                  - $ref: '#/components/schemas/Timestamp'
+                  - type: 'null'
+              daysRemaining:
+                type: [integer, 'null']
+              effectivePlan:
+                type: string
+              capabilities:
+                type: object
+                additionalProperties: true
+              catalog:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - plan
+                    - label
+                    - priceEur
+                  properties:
+                    plan:
+                      type: string
+                    label:
+                      type: string
+                    priceEur:
+                      type: integer
+              payments:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - id
+                    - plan
+                    - amountCents
+                    - paidAt
+                    - helloassoPaymentId
+                  properties:
+                    id:
+                      type: string
+                    plan:
+                      type: string
+                    amountCents:
+                      type: integer
+                    paidAt:
+                      type: string
+                    helloassoPaymentId:
+                      type: string
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '500':
+      $ref: '#/components/responses/ServerError'

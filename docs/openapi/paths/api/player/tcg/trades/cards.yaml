@@ -1,0 +1,44 @@
+get:
+  tags:
+    - public/auth
+  summary: Mes cartes a offrir, ou les doubles echangeables d'une partenaire.
+  description: |
+    Sans `userId` : MES cartes, chacune avec `copies`, `tradeableCopies`
+    (exemplaires issus de paquets echangeables) et `available` (non deja
+    promis dans une proposition en attente).
+
+    Avec `userId` : les DOUBLES ECHANGEABLES de la partenaire (au moins
+    deux exemplaires et au moins un echangeable), a la rarete de
+    l'exemplaire qui partirait. Jamais ses cartes uniques, ses comptes
+    d'exemplaires ni ses cartes de paquets cadeau : on ne voit pas la
+    collection d'une autre. Reciprocite : `403 trading_disabled` si
+    l'appelante n'a pas active les echanges ; `404 partner_not_found` si la
+    partenaire ne les accepte pas (ou n'existe pas dans l'espace). Faces
+    relues par `readCardFaces`. 60 / min.
+  operationId: listPlayerTcgTradeCards
+  security:
+    - PlayerBearer: []
+  parameters:
+    - name: userId
+      in: query
+      schema:
+        type: string
+        format: uuid
+  responses:
+    '200':
+      description: Cartes.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      description: '`code: invalid_user_id`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: '`code: trading_disabled`.'
+    '404':
+      description: '`code: partner_not_found`.'
+    '500':
+      $ref: '#/components/responses/ServerError'

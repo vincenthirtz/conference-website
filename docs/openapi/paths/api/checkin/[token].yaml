@@ -1,0 +1,50 @@
+parameters:
+  - name: token
+    in: path
+    required: true
+    schema:
+      type: string
+get:
+  tags:
+    - public/teams
+  summary: Resout un token de check-in match (info match + team).
+  operationId: resolveCheckinToken
+  security: []
+  responses:
+    '200':
+      description: Token resolu.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CheckinTokenStatus'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+post:
+  tags:
+    - public/teams
+  summary: Redeem un token de check-in (idempotent).
+  description: |
+    Effet de bord TCG (2026-09-15) : un check-in NEUF qui clot une serie de
+    `CHECKIN_STREAK_LENGTH` check-ins consecutifs de l'equipe dans le
+    tournoi credite `CHECKIN_STREAK_COINS` et un paquet `streak` aux
+    titulaires du roster (`utils/tcg/grantCheckinStreak.ts`). Cle
+    `<tournoi>:<match>` : un rejeu ne recredite pas. Best-effort, sans effet
+    sur la reponse ; meme branchement pour
+    `POST /api/bot/v1/matches/{matchId}/checkin`.
+  operationId: redeemCheckinToken
+  security: []
+  responses:
+    '200':
+      description: Check-in valide (ou deja valide).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CheckinTokenStatus'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '429':
+      $ref: '#/components/responses/RateLimited'

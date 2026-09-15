@@ -1,0 +1,61 @@
+parameters:
+  - $ref: '#/components/parameters/ScrimId'
+get:
+  tags:
+    - bot/scrims
+  summary: Liste les matchs d'un scrim.
+  operationId: botListScrimMatches
+  responses:
+    '200':
+      description: Liste des matchs.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              matches:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Match'
+post:
+  tags:
+    - bot/scrims
+  summary: Cree un ou plusieurs matchs lies a un scrim (staff admin/owner).
+  operationId: botCreateScrimMatches
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            match:
+              type: object
+              additionalProperties: true
+            matches:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+  responses:
+    '201':
+      description: Match(es) cree(s).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              matches:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Match'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'

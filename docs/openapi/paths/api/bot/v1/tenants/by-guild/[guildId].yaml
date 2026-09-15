@@ -1,0 +1,29 @@
+parameters:
+  - name: guildId
+    in: path
+    required: true
+    schema:
+      type: string
+      pattern: ^[0-9]{15,25}$
+get:
+  tags:
+    - bot/tenants
+  summary: Resoud un guild Discord -> tenant + config Discord. Cross-tenant.
+  operationId: botGetTenantByGuild
+  security:
+    - BotApiKey: []
+  responses:
+    '200':
+      description: Tenant + config trouve.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TenantConfigEntry'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      description: Guild non linke a un tenant.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

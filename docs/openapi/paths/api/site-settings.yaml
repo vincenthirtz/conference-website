@@ -1,0 +1,27 @@
+get:
+  tags:
+    - public/misc
+  summary: Settings publics du site (par cle ou tout).
+  operationId: getSiteSettings
+  security: []
+  parameters:
+    - name: key
+      in: query
+      required: false
+      schema:
+        type: string
+        pattern: ^[a-zA-Z0-9_]{1,100}$
+  responses:
+    '200':
+      description: Settings.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '503':
+      description: Service unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

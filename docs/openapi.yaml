@@ -5606,7 +5606,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PublicV1TeamMember'
-  requestBodies: {}
 security:
   - BotApiKey: []
     BotTenantId: []

@@ -1,0 +1,46 @@
+get:
+  tags:
+    - public/misc
+  summary: List champions/heroes for a MOBA game (LoL, Dota 2).
+  operationId: getGameHeroes
+  security: []
+  description: |
+    Public read of the global `game_heroes` pool synced daily by
+    `/api/cron/sync-game-heroes`. Currently only `lol` and `dota2` have
+    a hero pool — any other valid `GameSlug` returns 404.
+
+    Cache: `public, s-maxage=3600, stale-while-revalidate=600`.
+  parameters:
+    - name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+        enum:
+          - lol
+          - dota2
+    - name: includeDisabled
+      in: query
+      required: false
+      description: |
+        When `"1"` or `"true"`, includes soft-disabled heroes. Default
+        behaviour returns enabled-only.
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Hero pool for the requested game, sorted by name.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GameHeroesResponse'
+    '404':
+      description: Unknown game slug or game has no hero pool.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

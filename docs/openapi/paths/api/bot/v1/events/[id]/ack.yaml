@@ -1,0 +1,39 @@
+parameters:
+  - name: id
+    in: path
+    required: true
+    schema:
+      type: integer
+      minimum: 1
+    description: PK numerique de bot_event_outbox.
+post:
+  tags:
+    - bot/events
+  summary: Le bot acknowledge la livraison d'un event. Idempotent. Cross-tenant.
+  operationId: botAckEvent
+  security:
+    - BotApiKey: []
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  responses:
+    '200':
+      description: Event marque delivered (ou deja delivered).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              id:
+                type: integer
+              status:
+                type: string
+                enum:
+                  - delivered
+              alreadyAcked:
+                type: boolean
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'

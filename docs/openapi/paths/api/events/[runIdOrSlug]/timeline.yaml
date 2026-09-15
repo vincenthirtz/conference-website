@@ -1,0 +1,35 @@
+get:
+  tags:
+    - public/misc
+  summary: Timeline publique d'un event_run live (par UUID ou slug).
+  operationId: getPublicEventTimeline
+  security: []
+  parameters:
+    - name: runIdOrSlug
+      in: path
+      required: true
+      schema:
+        type: string
+        maxLength: 200
+      description: UUID de l'event_run ou slug.
+  responses:
+    '200':
+      description: Run live + segments ordonnes.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - run
+              - segments
+            properties:
+              run:
+                $ref: '#/components/schemas/PublicEventRun'
+              segments:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicEventSegment'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'

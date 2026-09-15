@@ -1,0 +1,23 @@
+get:
+  tags:
+    - public/misc
+  summary: Genere un challenge captcha mathematique (jeton + question).
+  operationId: getCaptchaChallenge
+  security: []
+  responses:
+    '200':
+      description: Challenge captcha.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - token
+              - question
+            properties:
+              token:
+                type: string
+              question:
+                type: string
+    '429':
+      $ref: '#/components/responses/RateLimited'

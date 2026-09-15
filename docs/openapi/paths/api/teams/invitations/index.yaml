@@ -1,0 +1,167 @@
+get:
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+    - $ref: '#/components/parameters/SubjectAs'
+    - $ref: '#/components/parameters/ActAs'
+  tags:
+    - public/teams
+  summary: Invitations en attente émises par l'équipe gérée.
+  description: >-
+    Le pendant « côté équipe » des invitations : sans lui, l'espace équipe
+    n'affichait que le roster (les personnes ayant ACCEPTÉ) et les demandes
+    ENTRANTES — une équipe fraîchement inscrite paraissait donc n'avoir qu'un
+    seul membre, sans que rien n'explique où étaient passées les joueuses
+    saisies. Gate `manage_roster`, la même que la création. Les invitations
+    EXPIRÉES sont conservées et marquées `expired` : ce sont celles qu'il faut
+    relancer. Le jeton du lien privé n'est jamais renvoyé (il n'est stocké que
+    hashé) — seul `has_invite_link` indique s'il en existe un.
+  operationId: playerListTeamInvitations
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Invitations en attente de l'équipe gérée.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - invitations
+            properties:
+              invitations:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    user_id:
+                      type: string
+                      format: uuid
+                    email:
+                      type: [string, 'null']
+                      format: email
+                    role:
+                      type: [string, 'null']
+                    battle_tag:
+                      type: [string, 'null']
+                    specialty:
+                      type: [string, 'null']
+                    set_captain:
+                      type: boolean
+                    created_at:
+                      type: string
+                      format: date-time
+                    expires_at:
+                      type: [string, 'null']
+                      format: date-time
+                    expired:
+                      type: boolean
+                    has_invite_link:
+                      type: boolean
+                    source:
+                      type: [string, 'null']
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+post:
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+    - $ref: '#/components/parameters/SubjectAs'
+    - $ref: '#/components/parameters/ActAs'
+  tags:
+    - public/teams
+  summary: >-
+    La capitaine (ou un membre au rôle de gestion) invite quelqu'un par email et
+    récupère un lien privé partageable.
+  description: >-
+    Crée une invitation pending (demandes type='invite') et un « lien privé »
+    (jeton aléatoire, stocké uniquement hashé) que l'appelante peut transmettre
+    elle-même. Le compte auth est créé à la volée si l'email est inconnu. Deux
+    usages symétriques : la capitaine confie un rôle de gestion (`role:
+    manager`), ou un manager désigne la capitaine (`set_captain: true`,
+    uniquement si l'équipe n'en a pas encore — sinon 409 CAPTAIN_ALREADY_SET).
+    Accorder un rôle à privilèges est réservé à la capitaine (403
+    ROLE_ESCALATION). Le lien n'authentifie pas : il expire avec l'invitation (7
+    jours) et exige une session correspondant à l'invitée pour être accepté.
+  operationId: playerCreateTeamInvitation
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - email
+          properties:
+            email:
+              type: string
+              format: email
+            role:
+              type: string
+              enum: [player, substitute, coach, manager]
+              default: player
+            battle_tag:
+              type: [string, 'null']
+            specialty:
+              type: [string, 'null']
+              enum: [tank, dps, support, flex, null]
+            set_captain:
+              type: boolean
+              default: false
+            comment:
+              type: [string, 'null']
+  responses:
+    '201':
+      description: Invitation créée. Le jeton en clair n'est renvoyé qu'ici.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - invitation
+              - invite_url
+              - email_sent
+            properties:
+              invitation:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  team_id:
+                    type: string
+                    format: uuid
+                  user_id:
+                    type: string
+                    format: uuid
+                  role:
+                    type: string
+                  set_captain:
+                    type: boolean
+                  expires_at:
+                    type: [string, 'null']
+                    format: date-time
+              invite_url:
+                type: string
+                format: uri
+              email_sent:
+                type: boolean
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'
+    '429':
+      $ref: '#/components/responses/RateLimited'

@@ -1,0 +1,54 @@
+get:
+  tags:
+    - cron
+  summary: Relance roster des equipes dans leur salon Discord (jalons J-21/14/7/3/1).
+  operationId: cronTeamRosterRemindersGet
+  description: |
+    Netlify scheduled function (quotidienne). N'envoie QUE si le nombre de
+    jours restants avant `site_settings.roster_lock_deadline` (fallback
+    `tournaments.start_date`) tombe sur un jalon (21, 14, 7, 3, 1) — ce
+    ciblage sur un jour exact tient lieu de deduplication, sans table
+    d'etat. Les autres jours : `200 { skipped: 'not_a_milestone' }`.
+
+    Par defaut seules les equipes avec un motif reel sont notifiees
+    (`only=needs_attention`). Emet un event `team.message` par equipe
+    livrable, avec mention du role.
+
+    Query : `?force=1` ignore la fenetre de jalons, `?dry_run=1` renvoie
+    l'apercu sans emettre, `?only=all|incomplete` change le ciblage.
+
+    Auth : `Authorization: Bearer <CRON_SECRET>` OU `?secret=<CRON_SECRET>`.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: '`{ daysRemaining, sent, skipped, teams[] }` ou `{ skipped: <raison> }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - cron
+  summary: Relance roster des equipes dans leur salon Discord (jalons J-21/14/7/3/1).
+  operationId: cronTeamRosterRemindersPost
+  description: Same as `GET /api/cron/team-roster-reminders`.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: '`{ daysRemaining, sent, skipped, teams[] }` ou `{ skipped: <raison> }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'

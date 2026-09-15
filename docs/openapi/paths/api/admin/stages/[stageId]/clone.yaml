@@ -1,0 +1,28 @@
+parameters:
+  - $ref: '#/components/parameters/StageId'
+post:
+  summary: Clone a stage into the same tournament (with empty matches).
+  operationId: adminCloneStage
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '201':
+      description: Cloned.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

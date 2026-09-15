@@ -1,0 +1,51 @@
+post:
+  summary: Add a stream marker on the live broadcast.
+  description: |
+    Requires `manager` role and the `channel:manage:broadcast` scope. Posts
+    a stream marker (`POST helix/streams/markers`) to flag a highlight for
+    the VOD. Returns `{ marker }`. If the channel is not live, Helix returns
+    404 which is mapped to `409 { code: 'NOT_LIVE' }`.
+    `409 NOT_CONNECTED` / `403 MISSING_SCOPE`.
+  operationId: adminTwitchCreateMarker
+  tags:
+    - admin/twitch
+  security:
+    - StaffSession: []
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            description:
+              type: string
+              maxLength: 140
+  responses:
+    '200':
+      description: Marker created.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: 'Missing scope (code MISSING_SCOPE) or forbidden role.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '409':
+      description: |
+        No broadcaster channel connected (code NOT_CONNECTED) or channel not
+        live (code NOT_LIVE).
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

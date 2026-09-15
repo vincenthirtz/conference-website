@@ -1,0 +1,27 @@
+get:
+  tags:
+    - public/teams
+  summary: Classement permanent des scrims (public).
+  description: >-
+    Calcule a la volee depuis les scrims `completed` et `ranked`. Bareme
+    victoire 3 / nul 1 / defaite 0, departage par difference de manches puis
+    victoires. Distinct du rating de tournoi (Glicko-2) : ici on mesure
+    l'entrainement, pas le niveau competitif officiel.
+  operationId: publicScrimLadder
+  security: []
+  responses:
+    '200':
+      description: Classement du tenant resolu (vide si aucun scrim rapporte).
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - ladder
+            properties:
+              ladder:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LadderRow'
+    '429':
+      $ref: '#/components/responses/RateLimited'

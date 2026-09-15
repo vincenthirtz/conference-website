@@ -1,0 +1,130 @@
+get:
+  tags:
+    - public/teams
+  summary: Métadonnées publiques d'une invitation à partir de son lien privé.
+  description: >-
+    Route PUBLIQUE (pas de session) : décrit l'invitation pour la page
+    /invitation/[token] — équipe, rôle proposé, adresse masquée, expiration.
+    N'expose ni l'id de la demande, ni l'email en clair, ni l'identité de
+    l'inviteuse. 404 si le jeton est inconnu/mal formé, 409 si l'invitation est
+    déjà traitée, 410 si elle a expiré.
+  operationId: publicGetInvitationByToken
+  security: []
+  parameters:
+    - in: query
+      name: token
+      required: true
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Invitation pending.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - invitation
+            properties:
+              invitation:
+                type: object
+                properties:
+                  team_name:
+                    type: [string, 'null']
+                  team_slug:
+                    type: [string, 'null']
+                  team_logo_url:
+                    type: [string, 'null']
+                  role:
+                    type: string
+                  as_captain:
+                    type: boolean
+                  battle_tag:
+                    type: [string, 'null']
+                  specialty:
+                    type: [string, 'null']
+                  invited_email:
+                    type: [string, 'null']
+                    description: Adresse masquée (a***@domain.tld).
+                  expires_at:
+                    type: [string, 'null']
+                    format: date-time
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'
+    '410':
+      description: Invitation expirée.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+post:
+  tags:
+    - public/teams
+  summary: Accepte ou refuse une invitation via son lien privé.
+  description: >-
+    Exige une SESSION : le lien seul n'authentifie jamais. L'appelante doit être
+    la destinataire (même auth user ; une correspondance par email sur un autre
+    compte renvoie 409 ACCOUNT_MISMATCH). À l'acceptation, une invitation
+    portant `set_captain` donne aussi le capitanat si l'équipe n'en a pas
+    encore.
+  operationId: playerAnswerInvitationByToken
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - token
+            - action
+          properties:
+            token:
+              type: string
+            action:
+              type: string
+              enum: [accept, reject]
+  responses:
+    '200':
+      description: Invitation traitée.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - success
+              - action
+            properties:
+              success:
+                type: boolean
+              action:
+                type: string
+                enum: [accept, reject]
+              teamId:
+                type: string
+                format: uuid
+              promotedToCaptain:
+                type: boolean
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'
+    '410':
+      description: Invitation expirée.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    '429':
+      $ref: '#/components/responses/RateLimited'

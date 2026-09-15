@@ -1,0 +1,13 @@
+get:
+  tags:
+    - bot/tournaments
+  summary: Inventaire des commandes de gestion tournoi (source unique /aide-tournoi).
+  operationId: botGetTournamentHelpInventory
+  responses:
+    '200':
+      description: Inventaire JSON.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

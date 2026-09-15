@@ -1,0 +1,274 @@
+get:
+  tags:
+    - public/auth
+  summary: Mes paquets TCG (ouverts et fermes) et mon solde de pieces.
+  description: |
+    PAGINATION PAR CURSEUR, RETROCOMPATIBLE. Sans parametre, la reponse est
+    celle d'avant — les 200 paquets les plus recents — plus `nextCursor`,
+    qui dit enfin s'il en existe d'autres. Ordre `(granted_at DESC, id
+    DESC)` : le second critere tranche les paquets attribues au meme
+    instant (un cadeau distribue en lot). Le curseur est interpole dans un
+    filtre PostgREST, d'ou une validation de forme exacte (horodatage +
+    UUID) : tout autre contenu est un `400 invalid_cursor`.
+
+    `unopened` est un COMPTE de tous les paquets fermes, independant de la
+    page et du filtre : l'ancien calcul sur les 200 lignes lues annoncait
+    moins de paquets a ouvrir qu'il n'en existait.
+    `Cache-Control: private, no-store`. Rate-limit 60 / min.
+  operationId: listPlayerTcgPacks
+  security:
+    - PlayerBearer: []
+  parameters:
+    - name: limit
+      in: query
+      required: false
+      description: Taille de page, 1 a 200, defaut 200. Hors bornes `400 invalid_limit`.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 200
+    - name: cursor
+      in: query
+      required: false
+      description: '`nextCursor` de la page precedente. Opaque. Invalide : `400
+        invalid_cursor`.'
+      schema:
+        type: string
+    - name: status
+      in: query
+      required: false
+      description: >-
+        `unopened` (paquets a ouvrir) ou `opened`. Absent : tous. Sans ce
+        filtre, un paquet ferme plus ancien que la premiere page ne
+        s'afficherait jamais cote espace joueuse. Autre valeur : `400
+        invalid_status`.
+      schema:
+        type: string
+        enum: [unopened, opened]
+  responses:
+    '200':
+      description: Paquets et solde.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              packs:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    source:
+                      type: string
+                      enum: [victory, purchase, welcome]
+                    grantedAt:
+                      type: string
+                    openedAt:
+                      type: [string, 'null']
+              unopened:
+                type: integer
+                description: Nombre TOTAL de paquets fermes, quels que soient la page et le
+                  filtre.
+              nextCursor:
+                type: [string, 'null']
+                description: Curseur de la page suivante ; `null` sur la derniere.
+              balance:
+                type: integer
+              boosterPrice:
+                type: integer
+                description: |
+                  Prix courant d'un booster. Rendu par l'API pour que
+                  l'interface l'AFFICHE sans le connaitre : le coder cote
+                  client ferait mentir le bouton des que le bareme
+                  bougerait, et importer `economy.ts` dans la page
+                  traînerait le moteur de rating dont il derive ce bareme
+                  dans le bundle navigateur.
+              earn:
+                type: object
+                description: |
+                  Ce que rapporte une victoire. Rendu pour la meme raison
+                  que `boosterPrice` : sans lui, la page affichait un solde
+                  et un prix sans jamais dire comment gagner des pieces —
+                  a zero, on voyait un montant et aucun chemin.
+                properties:
+                  matchWin:
+                    type: integer
+                  scrimWin:
+                    type: integer
+                  welcomeGift:
+                    type: integer
+                  twitchDrop:
+                    type: integer
+                    description: Absent si aucun drop n'est branche.
+                  checkinStreak:
+                    type: object
+                    properties:
+                      length: {type: integer}
+                      coins: {type: integer}
+                      packs: {type: integer}
+                  placement:
+                    type: array
+                    description: Paliers du palmares, du rang 1 au top cut.
+                    items:
+                      type: object
+                      properties:
+                        maxRank: {type: integer}
+                        coins: {type: integer}
+                        packs: {type: integer}
+                  battlenetVerified:
+                    type: object
+                    properties:
+                      coins: {type: integer}
+                      packs: {type: integer}
+                  collectionSet:
+                    type: object
+                    properties:
+                      coins: {type: integer}
+                      packs: {type: integer}
+    '400':
+      description: '`code` parmi `invalid_limit`, `invalid_cursor`, `invalid_status`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+post:
+  tags:
+    - public/auth
+  summary: Ouvrir un paquet — tirer ses cartes et les figer.
+  description: |
+    LE TIRAGE PRECEDE LA CONSOMMATION : les cartes sont composees d'abord,
+    le paquet n'est marque ouvert qu'ensuite. Un vivier vide ne coute donc
+    pas son paquet (409 `empty_pool`, paquet toujours fermé).
+
+    Reservation atomique (`opened_at IS NULL`) : deux clics simultanes ne
+    peuvent pas ouvrir deux fois le meme paquet. Si l'ecriture des cartes
+    echoue apres la reservation, celle-ci est RELACHEE — mieux vaut un
+    paquet encore ferme qu'un paquet ouvert et vide.
+
+    La rarete est calculee pour les 5 sujets tires seulement, jamais pour
+    tout le vivier. Une rarete illisible retombe sur `common` plutot que de
+    faire echouer l'ouverture. Rate-limit 30 / min.
+  operationId: openPlayerTcgPack
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [packId]
+          properties:
+            packId:
+              type: string
+              format: uuid
+  responses:
+    '200':
+      description: Paquet ouvert, cartes figees.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              packId:
+                type: string
+              openedAt:
+                type: string
+              setsCompleted:
+                description: |
+                  AJOUT RETROCOMPATIBLE (2026-09-15). Les series que CE
+                  paquet vient de completer ET dont la recompense vient
+                  d'etre ecrite (`collection_set`, cf.
+                  `GET /api/player/tcg/sets`). Vide sur un rejeu, et vide si
+                  la verification a echoue — elle est alors rattrapee a la
+                  lecture suivante des series, sans double credit (cle du
+                  registre). Aucun nom de joueuse.
+                type: array
+                items:
+                  $ref: '#/components/schemas/TcgSetCompletedNotice'
+              cards:
+                description: |
+                  Les cartes tirees, AVEC leur face (nom, image) : sans
+                  elle la page ne pouvait rien montrer de l'ouverture et se
+                  contentait de recharger la collection, ou le tirage se
+                  fondait en silence. Meme forme que
+                  `/api/player/tcg/collection` a `count` pres, pour que
+                  l'interface n'ait pas deux vocabulaires pour une carte.
+
+                  Les faces viennent de `readPlayerFaces` /
+                  `readTeamFaces` : la revelation herite ainsi de la
+                  garantie de consentement (photo `approved` ET non
+                  revoquee) au lieu d'ouvrir une seconde voie d'acces aux
+                  photos. Les cartes `map`, elles, n'ont rien a consentir :
+                  une maquette voxel est un dessin produit par le projet,
+                  pas l'image d'une personne.
+                type: array
+                items:
+                  type: object
+                  properties:
+                    position:
+                      type: integer
+                    kind:
+                      type: string
+                      enum: [player, team, map]
+                    userId:
+                      type: [string, 'null']
+                    teamId:
+                      type: [string, 'null']
+                    displayName:
+                      type: [string, 'null']
+                      description: Cartes `player` seulement.
+                    imageUrl:
+                      type: [string, 'null']
+                      description: >-
+                        Cartes `player` et `map`. Pour une map, la maquette
+                        voxel pre-rendue ; `null` si la map a quitte le
+                        registre.
+                    name:
+                      type: [string, 'null']
+                      description: Cartes `team` et `map`.
+                    slug:
+                      type: [string, 'null']
+                      description: >-
+                        Adresse publique pour une carte `team` ; pour une carte
+                        `map`, c'est l'IDENTIFIANT lui-meme.
+                    logoUrl:
+                      type: [string, 'null']
+                      description: Cartes `team` seulement.
+                    rarity:
+                      type: string
+                      enum: [common, rare, epic, legendary]
+                      description: >-
+                        Toujours `common` pour une carte `map` — cf. la
+                        description de `/api/player/tcg/collection`.
+                    isFoil:
+                      type: boolean
+                    isNew:
+                      type: boolean
+                      description: >-
+                        `true` si l'appelante ne possedait pas ce sujet avant ce
+                        paquet (cartes recyclees exclues). Decide par le SERVEUR
+                        : la collection etant paginee, l'interface ne sait plus
+                        ce qu'elle possede deja. OMIS si la lecture echoue —
+                        l'ouverture, deja ecrite, n'est pas annulee pour un
+                        badge.
+    '400':
+      description: '`code: missing_pack`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      description: |
+        Paquet introuvable. 404 et non 403 : on ne confirme pas
+        l'existence d'un paquet qui n'appartient pas a l'appelante.
+    '409':
+      description: |
+        `code: already_opened` (paquet deja ouvert) ou `code: empty_pool`
+        (aucun sujet a distribuer — le paquet reste ferme).
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

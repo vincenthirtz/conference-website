@@ -1,0 +1,93 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+get:
+  tags:
+    - public/misc
+  summary: Detail d'un match (staff manager+).
+  operationId: staffGetMatchById
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Match.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+patch:
+  tags:
+    - public/misc
+  summary: Met a jour un match (score, status, schedule). Staff manager+.
+  operationId: staffUpdateMatch
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Match mis a jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+put:
+  tags:
+    - public/misc
+  summary: Remplace les champs d'un match. Staff manager+.
+  operationId: staffReplaceMatch
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Match mis a jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  tags:
+    - public/misc
+  summary: Supprime un match. Staff manager+.
+  operationId: staffDeleteMatch
+  security:
+    - StaffSession: []
+  responses:
+    '204':
+      description: Supprime.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

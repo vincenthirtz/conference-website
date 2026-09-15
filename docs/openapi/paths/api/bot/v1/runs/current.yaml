@@ -1,0 +1,21 @@
+get:
+  tags:
+    - bot/misc
+  summary: Run-of-show actuel (event_runs status='live' ou 'scheduled' imminent).
+  operationId: botGetCurrentRun
+  responses:
+    '200':
+      description: Run en cours (ou null) + segments.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              run:
+                anyOf:
+                  - $ref: '#/components/schemas/EventRun'
+                  - type: 'null'
+              segments:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventSegment'

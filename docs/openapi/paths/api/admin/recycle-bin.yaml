@@ -1,0 +1,94 @@
+get:
+  summary: List soft-deleted entities (stages, teams, matches, etc.).
+  description: Requires `admin` role.
+  operationId: adminListRecycleBin
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  parameters:
+    - in: query
+      name: type
+      schema:
+        type: string
+        enum:
+          - stage
+          - team
+          - match
+          - partner
+          - cast_member
+          - adherent
+          - staff
+          - scrim
+  responses:
+    '200':
+      description: Recycle bin entries.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - items
+              - total
+            properties:
+              items:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecycleBinEntry'
+              total:
+                type: integer
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+patch:
+  summary: Restore a soft-deleted entity.
+  description: Requires `admin` role.
+  operationId: adminRestoreFromRecycleBin
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - type
+            - id
+          properties:
+            type:
+              type: string
+              enum:
+                - stage
+                - team
+                - match
+                - partner
+                - cast_member
+                - adherent
+                - staff
+                - scrim
+            id:
+              type: string
+              format: uuid
+  responses:
+    '200':
+      description: Restored.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              restored:
+                type: boolean
+              type:
+                type: string
+              id:
+                type: string
+                format: uuid
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

@@ -1,0 +1,82 @@
+get:
+  summary: List the active tenant's editable map pool.
+  description: >
+    Sans query : toutes les maps du tenant groupées par jeu (`{ pools:
+    Record<GameSlug, MapPoolRow[]> }`). Avec `?game=<slug>` : liste plate d'un
+    jeu (`{ game, maps: MapPoolRow[] }`), triée par order_index NULLS LAST puis
+    map_name.
+  operationId: adminListMapPool
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  parameters:
+    - name: game
+      in: query
+      required: false
+      description: Filtre optionnel sur un GameSlug (overwatch, valorant, ...).
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Pool groupé par jeu, ou liste plate si `?game=`.
+      content:
+        application/json:
+          schema:
+            type: object
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Create a map in the active tenant's pool.
+  description: >
+    Crée une entrée de pool. 409 si une map du même nom (insensible à la casse)
+    existe déjà pour ce tenant + jeu.
+  operationId: adminCreateMapPoolEntry
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - game
+            - map_name
+          properties:
+            game:
+              type: string
+            map_name:
+              type: string
+            map_type:
+              type: [string, 'null']
+            image_url:
+              type: [string, 'null']
+            enabled:
+              type: boolean
+            order_index:
+              type: [integer, 'null']
+  responses:
+    '201':
+      description: Map créée.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              map:
+                type: object
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      description: Doublon (tenant, game, lower(map_name)).

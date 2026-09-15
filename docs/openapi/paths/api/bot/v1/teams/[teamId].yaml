@@ -1,0 +1,86 @@
+parameters:
+  - $ref: '#/components/parameters/TeamId'
+get:
+  tags:
+    - bot/teams
+  summary: Lit une equipe (par UUID ou slug) avec ses membres en option.
+  operationId: botGetTeam
+  parameters:
+    - name: includeMembers
+      in: query
+      required: false
+      schema:
+        type: boolean
+  responses:
+    '200':
+      description: Equipe trouvee.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              team:
+                $ref: '#/components/schemas/Team'
+              members:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TeamMember'
+    '404':
+      $ref: '#/components/responses/NotFound'
+patch:
+  tags:
+    - bot/teams
+  summary: Met a jour les champs editables d'une equipe (capitaine, ou staff
+    admin/owner avec actorIsStaff:true).
+  operationId: botUpdateTeam
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            actorIsStaff:
+              type: boolean
+              description: |
+                Quand `true`, l'actor doit etre staff admin/owner
+                (resolu via user_discord_links). Le check capitaine est
+                skippe et l'action est aussi loggee dans staff_logs.
+                Utilise par la commande Discord `/modifier-equipe-admin`.
+            name:
+              type: string
+              minLength: 2
+              maxLength: 100
+            shortName:
+              type: [string, 'null']
+              maxLength: 20
+            description:
+              type: [string, 'null']
+              maxLength: 2000
+            discord:
+              type: [string, 'null']
+              maxLength: 200
+            website:
+              type: [string, 'null']
+            isJoinable:
+              type: boolean
+  responses:
+    '200':
+      description: Equipe mise a jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              team:
+                $ref: '#/components/schemas/Team'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

@@ -1,0 +1,98 @@
+get:
+  summary: Préférences de notification (push + email) du joueur courant.
+  description: |
+    Renvoie les préférences CHANNEL-AWARE fusionnées avec les défauts :
+    `push` couvre les event types joueur en modèle OPT-OUT (row absente =
+    `true`), `email` couvre les event types email en modèle OPT-IN (row
+    absente = `false`). `withAuthRoute`.
+  operationId: playerPushGetPrefs
+  tags:
+    - public
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Préférences fusionnées par canal.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - push
+              - email
+            properties:
+              push:
+                type: object
+                additionalProperties:
+                  type: boolean
+                description: |
+                  Map event_type → enabled pour le canal push (opt-out,
+                  défaut true).
+              email:
+                type: object
+                additionalProperties:
+                  type: boolean
+                description: |
+                  Map event_type → enabled pour le canal email (opt-in,
+                  défaut false).
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'
+put:
+  summary: Mettre à jour une préférence de notification du joueur courant.
+  description: |
+    Met à jour UNE préférence (event_type, channel). Seules les valeurs
+    NON-DÉFAUT sont persistées (push opt-out `enabled:false`, email opt-in
+    `enabled:true`) ; un retour au défaut supprime la row. `event_type` est
+    validé contre la whitelist du canal. `withAuthRoute`.
+  operationId: playerPushPutPrefs
+  tags:
+    - public
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - eventType
+            - channel
+            - enabled
+          properties:
+            eventType:
+              type: string
+            channel:
+              type: string
+              enum:
+                - push
+                - email
+            enabled:
+              type: boolean
+  responses:
+    '200':
+      description: Préférences mises à jour (état fusionné par canal).
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - push
+              - email
+            properties:
+              push:
+                type: object
+                additionalProperties:
+                  type: boolean
+              email:
+                type: object
+                additionalProperties:
+                  type: boolean
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'

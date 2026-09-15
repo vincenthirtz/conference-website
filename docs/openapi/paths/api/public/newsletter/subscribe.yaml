@@ -1,0 +1,34 @@
+post:
+  tags:
+    - public/misc
+  summary: Inscription newsletter (double opt-in) — anti-bot captcha + honeypot.
+  description: >
+    Enregistre (ou re-arme) un abonne `pending` avec un `confirm_token`
+    aleatoire et envoie l'email de confirmation. Reponse toujours generique `{
+    success: true }` (enumeration-safe) : ne revele jamais si l'adresse existait
+    deja. Un honeypot rempli est silencieusement absorbe (200).
+  operationId: subscribePublicNewsletter
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/PublicNewsletterSubscribeInput'
+  responses:
+    '200':
+      description: Toujours renvoye tant que la requete est bien formee (succes generique).
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - success
+            properties:
+              success:
+                type: boolean
+                example: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '429':
+      $ref: '#/components/responses/RateLimited'

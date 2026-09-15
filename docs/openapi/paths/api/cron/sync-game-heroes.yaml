@@ -1,0 +1,65 @@
+get:
+  tags:
+    - cron
+  summary: Sync the global LoL/Dota 2 hero pool from Data Dragon + OpenDota.
+  operationId: cronSyncGameHeroesGet
+  description: |
+    Schedule: once per day at 04:00 UTC (`0 4 * * *`) via Netlify
+    scheduled function `sync-game-heroes-cron`. Fetches the current
+    Riot Data Dragon champion list (LoL) and the OpenDota hero list
+    (Dota 2), then upserts each row into `public.game_heroes` keyed by
+    `(game, external_id)`. Global pool — no tenant scoping.
+
+    Returns `200` on full success, `207` when one upstream sync
+    failed and the other succeeded (partial success).
+
+    Heartbeat: upserts `site_settings.last_cron_sync_game_heroes_at`
+    with the run's finishedAt ISO timestamp.
+
+    Auth: `Authorization: Bearer <CRON_SECRET>` header OR
+    `?secret=<CRON_SECRET>` query string. Both GET and POST accepted.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Sync summary — both LoL and Dota 2 succeeded.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CronSyncGameHeroesResult'
+    '207':
+      description: Partial success — at least one upstream sync failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CronSyncGameHeroesResult'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - cron
+  summary: Sync the global LoL/Dota 2 hero pool from Data Dragon + OpenDota.
+  operationId: cronSyncGameHeroesPost
+  description: |
+    Same as `GET /api/cron/sync-game-heroes`.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Sync summary — both LoL and Dota 2 succeeded.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CronSyncGameHeroesResult'
+    '207':
+      description: Partial success — at least one upstream sync failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CronSyncGameHeroesResult'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'

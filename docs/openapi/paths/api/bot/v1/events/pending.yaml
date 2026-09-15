@@ -1,0 +1,34 @@
+get:
+  tags:
+    - bot/events
+  summary: Liste les events bot non encore livres (outbox). Cross-tenant.
+  operationId: botListPendingEvents
+  security:
+    - BotApiKey: []
+  parameters:
+    - name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+  responses:
+    '200':
+      description: Liste cross-tenant des events pending.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - events
+              - count
+            properties:
+              count:
+                type: integer
+              events:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BotEventOutboxRow'
+    '500':
+      $ref: '#/components/responses/ServerError'

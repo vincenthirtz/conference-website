@@ -1,0 +1,36 @@
+parameters:
+  - $ref: '#/components/parameters/TeamId'
+  - name: memberId
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+patch:
+  tags:
+    - public/teams
+  summary: Met a jour le profil d'un membre (battle_tag, role, etc.) — capitaine/self.
+  operationId: updateTeamMemberProfile
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Profil mis a jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

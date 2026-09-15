@@ -1,0 +1,125 @@
+parameters:
+  - $ref: '#/components/parameters/RunId'
+  - name: waveId
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+patch:
+  summary: Patch wave fields.
+  description: |
+    Requires `manager` role. Partial update. Status transitions auto-date:
+    `status='live'` sets `started_at`, `status='done'` sets `ended_at`
+    (unless explicitly provided).
+  operationId: adminPatchEventWave
+  tags:
+    - admin/events
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            title:
+              type: string
+            planned_start_at:
+              type: [string, 'null']
+              format: date-time
+            duration_min:
+              type: [integer, 'null']
+            status:
+              type: string
+              enum:
+                - upcoming
+                - live
+                - done
+                - skipped
+            started_at:
+              type: [string, 'null']
+              format: date-time
+            ended_at:
+              type: [string, 'null']
+              format: date-time
+  responses:
+    '200':
+      description: Updated.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - wave
+            properties:
+              wave:
+                $ref: '#/components/schemas/EventWave'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+put:
+  summary: Patch wave fields (alias of PATCH).
+  description: Requires `manager` role. Same partial-update semantics as PATCH.
+  operationId: adminReplaceEventWave
+  tags:
+    - admin/events
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Updated.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - wave
+            properties:
+              wave:
+                $ref: '#/components/schemas/EventWave'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+delete:
+  summary: Delete a wave.
+  description: |
+    Requires `manager` role. Hard delete. `event_segments.wave_id` is
+    `ON DELETE SET NULL`, so attached segments keep existing with a null
+    wave.
+  operationId: adminDeleteEventWave
+  tags:
+    - admin/events
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Deleted.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Ok'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

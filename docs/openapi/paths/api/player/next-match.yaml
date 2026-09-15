@@ -1,0 +1,22 @@
+get:
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+    - $ref: '#/components/parameters/SubjectAs'
+  tags:
+    - public/auth
+  summary: Prochain match du joueur connecte + token check-in.
+  operationId: getPlayerNextMatch
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Match + team + checkin status. Tous les champs peuvent etre null si
+        le joueur n'a pas d'equipe ou de match a venir.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PlayerNextMatch'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'

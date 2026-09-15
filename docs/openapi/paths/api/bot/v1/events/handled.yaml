@@ -1,0 +1,58 @@
+post:
+  tags:
+    - bot/events
+  summary: Le bot claim un event a traiter (INSERT ON CONFLICT DO NOTHING).
+  operationId: botClaimEventHandled
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - eventId
+          properties:
+            eventId:
+              $ref: '#/components/schemas/Uuid'
+            source:
+              type: string
+              maxLength: 32
+  responses:
+    '200':
+      description: Event deja claim (wasNew=false).
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - wasNew
+            properties:
+              wasNew:
+                type: boolean
+                enum:
+                  - false
+              handledAt:
+                anyOf:
+                  - $ref: '#/components/schemas/Timestamp'
+                  - type: 'null'
+    '201':
+      description: Event claim pour la premiere fois (wasNew=true).
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - wasNew
+            properties:
+              wasNew:
+                type: boolean
+                enum:
+                  - true
+              handledAt:
+                anyOf:
+                  - $ref: '#/components/schemas/Timestamp'
+                  - type: 'null'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '500':
+      $ref: '#/components/responses/ServerError'

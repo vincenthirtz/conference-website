@@ -1,0 +1,86 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+get:
+  tags:
+    - bot/matches
+  summary: Lit l'etat du map veto (flow attendu, steps joues, maps pickees).
+  operationId: botGetMatchVeto
+  responses:
+    '200':
+      description: Etat du veto.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VetoState'
+    '404':
+      $ref: '#/components/responses/NotFound'
+post:
+  tags:
+    - bot/matches
+  summary: Enregistre un step du veto (ban / pick / decider).
+  operationId: botCreateMatchVetoStep
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+            - action
+            - mapName
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            action:
+              type: string
+              enum:
+                - ban
+                - pick
+                - decider
+            mapName:
+              type: string
+            teamId:
+              $ref: '#/components/schemas/Uuid'
+  responses:
+    '200':
+      description: Step enregistre.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VetoState'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+delete:
+  tags:
+    - bot/matches
+  summary: Reset tous les steps du veto (et les games auto-creees).
+  operationId: botResetMatchVeto
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+  responses:
+    '200':
+      description: Veto reset.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Ok'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

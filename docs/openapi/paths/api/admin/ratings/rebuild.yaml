@@ -1,0 +1,26 @@
+post:
+  summary: Recalcule le rating persistant de tous les joueurs du tenant.
+  description: |
+    Replay complet Glicko-2 (backfill des snapshots manquants depuis le
+    roster courant, puis recompute from scratch de player_ratings /
+    player_rating_history / team_ratings). Idempotent via Idempotency-Key.
+  operationId: adminRebuildRatings
+  tags:
+    - admin/ratings
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Résultat du rebuild.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RatingRebuildResult'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '405':
+      description: Méthode non autorisée.
+    '429':
+      $ref: '#/components/responses/RateLimited'

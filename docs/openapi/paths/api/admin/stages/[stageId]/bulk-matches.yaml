@@ -1,0 +1,94 @@
+parameters:
+  - $ref: '#/components/parameters/StageId'
+post:
+  summary: Bulk-create matches in a stage.
+  operationId: adminStageBulkMatchesPost
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Created.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+patch:
+  summary: Bulk-patch matches of a stage.
+  operationId: adminStageBulkMatchesPatch
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Updated.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+put:
+  summary: Bulk-replace matches of a stage.
+  operationId: adminStageBulkMatchesPut
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Replaced.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  summary: Bulk-delete matches of a stage.
+  operationId: adminStageBulkMatchesDelete
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  responses:
+    '204':
+      description: Deleted.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

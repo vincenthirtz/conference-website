@@ -1,0 +1,54 @@
+post:
+  tags:
+    - bot/players
+  summary: Cree un compte site avec le Discord ID deja lie (welcome email).
+  operationId: botRegisterUser
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - email
+            - discordUserId
+          properties:
+            email:
+              type: string
+              format: email
+            discordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            discordUsername:
+              type: string
+            displayName:
+              type: string
+            role:
+              type: string
+              enum:
+                - player
+                - caster
+                - manager
+                - admin
+              default: player
+  responses:
+    '201':
+      description: Compte cree.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              authUserId:
+                $ref: '#/components/schemas/Uuid'
+              role:
+                type: string
+              discordUserId:
+                $ref: '#/components/schemas/DiscordId'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '409':
+      $ref: '#/components/responses/Conflict'
+    '500':
+      $ref: '#/components/responses/ServerError'

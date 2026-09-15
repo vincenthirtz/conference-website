@@ -1,0 +1,58 @@
+get:
+  tags:
+    - cron
+  summary: Detect SLA-breached disputes and emit escalation events (Lot 4).
+  operationId: cronDisputeSlaCheckGet
+  description: |
+    Schedule: every 5 minutes (`*/5 * * * *`) via Netlify scheduled
+    function `dispute-sla-cron`. Lot 4 — Open Disputes Board.
+
+    For each active tenant, calls `findUnpingedBreaches(tenantId, now)`
+    which returns matches with `status='disputed'` whose
+    `dispute_opened_at` is older than `tenants.dispute_sla_minutes`
+    AND have `escalation_pinged_at IS NULL`.
+
+    Side effects per breach:
+      1. Emits a `dispute.sla_breached` event in `bot_event_outbox`
+         with enriched payload (matchId, tournamentId, ageMinutes,
+         slaMinutes, disputeReason, optional thread enrichment).
+         The Discord bot picks it up and DMs the configured staff role.
+      2. Stamps `matches.escalation_pinged_at = now()` so the breach is
+         escalated at most once. Only matches whose event actually made
+         it to the outbox are stamped — a failed emit retries next tick.
+
+    Auth: `Authorization: Bearer <CRON_SECRET>` header OR
+    `?secret=<CRON_SECRET>` query string. Both GET and POST accepted.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Counters from the SLA-check tick.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CronDisputeSlaResult'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - cron
+  summary: Detect SLA-breached disputes and emit escalation events (Lot 4).
+  operationId: cronDisputeSlaCheckPost
+  description: |
+    Same as `GET /api/cron/dispute-sla-check`.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Counters from the SLA-check tick.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CronDisputeSlaResult'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'

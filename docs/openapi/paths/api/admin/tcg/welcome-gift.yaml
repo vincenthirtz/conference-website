@@ -1,0 +1,96 @@
+get:
+  summary: Simuler le cadeau d'accueil de l'edition en cours.
+  description: |
+    Rend ce qu'une distribution ferait, SANS rien ecrire : `eligible`
+    (comptes distincts sur les rosters des equipes engagees),
+    `alreadyGifted`, `teams`, et `reward` (ce que chacune recevrait).
+
+    POURQUOI SIMULER D'ABORD. Crediter d'un coup toutes les participantes
+    est un acte collectif qu'on ne reprend pas — un paquet ouvert ne se rend
+    pas. Annoncer le nombre AVANT de laisser cliquer coute une requete.
+
+    L'EDITION N'EST PAS UN PARAMETRE : le serveur la resout
+    (`resolveCurrentTournamentId`). La faire choisir au client laisserait
+    crediter une edition archivee depuis une URL forgee. Aucune edition en
+    cours rend `tournamentId: null` et des compteurs a zero, pas une erreur.
+
+    Les participantes sont les rosters des equipes ENGAGEES (`stage_teams`),
+    pas les feuilles de match : verifie en base, la Cup 2026 a 30 matchs
+    planifies et zero ligne de participation avant son debut — un cadeau
+    calcule sur les feuilles n'aurait credite personne. Les remplacantes
+    sont incluses. `private, no-store`. Rate-limit 20 / min.
+  operationId: adminPreviewTcgWelcomeGift
+  tags:
+    - admin/tcg
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Simulation, sans ecriture.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  summary: Distribuer le cadeau d'accueil de l'edition en cours.
+  description: |
+    Credite chaque participante engagee et lui accorde un paquet. Rend les
+    compteurs REELS (`granted`, `packsGranted`, `alreadyGifted`).
+
+    REJOUABLE SANS DOMMAGE. L'idempotence tient a `tcg_wallet_entries`
+    UNIQUE (tenant_id, user_id, source_kind, source_ref) avec
+    `source_ref = <tournoi>` : relancer apres l'arrivee d'une joueuse dans
+    un roster ne credite QUE la nouvelle. C'est l'usage prevu.
+
+    ORDRE D'ECRITURE VOLONTAIRE : les pieces d'abord, en `ON CONFLICT DO
+    NOTHING ... RETURNING`, puis un paquet aux seuls comptes reellement
+    rendus. `tcg_packs` n'a AUCUNE unicite exploitable ici — son index porte
+    sur `source_match_id`, nul pour un cadeau, et Postgres traite deux NULL
+    comme distincts. L'ordre inverse multiplierait les paquets a chaque
+    relance.
+
+    Une ecriture partielle ne leve pas : crediter 57 comptes sur 58 vaut
+    mieux qu'echouer sur les 58. Journalise (`tcg_welcome_gift_grant`) avec
+    le nombre de comptes touches.
+
+    HONORE `Idempotency-Key` (`withAdminIdempotency`, cle
+    `tcg-welcome-gift`) : un double-clic, un retry navigateur ou une coupure
+    reseau partielle ne distribuent pas deux fois. Ce n'est pas decoratif —
+    le schema protege des doublons de PIECES (unicite sur `source_ref`) mais
+    PAS des doublons de PAQUETS ; cette couche ferme la fenetre cote
+    transport. Seules les reponses 2xx sont mises en cache, donc un 500
+    transitoire reste rejouable. Rate-limit 20 / min.
+  operationId: adminGrantTcgWelcomeGift
+  tags:
+    - admin/tcg
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Compteurs reels de la distribution.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

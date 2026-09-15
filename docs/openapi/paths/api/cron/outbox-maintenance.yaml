@@ -1,0 +1,56 @@
+get:
+  tags:
+    - cron
+  summary: Hourly maintenance of `bot_event_outbox` (poison-pill + cleanup + stats).
+  operationId: cronOutboxMaintenanceGet
+  description: |
+    Schedule: hourly (`0 * * * *`) via Netlify scheduled function
+    `outbox-maintenance-cron`.
+
+    Three jobs:
+      1. **Poison-pill**: pending events older than
+         `OUTBOX_FAILED_AFTER_HOURS` (default 6h) are flipped to
+         `status='failed'` with `last_push_error='auto-failed: pending > Nh'`.
+         Prevents a corrupted event from being retried forever.
+      2. **Cleanup**: delete rows with `status IN ('delivered','failed')`
+         older than `OUTBOX_DELETE_AFTER_DAYS` (default 7 days).
+      3. **Observability**: counts of pending / delivered-24h /
+         failed-24h, age of oldest pending, and delivery latency
+         percentiles (p50/p95/p99/max) over the last 24h. Sample capped
+         at 10 000 rows.
+
+    Auth: `Authorization: Bearer <CRON_SECRET>` header OR
+    `?secret=<CRON_SECRET>` query string. Both GET and POST accepted.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Maintenance tick summary.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CronOutboxMaintenanceResult'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - cron
+  summary: Hourly maintenance of `bot_event_outbox` (poison-pill + cleanup + stats).
+  operationId: cronOutboxMaintenancePost
+  description: |
+    Same as `GET /api/cron/outbox-maintenance`.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Maintenance tick summary.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CronOutboxMaintenanceResult'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'

@@ -1,0 +1,45 @@
+get:
+  tags:
+    - public/auth
+  summary: Demarre le rattachement d'un compte Twitch (drop TCG en direct).
+  operationId: twitchLinkOauthStart
+  description: |
+    Auth via session cookie Supabase (joueuse connectee, `getServerClient`) —
+    navigation pleine page, pas de Bearer : un en-tete d'autorisation ne
+    survit pas a une redirection. Redirige (302) vers l'autorize Twitch et
+    pose un cookie httpOnly `tw_id_oauth_state` (anti-CSRF, recroise au
+    callback).
+
+    AUCUN SCOPE N'EST DEMANDE : on veut savoir QUI vient, pas agir en son
+    nom. Le consentement affiche a la spectatrice se reduit donc a la
+    lecture de son nom d'utilisateur, et aucun jeton n'est conserve.
+
+    Flux DISTINCT de la connexion d'une chaine (`/api/admin/twitch/connect`),
+    qui demande douze scopes d'ecriture et garde ses jetons chiffres. Les
+    deux ont leur propre URL de retour, pour qu'un code destine a l'un
+    n'atterrisse pas dans l'autre.
+
+    Dormant si `TWITCH_PLAYER_REDIRECT_URI` ou les creds manquent (503
+    `TWITCH_IDENTITY_NOT_CONFIGURED`). Rate-limit 10 req/min par IP.
+  security: []
+  parameters:
+    - name: returnTo
+      in: query
+      required: false
+      schema:
+        type: string
+        default: /player/profile
+      description: |
+        Chemin interne de retour apres le callback (sanitize : doit
+        commencer par `/`, ni `//` ni scheme externe).
+  responses:
+    '302':
+      description: Redirection vers l'autorize Twitch ; pose le cookie d'etat.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '405':
+      description: Methode non autorisee.
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '503':
+      description: Fonctionnalite dormante (`TWITCH_IDENTITY_NOT_CONFIGURED`).

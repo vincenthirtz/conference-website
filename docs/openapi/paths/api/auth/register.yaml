@@ -1,0 +1,53 @@
+post:
+  summary: Inscription joueur (validation serveur + rate-limit + rôle forcé).
+  description: |
+    Crée un compte via `supabase.auth.signUp` côté serveur. Le rôle est forcé
+    à `player`. Réponse neutre anti-énumération : `200 { status: "ok" }` même
+    si l'email est déjà enregistré. Endpoint public.
+  operationId: authRegister
+  tags:
+    - public
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - email
+            - password
+          properties:
+            email:
+              type: string
+              format: email
+            password:
+              type: string
+              minLength: 8
+              maxLength: 72
+            displayName:
+              type: string
+              maxLength: 80
+            battleTag:
+              type: string
+              description: 'Format BattleTag : Pseudo#0000 (4 ou 5 chiffres).'
+  responses:
+    '200':
+      description: Inscription acceptée (réponse neutre).
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - status
+            properties:
+              status:
+                type: string
+                enum:
+                  - ok
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

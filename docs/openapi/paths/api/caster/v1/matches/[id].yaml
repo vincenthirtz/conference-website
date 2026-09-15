@@ -1,0 +1,55 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: "[v1] Détail d'un match + ses games (app caster)."
+  description: |
+    Route canonique. Lecture publique tenant-scopée (`x-tenant-id`).
+    Le `match` inclut `stream_url` (aligné sur la liste des matchs).
+  operationId: casterV1GetMatch
+  tags:
+    - public
+  security: []
+  parameters:
+    - $ref: '#/components/parameters/XTenantId'
+  responses:
+    '200':
+      description: Match et ses games.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - match
+              - games
+            properties:
+              match:
+                type: object
+                additionalProperties: true
+              games:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      $ref: '#/components/schemas/Uuid'
+                    map_name:
+                      type: [string, 'null']
+                    map_order:
+                      type: [integer, 'null']
+                    team1_score:
+                      type: [integer, 'null']
+                    team2_score:
+                      type: [integer, 'null']
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

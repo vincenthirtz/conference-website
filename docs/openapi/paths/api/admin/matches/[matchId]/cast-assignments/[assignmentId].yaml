@@ -1,0 +1,47 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+  - in: path
+    name: assignmentId
+    required: true
+    schema:
+      type: string
+      format: uuid
+patch:
+  summary: Patch a cast assignment.
+  operationId: adminPatchMatchCastAssignment
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Updated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CastAssignment'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  summary: Remove a cast assignment.
+  operationId: adminDeleteMatchCastAssignment
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  responses:
+    '204':
+      description: Deleted.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

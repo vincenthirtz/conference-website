@@ -1,0 +1,23 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+get:
+  tags:
+    - public/caster
+  summary: Aggregate read pour le dashboard caster (match + teams + veto + H2H).
+  operationId: getCasterDashboardAggregate
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Aggregate.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

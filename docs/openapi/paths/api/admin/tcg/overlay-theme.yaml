@@ -1,0 +1,90 @@
+get:
+  summary: L'habillage de la source navigateur OBS du TCG.
+  description: |
+    Rend l'habillage COMPLET de l'espace — jamais de champ manquant : une
+    colonne nulle en base signifie « garde le defaut du code », pas « vide ».
+    Un espace qui n'a jamais ouvert l'editeur n'a aucune ligne et obtient
+    l'overlay d'origine a l'identique.
+
+    Rend aussi les bornes (`lineMax`, `positions`) pour que l'editeur refuse
+    AVANT l'envoi plutot que de recolter un refus de Postgres.
+
+    Permission `manage_tcg` — la meme que le lien d'overlay : ce que
+    regle cette route s'affiche au meme endroit, devant la meme audience.
+    `private, no-store`. Rate-limit 30 / min.
+  operationId: adminGetTcgOverlayTheme
+  tags:
+    - admin/tcg
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: "Habillage courant, plus les bornes de l'editeur."
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+put:
+  summary: Modifier l'habillage, deposer ou retirer le media.
+  description: |
+    PATCH PARTIEL, PAS REMPLACEMENT : seules les cles PRESENTES dans le corps
+    sont ecrites — regler la couleur n'efface pas la position au passage.
+
+    `null` est une valeur UTILE et distincte de l'absence : vider une
+    formulation restaure la phrase traduite, `media: null` retire
+    l'illustration. Sans cette distinction, on ne saurait qu'AJOUTER.
+
+    Corps : `accentColor?` (`#RRGGBB`), `position?`
+    (`top-left | top-right | bottom-left | bottom-right`), `dropLine?`,
+    `winLine?` (120 caracteres max, interpolent `{name}`),
+    `media?` (`{ data, mimeType }` en base64, ou `null`).
+
+    Le media va dans un bucket PUBLIC, d'ou une validation par MAGIC BYTES :
+    le `mimeType` d'une requete est une affirmation du client, pas un fait.
+    Images PNG/JPEG/WebP (2 Mio), videos MP4/WebM (8 Mio). L'ancien fichier
+    est supprime APRES que le nouveau est reference.
+
+    `400 { code }` : `invalid_color`, `invalid_position`, `unsupported_type`,
+    `too_large`, `content_mismatch`, `invalid_base64`, `missing_data`.
+    Rate-limit 30 / min.
+  operationId: adminUpdateTcgOverlayTheme
+  tags:
+    - admin/tcg
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: 'Habillage apres modification, relu en base.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

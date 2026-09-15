@@ -1,0 +1,79 @@
+post:
+  tags:
+    - public/auth
+  summary: Recycler un doublon TCG contre des pieces.
+  description: |
+    UN DOUBLON, JAMAIS LE DERNIER EXEMPLAIRE. On exige qu'il reste au moins
+    une autre carte NON recyclee du meme sujet. Sans ce controle,
+    « recycler un doublon » deviendrait « detruire sa collection contre de
+    la monnaie » — une joueuse pourrait effacer d'un clic une carte qu'elle
+    est seule a posseder. Refus explicite : `409 not_a_duplicate`.
+
+    LA CARTE EST MARQUEE (`recycled_at`), PAS SUPPRIMEE. C'est ce qui garde
+    le credit correspondant EXPLICABLE dans l'historique du porte-monnaie :
+    un solde qu'on ne peut pas expliquer est un solde qu'on ne peut pas
+    corriger. Les lecteurs de collection l'excluent.
+
+    DEUX GARDE-FOUS INDEPENDANTS contre le double recyclage, tous deux
+    portes par le SCHEMA : le marquage est conditionne a
+    `recycled_at IS NULL` (deux clics simultanes ne peuvent pas reussir tous
+    les deux), et `UNIQUE (tenant_id, user_id, source_kind, source_ref)`
+    avec `source_ref = <pack_id>:<position>` interdit de crediter deux fois
+    la meme carte, meme sur rejeu.
+
+    ON MARQUE AVANT DE CREDITER — l'inverse de l'achat de booster, et pour
+    la meme raison qui le fait debiter avant de livrer : une carte retiree
+    sans credit se repare (le marquage est relache), un credit sans carte
+    retiree serait de la monnaie creee a partir de rien.
+
+    Le montant (`RECYCLE_REFUND_COINS`) est DERIVE de `BOOSTER_PRICE_COINS`,
+    jamais ecrit en dur. Rate-limit 30 / min.
+  operationId: recyclePlayerTcgCard
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [packId, position]
+          properties:
+            packId:
+              $ref: '#/components/schemas/Uuid'
+            position:
+              type: integer
+              description: Rang de la carte dans son paquet (0..n-1).
+  responses:
+    '200':
+      description: Doublon recycle, pieces creditees.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              recycled:
+                type: object
+                properties:
+                  packId:
+                    type: string
+                  position:
+                    type: integer
+              refund:
+                type: integer
+    '400':
+      description: '`code: missing_card`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      description: |
+        Carte introuvable. 404 et non 403 : on ne confirme pas l'existence
+        d'une carte qui n'appartient pas a l'appelante.
+    '409':
+      description: |
+        `code: not_a_duplicate` (seul exemplaire — refus deliberé) ou
+        `code: already_recycled` (carte deja recyclee).
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

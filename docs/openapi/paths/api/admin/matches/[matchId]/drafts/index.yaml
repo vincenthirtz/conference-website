@@ -1,0 +1,52 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+post:
+  tags:
+    - admin/matches
+  summary: Initialise a MOBA draft for (matchId, gameIndex) — Lot 2.
+  operationId: adminInitMatchDraft
+  description: |
+    Resolves the game slug from the match's tournament (`tournaments.game`,
+    must be `lol` or `dota2`), then creates a `match_drafts` row and seeds
+    all `match_draft_steps` from `config/games/<slug>.draftFlows[format]`.
+    409 if a draft already exists for (matchId, gameIndex). Honors the
+    `Idempotency-Key` header.
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/InitMatchDraftRequest'
+  responses:
+    '201':
+      description: Newly created draft state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MatchDraftStateResponse'
+    '400':
+      description: |
+        Invalid input — bad gameIndex, missing tournament game,
+        game has no draft phase, or pickTimerSeconds out of range.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DraftEngineError'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      description: Match or tournament not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DraftEngineError'
+    '409':
+      description: Draft already exists for (matchId, gameIndex).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DraftEngineError'

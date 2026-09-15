@@ -1,0 +1,33 @@
+get:
+  tags:
+    - public/misc
+  summary: Reception du callback OAuth Twitch (echange code → token cote serveur).
+  operationId: twitchOauthCallback
+  security: []
+  parameters:
+    - name: code
+      in: query
+      required: true
+      schema:
+        type: string
+    - name: state
+      in: query
+      required: false
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Code recu.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              ok:
+                type: boolean
+              code:
+                type: string
+              state:
+                type: string
+    '400':
+      $ref: '#/components/responses/BadRequest'

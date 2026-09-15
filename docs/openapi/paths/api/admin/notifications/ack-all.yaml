@@ -1,0 +1,31 @@
+post:
+  summary: Acquitter toutes les notifications Web Push non-lues du staff courant.
+  description: |
+    Marque comme `acked_at` toutes les deliveries non-acquittées des
+    subscriptions du user staff courant (remet le compteur de badge à zéro).
+    `withStaffRoute(handler, 'caster')` — n'importe quel rôle staff.
+  operationId: adminNotificationsAckAll
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Notifications acquittées.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - count_cleared
+            properties:
+              count_cleared:
+                type: integer
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

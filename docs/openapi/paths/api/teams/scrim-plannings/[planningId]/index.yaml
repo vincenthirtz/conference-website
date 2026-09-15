@@ -1,0 +1,28 @@
+parameters:
+  - name: planningId
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  tags:
+    - public/teams
+  summary: Get a planning the caller participates in (anonymised heatmap).
+  operationId: getScrimPlanning
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Planning, caller party, own slots, anonymised heatmap.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

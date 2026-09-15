@@ -1,0 +1,100 @@
+get:
+  tags:
+    - bot/scrims
+  summary: Liste les scrims non-draft (filtres status, limit).
+  operationId: botListScrims
+  parameters:
+    - name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    - name: status
+      in: query
+      schema:
+        type: string
+        enum:
+          - draft
+          - scheduled
+          - running
+          - completed
+          - cancelled
+    - name: includeDrafts
+      in: query
+      schema:
+        type: boolean
+  responses:
+    '200':
+      description: Liste des scrims.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - scrims
+            properties:
+              scrims:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Scrim'
+post:
+  tags:
+    - bot/scrims
+  summary: Cree un scrim (staff admin/owner).
+  operationId: botCreateScrim
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+            - name
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            name:
+              type: string
+            slug:
+              type: string
+            game:
+              type: string
+            status:
+              type: string
+              enum:
+                - draft
+                - scheduled
+                - running
+                - completed
+                - cancelled
+              default: draft
+            team1_id:
+              $ref: '#/components/schemas/Uuid'
+            team2_id:
+              $ref: '#/components/schemas/Uuid'
+            scheduled_date:
+              type: string
+              format: date-time
+            is_public:
+              type: boolean
+  responses:
+    '201':
+      description: Scrim cree.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              scrim:
+                $ref: '#/components/schemas/Scrim'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      $ref: '#/components/responses/Conflict'

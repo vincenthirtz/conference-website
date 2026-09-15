@@ -1,0 +1,25 @@
+parameters:
+  - $ref: '#/components/parameters/RunId'
+post:
+  summary: Transition event run from draft to live.
+  description: Requires `manager` role.
+  operationId: adminStartEventRun
+  tags:
+    - admin/events
+  security:
+    - StaffSession: []
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  responses:
+    '200':
+      description: Run started.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EventRun'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      $ref: '#/components/responses/Conflict'

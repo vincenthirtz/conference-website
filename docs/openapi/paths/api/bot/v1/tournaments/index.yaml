@@ -1,0 +1,97 @@
+get:
+  tags:
+    - bot/tournaments
+  summary: Liste les tournois non-draft (filtres status, limit).
+  operationId: botListTournaments
+  parameters:
+    - name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    - name: status
+      in: query
+      schema:
+        type: string
+    - name: includeDrafts
+      in: query
+      schema:
+        type: boolean
+  responses:
+    '200':
+      description: Liste des tournois.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - tournaments
+            properties:
+              tournaments:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tournament'
+post:
+  tags:
+    - bot/tournaments
+  summary: Cree un tournoi (staff admin/owner).
+  operationId: botCreateTournament
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+            - name
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            name:
+              type: string
+            slug:
+              type: string
+            game:
+              type: string
+            status:
+              type: string
+              enum:
+                - draft
+                - published
+                - running
+                - completed
+                - archived
+                - cancelled
+              default: draft
+            start_date:
+              type: string
+              format: date-time
+            end_date:
+              type: string
+              format: date-time
+            max_teams:
+              type: integer
+              minimum: 1
+  responses:
+    '201':
+      description: Tournoi cree.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              tournament:
+                $ref: '#/components/schemas/Tournament'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      $ref: '#/components/responses/Conflict'
+    '500':
+      $ref: '#/components/responses/ServerError'

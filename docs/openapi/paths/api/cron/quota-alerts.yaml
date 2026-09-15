@@ -1,0 +1,22 @@
+post:
+  summary: Daily API-quota alerts (80% and 100%).
+  description: |
+    CRON_SECRET-authenticated. Emails the tenant OWNERS once per threshold
+    per monthly window — `api_usage_counters.alerted_threshold` prevents the
+    daily repetition that would make the alert stop being read. The
+    threshold is marked even when no email could be sent (a space without a
+    sender account would otherwise retry forever).
+  operationId: cronQuotaAlerts
+  tags:
+    - cron
+  security: []
+  responses:
+    '200':
+      description: Counters.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'

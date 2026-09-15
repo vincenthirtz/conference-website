@@ -1,0 +1,66 @@
+get:
+  tags:
+    - public/misc
+  summary: Liste anonymisee des joueuses cherchant une equipe.
+  description: >
+    Vitrine publique du marche des joueuses libres (lot 1 acquisition). Ne
+    renvoie AUCUN moyen de contact — c'est une preuve qu'il y a du monde, pas un
+    carnet d'adresses. Les annonces perimees (60 j) sont exclues.
+  operationId: listPublicFreePlayers
+  security: []
+  responses:
+    '200':
+      description: Liste anonymisee.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - players
+              - count
+            properties:
+              players:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicFreePlayer'
+              count:
+                type: integer
+    '429':
+      $ref: '#/components/responses/RateLimited'
+post:
+  tags:
+    - public/misc
+  summary: Se signaler comme joueuse libre — SANS COMPTE. Anti-bot captcha + honeypot.
+  description: >
+    Cree (ou rafraichit) une fiche `source='web'` dans `free_players`, sans
+    exiger de compte : c'est tout l'objet du lot 1 — une joueuse sans equipe
+    n'avait aucun chemin sur le site. Une re-soumission avec le meme email met a
+    jour la fiche et repousse sa peremption. Reponse toujours generique `{
+    success: true }` (enumeration-safe). Un honeypot rempli est silencieusement
+    absorbe (200). Emet l'event bot `free_player.registered` a la premiere
+    inscription.
+  operationId: signupPublicFreePlayer
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/PublicFreePlayerSignupInput'
+  responses:
+    '200':
+      description: Toujours renvoye tant que la requete est bien formee (succes generique).
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - success
+            properties:
+              success:
+                type: boolean
+                example: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '429':
+      $ref: '#/components/responses/RateLimited'

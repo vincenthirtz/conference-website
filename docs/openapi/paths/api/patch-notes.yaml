@@ -1,0 +1,14 @@
+get:
+  tags:
+    - public/news
+  summary: Scrape les patch notes Overwatch (cache).
+  operationId: getPatchNotes
+  security: []
+  responses:
+    '200':
+      description: Patch notes parses.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

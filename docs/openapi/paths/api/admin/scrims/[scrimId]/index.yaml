@@ -1,0 +1,86 @@
+parameters:
+  - $ref: '#/components/parameters/ScrimId'
+get:
+  summary: Scrim detail.
+  operationId: adminGetScrim
+  tags:
+    - admin/scrims
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Scrim.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Scrim'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+patch:
+  summary: Patch scrim fields.
+  operationId: adminPatchScrim
+  tags:
+    - admin/scrims
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Updated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Scrim'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+put:
+  summary: Replace scrim fields (full update).
+  operationId: adminPutScrim
+  tags:
+    - admin/scrims
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Updated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Scrim'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  summary: Soft-delete a scrim.
+  operationId: adminDeleteScrim
+  tags:
+    - admin/scrims
+  security:
+    - StaffSession: []
+  responses:
+    '204':
+      description: Deleted.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

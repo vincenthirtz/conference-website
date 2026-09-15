@@ -1,0 +1,59 @@
+get:
+  tags:
+    - public/teams
+  summary: Liste les demandes de scrim emises par le joueur (capitaine).
+  operationId: listScrimDemandes
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Demandes.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+post:
+  tags:
+    - public/teams
+  summary: Soumet une demande de scrim a une autre equipe.
+  operationId: submitScrimDemande
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - targetTeamId
+          properties:
+            targetTeamId:
+              type: string
+              format: uuid
+            preferredDate:
+              type: string
+              format: date-time
+            format:
+              type: string
+            message:
+              type: string
+  responses:
+    '201':
+      description: Demande creee.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'

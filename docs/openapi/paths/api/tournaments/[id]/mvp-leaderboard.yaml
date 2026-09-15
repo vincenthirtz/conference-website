@@ -1,0 +1,43 @@
+parameters:
+  - name: id
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  tags:
+    - public/tournaments
+  summary: Leaderboard MVP du tournoi (count par joueur, perMatch).
+  operationId: getMvpLeaderboard
+  security: []
+  responses:
+    '200':
+      description: Leaderboard + perMatch.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - tournamentId
+              - leaderboard
+              - perMatch
+            properties:
+              tournamentId:
+                $ref: '#/components/schemas/Uuid'
+              tournamentName:
+                type: [string, 'null']
+              totalMvpAwards:
+                type: integer
+              totalFinishedMatches:
+                type: integer
+              leaderboard:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MvpLeaderboardEntry'
+              perMatch:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MvpPerMatchEntry'
+    '400':
+      $ref: '#/components/responses/BadRequest'

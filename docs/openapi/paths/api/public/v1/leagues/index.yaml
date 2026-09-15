@@ -1,0 +1,24 @@
+get:
+  tags:
+    - public/v1
+  summary: Liste des leagues publiques.
+  operationId: publicV1ListLeagues
+  security: []
+  responses:
+    '200':
+      description: Leagues publiques.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - data
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/League'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

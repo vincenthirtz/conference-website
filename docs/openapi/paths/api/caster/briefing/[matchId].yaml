@@ -1,0 +1,26 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+get:
+  tags:
+    - public/caster
+  summary: Briefing automatique caster pour un match (compos, H2H, news).
+  operationId: getCasterBriefing
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Briefing.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CasterBriefing'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'

@@ -1,0 +1,51 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+patch:
+  tags:
+    - bot/matches
+  summary: Writeback des IDs Discord lies a un match (thread, scheduled event,
+    dispute thread).
+  operationId: botUpdateMatchDiscordIds
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            discordThreadId:
+              oneOf:
+                - $ref: '#/components/schemas/DiscordId'
+                - type: 'null'
+            discordScheduledEventId:
+              oneOf:
+                - $ref: '#/components/schemas/DiscordId'
+                - type: 'null'
+            discordDisputeThreadId:
+              oneOf:
+                - $ref: '#/components/schemas/DiscordId'
+                - type: 'null'
+            discordMatchChannelId:
+              description: >-
+                ID du salon prive par match (T4 — overwrite de role d'equipe).
+                Persiste dans `matches.discord_match_channel_id`. null pour
+                vider. Si la migration n'est pas encore appliquee, le writeback
+                de ce champ renvoie 503 (code CHANNEL_COLUMN_MISSING) sans
+                impacter les autres champs.
+              oneOf:
+                - $ref: '#/components/schemas/DiscordId'
+                - type: 'null'
+  responses:
+    '200':
+      description: IDs Discord persistes.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'

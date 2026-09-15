@@ -1,0 +1,68 @@
+post:
+  tags:
+    - bot/teams
+  summary: Poste un message personnalise dans le salon Discord de chaque equipe
+    inscrite.
+  operationId: botSendTeamMessages
+  description: |
+    Declenche l'envoi d'un message par equipe inscrite au tournoi (rappel
+    roster auto-personnalise ou gabarit libre a variables). Le rendu est fait
+    cote site (`utils/teamMessages.ts`) a partir de l'etat reel du roster
+    (titulaires, remplacantes, comptes jamais connectes, BattleTags
+    manquants), puis un event outbox `team.message` est emis par equipe
+    livrable — le bot poste dans `teams.discord_channel_id`.
+
+    `dryRun` vaut TRUE par defaut : la reponse contient l'apercu rendu et
+    RIEN n'est poste. Passer `dryRun: false` pour envoyer.
+
+    Une equipe sans salon textuel provisionne est comptee dans `skipped`
+    (jamais droppee en silence). Acteur : staff admin/owner.
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [actorDiscordUserId]
+          properties:
+            actorDiscordUserId: {type: string}
+            preset:
+              type: string
+              enum: [roster-reminder, custom]
+              default: roster-reminder
+            template:
+              type: string
+              maxLength: 4000
+              description: Requis si `preset=custom`. Variables `{equipe}`, `{titulaires}`,
+                `{manquants}`, `{minimum}`, `{remplacantes}`,
+                `{sans_battletag}`, `{jamais_connectees}`, `{deadline}`,
+                `{debut}`, `{lien_equipe}`.
+            teamIds:
+              type: array
+              maxItems: 200
+              items: {type: string, format: uuid}
+            only:
+              type: string
+              enum: [all, incomplete, needs_attention]
+            mention:
+              type: boolean
+              description: Ping le role d'equipe (sinon message silencieux).
+            tournamentId: {type: string, format: uuid}
+            dryRun:
+              type: boolean
+              default: true
+  responses:
+    '200':
+      description: "Apercu (`dryRun: true`) ou resultat d'envoi (`sent`, `skipped`,
+        `teams[]`)."
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '409':
+      description: Aucun tournoi en cours.

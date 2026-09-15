@@ -1,0 +1,31 @@
+post:
+  tags:
+    - bot/teams
+  summary: Une joueuse quitte son equipe (interdit si capitaine).
+  operationId: botLeaveTeam
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+  responses:
+    '200':
+      description: Equipe quittee.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Ok'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      $ref: '#/components/responses/Conflict'

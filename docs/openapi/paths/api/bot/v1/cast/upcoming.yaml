@@ -1,0 +1,31 @@
+get:
+  tags:
+    - bot/cast
+  summary: Liste les cast assignments dans la fenetre [now, now+withinMinutes] non
+    acknowledged. Cross-tenant.
+  operationId: botGetCastUpcoming
+  security:
+    - BotApiKey: []
+  parameters:
+    - name: withinMinutes
+      in: query
+      schema:
+        type: integer
+        minimum: 5
+        maximum: 120
+        default: 30
+  responses:
+    '200':
+      description: Liste cross-tenant des assignments due bientot.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              assignments:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'

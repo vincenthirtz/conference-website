@@ -1,0 +1,14 @@
+get:
+  tags:
+    - public/news
+  summary: Scrape la page d'actualites Blizzard Overwatch.
+  operationId: getBlizzardNews
+  security: []
+  responses:
+    '200':
+      description: Liste d'articles Blizzard parses.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

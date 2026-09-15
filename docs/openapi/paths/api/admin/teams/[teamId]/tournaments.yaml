@@ -1,0 +1,67 @@
+parameters:
+  - $ref: '#/components/parameters/TeamId'
+get:
+  summary: List tournaments the team is enrolled in.
+  operationId: adminListTeamTournaments
+  tags:
+    - admin/teams
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Tournaments.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Enroll a team into a tournament.
+  operationId: adminEnrollTeamInTournament
+  tags:
+    - admin/teams
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '201':
+      description: Enrolled.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  summary: Unenroll a team from a tournament.
+  operationId: adminUnenrollTeamFromTournament
+  tags:
+    - admin/teams
+  security:
+    - StaffSession: []
+  parameters:
+    - in: query
+      name: tournamentId
+      schema:
+        type: string
+        format: uuid
+  responses:
+    '204':
+      description: Unenrolled.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

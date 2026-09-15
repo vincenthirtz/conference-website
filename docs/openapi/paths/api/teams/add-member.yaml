@@ -1,0 +1,46 @@
+post:
+  tags:
+    - public/teams
+  summary: Le capitaine/manager ajoute un membre par email ou userId.
+  operationId: playerAddTeamMember
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            userId:
+              type: string
+              format: uuid
+            email:
+              type: string
+              format: email
+            role:
+              type: string
+            battleTag:
+              type: string
+  responses:
+    '200':
+      description: Membre ajoute.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'
+    '429':
+      $ref: '#/components/responses/RateLimited'

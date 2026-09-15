@@ -1,0 +1,56 @@
+parameters:
+  - name: conversationId
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  tags:
+    - public/auth
+  summary: Recupere les messages d'une conversation.
+  operationId: getConversationMessages
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Messages.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      $ref: '#/components/responses/NotFound'
+patch:
+  tags:
+    - public/auth
+  summary: Marque la conversation comme lue / poste une reply.
+  operationId: updateConversation
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: OK.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'

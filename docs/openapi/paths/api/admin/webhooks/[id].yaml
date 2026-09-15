@@ -1,0 +1,48 @@
+parameters:
+  - name: id
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+patch:
+  tags:
+    - admin/misc
+  summary: Active/désactive un abonnement webhook.
+  operationId: adminPatchWebhook
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - enabled
+          properties:
+            enabled:
+              type: boolean
+  responses:
+    '200':
+      description: Abonnement mis à jour.
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      $ref: '#/components/responses/NotFound'
+delete:
+  tags:
+    - admin/misc
+  summary: Supprime un abonnement webhook (CASCADE ses livraisons).
+  operationId: adminDeleteWebhook
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Supprimé.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      $ref: '#/components/responses/NotFound'

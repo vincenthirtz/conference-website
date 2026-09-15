@@ -1,0 +1,46 @@
+parameters:
+  - name: demandeId
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+post:
+  tags:
+    - bot/players
+  summary: Action sur une invitation pending (accept / reject / cancel).
+  operationId: botActOnInvitation
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+            - action
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            action:
+              type: string
+              enum:
+                - accept
+                - reject
+                - cancel
+  responses:
+    '200':
+      description: Action effectuee.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

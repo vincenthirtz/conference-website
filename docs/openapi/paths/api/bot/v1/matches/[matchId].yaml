@@ -1,0 +1,139 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+get:
+  tags:
+    - bot/matches
+  summary: Lecture des metadonnees d'un match (teams, status, scheduled_at).
+  operationId: botGetMatchById
+  responses:
+    '200':
+      description: Match trouve.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - match
+            properties:
+              match:
+                type: object
+                properties:
+                  id:
+                    $ref: '#/components/schemas/Uuid'
+                  status:
+                    type: string
+                  is_bye:
+                    type: boolean
+                  scheduled_at:
+                    anyOf:
+                      - $ref: '#/components/schemas/Timestamp'
+                      - type: 'null'
+                  match_format:
+                    type: [string, 'null']
+                  tournament_id:
+                    anyOf:
+                      - $ref: '#/components/schemas/Uuid'
+                      - type: 'null'
+                  scrim_id:
+                    anyOf:
+                      - $ref: '#/components/schemas/Uuid'
+                      - type: 'null'
+                  stage_id:
+                    anyOf:
+                      - $ref: '#/components/schemas/Uuid'
+                      - type: 'null'
+                  team1:
+                    type: object
+                    properties:
+                      id:
+                        $ref: '#/components/schemas/Uuid'
+                      name:
+                        type: string
+                      short_name:
+                        type: [string, 'null']
+                  team2:
+                    type: object
+                    properties:
+                      id:
+                        $ref: '#/components/schemas/Uuid'
+                      name:
+                        type: string
+                      short_name:
+                        type: [string, 'null']
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '500':
+      $ref: '#/components/responses/ServerError'
+patch:
+  tags:
+    - bot/matches
+  summary: Met a jour les metadonnees d'un match (planning, lobby, stream, notes).
+  operationId: botUpdateMatchMeta
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            scheduledAt:
+              oneOf:
+                - $ref: '#/components/schemas/Timestamp'
+                - type: 'null'
+            lobbyCode:
+              type: [string, 'null']
+              maxLength: 200
+            streamUrl:
+              type: [string, 'null']
+            notes:
+              type: [string, 'null']
+              maxLength: 2000
+  responses:
+    '200':
+      description: Mise a jour effectuee.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              match:
+                type: object
+                properties:
+                  id:
+                    $ref: '#/components/schemas/Uuid'
+                  status:
+                    type: string
+                  scheduled_at:
+                    anyOf:
+                      - $ref: '#/components/schemas/Timestamp'
+                      - type: 'null'
+                  lobby_code:
+                    type: [string, 'null']
+                  stream_url:
+                    type: [string, 'null']
+                  notes:
+                    type: [string, 'null']
+                  updated_at:
+                    $ref: '#/components/schemas/Timestamp'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

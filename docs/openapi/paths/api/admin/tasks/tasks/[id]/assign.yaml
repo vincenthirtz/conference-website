@@ -1,0 +1,36 @@
+patch:
+  tags:
+    - admin/tasks
+  summary: (Des)assigne une carte (assignTaskCore). Emet task.assigned +
+    task.board_changed. Idempotent.
+  operationId: adminAssignTask
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [assigneeStaffId]
+          properties:
+            assigneeStaffId: {type: [string, 'null'], format: uuid}
+  responses:
+    '200':
+      description: Carte (des)assignee.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

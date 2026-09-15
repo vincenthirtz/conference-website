@@ -1,0 +1,98 @@
+parameters:
+  - $ref: '#/components/parameters/DiscordUserId'
+get:
+  tags:
+    - bot/players
+  summary: Prochain match (ou en cours) du joueur, avec etat check-in.
+  operationId: botGetPlayerNextMatch
+  responses:
+    '200':
+      description: Match a venir ou null.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - authUserId
+              - discordUserId
+            properties:
+              authUserId:
+                $ref: '#/components/schemas/Uuid'
+              discordUserId:
+                $ref: '#/components/schemas/DiscordId'
+              match:
+                type: [object, 'null']
+                properties:
+                  id:
+                    $ref: '#/components/schemas/Uuid'
+                  scheduledAt:
+                    anyOf:
+                      - $ref: '#/components/schemas/Timestamp'
+                      - type: 'null'
+                  status:
+                    type: string
+                  format:
+                    type: [string, 'null']
+                  bestOf:
+                    type: [integer, 'null']
+                  roundName:
+                    type: [string, 'null']
+                  streamUrl:
+                    type: [string, 'null']
+                  lobbyCode:
+                    type: [string, 'null']
+              team:
+                type: [object, 'null']
+                properties:
+                  id:
+                    $ref: '#/components/schemas/Uuid'
+                  name:
+                    type: string
+                  slot:
+                    type: integer
+                    enum:
+                      - 1
+                      - 2
+              opponent:
+                type: [object, 'null']
+                properties:
+                  id:
+                    $ref: '#/components/schemas/Uuid'
+                  name:
+                    type: string
+              tournament:
+                type: [object, 'null']
+                properties:
+                  id:
+                    $ref: '#/components/schemas/Uuid'
+                  name:
+                    type: string
+                  slug:
+                    type: [string, 'null']
+              checkin:
+                type: [object, 'null']
+                properties:
+                  tokenAvailable:
+                    type: boolean
+                  alreadyCheckedIn:
+                    type: boolean
+                  checkedInAt:
+                    anyOf:
+                      - $ref: '#/components/schemas/Timestamp'
+                      - type: 'null'
+                  opensAt:
+                    anyOf:
+                      - $ref: '#/components/schemas/Timestamp'
+                      - type: 'null'
+                  closesAt:
+                    anyOf:
+                      - $ref: '#/components/schemas/Timestamp'
+                      - type: 'null'
+                  isOpen:
+                    type: boolean
+                  isPassed:
+                    type: boolean
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'

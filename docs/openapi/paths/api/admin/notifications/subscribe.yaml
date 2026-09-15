@@ -1,0 +1,23 @@
+post:
+  summary: Register a web push subscription.
+  operationId: adminSubscribeNotifications
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Subscribed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Ok'
+    '401':
+      $ref: '#/components/responses/Unauthorized'

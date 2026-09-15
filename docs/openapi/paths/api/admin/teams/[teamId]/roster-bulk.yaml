@@ -1,0 +1,86 @@
+parameters:
+  - $ref: '#/components/parameters/TeamId'
+post:
+  summary: Bulk roster operations on a team.
+  description: |
+    Applies one operation to a list of team members (best-effort, per-member
+    result). Operations: `set_role`, `set_substitute`, `remove`,
+    `import_battle_tags`. The captain can never be removed or marked
+    substitute via bulk.
+  operationId: adminTeamRosterBulk
+  tags:
+    - admin/teams
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - operation
+          properties:
+            operation:
+              type: string
+              enum:
+                - set_role
+                - set_substitute
+                - remove
+                - import_battle_tags
+            memberIds:
+              type: array
+              items:
+                type: string
+                format: uuid
+              description: Member ids for set_role / set_substitute / remove.
+            role:
+              type: string
+              description: Required when operation = set_role.
+            isSubstitute:
+              type: boolean
+              description: Required when operation = set_substitute.
+            items:
+              type: array
+              description: Required when operation = import_battle_tags.
+              items:
+                type: object
+                properties:
+                  memberId:
+                    type: string
+                    format: uuid
+                  battleTag:
+                    type: string
+  responses:
+    '200':
+      description: Per-member results.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              operation:
+                type: string
+              results:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    memberId:
+                      type: string
+                    ok:
+                      type: boolean
+                    error:
+                      type: string
+              successCount:
+                type: integer
+              failureCount:
+                type: integer
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

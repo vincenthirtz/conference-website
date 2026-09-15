@@ -1,0 +1,71 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: Détail d'une league.
+  operationId: adminGetLeague
+  tags:
+    - admin/leagues
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: League.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/League'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+patch:
+  summary: Met à jour partiellement une league.
+  operationId: adminUpdateLeague
+  tags:
+    - admin/leagues
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/LeaguePatchInput'
+  responses:
+    '200':
+      description: League mise à jour.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/League'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'
+delete:
+  summary: Supprime une league.
+  operationId: adminDeleteLeague
+  tags:
+    - admin/leagues
+  security:
+    - StaffSession: []
+  responses:
+    '204':
+      description: Supprimée.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

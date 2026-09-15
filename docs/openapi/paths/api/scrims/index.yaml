@@ -1,0 +1,44 @@
+get:
+  tags:
+    - public/scrims
+  summary: Liste les scrims publics (`is_public=true`, status != draft).
+  operationId: getPublicScrims
+  security: []
+  parameters:
+    - name: status
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+          - draft
+          - scheduled
+          - running
+          - completed
+          - cancelled
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+  responses:
+    '200':
+      description: Scrims publics.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - scrims
+            properties:
+              scrims:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicScrim'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '429':
+      $ref: '#/components/responses/RateLimited'

@@ -1,0 +1,137 @@
+get:
+  summary: File des photos de cartes TCG en attente de relecture.
+  description: |
+    `withStaffRoute(handler, { permission: 'manage_tcg' })`.
+    Les plus anciennes d'abord (une photo ne doit pas attendre derriere une
+    plus recente). Chaque element porte `displayName` et `email`, resolus
+    en UN appel par la RPC `admin_get_user_profiles`
+    (`fetchAdminUserProfiles` ; le profil vit dans
+    `auth.users.raw_user_meta_data`, il n'existe pas de table `profiles`).
+    `displayName` = `display_name`, sinon `full_name` (comptes Discord).
+    L'ENRICHISSEMENT NE FAIT JAMAIS ECHOUER LA FILE : une RPC en echec ou un
+    compte introuvable rend `null` pour les deux champs, et la file reste
+    servie — ce qu'une relectrice doit voir avant tout, c'est l'image.
+    `null` veut dire « nom inconnu », jamais « compte supprime ».
+    Rate-limit 60 / min.
+  operationId: adminTcgPhotosList
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: File d'attente.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              photos:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    userId:
+                      type: string
+                      format: uuid
+                    displayName:
+                      type: [string, 'null']
+                      description: |
+                        Pseudo du compte (`display_name`, sinon
+                        `full_name`). `null` si la resolution echoue.
+                    email:
+                      type: [string, 'null']
+                      description: |
+                        `null` si la resolution echoue.
+                    photoPath:
+                      type: [string, 'null']
+                      description: |
+                        Chemin du fichier AFFICHE dans le bucket. A renvoyer
+                        tel quel dans le PATCH : la decision porte sur ce
+                        fichier-la, jamais sur un remplacement.
+                    photoUrl:
+                      type: [string, 'null']
+                    submittedAt:
+                      type: [string, 'null']
+              total:
+                type: integer
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+patch:
+  summary: Approuver ou refuser une photo de carte TCG.
+  description: |
+    Un REFUS supprime le fichier du bucket, qui est public : un cliche
+    refuse — precisement parce qu'il pose probleme — y resterait sinon
+    atteignable par son URL. La joueuse garde le motif et peut redeposer.
+    Journalise (`tcg_photo_approve` / `tcg_photo_reject`).
+
+    ON N'APPROUVE QUE LA PHOTO VUE (2026-09-15). `photoPath` (rendu par le
+    GET) est OBLIGATOIRE ; l'ecriture est conditionnelle a
+    `photo_status = 'pending' AND photo_path = photoPath`. Si la joueuse a
+    remplace sa photo depuis l'affichage, rien n'est approuve ni supprime
+    (`409 PHOTO_CHANGED`) — sans quoi une photo jamais vue etait publiee,
+    et un refus concurrent laissait la nouvelle orpheline dans le bucket
+    public. Le fichier supprime au refus est celui que l'ecriture a
+    confirme. Rate-limit 30 / min.
+  operationId: adminTcgPhotosDecide
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [userId, decision, photoPath]
+          properties:
+            userId:
+              type: string
+              format: uuid
+            decision:
+              type: string
+              enum: [approve, reject]
+            photoPath:
+              type: string
+              minLength: 1
+              maxLength: 512
+              description: Le `photoPath` de l'element affiche (GET).
+            reason:
+              type: [string, 'null']
+              maxLength: 500
+  responses:
+    '200':
+      description: Decision enregistree.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [approved, rejected]
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      description: |
+        `code: NOT_PENDING` — la photo n'est plus en attente (la joueuse l'a
+        peut-etre retiree pendant la relecture ; sa decision prime).
+        `code: PHOTO_CHANGED` — la photo a ete remplacee depuis l'affichage
+        (y compris entre la relecture et l'ecriture) : la nouvelle doit etre
+        relue. Dans les deux cas rien n'est ecrit ni supprime, le panneau
+        rafraichit la file.
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

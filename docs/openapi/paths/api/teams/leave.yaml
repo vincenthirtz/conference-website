@@ -1,0 +1,42 @@
+post:
+  tags:
+    - public/teams
+  summary: L'utilisateur authentifie quitte son equipe (le capitaine doit
+    transferer avant).
+  operationId: playerLeaveTeam
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Sortie effective.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - success
+            properties:
+              success:
+                type: boolean
+              info:
+                type: string
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: Le capitaine ne peut pas quitter sans transfert prealable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    '409':
+      description: Roster verrouille.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    '429':
+      $ref: '#/components/responses/RateLimited'

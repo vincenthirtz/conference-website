@@ -1,0 +1,26 @@
+delete:
+  tags:
+    - admin/tasks
+  summary: Supprime un commentaire de carte. Loggue task_comment_delete.
+  operationId: adminDeleteTaskComment
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  responses:
+    '200':
+      description: Commentaire supprime.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

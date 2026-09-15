@@ -1,0 +1,45 @@
+get:
+  tags:
+    - public/auth
+  summary: Retour du flux OAuth Twitch joueuse.
+  operationId: twitchLinkOauthCallback
+  description: |
+    PUBLIC (le navigateur y arrive par un 302 de Twitch), protege par un
+    state SIGNE + cookie nonce en double-submit.
+
+    TROIS VERIFICATIONS, et il faut les trois : signature et peremption du
+    state, egalite avec le cookie nonce, puis egalite entre la session
+    courante et le compte qui a LANCE le flux. Sans la derniere, un state
+    vole encore valide permettrait de rattacher un compte Twitch au compte
+    d'autrui depuis n'importe quel navigateur.
+
+    Le compte Twitch est refuse s'il appartient deja a un AUTRE compte du
+    site (`already_linked`) : on ne vole pas un lien. Aucun jeton n'est
+    ecrit, ni dans l'URL de redirection ni en base — on lit l'identite et on
+    l'oublie.
+
+    Redirige (302) vers `returnTo` avec `?twitch=linked|already_linked|error`.
+    Rate-limit 20 req/min par IP.
+  security: []
+  parameters:
+    - name: code
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Code d'autorisation Twitch. Absent si la personne a annule.
+    - name: state
+      in: query
+      required: false
+      schema:
+        type: string
+      description: State signe emis par `/api/auth/twitch/start`.
+  responses:
+    '302':
+      description: Redirection vers `returnTo` avec le statut en query.
+    '405':
+      description: Methode non autorisee.
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '503':
+      description: Fonctionnalite dormante (`TWITCH_IDENTITY_NOT_CONFIGURED`).

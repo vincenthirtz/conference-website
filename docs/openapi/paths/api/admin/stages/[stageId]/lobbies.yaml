@@ -1,0 +1,55 @@
+parameters:
+  - $ref: '#/components/parameters/StageId'
+get:
+  summary: List FFA lobbies of a stage with placements and computed standings.
+  operationId: adminListStageLobbies
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Lobbies, placements and aggregated FFA standings.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+post:
+  summary: Create an FFA lobby in a stage.
+  operationId: adminCreateStageLobby
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '201':
+      description: Lobby created.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

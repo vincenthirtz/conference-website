@@ -1,0 +1,39 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: Every availability constraint weighing on a tournament.
+  description: >
+    Les equipes ENGAGEES (`tournament_teams`), chacune avec ses contraintes,
+    MEME VIDE : l'admin doit voir qui n'a rien declare autant que qui a declare
+    quelque chose. `constraints` reprend la liste a plat, prete pour le
+    diagnostic de planning.
+
+
+    Perimetre : les contraintes propres au tournoi ET les globales de ces memes
+    equipes.
+  operationId: adminGetTournamentAvailability
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Contraintes du tournoi.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      description: Identifiant invalide (`INVALID_TOURNAMENT_ID`).
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      description: Tournoi inconnu (`TOURNAMENT_NOT_FOUND`).

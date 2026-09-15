@@ -1,0 +1,124 @@
+get:
+  summary: List channel-point rewards.
+  description: |
+    Requires `manager` role and the `channel:read:redemptions` scope.
+    By default only rewards created by our client_id are returned
+    (`only_manageable_rewards=true`) — ce sont les seules que Helix
+    autorise a MODIFIER.
+
+    `?all=1` leve le filtre et renvoie TOUTES les recompenses de la chaine,
+    y compris celles creees a la main dans l'interface Twitch. La
+    restriction Helix ne porte que sur l'ecriture : lire est permis avec le
+    meme scope. Sert a recuperer l'identifiant d'une recompense qu'on ne
+    gere pas — typiquement celle qui declenche un drop TCG. Sans cette
+    option, une recompense creee a la main avait un identifiant
+    inatteignable.
+
+    `409 NOT_CONNECTED` / `403 MISSING_SCOPE`.
+  operationId: adminTwitchListRewards
+  tags:
+    - admin/twitch
+  security:
+    - StaffSession: []
+  parameters:
+    - name: all
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: ['1', 'true']
+      description: >-
+        Leve `only_manageable_rewards` et renvoie toutes les recompenses de la
+        chaine.
+  responses:
+    '200':
+      description: Manageable rewards.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: 'Missing scope (code MISSING_SCOPE) or forbidden role.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '409':
+      description: 'No broadcaster channel connected (code NOT_CONNECTED).'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+post:
+  summary: Create a channel-point reward.
+  description: |
+    Requires `manager` role and the `channel:manage:redemptions` scope.
+    Creates a custom reward via `POST helix/channel_points/custom_rewards`.
+    Only rewards created by our client_id are later editable/deletable.
+    Returns `{ reward }`. `409 NOT_CONNECTED` / `403 MISSING_SCOPE`.
+  operationId: adminTwitchCreateReward
+  tags:
+    - admin/twitch
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - title
+            - cost
+          properties:
+            title:
+              type: string
+              minLength: 1
+              maxLength: 45
+            cost:
+              type: integer
+              minimum: 1
+            prompt:
+              type: string
+              maxLength: 200
+            is_enabled:
+              type: boolean
+              default: true
+            is_user_input_required:
+              type: boolean
+            background_color:
+              type: string
+              pattern: '^#[0-9A-Fa-f]{6}$'
+            should_redemptions_skip_request_queue:
+              type: boolean
+  responses:
+    '200':
+      description: Reward created.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: 'Missing scope (code MISSING_SCOPE) or forbidden role.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '409':
+      description: 'No broadcaster channel connected (code NOT_CONNECTED).'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

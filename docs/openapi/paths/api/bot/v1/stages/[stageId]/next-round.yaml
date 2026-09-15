@@ -1,0 +1,55 @@
+parameters:
+  - $ref: '#/components/parameters/StageId'
+post:
+  tags:
+    - bot/tournaments
+  summary: Genere le round Swiss suivant pour une phase.
+  operationId: botStageNextRound
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            dryRun:
+              type: boolean
+              default: false
+            acceptRematches:
+              type: boolean
+              default: false
+            roundNumber:
+              type: integer
+            allowRematchesFallback:
+              type: boolean
+              default: true
+            scoreConfig:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Preview dry-run.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '201':
+      description: Round insere.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      $ref: '#/components/responses/Conflict'

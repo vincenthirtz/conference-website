@@ -1,0 +1,87 @@
+parameters:
+  - $ref: '#/components/parameters/StageId'
+get:
+  summary: List teams in a stage.
+  operationId: adminListStageTeams
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Teams.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Add teams to a stage.
+  operationId: adminAddStageTeams
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Added.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+patch:
+  summary: Patch a team membership in a stage (group, seed).
+  operationId: adminPatchStageTeams
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Patched.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  summary: Remove teams from a stage.
+  operationId: adminRemoveStageTeams
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  responses:
+    '204':
+      description: Removed.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

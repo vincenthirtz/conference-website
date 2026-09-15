@@ -1,0 +1,37 @@
+post:
+  tags:
+    - public/teams
+  summary: Ajoute un membre a une equipe via le bot Discord (legacy, bearer
+    DISCORD_TEAM_SECRET).
+  operationId: discordAddTeamMember
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            team_id:
+              type: string
+              format: uuid
+            user_id:
+              type: string
+              format: uuid
+            email:
+              type: string
+              format: email
+            role:
+              type: string
+            set_captain:
+              type: boolean
+  responses:
+    '200':
+      description: Membre ajoute.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'

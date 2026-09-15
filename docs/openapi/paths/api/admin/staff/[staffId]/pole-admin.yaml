@@ -1,0 +1,48 @@
+parameters:
+  - in: path
+    name: staffId
+    required: true
+    schema:
+      type: string
+      format: uuid
+post:
+  summary: Grant pole-admin role to a staff member.
+  description: Requires `owner` role.
+  operationId: adminGrantPoleAdmin
+  tags:
+    - admin/users
+  security:
+    - StaffSession: []
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Granted.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Ok'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  summary: Revoke pole-admin role from a staff member.
+  description: Requires `owner` role.
+  operationId: adminRevokePoleAdmin
+  tags:
+    - admin/users
+  security:
+    - StaffSession: []
+  responses:
+    '204':
+      description: Revoked.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

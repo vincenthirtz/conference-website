@@ -1,0 +1,47 @@
+BotApiKey:
+  type: apiKey
+  in: header
+  name: x-api-key
+  description: |
+    Bot API key, per-tenant uniquement : le sha256 du header est comparé à
+    `tenant_secrets.bot_api_key_hash` et détermine le tenant. Le fallback
+    env legacy `BOT_API_KEY` a été retiré pour `/api/bot/v1/*` ; une clé
+    inconnue renvoie 401.
+BotTenantId:
+  type: apiKey
+  in: header
+  name: x-tenant-id
+  description: |
+    UUID du tenant. Informationnel uniquement : la clé per-tenant est
+    autoritaire, le header n'est plus requis ni validé (ignoré, et la clé
+    gagne en cas de conflit).
+StaffSession:
+  type: apiKey
+  in: cookie
+  name: sb-access-token
+  description: |
+    Session Supabase staff. Le helper `withStaffRoute(handler, minRole)`
+    applique le check de rôle (`owner` > `admin` > `manager` > `caster`).
+PlayerBearer:
+  type: http
+  scheme: bearer
+  bearerFormat: JWT
+  description: |
+    Bearer token Supabase user (joueur, capitaine). Géré par
+    `withAuthRoute`. CSRF-immune par construction (header non
+    auto-attaché par le navigateur cross-origin).
+CronSecret:
+  type: apiKey
+  in: header
+  name: x-cron-secret
+  description: |
+    Token partagé entre Netlify scheduled functions et l'API. Vérifié
+    par `requireCronAuth()`. Routes idempotentes côté serveur.
+PublicApiToken:
+  type: http
+  scheme: bearer
+  description: |
+    Token API public scopé (`Authorization: Bearer pk_live_…`), découplé du
+    bot. Vérifié par `withPublicWrite` : sha256 → `tenant_api_tokens` (non
+    révoqué) ; le tenant est autoritaire, les `scopes` (`resource:action`,
+    ex. `matches:write`) gouvernent l'accès. CSRF-immune (bearer).

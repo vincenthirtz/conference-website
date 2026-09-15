@@ -1,0 +1,26 @@
+parameters:
+  - $ref: '#/components/parameters/RunId'
+  - $ref: '#/components/parameters/SegId'
+post:
+  summary: End a segment (transition live → done).
+  description: Requires `manager` role.
+  operationId: adminEndEventSegment
+  tags:
+    - admin/events
+  security:
+    - StaffSession: []
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  responses:
+    '200':
+      description: Segment ended.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EventSegment'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      $ref: '#/components/responses/Conflict'

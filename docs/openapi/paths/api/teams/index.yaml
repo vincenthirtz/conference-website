@@ -1,0 +1,68 @@
+get:
+  tags:
+    - public/teams
+  summary: Liste publique des equipes du tenant resolu.
+  operationId: getPublicTeams
+  security: []
+  parameters:
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 100
+    - name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    - name: search
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Recherche `ilike` sur name et short_name.
+    - name: joinable
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+          - '1'
+          - 'true'
+    - name: open_for_scrim
+      in: query
+      required: false
+      description: Ne renvoyer que les equipes qui se declarent disponibles pour un scrim.
+      schema:
+        type: string
+        enum:
+          - '1'
+          - 'true'
+    - name: country
+      in: query
+      required: false
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Equipes filtrees + total.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - teams
+            properties:
+              teams:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicTeamSummary'
+              total:
+                type: [integer, 'null']
+    '429':
+      $ref: '#/components/responses/RateLimited'

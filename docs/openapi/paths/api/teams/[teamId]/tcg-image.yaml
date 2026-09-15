@@ -1,0 +1,77 @@
+parameters:
+  - $ref: '#/components/parameters/TeamId'
+post:
+  tags:
+    - public/teams
+  summary: >-
+    Depose l'illustration de la carte TCG de l'equipe (capitaine ou staff).
+    Publiee immediatement ; remplace et supprime la precedente.
+  operationId: uploadTeamTcgImage
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - data
+            - mimeType
+          properties:
+            data:
+              type: string
+              description: 'Image en base64, prefixe data URI accepte. Max 2 Mio.'
+            mimeType:
+              type: string
+              enum:
+                - image/png
+                - image/jpeg
+                - image/webp
+  responses:
+    '200':
+      description: Image publiee ; URL publique renvoyee.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              url:
+                type: [string, 'null']
+              path:
+                type: string
+    '400':
+      description: >-
+        Image refusee. `code` vaut missing_data, unsupported_type,
+        invalid_base64, too_large ou content_mismatch.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  tags:
+    - public/teams
+  summary: >-
+    Retire l'illustration TCG de l'equipe ; la carte retombe sur son logo.
+  operationId: deleteTeamTcgImage
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Illustration retiree.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              url:
+                type: [string, 'null']
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

@@ -1,0 +1,67 @@
+get:
+  tags:
+    - public/misc
+  summary: Liste anonymisee des equipes qui cherchent une joueuse.
+  description: >
+    Miroir de /api/public/free-players : la vitrine des equipes qui recrutent.
+    Ne renvoie AUCUN moyen de contact — repondre a une annonce passe par
+    /api/team-openings/contact, derriere un compte. Les annonces perimees (60 j)
+    sont exclues. Cache CDN 60 s.
+  operationId: listPublicTeamOpenings
+  security: []
+  responses:
+    '200':
+      description: Liste anonymisee.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - openings
+              - count
+            properties:
+              openings:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicTeamOpening'
+              count:
+                type: integer
+    '429':
+      $ref: '#/components/responses/RateLimited'
+post:
+  tags:
+    - public/misc
+  summary: Publier une annonce de recrutement — SANS COMPTE. Anti-bot captcha +
+    honeypot.
+  description: >
+    Cree (ou rafraichit) une annonce `source='web'` dans `team_openings`, sans
+    exiger de compte : une equipe qui se monte n'a souvent pas encore
+    d'existence sur le site. Une re-soumission avec le meme email met a jour
+    l'annonce et repousse sa peremption. Reponse toujours generique `{ success:
+    true }` (enumeration-safe). Un honeypot rempli est silencieusement absorbe
+    (200). Emet l'event bot `team_opening.published` a la premiere publication.
+  operationId: publishPublicTeamOpening
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/PublicTeamOpeningInput'
+  responses:
+    '200':
+      description: Toujours renvoye tant que la requete est bien formee (succes generique).
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - success
+            properties:
+              success:
+                type: boolean
+                example: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '429':
+      $ref: '#/components/responses/RateLimited'

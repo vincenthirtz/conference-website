@@ -1,0 +1,19 @@
+parameters:
+  - $ref: '#/components/parameters/DiscordUserId'
+get:
+  tags:
+    - bot/players
+  summary: Equipe a laquelle ce joueur appartient.
+  operationId: botGetPlayerTeam
+  responses:
+    '200':
+      description: Equipe trouvee (ou null).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              team:
+                anyOf:
+                  - $ref: '#/components/schemas/Team'
+                  - type: 'null'

@@ -1,0 +1,50 @@
+parameters:
+  - name: id
+    in: path
+    required: true
+    description: Id (UUID) ou slug du tournoi.
+    schema:
+      type: string
+get:
+  tags:
+    - public/v1
+  summary: Matches d'un tournoi (overlays de bracket).
+  operationId: publicV1ListTournamentMatches
+  security: []
+  parameters:
+    - name: stageId
+      in: query
+      required: false
+      schema:
+        type: string
+    - name: status
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+          - pending
+          - ongoing
+          - finished
+  responses:
+    '200':
+      description: Liste des matches publics du tournoi.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - data
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicV1Match'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

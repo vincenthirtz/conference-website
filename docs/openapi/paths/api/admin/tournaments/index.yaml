@@ -1,0 +1,48 @@
+get:
+  summary: List tournaments of the active tenant.
+  operationId: adminListTournaments
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Tournaments.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              tournaments:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tournament'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Create a tournament.
+  operationId: adminCreateTournament
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '201':
+      description: Created.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Tournament'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

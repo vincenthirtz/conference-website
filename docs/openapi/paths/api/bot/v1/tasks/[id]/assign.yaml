@@ -1,0 +1,33 @@
+patch:
+  tags:
+    - bot/tasks
+  summary: (Des)assigne une carte Kanban (assignTaskCore). Emet task.assigned +
+    task.board_changed. Idempotent.
+  operationId: botAssignTask
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [actorDiscordUserId]
+          properties:
+            actorDiscordUserId: {type: string}
+            assignSelf: {type: boolean}
+            assigneeStaffId: {type: [string, 'null'], format: uuid}
+            assigneeDiscordUserId: {type: string}
+  responses:
+    '200':
+      description: Carte (des)assignee.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

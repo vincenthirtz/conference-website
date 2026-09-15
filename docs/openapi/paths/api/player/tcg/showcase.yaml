@@ -1,0 +1,80 @@
+get:
+  tags:
+    - public/auth
+  summary: Ma vitrine TCG (opt-in) — cartes exposees sur ma fiche publique.
+  description: |
+    La vitrine montre jusqu'a `maxCards` (3) cartes choisies par la joueuse
+    sur SA fiche publique `/player/[userId]`. DESACTIVEE PAR DEFAUT : sans
+    reglage, `enabled: false`. Seules des REFERENCES de sujet sont stockees
+    (`tcg_showcases.subject_keys`) ; les cartes sont RELUES contre la
+    possession reelle a chaque lecture (une carte recyclee ou echangee en
+    sort) et leurs faces passent par le filtre de consentement
+    (`readCardFaces`). `publicProfileUrl` est `null` quand la fiche publique
+    n'existe pas (ni classee ni sur un roster). `Cache-Control: private,
+    no-store`. Rate-limit 60 / min.
+  operationId: readPlayerTcgShowcase
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Etat de la vitrine.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TcgShowcaseState'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+put:
+  tags:
+    - public/auth
+  summary: Regler ma vitrine TCG.
+  description: |
+    `enabled` et la liste COMPLETE des cartes (0 a 3 cles de sujet
+    `player:<uuid>`, `team:<uuid>`, `map:<slug>`, dedoublonnees). Activer
+    exige de posseder chaque carte (`409 not_owned`) ; DESACTIVER n'exige
+    rien — un retrait ne doit jamais etre bloque. La fiche publique est
+    regeneree immediatement (`revalidatePlayerCard`), qui regenere aussi les
+    vitrines exposant la carte d'une joueuse dont la photo change. Rend
+    l'etat relu. Pas de `?as=`. Rate-limit 20 / min.
+  operationId: updatePlayerTcgShowcase
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [enabled, cards]
+          properties:
+            enabled:
+              type: boolean
+            cards:
+              type: array
+              maxItems: 3
+              items:
+                type: string
+  responses:
+    '200':
+      description: Vitrine enregistree, etat relu.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TcgShowcaseState'
+    '400':
+      description: '`code: invalid_body` (forme, plus de 3 cartes) ou `invalid_card`
+        (cle de sujet mal formee).'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '405':
+      description: Methode non autorisee.
+    '409':
+      description: '`code: not_owned` — une carte a activer n''est pas dans la collection.'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

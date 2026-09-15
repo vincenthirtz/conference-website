@@ -1,0 +1,50 @@
+get:
+  tags:
+    - cron
+  summary: Digest quotidien des boards Kanban (emet task.digest par tenant).
+  operationId: cronTaskBoardDigestGet
+  description: |
+    Netlify scheduled function. Pour chaque board NON archivé (tous tenants),
+    calcule les compteurs de cartes vivantes par colonne, `overdue`
+    (due_date < CURRENT_DATE, colonne non terminale) et `dueToday`
+    (due_date = CURRENT_DATE, colonne non terminale). Émet UN event outbox
+    `task.digest` par tenant :
+    `{ boards: [{ boardId, boardName, total, overdue, dueToday,
+    columns: [{ name, count }] }] }`.
+
+    Auth : `Authorization: Bearer <CRON_SECRET>` header OU
+    `?secret=<CRON_SECRET>` query string. GET et POST acceptés.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: '`{ emitted, boards }` du tick.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - cron
+  summary: Digest quotidien des boards Kanban (variante POST).
+  operationId: cronTaskBoardDigestPost
+  description: Same as `GET /api/cron/task-board-digest`.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: '`{ emitted, boards }` du tick.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'

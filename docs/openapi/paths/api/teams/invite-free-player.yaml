@@ -1,0 +1,58 @@
+post:
+  tags:
+    - public/teams
+  summary: Le capitaine/manager invite un joueur libre (lié) dans son équipe.
+  description: >-
+    Crée une invitation pending (demandes type='invite') pour un joueur libre
+    lié au site. L'appelant doit gérer l'équipe ciblée. Garde-fous : roster
+    lock, déjà membre / invitation déjà pending (409), cible non joueur libre du
+    tenant (404).
+  operationId: playerInviteFreePlayer
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - teamId
+            - authUserId
+          properties:
+            teamId:
+              type: string
+              format: uuid
+            authUserId:
+              type: string
+              format: uuid
+  responses:
+    '200':
+      description: Invitation créée.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - ok
+              - demandeId
+            properties:
+              ok:
+                type: boolean
+              demandeId:
+                type: string
+                format: uuid
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'
+    '429':
+      $ref: '#/components/responses/RateLimited'

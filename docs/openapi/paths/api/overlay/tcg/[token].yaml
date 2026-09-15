@@ -1,0 +1,92 @@
+get:
+  summary: Flux d'annonces TCG pour une source navigateur OBS.
+  description: |
+    PUBLIC PAR NECESSITE, BORNE PAR CONCEPTION. Une source navigateur ne
+    peut pas se connecter : l'acces est donc porte par un jeton opaque et
+    REVOCABLE (`tcg_overlay_tokens`), pas par une session.
+
+    Ce que la reponse contient est reduit au deja-public : un pseudo Twitch
+    (visible de tout le chat) et une origine d'evenement. Jamais un nom de
+    compte du site, jamais une photo, jamais un identifiant interne — une
+    joueuse a pu choisir son nom pour un espace connecte sans vouloir le
+    voir passer en surimpression d'un direct. La regle est tenue par
+    `utils/tcg/overlayFeed.ts`, seul chemin par lequel un nom sort.
+    `twitchLogin` vaut `null` quand la personne n'a pas rattache son compte,
+    et l'interface affiche alors un libelle neutre.
+
+    Fenetre de 15 minutes, 20 elements au plus : l'overlay annonce le
+    direct, il n'est pas un journal. Une source ajoutee avant le show ne
+    recoit jamais d'erreur pour autant — jeton inconnu ou revoque rend un
+    `404` explicite (la regie doit le voir), rien a annoncer rend `200` avec
+    une liste vide. `Cache-Control: s-maxage=5, stale-while-revalidate=30`
+    et `X-Robots-Tag: noindex`.
+
+    La reponse porte AUSSI `theme` : l'habillage regle par la regie
+    (`/api/admin/tcg/overlay-theme`), toujours complet. Il voyage avec les
+    annonces plutot que par une seconde route anonyme — la source interroge
+    deja celle-ci toutes les 5 secondes — ce qui permet a un reglage de
+    prendre effet PENDANT le direct, sans recharger la source dans OBS.
+
+    Le theme ne transite PAS par `utils/tcg/overlayFeed.ts` : il ne porte
+    aucune donnee personnelle, et l'y faire passer diluerait la seule raison
+    d'etre de ce module, qui est de garantir qu'aucun nom ne fuit.
+  operationId: getTcgOverlayFeed
+  tags:
+    - public/misc
+  security: []
+  parameters:
+    - name: token
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Jeton d'overlay opaque (base64url), emis cote admin.
+  responses:
+    '200':
+      description: Annonces recentes (liste vide si rien a annoncer).
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - items
+            properties:
+              items:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - id
+                    - kind
+                    - at
+                  properties:
+                    id:
+                      type: string
+                      description: >-
+                        Identifiant de l'ecriture au registre. L'overlay s'en
+                        sert pour n'annoncer chaque evenement qu'une fois,
+                        malgre l'interrogation repetee.
+                    kind:
+                      type: string
+                      enum: [twitch_drop, match_win, scrim_win]
+                    twitchLogin:
+                      type: [string, 'null']
+                      description: >-
+                        Pseudo Twitch, ou `null` si le compte n'est pas
+                        rattache. Aucun autre nom n'est jamais rendu.
+                    at:
+                      type: string
+                      format: date-time
+    '400':
+      description: Jeton malforme (`INVALID_TOKEN`) — erreur de configuration.
+    '404':
+      description: >-
+        Jeton inconnu OU revoque (`UNKNOWN_TOKEN`). La meme reponse pour les
+        deux : distinguer apprendrait, a qui teste des jetons, lesquels ont
+        existe.
+    '405':
+      description: Methode non autorisee.
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '503':
+      description: Base indisponible.

@@ -1,0 +1,81 @@
+post:
+  tags:
+    - public/auth
+  summary: Accepter, refuser ou retirer une proposition d'echange TCG.
+  description: |
+    `accept` (destinataire) : fonction SQL `tcg_accept_trade`, UNE
+    transaction — verrous consultatifs sur les deux joueuses, verrous de
+    ligne sur les cartes, possession REVERIFIEE au moment meme (paquet
+    ouvert, non recyclee, echangeable, meme sujet), plafond de 3 echanges
+    acceptes par 24 h pour chacune, puis deplacement des LIGNES de carte
+    vers deux paquets `trade` ouverts. Aucune piece ne bouge. Les autres
+    propositions qui offraient une carte deplacee sont annulees par le
+    systeme (et annoncees). IDEMPOTENT : une proposition deja acceptee
+    rend `200 { replayed: true }` sans rien reecrire ni reannoncer.
+
+    `decline` (destinataire) et `cancel` (proposante) : ecriture
+    conditionnelle `status = 'pending'` ; un rejeu rend `replayed: true`.
+    Un refus est annonce (`declined`) ; un retrait par la proposante ne
+    l'est pas (`resolution_reason = proposer_cancelled`).
+
+    404 plutot que 403 pour une proposition d'une autre personne ou d'un
+    autre espace. 30 / min.
+  operationId: actPlayerTcgTrade
+  security:
+    - PlayerBearer: []
+  parameters:
+    - name: tradeId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: false
+          required: [action]
+          properties:
+            action:
+              type: string
+              enum: [accept, decline, cancel]
+  responses:
+    '200':
+      description: 'Transition faite, ou rejeu (`replayed: true`).'
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              trade:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [accepted, declined, cancelled]
+              replayed:
+                type: boolean
+    '400':
+      description: '`code: invalid_trade_id | invalid_body`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: '`code: not_eligible` (un des deux comptes trop recent).'
+    '404':
+      description: '`code: not_found`.'
+    '409':
+      description: |
+        `code: not_pending | expired | stale` (carte offerte indisponible :
+        proposition annulee et annoncee) `| requested_unavailable` (la
+        destinataire n'a plus la carte : rien n'est change ni annonce) `|
+        partner_daily_limit`.
+    '429':
+      description: '`code: daily_limit` (plafond par compte en base), ou rate-limit HTTP.'
+    '500':
+      $ref: '#/components/responses/ServerError'

@@ -1,0 +1,78 @@
+parameters:
+  - $ref: '#/components/parameters/RunId'
+get:
+  summary: List stations of an event run.
+  description: Requires `manager` role. Stations are sorted by `ord` asc then name.
+  operationId: adminListEventStations
+  tags:
+    - admin/events
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Stations.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - stations
+            properties:
+              stations:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventStation'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+post:
+  summary: Append a station to an event run.
+  description: |
+    Requires `manager` role. If `ord` is omitted the API picks MAX(ord)+1
+    (0 when the run has no station yet). `status` defaults to `idle`.
+  operationId: adminCreateEventStation
+  tags:
+    - admin/events
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - name
+          properties:
+            name:
+              type: string
+            stream_url:
+              type: [string, 'null']
+            notes:
+              type: [string, 'null']
+            ord:
+              type: integer
+              minimum: 0
+  responses:
+    '201':
+      description: Station created.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - station
+            properties:
+              station:
+                $ref: '#/components/schemas/EventStation'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

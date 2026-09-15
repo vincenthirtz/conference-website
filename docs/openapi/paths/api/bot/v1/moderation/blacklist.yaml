@@ -1,0 +1,86 @@
+get:
+  tags:
+    - bot/misc
+  summary: Liste les entrees blacklist actives du tenant (scan membres Discord).
+  operationId: botListBlacklist
+  parameters:
+    - name: withAlerted
+      in: query
+      required: false
+      description: >-
+        Si '1' (ou 'true'), joint alertedDiscordUserIds : la liste distincte des
+        discord_user_id deja signales (table blacklist_alerts). Le bot l'utilise
+        au demarrage pour ne pas rejouer d'alerte apres un restart.
+      schema:
+        type: string
+        enum: ['1', 'true']
+  responses:
+    '200':
+      description: Entrees blacklist actives.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              blacklist:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+              alertedDiscordUserIds:
+                description: >-
+                  Present uniquement avec withAlerted. Tableau des
+                  discord_user_id deja alertes, ou null si le lookup a echoue.
+                type: [array, 'null']
+                items:
+                  type: string
+post:
+  tags:
+    - bot/misc
+  summary: Ajoute une entree blacklist (slash /blacklist add, staff only).
+  operationId: botAddBlacklist
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '201':
+      description: Entree creee.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  tags:
+    - bot/misc
+  summary: Desactive une entree blacklist (slash /blacklist remove, staff only).
+  operationId: botRemoveBlacklist
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Entree desactivee.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

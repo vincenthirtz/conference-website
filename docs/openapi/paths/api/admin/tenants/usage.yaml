@@ -1,0 +1,35 @@
+get:
+  summary: API usage of every tenant for the current month.
+  description: |
+    Platform owner only (`manage_tenant` + platform scope). Reads
+    `api_usage_counters` for the current month window and joins the
+    EFFECTIVE plan quota — an expired paid plan is measured against the
+    quota it actually gets, not the one it is billed for. Rows come sorted
+    by percentage consumed, closest to the wall first: that is the only
+    reason to open this screen. `monthLimit: null` means unlimited, which is
+    not the same as a quota of zero.
+  operationId: adminListTenantsUsage
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  parameters:
+    - in: query
+      name: window
+      schema:
+        type: string
+        enum: [month]
+  responses:
+    '200':
+      description: Usage rows.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

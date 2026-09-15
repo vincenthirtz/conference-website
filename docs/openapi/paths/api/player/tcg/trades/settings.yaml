@@ -1,0 +1,76 @@
+get:
+  tags:
+    - public/auth
+  summary: Ma preference d'echanges TCG, mon eligibilite et les plafonds.
+  description: |
+    `acceptsProposals` vaut `false` sans ligne (OPT-IN : etre sollicitable
+    est un choix). `eligible` / `eligibleAt` / `eligibilityReason`
+    (`no_account | no_collection | too_recent`) viennent de la fonction SQL
+    `tcg_trade_eligibility` (anciennete du compte ET de la collection) ;
+    `null` = non mesurable. `limits` = `TRADE_LIMITS`. `pending` = mes
+    propositions en attente, `null` si illisible. 60 / min.
+  operationId: getPlayerTcgTradeSettings
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Preference et regles.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'
+put:
+  tags:
+    - public/auth
+  summary: Activer ou desactiver les echanges TCG.
+  description: |
+    Activer exige l'eligibilite (`409 collection_too_recent` avec
+    `eligibleAt`). Activer rend visible des autres volontaires de l'espace
+    (pseudo + doubles echangeables). DESACTIVER ne laisse rien en attente :
+    propositions RECUES annulees par le systeme (`trading_disabled`,
+    annoncees aux proposantes), ENVOYEES retirees (`proposer_cancelled`,
+    sans annonce). 10 / min.
+  operationId: putPlayerTcgTradeSettings
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: false
+          required: [acceptsProposals]
+          properties:
+            acceptsProposals:
+              type: boolean
+  responses:
+    '200':
+      description: Preference ecrite.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              acceptsProposals:
+                type: boolean
+              cancelled:
+                type: object
+                properties:
+                  received:
+                    type: integer
+                  sent:
+                    type: integer
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '409':
+      description: '`code: collection_too_recent`, `eligibleAt`, `reason`.'
+    '500':
+      $ref: '#/components/responses/ServerError'

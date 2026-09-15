@@ -1,0 +1,12 @@
+delete:
+  summary: Unsubscribe a web push subscription.
+  operationId: adminUnsubscribeNotifications
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  responses:
+    '204':
+      description: Unsubscribed.
+    '401':
+      $ref: '#/components/responses/Unauthorized'

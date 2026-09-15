@@ -1,0 +1,20 @@
+get:
+  tags:
+    - public/onboard
+  summary: Verifie le token d'email d'une tenant_request et passe en pending_bot_invite.
+  operationId: verifyOnboardEmail
+  security: []
+  parameters:
+    - name: token
+      in: query
+      required: true
+      schema:
+        type: string
+        pattern: ^[a-f0-9]{64}$
+  responses:
+    '302':
+      description: Redirige vers /onboard/invite-bot/[id].
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'

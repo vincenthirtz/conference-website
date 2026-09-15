@@ -1,0 +1,13 @@
+get:
+  tags:
+    - public/news
+  summary: Flux RSS 2.0 des articles publies.
+  operationId: getNewsRssFeed
+  security: []
+  responses:
+    '200':
+      description: Flux RSS XML.
+      content:
+        application/rss+xml:
+          schema:
+            type: string

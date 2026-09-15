@@ -1,0 +1,32 @@
+parameters:
+  - $ref: '#/components/parameters/RunId'
+  - name: cueId
+    in: path
+    required: true
+    schema:
+      type: string
+delete:
+  summary: Retract (soft-delete) a cue.
+  description: |
+    Requires `manager` role. Does not delete the row: sets `retracted_at` +
+    `retracted_by_user_id` so casters get a realtime UPDATE (not a DELETE).
+    Idempotent: an already-retracted cue returns 200 with `alreadyRetracted`.
+  operationId: adminRetractEventCue
+  tags:
+    - admin/events
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Cue retracted (or already retracted).
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

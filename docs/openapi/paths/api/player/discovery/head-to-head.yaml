@@ -1,0 +1,103 @@
+get:
+  summary: Head-to-head cross-tenant contre un joueur découvrable.
+  description: |
+    Agrège les confrontations entre l'appelant (`side a`) et un opponent
+    (`side b`) sur TOUS les tenants où ils se sont rencontrés. L'opponent
+    DOIT être `discoverable=true` (sinon 404). Résultat approximé au niveau
+    ÉQUIPE (aucun résultat individuel joueur-vs-joueur dans le modèle).
+    `withAuthRoute`.
+  operationId: playerDiscoveryHeadToHead
+  tags:
+    - public/auth
+  security:
+    - PlayerBearer: []
+  parameters:
+    - name: opponentId
+      in: query
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    '200':
+      description: Totaux + confrontations récentes.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - a
+              - b
+              - totals
+              - recent
+            properties:
+              a:
+                type: object
+                required:
+                  - userId
+                properties:
+                  userId:
+                    $ref: '#/components/schemas/Uuid'
+              b:
+                type: object
+                required:
+                  - userId
+                properties:
+                  userId:
+                    $ref: '#/components/schemas/Uuid'
+              totals:
+                type: object
+                required:
+                  - played
+                  - aWins
+                  - bWins
+                  - draws
+                properties:
+                  played:
+                    type: integer
+                  aWins:
+                    type: integer
+                  bWins:
+                    type: integer
+                  draws:
+                    type: integer
+              recent:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - matchId
+                    - tenantId
+                    - tournamentId
+                    - date
+                    - winner
+                  properties:
+                    matchId:
+                      type: string
+                      format: uuid
+                    tenantId:
+                      type: [string, 'null']
+                      format: uuid
+                    tournamentId:
+                      type: [string, 'null']
+                      format: uuid
+                    date:
+                      anyOf:
+                        - $ref: '#/components/schemas/Timestamp'
+                        - type: 'null'
+                    winner:
+                      type: string
+                      enum:
+                        - a
+                        - b
+                        - draw
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

@@ -1,0 +1,86 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+post:
+  summary: Generate a HelloAsso payment link to activate/renew a tenant plan.
+  description: |
+    « Régie solidaire ». Requires `owner` role, and — unless the caller is a
+    PLATFORM owner — the tenant must be within their own scope. Creates a
+    HelloAsso checkout-intent (a targeted "don") for the given tenant, plan
+    and term, attaching
+    `metadata: { kind: 'tenant_plan', tenant_id, plan, term }` so the webhook
+    can correlate the payment and extend `plan_expires_at` by exactly what
+    was paid — one month or one year. `term` defaults to `year`, which is
+    what every link issued before monthly billing was worth.
+
+    Catalog-priced plans only (`discovery`, `regie`, `circuit`).
+    Rate-limited 10/min per IP.
+  operationId: adminGenerateTenantPlanCheckout
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - plan
+          properties:
+            plan:
+              type: string
+              enum: [discovery, regie, circuit]
+            term:
+              type: string
+              enum: [month, year]
+              default: year
+  responses:
+    '200':
+      description: Payment link created.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - redirectUrl
+              - checkoutIntentId
+              - plan
+              - amountEur
+            properties:
+              redirectUrl:
+                type: string
+                description: HelloAsso payment URL to send to the partner.
+              checkoutIntentId:
+                type: integer
+                format: int64
+              plan:
+                type: string
+                enum: [regie, circuit]
+              amountEur:
+                type: number
+                description: Annual catalog price in EUR.
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '502':
+      description: HelloAsso checkout creation failed.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

@@ -1,0 +1,59 @@
+get:
+  tags:
+    - public/auth
+  summary: Demarre la CONNEXION Battle.net (comptes deja lies uniquement).
+  operationId: battlenetLoginStart
+  description: |
+    Pendant ANONYME de `GET /api/auth/battlenet/start` (qui, lui, exige une
+    session : c'est le flux de verification d'identite). Aucune session
+    requise — c'est le but.
+
+    Le state ne peut donc pas etre lie a un utilisateur : la protection CSRF
+    repose sur le double-submit du nonce (cookie httpOnly `bn_login_state`,
+    DISTINCT du `bn_oauth_state` de la verification) et sur le discriminant
+    `purpose: 'login'` du state signe. Les deux flux ne peuvent pas consommer
+    le state ni le nonce l'un de l'autre.
+
+    La `redirect_uri` declaree chez Blizzard reste UNIQUE :
+    `/api/auth/battlenet/callback`, qui branche sur le `purpose` du state.
+
+    Cette connexion ne marche QUE pour un compte deja lie. Blizzard ne
+    renvoie pas d'email (`oauth/userinfo` = `sub` + `battletag`), donc un
+    compte Blizzard inconnu ne peut etre ni cree ni rattache sans ouvrir une
+    prise de controle : il repart vers `/login?battlenet=not_linked`.
+    Rate-limit 15/min par IP.
+  security: []
+  parameters:
+    - name: returnTo
+      in: query
+      required: false
+      schema:
+        type: string
+        default: /player
+      description: |
+        Chemin interne ou atterrir une fois la session posee (sanitize :
+        doit commencer par `/`, ni `//` ni backslash). Defaut `/player`.
+  responses:
+    '302':
+      description: |
+        Redirection vers l'URL authorize Battle.net ; pose le cookie
+        httpOnly `bn_login_state`.
+      headers:
+        Location:
+          schema:
+            type: string
+        Set-Cookie:
+          schema:
+            type: string
+          description: Cookie httpOnly `bn_login_state` (nonce anti-CSRF).
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '503':
+      description: 'Feature dormante : creds Blizzard absents.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Battle.net sign-in is not configured.
+            code: BATTLENET_NOT_CONFIGURED

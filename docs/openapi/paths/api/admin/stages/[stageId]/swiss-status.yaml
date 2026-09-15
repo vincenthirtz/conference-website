@@ -1,0 +1,21 @@
+parameters:
+  - $ref: '#/components/parameters/StageId'
+get:
+  summary: Swiss-specific status (current round, dropped teams, completion).
+  operationId: adminGetStageSwissStatus
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Swiss status.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

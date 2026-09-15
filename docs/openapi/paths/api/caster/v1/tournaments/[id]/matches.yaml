@@ -1,0 +1,40 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: "[v1] Matchs d'un tournoi (app caster)."
+  description: |
+    Route canonique. Lecture publique tenant-scopée (`x-tenant-id`).
+    Statuts retenus : `pending`, `ongoing`, `finished`. Inclut
+    `stream_url`.
+  operationId: casterV1ListTournamentMatches
+  tags:
+    - public
+  security: []
+  parameters:
+    - $ref: '#/components/parameters/XTenantId'
+  responses:
+    '200':
+      description: Liste des matchs.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - matches
+            properties:
+              matches:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

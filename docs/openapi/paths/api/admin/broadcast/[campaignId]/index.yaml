@@ -1,0 +1,89 @@
+parameters:
+  - in: path
+    name: campaignId
+    required: true
+    schema:
+      type: string
+post:
+  summary: Trigger a campaign send (test / dry-run / broadcast).
+  operationId: adminTriggerBroadcastCampaign
+  tags:
+    - admin/broadcast
+  security:
+    - StaffSession: []
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Triggered.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+patch:
+  summary: Edit a DB-backed email campaign.
+  description: |
+    Updates the structured body / metadata of a campaign stored in
+    `email_campaigns`. Builtin (legacy, non-editable) campaigns return 403.
+  operationId: adminUpdateBroadcastCampaign
+  tags:
+    - admin/broadcast
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Campaign updated.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+delete:
+  summary: Delete a DB-backed email campaign.
+  description: |
+    Removes a campaign from `email_campaigns` plus its associated wave
+    schedule and recipient snapshot. Builtin (legacy) campaigns return 403.
+  operationId: adminDeleteBroadcastCampaign
+  tags:
+    - admin/broadcast
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Campaign deleted.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

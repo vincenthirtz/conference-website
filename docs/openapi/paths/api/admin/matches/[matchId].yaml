@@ -1,0 +1,143 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+get:
+  summary: Match detail (with optional games payload).
+  description: Requires `manager` role.
+  operationId: adminGetMatch
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  parameters:
+    - in: query
+      name: includeGames
+      schema:
+        type: string
+        enum:
+          - '0'
+          - '1'
+          - 'true'
+          - 'false'
+  responses:
+    '200':
+      description: Match detail.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - match
+            properties:
+              match:
+                $ref: '#/components/schemas/AdminMatchDetail'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+patch:
+  summary: Update match (score mode or meta mode).
+  description: |
+    Requires `manager` role. Two modes selected via the body:
+    - `mode='score'` (or numeric scores present, or `forfeit_team_id`): applies
+      via `applyMatchScore` with optional bracket propagation.
+    - `mode='meta'`: updates meta fields (planning, lobby, bracket links).
+      Transitioning to `disputed` is rejected — use the `/dispute` endpoint.
+    Supports optimistic locking via `expected_updated_at`.
+  operationId: adminPatchMatch
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/AdminMatchPatchInput'
+  responses:
+    '200':
+      description: Updated match.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              match:
+                $ref: '#/components/schemas/AdminMatchDetail'
+              warnings:
+                type: array
+                items:
+                  type: string
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'
+put:
+  summary: Update match (alias of PATCH).
+  operationId: adminPutMatch
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/AdminMatchPatchInput'
+  responses:
+    '200':
+      description: Updated.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  summary: Cancel a match (soft) or hard-delete with `?hard=1`.
+  description: Requires `manager` role.
+  operationId: adminDeleteMatch
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  parameters:
+    - in: query
+      name: hard
+      schema:
+        type: string
+        enum:
+          - '0'
+          - '1'
+          - 'true'
+          - 'false'
+  responses:
+    '200':
+      description: Cancelled or hard-deleted.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              hardDeleted:
+                type: boolean
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

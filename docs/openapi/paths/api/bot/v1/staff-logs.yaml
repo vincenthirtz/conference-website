@@ -1,0 +1,34 @@
+get:
+  tags:
+    - bot/misc
+  summary: Audit log des actions staff (filtres limit, action, entityType).
+  operationId: botListStaffLogs
+  parameters:
+    - name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    - name: action
+      in: query
+      schema:
+        type: string
+    - name: entityType
+      in: query
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Liste des entrees staff_logs.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              logs:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true

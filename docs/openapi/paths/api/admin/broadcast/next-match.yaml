@@ -1,0 +1,50 @@
+post:
+  summary: One-click advance to the next match segment.
+  description: |
+    Resolves the tenant's live run and its current live segment, finds the
+    next `type='match'` segment by `ord` (skipping breaks/intros/outros and
+    anything not `upcoming`), and performs the atomic single-live-segment
+    swap — same implementation as `POST /segments/{segId}/start`. Resets the
+    overlay scene to `'starting'` (best-effort) so the auto-director flips
+    it to `'match'` cleanly when the new match goes ongoing. Emits
+    `event_segment.transitioned`. No request body. Requires `manager` role.
+  operationId: adminBroadcastNextMatch
+  tags:
+    - admin/broadcast
+  security:
+    - StaffSession: []
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  responses:
+    '200':
+      description: Transition performed (or idempotent no-op).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/NextMatchResult'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      description: |
+        Business-state conflict. The `code` field is one of:
+        `NO_LIVE_RUN` (no live run), `NO_CURRENT_SEGMENT` (live run has no
+        live segment), `NO_NEXT_MATCH` (no upcoming match segment after the
+        current one), `SEGMENT_NOT_UPCOMING` (target already transitioned by
+        another client).
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Error'
+            properties:
+              code:
+                type: string
+                enum:
+                  - NO_LIVE_RUN
+                  - NO_CURRENT_SEGMENT
+                  - NO_NEXT_MATCH
+                  - SEGMENT_NOT_UPCOMING

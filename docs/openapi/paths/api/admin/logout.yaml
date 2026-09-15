@@ -1,0 +1,13 @@
+post:
+  summary: Clear the staff session cookie.
+  operationId: adminLogout
+  tags:
+    - admin/misc
+  security: []
+  responses:
+    '200':
+      description: Logged out.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Ok'

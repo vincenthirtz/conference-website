@@ -1,0 +1,24 @@
+get:
+  tags:
+    - public/auth
+  summary: L'integration Battle.net est-elle configuree (pour la page de connexion).
+  operationId: battlenetAvailable
+  description: |
+    Endpoint PUBLIC minimal : dit a une page anonyme (la page de connexion)
+    si le bouton « Continuer avec Battle.net » doit s'afficher. Sans lui, la
+    page proposerait un bouton menant a un 503 quand la feature est dormante.
+    N'expose qu'un booleen — rien sur les identifiants Blizzard. Le pendant
+    authentifie est `GET /api/player/battlenet-status`. Rate-limit 60/min.
+  security: []
+  responses:
+    '200':
+      description: '`{ configured: boolean }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              configured:
+                type: boolean
+    '429':
+      $ref: '#/components/responses/RateLimited'

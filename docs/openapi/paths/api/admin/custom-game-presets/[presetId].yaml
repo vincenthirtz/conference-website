@@ -1,0 +1,85 @@
+parameters:
+  - name: presetId
+    in: path
+    required: true
+    description: Id (UUID) du preset.
+    schema:
+      type: string
+      format: uuid
+patch:
+  summary: Update a custom-game preset (partial).
+  description: >
+    Met a jour nom / code d'import / description / map_pool / enabled. Le
+    PERIMETRE (game, tournament_id, stage_id) n'est PAS modifiable : supprimer +
+    recreer, sinon on peut heurter l'index unique de scope et rendre la
+    resolution ambigue. 404 hors tenant actif.
+  operationId: adminUpdateCustomGamePreset
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+            import_code:
+              type: string
+            description:
+              type: [string, 'null']
+            map_pool:
+              type: array
+              items:
+                type: string
+            enabled:
+              type: boolean
+  responses:
+    '200':
+      description: Preset mis a jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              preset:
+                type: object
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+delete:
+  summary: Delete a custom-game preset.
+  description: >
+    Supprime le preset. Les matchs concernes retombent sur le perimetre
+    superieur (tournoi puis defaut tenant), ou sur aucun preset.
+  operationId: adminDeleteCustomGamePreset
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Supprime.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              ok:
+                type: boolean
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

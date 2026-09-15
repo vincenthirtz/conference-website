@@ -1,0 +1,55 @@
+get:
+  tags:
+    - public/teams
+  summary: Liste les joueurs libres du tenant (réservé capitaine/manager).
+  description: >-
+    Liste les joueurs libres (rôle Discord "Recherche une équipe", synchronisés
+    via POST /api/bot/v1/free-players/sync) pour recrutement. Exclut l'appelant
+    et toute personne déjà dans une équipe du tenant. Les rows liées sont
+    enrichies depuis profiles (battle_tag, display_name).
+  operationId: playerListFreePlayers
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Liste des joueurs libres.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - players
+            properties:
+              players:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - discordUserId
+                    - linked
+                  properties:
+                    discordUserId:
+                      $ref: '#/components/schemas/DiscordId'
+                    discordUsername:
+                      type: [string, 'null']
+                    linked:
+                      type: boolean
+                    authUserId:
+                      type: [string, 'null']
+                      format: uuid
+                    displayName:
+                      type: [string, 'null']
+                    battleTag:
+                      type: [string, 'null']
+                    specialty:
+                      type: [string, 'null']
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '405':
+      description: Méthode non autorisée (seul GET est accepté).
+    '429':
+      $ref: '#/components/responses/RateLimited'

@@ -1,0 +1,42 @@
+parameters:
+  - $ref: '#/components/parameters/TeamId'
+delete:
+  parameters:
+    - $ref: '#/components/parameters/SubjectAs'
+    - $ref: '#/components/parameters/ActAs'
+  tags:
+    - public/teams
+  summary: Le capitaine/manager retire un membre de l'equipe.
+  operationId: removeTeamMember
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - memberId
+          properties:
+            memberId:
+              type: string
+              format: uuid
+  responses:
+    '200':
+      description: Membre retire.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'

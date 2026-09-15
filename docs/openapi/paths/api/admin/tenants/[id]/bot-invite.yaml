@@ -1,0 +1,46 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: Bot invite link carrying this tenant.
+  description: |
+    Platform owner only. The generic invite URL forced the operator to come
+    back, refresh the pending queue, recognise the right server and attach
+    it to the right space. This link carries the space in a signed `state`;
+    when `DISCORD_OAUTH_REDIRECT_URI` is configured (and declared in the
+    Discord developer portal) Discord returns the installer to
+    `/api/onboard/discord-callback` and the attach happens on its own.
+
+    The response always states the `mode` (`direct` / `manual`) so the UI
+    never promises an automatic return that will not happen. `?guildId=`
+    pre-selects and locks a server, for re-inviting a known one.
+  operationId: adminGetTenantBotInvite
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  parameters:
+    - in: query
+      name: guildId
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Invite link and mode.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

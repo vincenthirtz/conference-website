@@ -1,0 +1,44 @@
+parameters:
+  - name: planningId
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+post:
+  summary: Validate a slot on a planning; materialises a scheduled scrim.
+  operationId: adminValidateScrimPlanning
+  tags:
+    - admin/scrims
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - slot
+          properties:
+            slot:
+              type: string
+              format: date-time
+  responses:
+    '201':
+      description: Scrim created and planning validated.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      description: Planning not open.

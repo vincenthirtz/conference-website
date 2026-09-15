@@ -1,0 +1,39 @@
+parameters:
+  - name: lobbyId
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+put:
+  summary: >-
+    Save FFA lobby placements (upsert), compute points from the stage points
+    table, and return the lobby plus fresh stage standings.
+  operationId: adminSaveLobbyPlacements
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Placements saved with updated standings.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

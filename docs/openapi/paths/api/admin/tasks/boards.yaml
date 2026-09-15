@@ -1,0 +1,53 @@
+get:
+  tags:
+    - admin/tasks
+  summary: Liste des boards Kanban (colonnes ordonnees + compte de cartes).
+  operationId: adminListTaskBoards
+  security:
+    - StaffSession: []
+  parameters:
+    - name: includeArchived
+      in: query
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Boards.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  tags:
+    - admin/tasks
+  summary: Cree un board Kanban + ses 4 colonnes par defaut.
+  operationId: adminCreateTaskBoard
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [name]
+          properties:
+            name: {type: string}
+            description: {type: string}
+  responses:
+    '201':
+      description: Board cree.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

@@ -1,0 +1,22 @@
+get:
+  summary: Liste des leagues publiques (is_public=true, status≠draft).
+  operationId: getPublicLeagues
+  tags:
+    - public/leagues
+  security: []
+  responses:
+    '200':
+      description: Leagues publiques.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - leagues
+            properties:
+              leagues:
+                type: array
+                items:
+                  $ref: '#/components/schemas/League'
+    '500':
+      $ref: '#/components/responses/ServerError'

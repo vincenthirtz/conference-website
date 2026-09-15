@@ -1,0 +1,84 @@
+get:
+  summary: Simuler le rattrapage de la recompense Battle.net.
+  description: |
+    Rend ce qu'un rattrapage ferait, SANS rien ecrire :
+    `{ eligible, alreadyRewarded, wouldGrant, discordDms, outsideSpace,
+    ready, reward: { coins } }`.
+
+    AUDIENCE = L'ESPACE DU STAFF. `eligible` compte les comptes lies a
+    Battle.net ET rattaches au tenant (`ctx.tenantId`) par une ligne de
+    roster (`team_members`) ou un porte-monnaie TCG (`tcg_wallets`).
+    L'index « une fois par personne » etant global, crediter ici une
+    joueuse qui ne joue que dans un autre espace y consommerait sa
+    recompense unique. `outsideSpace` compte les liens ecartes pour cette
+    raison.
+
+    `alreadyRewarded` : deja recompenses par la personne OU par le compte
+    Blizzard, tous tenants confondus (affichage seulement : l'ecrivain et
+    ses index tranchent). `discordDms` : parmi `wouldGrant`, comptes relies
+    a Discord — autant de DM `tcg.reward_granted` partiront ; `null` = non
+    mesurable. `ready` : `schemaReady` de la source. Lecture paginee (1000).
+    Audience illisible → `500 AUDIENCE_UNREADABLE`, jamais « 0 compte ».
+    `private, no-store`. Rate-limit 20 / min.
+  operationId: adminPreviewTcgBattlenetBackfill
+  tags:
+    - admin/tcg
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Simulation, sans ecriture.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  summary: Rattraper la recompense Battle.net pour les comptes de l'espace.
+  description: |
+    Passe CHAQUE lien de l'audience (meme definition que le GET) par
+    `grantBattlenetVerifiedReward`, l'ecrivain du callback : memes index
+    anti-abus (une fois par personne, une fois par compte Blizzard, tous
+    tenants confondus), meme annonce `tcg.reward_granted`
+    (`reason: 'battlenet_verified'`, un DM par joueuse creditee reliee a
+    Discord). Rend `{ eligible, granted, already, errors, reward }`.
+
+    RELANCE SURE : un second passage ne credite que les comptes lies ou
+    rattaches entre-temps. Audience illisible → `500 AUDIENCE_UNREADABLE` et
+    RIEN n'est ecrit. Journalise `tcg_battlenet_backfill` (entity `tenant`,
+    payload `{ eligible, granted, already, errors, coins }`). HONORE
+    `Idempotency-Key` (`withAdminIdempotency`, cle `tcg-battlenet-backfill`).
+    La monnaie se gagne : aucun paiement ni don. Rate-limit 20 / min.
+  operationId: adminRunTcgBattlenetBackfill
+  tags:
+    - admin/tcg
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Compteurs reels du rattrapage.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

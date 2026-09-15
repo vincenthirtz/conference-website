@@ -1,0 +1,56 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+  - name: gameIndex
+    in: path
+    required: true
+    schema:
+      type: integer
+      minimum: 1
+patch:
+  tags:
+    - admin/matches
+  summary: Assign team1Side + team2Side on a pending draft.
+  operationId: adminSetMatchDraftSides
+  description: |
+    Side enum is game-specific :
+    `lol` accepts `blue|red`, `dota2` accepts `radiant|dire`.
+    team1Side and team2Side must differ. Only allowed before any step
+    has been committed (`current_step = 0`). Honors the
+    `Idempotency-Key` header.
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/SetMatchDraftSidesRequest'
+  responses:
+    '200':
+      description: Updated draft state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MatchDraftStateResponse'
+    '400':
+      description: Invalid side values or shape.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DraftEngineError'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      description: Match or draft not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DraftEngineError'
+    '409':
+      description: Draft already started or completed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DraftEngineError'

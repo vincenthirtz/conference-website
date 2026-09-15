@@ -1,0 +1,23 @@
+post:
+  summary: Send a test transactional email to the current staff.
+  operationId: adminTestEmail
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Sent.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Ok'
+    '401':
+      $ref: '#/components/responses/Unauthorized'

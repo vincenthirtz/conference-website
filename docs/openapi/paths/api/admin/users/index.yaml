@@ -1,0 +1,58 @@
+post:
+  summary: Create a Supabase user on-the-fly (admin role).
+  description: |
+    Requires `admin` role. Body: `{ email, password?, display_name?, role? }`.
+    If `password` is missing or shorter than 6 chars, a random 16-char one
+    is generated. The plain password is never returned — it is sent to the
+    user by email instead. Returns `passwordSentByEmail` boolean.
+  operationId: adminCreateUser
+  tags:
+    - admin/users
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - email
+          properties:
+            email:
+              type: string
+              format: email
+            password:
+              type: string
+              minLength: 6
+            display_name:
+              type: string
+            role:
+              type: string
+              description: User role; lowercased server-side. Defaults to 'player'.
+  responses:
+    '201':
+      description: User created.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - userId
+              - email
+              - passwordSentByEmail
+            properties:
+              userId:
+                type: string
+                format: uuid
+              email:
+                type: string
+                format: email
+              passwordSentByEmail:
+                type: boolean
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

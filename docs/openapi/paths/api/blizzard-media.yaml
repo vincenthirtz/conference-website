@@ -1,0 +1,16 @@
+get:
+  tags:
+    - public/misc
+  summary: Scrape la page media Blizzard Overwatch (comics, screenshots, music).
+  operationId: getBlizzardMedia
+  security: []
+  responses:
+    '200':
+      description: Liste de medias.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '500':
+      $ref: '#/components/responses/ServerError'

@@ -1,0 +1,122 @@
+XTenantId:
+  name: x-tenant-id
+  in: header
+  required: false
+  schema:
+    type: string
+    format: uuid
+  description: UUID du tenant — requis avec l'env legacy uniquement.
+ActAs:
+  name: act
+  in: query
+  required: false
+  schema:
+    type: string
+    enum: ['1']
+  description: |
+    Demande explicite d'AGIR a la place du sujet (`as`), pour les routes
+    qui l'autorisent. Sans ce parametre (ou l'en-tete equivalent
+    `X-Staff-Act-As: 1`), `as` reste en lecture seule et toute methode
+    autre que GET renvoie 403 `subject_read_only`. Les ecritures act-as
+    sont journalisees dans `staff_logs` sous `act_as_player`.
+    Voir `utils/subject.ts`.
+SubjectAs:
+  name: as
+  in: query
+  required: false
+  schema:
+    type: string
+    format: uuid
+  description: |
+    Inspection staff, LECTURE SEULE : identifiant de l'utilisateur dont on
+    veut lire les donnees, a la place de l'appelant. Reserve au staff
+    (role `admin` minimum), scope au tenant actif du staff, refuse sur
+    toute methode autre que GET (403 `subject_read_only`) et journalise
+    dans `staff_logs`. Absent = l'appelant lit ses propres donnees.
+    Voir `utils/subject.ts`.
+TeamScope:
+  name: teamId
+  in: query
+  required: false
+  schema:
+    type: string
+    format: uuid
+  description: |
+    Equipe sur laquelle porte la requete, quand l'appelant en gere
+    PLUSIEURS. Un compte au role d'equipe `manager` peut en encadrer
+    plusieurs (index unique partiel, cf.
+    `database/migrations/allow_manager_multi_team.sql`) ; sans ce
+    parametre, le serveur retombe sur la premiere equipe geree (ordre
+    stable : capitainerie d'abord, puis anciennete d'adhesion), ce qui est
+    le comportement historique pour quiconque n'en gere qu'une.
+    Une equipe que l'appelant ne gere pas est REFUSEE (403) : le parametre
+    ne peut jamais elargir la portee. Une valeur non-UUID est ignoree.
+    Voir `utils/teamScopeParam.ts` (format) et `utils/teams/teamScope.ts`
+    (lecture serveur).
+IdempotencyKey:
+  name: idempotency-key
+  in: header
+  required: false
+  schema:
+    type: string
+    minLength: 1
+    maxLength: 128
+  description: |
+    Clé d'idempotence client. Pour un même couple (route, clé), la
+    réponse est rejouée 24h. Voir `BOT_API_CONTRACT.md` §Idempotency.
+TournamentId:
+  name: tournamentId
+  in: path
+  required: true
+  schema:
+    type: string
+    format: uuid
+TeamId:
+  name: teamId
+  in: path
+  required: true
+  schema:
+    type: string
+    format: uuid
+MatchId:
+  name: matchId
+  in: path
+  required: true
+  schema:
+    type: string
+    format: uuid
+StageId:
+  name: stageId
+  in: path
+  required: true
+  schema:
+    type: string
+    format: uuid
+ScrimId:
+  name: scrimId
+  in: path
+  required: true
+  schema:
+    type: string
+    format: uuid
+RunId:
+  name: runId
+  in: path
+  required: true
+  schema:
+    type: string
+    format: uuid
+SegId:
+  name: segId
+  in: path
+  required: true
+  schema:
+    type: string
+    format: uuid
+DiscordUserId:
+  name: discordUserId
+  in: path
+  required: true
+  schema:
+    type: string
+    pattern: ^[0-9]{17,20}$

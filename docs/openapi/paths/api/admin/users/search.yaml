@@ -1,0 +1,29 @@
+get:
+  summary: Search users by email, display name, Discord ID.
+  operationId: adminSearchUsers
+  tags:
+    - admin/users
+  security:
+    - StaffSession: []
+  parameters:
+    - in: query
+      name: q
+      schema:
+        type: string
+    - in: query
+      name: limit
+      schema:
+        type: integer
+        default: 20
+  responses:
+    '200':
+      description: Results.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

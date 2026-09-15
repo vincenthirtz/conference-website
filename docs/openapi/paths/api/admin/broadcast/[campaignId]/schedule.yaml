@@ -1,0 +1,66 @@
+parameters:
+  - in: path
+    name: campaignId
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: Read the campaign schedule.
+  operationId: adminGetBroadcastSchedule
+  tags:
+    - admin/broadcast
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Schedule.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Set the campaign schedule.
+  operationId: adminSetBroadcastSchedule
+  tags:
+    - admin/broadcast
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Saved.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  summary: Cancel a scheduled campaign.
+  operationId: adminDeleteBroadcastSchedule
+  tags:
+    - admin/broadcast
+  security:
+    - StaffSession: []
+  responses:
+    '204':
+      description: Cancelled.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

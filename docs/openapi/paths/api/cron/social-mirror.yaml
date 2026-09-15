@@ -1,0 +1,94 @@
+get:
+  summary: Recopie nos publications (Bluesky, YouTube, Instagram, TikTok) vers
+    Discord ET le mur du site.
+  operationId: cronSocialMirrorGet
+  tags:
+    - cron
+  security:
+    - CronSecret: []
+  description: |
+    Voir la variante POST : meme handler, GET et POST acceptes.
+  responses:
+    '200':
+      description: '`{ bluesky, youtube, instagram, tiktok }`, chacun `{ mirrored,
+        checked, stored, error? }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      description: CRON_SECRET absent ou invalide.
+post:
+  summary: Recopie nos publications (Bluesky, YouTube, Instagram, TikTok) vers
+    Discord ET le mur du site.
+  operationId: cronSocialMirror
+  tags:
+    - cron
+  security:
+    - CronSecret: []
+  description: |
+    Toutes les 15 minutes (Netlify). Quatre sources, un seul salon
+    (`site_settings.bluesky_mirror_channel_id`) :
+
+    - **Bluesky** — fil public `public.api.bsky.app`, SANS authentification.
+      Reposts et reponses ecartes.
+    - **YouTube** — flux Atom `youtube.com/feeds/videos.xml?channel_id=…`,
+      SANS cle API ni quota, contrairement a la Data API v3. L'identifiant
+      de chaine (UC…) vit dans `site_settings.youtube_channel_id` ; le
+      handle @… ne fonctionne pas dans cette URL.
+    - **Instagram** — `GET /me/media` avec le jeton du compte connecte
+      (scope `instagram_business_basic`, deja acquis pour la publication).
+      Aucun flux public n'existe. Le `timestamp` arrive en `+0000` sans
+      deux-points : il est normalise, sinon la date serait illisible et
+      TOUTES les publications ecartees, en silence.
+    - **TikTok** — `POST /v2/video/list/` avec le jeton du compte connecte
+      (scopes `user.info.basic`, `video.list`). Aucun flux public non plus.
+      Jeton d'acces 24 h rafraichi ICI plutot que par le cron quotidien, et
+      `create_time` lu en SECONDES.
+
+    Les deux sources authentifiees restent en veille (`not_configured`) tant
+    qu'aucun compte n'est connecte : ce n'est pas une panne, et ca ne remplit
+    pas le journal d'erreurs tous les quarts d'heure.
+
+    **DEUX DESTINATIONS, REGLES DIFFERENTES.** Le salon Discord ne recoit
+    que ce qui est posterieur au curseur ; la table `social_feed_items`
+    (mur « Nos reseaux » de la home) recoit TOUT ce que le flux a rendu, au
+    plus 3 nouveautes par source et par passage. La borne tient au cout des
+    vignettes : chacune est RECOPIEE dans notre bucket, parce qu'une
+    couverture TikTok expire en 6 h et qu'une URL de media Instagram est
+    signee. Le mur se remplit donc en une heure environ au premier
+    demarrage, puis au fil des publications.
+
+    Les deux destinations sont INDEPENDANTES : sans
+    `bluesky_mirror_channel_id`, le site continue d'etre alimente et seule
+    l'emission Discord est sautee (`mirrored: 0`).
+
+    Un curseur PAR SOURCE (`bluesky_mirror_last_post_at`,
+    `youtube_mirror_last_video_at`, `instagram_mirror_last_post_at`,
+    `tiktok_mirror_last_video_at`) : un curseur commun ferait qu'une video
+    recente masque un post plus ancien pas encore recopie.
+
+    Le curseur n'avance QUE sur ce qui est reellement emis : un echec a la
+    troisieme publication sur cinq laisse le curseur a la deuxieme.
+
+    Une source injoignable n'arrete pas l'autre — le rapport dit laquelle a
+    echoue.
+
+    Au premier passage (curseur absent), seules les 24 dernieres heures sont
+    recopiees : sans cette borne, l'activation deverserait tout
+    l'historique — la chaine YouTube compte deja une quinzaine de videos.
+
+    Sans salon configure, repond 200 `{ skipped: 'no_channel' }`.
+
+    Auth : `Authorization: Bearer <CRON_SECRET>` ou `?secret=`.
+  responses:
+    '200':
+      description: '`{ bluesky: { mirrored, checked, error? }, youtube: {…} }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      description: CRON_SECRET absent ou invalide.

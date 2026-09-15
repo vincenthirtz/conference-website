@@ -1,0 +1,49 @@
+post:
+  tags:
+    - public/teams
+  summary: Creation d'equipe via le bot Discord (legacy, auth bearer
+    DISCORD_TEAM_SECRET).
+  operationId: discordCreateTeam
+  description: |
+    Legacy endpoint authentifie par `Authorization: Bearer <DISCORD_TEAM_SECRET>`
+    (cle dediee, distincte de BOT_API_KEY). Non documente comme PlayerBearer
+    : c'est un secret partage cote bot. Conserve pour compat ; nouveau code
+    doit utiliser /api/bot/v1/teams.
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - name
+          properties:
+            name:
+              type: string
+              maxLength: 100
+            short_name:
+              type: [string, 'null']
+            logo_url:
+              type: [string, 'null']
+            country:
+              type: [string, 'null']
+            description:
+              type: [string, 'null']
+            discord:
+              type: [string, 'null']
+            website:
+              type: [string, 'null']
+  responses:
+    '200':
+      description: Equipe creee.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              team:
+                type: object
+                additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'

@@ -1,0 +1,26 @@
+post:
+  tags:
+    - public/misc
+  summary: Soumet une demande de partenariat (formulaire public).
+  operationId: submitPartnershipRequest
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+          description: Schema valide par `partnershipRequestSchema` cote serveur.
+  responses:
+    '201':
+      description: Demande creee.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '429':
+      $ref: '#/components/responses/RateLimited'

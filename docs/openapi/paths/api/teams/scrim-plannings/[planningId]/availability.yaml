@@ -1,0 +1,44 @@
+parameters:
+  - name: planningId
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+put:
+  tags:
+    - public/teams
+  summary: Upsert the caller's painted availability on a planning grid.
+  operationId: putScrimPlanningAvailability
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - slots
+          properties:
+            slots:
+              type: array
+              items:
+                type: string
+                format: date-time
+  responses:
+    '200':
+      description: Availability saved.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      description: Planning not open.

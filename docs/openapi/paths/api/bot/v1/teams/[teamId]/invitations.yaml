@@ -1,0 +1,99 @@
+parameters:
+  - $ref: '#/components/parameters/TeamId'
+get:
+  tags:
+    - bot/teams
+  summary: Liste les invitations emises par une equipe.
+  operationId: botListTeamInvitations
+  parameters:
+    - name: status
+      in: query
+      schema:
+        type: string
+        enum:
+          - pending
+          - approved
+          - rejected
+          - cancelled
+          - all
+        default: pending
+    - name: type
+      in: query
+      schema:
+        type: string
+        default: invite
+    - name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+  responses:
+    '200':
+      description: Liste des invitations.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              invitations:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invitation'
+post:
+  tags:
+    - bot/teams
+  summary: Le capitaine cree une invitation pending pour une joueuse.
+  operationId: botCreateTeamInvitation
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+            - targetDiscordUserId
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            targetDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            comment:
+              type: string
+              maxLength: 1000
+            role:
+              type: string
+              description: >-
+                Role d'equipe propose. Valide cote API contre la table
+                team_roles ; absent => 'player'.
+            battleTag:
+              type: string
+              description: BattleTag pre-rempli pour l'invitee.
+  responses:
+    '201':
+      description: >-
+        Invitation creee. Pas de lien partageable : l'invitee est deja liee au
+        site (la route echoue en 404 sinon) et recoit un DM du bot.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              invitation:
+                $ref: '#/components/schemas/Invitation'
+              teamName:
+                type: [string, 'null']
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'

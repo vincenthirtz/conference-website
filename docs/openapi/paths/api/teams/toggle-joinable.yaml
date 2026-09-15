@@ -1,0 +1,23 @@
+post:
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+    - $ref: '#/components/parameters/SubjectAs'
+    - $ref: '#/components/parameters/ActAs'
+  tags:
+    - public/teams
+  summary: Bascule le flag is_joinable de l'equipe geree par l'utilisateur.
+  operationId: toggleTeamJoinable
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Nouveau flag applique.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

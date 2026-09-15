@@ -1,0 +1,38 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+  - in: path
+    name: invitationId
+    required: true
+    schema:
+      type: string
+      format: uuid
+delete:
+  summary: Revoke a pending invitation.
+  description: |
+    Idempotent: revoking an already-revoked, accepted or unknown invitation
+    answers 200 with `revoked: false`. The caller wanted the link dead; it
+    is dead.
+  operationId: adminRevokeTenantInvitation
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Revoked (or already not live).
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

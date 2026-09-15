@@ -1,0 +1,53 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+post:
+  tags:
+    - bot/matches
+  summary: Initialise un draft MOBA depuis le bot Discord (Lot 6).
+  operationId: botInitMatchDraft
+  description: |
+    Wrap autour de l'engine `initDraft` (Lot 2). Auth bot-only
+    (x-api-key + x-tenant-id). En plus du `DraftState` assemblé,
+    retourne la liste des deux capitaines avec leur Discord ID
+    résolu via `user_discord_links` pour que le bot puisse les DM
+    directement. Les capitaines non liés à Discord renvoient
+    `discordUserId: null` (le bot tombe sur un message canal).
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/InitMatchDraftRequest'
+  responses:
+    '201':
+      description: Draft créé + résolution des capitaines.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BotInitMatchDraftResponse'
+    '400':
+      description: |
+        Invalid input — bad gameIndex, missing tournament game,
+        game has no draft phase, pickTimerSeconds out of range.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DraftEngineError'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      description: Match or tournament not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DraftEngineError'
+    '409':
+      description: Draft already exists for (matchId, gameIndex).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DraftEngineError'
+    '500':
+      $ref: '#/components/responses/ServerError'

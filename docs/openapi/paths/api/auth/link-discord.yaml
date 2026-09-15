@@ -1,0 +1,37 @@
+post:
+  tags:
+    - public/auth
+  summary: Lie l'identite Discord de l'utilisateur Supabase connecte dans
+    user_discord_links.
+  operationId: linkDiscordIdentity
+  description: |
+    Lit l'identite Discord attachee a auth.users (provider='discord'),
+    upsert dans user_discord_links pour permettre les DMs du bot.
+    Idempotent : un re-call rafraichit le username stocke.
+  security: []
+  responses:
+    '200':
+      description: Lien etabli/refresh.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - success
+            properties:
+              success:
+                type: boolean
+              discordUserId:
+                $ref: '#/components/schemas/DiscordId'
+              discordUsername:
+                type: [string, 'null']
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '409':
+      description: Ce compte Discord est deja lie a un autre utilisateur.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

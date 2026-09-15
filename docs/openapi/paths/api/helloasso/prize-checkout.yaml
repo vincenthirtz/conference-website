@@ -1,0 +1,50 @@
+post:
+  tags:
+    - public/misc
+  summary: Genere un lien de paiement HelloAsso pour contribuer a une cagnotte.
+  operationId: createPrizeCheckout
+  description: |
+    « Profondeur de la monétisation » — cash-prize crowdfundé. Miroir public
+    et rate-limité de `POST /api/helloasso/checkout`, ciblant la cagnotte
+    (`tournament_prize_pools`) d'un tournoi. Attache
+    `metadata:{ kind:'prize_pool', prize_pool_id, tenant_id }` au
+    checkout-intent (canal de corrélation renvoyé dans le webhook) et
+    persiste une row `prize_pool_checkouts` (status `pending`) capturant le
+    montant + inputs contributeur (nom / email PRIVÉ / message / anonymat).
+    Rate-limit : 10 tentatives / IP / heure.
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/PrizeCheckoutRequest'
+  responses:
+    '200':
+      description: URL de redirection vers la session de paiement HelloAsso.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - redirectUrl
+            properties:
+              redirectUrl:
+                type: string
+                format: uri
+    '400':
+      description: >-
+        Corps invalide (`INVALID_BODY`), cagnotte introuvable (`POOL_NOT_FOUND`)
+        ou fermée aux contributions (`POOL_CLOSED`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '502':
+      description: Échec de création de la session de paiement HelloAsso amont.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

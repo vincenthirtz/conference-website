@@ -1,0 +1,46 @@
+get:
+  tags:
+    - public/teams
+  summary: Recherche de joueurs par email ou BattleTag (capitaine/manager uniquement).
+  operationId: searchPlayers
+  security:
+    - PlayerBearer: []
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+    - name: q
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 2
+  responses:
+    '200':
+      description: Resultats.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - players
+            properties:
+              players:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      $ref: '#/components/schemas/Uuid'
+                    email:
+                      type: [string, 'null']
+                    display_name:
+                      type: [string, 'null']
+                    battle_tag:
+                      type: [string, 'null']
+                    has_team:
+                      type: boolean
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

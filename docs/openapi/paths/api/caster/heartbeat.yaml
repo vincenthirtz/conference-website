@@ -1,0 +1,29 @@
+post:
+  tags:
+    - public/caster
+  summary: Heartbeat de presence caster (renvoie online_at).
+  operationId: casterHeartbeat
+  security:
+    - StaffSession: []
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            runId:
+              type: string
+              format: uuid
+  responses:
+    '200':
+      description: Heartbeat enregistre.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

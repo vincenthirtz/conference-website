@@ -1,0 +1,31 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: Mega-dashboard payload for a tournament.
+  description: |
+    Requires `manager` role. Aggregates KPIs, signals, status guards,
+    velocity, recent staff activity. Cached `private, max-age=30,
+    stale-while-revalidate=60` on the response.
+  operationId: adminGetTournamentDashboard
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Dashboard payload.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AdminTournamentDashboard'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

@@ -1,0 +1,44 @@
+post:
+  summary: Seed the tenant map pool from the static config/games catalogue.
+  description: >
+    Importe le pool statique `getGame(game).mapPool` dans le pool tenant. Les
+    maps déjà présentes (par lower(map_name)) sont ignorées → idempotent.
+    Réponse `{ imported, skipped, maps }`.
+  operationId: adminImportDefaultMapPool
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - game
+          properties:
+            game:
+              type: string
+  responses:
+    '200':
+      description: Import effectué (idempotent).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              imported:
+                type: integer
+              skipped:
+                type: integer
+              maps:
+                type: array
+                items:
+                  type: object
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

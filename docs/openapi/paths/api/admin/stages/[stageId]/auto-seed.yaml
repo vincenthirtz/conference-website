@@ -1,0 +1,67 @@
+parameters:
+  - $ref: '#/components/parameters/StageId'
+post:
+  summary: Auto-seed a bracket from a source stage's standings.
+  description: |
+    Requires `manager` role. Reads standings of `sourceStageId` and fills
+    round-1 slots of the target bracket. Two patterns supported:
+    `standard` (1vN, 2v(N-1), etc.) and `sequential` (1v2, 3v4, etc.).
+  operationId: adminAutoSeedStage
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - sourceStageId
+          properties:
+            sourceStageId:
+              type: string
+              format: uuid
+            seedingPattern:
+              type: string
+              enum:
+                - standard
+                - sequential
+              default: standard
+  responses:
+    '200':
+      description: Seeded slots.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              seeded:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    matchId:
+                      type: string
+                      format: uuid
+                    slot:
+                      type: integer
+                      enum:
+                        - 1
+                        - 2
+                    teamId:
+                      type: string
+                      format: uuid
+                    seed:
+                      type: integer
+              totalMatches:
+                type: integer
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

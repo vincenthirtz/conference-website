@@ -1,0 +1,49 @@
+get:
+  tags:
+    - admin/misc
+  summary: Liste les abonnements webhook sortants du tenant courant.
+  operationId: adminListWebhooks
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Abonnements + liste blanche d'events (jamais le secret).
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - admin/misc
+  summary: Crée un abonnement webhook (secret de signature renvoyé une fois).
+  operationId: adminCreateWebhook
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - url
+            - event_types
+          properties:
+            url:
+              type: string
+              format: uri
+            event_types:
+              type: array
+              items:
+                type: string
+            description:
+              type: string
+  responses:
+    '201':
+      description: Abonnement créé + secret HMAC (affiché une seule fois).
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'

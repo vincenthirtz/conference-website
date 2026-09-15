@@ -1,0 +1,93 @@
+get:
+  tags:
+    - cron
+  summary: Dispatch Web Push notifications from `bot_event_outbox` to the /admin PWA.
+  operationId: cronWebPushDispatchGet
+  description: |
+    Schedule: every minute (`* * * * *`) via Netlify scheduled
+    function `web-push-dispatcher-cron`. Max end-to-end latency
+    ≈ 2 minutes (1 tick to pick up + 1 tick to send if cold).
+
+    Reads `bot_event_outbox` in read-only mode (the `.status` column
+    belongs to the Discord bot consumer — this dispatcher must never
+    touch it). Per-recipient tracking lives in `web_push_deliveries`
+    with `UNIQUE(outbox_event_id, subscription_id)` for idempotence.
+
+    Recipient resolution:
+      - Default: `tenant_staff(tenant_id)` + cross-tenant
+        `staff.is_pole_admin=true`, then map to `auth_user_id`
+        (active, non-deleted only).
+      - For `event_segment.transitioned` (match → live), audience is
+        narrowed to casters assigned to the match via
+        `cast_assignments` / `cast_members`.
+      - Opt-out: `notification_prefs(user_id, event_type, enabled=false)`
+        excludes the user. Absent row = opted-in (opt-out model).
+
+    Retry policy:
+      - Transient/5xx: row stays `failed`, `attempts` is incremented.
+        Stops retrying once `attempts >= 5`.
+      - 410/404: subscription is dead — final `status='expired'` is
+        written, then the `push_subscriptions` row is deleted (CASCADE
+        removes child `web_push_deliveries`).
+
+    Env requirements: `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and
+    `VAPID_PRIVATE_KEY` (optional `VAPID_SUBJECT`). If missing, the
+    route returns `500` with `code='VAPID_NOT_CONFIGURED'`.
+
+    Configurable via `WEB_PUSH_BATCH_LIMIT` (default 200) and
+    `WEB_PUSH_WINDOW_HOURS` (default 24). Soft time budget: 8s. An
+    in-process mutex (`_dispatcherInFlight`) prevents overlap inside
+    the same Netlify worker; a concurrent tick returns
+    `{ success: true, skipped: 'in_flight' }`.
+
+    Auth: `Authorization: Bearer <CRON_SECRET>` header OR
+    `?secret=<CRON_SECRET>` query string. Both GET and POST accepted.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Dispatch tick summary or in-flight skip notice.
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - $ref: '#/components/schemas/CronWebPushDispatchResult'
+              - $ref: '#/components/schemas/CronWebPushInFlightSkip'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      description: |
+        Server error. Special case: when VAPID env vars are missing the
+        response carries `code='VAPID_NOT_CONFIGURED'`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+post:
+  tags:
+    - cron
+  summary: Dispatch Web Push notifications from `bot_event_outbox` to the /admin PWA.
+  operationId: cronWebPushDispatchPost
+  description: |
+    Same as `GET /api/cron/web-push-dispatch`.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Dispatch tick summary or in-flight skip notice.
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - $ref: '#/components/schemas/CronWebPushDispatchResult'
+              - $ref: '#/components/schemas/CronWebPushInFlightSkip'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      description: |
+        Server error. Special case: when VAPID env vars are missing the
+        response carries `code='VAPID_NOT_CONFIGURED'`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

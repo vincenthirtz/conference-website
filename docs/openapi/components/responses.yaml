@@ -1,0 +1,47 @@
+BadRequest:
+  description: Requête invalide (validation zod, JSON mal formé, etc.).
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/Error'
+Unauthorized:
+  description: Auth manquante ou invalide (clé, session ou bearer).
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/Error'
+Forbidden:
+  description: Authentifié mais rôle/permissions insuffisants.
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/Error'
+NotFound:
+  description: Ressource introuvable (UUID inconnu, route inexistante).
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/Error'
+Conflict:
+  description: État incompatible (idempotency mismatch, lock détenu).
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/Error'
+RateLimited:
+  description: Rate-limit dépassé (par-actor ou par-route).
+  headers:
+    Retry-After:
+      schema:
+        type: integer
+      description: Secondes avant retry.
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/Error'
+ServerError:
+  description: Erreur serveur non récupérable.
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/Error'

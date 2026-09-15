@@ -1,0 +1,118 @@
+parameters:
+  - name: id
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  tags:
+    - public/tournaments
+  summary: Gestion des maps d'un tournoi (pool de maps). Lecture staff (manager+).
+  operationId: getTournamentMaps
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Maps du tournoi.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  tags:
+    - public/tournaments
+  summary: Ajoute des maps au pool d'un tournoi. Staff manager+.
+  operationId: createTournamentMaps
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Maps ajoutees.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+put:
+  tags:
+    - public/tournaments
+  summary: Remplace le pool de maps d'un tournoi. Staff manager+.
+  operationId: replaceTournamentMaps
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Maps remplacees.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+patch:
+  tags:
+    - public/tournaments
+  summary: Met a jour partiellement les maps d'un tournoi. Staff manager+.
+  operationId: patchTournamentMaps
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Maps mises a jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  tags:
+    - public/tournaments
+  summary: Supprime des maps du pool d'un tournoi. Staff manager+.
+  operationId: deleteTournamentMaps
+  security:
+    - StaffSession: []
+  responses:
+    '204':
+      description: Supprime.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

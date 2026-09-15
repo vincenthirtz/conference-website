@@ -1,0 +1,33 @@
+delete:
+  tags:
+    - public/teams
+  summary: Le joueur annule une de ses propres demandes.
+  operationId: cancelOwnDemande
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - demandeId
+          properties:
+            demandeId:
+              type: string
+              format: uuid
+  responses:
+    '200':
+      description: Demande annulee.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      $ref: '#/components/responses/NotFound'

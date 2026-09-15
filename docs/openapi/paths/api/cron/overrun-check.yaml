@@ -1,0 +1,60 @@
+get:
+  tags:
+    - cron
+  summary: Server-side fallback for run-of-show overrun escalation (Lot 6).
+  operationId: cronOverrunCheckGet
+  description: |
+    Schedule: every 2 minutes (`*/2 * * * *`) via Netlify scheduled
+    function `overrun-watcher-cron`. Run-of-show Lot 6 (timing/drift).
+
+    Cross-tenant scan via `supabaseAdmin` of every `event_runs` row
+    with `status='live'`. For each, fetches live `event_segments` with
+    `started_at IS NOT NULL` and `duration_min IS NOT NULL`; if
+    `(now - planned_end) >= 5 min`, inserts a `severity='urgent'` cue
+    in `event_cues` with body `OVERRUN: "<title>" en depassement de 5min`.
+
+    Idempotence: `dedup_key = auto-overrun:{runId}:{segId}`. A partial
+    unique index `uq_event_cues_dedup_key` guarantees at most one cue
+    per key. A `23505` conflict (client `useOverrunWatcher` already
+    wrote it, or a previous tick did) increments `deduped` and is not
+    an error.
+
+    Soft time budget: 20s. If exceeded, the loop breaks and
+    `truncated_by_time_budget=true` is reported; the rest is picked up
+    2 min later. Netlify scheduled functions cap at 30s.
+
+    Auth: `Authorization: Bearer <CRON_SECRET>` header OR
+    `?secret=<CRON_SECRET>` query string. Both GET and POST accepted.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Overrun-check tick summary.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CronOverrunCheckResult'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - cron
+  summary: Server-side fallback for run-of-show overrun escalation (Lot 6).
+  operationId: cronOverrunCheckPost
+  description: |
+    Same as `GET /api/cron/overrun-check`.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Overrun-check tick summary.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CronOverrunCheckResult'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'

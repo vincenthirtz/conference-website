@@ -1,0 +1,31 @@
+get:
+  tags:
+    - admin/tasks
+  summary: Timeline d'activite d'une carte (staff_logs, created_at DESC).
+  operationId: adminGetTaskActivity
+  description: |
+    Historique des actions staff portant sur la carte : actions « carte »
+    (entity_type='task', entity_id=taskId) + actions « commentaire »
+    (rattachees via payload.task_id). Renvoie l'action brute + payload ;
+    l'humanisation des libelles se fait cote UI.
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  responses:
+    '200':
+      description: '`{ activity: [{ action, actorName, createdAt, payload }] }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

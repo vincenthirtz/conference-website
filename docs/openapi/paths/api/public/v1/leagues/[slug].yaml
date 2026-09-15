@@ -1,0 +1,32 @@
+parameters:
+  - name: slug
+    in: path
+    required: true
+    schema:
+      type: string
+get:
+  tags:
+    - public/v1
+  summary: Détail public d'une league (standings + tournois liés).
+  operationId: publicV1GetLeague
+  security: []
+  responses:
+    '200':
+      description: Détail league.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - data
+            properties:
+              data:
+                $ref: '#/components/schemas/LeagueDetailResponse'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

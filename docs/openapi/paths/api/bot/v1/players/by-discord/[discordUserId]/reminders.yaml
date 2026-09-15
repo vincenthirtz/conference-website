@@ -1,0 +1,19 @@
+parameters:
+  - $ref: '#/components/parameters/DiscordUserId'
+get:
+  tags:
+    - bot/players
+  summary: Reminders dus pour ce joueur.
+  operationId: botGetPlayerReminders
+  responses:
+    '200':
+      description: Liste des reminders.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              reminders:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reminder'

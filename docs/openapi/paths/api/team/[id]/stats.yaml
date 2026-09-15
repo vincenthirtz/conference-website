@@ -1,0 +1,25 @@
+parameters:
+  - name: id
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  tags:
+    - public/teams
+  summary: Stats globales d'une equipe (winrate, MVP count, maps).
+  operationId: getTeamStats
+  security: []
+  responses:
+    '200':
+      description: Stats agregees.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'

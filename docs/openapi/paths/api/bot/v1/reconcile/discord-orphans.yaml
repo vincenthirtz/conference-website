@@ -1,0 +1,37 @@
+get:
+  tags:
+    - bot/misc
+  summary: >-
+    Liste les matches/teams porteurs d'un ID Discord persiste (thread, scheduled
+    event, dispute thread, salon de match T4, vocal d'equipe) pour que le bot
+    detecte les references orphelines.
+  description: >-
+    Pour chaque match, expose `discord_thread_id`, `discord_scheduled_event_id`,
+    `discord_dispute_thread_id` et `discord_match_channel_id` (T4 — null si la
+    migration n'est pas encore appliquee : le scan de ce champ degrade
+    gracieusement sans casser le reste). Le bot verifie l'existence Discord de
+    chaque objet et PATCH `/matches/{matchId}/discord` avec null pour clear les
+    orphelins.
+  operationId: botGetDiscordOrphans
+  responses:
+    '200':
+      description: Liste orphelins (matches + teams).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              matches:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+              teams:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+              limit:
+                type: integer
+              offset:
+                type: integer

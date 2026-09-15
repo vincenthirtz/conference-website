@@ -1,0 +1,33 @@
+get:
+  tags:
+    - public/misc
+  summary: Broadcaster OAuth callback (signed-state, no session).
+  description: |
+    PUBLIC endpoint but protected by a signed state (HMAC) + double-submit
+    nonce cookie issued by `/api/admin/twitch/connect`. Exchanges the code,
+    reads the broadcaster identity (helix/users), stores the encrypted tokens,
+    then redirects (302) to `returnTo` with `?twitch=connected` or
+    `?twitch=error`. No token is ever placed in the URL.
+  operationId: twitchBroadcasterCallback
+  security: []
+  parameters:
+    - name: code
+      in: query
+      required: false
+      schema:
+        type: string
+    - name: state
+      in: query
+      required: true
+      schema:
+        type: string
+  responses:
+    '302':
+      description: Redirect to returnTo with a ?twitch=connected|error status.
+    '503':
+      description: Twitch broadcaster OAuth not configured.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

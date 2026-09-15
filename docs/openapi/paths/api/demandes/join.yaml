@@ -1,0 +1,58 @@
+get:
+  parameters:
+    - $ref: '#/components/parameters/SubjectAs'
+  tags:
+    - public/teams
+  summary: Liste les demandes de join du joueur (emises).
+  operationId: listJoinDemandes
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Demandes.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+post:
+  tags:
+    - public/teams
+  summary: Soumet une demande de join vers une equipe.
+  operationId: submitJoinDemande
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - teamId
+          properties:
+            teamId:
+              type: string
+              format: uuid
+            message:
+              type: string
+            role:
+              type: string
+            battleTag:
+              type: string
+  responses:
+    '201':
+      description: Demande creee.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '409':
+      $ref: '#/components/responses/Conflict'

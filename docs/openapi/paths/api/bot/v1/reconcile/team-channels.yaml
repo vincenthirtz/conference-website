@@ -1,0 +1,92 @@
+get:
+  tags:
+    - bot/misc
+  summary: >-
+    Liste les equipes ACTIVES du tenant avec leurs IDs Discord (role, salon
+    texte, salon vocal), l'ID Discord du capitaine, et pour chaque equipe ses
+    membres resolus vers leur ID Discord.
+  description: >-
+    Consomme par un cron quotidien de reconciliation cote bot. Selectionne les
+    equipes ACTIVES (`is_active = true`, `deleted_at IS NULL`) INSCRITES au
+    tournoi de l'annee en cours (tournament_teams) OU dont l'inscription a ce
+    tournoi est EN ATTENTE (demandes team_registration pending), paginees via
+    `limit` (defaut 200, max 500) et `offset`. Les membres sans lien Discord
+    (aucune row `user_discord_links`) sont omis : le bot ne peut pas agir sur
+    eux. `captainDiscordUserId` est null si le capitaine n'est pas lie a
+    Discord. Les membres sont dedupliques par `discordUserId`.
+  operationId: botGetReconcileTeamChannels
+  parameters:
+    - in: query
+      name: limit
+      schema:
+        type: integer
+        default: 200
+        maximum: 500
+    - in: query
+      name: offset
+      schema:
+        type: integer
+        default: 0
+  responses:
+    '200':
+      description: Equipes actives + IDs Discord + membres.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              tournamentInProgress:
+                type: boolean
+                description: >-
+                  True si un tournoi du tenant est EN COURS (status `running`).
+                  Le cron bot saute alors entierement le run (aucune
+                  modification de salon pendant un tournoi).
+              knownChannelIds:
+                type: [array, 'null']
+                items:
+                  type: string
+                description: >-
+                  Ensemble de REFERENCE, non pagine : ids de salons Discord de
+                  TOUTES les equipes actives du tenant, inscrites au tournoi ou
+                  non. `teams` (scope) repond « a qui provisionner ? », ce champ
+                  repond « quels salons sont legitimes ? ». Ne jamais deduire le
+                  second du premier. Vaut null si la lecture a echoue : le
+                  consommateur doit alors s'abstenir plutot que de conclure «
+                  rien n'est connu ».
+              teams:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    teamId:
+                      type: string
+                      format: uuid
+                    name:
+                      type: [string, 'null']
+                    slug:
+                      type: [string, 'null']
+                    discordRoleId:
+                      type: [string, 'null']
+                    discordChannelId:
+                      type: [string, 'null']
+                    discordVoiceChannelId:
+                      type: [string, 'null']
+                    captainDiscordUserId:
+                      type: [string, 'null']
+                    members:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          discordUserId:
+                            type: string
+                          isCaptain:
+                            type: boolean
+                          isSubstitute:
+                            type: boolean
+              limit:
+                type: integer
+              offset:
+                type: integer
+              count:
+                type: integer

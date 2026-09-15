@@ -1,0 +1,80 @@
+parameters:
+  - $ref: '#/components/parameters/ScrimId'
+get:
+  tags:
+    - bot/scrims
+  summary: Lit un scrim (par UUID ou slug) + ses matchs.
+  operationId: botGetScrim
+  responses:
+    '200':
+      description: Scrim trouve.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              scrim:
+                $ref: '#/components/schemas/Scrim'
+              matches:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Match'
+    '404':
+      $ref: '#/components/responses/NotFound'
+patch:
+  tags:
+    - bot/scrims
+  summary: Met a jour un scrim (staff admin/owner).
+  operationId: botUpdateScrim
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            name:
+              type: string
+            status:
+              type: string
+            team1_id:
+              oneOf:
+                - $ref: '#/components/schemas/Uuid'
+                - type: 'null'
+            team2_id:
+              oneOf:
+                - $ref: '#/components/schemas/Uuid'
+                - type: 'null'
+            scheduled_date:
+              oneOf:
+                - type: string
+                  format: date-time
+                - type: 'null'
+            is_public:
+              type: boolean
+            description:
+              type: [string, 'null']
+            stream_url:
+              type: [string, 'null']
+            game:
+              type: [string, 'null']
+  responses:
+    '200':
+      description: Scrim mis a jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              scrim:
+                $ref: '#/components/schemas/Scrim'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

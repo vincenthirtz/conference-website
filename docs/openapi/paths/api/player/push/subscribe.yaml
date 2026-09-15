@@ -1,0 +1,63 @@
+post:
+  summary: Enregistrer (ou mettre à jour) une subscription Web Push joueur.
+  description: |
+    Idempotent par endpoint : `201 created: true` à la création, `200
+    created: false` si l'endpoint existait déjà. `withAuthRoute`.
+  operationId: playerPushSubscribe
+  tags:
+    - public
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - subscription
+          properties:
+            subscription:
+              type: object
+              required:
+                - endpoint
+                - keys
+              properties:
+                endpoint:
+                  type: string
+                  format: uri
+                  maxLength: 2048
+                keys:
+                  type: object
+                  required:
+                    - p256dh
+                    - auth
+                  properties:
+                    p256dh:
+                      type: string
+                      maxLength: 512
+                    auth:
+                      type: string
+                      maxLength: 256
+            user_agent:
+              type: [string, 'null']
+              maxLength: 512
+  responses:
+    '200':
+      description: Subscription existante mise à jour.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PlayerPushSubscription'
+    '201':
+      description: Subscription créée.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PlayerPushSubscription'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'

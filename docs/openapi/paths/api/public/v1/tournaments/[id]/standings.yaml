@@ -1,0 +1,35 @@
+parameters:
+  - name: id
+    in: path
+    required: true
+    description: Id (UUID) ou slug du tournoi.
+    schema:
+      type: string
+get:
+  tags:
+    - public/v1
+  summary: Classement final du tournoi (vide si non finalisé).
+  operationId: publicV1GetTournamentStandings
+  security: []
+  responses:
+    '200':
+      description: Classement final trié par rank.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - data
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicV1Standing'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

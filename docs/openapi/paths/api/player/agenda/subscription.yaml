@@ -1,0 +1,52 @@
+get:
+  tags:
+    - public/auth
+  summary: Mon lien d'abonnement calendrier (ou null).
+  operationId: getPlayerAgendaSubscription
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: '{ url, webcalUrl, createdAt, lastUsedAt } — url null si aucun
+        abonnement.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+post:
+  tags:
+    - public/auth
+  summary: Emettre un lien neuf (revoque le precedent).
+  operationId: rotatePlayerAgendaSubscription
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Le nouveau lien.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+delete:
+  tags:
+    - public/auth
+  summary: Revoquer mon lien d'abonnement.
+  operationId: revokePlayerAgendaSubscription
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Abonnement revoque.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'

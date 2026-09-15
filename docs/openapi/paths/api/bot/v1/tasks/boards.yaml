@@ -1,0 +1,19 @@
+get:
+  tags:
+    - bot/tasks
+  summary: Boards Kanban non archives (id, name) pour autocomplete /kanban.
+  operationId: botListTaskBoards
+  parameters:
+    - name: actorDiscordUserId
+      in: query
+      required: true
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Boards (id, name).
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

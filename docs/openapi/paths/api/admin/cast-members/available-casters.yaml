@@ -1,0 +1,30 @@
+get:
+  summary: List casters available for an assignment (filters by slot).
+  operationId: adminListAvailableCasters
+  tags:
+    - admin/content
+  security:
+    - StaffSession: []
+  parameters:
+    - in: query
+      name: scheduledAt
+      schema:
+        type: string
+        format: date-time
+    - in: query
+      name: matchId
+      schema:
+        type: string
+        format: uuid
+  responses:
+    '200':
+      description: Available casters.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

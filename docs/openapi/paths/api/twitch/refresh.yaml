@@ -1,0 +1,39 @@
+post:
+  summary: Rafraîchissement OAuth Twitch `refresh_token` (côté serveur).
+  description: |
+    Companion de `/api/twitch/exchange`. Garde `TWITCH_CLIENT_SECRET` côté
+    serveur quand le caster doit rafraîchir un access token. Endpoint public.
+  operationId: twitchRefresh
+  tags:
+    - public
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - refresh_token
+          properties:
+            refresh_token:
+              type: string
+  responses:
+    '200':
+      description: Tokens Twitch rafraîchis.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TwitchTokenResponse'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+    '502':
+      description: Échec du refresh auprès de Twitch.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

@@ -1,0 +1,33 @@
+get:
+  tags:
+    - bot/misc
+  summary: Liste les demandes (toutes equipes) avec filtres status/type.
+  operationId: botListDemandes
+  parameters:
+    - name: status
+      in: query
+      schema:
+        type: string
+    - name: type
+      in: query
+      schema:
+        type: string
+    - name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+  responses:
+    '200':
+      description: Liste paginate.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              demandes:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invitation'

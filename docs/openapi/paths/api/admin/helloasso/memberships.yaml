@@ -1,0 +1,19 @@
+get:
+  summary: List HelloAsso memberships pulled by the sync job.
+  operationId: adminListHelloAssoMemberships
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Memberships.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

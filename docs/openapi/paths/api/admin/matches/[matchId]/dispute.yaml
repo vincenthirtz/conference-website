@@ -1,0 +1,111 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+post:
+  summary: Open a dispute on a match.
+  description: |
+    Requires `manager` role. Status → `disputed`. Saves reason + author +
+    timestamp. Score propagation is blocked until resolution.
+  operationId: adminOpenMatchDispute
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - reason
+          properties:
+            reason:
+              type: string
+              minLength: 1
+              maxLength: 2000
+  responses:
+    '200':
+      description: Dispute opened.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'
+patch:
+  summary: Resolve an open dispute.
+  description: |
+    Requires `manager` role. Returns to a normal status with a resolution
+    note. Valid resume statuses are `pending`, `ongoing`, `finished`,
+    `walkover`.
+  operationId: adminResolveMatchDispute
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - resolution
+            - resumeStatus
+          properties:
+            resolution:
+              type: string
+              minLength: 1
+              maxLength: 2000
+            resumeStatus:
+              type: string
+              enum:
+                - pending
+                - ongoing
+                - finished
+                - walkover
+            team1Score:
+              type: [integer, 'null']
+            team2Score:
+              type: [integer, 'null']
+  responses:
+    '200':
+      description: Resolved.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  summary: Cancel an open dispute without resolution.
+  description: Requires `manager` role.
+  operationId: adminCancelMatchDispute
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Dispute cancelled.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

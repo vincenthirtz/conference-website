@@ -1,0 +1,59 @@
+get:
+  summary: Read Discord webhooks per channel/category.
+  operationId: adminGetSiteSettingsDiscordWebhooks
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Webhook map.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+put:
+  summary: Replace Discord webhooks configuration.
+  operationId: adminPutSiteSettingsDiscordWebhooks
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Saved.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  summary: Clear all Discord webhooks.
+  operationId: adminDeleteSiteSettingsDiscordWebhooks
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  responses:
+    '204':
+      description: Cleared.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

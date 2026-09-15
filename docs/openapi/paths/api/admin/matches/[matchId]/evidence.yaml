@@ -1,0 +1,133 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+get:
+  summary: Liste les preuves d'un match (vue arbitrage staff).
+  description: |
+    Requires `manager` role. Retourne chaque preuve avec une URL signée
+    courte-durée (~10 min) pour les binaires, plus l'identité du soumetteur
+    (`submittedByDiscordUserId` du capitaine, `submittedByAuthUserId`).
+  operationId: adminListMatchEvidence
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Liste des preuves.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - matchId
+              - evidence
+            properties:
+              matchId:
+                $ref: '#/components/schemas/Uuid'
+              evidence:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminMatchEvidenceItem'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  summary: Le staff attache une preuve neutre (team_side null) à un match.
+  description: |
+    Requires `manager` role. Même union discriminée que le POST bot mais
+    SANS `discordUserId` : la preuve est neutre (`teamSide=null`). Binaires
+    validés (magic bytes + extension) + hachés + uploadés dans le bucket
+    privé `match-evidence`. Limite de corps 15 Mo. Journalise l'action
+    staff `attach_match_evidence`.
+  operationId: adminAttachMatchEvidence
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          oneOf:
+            - type: object
+              required:
+                - kind
+                - file_base64
+                - filename
+              properties:
+                kind:
+                  type: string
+                  enum:
+                    - screenshot
+                file_base64:
+                  type: string
+                  minLength: 1
+                  description: Contenu binaire encodé base64.
+                filename:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                note:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+            - type: object
+              required:
+                - kind
+                - file_base64
+                - filename
+              properties:
+                kind:
+                  type: string
+                  enum:
+                    - replay_file
+                file_base64:
+                  type: string
+                  minLength: 1
+                filename:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                note:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+            - type: object
+              required:
+                - kind
+                - external_url
+              properties:
+                kind:
+                  type: string
+                  enum:
+                    - replay_url
+                external_url:
+                  type: string
+                  format: uri
+                note:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+  responses:
+    '201':
+      description: Preuve enregistrée.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MatchEvidenceCreateResult'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '500':
+      $ref: '#/components/responses/ServerError'

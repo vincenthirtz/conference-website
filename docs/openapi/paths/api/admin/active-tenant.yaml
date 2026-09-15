@@ -1,0 +1,58 @@
+get:
+  summary: Read the current operator's active tenant.
+  operationId: adminGetActiveTenant
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Active tenant for this staff session.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              activeTenantId:
+                type: [string, 'null']
+                format: uuid
+              tenant:
+                anyOf:
+                  - $ref: '#/components/schemas/Tenant'
+                  - type: 'null'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Switch the active tenant for the current staff session.
+  operationId: adminSetActiveTenant
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - tenantId
+          properties:
+            tenantId:
+              type: string
+              format: uuid
+  responses:
+    '200':
+      description: Switched.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Ok'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

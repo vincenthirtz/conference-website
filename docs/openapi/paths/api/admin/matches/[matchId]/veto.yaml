@@ -1,0 +1,84 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+get:
+  summary: Read veto state for a match.
+  operationId: adminGetMatchVeto
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Veto state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VetoState'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Apply a veto action (ban/pick) or reset.
+  operationId: adminPostMatchVeto
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Updated veto state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VetoState'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+patch:
+  summary: Update veto state (admin override).
+  operationId: adminPatchMatchVeto
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Updated veto state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VetoState'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  summary: Reset the veto for a match.
+  operationId: adminDeleteMatchVeto
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  responses:
+    '204':
+      description: Reset.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

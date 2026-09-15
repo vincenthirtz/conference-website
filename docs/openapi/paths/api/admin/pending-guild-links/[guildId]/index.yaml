@@ -1,0 +1,22 @@
+parameters:
+  - in: path
+    name: guildId
+    required: true
+    schema:
+      type: string
+      pattern: ^[0-9]{17,20}$
+delete:
+  summary: Revoke a pending guild link.
+  description: Requires `owner` role.
+  operationId: adminDeletePendingGuildLink
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  responses:
+    '204':
+      description: Revoked.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

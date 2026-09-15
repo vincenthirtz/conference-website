@@ -1,0 +1,16 @@
+post:
+  summary: Send a test push notification to the current staff.
+  operationId: adminTestNotification
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Sent.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Ok'
+    '401':
+      $ref: '#/components/responses/Unauthorized'

@@ -1,0 +1,167 @@
+get:
+  summary: Liste les joueurs suivis / les followers du joueur courant.
+  description: |
+    Liste `following` (joueurs suivis) ou `followers` (qui me suivent),
+    enrichie comme l'annuaire. Ne renvoie QUE les joueurs actuellement
+    `discoverable=true` (un opt-out disparaît sans supprimer l'arête).
+    `withAuthRoute`.
+  operationId: playerListFollows
+  tags:
+    - public/auth
+  security:
+    - PlayerBearer: []
+  parameters:
+    - name: type
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+          - following
+          - followers
+        default: following
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 20
+    - name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+  responses:
+    '200':
+      description: Page de joueurs suivis / followers + total.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - players
+              - total
+              - limit
+              - offset
+              - type
+            properties:
+              players:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DirectoryPlayer'
+              total:
+                type: integer
+              limit:
+                type: integer
+              offset:
+                type: integer
+              type:
+                type: string
+                enum:
+                  - following
+                  - followers
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  summary: Suivre un joueur découvrable (idempotent).
+  description: |
+    Suit un joueur `discoverable=true`. Rejette l'auto-suivi
+    (`CANNOT_FOLLOW_SELF`) ; cible inconnue ou non découvrable → 404
+    (anti-énumération). Idempotent sur `(follower_id, followee_id)`.
+    `withAuthRoute`.
+  operationId: playerFollow
+  tags:
+    - public/auth
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - followeeId
+          properties:
+            followeeId:
+              type: string
+              format: uuid
+  responses:
+    '200':
+      description: Le joueur est suivi.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - following
+            properties:
+              following:
+                type: boolean
+                enum:
+                  - true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+delete:
+  summary: Ne plus suivre un joueur (idempotent).
+  description: |
+    Supprime l'arête de suivi `follower_id = current user`. Idempotent :
+    ré-appeler sur une arête inexistante renvoie quand même `following:false`.
+    `withAuthRoute`.
+  operationId: playerUnfollow
+  tags:
+    - public/auth
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - followeeId
+          properties:
+            followeeId:
+              type: string
+              format: uuid
+  responses:
+    '200':
+      description: Le joueur n'est plus suivi.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - following
+            properties:
+              following:
+                type: boolean
+                enum:
+                  - false
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

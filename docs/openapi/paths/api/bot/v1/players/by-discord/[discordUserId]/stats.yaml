@@ -1,0 +1,15 @@
+parameters:
+  - $ref: '#/components/parameters/DiscordUserId'
+get:
+  tags:
+    - bot/players
+  summary: Stats agregees d'un joueur (wins/losses/etc.).
+  operationId: botGetPlayerStats
+  responses:
+    '200':
+      description: Stats joueur.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

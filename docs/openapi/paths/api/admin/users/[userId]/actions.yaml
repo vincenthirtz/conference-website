@@ -1,0 +1,62 @@
+parameters:
+  - name: userId
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+post:
+  summary: Admin player actions from the player-view command center.
+  description: |
+    Server-side player actions that cannot reuse an existing endpoint.
+    Supported actions: `assign_captain` (promote the target user to captain
+    of their current team) and `transfer_team` (move the target user to
+    another team). Scoped to the staff's active tenant.
+  operationId: adminUserActions
+  tags:
+    - admin/users
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - action
+          properties:
+            action:
+              type: string
+              enum:
+                - assign_captain
+                - transfer_team
+            teamId:
+              type: string
+              format: uuid
+              description: Destination team id (required for transfer_team).
+            battleTag:
+              type: string
+              description: Optional BattleTag override for transfer_team.
+  responses:
+    '200':
+      description: Action applied.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              info:
+                type: string
+              teamId:
+                type: string
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

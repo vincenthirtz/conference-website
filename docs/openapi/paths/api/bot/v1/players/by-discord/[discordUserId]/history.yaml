@@ -1,0 +1,15 @@
+parameters:
+  - $ref: '#/components/parameters/DiscordUserId'
+get:
+  tags:
+    - bot/players
+  summary: Historique recap d'un joueur (matchs joues, resultats).
+  operationId: botGetPlayerHistory
+  responses:
+    '200':
+      description: Historique.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

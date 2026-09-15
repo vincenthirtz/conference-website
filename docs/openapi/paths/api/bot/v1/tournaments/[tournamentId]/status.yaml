@@ -1,0 +1,44 @@
+parameters:
+  - $ref: '#/components/parameters/TournamentId'
+post:
+  tags:
+    - bot/tournaments
+  summary: Transitionne entre status draft <-> published.
+  operationId: botSetTournamentStatus
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+            - status
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            status:
+              type: string
+              enum:
+                - draft
+                - published
+  responses:
+    '200':
+      description: Status mis a jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              tournament:
+                $ref: '#/components/schemas/Tournament'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'

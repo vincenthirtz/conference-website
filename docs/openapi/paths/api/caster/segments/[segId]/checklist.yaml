@@ -1,0 +1,30 @@
+parameters:
+  - $ref: '#/components/parameters/SegId'
+patch:
+  tags:
+    - public/caster
+  summary: Met a jour la checklist d'un segment (caster).
+  operationId: updateSegmentChecklist
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Checklist mise a jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

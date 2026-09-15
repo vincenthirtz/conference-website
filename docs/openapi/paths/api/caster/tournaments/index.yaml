@@ -1,0 +1,47 @@
+get:
+  summary: "[DEPRECATED] Liste publique des tournois pour l'app caster."
+  deprecated: true
+  description: |
+    **Déprécié** (Sunset 2026-12-23). Alias de `/api/caster/v1/tournaments`
+    — réponses identiques + headers `Deprecation`/`Sunset`/`Link`.
+    Lecture publique tenant-scopée (`x-tenant-id`) via `supabaseAdmin`.
+    Statuts retenus : `running`, `published`.
+  operationId: casterListTournaments
+  tags:
+    - public
+  security: []
+  parameters:
+    - $ref: '#/components/parameters/XTenantId'
+  responses:
+    '200':
+      description: Liste de tournois.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - tournaments
+            properties:
+              tournaments:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      $ref: '#/components/schemas/Uuid'
+                    name:
+                      type: string
+                    slug:
+                      type: string
+                    game:
+                      type: string
+                    status:
+                      type: string
+                    start_date:
+                      anyOf:
+                        - $ref: '#/components/schemas/Timestamp'
+                        - type: 'null'
+                    format_type:
+                      type: [string, 'null']
+    '500':
+      $ref: '#/components/responses/ServerError'

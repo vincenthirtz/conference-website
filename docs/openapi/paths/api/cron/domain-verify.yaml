@@ -1,0 +1,22 @@
+post:
+  summary: Daily re-check of every custom domain.
+  description: |
+    CRON_SECRET-authenticated. A verified domain that stops pointing here
+    falls back to `failed` (and stops being routed — better the slug than an
+    illusion); a `pending` one whose proof finally landed becomes
+    `verified`. A DNS outage never degrades a tenant: exceptions skip the
+    row rather than writing a verdict.
+  operationId: cronVerifyCustomDomains
+  tags:
+    - cron
+  security: []
+  responses:
+    '200':
+      description: Counters and transitions.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'

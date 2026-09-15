@@ -1,0 +1,30 @@
+post:
+  tags:
+    - public/scrims
+  summary: Propose un scrim public a une de nos equipes (anti-bot captcha + honeypot).
+  operationId: submitPublicScrimRequest
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/PublicScrimRequestInput'
+  responses:
+    '201':
+      description: Demande de scrim enregistree.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      description: Equipe cible introuvable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    '429':
+      $ref: '#/components/responses/RateLimited'

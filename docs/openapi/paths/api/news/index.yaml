@@ -1,0 +1,101 @@
+get:
+  tags:
+    - public/news
+  summary: Liste les articles publies du tenant.
+  operationId: getPublicNews
+  security: []
+  parameters:
+    - name: tag
+      in: query
+      required: false
+      schema:
+        type: string
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+    - name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+  responses:
+    '200':
+      description: Articles publies.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - items
+            properties:
+              items:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicNewsItem'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - public/news
+  summary: Ingest d'un article via bot (auth `x-api-key=BOT_API_KEY`).
+  operationId: ingestNewsArticle
+  description: |
+    Endpoint d'ingest legacy : auth via BOT_API_KEY (env legacy global, pas
+    per-tenant). Le tenant cible est choisi par le header `x-tenant-id`
+    (et NON par la cle, contrairement a /api/bot/v1/*). Un `x-tenant-id`
+    inconnu ou inactif renvoie 400 (`UNKNOWN_TENANT`). Pour la nouvelle
+    surface bot, utiliser /api/bot/v1/* avec auth per-tenant.
+  security:
+    - BotApiKey: []
+      BotTenantId: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - title
+            - content
+          properties:
+            title:
+              type: string
+            slug:
+              type: string
+            tag:
+              type: string
+            excerpt:
+              type: string
+            content:
+              type: string
+            imageUrl:
+              type: string
+            status:
+              type: string
+              enum:
+                - draft
+                - published
+            publishedAt:
+              type: [string, 'null']
+              format: date-time
+  responses:
+    '201':
+      description: Article cree.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'

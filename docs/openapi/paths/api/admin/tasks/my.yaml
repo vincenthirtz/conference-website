@@ -1,0 +1,25 @@
+get:
+  tags:
+    - admin/tasks
+  summary: Vue transverse « Mes taches » (cartes assignees au staff courant).
+  operationId: adminListMyTasks
+  description: |
+    Toutes les cartes vivantes (`deleted_at IS NULL`) assignees a
+    `ctx.staff.id`, tous boards du tenant confondus. Enrichi de boardName /
+    columnName / columnIsDone / dueDate. Tri : dueDate asc (null en dernier)
+    puis priorite (urgent > high > medium > low).
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: '`{ tasks: [NormalizedTask + boardName + columnName + columnIsDone
+        + dueDate] }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

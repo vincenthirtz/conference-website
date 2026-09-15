@@ -1,0 +1,26 @@
+parameters:
+  - $ref: '#/components/parameters/RunId'
+  - $ref: '#/components/parameters/SegId'
+post:
+  summary: Skip a segment (transition upcoming → skipped).
+  description: Requires `manager` role.
+  operationId: adminSkipEventSegment
+  tags:
+    - admin/events
+  security:
+    - StaffSession: []
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  responses:
+    '200':
+      description: Segment skipped.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EventSegment'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      $ref: '#/components/responses/Conflict'

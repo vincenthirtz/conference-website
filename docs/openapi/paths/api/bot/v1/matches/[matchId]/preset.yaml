@@ -1,0 +1,94 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+get:
+  tags:
+    - bot/matches
+  summary: Preset de partie personnalisee applicable a un match.
+  description: >
+    Renvoie le code d'import de partie personnalisee que l'hote doit coller dans
+    le jeu (Partie perso > Parametres > Importer). Aucun titre qu'on opere
+    (Overwatch en tete) n'expose d'API pour CREER ou LANCER un lobby : ce code
+    est le seul artefact automatisable.
+
+
+    Le perimetre est resolu cote site — phase > tournoi > defaut du tenant (cf.
+    `utils/customGamePresets.ts`) — le bot ne duplique aucune regle. `lines`
+    porte la mise en forme prete a poster, pour que le thread de match, le DM
+    hote et `/preset` affichent le meme bloc.
+
+
+    `preset: null` (et `lines: []`) est un cas NOMINAL : aucun preset configure
+    pour ce perimetre.
+  operationId: botGetMatchPreset
+  responses:
+    '200':
+      description: Preset resolu, ou null si aucun preset configure.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - matchId
+              - game
+              - preset
+              - lines
+            properties:
+              matchId:
+                $ref: '#/components/schemas/Uuid'
+              tournamentId:
+                anyOf:
+                  - $ref: '#/components/schemas/Uuid'
+                  - type: 'null'
+              stageId:
+                anyOf:
+                  - $ref: '#/components/schemas/Uuid'
+                  - type: 'null'
+              game:
+                type: string
+                description: GameSlug du tournoi, `overwatch` par defaut (scrims).
+              preset:
+                type: [object, 'null']
+                required:
+                  - id
+                  - name
+                  - importCode
+                  - scope
+                properties:
+                  id:
+                    $ref: '#/components/schemas/Uuid'
+                  game:
+                    type: string
+                  name:
+                    type: string
+                  importCode:
+                    type: string
+                    description: Code d'import genere par le jeu (Overwatch = alphanumerique
+                      majuscules).
+                  description:
+                    type: [string, 'null']
+                  mapPool:
+                    type: array
+                    items:
+                      type: string
+                    description: Rappel indicatif pour l'hote (le pool contraignant reste celui du
+                      tournoi).
+                  scope:
+                    type: string
+                    enum: [stage, tournament, tenant]
+                  tournamentId:
+                    anyOf:
+                      - $ref: '#/components/schemas/Uuid'
+                      - type: 'null'
+                  stageId:
+                    anyOf:
+                      - $ref: '#/components/schemas/Uuid'
+                      - type: 'null'
+              lines:
+                type: array
+                items:
+                  type: string
+                description: Bloc pret a poster dans Discord. Vide si `preset` est null.
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'

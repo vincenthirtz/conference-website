@@ -1,0 +1,38 @@
+get:
+  tags:
+    - public/auth
+  summary: Les collectionneuses de mon espace qui acceptent des echanges.
+  description: |
+    PAS UN ANNUAIRE : seulement les comptes du tenant ayant ACTIVE les
+    echanges, servis a une appelante qui l'a fait elle-meme (sinon
+    `403 trading_disabled`). Borne au tenant par `tcg_trade_settings` ;
+    aucune recherche plateforme, aucun email (le pseudo seul, BattleTag
+    masque en repli ; un compte sans nom est ecarte). Trie par pseudo.
+    30 / min.
+  operationId: listPlayerTcgTradePartners
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Partenaires.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              partners:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    userId:
+                      type: string
+                      format: uuid
+                    displayName:
+                      type: string
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: '`code: trading_disabled`.'
+    '500':
+      $ref: '#/components/responses/ServerError'

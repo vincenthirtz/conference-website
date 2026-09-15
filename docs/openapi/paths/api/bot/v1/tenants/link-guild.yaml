@@ -1,0 +1,54 @@
+post:
+  tags:
+    - bot/tenants
+  summary: Lie un guild Discord a un tenant existant ou auto-claim via
+    tenant_request. Cross-tenant.
+  operationId: botLinkGuild
+  security:
+    - BotApiKey: []
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - guild_id
+          properties:
+            guild_id:
+              type: string
+              pattern: ^[0-9]{15,25}$
+            guild_name:
+              type: string
+              maxLength: 200
+            owner_discord_id:
+              type: string
+              pattern: ^[0-9]{15,25}$
+  responses:
+    '200':
+      description: |
+        Resultat avec un `status` :
+        - `already_linked` : le guild pointe deja sur un tenant
+        - `auto_claimed` : nouveau tenant cree depuis tenant_request
+        - `pending_admin_link` : enregistre dans pending_guild_links
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - status
+            properties:
+              status:
+                type: string
+                enum:
+                  - already_linked
+                  - auto_claimed
+                  - pending_admin_link
+              tenant:
+                $ref: '#/components/schemas/Tenant'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '500':
+      $ref: '#/components/responses/ServerError'

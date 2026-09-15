@@ -1,0 +1,29 @@
+parameters:
+  - name: lobbyId
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+delete:
+  summary: Delete an FFA lobby (cascade removes its placements).
+  operationId: adminDeleteLobby
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Lobby deleted.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Ok'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

@@ -1,0 +1,38 @@
+get:
+  summary: Search matches by team name, tournament, status.
+  operationId: adminSearchMatches
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  parameters:
+    - in: query
+      name: q
+      schema:
+        type: string
+    - in: query
+      name: status
+      schema:
+        type: string
+    - in: query
+      name: tournamentId
+      schema:
+        type: string
+        format: uuid
+    - in: query
+      name: limit
+      schema:
+        type: integer
+        default: 50
+  responses:
+    '200':
+      description: Search results.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

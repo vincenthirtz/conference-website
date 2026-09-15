@@ -1,0 +1,23 @@
+parameters:
+  - $ref: '#/components/parameters/RunId'
+get:
+  tags:
+    - public/caster
+  summary: Liste les cues d'un run pour le caster (avec etat ack).
+  operationId: listRunCues
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Cues + acks.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

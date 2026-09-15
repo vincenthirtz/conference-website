@@ -1,0 +1,68 @@
+post:
+  tags:
+    - public/auth
+  summary: Accepter ou refuser une invitation d'equipe.
+  description: |
+    Le joueur connecte accepte (`accept`) ou refuse (`reject`) une
+    invitation pending qui lui est adressee. `accept` cree l'adhesion
+    (team_members) et passe la demande en approved ; `reject` la passe en
+    rejected sans adhesion. Seul l'invite peut agir sur sa propre invitation.
+  operationId: actOnPlayerInvitation
+  security:
+    - PlayerBearer: []
+  parameters:
+    - name: demandeId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - action
+          properties:
+            action:
+              type: string
+              enum:
+                - accept
+                - reject
+  responses:
+    '200':
+      description: Invitation traitee.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              action:
+                type: string
+                enum:
+                  - accept
+                  - reject
+              teamId:
+                type: [string, 'null']
+                format: uuid
+              memberId:
+                type: [string, 'null']
+                format: uuid
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: Seule la joueuse invitee peut agir sur cette invitation.
+    '404':
+      description: Invitation introuvable.
+    '409':
+      description: Invitation deja traitee, ou joueur deja dans une equipe.
+    '410':
+      description: Invitation expiree.
+    '500':
+      $ref: '#/components/responses/ServerError'

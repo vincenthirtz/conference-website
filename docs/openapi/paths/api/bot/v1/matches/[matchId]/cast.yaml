@@ -1,0 +1,95 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+get:
+  tags:
+    - bot/matches
+  summary: Liste les cast assignments d'un match.
+  operationId: botListMatchCast
+  responses:
+    '200':
+      description: Liste des assignments.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - assignments
+            properties:
+              assignments:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CastAssignment'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - bot/matches
+  summary: Assigne un caster a un match (staff admin/owner).
+  operationId: botCreateMatchCastAssignment
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+            - castMemberId
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            castMemberId:
+              $ref: '#/components/schemas/Uuid'
+            briefingAt:
+              $ref: '#/components/schemas/Timestamp'
+  responses:
+    '201':
+      description: Assignment cree.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              assignment:
+                $ref: '#/components/schemas/CastAssignment'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '500':
+      $ref: '#/components/responses/ServerError'
+delete:
+  tags:
+    - bot/matches
+  summary: Retire un cast assignment (staff admin/owner).
+  operationId: botDeleteMatchCastAssignment
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            assignmentId:
+              $ref: '#/components/schemas/Uuid'
+            castMemberId:
+              $ref: '#/components/schemas/Uuid'
+  responses:
+    '200':
+      description: Assignment retire.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Ok'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

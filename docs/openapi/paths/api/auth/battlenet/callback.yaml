@@ -1,0 +1,86 @@
+get:
+  tags:
+    - public/auth
+  summary: Callback OAuth Battle.net — verification du BattleTag OU connexion.
+  operationId: battlenetOauthCallback
+  description: |
+    DEUX FLUX, une seule `redirect_uri` declaree chez Blizzard. Le handler
+    branche sur le state signe, AVANT toute lecture de session :
+
+    - state `purpose: 'login'` (cookie `bn_login_state`) → CONNEXION, anonyme :
+      resout `battle_net_id` -> `user_battlenet_links.auth_user_id`, puis pose
+      la session via un magic-link genere cote serveur
+      (`admin.generateLink` -> `hashed_token`), consomme par la page
+      `/auth/battlenet`. Compte Blizzard inconnu -> `/login?battlenet=not_linked`
+      (JAMAIS de creation de compte : Blizzard ne fournit pas d'email).
+      Nonce absent/different, refus de consentement ou compte sans email ->
+      `/login?battlenet=error`.
+    - sinon → VERIFICATION (comportement historique decrit ci-dessous).
+
+    Auth via session cookie Supabase (`getServerClient`). Recoit `code` +
+    `state` de Blizzard, recroise `state` avec le cookie `bn_oauth_state`,
+    echange le code, recupere le BattleTag et l'ecrit dans le profil du
+    joueur (`battle_net_id UNIQUE` → anti-smurf). Endpoint de redirection :
+    ne renvoie jamais de JSON en cas de succes, uniquement des 302.
+    Rate-limit 20 req/min par IP.
+
+    EFFET DE BORD TCG (2026-09-15) : une fois le lien ecrit, credite
+    `BATTLENET_VERIFIED_COINS` (100 pieces, sans paquet) au porte-monnaie du
+    tenant de la requete, UNE FOIS A VIE par joueuse et par compte Blizzard
+    (`utils/tcg/grantBattlenetVerified.ts`, `source_kind = battlenet_verified`,
+    migration `tcg_battlenet_verified.sql`), puis emet `tcg.reward_granted`
+    (`reason: 'battlenet_verified'`, sans tournoi). Best-effort : un refus
+    d'ecriture ou une exception est journalise et ne change JAMAIS le statut
+    `?battlenet=`.
+
+    PARAMETRE DE RETOUR ADDITIF : quand, et seulement quand, CET appel a
+    credite la recompense, la redirection porte en plus
+    `&tcg=battlenet_reward` (ex.
+    `/player/profile?battlenet=verified&tcg=battlenet_reward`). Rejeu, deja
+    recompensee, refus d'ecriture ou exception : parametre absent. L'espace
+    joueuse en fait « +N pieces », N etant relu dans
+    `GET /api/player/battlenet-status` (`reward.coins`), jamais dans l'URL.
+  security: []
+  parameters:
+    - name: code
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Code d'autorisation renvoye par Blizzard.
+    - name: state
+      in: query
+      required: false
+      schema:
+        type: string
+      description: State OAuth, recroise avec le cookie `bn_oauth_state`.
+  responses:
+    '302':
+      description: |
+        Redirection vers `returnTo` avec un parametre `?battlenet=` :
+        `verified` (BattleTag lie avec succes), `linked_no_match` (BattleTag
+        deja rattache a un autre compte — conflit d'unicite anti-smurf),
+        `already_linked` (le joueur avait deja une identite verifiee),
+        `error` (state invalide, echange OAuth KO, etc.). Si la session
+        Supabase est perdue → redirection `302 /login`.
+      headers:
+        Location:
+          schema:
+            type: string
+          description: >-
+            `returnTo?battlenet=verified|linked|linked_no_match|already_linked|error`,
+            suivi de `&tcg=battlenet_reward` si la recompense TCG vient d'etre
+            creditee (`linked` = lien cree mais l'utilisateur n'a AUCUNE ligne
+            de roster — cas normal d'un staff non-joueuse : succes neutre, pas
+            un avertissement) ou `/login` si la session est perdue.
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '503':
+      description: 'Feature dormante : creds Blizzard absents.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Battle.net verification is not configured.
+            code: BATTLENET_NOT_CONFIGURED

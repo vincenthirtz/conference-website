@@ -1,0 +1,72 @@
+patch:
+  tags:
+    - admin/tasks
+  summary: Edite une colonne (name, wipLimit, isDone, position/reorder). Emet
+    task.board_changed.
+  operationId: adminUpdateTaskColumn
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            name: {type: string}
+            wipLimit: {type: [integer, 'null']}
+            isDone: {type: boolean}
+            position: {type: integer, minimum: 0}
+  responses:
+    '200':
+      description: Colonne mise a jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+delete:
+  tags:
+    - admin/tasks
+  summary: Supprime une colonne. 409 column_not_empty si des cartes vivantes y
+    sont. Emet task.board_changed.
+  operationId: adminDeleteTaskColumn
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  responses:
+    '200':
+      description: Colonne supprimee.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      description: Colonne non vide (code column_not_empty).
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

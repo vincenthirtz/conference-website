@@ -1,0 +1,45 @@
+parameters:
+  - name: assignmentId
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+post:
+  tags:
+    - bot/cast
+  summary: Caster acknowledge son cast (bouton DM Discord).
+  operationId: botCastAck
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+  responses:
+    '200':
+      description: Ack enregistre (ou deja ack).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              assignmentId:
+                $ref: '#/components/schemas/Uuid'
+              ackedAt:
+                $ref: '#/components/schemas/Timestamp'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

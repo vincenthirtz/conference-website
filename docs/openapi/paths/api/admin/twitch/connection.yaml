@@ -1,0 +1,53 @@
+get:
+  summary: Broadcaster connection status for the active tenant.
+  description: |
+    Requires `caster` role. Never returns tokens (not even encrypted).
+  operationId: adminTwitchConnectionStatus
+  tags:
+    - admin/twitch
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Connection status.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - connected
+            properties:
+              connected:
+                type: boolean
+              broadcaster_login:
+                type: string
+              scope:
+                type: array
+                items:
+                  type: string
+              expires_at:
+                type: string
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  summary: Disconnect the broadcaster channel (delete the connection row).
+  description: Requires `manager` role.
+  operationId: adminTwitchDisconnect
+  tags:
+    - admin/twitch
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Disconnected.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

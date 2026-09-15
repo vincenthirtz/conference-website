@@ -1,0 +1,21 @@
+parameters:
+  - $ref: '#/components/parameters/StageId'
+get:
+  summary: Compute completion status (matches finished vs pending).
+  operationId: adminGetStageCompletion
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Completion status.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

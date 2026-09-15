@@ -1,0 +1,56 @@
+get:
+  summary: List broadcast campaigns.
+  operationId: adminListBroadcastCampaigns
+  tags:
+    - admin/broadcast
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Campaigns.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Create a DB-backed email campaign.
+  description: |
+    Creates an editable campaign in `email_campaigns`. The id is a stable
+    kebab-case slug derived from the name (with a -2/-3 suffix on collision).
+    The body is a structured template (not free HTML).
+  operationId: adminCreateBroadcastCampaign
+  tags:
+    - admin/broadcast
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '201':
+      description: Campaign created.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              campaign:
+                type: object
+                properties:
+                  id:
+                    type: string
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

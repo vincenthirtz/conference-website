@@ -1,0 +1,56 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+post:
+  tags:
+    - bot/matches
+  summary: Ferme une dispute en appliquant les scores definitifs decides par le staff.
+  operationId: botResolveMatchDispute
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+            - resolution
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            resolution:
+              type: string
+              maxLength: 2000
+            team1Score:
+              type: integer
+              minimum: 0
+            team2Score:
+              type: integer
+              minimum: 0
+            winnerTeamId:
+              $ref: '#/components/schemas/Uuid'
+            forfeitTeamId:
+              $ref: '#/components/schemas/Uuid'
+            resumeStatus:
+              type: string
+              enum:
+                - pending
+                - ongoing
+                - finished
+                - walkover
+              default: finished
+  responses:
+    '200':
+      description: Dispute resolue.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

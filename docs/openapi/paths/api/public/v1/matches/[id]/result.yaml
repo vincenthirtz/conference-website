@@ -1,0 +1,73 @@
+parameters:
+  - name: id
+    in: path
+    required: true
+    description: Id (UUID) du match.
+    schema:
+      type: string
+      format: uuid
+post:
+  tags:
+    - public/v1
+  summary: Pose le score final d'un match (écriture publique authentifiée).
+  description: |
+    Écriture publique autoritaire (pas de consensus capitaine) — réutilise
+    `applyMatchScore`. Idempotent (`Idempotency-Key`). Requiert le scope
+    `matches:write`.
+  operationId: publicV1ReportMatchResult
+  security:
+    - PublicApiToken: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - team1Score
+            - team2Score
+          properties:
+            team1Score:
+              type: integer
+              minimum: 0
+              maximum: 99
+            team2Score:
+              type: integer
+              minimum: 0
+              maximum: 99
+  responses:
+    '200':
+      description: Match finalisé.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - data
+            properties:
+              data:
+                type: object
+                properties:
+                  matchId:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                  team1Score:
+                    type: integer
+                  team2Score:
+                    type: integer
+                  winnerTeamId:
+                    type: [string, 'null']
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'
+    '429':
+      $ref: '#/components/responses/RateLimited'

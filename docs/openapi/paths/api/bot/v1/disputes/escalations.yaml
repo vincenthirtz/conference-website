@@ -1,0 +1,18 @@
+get:
+  tags:
+    - bot/misc
+  summary: Disputes escalades (SLA breached).
+  operationId: botListDisputeEscalations
+  responses:
+    '200':
+      description: Liste des escalations.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              escalations:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true

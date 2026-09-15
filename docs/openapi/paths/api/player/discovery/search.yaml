@@ -1,0 +1,65 @@
+get:
+  summary: Annuaire des joueurs découvrables du réseau (cross-tenant).
+  description: |
+    Recherche paginée dans l'annuaire des joueurs `discoverable=true`. Le
+    caller ne s'auto-liste jamais. Aucune variante publique / indexable SEO :
+    la route est derrière le login. `withAuthRoute`.
+  operationId: playerDiscoverySearch
+  tags:
+    - public/auth
+  security:
+    - PlayerBearer: []
+  parameters:
+    - name: q
+      in: query
+      required: false
+      schema:
+        type: string
+        maxLength: 80
+      description: Filtre (ILIKE) sur le nom affiché.
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 20
+    - name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+  responses:
+    '200':
+      description: Page de l'annuaire + total exact.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - players
+              - total
+              - limit
+              - offset
+            properties:
+              players:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DirectoryPlayer'
+              total:
+                type: integer
+              limit:
+                type: integer
+              offset:
+                type: integer
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

@@ -1,0 +1,112 @@
+patch:
+  summary: Update a channel-point reward.
+  description: |
+    Requires `manager` role and the `channel:manage:redemptions` scope.
+    At least one field is required. `PATCH
+    helix/channel_points/custom_rewards?broadcaster_id=&id=`. Only rewards
+    created by our client_id are editable (Helix may return 400/403 otherwise).
+    `409 NOT_CONNECTED` / `403 MISSING_SCOPE`.
+  operationId: adminTwitchUpdateReward
+  tags:
+    - admin/twitch
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          minProperties: 1
+          properties:
+            is_enabled:
+              type: boolean
+            is_paused:
+              type: boolean
+            title:
+              type: string
+              minLength: 1
+              maxLength: 45
+            cost:
+              type: integer
+              minimum: 1
+            prompt:
+              type: string
+              maxLength: 200
+  responses:
+    '200':
+      description: Reward updated.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: 'Missing scope (code MISSING_SCOPE) or forbidden role.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '409':
+      description: 'No broadcaster channel connected (code NOT_CONNECTED).'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+delete:
+  summary: Delete a channel-point reward.
+  description: |
+    Requires `manager` role and the `channel:manage:redemptions` scope.
+    `DELETE helix/channel_points/custom_rewards?broadcaster_id=&id=`. Only
+    rewards created by our client_id are deletable (Helix may return 400/403
+    otherwise). Returns `{ ok: true }`. `409 NOT_CONNECTED` /
+    `403 MISSING_SCOPE`.
+  operationId: adminTwitchDeleteReward
+  tags:
+    - admin/twitch
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Reward deleted.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: 'Missing scope (code MISSING_SCOPE) or forbidden role.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '409':
+      description: 'No broadcaster channel connected (code NOT_CONNECTED).'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

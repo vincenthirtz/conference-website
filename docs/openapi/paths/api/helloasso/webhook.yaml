@@ -1,0 +1,44 @@
+post:
+  tags:
+    - public/misc
+  summary: Webhook HelloAsso (paiements / etats).
+  operationId: helloAssoWebhook
+  description: |
+    Endpoint d'ingestion des events HelloAsso (Payment, etc.). Pas d'auth
+    cryptographique cote signature (HelloAsso n'expose pas de signature
+    HMAC stable) — validation par shape uniquement. A securiser via firewall
+    / IP allowlist au niveau infra.
+
+    Branche « cash-prize crowdfundé » : lorsqu'un `Payment/Authorized`
+    corrèle une cagnotte (metadata `kind='prize_pool'` du checkout-intent,
+    ou fallback via une row `prize_pool_checkouts` matchée), le webhook
+    persiste une row `prize_pool_contributions` (idempotente sur
+    `helloasso_payment_id`) et incrémente `raised_amount_cents` du pool. Un
+    don générique ou un don plan-tenant ne matche pas → comportement
+    inchangé. L'erreur applicative n'empêche jamais l'ACK 200 (HelloAsso ne
+    doit pas retenter en boucle).
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - eventType
+            - data
+          properties:
+            eventType:
+              type: string
+            data:
+              type: object
+              additionalProperties: true
+  responses:
+    '200':
+      description: Event accepte.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Ok'
+    '400':
+      $ref: '#/components/responses/BadRequest'

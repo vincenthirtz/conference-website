@@ -1,0 +1,124 @@
+parameters:
+  - name: id
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: Read the prize pool config + full contribution list of a tournament.
+  operationId: adminGetPrizePool
+  description: |
+    « Profondeur de la monétisation » — gestion organisateur de la cagnotte.
+    Renvoie la config du pool (ou `null` si aucune cagnotte), la liste
+    COMPLÈTE des contributions (avec identifiants de corrélation HelloAsso,
+    sans email) et le compteur. `Cache-Control: no-store`. Min role
+    `manager`.
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Config + contributions + compteur.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - pool
+              - contributions
+              - contributorCount
+            properties:
+              pool:
+                oneOf:
+                  - $ref: '#/components/schemas/PrizePoolAdmin'
+                  - type: 'null'
+              contributions:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PrizeContributionAdmin'
+              contributorCount:
+                type: integer
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+put:
+  summary: Create or update the prize pool of a tournament.
+  operationId: adminUpsertPrizePool
+  description: |
+    Crée (`201`) ou met à jour (`200`) la cagnotte du tournoi. Une seule
+    cagnotte par tournoi. Seuls les champs fournis sont écrasés ;
+    `raised_amount_cents` n'est jamais touché ici (géré par le webhook).
+    Écrit un `staff_logs`. Min role `manager`.
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/PrizePoolUpsertRequest'
+  responses:
+    '200':
+      description: Cagnotte mise à jour.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PrizePoolUpsertResponse'
+    '201':
+      description: Cagnotte créée.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PrizePoolUpsertResponse'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+post:
+  summary: Create or update the prize pool of a tournament (alias of PUT).
+  operationId: adminUpsertPrizePoolPost
+  description: Identique à `PUT` — crée (`201`) ou met à jour (`200`) la cagnotte.
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/PrizePoolUpsertRequest'
+  responses:
+    '200':
+      description: Cagnotte mise à jour.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PrizePoolUpsertResponse'
+    '201':
+      description: Cagnotte créée.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PrizePoolUpsertResponse'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

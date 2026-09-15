@@ -1,0 +1,35 @@
+parameters:
+  - name: cueId
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+post:
+  tags:
+    - public/caster
+  summary: Ack d'un cue par le caster (idempotent par PK composite).
+  operationId: ackCue
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Ack enregistre (ou deja existant).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CasterCueAck'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      description: Le run associe n'est pas live.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

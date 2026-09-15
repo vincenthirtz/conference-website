@@ -1,0 +1,38 @@
+parameters:
+  - name: id
+    in: path
+    required: true
+    description: Id (UUID) ou slug du tournoi.
+    schema:
+      type: string
+get:
+  tags:
+    - public/v1
+  summary: Métriques d'arbitrage agrégées (non-nominatives) du tournoi.
+  description: >
+    Agrégat de l'activité d'arbitrage (litiges) d'un tournoi public : volume,
+    résolution, respect du SLA, répartition des litiges ouverts. AUCUN
+    identifiant ni raison — que des nombres. 404 si le tournoi n'est pas public
+    (draft / archived / inconnu).
+  operationId: publicV1GetTournamentArbitration
+  security: []
+  responses:
+    '200':
+      description: Métriques d'arbitrage agrégées du tournoi.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - data
+            properties:
+              data:
+                $ref: '#/components/schemas/PublicV1TournamentArbitration'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

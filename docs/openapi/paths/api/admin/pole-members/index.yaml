@@ -1,0 +1,45 @@
+get:
+  summary: List pole (association staff) members.
+  operationId: adminListPoleMembers
+  tags:
+    - admin/users
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Pole members.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Create a pole member entry.
+  operationId: adminCreatePoleMember
+  tags:
+    - admin/users
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '201':
+      description: Created.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

@@ -1,0 +1,43 @@
+post:
+  summary: Échange OAuth Twitch `authorization_code` (côté serveur).
+  description: |
+    Déplace l'échange de code côté serveur pour garder `TWITCH_CLIENT_SECRET`
+    hors du binaire caster. Endpoint public (rate-limité).
+  operationId: twitchExchange
+  tags:
+    - public
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - code
+            - redirectUri
+          properties:
+            code:
+              type: string
+            redirectUri:
+              type: string
+              format: uri
+  responses:
+    '200':
+      description: Tokens Twitch.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TwitchTokenResponse'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+    '502':
+      description: Échec de l'échange auprès de Twitch.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

@@ -1,0 +1,22 @@
+delete:
+  tags:
+    - public/auth
+  summary: Suppression definitive du compte joueur (RGPD).
+  operationId: playerDeleteAccount
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Compte supprime.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Ok'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '409':
+      description: Sortie bloquee (ex. capitaine d'une equipe active).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

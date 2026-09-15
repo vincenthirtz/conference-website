@@ -1,0 +1,18 @@
+get:
+  tags:
+    - public/caster
+  summary: Profil du caster connecte + prochaines assignations dans 24h.
+  operationId: getCasterMe
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Fiche caster + upcomingAssignments.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CasterMe'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

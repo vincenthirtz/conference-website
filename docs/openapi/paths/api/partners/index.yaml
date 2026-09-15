@@ -1,0 +1,27 @@
+get:
+  tags:
+    - public/misc
+  summary: Liste les partenaires actifs (filtrable par categorie).
+  operationId: getPublicPartners
+  security: []
+  parameters:
+    - name: category
+      in: query
+      required: false
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Partenaires.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - items
+            properties:
+              items:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true

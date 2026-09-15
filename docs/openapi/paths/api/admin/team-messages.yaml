@@ -1,0 +1,81 @@
+get:
+  summary: Etat roster des equipes inscrites + capacite de livraison Discord.
+  operationId: adminGetTeamMessagesState
+  tags:
+    - admin/teams
+  description: |
+    Alimente l'onglet « Equipes » de /admin/communications : par equipe,
+    titulaires / remplacantes / BattleTags manquants / comptes jamais
+    connectes, plus `discordChannelId` (null = pas de salon provisionne, donc
+    equipe non contactable). Renvoie aussi la liste des variables de gabarit.
+  security:
+    - StaffSession: []
+  parameters:
+    - name: tournamentId
+      in: query
+      schema:
+        type: string
+        format: uuid
+      description: Defaut = tournoi en cours.
+  responses:
+    '200':
+      description: '`{ tournament, teams[], variables[], maxLength }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Apercu (dryRun) ou envoi d'un message vers les salons d'equipe.
+  operationId: adminSendTeamMessages
+  tags:
+    - admin/teams
+  description: |
+    Meme coeur que `POST /api/bot/v1/teams/messages`, authentifie par session
+    staff. `dryRun` vaut TRUE par defaut — l'UI exige un apercu avant de
+    deverrouiller l'envoi. Un envoi reel emet un event `team.message` par
+    equipe livrable et journalise `send_team_message` dans staff_logs.
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            preset:
+              type: string
+              enum: [roster-reminder, custom]
+              default: roster-reminder
+            template: {type: string, maxLength: 4000}
+            teamIds:
+              type: array
+              maxItems: 200
+              items: {type: string, format: uuid}
+            mention: {type: boolean}
+            only:
+              type: string
+              enum: [all, incomplete, needs_attention]
+            tournamentId: {type: string, format: uuid}
+            dryRun: {type: boolean, default: true}
+  responses:
+    '200':
+      description: Apercu ou resultat d'envoi.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      description: Aucun tournoi en cours.

@@ -1,0 +1,78 @@
+patch:
+  tags:
+    - admin/tasks
+  summary: Edite un label (name, color, position). Cascade le rename sur les cartes.
+  operationId: adminUpdateTaskLabel
+  description: |
+    Si `name` change, le renommage est repercute dans `tasks.labels[]` de
+    toutes les cartes du board (jointure par nom). 409 `label_exists` si le
+    nouveau nom entre en collision dans le board.
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            name: {type: string, minLength: 1, maxLength: 40}
+            color: {type: string, pattern: '^#[0-9a-fA-F]{6}$'}
+            position: {type: integer, minimum: 0}
+  responses:
+    '200':
+      description: '`{ label: { id, name, color, position } }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      description: '`{ error, code: "label_exists" }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+delete:
+  tags:
+    - admin/tasks
+  summary: Supprime une definition de label (ne strippe PAS le nom des cartes).
+  operationId: adminDeleteTaskLabel
+  description: |
+    La definition est supprimee ; les occurrences du nom dans `tasks.labels[]`
+    restent inertes et retombent en couleur neutre cote UI (choix assume).
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  responses:
+    '200':
+      description: '`{ success: true }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

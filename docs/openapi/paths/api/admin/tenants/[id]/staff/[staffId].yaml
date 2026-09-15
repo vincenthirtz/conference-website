@@ -1,0 +1,27 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+  - in: path
+    name: staffId
+    required: true
+    schema:
+      type: string
+      format: uuid
+delete:
+  summary: Remove a staff member from a tenant.
+  operationId: adminRemoveTenantStaff
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  responses:
+    '204':
+      description: Removed.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

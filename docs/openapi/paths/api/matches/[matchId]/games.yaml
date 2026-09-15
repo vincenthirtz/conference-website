@@ -1,0 +1,119 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+get:
+  tags:
+    - public/misc
+  summary: Liste les games d'un match (staff manager+).
+  operationId: staffListMatchGames
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Games.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  tags:
+    - public/misc
+  summary: Cree/met a jour les games d'un match (bulk). Staff manager+.
+  operationId: staffUpsertMatchGames
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Games upserted.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+put:
+  tags:
+    - public/misc
+  summary: Remplace les games d'un match. Staff manager+.
+  operationId: staffReplaceMatchGames
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Games replaced.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+patch:
+  tags:
+    - public/misc
+  summary: Met a jour partiellement les games d'un match. Staff manager+.
+  operationId: staffPatchMatchGames
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Games updated.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  tags:
+    - public/misc
+  summary: Supprime les games d'un match. Staff manager+.
+  operationId: staffDeleteMatchGames
+  security:
+    - StaffSession: []
+  responses:
+    '204':
+      description: Supprime.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

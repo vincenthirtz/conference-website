@@ -1,0 +1,26 @@
+get:
+  summary: Depart du consentement TikTok (redirection vers TikTok).
+  operationId: adminTiktokAuthorize
+  tags:
+    - admin/communications
+  description: |
+    Redirige le staff vers l'ecran d'autorisation TikTok avec un `state`
+    signe HMAC (CSRF + binding tenant, TTL 10 min, sel propre au parcours
+    TikTok). Scopes demandes : `user.info.basic`, `video.list` — LECTURE
+    SEULE, pour le miroir Discord. Pas de `video.upload`, qui exigerait
+    l'audit complet de l'app.
+
+    Repond 503 si la client key ou le client secret manquent
+    (`integration_secrets`) : le miroir TikTok est alors dormant, pas en
+    panne.
+  security:
+    - StaffSession: []
+  responses:
+    '302':
+      description: Redirection vers https://www.tiktok.com/v2/auth/authorize/.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '503':
+      description: TikTok non configure (client key ou secret absents).

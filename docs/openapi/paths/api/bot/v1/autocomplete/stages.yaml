@@ -1,0 +1,28 @@
+get:
+  tags:
+    - bot/autocomplete
+  summary: Autocomplete des phases de tournoi.
+  operationId: botAutocompleteStages
+  parameters:
+    - name: q
+      in: query
+      schema:
+        type: string
+    - name: tournamentId
+      in: query
+      schema:
+        type: string
+        format: uuid
+    - name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 25
+  responses:
+    '200':
+      description: Resultats autocomplete.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AutocompleteResult'

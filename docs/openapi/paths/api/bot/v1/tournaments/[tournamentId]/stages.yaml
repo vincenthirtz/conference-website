@@ -1,0 +1,53 @@
+parameters:
+  - $ref: '#/components/parameters/TournamentId'
+post:
+  tags:
+    - bot/tournaments
+  summary: Cree une phase dans un tournoi (staff admin/owner).
+  operationId: botCreateTournamentStage
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+            - name
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            name:
+              type: string
+            stage_type:
+              type: string
+              enum:
+                - group
+                - bracket
+                - swiss
+                - round_robin
+                - showmatch
+                - other
+              default: other
+            start_date:
+              type: string
+              format: date-time
+            end_date:
+              type: string
+              format: date-time
+  responses:
+    '201':
+      description: Phase creee.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              stage:
+                $ref: '#/components/schemas/Stage'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'

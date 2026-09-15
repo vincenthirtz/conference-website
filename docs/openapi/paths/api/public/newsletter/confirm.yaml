@@ -1,0 +1,21 @@
+get:
+  tags:
+    - public/misc
+  summary: Confirme une inscription newsletter (double opt-in) via le lien email.
+  description: >
+    Cible du lien de confirmation. Passe l'abonne a `confirmed` puis redirige
+    (302) vers `/newsletter/merci`. Token manquant / invalide / introuvable →
+    redirige vers `/newsletter/merci?status=invalid`. Pas de captcha (clic sur
+    un lien).
+  operationId: confirmPublicNewsletter
+  security: []
+  parameters:
+    - name: token
+      in: query
+      required: true
+      schema:
+        type: string
+      description: Le `confirm_token` recu par email.
+  responses:
+    '302':
+      description: Redirection vers la page de remerciement (ou `?status=invalid`).

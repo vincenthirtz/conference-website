@@ -1,0 +1,60 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+  - name: gameIndex
+    in: path
+    required: true
+    schema:
+      type: integer
+      minimum: 1
+post:
+  tags:
+    - admin/matches
+  summary: Commit one ban/pick step on the draft.
+  operationId: adminCommitMatchDraftStep
+  description: |
+    `stepNumber` must equal `current_step + 1`. Transitions
+    pending → in_progress on step 1, in_progress → completed once the
+    last flow step is committed. Side selection is required before
+    step 1. Rejects heroes already banned/picked in this draft, and
+    when `fearless=true`, heroes picked in any prior game of the
+    same match. Honors the `Idempotency-Key` header.
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/CommitMatchDraftStepRequest'
+  responses:
+    '200':
+      description: Updated draft state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MatchDraftStateResponse'
+    '400':
+      description: Invalid input (heroId not a UUID, wrong game for the hero…).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DraftEngineError'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      description: Match, draft, or hero not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DraftEngineError'
+    '409':
+      description: |
+        Step out of order, sides not set yet, hero already
+        banned/picked in this draft, or fearless-blocked across
+        previous games.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DraftEngineError'

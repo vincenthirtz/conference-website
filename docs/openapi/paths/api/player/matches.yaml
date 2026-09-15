@@ -1,0 +1,35 @@
+get:
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+    - $ref: '#/components/parameters/SubjectAs'
+  tags:
+    - public/auth
+  summary: Matchs du joueur connecte (a venir + passes).
+  description: |
+    Liste tous les matchs (toute statut) de l'equipe du joueur connecte,
+    scopes au tenant resolu, tries par scheduled_at decroissant. Pour chaque
+    match : slot, adversaire, score relatif, resultat win/loss/draw, tournoi
+    et fenetre de check-in pour les matchs pending encore actionnables.
+  operationId: getPlayerMatches
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Equipe + liste des matchs (team peut etre null si pas d'equipe).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              team:
+                type: [object, 'null']
+                additionalProperties: true
+              matches:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'

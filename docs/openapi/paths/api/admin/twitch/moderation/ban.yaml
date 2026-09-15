@@ -1,0 +1,64 @@
+post:
+  summary: Ban or timeout a user on the broadcaster channel.
+  description: |
+    Requires `manager` role and the `moderator:manage:banned_users` scope.
+    Resolves `login` → user_id via `helix/users` (`400 USER_NOT_FOUND` if
+    absent). `duration` in seconds (absent = permanent ban).
+    `409 NOT_CONNECTED` / `403 MISSING_SCOPE`.
+  operationId: adminTwitchBan
+  tags:
+    - admin/twitch
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - login
+          properties:
+            login:
+              type: string
+              minLength: 1
+              maxLength: 25
+            duration:
+              type: integer
+              minimum: 1
+              maximum: 1209600
+            reason:
+              type: string
+              maxLength: 500
+  responses:
+    '200':
+      description: User banned or timed out.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      description: 'Invalid payload (code INVALID_PAYLOAD) or unknown login (code
+        USER_NOT_FOUND).'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: 'Missing scope (code MISSING_SCOPE) or forbidden role.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '409':
+      description: 'No broadcaster channel connected (code NOT_CONNECTED).'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

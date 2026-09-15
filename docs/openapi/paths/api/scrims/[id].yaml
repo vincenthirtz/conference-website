@@ -1,0 +1,35 @@
+parameters:
+  - name: id
+    in: path
+    required: true
+    schema:
+      type: string
+    description: UUID OR slug.
+get:
+  tags:
+    - public/scrims
+  summary: Detail d'un scrim public (par UUID ou slug) + matchs associes.
+  operationId: getPublicScrimById
+  security: []
+  responses:
+    '200':
+      description: Scrim + matches.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - scrim
+              - matches
+            properties:
+              scrim:
+                $ref: '#/components/schemas/PublicScrim'
+              matches:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'

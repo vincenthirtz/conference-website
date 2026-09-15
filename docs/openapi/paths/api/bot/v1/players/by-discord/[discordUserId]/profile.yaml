@@ -1,0 +1,24 @@
+parameters:
+  - $ref: '#/components/parameters/DiscordUserId'
+patch:
+  tags:
+    - bot/players
+  summary: Met a jour le profil joueur (battle tag, display name, etc.).
+  operationId: botUpdatePlayerProfile
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Profil mis a jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'

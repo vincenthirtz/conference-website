@@ -1,0 +1,58 @@
+get:
+  tags:
+    - public/teams
+  summary: Liste les demandes de transfert (capitaine) recues/emises par le joueur.
+  operationId: listTransferRequests
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Liste.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+post:
+  tags:
+    - public/teams
+  summary: Repond a une demande de transfert (accept/reject).
+  operationId: respondToTransferRequest
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - requestId
+            - action
+          properties:
+            requestId:
+              type: string
+              format: uuid
+            action:
+              type: string
+              enum:
+                - accept
+                - reject
+  responses:
+    '200':
+      description: Action appliquee.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'

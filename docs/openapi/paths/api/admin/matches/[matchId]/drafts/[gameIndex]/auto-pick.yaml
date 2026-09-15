@@ -1,0 +1,47 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+  - name: gameIndex
+    in: path
+    required: true
+    schema:
+      type: integer
+      minimum: 1
+post:
+  tags:
+    - admin/matches
+  summary: Manual trigger of the auto-pick logic on this draft (Lot 3).
+  operationId: adminAutoPickMatchDraft
+  description: |
+    If the current step's `deadline_at` is in the past, picks the
+    first alphabetical eligible hero and commits it with
+    `auto_picked=true`. Otherwise returns `200 { autoPicked: false }`.
+    Useful for manual recovery + the captain UI "auto-pick now"
+    button. The Netlify cron `/api/cron/draft-auto-pick` runs the
+    same logic across every tenant every minute.
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Auto-pick outcome (either no-op or a fresh state).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DraftAutoPickResponse'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      description: Draft not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DraftEngineError'
+    '500':
+      description: |
+        No eligible hero left for auto-pick — extremely unlikely (LoL
+        pool ~170, Dota ~125) but the engine surfaces it explicitly.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DraftEngineError'

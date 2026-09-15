@@ -1,0 +1,46 @@
+get:
+  tags:
+    - cron
+  summary: Cycle de vie des abonnements org self-serve (« Régie solidaire »).
+  operationId: cronPlanRenewalGet
+  description: |
+    Schedule : une fois par jour via la Netlify scheduled function
+    `plan-renewal-cron`. Sur les tenants `regie` / `circuit` : bascule les
+    plans expirés `active` → `past_due`, et relance par email les owners
+    dont le plan expire sous 14 jours (une relance par cycle annuel).
+    Résilient (try/catch par tenant), idempotent côté serveur.
+
+    Auth : `Authorization: Bearer <CRON_SECRET>` OU `?secret=<CRON_SECRET>`.
+    GET et POST acceptés.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Résumé du tick.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CronPlanRenewalResult'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - cron
+  summary: Cycle de vie des abonnements org self-serve (« Régie solidaire »).
+  operationId: cronPlanRenewalPost
+  description: Identique à `GET /api/cron/plan-renewal`.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Résumé du tick.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CronPlanRenewalResult'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'

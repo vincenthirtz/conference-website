@@ -1,0 +1,56 @@
+get:
+  summary: Etat du lien Twitch de la joueuse courante.
+  description: |
+    `configured` vaut false quand la fonctionnalite est dormante : l'ecran
+    masque alors le bouton au lieu de proposer un chemin qui finirait en
+    503. `twitchLogin` est un pseudo d'AFFICHAGE — il se renomme et ne
+    decide de rien ; c'est `twitch_user_id`, invisible ici, qui fait foi.
+
+    A quoi sert ce lien : un evenement Twitch livre un identifiant Twitch,
+    jamais un compte du site. Sans ce pont, un drop reclame en direct n'a
+    pas de destinataire. Il doit etre PROUVE par OAuth et non declare : un
+    pseudo saisi a la main laisserait n'importe qui encaisser les drops
+    d'une autre. `withAuthRoute`. Rate-limit 30 / min.
+  operationId: playerGetTwitchStatus
+  tags:
+    - public/auth
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Etat du lien Twitch.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PlayerTwitchStatus'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+delete:
+  summary: Retirer le lien Twitch de la joueuse courante.
+  description: |
+    Immediat et sans condition : rattacher son compte est un choix, le
+    defaire doit l'etre autant, sans passer par le staff. Les cartes deja
+    gagnees restent acquises — elles ont ete gagnees. Rend le meme objet
+    que le GET, avec `linked: false`. `withAuthRoute`. Rate-limit 30 / min.
+  operationId: playerDeleteTwitchLink
+  tags:
+    - public/auth
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Lien retire.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PlayerTwitchStatus'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

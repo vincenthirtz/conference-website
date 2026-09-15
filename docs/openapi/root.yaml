@@ -1,0 +1,141 @@
+openapi: 3.1.0
+info:
+  title: Conference Website API
+  version: 1.0.0
+  summary: Surface HTTP du site conference-website (bot, admin, public, cron).
+  description: |
+    Spec OpenAPI 3.1 de toute l'API HTTP servie par `pages/api/*`.
+
+    **Sources de vérité (par ordre de précédence) :**
+    1. Les handlers eux-mêmes sous `pages/api/`.
+    2. Le contrat humain `docs/BOT_API_CONTRACT.md` (pour `/api/bot/v1/*`).
+    3. Cette spec — régénérer à chaque changement de surface.
+
+    **Quatre familles d'endpoints :**
+    - `tag:bot` — `/api/bot/v1/*` consommés par le Discord bot. Auth par
+      `x-api-key` (per-tenant) + `x-tenant-id` (legacy env fallback).
+    - `tag:admin` — `/api/admin/*` gated par session staff Supabase (cookies).
+    - `tag:cron` — `/api/cron/*` invoqués par Netlify scheduled functions.
+    - `tag:public` — tout le reste, accessible sans auth ou auth utilisateur.
+  contact:
+    name: conference-website
+    url: https://github.com/
+  license:
+    name: Proprietary
+servers:
+  - url: https://owwomenscup.fr
+    description: Production
+  - url: http://localhost:3000
+    description: Local dev
+tags:
+  - name: bot/matches
+    description: Endpoints bot pour la gestion des matchs (planif, score, dispute).
+  - name: bot/teams
+    description: Endpoints bot pour la gestion des équipes (membres, captain).
+  - name: bot/free-players
+    description: Endpoints bot pour les joueurs libres (rôle "Recherche une équipe").
+  - name: bot/tournaments
+    description: Endpoints bot pour la gestion des tournois et phases.
+  - name: bot/scrims
+    description: Endpoints bot pour les scrims.
+  - name: bot/players
+    description: Endpoints bot scoped par Discord user id.
+  - name: bot/cast
+    description: Endpoints bot pour les assignments de casters.
+  - name: bot/events
+    description: Outbox d'events bot (pending / ack / handled).
+  - name: bot/tenants
+    description: Résolution tenant ↔ guild Discord (cross-tenant).
+  - name: bot/autocomplete
+    description: Endpoints d'autocomplete des slash-commands Discord.
+  - name: bot/misc
+    description: Autres endpoints bot (twitch, reminders, role-sync, locks, etc.).
+  - name: admin/matches
+    description: 'Matchs côté staff (planification, scores, litiges, feuilles de match).'
+  - name: admin/teams
+    description: 'Équipes et rosters côté staff.'
+  - name: admin/tournaments
+    description: 'Tournois côté staff (création, inscriptions, résultats).'
+  - name: admin/stages
+    description: 'Phases de tournoi (poules, brackets).'
+  - name: admin/scrims
+    description: 'Scrims côté staff.'
+  - name: admin/events
+    description: Run-of-show admin (cues, segments, presence).
+  - name: admin/broadcast
+    description: 'Régie de diffusion (scènes, overlays, auto-director).'
+  - name: admin/tenants
+    description: 'Espaces (tenants) et leur configuration.'
+  - name: admin/users
+    description: 'Comptes utilisateurs côté staff.'
+  - name: admin/content
+    description: News, partners, cast members, etc.
+  - name: admin/misc
+    description: 'Autres endpoints admin.'
+  - name: cron
+    description: 'Tâches planifiées appelées par les fonctions Netlify.'
+  - name: public/teams
+    description: 'Équipes : pages publiques et gestion par la capitaine.'
+  - name: public/tournaments
+    description: 'Tournois publics.'
+  - name: public/scrims
+    description: 'Scrims côté joueuses et capitaines.'
+  - name: public/news
+    description: 'Actualités.'
+  - name: public/auth
+    description: 'Authentification (OAuth Twitch, Battle.net, sessions).'
+  - name: public/caster
+    description: Endpoints joueurs/casters (auth Bearer).
+  - name: public/onboard
+    description: 'Inscription d''un nouvel espace.'
+  - name: public/misc
+    description: 'Autres endpoints publics.'
+  - name: public/v1
+    description: >-
+      API publique read-only versionnée (`/api/public/v1/*`) — parité avec l'API
+      publique de start.gg : overlays casters, widgets partenaires, embeds. GET
+      uniquement (+ OPTIONS preflight), anonyme, rate-limitée (120 req/min par
+      IP, bucket par endpoint), CORS `*`. Toutes les réponses utilisent
+      l'enveloppe `{ data }` / `{ data, pagination }` ; erreurs `{ error, code?
+      }`.
+  - name: bot
+    description: 'Endpoints bot transverses (hors familles dédiées).'
+  - name: bot/tickets
+    description: 'Tickets de support ouverts depuis Discord.'
+  - name: bot/tasks
+    description: 'Kanban staff piloté par la commande /kanban.'
+  - name: admin
+    description: 'Endpoints admin transverses.'
+  - name: admin/demandes
+    description: 'Demandes (rejoindre, quitter, transfert, capitanat, inscription).'
+  - name: admin/caster
+    description: 'Gestion des casters et de la régie côté staff.'
+  - name: admin/tasks
+    description: 'Kanban interne du staff.'
+  - name: admin/staff
+    description: 'Membres du staff et permissions.'
+  - name: admin/association
+    description: "Vie de l'association (adhésions, cotisations)."
+  - name: admin/communications
+    description: 'Campagnes email et annonces.'
+  - name: admin/twitch
+    description: 'Intégration Twitch (chaîne, prédictions, récompenses).'
+  - name: admin/tcg
+    description: 'TCG : soldes, corrections, modération des cartes.'
+  - name: admin/ratings
+    description: 'Rating Glicko-2 des joueuses.'
+  - name: admin/leagues
+    description: 'Ligues et saisons.'
+  - name: teams
+    description: 'Espace équipe (capitaine, manager, membres).'
+  - name: public
+    description: 'Endpoints publics transverses.'
+  - name: public/players
+    description: 'Profils publics des joueuses.'
+  - name: public/leagues
+    description: 'Classements publics des ligues.'
+  - name: webhooks
+    description: 'Webhooks entrants (paiements, Twitch, services tiers).'
+security:
+  - BotApiKey: []
+    BotTenantId: []

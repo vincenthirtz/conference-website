@@ -1,0 +1,43 @@
+patch:
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+    - $ref: '#/components/parameters/SubjectAs'
+    - $ref: '#/components/parameters/ActAs'
+  tags:
+    - public/teams
+  summary: Le capitaine/manager met a jour la specialite en jeu d'un membre.
+  operationId: updateMemberSpecialty
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - memberId
+            - specialty
+          properties:
+            memberId:
+              type: string
+              format: uuid
+            specialty:
+              type: [string, 'null']
+              enum: [tank, dps, support, flex, null]
+  responses:
+    '200':
+      description: Specialite mise a jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

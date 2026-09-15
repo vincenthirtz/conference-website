@@ -1,0 +1,83 @@
+get:
+  summary: Aggregate live state of the broadcast console.
+  description: |
+    Returns the single live `event_run` of the tenant plus the current
+    segment, the bound match and overlay (lower-third, PiP, on-air).
+    Requires `caster` role.
+  operationId: adminGetBroadcastState
+  tags:
+    - admin/broadcast
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Live broadcast state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BroadcastState'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Patch overlay state (on_air, lower_third, pip, scene, auto_director).
+  description: |
+    Partial update of `broadcast_state` on the currently-live run. Requires
+    at least `manager` role (caster is read-only). Returns 409 if no
+    `event_run` is live. At least one field must be supplied.
+
+    `scene` selects the overlay scene manually; `auto_director` toggles the
+    auto-director reactor (when true, the reactor switches `scene` on match
+    status changes — set it false to hold a manual scene).
+  operationId: adminUpdateBroadcastState
+  tags:
+    - admin/broadcast
+  security:
+    - StaffSession: []
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: false
+          properties:
+            on_air:
+              type: boolean
+            lower_third:
+              type: [string, 'null']
+              maxLength: 500
+            pip:
+              type: object
+              required:
+                - enabled
+              properties:
+                enabled:
+                  type: boolean
+            scene:
+              allOf:
+                - $ref: '#/components/schemas/BroadcastScene'
+              description: Manually select the overlay scene.
+            auto_director:
+              type: boolean
+              description: >-
+                Toggle the auto-director reactor (defaults to true on the stored
+                state).
+  responses:
+    '200':
+      description: Refreshed live state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BroadcastState'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      $ref: '#/components/responses/Conflict'

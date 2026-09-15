@@ -1,0 +1,39 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+  - in: path
+    name: guildId
+    required: true
+    schema:
+      type: string
+      pattern: ^[0-9]{17,20}$
+put:
+  summary: Replace Discord config for a specific guild.
+  operationId: adminPutTenantDiscordConfigGuild
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Saved.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

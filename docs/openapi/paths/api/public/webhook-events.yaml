@@ -1,0 +1,56 @@
+get:
+  tags:
+    - public/v1
+  summary: Catalogue public des types d'événements webhook souscriptibles.
+  description: >
+    Catalogue anonyme des event types qu'un tenant peut recevoir en webhook
+    sortant, + la convention de signature. Dérivé du sous-ensemble PUBLIC des
+    noms d'événements outbox (les événements Discord internes n'y figurent
+    jamais). Anonyme, CORS `*`, edge-caché (`s-maxage=3600`).
+  operationId: publicGetWebhookEvents
+  security: []
+  responses:
+    '200':
+      description: Catalogue d'événements + convention de signature.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - data
+            properties:
+              data:
+                type: object
+                required:
+                  - events
+                  - signature
+                properties:
+                  events:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - type
+                        - description
+                      properties:
+                        type:
+                          type: string
+                        description:
+                          type: string
+                  signature:
+                    type: object
+                    required:
+                      - header
+                      - algo
+                      - format
+                    properties:
+                      header:
+                        type: string
+                      algo:
+                        type: string
+                      format:
+                        type: string
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

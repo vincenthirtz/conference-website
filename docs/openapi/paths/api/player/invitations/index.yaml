@@ -1,0 +1,53 @@
+get:
+  parameters:
+    - $ref: '#/components/parameters/SubjectAs'
+  tags:
+    - public/auth
+  summary: Invitations d'equipe en attente pour le joueur connecte.
+  description: |
+    Liste les invitations (demandes type=invite, status=pending) adressees
+    au joueur connecte, scopees au tenant resolu. Chaque entree est enrichie
+    du nom de l'equipe. Pendant invitee uniquement (l'envoi/annulation cote
+    capitaine passe par le bot).
+  operationId: getPlayerInvitations
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Liste des invitations en attente.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - invitations
+            properties:
+              invitations:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    teamId:
+                      type: [string, 'null']
+                      format: uuid
+                    teamName:
+                      type: [string, 'null']
+                    role:
+                      type: string
+                    specialty:
+                      type: [string, 'null']
+                    battleTag:
+                      type: [string, 'null']
+                    expiresAt:
+                      type: [string, 'null']
+                      format: date-time
+                    createdAt:
+                      type: string
+                      format: date-time
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'

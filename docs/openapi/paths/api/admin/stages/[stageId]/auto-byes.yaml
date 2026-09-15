@@ -1,0 +1,28 @@
+parameters:
+  - $ref: '#/components/parameters/StageId'
+post:
+  summary: Generate auto-byes for the stage when team count is non-power-of-2.
+  operationId: adminAutoByesStage
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Byes generated.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

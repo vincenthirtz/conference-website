@@ -1,0 +1,93 @@
+get:
+  tags:
+    - admin/tasks
+  summary: Detail d'une carte.
+  operationId: adminGetTask
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  responses:
+    '200':
+      description: Carte.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+patch:
+  tags:
+    - admin/tasks
+  summary: Edite une carte (title, description, priority, dueDate, labels). Emet
+    task.board_changed.
+  operationId: adminUpdateTask
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            title: {type: string}
+            description: {type: [string, 'null']}
+            priority: {type: string, enum: [low, medium, high, urgent]}
+            dueDate: {type: [string, 'null']}
+            labels:
+              type: array
+              items: {type: string}
+  responses:
+    '200':
+      description: Carte mise a jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+delete:
+  tags:
+    - admin/tasks
+  summary: Soft-delete d'une carte (deleted_at = now()). Emet task.board_changed.
+  operationId: adminDeleteTask
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  responses:
+    '200':
+      description: Carte supprimee.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

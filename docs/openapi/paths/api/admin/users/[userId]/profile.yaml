@@ -1,0 +1,42 @@
+get:
+  tags:
+    - admin
+  summary: Identite d'un utilisateur cible (vues d'inspection admin).
+  description: |
+    Metadonnees du compte auth de la cible + son equipe dans le tenant
+    ACTIF du staff. Alimente l'en-tete et les actions des pages
+    /admin/users/[id]/player-view et captain-view ; les donnees d'espace
+    joueur, elles, sont lues par les vrais endpoints /api/player/* via le
+    parametre `as`. Remplace les endpoints-miroirs player-view /
+    captain-view (supprimes). Chaque appel est journalise
+    (`view_player_data`).
+  operationId: getAdminUserProfile
+  security:
+    - StaffSession: []
+  parameters:
+    - name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    '200':
+      description: Identite + equipe eventuelle.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              user:
+                type: object
+                additionalProperties: true
+              team:
+                type: [object, 'null']
+                additionalProperties: true
+    '400':
+      description: userId invalide.
+    '403':
+      description: Role staff insuffisant.
+    '404':
+      description: Utilisateur introuvable.

@@ -1,0 +1,28 @@
+get:
+  tags:
+    - public
+  summary: Flux iCalendar personnel (jeton porteur, sans session).
+  description: |
+    Appele par Google / Apple / Outlook Calendar, qui ne presentent jamais
+    de session : l'authentification est le JETON PORTEUR `?token=`, emis et
+    revocable depuis `/api/player/agenda/subscription`.
+
+    Jeton inconnu, revoque ou malforme -> **404 identique**, sans dire
+    lequel. Reponse `private, no-store` + `X-Robots-Tag: noindex`.
+  operationId: getPlayerAgendaIcs
+  security: []
+  parameters:
+    - name: token
+      in: query
+      required: true
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Flux iCalendar (RFC 5545).
+      content:
+        text/calendar:
+          schema:
+            type: string
+    '404':
+      $ref: '#/components/responses/NotFound'

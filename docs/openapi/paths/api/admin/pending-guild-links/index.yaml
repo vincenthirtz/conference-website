@@ -1,0 +1,20 @@
+get:
+  summary: List pending guild links (claim tickets for Discord guilds).
+  description: Requires `owner` role.
+  operationId: adminListPendingGuildLinks
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Pending links.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

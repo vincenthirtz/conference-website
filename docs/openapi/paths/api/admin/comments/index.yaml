@@ -1,0 +1,63 @@
+get:
+  summary: List user comments awaiting moderation.
+  operationId: adminListComments
+  tags:
+    - admin/content
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Comments.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+patch:
+  summary: Update / moderate an existing comment.
+  operationId: adminUpdateComment
+  tags:
+    - admin/content
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Updated.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+delete:
+  summary: Delete a comment.
+  operationId: adminDeleteComment
+  tags:
+    - admin/content
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Deleted.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Ok'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

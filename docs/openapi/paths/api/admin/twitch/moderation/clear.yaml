@@ -1,0 +1,34 @@
+post:
+  summary: Clear the broadcaster channel chat.
+  description: |
+    Requires `manager` role and the `moderator:manage:chat_messages` scope.
+    `409 NOT_CONNECTED` / `403 MISSING_SCOPE`.
+  operationId: adminTwitchClearChat
+  tags:
+    - admin/twitch
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Chat cleared.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: 'Missing scope (code MISSING_SCOPE) or forbidden role.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '409':
+      description: 'No broadcaster channel connected (code NOT_CONNECTED).'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

@@ -1,0 +1,31 @@
+post:
+  tags:
+    - admin/tasks
+  summary: Cree une colonne dans un board (position = max+1). Emet task.board_changed.
+  operationId: adminCreateTaskColumn
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [boardId, name]
+          properties:
+            boardId: {type: string, format: uuid}
+            name: {type: string}
+            wipLimit: {type: [integer, 'null']}
+            isDone: {type: boolean}
+  responses:
+    '201':
+      description: Colonne creee.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

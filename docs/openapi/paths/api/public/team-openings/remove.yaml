@@ -1,0 +1,71 @@
+get:
+  tags:
+    - public/misc
+  summary: Decrit l'annonce visee par un lien de retrait (ne supprime rien).
+  description: >
+    Sert la page de confirmation /recrutement/retrait : elle doit montrer CE
+    qu'on s'apprete a retirer. La separation GET/POST n'est pas cosmetique — les
+    clients mail et antivirus pre-visitent les liens d'un email, un GET
+    destructeur ferait disparaitre des annonces sans clic humain. Token HMAC
+    recu par email a la publication (aucun compte requis).
+  operationId: describePublicTeamOpeningRemoval
+  security: []
+  parameters:
+    - in: query
+      name: token
+      required: true
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Annonce trouvee.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              teamName:
+                type: [string, 'null']
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+post:
+  tags:
+    - public/misc
+  summary: Retire definitivement une annonce de recrutement.
+  description: >
+    Porte de sortie autonome du parcours : la publication se fait SANS compte,
+    donc sans cette route une equipe au complet devrait ecrire au staff pour
+    disparaitre — et en attendant, chaque joueuse qui repond perd son temps.
+    Token invalide et annonce introuvable renvoient le MEME message : les
+    distinguer transformerait la route en oracle d'existence.
+  operationId: removePublicTeamOpening
+  security: []
+  parameters:
+    - in: query
+      name: token
+      schema:
+        type: string
+      description: 'Accepte aussi dans le corps JSON : { "token": "..." }.'
+  responses:
+    '200':
+      description: Annonce retiree.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - success
+            properties:
+              success:
+                type: boolean
+                example: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'

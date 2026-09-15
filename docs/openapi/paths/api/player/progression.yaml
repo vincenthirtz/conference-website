@@ -1,0 +1,36 @@
+get:
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+    - $ref: '#/components/parameters/SubjectAs'
+  tags:
+    - public/teams
+  summary: Progression — courbe de niveau de l'appelante et jalons d'equipe.
+  description: >-
+    Restitue `player_rating_history`, jusque-la stockee et jamais montree :
+    niveau courant, meilleur atteint, variation sur la fenetre affichee et serie
+    chronologique plafonnee (sparkline d'une stat tile, pas un graphe : la
+    donnee est « une valeur courante + une tendance »).
+
+    Y sont joints les JALONS de l'equipe (premier affrontement, premiere
+    victoire, palier franchi, serie en cours). Aucun jalon fabrique : ni points,
+    ni badges, ni niveaux inventes — chaque entree est un fait pointable dans
+    une table.
+
+    Repond 200 meme sans equipe : le niveau appartient a la joueuse, seuls les
+    jalons d'equipe disparaissent. `delta` vaut `null` sous deux mesures, `peak`
+    vaut `null` si rien n'a jamais ete note — ne pas savoir n'est pas « n'a pas
+    bouge ».
+  operationId: playerProgression
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Progression de l'appelante et jalons de son equipe.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PlayerProgression'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'

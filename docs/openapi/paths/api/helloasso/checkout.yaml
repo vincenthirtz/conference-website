@@ -1,0 +1,45 @@
+post:
+  tags:
+    - public/misc
+  summary: Cree un checkout HelloAsso (don ou paiement).
+  operationId: createHelloAssoCheckout
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - amount
+            - firstName
+            - lastName
+            - email
+          properties:
+            amount:
+              type: integer
+              minimum: 100
+              maximum: 10000000
+              description: Montant en centimes.
+            firstName:
+              type: string
+              maxLength: 100
+            lastName:
+              type: string
+              maxLength: 100
+            email:
+              type: string
+              format: email
+              maxLength: 254
+  responses:
+    '200':
+      description: URL de redirection vers HelloAsso.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '429':
+      $ref: '#/components/responses/RateLimited'

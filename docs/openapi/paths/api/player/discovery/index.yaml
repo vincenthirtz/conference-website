@@ -1,0 +1,75 @@
+get:
+  summary: Carte de découverte cross-tenant du joueur courant.
+  description: |
+    Renvoie la carte de découverte GLOBALE (opt-in, invisible par défaut,
+    derrière le login). Convention « absent = défaut » : un joueur sans row
+    est non découvrable (`discoverable=false`) mais expose les défauts de
+    visibilité (`showRatings=true`, `showTeams=true`). `withAuthRoute`.
+  operationId: playerGetDiscovery
+  tags:
+    - public/auth
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Carte de découverte du joueur.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DiscoveryCard'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+put:
+  summary: Mettre à jour la carte de découverte du joueur courant.
+  description: |
+    Patch partiel de la carte de découverte. `opted_in_at` (audit RGPD) est
+    posé au PREMIER passage `discoverable=true` et n'est jamais effacé. Le
+    kill-switch (`discoverable=false`) conserve la row et l'horodatage de
+    consentement. `withAuthRoute`.
+  operationId: playerPutDiscovery
+  tags:
+    - public/auth
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            discoverable:
+              type: boolean
+            displayName:
+              type: [string, 'null']
+              maxLength: 80
+            avatarUrl:
+              type: [string, 'null']
+              format: uri
+              maxLength: 500
+            tagline:
+              type: [string, 'null']
+              maxLength: 160
+            showRatings:
+              type: boolean
+            showTeams:
+              type: boolean
+  responses:
+    '200':
+      description: Carte de découverte mise à jour.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DiscoveryCard'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

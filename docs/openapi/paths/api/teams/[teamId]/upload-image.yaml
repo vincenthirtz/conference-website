@@ -1,0 +1,36 @@
+parameters:
+  - $ref: '#/components/parameters/TeamId'
+post:
+  tags:
+    - public/teams
+  summary: Upload du logo/banner d'une equipe (multipart, capitaine).
+  operationId: uploadTeamImage
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      multipart/form-data:
+        schema:
+          type: object
+          properties:
+            file:
+              type: string
+              format: binary
+            kind:
+              type: string
+              enum:
+                - logo
+                - banner
+  responses:
+    '200':
+      description: Image uploadee, URL renvoyee.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

@@ -1,0 +1,46 @@
+parameters:
+  - $ref: '#/components/parameters/ScrimId'
+get:
+  summary: List matches in a scrim.
+  operationId: adminListScrimMatches
+  tags:
+    - admin/scrims
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Matches.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Add a match to a scrim.
+  operationId: adminCreateScrimMatch
+  tags:
+    - admin/scrims
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '201':
+      description: Created.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Match'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

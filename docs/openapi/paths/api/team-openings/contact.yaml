@@ -1,0 +1,42 @@
+get:
+  tags:
+    - public/teams
+  summary: Coordonnees d'une annonce de recrutement (compte requis).
+  description: >
+    Pendant de /api/teams/free-players pour le marche inverse. La gate n'est PAS
+    « gerer une equipe » : la personne interessee par une annonce est justement
+    celle qui n'a pas d'equipe. Il faut simplement un compte — ce qui suffit a
+    sortir les coordonnees des pages publiques indexables et a rendre un
+    moissonneur tracable. Une annonce perimee repond 404, comme une annonce
+    inexistante.
+  operationId: getTeamOpeningContact
+  security:
+    - PlayerBearer: []
+  parameters:
+    - in: query
+      name: id
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+  responses:
+    '200':
+      description: Annonce avec ses coordonnees.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - opening
+            properties:
+              opening:
+                $ref: '#/components/schemas/ContactTeamOpening'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '405':
+      description: Methode non autorisee (seul GET est accepte).
+    '429':
+      $ref: '#/components/responses/RateLimited'

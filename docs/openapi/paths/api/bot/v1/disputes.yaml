@@ -1,0 +1,26 @@
+get:
+  tags:
+    - bot/misc
+  summary: Liste les disputes ouvertes (status='disputed') pour le panel staff.
+  operationId: botListDisputes
+  parameters:
+    - name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+  responses:
+    '200':
+      description: Liste des disputes.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              disputes:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true

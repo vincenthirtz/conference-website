@@ -1,0 +1,22 @@
+get:
+  tags:
+    - public/misc
+  summary: Event_run actuellement live pour le tenant (ou null).
+  operationId: getCurrentPublicEvent
+  security: []
+  responses:
+    '200':
+      description: 'Run live ou `{ run: null, segments: [] }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              run:
+                oneOf:
+                  - $ref: '#/components/schemas/PublicEventRun'
+                  - type: 'null'
+              segments:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicEventSegment'

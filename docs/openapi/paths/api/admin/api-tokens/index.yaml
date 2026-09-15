@@ -1,0 +1,64 @@
+get:
+  summary: List the active tenant's public API tokens (metadata only).
+  operationId: adminListApiTokens
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Tokens (jamais le hash ni le plain).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              tokens:
+                type: array
+                items:
+                  type: object
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Mint a new scoped public API token (plain returned once).
+  operationId: adminCreateApiToken
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - name
+            - scopes
+          properties:
+            name:
+              type: string
+            scopes:
+              type: array
+              items:
+                type: string
+  responses:
+    '201':
+      description: Token créé — `token` (plain) renvoyé une seule fois.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              token:
+                type: string
+              tokenMeta:
+                type: object
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

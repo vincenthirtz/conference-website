@@ -1,0 +1,31 @@
+get:
+  tags:
+    - public/auth
+  summary: Etat du lien Discord pour l'utilisateur connecte (lit cookie Supabase SSR).
+  operationId: getDiscordLinkStatus
+  security: []
+  responses:
+    '200':
+      description: Etat du lien.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+delete:
+  tags:
+    - public/auth
+  summary: Supprime le lien Discord (pour relier un autre compte).
+  operationId: deleteDiscordLink
+  security: []
+  responses:
+    '200':
+      description: Lien supprime.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Ok'
+    '401':
+      $ref: '#/components/responses/Unauthorized'

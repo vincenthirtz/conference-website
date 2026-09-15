@@ -1,0 +1,160 @@
+get:
+  tags:
+    - public/auth
+  summary: Ma collection TCG, regroupee par sujet.
+  description: |
+    LA COLLECTION SE DEDUIT, ELLE N'EST PAS STOCKEE : le socle a
+    deliberement ecarte une table `collection`, un agregat finissant par
+    diverger du detail qui le nourrit. Cette route lit les paquets OUVERTS
+    puis leurs cartes, et compte cote serveur.
+
+    Les faces (nom, image) sont RELUES a chaque appel, jamais figees au
+    tirage : c'est ce qui rend le retrait de consentement d'une joueuse
+    retroactif sur les cartes deja distribuees. Une photo n'est servie que
+    si elle est `approved` ET non revoquee.
+
+    Rarete rendue = la MEILLEURE possedee, la rarete etant figee par tirage
+    et pouvant differer d'un exemplaire a l'autre.
+
+    `recyclable` DESIGNE UN EXEMPLAIRE PRECIS (`packId` + `position`), le
+    couple qu'exige `POST /api/player/tcg/recycle` et qui porte son
+    idempotence (`source_ref = <pack_id>:<position>`). Il vaut `null` des
+    qu'il n'y a qu'un exemplaire : la route refuse le dernier.
+
+    L'EXEMPLAIRE DESIGNE EST LE MOINS PRECIEUX — plus basse rarete, non
+    brillant a rarete egale. La route de recyclage, elle, accepte n'importe
+    quel exemplaire pourvu qu'il en reste un autre : elle ne regarde PAS
+    lequel part. Le choix appartient donc a cette route-ci, et envoyer le
+    premier venu detruirait un jour l'epique d'une joueuse en lui laissant
+    la commune. La carte s'affiche avec sa MEILLEURE rarete tandis qu'on
+    propose la PIRE : les deux informations coexistent sans se contredire.
+
+    PAGINATION PAR CURSEUR, RETROCOMPATIBLE. Sans `limit` ni `cursor`, la
+    collection entiere est rendue comme avant, avec `nextCursor: null`.
+    Avec l'un des deux, une page (40 cartes par defaut, 200 au plus) et
+    `nextCursor` tant qu'il en reste. Ordre TOTAL : rarete decroissante
+    puis cle de sujet (`<kind>:<id>`) — trier sur la rarete seule laisserait
+    les ex aequo dans un ordre non garanti, et deux pages pourraient se
+    chevaucher. On pagine l'AFFICHAGE, pas la lecture : `distinct` et
+    `total` restent ceux de la collection entiere, et seules les faces de
+    la page sont relues. Le curseur ne contient jamais d'URL d'image (une
+    face se relit a chaque affichage : retrait de consentement retroactif).
+    Les cartes sont lues par tranches, sans le plafond silencieux de 1000
+    lignes de PostgREST qui amputait l'ancienne lecture.
+    `Cache-Control: private, no-store`.
+
+    Rate-limit 60 / min.
+  operationId: readPlayerTcgCollection
+  security:
+    - PlayerBearer: []
+  parameters:
+    - name: limit
+      in: query
+      required: false
+      description: >-
+        Taille de page, entier de 1 a 200. Hors bornes : `400 invalid_limit`
+        (jamais rogne en silence).
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+    - name: cursor
+      in: query
+      required: false
+      description: >-
+        `nextCursor` rendu par la page precedente. Opaque. Illisible ou forge :
+        `400 invalid_cursor`. Au-dela de la fin : page vide.
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Collection agregee, les plus rares d'abord.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              cards:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    kind:
+                      type: string
+                      enum: [player, team, map]
+                    userId:
+                      type: [string, 'null']
+                    teamId:
+                      type: [string, 'null']
+                    displayName:
+                      type: [string, 'null']
+                    name:
+                      type: [string, 'null']
+                      description: Cartes `team` et `map`.
+                    slug:
+                      type: [string, 'null']
+                      description: >-
+                        Adresse publique pour une carte `team` ; pour une carte
+                        `map`, c'est l'IDENTIFIANT lui-meme, les maps vivant
+                        dans un registre et non dans une table.
+                    imageUrl:
+                      type: [string, 'null']
+                      description: >-
+                        Cartes `player` et `map`. Pour une map, la maquette
+                        voxel pre-rendue ; `null` si la map a quitte le
+                        registre.
+                    logoUrl:
+                      type: [string, 'null']
+                      description: Cartes `team` seulement.
+                    rarity:
+                      type: string
+                      enum: [common, rare, epic, legendary]
+                      description: >-
+                        Toujours `common` pour une carte `map` : une map n'a pas
+                        de palmares, donc pas de prestige a mesurer. Une rarete
+                        variable inventerait une seconde echelle de valeur a
+                        cote de celle des joueuses.
+                    isFoil:
+                      type: boolean
+                    count:
+                      type: integer
+                    recyclable:
+                      type: [object, 'null']
+                      description: >-
+                        L'exemplaire propose au recyclage, ou `null` des qu'il
+                        n'y en a qu'un — la route de recyclage refuse le dernier
+                        (`not_a_duplicate`), et un bouton qu'elle rejetterait
+                        promettrait un geste impossible. Le couple designe LE
+                        MOINS PRECIEUX des exemplaires.
+                      properties:
+                        packId:
+                          type: string
+                        position:
+                          type: integer
+              distinct:
+                type: integer
+                description: Sujets distincts de la collection ENTIERE, pas de la page.
+              total:
+                type: integer
+                description: Exemplaires de la collection ENTIERE, doublons compris.
+              pool:
+                type: [object, 'null']
+                description: >-
+                  Le vivier (sujets existants), `null` si illisible. Absent
+                  quand la collection est vide.
+                properties:
+                  distinct:
+                    type: integer
+              nextCursor:
+                type: [string, 'null']
+                description: >-
+                  Curseur de la page suivante ; `null` sur la derniere page ou
+                  quand la collection est servie en entier.
+    '400':
+      description: '`code: invalid_limit` ou `code: invalid_cursor`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

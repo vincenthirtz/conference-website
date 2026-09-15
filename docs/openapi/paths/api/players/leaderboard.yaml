@@ -1,0 +1,31 @@
+get:
+  summary: Classement des joueurs par rating Glicko-2 (games_played > 0).
+  operationId: getPlayersLeaderboard
+  tags:
+    - public/players
+  security: []
+  parameters:
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    - name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+  responses:
+    '200':
+      description: Classement.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/LeaderboardResponse'
+    '500':
+      $ref: '#/components/responses/ServerError'

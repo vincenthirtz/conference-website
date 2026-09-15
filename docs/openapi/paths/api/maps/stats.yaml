@@ -1,0 +1,29 @@
+get:
+  tags:
+    - public/tournaments
+  summary: Stats agregees des maps pour un tournoi (winrate par map, vetos).
+  operationId: getMapsStats
+  security: []
+  parameters:
+    - name: tournamentId
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+  responses:
+    '200':
+      description: Stats par map + veto info.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MapStats'
+    '500':
+      $ref: '#/components/responses/ServerError'

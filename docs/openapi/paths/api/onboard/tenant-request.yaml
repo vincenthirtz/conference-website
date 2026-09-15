@@ -1,0 +1,54 @@
+post:
+  tags:
+    - public/onboard
+  summary: Soumet une demande d'enrolement tenant (Discord OAuth + Turnstile).
+  operationId: submitOnboardTenantRequest
+  description: |
+    Le requester doit etre connecte (Supabase Auth via Discord). Verifie
+    Cloudflare Turnstile, refuse si le slug existe deja ou si une demande
+    active existe deja pour ce Discord user.
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/OnboardTenantRequest'
+  responses:
+    '200':
+      description: Demande enregistree, email de verification envoye.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - ok
+              - requestId
+              - status
+            properties:
+              ok:
+                type: boolean
+                enum:
+                  - true
+              requestId:
+                $ref: '#/components/schemas/Uuid'
+              status:
+                type: string
+                enum:
+                  - pending_email_verification
+              emailSent:
+                type: boolean
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '409':
+      description: Slug pris ou demande deja en cours.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

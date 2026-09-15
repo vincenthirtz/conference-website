@@ -1,0 +1,58 @@
+parameters:
+  - in: path
+    name: token
+    required: true
+    schema:
+      type: string
+get:
+  summary: Read a tenant invitation without consuming it.
+  description: |
+    PUBLIC (the invitee is, by construction, not staff yet). Returns the
+    tenant name, the offered role, the status and a masked email hint, so
+    the acceptance page can say what is on offer before asking for a login.
+  operationId: readTenantInvitation
+  tags:
+    - public
+  # Route publique : l'invité n'est pas encore staff, c'est tout l'objet.
+  security: []
+  responses:
+    '200':
+      description: Invitation summary.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'
+post:
+  summary: Accept a tenant invitation as the logged-in user.
+  description: |
+    Requires a Supabase session whose email matches the invited address.
+    Creates the staff account when it does not exist yet (global role
+    `caster` — the invitation grants access to ONE space, not a platform
+    role), attaches it to the tenant, then marks the invitation accepted.
+    Single use.
+  operationId: acceptTenantInvitation
+  tags:
+    - public
+  # Route publique : l'invité n'est pas encore staff, c'est tout l'objet.
+  security: []
+  responses:
+    '200':
+      description: Accepted.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: The session email does not match the invited address.
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      description: Invitation already accepted, revoked or expired.

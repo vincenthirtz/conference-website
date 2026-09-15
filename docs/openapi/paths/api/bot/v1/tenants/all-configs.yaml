@@ -1,0 +1,23 @@
+get:
+  tags:
+    - bot/tenants
+  summary: Config tenant + Discord pour tous les guilds linkes. Cross-tenant.
+  operationId: botGetAllTenantConfigs
+  security:
+    - BotApiKey: []
+  responses:
+    '200':
+      description: Liste des configs.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - tenants
+            properties:
+              tenants:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TenantConfigEntry'
+    '500':
+      $ref: '#/components/responses/ServerError'

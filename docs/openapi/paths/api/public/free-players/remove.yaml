@@ -1,0 +1,71 @@
+get:
+  tags:
+    - public/misc
+  summary: Décrit la fiche visée par un lien de retrait (ne supprime rien).
+  description: >
+    Sert la page de confirmation /rejoindre/retrait : elle doit montrer CE qu'on
+    s'apprête à retirer. La separation GET/POST n'est pas cosmetique — les
+    clients mail et antivirus pre-visitent les liens d'un email, un GET
+    destructeur ferait disparaitre des fiches sans clic humain. Token HMAC recu
+    par email a l'inscription (aucun compte requis).
+  operationId: describePublicFreePlayerRemoval
+  security: []
+  parameters:
+    - in: query
+      name: token
+      required: true
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Fiche trouvee.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: [string, 'null']
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+post:
+  tags:
+    - public/misc
+  summary: Retire définitivement une fiche « joueuse libre ».
+  description: >
+    Porte de sortie autonome du parcours /rejoindre : l'inscription se fait SANS
+    compte, donc sans cette route une joueuse devrait ecrire au staff pour
+    disparaitre d'une liste publique qu'elle a elle-meme alimentee. Token
+    invalide et fiche introuvable renvoient le MEME message : les distinguer
+    transformerait la route en oracle d'existence.
+  operationId: removePublicFreePlayer
+  security: []
+  parameters:
+    - in: query
+      name: token
+      schema:
+        type: string
+      description: 'Accepte aussi dans le corps JSON : { "token": "..." }.'
+  responses:
+    '200':
+      description: Fiche retiree.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - success
+            properties:
+              success:
+                type: boolean
+                example: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'

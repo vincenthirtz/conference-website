@@ -1,0 +1,57 @@
+get:
+  tags:
+    - public/teams
+  summary: Liste les demandes d'inscription equipe a un tournoi du joueur.
+  operationId: listRegisterTeamDemandes
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Demandes.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+post:
+  tags:
+    - public/teams
+  summary: Soumet une demande d'inscription equipe a un tournoi.
+  operationId: submitRegisterTeamDemande
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - tournamentId
+          properties:
+            tournamentId:
+              type: string
+              format: uuid
+            teamId:
+              type: string
+              format: uuid
+            message:
+              type: string
+  responses:
+    '201':
+      description: Demande creee.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'

@@ -1,0 +1,37 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: Export final results / standings / rankings.
+  operationId: adminExportTournamentResults
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  parameters:
+    - in: query
+      name: format
+      schema:
+        type: string
+        enum:
+          - json
+          - csv
+  responses:
+    '200':
+      description: Export payload.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+        text/csv:
+          schema:
+            type: string
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

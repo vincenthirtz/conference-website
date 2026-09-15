@@ -1,0 +1,21 @@
+get:
+  summary: List tenants the current staff has any role on.
+  operationId: adminListAccessibleTenants
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Accessible tenants.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              tenants:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tenant'
+    '401':
+      $ref: '#/components/responses/Unauthorized'

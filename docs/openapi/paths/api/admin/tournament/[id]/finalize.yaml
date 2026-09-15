@@ -1,0 +1,130 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+post:
+  summary: Freeze the tournament podium and transition to `completed`.
+  description: |
+    Requires `manager` role. Inserts/replaces `final_rankings` and
+    transitions `tournament.status` from `running` to `completed`. Re-call
+    on a finalized tournament is a 200 no-op unless `force=true`. Emits
+    `tournament.finalized` to the bot outbox. Supports idempotency.
+
+    PALMARES TCG (2026-09-15). Une fois le podium fige, les TITULAIRES qui
+    ont joue pour une equipe du top 8 dans ce tournoi (`match_participants`,
+    `is_substitute = false`) recoivent pieces et paquets selon
+    `PLACEMENT_TIERS` (`utils/tcg/grantPlacementRewards.ts`). Une
+    recompense par personne ET par tournoi : un rejeu a l'identique — qui
+    reste un no-op sur le classement — ne recredite personne et sert de
+    voie de reprise ; un `force=true` ne repaie pas la difference de rang et
+    ne reprend rien. Le compte rendu est rendu dans
+    `tcg_placement_rewards`.
+  operationId: adminFinalizeTournament
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - rankings
+          properties:
+            rankings:
+              type: array
+              items:
+                type: object
+                required:
+                  - team_id
+                  - rank
+                properties:
+                  team_id:
+                    type: string
+                    format: uuid
+                  rank:
+                    type: integer
+                    minimum: 1
+                  prize:
+                    type: [string, 'null']
+                  notes:
+                    type: [string, 'null']
+            force:
+              type: boolean
+              default: false
+  responses:
+    '200':
+      description: Finalized (or no-op when already finalized).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              tournament:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  status:
+                    type: string
+              rankings:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    team_id:
+                      type: string
+                      format: uuid
+                    team_name:
+                      type: string
+                    rank:
+                      type: integer
+                    prize:
+                      type: [string, 'null']
+                    notes:
+                      type: [string, 'null']
+                    frozen_at:
+                      type: string
+                      format: date-time
+              already_finalized:
+                type: boolean
+              tcg_placement_rewards:
+                type: object
+                description: |
+                  Compte rendu du palmares TCG. `packsGranted` <
+                  `packsExpected` = paquets refuses par la base (pieces
+                  ecrites) ; `status: error` = rien n'a ete decide sur une
+                  lecture en echec.
+                properties:
+                  status:
+                    type: string
+                    enum: [granted, nothing, not_ready, error]
+                  eligible:
+                    type: integer
+                  granted:
+                    type: integer
+                    description: Joueuses creditees par CET appel (0 sur un rejeu).
+                  packsExpected:
+                    type: integer
+                  packsGranted:
+                    type: integer
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      $ref: '#/components/responses/Conflict'

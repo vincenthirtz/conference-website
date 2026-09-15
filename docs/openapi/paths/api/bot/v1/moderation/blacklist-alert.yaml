@@ -1,0 +1,30 @@
+post:
+  tags:
+    - bot/misc
+  summary: Enregistre une alerte de detection blacklist (scan / arrivee membre).
+  operationId: botCreateBlacklistAlert
+  description: >-
+    Le bot rapporte une detection blacklist (pas d'acteur staff). Idempotent via
+    Idempotency-Key.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '201':
+      description: Alerte enregistree.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              alert:
+                type: object
+                additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'

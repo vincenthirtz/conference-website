@@ -1,0 +1,37 @@
+post:
+  tags:
+    - public/misc
+  summary: Soumet un ticket de support (litige, comportement, technique).
+  operationId: submitSupportTicket
+  description: |
+    Endpoint dual : mode web (captcha + IP rate-limit) ou mode bot
+    (x-api-key=BOT_API_KEY + per-Discord-user rate-limit, 5/h). Severity
+    HIGH declenche une notif Discord.
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/SupportTicketInput'
+  responses:
+    '201':
+      description: Ticket cree.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - success
+              - ticketId
+            properties:
+              success:
+                type: boolean
+              ticketId:
+                $ref: '#/components/schemas/Uuid'
+              referenceShort:
+                type: string
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '429':
+      $ref: '#/components/responses/RateLimited'

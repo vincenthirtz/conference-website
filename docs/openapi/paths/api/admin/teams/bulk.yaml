@@ -1,0 +1,27 @@
+post:
+  summary: Bulk-create teams from a JSON payload.
+  operationId: adminBulkCreateTeams
+  tags:
+    - admin/teams
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Result.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ImportCsvResult'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

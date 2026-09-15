@@ -1,0 +1,44 @@
+get:
+  tags:
+    - public/teams
+  summary: Ce qui manque a une joueuse pour exister dans le reseau.
+  description: >-
+    Constat en lecture seule : compte Discord lie, BattleTag verifie (si membre
+    d'une equipe), profil de decouverte actif. Alimente la checklist
+    d'onboarding reseau du tableau de bord joueuse. N'ecrit rien et ne declenche
+    aucune notification.
+  operationId: playerNetworkStatus
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Etat des liaisons de la joueuse.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - discordLinked
+              - hasTeam
+              - battleTagSet
+              - battleTagVerified
+              - discoverable
+              - missingCount
+            properties:
+              discordLinked:
+                type: boolean
+              hasTeam:
+                type: boolean
+              battleTagSet:
+                type: boolean
+              battleTagVerified:
+                type: boolean
+              discoverable:
+                type: boolean
+              missingCount:
+                type: integer
+                description: Nombre d'etapes restantes (0 = rien a proposer).
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'

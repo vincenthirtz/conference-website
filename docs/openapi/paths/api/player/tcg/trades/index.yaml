@@ -1,0 +1,196 @@
+get:
+  tags:
+    - public/auth
+  summary: Mes propositions d'echange TCG, recues ou envoyees.
+  description: |
+    Boite `received` (defaut) ou `sent`, etat `open` (en attente, defaut)
+    ou `closed` (historique). Pagination par curseur (`created_at`, `id`
+    decroissants), meme forme que les paquets ; un curseur forge rend
+    `400 invalid_cursor`.
+
+    EXPIRATION PARESSEUSE avant lecture : une proposition echue n'est
+    jamais servie comme acceptable ; sa transition est annoncee une seule
+    fois (`tcg.trade_resolved`, outcome `expired`).
+
+    Les faces sont RELUES par `readCardFaces` (filtre de consentement) :
+    une photo retiree ne ressort pas, meme sur une carte d'une proposition.
+    Une proposition RECUE en attente porte, sur chaque carte demandee,
+    `ownedCopies` et `tradeableCopies` de l'APPELANTE (pour avertir d'un
+    dernier exemplaire) ; cote proposante, rien de la collection de
+    l'autre. Aucun email. `Cache-Control: private, no-store`. 60 / min.
+  operationId: listPlayerTcgTrades
+  security:
+    - PlayerBearer: []
+  parameters:
+    - name: box
+      in: query
+      schema:
+        type: string
+        enum: [received, sent]
+    - name: state
+      in: query
+      schema:
+        type: string
+        enum: [open, closed]
+    - name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+    - name: cursor
+      in: query
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Une page de propositions.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              trades:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    direction:
+                      type: string
+                      enum: [received, sent]
+                    status:
+                      type: string
+                      enum: [pending, accepted, declined, cancelled, expired]
+                    reason:
+                      type: [string, 'null']
+                      enum:
+                        - proposer_cancelled
+                        - offered_unavailable
+                        - card_unavailable
+                        - trading_disabled
+                        - null
+                    createdAt:
+                      type: string
+                      format: date-time
+                    expiresAt:
+                      type: string
+                      format: date-time
+                    resolvedAt:
+                      type: [string, 'null']
+                      format: date-time
+                    counterpart:
+                      type: object
+                      properties:
+                        userId:
+                          type: string
+                          format: uuid
+                        displayName:
+                          type: [string, 'null']
+                    offered:
+                      type: array
+                      items:
+                        type: object
+                        additionalProperties: true
+                        description: |
+                          Carte (`kind` player | team | map + face relue,
+                          `rarity`, `isFoil`), memes champs que la collection.
+                    requested:
+                      type: array
+                      items:
+                        type: object
+                        additionalProperties: true
+              nextCursor:
+                type: [string, 'null']
+    '400':
+      description: '`code: invalid_box | invalid_state | invalid_limit | invalid_cursor`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - public/auth
+  summary: Proposer un echange de cartes TCG (carte contre carte).
+  description: |
+    CARTE CONTRE CARTE, RIEN D'AUTRE : le corps est strict (aucun champ
+    pour des pieces, un paquet ferme ou un message — pas de canal de
+    harcelement), 1 a 5 cartes de chaque cote, A PARITE, sujets distincts,
+    aucun sujet des deux cotes. Les cartes offertes sont des SUJETS de ma
+    collection (l'exemplaire le moins precieux, non engage ailleurs, est
+    choisi et fige par la base) ; les cartes demandees sont des sujets que
+    la destinataire montre en DOUBLE (`GET /api/player/tcg/trades/cards`).
+
+    Ecrit en UNE transaction par la fonction SQL `tcg_propose_trade`
+    (verrous consultatifs sur les deux joueuses) : consentements des deux,
+    anciennete du compte (14 j) et de la collection (7 j), plafonds PAR
+    COMPTE (5 envoyees, 10 recues en attente), une seule en attente par
+    paire, 24 h apres un refus, possession et echangeabilite (seuls les
+    paquets `victory`, `placement`, `purchase`, `trade`), expiration 72 h.
+    Le rate-limit HTTP (10 / min) n'est qu'un amortisseur.
+
+    Emet `tcg.trade_proposed` a la destinataire sur la seule creation.
+  operationId: proposePlayerTcgTrade
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: false
+          required: [recipientId, offered, requested]
+          properties:
+            recipientId:
+              $ref: '#/components/schemas/Uuid'
+            offered:
+              type: array
+              minItems: 1
+              maxItems: 5
+              items:
+                $ref: '#/components/schemas/TcgTradeSubject'
+            requested:
+              type: array
+              minItems: 1
+              maxItems: 5
+              items:
+                $ref: '#/components/schemas/TcgTradeSubject'
+  responses:
+    '201':
+      description: Proposition creee.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              trade:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  expiresAt:
+                    type: string
+                    format: date-time
+    '400':
+      description: '`code: invalid_body | invalid_items | self_trade`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: '`code: trading_disabled | collection_too_recent`.'
+    '409':
+      description: |
+        `code: recipient_unavailable` (n'accepte pas, compte trop recent ou
+        absente de l'espace — une seule reponse pour les trois) `|
+        recipient_inbox_full | too_many_pending | already_pending |
+        recently_declined | offered_not_owned | requested_not_available`.
+        `subject: { kind, id }` designe la carte en cause quand la base le dit.
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

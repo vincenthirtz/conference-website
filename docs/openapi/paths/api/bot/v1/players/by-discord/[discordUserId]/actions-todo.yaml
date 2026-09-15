@@ -1,0 +1,20 @@
+parameters:
+  - $ref: '#/components/parameters/DiscordUserId'
+get:
+  tags:
+    - bot/players
+  summary: Actions a faire (todo) du joueur.
+  operationId: botGetPlayerActionsTodo
+  responses:
+    '200':
+      description: Liste todo.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              todos:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true

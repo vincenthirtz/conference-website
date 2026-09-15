@@ -1,0 +1,63 @@
+get:
+  tags:
+    - admin/tasks
+  summary: Checklist (sous-taches) d'une carte, triee par position.
+  operationId: adminListTaskChecklist
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  responses:
+    '200':
+      description: Items de la checklist.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+post:
+  tags:
+    - admin/tasks
+  summary: Ajoute un item de checklist (position = max+1).
+  operationId: adminCreateTaskChecklistItem
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [label]
+          properties:
+            label: {type: string, minLength: 1, maxLength: 500}
+  responses:
+    '201':
+      description: Item cree.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

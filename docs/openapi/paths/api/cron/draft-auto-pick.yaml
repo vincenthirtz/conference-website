@@ -1,0 +1,47 @@
+get:
+  tags:
+    - cron
+  summary: Auto-pick scan across every tenant (Lot 3 — draft timer).
+  operationId: cronDraftAutoPickGet
+  description: |
+    Schedule: every minute (`* * * * *`) via Netlify scheduled
+    function `draft-auto-pick-cron`. Scans `match_drafts`
+    status='in_progress' whose current `match_draft_steps.deadline_at`
+    is in the past, then auto-picks each one (first alphabetical
+    eligible hero, `auto_picked=true`). Heartbeat:
+    `site_settings.last_cron_draft_auto_pick_at`.
+
+    Auth: `Authorization: Bearer <CRON_SECRET>` header OR
+    `?secret=<CRON_SECRET>` query string. Both GET and POST accepted.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Tick summary.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CronDraftAutoPickResult'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - cron
+  summary: Auto-pick scan across every tenant (Lot 3 — draft timer).
+  operationId: cronDraftAutoPickPost
+  description: Same as `GET /api/cron/draft-auto-pick`.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Tick summary.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CronDraftAutoPickResult'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'

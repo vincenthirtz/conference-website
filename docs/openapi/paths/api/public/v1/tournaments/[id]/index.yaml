@@ -1,0 +1,33 @@
+parameters:
+  - name: id
+    in: path
+    required: true
+    description: Id (UUID) ou slug du tournoi.
+    schema:
+      type: string
+get:
+  tags:
+    - public/v1
+  summary: Détail d'un tournoi public + résumé des stages.
+  operationId: publicV1GetTournament
+  security: []
+  responses:
+    '200':
+      description: Détail tournoi.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - data
+            properties:
+              data:
+                $ref: '#/components/schemas/PublicV1TournamentDetail'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

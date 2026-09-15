@@ -1,0 +1,59 @@
+get:
+  tags:
+    - admin
+  summary: Les deux feuilles de match (vue organisation).
+  operationId: adminGetMatchLineups
+  security:
+    - StaffSession: []
+  parameters:
+    - name: matchId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    '200':
+      description: Feuilles des deux equipes.
+post:
+  tags:
+    - admin
+  summary: Valide la feuille d'une equipe a sa place, ou la rouvre.
+  description: >-
+    `validated_by_kind = admin` : une feuille validee par l'organisation
+    n'engage pas l'equipe de la meme facon. `reopen: true` defige une feuille
+    validee — le seul geste qui le permette.
+  operationId: adminValidateMatchLineup
+  security:
+    - StaffSession: []
+  parameters:
+    - name: matchId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - teamId
+          properties:
+            teamId:
+              type: string
+              format: uuid
+            starters:
+              type: array
+              items:
+                type: string
+                format: uuid
+            reopen:
+              type: boolean
+  responses:
+    '200':
+      description: Feuille validee ou rouverte.
+    '409':
+      description: Check-in manquant ou match termine.

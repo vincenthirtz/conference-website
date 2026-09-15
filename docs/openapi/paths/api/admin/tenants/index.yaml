@@ -1,0 +1,48 @@
+get:
+  summary: List tenants visible to the current operator.
+  operationId: adminListTenants
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Tenants.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              tenants:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tenant'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Create a tenant.
+  operationId: adminCreateTenant
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '201':
+      description: Created.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Tenant'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

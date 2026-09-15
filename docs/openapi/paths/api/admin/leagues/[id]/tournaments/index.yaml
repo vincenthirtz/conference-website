@@ -1,0 +1,44 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+post:
+  summary: Lie un tournoi à une league.
+  operationId: adminLinkLeagueTournament
+  tags:
+    - admin/leagues
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - tournament_id
+          properties:
+            tournament_id:
+              type: string
+              format: uuid
+            weight:
+              type: number
+              exclusiveMinimum: 0
+  responses:
+    '201':
+      description: Lien créé.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/LeagueTournamentLink'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

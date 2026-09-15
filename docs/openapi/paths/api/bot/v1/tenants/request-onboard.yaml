@@ -1,0 +1,54 @@
+post:
+  tags:
+    - bot/tenants
+  summary: Cree un tenant_request via la slash-command /demander-bot (skip email
+    verif). Cross-tenant.
+  operationId: botRequestOnboard
+  security:
+    - BotApiKey: []
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - requesterDiscordUserId
+            - requesterEmail
+            - requestedSlug
+            - requestedName
+          properties:
+            requesterDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            requesterDiscordDisplayName:
+              type: [string, 'null']
+              maxLength: 200
+            requesterEmail:
+              type: string
+              format: email
+            requestedSlug:
+              type: string
+            requestedName:
+              type: string
+              maxLength: 200
+            description:
+              type: string
+              maxLength: 1000
+  responses:
+    '201':
+      description: Onboarding request cree.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              requestId:
+                $ref: '#/components/schemas/Uuid'
+              botInviteUrl:
+                type: string
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '409':
+      $ref: '#/components/responses/Conflict'

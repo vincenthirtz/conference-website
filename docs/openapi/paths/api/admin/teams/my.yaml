@@ -1,0 +1,48 @@
+get:
+  summary: Read the team(s) that the current user captains/operates.
+  operationId: adminGetMyTeams
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+  tags:
+    - admin/teams
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Teams.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+patch:
+  summary: Patch the team(s) the current user captains/operates.
+  description: >-
+    Requires the `manage_team_info` team permission (a captain has every
+    permission; a privileged role only has its own).
+  operationId: adminPatchMyTeams
+  tags:
+    - admin/teams
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: Updated.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

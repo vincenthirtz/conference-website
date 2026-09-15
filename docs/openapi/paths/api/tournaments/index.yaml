@@ -1,0 +1,54 @@
+get:
+  tags:
+    - public/tournaments
+  summary: Liste publique des tournois visibles (published / running / completed).
+  operationId: getPublicTournaments
+  security: []
+  parameters:
+    - name: status
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+          - published
+          - running
+          - completed
+    - name: id
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: Si fourni, filtre le tournoi specifique meme s'il n'est pas publie.
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    - name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+  responses:
+    '200':
+      description: Tournois + total.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - tournaments
+            properties:
+              tournaments:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicTournamentSummary'
+              total:
+                type: [integer, 'null']

@@ -1,0 +1,30 @@
+parameters:
+  - $ref: '#/components/parameters/DiscordUserId'
+post:
+  tags:
+    - bot/players
+  summary: Snooze (reporter) une action todo.
+  operationId: botSnoozePlayerAction
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            actionId:
+              type: string
+            snoozeUntil:
+              type: string
+              format: date-time
+  responses:
+    '200':
+      description: Snooze applique.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Ok'
+    '400':
+      $ref: '#/components/responses/BadRequest'

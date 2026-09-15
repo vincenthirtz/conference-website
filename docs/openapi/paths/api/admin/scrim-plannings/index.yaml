@@ -1,0 +1,45 @@
+get:
+  summary: List scrim planning sessions (shared availability grids).
+  operationId: adminListScrimPlannings
+  tags:
+    - admin/scrims
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Plannings.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Open a scrim planning session between two teams.
+  operationId: adminCreateScrimPlanning
+  tags:
+    - admin/scrims
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '201':
+      description: Planning created.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

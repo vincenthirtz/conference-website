@@ -1,0 +1,76 @@
+post:
+  tags:
+    - public/teams
+  summary: Rapporter le score d'un scrim de mon equipe.
+  description: >-
+    Decalque du report de match : un seul report -> `awaiting_opponent` ; deux
+    concordants -> scrim clos (`completed`, vainqueur calcule) ; deux divergents
+    -> `disputed`. Re-soumission supportee (un report par camp) TANT QUE LE
+    SCRIM N'EST PAS CLOS : une correction qui rejoint l'adversaire referme le
+    litige. Un scrim `completed` (ou `cancelled`) ne se re-rapporte plus : `409
+    SCRIM_CLOSED`, contestation par le staff (correctif du 2026-09-15 — le
+    re-rapport d'un scrim clos permettait de recreer son match miroir et
+    d'encaisser a nouveau les recompenses TCG). La bascule en litige est
+    conditionnelle : un scrim clos entre la lecture et le report divergent rend
+    aussi `409 SCRIM_CLOSED`. Permission requise : `manage_scrims` sur une des
+    deux equipes.
+  operationId: playerReportScrimScore
+  security:
+    - PlayerBearer: []
+  parameters:
+    - in: path
+      name: scrimId
+      required: true
+      schema:
+        type: string
+        format: uuid
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - team1Score
+            - team2Score
+          properties:
+            team1Score:
+              type: integer
+              minimum: 0
+              maximum: 99
+            team2Score:
+              type: integer
+              minimum: 0
+              maximum: 99
+  responses:
+    '200':
+      description: Report enregistre.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - outcome
+            properties:
+              outcome:
+                type: string
+                enum: [awaiting_opponent, completed, disputed]
+              scrimStatus:
+                type: string
+              winnerTeamId:
+                type: [string, 'null']
+                format: uuid
+              reason:
+                type: string
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'
+    '429':
+      $ref: '#/components/responses/RateLimited'

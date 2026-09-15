@@ -1,0 +1,54 @@
+parameters:
+  - name: name
+    in: path
+    required: true
+    schema:
+      type: string
+      maxLength: 64
+post:
+  tags:
+    - bot/misc
+  summary: Distributed lock claim / release pour le bot Discord.
+  operationId: botLockOperation
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - holder
+          properties:
+            holder:
+              type: string
+              maxLength: 100
+            ttlSeconds:
+              type: integer
+              minimum: 5
+              maximum: 3600
+              default: 60
+            action:
+              type: string
+              enum:
+                - claim
+                - release
+              default: claim
+  responses:
+    '200':
+      description: |
+        Resultat (claim ou release). Pour `claim` quand le lock est detenu par
+        un autre process, `acquired` est `false` et `currentHolder` est rempli.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Lock'
+    '201':
+      description: Lock acquis (premiere acquisition, row inseree).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Lock'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '500':
+      $ref: '#/components/responses/ServerError'

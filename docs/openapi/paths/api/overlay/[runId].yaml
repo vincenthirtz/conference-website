@@ -1,0 +1,37 @@
+get:
+  summary: OBS browser-source overlay state for a run.
+  description: |
+    PUBLIC (no auth), cacheable renderer feed for a run's OBS browser
+    source: scene + overlay flags from `broadcast_state`, the current match
+    (teams/scores/format/status) and the active sponsors. Driven live by
+    `event_runs.broadcast_state` via Supabase Realtime on the overlay page.
+
+    Never exposes staff-only fields (`auto_director`, casters, stream URLs,
+    checklists, broadcast messages…). When the run is unknown or not live, a
+    safe empty-ish shape (scene `'starting'`, `match` null, `onAir` false)
+    is returned with `200` so the browser source never errors mid-broadcast.
+    A malformed `runId` returns `400`. `Cache-Control: s-maxage=5,
+    stale-while-revalidate`.
+  operationId: getOverlayState
+  tags:
+    - public/misc
+  security: []
+  parameters:
+    - name: runId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: The `event_runs.id` to render.
+  responses:
+    '200':
+      description: Overlay state (empty-ish shape when the run is not live).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/OverlayState'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '405':
+      description: Méthode non autorisée (seul GET est accepté).

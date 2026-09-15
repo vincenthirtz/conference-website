@@ -1,0 +1,40 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: "[DEPRECATED] Matchs d'un tournoi (app caster)."
+  deprecated: true
+  description: |
+    **Déprécié** (Sunset 2026-12-23). Alias de
+    `/api/caster/v1/tournaments/{id}/matches`. Lecture publique
+    tenant-scopée (`x-tenant-id`). Statuts retenus : `pending`, `ongoing`,
+    `finished`.
+  operationId: casterListTournamentMatches
+  tags:
+    - public
+  security: []
+  parameters:
+    - $ref: '#/components/parameters/XTenantId'
+  responses:
+    '200':
+      description: Liste des matchs.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - matches
+            properties:
+              matches:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '500':
+      $ref: '#/components/responses/ServerError'

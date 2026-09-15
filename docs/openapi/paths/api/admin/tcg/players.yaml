@@ -1,0 +1,75 @@
+get:
+  summary: Chercher le compte d'une joueuse pour corriger son solde TCG.
+  description: |
+    `withStaffRoute(handler, { permission: 'manage_tcg' })` — le MEME droit
+    que la correction. Existe pour ne pas exiger `manage_staff`
+    (`/api/admin/users/search`) de qui corrige seulement un solde.
+
+    CANTONNEE A L'ESPACE DU STAFF (correctif du 2026-09-15). La route
+    appelait la RPC GLOBALE `admin_search_users` : tout owner d'espace — y
+    compris un espace developpeur cree en libre-service — lisait email,
+    BattleTag et equipe de tous les comptes de la plateforme. Elle appelle
+    desormais `admin_search_tcg_players(p_tenant_id, p_query)`
+    (migration `tcg_admin_search_players_scoped.sql`), qui filtre EN BASE
+    sur les comptes rattaches au tenant : roster du tenant, ou gain reel
+    au registre du tenant (`admin_grant`, `booster_purchase` et
+    `card_recycled` exclus). Recherche par pseudo et BattleTag ; l'email
+    n'est ni cherche ni rendu (`email` vaut toujours `null`).
+    20 resultats au plus. Une recherche en echec rend 500, jamais une liste
+    vide ; fonction SQL absente → 503 `SEARCH_UNAVAILABLE`, sans repli sur
+    la RPC globale. `private, no-store`. Rate-limit 60 / min.
+  operationId: adminSearchTcgPlayers
+  tags:
+    - admin/tcg
+  security:
+    - StaffSession: []
+  parameters:
+    - name: q
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 2
+        maxLength: 100
+  responses:
+    '200':
+      description: Comptes correspondants.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [players]
+            properties:
+              players:
+                type: array
+                maxItems: 20
+                items:
+                  type: object
+                  required: [id]
+                  properties:
+                    id: {type: string, format: uuid}
+                    email:
+                      type: [string, 'null']
+                      description: Toujours `null` (champ garde pour la forme partagee avec
+                        `/api/admin/users/search`).
+                    display_name: {type: [string, 'null']}
+                    battle_tag: {type: [string, 'null']}
+                    team_name:
+                      type: [string, 'null']
+                      description: Une equipe DE CET ESPACE.
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '405':
+      description: Method not allowed.
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+    '503':
+      description: |
+        `code: SEARCH_UNAVAILABLE` — la fonction SQL cantonnee a l'espace
+        n'est pas encore deployee. Jamais de repli sur la recherche globale.

@@ -1,0 +1,81 @@
+parameters:
+  - name: mapId
+    in: path
+    required: true
+    description: Id (UUID) de l'entrée de pool.
+    schema:
+      type: string
+      format: uuid
+patch:
+  summary: Update a map pool entry (partial).
+  description: >
+    Met à jour une entrée du pool tenant. 404 si la ligne n'appartient pas au
+    tenant actif (scope tenant strict).
+  operationId: adminUpdateMapPoolEntry
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            map_name:
+              type: string
+            map_type:
+              type: [string, 'null']
+            image_url:
+              type: [string, 'null']
+            enabled:
+              type: boolean
+            order_index:
+              type: [integer, 'null']
+  responses:
+    '200':
+      description: Map mise à jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              map:
+                type: object
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+delete:
+  summary: Delete a map pool entry.
+  description: >
+    Supprime une entrée du pool tenant. 404 si la ligne n'appartient pas au
+    tenant actif.
+  operationId: adminDeleteMapPoolEntry
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Supprimée.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              ok:
+                type: boolean
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

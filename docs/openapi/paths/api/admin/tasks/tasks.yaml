@@ -1,0 +1,37 @@
+post:
+  tags:
+    - admin/tasks
+  summary: Cree une carte (createTaskCore). Emet task.created + task.board_changed.
+  operationId: adminCreateTask
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [boardId, columnId, title]
+          properties:
+            boardId: {type: string, format: uuid}
+            columnId: {type: string, format: uuid}
+            title: {type: string}
+            description: {type: string}
+            priority: {type: string, enum: [low, medium, high, urgent]}
+            assigneeStaffId: {type: [string, 'null'], format: uuid}
+            dueDate: {type: string}
+            labels:
+              type: array
+              items: {type: string}
+  responses:
+    '201':
+      description: Carte creee.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

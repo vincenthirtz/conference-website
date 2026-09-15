@@ -1,0 +1,39 @@
+post:
+  summary: Bulk-import teams from raw CSV text.
+  description: |
+    Requires `admin` role. Body is `{ csv: string, tournamentId?: uuid }`.
+    CSV format: `name,short_name,country,players` with players being a
+    `;`-separated list of battle tags. First row is the header and is
+    ignored. Max rows defined by `MAX_ROWS` server-side.
+  operationId: adminImportCsvTeams
+  tags:
+    - admin/teams
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - csv
+          properties:
+            csv:
+              type: string
+            tournamentId:
+              type: string
+              format: uuid
+  responses:
+    '200':
+      description: Import result.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ImportCsvResult'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

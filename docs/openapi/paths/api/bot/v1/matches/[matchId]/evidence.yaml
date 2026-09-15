@@ -1,0 +1,141 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+get:
+  tags:
+    - bot/matches
+  summary: Vue capitaine — liste les preuves attachées à un de ses matches.
+  operationId: botListMatchEvidence
+  parameters:
+    - name: actorDiscordUserId
+      in: query
+      required: true
+      schema:
+        $ref: '#/components/schemas/DiscordId'
+  responses:
+    '200':
+      description: Liste des preuves (URLs signées courte-durée pour les binaires).
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - matchId
+              - evidence
+            properties:
+              matchId:
+                $ref: '#/components/schemas/Uuid'
+              evidence:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MatchEvidenceItem'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+post:
+  tags:
+    - bot/matches
+  summary: Capitaine attache une preuve à un match (capture, replay, ou lien).
+  description: |
+    Union discriminée sur `kind`. `screenshot` / `replay_file` portent un
+    binaire base64 (validé : magic bytes + extension allowlistée), hashé
+    (sha256) et uploadé dans le bucket privé `match-evidence` ; `replay_url`
+    porte un lien externe. Le camp (`team_side`) est déduit du capitaine
+    appelant. Limite de corps 15 Mo. Rate limit : 40/min par IP + 10/min
+    par acteur (`discordUserId`). `Idempotency-Key` honoré (réponses 2xx).
+  operationId: botAttachMatchEvidence
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          oneOf:
+            - type: object
+              required:
+                - kind
+                - discordUserId
+                - file_base64
+                - filename
+              properties:
+                kind:
+                  type: string
+                  enum:
+                    - screenshot
+                discordUserId:
+                  $ref: '#/components/schemas/DiscordId'
+                file_base64:
+                  type: string
+                  minLength: 1
+                  description: Contenu binaire encodé base64.
+                filename:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                note:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+            - type: object
+              required:
+                - kind
+                - discordUserId
+                - file_base64
+                - filename
+              properties:
+                kind:
+                  type: string
+                  enum:
+                    - replay_file
+                discordUserId:
+                  $ref: '#/components/schemas/DiscordId'
+                file_base64:
+                  type: string
+                  minLength: 1
+                filename:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                note:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+            - type: object
+              required:
+                - kind
+                - discordUserId
+                - external_url
+              properties:
+                kind:
+                  type: string
+                  enum:
+                    - replay_url
+                discordUserId:
+                  $ref: '#/components/schemas/DiscordId'
+                external_url:
+                  type: string
+                  format: uri
+                note:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+  responses:
+    '201':
+      description: Preuve enregistrée.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MatchEvidenceCreateResult'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

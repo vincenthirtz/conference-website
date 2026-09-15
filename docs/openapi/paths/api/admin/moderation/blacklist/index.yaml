@@ -1,0 +1,70 @@
+get:
+  summary: List blacklist entries for the current tenant (search, active filter).
+  operationId: adminListBlacklist
+  tags:
+    - admin/content
+  security:
+    - StaffSession: []
+  parameters:
+    - name: search
+      in: query
+      schema:
+        type: string
+    - name: active
+      in: query
+      schema:
+        type: string
+        enum: ['true', 'false']
+    - name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    - name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+  responses:
+    '200':
+      description: Blacklist entries.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Create a blacklist entry (at least one identifier required).
+  operationId: adminCreateBlacklist
+  tags:
+    - admin/content
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '201':
+      description: Created.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

@@ -1,0 +1,58 @@
+parameters:
+  - $ref: '#/components/parameters/TournamentId'
+get:
+  tags:
+    - bot/tournaments
+  summary: Liste les equipes inscrites au tournoi.
+  operationId: botListTournamentTeams
+  responses:
+    '200':
+      description: Liste des inscriptions.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              teams:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Team'
+post:
+  tags:
+    - bot/tournaments
+  summary: Inscrit une equipe au tournoi (staff ou capitaine pour son equipe).
+  operationId: botRegisterTeamToTournament
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - actorDiscordUserId
+            - teamId
+          properties:
+            actorDiscordUserId:
+              $ref: '#/components/schemas/DiscordId'
+            teamId:
+              $ref: '#/components/schemas/Uuid'
+            stageId:
+              $ref: '#/components/schemas/Uuid'
+  responses:
+    '201':
+      description: Equipe inscrite.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'

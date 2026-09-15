@@ -1,0 +1,35 @@
+get:
+  tags:
+    - cron
+  summary: Dispatcher des webhooks sortants (lit bot_event_outbox, POST signés).
+  operationId: cronWebhookDispatchGet
+  description: |
+    Schedule: chaque minute (`* * * * *`) via Netlify scheduled function
+    `webhook-dispatcher-cron`. Lit `bot_event_outbox` en read-only, fan-out
+    vers les `webhook_subscriptions` actives de chaque tenant (POST signé
+    HMAC-SHA256), tracking + retry dans `webhook_deliveries`.
+
+    Auth: `Authorization: Bearer <CRON_SECRET>` ou `?secret=<CRON_SECRET>`.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Résumé du tick (delivered / failed / skipped / disabled).
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - cron
+  summary: Dispatcher des webhooks sortants (variante POST).
+  operationId: cronWebhookDispatchPost
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Résumé du tick.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'
