@@ -303,7 +303,12 @@ export function sendTeamJoinEmail(
           </p>
         </td></tr>
       </table>
-      ${ctaButton(SITE_URL + '/login', 'Voir mon équipe')}
+      <p style="margin:0 0 24px;font-size:13px;color:#9081B0;line-height:1.6;">
+        Vous n&apos;avez pas demand&eacute; &agrave; rejoindre cette &eacute;quipe&nbsp;?
+        Vous pouvez la quitter &agrave; tout moment depuis votre espace joueuse,
+        avec le bouton &laquo;&nbsp;Quitter l&apos;&eacute;quipe&nbsp;&raquo;.
+      </p>
+      ${ctaButton(SITE_URL + '/player', 'Voir mon équipe')}
     `),
   });
 }
