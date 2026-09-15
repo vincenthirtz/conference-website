@@ -718,6 +718,12 @@
       "tournament_id",
       "user_id"
     ],
+    "match_prediction_settings": [
+      "show_in_leaderboard",
+      "tenant_id",
+      "updated_at",
+      "user_id"
+    ],
     "match_predictions": [
       "created_at",
       "id",
@@ -2421,6 +2427,10 @@
     "match_participants_tournament_id_fkey": {
       "source": "match_participants",
       "target": "tournaments"
+    },
+    "match_prediction_settings_tenant_id_fkey": {
+      "source": "match_prediction_settings",
+      "target": "tenants"
     },
     "match_predictions_match_id_fkey": {
       "source": "match_predictions",

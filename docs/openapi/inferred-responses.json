@@ -17293,11 +17293,175 @@
        "maps",
        "heroes"
       ]
+     },
+     "tiers": {
+      "type": "object",
+      "properties": {
+       "tiers": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "label": {
+           "type": "string",
+           "enum": [
+            "A",
+            "B",
+            "C",
+            "S"
+           ]
+          },
+          "teams": {
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "teamId": {
+              "type": "string"
+             },
+             "name": {
+              "type": "string"
+             },
+             "played": {
+              "type": "number"
+             },
+             "wins": {
+              "type": "number"
+             },
+             "losses": {
+              "type": "number"
+             },
+             "winRate": {
+              "type": "number"
+             },
+             "mapRate": {
+              "type": "number"
+             },
+             "score": {
+              "type": "number"
+             },
+             "tier": {
+              "type": "string",
+              "enum": [
+               "A",
+               "B",
+               "C",
+               "S"
+              ]
+             }
+            },
+            "required": [
+             "teamId",
+             "name",
+             "played",
+             "wins",
+             "losses",
+             "winRate",
+             "mapRate",
+             "score",
+             "tier"
+            ]
+           }
+          }
+         },
+         "required": [
+          "label",
+          "teams"
+         ]
+        }
+       },
+       "unranked": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "name": {
+           "type": "string"
+          },
+          "teamId": {
+           "type": "string"
+          },
+          "wins": {
+           "type": "number"
+          },
+          "losses": {
+           "type": "number"
+          },
+          "played": {
+           "type": "number"
+          },
+          "winRate": {
+           "type": "number"
+          },
+          "mapRate": {
+           "type": "number"
+          }
+         },
+         "required": [
+          "name",
+          "teamId",
+          "wins",
+          "losses",
+          "played",
+          "winRate",
+          "mapRate"
+         ]
+        }
+       },
+       "minPlayed": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "tiers",
+       "unranked",
+       "minPlayed"
+      ]
+     },
+     "duels": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "teamAId": {
+         "type": "string"
+        },
+        "teamBId": {
+         "type": "string"
+        },
+        "matches": {
+         "type": "number"
+        },
+        "aWins": {
+         "type": "number"
+        },
+        "bWins": {
+         "type": "number"
+        },
+        "aMapWins": {
+         "type": "number"
+        },
+        "bMapWins": {
+         "type": "number"
+        }
+       },
+       "required": [
+        "teamAId",
+        "teamBId",
+        "matches",
+        "aWins",
+        "bWins",
+        "aMapWins",
+        "bMapWins"
+       ]
+      }
      }
     },
     "required": [
      "tournament",
-     "analytics"
+     "analytics",
+     "tiers",
+     "duels"
     ]
    }
   },
@@ -35355,6 +35519,19 @@
      "open",
      "recent",
      "ineligibility"
+    ]
+   }
+  },
+  "GET /api/player/predictions/leaderboard": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "showsMyName": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "showsMyName"
     ]
    }
   },
@@ -63550,6 +63727,7 @@
   "pages/api/cron/tenant-purge.ts:163",
   "pages/api/invitations/[token].ts:143",
   "pages/api/player/predictions/[matchId].ts:193",
+  "pages/api/player/predictions/leaderboard.ts:91",
   "pages/api/player/team-reviews.ts:395",
   "pages/api/teams/invitations/index.ts:314",
   "pages/api/teams/invite-links/by-token.ts:229",

@@ -24,6 +24,28 @@ export default {
   kpiOvertime: '% Overtime',
   kpiDecisiveGames: '% Decisive games',
   kpiTotalMatches: 'Total matches',
+  tierListTitle: 'Tier list',
+  tierListSubtitle:
+    'Composite : 65 % de matchs gagnés, 35 % de manches gagnées. Seuils fixes — un plateau serré peut n’avoir aucune équipe en S.',
+  tierListEmpty: 'Pas encore assez de matchs joués pour classer les équipes.',
+  tierTeamTitle:
+    '{wins} victoires, {losses} défaites — {maps} de manches gagnées',
+  tierUnranked: 'Non classées (moins de {minPlayed} matchs joués) : {teams}.',
+  comparatorTitle: 'Comparateur',
+  comparatorSubtitle:
+    'Deux équipes côte à côte, et leur face-à-face réel dans ce tournoi.',
+  comparatorLeft: 'Équipe A',
+  comparatorRight: 'Équipe B',
+  comparatorMetric: 'Mesure',
+  comparatorPlayed: 'Matchs joués',
+  comparatorRecord: 'Bilan (V–D)',
+  comparatorWinRate: 'Taux de victoire',
+  comparatorMaps: 'Manches (gagnées–perdues)',
+  comparatorDuel:
+    'Face-à-face : {matches} match(s) — {left} {leftWins}, {right} {rightWins} ; manches {leftMaps}–{rightMaps}.',
+  comparatorNoDuel:
+    'Ces deux équipes ne se sont pas rencontrées dans ce tournoi.',
+  comparatorPickTwo: 'Choisissez deux équipes différentes.',
   teamsTitle: 'Teams',
   teamsSubtitle: 'Standings provided by the API',
   teamsEmpty: 'No team statistics.',

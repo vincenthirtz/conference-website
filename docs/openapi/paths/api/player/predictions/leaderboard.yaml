@@ -1,0 +1,64 @@
+get:
+  tags:
+    - public/auth
+  summary: Classement des pronostiqueuses de l'espace (ou d'un tournoi).
+  description: |
+    Cumul des pronostics TRANCHES : les `void` (forfait, annulation) ne comptent
+    ni en bien ni en mal. Rangs partages en cas d'ex aequo, et seuil d'entree
+    (`minSettled`) pour qu'un seul pronostic juste ne prenne pas la premiere
+    place.
+
+    ON COMPTE TOUT LE MONDE, ON NE NOMME QUE SUR ACCORD : `displayName` vaut
+    `null` tant que la personne n'a pas accepte d'etre nommee
+    (`match_prediction_settings`). Chacune voit toujours sa propre ligne (`me`).
+    Derriere connexion et `no-store` : un classement de spectatrices n'a rien a
+    faire dans un moteur de recherche.
+  operationId: getPlayerPredictionLeaderboard
+  security:
+    - PlayerBearer: []
+  parameters:
+    - name: tournamentId
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/Uuid'
+      description: Restreint le classement aux matchs de ce tournoi.
+  responses:
+    '200':
+      description: Classement, ligne personnelle et preference d'affichage.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      $ref: '#/components/responses/ServerError'
+put:
+  tags:
+    - public/auth
+  summary: Accepter (ou retirer) d'etre nommee au classement.
+  description: |
+    `{ showInLeaderboard: boolean }`. Le defaut est FAUX : le silence n'est pas
+    un accord. Retirer son accord ne retire pas son rang — seul le pseudo
+    redevient « Anonyme ». 20 / min.
+  operationId: putPlayerPredictionLeaderboardVisibility
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [showInLeaderboard]
+          properties:
+            showInLeaderboard:
+              type: boolean
+  responses:
+    '200':
+      description: Preference enregistree.
+    '400':
+      description: '`code: invalid_choice`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

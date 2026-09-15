@@ -22,6 +22,7 @@ import type {
   PlayerPredictionsResponse,
   PredictionListItem,
 } from '@/utils/predictions/readState';
+import PredictionLeaderboard from './PredictionLeaderboard';
 import {
   resultLabel,
   resultTone,
@@ -101,9 +102,16 @@ export default function PredictionsPanel({
         {t.panelTitle}
       </h2>
       {data && (
-        <p className="mt-1 max-w-prose text-sm text-gray-400">
-          {format(t.intro, { coins: data.reward })}
-        </p>
+        <>
+          <p className="mt-1 max-w-prose text-sm text-gray-400">
+            {format(t.intro, { coins: data.reward })}
+          </p>
+          {/* Dit qui peut jouer : une supportrice qui n'est dans aucune équipe
+              a autant sa place ici qu'une joueuse. */}
+          <p className="mt-1 max-w-prose text-sm text-gray-500">
+            {t.openToAll}
+          </p>
+        </>
       )}
 
       {state === 'loading' && (
@@ -179,6 +187,9 @@ export default function PredictionsPanel({
               ))}
             </ul>
           )}
+          {/* Classement : composant autonome, chargé en même temps que le
+              panneau. Il porte sa propre préférence d'affichage du pseudo. */}
+          <PredictionLeaderboard className="mt-6" />
         </>
       )}
     </section>

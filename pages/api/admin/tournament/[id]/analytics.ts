@@ -11,6 +11,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 import {
+  computeTeamDuels,
+  computeTeamTiers,
+} from '@/utils/analytics/teamTiers';
+import {
   computeTournamentAnalytics,
   type AnalyticsMatch,
   type AnalyticsGame,
@@ -223,7 +227,14 @@ async function handler(
       teamsById,
     });
 
-    return res.status(200).json({ tournament, analytics });
+    // Tier list et duels : deux lectures de plus sur les MÊMES lignes, déjà
+    // chargées. Elles servent à préparer un tournoi (poules, têtes de série,
+    // affiches) et restent dans l'écran d'analyse du staff — la page publique
+    // ne classe personne en « C ».
+    const tiers = computeTeamTiers(analytics.teams);
+    const duels = computeTeamDuels({ matches, games });
+
+    return res.status(200).json({ tournament, analytics, tiers, duels });
   } catch (err: unknown) {
     logger.error('[admin/tournament/analytics] internal error:', err);
     return res.status(500).json({ error: 'Internal server error' });

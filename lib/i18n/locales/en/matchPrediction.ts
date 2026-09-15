@@ -34,6 +34,31 @@ export default {
   errorLocked: 'Too late: predictions just closed.',
   errorGeneric: 'Couldn’t save your prediction. Try again.',
   loadError: 'Couldn’t load the prediction.',
+  openToAll:
+    'Open to everyone, supporters included: an account is all it takes. Only the two teams playing and the staff are kept out.',
+  leaderboardTitle: 'Predictors leaderboard',
+  leaderboardIntro:
+    'All settled predictions in this space. Forfeits and cancelled matches count neither for nor against.',
+  leaderboardEmpty: 'No prediction has been settled yet.',
+  leaderboardError: 'Couldn’t load the leaderboard.',
+  leaderboardColRank: 'Rank',
+  leaderboardColName: 'Predictor',
+  leaderboardColCorrect: 'Correct',
+  leaderboardColAccuracy: 'Accuracy',
+  leaderboardAnonymous: 'Anonymous',
+  leaderboardYou: 'You',
+  leaderboardMine:
+    'Your rank: {rank} — {correct} correct out of {settled} ({accuracy}%)',
+  leaderboardMinePending:
+    '{missing} more prediction(s) need settling before you enter the leaderboard. So far: {correct} correct out of {settled}.',
+  leaderboardMineNone: 'None of your predictions have been settled yet.',
+  leaderboardOptInLabel: 'Show my name on this leaderboard',
+  leaderboardOptInHelp:
+    'Without your consent your rank still counts: only your name is replaced by “Anonymous”. You always see your own rank.',
+  leaderboardOptInSaved: 'Preference saved.',
+  leaderboardOptInError: 'Preference not saved. Try again.',
+  leaderboardTruncated:
+    'Leaderboard computed on the first recorded predictions: beyond that it is partial.',
   panelTitle: 'Predictions',
   openTitle: 'Open for predictions',
   openEmpty: 'No upcoming match is open for predictions.',

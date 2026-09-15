@@ -22,10 +22,15 @@ import type {
   TournamentAnalyticsTeam,
 } from '@/utils/analytics/tournamentAnalytics';
 import nsAdminTournamentAnalytics from '@/lib/i18n/locales/admin-fr/adminTournamentAnalytics';
+import TierListPanel from './TierListPanel';
+import type { TeamDuel, TierList } from '@/utils/analytics/teamTiers';
 
 type AnalyticsResponse = {
   tournament: { id: string; name: string; slug: string | null };
   analytics: TournamentAnalytics;
+  /** Tier list et duels : mêmes lignes, deux lectures de plus (cf. l'API). */
+  tiers?: TierList;
+  duels?: TeamDuel[];
 };
 
 /** Fraction 0..1 -> "xx %". */
@@ -170,6 +175,15 @@ export default function StatsAnalyticsPanel() {
           {/* Heros (masquee si vide) */}
           {analytics.heroes.length > 0 && (
             <HeroesTable heroes={analytics.heroes} />
+          )}
+
+          {/* Tier list + comparateur : outils de préparation, staff seulement. */}
+          {data?.tiers && (
+            <TierListPanel
+              tiers={data.tiers}
+              duels={data.duels ?? []}
+              teams={analytics.teams}
+            />
           )}
         </div>
       )}

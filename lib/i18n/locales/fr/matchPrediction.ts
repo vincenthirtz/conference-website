@@ -41,6 +41,31 @@ export default ns('matchPrediction', {
   errorLocked: 'Trop tard : les pronostics viennent de fermer.',
   errorGeneric: 'Pronostic impossible pour le moment. Réessaie.',
   loadError: 'Impossible de charger le pronostic.',
+  openToAll:
+    'Ouvert à tout le monde, supportrices comprises : il suffit d’un compte. Seules les deux équipes du match et le staff en sont écartés.',
+  leaderboardTitle: 'Classement des pronostiqueuses',
+  leaderboardIntro:
+    'Cumul des pronostics tranchés de l’espace. Les forfaits et matchs annulés ne comptent ni en bien ni en mal.',
+  leaderboardEmpty: 'Aucun pronostic n’a encore été tranché.',
+  leaderboardError: 'Impossible de charger le classement.',
+  leaderboardColRank: 'Rang',
+  leaderboardColName: 'Pronostiqueuse',
+  leaderboardColCorrect: 'Justes',
+  leaderboardColAccuracy: 'Précision',
+  leaderboardAnonymous: 'Anonyme',
+  leaderboardYou: 'Toi',
+  leaderboardMine:
+    'Ton rang : {rank} — {correct} justes sur {settled} ({accuracy} %)',
+  leaderboardMinePending:
+    'Encore {missing} pronostic(s) à faire trancher pour entrer au classement. Pour l’instant : {correct} justes sur {settled}.',
+  leaderboardMineNone: 'Tu n’as encore aucun pronostic tranché.',
+  leaderboardOptInLabel: 'Afficher mon pseudo dans ce classement',
+  leaderboardOptInHelp:
+    'Sans accord, ton rang compte quand même : seul ton pseudo est remplacé par « Anonyme ». Ton propre rang t’est toujours visible.',
+  leaderboardOptInSaved: 'Préférence enregistrée.',
+  leaderboardOptInError: 'Préférence non enregistrée. Réessaie.',
+  leaderboardTruncated:
+    'Classement calculé sur les premiers pronostics enregistrés : au-delà, il est partiel.',
   panelTitle: 'Pronostics',
   openTitle: 'À pronostiquer',
   openEmpty: 'Aucun match à venir n’est ouvert aux pronostics.',

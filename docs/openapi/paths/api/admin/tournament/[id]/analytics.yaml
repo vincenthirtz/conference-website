@@ -23,7 +23,22 @@ get:
             required:
               - tournament
               - analytics
+              - tiers
+              - duels
             properties:
+              tiers:
+                type: object
+                additionalProperties: true
+                description: >-
+                  Tier list des equipes (seuils absolus, cf.
+                  utils/analytics/teamTiers.ts). Outil d'organisation : jamais
+                  expose sur la page publique du tournoi.
+              duels:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+                description: Rencontres REELLEMENT jouees entre deux equipes.
               tournament:
                 type: object
                 additionalProperties: true
