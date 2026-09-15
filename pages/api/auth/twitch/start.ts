@@ -18,7 +18,7 @@
 // Cf. l'en-tête de `utils/twitchIdentity.ts`.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { serialize } from 'cookie';
+import { stringifySetCookie } from 'cookie';
 
 import { getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
@@ -86,7 +86,9 @@ export default async function handler(
 
   res.setHeader(
     'Set-Cookie',
-    serialize(STATE_COOKIE, nonce, {
+    stringifySetCookie({
+      name: STATE_COOKIE,
+      value: nonce,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',

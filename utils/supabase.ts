@@ -1,7 +1,7 @@
 // utils/supabase.ts (ou lib/supabase.ts)
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
-import { serialize } from 'cookie';
+import { stringifySetCookie } from 'cookie';
 import { logger } from './logger';
 import type {
   GetServerSidePropsContext,
@@ -115,7 +115,11 @@ export function getServerClient(
         for (const { name, value, options } of cookiesToSet) {
           appendSetCookie(
             res,
-            serialize(name, value, hardenCookieOptions(name, options))
+            stringifySetCookie({
+              name,
+              value,
+              ...hardenCookieOptions(name, options),
+            })
           );
         }
         // En-têtes anti-cache (Cache-Control/Expires/Pragma) à poser sur toute

@@ -22,7 +22,7 @@
 // compte inconnu est renvoyé vers /login avec `?battlenet=not_linked`.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { serialize } from 'cookie';
+import { stringifySetCookie } from 'cookie';
 import { applyRateLimit } from '@/utils/rateLimit';
 import {
   isBattlenetConfigured,
@@ -86,7 +86,9 @@ export default async function handler(
 
   res.setHeader(
     'Set-Cookie',
-    serialize(LOGIN_STATE_COOKIE, nonce, {
+    stringifySetCookie({
+      name: LOGIN_STATE_COOKIE,
+      value: nonce,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',

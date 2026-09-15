@@ -31,7 +31,7 @@
 //     par le garde-fou de session du flux de vérification.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { serialize } from 'cookie';
+import { stringifySetCookie } from 'cookie';
 import { getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import {
@@ -89,7 +89,9 @@ function withStatus(returnTo: string, status: BattlenetStatus): string {
 }
 
 function clearCookie(res: NextApiResponse, name: string): void {
-  const cookie = serialize(name, '', {
+  const cookie = stringifySetCookie({
+    name: name,
+    value: '',
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',

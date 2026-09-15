@@ -12,7 +12,7 @@
 // - 503 { code:'TWITCH_NOT_CONFIGURED' } si la feature est dormante.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { serialize } from 'cookie';
+import { stringifySetCookie } from 'cookie';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import {
@@ -71,7 +71,9 @@ async function handler(
 
   res.setHeader(
     'Set-Cookie',
-    serialize(STATE_COOKIE, nonce, {
+    stringifySetCookie({
+      name: STATE_COOKIE,
+      value: nonce,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',

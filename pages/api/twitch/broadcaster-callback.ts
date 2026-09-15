@@ -16,7 +16,7 @@
 // log serveur (sans secret).
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { serialize } from 'cookie';
+import { stringifySetCookie } from 'cookie';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { logStaffAction } from '@/utils/staffLogs';
@@ -56,7 +56,9 @@ function withStatus(returnTo: string, status: TwitchStatus): string {
 function clearStateCookie(res: NextApiResponse): void {
   res.setHeader(
     'Set-Cookie',
-    serialize(STATE_COOKIE, '', {
+    stringifySetCookie({
+      name: STATE_COOKIE,
+      value: '',
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',

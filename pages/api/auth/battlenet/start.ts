@@ -10,7 +10,7 @@
 //   (nonce + auth_user_id + returnTo) et redirige (302) vers Blizzard.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { serialize } from 'cookie';
+import { stringifySetCookie } from 'cookie';
 import { getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import {
@@ -90,7 +90,9 @@ export default async function handler(
 
   appendSetCookie(
     res,
-    serialize(STATE_COOKIE, nonce, {
+    stringifySetCookie({
+      name: STATE_COOKIE,
+      value: nonce,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
