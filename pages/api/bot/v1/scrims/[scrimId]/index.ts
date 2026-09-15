@@ -18,6 +18,7 @@ import {
   isoDateSchema,
 } from '@/utils/botValidation';
 import { logger } from '@/utils/logger';
+import { syncScrimRatedMatch } from '@/utils/scrims/ratedMatch';
 
 const VALID_STATUSES = [
   'draft',
@@ -169,17 +170,41 @@ async function handlePatch(
       .json({ error: 'team1_id et team2_id doivent etre distincts' });
   }
 
-  const { data: after, error: updErr } = await supabaseAdmin!
+  // Même garde que la route admin : un changement de statut ne s'applique que
+  // sur l'état lu (une annulation ne croise pas l'accord des capitaines).
+  let updateQuery = supabaseAdmin!
     .from('scrims')
     .update(updatePayload)
     .eq('tenant_id', req.botContext.tenantId)
-    .eq('id', before.id)
+    .eq('id', before.id);
+  if (updatePayload.status !== undefined && before.status) {
+    updateQuery = updateQuery.eq('status', before.status as string);
+  }
+  const { data: after, error: updErr } = await updateQuery
     .select('*')
-    .single();
+    .maybeSingle();
 
-  if (updErr || !after) {
+  if (updErr) {
     logger.error('[bot/scrim] PATCH error:', updErr);
     return res.status(500).json({ error: 'Failed to update scrim' });
+  }
+  if (!after) {
+    return res.status(409).json({
+      error:
+        'Le scrim a changé entre-temps (résultat déclaré ou statut modifié) : recharge-le avant de le modifier.',
+      code: 'SCRIM_CHANGED',
+    });
+  }
+
+  // Le miroir noté suit le statut et les équipes, comme côté admin : sans ce
+  // réalignement, un scrim annulé depuis Discord gardait ses points au rating
+  // et au classement de saison.
+  if (
+    updatePayload.status !== undefined ||
+    updatePayload.team1_id !== undefined ||
+    updatePayload.team2_id !== undefined
+  ) {
+    await syncScrimRatedMatch(req.botContext.tenantId, before.id as string);
   }
 
   await logBotStaffAction({

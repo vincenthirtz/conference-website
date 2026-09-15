@@ -223,17 +223,31 @@ async function handlePatch(
       .json({ error: 'team1_id et team2_id doivent etre distincts' });
   }
 
-  const { data: after, error: updErr } = await supabaseAdmin!
+  // Un changement de STATUT n'est appliqué que si le scrim est toujours dans
+  // l'état que le staff a lu : sinon une annulation pouvait croiser l'accord
+  // des capitaines (ou l'inverse) et écraser un état qu'elle n'a jamais vu.
+  let updateQuery = supabaseAdmin!
     .from('scrims')
     .update(updatePayload)
     .eq('id', id)
-    .eq('tenant_id', ctx.tenantId)
+    .eq('tenant_id', ctx.tenantId);
+  if (updatePayload.status !== undefined && before.status) {
+    updateQuery = updateQuery.eq('status', before.status as string);
+  }
+  const { data: after, error: updErr } = await updateQuery
     .select('*')
-    .single();
+    .maybeSingle();
 
-  if (updErr || !after) {
+  if (updErr) {
     logger.error('[admin/scrims/:id] PATCH error:', updErr);
     return res.status(500).json({ error: 'Failed to update scrim' });
+  }
+  if (!after) {
+    return res.status(409).json({
+      error:
+        'Le scrim a changé entre-temps (résultat déclaré ou statut modifié) : recharge-le avant de le modifier.',
+      code: 'SCRIM_CHANGED',
+    });
   }
 
   if (ctx.staff?.id) {

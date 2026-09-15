@@ -33,6 +33,7 @@ import {
   resetSupabaseMock,
   setAuthUser,
   seedBotAuth,
+  supabaseAdmin,
 } from './__helpers__/supabaseMock';
 import { invalidateStaffCache } from '../../utils/staff';
 
@@ -122,6 +123,27 @@ beforeEach(() => {
 /* -----------------------------------------------------------
  * /api/admin/scrims
  * ---------------------------------------------------------*/
+
+/** Simule un changement de statut concurrent JUSTE APRÈS la lecture de la route. */
+function changeStatusAfterRead(nextStatus: string) {
+  const real = supabaseAdmin.from.bind(supabaseAdmin);
+  let done = false;
+  return vi.spyOn(supabaseAdmin, 'from').mockImplementation((name: string) => {
+    const builder: any = real(name);
+    if (name === 'scrims' && !done) {
+      const original = builder.maybeSingle?.bind(builder);
+      if (original) {
+        builder.maybeSingle = async () => {
+          const result = await original();
+          done = true;
+          (store.scrims as any[])[0].status = nextStatus;
+          return result;
+        };
+      }
+    }
+    return builder;
+  });
+}
 
 describe('/api/admin/scrims', () => {
   it('GET 401 when unauthenticated', async () => {
@@ -327,6 +349,27 @@ describe('/api/admin/scrims/[scrimId]', () => {
     expect(res.statusCode).toBe(200);
     expect((res.body as any).scrim.status).toBe('scheduled');
     expect((res.body as any).scrim.is_public).toBe(true);
+  });
+
+  it('PATCH status : 409 si le scrim a changé depuis la lecture (course avec l’accord des capitaines)', async () => {
+    (store.scrims as any[])[0].status = 'scheduled';
+    const spy = changeStatusAfterRead('completed');
+    const res = makeRes();
+    try {
+      await adminScrimIdHandler(
+        makeAuthedReq({
+          method: 'PATCH',
+          query: { scrimId: SCRIM_ID },
+          body: { status: 'cancelled' },
+        }),
+        res
+      );
+    } finally {
+      spy.mockRestore();
+    }
+    expect(res.statusCode).toBe(409);
+    expect((res.body as any).code).toBe('SCRIM_CHANGED');
+    expect((store.scrims as any[])[0].status).toBe('completed');
   });
 
   it('DELETE soft-deletes the scrim', async () => {
@@ -825,6 +868,25 @@ describe('/api/bot/scrims/[scrimId]', () => {
     );
     expect(res.statusCode).toBe(200);
     expect((res.body as any).scrim.status).toBe('completed');
+  });
+
+  it('PATCH status : 409 si le scrim a changé depuis la lecture', async () => {
+    const spy = changeStatusAfterRead('completed');
+    const res = makeRes();
+    try {
+      await botScrimIdHandler(
+        makeBotReq({
+          method: 'PATCH',
+          body: { actorDiscordUserId: DISCORD_ID, status: 'cancelled' },
+        }),
+        res
+      );
+    } finally {
+      spy.mockRestore();
+    }
+    expect(res.statusCode).toBe(409);
+    expect((res.body as any).code).toBe('SCRIM_CHANGED');
+    expect((store.scrims as any[])[0].status).toBe('completed');
   });
 
   it('PATCH 400 when no fields', async () => {

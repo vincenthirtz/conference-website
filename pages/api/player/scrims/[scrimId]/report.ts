@@ -217,7 +217,13 @@ export default withAuthRoute(async function handler(
   );
 
   if (!applied.ok) {
-    return res.status(applied.status).json({ error: applied.error });
+    return res
+      .status(applied.status)
+      .json(
+        applied.code
+          ? { error: applied.error, code: applied.code }
+          : { error: applied.error }
+      );
   }
 
   // Le bot annonce la fin du scrim dans le salon d'équipe. Fire-and-forget :

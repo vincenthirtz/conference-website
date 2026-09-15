@@ -46,7 +46,13 @@ export function winnerFromScores(
 
 export type ApplyResult =
   | { ok: true; status: 'completed'; winnerTeamId: string | null }
-  | { ok: false; error: string; status: number };
+  | { ok: false; error: string; status: number; code?: 'SCRIM_CLOSED' };
+
+/**
+ * Statuts qu'un report de capitaine ne peut plus faire basculer — ni en litige,
+ * ni en clôture : un scrim clos ne se re-clôt pas, un scrim annulé non plus.
+ */
+const CLOSED_FOR_DISPUTE = ['completed', 'cancelled'] as const;
 
 /**
  * Clôt un scrim sur un score validé par les deux camps.
@@ -69,7 +75,13 @@ export async function applyScrimResult(
     team2Score
   );
 
-  const { error } = await supabaseAdmin
+  // CONDITIONNELLE, comme `markScrimDisputed` : un scrim déjà clos ou ANNULÉ
+  // ne se clôt pas. La route relit le statut avant d'appeler, mais entre sa
+  // lecture et cette écriture le staff peut avoir annulé le scrim ; sans la
+  // condition, l'accord des capitaines le re-clôturait — et le miroir noté
+  // (rating Glicko, points de saison) comptait un scrim que le staff venait
+  // d'écarter. `.select()` rend les lignes réellement modifiées : zéro = refus.
+  const { data: closedRows, error } = await supabaseAdmin
     .from('scrims')
     .update({
       status: 'completed',
@@ -83,7 +95,9 @@ export async function applyScrimResult(
       dispute_reason: null,
     })
     .eq('id', scrim.id)
-    .eq('tenant_id', tenantId);
+    .eq('tenant_id', tenantId)
+    .not('status', 'in', `(${CLOSED_FOR_DISPUTE.join(',')})`)
+    .select('id');
 
   if (error) {
     logger.error('[scrimResult] apply error', error);
@@ -91,6 +105,16 @@ export async function applyScrimResult(
       ok: false,
       error: 'Enregistrement du résultat impossible.',
       status: 500,
+    };
+  }
+
+  if (!Array.isArray(closedRows) || closedRows.length === 0) {
+    // Rien d'écrit : le miroir n'est PAS resynchronisé — c'est tout l'objet.
+    return {
+      ok: false,
+      error: 'Scrim clos : contacte le staff pour le modifier.',
+      status: 409,
+      code: 'SCRIM_CLOSED',
     };
   }
 
@@ -102,9 +126,6 @@ export async function applyScrimResult(
 
   return { ok: true, status: 'completed', winnerTeamId };
 }
-
-/** Statuts qu'un report de capitaine ne peut plus faire basculer en litige. */
-const CLOSED_FOR_DISPUTE = ['completed', 'cancelled'] as const;
 
 /**
  * Bascule un scrim en litige quand les deux reports divergent.

@@ -31,6 +31,7 @@ import {
   winnerFromScores,
   reportsAgree,
   markScrimDisputed,
+  applyScrimResult,
 } from '../../utils/scrims/scrimResult';
 import { SCRIM_WIN_COINS } from '../../utils/tcg/economy';
 
@@ -398,6 +399,70 @@ describe('POST /api/player/scrims/[scrimId]/report — un scrim clos ne se re-ra
     expect(res.statusCode).toBe(409);
     expect(res.body.code).toBe('SCRIM_CLOSED');
     expect((store.scrims as any[])[0].status).toBe('completed');
+  });
+
+  it('course : le staff ANNULE entre la lecture et l’accord — 409, ni miroir, ni rating, ni récompense', async () => {
+    // Avant : `applyScrimResult` écrivait sans condition. L'accord des
+    // capitaines re-clôturait un scrim que le staff venait d'annuler, et le
+    // miroir noté comptait au rating et à la saison.
+    seedRosters();
+    store.scrim_score_reports = [
+      {
+        tenant_id: CONFERENCE_TENANT_ID,
+        scrim_id: SCRIM_ID,
+        team_side: 2,
+        team1_score: 1,
+        team2_score: 0,
+      },
+    ] as any;
+    const real = supabaseAdmin.from.bind(supabaseAdmin);
+    const spy = vi.spyOn(supabaseAdmin, 'from').mockImplementation((name) => {
+      const builder: any = real(name);
+      if (name === 'scrims') {
+        const original = builder.maybeSingle?.bind(builder);
+        if (original) {
+          builder.maybeSingle = async () => {
+            const result = await original();
+            (store.scrims as any[])[0].status = 'cancelled';
+            return result;
+          };
+        }
+      }
+      return builder;
+    });
+    let res: any;
+    try {
+      res = await report(CAPTAIN_A, 1, 0);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(res.statusCode).toBe(409);
+    expect(res.body.code).toBe('SCRIM_CLOSED');
+    expect((store.scrims as any[])[0].status).toBe('cancelled');
+    expect(
+      ((store.matches as any[]) || []).filter((m) => m.scrim_id === SCRIM_ID)
+    ).toHaveLength(0);
+    expect(((store.player_rating_history as any[]) || []).length).toBe(0);
+    expect(rewardsOf(PLAYER_A).coins).toHaveLength(0);
+    expect(rewardsOf(PLAYER_A).packs).toHaveLength(0);
+  });
+
+  it('applyScrimResult refuse de clore un scrim annulé ou déjà clos', async () => {
+    for (const status of ['cancelled', 'completed']) {
+      (store.scrims as any[])[0].status = status;
+      const outcome = await applyScrimResult(
+        CONFERENCE_TENANT_ID,
+        { id: SCRIM_ID, team1_id: TEAM_A, team2_id: TEAM_B },
+        2,
+        0
+      );
+      expect(outcome).toMatchObject({
+        ok: false,
+        status: 409,
+        code: 'SCRIM_CLOSED',
+      });
+      expect((store.scrims as any[])[0].status).toBe(status);
+    }
   });
 
   it('markScrimDisputed ne rouvre ni un scrim clos ni un scrim annulé', async () => {
