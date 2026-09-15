@@ -56,7 +56,7 @@ export default adminNs('adminTcgGrant', {
   // Motif
   reasonLabel: 'Motif',
   reasonHint:
-    'Obligatoire. Lu dans le journal staff : ce qui est corrigé, et pourquoi.',
+    'Obligatoire. Visible par la joueuse dans son historique de pièces, et gardé au journal staff : écrire ce qui est corrigé, et pourquoi, en termes qu’elle comprendra.',
   reasonPlaceholder:
     'Ex. victoire du 12/09 non créditée (match rejoué après annulation)',
   /** Interpole `{count}` et `{max}`. */

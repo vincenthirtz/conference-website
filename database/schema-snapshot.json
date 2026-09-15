@@ -1350,6 +1350,7 @@
       "amount",
       "created_at",
       "id",
+      "note",
       "source_kind",
       "source_ref",
       "tenant_id",

@@ -188,7 +188,7 @@ describe('POST /api/admin/tcg/grant — accès', () => {
     expect(grants()).toHaveLength(0);
   });
 
-  it('403 pour un rôle sans `moderate_support`, et rien n’est écrit', async () => {
+  it('403 pour un rôle sans `manage_tcg`, et rien n’est écrit', async () => {
     seedStaff('caster');
     const res = await callGrant(body());
     expect(res.statusCode).toBe(403);
@@ -286,6 +286,9 @@ describe('POST /api/admin/tcg/grant — crédit', () => {
       // La clé d'idempotence EST la référence : c'est l'unicité du registre
       // qui interdit la seconde écriture.
       source_ref: KEY_A,
+      // Le motif est recopié au registre : c'est ce que la joueuse lira dans
+      // son historique (« Ajustement par l'équipe » seul ne disait rien).
+      note: 'Victoire du 12/09 non créditée',
     });
     expect(res.body.entryId).toBe(entry.id);
     expect(cachedBalance()).toBe(250);

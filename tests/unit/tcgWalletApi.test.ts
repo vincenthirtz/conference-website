@@ -186,4 +186,30 @@ describe('GET /api/player/tcg/wallet', () => {
     expect(res.statusCode).toBe(405);
     expect(res.headers.Allow).toBe('GET');
   });
+  it('rend le motif d’une correction de l’équipe, et de rien d’autre', async () => {
+    // « Ajustement par l'équipe » seul ne dit pas CE qui a été corrigé : la
+    // note est la raison d'être de cette ligne. Une note égarée sur un gain
+    // automatique, elle, n'a pas d'auteur — elle reste privée.
+    store.tcg_wallet_entries = [
+      entry({
+        source_kind: 'admin_grant',
+        source_ref: 'k-1',
+        note: 'Victoire du 12/09 non créditée',
+        created_at: '2026-02-01T00:00:00.000Z',
+      }),
+      entry({
+        source_kind: 'match_win',
+        note: 'ne doit pas sortir',
+        created_at: '2026-01-01T00:00:00.000Z',
+      }),
+    ];
+    const res = makeRes();
+    await handler(makeReq(), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.entries.map((e: any) => e.note)).toEqual([
+      'Victoire du 12/09 non créditée',
+      null,
+    ]);
+  });
 });

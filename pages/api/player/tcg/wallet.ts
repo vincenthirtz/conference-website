@@ -42,6 +42,7 @@ type EntryRow = {
   amount: number;
   source_kind: string;
   source_ref: string;
+  note: string | null;
   created_at: string;
 };
 
@@ -67,7 +68,7 @@ export default withAuthRoute(async function handler(
 
   const { data, error } = await supabaseAdmin
     .from('tcg_wallet_entries')
-    .select('id, amount, source_kind, source_ref, created_at')
+    .select('id, amount, source_kind, source_ref, note, created_at')
     .eq('tenant_id', tenantId)
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
@@ -94,6 +95,10 @@ export default withAuthRoute(async function handler(
       amount: r.amount,
       sourceKind: r.source_kind,
       sourceRef: r.source_ref,
+      // Le motif n'est rendu que pour une correction de l'équipe : c'est la
+      // seule source qui en a un auteur. Une note égarée sur une autre source
+      // resterait privée plutôt que d'apparaître sans contexte.
+      note: r.source_kind === 'admin_grant' ? (r.note ?? null) : null,
       createdAt: r.created_at,
     })),
     shownTotal,

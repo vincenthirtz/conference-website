@@ -40,7 +40,8 @@ export default {
   amountPreviewDebit: 'Deduction of {amount} coin(s)',
 
   reasonLabel: 'Reason',
-  reasonHint: 'Required. Read in the staff log: what is corrected, and why.',
+  reasonHint:
+    'Required. Shown to the player in her coin history, and kept in the staff log: say what is corrected, and why, in words she will understand.',
   reasonPlaceholder:
     'e.g. 12/09 win not credited (match replayed after being voided)',
   reasonCounter: '{count} / {max}',

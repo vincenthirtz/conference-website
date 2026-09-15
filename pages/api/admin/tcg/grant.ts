@@ -40,7 +40,7 @@
 // avant l'écriture au registre. Un achat simultané ne peut donc pas dépenser
 // les pièces que le staff est en train de retirer.
 //
-// MÊME PERMISSION QUE LE RESTE DE L'ÉCONOMIE DU TCG (`moderate_support`), comme
+// MÊME PERMISSION QUE LE RESTE DE L'ÉCONOMIE DU TCG (`manage_tcg`), comme
 // le cadeau d'accueil : c'est la même économie qu'on touche.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -190,6 +190,10 @@ async function grant(
       amount,
       source_kind: SOURCE_KIND,
       source_ref: idempotencyKey,
+      // Le motif est RECOPIÉ au registre (migration `tcg_wallet_entries_note`)
+      // pour que la joueuse lise pourquoi son solde a bougé ; le journal staff
+      // le garde aussi, avec l'auteur.
+      note: reason,
     })
     .select('id')
     .maybeSingle();
@@ -458,4 +462,4 @@ async function readLedgerBalance(
   return (data as { balance?: number } | null)?.balance ?? 0;
 }
 
-export default withStaffRoute(handler, { permission: 'moderate_support' });
+export default withStaffRoute(handler, { permission: 'manage_tcg' });
