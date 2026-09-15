@@ -20,12 +20,17 @@
 // l'index « une fois par personne » est GLOBAL lui aussi. Rattraper tous les
 // liens depuis un espace A reviendrait à CONSOMMER, dans A, la récompense
 // unique d'une joueuse qui ne joue que dans B — B ne pourrait plus jamais la
-// lui verser. On ne rattrape donc que les comptes RATTACHÉS à l'espace, par
-// l'un de deux faits propres au tenant :
+// lui verser. On ne rattrape donc que les comptes RATTACHÉS à l'espace, au sens
+// de `utils/tcg/tenantAttachment.ts` :
 //   - une ligne de roster (`team_members.tenant_id`), la définition de
 //     « participante » de `grantWelcomeGift` et `grantSupporterWelcome` ;
-//   - un porte-monnaie TCG (`tcg_wallets.tenant_id`) : elle collectionne déjà
-//     dans cet espace (supportrice, drop Twitch), sans être sur un roster.
+//   - un GAIN RÉEL au registre du tenant (victoire, drop, cadeau… — liste
+//     blanche) : elle collectionne déjà dans cet espace, sans être sur un roster.
+// ⚠️ PLUS « UN PORTE-MONNAIE » (correctif du 2026-09-15). Un porte-monnaie se
+// crée au premier crédit, y compris un `admin_grant` : un owner tiers créditait
+// +1 pièce à une étrangère, puis son rattrapage consommait chez lui la
+// récompense Battle.net unique de celle-ci. Un porte-monnaie qui n'a reçu que
+// des corrections staff ne rattache donc plus personne.
 // Un compte lié sans aucun des deux n'est pas rattrapé d'ici ; il reste compté
 // (`outsideSpace`) pour que l'écran ne taise pas qu'il existe.
 //
@@ -46,6 +51,7 @@ import {
   grantBattlenetVerifiedReward,
 } from './grantBattlenetVerified';
 import { earnReward, getEarnSource } from './earnSources';
+import { readTenantAttachedUsers } from './tenantAttachment';
 
 /** PostgREST coupe à 1000 lignes (`max_rows`) : on lit par pages explicites. */
 const PAGE_SIZE = 1000;
@@ -68,7 +74,7 @@ export type BattlenetBackfillSimulation = {
    * `null` = non mesurable (lecture en échec), jamais « zéro ».
    */
   discordDms: number | null;
-  /** Comptes liés à Battle.net mais rattachés à aucun roster ni porte-monnaie de l'espace. */
+  /** Comptes liés à Battle.net mais sans roster ni gain réel dans l'espace (cf. `tenantAttachment.ts`). */
   outsideSpace: number;
   /** La source est-elle écrivable (migration déclarée passée) ? */
   ready: boolean;
@@ -127,35 +133,6 @@ async function readAllLinks(): Promise<Read<Link[]>> {
   return { ok: true, value: links };
 }
 
-/** Parmi `userIds`, ceux qui ont une ligne dans `table` pour ce tenant. */
-async function readAttached(
-  table: 'team_members' | 'tcg_wallets',
-  tenantId: string,
-  userIds: string[]
-): Promise<Read<Set<string>>> {
-  if (!supabaseAdmin) return { ok: false };
-  const found = new Set<string>();
-  for (const batch of chunks(userIds, CHUNK_SIZE)) {
-    const { data, error } = await supabaseAdmin
-      .from(table)
-      .select('user_id')
-      .eq('tenant_id', tenantId)
-      .in('user_id', batch);
-    if (error) {
-      logger.error(
-        '[tcg/battlenet-backfill] %s illisible: %s',
-        table,
-        error.message
-      );
-      return { ok: false };
-    }
-    for (const row of (data ?? []) as Array<{ user_id?: string | null }>) {
-      if (row.user_id) found.add(row.user_id);
-    }
-  }
-  return { ok: true, value: found };
-}
-
 /**
  * Les liens rattachés à l'espace, et combien ne le sont pas.
  *
@@ -170,15 +147,10 @@ export async function readBattlenetBackfillAudience(
   if (!links.ok) return { ok: false };
 
   const userIds = [...new Set(links.value.map((l) => l.userId))];
-  const [rosters, wallets] = await Promise.all([
-    readAttached('team_members', tenantId, userIds),
-    readAttached('tcg_wallets', tenantId, userIds),
-  ]);
-  if (!rosters.ok || !wallets.ok) return { ok: false };
+  const attached = await readTenantAttachedUsers(tenantId, userIds);
+  if (!attached.ok) return { ok: false };
 
-  const inSpace = links.value.filter(
-    (l) => rosters.value.has(l.userId) || wallets.value.has(l.userId)
-  );
+  const inSpace = links.value.filter((l) => attached.value.has(l.userId));
   return {
     ok: true,
     value: { inSpace, outsideSpace: links.value.length - inSpace.length },

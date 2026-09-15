@@ -42,6 +42,9 @@ import { logger } from '@/utils/logger';
 const BUCKET = 'teams-images';
 const PREFIX = 'tcg';
 
+/** Relectures du retrait si un dépôt s'intercale : à vitesse humaine, une suffit. */
+const REVOKE_ATTEMPTS = 3;
+
 export const config = {
   api: {
     // Le base64 gonfle d'environ un tiers : 4 Mo de corps pour 2 Mio d'image.
@@ -155,6 +158,27 @@ async function submitPhoto(
     });
   }
 
+  // On lit l'ancien chemin AVANT tout envoi, pour pouvoir le supprimer ensuite.
+  // UNE LECTURE EN ÉCHEC ARRÊTE LE DÉPÔT (correctif du 2026-09-15) : l'ancien
+  // code l'ignorait, l'upsert écrasait `photo_path`, et l'ancienne photo restait
+  // dans le bucket PUBLIC sans plus aucune ligne pour la désigner — un fichier
+  // que ni la joueuse ni le staff ne pouvaient plus retirer.
+  const { data: previous, error: previousError } = await supabaseAdmin!
+    .from('tcg_player_cards')
+    .select('photo_path, opted_in_at')
+    .eq('tenant_id', tenantId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (previousError) {
+    logger.error('[tcg/photo] read error: %s', previousError.message);
+    return res.status(500).json({ error: 'Lecture impossible.' });
+  }
+
+  const previousPath =
+    (previous as { photo_path?: string | null } | null)?.photo_path ?? null;
+  const alreadyOptedIn =
+    (previous as { opted_in_at?: string | null } | null)?.opted_in_at ?? null;
+
   // Un chemin par dépôt (jamais réécrit) : `upsert: false` garantit qu'on
   // n'écrase pas silencieusement un fichier, et l'ancien est supprimé
   // explicitement plus bas une fois le nouveau en place.
@@ -171,19 +195,6 @@ async function submitPhoto(
     logger.error('[tcg/photo] upload error: %s', uploadError.message);
     return res.status(500).json({ error: 'Envoi impossible.' });
   }
-
-  // On lit l'ancien chemin AVANT d'écrire, pour pouvoir le supprimer ensuite.
-  const { data: previous } = await supabaseAdmin!
-    .from('tcg_player_cards')
-    .select('photo_path, opted_in_at')
-    .eq('tenant_id', tenantId)
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  const previousPath =
-    (previous as { photo_path?: string | null } | null)?.photo_path ?? null;
-  const alreadyOptedIn =
-    (previous as { opted_in_at?: string | null } | null)?.opted_in_at ?? null;
 
   const nowIso = new Date().toISOString();
   const { error: writeError } = await supabaseAdmin!
@@ -254,36 +265,64 @@ async function revoke(
     return;
   }
 
-  const { data: existing } = await supabaseAdmin!
-    .from('tcg_player_cards')
-    .select('photo_path')
-    .eq('tenant_id', tenantId)
-    .eq('user_id', userId)
-    .maybeSingle();
+  // LIRE PUIS EFFACER, SANS PERDRE LE FICHIER (correctif du 2026-09-15).
+  // L'ancien code ignorait l'erreur de lecture : sur un 504, `path` valait
+  // `null`, la base était vidée quand même, et la photo restait dans le bucket
+  // PUBLIC sans plus aucune ligne pour la désigner. Désormais une lecture en
+  // échec rend 500 sans rien écrire, et l'effacement est CONDITIONNEL au chemin
+  // lu : si un dépôt s'intercale, zéro ligne n'est touchée et on relit, au lieu
+  // d'effacer en base la référence d'un fichier qu'on ne supprimerait pas.
+  let path: string | null = null;
+  let revoked = false;
+  for (let attempt = 0; attempt < REVOKE_ATTEMPTS && !revoked; attempt += 1) {
+    const { data: existing, error: readError } = await supabaseAdmin!
+      .from('tcg_player_cards')
+      .select('photo_path')
+      .eq('tenant_id', tenantId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (readError) {
+      logger.error('[tcg/photo] revoke read error: %s', readError.message);
+      return res.status(500).json({ error: 'Retrait impossible.' });
+    }
+    path =
+      (existing as { photo_path?: string | null } | null)?.photo_path ?? null;
 
-  const path =
-    (existing as { photo_path?: string | null } | null)?.photo_path ?? null;
+    const nowIso = new Date().toISOString();
+    // On garde la ligne : `revoked_at` est un fait à conserver, et `opted_in_at`
+    // atteste qu'il y a eu accord. Effacer la ligne effacerait cette histoire.
+    let update = supabaseAdmin!
+      .from('tcg_player_cards')
+      .update({
+        revoked_at: nowIso,
+        photo_path: null,
+        photo_status: 'none',
+        photo_reviewed_by: null,
+        photo_reviewed_at: null,
+        photo_rejected_reason: null,
+        updated_at: nowIso,
+      })
+      .eq('tenant_id', tenantId)
+      .eq('user_id', userId);
+    update = path
+      ? update.eq('photo_path', path)
+      : update.is('photo_path', null);
+    const { data: written, error } = await update.select('user_id');
 
-  const nowIso = new Date().toISOString();
-  // On garde la ligne : `revoked_at` est un fait à conserver, et `opted_in_at`
-  // atteste qu'il y a eu accord. Effacer la ligne effacerait cette histoire.
-  const { error } = await supabaseAdmin!
-    .from('tcg_player_cards')
-    .update({
-      revoked_at: nowIso,
-      photo_path: null,
-      photo_status: 'none',
-      photo_reviewed_by: null,
-      photo_reviewed_at: null,
-      photo_rejected_reason: null,
-      updated_at: nowIso,
-    })
-    .eq('tenant_id', tenantId)
-    .eq('user_id', userId);
-
-  if (error) {
-    logger.error('[tcg/photo] revoke error: %s', error.message);
-    return res.status(500).json({ error: 'Retrait impossible.' });
+    if (error) {
+      logger.error('[tcg/photo] revoke error: %s', error.message);
+      return res.status(500).json({ error: 'Retrait impossible.' });
+    }
+    // Aucune ligne : soit la joueuse n'a jamais déposé (rien à retirer, le
+    // retrait est acquis), soit un dépôt s'est intercalé — on relit.
+    if (Array.isArray(written) && written.length > 0) revoked = true;
+    else if (!existing) revoked = true;
+  }
+  if (!revoked) {
+    return res.status(409).json({
+      error: 'La photo a changé pendant le retrait, réessaie.',
+      code: 'PHOTO_CHANGED',
+    });
   }
 
   // Le fichier part APRÈS que la base ne le référence plus : dans l'autre

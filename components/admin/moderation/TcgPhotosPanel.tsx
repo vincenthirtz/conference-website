@@ -19,9 +19,11 @@
 // public — un cliché refusé n'a rien à y faire. L'écran le dit avant le clic, et
 // le refus passe par une confirmation qui nomme la joueuse et le motif transmis.
 //
-// Le conflit 409 (« plus en attente ») n'est pas une erreur mais une course
-// normale : la joueuse peut retirer sa photo pendant la relecture, et sa
-// décision prime. On rafraîchit alors la liste au lieu d'insister.
+// Le conflit 409 (« plus en attente », « photo remplacée ») n'est pas une
+// erreur mais une course normale : la joueuse peut retirer ou remplacer sa
+// photo pendant la relecture. La décision envoie le `photoPath` AFFICHÉ, et le
+// serveur refuse de trancher sur un autre fichier : on ne peut approuver que ce
+// qu'on a vu. On rafraîchit alors la liste au lieu d'insister.
 
 import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
@@ -88,8 +90,15 @@ export default function TcgPhotosPanel() {
 
   const decide = useCallback(
     async (photo: PendingPhoto, decision: 'approve' | 'reject') => {
-      const { userId } = photo;
+      const { userId, photoPath } = photo;
       const reason = reasons[userId]?.trim() || null;
+      // Sans le chemin affiché, le serveur refuserait : on recharge la file
+      // plutôt que d'envoyer une décision qui ne désignerait aucune image.
+      if (!photoPath) {
+        addToast(t.conflict, 'info');
+        await load();
+        return;
+      }
 
       if (decision === 'reject') {
         const name = photoOwnerLabel(photo);
@@ -116,6 +125,7 @@ export default function TcgPhotosPanel() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             userId,
+            photoPath,
             decision,
             reason: decision === 'reject' ? reason : null,
           }),

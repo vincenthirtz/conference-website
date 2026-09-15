@@ -25,6 +25,7 @@ describe('normalizePendingPhotos', () => {
             userId: A,
             displayName: 'Marie',
             email: 'marie@example.org',
+            photoPath: 'tcg/x.webp',
             photoUrl: 'https://cdn/x.webp',
             submittedAt: '2026-09-14T10:00:00Z',
           },
@@ -36,6 +37,9 @@ describe('normalizePendingPhotos', () => {
         userId: A,
         displayName: 'Marie',
         email: 'marie@example.org',
+        // Le chemin AFFICHÉ, renvoyé tel quel dans la décision : le serveur
+        // refuse de trancher sur une photo remplacée depuis (audit 2026-09-15).
+        photoPath: 'tcg/x.webp',
         photoUrl: 'https://cdn/x.webp',
         submittedAt: '2026-09-14T10:00:00Z',
       },
@@ -50,6 +54,8 @@ describe('normalizePendingPhotos', () => {
       userId: A,
       displayName: null,
       email: null,
+      // Sans chemin, le panneau recharge la file au lieu de décider à l'aveugle.
+      photoPath: null,
       photoUrl: null,
       submittedAt: null,
     });
@@ -74,6 +80,7 @@ describe('photoOwnerLabel', () => {
     userId: A,
     displayName: null,
     email: null,
+    photoPath: null,
     photoUrl: null,
     submittedAt: null,
   };

@@ -563,6 +563,17 @@ class Builder {
     if (op === 'is' && val === null) {
       this.filters.push((row) => row[col] !== null && row[col] !== undefined);
     }
+    // `.not(col, 'in', '(a,b)')` — une écriture CONDITIONNELLE au statut s'en
+    // sert (ex. `markScrimDisputed`) : sans ce filtre, le mock toucherait la
+    // ligne que Postgres aurait épargnée, et la course resterait intestable.
+    if (op === 'in' && typeof val === 'string') {
+      const excluded = val
+        .replace(/^\(|\)$/g, '')
+        .split(',')
+        .map((v) => v.trim().replace(/^"|"$/g, ''))
+        .filter((v) => v.length > 0);
+      this.filters.push((row) => !excluded.includes(String(row[col] ?? '')));
+    }
     return this;
   }
 

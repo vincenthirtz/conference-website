@@ -22,7 +22,11 @@ vi.mock('@/utils/supabase', async () => {
   return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
 });
 
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import {
+  store,
+  resetSupabaseMock,
+  supabaseAdmin,
+} from './__helpers__/supabaseMock';
 import {
   isScrimRatable,
   syncScrimRatedMatch,
@@ -177,11 +181,13 @@ describe('syncScrimRatedMatch', () => {
     expect(winner.games_played).toBe(1);
   });
 
-  it("retire le miroir et l'historique quand le scrim n'est plus éligible", async () => {
+  it("retire le miroir et l'historique quand le scrim n'est plus éligible (miroir qui n'a rien payé)", async () => {
     seedScrim();
     await syncScrimRatedMatch(TENANT, SCRIM);
     expect(mirrors()).toHaveLength(1);
     expect((store.player_rating_history || []).length).toBeGreaterThan(0);
+    // Aucun paquet ne dépend de ce miroir : il peut disparaître comme avant.
+    store.tcg_packs = [];
 
     // Le staff dé-classe le scrim.
     (store.scrims[0] as Record<string, unknown>).ranked = false;
@@ -189,6 +195,109 @@ describe('syncScrimRatedMatch', () => {
 
     expect(mirrors()).toHaveLength(0);
     expect(store.player_rating_history || []).toHaveLength(0);
+  });
+
+  it('NEUTRALISE (sans le supprimer) un miroir dont un paquet TCG dépend', async () => {
+    // `tcg_packs.source_match_id` est en ON DELETE CASCADE : supprimer ce
+    // miroir emporterait les paquets de la victoire — ouverts compris — et le
+    // miroir suivant, sous un autre id, rouvrirait la récompense.
+    seedScrim();
+    await syncScrimRatedMatch(TENANT, SCRIM);
+    const [mirror] = mirrors();
+    expect((store.tcg_packs || []).length).toBe(2);
+
+    (store.scrims[0] as Record<string, unknown>).status = 'disputed';
+    await syncScrimRatedMatch(TENANT, SCRIM);
+
+    expect(mirrors()).toHaveLength(1);
+    expect(mirrors()[0]).toMatchObject({
+      id: mirror.id,
+      status: 'disputed',
+      winner_team_id: null,
+    });
+    // Plus noté : ni historique, ni feuille.
+    expect(store.player_rating_history || []).toHaveLength(0);
+    expect(
+      (store.match_participants || []).filter((p) => p.match_id === mirror.id)
+    ).toHaveLength(0);
+    // Et les paquets sont toujours là.
+    expect((store.tcg_packs || []).length).toBe(2);
+  });
+
+  it('un scrim dé-classé puis mis à la corbeille : miroir `cancelled`, jamais supprimé s’il a payé', async () => {
+    seedScrim();
+    await syncScrimRatedMatch(TENANT, SCRIM);
+    (store.scrims[0] as Record<string, unknown>).deleted_at =
+      '2026-05-20T00:00:00Z';
+    await syncScrimRatedMatch(TENANT, SCRIM);
+    expect(mirrors()).toHaveLength(1);
+    expect(mirrors()[0].status).toBe('cancelled');
+  });
+
+  it('dans le doute (paquets illisibles), neutralise plutôt que supprimer', async () => {
+    seedScrim();
+    await syncScrimRatedMatch(TENANT, SCRIM);
+    const real = supabaseAdmin.from.bind(supabaseAdmin);
+    const spy = vi.spyOn(supabaseAdmin, 'from').mockImplementation((name) => {
+      const builder = real(name) as unknown as Record<string, unknown>;
+      if (name === 'tcg_packs') {
+        builder.select = () => ({
+          eq: () => ({
+            eq: () => ({
+              limit: async () => ({ data: null, error: { message: '504' } }),
+            }),
+          }),
+        });
+      }
+      return builder as unknown as ReturnType<typeof real>;
+    });
+    try {
+      (store.scrims[0] as Record<string, unknown>).ranked = false;
+      await syncScrimRatedMatch(TENANT, SCRIM);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(mirrors()).toHaveLength(1);
+    expect(mirrors()[0].status).toBe('cancelled');
+  });
+
+  it('BOUCLE litige ↔ accord : le scrim ne paie qu’une fois, sous le même miroir', async () => {
+    // Le scénario de l'audit, rejoué au niveau du miroir : terminé → litige →
+    // terminé → litige → terminé. AVANT le correctif, chaque retour à
+    // « terminé » recréait un miroir (nouvel id) et repayait paquet + pièces :
+    // 3 paquets et 150 pièces par gagnante à la fin de ce test.
+    seedScrim();
+    await syncScrimRatedMatch(TENANT, SCRIM);
+    const firstMirrorId = mirrors()[0].id;
+
+    for (let turn = 0; turn < 2; turn += 1) {
+      (store.scrims[0] as Record<string, unknown>).status = 'disputed';
+      await syncScrimRatedMatch(TENANT, SCRIM);
+      (store.scrims[0] as Record<string, unknown>).status = 'completed';
+      await syncScrimRatedMatch(TENANT, SCRIM);
+    }
+
+    expect(mirrors()).toHaveLength(1);
+    expect(mirrors()[0]).toMatchObject({
+      id: firstMirrorId,
+      status: 'finished',
+      winner_team_id: TEAM_A,
+    });
+    // Le rating est bien réappliqué (le miroir redevient noté)…
+    expect((store.player_rating_history || []).length).toBeGreaterThan(0);
+    // …mais la récompense ne l'est pas.
+    const packsOf = (u: string) =>
+      (store.tcg_packs || []).filter((p) => p.user_id === u);
+    const coinsOf = (u: string) =>
+      (store.tcg_wallet_entries || []).filter((e) => e.user_id === u);
+    expect(packsOf(A1)).toHaveLength(1);
+    expect(packsOf(A2)).toHaveLength(1);
+    expect(coinsOf(A1)).toHaveLength(1);
+    expect(coinsOf(A1)[0]).toMatchObject({
+      source_kind: 'scrim_win',
+      source_ref: `scrim:${SCRIM}`,
+    });
+    expect(packsOf(B1)).toHaveLength(0);
   });
 
   it('ne crée rien pour un scrim en litige', async () => {

@@ -18,12 +18,13 @@
 //   4. LE MONTANT VIENT DES CONSTANTES. Écrire « 30 » en dur figerait un
 //      barème que le code dérive exprès de BOOSTER_PRICE_COINS.
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import {
   store,
   resetSupabaseMock,
   setAuthUser,
+  supabaseAdmin,
 } from './__helpers__/supabaseMock';
 import { DEFAULT_TENANT_ID } from '../../utils/tenant';
 import { RECYCLE_REFUND_COINS } from '../../utils/tcg/economy';
@@ -92,6 +93,10 @@ const entries = () => (store.tcg_wallet_entries ?? []) as any[];
 beforeEach(() => {
   resetSupabaseMock();
   setAuthUser({ id: PLAYER });
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe('POST /api/player/tcg/recycle', () => {
@@ -217,5 +222,76 @@ describe('POST /api/player/tcg/recycle', () => {
 
     expect(res.statusCode).toBe(405);
     expect(res.headers.Allow).toBe('POST');
+  });
+});
+
+describe('POST /api/player/tcg/recycle — recyclages concurrents (audit du 2026-09-15)', () => {
+  it('SCÉNARIO : deux recyclages simultanés des DEUX derniers exemplaires ne détruisent pas le dernier', async () => {
+    // AVANT : chaque requête comptait « 2 exemplaires » AVANT de réserver, puis
+    // réservait SA carte (`recycled_at IS NULL` protège une carte, pas un
+    // sujet) → les deux passaient, la joueuse perdait sa dernière carte.
+    // On simule la requête concurrente : elle réserve la position 1 juste après
+    // notre lecture de contrôle, avant notre réservation de la position 0.
+    seedOpenedPack();
+    store.tcg_pack_cards = [card(0, SUBJECT_A), card(1, SUBJECT_A)] as any;
+
+    const real = supabaseAdmin.from.bind(supabaseAdmin);
+    let cardReads = 0;
+    vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
+      const builder: any = real(table);
+      if (table === 'tcg_pack_cards') {
+        const originalThen = builder.then.bind(builder);
+        builder.then = (onFulfilled: any, onRejected: any) =>
+          originalThen((result: any) => {
+            // La première lecture est le contrôle « au moins deux exemplaires ».
+            if (builder.op === 'select' && ++cardReads === 1) {
+              cards()[1].recycled_at = '2026-09-15T10:00:00.000Z';
+            }
+            return onFulfilled ? onFulfilled(result) : result;
+          }, onRejected);
+      }
+      return builder;
+    });
+
+    const res = makeRes();
+    await handler(makeReq({ packId: PACK, position: 0 }), res);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body.code).toBe('not_a_duplicate');
+    // Notre réservation est relâchée : il reste un exemplaire non recyclé.
+    expect(cards()[0].recycled_at).toBeNull();
+    expect(cards().filter((c) => c.recycled_at === null)).toHaveLength(1);
+    // Et aucune pièce n'a été créée pour une carte rendue.
+    expect(entries()).toHaveLength(0);
+  });
+
+  it('un recompte illisible annule le recyclage (500) et relâche la réservation', async () => {
+    seedOpenedPack();
+    store.tcg_pack_cards = [card(0, SUBJECT_A), card(1, SUBJECT_A)] as any;
+    const real = supabaseAdmin.from.bind(supabaseAdmin);
+    let cardReads = 0;
+    vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
+      const builder: any = real(table);
+      if (table === 'tcg_pack_cards') {
+        const originalThen = builder.then.bind(builder);
+        builder.then = (onFulfilled: any, onRejected: any) => {
+          if (builder.op === 'select' && ++cardReads === 2) {
+            return Promise.resolve({
+              data: null,
+              error: { message: '504 upstream' },
+            }).then(onFulfilled, onRejected);
+          }
+          return originalThen(onFulfilled, onRejected);
+        };
+      }
+      return builder;
+    });
+
+    const res = makeRes();
+    await handler(makeReq({ packId: PACK, position: 0 }), res);
+
+    expect(res.statusCode).toBe(500);
+    expect(cards().every((c) => c.recycled_at === null)).toBe(true);
+    expect(entries()).toHaveLength(0);
   });
 });

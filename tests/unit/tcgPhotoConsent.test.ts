@@ -22,7 +22,7 @@
 // photo refusée qui resterait atteignable par son URL rendrait le refus
 // décoratif, et la base ne dit rien de cela.
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 vi.mock('@/utils/supabase', async () => {
   const m = await import('./__helpers__/supabaseMock');
@@ -37,6 +37,8 @@ import {
   resetSupabaseMock,
   setAuthUser,
   storageRemovals,
+  storageUploads,
+  supabaseAdmin,
 } from './__helpers__/supabaseMock';
 import { invalidateStaffCache } from '../../utils/staff';
 import { DEFAULT_TENANT_ID } from '../../utils/tenant';
@@ -172,6 +174,12 @@ beforeEach(() => {
   resetSupabaseMock();
   invalidateStaffCache();
   setAuthUser({ id: PLAYER });
+});
+
+afterEach(() => {
+  // Les espions de course (`vi.spyOn(supabaseAdmin, 'from')`) s'empileraient
+  // d'un test à l'autre et finiraient par s'appeler eux-mêmes.
+  vi.restoreAllMocks();
 });
 
 /* -------------------------------------------------------------------------- */
@@ -374,7 +382,7 @@ describe('PATCH /api/admin/tcg/photos — relecture', () => {
     await moderationHandler(
       makeReq({
         method: 'PATCH',
-        body: { userId: PLAYER, decision: 'approve' },
+        body: { userId: PLAYER, decision: 'approve', photoPath: PHOTO_PATH },
       }),
       res
     );
@@ -395,7 +403,12 @@ describe('PATCH /api/admin/tcg/photos — relecture', () => {
     await moderationHandler(
       makeReq({
         method: 'PATCH',
-        body: { userId: PLAYER, decision: 'reject', reason: 'hors sujet' },
+        body: {
+          userId: PLAYER,
+          decision: 'reject',
+          reason: 'hors sujet',
+          photoPath: PHOTO_PATH,
+        },
       }),
       res
     );
@@ -416,7 +429,7 @@ describe('PATCH /api/admin/tcg/photos — relecture', () => {
     await moderationHandler(
       makeReq({
         method: 'PATCH',
-        body: { userId: PLAYER, decision: 'approve' },
+        body: { userId: PLAYER, decision: 'approve', photoPath: PHOTO_PATH },
       }),
       res
     );
@@ -439,12 +452,241 @@ describe('PATCH /api/admin/tcg/photos — relecture', () => {
     await moderationHandler(
       makeReq({
         method: 'PATCH',
-        body: { userId: PLAYER, decision: 'approve' },
+        body: { userId: PLAYER, decision: 'approve', photoPath: PHOTO_PATH },
       }),
       res
     );
 
     expect(res.statusCode).toBe(409);
     expect(res.body.code).toBe('NOT_PENDING');
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* On n'approuve que la photo qu'on a vue (audit du 2026-09-15)                 */
+/* -------------------------------------------------------------------------- */
+
+describe('PATCH /api/admin/tcg/photos — la décision porte sur la photo AFFICHÉE', () => {
+  const PHOTO_B = 'tcg/11111111-remplacee.png';
+
+  /** Remplace la photo par B au moment où la route relit la ligne. */
+  function replaceAfterRead(nthRead: number, over: Record<string, unknown>) {
+    const real = supabaseAdmin.from.bind(supabaseAdmin);
+    let reads = 0;
+    vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
+      const builder: any = real(table);
+      if (table === 'tcg_player_cards') {
+        const original = builder.maybeSingle.bind(builder);
+        builder.maybeSingle = async () => {
+          const result = await original();
+          reads += 1;
+          if (reads === nthRead) Object.assign(cardRow(), over);
+          return result;
+        };
+      }
+      return builder;
+    });
+  }
+
+  async function decide(body: Record<string, unknown>) {
+    const res = makeRes();
+    await moderationHandler(makeReq({ method: 'PATCH', body }), res);
+    return res;
+  }
+
+  it('le GET rend `photoPath`, que le panneau renvoie tel quel', async () => {
+    seedPlayer();
+    seedCard({ photo_status: 'pending' });
+    seedStaff();
+    const res = makeRes();
+    await moderationHandler(makeReq({ method: 'GET' }), res);
+    expect(res.body.photos[0]).toMatchObject({
+      userId: PLAYER,
+      photoPath: PHOTO_PATH,
+    });
+  });
+
+  it('400 sans `photoPath` : une décision doit désigner un fichier', async () => {
+    seedPlayer();
+    seedCard({ photo_status: 'pending' });
+    seedStaff();
+    const res = await decide({ userId: PLAYER, decision: 'approve' });
+    expect(res.statusCode).toBe(400);
+    expect(cardRow().photo_status).toBe('pending');
+  });
+
+  it('SCÉNARIO D’ATTAQUE : A affichée, remplacée par B, « approuver » → 409 PHOTO_CHANGED, B jamais publiée', async () => {
+    // AVANT : la décision ne citait que la joueuse → B, jamais vue, approuvée.
+    seedPlayer();
+    seedCard({ photo_status: 'pending', photo_path: PHOTO_B });
+    seedStaff();
+
+    const res = await decide({
+      userId: PLAYER,
+      decision: 'approve',
+      photoPath: PHOTO_PATH,
+    });
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body.code).toBe('PHOTO_CHANGED');
+    expect(cardRow()).toMatchObject({
+      photo_status: 'pending',
+      photo_path: PHOTO_B,
+    });
+    expect((await publicFace()).hasTcgPhoto).toBe(false);
+    expect(storageRemovals).toHaveLength(0);
+  });
+
+  it('course : remplacement ENTRE la relecture et l’écriture → rien n’est approuvé', async () => {
+    seedPlayer();
+    seedCard({ photo_status: 'pending' });
+    seedStaff();
+    // La relecture voit A ; B arrive juste après.
+    replaceAfterRead(1, { photo_path: PHOTO_B, photo_status: 'pending' });
+
+    const res = await decide({
+      userId: PLAYER,
+      decision: 'approve',
+      photoPath: PHOTO_PATH,
+    });
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body.code).toBe('PHOTO_CHANGED');
+    expect(cardRow()).toMatchObject({
+      photo_status: 'pending',
+      photo_path: PHOTO_B,
+    });
+    expect((await publicFace()).hasTcgPhoto).toBe(false);
+  });
+
+  it('refus concurrent : B arrivée pendant le refus de A n’est ni déréférencée ni orpheline', async () => {
+    // AVANT : l'update vidait `photo_path` (celui de B) et supprimait A — B
+    // restait dans le bucket PUBLIC sans ligne pour la désigner.
+    seedPlayer();
+    seedCard({ photo_status: 'pending' });
+    seedStaff();
+    replaceAfterRead(1, { photo_path: PHOTO_B, photo_status: 'pending' });
+
+    const res = await decide({
+      userId: PLAYER,
+      decision: 'reject',
+      reason: 'hors sujet',
+      photoPath: PHOTO_PATH,
+    });
+
+    expect(res.statusCode).toBe(409);
+    expect(cardRow().photo_path).toBe(PHOTO_B);
+    // Aucune suppression : A a déjà été retirée par le dépôt de B, et B attend
+    // sa relecture.
+    expect(storageRemovals).toHaveLength(0);
+  });
+
+  it('un refus supprime EXACTEMENT le fichier confirmé par l’écriture', async () => {
+    seedPlayer();
+    seedCard({ photo_status: 'pending' });
+    seedStaff();
+    const res = await decide({
+      userId: PLAYER,
+      decision: 'reject',
+      photoPath: PHOTO_PATH,
+    });
+    expect(res.statusCode).toBe(200);
+    expect(storageRemovals).toEqual([
+      { bucket: 'teams-images', paths: [PHOTO_PATH] },
+    ]);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Erreurs de lecture côté joueuse (audit du 2026-09-15)                        */
+/* -------------------------------------------------------------------------- */
+
+describe('POST/DELETE /api/player/tcg/photo — une lecture ratée ne crée pas d’orpheline', () => {
+  function failCardReads(times: number) {
+    const real = supabaseAdmin.from.bind(supabaseAdmin);
+    let failures = 0;
+    vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
+      const builder: any = real(table);
+      if (table === 'tcg_player_cards' && failures < times) {
+        builder.maybeSingle = async () => {
+          failures += 1;
+          return { data: null, error: { message: '504 upstream' } };
+        };
+      }
+      return builder;
+    });
+  }
+
+  it('DELETE : lecture en échec → 500, la base garde le chemin, le fichier n’est pas perdu', async () => {
+    // AVANT : l'erreur était ignorée, `path` valait null, la base était vidée
+    // et le fichier restait dans le bucket public sans aucune référence.
+    seedPlayer();
+    seedCard();
+    failCardReads(1);
+
+    const res = makeRes();
+    await photoHandler(makeReq({ method: 'DELETE' }), res);
+
+    expect(res.statusCode).toBe(500);
+    expect(cardRow().photo_path).toBe(PHOTO_PATH);
+    expect(storageRemovals).toHaveLength(0);
+    vi.restoreAllMocks();
+    // Rejouer le retrait fonctionne et supprime bien le fichier.
+    const retry = makeRes();
+    await photoHandler(makeReq({ method: 'DELETE' }), retry);
+    expect(retry.statusCode).toBe(200);
+    expect(storageRemovals[0].paths).toEqual([PHOTO_PATH]);
+  });
+
+  it('DELETE : un dépôt intercalé est relu, et c’est SON fichier qui part', async () => {
+    const PHOTO_B = 'tcg/11111111-intercalee.png';
+    seedPlayer();
+    seedCard();
+    const real = supabaseAdmin.from.bind(supabaseAdmin);
+    let reads = 0;
+    vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
+      const builder: any = real(table);
+      if (table === 'tcg_player_cards') {
+        const original = builder.maybeSingle.bind(builder);
+        builder.maybeSingle = async () => {
+          const result = await original();
+          reads += 1;
+          if (reads === 1) {
+            Object.assign(cardRow(), {
+              photo_path: PHOTO_B,
+              photo_status: 'pending',
+            });
+          }
+          return result;
+        };
+      }
+      return builder;
+    });
+
+    const res = makeRes();
+    await photoHandler(makeReq({ method: 'DELETE' }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(cardRow().photo_path).toBeNull();
+    expect(storageRemovals.map((r) => r.paths)).toEqual([[PHOTO_B]]);
+  });
+
+  it('POST : lecture de l’ancienne photo en échec → 500 AVANT tout envoi au bucket', async () => {
+    seedPlayer();
+    seedCard();
+    failCardReads(1);
+
+    const res = makeRes();
+    await photoHandler(
+      makeReq({
+        method: 'POST',
+        body: { data: PNG_1PX, mimeType: 'image/png' },
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(500);
+    expect(storageUploads).toHaveLength(0);
+    expect(cardRow().photo_path).toBe(PHOTO_PATH);
   });
 });

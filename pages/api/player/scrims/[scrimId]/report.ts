@@ -7,9 +7,19 @@
 //   * deux concordants    -> scrim clos, résultat enregistré (`completed`) ;
 //   * deux divergents     -> scrim en litige (`disputed`), arbitrage humain.
 //
-// Re-soumission supportée (upsert sur (scrim_id, team_side)) : une équipe peut
-// corriger son report. Si sa correction rejoint le report adverse alors que le
-// scrim était en litige, le litige se referme tout seul.
+// Re-soumission supportée (upsert sur (scrim_id, team_side)) TANT QUE LE SCRIM
+// N'EST PAS CLOS : une équipe peut corriger son report, et si sa correction
+// rejoint le report adverse alors que le scrim était en litige, le litige se
+// referme tout seul.
+//
+// UN SCRIM `completed` NE SE RE-RAPPORTE PLUS (correctif du 2026-09-15). Le
+// re-rapport d'un scrim clos était la gâchette d'une boucle de récompenses TCG
+// infinies : report contraire → litige → miroir noté retiré ; report d'origine
+// → accord avec le report adverse resté en base → nouveau miroir → nouvelles
+// pièces et nouveau paquet. Les récompenses sont désormais clées sur le scrim
+// (cf. utils/tcg/grantVictoryRewards.ts), mais un résultat validé par les DEUX
+// équipes n'a pas non plus à être défait par UNE seule : une contestation
+// passe par le staff (`PATCH /api/admin/scrims/[id]`), comme une annulation.
 //
 // UNE DIFFÉRENCE assumée avec le report de match : là-bas le droit est réservé
 // au `captain_id` ; ici on exige la permission d'équipe `manage_scrims` (R2).
@@ -36,8 +46,14 @@ import {
 import { emitBotEvent } from '@/utils/botEvents';
 import { logger } from '@/utils/logger';
 
-/** Un scrim clos ou annulé ne se re-rapporte pas sans le staff. */
-const TERMINAL_STATUSES = new Set(['cancelled']);
+/**
+ * Un scrim clos ou annulé ne se re-rapporte pas sans le staff. `completed` en
+ * fait partie : cf. l'en-tête — c'est la moitié « déclencheur » du correctif.
+ */
+const SCRIM_REPORT_TERMINAL_STATUSES: ReadonlySet<string> = new Set([
+  'completed',
+  'cancelled',
+]);
 
 const bodySchema = z.object({
   team1Score: z.number().int().min(0).max(99),
@@ -99,7 +115,7 @@ export default withAuthRoute(async function handler(
     return res.status(500).json({ error: 'Erreur de lecture du scrim.' });
   }
   if (!scrim) return res.status(404).json({ error: 'Scrim introuvable.' });
-  if (TERMINAL_STATUSES.has(scrim.status as string)) {
+  if (SCRIM_REPORT_TERMINAL_STATUSES.has(scrim.status as string)) {
     return res.status(409).json({
       error: `Scrim ${scrim.status} : contacte le staff pour le modifier.`,
       code: 'SCRIM_CLOSED',
@@ -172,7 +188,16 @@ export default withAuthRoute(async function handler(
 
   if (!reportsAgree(mine, theirs)) {
     const reason = `Reports divergents : ${mine.team1_score}-${mine.team2_score} vs ${theirs.team1_score}-${theirs.team2_score}.`;
-    await markScrimDisputed(tenantId, scrimId, reason);
+    const disputed = await markScrimDisputed(tenantId, scrimId, reason);
+    if (disputed === 'closed') {
+      // Le scrim a été clos (ou annulé) entre notre lecture et ce report : la
+      // bascule conditionnelle a refusé de le rouvrir. Même réponse que la
+      // garde ci-dessus.
+      return res.status(409).json({
+        error: 'Scrim clos : contacte le staff pour le modifier.',
+        code: 'SCRIM_CLOSED',
+      });
+    }
     return res.status(200).json({
       outcome: 'disputed',
       scrimStatus: 'disputed',

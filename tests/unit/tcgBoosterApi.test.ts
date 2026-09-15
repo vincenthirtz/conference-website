@@ -1,31 +1,26 @@
 // tests/unit/tcgBoosterApi.test.ts
 //
-// POST /api/player/tcg/booster — la seule route du TCG qui DÉBITE.
+// POST /api/player/tcg/booster — la seule route du TCG qui DÉBITE une joueuse.
 //
-// CE QUE CES CAS PROTÈGENT, ET POURQUOI ÇA SE PERD FACILEMENT.
+// CE QUE CES CAS PROTÈGENT (refonte du 2026-09-15, audit de sécurité).
 //
-//   1. LE BARÈME VIENT DE `utils/tcg/economy.ts`. Aucun montant n'est écrit en
-//      dur ici : un test qui poserait « 300 » figerait un prix que le code
-//      laisse réglable, et le premier ajustement du barème casserait la suite
-//      au lieu de la valider.
+//   1. PLUS D'ACHAT EN PLUSIEURS REQUÊTES. L'ancienne route débitait le cache,
+//      créait le paquet, puis écrivait au registre : trois transactions. Un
+//      recalcul du solde intercalé (gain, recyclage, autre achat) écrasait le
+//      débit, et trois achats rapides en livraient trois pour le prix de deux.
+//      L'achat passe désormais par UNE fonction SQL (`tcg_purchase_booster`) ;
+//      le cas « la route n'écrit plus elle-même paquet, registre ni cache » est
+//      donc le garde-fou central : le réintroduire rouvrirait la course.
 //
-//   2. LE DÉBIT EST CONDITIONNEL, PAS « LIRE PUIS ÉCRIRE ». Deux achats
-//      simultanés liraient le même solde et le dépenseraient deux fois. La
-//      contrainte d'unicité du registre ne protège pas de ce cas (chaque achat
-//      a sa propre référence) : la seule garantie est le `.eq('balance', avant)`
-//      de l'écriture. Elle est invisible à la lecture du code — rien ne signale
-//      qu'enlever ce filtre « qui ne sert à rien » ouvre la double dépense.
+//   2. LE MOCK N'EXÉCUTE PAS LE SQL. La route est testée contre les réponses
+//      de la fonction (`setRpcResult`) : chaque issue garde son code HTTP. Ce
+//      que la fonction garantit (verrou, contrôle du solde par SUM, paquet et
+//      registre dans la même transaction) est vérifié par LECTURE de la
+//      migration dans `tcgWalletAtomicSql.test.ts`.
 //
-//   3. UNE ÉCRITURE DE REGISTRE RATÉE ANNULE L'ACHAT. C'est le cas le plus
-//      important du fichier. Sans la suppression du paquet, l'étape suivante
-//      recalculerait le solde depuis un registre NON débité et rendrait les
-//      pièces : la joueuse garderait un booster GRATUIT à chaque erreur
-//      transitoire. Une régression ici ne casse rien de visible — elle offre
-//      simplement des boosters.
+//   3. MIGRATION ABSENTE : ON REFUSE. Jamais un achat sans verrou (503).
 //
-//   4. LE SOLDE EST UN CACHE DU REGISTRE. On sème donc des écritures cohérentes
-//      avec le solde affiché, sinon on testerait un état que la production ne
-//      produit jamais.
+//   4. LE BARÈME VIENT DE `utils/tcg/economy.ts` : aucun montant en dur ici.
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
@@ -33,15 +28,17 @@ import {
   store,
   resetSupabaseMock,
   setAuthUser,
+  setRpcResult,
+  rpcCalls,
   supabaseAdmin,
 } from './__helpers__/supabaseMock';
 import { DEFAULT_TENANT_ID } from '../../utils/tenant';
-import { BOOSTER_PRICE_COINS, MATCH_WIN_COINS } from '../../utils/tcg/economy';
+import { BOOSTER_PRICE_COINS } from '../../utils/tcg/economy';
 
 import handler from '../../pages/api/player/tcg/booster';
 
 const PLAYER = '11111111-1111-4111-8111-111111111111';
-const OTHER_TENANT = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+const PACK = 'a0000000-0000-4000-8000-000000000001';
 
 let _token = 0;
 function makeReq(over: Partial<Record<string, unknown>> = {}): any {
@@ -67,76 +64,10 @@ function makeRes(): any {
   return res;
 }
 
-/**
- * Sème un porte-monnaie COHÉRENT : `wins` victoires au registre, et un solde
- * qui en est exactement la somme.
- *
- * Semer un solde sans les écritures qui le justifient donnerait un état
- * impossible en production — et le `refreshBalance` de fin d'achat, qui
- * recalcule depuis le registre, remettrait le solde à zéro en faisant croire à
- * un bug de la route.
- */
-function seedWallet(wins: number, tenantId: string = DEFAULT_TENANT_ID) {
-  store.tcg_wallet_entries = Array.from({ length: wins }, (_, i) => ({
-    id: `entry-${i}`,
-    tenant_id: tenantId,
-    user_id: PLAYER,
-    amount: MATCH_WIN_COINS,
-    source_kind: 'match_win',
-    source_ref: `match-${i}`,
-    created_at: `2026-01-0${i + 1}T00:00:00.000Z`,
-  })) as any;
-
-  store.tcg_wallets = [
-    {
-      tenant_id: tenantId,
-      user_id: PLAYER,
-      balance: wins * MATCH_WIN_COINS,
-      updated_at: '2026-01-01T00:00:00.000Z',
-    },
-  ] as any;
-}
-
-/** Nombre de victoires nécessaires pour s'offrir un booster (barème dérivé). */
-const WINS_FOR_ONE_BOOSTER = Math.ceil(BOOSTER_PRICE_COINS / MATCH_WIN_COINS);
-
-/**
- * Le mock Supabase ne sait pas échouer. On enveloppe donc `from()` pour forcer
- * l'erreur d'UNE opération sur UNE table, en laissant tout le reste réel : le
- * repli qu'on teste (suppression du paquet, recalcul du solde) doit lui
- * continuer de fonctionner, sinon on ne testerait que le mock.
- */
-function failOn(
-  table: string,
-  op: 'insert' | 'delete',
-  shape: 'plain' | 'selectMaybeSingle' = 'plain',
-  message = 'échec transitoire'
-) {
-  const real = supabaseAdmin.from.bind(supabaseAdmin);
-  vi.spyOn(supabaseAdmin, 'from').mockImplementation((name: string) => {
-    const builder: any = real(name);
-    if (name === table) {
-      if (shape === 'selectMaybeSingle') {
-        // `.insert(...).select('id').maybeSingle()`
-        builder[op] = () => ({
-          select: () => ({
-            maybeSingle: async () => ({ data: null, error: { message } }),
-          }),
-        });
-      } else {
-        // `.insert(...)` / `.delete().eq()...` attendus directement
-        builder[op] = () => {
-          const chain: any = {
-            eq: () => chain,
-            then: (resolve: (v: unknown) => unknown) =>
-              Promise.resolve({ data: null, error: { message } }).then(resolve),
-          };
-          return chain;
-        };
-      }
-    }
-    return builder;
-  });
+async function buy() {
+  const res = makeRes();
+  await handler(makeReq(), res);
+  return res;
 }
 
 beforeEach(() => {
@@ -148,283 +79,155 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/* -------------------------------------------------------------------------- */
-/* Refus d'achat — rien ne doit être écrit                                     */
-/* -------------------------------------------------------------------------- */
-
 describe('POST /api/player/tcg/booster — refus', () => {
-  it('refuse une méthode non autorisée', async () => {
+  it('refuse une méthode non autorisée, sans appeler la base', async () => {
     const res = makeRes();
     await handler(makeReq({ method: 'GET' }), res);
 
     expect(res.statusCode).toBe(405);
     expect(res.headers.Allow).toBe('POST');
+    expect(rpcCalls).toHaveLength(0);
   });
 
-  it('refuse un solde insuffisant sans RIEN écrire', async () => {
-    // Le point n'est pas le 400, c'est l'absence d'écriture : un refus qui
-    // aurait quand même créé le paquet donnerait un booster gratuit à qui n'a
-    // pas les moyens de l'acheter.
-    seedWallet(WINS_FOR_ONE_BOOSTER - 1);
-    const before = (store.tcg_wallets![0] as any).balance;
+  it('400 insufficient_funds avec le solde RELU SOUS VERROU et le prix', async () => {
+    setRpcResult('tcg_purchase_booster', {
+      data: {
+        status: 'insufficient_funds',
+        balance: BOOSTER_PRICE_COINS - 1,
+        price: BOOSTER_PRICE_COINS,
+      },
+    });
 
-    const res = makeRes();
-    await handler(makeReq(), res);
-
-    expect(res.statusCode).toBe(400);
-    expect(res.body.code).toBe('insufficient_funds');
-    // Le barème est rendu à l'appelante pour qu'elle sache ce qui manque.
-    expect(res.body.price).toBe(BOOSTER_PRICE_COINS);
-    expect(res.body.balance).toBe(before);
-
-    expect(store.tcg_packs ?? []).toHaveLength(0);
-    expect(store.tcg_wallet_entries).toHaveLength(WINS_FOR_ONE_BOOSTER - 1);
-    expect((store.tcg_wallets![0] as any).balance).toBe(before);
-  });
-
-  it('traite l’absence de porte-monnaie comme un solde nul, pas une erreur', async () => {
-    // État normal de quelqu'un qui n'a encore rien gagné.
-    const res = makeRes();
-    await handler(makeReq(), res);
+    const res = await buy();
 
     expect(res.statusCode).toBe(400);
-    expect(res.body.code).toBe('insufficient_funds');
-    expect(res.body.balance).toBe(0);
-    expect(store.tcg_packs ?? []).toHaveLength(0);
-  });
-
-  it('ne laisse pas dépenser les pièces d’un AUTRE tenant', async () => {
-    // Une joueuse peut jouer dans plusieurs organisations ; son porte-monnaie
-    // est celui du tenant courant. Sans scoping, les pièces gagnées ailleurs
-    // paieraient les boosters d'ici.
-    seedWallet(WINS_FOR_ONE_BOOSTER * 3, OTHER_TENANT);
-
-    const res = makeRes();
-    await handler(makeReq(), res);
-
-    expect(res.statusCode).toBe(400);
-    expect(res.body.code).toBe('insufficient_funds');
-    expect(res.body.balance).toBe(0);
-    expect(store.tcg_packs ?? []).toHaveLength(0);
-    // Et le porte-monnaie de l'autre tenant n'a pas bougé d'un centime.
-    expect((store.tcg_wallets![0] as any).balance).toBe(
-      WINS_FOR_ONE_BOOSTER * 3 * MATCH_WIN_COINS
-    );
+    expect(res.body).toMatchObject({
+      code: 'insufficient_funds',
+      balance: BOOSTER_PRICE_COINS - 1,
+      price: BOOSTER_PRICE_COINS,
+    });
   });
 });
-
-/* -------------------------------------------------------------------------- */
-/* Achat réussi — un paquet FERMÉ, une écriture au registre                     */
-/* -------------------------------------------------------------------------- */
 
 describe('POST /api/player/tcg/booster — achat', () => {
-  it('crée un paquet FERMÉ, débite le registre et recalcule le solde', async () => {
-    const wins = WINS_FOR_ONE_BOOSTER + 1;
-    seedWallet(wins);
+  it('appelle `tcg_purchase_booster` avec le tenant, la joueuse et le prix du barème', async () => {
+    setRpcResult('tcg_purchase_booster', {
+      data: {
+        status: 'ok',
+        pack_id: PACK,
+        balance: 0,
+        price: BOOSTER_PRICE_COINS,
+      },
+    });
 
-    const res = makeRes();
-    await handler(makeReq(), res);
-
-    expect(res.statusCode).toBe(200);
-    expect(res.body.price).toBe(BOOSTER_PRICE_COINS);
-    expect(typeof res.body.packId).toBe('string');
-
-    // Le paquet : fermé, et marqué comme ACHETÉ. `source_match_id` NULL +
-    // `source_kind = 'purchase'` sont exigés ensemble par la contrainte de
-    // cohérence du schéma — un achat étiqueté 'victory' passerait ici mais
-    // serait rejeté en base.
-    expect(store.tcg_packs).toHaveLength(1);
-    const pack = store.tcg_packs![0] as any;
-    expect(pack.id).toBe(res.body.packId);
-    expect(pack.source_kind).toBe('purchase');
-    expect(pack.source_match_id).toBeNull();
-    expect(pack.tenant_id).toBe(DEFAULT_TENANT_ID);
-    expect(pack.user_id).toBe(PLAYER);
-    // Fermé : l'achat ne tire aucune carte, l'ouverture est un autre geste.
-    // C'est ce qui permet de rejouer une ouverture ratée sans re-débiter.
-    expect(pack.opened_at ?? null).toBeNull();
-
-    // L'écriture au registre : négative, du bon montant, et rattachée AU
-    // PAQUET — c'est `source_ref` qui rend la dépense traçable.
-    const spends = (store.tcg_wallet_entries as any[]).filter(
-      (e) => e.source_kind === 'booster_purchase'
-    );
-    expect(spends).toHaveLength(1);
-    expect(spends[0].amount).toBe(-BOOSTER_PRICE_COINS);
-    expect(spends[0].source_ref).toBe(res.body.packId);
-    expect(spends[0].tenant_id).toBe(DEFAULT_TENANT_ID);
-    expect(spends[0].user_id).toBe(PLAYER);
-
-    // Le solde n'est pas décrémenté « à la main » : il est recalculé depuis le
-    // registre, seule source de vérité.
-    expect((store.tcg_wallets![0] as any).balance).toBe(
-      wins * MATCH_WIN_COINS - BOOSTER_PRICE_COINS
-    );
-  });
-
-  it('autorise l’achat au centime près (solde EXACTEMENT égal au prix)', async () => {
-    // La borne : `canAfford` compare avec `>=`. Un `>` transformerait le
-    // dernier achat possible en refus incompréhensible.
-    seedWallet(WINS_FOR_ONE_BOOSTER);
-
-    const res = makeRes();
-    await handler(makeReq(), res);
+    const res = await buy();
 
     expect(res.statusCode).toBe(200);
-    expect((store.tcg_wallets![0] as any).balance).toBe(
-      WINS_FOR_ONE_BOOSTER * MATCH_WIN_COINS - BOOSTER_PRICE_COINS
-    );
+    expect(res.body).toEqual({ packId: PACK, price: BOOSTER_PRICE_COINS });
+    expect(rpcCalls).toEqual([
+      {
+        fn: 'tcg_purchase_booster',
+        params: {
+          p_tenant_id: DEFAULT_TENANT_ID,
+          p_user_id: PLAYER,
+          p_price: BOOSTER_PRICE_COINS,
+        },
+      },
+    ]);
   });
 
-  it('débite une fois par achat, pas une fois pour deux', async () => {
-    // Deux achats SÉQUENTIELS avec de quoi payer les deux : chacun laisse sa
-    // trace, et le solde final porte les deux débits.
-    const wins = WINS_FOR_ONE_BOOSTER * 2;
-    seedWallet(wins);
+  it('GARDE-FOU DE LA COURSE : la route n’écrit plus elle-même ni cache, ni paquet, ni registre', async () => {
+    // AVANT : `tcg_wallets.update` (débit du cache) → `tcg_packs.insert` →
+    // `tcg_wallet_entries.insert` → `refreshBalance`, quatre requêtes et autant
+    // de fenêtres pour un recalcul concurrent. Toute réécriture de ce chemin
+    // hors de la fonction SQL rouvrirait « 3 boosters pour le prix de 2 ».
+    setRpcResult('tcg_purchase_booster', {
+      data: {
+        status: 'ok',
+        pack_id: PACK,
+        balance: 0,
+        price: BOOSTER_PRICE_COINS,
+      },
+    });
+    const touched: string[] = [];
+    const real = supabaseAdmin.from.bind(supabaseAdmin);
+    vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
+      touched.push(table);
+      return real(table);
+    });
 
-    await handler(makeReq(), makeRes());
-    const res2 = makeRes();
-    await handler(makeReq(), res2);
+    await buy();
 
-    expect(res2.statusCode).toBe(200);
-    expect(store.tcg_packs).toHaveLength(2);
-    const spends = (store.tcg_wallet_entries as any[]).filter(
-      (e) => e.source_kind === 'booster_purchase'
-    );
-    expect(spends).toHaveLength(2);
-    // Deux paquets distincts : le registre ne doit pas référencer deux fois le
-    // même, sinon la contrainte d'unicité rejetterait le second achat en base.
-    expect(new Set(spends.map((e) => e.source_ref)).size).toBe(2);
-    expect((store.tcg_wallets![0] as any).balance).toBe(
-      wins * MATCH_WIN_COINS - 2 * BOOSTER_PRICE_COINS
-    );
+    expect(touched).not.toContain('tcg_wallets');
+    expect(touched).not.toContain('tcg_packs');
+    expect(touched).not.toContain('tcg_wallet_entries');
+    expect(store.tcg_packs ?? []).toHaveLength(0);
   });
 });
 
-/* -------------------------------------------------------------------------- */
-/* Double dépense — l'écriture conditionnelle                                  */
-/* -------------------------------------------------------------------------- */
-
-describe('POST /api/player/tcg/booster — dépense concurrente', () => {
-  it('refuse en 409 si le solde a changé entre la lecture et l’écriture', async () => {
-    // LE cas que le `.eq('balance', avant)` existe pour attraper. On simule
-    // l'achat concurrent en modifiant le solde JUSTE APRÈS sa lecture par le
-    // handler : c'est exactement la fenêtre que deux requêtes parallèles
-    // ouvrent. Sans le filtre, le handler écrirait « ancien - prix » et
-    // effacerait la dépense de l'autre — un booster livré à crédit.
-    seedWallet(WINS_FOR_ONE_BOOSTER);
-
+describe('POST /api/player/tcg/booster — issues dégradées', () => {
+  it('migration absente (PGRST202) : 503 purchase_unavailable, jamais un achat sans verrou', async () => {
+    setRpcResult('tcg_purchase_booster', {
+      error: {
+        code: 'PGRST202',
+        message: 'Could not find the function public.tcg_purchase_booster',
+      },
+    });
+    const writes: string[] = [];
     const real = supabaseAdmin.from.bind(supabaseAdmin);
-    vi.spyOn(supabaseAdmin, 'from').mockImplementation((name: string) => {
-      const builder: any = real(name);
-      if (name === 'tcg_wallets') {
-        const originalMaybeSingle = builder.maybeSingle.bind(builder);
-        builder.maybeSingle = async () => {
-          const result = await originalMaybeSingle();
-          // Un autre achat passe ICI, entre la lecture et l'écriture.
-          (store.tcg_wallets![0] as any).balance = 0;
-          return result;
-        };
-      }
-      return builder;
+    vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
+      writes.push(table);
+      return real(table);
     });
 
-    const res = makeRes();
-    await handler(makeReq(), res);
+    const res = await buy();
 
+    expect(res.statusCode).toBe(503);
+    expect(res.body.code).toBe('purchase_unavailable');
+    // Aucun repli sur l'ancien chemin en plusieurs requêtes.
+    expect(writes).toHaveLength(0);
+  });
+
+  it('signature introuvable côté Postgres (42883) : même refus', async () => {
+    setRpcResult('tcg_purchase_booster', {
+      error: { code: '42883', message: 'function does not exist' },
+    });
+    const res = await buy();
+    expect(res.statusCode).toBe(503);
+  });
+
+  it('verrou non obtenu (55P03) : 409 balance_changed, réessayer est sûr', async () => {
+    setRpcResult('tcg_purchase_booster', {
+      error: { code: '55P03', message: 'could not obtain lock' },
+    });
+    const res = await buy();
     expect(res.statusCode).toBe(409);
     expect(res.body.code).toBe('balance_changed');
-    // Et surtout : RIEN n'a été livré.
-    expect(store.tcg_packs ?? []).toHaveLength(0);
-    expect(
-      (store.tcg_wallet_entries as any[]).filter(
-        (e) => e.source_kind === 'booster_purchase'
-      )
-    ).toHaveLength(0);
-  });
-});
-
-/* -------------------------------------------------------------------------- */
-/* Annulation — le cas qui distribue des boosters gratuits si on le casse      */
-/* -------------------------------------------------------------------------- */
-
-describe('POST /api/player/tcg/booster — annulation', () => {
-  it('SUPPRIME le paquet quand l’écriture au registre échoue', async () => {
-    // Le cas le plus important du fichier. Sans la suppression, le recalcul du
-    // solde depuis un registre non débité rendrait les pièces ET laisserait le
-    // paquet : un booster gratuit à chaque erreur transitoire.
-    const wins = WINS_FOR_ONE_BOOSTER + 1;
-    seedWallet(wins);
-    failOn('tcg_wallet_entries', 'insert');
-
-    const res = makeRes();
-    await handler(makeReq(), res);
-
-    expect(res.statusCode).toBe(500);
-    // Ni paquet livré…
-    expect(store.tcg_packs ?? []).toHaveLength(0);
-    // …ni écriture de dépense…
-    expect(
-      (store.tcg_wallet_entries as any[]).filter(
-        (e) => e.source_kind === 'booster_purchase'
-      )
-    ).toHaveLength(0);
-    // …ni pièces prélevées : le solde est revenu exactement là où il était.
-    expect((store.tcg_wallets![0] as any).balance).toBe(wins * MATCH_WIN_COINS);
   });
 
-  it('rend les pièces quand le paquet n’a pas pu être créé après le débit', async () => {
-    // Le débit a eu lieu dans le cache, mais le registre n'a rien enregistré :
-    // recalculer depuis le registre suffit à rendre les pièces.
-    const wins = WINS_FOR_ONE_BOOSTER + 1;
-    seedWallet(wins);
-    failOn('tcg_packs', 'insert', 'selectMaybeSingle');
-
-    const res = makeRes();
-    await handler(makeReq(), res);
-
-    expect(res.statusCode).toBe(500);
-    expect(store.tcg_packs ?? []).toHaveLength(0);
-    expect((store.tcg_wallets![0] as any).balance).toBe(wins * MATCH_WIN_COINS);
-  });
-
-  it('rend les pièces même si le paquet orphelin n’a pas pu être supprimé', async () => {
-    // Le seul état incohérent assumé : un paquet offert, jamais facturé. La
-    // garantie qui doit tenir malgré tout est monétaire — on ne prélève pas des
-    // pièces pour un achat qu'on vient d'annoncer en échec.
-    const wins = WINS_FOR_ONE_BOOSTER + 1;
-    seedWallet(wins);
-
+  it('panne (504) : 500, et RIEN à rembourser ni à supprimer', async () => {
+    // AVANT : un 504 après la création du paquet déclenchait un « remboursement »
+    // par recalcul, et le paquet — peut-être déjà committé — restait gratuit.
+    // Une transaction est tout ou rien : la route ne tente plus aucune reprise.
+    setRpcResult('tcg_purchase_booster', {
+      error: { message: '504 upstream timeout' },
+    });
+    const touched: string[] = [];
     const real = supabaseAdmin.from.bind(supabaseAdmin);
-    vi.spyOn(supabaseAdmin, 'from').mockImplementation((name: string) => {
-      const builder: any = real(name);
-      if (name === 'tcg_wallet_entries') {
-        builder.insert = () =>
-          Promise.resolve({ data: null, error: { message: 'registre KO' } });
-      }
-      if (name === 'tcg_packs') {
-        builder.delete = () => {
-          const chain: any = {
-            eq: () => chain,
-            then: (resolve: (v: unknown) => unknown) =>
-              Promise.resolve({
-                data: null,
-                error: { message: 'suppression KO' },
-              }).then(resolve),
-          };
-          return chain;
-        };
-      }
-      return builder;
+    vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
+      touched.push(table);
+      return real(table);
     });
 
-    const res = makeRes();
-    await handler(makeReq(), res);
+    const res = await buy();
 
     expect(res.statusCode).toBe(500);
-    // Le paquet orphelin subsiste (c'est le cas dégradé documenté)…
-    expect(store.tcg_packs).toHaveLength(1);
-    // …mais la joueuse n'a pas payé.
-    expect((store.tcg_wallets![0] as any).balance).toBe(wins * MATCH_WIN_COINS);
+    expect(touched).toHaveLength(0);
+  });
+
+  it('réponse inattendue : 500, jamais un faux succès', async () => {
+    setRpcResult('tcg_purchase_booster', { data: { status: 'ok' } });
+    const res = await buy();
+    expect(res.statusCode).toBe(500);
   });
 });

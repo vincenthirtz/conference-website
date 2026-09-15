@@ -16,6 +16,15 @@
 //   4. LA TRACE. Sans journal, une correction est indiscernable d'une création
 //      de monnaie à partir de rien.
 //
+//   5. LE RATTACHEMENT À L'ESPACE (audit du 2026-09-15). Un owner d'espace tiers
+//      ne crédite pas une joueuse qui ne joue pas chez lui : c'était la porte
+//      d'entrée du vol de la récompense Battle.net unique (cf. le bloc dédié).
+//
+// Le retrait passe par la fonction SQL `tcg_admin_debit` : le mock n'exécute
+// pas le SQL, on l'ÉMULE donc en JavaScript (`emulateAdminDebit`) pour tester
+// ce que la ROUTE fait de chaque issue ; le SQL lui-même est vérifié par
+// `tcgWalletAtomicSql.test.ts`, qui lit la migration.
+//
 // Le mock Supabase n'évalue ni `UNIQUE` ni `CHECK` : les conflits sont donc
 // SIMULÉS (`setTableWriteError` + ligne semée au bon moment), et les colonnes
 // utilisées ont été vérifiées contre `create_tcg_currency_tables.sql`
@@ -38,6 +47,7 @@ import {
   resetSupabaseMock,
   setAuthUser,
   setAdminUser,
+  setRpcResult,
   setTableWriteError,
   supabaseAdmin,
 } from './__helpers__/supabaseMock';
@@ -168,11 +178,95 @@ const cachedBalance = () =>
   ((store.tcg_wallets ?? []) as any[]).find((w) => w.user_id === PLAYER)
     ?.balance;
 
+/**
+ * Les deux joueuses sont sur un roster de l'espace : sans ce rattachement, la
+ * route répond 404 avant toute écriture (cf. le bloc « rattachement »).
+ */
+function seedRosters(userIds: string[] = [PLAYER, OTHER_PLAYER]) {
+  store.team_members = userIds.map((userId, i) => ({
+    id: `f0000000-0000-4000-8000-00000000000${i}`,
+    tenant_id: TENANT,
+    team_id: 'c0000000-0000-4000-8000-000000000001',
+    user_id: userId,
+    role: 'player',
+  })) as any;
+}
+
+/**
+ * Émule `tcg_admin_debit` (migration `tcg_wallet_atomic_balance.sql`) sur le
+ * store : somme du registre, refus sous zéro, 23505 sur clé déjà servie,
+ * écriture + cache. Le verrou n'a pas d'équivalent en JavaScript mono-fil —
+ * c'est le SQL qui le porte, et un autre test le lit.
+ */
+function emulateAdminDebit() {
+  const realRpc = supabaseAdmin.rpc;
+  return vi
+    .spyOn(supabaseAdmin, 'rpc')
+    .mockImplementation((fn: string, params?: any) => {
+      if (fn !== 'tcg_admin_debit') return realRpc(fn, params);
+      const entries = (store.tcg_wallet_entries ||= []) as any[];
+      const mine = entries.filter(
+        (e) =>
+          e.tenant_id === params.p_tenant_id && e.user_id === params.p_user_id
+      );
+      const sum = mine.reduce((acc, e) => acc + e.amount, 0);
+      const writeCache = (balance: number) => {
+        const wallets = (store.tcg_wallets ||= []) as any[];
+        const row = wallets.find(
+          (w) =>
+            w.tenant_id === params.p_tenant_id && w.user_id === params.p_user_id
+        );
+        if (row) row.balance = balance;
+        else
+          wallets.push({
+            tenant_id: params.p_tenant_id,
+            user_id: params.p_user_id,
+            balance,
+          });
+      };
+      if (sum < params.p_cost) {
+        writeCache(Math.max(0, sum));
+        return Promise.resolve({
+          data: { status: 'insufficient', balance: Math.max(0, sum) },
+          error: null,
+        }) as any;
+      }
+      if (
+        mine.some(
+          (e) =>
+            e.source_kind === 'admin_grant' &&
+            e.source_ref === params.p_source_ref
+        )
+      ) {
+        return Promise.resolve({
+          data: null,
+          error: { code: '23505', message: 'duplicate key' },
+        }) as any;
+      }
+      const id = crypto.randomUUID();
+      entries.push({
+        id,
+        tenant_id: params.p_tenant_id,
+        user_id: params.p_user_id,
+        amount: -params.p_cost,
+        source_kind: 'admin_grant',
+        source_ref: params.p_source_ref,
+        note: params.p_note,
+      });
+      writeCache(sum - params.p_cost);
+      return Promise.resolve({
+        data: { status: 'ok', entry_id: id, balance: sum - params.p_cost },
+        error: null,
+      }) as any;
+    });
+}
+
 beforeEach(() => {
   resetSupabaseMock();
   vi.mocked(logStaffAction).mockClear();
   vi.restoreAllMocks();
   seedStaff();
+  seedRosters();
   setAdminUser(PLAYER, 'nova@example.com');
   setAdminUser(OTHER_PLAYER, 'kira@example.com');
 });
@@ -403,8 +497,9 @@ describe('POST /api/admin/tcg/grant — idempotence', () => {
       source_kind: 'admin_grant',
       source_ref: KEY_A,
     };
-    // Appel n°1 = relecture préalable (vide), n°2 = insertion (refusée).
-    injectEntryOnRegistryCall(2, winner);
+    // Appel n°1 = relecture préalable (vide), n°2 = rattachement (gains
+    // réels), n°3 = insertion (refusée).
+    injectEntryOnRegistryCall(3, winner);
     setTableWriteError('tcg_wallet_entries', {
       message: 'duplicate key value violates unique constraint',
       code: '23505',
@@ -426,7 +521,7 @@ describe('POST /api/admin/tcg/grant — idempotence', () => {
       source_kind: 'admin_grant',
       source_ref: KEY_A,
     };
-    injectEntryOnRegistryCall(2, committed);
+    injectEntryOnRegistryCall(3, committed);
     setTableWriteError('tcg_wallet_entries', { message: '504 upstream' });
 
     const res = await callGrant(body());
@@ -438,21 +533,55 @@ describe('POST /api/admin/tcg/grant — idempotence', () => {
 });
 
 /* -------------------------------------------------------------------------- */
-/* Retrait                                                                     */
+/* Retrait — une transaction SQL                                               */
 /* -------------------------------------------------------------------------- */
 
 describe('POST /api/admin/tcg/grant — retrait', () => {
   it('retire des pièces quand le solde le permet', async () => {
     seedBalance(300);
+    emulateAdminDebit();
     const res = await callGrant(body({ amount: -100 }));
     expect(res.statusCode).toBe(200);
     expect(res.body.balance).toBe(200);
-    expect(grants()[0].amount).toBe(-100);
+    expect(grants()[0]).toMatchObject({
+      amount: -100,
+      source_ref: KEY_A,
+      note: 'Victoire du 12/09 non créditée',
+    });
     expect(cachedBalance()).toBe(200);
+    expect(logStaffAction).toHaveBeenCalledTimes(1);
+  });
+
+  it('passe par `tcg_admin_debit` avec un coût POSITIF, et n’écrit pas le registre lui-même', async () => {
+    seedBalance(300);
+    const spy = emulateAdminDebit();
+    const insertSpy = vi.fn();
+    const realFrom = supabaseAdmin.from.bind(supabaseAdmin);
+    vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
+      const builder = realFrom(table) as any;
+      if (table === 'tcg_wallet_entries') {
+        const realInsert = builder.insert.bind(builder);
+        builder.insert = (...args: unknown[]) => {
+          insertSpy(...args);
+          return realInsert(...args);
+        };
+      }
+      return builder;
+    });
+    await callGrant(body({ amount: -100 }));
+    expect(spy).toHaveBeenCalledWith('tcg_admin_debit', {
+      p_tenant_id: TENANT,
+      p_user_id: PLAYER,
+      p_cost: 100,
+      p_source_ref: KEY_A,
+      p_note: 'Victoire du 12/09 non créditée',
+    });
+    expect(insertSpy).not.toHaveBeenCalled();
   });
 
   it('peut ramener un solde exactement à zéro', async () => {
     seedBalance(100);
+    emulateAdminDebit();
     const res = await callGrant(body({ amount: -100 }));
     expect(res.statusCode).toBe(200);
     expect(res.body.balance).toBe(0);
@@ -460,70 +589,212 @@ describe('POST /api/admin/tcg/grant — retrait', () => {
 
   it('409 INSUFFICIENT_BALANCE si le retrait rendrait le solde négatif', async () => {
     seedBalance(50);
+    emulateAdminDebit();
     const res = await callGrant(body({ amount: -100 }));
     expect(res.statusCode).toBe(409);
-    expect(res.body.code).toBe('INSUFFICIENT_BALANCE');
+    expect(res.body).toMatchObject({
+      code: 'INSUFFICIENT_BALANCE',
+      balance: 50,
+    });
     expect(grants()).toHaveLength(0);
     expect(cachedBalance()).toBe(50);
     expect(logStaffAction).not.toHaveBeenCalled();
   });
 
   it('409 sur un compte sans aucun solde', async () => {
+    emulateAdminDebit();
     const res = await callGrant(body({ amount: -1 }));
     expect(res.statusCode).toBe(409);
     expect(res.body.code).toBe('INSUFFICIENT_BALANCE');
   });
 
-  it('refuse quand le CACHE est déjà engagé par un achat en vol', async () => {
-    // Registre à 300, cache à 0 : un booster a débité le cache et n'a pas
-    // encore écrit au registre. Ces pièces sont déjà dépensées.
-    seedBalance(300, 0);
-    const res = await callGrant(body({ amount: -100 }));
-    expect(res.statusCode).toBe(409);
-    expect(res.body.code).toBe('INSUFFICIENT_BALANCE');
-    expect(grants()).toHaveLength(0);
-  });
-
-  it('refuse quand le REGISTRE est plus bas que le cache', async () => {
-    // Cache resté haut après un recalcul raté : le registre fait foi.
+  it('le REGISTRE fait foi, pas un cache resté haut', async () => {
     seedBalance(50, 500);
+    emulateAdminDebit();
     const res = await callGrant(body({ amount: -100 }));
     expect(res.statusCode).toBe(409);
     expect(res.body.code).toBe('INSUFFICIENT_BALANCE');
   });
 
-  it('une écriture refusée rend les pièces réservées sur le cache', async () => {
+  it('migration absente : 503 WITHDRAWAL_UNAVAILABLE, rien d’écrit (jamais un retrait sans verrou)', async () => {
     seedBalance(300);
-    setTableWriteError('tcg_wallet_entries', { message: 'boom' });
+    setRpcResult('tcg_admin_debit', {
+      error: { code: 'PGRST202', message: 'Could not find the function' },
+    });
     const res = await callGrant(body({ amount: -100 }));
-    expect(res.statusCode).toBe(500);
+    expect(res.statusCode).toBe(503);
+    expect(res.body.code).toBe('WITHDRAWAL_UNAVAILABLE');
     expect(grants()).toHaveLength(0);
-    // Le recalcul depuis un registre non débité remet le cache à 300.
     expect(cachedBalance()).toBe(300);
     expect(logStaffAction).not.toHaveBeenCalled();
   });
 
-  it('un registre illisible rend 500, jamais un retrait à l’aveugle', async () => {
+  it('verrou non obtenu : 409 BALANCE_CHANGED', async () => {
     seedBalance(300);
-    const realFrom = supabaseAdmin.from;
-    let calls = 0;
-    vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
-      const builder = realFrom(table) as any;
-      if (table === 'tcg_wallet_entries') {
-        calls += 1;
-        // n°1 = relecture de la clé ; n°2 = somme du registre → en échec.
-        if (calls === 2) {
-          builder.then = (resolve: (r: unknown) => unknown) =>
-            Promise.resolve({ data: null, error: { message: 'timeout' } }).then(
-              resolve
-            );
-        }
-      }
-      return builder;
+    setRpcResult('tcg_admin_debit', {
+      error: { code: '55P03', message: 'lock not available' },
     });
+    const res = await callGrant(body({ amount: -100 }));
+    expect(res.statusCode).toBe(409);
+    expect(res.body.code).toBe('BALANCE_CHANGED');
+  });
+
+  it('course sur la même clé (23505) : `replayed: true`, pas de second retrait', async () => {
+    seedBalance(300);
+    const winner = {
+      id: 'e0000000-0000-4000-8000-00000000dead',
+      tenant_id: TENANT,
+      user_id: PLAYER,
+      amount: -100,
+      source_kind: 'admin_grant',
+      source_ref: KEY_A,
+    };
+    setRpcResult('tcg_admin_debit', {
+      error: { code: '23505', message: 'duplicate key' },
+    });
+    // La requête concurrente a écrit APRÈS la relecture préalable.
+    const realRpc = supabaseAdmin.rpc;
+    vi.spyOn(supabaseAdmin, 'rpc').mockImplementation(
+      (fn: string, params?: any) => {
+        if (fn === 'tcg_admin_debit') {
+          (store.tcg_wallet_entries as any[]).push(winner);
+        }
+        return realRpc(fn, params);
+      }
+    );
+    const res = await callGrant(body({ amount: -100 }));
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({ entryId: winner.id, replayed: true });
+    expect(grants()).toHaveLength(1);
+    expect(logStaffAction).not.toHaveBeenCalled();
+  });
+
+  it('panne après commit (504) : relit par la clé, succès tracé', async () => {
+    seedBalance(300);
+    const committed = {
+      id: 'e0000000-0000-4000-8000-00000000f00d',
+      tenant_id: TENANT,
+      user_id: PLAYER,
+      amount: -100,
+      source_kind: 'admin_grant',
+      source_ref: KEY_A,
+    };
+    setRpcResult('tcg_admin_debit', { error: { message: '504 upstream' } });
+    const realRpc = supabaseAdmin.rpc;
+    vi.spyOn(supabaseAdmin, 'rpc').mockImplementation(
+      (fn: string, params?: any) => {
+        if (fn === 'tcg_admin_debit') {
+          (store.tcg_wallet_entries as any[]).push(committed);
+        }
+        return realRpc(fn, params);
+      }
+    );
+    const res = await callGrant(body({ amount: -100 }));
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({
+      entryId: committed.id,
+      replayed: false,
+      balance: 200,
+    });
+    expect(logStaffAction).toHaveBeenCalledTimes(1);
+  });
+
+  it('panne sans écriture : 500, rien d’écrit ni de tracé', async () => {
+    seedBalance(300);
+    setRpcResult('tcg_admin_debit', { error: { message: 'boom' } });
     const res = await callGrant(body({ amount: -100 }));
     expect(res.statusCode).toBe(500);
     expect(grants()).toHaveLength(0);
-    expect(cachedBalance()).toBe(300);
+    expect(logStaffAction).not.toHaveBeenCalled();
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Rattachement à l'espace (audit du 2026-09-15)                               */
+/* -------------------------------------------------------------------------- */
+
+describe('POST /api/admin/tcg/grant — seulement une joueuse de l’espace', () => {
+  // SCÉNARIO D'ATTAQUE. L'owner d'un espace B (un espace développeur se crée en
+  // libre-service) crédite +1 pièce à une joueuse qui ne joue que dans A.
+  // AVANT : 200 — le crédit créait un porte-monnaie dans B, que le rattrapage
+  // Battle.net de B prenait pour un rattachement, et la récompense UNIQUE de la
+  // joueuse était consommée dans B. APRÈS : 404, rien d'écrit, et la route ne
+  // dit même pas si le compte existe.
+  it('refuse (404 USER_NOT_FOUND) une joueuse sans roster ni gain dans l’espace, sans consulter GoTrue', async () => {
+    store.team_members = [
+      {
+        id: 'f0000000-0000-4000-8000-0000000000aa',
+        tenant_id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+        team_id: 'c0000000-0000-4000-8000-000000000002',
+        user_id: PLAYER,
+        role: 'player',
+      },
+    ] as any;
+    const lookup = vi.spyOn(supabaseAdmin.auth.admin, 'getUserById');
+
+    const res = await callGrant(body({ amount: 1 }));
+
+    expect(res.statusCode).toBe(404);
+    expect(res.body.code).toBe('USER_NOT_FOUND');
+    expect(grants()).toHaveLength(0);
+    expect(store.tcg_wallets ?? []).toHaveLength(0);
+    expect(lookup).not.toHaveBeenCalled();
+    expect(logStaffAction).not.toHaveBeenCalled();
+  });
+
+  it('un porte-monnaie fait de SEULES corrections staff ne rattache pas', async () => {
+    store.team_members = [] as any;
+    store.tcg_wallet_entries = [
+      {
+        id: 'e0000000-0000-4000-8000-000000000a01',
+        tenant_id: TENANT,
+        user_id: PLAYER,
+        amount: 1,
+        source_kind: 'admin_grant',
+        source_ref: KEY_B,
+      },
+    ] as any;
+    store.tcg_wallets = [
+      { tenant_id: TENANT, user_id: PLAYER, balance: 1 },
+    ] as any;
+
+    const res = await callGrant(body({ amount: 5 }));
+    expect(res.statusCode).toBe(404);
+    expect(grants()).toHaveLength(1);
+  });
+
+  it('une supportrice sans roster, rattachée par un gain réel (drop Twitch), reste corrigeable', async () => {
+    store.team_members = [] as any;
+    store.tcg_wallet_entries = [
+      {
+        id: 'e0000000-0000-4000-8000-000000000a02',
+        tenant_id: TENANT,
+        user_id: PLAYER,
+        amount: 25,
+        source_kind: 'twitch_drop',
+        source_ref: 'live-1',
+      },
+    ] as any;
+    const res = await callGrant(body({ amount: 5 }));
+    expect(res.statusCode).toBe(200);
+    expect(res.body.balance).toBe(30);
+  });
+
+  it('un rattachement illisible rend 500, jamais « introuvable » ni une écriture', async () => {
+    const realFrom = supabaseAdmin.from.bind(supabaseAdmin);
+    vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
+      const builder = realFrom(table) as any;
+      if (table === 'team_members') {
+        builder.then = (resolve: (r: unknown) => unknown) =>
+          Promise.resolve({ data: null, error: { message: 'timeout' } }).then(
+            resolve
+          );
+      }
+      return builder;
+    });
+    const res = await callGrant(body({ amount: 5 }));
+    expect(res.statusCode).toBe(500);
+    expect(res.body.code).not.toBe('USER_NOT_FOUND');
+    expect(grants()).toHaveLength(0);
   });
 });

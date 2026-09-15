@@ -17,6 +17,12 @@ export type PendingPhoto = {
   userId: string;
   displayName: string | null;
   email: string | null;
+  /**
+   * Chemin du fichier AFFICHÉ, renvoyé tel quel dans la décision : le serveur
+   * refuse (409) de trancher sur une photo remplacée depuis. `null` = la route
+   * ne l'a pas fourni, et aucune décision n'est alors possible.
+   */
+  photoPath: string | null;
   photoUrl: string | null;
   submittedAt: string | null;
 };
@@ -46,6 +52,7 @@ export function normalizePendingPhotos(raw: unknown): PendingPhoto[] {
       userId,
       displayName: str(row.displayName),
       email: str(row.email),
+      photoPath: str(row.photoPath),
       photoUrl: str(row.photoUrl),
       submittedAt: str(row.submittedAt),
     });

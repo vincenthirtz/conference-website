@@ -13,6 +13,20 @@
 // motif du refus et peut redéposer ; c'est le fichier qui part, pas
 // l'explication.
 //
+// ON N'APPROUVE QUE LA PHOTO QU'ON A VUE (correctif du 2026-09-15). La décision
+// désignait la JOUEUSE, pas le fichier : la relectrice voyait la photo A, la
+// joueuse la remplaçait par B (de nouveau `pending`), et « approuver »
+// publiait B, que personne n'avait regardée — le consentement de modération
+// contourné par un simple remplacement. Symétriquement, un refus concurrent
+// vidait le chemin de B en base et supprimait A du bucket : B restait
+// orpheline dans un bucket PUBLIC, sans ligne pour la retirer.
+// Le PATCH porte donc `photoPath`, le chemin AFFICHÉ (rendu par le GET), et
+// l'écriture est CONDITIONNELLE : `photo_status = 'pending' AND photo_path =
+// <affiché>`, avec `.select()` pour savoir si une ligne a été touchée. Zéro
+// ligne → `409 PHOTO_CHANGED` (ou `NOT_PENDING`), l'écran rafraîchit la file.
+// Le fichier supprimé au refus est le chemin que l'écriture a CONFIRMÉ, jamais
+// une relecture antérieure.
+//
 // LES PSEUDOS SONT UN ENRICHISSEMENT, PAS UNE CONDITION. Chaque élément porte
 // `displayName` et `email`, résolus en UN aller-retour par la RPC
 // `fetchAdminUserProfiles` (le profil vit dans `auth.users.raw_user_meta_data`,
@@ -47,6 +61,10 @@ const SELECT_COLS =
 const decisionSchema = z.object({
   userId: z.string().uuid(),
   decision: z.enum(['approve', 'reject']),
+  // Le chemin de la photo AFFICHÉE à la relectrice (champ `photoPath` du GET).
+  // Obligatoire : une décision sans lui porterait sur « la photo du moment »,
+  // c'est-à-dire éventuellement une photo jamais vue (cf. l'en-tête).
+  photoPath: z.string().trim().min(1).max(512),
   // Motif facultatif, mais fortement utile en cas de refus : sans lui, la
   // joueuse ne sait pas quoi corriger.
   reason: z.string().trim().max(500).optional().nullable(),
@@ -110,6 +128,9 @@ async function listPending(
       displayName: profile?.display_name || profile?.full_name || null,
       email: profile?.email ?? null,
       submittedAt: row.updated_at,
+      // Le chemin exact de CE fichier : le PATCH le renvoie pour que la
+      // décision porte sur l'image affichée, et pas sur une remplaçante.
+      photoPath: row.photo_path,
       photoUrl: row.photo_path
         ? supabaseAdmin!.storage.from(BUCKET).getPublicUrl(row.photo_path).data
             .publicUrl
@@ -160,14 +181,15 @@ async function decide(
       .status(400)
       .json({ error: formatZodError(parsed.error), code: 'INVALID_BODY' });
   }
-  const { userId, decision, reason } = parsed.data;
+  const { userId, decision, reason, photoPath } = parsed.data;
   if (!isValidUUID(userId)) {
     return res.status(400).json({ error: 'Identifiant invalide.' });
   }
 
-  // On relit la ligne : il faut le chemin du fichier pour un refus, et savoir
-  // si la photo est toujours en attente (elle a pu être retirée entre-temps
-  // par la joueuse — sa décision prime sur celle du staff).
+  // Relecture : elle ne DÉCIDE de rien (l'écriture conditionnelle ci-dessous
+  // tranche), elle sert à distinguer les deux conflits pour l'écran — la
+  // joueuse a retiré sa photo (`NOT_PENDING`, sa décision prime) ou l'a
+  // remplacée (`PHOTO_CHANGED`, la nouvelle doit être relue).
   const { data: existing, error: readError } = await supabaseAdmin!
     .from('tcg_player_cards')
     .select('photo_path, photo_status')
@@ -187,42 +209,54 @@ async function decide(
   if (!row || row.photo_status !== 'pending') {
     // 409 et non 404 : la ligne existe peut-être, mais l'état a changé sous les
     // yeux de la relectrice. Le panneau rafraîchit plutôt que d'écraser.
-    return res.status(409).json({
-      error: 'Cette photo n’est plus en attente.',
-      code: 'NOT_PENDING',
-    });
+    return notPending(res);
+  }
+  if (row.photo_path !== photoPath) {
+    return photoChanged(res);
   }
 
   const nowIso = new Date().toISOString();
   const approving = decision === 'approve';
 
-  const { error: writeError } = await supabaseAdmin!
+  // L'ÉCRITURE CONDITIONNELLE — la seule garantie. Entre la relecture et ici,
+  // la joueuse peut encore remplacer ou retirer sa photo : la condition sur le
+  // CHEMIN fait alors toucher zéro ligne, au lieu d'approuver une inconnue.
+  const { data: written, error: writeError } = await supabaseAdmin!
     .from('tcg_player_cards')
     .update({
       photo_status: approving ? 'approved' : 'rejected',
       // Un refus retire le fichier (cf. l'en-tête) : le chemin ne doit plus
       // pointer vers rien.
-      photo_path: approving ? row.photo_path : null,
+      photo_path: approving ? photoPath : null,
       photo_reviewed_by: ctx.staff.id,
       photo_reviewed_at: nowIso,
       photo_rejected_reason: approving ? null : (reason ?? null),
       updated_at: nowIso,
     })
     .eq('tenant_id', ctx.tenantId)
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .eq('photo_status', 'pending')
+    .eq('photo_path', photoPath)
+    .select('user_id');
 
   if (writeError) {
     logger.error('[admin/tcg] decision error: %s', writeError.message);
     return res.status(500).json({ error: 'Enregistrement impossible.' });
   }
+  if (!Array.isArray(written) || written.length === 0) {
+    // Course perdue : la photo a changé entre la relecture et l'écriture.
+    // Rien n'est approuvé, rien n'est supprimé.
+    return photoChanged(res);
+  }
 
   // Le fichier part APRÈS que la base ne le référence plus : dans l'autre
   // ordre, un échec d'écriture laisserait une ligne pointant vers un fichier
-  // disparu.
-  if (!approving && row.photo_path) {
+  // disparu. C'est le chemin CONFIRMÉ par l'écriture conditionnelle — donc le
+  // fichier que la relectrice a vu et refusé, jamais celui d'un remplacement.
+  if (!approving) {
     const { error: removeError } = await supabaseAdmin!.storage
       .from(BUCKET)
-      .remove([row.photo_path]);
+      .remove([photoPath]);
     if (removeError) {
       logger.error(
         '[admin/tcg] fichier refusé non supprimé: %s',
@@ -246,6 +280,20 @@ async function decide(
   await revalidatePlayerCard(res, userId);
 
   return res.status(200).json({ status: approving ? 'approved' : 'rejected' });
+}
+
+function notPending(res: NextApiResponse) {
+  return res.status(409).json({
+    error: 'Cette photo n’est plus en attente.',
+    code: 'NOT_PENDING',
+  });
+}
+
+function photoChanged(res: NextApiResponse) {
+  return res.status(409).json({
+    error: 'La photo a été remplacée depuis l’affichage : relis la nouvelle.',
+    code: 'PHOTO_CHANGED',
+  });
 }
 
 export default withStaffRoute(handler, { permission: 'manage_tcg' });

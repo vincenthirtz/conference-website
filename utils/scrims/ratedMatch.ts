@@ -22,8 +22,21 @@
 // de la logique Glicko.
 //
 // Le miroir est réconcilié, pas empilé : un scrim qui cesse d'être éligible
-// (dé-classé, rouvert, mis en litige, supprimé) perd sa ligne miroir ET les
-// lignes d'historique de rating qui en découlaient.
+// (dé-classé, rouvert, mis en litige, supprimé) perd les lignes d'historique de
+// rating qui en découlaient, et sa feuille de participantes.
+//
+// UN MIROIR QUI A PAYÉ N'EST PLUS SUPPRIMÉ, IL EST NEUTRALISÉ (2026-09-15).
+//   `tcg_packs.source_match_id` référence le miroir en `ON DELETE CASCADE` :
+//   supprimer le miroir emportait les paquets de la victoire — ouverts
+//   compris, donc des cartes de collection — et le miroir suivant, recréé sous
+//   un autre id, rouvrait la récompense. C'était la moitié « paquet » de la
+//   boucle de pièces infinies (l'autre moitié, la clé des pièces, est dans
+//   `utils/tcg/grantVictoryRewards.ts`). Un miroir dont un paquet dépend passe
+//   donc en statut non noté (`disputed` si le scrim est en litige, `cancelled`
+//   sinon), sans vainqueur ; il redevient `finished` si le scrim redevient
+//   éligible, sous LE MÊME id. Un miroir qui n'a rien payé est supprimé comme
+//   avant. Si la présence d'un paquet est illisible, on NEUTRALISE : dans le
+//   doute, on ne détruit pas une récompense.
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
@@ -77,12 +90,45 @@ export function isScrimRatable(scrim: {
   return true;
 }
 
-/** Supprime le miroir d'un scrim et l'historique de rating qui en découle. */
-async function dropMirror(tenantId: string, matchId: string): Promise<void> {
+/** Statut d'un miroir neutralisé : ni l'un ni l'autre n'est noté par le rating. */
+function neutralMirrorStatus(scrim: ScrimRow | null): 'disputed' | 'cancelled' {
+  return scrim?.status === 'disputed' ? 'disputed' : 'cancelled';
+}
+
+/**
+ * Le miroir a-t-il servi de source à un paquet TCG ? `true` aussi quand la
+ * lecture échoue : la réponse prudente est celle qui ne supprime rien.
+ */
+async function mirrorHasPaid(
+  tenantId: string,
+  matchId: string
+): Promise<boolean> {
+  const { data, error } = await supabaseAdmin!
+    .from('tcg_packs')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('source_match_id', matchId)
+    .limit(1);
+  if (error) {
+    logger.error('[scrim-rating] tcg packs probe error', error);
+    return true;
+  }
+  return Array.isArray(data) && data.length > 0;
+}
+
+/**
+ * Retire le miroir d'un scrim du classement : l'historique de rating et la
+ * feuille de participantes partent ; la ligne `matches` est supprimée si elle
+ * n'a rien payé, NEUTRALISÉE sinon (cf. l'en-tête).
+ */
+async function retireMirror(
+  tenantId: string,
+  matchId: string,
+  scrim: ScrimRow | null
+): Promise<void> {
   if (!supabaseAdmin) return;
   // L'historique d'abord : sans lui, la joueuse garderait les points d'une
-  // partie qui n'existe plus. `match_participants` part en cascade avec le
-  // match (FK ON DELETE CASCADE).
+  // partie qui n'existe plus.
   const { error: histErr } = await supabaseAdmin
     .from('player_rating_history')
     .delete()
@@ -92,6 +138,35 @@ async function dropMirror(tenantId: string, matchId: string): Promise<void> {
     logger.error('[scrim-rating] history delete error', histErr);
     return;
   }
+
+  if (await mirrorHasPaid(tenantId, matchId)) {
+    const { error: neutralErr } = await supabaseAdmin
+      .from('matches')
+      .update({
+        status: neutralMirrorStatus(scrim),
+        winner_team_id: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('tenant_id', tenantId)
+      .eq('id', matchId);
+    if (neutralErr) {
+      logger.error('[scrim-rating] mirror neutralize error', neutralErr);
+      return;
+    }
+    // Ce que la cascade retirait avec le match : la feuille. Elle est refigée
+    // si le scrim redevient éligible (`snapshotMatchParticipants`).
+    const { error: partErr } = await supabaseAdmin
+      .from('match_participants')
+      .delete()
+      .eq('tenant_id', tenantId)
+      .eq('match_id', matchId);
+    if (partErr) {
+      logger.error('[scrim-rating] participants delete error', partErr);
+    }
+    return;
+  }
+
+  // `match_participants` part en cascade avec le match (FK ON DELETE CASCADE).
   const { error: delErr } = await supabaseAdmin
     .from('matches')
     .delete()
@@ -105,7 +180,8 @@ async function dropMirror(tenantId: string, matchId: string): Promise<void> {
  * partie. Best-effort : loggue et ne throw JAMAIS — un scrim dont le résultat
  * est déjà persisté ne doit pas échouer parce que le rating a hoqueté.
  *
- * Idempotent : rappelée sur le même scrim, elle met à jour la même ligne, et
+ * Idempotent : rappelée sur le même scrim, elle met à jour la même ligne (y
+ * compris un miroir neutralisé, qui redevient `finished` sous le même id), et
  * `applyMatchRatingIncremental` ne recompte pas un match déjà noté.
  */
 export async function syncScrimRatedMatch(
@@ -140,7 +216,7 @@ export async function syncScrimRatedMatch(
 
     const scrim = scrimRow as ScrimRow | null;
     if (!scrim || !isScrimRatable(scrim)) {
-      if (existingId) await dropMirror(tenantId, existingId);
+      if (existingId) await retireMirror(tenantId, existingId, scrim);
       return;
     }
 

@@ -203,6 +203,49 @@ export default withAuthRoute(async function handler(
       .json({ error: 'Carte déjà recyclée.', code: 'already_recycled' });
   }
 
+  // 3 bis) RECOMPTE APRÈS RÉSERVATION (correctif du 2026-09-15). Le contrôle
+  //    « au moins deux exemplaires » de l'étape 2 est une LECTURE : deux
+  //    recyclages simultanés des deux derniers exemplaires d'un sujet la
+  //    passaient tous les deux, puis réservaient chacun LEUR carte (le garde
+  //    `recycled_at IS NULL` protège une carte, pas un sujet) — et la joueuse
+  //    perdait son dernier exemplaire. On recompte donc APRÈS avoir réservé :
+  //    s'il ne reste aucun exemplaire non recyclé, on relâche NOTRE réservation
+  //    (conditionnée à notre horodatage) et on refuse. Deux requêtes qui se
+  //    croisent peuvent se relâcher toutes les deux — un refus inutile,
+  //    rejouable — mais jamais détruire la dernière carte.
+  const recount = await readCardsOfPacks(packIds);
+  const remaining = recount.ok
+    ? recount.value.filter((c) => subjectOf(c) === targetSubject).length
+    : null;
+  if (remaining === null || remaining < 1) {
+    const { error: releaseError } = await supabaseAdmin
+      .from('tcg_pack_cards')
+      .update({ recycled_at: null })
+      .in('pack_id', packIds)
+      .eq('pack_id', packId)
+      .eq('position', position)
+      .eq('recycled_at', recycledAt);
+    if (releaseError) {
+      logger.error(
+        '[tcg/recycle] carte %s:%s réservée mais non relâchée: %s',
+        packId,
+        position,
+        releaseError.message
+      );
+    }
+    if (remaining === null) {
+      logger.error(
+        '[tcg/recycle] recompte illisible, recyclage annulé: %s',
+        recount.ok ? '?' : recount.error
+      );
+      return res.status(500).json({ error: 'Recyclage impossible.' });
+    }
+    return res.status(409).json({
+      error: 'Cette carte est ton seul exemplaire.',
+      code: 'not_a_duplicate',
+    });
+  }
+
   // 4) Le crédit. `source_ref` désigne LA carte : la contrainte d'unicité du
   //    registre interdit de la créditer deux fois, quoi qu'il arrive.
   const { error: entryError } = await supabaseAdmin

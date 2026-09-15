@@ -16,6 +16,7 @@ import {
   store,
   resetSupabaseMock,
   setAuthUser,
+  supabaseAdmin,
   CONFERENCE_TENANT_ID,
 } from './__helpers__/supabaseMock';
 
@@ -26,7 +27,12 @@ import {
   POINTS_DRAW,
   type ScrimResultRow,
 } from '../../utils/scrims/ladder';
-import { winnerFromScores, reportsAgree } from '../../utils/scrims/scrimResult';
+import {
+  winnerFromScores,
+  reportsAgree,
+  markScrimDisputed,
+} from '../../utils/scrims/scrimResult';
+import { SCRIM_WIN_COINS } from '../../utils/tcg/economy';
 
 const SCRIM_ID = '11111111-1111-4111-8111-111111111111';
 const TEAM_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -252,6 +258,169 @@ describe('POST /api/player/scrims/[scrimId]/report', () => {
       res
     );
     expect(res.statusCode).toBe(400);
+  });
+});
+
+/* -----------------------------------------------------------
+ * Boucle de récompenses TCG par re-rapport (audit du 2026-09-15)
+ * ---------------------------------------------------------*/
+describe('POST /api/player/scrims/[scrimId]/report — un scrim clos ne se re-rapporte plus', () => {
+  const PLAYER_A = '0a0a0a0a-0a0a-4a0a-8a0a-0a0a0a0a0a0a';
+  const PLAYER_B = '0b0b0b0b-0b0b-4b0b-8b0b-0b0b0b0b0b0b';
+
+  function seedRosters() {
+    store.team_members = [
+      {
+        tenant_id: CONFERENCE_TENANT_ID,
+        team_id: TEAM_A,
+        user_id: PLAYER_A,
+        role: 'player',
+        is_substitute: false,
+        battle_tag: null,
+      },
+      {
+        tenant_id: CONFERENCE_TENANT_ID,
+        team_id: TEAM_B,
+        user_id: PLAYER_B,
+        role: 'player',
+        is_substitute: false,
+        battle_tag: null,
+      },
+    ] as any;
+    store.matches = [] as any;
+    store.match_participants = [] as any;
+    store.player_ratings = [] as any;
+    store.player_rating_history = [] as any;
+  }
+
+  async function report(
+    captain: string,
+    team1Score: number,
+    team2Score: number
+  ) {
+    setAuthUser({ id: captain });
+    const res = makeRes();
+    await reportHandler(makeReq({ body: { team1Score, team2Score } }), res);
+    return res;
+  }
+
+  const rewardsOf = (userId: string) => ({
+    packs: ((store.tcg_packs as any[]) || []).filter(
+      (p) => p.user_id === userId
+    ),
+    coins: ((store.tcg_wallet_entries as any[]) || []).filter(
+      (e) => e.user_id === userId
+    ),
+  });
+
+  it('SCÉNARIO D’ATTAQUE : la capitaine gagnante alterne ses reports — 409, rien ne se repaie', async () => {
+    seedRosters();
+    // 1) Accord 1-0 : scrim clos, miroir noté, la gagnante est payée une fois.
+    await report(CAPTAIN_A, 1, 0);
+    const done = await report(CAPTAIN_B, 1, 0);
+    expect((done.body as any).outcome).toBe('completed');
+    expect(rewardsOf(PLAYER_A).packs).toHaveLength(1);
+    expect(rewardsOf(PLAYER_A).coins).toHaveLength(1);
+    expect(rewardsOf(PLAYER_A).coins[0].amount).toBe(SCRIM_WIN_COINS);
+    const mirrorBefore = ((store.matches as any[]) || []).filter(
+      (m) => m.scrim_id === SCRIM_ID
+    );
+    expect(mirrorBefore).toHaveLength(1);
+
+    // 2) AVANT : 0-1 → litige → miroir supprimé ; puis 1-0 → accord avec le
+    //    report de B resté en base → nouveau miroir → nouveau paquet. Boucle.
+    //    APRÈS : un scrim `completed` est terminal pour les capitaines.
+    for (const [t1, t2] of [
+      [0, 1],
+      [1, 0],
+      [0, 1],
+      [1, 0],
+    ]) {
+      const res = await report(CAPTAIN_A, t1, t2);
+      expect(res.statusCode).toBe(409);
+      expect((res.body as any).code).toBe('SCRIM_CLOSED');
+    }
+
+    const scrim = (store.scrims as any[])[0];
+    expect(scrim.status).toBe('completed');
+    expect(scrim.winner_team_id).toBe(TEAM_A);
+    // Le report de A n'a pas été réécrit : la garde précède l'upsert.
+    const reportA = (store.scrim_score_reports as any[]).find(
+      (r) => r.team_side === 1
+    );
+    expect([reportA.team1_score, reportA.team2_score]).toEqual([1, 0]);
+    // Même miroir, même statut, et toujours UNE récompense.
+    const mirrorAfter = ((store.matches as any[]) || []).filter(
+      (m) => m.scrim_id === SCRIM_ID
+    );
+    expect(mirrorAfter.map((m) => [m.id, m.status])).toEqual(
+      mirrorBefore.map((m) => [m.id, 'finished'])
+    );
+    expect(rewardsOf(PLAYER_A).packs).toHaveLength(1);
+    expect(rewardsOf(PLAYER_A).coins).toHaveLength(1);
+    expect(rewardsOf(PLAYER_B).packs).toHaveLength(0);
+  });
+
+  it('course : le scrim est clos entre la lecture et le report divergent — pas de litige', async () => {
+    seedRosters();
+    // B a déjà rapporté 1-3 ; A rapporte 3-1 pendant que l'accord se referme.
+    store.scrim_score_reports = [
+      {
+        tenant_id: CONFERENCE_TENANT_ID,
+        scrim_id: SCRIM_ID,
+        team_side: 2,
+        team1_score: 1,
+        team2_score: 3,
+      },
+    ] as any;
+    const real = supabaseAdmin.from.bind(supabaseAdmin);
+    const spy = vi.spyOn(supabaseAdmin, 'from').mockImplementation((name) => {
+      const builder: any = real(name);
+      if (name === 'scrims') {
+        const original = builder.maybeSingle?.bind(builder);
+        if (original) {
+          builder.maybeSingle = async () => {
+            const result = await original();
+            // Le scrim se clôt JUSTE APRÈS la lecture de la route.
+            (store.scrims as any[])[0].status = 'completed';
+            return result;
+          };
+        }
+      }
+      return builder;
+    });
+    let res: any;
+    try {
+      res = await report(CAPTAIN_A, 3, 1);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(res.statusCode).toBe(409);
+    expect(res.body.code).toBe('SCRIM_CLOSED');
+    expect((store.scrims as any[])[0].status).toBe('completed');
+  });
+
+  it('markScrimDisputed ne rouvre ni un scrim clos ni un scrim annulé', async () => {
+    for (const status of ['completed', 'cancelled']) {
+      (store.scrims as any[])[0].status = status;
+      const outcome = await markScrimDisputed(
+        CONFERENCE_TENANT_ID,
+        SCRIM_ID,
+        'divergence tardive'
+      );
+      expect(outcome).toBe('closed');
+      expect((store.scrims as any[])[0].status).toBe(status);
+    }
+  });
+
+  it('un litige reste corrigeable par les capitaines (seul `completed` est terminal)', async () => {
+    seedRosters();
+    await report(CAPTAIN_A, 3, 1);
+    await report(CAPTAIN_B, 1, 3);
+    expect((store.scrims as any[])[0].status).toBe('disputed');
+    const res = await report(CAPTAIN_A, 1, 3);
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).outcome).toBe('completed');
   });
 });
 

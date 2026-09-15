@@ -29,7 +29,11 @@ vi.mock('@/utils/botEvents', () => ({
   emitBotEvent: vi.fn(async () => ({ delivered: true, attempts: 1 })),
 }));
 
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import {
+  store,
+  resetSupabaseMock,
+  supabaseAdmin,
+} from './__helpers__/supabaseMock';
 import { emitBotEvent } from '../../utils/botEvents';
 import { grantVictoryRewards } from '../../utils/tcg/grantVictoryRewards';
 import { MATCH_WIN_COINS, SCRIM_WIN_COINS } from '../../utils/tcg/economy';
@@ -43,6 +47,9 @@ function granted() {
 
 const TENANT = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 const MATCH = '11111111-1111-1111-1111-111111111111';
+/** Le scrim dont MATCH est le miroir, et un second miroir du même scrim. */
+const SCRIM = '55555555-5555-4555-8555-555555555555';
+const MIRROR_2 = '22222222-2222-4222-8222-222222222222';
 const WINNER_TEAM = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const LOSER_TEAM = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 
@@ -111,6 +118,7 @@ describe('grantVictoryRewards', () => {
       matchId: MATCH,
       winnerTeamId: WINNER_TEAM,
       isScrim: true,
+      scrimId: SCRIM,
       participants: PARTICIPANTS,
     });
 
@@ -119,6 +127,12 @@ describe('grantVictoryRewards', () => {
       SCRIM_WIN_COINS,
     ]);
     expect(entries().every((e) => e.source_kind === 'scrim_win')).toBe(true);
+    // La clé est le SCRIM, pas le match miroir (cf. le bloc « boucle » plus bas).
+    expect(entries().every((e) => e.source_ref === `scrim:${SCRIM}`)).toBe(
+      true
+    );
+    // Le paquet, lui, cite toujours le miroir : `victory` exige un match.
+    expect(packs().every((p) => p.source_match_id === MATCH)).toBe(true);
   });
 
   it('dédoublonne une joueuse inscrite deux fois sur la feuille', async () => {
@@ -254,6 +268,7 @@ describe('grantVictoryRewards', () => {
       matchId: MATCH,
       winnerTeamId: WINNER_TEAM,
       isScrim: true,
+      scrimId: SCRIM,
       participants: [{ teamId: WINNER_TEAM, userId: ALICE }],
     });
 
@@ -284,5 +299,128 @@ describe('grantVictoryRewards', () => {
     expect(packs()).toHaveLength(0);
     expect(entries()).toHaveLength(0);
     expect(wallets()).toHaveLength(0);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Boucle de pièces infinies par scrim re-rapporté (audit du 2026-09-15)       */
+/* -------------------------------------------------------------------------- */
+
+describe('grantVictoryRewards — un scrim paie UNE fois, quel que soit son miroir', () => {
+  // SCÉNARIO D'ATTAQUE. A gagne un scrim classé : miroir M1 → paquet + 50
+  // pièces. La capitaine A re-rapporte un score contraire → litige → M1
+  // SUPPRIMÉ (le paquet part en cascade via `source_match_id`). Elle re-rapporte
+  // le bon score → accord avec le report de B → nouveau miroir M2 → la même
+  // fonction est rappelée avec `matchId: M2`.
+  //
+  // AVANT le correctif : `source_ref = matchId` et paquet clé sur `matchId` →
+  // M2 n'entrait en conflit avec rien → 2 écritures de plus, 2 paquets de
+  // plus, 2 annonces de plus. À chaque tour. Ce bloc échoue sur l'ancien code
+  // (`entries()` vaudrait 4, `packs()` 2 après la cascade simulée).
+  const scrimInput = (matchId: string) => ({
+    tenantId: TENANT,
+    matchId,
+    winnerTeamId: WINNER_TEAM,
+    isScrim: true,
+    scrimId: SCRIM,
+    participants: PARTICIPANTS,
+  });
+
+  it('un second miroir du même scrim ne recrédite rien, ne redonne aucun paquet', async () => {
+    await grantVictoryRewards(scrimInput(MATCH));
+    expect(entries()).toHaveLength(2);
+    expect(packs()).toHaveLength(2);
+    expect(granted()).toHaveLength(2);
+
+    // Le litige supprime M1 : `ON DELETE CASCADE` emporte ses paquets. Le mock
+    // n'a pas de clé étrangère, on joue la cascade à la main.
+    store.tcg_packs = packs().filter((p) => p.source_match_id !== MATCH);
+    emitMock.mockClear();
+
+    // L'accord retrouvé recrée un miroir, sous un AUTRE id.
+    await grantVictoryRewards(scrimInput(MIRROR_2));
+
+    expect(entries()).toHaveLength(2);
+    expect(packs()).toHaveLength(0);
+    expect(granted()).toHaveLength(0);
+    const wallet = wallets().find((w) => w.user_id === ALICE);
+    expect(wallet?.balance).toBe(SCRIM_WIN_COINS);
+  });
+
+  it('boucle répétée dix fois : toujours une seule récompense', async () => {
+    let mirror = MATCH;
+    for (let turn = 0; turn < 10; turn += 1) {
+      await grantVictoryRewards(scrimInput(mirror));
+      store.tcg_packs = packs().filter((p) => p.source_match_id !== mirror);
+      mirror = `00000000-0000-4000-8000-${String(turn).padStart(12, '0')}`;
+    }
+    const alice = entries().filter((e) => e.user_id === ALICE);
+    expect(alice).toHaveLength(1);
+    expect(wallets().find((w) => w.user_id === ALICE)?.balance).toBe(
+      SCRIM_WIN_COINS
+    );
+  });
+
+  it('un scrim déjà payé ne redonne pas de paquet même si le miroir est conservé', async () => {
+    await grantVictoryRewards(scrimInput(MATCH));
+    emitMock.mockClear();
+    await grantVictoryRewards(scrimInput(MATCH));
+    expect(packs()).toHaveLength(2);
+    expect(entries()).toHaveLength(2);
+    expect(granted()).toHaveLength(0);
+  });
+
+  it('un arbitrage qui change de vainqueur paie les nouvelles gagnantes, pas deux fois les anciennes', async () => {
+    await grantVictoryRewards(scrimInput(MATCH));
+    await grantVictoryRewards({
+      ...scrimInput(MATCH),
+      winnerTeamId: LOSER_TEAM,
+    });
+    const byUser = (id: string) => entries().filter((e) => e.user_id === id);
+    expect(byUser(ALICE)).toHaveLength(1);
+    expect(byUser(BEA)).toHaveLength(1);
+    expect(byUser(CHLOE)).toHaveLength(1);
+    expect(packs().filter((p) => p.user_id === CHLOE)).toHaveLength(1);
+  });
+
+  it('une victoire de scrim SANS scrimId ne paie rien (jamais de repli sur le miroir)', async () => {
+    await grantVictoryRewards({ ...scrimInput(MATCH), scrimId: null });
+    expect(entries()).toHaveLength(0);
+    expect(packs()).toHaveLength(0);
+    expect(granted()).toHaveLength(0);
+  });
+
+  it('pièces refusées → aucun paquet de scrim (l’ancre est le registre)', async () => {
+    // `setTableWriteError` n'atteint pas un upsert chaîné d'un `.select()` dans
+    // le mock : on force le refus de CETTE écriture-là, le reste restant réel.
+    const real = supabaseAdmin.from.bind(supabaseAdmin);
+    const spy = vi.spyOn(supabaseAdmin, 'from').mockImplementation((name) => {
+      const builder = real(name) as unknown as Record<string, unknown>;
+      if (name === 'tcg_wallet_entries') {
+        builder.upsert = () => ({
+          select: async () => ({ data: null, error: { message: 'boom' } }),
+        });
+      }
+      return builder as unknown as ReturnType<typeof real>;
+    });
+    try {
+      await grantVictoryRewards(scrimInput(MATCH));
+    } finally {
+      spy.mockRestore();
+    }
+    expect(packs()).toHaveLength(0);
+    expect(granted()).toHaveLength(0);
+  });
+
+  it('les matchs de tournoi gardent leur clé et leur paquet pour toutes les gagnantes', async () => {
+    await grantVictoryRewards({
+      tenantId: TENANT,
+      matchId: MATCH,
+      winnerTeamId: WINNER_TEAM,
+      isScrim: false,
+      participants: PARTICIPANTS,
+    });
+    expect(entries().every((e) => e.source_ref === MATCH)).toBe(true);
+    expect(packs()).toHaveLength(2);
   });
 });

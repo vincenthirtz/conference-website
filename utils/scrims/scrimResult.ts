@@ -103,20 +103,41 @@ export async function applyScrimResult(
   return { ok: true, status: 'completed', winnerTeamId };
 }
 
-/** Bascule un scrim en litige quand les deux reports divergent. */
+/** Statuts qu'un report de capitaine ne peut plus faire basculer en litige. */
+const CLOSED_FOR_DISPUTE = ['completed', 'cancelled'] as const;
+
+/**
+ * Bascule un scrim en litige quand les deux reports divergent.
+ *
+ * CONDITIONNELLE : un scrim déjà clos (`completed`) ou annulé ne bascule pas.
+ * La route relit le statut avant d'appeler, mais entre sa lecture et cette
+ * écriture l'adversaire peut avoir clos le scrim ; sans la condition, un report
+ * tardif rouvrirait un résultat validé — c'est la gâchette de la boucle de
+ * récompenses infinies corrigée le 2026-09-15 (cf. la route de report).
+ *
+ * Rend `'disputed'` si la bascule a eu lieu (ou si le scrim était déjà en
+ * litige), `'closed'` si le scrim était clos, `'error'` sur échec d'écriture.
+ */
 export async function markScrimDisputed(
   tenantId: string,
   scrimId: string,
   reason: string
-): Promise<void> {
-  if (!supabaseAdmin) return;
-  const { error } = await supabaseAdmin
+): Promise<'disputed' | 'closed' | 'error'> {
+  if (!supabaseAdmin) return 'error';
+  const { data, error } = await supabaseAdmin
     .from('scrims')
     .update({ status: 'disputed', dispute_reason: reason })
     .eq('id', scrimId)
-    .eq('tenant_id', tenantId);
-  if (error) logger.error('[scrimResult] dispute error', error);
-  // Un scrim en litige n'est plus un résultat : son miroir noté disparaît,
-  // sinon le classement garderait les points d'une partie contestée.
+    .eq('tenant_id', tenantId)
+    .not('status', 'in', `(${CLOSED_FOR_DISPUTE.join(',')})`)
+    .select('id');
+  if (error) {
+    logger.error('[scrimResult] dispute error', error);
+    return 'error';
+  }
+  if (!Array.isArray(data) || data.length === 0) return 'closed';
+  // Un scrim en litige n'est plus un résultat : son miroir noté est retiré du
+  // classement, sinon le classement garderait les points d'une partie contestée.
   await syncScrimRatedMatch(tenantId, scrimId);
+  return 'disputed';
 }

@@ -433,6 +433,9 @@ export async function applyMatchRatingIncremental(
       matchId,
       winnerTeamId: match.winner_team_id as string,
       isScrim: Boolean(match.scrim_id),
+      // La clé STABLE d'une victoire de scrim : un miroir retiré puis recréé
+      // ne doit pas rouvrir la récompense (cf. grantVictoryRewards).
+      scrimId: match.scrim_id ?? null,
       participants,
     });
   } catch (err) {
