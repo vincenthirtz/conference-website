@@ -45,6 +45,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { earnReward, getEarnSource, placementTier } from './earnSources';
 import { grantCoinsThenPacks } from './grantCoinsThenPacks';
+import { announceTcgRewards } from './announceReward';
 
 const WALLET_SOURCE_KIND = 'tournament_placement';
 
@@ -201,6 +202,16 @@ export async function grantPlacementRewards(input: {
       grants,
     });
     if (!result.ok) return report('error', { eligible: grants.length });
+
+    // DM Discord aux seules joueuses créditées PAR CET APPEL : relancer la
+    // finalisation rend une liste vide et ne renotifie personne.
+    await announceTcgRewards({
+      tenantId,
+      reason: 'tournament_placement',
+      tournamentId,
+      credited: result.credited,
+      rankByUser,
+    });
 
     if (result.packsGranted < result.packsExpected) {
       logger.error(

@@ -147,6 +147,20 @@ export const BOT_EVENT_NAMES = [
   // devant son écran : elle n'a pas besoin qu'on l'avertisse d'un geste qu'elle
   // vient de faire. Le DM Discord suffit, et l'overlay le montre à l'antenne.
   'tcg.drop_granted',
+
+  // TCG : un gain de SÉRIE de check-ins ou de PALMARÈS de tournoi
+  // (`reason: 'checkin_streak' | 'tournament_placement'`). Un seul événement
+  // pour les deux : même forme (pièces + paquets rattachés à un tournoi), seule
+  // la phrase change.
+  //
+  // MÊME DISCIPLINE QUE `tcg.pack_granted` : un événement par destinataire,
+  // émis sur les seules lignes que l'insertion a rendues (`announceTcgRewards`),
+  // donc jamais sur un rejeu. `packs` = paquets RÉELLEMENT créés (0 si refusés).
+  //
+  // Hors `WEB_PUSH_EVENT_TYPES` pour la même raison que le drop : la branche
+  // par défaut du dispatcher préviendrait tout le staff du tenant pour un gain
+  // qui ne regarde qu'une joueuse.
+  'tcg.reward_granted',
 ] as const;
 
 export type BotEventName = (typeof BOT_EVENT_NAMES)[number];

@@ -204,6 +204,16 @@ beforeEach(() => {
  * Le réducteur pur
  * ---------------------------------------------------------*/
 
+/** Charges `tcg.reward_granted` persistées dans l'outbox du bot. */
+const rewardEvents = () =>
+  ((store.bot_event_outbox ?? []) as Array<Record<string, any>>)
+    .filter(
+      (row) =>
+        row.event_name === 'tcg.reward_granted' ||
+        row.payload?.event === 'tcg.reward_granted'
+    )
+    .map((row) => row.payload?.data as Record<string, unknown>);
+
 describe('checkinStreakEndingAt', () => {
   const base = (n: number, over: Partial<StreakMatch> = {}): StreakMatch => ({
     id: m(n),
@@ -335,6 +345,31 @@ describe('grantCheckinStreakReward', () => {
     });
     expect(entries()).toHaveLength(2);
     expect(packs()).toHaveLength(2);
+  });
+
+  it('annonce `tcg.reward_granted` aux titulaires créditées, jamais sur un rejeu', async () => {
+    seedFiveCheckins();
+    const input = { tenantId: TENANT, matchId: m(5), teamId: TEAM };
+
+    await grantCheckinStreakReward(input);
+    const events = rewardEvents();
+    expect(events.map((e) => e.userId).sort()).toEqual(
+      [STARTER_A, STARTER_B].sort()
+    );
+    for (const event of events) {
+      expect(event).toMatchObject({
+        reason: 'checkin_streak',
+        streak: 5,
+        rank: null,
+        coins: CHECKIN_STREAK_COINS,
+        packs: earnReward('checkin_streak').packs,
+        tournamentId: TOURNAMENT,
+        sourceRef: `${TOURNAMENT}:${m(5)}`,
+      });
+    }
+
+    await grantCheckinStreakReward(input);
+    expect(rewardEvents()).toHaveLength(2);
   });
 
   it('ne récompense rien avant la fin de la fenêtre', async () => {

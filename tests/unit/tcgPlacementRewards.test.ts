@@ -48,6 +48,15 @@ const entries = () =>
 const packs = () => (store.tcg_packs ?? []) as Array<Record<string, unknown>>;
 const entryOf = (userId: string) => entries().find((e) => e.user_id === userId);
 const packsOf = (userId: string) => packs().filter((p) => p.user_id === userId);
+/** Charges `tcg.reward_granted` persistées dans l'outbox du bot. */
+const rewardEvents = () =>
+  ((store.bot_event_outbox ?? []) as Array<Record<string, any>>)
+    .filter(
+      (row) =>
+        row.event_name === 'tcg.reward_granted' ||
+        row.payload?.event === 'tcg.reward_granted'
+    )
+    .map((row) => row.payload?.data as Record<string, unknown>);
 
 let participantSeq = 0;
 function played(
@@ -202,6 +211,50 @@ describe('grantPlacementRewards', () => {
     });
     expect(entries()).toHaveLength(entriesAfterFirst);
     expect(packs()).toHaveLength(packsAfterFirst);
+  });
+
+  it('annonce `tcg.reward_granted` une fois par joueuse créditée, jamais sur un rejeu', async () => {
+    // Le DM Discord d'un palmarès : son rang, ce qu'elle gagne, et le tournoi.
+    // Émis sur les seules lignes écrites — relancer la finalisation (la voie de
+    // reprise) ne doit renotifier personne.
+    store.tournaments = [
+      { id: TOURNAMENT, tenant_id: TENANT, name: 'Women’s Cup 2026' },
+    ] as never;
+    played(TEAM(1), USER(1));
+    played(TEAM(2), USER(2));
+    const input = {
+      tenantId: TENANT,
+      tournamentId: TOURNAMENT,
+      rankings: [
+        { teamId: TEAM(1), rank: 1 },
+        { teamId: TEAM(2), rank: 2 },
+      ],
+    };
+
+    await grantPlacementRewards(input);
+    const events = rewardEvents().sort((a, b) =>
+      String(a.userId).localeCompare(String(b.userId))
+    );
+    expect(events).toHaveLength(2);
+    for (const [user, rank] of [
+      [USER(1), 1],
+      [USER(2), 2],
+    ] as const) {
+      const reward = earnReward('tournament_placement', { rank });
+      expect(events.find((e) => e.userId === user)).toMatchObject({
+        reason: 'tournament_placement',
+        rank,
+        streak: null,
+        coins: reward.coins,
+        packs: reward.packs,
+        tournamentId: TOURNAMENT,
+        tournamentName: 'Women’s Cup 2026',
+        sourceRef: TOURNAMENT,
+      });
+    }
+
+    await grantPlacementRewards(input);
+    expect(rewardEvents()).toHaveLength(2);
   });
 
   it('un classement RÉÉCRIT ne repaie pas la différence, mais crédite une nouvelle entrée du top 8', async () => {

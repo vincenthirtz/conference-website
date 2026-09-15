@@ -51,6 +51,7 @@ import {
   getEarnSource,
 } from './earnSources';
 import { grantCoinsThenPacks } from './grantCoinsThenPacks';
+import { announceTcgRewards } from './announceReward';
 
 const WALLET_SOURCE_KIND = 'checkin_streak';
 
@@ -292,6 +293,17 @@ export async function grantCheckinStreakReward(input: {
       grants: recipients.map((userId) => ({ userId, sourceRef, coins, packs })),
     });
     if (!result.ok) return { status: 'error' };
+
+    // DM Discord aux seules joueuses créditées PAR CET APPEL (liste vide sur
+    // un rejeu). Attendu, pour qu'une fonction serverless ne soit pas gelée
+    // avant l'écriture dans l'outbox ; ne lève jamais.
+    await announceTcgRewards({
+      tenantId,
+      reason: 'checkin_streak',
+      tournamentId,
+      credited: result.credited,
+      streak,
+    });
 
     return {
       status: 'granted',
