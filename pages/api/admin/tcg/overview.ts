@@ -309,15 +309,21 @@ async function handler(
     photosRevokedR,
     walletsR,
   ] = await Promise.allSettled([
-    db
-      .from('tcg_packs')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId),
+    // `trade` exclu des deux compteurs : un paquet d'échange recueille des
+    // cartes DÉJÀ distribuées (`tcg_card_trades.sql`), il ne sort d'aucune
+    // victoire ni d'aucun achat. Ses cartes, elles, restent comptées une fois —
+    // la ligne a changé de paquet, elle n'a pas été recopiée.
     db
       .from('tcg_packs')
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
-      .not('opened_at', 'is', null),
+      .neq('source_kind', 'trade'),
+    db
+      .from('tcg_packs')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .not('opened_at', 'is', null)
+      .neq('source_kind', 'trade'),
     db
       .from('tcg_packs')
       .select('id', { count: 'exact', head: true })

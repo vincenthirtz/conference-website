@@ -41,8 +41,14 @@ import {
   SCRIM_WIN_COINS,
 } from '../../utils/tcg/economy';
 import {
+  BATTLENET_VERIFIED_COINS,
+  CHECKIN_STREAK_COINS,
+  CHECKIN_STREAK_LENGTH,
+  COLLECTION_SET_COINS,
+  PLACEMENT_TIERS,
   TWITCH_DROP_COINS,
   WELCOME_GIFT_COINS,
+  earnReward,
 } from '../../utils/tcg/earnSources';
 import { PACK_SIZE } from '../../utils/tcg/drawPack';
 
@@ -155,6 +161,24 @@ describe('GET /api/player/tcg/packs', () => {
       // a fait échouer la construction le jour où ce champ est apparu, ce qui
       // est exactement son rôle — la forme de `earn` ne bouge pas en silence.
       welcomeGift: WELCOME_GIFT_COINS,
+      checkinStreak: {
+        length: CHECKIN_STREAK_LENGTH,
+        coins: CHECKIN_STREAK_COINS,
+        packs: earnReward('checkin_streak').packs,
+      },
+      placement: PLACEMENT_TIERS.map((tier) => ({
+        maxRank: tier.maxRank,
+        coins: tier.coins,
+        packs: tier.packs,
+      })),
+      battlenetVerified: {
+        coins: BATTLENET_VERIFIED_COINS,
+        packs: earnReward('battlenet_verified').packs,
+      },
+      collectionSet: {
+        coins: COLLECTION_SET_COINS,
+        packs: earnReward('collection_set').packs,
+      },
     });
   });
 

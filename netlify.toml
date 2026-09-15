@@ -102,6 +102,13 @@
 [functions."scrim-planning-reminders-cron"]
   schedule = "0 9,18 * * *"
 
+# Scheduled function: expiration des propositions d'échange TCG (72 h). Toutes
+# les heures, passe les propositions échues en `expired` et annonce
+# `tcg.trade_resolved` à leurs proposantes (idempotent : écriture conditionnelle
+# status = 'pending'). Les routes d'échange expirent aussi paresseusement.
+[functions."tcg-trades-expire-cron"]
+  schedule = "17 * * * *"
+
 # Scheduled function: paid-plan lifecycle (« Régie solidaire », axe 06 — revenu
 # récurrent). Une fois par jour à 08:00 UTC. Sur les tenants regie/circuit :
 # bascule en 'past_due' les plans actifs expirés, et envoie aux owners une

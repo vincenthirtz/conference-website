@@ -33,7 +33,6 @@ import { readTeamRarity } from '@/utils/tcg/readTeamRarity';
 import {
   pickPackSubjects,
   PACK_SIZE,
-  POOL_LIMIT,
   type DrawnSubject,
 } from '@/utils/tcg/drawPack';
 import { readMapFaces, MAP_POOL_SLUGS } from '@/utils/tcg/readMapFaces';
@@ -41,9 +40,20 @@ import { readMapFaces, MAP_POOL_SLUGS } from '@/utils/tcg/readMapFaces';
 // la même raison que le prix du booster : elle les AFFICHE sans les connaître,
 // et les recopier côté client les ferait mentir au premier réglage — c'est
 // doublement vrai du guide, qui prétend énoncer la règle.
-import { TWITCH_DROP_COINS, WELCOME_GIFT_COINS } from '@/utils/tcg/earnSources';
+import {
+  BATTLENET_VERIFIED_COINS,
+  CHECKIN_STREAK_COINS,
+  CHECKIN_STREAK_LENGTH,
+  COLLECTION_SET_COINS,
+  PLACEMENT_TIERS,
+  earnReward,
+  TWITCH_DROP_COINS,
+  WELCOME_GIFT_COINS,
+} from '@/utils/tcg/earnSources';
 import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
 import { readOwnedSubjectKeys } from '@/utils/tcg/readOwnedCards';
+import { readDrawPool } from '@/utils/tcg/readDrawPool';
+import { checkCollectionSets } from '@/utils/tcg/grantCollectionSets';
 import {
   decodePacksCursor,
   encodePacksCursor,
@@ -137,7 +147,11 @@ async function listPacks(
     .from('tcg_packs')
     .select('id, source_kind, granted_at, opened_at')
     .eq('tenant_id', tenantId)
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    // Un paquet `trade` n'est pas un paquet REÇU : il recueille les cartes d'un
+    // échange accepté, ouvert d'emblée (`tcg_card_trades.sql`). Ses cartes sont
+    // dans la collection ; le lister ici annoncerait un paquet jamais gagné.
+    .neq('source_kind', 'trade');
   if (status === 'unopened') packsQuery = packsQuery.is('opened_at', null);
   if (status === 'opened') packsQuery = packsQuery.not('opened_at', 'is', null);
   if (cursor) {
@@ -226,6 +240,28 @@ async function listPacks(
       // (« le cadeau d'accueil vaut tant »), pas la promesse d'en recevoir un.
       // Les deux cadeaux — édition et supportrice — valent le même montant.
       welcomeGift: WELCOME_GIFT_COINS,
+      // Les voies ajoutées le 2026-09-15, pour que le guide énonce TOUTE la
+      // règle sans la recopier. Inconditionnelles comme le cadeau d'accueil :
+      // ce sont des barèmes, pas des promesses. `packs` dit si un paquet
+      // accompagne les pièces — la vérification et les séries n'en donnent pas.
+      checkinStreak: {
+        length: CHECKIN_STREAK_LENGTH,
+        coins: CHECKIN_STREAK_COINS,
+        packs: earnReward('checkin_streak').packs,
+      },
+      placement: PLACEMENT_TIERS.map((tier) => ({
+        maxRank: tier.maxRank,
+        coins: tier.coins,
+        packs: tier.packs,
+      })),
+      battlenetVerified: {
+        coins: BATTLENET_VERIFIED_COINS,
+        packs: earnReward('battlenet_verified').packs,
+      },
+      collectionSet: {
+        coins: COLLECTION_SET_COINS,
+        packs: earnReward('collection_set').packs,
+      },
       // Le drop en direct n'est annoncé QUE s'il est réellement branché.
       // Promettre « et N pièces sur le stream » à un espace sans chaîne
       // connectée serait une promesse creuse — même discipline que le prix du
@@ -319,40 +355,15 @@ async function openPack(
       .json({ error: 'Paquet déjà ouvert.', code: 'already_opened' });
   }
 
-  // 2) Les viviers.
-  const [playersRes, teamsRes] = await Promise.all([
-    supabaseAdmin!
-      .from('player_ratings')
-      .select('user_id')
-      .eq('tenant_id', tenantId)
-      .limit(POOL_LIMIT),
-    supabaseAdmin!
-      .from('teams')
-      .select('id')
-      .eq('tenant_id', tenantId)
-      .is('deleted_at', null)
-      // `is_active` est NULLABLE (défaut `true`). `.neq('is_active', false)`
-      // exclurait les lignes NULL — en SQL, `NULL <> false` ne vaut pas vrai.
-      // Une équipe au drapeau non renseigné disparaîtrait donc du vivier sans
-      // que rien ne le signale. `or(...)` accepte les deux formes de « active ».
-      .or('is_active.is.null,is_active.eq.true')
-      .limit(POOL_LIMIT),
-  ]);
-
-  if (playersRes.error || teamsRes.error) {
-    logger.error(
-      '[tcg/packs] viviers illisibles: %s',
-      playersRes.error?.message ?? teamsRes.error?.message
-    );
+  // 2) Les viviers — lus par le module PARTAGÉ avec les séries
+  //    (`readDrawPool`) : une série ne doit exiger aucune carte qu'un paquet ne
+  //    puisse donner, et la seule façon d'en être sûr est une lecture unique.
+  const pool = await readDrawPool(tenantId);
+  if (!pool.ok) {
+    logger.error('[tcg/packs] viviers illisibles: %s', pool.error);
     return res.status(500).json({ error: 'Lecture impossible.' });
   }
-
-  const playerIds = ((playersRes.data ?? []) as Array<{ user_id: string }>).map(
-    (r) => r.user_id
-  );
-  const teamIds = ((teamsRes.data ?? []) as Array<{ id: string }>).map(
-    (r) => r.id
-  );
+  const { playerIds, teamIds } = pool.value;
 
   const subjects = pickPackSubjects({
     playerIds,
@@ -475,22 +486,32 @@ async function openPack(
     .filter((c) => c.subject_kind === 'map')
     .map((c) => c.card_map_slug as string);
 
-  const [playerFaces, teamFaces, mapFaces, ownedBefore] = await Promise.all([
-    readPlayerFaces(tenantId, drawnPlayerIds),
-    readTeamFaces(tenantId, drawnTeamIds),
-    // Sans `tenantId` : une map appartient au registre commun, pas au tenant.
-    readMapFaces(drawnMapSlugs),
-    // « Nouvelle carte ou doublon ? » — la question qu'on se pose en ouvrant.
-    // La page la déduisait de la collection chargée, ce qui devient faux dès
-    // que celle-ci est paginée : une carte possédée mais pas encore affichée
-    // passerait pour nouvelle. Ciblé sur les sujets tirés, hors de CE paquet.
-    readOwnedSubjectKeys(
-      tenantId,
-      userId,
-      { players: drawnPlayerIds, teams: drawnTeamIds, maps: drawnMapSlugs },
-      packId
-    ),
-  ]);
+  const [playerFaces, teamFaces, mapFaces, ownedBefore, setsCheck] =
+    await Promise.all([
+      readPlayerFaces(tenantId, drawnPlayerIds),
+      readTeamFaces(tenantId, drawnTeamIds),
+      // Sans `tenantId` : une map appartient au registre commun, pas au tenant.
+      readMapFaces(drawnMapSlugs),
+      // « Nouvelle carte ou doublon ? » — la question qu'on se pose en ouvrant.
+      // La page la déduisait de la collection chargée, ce qui devient faux dès
+      // que celle-ci est paginée : une carte possédée mais pas encore affichée
+      // passerait pour nouvelle. Ciblé sur les sujets tirés, hors de CE paquet.
+      readOwnedSubjectKeys(
+        tenantId,
+        userId,
+        { players: drawnPlayerIds, teams: drawnTeamIds, maps: drawnMapSlugs },
+        packId
+      ),
+      // SÉRIES : ce paquet en a-t-il complété une ? C'est le moment où la
+      // récompense a du sens (et où l'annonce part). Best-effort : les cartes
+      // sont écrites, une série non vérifiée ici sera rattrapée à la lecture
+      // suivante de `/api/player/tcg/sets` — la clé du registre empêche tout
+      // double crédit entre les deux voies. Ne lève jamais.
+      checkCollectionSets({ tenantId, userId }),
+    ]);
+  if (!setsCheck.ok) {
+    logger.warn('[tcg/packs] séries non vérifiées: %s', setsCheck.error);
+  }
 
   // BEST-EFFORT : une lecture en échec n'annule pas une ouverture déjà écrite.
   // `isNew` est alors OMIS — l'interface n'affiche aucun badge plutôt qu'un
@@ -510,6 +531,10 @@ async function openPack(
   return res.status(200).json({
     packId,
     openedAt,
+    // AJOUT RÉTROCOMPATIBLE : les séries que CE paquet vient de compléter et
+    // dont la récompense vient d'être écrite. Vide sur un rejeu, et vide si la
+    // vérification a échoué (rattrapée plus tard).
+    setsCompleted: setsCheck.ok ? setsCheck.newlyRewarded : [],
     // Même forme que `/api/player/tcg/collection`, à `count` près : la page
     // rend les deux avec le même composant, elle ne doit pas connaître deux
     // vocabulaires pour la même carte.

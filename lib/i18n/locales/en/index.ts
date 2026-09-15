@@ -16,6 +16,9 @@
 import enProfileSummary from './profileSummary';
 import enPlayerTcg from './playerTcg';
 import enTcgCatalog from './tcgCatalog';
+import enTcgTrade from './tcgTrade';
+import enTcgSets from './tcgSets';
+import enTcgShowcase from './tcgShowcase';
 import enPlayerIndex from './playerIndex';
 import enSupportAssoCard from './supportAssoCard';
 import enCopyButton from './copyButton';
@@ -354,6 +357,9 @@ const enDict = {
   mapsVoxelPage: enMapsVoxelPage,
   playerTcg: enPlayerTcg,
   tcgCatalog: enTcgCatalog,
+  tcgTrade: enTcgTrade,
+  tcgSets: enTcgSets,
+  tcgShowcase: enTcgShowcase,
   playerHeroPrefs: enPlayerHeroPrefs,
   playerTwitchLink: enPlayerTwitchLink,
   overlayTcg: enOverlayTcg,

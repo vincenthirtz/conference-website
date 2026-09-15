@@ -10,6 +10,9 @@
 import nsProfileSummary from './profileSummary';
 import nsPlayerTcg from './playerTcg';
 import nsTcgCatalog from './tcgCatalog';
+import nsTcgTrade from './tcgTrade';
+import nsTcgSets from './tcgSets';
+import nsTcgShowcase from './tcgShowcase';
 import nsPlayerIndex from './playerIndex';
 import nsSupportAssoCard from './supportAssoCard';
 import nsCopyButton from './copyButton';
@@ -348,6 +351,9 @@ export const frDict = {
   productionPartner: nsProductionPartner.fr,
   playerTcg: nsPlayerTcg.fr,
   tcgCatalog: nsTcgCatalog.fr,
+  tcgTrade: nsTcgTrade.fr,
+  tcgSets: nsTcgSets.fr,
+  tcgShowcase: nsTcgShowcase.fr,
   playerHeroPrefs: nsPlayerHeroPrefs.fr,
   playerTwitchLink: nsPlayerTwitchLink.fr,
   overlayTcg: nsOverlayTcg.fr,

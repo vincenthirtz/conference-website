@@ -55,21 +55,35 @@ export type ReadResult<T> =
  * Un paquet fermé ne contient encore rien : ses cartes n'existent en base qu'à
  * l'ouverture, et les montrer éventerait le tirage.
  */
+export type OwnedReadOptions = {
+  /**
+   * Écarte les cartes REÇUES PAR ÉCHANGE (paquets `trade`,
+   * `tcg_card_trades.sql`). Par défaut elles font partie de la collection —
+   * elles sont à la joueuse. Seules les SÉRIES les écartent : une série se
+   * récompense une fois par joueuse, et des comptes qui se passeraient une
+   * série complète toucheraient chacun la récompense.
+   */
+  excludeTradedIn?: boolean;
+};
+
 export async function readOpenedPackIds(
   tenantId: string,
-  userId: string
+  userId: string,
+  options: OwnedReadOptions = {}
 ): Promise<ReadResult<string[]>> {
   if (!supabaseAdmin) return { ok: false, error: 'supabaseAdmin absent' };
 
   const ids: string[] = [];
   for (let from = 0; from < MAX_SCAN_PACKS; from += READ_PAGE) {
     const to = Math.min(from + READ_PAGE, MAX_SCAN_PACKS) - 1;
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('tcg_packs')
       .select('id')
       .eq('tenant_id', tenantId)
       .eq('user_id', userId)
-      .not('opened_at', 'is', null)
+      .not('opened_at', 'is', null);
+    if (options.excludeTradedIn) query = query.neq('source_kind', 'trade');
+    const { data, error } = await query
       .order('id', { ascending: true })
       .range(from, to);
     if (error) return { ok: false, error: error.message };
@@ -129,9 +143,10 @@ export async function readCardsOfPacks(
 /** Paquets ouverts puis leurs cartes, en un appel. */
 export async function readOwnedCardRows(
   tenantId: string,
-  userId: string
+  userId: string,
+  options: OwnedReadOptions = {}
 ): Promise<ReadResult<OwnedCardRow[]>> {
-  const packs = await readOpenedPackIds(tenantId, userId);
+  const packs = await readOpenedPackIds(tenantId, userId, options);
   if (!packs.ok) return packs;
   if (packs.value.length === 0)
     return { ok: true, value: [], truncated: false };

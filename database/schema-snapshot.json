@@ -1346,6 +1346,48 @@
       "updated_at",
       "user_id"
     ],
+    "tcg_showcases": [
+      "created_at",
+      "enabled",
+      "subject_keys",
+      "tenant_id",
+      "updated_at",
+      "user_id"
+    ],
+    "tcg_trade_items": [
+      "card_map_slug",
+      "card_team_id",
+      "card_user_id",
+      "from_pack_id",
+      "from_position",
+      "is_foil",
+      "ordinal",
+      "rarity",
+      "side",
+      "subject_kind",
+      "to_pack_id",
+      "to_position",
+      "trade_id"
+    ],
+    "tcg_trade_settings": [
+      "accepts_proposals",
+      "tenant_id",
+      "updated_at",
+      "user_id"
+    ],
+    "tcg_trades": [
+      "created_at",
+      "expires_at",
+      "id",
+      "proposer_id",
+      "proposer_pack_id",
+      "recipient_id",
+      "recipient_pack_id",
+      "resolution_reason",
+      "resolved_at",
+      "status",
+      "tenant_id"
+    ],
     "tcg_wallet_entries": [
       "amount",
       "created_at",
@@ -2727,6 +2769,30 @@
     },
     "tcg_player_cards_tenant_id_fkey": {
       "source": "tcg_player_cards",
+      "target": "tenants"
+    },
+    "tcg_showcases_tenant_id_fkey": {
+      "source": "tcg_showcases",
+      "target": "tenants"
+    },
+    "tcg_trade_items_trade_id_fkey": {
+      "source": "tcg_trade_items",
+      "target": "tcg_trades"
+    },
+    "tcg_trade_settings_tenant_id_fkey": {
+      "source": "tcg_trade_settings",
+      "target": "tenants"
+    },
+    "tcg_trades_proposer_pack_id_fkey": {
+      "source": "tcg_trades",
+      "target": "tcg_packs"
+    },
+    "tcg_trades_recipient_pack_id_fkey": {
+      "source": "tcg_trades",
+      "target": "tcg_packs"
+    },
+    "tcg_trades_tenant_id_fkey": {
+      "source": "tcg_trades",
       "target": "tenants"
     },
     "tcg_wallet_entries_tenant_id_fkey": {

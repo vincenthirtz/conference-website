@@ -34,6 +34,10 @@ import { useT, format } from '@/lib/i18n/useT';
 import TcgCard, { type TcgCardSubject } from '@/components/tcg/TcgCard';
 import { TcgCoin, TcgAmount } from '@/components/tcg/TcgCoin';
 import TcgCollectionProgress from '@/components/tcg/TcgCollectionProgress';
+import TcgSetsPanel, {
+  type TcgSetCompletedNotice,
+} from '@/components/tcg/TcgSetsPanel';
+import TcgShowcaseEditor from '@/components/tcg/TcgShowcaseEditor';
 import TcgPackReveal, {
   type TcgRevealCard,
 } from '@/components/tcg/TcgPackReveal';
@@ -44,6 +48,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
+import nsTcgTrade from '@/lib/i18n/locales/fr/tcgTrade';
 
 /**
  * Paquets à ouvrir par page. Au-delà, un bouton « voir les autres » : un mur de
@@ -276,6 +281,7 @@ type LoadState = 'loading' | 'ready' | 'error';
 
 function PlayerTcg() {
   const t = useT(nsPlayerTcg);
+  const tTrade = useT(nsTcgTrade);
   const { addToast } = useToast();
   usePlayerSession({ redirectTo: '/login?next=/player/tcg' });
   const { adminFetch, adminFetchJson } = useAdminFetch({ loginPath: '/login' });
@@ -328,6 +334,11 @@ function PlayerTcg() {
     id: string;
     cards: DrawnCard[];
   } | null>(null);
+  // Les séries que la dernière ouverture vient de compléter : la récompense a
+  // été écrite À CE MOMENT-LÀ, c'est donc cette réponse qui le dit.
+  const [setsCompleted, setSetsCompleted] = useState<
+    TcgSetCompletedNotice[] | null
+  >(null);
   /**
    * Ce que lit la région `aria-live`. Elle est montée en permanence, vide : une
    * région insérée AVEC son contenu n'est pas annoncée par tous les lecteurs
@@ -585,7 +596,14 @@ function PlayerTcg() {
         // se rabat alors sur le rechargement, sans rien annoncer de faux.
         const body = (await res.json().catch(() => null)) as {
           cards?: DrawnCard[];
+          setsCompleted?: TcgSetCompletedNotice[];
         } | null;
+        if (
+          Array.isArray(body?.setsCompleted) &&
+          body.setsCompleted.length > 0
+        ) {
+          setSetsCompleted(body.setsCompleted);
+        }
         if (Array.isArray(body?.cards) && body.cards.length > 0) {
           const drawn = [...body.cards].sort((a, b) => a.position - b.position);
           setRevealed({ id: packId, cards: drawn });
@@ -663,6 +681,8 @@ function PlayerTcg() {
           return t.walletTournamentPlacement;
         case 'battlenet_verified':
           return t.walletBattlenetVerified;
+        case 'collection_set':
+          return t.walletCollectionSet;
         default:
           return t.walletUnknownSource;
       }
@@ -897,12 +917,22 @@ function PlayerTcg() {
           {/* Discret, mais AU TITRE : « d'où viennent les paquets » et « que
               devient ma photo » se demandent en regardant sa collection, pas
               depuis le tableau de bord. */}
-          <Link
-            href="/player/tcg-guide"
-            className="text-sm font-medium text-purple-300 underline-offset-4 transition hover:text-purple-200 hover:underline"
-          >
-            {t.guideLink}
-          </Link>
+          <div className="flex flex-wrap items-baseline gap-4">
+            <Link
+              href="/player/tcg-guide"
+              className="text-sm font-medium text-purple-300 underline-offset-4 transition hover:text-purple-200 hover:underline"
+            >
+              {t.guideLink}
+            </Link>
+            {/* Point d'entrée discret des échanges : on y vient avec ses
+                doublons sous les yeux. */}
+            <Link
+              href="/player/tcg/echanges"
+              className="text-sm font-medium text-purple-300 underline-offset-4 transition hover:text-purple-200 hover:underline"
+            >
+              {tTrade.entryLink}
+            </Link>
+          </div>
         </div>
 
         {/* Région d'annonce, montée VIDE en permanence (cf. `announce`). */}
@@ -1230,6 +1260,16 @@ function PlayerTcg() {
           />
         )}
 
+        {/* Séries : composant autonome. `reloadToken` = le nombre d'exemplaires,
+            qui bouge à chaque ouverture et chaque recyclage. */}
+        {loadState === 'ready' && (
+          <TcgSetsPanel
+            className="mt-8"
+            reloadToken={totals.total}
+            celebrate={setsCompleted}
+          />
+        )}
+
         {/* Collection */}
         <section className="mt-8" aria-labelledby="tcg-collection-title">
           <h2 id="tcg-collection-title" className="sr-only">
@@ -1362,6 +1402,12 @@ function PlayerTcg() {
             </>
           )}
         </section>
+
+        {/* Vitrine (opt-in) : composant autonome, sous la collection d'où l'on
+            choisit ses cartes. */}
+        {loadState === 'ready' && (
+          <TcgShowcaseEditor className="mt-8" reloadToken={totals.total} />
+        )}
 
         <p className="mt-10 text-xs text-gray-500">
           <Link href="/player/profile" className="hover:text-gray-300">

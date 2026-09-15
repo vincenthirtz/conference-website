@@ -161,6 +161,49 @@ export const BOT_EVENT_NAMES = [
   // par défaut du dispatcher préviendrait tout le staff du tenant pour un gain
   // qui ne regarde qu'une joueuse.
   'tcg.reward_granted',
+
+  // TCG : une joueuse vient de COMPLÉTER UNE SÉRIE (`utils/tcg/collectionSets.ts`)
+  // et la récompense vient d'être écrite. Charge :
+  // `{ userId, discordUserId, discordUsername, setKey, setLabel, coins, ctaUrl }`.
+  //
+  // Un événement distinct de `tcg.reward_granted` plutôt qu'une `reason` de
+  // plus : une série n'a ni tournoi, ni rang, ni paquet, mais un libellé et une
+  // clé à elle — la forger dans le contrat de l'autre aurait rempli quatre
+  // champs de `null`.
+  //
+  // MÊME DISCIPLINE : un événement par joueuse, émis sur la seule ligne que
+  // l'insertion a rendue (`grantCollectionSets.checkCollectionSets`), donc
+  // jamais sur un rejeu ni sur la vérification paresseuse qui retombe sur une
+  // récompense déjà versée. `setLabel` ne nomme JAMAIS une joueuse (un DM se lit
+  // par-dessus l'épaule) : l'équipe, l'édition ou le mode de jeu seulement.
+  //
+  // Hors `WEB_PUSH_EVENT_TYPES` pour la même raison que les autres gains TCG :
+  // la branche par défaut du dispatcher préviendrait tout le staff du tenant.
+  'tcg.set_completed',
+
+  // TCG — ÉCHANGES de cartes entre joueuses (`utils/tcg/trades.ts`).
+  //
+  // `tcg.trade_proposed` : à la DESTINATAIRE, une fois, à la création.
+  //   `{ tradeId, recipientUserId, recipientDiscordUserId, proposerDisplayName,
+  //      offeredCount, requestedCount, expiresAt, ctaUrl }`
+  // `tcg.trade_resolved` : à la PROPOSANTE, quand sa proposition se clôt.
+  //   `{ tradeId, proposerUserId, proposerDiscordUserId,
+  //      outcome: 'accepted' | 'declined' | 'expired' | 'cancelled',
+  //      counterpartDisplayName, ctaUrl }`
+  //   `cancelled` seulement quand le SYSTÈME annule (carte offerte plus
+  //   disponible, échanges désactivés par la destinataire) — jamais quand la
+  //   proposante annule elle-même.
+  //
+  // MÊME DISCIPLINE que les autres annonces TCG : un événement par
+  // destinataire, émis sur la seule transition réellement écrite (écriture
+  // conditionnelle `status = 'pending'`, ou retour de la fonction SQL), donc
+  // jamais sur un rejeu — double clic, retry réseau, deux déclencheurs
+  // d'expiration. Aucune image ni aucun sujet de carte dans la charge.
+  //
+  // Hors `WEB_PUSH_EVENT_TYPES` : la branche par défaut du dispatcher
+  // préviendrait tout le staff du tenant d'un échange entre deux joueuses.
+  'tcg.trade_proposed',
+  'tcg.trade_resolved',
 ] as const;
 
 export type BotEventName = (typeof BOT_EVENT_NAMES)[number];

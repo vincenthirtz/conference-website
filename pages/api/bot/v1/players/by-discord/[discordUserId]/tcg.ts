@@ -74,7 +74,10 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
       .eq('user_id', userId)
-      .not('opened_at', 'is', null),
+      .not('opened_at', 'is', null)
+      // Un paquet `trade` (cartes reçues par échange) n'a pas été « ouvert » :
+      // le compter gonflerait le nombre de paquets annoncé sur Discord.
+      .neq('source_kind', 'trade'),
     supabaseAdmin
       .from('tcg_wallets')
       .select('balance')
