@@ -10,7 +10,37 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
-import type { League, LeaguesListResponse } from '@/types/leagues';
+import type {
+  League,
+  PublicLeague,
+  PublicLeaguesListResponse,
+} from '@/types/leagues';
+
+/** Colonnes exposées publiquement (cf. `PublicLeague` : pas de `tenant_id`). */
+export const PUBLIC_LEAGUE_COLUMNS =
+  'id, name, slug, description, game, status, start_date, end_date, points_table, is_public, created_at, updated_at';
+
+/**
+ * Projection publique d'une ligne `leagues`, champ par champ. Double garde avec
+ * `PUBLIC_LEAGUE_COLUMNS` : même si la requête remontait une colonne de trop,
+ * elle ne sortirait pas.
+ */
+export function toPublicLeague(row: League | PublicLeague): PublicLeague {
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    description: row.description,
+    game: row.game,
+    status: row.status,
+    start_date: row.start_date,
+    end_date: row.end_date,
+    points_table: row.points_table,
+    is_public: row.is_public,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
 
 /**
  * Lit la liste des leagues publiques pour un tenant donné.
@@ -20,10 +50,10 @@ import type { League, LeaguesListResponse } from '@/types/leagues';
  */
 export async function readPublicLeagues(
   tenantId: string
-): Promise<LeaguesListResponse> {
+): Promise<PublicLeaguesListResponse> {
   const { data, error } = await supabaseAdmin
     .from('leagues')
-    .select('*')
+    .select(PUBLIC_LEAGUE_COLUMNS)
     .eq('tenant_id', tenantId)
     .eq('is_public', true)
     .neq('status', 'draft')
@@ -34,5 +64,5 @@ export async function readPublicLeagues(
     throw new Error('Failed to load leagues');
   }
 
-  return { leagues: (data ?? []) as League[] };
+  return { leagues: ((data ?? []) as PublicLeague[]).map(toPublicLeague) };
 }

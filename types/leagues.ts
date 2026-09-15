@@ -23,6 +23,15 @@ export type League = {
   updated_at: string;
 };
 
+/**
+ * League telle qu'exposée PUBLIQUEMENT (API v1, /api/leagues, pages ligues) :
+ * sans `tenant_id`, identifiant interne dont un partenaire n'a aucun usage.
+ * Les lectures publiques projettent ces colonnes explicitement
+ * (`PUBLIC_LEAGUE_COLUMNS`) plutôt qu'un `select('*')` : une colonne ajoutée
+ * à la table ne sort pas sur l'API publique sans décision.
+ */
+export type PublicLeague = Omit<League, 'tenant_id'>;
+
 /** Row `league_standings` enrichie (join teams) pour l'API publique. */
 export type LeagueStandingPublic = {
   teamId: string;
@@ -59,14 +68,19 @@ export type LeagueScrimRef = {
   scheduledDate: string | null;
 };
 
-/** Réponse publique `GET /api/leagues`. */
+/** Réponse admin `GET /api/admin/leagues`. */
 export type LeaguesListResponse = {
   leagues: League[];
 };
 
+/** Réponse publique `GET /api/leagues`. */
+export type PublicLeaguesListResponse = {
+  leagues: PublicLeague[];
+};
+
 /** Réponse publique `GET /api/leagues/[slug]`. */
 export type LeagueDetailResponse = {
-  league: League;
+  league: PublicLeague;
   standings: LeagueStandingPublic[];
   tournaments: LeagueTournamentRef[];
   scrims: LeagueScrimRef[];

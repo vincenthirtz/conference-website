@@ -8,6 +8,7 @@ import type { z } from 'zod';
 import type {
   LeagueDetailResponse,
   League,
+  PublicLeague,
   LeagueScrimRef,
   LeagueStandingPublic,
   LeagueTournamentRef,
@@ -47,6 +48,7 @@ import type { publicV1TournamentArbitrationSchema } from '../../lib/apiContracts
 import type {
   leagueDetailResponseSchema,
   leagueSchema,
+  publicLeagueSchema,
   leagueScrimRefSchema,
   leagueStandingPublicSchema,
   leagueTournamentRefSchema,
@@ -100,6 +102,9 @@ describe('API publique v1 — schémas de réponse ≡ types des handlers', () =
 
   it('ligues', () => {
     expectTypeOf<Out<typeof leagueSchema>>().toEqualTypeOf<League>();
+    expectTypeOf<Out<typeof publicLeagueSchema>>().toEqualTypeOf<
+      Flat<PublicLeague>
+    >();
     expectTypeOf<
       Out<typeof leagueStandingPublicSchema>
     >().toEqualTypeOf<LeagueStandingPublic>();

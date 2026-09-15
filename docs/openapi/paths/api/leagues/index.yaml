@@ -17,6 +17,6 @@ get:
               leagues:
                 type: array
                 items:
-                  $ref: '#/components/schemas/League'
+                  $ref: '#/components/schemas/PublicLeague'
     '500':
       $ref: '#/components/responses/ServerError'

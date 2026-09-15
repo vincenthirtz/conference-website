@@ -14,8 +14,9 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+import { PUBLIC_LEAGUE_COLUMNS, toPublicLeague } from './readPublicLeagues';
 import type {
-  League,
+  PublicLeague,
   LeagueDetailResponse,
   LeagueScrimRef,
   LeagueStandingPublic,
@@ -36,7 +37,7 @@ export async function readLeagueDetail(
   // 1) League publique.
   const { data: leagueRow, error: lErr } = await supabaseAdmin
     .from('leagues')
-    .select('*')
+    .select(PUBLIC_LEAGUE_COLUMNS)
     .eq('tenant_id', tenantId)
     .eq('slug', slug)
     .eq('is_public', true)
@@ -45,10 +46,10 @@ export async function readLeagueDetail(
     logger.error('[readLeagueDetail] league read error', lErr);
     throw new Error('Failed to load league');
   }
-  if (!leagueRow || (leagueRow as League).status === 'draft') {
+  if (!leagueRow || (leagueRow as PublicLeague).status === 'draft') {
     return null;
   }
-  const league = leagueRow as League;
+  const league = toPublicLeague(leagueRow as PublicLeague);
 
   // 2) Standings (join teams pour les noms).
   const { data: standingRows } = await supabaseAdmin

@@ -11,7 +11,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { GetStaticProps, InferGetStaticPropsType } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
-import type { League, LeagueStatus } from '@/types/leagues';
+import type { PublicLeague, LeagueStatus } from '@/types/leagues';
 import { readPublicLeagues } from '@/utils/leagues/readPublicLeagues';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT } from '@/lib/i18n/useT';
@@ -44,7 +44,7 @@ export default function LeaguesPage({
   const locale = useLocale();
   const statusLabels = getStatusLabels(t);
   const hasInitial = initialLeagues.length > 0;
-  const [leagues, setLeagues] = useState<League[]>(initialLeagues);
+  const [leagues, setLeagues] = useState<PublicLeague[]>(initialLeagues);
   // Pas de spinner si les props ISR sont pré-remplies : le fetch client ne
   // sert qu'à rafraîchir après hydratation.
   const [loading, setLoading] = useState(!hasInitial);
@@ -55,7 +55,7 @@ export default function LeaguesPage({
     try {
       const res = await fetch('/api/leagues');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { leagues: League[] };
+      const data = (await res.json()) as { leagues: PublicLeague[] };
       setLeagues(Array.isArray(data.leagues) ? data.leagues : []);
     } catch {
       // On garde l'affichage pré-rempli si le refresh échoue ; on ne montre
@@ -207,7 +207,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
  * JSON-LD : `ItemList` des ligues publiées.
  * -------------------------------------------------------------------------*/
 
-function buildLeaguesSeo(leagues: League[]): SeoProps {
+function buildLeaguesSeo(leagues: PublicLeague[]): SeoProps {
   const count = leagues.length;
   const plural = count > 1;
   const descriptionFr =
@@ -261,10 +261,10 @@ const leaguesSeoFallback: SeoProps = {
 LeaguesPage.seo = leaguesSeoFallback;
 
 export const getStaticProps: GetStaticProps<{
-  initialLeagues: League[];
+  initialLeagues: PublicLeague[];
   seo: SeoProps;
 }> = async () => {
-  let leagues: League[] = [];
+  let leagues: PublicLeague[] = [];
   try {
     const { leagues: list } = await readPublicLeagues(DEFAULT_TENANT_ID);
     leagues = list;

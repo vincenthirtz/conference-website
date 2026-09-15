@@ -5,9 +5,9 @@
 import { withPublicApi, list } from '@/utils/publicApi';
 import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { readPublicLeagues } from '@/utils/leagues/readPublicLeagues';
-import type { League } from '@/types/leagues';
+import type { PublicLeague } from '@/types/leagues';
 
-export default withPublicApi<League>(
+export default withPublicApi<PublicLeague>(
   async ({ req }) => {
     const tenantId = await resolveTenantIdForPublicRequestAsync(req);
     const { leagues } = await readPublicLeagues(tenantId);

@@ -17,7 +17,7 @@ get:
               data:
                 type: array
                 items:
-                  $ref: '#/components/schemas/League'
+                  $ref: '#/components/schemas/PublicLeague'
     '429':
       $ref: '#/components/responses/RateLimited'
     '500':

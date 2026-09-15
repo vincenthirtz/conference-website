@@ -28,7 +28,7 @@ import {
 import { publicV1TeamSchema } from '../../lib/apiContracts/public/v1/teams';
 import {
   leagueDetailResponseSchema,
-  leagueSchema,
+  publicLeagueSchema,
 } from '../../lib/apiContracts/public/v1/leagues';
 import { publicV1TournamentArbitrationSchema } from '../../lib/apiContracts/public/v1/arbitration';
 import { leaderboardPlayerSchema } from '../../lib/apiContracts/public/v1/rating';
@@ -624,7 +624,8 @@ describe('GET /api/public/v1/leagues', () => {
     const res = makeRes();
     await leaguesList(req, res);
     expect(res.statusCode).toBe(200);
-    expectContract(res.body, leagueSchema, 'list');
+    expectContract(res.body, publicLeagueSchema, 'list');
+    expect((res.body as any).data[0]).not.toHaveProperty('tenant_id');
     const rows = (res.body as any).data;
     expect(rows).toHaveLength(1);
     expect(rows[0].slug).toBe('pro');

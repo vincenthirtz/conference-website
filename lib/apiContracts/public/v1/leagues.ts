@@ -22,6 +22,11 @@ export const leagueSchema = z
   })
   .meta({ id: 'League' });
 
+/** League publique : sans `tenant_id` (cf. `PublicLeague`). */
+export const publicLeagueSchema = leagueSchema
+  .omit({ tenant_id: true })
+  .meta({ id: 'PublicLeague' });
+
 export const leagueStandingPublicSchema = z
   .object({
     teamId: z.string(),
@@ -64,7 +69,7 @@ export const leagueScrimRefSchema = z
 
 export const leagueDetailResponseSchema = z
   .object({
-    league: leagueSchema,
+    league: publicLeagueSchema,
     standings: z.array(leagueStandingPublicSchema),
     tournaments: z.array(leagueTournamentRefSchema),
     scrims: z.array(leagueScrimRefSchema),

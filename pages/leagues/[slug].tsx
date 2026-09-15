@@ -21,7 +21,7 @@ import type {
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type {
   LeagueDetailResponse,
-  League,
+  PublicLeague,
   LeagueStatus,
   LeagueScrimRef,
   LeagueStandingPublic,
@@ -113,7 +113,7 @@ const PERIOD_TEMPLATES_EN: PeriodTemplates = {
 };
 
 function periodLabel(
-  league: League,
+  league: PublicLeague,
   lang: Lang,
   templates: PeriodTemplates
 ): string | null {

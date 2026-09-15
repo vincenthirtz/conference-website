@@ -253,6 +253,22 @@ curl -X POST https://<host>/api/graphql \
   `/admin/api-tokens` (affichées une seule fois). Le guide public
   `/developpeurs` pointe vers cette page.
 
+### Changements de contrat
+
+- **2026-09-15 — `tenant_id` retiré des ligues publiques.**
+  `GET /api/public/v1/leagues`, `GET /api/public/v1/leagues/{slug}` (objet
+  `league`) et `GET /api/leagues*` renvoyaient l'identifiant interne de
+  l'espace, sans usage pour un partenaire : l'espace est déjà déterminé par le
+  domaine appelé. Schéma `PublicLeague` (= `League` sans `tenant_id`) ; la
+  lecture projette ses colonnes explicitement (`PUBLIC_LEAGUE_COLUMNS` +
+  `toPublicLeague`), si bien qu'une colonne ajoutée à la table ne sort plus
+  sans décision. L'admin (`/api/admin/leagues`) garde `League` complet.
+- **2026-09-15 — réponses de l'API v1 décrites exactement.** Schémas générés
+  depuis zod et vérifiés contre les types des handlers : plusieurs champs
+  réellement renvoyés apparaissent enfin dans la spec (profil : `twitch`,
+  `unrated`, `rank` nullable ; ligue : `scrims`, `scrimsCounted`). Aucun
+  changement de réponse.
+
 ## 6. Webhooks sortants (outbound)
 
 Un tenant abonne une URL et reçoit nos events en **POST signé** — le pendant
