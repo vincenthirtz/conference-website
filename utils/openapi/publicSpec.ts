@@ -10,15 +10,12 @@
 // Pure filtering lives in `filterPublicSpec` (unit-tested); `buildPublicSpec`
 // reads + parses the YAML once and memoises the result.
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
+import { stringify as stringifyYaml } from 'yaml';
+import { loadFullSpec, type OpenApiDoc } from './loadSpec';
 
 // Loose typing on purpose — OpenAPI documents are deeply dynamic and fully
 // modelling 3.1 here would add friction without real safety.
-export type OpenApiDoc = Record<string, unknown>;
-
-const SPEC_PATH = path.join(process.cwd(), 'docs', 'openapi.yaml');
+export type { OpenApiDoc };
 const PUBLIC_PREFIX = '/api/public/';
 const COMPONENTS_REF = '#/components/';
 
@@ -172,12 +169,10 @@ export function filterPublicSpec(full: OpenApiDoc): OpenApiDoc {
 
 let cached: OpenApiDoc | null = null;
 
-/** Read + parse `docs/openapi.yaml`, filter to public, memoise. */
+/** Full spec (cf. loadSpec) filtered to public, memoised. */
 export function buildPublicSpec(): OpenApiDoc {
   if (cached) return cached;
-  const raw = fs.readFileSync(SPEC_PATH, 'utf8');
-  const full = parseYaml(raw) as OpenApiDoc;
-  cached = filterPublicSpec(full);
+  cached = filterPublicSpec(loadFullSpec());
   return cached;
 }
 

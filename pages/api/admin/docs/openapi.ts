@@ -1,23 +1,15 @@
 // pages/api/admin/docs/openapi.ts
 //
-// Owner-only endpoint serving the canonical OpenAPI spec at
-// `docs/openapi.yaml`. Renders the file as `text/yaml` (raw) or
-// `application/json` (parsed) depending on the `?format=json` flag —
-// Swagger UI can consume either, but YAML is the source of truth.
+// Endpoint staff (`manage_tenant`) servant la spec OpenAPI complète, en
+// `text/yaml` (défaut) ou `application/json` (`?format=json`). La spec est lue
+// via le point d'entrée unique `utils/openapi/loadSpec.ts` (mémorisée).
 
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import { parse as parseYaml } from 'yaml';
+import { stringify as stringifyYaml } from 'yaml';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 import { withStaffRoute } from '@/utils/staff';
 import { logger } from '@/utils/logger';
-
-const SPEC_PATH = path.join(process.cwd(), 'docs', 'openapi.yaml');
-
-async function readSpec(): Promise<string> {
-  return fs.readFile(SPEC_PATH, 'utf8');
-}
+import { loadFullSpec } from '@/utils/openapi/loadSpec';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -27,20 +19,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const yaml = await readSpec();
+    const spec = loadFullSpec();
     const format =
       typeof req.query.format === 'string' ? req.query.format : 'yaml';
 
     res.setHeader('Cache-Control', 'private, max-age=0, must-revalidate');
 
     if (format === 'json') {
-      const parsed = parseYaml(yaml);
-      res.status(200).json(parsed);
+      res.status(200).json(spec);
       return;
     }
 
     res.setHeader('Content-Type', 'text/yaml; charset=utf-8');
-    res.status(200).send(yaml);
+    res.status(200).send(stringifyYaml(spec));
   } catch (err) {
     logger.error('GET /api/admin/docs/openapi failed', err);
     res.status(500).json({ error: 'Failed to read OpenAPI spec' });

@@ -17,14 +17,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parse as parseYaml } from 'yaml';
+import { loadFullSpec } from '../../utils/openapi/loadSpec';
 
 // ---------------------------------------------------------------------------
 // Roots
 // ---------------------------------------------------------------------------
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
-const SPEC_PATH = path.join(REPO_ROOT, 'docs', 'openapi.yaml');
 const API_ROOT = path.join(REPO_ROOT, 'pages', 'api');
 const BOT_CLIENT_ROOT =
   process.env.BOT_CLIENT_ROOT ??
@@ -118,8 +117,10 @@ type SpecOp = {
 };
 
 function loadSpec(): { paths: Record<string, any>; defaultSecurity: string[] } {
-  const raw = fs.readFileSync(SPEC_PATH, 'utf8');
-  const spec = parseYaml(raw);
+  const spec = loadFullSpec() as {
+    paths?: Record<string, any>;
+    security?: any;
+  };
   const defaultSecurity = (spec.security ?? []).flatMap(
     (s: Record<string, unknown>) => Object.keys(s)
   ) as string[];

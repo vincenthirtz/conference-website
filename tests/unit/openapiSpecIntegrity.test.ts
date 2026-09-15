@@ -7,12 +7,9 @@
 // Ces règles sont celles qu'un générateur de client ou un lint Redocly
 // appliqueraient ; on les tient ici, sans dépendance.
 
-import fs from 'node:fs';
-import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parse as parseYaml } from 'yaml';
+import { loadFullSpec } from '../../utils/openapi/loadSpec';
 
-const SPEC_PATH = path.resolve(__dirname, '..', '..', 'docs', 'openapi.yaml');
 const METHODS = [
   'get',
   'put',
@@ -30,7 +27,7 @@ type Doc = {
   components: Record<string, Record<string, any>>;
 };
 
-const doc = parseYaml(fs.readFileSync(SPEC_PATH, 'utf8')) as Doc;
+const doc = loadFullSpec() as unknown as Doc;
 
 function operations() {
   const out: { key: string; path: string; item: any; op: any }[] = [];
