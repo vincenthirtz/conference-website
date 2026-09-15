@@ -959,62 +959,8 @@ TeamReviews:
                 type: [string, 'null']
                 format: uuid
 PublicFreePlayerSignupInput:
-  type: object
-  required:
-    - displayName
-    - email
-    - roles
-  properties:
-    displayName:
-      type: string
-      minLength: 2
-      maxLength: 40
-    email:
-      type: string
-      format: email
-      maxLength: 200
-      description: >
-        Contact prive. N'est JAMAIS renvoye par le GET de cette route ; seules
-        les capitaines authentifiees y accedent via /api/teams/free-players.
-    roles:
-      type: array
-      minItems: 1
-      maxItems: 4
-      items:
-        type: string
-        enum: [tank, dps, support, flex]
-    level:
-      type: string
-      enum:
-        [
-          unknown,
-          bronze,
-          silver,
-          gold,
-          platinum,
-          emerald,
-          diamond,
-          master,
-          grandmaster,
-          champion
-        ]
-      description: Defaut `unknown` — il n'y a aucun rang minimum pour participer.
-    availability:
-      type: string
-      maxLength: 200
-    note:
-      type: string
-      maxLength: 400
-    contactDiscord:
-      type: string
-      maxLength: 60
-    honeypot:
-      type: string
-      description: Doit etre vide (anti-bot).
-    captchaToken:
-      type: string
-    captchaAnswer:
-      type: string
+  # Généré depuis le schéma zod du handler (lib/apiContracts).
+  x-zod: public.freePlayerSignup
 PublicFreePlayer:
   type: object
   description: >
@@ -1044,71 +990,8 @@ PublicFreePlayer:
       type: [string, 'null']
       format: date-time
 PublicTeamOpeningInput:
-  type: object
-  required:
-    - teamName
-    - roles
-  description: >
-    `contactEmail` est obligatoire — `email` est accepte comme alias (c'est le
-    nom du champ cote fiches joueuses, et un client ecrit en le recopiant ne
-    doit pas etre refuse en silence). Fournir l'un des deux.
-  properties:
-    teamName:
-      type: string
-      minLength: 2
-      maxLength: 60
-    contactEmail:
-      type: string
-      format: email
-      maxLength: 200
-      description: >
-        Contact prive. N'est JAMAIS renvoye par le GET de cette route ; seules
-        les personnes connectees y accedent via /api/team-openings/contact.
-    email:
-      type: string
-      format: email
-      maxLength: 200
-      description: 'Alias historique de `contactEmail` (celui de /api/public/free-players).'
-    roles:
-      type: array
-      minItems: 1
-      maxItems: 4
-      description: Postes RECHERCHES par l'equipe (sens inverse d'une fiche joueuse).
-      items:
-        type: string
-        enum: [tank, dps, support, flex]
-    level:
-      type: string
-      enum:
-        [
-          unknown,
-          bronze,
-          silver,
-          gold,
-          platinum,
-          emerald,
-          diamond,
-          master,
-          grandmaster,
-          champion
-        ]
-      description: Niveau de l'EQUIPE. Defaut `unknown` — aucun rang minimum requis.
-    availability:
-      type: string
-      maxLength: 200
-    note:
-      type: string
-      maxLength: 400
-    contactDiscord:
-      type: string
-      maxLength: 60
-    honeypot:
-      type: string
-      description: Doit etre vide (anti-bot).
-    captchaToken:
-      type: string
-    captchaAnswer:
-      type: string
+  # Généré depuis le schéma zod du handler (lib/apiContracts).
+  x-zod: public.teamOpeningSignup
 PublicTeamOpening:
   type: object
   description: >

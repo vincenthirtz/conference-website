@@ -20,7 +20,6 @@
 // comme /api/public/newsletter/subscribe et /api/public/scrim-requests.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { z } from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { verifyCaptcha } from '@/utils/captcha';
@@ -31,10 +30,8 @@ import { emitBotEvent } from '@/utils/botEvents';
 import { sendFreePlayerPublishedEmail } from '@/utils/email';
 import { buildFreePlayerRemovalUrl } from '@/utils/freePlayerRemoval';
 import { logger } from '@/utils/logger';
+import { freePlayerSignupBodySchema } from '@/lib/apiContracts/public/freePlayers';
 import {
-  FREE_PLAYER_LEVELS,
-  FREE_PLAYER_LIMITS,
-  FREE_PLAYER_ROLES,
   FREE_PLAYER_SELECT,
   computeExpiresAt,
   isActive,
@@ -46,23 +43,8 @@ import {
 /** Plafond de la liste publique : au-delà, c'est un annuaire, pas une vitrine. */
 const LIST_LIMIT = 120;
 
-const bodySchema = z.object({
-  displayName: z.string().trim().min(2).max(FREE_PLAYER_LIMITS.displayName),
-  email: z.string().trim().toLowerCase().email().max(FREE_PLAYER_LIMITS.contactEmail),
-  // Au moins un poste : sans ça la fiche n'aide aucune capitaine à décider.
-  roles: z.array(z.enum(FREE_PLAYER_ROLES)).min(1).max(FREE_PLAYER_ROLES.length),
-  level: z.enum(FREE_PLAYER_LEVELS).optional(),
-  availability: z.string().trim().max(FREE_PLAYER_LIMITS.availability).optional(),
-  note: z.string().trim().max(FREE_PLAYER_LIMITS.note).optional(),
-  contactDiscord: z
-    .string()
-    .trim()
-    .max(FREE_PLAYER_LIMITS.contactDiscord)
-    .optional(),
-  honeypot: z.string().optional(),
-  captchaToken: z.string().optional(),
-  captchaAnswer: z.string().optional(),
-});
+// Schéma partagé avec la spec OpenAPI (lib/apiContracts).
+const bodySchema = freePlayerSignupBodySchema;
 
 /**
  * Réponse unique du chemin nominal. Comme pour la newsletter, elle ne révèle

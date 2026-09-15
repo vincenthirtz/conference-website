@@ -5,7 +5,13 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { assembleSpec, fragmentToApiPath } from '../../utils/openapi/assemble';
+import { z } from 'zod';
+import { API_CONTRACT_SCHEMAS } from '../../lib/apiContracts';
+import {
+  assembleSpec,
+  fragmentToApiPath,
+  resolveZodSchemas,
+} from '../../utils/openapi/assemble';
 
 describe('fragmentToApiPath', () => {
   it.each([
@@ -67,5 +73,85 @@ describe('assembleSpec', () => {
   it('refuse des paths ou components écrits dans root.yaml', () => {
     const dir = fixture({ 'root.yaml': 'openapi: 3.1.0\npaths: {}\n' });
     expect(() => assembleSpec(dir)).toThrow(/root\.yaml/);
+  });
+});
+
+describe('x-zod : schémas générés depuis lib/apiContracts', () => {
+  const contracts = {
+    body: {
+      schema: z.object({
+        email: z.string().trim().email().max(200),
+        note: z.string().optional().meta({ description: 'libre' }),
+      }),
+      io: 'input' as const,
+    },
+    reply: { schema: z.object({ ok: z.boolean() }), io: 'output' as const },
+    dated: { schema: z.object({ at: z.date() }), io: 'input' as const },
+  };
+
+  it('remplace la référence par le JSON Schema, voisins en complément', () => {
+    const used = new Set<string>();
+    const out = resolveZodSchemas(
+      {
+        a: { 'x-zod': 'body', description: 'Corps' },
+        b: [{ 'x-zod': 'reply' }],
+      },
+      contracts,
+      used
+    ) as any;
+    expect(out.a).toMatchObject({
+      type: 'object',
+      required: ['email'],
+      description: 'Corps',
+      properties: {
+        email: { type: 'string', format: 'email', maxLength: 200 },
+        note: { type: 'string', description: 'libre' },
+      },
+    });
+    expect(out.a.$schema).toBeUndefined();
+    // Sortie : zod ferme l'objet ; entrée : non.
+    expect(out.b[0].additionalProperties).toBe(false);
+    expect(out.a.additionalProperties).toBeUndefined();
+    expect([...used].sort()).toEqual(['body', 'reply']);
+  });
+
+  it('refuse un nom inconnu', () => {
+    expect(() => resolveZodSchemas({ 'x-zod': 'nope' }, contracts)).toThrow(
+      /absent de lib\/apiContracts/
+    );
+  });
+
+  it('refuse un schéma non représentable plutôt que de l’appauvrir', () => {
+    expect(() => resolveZodSchemas({ 'x-zod': 'dated' }, contracts)).toThrow(
+      /non représentable/
+    );
+  });
+
+  it('chaque contrat enregistré est référencé par la spec réelle', () => {
+    const used = new Set<string>();
+    resolveZodSchemas(
+      // Document brut (avant résolution) : on relit les fragments tels quels.
+      JSON.parse(
+        JSON.stringify(
+          fs
+            .readdirSync(path.join(process.cwd(), 'docs', 'openapi'), {
+              recursive: true,
+              withFileTypes: true,
+            })
+            .filter((e) => e.isFile() && e.name.endsWith('.yaml'))
+            .map((e) =>
+              fs.readFileSync(path.join(e.parentPath, e.name), 'utf8')
+            )
+            .flatMap((src) => [...src.matchAll(/x-zod:\s*(\S+)/g)])
+            .map((m) => ({ 'x-zod': m[1] }))
+        )
+      ),
+      API_CONTRACT_SCHEMAS,
+      used
+    );
+    const unused = Object.keys(API_CONTRACT_SCHEMAS).filter(
+      (name) => !used.has(name)
+    );
+    expect(unused, 'contrat zod enregistré mais jamais référencé').toEqual([]);
   });
 });

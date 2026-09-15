@@ -22,19 +22,8 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - team1Score
-            - team2Score
-          properties:
-            team1Score:
-              type: integer
-              minimum: 0
-              maximum: 99
-            team2Score:
-              type: integer
-              minimum: 0
-              maximum: 99
+          # Généré depuis le schéma zod du handler (lib/apiContracts).
+          x-zod: public.v1.matchResult
   responses:
     '200':
       description: Match finalisé.

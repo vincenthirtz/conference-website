@@ -21,7 +21,6 @@
 // /api/public/free-players et /api/public/newsletter/subscribe.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { z } from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { verifyCaptcha } from '@/utils/captcha';
@@ -32,10 +31,8 @@ import { emitBotEvent } from '@/utils/botEvents';
 import { sendTeamOpeningPublishedEmail } from '@/utils/email';
 import { buildTeamOpeningRemovalUrl } from '@/utils/teamOpeningRemoval';
 import { logger } from '@/utils/logger';
+import { teamOpeningBodySchema } from '@/lib/apiContracts/public/teamOpenings';
 import {
-  TEAM_OPENING_LEVELS,
-  TEAM_OPENING_LIMITS,
-  TEAM_OPENING_ROLES,
   TEAM_OPENING_SELECT,
   computeTeamOpeningExpiresAt,
   isTeamOpeningActive,
@@ -50,43 +47,8 @@ const LIST_LIMIT = 120;
 /** Cache CDN de la liste. Cf. commentaire dans `handleGet`. */
 const LIST_CACHE_SECONDS = 60;
 
-const emailField = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .email()
-  .max(TEAM_OPENING_LIMITS.contactEmail);
-
-const bodySchema = z.object({
-  teamName: z.string().trim().min(2).max(TEAM_OPENING_LIMITS.teamName),
-  // Le formulaire public envoie `contactEmail` — nommé comme la colonne, et
-  // comme le champ « contact Discord » juste à côté. `email` reste accepté :
-  // c'est le nom qu'utilise le formulaire des joueuses libres, et un client
-  // écrit en le recopiant ne doit pas se faire refuser en silence.
-  contactEmail: emailField.optional(),
-  email: emailField.optional(),
-  // Au moins un poste recherché : une annonce « on cherche quelqu'un » sans
-  // dire quel poste n'aide aucune joueuse à savoir si elle est concernée.
-  roles: z
-    .array(z.enum(TEAM_OPENING_ROLES))
-    .min(1)
-    .max(TEAM_OPENING_ROLES.length),
-  level: z.enum(TEAM_OPENING_LEVELS).optional(),
-  availability: z
-    .string()
-    .trim()
-    .max(TEAM_OPENING_LIMITS.availability)
-    .optional(),
-  note: z.string().trim().max(TEAM_OPENING_LIMITS.note).optional(),
-  contactDiscord: z
-    .string()
-    .trim()
-    .max(TEAM_OPENING_LIMITS.contactDiscord)
-    .optional(),
-  honeypot: z.string().optional(),
-  captchaToken: z.string().optional(),
-  captchaAnswer: z.string().optional(),
-});
+// Schéma partagé avec la spec OpenAPI (lib/apiContracts).
+const bodySchema = teamOpeningBodySchema;
 
 /**
  * Réponse unique du chemin nominal. Comme pour les joueuses libres, elle ne

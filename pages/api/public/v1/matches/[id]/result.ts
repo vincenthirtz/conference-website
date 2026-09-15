@@ -21,15 +21,16 @@ import {
   PublicWriteError,
   type PublicWriteContext,
 } from '@/utils/publicWriteApi';
-import { scoreSchema, uuidSchema } from '@/utils/botValidation';
+import {
+  matchResultBodySchema,
+  matchResultQuerySchema,
+} from '@/lib/apiContracts/public/matchResult';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { logger } from '@/utils/logger';
 
-const bodySchema = z.object({
-  team1Score: scoreSchema,
-  team2Score: scoreSchema,
-});
-const querySchema = z.object({ id: uuidSchema });
+// Schémas partagés avec la spec OpenAPI (lib/apiContracts).
+const bodySchema = matchResultBodySchema;
+const querySchema = matchResultQuerySchema;
 
 type Body = z.infer<typeof bodySchema>;
 type Query = z.infer<typeof querySchema>;

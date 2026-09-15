@@ -11,21 +11,16 @@
 
 import crypto from 'crypto';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { z } from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { verifyCaptcha } from '@/utils/captcha';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { sendNewsletterConfirmEmail } from '@/utils/email';
 import { logger } from '@/utils/logger';
+import { newsletterSubscribeBodySchema } from '@/lib/apiContracts/public/newsletter';
 
-const BodySchema = z.object({
-  email: z.string().trim().toLowerCase().email().max(200),
-  source: z.string().trim().max(80).optional(),
-  honeypot: z.string().optional(),
-  captchaToken: z.string().optional(),
-  captchaAnswer: z.string().optional(),
-});
+// Schéma partagé avec la spec OpenAPI (lib/apiContracts).
+const BodySchema = newsletterSubscribeBodySchema;
 
 /** Origin precedence shared with utils/broadcasts.ts / utils/email.ts. */
 function siteOrigin(): string {

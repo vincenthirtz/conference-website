@@ -18,12 +18,23 @@
 // Les `$ref` restent internes au document assemblé (`#/components/...`).
 // Doublons (URL, clé de composant) : erreur, jamais d'écrasement silencieux.
 //
-// Fonction pure vis-à-vis du reste du site : pas d'alias `@/`, seulement
-// `node:*` et `yaml`, pour pouvoir tourner dans un script de build.
+// SCHÉMAS ZOD. Partout où un schéma est attendu, un fragment peut écrire
+// `x-zod: <nom>` : l'assembleur y met le JSON Schema du schéma zod enregistré
+// sous ce nom dans lib/apiContracts (celui-là même que le handler utilise).
+// Les clés voisines de `x-zod` (ex. `description`) complètent le résultat.
+// Nom inconnu ou schéma non représentable : erreur.
+//
+// Pas d'alias `@/` ici ni dans les modules importés : l'assembleur tourne
+// aussi dans un script de build (scripts/openapi/build.mjs).
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { parse as parseYaml } from 'yaml';
+import { z } from 'zod';
+import {
+  API_CONTRACT_SCHEMAS,
+  type ApiContractEntry,
+} from '../../lib/apiContracts';
 
 export type OpenApiDoc = Record<string, unknown>;
 
@@ -61,6 +72,50 @@ export function fragmentToApiPath(relative: string): string {
 
 function isMap(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/**
+ * Remplace chaque `{ 'x-zod': nom, ...voisins }` par le JSON Schema du contrat
+ * nommé. Parcours en profondeur, nouvelles valeurs (le document d'entrée n'est
+ * pas muté). Rend aussi l'ensemble des noms utilisés.
+ */
+export function resolveZodSchemas<T>(
+  node: T,
+  contracts: Record<string, ApiContractEntry> = API_CONTRACT_SCHEMAS,
+  used: Set<string> = new Set()
+): T {
+  if (Array.isArray(node)) {
+    return node.map((n) => resolveZodSchemas(n, contracts, used)) as T;
+  }
+  if (!isMap(node)) return node;
+  if ('x-zod' in node) {
+    const { 'x-zod': name, ...siblings } = node;
+    const entry = typeof name === 'string' ? contracts[name] : undefined;
+    if (!entry) {
+      throw new Error(
+        `openapi: x-zod « ${String(name)} » absent de lib/apiContracts`
+      );
+    }
+    used.add(name as string);
+    let generated: Record<string, unknown>;
+    try {
+      generated = z.toJSONSchema(entry.schema, { io: entry.io }) as Record<
+        string,
+        unknown
+      >;
+    } catch (err) {
+      throw new Error(
+        `openapi: x-zod « ${String(name)} » non représentable en JSON Schema (${(err as Error).message})`
+      );
+    }
+    const { $schema: _dialect, ...schema } = generated;
+    return { ...schema, ...siblings } as T;
+  }
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(node)) {
+    out[k] = resolveZodSchemas(v, contracts, used);
+  }
+  return out as T;
 }
 
 export function assembleSpec(root: string = process.cwd()): OpenApiDoc {
@@ -123,5 +178,5 @@ export function assembleSpec(root: string = process.cwd()): OpenApiDoc {
     paths[apiPath] = item;
   }
 
-  return { ...doc, components, paths };
+  return resolveZodSchemas({ ...doc, components, paths });
 }

@@ -20,25 +20,8 @@ ContactFormSubmission:
       minLength: 10
       maxLength: 5000
 PublicNewsletterSubscribeInput:
-  type: object
-  required:
-    - email
-  properties:
-    email:
-      type: string
-      format: email
-      maxLength: 200
-    source:
-      type: string
-      maxLength: 80
-      description: Provenance libre (ex. `footer`, `landing`). Defaut `public`.
-    honeypot:
-      type: string
-      description: Doit etre vide (anti-bot).
-    captchaToken:
-      type: string
-    captchaAnswer:
-      type: string
+  # Généré depuis le schéma zod du handler (lib/apiContracts).
+  x-zod: public.newsletterSubscribe
 PublicNewsItem:
   type: object
   required:
