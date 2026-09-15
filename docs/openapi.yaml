@@ -34813,7 +34813,7 @@ paths:
       description: |
         Rend le lien ACTIF de l'espace, ou `url: null` si aucun n'a ete emis.
         `private, no-store` : un lien porteur ne se met en cache nulle part.
-        Permission `moderate_support` — la meme que la vue d'ensemble TCG, parce
+        Permission `manage_tcg` — la meme que la vue d'ensemble TCG, parce
         que c'est l'exposition de donnees TCG qui decide du seuil, pas la
         diffusion. Rate-limit 30 / min.
       operationId: adminGetTcgOverlayToken
@@ -34904,7 +34904,7 @@ paths:
         Rend aussi les bornes (`lineMax`, `positions`) pour que l'editeur refuse
         AVANT l'envoi plutot que de recolter un refus de Postgres.
 
-        Permission `moderate_support` — la meme que le lien d'overlay : ce que
+        Permission `manage_tcg` — la meme que le lien d'overlay : ce que
         regle cette route s'affiche au meme endroit, devant la meme audience.
         `private, no-store`. Rate-limit 30 / min.
       operationId: adminGetTcgOverlayTheme
@@ -35080,11 +35080,69 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '500':
           $ref: '#/components/responses/ServerError'
+  /api/admin/tcg/players:
+    get:
+      summary: Chercher le compte d'une joueuse pour corriger son solde TCG.
+      description: |
+        `withStaffRoute(handler, { permission: 'manage_tcg' })` — le MEME droit
+        que la correction. Existe pour ne pas exiger `manage_staff`
+        (`/api/admin/users/search`) de qui corrige seulement un solde.
+
+        Reutilise la RPC `admin_search_users` (email, pseudo, BattleTag,
+        jointure equipe) et ne rend que ce qu'il faut pour distinguer deux
+        homonymes. 20 resultats au plus. Une recherche en echec rend 500,
+        jamais une liste vide. Rate-limit 60 / min.
+      operationId: adminSearchTcgPlayers
+      tags:
+        - admin/tcg
+      security:
+        - StaffSession: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 100
+      responses:
+        '200':
+          description: Comptes correspondants.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [players]
+                properties:
+                  players:
+                    type: array
+                    maxItems: 20
+                    items:
+                      type: object
+                      required: [id]
+                      properties:
+                        id: { type: string, format: uuid }
+                        email: { type: string, nullable: true }
+                        display_name: { type: string, nullable: true }
+                        battle_tag: { type: string, nullable: true }
+                        team_name: { type: string, nullable: true }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          description: Method not allowed.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /api/admin/tcg/grant:
     post:
       summary: Corriger le solde de pieces TCG d'une joueuse (credit ou retrait).
       description: |
-        `withStaffRoute(handler, { permission: 'moderate_support' })` — meme
+        `withStaffRoute(handler, { permission: 'manage_tcg' })` — meme
         permission que le reste de l'economie du TCG (cadeau d'accueil, vue
         d'ensemble). L'ecrivain de `source_kind = 'admin_grant'`.
 
@@ -35115,8 +35173,10 @@ paths:
         500, jamais `USER_NOT_FOUND` ; une insertion en erreur est relue par la
         cle avant de conclure a l'echec (504 apres commit).
 
-        Le motif n'est PAS stocke dans le registre (aucune colonne) : il est
-        journalise `tcg_admin_grant` dans `staff_logs`, payload
+        LE MOTIF EST VISIBLE PAR LA JOUEUSE : recopie dans
+        `tcg_wallet_entries.note` (migration `tcg_wallet_entries_note.sql`) et
+        rendu par `GET /api/player/tcg/wallet` pour cette seule source. Il est
+        aussi journalise `tcg_admin_grant` dans `staff_logs`, payload
         `{ userId, amount, reason, entryId }`. `private, no-store`.
         Rate-limit 30 / min.
       operationId: adminGrantTcgCoins
@@ -35207,7 +35267,7 @@ paths:
     get:
       tags:
         - admin/misc
-      # `withStaffRoute(handler, { permission: 'moderate_support' })`. SANS ce
+      # `withStaffRoute(handler, { permission: 'manage_tcg' })`. SANS ce
       # bloc, la spec héritait du défaut global (BotApiKey + BotTenantId) et
       # annonçait donc qu'une clé bot ouvre un agrégat exposant qui possède
       # quoi. Le garde-fou de dérive l'a rattrapé.
@@ -35262,7 +35322,7 @@ paths:
         l'arithmetique entre compteurs, puisqu'une cle en echec vaut `null` et
         qu'une soustraction produirait un nombre invente.
 
-        Permission `moderate_support`, la meme que la file de moderation.
+        Permission `manage_tcg`, la meme que la file de moderation.
         Rate-limit 30 / min.
       operationId: readAdminTcgOverview
       parameters:
@@ -35612,6 +35672,10 @@ paths:
                         sourceRef:
                           type: string
                           description: Identifiant de l'objet source, en texte (match, paquet…).
+                        note:
+                          type: string
+                          nullable: true
+                          description: Motif d'une correction de l'equipe (`admin_grant`), ecrit par le staff et visible par la joueuse. `null` pour toute autre source.
                         createdAt:
                           type: string
                   shownTotal:
@@ -36099,7 +36163,7 @@ paths:
     get:
       summary: File des photos de cartes TCG en attente de relecture.
       description: |
-        `withStaffRoute(handler, { permission: 'moderate_support' })`.
+        `withStaffRoute(handler, { permission: 'manage_tcg' })`.
         Les plus anciennes d'abord (une photo ne doit pas attendre derriere une
         plus recente). Chaque element porte `displayName` et `email`, resolus
         en UN appel par la RPC `admin_get_user_profiles`

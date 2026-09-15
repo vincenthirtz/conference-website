@@ -85,7 +85,7 @@ bouton « envoyer une photo » aurait obtenu un consentement sans qu'il soit
 
 Une photo déposée est `pending`. Elle n'est affichée nulle part tant qu'une
 personne du staff ne l'a pas approuvée via `PATCH /api/admin/tcg/photos`
-(permission `moderate_support`, journalisé `tcg_photo_approve` /
+(permission `manage_tcg`, journalisé `tcg_photo_approve` /
 `tcg_photo_reject`). **Une photo remplacée redevient `pending`**, y compris en
 remplacement d'une photo déjà approuvée — sans quoi il suffirait de substituer
 n'importe quoi à un cliché validé.
@@ -315,11 +315,24 @@ figé sur une valeur encore plus fausse.
 (`tcg_twitch_drop.sql`, 2026-09-13), `welcome_gift` (`tcg_welcome_gift.sql`,
 2026-09-14), `supporter_welcome` (`tcg_supporter_welcome.sql`, 2026-09-14),
 `checkin_streak` et `tournament_placement`
-(`tcg_earn_sources_drop_streak_placement.sql`, 2026-09-15 — **à appliquer**, cf.
-§7). Côté paquets, `tcg_packs.source_kind` admet `victory`, `purchase`,
+(`tcg_earn_sources_drop_streak_placement.sql`, appliquée le 2026-09-15). Côté paquets, `tcg_packs.source_kind` admet `victory`, `purchase`,
 `welcome`, et avec la même migration `drop`, `placement` et `streak`.
 `admin_grant` est écrit par `POST /api/admin/tcg/grant` (correction tracée
-par l'équipe, `source_ref` = clé d'idempotence, motif dans `staff_logs`).
+par l'équipe, `source_ref` = clé d'idempotence). Son **motif est lisible par
+la joueuse** : recopié dans `tcg_wallet_entries.note` (seule source à en porter
+un, migration `tcg_wallet_entries_note.sql`) et affiché sous « Ajustement par
+l'équipe » dans son historique — la carte staff le dit avant la saisie. Il
+reste aussi au journal staff, avec l'auteur.
+
+**Qui gère le TCG côté staff : la permission `manage_tcg`**, et non
+`moderate_support`. Toutes les routes `/api/admin/tcg/*` et les onglets TCG de
+`/admin/moderation` en dépendent ; `owner` et `admin` l'ont par rôle, un
+`caster` seulement si on la lui accorde. Le TCG était d'abord gardé par
+`moderate_support`, décrit « traiter les signalements et les tickets » :
+accorder le support ouvrait du même geste la correction des soldes et la
+relecture des photos. La recherche de comptes de la carte d'ajustement passe par
+`/api/admin/tcg/players`, sous le même droit, plutôt que par
+`/api/admin/users/search` (`manage_staff`).
 `source_ref` est du **texte**,
 et non un uuid, parce que les sources n'ont pas toutes la même clé (un match, un
 paquet, une carte `<pack_id>:<position>`, un tournoi, un tenant, un direct,
@@ -557,6 +570,14 @@ irrattrapables. La lecture est paginée (pages de 1 000, ordre stable). Le compt
 rendu `{ status, eligible, granted, packsExpected, packsGranted }` est **rendu
 dans la réponse** de la finalisation (`tcg_placement_rewards`).
 
+**Annonce.** Série et palmarès émettent `tcg.reward_granted`
+(`reason: 'checkin_streak' | 'tournament_placement'`) pour les seules joueuses
+que l'insertion vient de créditer : `grantCoinsThenPacks` rend `credited`, vide
+sur un rejeu, donc relancer une finalisation ne renotifie personne. `packs` est
+le nombre de paquets RÉELLEMENT créés, pour ne jamais annoncer un paquet refusé.
+Le bot en fait un DM (raison d'abord, gain ensuite), dédoublonné par
+`(joueuse, source, sourceRef)`.
+
 ### Ce que la victoire déclenche
 
 [`utils/tcg/grantVictoryRewards.ts`](../utils/tcg/grantVictoryRewards.ts) est
@@ -657,14 +678,15 @@ joueuse) et scopées au tenant résolu par `resolveTenantIdForUserRequest`.
 | `/api/player/tcg/booster`                            | POST              | joueuse                              | Acheter un paquet **fermé** avec ses pièces. 20/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `/api/player/tcg/recycle`                            | POST              | joueuse                              | Recycler un **doublon** contre `RECYCLE_REFUND_COINS`. 30/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `/api/player/tcg/wallet`                             | GET               | joueuse                              | « D'où viennent mes pièces ? » — 50 derniers mouvements, `shownTotal`, `truncated`. 60/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `/api/admin/tcg/photos`                              | GET, PATCH        | staff, permission `moderate_support` | La file de relecture (`pending`, la plus ancienne d'abord) ; approuver ou refuser. Chaque élément porte `displayName` et `email`, résolus en un appel par la RPC `fetchAdminUserProfiles` — un **enrichissement, jamais une condition** : une résolution en échec rend `null` et la file reste servie, parce qu'une relectrice doit d'abord voir l'image. Journalisé. 60/min en GET, 30/min en PATCH. |
-| `/api/admin/tcg/overview`                            | GET               | staff, permission `moderate_support` | État de l'économie en un appel : paquets, pièces, cartes par rareté, photos, sujets les plus distribués. Tout est agrégé côté serveur — aucune ligne de détail ne sort. `null` ≠ `0` : une clé en échec vaut « pas mesurable », jamais « mesuré et vide ». 30/min, `Cache-Control: private, max-age=30`.                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `/api/admin/tcg/photos`                              | GET, PATCH        | staff, permission `manage_tcg`       | La file de relecture (`pending`, la plus ancienne d'abord) ; approuver ou refuser. Chaque élément porte `displayName` et `email`, résolus en un appel par la RPC `fetchAdminUserProfiles` — un **enrichissement, jamais une condition** : une résolution en échec rend `null` et la file reste servie, parce qu'une relectrice doit d'abord voir l'image. Journalisé. 60/min en GET, 30/min en PATCH. |
+| `/api/admin/tcg/overview`                            | GET               | staff, permission `manage_tcg`       | État de l'économie en un appel : paquets, pièces, cartes par rareté, photos, sujets les plus distribués. Tout est agrégé côté serveur — aucune ligne de détail ne sort. `null` ≠ `0` : une clé en échec vaut « pas mesurable », jamais « mesuré et vide ». 30/min, `Cache-Control: private, max-age=30`.                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `/api/bot/v1/players/by-discord/{discordUserId}/tcg` | GET               | bot, `x-api-key` par tenant          | Solde, paquets en attente et **résumé** de collection pour Discord. `discordUserId` : 15 à 25 chiffres (la spec est alignée sur le code, des identifiants courts existant chez les comptes anciens). 60/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `/api/webhooks/twitch/tcg-drop`                      | POST              | signature HMAC Twitch EventSub       | Webhook entrant : créditer une spectatrice qui échange des points de chaîne. Corps lu brut (`bodyParser: false`), signature vérifiée **avant** tout parsing, fenêtre anti-rejeu de 10 min, tenant résolu par la chaîne et non par `x-tenant-id`. **En service** depuis le 2026-09-13. Une `revocation` est lue et non seulement acquittée : son `status` dit laquelle des trois causes s'applique. Crédite **pièces + un paquet `drop`** (pièces d'abord) ; `packGranted` dans la réponse, `pack: { id } \| null` dans `tcg.drop_granted`. 600/min.                                                                                                                                                                                                                                                                                                                     |
-| `/api/admin/tcg/overlay-token`                       | GET, POST, DELETE | staff, permission `moderate_support` | Le lien de la source navigateur OBS. Un seul jeton actif par espace : émettre révoque le précédent. Journalisé **sans** le jeton. 30/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `/api/admin/tcg/overlay-theme`                       | GET, PUT          | staff, permission `moderate_support` | L'habillage de l'overlay (couleur, position, deux formulations, image ou vidéo). **Patch partiel** ; `null` = revenir au défaut. Média validé par **magic bytes** avant dépôt en bucket public. 30/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `/api/admin/tcg/welcome-gift`                        | GET, POST         | staff, permission `moderate_support` | Simuler puis distribuer le cadeau d'accueil de l'édition en cours. `GET` n'écrit rien. `POST` honore `Idempotency-Key`. Journalisé. 20/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `/api/admin/tcg/grant`                               | POST              | staff, permission `moderate_support` | Corriger le solde d'une joueuse (`admin_grant`, crédit ou retrait, valeur absolue ≤ 10 000, motif obligatoire). **Une correction tracée, pas une vente.** Registre d'abord, `source_ref` = `idempotencyKey` : l'unicité du registre porte l'idempotence, un rejeu rend `replayed: true` sans double crédit. Un retrait ne passe jamais sous zéro (`409 INSUFFICIENT_BALANCE`) : réservation conditionnelle du cache, disponible = minimum du cache et du registre. Motif journalisé `tcg_admin_grant` (le registre n'a pas de colonne pour lui). 30/min. |
+| `/api/admin/tcg/overlay-token`                       | GET, POST, DELETE | staff, permission `manage_tcg`       | Le lien de la source navigateur OBS. Un seul jeton actif par espace : émettre révoque le précédent. Journalisé **sans** le jeton. 30/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `/api/admin/tcg/overlay-theme`                       | GET, PUT          | staff, permission `manage_tcg`       | L'habillage de l'overlay (couleur, position, deux formulations, image ou vidéo). **Patch partiel** ; `null` = revenir au défaut. Média validé par **magic bytes** avant dépôt en bucket public. 30/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `/api/admin/tcg/welcome-gift`                        | GET, POST         | staff, permission `manage_tcg`       | Simuler puis distribuer le cadeau d'accueil de l'édition en cours. `GET` n'écrit rien. `POST` honore `Idempotency-Key`. Journalisé. 20/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `/api/admin/tcg/grant`                               | POST              | staff, permission `manage_tcg`       | Corriger le solde d'une joueuse (`admin_grant`, crédit ou retrait, valeur absolue ≤ 10 000, motif obligatoire). **Une correction tracée, pas une vente.** Registre d'abord, `source_ref` = `idempotencyKey` : l'unicité du registre porte l'idempotence, un rejeu rend `replayed: true` sans double crédit. Un retrait ne passe jamais sous zéro (`409 INSUFFICIENT_BALANCE`) : réservation conditionnelle du cache, disponible = minimum du cache et du registre. Motif journalisé `tcg_admin_grant` (le registre n'a pas de colonne pour lui). 30/min. |
+| `/api/admin/tcg/players`                             | GET               | staff, permission `manage_tcg`       | Recherche de comptes pour la carte « Ajuster un solde » (RPC `admin_search_users`, 20 résultats), sans exiger `manage_staff`. |
 | `/api/player/tcg/welcome-gift`                       | GET, POST         | joueuse (**`withSubjectRoute`**)     | `GET` : « Ai-je reçu un cadeau ? » — `{ gift: { coins, receivedAt } \| null, supporterClaimable }`, les DEUX accueils confondus (`welcome_gift` et `supporter_welcome`) ; `supporterClaimable` vient de `grantSupporterWelcome({ dryRun: true })`, donc des conditions EXACTES du POST — proposer un bouton que le serveur refuserait serait pire que ne rien proposer. `POST` : réclamer le cadeau **supportrice**, une fois par compte, `{ status, coins, packGranted }` — `packGranted: false` DIT l'écriture partielle au lieu de la masquer. Seule route `tcg/` à honorer `?as=`, mais **sans `allowActAs`** : le `POST` est donc refusé en inspection, un cadeau réclamé ne se rendant pas. 60/min en GET, 6/min en POST. |
 | `/api/overlay/tcg/{token}`                           | GET               | **public**, porté par le jeton       | Le flux d'annonces d'une source navigateur OBS, plus l'habillage. Réduit au déjà-public : pseudo Twitch et origine d'événement, jamais un nom de compte ni une photo. `s-maxage=5`. 120/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
@@ -674,7 +696,9 @@ Quelques conventions transverses :
   `POST /api/admin/tournament/[id]/finalize` (palmarès, compte rendu additif
   `tcg_placement_rewards`) et `redeemCheckinToken`, derrière
   `POST /api/checkin/[token]` et `POST /api/bot/v1/matches/[matchId]/checkin`
-  (série de check-ins, réponse inchangée). Aucune n'émet d'événement bot.
+  (série de check-ins, réponse inchangée). Toutes deux annoncent le gain par
+  `tcg.reward_granted` (`utils/tcg/announceReward.ts`), un événement par
+  joueuse créditée, jamais sur un rejeu — le bot en fait un DM.
 
 - **404 plutôt que 403** sur un paquet ou une carte qui n'est pas le sien : on ne
   confirme pas l'existence de ce qui n'appartient pas à l'appelante.
@@ -722,23 +746,6 @@ Quelques conventions transverses :
   Le titre de la carte « Monnaie » ne la porte pas non plus, `WidgetCard.title`
   étant typé `string` : l'élargir pour un seul appelant coûterait plus que le
   gain.
-- **`tcg_earn_sources_drop_streak_placement.sql` est À APPLIQUER, et AVANT le
-  déploiement du code** qui l'accompagne (2026-09-15). Elle élargit
-  `tcg_wallet_entries_source_kind_check`, `tcg_packs_source_kind_check` ET
-  `tcg_packs_source_coherent`. Code sans migration : le drop part en pièces
-  seules (`pack: null`, ce drop-là ne recevra jamais son paquet), la série et le
-  palmarès voient leurs pièces refusées (une finalisation relancée à l'identique
-  répare le palmarès ; une série manquée n'est pas rejouée). Revérifier d'abord
-  en base qu'aucune autre contrainte `CHECK` n'existe sur ces deux tables.
-- **Les trois nouvelles origines de paquet ne sont pas ventilées côté staff.**
-  L'espace joueuse les nomme depuis le 2026-09-15 (`packOriginLabel` et
-  l'historique : « Récupéré en direct », « Classement de tournoi », « Série de
-  check-ins »), mais `/api/admin/tcg/overview` ne compte que `victory`,
-  `purchase` et `welcome` : ces paquets entrent dans le total sans ventilation.
-- **Ni la série ni le palmarès ne sont annoncés.** Aucun événement bot, aucune
-  notification : le paquet attend sur `/player/tcg`. Un `tcg.pack_granted`
-  élargi (ou deux événements dédiés) serait un changement de contrat bot à
-  concevoir avec le consommateur.
 - **Aucune joueuse n'a rattaché son compte Twitch** (0 sur 58 participantes au
   2026-09-14). Toute la chaîne fonctionne, mais sans `user_twitch_links` le
   webhook répond `identity_not_linked` et personne ne reçoit rien. La carte de
@@ -753,21 +760,9 @@ Quelques conventions transverses :
   les trois attendent un geste de la régie, par construction. Un lien d'overlay
   s'émet, un cadeau se distribue — ni l'un ni l'autre ne doit être l'effet de
   bord d'un déploiement.
-- **Le motif d'une correction `admin_grant` ne vit que dans `staff_logs`.**
-  `POST /api/admin/tcg/grant` écrit le mouvement au registre et le motif au
-  journal staff (payload `entryId`), faute de colonne dans
-  `tcg_wallet_entries`. L'historique joueuse affiche donc « Ajustement par
-  l'équipe » sans le pourquoi. Ajouter une colonne `note` demanderait une
-  migration appliquée AVANT le code — sinon chaque correction échouerait en 500 ;
-  à décider si les joueuses doivent lire ce motif.
-- **La carte « Ajuster un solde » (onglet Économie TCG de `/admin/moderation`)
-  a deux angles morts.** Elle n'affiche pas le solde AVANT correction — aucune
-  route staff ne lit le porte-monnaie d'une autre joueuse, et le solde résultant
-  n'arrive qu'avec la réponse. Et sa recherche de comptes réutilise
-  `/api/admin/users/search`, gardée par `manage_staff` au niveau plateforme :
-  un staff qui n'a que `moderate_support` voit la recherche refusée et doit
-  coller l'identifiant du compte (l'écran le lui dit). Les onglets TCG, eux,
-  suivent désormais la permission `moderate_support` et non plus le rôle.
+- **La carte « Ajuster un solde » n'affiche pas le solde AVANT correction** :
+  aucune route staff ne lit le porte-monnaie d'une autre joueuse, et le solde
+  résultant n'arrive qu'avec la réponse.
 - **Passe UX de `/player/tcg` et `/tcg` (2026-09-15) non vérifiée en
   navigateur ni couverte en e2e.** Livré : focus porté sur la révélation et
   rendu aux paquets à la fermeture, annonce `aria-live` du tirage (nom, rareté,
