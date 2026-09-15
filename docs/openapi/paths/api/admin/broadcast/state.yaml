@@ -13,9 +13,7 @@ get:
     '200':
       description: Live broadcast state.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/BroadcastState'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
@@ -70,9 +68,7 @@ post:
     '200':
       description: Refreshed live state.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/BroadcastState'
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':

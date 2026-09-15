@@ -1,25 +1,3 @@
-LeaderboardEntry:
-  type: object
-  required:
-    - teamId
-    - teamName
-    - wins
-    - losses
-  properties:
-    rank:
-      type: integer
-    teamId:
-      $ref: '#/components/schemas/Uuid'
-    teamName:
-      type: string
-    wins:
-      type: integer
-    draws:
-      type: integer
-    losses:
-      type: integer
-    points:
-      type: number
 LadderRow:
   type: object
   required:
@@ -51,46 +29,6 @@ LadderRow:
       type: integer
     rank:
       type: integer
-MapStats:
-  type: object
-  properties:
-    tournamentId:
-      oneOf:
-        - $ref: '#/components/schemas/Uuid'
-        - type: 'null'
-    maps:
-      type: array
-      items:
-        type: object
-        properties:
-          mapName:
-            type: string
-          gamesPlayed:
-            type: integer
-          wins:
-            type: integer
-          losses:
-            type: integer
-          winrate:
-            type: number
-          roundsFor:
-            type: integer
-          roundsAgainst:
-            type: integer
-          overtimeCount:
-            type: integer
-          tiebreakerCount:
-            type: integer
-    vetoStats:
-      type: array
-      items:
-        type: object
-        additionalProperties: true
-    teamWinrates:
-      type: array
-      items:
-        type: object
-        additionalProperties: true
 MvpLeaderboardEntry:
   type: object
   required:

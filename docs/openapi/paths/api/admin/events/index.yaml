@@ -82,9 +82,7 @@ post:
     '201':
       description: Event run created (draft).
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/EventRun'
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':

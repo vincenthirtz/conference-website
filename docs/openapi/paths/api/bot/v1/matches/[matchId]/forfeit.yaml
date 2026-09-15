@@ -20,24 +20,7 @@ post:
     '200':
       description: Forfait applique.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              success:
-                type: boolean
-              matchId:
-                $ref: '#/components/schemas/Uuid'
-              forfeitTeamId:
-                $ref: '#/components/schemas/Uuid'
-              winnerTeamId:
-                $ref: '#/components/schemas/Uuid'
-              team1_score:
-                type: [integer, 'null']
-              team2_score:
-                type: [integer, 'null']
-              status:
-                type: [string, 'null']
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '403':

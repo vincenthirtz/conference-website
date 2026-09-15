@@ -12,7 +12,8 @@
       "!**/test-results",
       "!**/playwright-report",
       "!**/public",
-      "!**/next-env.d.ts"
+      "!**/next-env.d.ts",
+      "!docs/openapi/inferred-responses.json"
     ]
   },
   "formatter": {

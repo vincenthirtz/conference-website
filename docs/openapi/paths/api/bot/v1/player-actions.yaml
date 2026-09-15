@@ -19,14 +19,7 @@ get:
     '200':
       description: Liste paginate.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              actions:
-                type: array
-                items:
-                  $ref: '#/components/schemas/PlayerAction'
+        application/json: {}
     "400":
       $ref: "#/components/responses/BadRequest"
     "401":

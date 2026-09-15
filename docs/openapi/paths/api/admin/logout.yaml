@@ -8,8 +8,6 @@ post:
     '200':
       description: Logged out.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Ok'
+        application/json: {}
     "403":
       $ref: "#/components/responses/Forbidden"

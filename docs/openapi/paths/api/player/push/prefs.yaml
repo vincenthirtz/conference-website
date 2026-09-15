@@ -14,27 +14,7 @@ get:
     '200':
       description: Préférences fusionnées par canal.
       content:
-        application/json:
-          schema:
-            type: object
-            required:
-              - push
-              - email
-            properties:
-              push:
-                type: object
-                additionalProperties:
-                  type: boolean
-                description: |
-                  Map event_type → enabled pour le canal push (opt-out,
-                  défaut true).
-              email:
-                type: object
-                additionalProperties:
-                  type: boolean
-                description: |
-                  Map event_type → enabled pour le canal email (opt-in,
-                  défaut false).
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '500':
@@ -75,21 +55,7 @@ put:
     '200':
       description: Préférences mises à jour (état fusionné par canal).
       content:
-        application/json:
-          schema:
-            type: object
-            required:
-              - push
-              - email
-            properties:
-              push:
-                type: object
-                additionalProperties:
-                  type: boolean
-              email:
-                type: object
-                additionalProperties:
-                  type: boolean
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':

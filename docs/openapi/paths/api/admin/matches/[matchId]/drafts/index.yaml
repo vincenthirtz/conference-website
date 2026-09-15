@@ -23,9 +23,7 @@ post:
     '201':
       description: Newly created draft state.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/MatchDraftStateResponse'
+        application/json: {}
     '400':
       description: |
         Invalid input — bad gameIndex, missing tournament game,

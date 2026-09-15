@@ -40,9 +40,7 @@ post:
     '201':
       description: Lock acquis (premiere acquisition, row inseree).
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Lock'
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '500':

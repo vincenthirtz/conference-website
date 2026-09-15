@@ -30,9 +30,7 @@ post:
     '200':
       description: Updated draft state.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/MatchDraftStateResponse'
+        application/json: {}
     '400':
       description: Invalid input (heroId not a UUID, wrong game for the hero…).
       content:

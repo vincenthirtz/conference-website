@@ -64,6 +64,24 @@ requestBody:
   (`lib/apiContracts/public/v1/`) ; paramètres de requête des 36 routes bot à
   `querySchema` et des 8 routes admin/joueuse qui valident leur query avec zod.
 
+## Réponses déduites du code
+
+Les réponses de succès (2xx) de `pages/api/**` (hors API publique v1, décrite
+par zod) sont **déduites du type TypeScript** passé à `res.json()` :
+`npm run openapi:responses` (API du compilateur TypeScript, aucune dépendance
+ajoutée) écrit `docs/openapi/inferred-responses.json`, commité.
+
+- L'assembleur l'utilise là où le fragment n'a pas de schéma, ou un schéma
+  générique (`type: object` sans propriétés), et ajoute un code 2xx renvoyé
+  mais non documenté. Un schéma écrit précis est conservé.
+- `x-infer-responses: false` sur une opération désactive la déduction.
+- `tests/unit/openapiInferredResponses.test.ts` vérifie que le fichier est à
+  jour, et qu'**aucune réponse écrite ne contredit le code** (mêmes propriétés
+  de premier niveau). Pour documenter une réponse, le plus sûr est donc de NE
+  PAS écrire son schéma : le code le fournit ; n'écrire que la description.
+- Une réponse que le script ne sait pas attribuer à une méthode HTTP n'est pas
+  documentée (liste `unattributed` du fichier) : jamais de supposition.
+
 ## Où la spec est lue
 
 - **Dev et tests** : assemblée à la volée (`utils/openapi/loadSpec.ts`), rien à

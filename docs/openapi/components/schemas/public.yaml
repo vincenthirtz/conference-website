@@ -121,41 +121,6 @@ OnboardTenantRequest:
       maxLength: 2000
     turnstile_token:
       type: string
-OnboardRequestStatus:
-  type: object
-  required:
-    - id
-    - status
-  properties:
-    id:
-      $ref: '#/components/schemas/Uuid'
-    status:
-      type: string
-      enum:
-        - pending_email_verification
-        - pending_bot_invite
-        - claimed
-        - failed
-        - cancelled
-    requested_slug:
-      type: string
-    requested_name:
-      type: string
-    botInviteUrl:
-      type: [string, 'null']
-    tenantId:
-      oneOf:
-        - $ref: '#/components/schemas/Uuid'
-        - type: 'null'
-    secretsRevealToken:
-      type: [string, 'null']
-      description: Token a passer a /api/onboard/secrets/{token} pour reveal one-shot.
-    createdAt:
-      $ref: '#/components/schemas/Timestamp'
-    claimedAt:
-      oneOf:
-        - $ref: '#/components/schemas/Timestamp'
-        - type: 'null'
 SupportTicketInput:
   type: object
   required:

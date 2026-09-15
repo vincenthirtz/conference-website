@@ -7,14 +7,7 @@ get:
     '200':
       description: Liste reminders.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              reminders:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Reminder'
+        application/json: {}
     "401":
       $ref: "#/components/responses/Unauthorized"
     "429":

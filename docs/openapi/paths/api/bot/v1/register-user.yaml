@@ -22,16 +22,7 @@ post:
     '201':
       description: Compte cree.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              authUserId:
-                $ref: '#/components/schemas/Uuid'
-              role:
-                type: string
-              discordUserId:
-                $ref: '#/components/schemas/DiscordId'
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '409':

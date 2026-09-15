@@ -11,9 +11,7 @@ get:
     '200':
       description: Veto state.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/VetoState'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
@@ -61,9 +59,7 @@ patch:
     '200':
       description: Updated veto state.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/VetoState'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

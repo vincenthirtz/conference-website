@@ -30,18 +30,7 @@ get:
     '200':
       description: List of adherents.
       content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: true
-            properties:
-              items:
-                type: array
-                items:
-                  type: object
-                  additionalProperties: true
-              total:
-                type: integer
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

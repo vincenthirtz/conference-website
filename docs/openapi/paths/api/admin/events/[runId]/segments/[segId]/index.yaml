@@ -12,9 +12,7 @@ get:
     '200':
       description: Segment.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/EventSegment'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
@@ -39,9 +37,7 @@ patch:
     '200':
       description: Updated.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/EventSegment'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
@@ -64,9 +60,7 @@ put:
     '200':
       description: Replaced.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/EventSegment'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

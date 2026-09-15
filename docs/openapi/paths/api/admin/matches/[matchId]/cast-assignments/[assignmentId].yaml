@@ -24,9 +24,7 @@ patch:
     '200':
       description: Updated.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/CastAssignment'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

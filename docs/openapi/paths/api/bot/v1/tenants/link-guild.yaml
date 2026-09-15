@@ -34,20 +34,7 @@ post:
         - `auto_claimed` : nouveau tenant cree depuis tenant_request
         - `pending_admin_link` : enregistre dans pending_guild_links
       content:
-        application/json:
-          schema:
-            type: object
-            required:
-              - status
-            properties:
-              status:
-                type: string
-                enum:
-                  - already_linked
-                  - auto_claimed
-                  - pending_admin_link
-              tenant:
-                $ref: '#/components/schemas/Tenant'
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '500':

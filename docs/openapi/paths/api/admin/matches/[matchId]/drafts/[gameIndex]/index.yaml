@@ -21,9 +21,7 @@ get:
     '200':
       description: Draft state (or null if not initialised).
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/MatchDraftStateResponse'
+        application/json: {}
     '400':
       description: Invalid matchId or gameIndex.
       content:

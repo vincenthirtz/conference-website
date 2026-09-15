@@ -16,9 +16,7 @@ get:
     '200':
       description: Tenant.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Tenant'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
@@ -43,9 +41,7 @@ patch:
     '200':
       description: Updated.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Tenant'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

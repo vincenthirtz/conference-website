@@ -22,9 +22,7 @@ post:
     '200':
       description: Captainat transfere.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Ok'
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '403':

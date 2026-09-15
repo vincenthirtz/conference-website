@@ -9,16 +9,7 @@ get:
     '200':
       description: Liste des configs.
       content:
-        application/json:
-          schema:
-            type: object
-            required:
-              - tenants
-            properties:
-              tenants:
-                type: array
-                items:
-                  $ref: '#/components/schemas/TenantConfigEntry'
+        application/json: {}
     '500':
       $ref: '#/components/responses/ServerError'
     "401":

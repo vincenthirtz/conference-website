@@ -20,9 +20,7 @@ post:
     '200':
       description: Phase finalisee.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Ok'
+        application/json: {}
     '403':
       $ref: '#/components/responses/Forbidden'
     '404':

@@ -94,9 +94,7 @@ delete:
     '200':
       description: Assignment retire.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Ok'
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '403':

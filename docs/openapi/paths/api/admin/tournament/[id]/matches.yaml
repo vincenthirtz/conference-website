@@ -16,14 +16,7 @@ get:
     '200':
       description: Matches.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              matches:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Match'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
@@ -46,9 +39,7 @@ post:
     '201':
       description: Created.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Match'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

@@ -40,12 +40,7 @@ patch:
     '200':
       description: Scrim mis a jour.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              scrim:
-                $ref: '#/components/schemas/Scrim'
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '403':

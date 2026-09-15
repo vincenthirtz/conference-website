@@ -15,9 +15,7 @@ get:
     '200':
       description: Etat de la demande + URL d'invitation bot.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/OnboardRequestStatus'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '404':

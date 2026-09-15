@@ -15,9 +15,7 @@ post:
     '200':
       description: Segment skipped.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/EventSegment'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

@@ -8,6 +8,7 @@
     "build": "next build",
     "openapi:build": "node --import ./scripts/register-ts.mjs scripts/openapi/build.mjs",
     "contract:bot-inventory": "node --import ./scripts/register-ts.mjs scripts/openapi/bot-inventory.mjs",
+    "openapi:responses": "node scripts/openapi/infer-responses.cjs",
     "start": "next start",
     "format": "biome format --write .",
     "format:check": "biome format .",

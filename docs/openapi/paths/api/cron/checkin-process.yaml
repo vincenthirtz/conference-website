@@ -26,9 +26,7 @@ get:
     '200':
       description: Check-in tick summary.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/CronCheckinResult'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '500':
@@ -46,9 +44,7 @@ post:
     '200':
       description: Check-in tick summary.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/CronCheckinResult'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '500':

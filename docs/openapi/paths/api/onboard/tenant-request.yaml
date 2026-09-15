@@ -18,26 +18,7 @@ post:
     '200':
       description: Demande enregistree, email de verification envoye.
       content:
-        application/json:
-          schema:
-            type: object
-            required:
-              - ok
-              - requestId
-              - status
-            properties:
-              ok:
-                type: boolean
-                enum:
-                  - true
-              requestId:
-                $ref: '#/components/schemas/Uuid'
-              status:
-                type: string
-                enum:
-                  - pending_email_verification
-              emailSent:
-                type: boolean
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':

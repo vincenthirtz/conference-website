@@ -33,14 +33,7 @@ get:
     '200':
       description: Liste des invitations.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              invitations:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Invitation'
+        application/json: {}
     "400":
       $ref: "#/components/responses/BadRequest"
     "401":

@@ -20,9 +20,7 @@ get:
     '200':
       description: Dashboard payload.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/AdminTournamentDashboard'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

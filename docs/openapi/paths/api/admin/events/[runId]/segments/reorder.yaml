@@ -35,9 +35,7 @@ post:
     '200':
       description: Reordered.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Ok'
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':

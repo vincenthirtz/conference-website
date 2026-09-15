@@ -235,41 +235,6 @@ Scrim:
       anyOf:
         - $ref: '#/components/schemas/Uuid'
         - type: 'null'
-BracketView:
-  type: object
-  required:
-    - tournamentId
-    - stages
-  properties:
-    tournamentId:
-      $ref: '#/components/schemas/Uuid'
-    tournamentName:
-      type: string
-    stages:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            $ref: '#/components/schemas/Uuid'
-          name:
-            type: string
-          slug:
-            type: [string, 'null']
-          stageType:
-            type: string
-          orderIndex:
-            type: integer
-          matches:
-            type: array
-            items:
-              type: object
-              additionalProperties: true
-          standings:
-            type: array
-            items:
-              type: object
-              additionalProperties: true
 VetoState:
   type: object
   required:
@@ -539,33 +504,6 @@ AdminMatchPatchInput:
         - 1
         - 2
         - null
-AdminTournamentDashboard:
-  type: object
-  description: |
-    Mega-dashboard payload assembled by fetchDashboardData. Shape is
-    intentionally permissive — see utils/dashboard/buildTournamentDashboard.ts
-    for the canonical type.
-  additionalProperties: true
-  properties:
-    kpis:
-      type: object
-      additionalProperties: true
-    signals:
-      type: array
-      items:
-        type: object
-        additionalProperties: true
-    guards:
-      type: object
-      additionalProperties: true
-    velocity:
-      type: object
-      additionalProperties: true
-    recentActivity:
-      type: array
-      items:
-        type: object
-        additionalProperties: true
 CheckinNudgePayload:
   type: object
   required:
@@ -774,39 +712,6 @@ PublicScrimRequestInput:
       type: string
     captchaAnswer:
       type: string
-CheckinTokenStatus:
-  type: object
-  required:
-    - ok
-  properties:
-    ok:
-      type: boolean
-    error:
-      type: string
-    match:
-      type: object
-      additionalProperties: true
-    team:
-      type: object
-      additionalProperties: true
-    alreadyCheckedIn:
-      type: boolean
-    checkedInAt:
-      oneOf:
-        - $ref: '#/components/schemas/Timestamp'
-        - type: 'null'
-    opensAt:
-      oneOf:
-        - $ref: '#/components/schemas/Timestamp'
-        - type: 'null'
-    closesAt:
-      oneOf:
-        - $ref: '#/components/schemas/Timestamp'
-        - type: 'null'
-    isOpen:
-      type: boolean
-    isPassed:
-      type: boolean
 PlayerNextMatch:
   type: object
   required:

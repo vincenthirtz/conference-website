@@ -22,9 +22,7 @@ get:
     '200':
       description: Stats par map + veto info.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/MapStats'
+        application/json: {}
     '500':
       $ref: '#/components/responses/ServerError'
     "400":

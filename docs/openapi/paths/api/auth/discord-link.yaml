@@ -24,8 +24,6 @@ delete:
     '200':
       description: Lien supprime.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Ok'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'

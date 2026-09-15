@@ -9,14 +9,7 @@ get:
     '200':
       description: Liste des actions.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              actions:
-                type: array
-                items:
-                  $ref: '#/components/schemas/PlayerAction'
+        application/json: {}
     "400":
       $ref: "#/components/responses/BadRequest"
     "401":

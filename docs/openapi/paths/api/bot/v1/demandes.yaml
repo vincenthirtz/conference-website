@@ -23,14 +23,7 @@ get:
     '200':
       description: Liste paginate.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              demandes:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Invitation'
+        application/json: {}
     "400":
       $ref: "#/components/responses/BadRequest"
     "401":

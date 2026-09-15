@@ -9,15 +9,7 @@ get:
     '200':
       description: Liste todo.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              todos:
-                type: array
-                items:
-                  type: object
-                  additionalProperties: true
+        application/json: {}
     "400":
       $ref: "#/components/responses/BadRequest"
     "401":

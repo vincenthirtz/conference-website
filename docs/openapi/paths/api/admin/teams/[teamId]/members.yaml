@@ -11,14 +11,7 @@ get:
     '200':
       description: Members.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              members:
-                type: array
-                items:
-                  $ref: '#/components/schemas/TeamMember'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
@@ -55,9 +48,7 @@ post:
     '201':
       description: 'Added directly (`mode: direct`).'
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/TeamMember'
+        application/json: {}
     '202':
       description: Invitation created; the person has not joined yet.
       content:
@@ -91,9 +82,7 @@ patch:
     '200':
       description: Updated.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/TeamMember'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

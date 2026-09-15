@@ -20,21 +20,7 @@ post:
     '200':
       description: Check-in effectue (ou deja effectue).
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              success:
-                type: boolean
-              matchId:
-                $ref: '#/components/schemas/Uuid'
-              alreadyCheckedIn:
-                type: boolean
-              side:
-                type: integer
-                enum:
-                  - 1
-                  - 2
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '403':

@@ -36,14 +36,7 @@ get:
     '200':
       description: Liste des assignments.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              assignments:
-                type: array
-                items:
-                  $ref: '#/components/schemas/CastAssignment'
+        application/json: {}
     "400":
       $ref: "#/components/responses/BadRequest"
     "401":

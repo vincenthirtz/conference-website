@@ -16,9 +16,7 @@ get:
     '200':
       description: Tenant + config trouve.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/TenantConfigEntry'
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '404':

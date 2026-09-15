@@ -16,8 +16,6 @@ get:
     '200':
       description: Vue bracket.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/BracketView'
+        application/json: {}
     '404':
       $ref: '#/components/responses/NotFound'

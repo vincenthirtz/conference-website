@@ -40,15 +40,7 @@ get:
       description: Cartes normalisees (id, title, boardName, columnName, priority,
         assigneeName, dueDate).
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              tasks:
-                type: array
-                items:
-                  type: object
-                  additionalProperties: true
+        application/json: {}
     "400":
       $ref: "#/components/responses/BadRequest"
     "401":

@@ -9,14 +9,7 @@ get:
     '200':
       description: Tournaments.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              tournaments:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Tournament'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
@@ -39,9 +32,7 @@ post:
     '201':
       description: Created.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Tournament'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

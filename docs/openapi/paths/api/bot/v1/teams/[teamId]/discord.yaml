@@ -18,12 +18,7 @@ patch:
     '200':
       description: IDs persistes.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              team:
-                $ref: '#/components/schemas/Team'
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '403':

@@ -324,6 +324,128 @@ export function expandZodQueryParameters(
   return out;
 }
 
+/** Réponses déduites du code (scripts/openapi/infer-responses.cjs). */
+export type InferredResponses = {
+  responses: Record<string, Record<string, unknown>>;
+  unattributed: string[];
+};
+
+export const INFERRED_RESPONSES_FILE = path.join(
+  'docs',
+  'openapi',
+  'inferred-responses.json'
+);
+
+/**
+ * Un schéma qui ne dit rien de la réponse : absent, `{}`, ou un objet sans
+ * propriétés ni composition (`type: object, additionalProperties: true`).
+ */
+export function isGenericSchema(schema: unknown): boolean {
+  if (!isMap(schema)) return true;
+  const informative = [
+    'properties',
+    'items',
+    '$ref',
+    'anyOf',
+    'oneOf',
+    'allOf',
+    'x-zod',
+    'enum',
+    'const',
+  ];
+  if (informative.some((k) => k in schema)) return false;
+  if (schema.type && schema.type !== 'object') return false;
+  return (
+    schema.additionalProperties === undefined ||
+    schema.additionalProperties === true
+  );
+}
+
+export type InferredMergeStats = {
+  replaced: number;
+  added: number;
+  keptWritten: number;
+};
+
+/**
+ * RÉPONSES DÉDUITES. Pour chaque opération, la réponse 2xx déduite du type
+ * réellement passé à `res.json()` :
+ *   - remplace un schéma écrit GÉNÉRIQUE ou absent (la description reste) ;
+ *   - ajoute un code 2xx que le code renvoie mais que la spec ne documente pas ;
+ *   - ne touche PAS un schéma écrit précis (composants nommés, textes) ;
+ *   - rien du tout si l'opération porte `x-infer-responses: false`.
+ */
+export function mergeInferredResponses(
+  paths: Record<string, unknown>,
+  inferred: InferredResponses['responses'],
+  stats: InferredMergeStats = { replaced: 0, added: 0, keptWritten: 0 }
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [url, rawItem] of Object.entries(paths)) {
+    if (!isMap(rawItem)) {
+      out[url] = rawItem;
+      continue;
+    }
+    const item: Record<string, unknown> = { ...rawItem };
+    for (const method of HTTP_METHODS) {
+      const op = item[method];
+      if (!isMap(op)) continue;
+      const { 'x-infer-responses': infer, ...rest } = op;
+      const byStatus = inferred[`${method.toUpperCase()} ${url}`];
+      if (infer === false || !byStatus) {
+        item[method] = rest;
+        continue;
+      }
+      const responses: Record<string, unknown> = isMap(rest.responses)
+        ? { ...rest.responses }
+        : {};
+      for (const [status, schema] of Object.entries(byStatus)) {
+        const written = responses[status];
+        if (!isMap(written)) {
+          responses[status] = {
+            description: 'Succès (schéma déduit du code du handler).',
+            content: { 'application/json': { schema } },
+          };
+          stats.added++;
+          continue;
+        }
+        if ('$ref' in written) {
+          stats.keptWritten++;
+          continue;
+        }
+        const content = isMap(written.content) ? written.content : {};
+        const json = isMap(content['application/json'])
+          ? content['application/json']
+          : null;
+        if (
+          !Object.keys(content).length ||
+          (json && isGenericSchema(json.schema))
+        ) {
+          responses[status] = {
+            ...written,
+            content: {
+              ...content,
+              'application/json': { ...(json ?? {}), schema },
+            },
+          };
+          stats.replaced++;
+        } else {
+          stats.keptWritten++;
+        }
+      }
+      item[method] = { ...rest, responses };
+    }
+    out[url] = item;
+  }
+  return out;
+}
+
+export function readInferredResponses(root: string): InferredResponses | null {
+  const file = path.join(root, INFERRED_RESPONSES_FILE);
+  if (!fs.existsSync(file)) return null;
+  return JSON.parse(fs.readFileSync(file, 'utf8')) as InferredResponses;
+}
+
 export function assembleSpec(root: string = process.cwd()): OpenApiDoc {
   const base = path.join(root, FRAGMENTS_DIR);
   const doc = readYaml(path.join(base, 'root.yaml'));
@@ -392,8 +514,12 @@ export function assembleSpec(root: string = process.cwd()): OpenApiDoc {
 
   const ctx = newZodResolution();
   for (const name of zodQueryUsed) ctx.used.add(name);
+  const inferred = readInferredResponses(root);
+  const mergedPaths = inferred
+    ? mergeInferredResponses(paths, inferred.responses)
+    : paths;
   const resolved = resolveZodSchemas(
-    { ...doc, components, paths },
+    { ...doc, components, paths: mergedPaths },
     undefined,
     ctx
   );

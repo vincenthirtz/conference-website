@@ -60,16 +60,7 @@ patch:
     '200':
       description: Updated match.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              match:
-                $ref: '#/components/schemas/AdminMatchDetail'
-              warnings:
-                type: array
-                items:
-                  type: string
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':

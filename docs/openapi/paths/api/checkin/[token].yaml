@@ -14,9 +14,7 @@ get:
     '200':
       description: Token resolu.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/CheckinTokenStatus'
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '404':
@@ -41,9 +39,7 @@ post:
     '200':
       description: Check-in valide (ou deja valide).
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/CheckinTokenStatus'
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '429':

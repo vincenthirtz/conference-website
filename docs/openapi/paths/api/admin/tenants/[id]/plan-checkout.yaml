@@ -44,27 +44,7 @@ post:
     '200':
       description: Payment link created.
       content:
-        application/json:
-          schema:
-            type: object
-            required:
-              - redirectUrl
-              - checkoutIntentId
-              - plan
-              - amountEur
-            properties:
-              redirectUrl:
-                type: string
-                description: HelloAsso payment URL to send to the partner.
-              checkoutIntentId:
-                type: integer
-                format: int64
-              plan:
-                type: string
-                enum: [regie, circuit]
-              amountEur:
-                type: number
-                description: Annual catalog price in EUR.
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':

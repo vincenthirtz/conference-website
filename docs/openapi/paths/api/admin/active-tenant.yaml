@@ -9,17 +9,7 @@ get:
     '200':
       description: Active tenant for this staff session.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              activeTenantId:
-                type: [string, 'null']
-                format: uuid
-              tenant:
-                anyOf:
-                  - $ref: '#/components/schemas/Tenant'
-                  - type: 'null'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
@@ -47,9 +37,7 @@ post:
     '200':
       description: Switched.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Ok'
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':

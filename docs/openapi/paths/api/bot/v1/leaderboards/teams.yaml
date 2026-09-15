@@ -20,14 +20,7 @@ get:
     '200':
       description: Leaderboard.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              leaderboard:
-                type: array
-                items:
-                  $ref: '#/components/schemas/LeaderboardEntry'
+        application/json: {}
     "400":
       $ref: "#/components/responses/BadRequest"
     "401":

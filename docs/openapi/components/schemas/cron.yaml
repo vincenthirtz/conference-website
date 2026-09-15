@@ -64,33 +64,6 @@ CronEmailDigestResult:
     skipped:
       type: integer
       minimum: 0
-CronCheckinResult:
-  type: object
-  required:
-    - success
-    - scanned
-    - acted
-    - errors
-  description: |
-    Summary returned by `processCheckinForUpcomingMatches`. Cross-tenant
-    tick — `scanned` counts every upcoming match across tenants, `acted`
-    counts the ones that triggered an action (email/Discord/forfeit),
-    `errors` counts handler-level failures (route still returns 200).
-  properties:
-    success:
-      type: boolean
-      enum:
-        - true
-    scanned:
-      type: integer
-      minimum: 0
-    acted:
-      type: integer
-      minimum: 0
-    errors:
-      type: integer
-      minimum: 0
-  additionalProperties: true
 CronDisputeSlaResult:
   type: object
   required:
@@ -416,36 +389,6 @@ CronDraftAutoPickResult:
         Number of distinct drafts whose current step deadline_at was
         in the past at the start of the tick.
     autoPicked:
-      type: integer
-      minimum: 0
-    errors:
-      type: integer
-      minimum: 0
-CronPlanRenewalResult:
-  type: object
-  description: |
-    Résumé du tick de `/api/cron/plan-renewal`. `checked` = tenants aux plans
-    payants examinés ; `markedPastDue` = bascules expiration → past_due ;
-    `remindersSent` = relances de renouvellement envoyées ; `errors` =
-    échecs par-tenant non fatals.
-  required:
-    - success
-    - checked
-    - markedPastDue
-    - remindersSent
-    - errors
-  properties:
-    success:
-      type: boolean
-      enum:
-        - true
-    checked:
-      type: integer
-      minimum: 0
-    markedPastDue:
-      type: integer
-      minimum: 0
-    remindersSent:
       type: integer
       minimum: 0
     errors:

@@ -32,18 +32,7 @@ post:
     '200':
       description: Invitation créée.
       content:
-        application/json:
-          schema:
-            type: object
-            required:
-              - ok
-              - demandeId
-            properties:
-              ok:
-                type: boolean
-              demandeId:
-                type: string
-                format: uuid
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':

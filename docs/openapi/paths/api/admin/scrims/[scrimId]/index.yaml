@@ -11,9 +11,7 @@ get:
     '200':
       description: Scrim.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Scrim'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
@@ -63,9 +61,7 @@ put:
     '200':
       description: Updated.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Scrim'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

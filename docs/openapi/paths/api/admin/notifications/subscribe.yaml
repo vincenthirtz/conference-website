@@ -16,8 +16,6 @@ post:
     '200':
       description: Subscribed.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Ok'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'

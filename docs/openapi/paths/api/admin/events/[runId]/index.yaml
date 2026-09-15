@@ -11,16 +11,7 @@ get:
     '200':
       description: Event run + segments.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              run:
-                $ref: '#/components/schemas/EventRun'
-              segments:
-                type: array
-                items:
-                  $ref: '#/components/schemas/EventSegment'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
@@ -45,9 +36,7 @@ patch:
     '200':
       description: Updated.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/EventRun'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
@@ -70,9 +59,7 @@ put:
     '200':
       description: Replaced.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/EventRun'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

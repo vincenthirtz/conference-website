@@ -23,9 +23,7 @@ post:
     '201':
       description: Cloned.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Tournament'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

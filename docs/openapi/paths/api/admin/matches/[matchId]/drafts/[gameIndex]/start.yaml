@@ -22,9 +22,7 @@ post:
     '200':
       description: Draft transitioned to in_progress with deadline armed.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/MatchDraftStateResponse'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

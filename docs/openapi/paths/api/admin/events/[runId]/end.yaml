@@ -14,9 +14,7 @@ post:
     '200':
       description: Run ended.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/EventRun'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

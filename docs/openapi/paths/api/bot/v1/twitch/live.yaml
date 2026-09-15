@@ -13,15 +13,7 @@ get:
     '200':
       description: Liste live (+ offline si demande).
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              channels:
-                type: array
-                items:
-                  type: object
-                  additionalProperties: true
+        application/json: {}
     "401":
       $ref: "#/components/responses/Unauthorized"
     "429":

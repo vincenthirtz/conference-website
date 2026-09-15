@@ -45,38 +45,7 @@ get:
     '200':
       description: Annonces recentes (liste vide si rien a annoncer).
       content:
-        application/json:
-          schema:
-            type: object
-            required:
-              - items
-            properties:
-              items:
-                type: array
-                items:
-                  type: object
-                  required:
-                    - id
-                    - kind
-                    - at
-                  properties:
-                    id:
-                      type: string
-                      description: >-
-                        Identifiant de l'ecriture au registre. L'overlay s'en
-                        sert pour n'annoncer chaque evenement qu'une fois,
-                        malgre l'interrogation repetee.
-                    kind:
-                      type: string
-                      enum: [twitch_drop, match_win, scrim_win]
-                    twitchLogin:
-                      type: [string, 'null']
-                      description: >-
-                        Pseudo Twitch, ou `null` si le compte n'est pas
-                        rattache. Aucun autre nom n'est jamais rendu.
-                    at:
-                      type: string
-                      format: date-time
+        application/json: {}
     '400':
       description: Jeton malforme (`INVALID_TOKEN`) — erreur de configuration.
     '404':

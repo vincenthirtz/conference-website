@@ -18,9 +18,7 @@ get:
     '200':
       description: Résumé du tick.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/CronPlanRenewalResult'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '500':
@@ -37,9 +35,7 @@ post:
     '200':
       description: Résumé du tick.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/CronPlanRenewalResult'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '500':

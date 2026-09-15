@@ -53,17 +53,7 @@ post:
         Report enregistre. Le champ `status` indique l'issue :
         `awaiting_opponent`, `finalized` ou `disputed`.
       content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: true
-            properties:
-              status:
-                type: string
-                enum: [awaiting_opponent, finalized, disputed]
-              matchId:
-                type: string
-                format: uuid
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':

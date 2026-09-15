@@ -25,16 +25,7 @@ post:
     '200':
       description: Ack enregistre (ou deja ack).
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              success:
-                type: boolean
-              assignmentId:
-                $ref: '#/components/schemas/Uuid'
-              ackedAt:
-                $ref: '#/components/schemas/Timestamp'
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '403':

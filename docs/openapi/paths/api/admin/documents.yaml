@@ -37,47 +37,7 @@ get:
     '200':
       description: 'Contenu du dossier, ou `configured: false`.'
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              configured:
-                type: boolean
-              folderId:
-                type: string
-              folderName:
-                type: [string, 'null']
-              breadcrumb:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                    name:
-                      type: string
-              files:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                    name:
-                      type: string
-                    mimeType:
-                      type: string
-                    isFolder:
-                      type: boolean
-                    size:
-                      type: [integer, 'null']
-                    modifiedTime:
-                      type: [string, 'null']
-                      format: date-time
-                    modifiedBy:
-                      type: [string, 'null']
-                    webViewLink:
-                      type: [string, 'null']
+        application/json: {}
     '400':
       description: Dossier hors de l'arborescence configuree, ou cle illisible.
     '429':

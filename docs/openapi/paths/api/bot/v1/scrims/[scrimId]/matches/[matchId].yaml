@@ -21,12 +21,7 @@ patch:
     '200':
       description: Match mis a jour.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              match:
-                $ref: '#/components/schemas/Match'
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '403':

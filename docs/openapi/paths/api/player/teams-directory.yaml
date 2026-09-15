@@ -16,21 +16,7 @@ get:
     '200':
       description: Annuaire du tenant courant.
       content:
-        application/json:
-          schema:
-            type: object
-            required:
-              - teams
-            properties:
-              teams:
-                type: array
-                items:
-                  $ref: '#/components/schemas/DirectoryTeam'
-              myTeamId:
-                type: [string, 'null']
-                format: uuid
-              hasOwnSearch:
-                type: boolean
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '429':

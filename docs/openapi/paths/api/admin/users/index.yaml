@@ -34,22 +34,7 @@ post:
     '201':
       description: User created.
       content:
-        application/json:
-          schema:
-            type: object
-            required:
-              - userId
-              - email
-              - passwordSentByEmail
-            properties:
-              userId:
-                type: string
-                format: uuid
-              email:
-                type: string
-                format: email
-              passwordSentByEmail:
-                type: boolean
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':

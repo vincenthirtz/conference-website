@@ -16,9 +16,7 @@ get:
     '200':
       description: Tournament.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Tournament'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
@@ -68,9 +66,7 @@ put:
     '200':
       description: Updated.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Tournament'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

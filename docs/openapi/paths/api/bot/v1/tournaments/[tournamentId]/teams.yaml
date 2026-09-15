@@ -9,14 +9,7 @@ get:
     '200':
       description: Liste des inscriptions.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              teams:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Team'
+        application/json: {}
     "400":
       $ref: "#/components/responses/BadRequest"
     "401":

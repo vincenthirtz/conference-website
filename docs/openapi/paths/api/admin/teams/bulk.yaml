@@ -16,9 +16,7 @@ post:
     '200':
       description: Result.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ImportCsvResult'
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':

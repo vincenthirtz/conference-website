@@ -7,15 +7,7 @@ get:
     '200':
       description: Liste des escalations.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              escalations:
-                type: array
-                items:
-                  type: object
-                  additionalProperties: true
+        application/json: {}
     "400":
       $ref: "#/components/responses/BadRequest"
     "401":

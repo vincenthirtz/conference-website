@@ -19,32 +19,7 @@ get:
     '200':
       description: Etat des permissions.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              staffId:
-                type: string
-              userId:
-                type: string
-              role:
-                type: string
-              rolePermissions:
-                type: array
-                items:
-                  type: string
-              extraPermissions:
-                type: array
-                items:
-                  type: string
-              effective:
-                type: array
-                items:
-                  type: string
-              grantable:
-                type: array
-                items:
-                  type: string
+        application/json: {}
     '404':
       description: Ce compte n'est pas membre du staff.
     '429':

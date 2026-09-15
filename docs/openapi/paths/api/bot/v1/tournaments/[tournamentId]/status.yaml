@@ -20,12 +20,7 @@ post:
     '200':
       description: Status mis a jour.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              tournament:
-                $ref: '#/components/schemas/Tournament'
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '403':

@@ -12,16 +12,7 @@ post:
     '200':
       description: Sortie effective.
       content:
-        application/json:
-          schema:
-            type: object
-            required:
-              - success
-            properties:
-              success:
-                type: boolean
-              info:
-                type: string
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':

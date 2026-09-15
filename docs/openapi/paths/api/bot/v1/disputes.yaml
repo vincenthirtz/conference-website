@@ -15,15 +15,7 @@ get:
     '200':
       description: Liste des disputes.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              disputes:
-                type: array
-                items:
-                  type: object
-                  additionalProperties: true
+        application/json: {}
     "400":
       $ref: "#/components/responses/BadRequest"
     "401":

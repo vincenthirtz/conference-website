@@ -17,9 +17,7 @@ post:
     '200':
       description: Snooze applique.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Ok'
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
   x-zod-query: bot.players/by-discord/[discordUserId]/actions/snooze.query

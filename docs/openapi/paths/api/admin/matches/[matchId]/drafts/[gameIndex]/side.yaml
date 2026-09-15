@@ -29,9 +29,7 @@ patch:
     '200':
       description: Updated draft state.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/MatchDraftStateResponse'
+        application/json: {}
     '400':
       description: Invalid side values or shape.
       content:

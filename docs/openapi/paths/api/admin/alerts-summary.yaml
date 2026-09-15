@@ -9,19 +9,7 @@ get:
     '200':
       description: Counters by category.
       content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: true
-            properties:
-              disputes:
-                type: integer
-              supportTickets:
-                type: integer
-              partnershipRequests:
-                type: integer
-              tenantRequests:
-                type: integer
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

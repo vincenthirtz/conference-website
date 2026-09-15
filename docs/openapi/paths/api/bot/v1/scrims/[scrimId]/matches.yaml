@@ -44,14 +44,7 @@ post:
     '201':
       description: Match(es) cree(s).
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              matches:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Match'
+        application/json: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '403':

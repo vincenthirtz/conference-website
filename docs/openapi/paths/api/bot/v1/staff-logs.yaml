@@ -23,15 +23,7 @@ get:
     '200':
       description: Liste des entrees staff_logs.
       content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              logs:
-                type: array
-                items:
-                  type: object
-                  additionalProperties: true
+        application/json: {}
     "400":
       $ref: "#/components/responses/BadRequest"
     "401":
