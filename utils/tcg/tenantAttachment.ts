@@ -15,21 +15,23 @@
 // l'espace où elle joue ne pourrait plus jamais la lui verser.
 //
 // RATTACHÉE =
-//   - une ligne de roster du tenant (`team_members.tenant_id`), OU
-//   - une écriture de GAIN RÉEL au registre du tenant : une source de la liste
-//     blanche ci-dessous. Exclus : `admin_grant` (le geste même du staff
-//     qu'on veut empêcher de fabriquer un rattachement), `booster_purchase` et
-//     `card_recycled` (dérivés de pièces qui peuvent venir d'un `admin_grant`),
-//     et toute source que personne n'a pris la décision d'ajouter ici — une
-//     liste blanche oublie une joueuse, elle n'invite jamais une étrangère.
-//   Le simple fait d'avoir un porte-monnaie ne compte plus : `refreshBalance`
-//   en crée un pour n'importe quel crédit.
+//   - une appartenance ACCEPTÉE à un roster du tenant (`team_members.tenant_id`
+//     avec `accepted_at` non nul : elle a créé l'équipe, demandé à la rejoindre
+//     ou accepté une invitation), OU
+//   - une écriture de GAIN né de SON geste au registre du tenant (liste blanche
+//     ci-dessous : drop Twitch, accueil supportrice réclamé, vérification
+//     Battle.net, série de collection).
+//   Ne comptent PAS : un ajout au roster par un tiers (staff, capitaine,
+//   import), `admin_grant`, et tout gain piloté par l'organisation (victoires,
+//   check-ins, palmarès, cadeau d'accueil) — un owner malveillant peut les
+//   provoquer pour une personne qu'il a ajoutée de force. Le simple fait
+//   d'avoir un porte-monnaie ne compte pas non plus : `refreshBalance` en crée
+//   un pour n'importe quel crédit.
 //
-// LIMITE CONNUE, HORS DE CE MODULE. Un owner peut ajouter un compte existant à
-// un roster de son espace (`POST /api/admin/teams/[teamId]/members`, par email
-// ou par id) sans le consentement de la personne : le rattachement « roster »
-// reste donc fabricable par un staff malveillant. Le fermer relève d'un flux
-// d'invitation acceptée, pas d'une définition.
+// CE QUI RESTE HORS DE CE MODULE : un owner peut toujours AJOUTER quelqu'un à
+// un roster sans son accord (l'appartenance existe, simplement sans
+// `accepted_at`). Il n'en tire plus aucune prise TCG ; empêcher l'ajout
+// lui-même relève d'une invitation obligatoire (lot 2).
 //
 // UNE ERREUR DE LECTURE N'EST PAS UNE ABSENCE : `{ ok: false }`, jamais un
 // ensemble vide qui ferait conclure « pas rattachée ».
@@ -43,14 +45,16 @@ import { logger } from '@/utils/logger';
  * `tcg_admin_search_players_scoped.sql` — un test vérifie l'égalité.
  */
 export const TENANT_ATTACHING_WALLET_SOURCES = [
-  'match_win',
-  'scrim_win',
-  'twitch_drop',
-  'welcome_gift',
-  'supporter_welcome',
-  'checkin_streak',
-  'tournament_placement',
-  'battlenet_verified',
+  // SEULS les gains nés d'un geste de la personne elle-même (2026-09-15).
+  // Victoires, séries de check-ins, palmarès et cadeau d'accueil sont PILOTÉS
+  // par l'organisation : un owner qui ajoute une étrangère à un roster puis lui
+  // distribue un cadeau ou fait tourner des check-ins fabriquait un
+  // rattachement. Une joueuse de roster reste rattachée par son APPARTENANCE
+  // acceptée (`team_members.accepted_at`), qui couvre ces cas légitimes.
+  'twitch_drop', // son compte Twitch, ses points de chaîne
+  'supporter_welcome', // réclamé par elle
+  'battlenet_verified', // son OAuth Blizzard
+  'collection_set', // elle a ouvert ses paquets
 ] as const;
 
 /** Taille des listes `in (...)` : des UUID dans l'URL, gardée courte. */
@@ -80,6 +84,9 @@ async function readRostered(
       .select('id, user_id')
       .eq('tenant_id', tenantId)
       .in('user_id', batch)
+      // Appartenance ACCEPTÉE seulement : un ajout par un tiers (staff,
+      // capitaine, import) ne vaut pas rattachement tant qu'elle n'a pas dit oui.
+      .not('accepted_at', 'is', null)
       .order('id', { ascending: true })
       .range(from, from + PAGE_SIZE - 1);
     if (error) {

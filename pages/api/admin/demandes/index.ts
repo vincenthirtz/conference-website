@@ -829,6 +829,8 @@ async function handlePost(
               user_id: d.user_id,
               role: desiredRole,
               battle_tag: battleTag,
+              // La joueuse a DEMANDÉ à rejoindre : c'est son accord.
+              accepted_at: new Date().toISOString(),
             });
 
           if (memberErr) {
@@ -981,6 +983,8 @@ async function handlePost(
             userId: d.user_id,
             role: 'captain',
             battleTag: battleTag || null,
+            // Demande de capitanat : elle a demandé cette équipe.
+            acceptedAt: new Date().toISOString(),
           });
           if (!memberResult.ok && !memberResult.isDuplicate) {
             logger.error(

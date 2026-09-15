@@ -138,8 +138,10 @@ function seedBalance(coins: number, cache: number = coins) {
       tenant_id: TENANT,
       user_id: PLAYER,
       amount: coins,
-      source_kind: 'match_win',
-      source_ref: 'm-1',
+      // Gain né d'un geste de la joueuse (son drop Twitch) : il rattache.
+      // Une victoire ne rattache plus seule (pilotée par l'organisation).
+      source_kind: 'twitch_drop',
+      source_ref: 'live-1',
       created_at: '2026-01-01T00:00:00.000Z',
     },
   ] as any;
@@ -189,6 +191,9 @@ function seedRosters(userIds: string[] = [PLAYER, OTHER_PLAYER]) {
     team_id: 'c0000000-0000-4000-8000-000000000001',
     user_id: userId,
     role: 'player',
+    // Appartenance ACCEPTÉE : seule elle rattache à l'espace depuis
+    // `team_members_accepted_at.sql` (un ajout par un tiers ne compte pas).
+    accepted_at: '2026-01-01T00:00:00.000Z',
   })) as any;
 }
 
@@ -740,6 +745,45 @@ describe('POST /api/admin/tcg/grant — seulement une joueuse de l’espace', ()
     expect(store.tcg_wallets ?? []).toHaveLength(0);
     expect(lookup).not.toHaveBeenCalled();
     expect(logStaffAction).not.toHaveBeenCalled();
+  });
+
+  it('un AJOUT FORCÉ au roster (sans accepted_at) ne rattache pas, même avec des victoires', async () => {
+    // L'owner ajoute une étrangère à une équipe de son espace, puis la fait
+    // « gagner » : ni l'appartenance non acceptée, ni les gains pilotés par
+    // l'organisation ne lui ouvrent la correction de solde.
+    store.team_members = [
+      {
+        id: 'f0000000-0000-4000-8000-0000000000bb',
+        tenant_id: TENANT,
+        team_id: 'c0000000-0000-4000-8000-000000000001',
+        user_id: PLAYER,
+        role: 'player',
+        accepted_at: null,
+      },
+    ] as any;
+    store.tcg_wallet_entries = [
+      {
+        id: 'e0000000-0000-4000-8000-000000000b01',
+        tenant_id: TENANT,
+        user_id: PLAYER,
+        amount: 100,
+        source_kind: 'match_win',
+        source_ref: 'm-9',
+        created_at: '2026-01-01T00:00:00.000Z',
+      },
+      {
+        id: 'e0000000-0000-4000-8000-000000000b02',
+        tenant_id: TENANT,
+        user_id: PLAYER,
+        amount: 100,
+        source_kind: 'welcome_gift',
+        source_ref: 'ed-1',
+        created_at: '2026-01-01T00:00:00.000Z',
+      },
+    ] as any;
+    const res = await callGrant(body({ amount: 1 }));
+    expect(res.statusCode).toBe(404);
+    expect(res.body.code).toBe('USER_NOT_FOUND');
   });
 
   it('un porte-monnaie fait de SEULES corrections staff ne rattache pas', async () => {

@@ -193,7 +193,8 @@ async function transferTeam(
     team_id: string;
     role: string | null;
     battle_tag: string | null;
-  }>(userId, tenantId, 'id, team_id, role, battle_tag');
+    accepted_at: string | null;
+  }>(userId, tenantId, 'id, team_id, role, battle_tag, accepted_at');
   const current = pickExclusiveMembership(currentRows);
 
   const sourceTeamId = current?.team_id ?? null;
@@ -256,6 +257,9 @@ async function transferTeam(
     role,
     battleTag: battleTagValue,
     enforceMaxPlayersPreCheck: true,
+    // Le rattachement TCG est une affaire d'ESPACE, pas d'équipe : un transfert
+    // staff dans le même espace reporte l'accord existant, sans en créer un.
+    acceptedAt: current?.accepted_at ?? null,
   });
 
   if (!insertResult.ok) {
@@ -268,6 +272,7 @@ async function transferTeam(
         userId,
         role,
         battleTag: battleTagValue,
+        acceptedAt: current?.accepted_at ?? null,
       });
     }
     return res.status(insertResult.status).json({ error: insertResult.error });

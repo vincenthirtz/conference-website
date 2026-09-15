@@ -196,6 +196,8 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     team_id: created.id,
     user_id: captainAuthId,
     role: 'captain',
+    // Elle crée son équipe : accord implicite, c'est son geste.
+    accepted_at: new Date().toISOString(),
   });
   if (memberErr) {
     logger.error('[bot/teams] member insert error, rolling back', memberErr);

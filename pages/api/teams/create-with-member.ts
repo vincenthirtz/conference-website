@@ -712,6 +712,8 @@ export default async function handler(
         battle_tag: null,
         specialty: null,
         tenant_id: tenantId,
+        // Le créateur de l'équipe : son propre geste.
+        accepted_at: new Date().toISOString(),
       })
       .select('id')
       .maybeSingle();
@@ -847,6 +849,9 @@ export default async function handler(
       battle_tag: m.battle_tag,
       specialty: m.specialty,
       tenant_id: tenantId,
+      // Créatrice (capitaine) : les autres membres passent par une invitation,
+      // dont l'acceptation pose elle-même `accepted_at` (RPC accept_invitation).
+      accepted_at: new Date().toISOString(),
     };
 
     const { data: member, error: insertErr } = await supabaseAdmin

@@ -132,9 +132,27 @@ function seedWorld() {
     battle_tag: 'Player#1234',
   })) as any;
   store.team_members = [
-    { id: 'tm-1', tenant_id: TENANT, user_id: ROSTER, team_id: 't-1' },
-    { id: 'tm-2', tenant_id: TENANT, user_id: REWARDED, team_id: 't-1' },
-    { id: 'tm-3', tenant_id: OTHER_TENANT, user_id: ELSEWHERE, team_id: 't-9' },
+    {
+      id: 'tm-1',
+      tenant_id: TENANT,
+      user_id: ROSTER,
+      team_id: 't-1',
+      accepted_at: '2026-01-01T00:00:00.000Z',
+    },
+    {
+      id: 'tm-2',
+      tenant_id: TENANT,
+      user_id: REWARDED,
+      team_id: 't-1',
+      accepted_at: '2026-01-01T00:00:00.000Z',
+    },
+    {
+      id: 'tm-3',
+      tenant_id: OTHER_TENANT,
+      user_id: ELSEWHERE,
+      team_id: 't-9',
+      accepted_at: '2026-01-01T00:00:00.000Z',
+    },
   ] as any;
   store.tcg_wallets = [
     { tenant_id: TENANT, user_id: COLLECTOR, balance: 25 },
@@ -227,6 +245,7 @@ describe('GET — simulation', () => {
       tenant_id: TENANT,
       user_id: user,
       team_id: 't-1',
+      accepted_at: '2026-01-01T00:00:00.000Z',
     })) as any;
     store.tcg_wallet_entries = [];
 

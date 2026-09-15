@@ -1493,6 +1493,7 @@
       "user_id"
     ],
     "team_members": [
+      "accepted_at",
       "avatar_url",
       "battle_tag",
       "battle_tag_verified_at",

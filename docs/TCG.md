@@ -471,6 +471,26 @@ une écriture `match_win` pour le match (`utils/tcg/paidMatches.ts`, lecture en
 (`tcg_packs_source_match_restrict.sql`), si bien que supprimer un tournoi dont un
 match a payé échoue au lieu de vider les collections.
 
+**Le rattachement à l'espace exige l'ACCORD de la personne** (2026-09-15,
+`team_members_accepted_at.sql`). `team_members.accepted_at` est posé quand elle a
+créé son équipe, demandé à la rejoindre (ou un transfert) ou accepté une
+invitation — les trois fonctions SQL d'adhésion le posent, et `NULL` par défaut
+signifie « ajoutée par un tiers » (staff, capitaine, import). Le rattachement TCG
+(correction de solde, rattrapage Battle.net, recherche de joueuses) ne compte que
+les appartenances acceptées et, au registre, les seuls gains nés de SON geste :
+`twitch_drop`, `supporter_welcome`, `battlenet_verified`, `collection_set`. Les
+victoires, check-ins, palmarès et cadeaux d'accueil sont pilotés par
+l'organisation : un owner pouvait les provoquer pour une personne ajoutée de
+force. Les appartenances antérieures ont reçu `accepted_at = created_at`.
+Reste possible, sans aucune prise TCG : ajouter quelqu'un sans son accord
+(invitation obligatoire = lot suivant).
+
+**Un scrim annulé ne se re-clôt plus.** `applyScrimResult` n'écrit que si le scrim
+n'est ni `completed` ni `cancelled` (409 `SCRIM_CLOSED`, miroir noté non touché) ;
+les PATCH staff (admin et bot) ne changent un statut que s'il est toujours celui
+qu'ils ont lu (409 `SCRIM_CHANGED`), et le PATCH bot réaligne désormais le miroir
+noté (un scrim annulé depuis Discord gardait ses points au rating et à la saison).
+
 **Les routes staff d'équipe sont bornées à l'espace** (2026-09-15) :
 `/api/admin/teams/[teamId]/members` (toutes méthodes), `/roster-bulk` et
 `/api/admin/teams/add-member` chargent l'équipe avec `tenant_id = ctx.tenantId`
@@ -1364,11 +1384,6 @@ Quelques conventions transverses :
   négatifs (plafonnés à 0 dans le cache) : `SELECT tenant_id, user_id,
   SUM(amount) FROM tcg_wallet_entries GROUP BY 1, 2 HAVING SUM(amount) < 0`.
 
-- **Rattachement « roster » fabricable par un owner** : cf. §4, « Qui gère le TCG
-  côté staff ». Relève d'un flux d'invitation acceptée.
-- **`applyScrimResult` n'est pas conditionnelle** : deux capitaines qui
-  concluent au même instant qu'un staff annule peuvent re-clore un scrim
-  annulé. Sans conséquence monétaire depuis la clé stable, non corrigé.
 
 - **Séries et vitrine : livrées (2026-09-15), pas encore en service.** Ordre de
   déploiement : (1) le bot apprend `tcg.set_completed` ; (2) appliquer

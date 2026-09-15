@@ -211,6 +211,7 @@ describe('GET /api/admin/tcg/players', () => {
   });
 
   it('la fonction SQL filtre par tenant, n’expose pas l’email et partage la liste des gains réels', () => {
+    // Droits : posés par la migration d'origine (un CREATE OR REPLACE les garde).
     const sql = readFileSync(
       join(
         process.cwd(),
@@ -218,7 +219,18 @@ describe('GET /api/admin/tcg/players', () => {
       ),
       'utf8'
     );
-    const body = sql.slice(sql.indexOf('CREATE OR REPLACE FUNCTION'));
+    // Corps : la DERNIÈRE définition (`team_members_accepted_at.sql`), qui
+    // n'accepte plus qu'une appartenance ACCEPTÉE comme rattachement.
+    const latest = readFileSync(
+      join(process.cwd(), 'database/migrations/team_members_accepted_at.sql'),
+      'utf8'
+    );
+    const body = latest.slice(
+      latest.indexOf(
+        'CREATE OR REPLACE FUNCTION public.admin_search_tcg_players'
+      )
+    );
+    expect(body).toMatch(/tm\.accepted_at IS NOT NULL/);
     // Le tenant est un PARAMÈTRE et chaque source de candidats le filtre.
     expect(body).toMatch(
       /admin_search_tcg_players\(\s*p_tenant_id uuid,\s*p_query text\s*\)/

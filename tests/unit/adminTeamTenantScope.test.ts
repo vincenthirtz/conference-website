@@ -159,6 +159,26 @@ describe('/api/admin/teams/[teamId]/members — équipe d’un autre espace', ()
     expect(snapshot()).toBe(before);
   });
 
+  it('POST sur SON espace : le membre est ajouté SANS accepted_at (ajout par un tiers)', async () => {
+    // L'ajout staff reste possible, mais ne vaut pas accord de la personne :
+    // sans `accepted_at`, il n'ouvre aucune prise TCG sur son compte.
+    const res = resp();
+    await membersHandler(
+      req({
+        method: 'POST',
+        query: { teamId: TEAM_A },
+        body: { userId: ATTACKER_ALT, battleTag: 'Alt#9999', force: true },
+      }),
+      res
+    );
+    expect(res.statusCode).toBeLessThan(300);
+    const added = (store.team_members as any[]).find(
+      (m) => m.team_id === TEAM_A && m.user_id === ATTACKER_ALT
+    );
+    expect(added).toBeTruthy();
+    expect(added.accepted_at ?? null).toBeNull();
+  });
+
   it('GET sur une équipe de SON espace : 200', async () => {
     const res = resp();
     await membersHandler(req({ query: { teamId: TEAM_A } }), res);

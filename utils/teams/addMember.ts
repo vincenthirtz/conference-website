@@ -172,6 +172,14 @@ export type InsertTeamMemberInput = {
   /** Optionnel : spécialité in-game (tank | dps | support | flex). */
   specialty?: string | null;
   /**
+   * Horodatage d'ACCORD de la personne (`team_members.accepted_at`).
+   * À renseigner seulement quand elle a elle-même demandé ou accepté d'être
+   * dans l'équipe (création par sa capitaine, demande approuvée…). Absent =
+   * ajout par un tiers (staff, capitaine, import) : le membre n'ouvre alors
+   * aucun rattachement TCG à l'espace (cf. `utils/tcg/tenantAttachment.ts`).
+   */
+  acceptedAt?: string | null;
+  /**
    * Si true, on fait un pre-check `max_players` avant d'insert :
    * compte les membres non-coach actuels et compare a la plus petite limite
    * imposee par les tournois auxquels la team est inscrite. Renvoie une
@@ -252,6 +260,7 @@ export async function insertTeamMember(
   };
   if (input.battleTag) payload.battle_tag = input.battleTag;
   if (input.specialty) payload.specialty = input.specialty;
+  if (input.acceptedAt) payload.accepted_at = input.acceptedAt;
   // Le role `substitute` doit aussi lever is_substitute (comme update-member-role),
   // sinon la sub n'est pas comptee comme remplacante par les vues qui lisent ce flag.
   if (input.role === 'substitute') payload.is_substitute = true;
