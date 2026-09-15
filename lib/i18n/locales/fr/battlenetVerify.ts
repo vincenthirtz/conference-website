@@ -27,4 +27,9 @@ export default ns('battlenetVerify', {
     'Compte Battle.net lié, mais il ne correspond à aucun BattleTag de tes rosters. Vérifie que le tag saisi dans ton équipe correspond bien à ce compte.',
   toastAlreadyLinked: 'Ce compte Battle.net est déjà lié à une autre joueuse.',
   toastError: 'La vérification a échoué, réessaie.',
+  // Récompense TCG : une récompense GAGNÉE par un geste, jamais un achat. Le
+  // montant est interpolé depuis l'API, jamais écrit ici.
+  rewardHint:
+    'Bonus : vérifier ton compte te rapporte {coins} pièces pour ta collection TCG, une seule fois.',
+  toastRewardCredited: '+{coins} pièces créditées dans ta collection TCG',
 });

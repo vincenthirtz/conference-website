@@ -180,6 +180,7 @@ export default {
   packFromStreak: 'Check-in streak',
   walletCheckinStreak: 'Check-in streak',
   walletTournamentPlacement: 'Tournament placement',
+  walletBattlenetVerified: 'Battle.net account verified',
 
   twitchPitchTitle: 'Earn coins by watching our streams',
   twitchPitchBody:

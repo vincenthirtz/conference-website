@@ -213,6 +213,11 @@ export type StaffLogAction =
   // dire QUI l'a déclenché, sur quelle édition, et combien de comptes il a
   // touchés.
   | 'tcg_welcome_gift_grant'
+  // Rattraper la récompense « compte Battle.net vérifié » pour les comptes liés
+  // avant qu'elle existe : un crédit collectif, dans UN espace, qui consomme la
+  // récompense unique de chaque personne créditée. Il doit dire QUI, OÙ et
+  // combien.
+  | 'tcg_battlenet_backfill'
   // Corriger à la main le solde de pièces d'UNE joueuse (crédit ou retrait) :
   // le registre dit combien, seul le journal dit QUI et POURQUOI. La monnaie
   // se gagne, elle ne s'achète pas — cette trace distingue une correction

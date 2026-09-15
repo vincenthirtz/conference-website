@@ -14,6 +14,12 @@
 // retour du flux OAuth (`?battlenet=…`) et nettoyage du paramètre. Les pages
 // n'ont qu'à la monter.
 //
+// RÉCOMPENSE TCG (2026-09-15). Tant que le compte n'est pas lié et que la
+// récompense est réclamable, la carte annonce ce que vérifier rapporte ; au
+// retour d'OAuth, `?tcg=battlenet_reward` (posé par le callback sur un crédit
+// réel seulement) déclenche « +N pièces ». Le montant vient TOUJOURS de l'API
+// (`reward.coins`, lu dans le registre) : aucun nombre n'est écrit ici.
+//
 // Deux garde-fous d'affichage :
 //   - feature dormante (`configured: false`) → rien n'est rendu, jamais de
 //     bouton qui mènerait à un 503 ;
@@ -27,12 +33,21 @@ import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import nsBattlenetVerify from '@/lib/i18n/locales/fr/battlenetVerify';
+import {
+  type BattlenetRewardOffer,
+  TCG_REWARD_BATTLENET,
+  TCG_REWARD_QUERY_PARAM,
+  creditedRewardCoins,
+  rewardHintCoins,
+} from '../../utils/tcg/battlenetRewardDisplay';
 
 export type BattlenetStatus = {
   configured: boolean;
   linked: boolean;
   battleTag: string | null;
   verifiedAt: string | null;
+  /** Additif : absent d'une API plus ancienne, `null` si non activée. */
+  reward?: BattlenetRewardOffer | null;
 };
 
 type Props = {
@@ -73,6 +88,9 @@ export default function BattlenetVerifyCard({
   const { adminFetchJson } = useAdminFetch({ loginPath });
 
   const [status, setStatus] = useState<BattlenetStatus | null>(null);
+  // Le retour d'OAuth annonce un crédit, mais le MONTANT vient de l'état relu :
+  // on attend qu'il soit là pour le dire, plutôt que de l'inventer.
+  const [rewardCredited, setRewardCredited] = useState(false);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -116,12 +134,33 @@ export default function BattlenetVerifyCard({
       addToast(entry.msg, entry.variant);
       void loadStatus();
     }
+    const rewardParam = router.query[TCG_REWARD_QUERY_PARAM];
+    if (rewardParam === TCG_REWARD_BATTLENET) setRewardCredited(true);
 
-    const { battlenet: _omit, ...rest } = router.query;
+    // On ne retire `tcg` que s'il porte NOTRE valeur : un paramètre homonyme
+    // d'un autre usage n'a pas à disparaître de l'URL.
+    const { battlenet: _omit, ...withoutBattlenet } = router.query;
+    const rest =
+      rewardParam === TCG_REWARD_BATTLENET
+        ? Object.fromEntries(
+            Object.entries(withoutBattlenet).filter(
+              ([key]) => key !== TCG_REWARD_QUERY_PARAM
+            )
+          )
+        : withoutBattlenet;
     void router.replace({ pathname: router.pathname, query: rest }, undefined, {
       shallow: true,
     });
   }, [router, addToast, loadStatus, t]);
+
+  useEffect(() => {
+    if (!rewardCredited || !status) return;
+    const coins = creditedRewardCoins(TCG_REWARD_BATTLENET, status);
+    if (coins !== null) {
+      addToast(format(t.toastRewardCredited, { coins }), 'success');
+    }
+    setRewardCredited(false);
+  }, [rewardCredited, status, addToast, t]);
 
   if (!status?.configured) return null;
   if (status.linked && hideWhenVerified) return null;
@@ -131,6 +170,8 @@ export default function BattlenetVerifyCard({
   )}`;
 
   const isOnboarding = variant === 'onboarding';
+  // Montant de l'API, ou `null` : déjà reçue, non activée, ou état illisible.
+  const hintCoins = rewardHintCoins(status);
 
   const body = (
     <>
@@ -162,28 +203,37 @@ export default function BattlenetVerifyCard({
           <p className="mt-3 text-xs text-gray-400">{t.verifiedProof}</p>
         </div>
       ) : (
-        <div className="flex flex-wrap items-center gap-3">
-          <a
-            href={startHref}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#148eff] px-6 py-2.5 text-sm font-medium text-white transition hover:bg-[#1a9bff]"
-          >
-            <span aria-hidden="true">🛡️</span>
-            {t.verifyBtn}
-          </a>
-          {isOnboarding && (
-            <>
-              {onDismiss && (
-                <button
-                  type="button"
-                  onClick={onDismiss}
-                  className="text-sm text-gray-400 transition hover:text-white"
-                >
-                  {t.later}
-                </button>
-              )}
-              <span className="text-xs text-gray-500">{t.onboardingHint}</span>
-            </>
+        <div className="space-y-3">
+          {hintCoins !== null && (
+            <p className="text-sm text-amber-200">
+              {format(t.rewardHint, { coins: hintCoins })}
+            </p>
           )}
+          <div className="flex flex-wrap items-center gap-3">
+            <a
+              href={startHref}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#148eff] px-6 py-2.5 text-sm font-medium text-white transition hover:bg-[#1a9bff]"
+            >
+              <span aria-hidden="true">🛡️</span>
+              {t.verifyBtn}
+            </a>
+            {isOnboarding && (
+              <>
+                {onDismiss && (
+                  <button
+                    type="button"
+                    onClick={onDismiss}
+                    className="text-sm text-gray-400 transition hover:text-white"
+                  >
+                    {t.later}
+                  </button>
+                )}
+                <span className="text-xs text-gray-500">
+                  {t.onboardingHint}
+                </span>
+              </>
+            )}
+          </div>
         </div>
       )}
     </>

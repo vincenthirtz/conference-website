@@ -28,5 +28,8 @@ export default {
     "Battle.net account linked, but it doesn't match any BattleTag on your rosters. Check that the tag entered in your team matches this account.",
   toastAlreadyLinked:
     'This Battle.net account is already linked to another player.',
+  rewardHint:
+    'Bonus: verifying your account earns you {coins} coins for your TCG collection, once.',
+  toastRewardCredited: '+{coins} coins credited to your TCG collection',
   toastError: 'Verification failed, please try again.',
 };

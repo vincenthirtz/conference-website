@@ -661,6 +661,8 @@ function PlayerTcg() {
           return t.walletCheckinStreak;
         case 'tournament_placement':
           return t.walletTournamentPlacement;
+        case 'battlenet_verified':
+          return t.walletBattlenetVerified;
         default:
           return t.walletUnknownSource;
       }

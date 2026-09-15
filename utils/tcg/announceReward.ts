@@ -2,7 +2,15 @@
 //
 // Annonce `tcg.reward_granted` — le DM Discord d'un gain TCG qui ne vient ni
 // d'une victoire (`tcg.pack_granted`) ni d'un drop en direct
-// (`tcg.drop_granted`) : la SÉRIE de check-ins et le PALMARÈS de tournoi.
+// (`tcg.drop_granted`) : la SÉRIE de check-ins, le PALMARÈS de tournoi et,
+// depuis le 2026-09-15, la VÉRIFICATION d'un compte Battle.net.
+//
+// LA VÉRIFICATION N'A PAS DE TOURNOI. `tournamentId` et `tournamentName`
+// valent alors `null` — ajout rétrocompatible du contrat : un bot qui ne
+// connaît pas `reason: 'battlenet_verified'` l'ignore sans DM (il écarte toute
+// raison inconnue), il ne tombe jamais sur un tournoi manquant qu'il
+// n'attendait pas. Le bot DOIT apprendre cette raison AVANT que le site
+// l'émette, sinon ces DM sont perdus (l'outbox ne les rejoue pas).
 //
 // POURQUOI UN SEUL ÉVÉNEMENT POUR DEUX SOURCES. Les deux se ressemblent trait
 // pour trait — des pièces et un ou plusieurs paquets, rattachés à un tournoi,
@@ -29,12 +37,16 @@ import { getDiscordLinksForUsers } from '@/utils/discordLinks';
 import { absoluteSiteUrl } from '@/utils/siteUrl';
 import type { CoinsThenPacksCredit } from './grantCoinsThenPacks';
 
-export type TcgRewardReason = 'checkin_streak' | 'tournament_placement';
+export type TcgRewardReason =
+  | 'checkin_streak'
+  | 'tournament_placement'
+  | 'battlenet_verified';
 
 export type AnnounceRewardInput = {
   tenantId: string;
   reason: TcgRewardReason;
-  tournamentId: string;
+  /** `null` pour un gain sans tournoi (`battlenet_verified`). */
+  tournamentId: string | null;
   credited: readonly CoinsThenPacksCredit[];
   /** Série : nombre de check-ins consécutifs qui ferme la fenêtre. */
   streak?: number;
@@ -72,7 +84,9 @@ export async function announceTcgRewards(
   try {
     const [links, tournamentName] = await Promise.all([
       getDiscordLinksForUsers(input.credited.map((c) => c.userId)),
-      readTournamentName(input.tournamentId),
+      input.tournamentId
+        ? readTournamentName(input.tournamentId)
+        : Promise.resolve(null),
     ]);
     // Absolue : ce lien part dans un DM, où un chemin relatif est inerte.
     const ctaUrl = absoluteSiteUrl('/player/tcg');
@@ -91,7 +105,7 @@ export async function announceTcgRewards(
             // Paquets RÉELLEMENT créés : 0 si leur insertion a été refusée,
             // pour ne jamais annoncer un paquet qui n'attend nulle part.
             packs: credit.packIds.length,
-            tournamentId: input.tournamentId,
+            tournamentId: input.tournamentId ?? null,
             tournamentName,
             rank:
               input.reason === 'tournament_placement'
@@ -112,7 +126,7 @@ export async function announceTcgRewards(
     logger.error(
       '[tcg/reward] annonce « %s » impossible (tournoi %s): %s',
       input.reason,
-      input.tournamentId,
+      input.tournamentId ?? '—',
       err instanceof Error ? err.message : String(err)
     );
   }

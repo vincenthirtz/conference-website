@@ -11,6 +11,7 @@ import nsAdminQuickBracket from './adminQuickBracket';
 import nsAdminTcgPhotos from './adminTcgPhotos';
 import nsAdminTcgOverview from './adminTcgOverview';
 import nsAdminTcgGrant from './adminTcgGrant';
+import nsAdminTcgBattlenetBackfill from './adminTcgBattlenetBackfill';
 import nsAdminLogout from './adminLogout';
 import nsAdminForgotPassword from './adminForgotPassword';
 import nsAdminResetPassword from './adminResetPassword';
@@ -397,4 +398,5 @@ export const frDict = {
   adminTcgPhotos: nsAdminTcgPhotos.fr,
   adminTcgOverview: nsAdminTcgOverview.fr,
   adminTcgGrant: nsAdminTcgGrant.fr,
+  adminTcgBattlenetBackfill: nsAdminTcgBattlenetBackfill.fr,
 };

@@ -300,7 +300,11 @@ describe('GET /api/auth/battlenet/callback', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(res.statusCode).toBe(302);
-    expect(res.headers.Location).toBe('/player/profile?battlenet=verified');
+    // `tcg=battlenet_reward` : première vérification, la récompense TCG est
+    // créditée (cf. tcgBattlenetVerifiedReward.test.ts).
+    expect(res.headers.Location).toBe(
+      '/player/profile?battlenet=verified&tcg=battlenet_reward'
+    );
 
     expect(store.user_battlenet_links).toHaveLength(1);
     expect(store.user_battlenet_links[0].battle_net_id).toBe(BNET_ID);
@@ -343,7 +347,9 @@ describe('GET /api/auth/battlenet/callback', () => {
     );
 
     expect(res.statusCode).toBe(302);
-    expect(res.headers.Location).toBe('/admin?profile=1&battlenet=linked');
+    expect(res.headers.Location).toBe(
+      '/admin?profile=1&battlenet=linked&tcg=battlenet_reward'
+    );
     // Le lien existe bien malgré l'absence de roster.
     expect(store.user_battlenet_links).toHaveLength(1);
     expect(store.user_battlenet_links[0].auth_user_id).toBe(USER_A);
@@ -385,7 +391,7 @@ describe('GET /api/auth/battlenet/callback', () => {
 
     expect(res.statusCode).toBe(302);
     expect(res.headers.Location).toBe(
-      '/player/profile?battlenet=linked_no_match'
+      '/player/profile?battlenet=linked_no_match&tcg=battlenet_reward'
     );
     expect(store.user_battlenet_links).toHaveLength(1);
   });

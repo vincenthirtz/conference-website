@@ -9,12 +9,18 @@
 //   - linked     : un lien user_battlenet_links existe
 //   - battleTag  : le BattleTag vérifié (ou null)
 //   - verifiedAt : timestamp ISO de la dernière vérification (ou null)
+//   - reward     : { coins, claimable } | null — la récompense TCG de la
+//                  vérification (ajout additif, 2026-09-15). `coins` vient du
+//                  registre `earnSources.ts` : la carte l'annonce sans jamais
+//                  écrire un nombre. `null` = récompense non activée.
+//                  `claimable: false` = déjà reçue, ou registre illisible.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { isBattlenetConfigured } from '@/utils/battlenet';
 import { getBattlenetLinkStatus } from '@/utils/auth/battlenetLinks';
+import { readBattlenetRewardOffer } from '@/utils/tcg/grantBattlenetVerified';
 
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
@@ -31,12 +37,16 @@ export default withAuthRoute(async function handler(
   )
     return;
 
-  const status = await getBattlenetLinkStatus(user.id);
+  const [status, reward] = await Promise.all([
+    getBattlenetLinkStatus(user.id),
+    readBattlenetRewardOffer(user.id),
+  ]);
 
   return res.status(200).json({
     configured: isBattlenetConfigured(),
     linked: status.linked,
     battleTag: status.battleTag,
     verifiedAt: status.verifiedAt,
+    reward,
   });
 });

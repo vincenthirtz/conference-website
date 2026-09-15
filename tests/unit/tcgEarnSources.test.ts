@@ -20,6 +20,7 @@ import {
   SCRIM_WIN_COINS,
 } from '../../utils/tcg/economy';
 import {
+  BATTLENET_VERIFIED_COINS,
   CHECKIN_STREAK_COINS,
   CHECKIN_STREAK_LENGTH,
   PLACEMENT_TIERS,
@@ -46,6 +47,7 @@ describe('intégrité du registre', () => {
         'tournament_placement',
         'welcome_gift',
         'supporter_welcome',
+        'battlenet_verified',
       ])
     );
   });
@@ -78,9 +80,17 @@ describe('intégrité du registre', () => {
     expect(debits[0].coins).toBe(-BOOSTER_PRICE_COINS);
   });
 
-  it('fait apparaître un paquet dans toute source sauf le palmarès variable', () => {
+  it('fait apparaître un paquet dans toute source sauf le palmarès variable et la vérification Battle.net', () => {
+    // Deux exceptions, et seulement deux. Le palmarès résout ses paquets par
+    // rang ; la vérification Battle.net n'ouvre pas la porte du TCG (c'est le
+    // rôle des cadeaux d'accueil), elle récompense un geste d'identité — et un
+    // paquet aurait exigé d'élargir les deux contraintes de `tcg_packs`.
     for (const source of TCG_EARN_SOURCES) {
       if (source.key === 'tournament_placement') continue;
+      if (source.key === 'battlenet_verified') {
+        expect(source.packs).toBe(0);
+        continue;
+      }
       expect(source.packs).toBeGreaterThanOrEqual(1);
     }
   });
@@ -116,6 +126,37 @@ describe('montants dérivés', () => {
       expect(tier.coins % MATCH_WIN_COINS).toBe(0);
       expect(tier.coins / MATCH_WIN_COINS).toBeGreaterThanOrEqual(1);
     }
+  });
+});
+
+describe('vérification Battle.net', () => {
+  it('rapporte une victoire de match, en pièces seules', () => {
+    expect(BATTLENET_VERIFIED_COINS).toBe(MATCH_WIN_COINS);
+    expect(earnReward('battlenet_verified')).toEqual({
+      packs: 0,
+      coins: MATCH_WIN_COINS,
+    });
+  });
+
+  it('n’achète pas un booster à elle seule', () => {
+    // Un tiers de booster : elle rapproche du prochain paquet, elle ne l'offre
+    // pas. Au-delà, un geste administratif paierait mieux que jouer.
+    expect(BATTLENET_VERIFIED_COINS).toBeLessThan(BOOSTER_PRICE_COINS);
+  });
+
+  it('reste sous chacun des cadeaux d’accueil (même pièces, sans paquet)', () => {
+    const welcome = earnReward('welcome_gift');
+    expect(BATTLENET_VERIFIED_COINS).toBeLessThanOrEqual(welcome.coins);
+    expect(welcome.packs).toBeGreaterThan(
+      earnReward('battlenet_verified').packs
+    );
+  });
+
+  it('attache la récompense au compte Blizzard prouvé', () => {
+    expect(getEarnSource('battlenet_verified')?.refKind).toBe(
+      'blizzard_account'
+    );
+    expect(getEarnSource('battlenet_verified')?.maxPerRef).toBe(1);
   });
 });
 
@@ -192,6 +233,7 @@ describe('schemaReady', () => {
         .map((s) => s.key)
         .sort()
     ).toEqual([
+      'battlenet_verified',
       'booster_purchase',
       'checkin_streak',
       'match_win',

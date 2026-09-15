@@ -60,6 +60,11 @@ const TcgWelcomeGiftCard = lazyPanel(
 const TcgGrantCard = lazyPanel(
   () => import('@/components/admin/tcg/TcgGrantCard')
 );
+// Rattrapage de la récompense Battle.net : une distribution collective, donc
+// voisine du cadeau d'accueil, mais un sujet à part (audience, unicité globale).
+const TcgBattlenetBackfillCard = lazyPanel(
+  () => import('@/components/admin/tcg/TcgBattlenetBackfillCard')
+);
 
 const ID_BASE = 'admin-moderation';
 
@@ -264,6 +269,7 @@ export default function AdminModerationPage({ staff }: StaffProps) {
                     grantError: tTcgOverview.giftGrantError,
                   }}
                 />
+                <TcgBattlenetBackfillCard />
                 <TcgGrantCard />
               </div>
             ) : (

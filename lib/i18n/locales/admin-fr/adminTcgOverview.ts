@@ -64,6 +64,7 @@ export default adminNs('adminTcgOverview', {
   coinsSourceSupporterWelcome: 'Accueil des supportrices',
   coinsSourceCheckinStreak: 'Séries de check-ins',
   coinsSourceTournamentPlacement: 'Palmarès de tournoi',
+  coinsSourceBattlenetVerified: 'Comptes Battle.net vérifiés',
   // Repli pour une origine que ce panneau ne connaît pas encore : on affiche sa
   // clé brute plutôt que de la masquer, sinon le total ventilé cesserait de
   // correspondre au cumul affiché juste au-dessus.

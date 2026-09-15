@@ -129,6 +129,7 @@ export type TcgOverviewLabels = {
   coinsSourceSupporterWelcome: string;
   coinsSourceCheckinStreak: string;
   coinsSourceTournamentPlacement: string;
+  coinsSourceBattlenetVerified: string;
   /** Repli d'une origine inconnue de ce panneau. Interpole `{kind}`. */
   coinsSourceUnknown: string;
 
@@ -226,6 +227,8 @@ function coinSourceLabel(kind: string, labels: TcgOverviewLabels): string {
       return labels.coinsSourceCheckinStreak;
     case 'tournament_placement':
       return labels.coinsSourceTournamentPlacement;
+    case 'battlenet_verified':
+      return labels.coinsSourceBattlenetVerified;
     default:
       return format(labels.coinsSourceUnknown, { kind });
   }

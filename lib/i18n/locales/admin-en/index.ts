@@ -11,6 +11,7 @@ import enAdminQuickBracket from './adminQuickBracket';
 import enAdminTcgPhotos from './adminTcgPhotos';
 import enAdminTcgOverview from './adminTcgOverview';
 import enAdminTcgGrant from './adminTcgGrant';
+import enAdminTcgBattlenetBackfill from './adminTcgBattlenetBackfill';
 import enAdminLogout from './adminLogout';
 import enAdminForgotPassword from './adminForgotPassword';
 import enAdminResetPassword from './adminResetPassword';
@@ -397,6 +398,7 @@ const adminEnDict = {
   adminTcgPhotos: enAdminTcgPhotos,
   adminTcgOverview: enAdminTcgOverview,
   adminTcgGrant: enAdminTcgGrant,
+  adminTcgBattlenetBackfill: enAdminTcgBattlenetBackfill,
 };
 
 export default adminEnDict;

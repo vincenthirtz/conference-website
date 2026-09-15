@@ -16,6 +16,13 @@
 //
 // Navigation pleine page → auth via session cookie Supabase (getServerClient).
 //
+// RÉCOMPENSE TCG (2026-09-15) : une fois le lien écrit, des pièces sont
+// créditées une fois à vie (`utils/tcg/grantBattlenetVerified.ts`). Effet de
+// bord BEST-EFFORT : son échec ne change jamais le statut `?battlenet=`.
+// Quand — et SEULEMENT quand — l'écrivain rend `granted`, la redirection porte
+// en plus `&tcg=battlenet_reward`, que la carte traduit en « +N pièces ».
+// Rejeu, déjà récompensée, refus d'écriture, exception : paramètre absent.
+//
 // DEUX FLUX, UNE SEULE redirect_uri (celle déclarée chez Blizzard) :
 //   - vérification (défaut) : state signé PORTANT un authUserId, session requise ;
 //   - connexion : state signé `purpose: 'login'`, AUCUNE session, cookie de
@@ -40,6 +47,9 @@ import {
   findAuthUserIdByBattleNetId,
 } from '@/utils/auth/battlenetLinks';
 import { supabaseAdmin } from '@/utils/supabase';
+import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { grantBattlenetVerifiedReward } from '@/utils/tcg/grantBattlenetVerified';
+import { withBattlenetRewardParam } from '@/utils/tcg/battlenetRewardDisplay';
 import { LOGIN_STATE_COOKIE } from './login-start';
 import { logger } from '../../../../utils/logger';
 
@@ -95,6 +105,44 @@ function clearCookie(res: NextApiResponse, name: string): void {
 
 function clearStateCookie(res: NextApiResponse): void {
   clearCookie(res, STATE_COOKIE);
+}
+
+/**
+ * Crédite la récompense TCG de la vérification, sans jamais lever.
+ *
+ * Le `try` est redondant avec l'écrivain, qui ne lève pas — il est là parce que
+ * le `catch` du flux transformerait toute exception en `?battlenet=error`,
+ * c'est-à-dire en vérification ratée alors que le lien est écrit.
+ *
+ * Le tenant est celui des routes `/api/player/tcg/*` : le porte-monnaie que la
+ * joueuse consulte, et un seul.
+ *
+ * Rend `true` si et seulement si CET appel a crédité : c'est ce qui décide du
+ * paramètre de retour. Tout le reste — y compris une exception — rend `false`.
+ */
+async function rewardVerification(
+  req: NextApiRequest,
+  userId: string,
+  battleNetId: string
+): Promise<boolean> {
+  try {
+    const outcome = await grantBattlenetVerifiedReward({
+      tenantId: resolveTenantIdForUserRequest(req),
+      userId,
+      battleNetId,
+    });
+    if (outcome.status === 'granted') {
+      logger.info('[battlenet/callback] récompense TCG créditée', {
+        userId,
+        coins: outcome.coins,
+      });
+      return true;
+    }
+    return false;
+  } catch (err) {
+    logger.error('[battlenet/callback] récompense TCG impossible', err);
+    return false;
+  }
 }
 
 function redirect(res: NextApiResponse, url: string): void {
@@ -200,6 +248,12 @@ export default async function handler(
     const { verifiedCount, mismatchCount, filledCount } =
       await stampVerifiedTeamMembers(user.id, info.battleTag, info.battleNetId);
 
+    // Le compte Blizzard est prouvé ET rattaché : c'est ICI, et seulement ici,
+    // que la vérification devient vraie. Quel que soit le statut du roster
+    // (`linked`, `linked_no_match`) — c'est le compte qu'on récompense, pas la
+    // concordance d'un tag déclaré.
+    const rewarded = await rewardVerification(req, user.id, info.battleNetId);
+
     // Aucune ligne estampillée ET aucun mismatch ⇒ l'utilisateur n'est dans
     // aucun roster (staff non-joueuse, joueuse pas encore inscrite). Le lien est
     // valide : c'est un succès neutre, pas le « ton tag ne correspond pas »
@@ -215,7 +269,8 @@ export default async function handler(
           ? 'linked_no_match'
           : 'linked';
 
-    return redirect(res, withStatus(returnTo, status));
+    const target = withStatus(returnTo, status);
+    return redirect(res, rewarded ? withBattlenetRewardParam(target) : target);
   } catch (err) {
     logger.error('[battlenet/callback] flow error', err);
     return redirect(res, withStatus(returnTo, 'error'));

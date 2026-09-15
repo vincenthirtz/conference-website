@@ -193,6 +193,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   tcg_photo_approve: 'Photo de carte TCG approuvée',
   tcg_photo_reject: 'Photo de carte TCG refusée',
   tcg_welcome_gift_grant: 'Cadeau de bienvenue TCG distribué',
+  tcg_battlenet_backfill: 'Récompense Battle.net TCG rattrapée',
   tcg_admin_grant: 'Solde de pièces TCG corrigé',
   // Broadcast
   broadcast_state_update: 'Mise à jour état broadcast',

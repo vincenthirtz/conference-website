@@ -53,6 +53,7 @@ export default {
   coinsSourceSupporterWelcome: 'Supporter welcome',
   coinsSourceCheckinStreak: 'Check-in streaks',
   coinsSourceTournamentPlacement: 'Tournament placement',
+  coinsSourceBattlenetVerified: 'Verified Battle.net accounts',
   coinsSourceUnknown: 'Other ({kind})',
 
   cardsTitle: 'Cards',

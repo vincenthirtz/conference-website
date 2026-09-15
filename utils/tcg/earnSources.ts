@@ -33,7 +33,8 @@
 // connaissance de cause, pas une extension de ce fichier.
 //
 // TOUTES LES SOURCES SONT DÉSORMAIS ACCEPTÉES PAR LE SCHÉMA — à condition que
-// `tcg_earn_sources_drop_streak_placement.sql` (2026-09-15) soit appliquée.
+// `tcg_earn_sources_drop_streak_placement.sql` (2026-09-15) soit appliquée,
+// et, pour `battlenet_verified`, `tcg_battlenet_verified.sql` (même jour).
 // Le CHECK `tcg_wallet_entries_source_kind_check` y liste match_win,
 // scrim_win, booster_purchase, admin_grant, card_recycled, twitch_drop,
 // welcome_gift, supporter_welcome, checkin_streak et tournament_placement ;
@@ -144,6 +145,24 @@ export const WELCOME_GIFT_COINS = MATCH_WIN_COINS;
  *
  * Ordonné du meilleur rang au moins bon : la première borne atteinte gagne.
  */
+/**
+ * Ce que rapporte la vérification d'un compte Battle.net, UNE FOIS À VIE.
+ *
+ * DES PIÈCES SEULES, PAS DE PAQUET — et c'est l'exception assumée au « un
+ * paquet dans toute source ». Les deux cadeaux d'accueil donnent un paquet
+ * parce qu'ils OUVRENT la porte du TCG ; la vérification n'ouvre rien, elle
+ * récompense un geste d'identité utile au tournoi (anti-smurf). Un paquet
+ * aurait aussi exigé d'élargir les DEUX contraintes de `tcg_packs` — celles
+ * qui ont coûté 58 paquets le 2026-09-14 — pour une récompense ponctuelle.
+ *
+ * UNE VICTOIRE DE MATCH, soit un TIERS DE BOOSTER : la vérification rapproche
+ * du prochain paquet sans en acheter un à elle seule. Reste sous chacun des
+ * deux cadeaux d'accueil (le même montant, sans leur paquet).
+ *
+ * DÉRIVÉ, JAMAIS ÉCRIT EN DUR, comme tout le barème.
+ */
+export const BATTLENET_VERIFIED_COINS = MATCH_WIN_COINS;
+
 export const PLACEMENT_TIERS: ReadonlyArray<{
   /** Rang maximal (inclus) ouvrant ce palier. */
   maxRank: number;
@@ -170,7 +189,8 @@ export type TcgEarnSourceKey =
   | 'checkin_streak'
   | 'tournament_placement'
   | 'welcome_gift'
-  | 'supporter_welcome';
+  | 'supporter_welcome'
+  | 'battlenet_verified';
 
 /**
  * Ce que `source_ref` doit contenir — donc ce qu'« une occurrence » veut dire.
@@ -200,7 +220,18 @@ export type TcgSourceRefKind =
    * ni match ni édition à quoi s'accrocher — et `source_ref` ne peut pas être
    * NULL, deux NULL étant DISTINCTS dans une contrainte UNIQUE.
    */
-  | 'tenant';
+  | 'tenant'
+  /**
+   * Le compte Blizzard prouvé : `bnet:<sha256 de son battle_net_id>`.
+   *
+   * ⚠️ LA SEULE CLÉ QUI NE SUFFIT PAS À ELLE SEULE. L'unicité du registre
+   * contient `user_id` : avec cette clé, elle empêche un rejeu mais pas un
+   * second compte Blizzard sur la même joueuse, ni le même compte Blizzard sur
+   * une seconde joueuse, ni un second tenant. Deux index uniques PARTIELS
+   * (`tcg_battlenet_verified.sql`) portent ces règles : une fois par
+   * personne, une fois par compte Blizzard, tous tenants confondus.
+   */
+  | 'blizzard_account';
 
 export type TcgEarnSource = {
   key: TcgEarnSourceKey;
@@ -330,6 +361,19 @@ export const TCG_EARN_SOURCES: readonly TcgEarnSource[] = [
     // `source_ref` = le TENANT : « une fois, jamais deux », appliqué par la
     // contrainte UNIQUE et par rien d'autre.
     refKind: 'tenant',
+    maxPerRef: 1,
+    schemaReady: true,
+  },
+  {
+    // ALLUMÉE le 2026-09-15 avec `tcg_battlenet_verified.sql` (CHECK élargi
+    // + deux index uniques partiels), écrite par
+    // `utils/tcg/grantBattlenetVerified.ts` au retour de l'OAuth Battle.net.
+    // Le drapeau COMMANDE : l'écrivain ne tente rien tant qu'il est faux.
+    key: 'battlenet_verified',
+    // Pas de paquet : cf. `BATTLENET_VERIFIED_COINS`.
+    packs: 0,
+    coins: BATTLENET_VERIFIED_COINS,
+    refKind: 'blizzard_account',
     maxPerRef: 1,
     schemaReady: true,
   },
