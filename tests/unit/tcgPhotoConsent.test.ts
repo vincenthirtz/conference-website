@@ -133,7 +133,7 @@ function seedCard(over: Record<string, unknown> = {}) {
   ] as any;
 }
 
-/** Le staff qui relit les photos (`moderate_support`). */
+/** Le staff qui relit les photos (`manage_tcg`). */
 function seedStaff() {
   store.staff = [
     {

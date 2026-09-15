@@ -19,7 +19,7 @@
 // Relancer après l'arrivée d'une joueuse dans un roster ne crédite QUE la
 // nouvelle — c'est l'usage prévu, pas un abus.
 //
-// MÊME PERMISSION QUE LE RESTE DU TCG (`moderate_support`) : c'est l'économie
+// MÊME PERMISSION QUE LE RESTE DU TCG (`manage_tcg`) : c'est l'économie
 // du jeu qu'on touche, au même titre que la relecture des photos.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -146,5 +146,5 @@ async function handler(
 // rejouable, ce qui est le comportement voulu.
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'tcg-welcome-gift' }),
-  { permission: 'moderate_support' }
+  { permission: 'manage_tcg' }
 );

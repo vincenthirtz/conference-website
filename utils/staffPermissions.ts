@@ -39,6 +39,17 @@ export const STAFF_PERMISSION_CATALOG = [
     description: 'Traiter les signalements et les tickets',
   },
   {
+    // Distinct du support, et c'est tout l'objet de ce droit. Les routes TCG
+    // étaient gardées par `moderate_support` : accorder le support pour traiter
+    // des tickets ouvrait du même geste la correction des soldes de pièces et
+    // la relecture des photos de joueuses — deux pouvoirs sans rapport avec un
+    // ticket.
+    value: 'manage_tcg',
+    label: 'Gérer le TCG',
+    description:
+      'Relire les photos de cartes, corriger un solde de pièces, régler l’overlay et le cadeau d’accueil',
+  },
+  {
     value: 'manage_teams',
     label: 'Gérer les équipes',
     description: 'Créer, éditer, fusionner ou supprimer une équipe',

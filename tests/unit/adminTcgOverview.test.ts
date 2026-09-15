@@ -104,7 +104,7 @@ function makeRes(): any {
   return res;
 }
 
-/** Le staff qui ouvre le panneau TCG (`moderate_support`). */
+/** Le staff qui ouvre le panneau TCG (`manage_tcg`). */
 function seedStaff(role: 'owner' | 'admin' | 'caster' = 'admin') {
   store.staff = [
     {
@@ -371,7 +371,7 @@ describe('GET /api/admin/tcg/overview — accès', () => {
     expect(res.statusCode).toBe(401);
   });
 
-  it('403 pour un rôle sans `moderate_support`', async () => {
+  it('403 pour un rôle sans `manage_tcg`', async () => {
     // Le caster n'a que la régie : l'agrégat dit qui possède quoi, il n'a rien
     // à en faire.
     seedStaff('caster');

@@ -5,16 +5,17 @@
 // POURQUOI UN NOUVEAU SÉLECTEUR. Le dépôt n'en a pas de réutilisable : la seule
 // recherche de comptes (`pages/admin/teams/[teamId]/edit.tsx`) est câblée dans
 // la page, avec l'état du formulaire d'équipe. `MatchPicker` et `TeamPicker`
-// cherchent d'autres entités. Ce composant reprend la route existante
-// (`GET /api/admin/users/search`) et le motif ARIA de `MatchPicker`, sans rien
-// y ajouter côté serveur.
+// cherchent d'autres entités. Ce composant interroge
+// `GET /api/admin/tcg/players`, gardée par le MÊME droit que la correction
+// (`manage_tcg`) — et non `/api/admin/users/search`, gardée par `manage_staff` :
+// trouver une joueuse ne doit pas exiger le pouvoir de gérer le staff. Motif
+// ARIA repris de `MatchPicker`.
 //
-// L'IDENTIFIANT COLLÉ EST UNE VOIE À PART ENTIÈRE, PAS UN BRICOLAGE. La
-// recherche est gardée par `manage_staff` au niveau plateforme : un staff qui
-// peut corriger un solde ne peut pas forcément chercher un compte. Plutôt que
-// de lui présenter un champ mort, on lui dit pourquoi et on accepte l'uuid —
-// celui qu'on lit dans l'adresse de la fiche joueuse. L'endpoint d'ajustement
-// reste juge : un compte hors de l'espace revient en `USER_NOT_FOUND`.
+// L'IDENTIFIANT COLLÉ RESTE UNE VOIE À PART ENTIÈRE : c'est celui qu'on lit dans
+// l'adresse de la fiche joueuse, et il sert quand la recherche ne distingue pas
+// deux homonymes. L'endpoint d'ajustement reste juge : un compte inconnu revient
+// en `USER_NOT_FOUND`. Un 403 (droit retiré en cours de session) garde son
+// message dédié.
 //
 // UNE RÉPONSE PÉRIMÉE NE DOIT PAS ÉCRASER LA DERNIÈRE. Chaque frappe annule la
 // requête précédente : sans cela, « ma » puis « marie » peut afficher les
@@ -46,7 +47,7 @@ export type PickedUser = {
   teamName: string | null;
 };
 
-/** Forme rendue par `/api/admin/users/search` (snake_case côté route). */
+/** Forme rendue par `/api/admin/tcg/players` (snake_case côté route). */
 type SearchRow = {
   id: string;
   email: string | null;
@@ -135,7 +136,7 @@ export default function TcgPlayerPicker({
     void (async () => {
       try {
         const res = await adminFetch(
-          `/api/admin/users/search?q=${encodeURIComponent(debouncedQuery)}`,
+          `/api/admin/tcg/players?q=${encodeURIComponent(debouncedQuery)}`,
           { signal: controller.signal }
         );
         if (controller.signal.aborted) return;

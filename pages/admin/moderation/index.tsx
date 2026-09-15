@@ -85,12 +85,14 @@ export default function AdminModerationPage({ staff }: StaffProps) {
   const tTcg = useAdminT(nsAdminTcgPhotos);
   const tTcgOverview = useAdminT(nsAdminTcgOverview);
   const isManager = hasAtLeastRole(staff.role as StaffRole, 'admin');
-  // Les onglets TCG suivent la PERMISSION de leurs routes (`moderate_support`
-  // pour photos, vue d'ensemble, overlay, cadeau et ajustement de solde), pas
-  // le rôle : ce droit s'accorde à l'unité, et un caster qui l'a reçu doit voir
-  // ce que l'API lui ouvre. Repli sur le rôle si la prop manque (fixtures).
+  // Les onglets TCG suivent la PERMISSION de leurs routes (`manage_tcg` pour
+  // photos, vue d'ensemble, overlay, cadeau et ajustement de solde), pas le
+  // rôle : ce droit s'accorde à l'unité, et un caster qui l'a reçu doit voir ce
+  // que l'API lui ouvre. Droit DÉDIÉ et non `moderate_support` : donner le
+  // support pour traiter des tickets ne doit pas ouvrir la correction des
+  // soldes. Repli sur le rôle si la prop manque (fixtures).
   const canModerateTcg = staff.permissions
-    ? staff.permissions.includes('moderate_support')
+    ? staff.permissions.includes('manage_tcg')
     : isManager;
 
   const tabs = [
@@ -105,7 +107,7 @@ export default function AdminModerationPage({ staff }: StaffProps) {
     ...(canModerateTcg
       ? [
           // Relire la photo d'une personne réelle n'est pas un geste de
-          // caster par défaut : même permission que Support.
+          // caster par défaut : droit `manage_tcg`, admin et owner l'ont.
           { id: 'tcg-photos', label: tTcg.tabLabel },
           // Mesurer l'économie expose qui possède quoi, et corriger un solde
           // la modifie : même permission que la file de photos.

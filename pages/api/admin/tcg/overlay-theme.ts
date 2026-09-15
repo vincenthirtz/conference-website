@@ -5,7 +5,7 @@
 //   GET — l'habillage courant, plus les bornes que l'éditeur doit respecter.
 //   PUT — modifie tout ou partie, et dépose ou retire le média.
 //
-// MÊME PERMISSION QUE LE LIEN D'OVERLAY (`moderate_support`) : ce que règle
+// MÊME PERMISSION QUE LE LIEN D'OVERLAY (`manage_tcg`) : ce que règle
 // cette route s'affiche exactement au même endroit, devant la même audience.
 // Un seuil différent pour l'apparence et pour le lien serait arbitraire.
 //
@@ -220,4 +220,4 @@ async function handler(
   }
 }
 
-export default withStaffRoute(handler, { permission: 'moderate_support' });
+export default withStaffRoute(handler, { permission: 'manage_tcg' });

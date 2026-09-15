@@ -248,4 +248,4 @@ async function decide(
   return res.status(200).json({ status: approving ? 'approved' : 'rejected' });
 }
 
-export default withStaffRoute(handler, { permission: 'moderate_support' });
+export default withStaffRoute(handler, { permission: 'manage_tcg' });

@@ -12,7 +12,7 @@
 // régisseuses. « Régénérer » est donc la réponse à « le lien a circulé », et
 // c'est pour cela qu'il n'y a qu'un jeton actif par espace : émettre révoque.
 //
-// MÊME PERMISSION QUE LE PANNEAU QUI L'HÉBERGE (`moderate_support`, celle de la
+// MÊME PERMISSION QUE LE PANNEAU QUI L'HÉBERGE (`manage_tcg`, celle de la
 // vue d'ensemble TCG). Un lien d'overlay n'est pas un réglage de diffusion : il
 // expose des données du TCG, et c'est cette exposition qui décide du seuil.
 
@@ -138,4 +138,4 @@ async function handler(
   }
 }
 
-export default withStaffRoute(handler, { permission: 'moderate_support' });
+export default withStaffRoute(handler, { permission: 'manage_tcg' });

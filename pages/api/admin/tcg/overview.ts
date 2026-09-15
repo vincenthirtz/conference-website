@@ -739,8 +739,8 @@ function toInt(value: number | null | undefined): number {
     : 0;
 }
 
-// Même garde que la file de modération : `moderate_support` est la permission
+// Même garde que la file de modération : `manage_tcg` est la permission
 // qui ouvre déjà le panneau TCG du staff. La graduer plus haut (rôle `admin`)
 // couperait la relectrice du contexte de ce qu'elle relit ; l'ouvrir plus bas
 // exposerait qui possède quoi à des rôles qui n'ont rien à en faire.
-export default withStaffRoute(handler, { permission: 'moderate_support' });
+export default withStaffRoute(handler, { permission: 'manage_tcg' });
