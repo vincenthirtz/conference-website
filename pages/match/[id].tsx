@@ -232,12 +232,19 @@ function buildMatchSeo(
     };
   }
 
+  // Affiche du match (1200×630) générée par /api/og/match/[matchId] : le
+  // partage d'un lien de match montre l'affiche plutôt que la carte générique
+  // du site. La même route sert le format story (?format=story), proposé au
+  // partage depuis la page elle-même.
+  const ogImage = `${SEO_BASE_URL}/api/og/match/${encodeURIComponent(match.id)}`;
+
   return {
     title: `${versus} – ${tournamentName}`,
     description: {
       fr: `Suivez ${versus} au tournoi ${tournamentName} — OW Women's Cup : score global, détail des maps et informations du match.`,
       en: `Follow ${versus} at the ${tournamentName} tournament — OW Women's Cup: overall score, map breakdown and match details.`,
     },
+    image: ogImage,
     type: 'website',
     jsonLd,
   };
@@ -737,6 +744,23 @@ export default function MatchPage({ match, lineups, mvp }: Props) {
                   />
                 )}
                 <InfoRow label={t.infoBye} value={isBye ? t.yes : t.no} />
+                {/* L'affiche du match au format story : une équipe qui veut
+                    annoncer sa rencontre n'a pas à passer par un éditeur
+                    d'image. Un lien, pas un téléchargement forcé — l'aperçu
+                    s'ouvre, l'enregistrement reste au choix du visiteur. */}
+                <InfoRow
+                  label={t.infoShareVisual}
+                  value={
+                    <a
+                      href={`/api/og/match/${encodeURIComponent(match.id)}?format=story`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-pink-300 hover:text-pink-100"
+                    >
+                      {t.viewShareVisual}
+                    </a>
+                  }
+                />
               </dl>
             </div>
 

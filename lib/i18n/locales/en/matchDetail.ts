@@ -40,6 +40,8 @@ export default {
   infoReplay: 'Replay',
   viewVod: 'Watch the VOD ↗',
   infoBye: 'Bye',
+  infoShareVisual: 'Visual',
+  viewShareVisual: 'Shareable poster ↗',
   yes: 'Yes',
   no: 'No',
   staffNotes: 'Staff notes',

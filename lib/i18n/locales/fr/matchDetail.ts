@@ -40,6 +40,8 @@ export default ns('matchDetail', {
   infoReplay: 'Replay',
   viewVod: 'Voir le VOD ↗',
   infoBye: 'Bye',
+  infoShareVisual: 'Visuel',
+  viewShareVisual: 'Affiche à partager ↗',
   yes: 'Oui',
   no: 'Non',
   staffNotes: 'Notes staff',
