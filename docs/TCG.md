@@ -981,6 +981,57 @@ par le site (`Maps — Contrôle`, `Équipes — Cup 2026`,
 se lit par-dessus l'épaule. Événement distinct de `tcg.reward_granted` : une
 série n'a ni tournoi obligatoire, ni rang, ni paquet.
 
+### Les cartes fan art
+
+[`utils/tcg/fanart.ts`](../utils/tcg/fanart.ts) (règles pures),
+[`pages/api/player/tcg/fanart.ts`](../pages/api/player/tcg/fanart.ts)
+(proposer), [`pages/api/admin/tcg/fanart.ts`](../pages/api/admin/tcg/fanart.ts)
+(relire), [`pages/tcg/fan-art.tsx`](../pages/tcg/fan-art.tsx) (les crédits).
+Migration [`tcg_fanart_cards.sql`](../database/migrations/tcg_fanart_cards.sql).
+
+N'importe quelle personne connectée propose une carte dessinée par elle ; le
+staff la relit ; validée, elle entre dans les paquets et **crédite son
+autrice** — sur la carte et sur une page publique.
+
+**Le crédit fait partie de la carte.** `artist_name` est saisi par la
+proposante : son pseudo de compte n'est pas forcément sa signature d'artiste, et
+une carte doit créditer le nom sous lequel on veut être reconnue. Le lien
+facultatif (`artist_url`) n'est affiché que s'il est `http(s)` — un crédit ne
+doit pas devenir un vecteur d'attaque.
+
+**Les trois garde-fous de la photo, repris tels quels** (cf. § 2) : proposer
+VAUT déclaration d'originalité et accord de diffusion (`licence_accepted_at`) ;
+rien n'est publié avant modération (`status = 'pending'`, bucket public) ; le
+retrait existe et il est rétroactif (`revoked` : l'œuvre sort des paquets à
+venir, et `readFanartFaces` ne rend plus son image).
+
+**Retirer n'est pas supprimer.** `tcg_pack_cards.card_fanart_id` référence
+l'œuvre en `ON DELETE RESTRICT` : effacer une fan art effacerait des cartes
+possédées, c'est-à-dire des collections. Une carte retirée reste dans la
+collection et retombe sur une face neutre.
+
+**Une place de décor, jamais une place de joueuse.** Le paquet garde sa
+composition — trois joueuses, une équipe, une carte de décor — et la fan art
+partage cette dernière place avec les maps, une fois sur deux
+(`FANART_DECOR_SHARE`). C'est la règle que `drawPack.ts` énonce depuis les
+maps : le décor « ne doit jamais évincer une joueuse d'un paquet, seulement
+occuper une place que personne ne réclame ». Sans fan art validée, le tirage est
+identique à ce qu'il était.
+
+**La rareté est décidée à la validation**, faute de palmarès à mesurer — même
+raisonnement que la rareté fixe des maps. Le CHECK
+`tcg_fanart_approved_has_rarity` l'impose : une carte approuvée sans rareté
+n'existe pas. Défaut proposé : `rare` (`DEFAULT_FANART_RARITY`), jamais imposé.
+
+- **Plafond de propositions en attente** : trois par personne
+  (`MAX_PENDING_FANART`). La file est tenue par des humaines.
+- **L'identité de la proposante ne sort pas** de la file de modération : on
+  modère une œuvre et un crédit.
+- **Pas de série, pas d'échange** pour l'instant : une fan art se garde ou se
+  recycle comme une autre carte, mais elle n'entre dans aucune collection à
+  compléter — une série ne doit exiger que des cartes qu'un paquet peut donner
+  en nombre stable, et le vivier des fan arts grandit au fil des validations.
+
 ### Les échanges : carte contre carte
 
 La première interaction entre collectionneuses
@@ -1355,6 +1406,8 @@ joueuse) et scopées au tenant résolu par `resolveTenantIdForUserRequest`.
 | `/api/player/tcg/showcase`                           | GET, PUT          | joueuse                              | Ma vitrine : `{ enabled, cards[], unavailable, maxCards, publicProfileUrl }`, désactivée par défaut. `PUT { enabled, cards }` (≤ 3 clés de sujet) : `409 not_owned` pour activer une carte non possédée, désactivation jamais bloquée, fiche régénérée. 60/min en GET, 20/min en PUT. |
 | `/api/player/predictions`                            | GET               | joueuse                              | **Pronostics.** Matchs à venir encore ouverts (hors matchs de ses équipes, rien pour le staff) et ses 20 derniers pronostics avec résultat. Affiche, ne décide pas. |
 | `/api/player/predictions/{matchId}`                  | GET, PUT, DELETE  | joueuse                              | État (`window`, `locksAt`, `reward`, `ineligibility`, `prediction`, `distribution` une fois verrouillé) ; pronostiquer `{ teamId }` ou changer d'avis ; retirer. `409 locked\|not_predictable`, `403 participant\|staff`, `400 invalid_team`, 404 hors tenant. Gratuit, crédité au résultat. 30/min en écriture. |
+| `/api/player/tcg/fanart`                             | GET, POST, DELETE | joueuse                              | **Cartes fan art.** Mes propositions ; proposer (image base64 vérifiée par magic bytes, titre, nom à créditer, lien facultatif, `licenceAccepted` obligatoire → `pending`) ; retirer une proposition encore en attente. 3 en attente au plus, 5 envois/min. |
+| `/api/admin/tcg/fanart`                              | GET, PATCH        | staff, permission `manage_tcg`       | File de relecture des fan arts (`pending` par défaut, la plus ancienne d'abord) ; `approve` (rareté obligatoire), `reject` et `revoke` (motif obligatoire). Écriture conditionnée au statut de départ. Journalisé. L'identité de la proposante n'est pas rendue. |
 | `/api/overlay/tcg/{token}`                           | GET               | **public**, porté par le jeton       | Le flux d'annonces d'une source navigateur OBS, plus l'habillage. Réduit au déjà-public : pseudo Twitch et origine d'événement, jamais un nom de compte ni une photo. `s-maxage=5`. 120/min.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
 Quelques conventions transverses :

@@ -147,6 +147,10 @@ export type StaffLogAction =
   // Offre partenaire des circuits féminins et mixtes
   | 'approve_circuit_partner'
   | 'reject_circuit_partner'
+  // Cartes fan art proposées par la communauté
+  | 'approve_tcg_fanart'
+  | 'reject_tcg_fanart'
+  | 'revoke_tcg_fanart'
   | 'claim_guild_link'
   | 'reject_guild_link'
   | 'update_tenant_discord_config'

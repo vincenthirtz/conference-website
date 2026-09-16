@@ -28,6 +28,7 @@ import { withAuthRoute } from '@/utils/staff';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import { readPlayerProfile } from '@/utils/rating/readPlayerProfile';
 import { cardRarity, isFoil, MAP_CARD_RARITY } from '@/utils/tcg/rarity';
+import { DEFAULT_FANART_RARITY } from '@/utils/tcg/fanart';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import { readTeamRarity } from '@/utils/tcg/readTeamRarity';
 import {
@@ -51,7 +52,11 @@ import {
   TWITCH_DROP_COINS,
   WELCOME_GIFT_COINS,
 } from '@/utils/tcg/earnSources';
-import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
+import {
+  readFanartFaces,
+  readPlayerFaces,
+  readTeamFaces,
+} from '@/utils/tcg/readCardFaces';
 import { readOwnedSubjectKeys } from '@/utils/tcg/readOwnedCards';
 import { readDrawPool } from '@/utils/tcg/readDrawPool';
 import { checkCollectionSets } from '@/utils/tcg/grantCollectionSets';
@@ -369,7 +374,7 @@ async function openPack(
     logger.error('[tcg/packs] viviers illisibles: %s', pool.error);
     return res.status(500).json({ error: 'Lecture impossible.' });
   }
-  const { playerIds, teamIds } = pool.value;
+  const { playerIds, teamIds, fanartIds } = pool.value;
 
   const subjects = pickPackSubjects({
     playerIds,
@@ -379,6 +384,10 @@ async function openPack(
     // Aucune requête de plus, donc, et la même liste sert de dénominateur à la
     // progression de collection.
     mapSlugs: MAP_POOL_SLUGS,
+    // Fan arts validées : elles partagent l'emplacement de DÉCOR avec les maps
+    // (une fois sur deux), jamais celui d'une joueuse.
+    fanartIds,
+    decorRoll: Math.random(),
     // Quatre fois la taille du paquet : trois viviers, chacun avec son repli.
     // Un tableau trop court n'échouerait pas — `pickDistinct` retombe sur « le
     // premier disponible » — mais rendrait le tirage discrètement moins
@@ -434,6 +443,7 @@ async function openPack(
         card_user_id: subject.kind === 'player' ? subject.userId : null,
         card_team_id: subject.kind === 'team' ? subject.teamId : null,
         card_map_slug: subject.kind === 'map' ? subject.slug : null,
+        card_fanart_id: subject.kind === 'fanart' ? subject.fanartId : null,
         rarity,
         is_foil: isFoil(Math.random()),
       };
@@ -491,30 +501,40 @@ async function openPack(
   const drawnMapSlugs = cards
     .filter((c) => c.subject_kind === 'map')
     .map((c) => c.card_map_slug as string);
+  const drawnFanartIds = cards
+    .filter((c) => c.subject_kind === 'fanart')
+    .map((c) => c.card_fanart_id as string);
 
-  const [playerFaces, teamFaces, mapFaces, ownedBefore, setsCheck] =
-    await Promise.all([
-      readPlayerFaces(tenantId, drawnPlayerIds),
-      readTeamFaces(tenantId, drawnTeamIds),
-      // Sans `tenantId` : une map appartient au registre commun, pas au tenant.
-      readMapFaces(drawnMapSlugs),
-      // « Nouvelle carte ou doublon ? » — la question qu'on se pose en ouvrant.
-      // La page la déduisait de la collection chargée, ce qui devient faux dès
-      // que celle-ci est paginée : une carte possédée mais pas encore affichée
-      // passerait pour nouvelle. Ciblé sur les sujets tirés, hors de CE paquet.
-      readOwnedSubjectKeys(
-        tenantId,
-        userId,
-        { players: drawnPlayerIds, teams: drawnTeamIds, maps: drawnMapSlugs },
-        packId
-      ),
-      // SÉRIES : ce paquet en a-t-il complété une ? C'est le moment où la
-      // récompense a du sens (et où l'annonce part). Best-effort : les cartes
-      // sont écrites, une série non vérifiée ici sera rattrapée à la lecture
-      // suivante de `/api/player/tcg/sets` — la clé du registre empêche tout
-      // double crédit entre les deux voies. Ne lève jamais.
-      checkCollectionSets({ tenantId, userId }),
-    ]);
+  const [
+    playerFaces,
+    teamFaces,
+    mapFaces,
+    fanartFaces,
+    ownedBefore,
+    setsCheck,
+  ] = await Promise.all([
+    readPlayerFaces(tenantId, drawnPlayerIds),
+    readTeamFaces(tenantId, drawnTeamIds),
+    // Sans `tenantId` : une map appartient au registre commun, pas au tenant.
+    readMapFaces(drawnMapSlugs),
+    readFanartFaces(tenantId, drawnFanartIds),
+    // « Nouvelle carte ou doublon ? » — la question qu'on se pose en ouvrant.
+    // La page la déduisait de la collection chargée, ce qui devient faux dès
+    // que celle-ci est paginée : une carte possédée mais pas encore affichée
+    // passerait pour nouvelle. Ciblé sur les sujets tirés, hors de CE paquet.
+    readOwnedSubjectKeys(
+      tenantId,
+      userId,
+      { players: drawnPlayerIds, teams: drawnTeamIds, maps: drawnMapSlugs },
+      packId
+    ),
+    // SÉRIES : ce paquet en a-t-il complété une ? C'est le moment où la
+    // récompense a du sens (et où l'annonce part). Best-effort : les cartes
+    // sont écrites, une série non vérifiée ici sera rattrapée à la lecture
+    // suivante de `/api/player/tcg/sets` — la clé du registre empêche tout
+    // double crédit entre les deux voies. Ne lève jamais.
+    checkCollectionSets({ tenantId, userId }),
+  ]);
   if (!setsCheck.ok) {
     logger.warn('[tcg/packs] séries non vérifiées: %s', setsCheck.error);
   }
@@ -550,7 +570,7 @@ async function openPack(
         rarity: c.rarity,
         isFoil: c.is_foil,
         ...isNewAt(
-          `${c.subject_kind}:${c.card_user_id ?? c.card_team_id ?? c.card_map_slug}`
+          `${c.subject_kind}:${c.card_user_id ?? c.card_team_id ?? c.card_map_slug ?? c.card_fanart_id}`
         ),
       };
       if (c.subject_kind === 'player') {
@@ -561,6 +581,22 @@ async function openPack(
           userId: c.card_user_id,
           teamId: null,
           displayName: face?.displayName ?? null,
+          imageUrl: face?.imageUrl ?? null,
+        };
+      }
+      if (c.subject_kind === 'fanart') {
+        const face = fanartFaces.get(c.card_fanart_id as string);
+        return {
+          ...base,
+          kind: 'fanart' as const,
+          userId: null,
+          teamId: null,
+          fanartId: c.card_fanart_id,
+          // Le crédit voyage AVEC la carte : une fan art sans son autrice
+          // n'est pas une carte, c'est une œuvre prise sans le dire.
+          title: face?.title ?? null,
+          artistName: face?.artistName ?? null,
+          artistUrl: face?.artistUrl ?? null,
           imageUrl: face?.imageUrl ?? null,
         };
       }
@@ -591,6 +627,25 @@ async function openPack(
   });
 }
 
+/** La rareté décidée à la validation. `null` si l'œuvre n'est plus publiable. */
+async function readFanartRarity(
+  tenantId: string,
+  fanartId: string
+): Promise<TcgRarity | null> {
+  const { data, error } = await supabaseAdmin!
+    .from('tcg_fanart_cards')
+    .select('rarity')
+    .eq('tenant_id', tenantId)
+    .eq('id', fanartId)
+    .eq('status', 'approved')
+    .maybeSingle();
+  if (error) {
+    logger.warn('[tcg/packs] rareté de fan art illisible: %s', error.message);
+    return null;
+  }
+  return ((data as { rarity?: TcgRarity } | null)?.rarity ?? null) || null;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Rareté d'un sujet                                                           */
 /* -------------------------------------------------------------------------- */
@@ -610,6 +665,14 @@ async function rarityOf(
       // de prestige à mesurer. Le détail du raisonnement est dans
       // `utils/tcg/rarity.ts`, où vivent toutes les décisions de rareté.
       return MAP_CARD_RARITY;
+    }
+
+    if (subject.kind === 'fanart') {
+      // La rareté d'une fan art est DÉCIDÉE à la validation par le staff : une
+      // œuvre n'a pas de palmarès à mesurer. Elle est lue sur la ligne plutôt
+      // que recalculée, et un repli prudent couvre l'imprévu.
+      const rarity = await readFanartRarity(tenantId, subject.fanartId);
+      return rarity ?? DEFAULT_FANART_RARITY;
     }
 
     // Lecture PARTAGÉE avec la page publique d'équipe : recopier ces deux

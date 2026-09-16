@@ -18,7 +18,12 @@
 import { supabaseAdmin } from '@/utils/supabase';
 import { POOL_LIMIT } from './drawPack';
 
-export type DrawPool = { playerIds: string[]; teamIds: string[] };
+export type DrawPool = {
+  playerIds: string[];
+  teamIds: string[];
+  /** Fan arts VALIDÉES : elles partagent l'emplacement de décor avec les maps. */
+  fanartIds: string[];
+};
 
 export type DrawPoolResult =
   | { ok: true; value: DrawPool }
@@ -37,7 +42,7 @@ export type DrawPoolResult =
 export async function readDrawPool(tenantId: string): Promise<DrawPoolResult> {
   if (!supabaseAdmin) return { ok: false, error: 'supabaseAdmin absent' };
 
-  const [playersRes, teamsRes] = await Promise.all([
+  const [playersRes, teamsRes, fanartRes] = await Promise.all([
     supabaseAdmin
       .from('player_ratings')
       .select('user_id')
@@ -50,12 +55,25 @@ export async function readDrawPool(tenantId: string): Promise<DrawPoolResult> {
       .is('deleted_at', null)
       .or('is_active.is.null,is_active.eq.true')
       .limit(POOL_LIMIT),
+    // Fan arts : seules les APPROUVÉES. Une œuvre retirée (`revoked`) sort du
+    // vivier immédiatement — le retrait doit valoir pour les paquets à venir,
+    // même si les cartes déjà tirées, elles, restent (cf. la migration).
+    supabaseAdmin
+      .from('tcg_fanart_cards')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'approved')
+      .limit(POOL_LIMIT),
   ]);
 
-  if (playersRes.error || teamsRes.error) {
+  if (playersRes.error || teamsRes.error || fanartRes.error) {
     return {
       ok: false,
-      error: playersRes.error?.message ?? teamsRes.error?.message ?? 'inconnue',
+      error:
+        playersRes.error?.message ??
+        teamsRes.error?.message ??
+        fanartRes.error?.message ??
+        'inconnue',
     };
   }
 
@@ -66,6 +84,9 @@ export async function readDrawPool(tenantId: string): Promise<DrawPoolResult> {
         (r) => r.user_id
       ),
       teamIds: ((teamsRes.data ?? []) as Array<{ id: string }>).map(
+        (r) => r.id
+      ),
+      fanartIds: ((fanartRes.data ?? []) as Array<{ id: string }>).map(
         (r) => r.id
       ),
     },

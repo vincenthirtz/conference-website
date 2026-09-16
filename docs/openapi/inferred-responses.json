@@ -4106,6 +4106,7 @@
           "apply_template",
           "approve",
           "approve_circuit_partner",
+          "approve_tcg_fanart",
           "assign",
           "assign_captain",
           "assign_team_captain",
@@ -4253,6 +4254,7 @@
           "reject",
           "reject_circuit_partner",
           "reject_guild_link",
+          "reject_tcg_fanart",
           "reject_tenant_request",
           "remove",
           "remove_team_member",
@@ -4265,6 +4267,7 @@
           "resolve_match_dispute",
           "retract_event_cue",
           "revoke_api_token",
+          "revoke_tcg_fanart",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
           "save_placements",
@@ -5454,6 +5457,7 @@
           "apply_template",
           "approve",
           "approve_circuit_partner",
+          "approve_tcg_fanart",
           "assign",
           "assign_captain",
           "assign_team_captain",
@@ -5601,6 +5605,7 @@
           "reject",
           "reject_circuit_partner",
           "reject_guild_link",
+          "reject_tcg_fanart",
           "reject_tenant_request",
           "remove",
           "remove_team_member",
@@ -5613,6 +5618,7 @@
           "resolve_match_dispute",
           "retract_event_cue",
           "revoke_api_token",
+          "revoke_tcg_fanart",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
           "save_placements",
@@ -7403,6 +7409,7 @@
           "apply_template",
           "approve",
           "approve_circuit_partner",
+          "approve_tcg_fanart",
           "assign",
           "assign_captain",
           "assign_team_captain",
@@ -7550,6 +7557,7 @@
           "reject",
           "reject_circuit_partner",
           "reject_guild_link",
+          "reject_tcg_fanart",
           "reject_tenant_request",
           "remove",
           "remove_team_member",
@@ -7562,6 +7570,7 @@
           "resolve_match_dispute",
           "retract_event_cue",
           "revoke_api_token",
+          "revoke_tcg_fanart",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
           "save_placements",
@@ -10236,6 +10245,7 @@
           "apply_template",
           "approve",
           "approve_circuit_partner",
+          "approve_tcg_fanart",
           "assign",
           "assign_captain",
           "assign_team_captain",
@@ -10383,6 +10393,7 @@
           "reject",
           "reject_circuit_partner",
           "reject_guild_link",
+          "reject_tcg_fanart",
           "reject_tenant_request",
           "remove",
           "remove_team_member",
@@ -10395,6 +10406,7 @@
           "resolve_match_dispute",
           "retract_event_cue",
           "revoke_api_token",
+          "revoke_tcg_fanart",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
           "save_placements",
@@ -12899,6 +12911,105 @@
     ]
    }
   },
+  "GET /api/admin/tcg/fanart": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "items": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "title": {
+         "type": "string"
+        },
+        "artistName": {
+         "type": "string"
+        },
+        "artistUrl": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "imageUrl": {
+         "type": "string"
+        },
+        "status": {
+         "type": "string"
+        },
+        "rarity": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "reviewNotes": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "createdAt": {
+         "type": "string"
+        },
+        "reviewedAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "id",
+        "title",
+        "artistName",
+        "artistUrl",
+        "imageUrl",
+        "status",
+        "rarity",
+        "reviewNotes",
+        "createdAt",
+        "reviewedAt"
+       ]
+      }
+     },
+     "status": {
+      "type": "string"
+     },
+     "rarities": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "enum": [
+        "common",
+        "epic",
+        "legendary",
+        "rare"
+       ]
+      }
+     },
+     "defaultRarity": {
+      "type": "string",
+      "enum": [
+       "common",
+       "epic",
+       "legendary",
+       "rare"
+      ]
+     }
+    },
+    "required": [
+     "items",
+     "status",
+     "rarities",
+     "defaultRarity"
+    ]
+   }
+  },
   "GET /api/admin/tcg/overlay-theme": {
    "200": {
     "type": "object",
@@ -14845,6 +14956,7 @@
           "apply_template",
           "approve",
           "approve_circuit_partner",
+          "approve_tcg_fanart",
           "assign",
           "assign_captain",
           "assign_team_captain",
@@ -14992,6 +15104,7 @@
           "reject",
           "reject_circuit_partner",
           "reject_guild_link",
+          "reject_tcg_fanart",
           "reject_tenant_request",
           "remove",
           "remove_team_member",
@@ -15004,6 +15117,7 @@
           "resolve_match_dispute",
           "retract_event_cue",
           "revoke_api_token",
+          "revoke_tcg_fanart",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
           "save_placements",
@@ -18925,6 +19039,7 @@
           "apply_template",
           "approve",
           "approve_circuit_partner",
+          "approve_tcg_fanart",
           "assign",
           "assign_captain",
           "assign_team_captain",
@@ -19072,6 +19187,7 @@
           "reject",
           "reject_circuit_partner",
           "reject_guild_link",
+          "reject_tcg_fanart",
           "reject_tenant_request",
           "remove",
           "remove_team_member",
@@ -19084,6 +19200,7 @@
           "resolve_match_dispute",
           "retract_event_cue",
           "revoke_api_token",
+          "revoke_tcg_fanart",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
           "save_placements",
@@ -36866,6 +36983,178 @@
        "nextCursor"
       ]
      }
+    ]
+   }
+  },
+  "GET /api/player/tcg/fanart": {
+   "200": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "ok": {
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "ok"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "submissions": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "title": {
+           "type": "string"
+          },
+          "artistName": {
+           "type": "string"
+          },
+          "artistUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "imageUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "status": {
+           "type": "string"
+          },
+          "rarity": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "reviewNotes": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "createdAt": {
+           "type": "string"
+          },
+          "reviewedAt": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "id",
+          "title",
+          "artistName",
+          "artistUrl",
+          "imageUrl",
+          "status",
+          "rarity",
+          "reviewNotes",
+          "createdAt",
+          "reviewedAt"
+         ]
+        }
+       },
+       "pending": {
+        "type": "number"
+       },
+       "maxPending": {
+        "type": "number"
+       },
+       "maxBytes": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "submissions",
+       "pending",
+       "maxPending",
+       "maxBytes"
+      ]
+     }
+    ]
+   },
+   "201": {
+    "type": "object",
+    "properties": {
+     "submission": {
+      "type": "object",
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "title": {
+        "type": "string"
+       },
+       "artistName": {
+        "type": "string"
+       },
+       "artistUrl": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "imageUrl": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "status": {
+        "type": "string"
+       },
+       "rarity": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "reviewNotes": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "createdAt": {
+        "type": "string"
+       },
+       "reviewedAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "id",
+       "title",
+       "artistName",
+       "artistUrl",
+       "imageUrl",
+       "status",
+       "rarity",
+       "reviewNotes",
+       "createdAt",
+       "reviewedAt"
+      ]
+     }
+    },
+    "required": [
+     "submission"
     ]
    }
   },
@@ -60781,6 +61070,82 @@
          "properties": {
           "kind": {
            "type": "string",
+           "const": "fanart"
+          },
+          "userId": {
+           "type": "null"
+          },
+          "teamId": {
+           "type": "null"
+          },
+          "fanartId": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "title": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "artistName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "artistUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "imageUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "isNew": {
+           "type": "boolean"
+          },
+          "position": {
+           "type": "number"
+          },
+          "rarity": {
+           "type": "string",
+           "enum": [
+            "common",
+            "epic",
+            "legendary",
+            "rare"
+           ]
+          },
+          "isFoil": {
+           "type": "boolean"
+          }
+         },
+         "required": [
+          "kind",
+          "userId",
+          "teamId",
+          "fanartId",
+          "title",
+          "artistName",
+          "artistUrl",
+          "imageUrl",
+          "position",
+          "rarity",
+          "isFoil"
+         ]
+        },
+        {
+         "type": "object",
+         "properties": {
+          "kind": {
+           "type": "string",
            "const": "map"
           },
           "userId": {
@@ -63720,6 +64085,7 @@
   "pages/api/admin/documents.ts:288",
   "pages/api/admin/matches/[matchId]/lineup.ts:168",
   "pages/api/admin/matches/[matchId]/lineup.ts:284",
+  "pages/api/admin/tcg/fanart.ts:229",
   "pages/api/admin/tcg/welcome-gift.ts:72",
   "pages/api/cron/domain-verify.ts:123",
   "pages/api/cron/quota-alerts.ts:114",

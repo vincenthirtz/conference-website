@@ -20,6 +20,7 @@ export type CardSubjectRow = {
   card_user_id?: string | null;
   card_team_id?: string | null;
   card_map_slug?: string | null;
+  card_fanart_id?: string | null;
 };
 
 /**
@@ -40,6 +41,8 @@ export function cardSubjectId(row: CardSubjectRow): string | null {
       return row.card_team_id ?? null;
     case 'map':
       return row.card_map_slug ?? null;
+    case 'fanart':
+      return row.card_fanart_id ?? null;
     default:
       return null;
   }

@@ -36,6 +36,7 @@ import { logger } from '@/utils/logger';
 import { recommendCardHero } from '@/utils/heroes/recommendCardHero';
 import { maskBattleTag } from '@/utils/battleTag';
 import { TCG_BUCKET, tcgTeamImageUrl } from '@/utils/tcg/teamCardImage';
+import { displayableArtistUrl } from '@/utils/tcg/fanart';
 
 /** Même bucket public que les logos d'équipe. */
 const BUCKET = TCG_BUCKET;
@@ -294,5 +295,69 @@ export async function readTeamFaces(
     });
   }
 
+  return faces;
+}
+
+/* ---------------------------------------------------------------------------
+ * Fan arts
+ * ------------------------------------------------------------------------- */
+
+export type FanartFace = {
+  fanartId: string;
+  title: string | null;
+  /** Le nom à CRÉDITER, tel que l'autrice l'a écrit. */
+  artistName: string | null;
+  artistUrl: string | null;
+  imageUrl: string | null;
+};
+
+/**
+ * Les faces des fan arts demandées.
+ *
+ * FILTRE DE PUBLICATION, ICI ET NULLE PART AILLEURS : seules les œuvres
+ * `approved` rendent une image et un crédit. Une œuvre retirée (`revoked`) ou
+ * refusée sort du lot — la carte déjà tirée reste dans la collection, mais
+ * retombe sur une face neutre, exactement comme une photo de joueuse retirée.
+ *
+ * Ne lève jamais : une lecture en échec rend une Map vide, et les cartes
+ * s'affichent sans image plutôt que de faire échouer l'écran.
+ */
+export async function readFanartFaces(
+  tenantId: string,
+  fanartIds: readonly string[]
+): Promise<Map<string, FanartFace>> {
+  const faces = new Map<string, FanartFace>();
+  const ids = [...new Set(fanartIds.filter(Boolean))];
+  if (ids.length === 0 || !supabaseAdmin) return faces;
+
+  const { data, error } = await supabaseAdmin
+    .from('tcg_fanart_cards')
+    .select('id, title, artist_name, artist_url, image_path, status')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'approved')
+    .in('id', ids);
+  if (error) {
+    logger.error('[tcg/faces] fan arts illisibles: %s', error.message);
+    return faces;
+  }
+
+  for (const row of (data ?? []) as Array<{
+    id: string;
+    title: string | null;
+    artist_name: string | null;
+    artist_url: string | null;
+    image_path: string | null;
+  }>) {
+    faces.set(row.id, {
+      fanartId: row.id,
+      title: row.title,
+      artistName: row.artist_name,
+      artistUrl: displayableArtistUrl(row.artist_url),
+      imageUrl: row.image_path
+        ? (supabaseAdmin.storage.from(BUCKET).getPublicUrl(row.image_path).data
+            ?.publicUrl ?? null)
+        : null,
+    });
+  }
   return faces;
 }

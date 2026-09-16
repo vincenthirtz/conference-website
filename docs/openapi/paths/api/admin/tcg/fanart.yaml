@@ -1,0 +1,79 @@
+get:
+  tags:
+    - admin/tcg
+  summary: File de moderation des cartes fan art.
+  description: |
+    Par defaut `pending`, la plus ancienne d'abord (une file se prend par le
+    bas). L'identite du compte qui a propose n'est PAS rendue : on modere une
+    œuvre et un credit. Permission `manage_tcg`.
+  operationId: adminListTcgFanart
+  security:
+    - StaffSession: []
+  parameters:
+    - name: status
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [pending, approved, rejected, revoked]
+  responses:
+    '200':
+      description: File, raretes disponibles et rarete par defaut.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+patch:
+  tags:
+    - admin/tcg
+  summary: Valider, refuser ou retirer une carte fan art.
+  description: |
+    `approve` (avec une rarete — la base l'exige), `reject` (motif obligatoire),
+    `revoke` (motif obligatoire, sur une œuvre deja validee).
+
+    RETIRER N'EST PAS SUPPRIMER : l'œuvre sort du vivier des paquets a venir,
+    les cartes deja tirees restent dans les collections et retombent sur une
+    face neutre. L'ecriture est conditionnee au statut de depart : deux
+    relectrices simultanees ne peuvent pas valider ET refuser la meme œuvre.
+    Journalise (`approve_tcg_fanart`, `reject_tcg_fanart`, `revoke_tcg_fanart`).
+  operationId: adminReviewTcgFanart
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [action, id]
+          properties:
+            action:
+              type: string
+              enum: [approve, reject, revoke]
+            id:
+              $ref: '#/components/schemas/Uuid'
+            rarity:
+              type: string
+              enum: [common, rare, epic, legendary]
+            notes:
+              type: string
+              maxLength: 500
+  responses:
+    '200':
+      description: Decision appliquee.
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      description: '`code: already_reviewed`.'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

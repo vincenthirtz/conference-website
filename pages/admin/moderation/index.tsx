@@ -18,6 +18,7 @@ import nsAdminTcgPhotos from '@/lib/i18n/locales/admin-fr/adminTcgPhotos';
 // économie sont deux métiers, et mélanger leurs libellés obligerait à toucher
 // la parité des deux à chaque évolution de l'un.
 import nsAdminTcgOverview from '@/lib/i18n/locales/admin-fr/adminTcgOverview';
+import nsAdminTcgFanart from '@/lib/i18n/locales/admin-fr/adminTcgFanart';
 
 import { lazyPanel } from '@/components/admin/lazyPanel';
 
@@ -33,6 +34,9 @@ const SupportPanel = lazyPanel(
 );
 const TcgPhotosPanel = lazyPanel(
   () => import('@/components/admin/moderation/TcgPhotosPanel')
+);
+const TcgFanartPanel = lazyPanel(
+  () => import('@/components/admin/moderation/TcgFanartPanel')
 );
 const TcgOverviewPanel = lazyPanel(
   () => import('@/components/admin/tcg/TcgOverviewPanel')
@@ -89,6 +93,7 @@ export default function AdminModerationPage({ staff }: StaffProps) {
   const t = useAdminT(nsAdminModeration);
   const tTcg = useAdminT(nsAdminTcgPhotos);
   const tTcgOverview = useAdminT(nsAdminTcgOverview);
+  const tTcgFanart = useAdminT(nsAdminTcgFanart);
   const isManager = hasAtLeastRole(staff.role as StaffRole, 'admin');
   // Les onglets TCG suivent la PERMISSION de leurs routes (`manage_tcg` pour
   // photos, vue d'ensemble, overlay, cadeau et ajustement de solde), pas le
@@ -114,6 +119,9 @@ export default function AdminModerationPage({ staff }: StaffProps) {
           // Relire la photo d'une personne réelle n'est pas un geste de
           // caster par défaut : droit `manage_tcg`, admin et owner l'ont.
           { id: 'tcg-photos', label: tTcg.tabLabel },
+          // Les cartes fan art : même droit, même métier — décider ce qui
+          // entre dans le TCG.
+          { id: 'tcg-fanart', label: tTcgFanart.tabLabel },
           // Mesurer l'économie expose qui possède quoi, et corriger un solde
           // la modifie : même permission que la file de photos.
           { id: 'tcg-overview', label: tTcgOverview.tabLabel },
@@ -186,6 +194,8 @@ export default function AdminModerationPage({ staff }: StaffProps) {
               </>
             ) : active === 'support' && isManager ? (
               <SupportPanel />
+            ) : active === 'tcg-fanart' && canModerateTcg ? (
+              <TcgFanartPanel />
             ) : active === 'tcg-photos' && canModerateTcg ? (
               <TcgPhotosPanel />
             ) : active === 'tcg-overview' && canModerateTcg ? (

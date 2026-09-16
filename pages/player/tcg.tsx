@@ -38,6 +38,7 @@ import TcgSetsPanel, {
   type TcgSetCompletedNotice,
 } from '@/components/tcg/TcgSetsPanel';
 import PredictionsPanel from '@/components/predictions/PredictionsPanel';
+import FanartSubmitPanel from '@/components/tcg/FanartSubmitPanel';
 import TcgShowcaseEditor from '@/components/tcg/TcgShowcaseEditor';
 import TcgPackReveal, {
   type TcgRevealCard,
@@ -1275,6 +1276,9 @@ function PlayerTcg() {
 
         {/* Pronostics : composant autonome, gratuit, crédité au résultat. */}
         {loadState === 'ready' && <PredictionsPanel className="mt-8" />}
+
+        {/* Fan art : proposer une carte, et suivre ses propositions. */}
+        {loadState === 'ready' && <FanartSubmitPanel className="mt-8" />}
 
         {/* Collection */}
         <section className="mt-8" aria-labelledby="tcg-collection-title">

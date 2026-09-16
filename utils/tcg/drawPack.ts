@@ -17,6 +17,8 @@
 // arrive. Des emplacements réservés donnent une composition lisible : « trois
 // joueuses, une équipe, une map ».
 
+import { pickDecorKind } from './fanart';
+
 /** Cartes par paquet. */
 export const PACK_SIZE = 5;
 
@@ -34,6 +36,14 @@ export const TEAM_SLOTS = 1;
 export const MAP_SLOTS = 1;
 
 /**
+ * L'emplacement de DÉCOR, partagé entre les maps et les fan arts validées.
+ * Même valeur que `MAP_SLOTS` : les fan arts n'ajoutent pas de carte au paquet,
+ * elles prennent la place du décor une fois sur deux
+ * (`FANART_DECOR_SHARE`).
+ */
+export const DECOR_SLOTS = MAP_SLOTS;
+
+/**
  * Sujets lus au plus dans chaque vivier lors d'un tirage.
  *
  * EXPORTÉ PARCE QUE LE DÉNOMINATEUR EN DÉPEND. La progression de collection
@@ -48,7 +58,8 @@ export const POOL_LIMIT = 1000;
 export type DrawnSubject =
   | { kind: 'player'; userId: string }
   | { kind: 'team'; teamId: string }
-  | { kind: 'map'; slug: string };
+  | { kind: 'map'; slug: string }
+  | { kind: 'fanart'; fanartId: string };
 
 /**
  * Choisit `count` éléments distincts, ou moins si le vivier est trop petit.
@@ -98,31 +109,62 @@ export function pickPackSubjects(input: {
   teamIds: readonly string[];
   /** Slugs du registre des maps ; vide = pas de carte de map. */
   mapSlugs?: readonly string[];
+  /**
+   * Fan arts VALIDÉES de l'espace ; vide = comportement d'avant les fan arts.
+   * Elles partagent l'emplacement de DÉCOR avec les maps — jamais celui d'une
+   * joueuse (cf. `utils/tcg/fanart.ts`).
+   */
+  fanartIds?: readonly string[];
+  /**
+   * Tirage qui décide du décor : map ou fan art. Séparé des `rolls` pour que
+   * l'ajout des fan arts ne décale pas l'aléa des autres emplacements — un
+   * paquet tiré avec les mêmes `rolls` qu'avant sort identique tant qu'aucune
+   * fan art n'est validée.
+   */
+  decorRoll?: number;
   /** Au moins `PACK_SIZE` valeurs dans [0, 1). */
   rolls: readonly number[];
 }): DrawnSubject[] {
   const { playerIds, teamIds, rolls } = input;
   const mapSlugs = input.mapSlugs ?? [];
+  const fanartIds = input.fanartIds ?? [];
 
   const teamCount = Math.min(TEAM_SLOTS, teamIds.length);
   const teams = pickDistinct(teamIds, teamCount, rolls);
 
-  const mapCount = Math.min(MAP_SLOTS, mapSlugs.length);
+  // L'emplacement de DÉCOR : une map, ou une fan art de la communauté. Un seul
+  // des deux, jamais les deux — la composition du paquet ne bouge pas.
+  const decor = pickDecorKind({
+    roll: input.decorRoll ?? Number.NaN,
+    hasFanart: fanartIds.length > 0,
+    hasMaps: mapSlugs.length > 0,
+  });
+
+  const mapCount = decor === 'map' ? Math.min(MAP_SLOTS, mapSlugs.length) : 0;
   const maps = pickDistinct(mapSlugs, mapCount, rolls.slice(teamCount));
 
+  const fanartCount =
+    decor === 'fanart' ? Math.min(DECOR_SLOTS, fanartIds.length) : 0;
+  const fanarts = pickDistinct(
+    fanartIds,
+    fanartCount,
+    rolls.slice(teamCount + mapCount)
+  );
+
   // Les joueuses occupent le reste, et comblent les emplacements réservés
-  // laissés vacants par un vivier d'équipes ou de maps trop court.
-  const playerCount = PACK_SIZE - teams.length - maps.length;
+  // laissés vacants par un vivier d'équipes ou de décor trop court.
+  const playerCount = PACK_SIZE - teams.length - maps.length - fanarts.length;
   const players = pickDistinct(
     playerIds,
     playerCount,
-    rolls.slice(teamCount + mapCount)
+    rolls.slice(teamCount + mapCount + fanartCount)
   );
 
   // Si les joueuses n'ont pas suffi, on complète avec d'autres équipes, puis
   // avec d'autres maps — dans cet ordre, cf. l'en-tête de la fonction.
-  let shortfall = PACK_SIZE - teams.length - maps.length - players.length;
-  const consumed = teamCount + mapCount + players.length;
+  let shortfall =
+    PACK_SIZE - teams.length - maps.length - fanarts.length - players.length;
+  const consumed = teamCount + mapCount + fanartCount + players.length;
 
   const extraTeams =
     shortfall > 0
@@ -149,5 +191,6 @@ export function pickPackSubjects(input: {
     ...extraTeams.map((teamId): DrawnSubject => ({ kind: 'team', teamId })),
     ...maps.map((slug): DrawnSubject => ({ kind: 'map', slug })),
     ...extraMaps.map((slug): DrawnSubject => ({ kind: 'map', slug })),
+    ...fanarts.map((fanartId): DrawnSubject => ({ kind: 'fanart', fanartId })),
   ];
 }

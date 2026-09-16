@@ -1345,6 +1345,23 @@
       "title",
       "updated_at"
     ],
+    "tcg_fanart_cards": [
+      "artist_name",
+      "artist_url",
+      "created_at",
+      "id",
+      "image_path",
+      "licence_accepted_at",
+      "rarity",
+      "review_notes",
+      "reviewed_at",
+      "reviewed_by",
+      "status",
+      "submitted_by",
+      "tenant_id",
+      "title",
+      "updated_at"
+    ],
     "tcg_overlay_themes": [
       "accent_color",
       "drop_line",
@@ -1366,6 +1383,7 @@
       "token"
     ],
     "tcg_pack_cards": [
+      "card_fanart_id",
       "card_map_slug",
       "card_team_id",
       "card_user_id",
@@ -2815,6 +2833,14 @@
     "tasks_tenant_id_fkey": {
       "source": "tasks",
       "target": "tenants"
+    },
+    "tcg_fanart_cards_tenant_id_fkey": {
+      "source": "tcg_fanart_cards",
+      "target": "tenants"
+    },
+    "tcg_pack_cards_card_fanart_id_fkey": {
+      "source": "tcg_pack_cards",
+      "target": "tcg_fanart_cards"
     },
     "tcg_pack_cards_card_team_id_fkey": {
       "source": "tcg_pack_cards",

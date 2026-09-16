@@ -88,6 +88,7 @@ import nsAdminBilling from './adminBilling';
 import nsAdminTenantDetail from './adminTenantDetail';
 import nsAdminTenantRequestsList from './adminTenantRequestsList';
 import nsAdminCircuitPartners from './adminCircuitPartners';
+import nsAdminTcgFanart from './adminTcgFanart';
 import nsAdminPartnershipRequestsList from './adminPartnershipRequestsList';
 import nsAdminPartnershipRequestDetail from './adminPartnershipRequestDetail';
 import nsAdminPendingGuildLinks from './adminPendingGuildLinks';
@@ -281,6 +282,7 @@ export const frDict = {
   adminTenantDetail: nsAdminTenantDetail.fr,
   adminTenantRequestsList: nsAdminTenantRequestsList.fr,
   adminCircuitPartners: nsAdminCircuitPartners.fr,
+  adminTcgFanart: nsAdminTcgFanart.fr,
   adminPartnershipRequestsList: nsAdminPartnershipRequestsList.fr,
   adminPartnershipRequestDetail: nsAdminPartnershipRequestDetail.fr,
   adminPendingGuildLinks: nsAdminPendingGuildLinks.fr,

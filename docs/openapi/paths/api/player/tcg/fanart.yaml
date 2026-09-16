@@ -1,0 +1,105 @@
+get:
+  tags:
+    - public/auth
+  summary: Mes propositions de cartes fan art.
+  description: |
+    Statut, motif de refus et credit tel qu'il sera affiche, plus le plafond de
+    propositions EN ATTENTE (`maxPending`).
+  operationId: listMyTcgFanart
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Mes propositions.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - public/auth
+  summary: Proposer une carte fan art.
+  description: |
+    Image en base64 (`data` + `mimeType`), titre, NOM A CREDITER, lien
+    facultatif, et `licenceAccepted: true` — la proposition vaut declaration
+    d'originalite ET accord de diffusion : sans elle, on publierait le travail
+    de quelqu'un sans son accord.
+
+    Le contenu du fichier est verifie (magic bytes) avant depot dans un bucket
+    PUBLIC. La proposition nait `pending` : rien n'entre dans les paquets avant
+    relecture du staff. 5 / min, et `MAX_PENDING_FANART` propositions en attente
+    au plus par personne.
+  operationId: submitTcgFanart
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [data, mimeType, title, artistName, licenceAccepted]
+          properties:
+            data:
+              type: string
+              description: Image en data-URL base64.
+            mimeType:
+              type: string
+              enum: [image/png, image/jpeg, image/webp]
+            title:
+              type: string
+              maxLength: 80
+            artistName:
+              type: string
+              maxLength: 80
+              description: Le nom sous lequel l'autrice veut etre creditee.
+            artistUrl:
+              type: string
+              maxLength: 300
+            licenceAccepted:
+              type: boolean
+              enum: [true]
+  responses:
+    '201':
+      description: Proposition enregistree, en attente de relecture.
+    '400':
+      description: '`code: title`, `artist_name`, `artist_url`, `licence`, ou un code image (`unsupported_type`, `too_large`, `content_mismatch`).'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '409':
+      description: '`code: too_many_pending`.'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+delete:
+  tags:
+    - public/auth
+  summary: Retirer une proposition ENCORE EN ATTENTE.
+  description: |
+    Une œuvre deja validee ne se retire pas ici : elle est dans des
+    collections, et seul le staff peut la retirer des paquets a venir.
+  operationId: withdrawTcgFanart
+  security:
+    - PlayerBearer: []
+  parameters:
+    - name: id
+      in: query
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+  responses:
+    '200':
+      description: Proposition retiree, image supprimee du bucket.
+    '400':
+      description: Identifiant manquant.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '409':
+      description: '`code: not_pending`.'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

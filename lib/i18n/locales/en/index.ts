@@ -18,6 +18,7 @@ import enPlayerTcg from './playerTcg';
 import enTcgCatalog from './tcgCatalog';
 import enTcgTrade from './tcgTrade';
 import enTcgSets from './tcgSets';
+import enTcgFanart from './tcgFanart';
 import enMatchPrediction from './matchPrediction';
 import enOrganiserFemininPage from './organiserFemininPage';
 import enCircuitPartnersPage from './circuitPartnersPage';
@@ -362,6 +363,7 @@ const enDict = {
   tcgCatalog: enTcgCatalog,
   tcgTrade: enTcgTrade,
   tcgSets: enTcgSets,
+  tcgFanart: enTcgFanart,
   matchPrediction: enMatchPrediction,
   organiserFemininPage: enOrganiserFemininPage,
   circuitPartnersPage: enCircuitPartnersPage,

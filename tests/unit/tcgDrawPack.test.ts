@@ -47,7 +47,13 @@ describe('pickPackSubjects', () => {
     });
 
     const ids = out.map((s) =>
-      s.kind === 'player' ? s.userId : s.kind === 'map' ? s.slug : s.teamId
+      s.kind === 'player'
+        ? s.userId
+        : s.kind === 'map'
+          ? s.slug
+          : s.kind === 'fanart'
+            ? s.fanartId
+            : s.teamId
     );
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -110,7 +116,13 @@ describe('pickPackSubjects', () => {
 
     expect(out).toHaveLength(PACK_SIZE);
     const ids = out.map((s) =>
-      s.kind === 'player' ? s.userId : s.kind === 'map' ? s.slug : s.teamId
+      s.kind === 'player'
+        ? s.userId
+        : s.kind === 'map'
+          ? s.slug
+          : s.kind === 'fanart'
+            ? s.fanartId
+            : s.teamId
     );
     expect(new Set(ids).size).toBe(ids.length);
   });
