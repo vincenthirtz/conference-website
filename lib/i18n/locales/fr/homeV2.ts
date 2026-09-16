@@ -66,6 +66,18 @@ export default ns('homeV2', {
   spotTwitchHandle: 'Twitch · womens_cup',
   spotNextLive: "Le lecteur s'ouvre ici quand la chaîne est en direct.",
   spotNextLiveHint: 'Suivre sur Twitch →',
+  // Les affiches de la prochaine journée, en pied de la carte du rendez-vous.
+  // Le jour lui-même n'est pas une clé : c'est une donnée, formatée par Intl
+  // dans la langue de l'interface (« vendredi 18 septembre »).
+  matchdayTitle_one: '{count} match au programme',
+  matchdayTitle_other: '{count} matchs au programme',
+  matchdayLive: 'En direct',
+  matchdayFinished: 'Terminé',
+  matchdayMatchAria: '{home} contre {away}, à {time}',
+  matchdayMatchAriaScore: '{home} {score1} – {away} {score2}, à {time}',
+  matchdayMore_one: '+ {count} autre match ce jour-là',
+  matchdayMore_other: '+ {count} autres matchs ce jour-là',
+  matchdayAll: 'Tout le calendrier',
   teamsStripEyebrow: '{count} équipes engagées',
   teamsStripTitle: 'Elles participent à la seconde édition de la Women’s Cup',
   newsEyebrow: 'Actualités',

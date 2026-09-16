@@ -22,6 +22,7 @@ import { type HomeNewsItem } from '@/components/News/HomeNewsSection';
 import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
 import { type HomePartner } from '@/components/Home/HomeSponsors';
 import { type HomeTeam } from '@/utils/home/loadHomeData';
+import { type HomeMatchday } from '@/utils/home/loadNextMatchday';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import {
   loadHomeData,
@@ -43,6 +44,7 @@ type HomeProps = {
   upcomingTournament: UpcomingTournament | null;
   partners: HomePartner[];
   teams: HomeTeam[];
+  matchday: HomeMatchday | null;
   countdownTarget: string | null;
   prizeCents: number | null;
   // Vrai quand le chargement du contenu dynamique a échoué côté serveur : on le
@@ -65,6 +67,7 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
       upcomingTournament: data.upcomingTournament,
       partners: data.partners,
       teams: data.teams,
+      matchday: data.matchday,
       countdownTarget: data.countdownTarget,
       prizeCents,
       loadError: data.loadError,
@@ -79,6 +82,7 @@ function Home({
   upcomingTournament,
   partners,
   teams,
+  matchday,
   countdownTarget,
   prizeCents,
   loadError,
@@ -117,6 +121,7 @@ function Home({
         prizeCents={prizeCents}
         live={live}
         teams={teams}
+        matchday={matchday}
       />
 
       <HomeNewsV2 news={news} />

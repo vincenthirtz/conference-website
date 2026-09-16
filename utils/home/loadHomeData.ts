@@ -17,6 +17,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { resolveNewsImage } from '@/utils/news/newsImage';
 import { logger } from '@/utils/logger';
 import { loadSocialFeed, type SocialFeedItem } from '@/utils/social/socialFeed';
+import {
+  loadNextMatchday,
+  type HomeMatchday,
+} from '@/utils/home/loadNextMatchday';
 
 // Marge de troncature du `content` des news de la home. HomeNewsSection ne rend
 // qu'un excerpt d'au plus ~220 caractères ; on garde une marge confortable.
@@ -30,6 +34,12 @@ export type HomeData = {
   partners: HomePartner[];
   /** Équipes engagées dans l'édition en cours — cf. `loadContendingTeams`. */
   teams: HomeTeam[];
+  /**
+   * La prochaine journée de matchs (les affiches du jour) — cf.
+   * `loadNextMatchday`. `null` quand rien n'est programmé : la carte du
+   * rendez-vous retombe alors sur les équipes engagées.
+   */
+  matchday: HomeMatchday | null;
   countdownTarget: string | null;
   // Vrai quand le chargement du contenu dynamique (news / annonces) a échoué
   // côté serveur. Permet d'afficher un avis d'erreur distinct d'un site
@@ -198,6 +208,7 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
   let upcomingTournament: UpcomingTournament | null = null;
   let partners: HomePartner[] = [];
   let teams: HomeTeam[] = [];
+  let matchday: HomeMatchday | null = null;
   let countdownTarget: string | null = null;
   // Client absent = on n'a pas pu charger le contenu : on le signale plutôt
   // que d'afficher une home faussement vide.
@@ -234,6 +245,15 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
     // Après le tournoi : la liste des engagées en dépend, elle ne peut pas
     // partir dans le même Promise.all.
     teams = await loadContendingTeams(tenantId, upcomingTournament?.id ?? null);
+    // Puis les affiches de la prochaine journée, qui se servent des équipes
+    // qu'on vient de charger (nom court, slug) plutôt que d'aller les relire.
+    // Comme le mur des réseaux, un calendrier vide n'est pas une panne : il
+    // n'entre PAS dans `loadError`, la carte retombe sur les engagées.
+    matchday = await loadNextMatchday(
+      tenantId,
+      upcomingTournament?.id ?? null,
+      teams
+    );
 
     // Une erreur sur la requête de contenu signale une panne, à distinguer
     // d'un contenu légitimement vide.
@@ -277,6 +297,7 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
     upcomingTournament,
     partners,
     teams,
+    matchday,
     countdownTarget,
     loadError,
   };

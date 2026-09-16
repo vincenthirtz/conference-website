@@ -16,7 +16,9 @@ import {
 } from '@/components/Home/HomeUpcomingTournament';
 import { type TwitchLive } from '@/components/Home/useTwitchLive';
 import HomeTeamsStrip from '@/components/Home/HomeTeamsStrip';
+import HomeMatchdayStrip from '@/components/Home/HomeMatchdayStrip';
 import { type HomeTeam } from '@/utils/home/loadHomeData';
+import { type HomeMatchday } from '@/utils/home/loadNextMatchday';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
@@ -26,12 +28,21 @@ type HomeSpotlightProps = {
   prizeCents: number | null;
   live: TwitchLive;
   /**
-   * Équipes engagées, rendues en pied de carte. Elles vivaient dans une
-   * section à part, juste en dessous : les deux disaient la même chose à deux
-   * endroits — « voici la compétition », puis « voici qui y court ». Réunies,
-   * l'affiche est complète d'un seul regard.
+   * Équipes engagées. Elles vivaient dans une section à part, juste en
+   * dessous : les deux disaient la même chose à deux endroits — « voici la
+   * compétition », puis « voici qui y court ». Réunies, l'affiche est complète
+   * d'un seul regard.
+   *
+   * Depuis l'arrivée de `matchday`, elles sont le REPLI du pied de carte : on
+   * préfère annoncer qui joue ce soir, mais hors calendrier publié, « elles
+   * participent » reste vrai et utile.
    */
   teams: HomeTeam[];
+  /**
+   * Les affiches de la prochaine journée (« vendredi, X contre Y à 20 h 30 »),
+   * quand il y en a. Optionnel : la carte sait vivre sans.
+   */
+  matchday?: HomeMatchday | null;
 };
 
 function formatPrize(cents: number, locale: string) {
@@ -118,6 +129,7 @@ export default function HomeSpotlight({
   prizeCents,
   live,
   teams,
+  matchday = null,
 }: HomeSpotlightProps): JSX.Element | null {
   const t = useT(nsHomeV2);
   const locale = useLocale();
@@ -303,9 +315,22 @@ export default function HomeSpotlight({
           <TwitchPanel live={live} />
         </aside>
 
-        {/* Pied de carte, sur toute la largeur : qui court. Ne rend rien tant
-            qu'aucune équipe n'est engagée. */}
-        <HomeTeamsStrip teams={teams} />
+        {/* Pied de carte, sur toute la largeur.
+            D'abord CE QUI SE JOUE : les affiches de la prochaine journée, avec
+            l'heure du coup d'envoi — c'est ce qu'on vient chercher ici un soir
+            de match, et ça change toutes les semaines.
+            À DÉFAUT, qui court : hors calendrier publié (intersaison, tournoi
+            annoncé sans matchs, lecture en échec), la bande des équipes
+            engagées dit encore quelque chose de vrai. Et si les deux manquent,
+            chaque bande s'efface d'elle-même : pas de squelette vide. */}
+        {matchday ? (
+          <HomeMatchdayStrip
+            matchday={matchday}
+            matchesHref={`${detailHref}/matches`}
+          />
+        ) : (
+          <HomeTeamsStrip teams={teams} />
+        )}
       </div>
     </section>
   );
