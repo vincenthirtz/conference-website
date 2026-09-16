@@ -55,8 +55,18 @@ function dismissKey(userId: string): string {
 
 export default function RegistrationDeadlineBanner({
   userId,
+  networkStatus,
 }: {
   userId: string;
+  /**
+   * État réseau déjà lu par la page (tableau de bord), pour ne pas appeler
+   * `/api/player/network-status` une seconde fois en même temps que
+   * `NetworkOnboardingCard`. `undefined` = le bandeau lit lui-même (usage
+   * autonome, ex. gestion d'équipe) ; `null` = la page lit, pas encore de
+   * réponse ou échec — lu comme « on ne sait pas », exactement comme l'échec
+   * de sa propre lecture.
+   */
+  networkStatus?: NetworkStatus | null;
 }) {
   const t = useT(nsRegistrationDeadline);
   const locale = useLocale();
@@ -65,7 +75,15 @@ export default function RegistrationDeadlineBanner({
   const [deadline, setDeadline] = useState<RegistrationDeadlineState | null>(
     null
   );
-  const [discordLinked, setDiscordLinked] = useState<boolean | null>(null);
+  const selfLoads = networkStatus === undefined;
+  const [fetchedDiscordLinked, setDiscordLinked] = useState<boolean | null>(
+    null
+  );
+  const discordLinked = selfLoads
+    ? fetchedDiscordLinked
+    : networkStatus
+      ? Boolean(networkStatus.discordLinked)
+      : null;
   const [dismissed, setDismissed] = useState(false);
 
   // Compte à rebours : client uniquement (cf. en-tête, choix 3).
@@ -97,8 +115,9 @@ export default function RegistrationDeadlineBanner({
   }, [adminFetchJson]);
 
   useEffect(() => {
+    if (!selfLoads) return;
     void load();
-  }, [load]);
+  }, [load, selfLoads]);
 
   if (!deadline || deadline.isPast) return null;
   // Refermable seulement quand il ne reste rien à faire (choix 2).

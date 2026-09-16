@@ -11,6 +11,7 @@ import PublicNav from './PublicNav';
 import LiveLogoPulse from './LiveLogoPulse';
 import { ADMIN_LINKS, filterAdminLinks } from './adminLinks';
 import { PLAYER_LINKS } from './playerLinks';
+import { resolveHeaderBars } from './headerBars';
 import { useT } from '@/lib/i18n/useT';
 import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
 import nsNavbar from '@/lib/i18n/locales/fr/navbar';
@@ -92,10 +93,13 @@ function Navbar(): JSX.Element {
     [staffRole, activeTenantKind, staffPermissions]
   );
 
-  // Staff takes precedence: never show both bars. The player bar shows only on
-  // /player routes, for a signed-in non-staff user, once both sessions resolved.
-  const isPlayerRoute = router.pathname.startsWith('/player');
-  // `visibleAdminLinks.length > 0` n'est PAS une précaution décorative :
+  // Jamais deux barres. Sur /player, la barre joueuse gagne — staff compris :
+  // une capitaine qui est aussi staff n'avait là que la barre admin, sans
+  // « Mes matchs » ni « Notifications ». Elle y retrouve la navigation
+  // joueuse, plus un lien vers l'administration (cf. headerBars.ts).
+  //
+  // Pour la barre admin, `visibleAdminLinks.length > 0` n'est PAS une
+  // précaution décorative :
   // `AdminTopBar` se supprime elle-même quand elle n'a rien à montrer
   // (`categories.length === 0 && singleLinks.length === 0` → `return null`).
   // Avec `isStaff` seul, un compte staff dont aucun lien ne passe le filtre —
@@ -103,9 +107,14 @@ function Navbar(): JSX.Element {
   // `hideMarketingNav = true` pour une barre qui ne s'affichait jamais : la
   // page se retrouvait sans AUCUN en-tête, sur le site public comme ailleurs.
   // L'en-tête ne se masque que si quelque chose le remplace VRAIMENT.
-  const showAdminBar = !loading && isStaff && visibleAdminLinks.length > 0;
-  const showPlayerBar =
-    isPlayerRoute && !loading && !playerLoading && !!playerUser && !isStaff;
+  const { showAdminBar, showPlayerBar } = resolveHeaderBars({
+    pathname: router.pathname,
+    staffLoading: loading,
+    isStaff,
+    adminLinkCount: visibleAdminLinks.length,
+    playerLoading,
+    hasPlayerUser: !!playerUser,
+  });
 
   const playerName =
     (playerUser?.user_metadata?.display_name as string | undefined) ||
@@ -181,8 +190,11 @@ function Navbar(): JSX.Element {
           roleLabel={playerRoleLabel}
           links={PLAYER_LINKS}
           height={PLAYER_BAR_HEIGHT}
-          onLogout={handlePlayerLogout}
+          // Staff : la déconnexion doit aussi vider le cache de session staff,
+          // comme depuis la barre admin.
+          onLogout={isStaff ? handleLogout : handlePlayerLogout}
           avatarUrl={playerAvatarUrl}
+          adminHref={isStaff && visibleAdminLinks.length > 0 ? '/admin' : null}
         />
       )}
 

@@ -45,4 +45,8 @@ export default ns('scouting', {
   myNotesHint:
     "Vos revues de match et de scrim contre elles. Privées : personne d'autre ne les voit.",
   watchVod: 'Voir la VOD',
+  proposeScrim: 'Proposer un scrim',
+  emptyTitle: "Rien à analyser pour l'instant",
+  emptyBody:
+    "Aucun affrontement joué contre elles ni ailleurs en assez grand nombre pour en tirer une tendance, et pas encore de note de votre part. Le dossier se remplira au fil des matchs — un scrim contre elles est la façon la plus rapide d'en apprendre quelque chose.",
 });

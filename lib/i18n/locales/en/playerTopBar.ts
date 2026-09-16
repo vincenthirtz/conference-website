@@ -18,6 +18,7 @@ export default {
   closeMenu: 'Close menu',
   bellPending: 'Notifications ({count} pending)',
   bellEmpty: 'Notifications (none pending)',
+  adminLink: 'Admin',
   linkLabels: {
     dashboard: 'Dashboard',
     matches: 'My matches',

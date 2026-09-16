@@ -30,6 +30,8 @@ import type { PlayerNotificationsPayload } from '@/pages/api/player/notification
 import { logger } from '../../../utils/logger';
 import nsPlayerNotifications from '@/lib/i18n/locales/fr/playerNotifications';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';
+import ActiveTeamSwitcher from '@/components/player/ActiveTeamSwitcher';
+import { useManagedTeam } from '@/hooks/useManagedTeam';
 
 // Réponse du GET /api/player/push/prefs : deux maps event_type -> bool.
 // `push` = opt-OUT (clé absente => activé). `email` = opt-IN (clé absente =>
@@ -66,6 +68,12 @@ export default function PlayerNotificationsScreen() {
   // sont pas — elles sont liées à l'appareil et au consentement de la personne.
   const { withSubject, readOnly, isInspecting } = usePlayerArea();
   const { withTeam } = useActiveTeam();
+  // Sélecteur d'équipe : cet écran applique `withTeam()`, il doit donc dire
+  // QUELLE équipe il montre et permettre d'en changer. `useManagedTeam` publie
+  // la liste des équipes gérées dans ActiveTeamContext (lecture partagée et
+  // mise en cache avec les autres écrans) — c'est aussi ce qui efface un choix
+  // mémorisé devenu périmé. Le sélecteur s'efface seul pour une mono-équipe.
+  useManagedTeam();
 
   const [loading, setLoading] = useState(true);
   const [counters, setCounters] = useState<PlayerNotificationsPayload | null>(
@@ -230,6 +238,8 @@ export default function PlayerNotificationsScreen() {
           </h1>
           <p className="text-sm text-gray-400 mt-2">{t.intro}</p>
         </div>
+
+        <ActiveTeamSwitcher className="mb-6" />
 
         {error && (
           <div

@@ -21,8 +21,8 @@ export default {
   emptyHint:
     'Try another name, or check back later: the network grows as more players make themselves visible.',
   notDiscoverableBanner:
-    "You don't appear in the network yet — turn on your visibility from your profile.",
-  notDiscoverableCta: 'Manage my visibility',
+    "You don't appear in the network yet: other players can't find you.",
+  notDiscoverableCta: 'Fine-tune my card (tagline, stats, teams)',
   loadMore: 'Load more',
   resultsCount: '{count} player(s)',
   statsLine: '{games} games · peak {peak} · {tenants} orgs',

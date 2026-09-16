@@ -20,6 +20,7 @@ import type { ScrimPlanning, ScrimPlanningParty } from '@/types/admin';
 
 import { logger } from '../../../utils/logger';
 import nsScrimPlanning from '@/lib/i18n/locales/fr/scrimPlanning';
+import { loginHrefFor } from '@/utils/player/sessionExpiry';
 
 type DetailResponse = {
   planning: ScrimPlanning;
@@ -37,7 +38,18 @@ type LoadState =
 
 export default function ScrimPlanningDetailPage() {
   const router = useRouter();
-  const { user, token, loading: authLoading, ready } = usePlayerSession();
+  // Retour à CETTE page après connexion (`?next=`), requête comprise — sans
+  // quoi un lien partagé (`?tab=scrim&team=…`, un mail, une notification)
+  // perdait sa destination. Avant hydratation `asPath` n'est pas fiable :
+  // repli sur `/player`.
+  const {
+    user,
+    token,
+    loading: authLoading,
+    ready,
+  } = usePlayerSession({
+    redirectTo: loginHrefFor(router.isReady ? router.asPath : '/player'),
+  });
   const t = useT(nsScrimPlanning);
 
   const rawId = router.query.planningId;

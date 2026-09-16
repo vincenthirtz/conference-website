@@ -20,8 +20,8 @@ export default ns('playerDiscovery', {
   emptyHint:
     "Essaie un autre nom, ou reviens plus tard : le réseau grandit à mesure que les joueuses s'y rendent visibles.",
   notDiscoverableBanner:
-    "Tu n'apparais pas encore dans le réseau — active ta visibilité dans ton profil.",
-  notDiscoverableCta: 'Gérer ma visibilité',
+    "Tu n'apparais pas encore dans le réseau : les autres joueuses ne peuvent pas te trouver.",
+  notDiscoverableCta: 'Régler ma fiche (accroche, stats, équipes)',
   loadMore: 'Charger plus',
   resultsCount: '{count} joueuse·s',
   statsLine: '{games} parties · pic {peak} · {tenants} orgs',

@@ -153,6 +153,10 @@ describe('POST /api/demandes/scrim — email capitaine cible', () => {
     expect(arg.opponentName).toBe('Requesters');
     expect(arg.isExternal).toBe(false);
     expect(typeof arg.dateLabel).toBe('string');
+    // Le bouton du mail mène à la section Scrims du tableau de bord — pas à
+    // la landing marketing `/espace-capitaine`, qui n'a ni session ni scrims.
+    expect(arg.ctaUrl).toMatch(/\/player#section-scrims$/);
+    expect(arg.ctaUrl).not.toContain('espace-capitaine');
   });
 
   it("n'échoue pas (0 email) quand l'équipe cible n'a pas de capitaine", async () => {

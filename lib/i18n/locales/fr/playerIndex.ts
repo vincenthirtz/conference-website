@@ -36,6 +36,7 @@ export default ns('playerIndex', {
   pendingScrims: 'Demandes de scrim en attente',
   catProfileTeam: 'Profil & équipe',
   catCompetition: 'Compétition',
+  competitionAllMatches: 'Voir tous mes matchs',
   catScrims: 'Scrims',
   catQuickActions: 'Actions rapides',
   catActivity: 'Activité',

@@ -35,10 +35,26 @@ function dismissKey(userId: string): string {
   return `network-onboarding-dismissed:${userId}`;
 }
 
-export default function NetworkOnboardingCard({ userId }: { userId: string }) {
+export default function NetworkOnboardingCard({
+  userId,
+  status: providedStatus,
+}: {
+  userId: string;
+  /**
+   * État réseau déjà lu par la page. Le tableau de bord le passe : sans cela,
+   * cette carte et `RegistrationDeadlineBanner` appelaient
+   * `/api/player/network-status` au même instant. `undefined` = la carte lit
+   * elle-même (usage autonome) ; `null` = la page lit, pas encore de réponse
+   * (ou échec) — la carte reste alors masquée, comme pendant son propre
+   * chargement.
+   */
+  status?: NetworkStatus | null;
+}) {
   const t = useT(nsNetworkOnboarding);
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
-  const [status, setStatus] = useState<NetworkStatus | null>(null);
+  const selfLoads = providedStatus === undefined;
+  const [fetchedStatus, setStatus] = useState<NetworkStatus | null>(null);
+  const status = selfLoads ? fetchedStatus : providedStatus;
   const [dismissed, setDismissed] = useState(true); // fermé tant qu'on ne sait pas
 
   useEffect(() => {
@@ -62,8 +78,9 @@ export default function NetworkOnboardingCard({ userId }: { userId: string }) {
   }, [adminFetchJson]);
 
   useEffect(() => {
+    if (!selfLoads) return;
     void load();
-  }, [load]);
+  }, [load, selfLoads]);
 
   const dismiss = () => {
     setDismissed(true);
@@ -101,7 +118,11 @@ export default function NetworkOnboardingCard({ userId }: { userId: string }) {
       key: 'discovery',
       title: t.stepDiscoveryTitle,
       why: t.stepDiscoveryWhy,
-      href: '/player/discovery',
+      // Droit à l'interrupteur (DiscoveryCard, ancre `decouverte` du profil).
+      // `/player/discovery` n'en a pas : l'annuaire renvoyait lui-même au
+      // profil, où la carte était tout en bas — trois clics et un défilement
+      // pour un bouton, d'où une grille vide pour tout le monde.
+      href: '/player/profile#decouverte',
       cta: t.stepDiscoveryCta,
     });
   }

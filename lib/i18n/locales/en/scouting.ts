@@ -45,4 +45,8 @@ export default {
   myNotesHint:
     'Your match and scrim reviews against them. Private: nobody else sees them.',
   watchVod: 'Watch the VOD',
+  proposeScrim: 'Propose a scrim',
+  emptyTitle: 'Nothing to analyse yet',
+  emptyBody:
+    'No games played against them, not enough played elsewhere to show a trend, and no notes from you yet. The dossier fills up as matches are played — a scrim against them is the quickest way to learn something.',
 };

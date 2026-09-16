@@ -35,6 +35,8 @@ import type { PlayerMatchesPayload } from '@/pages/api/player/matches';
 import { logger } from '../../../utils/logger';
 import nsPlayerMatches from '@/lib/i18n/locales/fr/playerMatches';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';
+import ActiveTeamSwitcher from '@/components/player/ActiveTeamSwitcher';
+import { useManagedTeam } from '@/hooks/useManagedTeam';
 
 type PlayerMatch = PlayerMatchesPayload['matches'][number];
 
@@ -305,6 +307,12 @@ export default function PlayerMatchesScreen() {
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { withSubject, readOnly } = usePlayerArea();
   const { withTeam } = useActiveTeam();
+  // Sélecteur d'équipe : cet écran applique `withTeam()`, il doit donc dire
+  // QUELLE équipe il montre et permettre d'en changer. `useManagedTeam` publie
+  // la liste des équipes gérées dans ActiveTeamContext (lecture partagée et
+  // mise en cache avec les autres écrans) — c'est aussi ce qui efface un choix
+  // mémorisé devenu périmé. Le sélecteur s'efface seul pour une mono-équipe.
+  useManagedTeam();
   const { lang } = useLang();
   const router = useRouter();
   const t = useT(nsPlayerMatches);
@@ -417,6 +425,8 @@ export default function PlayerMatchesScreen() {
             <p className="text-sm text-gray-400 mt-2">{t.yourSchedule}</p>
           )}
         </div>
+
+        <ActiveTeamSwitcher className="mb-6" />
 
         {/* Agenda (J2) — AVANT la liste : « qu'est-ce qui m'attend ? » se pose
             avant « qu'ai-je joué ? ». Il porte toutes les équipes, la liste en

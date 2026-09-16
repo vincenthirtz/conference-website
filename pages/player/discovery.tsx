@@ -15,9 +15,14 @@ import Link from 'next/link';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useToast } from '@/components/Toast';
+import { ChannelToggle } from '@/components/player/NotificationPrefsGrid';
 import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
-import type { DiscoveryCardData } from '@/components/player/DiscoveryCard';
+import {
+  DISCOVERY_ANCHOR,
+  type DiscoveryCardData,
+} from '@/components/player/DiscoveryCard';
 import DirectoryPlayerCard, {
   type DirectoryPlayer,
 } from '@/components/player/DirectoryPlayerCard';
@@ -45,6 +50,7 @@ function PlayerDiscovery() {
     redirectTo: '/login?next=/player/discovery',
   });
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  const { addToast } = useToast();
   const t = useT(nsPlayerDiscovery);
 
   const [tab, setTab] = useState<DirectoryTab>('discover');
@@ -68,6 +74,32 @@ function PlayerDiscovery() {
   const [selfDiscoverable, setSelfDiscoverable] = useState<boolean | null>(
     null
   );
+  const [enablingSelf, setEnablingSelf] = useState(false);
+
+  // L'interrupteur du bandeau : la MÊME écriture que DiscoveryCard
+  // (`PUT /api/player/discovery`, patch partiel `{ discoverable }`). Le
+  // bandeau renvoyait au profil, où la carte était tout en bas : trois clics
+  // et un défilement pour un bouton, et la découverte étant `false` par
+  // défaut, une grille vide pour tout le monde. Le PUT est idempotent par
+  // nature (il pose une valeur, il n'incrémente rien) : un double clic ou un
+  // rejeu ne produit rien de plus.
+  const enableSelfDiscovery = async () => {
+    if (enablingSelf) return;
+    setEnablingSelf(true);
+    try {
+      const updated = await adminFetchJson<DiscoveryCardData>(
+        '/api/player/discovery',
+        { method: 'PUT', body: JSON.stringify({ discoverable: true }) }
+      );
+      setSelfDiscoverable(updated.discoverable);
+      addToast(t.saved, 'success');
+    } catch (err) {
+      logger.error('[player/discovery] enable self error:', err);
+      addToast((err as Error)?.message || t.saveError, 'error');
+    } finally {
+      setEnablingSelf(false);
+    }
+  };
 
   // Un seul point d'entrée data pour les trois onglets — même forme de réponse.
   const fetchPage = useCallback(
@@ -237,16 +269,33 @@ function PlayerDiscovery() {
           </p>
         </div>
 
-        {/* Bandeau : la caller n'est pas encore découvrable */}
+        {/* Bandeau : la caller n'est pas encore découvrable. Il porte
+            l'interrupteur lui-même ; le lien ne sert plus qu'aux réglages fins
+            (accroche, stats, équipes), et mène droit à la carte du profil. */}
         {selfDiscoverable === false && (
-          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-purple-500/40 bg-purple-500/10 px-5 py-4">
-            <p className="text-sm text-purple-100">{t.notDiscoverableBanner}</p>
-            <Link
-              href="/player/profile"
-              className="shrink-0 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-5 py-2 text-xs font-bold text-white shadow-lg shadow-purple-500/20 transition hover:brightness-110"
-            >
-              {t.notDiscoverableCta}
-            </Link>
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-purple-500/40 bg-purple-500/10 px-5 py-4">
+            <div className="min-w-0">
+              <p className="text-sm text-purple-100">
+                {t.notDiscoverableBanner}
+              </p>
+              <Link
+                href={`/player/profile#${DISCOVERY_ANCHOR}`}
+                className="mt-1 inline-block text-xs font-medium text-purple-300 underline underline-offset-2 transition hover:text-purple-200"
+              >
+                {t.notDiscoverableCta}
+              </Link>
+            </div>
+            <div className="flex shrink-0 items-center gap-3">
+              <span className="text-sm font-medium text-white">
+                {t.masterSwitchLabel}
+              </span>
+              <ChannelToggle
+                checked={false}
+                disabled={enablingSelf}
+                onChange={() => void enableSelfDiscovery()}
+                label={t.masterAriaLabel}
+              />
+            </div>
           </div>
         )}
 

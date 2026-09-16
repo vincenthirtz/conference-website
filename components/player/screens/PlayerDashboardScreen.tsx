@@ -13,9 +13,10 @@
 // fetchent leur propre tranche (NextMatchCard, TeamHealthCard, MyScrimsCard…)
 // font pareil de leur côté.
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
+import Router from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
@@ -67,6 +68,14 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 
 import type { TodoItem } from '@/pages/api/player/dashboard';
+import type { NetworkStatus } from '@/pages/api/player/network-status';
+import type { PlayerWelcomeGiftResponse } from '@/pages/api/player/tcg/welcome-gift';
+import {
+  DASHBOARD_ANCHORS,
+  hashTargetId,
+  sectionPanelId,
+  shouldExpandForHash,
+} from '@/utils/player/dashboardAnchors';
 
 import { logger } from '../../../utils/logger';
 import nsPlayerIndex from '@/lib/i18n/locales/fr/playerIndex';
@@ -244,14 +253,20 @@ function buildQuickActions(args: {
 // tracking large — le style de label du site) suivi des cartes de la catégorie
 // avec un rythme vertical constant. À ne rendre QUE si la catégorie contient au
 // moins une carte visible (l'appelant décide via `visible`).
-function CategorySection({
+export function CategorySection({
   id,
   label,
+  action,
   children,
 }: {
   /** Clé de mémorisation du pli — stable, jamais le libellé traduit. */
   id: string;
   label: string;
+  /**
+   * Lien d'en-tête, à droite du libellé (« Voir tous mes matchs »). Hors du
+   * bouton de pli : il reste atteignable section repliée.
+   */
+  action?: ReactNode;
   children: ReactNode;
 }) {
   const t = useT(nsPlayerIndex);
@@ -281,34 +296,95 @@ function CategorySection({
     });
   };
 
-  const panelId = `section-${id}`;
+  const panelId = sectionPanelId(id);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Un lien vers une ancre de CETTE section (mail « on veut jouer contre
+  // vous » → `#section-scrims`, bandeau « à faire » → `#pending-scrims`) doit
+  // l'ouvrir : une ancre dans un élément `hidden` ne fait pas défiler, et le
+  // pli est mémorisé — quelqu'un qui avait replié « Scrims » ne pouvait plus y
+  // être amené par aucun lien. Le dépli est TEMPORAIRE (non écrit en
+  // localStorage) : suivre un lien n'est pas changer d'avis sur le rangement.
+  //
+  // Déclaré APRÈS l'effet de restauration : au montage, le dépli passe après
+  // la lecture du pli mémorisé. `hashChangeComplete` couvre le clic sur un
+  // `<Link>` depuis /player même (Next pousse l'URL sans `hashchange` natif) ;
+  // `hashchange` couvre le reste. Le défilement lui-même est fait par l'écran.
+  useEffect(() => {
+    const reveal = () => {
+      const panel = panelRef.current;
+      if (!panel) return;
+      const expand = shouldExpandForHash(
+        window.location.hash,
+        panelId,
+        (targetId) => {
+          const el = document.getElementById(targetId);
+          return !!el && panel.contains(el);
+        }
+      );
+      if (expand) setCollapsed(false);
+    };
+    reveal();
+    window.addEventListener('hashchange', reveal);
+    Router.events.on('hashChangeComplete', reveal);
+    return () => {
+      window.removeEventListener('hashchange', reveal);
+      Router.events.off('hashChangeComplete', reveal);
+    };
+  }, [panelId]);
+
   return (
     <section className="mt-10">
-      <h2 className="mb-4">
-        <button
-          type="button"
-          onClick={toggle}
-          aria-expanded={!collapsed}
-          aria-controls={panelId}
-          className="flex w-full items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 transition hover:text-gray-300"
-        >
-          <span
-            aria-hidden
-            className={`inline-block transition-transform ${collapsed ? '' : 'rotate-90'}`}
+      <div className="mb-4 flex items-center gap-3">
+        <h2 className="min-w-0 flex-1">
+          <button
+            type="button"
+            onClick={toggle}
+            aria-expanded={!collapsed}
+            aria-controls={panelId}
+            className="flex w-full items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 transition hover:text-gray-300"
           >
-            ›
-          </span>
-          {label}
-          <span className="sr-only">
-            {collapsed ? t.sectionExpand : t.sectionCollapse}
-          </span>
-        </button>
-      </h2>
-      <div id={panelId} hidden={collapsed} className="space-y-6">
+            <span
+              aria-hidden
+              className={`inline-block transition-transform ${collapsed ? '' : 'rotate-90'}`}
+            >
+              ›
+            </span>
+            {label}
+            <span className="sr-only">
+              {collapsed ? t.sectionExpand : t.sectionCollapse}
+            </span>
+          </button>
+        </h2>
+        {action}
+      </div>
+      <div
+        id={panelId}
+        ref={panelRef}
+        hidden={collapsed}
+        className="scroll-mt-24 space-y-6"
+      >
         {children}
       </div>
     </section>
   );
+}
+
+/**
+ * Défile jusqu'à la cible du hash courant, deux images plus tard : le temps
+ * qu'une `CategorySection` repliée se déplie (son effet a posé l'état, le rendu
+ * suit). Sans cible dans le DOM, ne fait rien.
+ */
+function scrollToHashTarget() {
+  const targetId = hashTargetId(window.location.hash);
+  if (!targetId) return;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document
+        .getElementById(targetId)
+        ?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
+  });
 }
 
 // Product card — "Match readiness". Renders only when there is an upcoming
@@ -400,7 +476,14 @@ function MatchReadinessCard({
 export default function PlayerDashboardScreen() {
   const t = useT(nsPlayerIndex);
   const locale = useLocale();
-  const { user, token, loading: authLoading, ready } = usePlayerSession();
+  // `next` : sans lui, une visiteuse déconnectée arrivée par un lien (mail de
+  // scrim, notification) repartait de /login vers la page d'accueil.
+  const {
+    user,
+    token,
+    loading: authLoading,
+    ready,
+  } = usePlayerSession({ redirectTo: '/login?next=/player' });
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   // `withSubject` redirige chaque lecture vers l'utilisateur inspecté ;
   // `readOnly` masque tout ce qui écrit. En mode self, les deux sont neutres.
@@ -428,6 +511,18 @@ export default function PlayerDashboardScreen() {
   const [nextMatch, setNextMatch] = useState<NextMatchData | null>(null);
   const [todo, setTodo] = useState<TodoItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // Lectures PARTAGÉES par deux cartes voisines, faites ici une seule fois
+  // (même motif que `NextMatchCard initialData=`). `null` = pas encore de
+  // réponse, ou échec : chaque carte se comporte alors comme pendant son
+  // propre chargement. Avant : `RegistrationDeadlineBanner` et
+  // `NetworkOnboardingCard` appelaient `/api/player/network-status` au même
+  // instant, `WelcomeGiftCard` et `SupporterWelcomeCard` faisaient de même sur
+  // `/api/player/tcg/welcome-gift` — qui exécute un calcul d'éligibilité.
+  const [networkStatus, setNetworkStatus] = useState<NetworkStatus | null>(
+    null
+  );
+  const [welcomeGift, setWelcomeGift] =
+    useState<PlayerWelcomeGiftResponse | null>(null);
 
   const canManage = isCaptain || isManager;
   /**
@@ -489,6 +584,37 @@ export default function PlayerDashboardScreen() {
     // ne peut pas proposer une équipe que cet écran ne saurait pas charger.
     publishManagedTeams(data.managedTeams ?? []);
   }, [adminFetchJson, withSubject, withTeam, publishManagedTeams]);
+
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    // Hors inspection seulement : les deux cartes qui la lisent sont masquées
+    // en inspection, et la route ne suit pas `?as=`.
+    if (!isInspecting) {
+      adminFetchJson<NetworkStatus>('/api/player/network-status', {
+        skipAuthRedirect: true,
+      })
+        .then((data) => {
+          if (!cancelled) setNetworkStatus(data);
+        })
+        .catch((err: unknown) => {
+          logger.error('[player] network-status load error:', err);
+        });
+    }
+    adminFetchJson<PlayerWelcomeGiftResponse>(
+      withSubject('/api/player/tcg/welcome-gift'),
+      { skipAuthRedirect: true }
+    )
+      .then((data) => {
+        if (!cancelled) setWelcomeGift(data);
+      })
+      .catch((err: unknown) => {
+        logger.error('[player] welcome-gift load error:', err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, isInspecting, adminFetchJson, withSubject]);
 
   useEffect(() => {
     if (!ready) return;
@@ -674,7 +800,25 @@ export default function PlayerDashboardScreen() {
     (d) => d.type === 'join' && d.status === 'pending'
   );
 
-  if (authLoading || loading) {
+  // Arrivée sur `/player#…` : le navigateur a tenté le défilement pendant le
+  // squelette, quand la cible n'existait pas. On le refait une fois le contenu
+  // rendu, puis à chaque changement de hash sur la page.
+  useEffect(() => {
+    if (loading) return;
+    scrollToHashTarget();
+    window.addEventListener('hashchange', scrollToHashTarget);
+    Router.events.on('hashChangeComplete', scrollToHashTarget);
+    return () => {
+      window.removeEventListener('hashchange', scrollToHashTarget);
+      Router.events.off('hashChangeComplete', scrollToHashTarget);
+    };
+  }, [loading]);
+
+  // `loading` n'est remis à `false` que par le `finally` de loadData, qui ne
+  // tourne que session prête. Déconnectée, la condition `authLoading ||
+  // loading` restait donc vraie pour toujours : un squelette qui ne se remplit
+  // jamais, et le bloc « Connecte-toi » ci-dessous, inatteignable.
+  if (authLoading || (ready && loading)) {
     return <PlayerDashboardSkeleton />;
   }
 
@@ -735,7 +879,10 @@ export default function PlayerDashboardScreen() {
               manager), d'où l'absence de gate. Se masque tout seul une fois la
               date passée. */}
           {!isInspecting && user?.id && (
-            <RegistrationDeadlineBanner userId={user.id} />
+            <RegistrationDeadlineBanner
+              userId={user.id}
+              networkStatus={networkStatus}
+            />
           )}
 
           {/* Sélecteur d'équipe — rendu seulement pour un manager qui en
@@ -756,9 +903,14 @@ export default function PlayerDashboardScreen() {
           {/* Invitations reçues. Elles ne vivaient que sur /player/notifications :
               une joueuse invitée arrivait ici, ne voyait rien, et finissait par
               DEMANDER à rejoindre l'équipe qui l'avait déjà invitée. La section
-              ne rend rien quand il n'y a aucune invitation en attente. */}
+              ne rend rien quand il n'y a aucune invitation en attente.
+              L'enveloppe porte l'ancre du bandeau « à faire » : elle existe
+              même avant que la liste soit chargée. */}
           {!isInspecting && (
-            <div className="mb-6">
+            <div
+              id={DASHBOARD_ANCHORS.invitations}
+              className="mb-6 scroll-mt-24"
+            >
               <InvitationsSection
                 onJoined={() => {
                   void loadData();
@@ -767,12 +919,55 @@ export default function PlayerDashboardScreen() {
             </div>
           )}
 
+          {/* ─────────────  Compétition  ─────────────
+              JUSTE après ce qui attend une action : c'est la porte d'entrée
+              d'un soir de match. Avant, une capitaine sur mobile faisait
+              défiler l'opt-in push, le soutien à l'asso, la checklist réseau
+              et tout « Profil & équipe » avant de voir son prochain match.
+              NextMatchCard rend toujours un contenu (placeholder sobre s'il n'y
+              a pas de match), la catégorie est donc toujours pertinente.
+              L'agenda complet n'existe que sur /player/matches : l'en-tête y
+              mène (masqué en inspection, où il ouvrirait l'agenda du staff). */}
+          <CategorySection
+            id="competition"
+            label={t.catCompetition}
+            action={
+              isInspecting ? undefined : (
+                <Link
+                  href="/player/matches"
+                  className="shrink-0 text-xs font-medium text-purple-300 transition hover:text-purple-200"
+                >
+                  {t.competitionAllMatches} <span aria-hidden>→</span>
+                </Link>
+              )
+            }
+          >
+            <NextMatchCard initialData={nextMatch} />
+            <MatchReadinessCard nextMatch={nextMatch} t={t} />
+            {/* Feuille de match : qui joue CE match. Se tait d'elle-même sans
+                match, sans permission `validate_lineup`, ou avant le check-in
+                de l'équipe (cf. MatchLineupCard). */}
+            {nextMatch?.match?.id && (
+              <MatchLineupCard matchId={nextMatch.match.id} />
+            )}
+            {/* Progression (N8) — MA courbe de niveau et les jalons de mon
+                équipe. Pas de gate d'équipe : le niveau appartient à la
+                joueuse, la carte se masque d'elle-même si rien n'est mesuré. */}
+            <ProgressionCard />
+            {/* Mémoire d'équipe (N2) — ouverte à tout le roster, comme le
+                rythme : une revue est le document partagé de l'équipe, pas le
+                carnet de sa capitaine. Se masque d'elle-même tant qu'aucun
+                affrontement n'a été joué. */}
+            {team && !isInspecting && <TeamMemoryCard />}
+          </CategorySection>
+
           {/* Push opt-in : carte visible tant que le user n'a pas activé /
               refusé / "plus tard". Routes vers /api/player/push/subscribe.
               loginPath='/login' : login universel qui route captain/player
-              vers /player et le staff vers /admin. */}
+              vers /player et le staff vers /admin. Sous la compétition : utile,
+              mais jamais plus urgent que le prochain match. */}
           {!isInspecting && (
-            <div className="mb-6">
+            <div className="mt-10 mb-6">
               <PushOptIn audience="player" variant="card" loginPath="/login" />
             </div>
           )}
@@ -789,7 +984,7 @@ export default function PlayerDashboardScreen() {
               (Discord lié, BattleTag vérifié, découverte). Ne s'affiche que
               s'il reste quelque chose à faire, et refermable. */}
           {!isInspecting && user?.id && (
-            <NetworkOnboardingCard userId={user.id} />
+            <NetworkOnboardingCard userId={user.id} status={networkStatus} />
           )}
 
           {/* ─────────────  Profil & équipe  ───────────── */}
@@ -829,29 +1024,6 @@ export default function PlayerDashboardScreen() {
             )}
           </CategorySection>
 
-          {/* ─────────────  Compétition  ─────────────
-              NextMatchCard rend toujours un contenu (placeholder sobre s'il n'y
-              a pas de match), la catégorie est donc toujours pertinente. */}
-          <CategorySection id="competition" label={t.catCompetition}>
-            <NextMatchCard initialData={nextMatch} />
-            <MatchReadinessCard nextMatch={nextMatch} t={t} />
-            {/* Feuille de match : qui joue CE match. Se tait d'elle-même sans
-                match, sans permission `validate_lineup`, ou avant le check-in
-                de l'équipe (cf. MatchLineupCard). */}
-            {nextMatch?.match?.id && (
-              <MatchLineupCard matchId={nextMatch.match.id} />
-            )}
-            {/* Progression (N8) — MA courbe de niveau et les jalons de mon
-                équipe. Pas de gate d'équipe : le niveau appartient à la
-                joueuse, la carte se masque d'elle-même si rien n'est mesuré. */}
-            <ProgressionCard />
-            {/* Mémoire d'équipe (N2) — ouverte à tout le roster, comme le
-                rythme : une revue est le document partagé de l'équipe, pas le
-                carnet de sa capitaine. Se masque d'elle-même tant qu'aucun
-                affrontement n'a été joué. */}
-            {team && !isInspecting && <TeamMemoryCard />}
-          </CategorySection>
-
           {/* ─────────────  Scrims  ─────────────
               Réservée aux capitaines/managers avec équipe : le hub en est
               l'en-tête permanent, les blocs de détail (négociations, grilles)
@@ -875,9 +1047,13 @@ export default function PlayerDashboardScreen() {
                   rencontres et le report de score. */}
               <MyScrimsCard />
 
-              {/* Scrims en attente de MON action */}
+              {/* Scrims en attente de MON action. Ancre du bandeau « à
+                  faire » (item `scrims`). */}
               {pendingScrims.length > 0 && (
-                <div className="rounded-2xl border border-blue-400/20 bg-blue-500/5 backdrop-blur-xl p-6">
+                <div
+                  id={DASHBOARD_ANCHORS.pendingScrims}
+                  className="scroll-mt-24 rounded-2xl border border-blue-400/20 bg-blue-500/5 backdrop-blur-xl p-6"
+                >
                   <h3 className="text-lg font-semibold mb-4">
                     {t.pendingScrims}
                     <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-blue-500 text-[10px] font-bold text-white">
@@ -947,12 +1123,12 @@ export default function PlayerDashboardScreen() {
                 pas une action permanente. Il se retire de lui-même quand il
                 n'y a rien à annoncer, et sa route honore `?as=` — il montre
                 donc le cadeau de la personne inspectée, pas celui du staff. */}
-            <WelcomeGiftCard />
+            <WelcomeGiftCard data={welcomeGift} />
             {/* Le cadeau d'accueil SUPPORTRICE, qui se RÉCLAME. Il ne s'affiche
                 qu'à qui peut réellement le prendre (rôle de compte
                 « supporter », hors roster, pas déjà réclamé) — la route le
                 calcule avec les conditions exactes du chemin d'écriture. */}
-            <SupporterWelcomeCard />
+            <SupporterWelcomeCard data={welcomeGift} />
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <QuickAction
                 href="/player/tcg"

@@ -32,13 +32,27 @@ import type { PlayerWelcomeGiftResponse } from '../../pages/api/player/tcg/welco
 import { logger } from '../../utils/logger';
 import nsPlayerIndex from '@/lib/i18n/locales/fr/playerIndex';
 
-export default function WelcomeGiftCard() {
+export default function WelcomeGiftCard({
+  data,
+}: {
+  /**
+   * Réponse de `/api/player/tcg/welcome-gift` déjà lue par la page. Le tableau
+   * de bord la passe à cette carte ET à `SupporterWelcomeCard` : chacune
+   * appelait la route de son côté, et la route exécute un
+   * `grantSupporterWelcome({ dryRun: true })` — deux fois le même calcul au
+   * même instant. `undefined` = la carte lit elle-même ; `null` = la page lit
+   * (pas encore de réponse, ou échec) — la carte reste masquée.
+   */
+  data?: PlayerWelcomeGiftResponse | null;
+}) {
   const t = useT(nsPlayerIndex);
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { withSubject } = usePlayerArea();
-  const [gift, setGift] = useState<
+  const selfLoads = data === undefined;
+  const [fetchedGift, setGift] = useState<
     PlayerWelcomeGiftResponse['gift'] | undefined
   >(undefined);
+  const gift = selfLoads ? fetchedGift : (data?.gift ?? null);
 
   const load = useCallback(async () => {
     try {
@@ -56,8 +70,9 @@ export default function WelcomeGiftCard() {
   }, [adminFetchJson, withSubject]);
 
   useEffect(() => {
+    if (!selfLoads) return;
     void load();
-  }, [load]);
+  }, [load, selfLoads]);
 
   // `undefined` = pas encore lu. On n'affiche AUCUN indicateur de chargement :
   // il occuperait la place d'une carte qui, la plupart du temps, n'apparaîtra

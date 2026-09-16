@@ -29,7 +29,9 @@ import { readRequestedTeamId } from '@/utils/teams/teamScope';
 import type { TeamPermission } from '@/utils/teamRoles';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
 import { readScrimNego } from '@/utils/teams/scrimNegotiation';
+import { loadScrimsAwaitingTeam } from '@/utils/teams/scrimsAwaitingTeam';
 import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
+import { DASHBOARD_ANCHORS } from '@/utils/player/dashboardAnchors';
 
 import { logger } from '../../../utils/logger';
 
@@ -187,16 +189,27 @@ export const EMPTY_NEXT_MATCH: NextMatchSection = {
   readiness: null,
 };
 
-/** Deterministic conversation ID from two team UUIDs (mirrors player/messages). */
-function conversationId(teamA: string, teamB: string): string {
-  return teamA < teamB ? `${teamA}_${teamB}` : `${teamB}_${teamA}`;
-}
-
 /* -----------------------------------------------------------
  * Section loaders — each returns its slice and never throws so a single
  * failing section degrades gracefully instead of taking the whole dashboard
  * down (matches the per-section .catch() behavior the client used to have).
  * ---------------------------------------------------------*/
+
+/**
+ * Colonnes réellement lues par l'écran (TeamCard : demande en cours ;
+ * DemandesHistory : historique). `select('*')` transférait en plus
+ * `tournament_id`, `processed_by_staff_id`, `source`… sur TOUT l'historique.
+ */
+const DEMANDE_COLUMNS =
+  'id, type, status, created_at, updated_at, processed_at, comment, staff_note, payload, team_id';
+
+/**
+ * Plafond de l'historique. Une demande en cours est par nature récente : les
+ * cinquante dernières la contiennent toujours, et l'historique affiché n'en
+ * montre pas davantage d'utile. Sans plafond, la lecture grossissait avec
+ * l'ancienneté du compte, à chaque ouverture du tableau de bord.
+ */
+export const DEMANDES_HISTORY_LIMIT = 50;
 
 async function loadDemandes(
   userId: string,
@@ -206,15 +219,16 @@ async function loadDemandes(
   try {
     const sel =
       type === 'join'
-        ? '*, team:teams!team_id(id, name, short_name, logo_url)'
-        : '*';
+        ? `${DEMANDE_COLUMNS}, team:teams!team_id(id, name, short_name, logo_url)`
+        : DEMANDE_COLUMNS;
     const { data, error } = await supabaseAdmin
       .from('demandes')
       .select(sel)
       .eq('user_id', userId)
       .eq('tenant_id', tenantId)
       .eq('type', type)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(DEMANDES_HISTORY_LIMIT);
 
     if (error) {
       logger.error(`[player/dashboard] demandes ${type} error:`, error);
@@ -232,74 +246,32 @@ export async function loadPendingScrims(
   tenantId: string
 ): Promise<PendingScrim[]> {
   try {
-    // Scrims AWAITING MY ACTION in both directions :
-    //  - my team is a participant (target via team_id OR requester via
-    //    payload.from_team_id), AND
-    //  - the current proposal was NOT made by my team (it's my turn).
-    // Two queries (one per direction) merged + deduped in code — the unit-test
-    // supabase mock treats .or() as a no-op so we never rely on it.
-    const [asTargetRes, asRequesterRes] = await Promise.all([
-      supabaseAdmin
-        .from('demandes')
-        .select('*')
-        .eq('team_id', teamId)
-        .eq('tenant_id', tenantId)
-        .eq('type', 'scrim')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false }),
-      supabaseAdmin
-        .from('demandes')
-        .select('*')
-        .filter('payload->>from_team_id', 'eq', teamId)
-        .eq('tenant_id', tenantId)
-        .eq('type', 'scrim')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false }),
-    ]);
-
-    if (asTargetRes.error || asRequesterRes.error) {
-      logger.error(
-        '[player/dashboard] pendingScrims error:',
-        asTargetRes.error || asRequesterRes.error
-      );
-      return [];
-    }
-
-    const byId = new Map<string, Record<string, unknown>>();
-    for (const d of [
-      ...(asTargetRes.data || []),
-      ...(asRequesterRes.data || []),
-    ] as Record<string, unknown>[]) {
-      byId.set(d.id as string, d);
-    }
-
-    // Keep only the demandes where it's MY turn (non-proposer).
-    const demandes = Array.from(byId.values()).filter((d) => {
-      const nego = readScrimNego((d.payload as Record<string, unknown>) || {});
-      return nego.proposed_by !== teamId;
-    });
+    // Scrims AWAITING MY ACTION in both directions — la règle vit dans
+    // utils/teams/scrimsAwaitingTeam.ts, partagée avec la cloche
+    // (/api/player/notifications) pour que les deux comptes ne divergent plus.
+    const demandes = await loadScrimsAwaitingTeam(teamId, tenantId);
 
     // Enrich with sender info (mirrors /api/teams/scrim-requests GET).
     // Batch-resolve every auth user_id in ONE RPC instead of N getUserById
     // round-trips; unknown ids simply stay absent from the Map (userInfo null).
     const profiles = await fetchAdminUserProfiles(
-      (demandes || []).map((d) => d.user_id as string | null | undefined)
+      demandes.map((d) => d.user_id)
     );
 
-    const enriched = (demandes || []).map((d: Record<string, unknown>) => {
+    const enriched = demandes.map((d) => {
       let userInfo: PendingScrim['user'] = null;
       if (d.user_id) {
-        const p = profiles.get(d.user_id as string);
+        const p = profiles.get(d.user_id);
         if (p) {
           userInfo = {
-            id: d.user_id as string,
+            id: d.user_id,
             email: p.email || null,
             display_name: p.display_name || p.full_name || null,
             discord: p.discord || null,
           };
         }
       } else if (d.source === 'public' && d.payload) {
-        const p = d.payload as Record<string, unknown>;
+        const p = d.payload;
         userInfo = {
           id: null,
           email: (p.requester_email as string) || null,
@@ -307,17 +279,17 @@ export async function loadPendingScrims(
           discord: (p.requester_discord as string) || null,
         };
       }
-      const payload = (d.payload as Record<string, unknown> | null) ?? null;
+      const payload = d.payload ?? null;
       const nego = readScrimNego(payload || {});
       const fromTeamId = (payload?.from_team_id as string | null) ?? null;
       return {
-        id: d.id as string,
-        user_id: (d.user_id as string | null) ?? null,
-        source: (d.source as string | null) ?? null,
-        status: d.status as string,
-        comment: (d.comment as string | null) ?? null,
+        id: d.id,
+        user_id: d.user_id ?? null,
+        source: d.source ?? null,
+        status: d.status,
+        comment: d.comment ?? null,
         payload,
-        created_at: d.created_at as string,
+        created_at: d.created_at,
         user: userInfo,
         scrimNego: {
           slots: nego.slots,
@@ -336,46 +308,34 @@ export async function loadPendingScrims(
   }
 }
 
-async function loadUnreadMessages(
+/**
+ * Messages d'équipe non lus : les `captain_message` REÇUS (`team_id` = mon
+ * équipe) encore `pending`.
+ *
+ * C'était un regroupement par conversation sur TOUS les messages envoyés et
+ * reçus, `payload` JSONB compris, pour n'en tirer qu'une somme : or la somme
+ * des non-lus par conversation EST le nombre de messages reçus non lus — les
+ * messages envoyés n'y contribuaient que par des zéros. Un `count` en `head`
+ * rend le même entier sans transférer une ligne.
+ */
+export async function loadUnreadMessages(
   teamId: string,
   tenantId: string
 ): Promise<number> {
   try {
-    const { data: messages, error } = await supabaseAdmin
+    const { count, error } = await supabaseAdmin
       .from('demandes')
-      .select('id, user_id, team_id, comment, payload, status, created_at')
+      .select('id', { count: 'exact', head: true })
       .eq('type', 'captain_message')
       .eq('tenant_id', tenantId)
-      .or(`payload->>from_team_id.eq.${teamId},team_id.eq.${teamId}`)
-      .order('created_at', { ascending: false });
+      .eq('team_id', teamId)
+      .eq('status', 'pending');
 
     if (error) {
       logger.error('[player/dashboard] unreadMessages error:', error);
       return 0;
     }
-
-    // Group by conversation and count unread (incoming + pending) — mirrors
-    // the reduce the client did over /api/player/messages conversations.
-    const unreadByConv = new Map<string, number>();
-    for (const msg of (messages || []) as Record<string, unknown>[]) {
-      const payload = (msg.payload as Record<string, unknown>) || {};
-      const convId =
-        (payload.conversation_id as string) ||
-        conversationId(
-          (payload.from_team_id as string) || '',
-          msg.team_id as string
-        );
-      const isIncoming = msg.team_id === teamId;
-      const isUnread = isIncoming && msg.status === 'pending';
-      if (isUnread) {
-        unreadByConv.set(convId, (unreadByConv.get(convId) || 0) + 1);
-      } else if (!unreadByConv.has(convId)) {
-        unreadByConv.set(convId, 0);
-      }
-    }
-    let total = 0;
-    for (const n of unreadByConv.values()) total += n;
-    return total;
+    return count ?? 0;
   } catch (err) {
     logger.error('[player/dashboard] unreadMessages error:', err);
     return 0;
@@ -671,19 +631,29 @@ export function buildTodo(input: {
   }
 
   // 4. Invitation reçue : elle expire, et c'est un geste d'une seconde.
+  //    `/player` seul était un clic mort — le bandeau vit SUR /player. L'ancre
+  //    est celle posée autour d'InvitationsSection.
   if (input.pendingInvitations > 0) {
     items.push({
       id: 'invitation',
-      href: '/player',
+      href: `/player#${DASHBOARD_ANCHORS.invitations}`,
       count: input.pendingInvitations,
     });
   }
 
-  // 5. Scrims en attente de MA réponse.
-  if (input.pendingScrims.length > 0) {
+  // 5. Scrims en attente de MA réponse. Vers le bloc « scrims qui attendent ta
+  //    réponse », pas vers `#scrim-plannings` (les grilles de dispo, un autre
+  //    geste). Le tableau de bord déplie la section Scrims si elle est repliée.
+  //    Seulement avec `manage_scrims` : c'est la condition d'affichage de la
+  //    section Scrims (et de son ancre). Sans elle, le lien menait nulle part,
+  //    et le geste — répondre — serait refusé.
+  if (
+    input.pendingScrims.length > 0 &&
+    input.permissions.includes('manage_scrims')
+  ) {
     items.push({
       id: 'scrims',
-      href: '/player#scrim-plannings',
+      href: `/player#${DASHBOARD_ANCHORS.pendingScrims}`,
       count: input.pendingScrims.length,
     });
   }

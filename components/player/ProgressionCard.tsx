@@ -20,6 +20,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import {
@@ -37,19 +38,23 @@ export default function ProgressionCard() {
   const locale = useLocale();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { withSubject } = usePlayerArea();
+  // Les jalons sont ceux de l'équipe ACTIVE : la route lit `?teamId=`. Sans
+  // lui, une joueuse de deux équipes voyait les jalons de la première sous le
+  // prochain match de celle qu'elle avait choisie.
+  const { withTeam } = useActiveTeam();
   const [data, setData] = useState<ProgressionResponse | null>(null);
 
   const load = useCallback(async () => {
     try {
       const payload = await adminFetchJson<ProgressionResponse>(
-        withSubject('/api/player/progression'),
+        withTeam(withSubject('/api/player/progression')),
         { skipAuthRedirect: true }
       );
       setData(payload);
     } catch (err) {
       logger.error('[ProgressionCard] load error', err);
     }
-  }, [adminFetchJson, withSubject]);
+  }, [adminFetchJson, withSubject, withTeam]);
 
   useEffect(() => {
     void load();

@@ -14,6 +14,8 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
 import nsPlayerTopBar from '@/lib/i18n/locales/fr/playerTopBar';
 import { useDocumentVisible } from '@/hooks/useDocumentVisible';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
+import { isPlayerLinkActive } from './headerBars';
 
 const SITE_MENU_KEY = '__site__';
 const MOBILE_MENU_KEY = '__mobile__';
@@ -25,6 +27,12 @@ type PlayerTopBarProps = {
   height: number;
   onLogout: () => void;
   avatarUrl?: string | null;
+  /**
+   * Lien retour vers l'administration, pour un compte staff sur son espace
+   * joueuse (la barre joueuse y remplace alors la barre admin). `null` ou
+   * absent : pas de lien.
+   */
+  adminHref?: string | null;
 };
 
 function ChevronDown({ open }: { open: boolean }) {
@@ -72,11 +80,18 @@ export default function PlayerTopBar({
   height,
   onLogout,
   avatarUrl,
+  adminHref = null,
 }: PlayerTopBarProps) {
   const t = useT(nsPlayerTopBar);
   const branding = useTenantBranding();
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  // La cloche compte pour l'équipe ACTIVE, comme le tableau de bord et
+  // /player/notifications : c'est la raison pour laquelle ActiveTeamProvider
+  // enveloppe toute l'application (cf. _app.tsx). Sans `withTeam`, un manager
+  // multi-équipes voyait le compteur de sa première équipe quelle que soit
+  // celle choisie.
+  const { withTeam } = useActiveTeam();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const menuAreaRef = useRef<HTMLDivElement>(null);
   const mobileAreaRef = useRef<HTMLDivElement>(null);
@@ -88,7 +103,7 @@ export default function PlayerTopBar({
   const poll = useCallback(async () => {
     try {
       const json = await adminFetchJson<PlayerNotificationsPayload>(
-        '/api/player/notifications',
+        withTeam('/api/player/notifications'),
         { skipAuthRedirect: true }
       );
       if (typeof json?.total === 'number') {
@@ -97,7 +112,7 @@ export default function PlayerTopBar({
     } catch {
       // silent — pas d'incidence sur l'UX si ça plante
     }
-  }, [adminFetchJson]);
+  }, [adminFetchJson, withTeam]);
 
   // Onglet caché = pas de poll. Au retour, l'effet se relance et rafraîchit
   // IMMÉDIATEMENT le compteur, au lieu d'attendre le prochain cycle de 90 s.
@@ -162,10 +177,9 @@ export default function PlayerTopBar({
     setOpenMenu(null);
   };
 
-  const isActive = (ref: string) => {
-    if (ref === '/player') return router.pathname === '/player';
-    return router.pathname === ref;
-  };
+  // Préfixe et non égalité : « Mes matchs » reste actif sur le fil d'un match
+  // (`/player/match/[id]`). Cf. headerBars.ts.
+  const isActive = (ref: string) => isPlayerLinkActive(router.pathname, ref);
 
   const hasNotifs = typeof notifTotal === 'number' && notifTotal > 0;
   const notifBadgeLabel = notifTotal && notifTotal > 99 ? '99+' : notifTotal;
@@ -256,6 +270,18 @@ export default function PlayerTopBar({
               </Link>
             );
           })}
+
+          {adminHref && (
+            <>
+              <span className="mx-1 h-5 w-px bg-white/[0.06]" />
+              <Link
+                href={adminHref}
+                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium text-amber-200 transition-all hover:bg-white/[0.06] hover:text-amber-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+              >
+                {t.adminLink}
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Spacer pushes the bell/hamburger to the right on mobile. */}
@@ -350,6 +376,16 @@ export default function PlayerTopBar({
                     </Link>
                   );
                 })}
+                {adminHref && (
+                  <Link
+                    href={adminHref}
+                    role="menuitem"
+                    onClick={closeAll}
+                    className="block px-4 py-2.5 text-[13px] font-medium text-amber-200 transition-colors hover:bg-white/[0.06] hover:text-amber-100"
+                  >
+                    {t.adminLink}
+                  </Link>
+                )}
               </div>
 
               <div className="border-t border-white/10">

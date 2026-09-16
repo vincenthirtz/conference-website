@@ -36,8 +36,8 @@ const T = {
   searchLabel: 'Rechercher une joueuse',
   emptyTitle: 'Aucune joueuse trouvée',
   notDiscoverableBanner:
-    "Tu n'apparais pas encore dans le réseau — active ta visibilité dans ton profil.",
-  notDiscoverableCta: 'Gérer ma visibilité',
+    "Tu n'apparais pas encore dans le réseau : les autres joueuses ne peuvent pas te trouver.",
+  notDiscoverableCta: 'Régler ma fiche (accroche, stats, équipes)',
   loadMore: 'Charger plus',
   cardTitle: 'Découverte / Réseau joueurs',
   masterAria: 'Activer ma visibilité dans le réseau',
@@ -190,7 +190,11 @@ test.describe('Player discovery', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // 3. Not discoverable → opt-in banner visible with a working CTA to /profile.
+  // 3. Not discoverable → opt-in banner visible. The banner now carries the
+  //    visibility switch itself (it used to send the player three clicks and a
+  //    scroll away, to the bottom of /player/profile); its link only leads to
+  //    the fine-grained settings, straight onto the DiscoveryCard anchor. The
+  //    switch is NOT clicked here: that would write to the shared prod DB.
   // ---------------------------------------------------------------------------
   test('not-discoverable caller sees the opt-in banner with a CTA to /player/profile', async ({
     page,
@@ -217,11 +221,18 @@ test.describe('Player discovery', () => {
     const banner = page.getByText(T.notDiscoverableBanner);
     await expect(banner).toBeVisible();
 
+    // L'interrupteur est dans le bandeau lui-même.
+    await expect(
+      page.getByRole('switch', { name: T.masterAria }).first()
+    ).toBeVisible();
+
     const cta = page.getByRole('link', { name: T.notDiscoverableCta });
-    await expect(cta).toHaveAttribute('href', '/player/profile');
+    await expect(cta).toHaveAttribute('href', '/player/profile#decouverte');
 
     await cta.click();
-    await page.waitForURL(/\/player\/profile$/, { timeout: 10000 });
+    await page.waitForURL(/\/player\/profile(#decouverte)?$/, {
+      timeout: 10000,
+    });
   });
 
   // ---------------------------------------------------------------------------

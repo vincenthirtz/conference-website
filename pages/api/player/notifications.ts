@@ -3,7 +3,9 @@
 //
 // Returns:
 //   - unreadMessages       : number of unread inter-captain messages
-//   - pendingScrims        : open scrim requests received by the captain's team
+//   - pendingScrims        : scrim requests where it is the team's turn to
+//                             answer, both directions — SAME rule as the
+//                             dashboard (utils/teams/scrimsAwaitingTeam.ts)
 //   - pendingJoinRequests  : open team-join requests received by the captain
 //   - pendingInvites       : team invitations addressed TO this user that are
 //                             still pending (the rank-and-file invitee view —
@@ -23,6 +25,7 @@ import { readRequestedTeamId } from '@/utils/teams/teamScope';
 import { resolveMembership } from '@/utils/teams/memberships';
 import { listPendingInvitationsForUser } from '@/utils/teams/invitations';
 import { getStaffRole } from '@/utils/staff';
+import { loadScrimsAwaitingTeam } from '@/utils/teams/scrimsAwaitingTeam';
 
 export type PlayerNotificationsPayload = {
   hasTeam: boolean;
@@ -84,43 +87,58 @@ async function countPendingInvites(
 }
 
 /**
- * Captain inbox counters. Messages, scrims and joins all live in the `demandes`
- * table with the same team/tenant/status filter and differ only on `type`, so a
- * single round-trip fetches the three pending types and we bucket by type in JS
- * (was 3 separate `count` queries).
+ * Captain inbox counters.
+ *
+ * Messages et candidatures partagent le même filtre (équipe, tenant, `pending`)
+ * et ne diffèrent que par `type` : une seule lecture, ventilée en JS.
  *
  *   captain_message + status=pending → unread inbox item
- *   scrim           + status=pending → scrim invite to answer
  *   join            + status=pending → roster candidate to validate
+ *
+ * Les SCRIMS n'y sont plus. Les compter ici (« toute demande de scrim pending
+ * adressée à l'équipe ») donnait un autre nombre que le tableau de bord, qui ne
+ * retient que ceux où c'est à l'équipe de répondre, dans les deux sens : la
+ * cloche affichait « 1 » pour une contre-proposition qui attendait l'adversaire,
+ * et le tableau de bord, rien. Le compte vient désormais de la même règle que le
+ * tableau de bord (utils/teams/scrimsAwaitingTeam.ts).
  */
 async function countInboxByType(
   teamId: string,
   tenantId: string
 ): Promise<{
   unreadMessages: number;
-  pendingScrims: number;
   pendingJoinRequests: number;
 }> {
-  const zero = { unreadMessages: 0, pendingScrims: 0, pendingJoinRequests: 0 };
+  const zero = { unreadMessages: 0, pendingJoinRequests: 0 };
   try {
     const { data } = await supabaseAdmin!
       .from('demandes')
       .select('type')
       .eq('team_id', teamId)
       .eq('tenant_id', tenantId)
-      .in('type', ['captain_message', 'scrim', 'join'])
+      .in('type', ['captain_message', 'join'])
       .eq('status', 'pending');
     let unreadMessages = 0;
-    let pendingScrims = 0;
     let pendingJoinRequests = 0;
     for (const row of (data ?? []) as Array<{ type?: string }>) {
       if (row.type === 'captain_message') unreadMessages += 1;
-      else if (row.type === 'scrim') pendingScrims += 1;
       else if (row.type === 'join') pendingJoinRequests += 1;
     }
-    return { unreadMessages, pendingScrims, pendingJoinRequests };
+    return { unreadMessages, pendingJoinRequests };
   } catch {
     return zero;
+  }
+}
+
+/** Scrims où c'est au tour de l'équipe — la règle du tableau de bord. */
+async function countScrimsAwaitingTeam(
+  teamId: string,
+  tenantId: string
+): Promise<number> {
+  try {
+    return (await loadScrimsAwaitingTeam(teamId, tenantId)).length;
+  } catch {
+    return 0;
   }
 }
 
@@ -250,23 +268,30 @@ export default withSubjectRoute(async function handler(
   // Phase 2 — every counter block is now independent and runs in parallel.
   // Each helper degrades to its zero value on failure so one failing block
   // never takes the whole response down.
-  const [pendingInvites, inbox, checkinPending, pendingPlannings] =
-    await Promise.all([
-      countPendingInvites(userId, tenantId),
-      canManageInbox && managedTeamId
-        ? countInboxByType(managedTeamId, tenantId)
-        : Promise.resolve({
-            unreadMessages: 0,
-            pendingScrims: 0,
-            pendingJoinRequests: 0,
-          }),
-      hasTeam && memberTeamId
-        ? computeCheckinPending(memberTeamId, tenantId)
-        : Promise.resolve(0 as 0 | 1),
-      countPendingPlannings(userId, tenantId, managedTeamId, staffRole),
-    ]);
+  const [
+    pendingInvites,
+    inbox,
+    pendingScrims,
+    checkinPending,
+    pendingPlannings,
+  ] = await Promise.all([
+    countPendingInvites(userId, tenantId),
+    canManageInbox && managedTeamId
+      ? countInboxByType(managedTeamId, tenantId)
+      : Promise.resolve({
+          unreadMessages: 0,
+          pendingJoinRequests: 0,
+        }),
+    canManageInbox && managedTeamId
+      ? countScrimsAwaitingTeam(managedTeamId, tenantId)
+      : Promise.resolve(0),
+    hasTeam && memberTeamId
+      ? computeCheckinPending(memberTeamId, tenantId)
+      : Promise.resolve(0 as 0 | 1),
+    countPendingPlannings(userId, tenantId, managedTeamId, staffRole),
+  ]);
 
-  const { unreadMessages, pendingScrims, pendingJoinRequests } = inbox;
+  const { unreadMessages, pendingJoinRequests } = inbox;
 
   const total =
     unreadMessages +

@@ -27,8 +27,17 @@ const SITE_URL =
   process.env.URL ||
   'https://owwomenscup.fr';
 
-/** CTA cible côté site : l'espace capitaine (demandes + scrims). */
-const CAPTAIN_CTA_URL = `${SITE_URL.replace(/\/$/, '')}/espace-capitaine`;
+/**
+ * CTA cible côté site : la section Scrims du tableau de bord joueuse.
+ *
+ * PAS `/espace-capitaine` : c'est la landing marketing, sans session — la
+ * capitaine qui recevait « on veut jouer contre vous » tombait sur une FAQ.
+ * L'ancre `section-scrims` est l'id du panneau que rend `CategorySection
+ * id="scrims"` (PlayerDashboardScreen) ; ce panneau se déplie de lui-même quand
+ * le hash le vise, même si la personne l'avait replié. Sans session, `/player`
+ * renvoie vers la connexion avec retour au tableau de bord.
+ */
+export const CAPTAIN_CTA_URL = `${SITE_URL.replace(/\/$/, '')}/player#section-scrims`;
 
 /* -----------------------------------------------------------
  * Résolution capitaine → email

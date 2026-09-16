@@ -17,6 +17,7 @@ export default ns('playerTopBar', {
   closeMenu: 'Fermer le menu',
   bellPending: 'Notifications ({count} en attente)',
   bellEmpty: 'Notifications (aucune en attente)',
+  adminLink: 'Administration',
   linkLabels: {
     dashboard: 'Tableau de bord',
     matches: 'Mes matchs',

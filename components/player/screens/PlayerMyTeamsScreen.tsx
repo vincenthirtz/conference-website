@@ -16,6 +16,8 @@ import Link from 'next/link';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
+import TeamAvatar from '@/components/Team/TeamAvatar';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -42,15 +44,37 @@ function Cell({
   return <span className={`text-xs font-medium ${cls}`}>{children}</span>;
 }
 
+/**
+ * Le lien d'une ligne vers l'écran de GESTION doit d'abord désigner l'équipe.
+ *
+ * `/player/manage-team` travaille sur l'équipe ACTIVE (ActiveTeamContext), pas
+ * sur une équipe passée dans l'URL : toutes les lignes pointant la même
+ * adresse, cliquer l'équipe C ouvrait l'équipe A. Le choix est posé au clic,
+ * AVANT la navigation — le contexte est global à l'application et mémorisé,
+ * l'écran de gestion le lit donc dès son montage.
+ */
+export function manageTeamLinkProps(
+  teamId: string,
+  setActiveTeamId: (teamId: string | null) => void
+): { href: string; onClick: () => void } {
+  return {
+    href: '/player/manage-team',
+    onClick: () => setActiveTeamId(teamId),
+  };
+}
+
 function TeamCardRow({
   row,
   locale,
   t,
+  setActiveTeamId,
 }: {
   row: MyTeamRow;
   locale: string;
   t: T;
+  setActiveTeamId: (teamId: string | null) => void;
 }) {
+  const manageLink = manageTeamLinkProps(row.team.id, setActiveTeamId);
   const nm = row.nextMatch;
   const canLineup = row.permissions.includes('validate_lineup');
   const canRequests = row.permissions.includes('manage_join_requests');
@@ -59,14 +83,10 @@ function TeamCardRow({
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          {row.team.logoUrl && (
-            // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
-            <img
-              src={row.team.logoUrl}
-              alt=""
-              className="h-9 w-9 rounded-full border border-white/10 object-cover"
-            />
-          )}
+          {/* Pastille partagée : logo optimisé quand l'hôte est déclaré, et
+              monogramme quand l'équipe n'en a pas — une ligne sans logo ne
+              laisse plus de trou. */}
+          <TeamAvatar name={row.team.name} logoUrl={row.team.logoUrl} />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-white">
               {row.team.name}
@@ -93,7 +113,7 @@ function TeamCardRow({
         </div>
 
         <Link
-          href="/player/manage-team"
+          {...manageLink}
           className="shrink-0 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-medium text-white transition hover:bg-white/10"
         >
           {t.openTeam}
@@ -164,7 +184,7 @@ function TeamCardRow({
             {row.pendingJoinRequests === 0 ? (
               <Cell tone="muted">{t.requestsNone}</Cell>
             ) : canRequests ? (
-              <Link href="/player/manage-team">
+              <Link {...manageLink}>
                 <Cell tone="todo">
                   {format(t.requestsPending, { n: row.pendingJoinRequests })} →
                 </Cell>
@@ -187,6 +207,7 @@ export default function PlayerMyTeamsScreen() {
   const { loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { withSubject } = usePlayerArea();
+  const { setActiveTeamId } = useActiveTeam();
 
   const [rows, setRows] = useState<MyTeamRow[] | null>(null);
   const [error, setError] = useState(false);
@@ -236,7 +257,13 @@ export default function PlayerMyTeamsScreen() {
         ) : (
           <div className="mt-6 flex flex-col gap-3">
             {(rows ?? []).map((row) => (
-              <TeamCardRow key={row.team.id} row={row} locale={locale} t={t} />
+              <TeamCardRow
+                key={row.team.id}
+                row={row}
+                locale={locale}
+                t={t}
+                setActiveTeamId={setActiveTeamId}
+              />
             ))}
           </div>
         )}

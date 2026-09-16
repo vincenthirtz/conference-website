@@ -37,15 +37,36 @@ import type {
 import { logger } from '../../utils/logger';
 import nsPlayerIndex from '@/lib/i18n/locales/fr/playerIndex';
 
-export default function SupporterWelcomeCard() {
+export default function SupporterWelcomeCard({
+  data,
+}: {
+  /**
+   * Réponse de `/api/player/tcg/welcome-gift` déjà lue par la page (cf.
+   * `WelcomeGiftCard`, qui reçoit la même). `undefined` = la carte lit
+   * elle-même ; `null` = la page lit (pas encore de réponse, ou échec) — la
+   * carte reste masquée.
+   */
+  data?: PlayerWelcomeGiftResponse | null;
+}) {
   const t = useT(nsPlayerIndex);
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { withSubject, readOnly } = usePlayerArea();
+  const selfLoads = data === undefined;
 
   // `undefined` = pas encore lu. Aucun indicateur de chargement : la carte
   // n'apparaîtra pas la plupart du temps, et un squelette ferait clignoter le
-  // tableau de bord à chaque visite.
-  const [claimable, setClaimable] = useState<boolean | undefined>(undefined);
+  // tableau de bord à chaque visite. Amorcé depuis `data` quand la page l'a
+  // fourni ; l'état reste LOCAL, parce qu'une réclamation le fait passer à
+  // `false` sans que la réponse de la page change.
+  const [claimable, setClaimable] = useState<boolean | undefined>(
+    selfLoads ? undefined : (data?.supporterClaimable ?? false)
+  );
+
+  // La page republie sa lecture (premier chargement, rechargement) : on suit.
+  useEffect(() => {
+    if (selfLoads) return;
+    setClaimable(data?.supporterClaimable ?? false);
+  }, [selfLoads, data]);
   const [coins, setCoins] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -66,8 +87,9 @@ export default function SupporterWelcomeCard() {
   }, [adminFetchJson, withSubject]);
 
   useEffect(() => {
+    if (!selfLoads) return;
     void load();
-  }, [load]);
+  }, [load, selfLoads]);
 
   const claim = async () => {
     setBusy(true);

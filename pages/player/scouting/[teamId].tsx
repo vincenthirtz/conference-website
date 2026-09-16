@@ -27,9 +27,34 @@ import type { ScoutingResponse } from '../../api/player/scouting';
 import type { GameResult } from '../../../utils/teams/scouting';
 import { logger } from '../../../utils/logger';
 import nsScouting from '@/lib/i18n/locales/fr/scouting';
+import { useManagedTeam } from '@/hooks/useManagedTeam';
+import { loginHrefFor } from '@/utils/player/sessionExpiry';
 
 /** Lundi 1er janvier 2024 — base neutre pour nommer les jours. */
 const REFERENCE_MONDAY = Date.UTC(2024, 0, 1);
+
+/**
+ * Le dossier n'a RIEN à dire : aucune confrontation, forme et bilan sous le
+ * seuil, pas d'adversaire commun, pas de créneau, pas de note.
+ *
+ * C'est le cas de presque toutes les équipes à l'ouverture d'un tournoi. Quatre
+ * sections disant chacune « pas assez de données » se lisaient comme une page
+ * en panne ; un seul état vide, qui dit pourquoi et propose le seul geste utile
+ * (jouer contre elles), est honnête. Dès qu'UNE section a matière, la page
+ * normale revient — une section vide y reste instructive à côté des autres.
+ */
+export function isScoutingDossierEmpty(
+  data: Pick<ScoutingResponse, 'report' | 'myNotes'>
+): boolean {
+  const r = data.report;
+  return (
+    r.headToHead.played === 0 &&
+    (!r.recentForm || !r.record) &&
+    r.commonOpponents.length === 0 &&
+    (!r.usualSlots || r.usualSlots.length === 0) &&
+    data.myNotes.length === 0
+  );
+}
 
 const RESULT_TONE: Record<GameResult, string> = {
   win: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/40',
@@ -41,7 +66,16 @@ function ScoutingPage() {
   const t = useT(nsScouting);
   const locale = useLocale();
   const router = useRouter();
-  const { ready, loading: authLoading } = usePlayerSession();
+  // Retour au dossier après connexion : c'est une page qu'on ouvre depuis un
+  // lien (annuaire, fil de match), la perdre renvoyait à l'accueil.
+  const { ready, loading: authLoading } = usePlayerSession({
+    redirectTo: loginHrefFor(router.isReady ? router.asPath : '/player/teams'),
+  });
+  // « Proposer un scrim » n'est offert qu'à qui peut le faire : la page de
+  // demande refuserait sinon. Lecture partagée et mise en cache.
+  const { data: managedTeam } = useManagedTeam();
+  const canProposeScrim =
+    managedTeam?.permissions.includes('manage_scrims') ?? false;
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
 
   const [data, setData] = useState<ScoutingResponse | null>(null);
@@ -94,6 +128,12 @@ function ScoutingPage() {
   if (authLoading || !ready) return <PlayerPageSkeleton />;
 
   const report = data?.report;
+  const dossierEmpty = data ? isScoutingDossierEmpty(data) : false;
+  // Même adresse que l'annuaire des équipes (`/player/teams`) : l'adversaire
+  // arrive présélectionné dans le formulaire de demande.
+  const proposeScrimHref = data
+    ? `/player/requests?tab=scrim&team=${encodeURIComponent(data.target.id)}`
+    : '';
 
   return (
     <>
@@ -157,171 +197,197 @@ function ScoutingPage() {
                     </Link>
                   )}
                 </div>
+                {canProposeScrim && (
+                  <Link
+                    href={proposeScrimHref}
+                    className="mt-4 inline-flex min-h-[44px] items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
+                  >
+                    {t.proposeScrim}
+                  </Link>
+                )}
               </header>
 
-              {/* ── Confrontations directes ──────────────────────────────── */}
-              <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                <h2 className="text-lg font-semibold">{t.headToHead}</h2>
-                {report.headToHead.played === 0 ? (
-                  <p className="mt-2 text-sm text-gray-400">{t.neverPlayed}</p>
-                ) : (
-                  <>
-                    <p className="mt-2 text-sm text-gray-300">
-                      {format(t.headToHeadSummary, {
-                        played: report.headToHead.played,
-                        wins: report.headToHead.wins,
-                        losses: report.headToHead.losses,
-                      })}
-                    </p>
-                    <ul className="mt-3 space-y-2">
-                      {report.headToHead.recent.map((game) => (
-                        <li
-                          key={`${game.subjectType}:${game.subjectId}`}
-                          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-2.5"
-                        >
-                          <span className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
-                            <span
-                              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${RESULT_TONE[game.result]}`}
-                            >
-                              {resultLabel(game.result)}
-                            </span>
-                            <span>{fmtDate(game.playedAt)}</span>
-                            <span className="uppercase tracking-wide">
-                              {game.subjectType === 'match'
-                                ? t.typeMatch
-                                : t.typeScrim}
-                            </span>
-                          </span>
-                          {game.myScore != null &&
-                            game.opponentScore != null && (
-                              <span className="text-sm font-semibold text-white">
-                                {game.myScore} – {game.opponentScore}
-                              </span>
-                            )}
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-              </section>
-
-              {/* ── Forme et bilan ───────────────────────────────────────── */}
-              <section className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                <h2 className="text-lg font-semibold">{t.form}</h2>
-                {!report.recentForm || !report.record ? (
-                  <p className="mt-2 text-sm text-gray-400">
-                    {t.notEnoughData}
-                  </p>
-                ) : (
-                  <>
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {report.recentForm.map((r, i) => (
-                        <span
-                          key={i}
-                          title={resultLabel(r)}
-                          className={`rounded-lg border px-2.5 py-1 text-xs font-semibold ${RESULT_TONE[r]}`}
-                        >
-                          {resultLabel(r).charAt(0).toUpperCase()}
-                        </span>
-                      ))}
-                    </div>
-                    <p className="mt-3 text-sm text-gray-300">
-                      {format(t.recordSummary, {
-                        played: report.record.played,
-                        wins: report.record.wins,
-                        losses: report.record.losses,
-                      })}
-                    </p>
-                  </>
-                )}
-              </section>
-
-              {/* ── Adversaires communs ──────────────────────────────────── */}
-              {report.commonOpponents.length > 0 && (
-                <section className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                  <h2 className="text-lg font-semibold">{t.commonOpponents}</h2>
-                  <p className="mt-1 text-xs text-gray-500">
-                    {t.commonOpponentsHint}
-                  </p>
-                  <ul className="mt-3 space-y-2">
-                    {report.commonOpponents.map((c) => (
-                      <li
-                        key={c.teamId}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-2.5"
-                      >
-                        <span className="text-sm text-white">
-                          {data.teamNames[c.teamId] ?? '—'}
-                        </span>
-                        <span className="text-xs text-gray-400">
-                          {format(t.commonOpponentLine, {
-                            myWins: c.myWins,
-                            myLosses: c.myLosses,
-                            theirWins: c.theirWins,
-                            theirLosses: c.theirLosses,
+              {dossierEmpty ? (
+                <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+                  <h2 className="text-lg font-semibold">{t.emptyTitle}</h2>
+                  <p className="mt-2 text-sm text-gray-300">{t.emptyBody}</p>
+                </section>
+              ) : (
+                <>
+                  {/* ── Confrontations directes ──────────────────────────────── */}
+                  <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                    <h2 className="text-lg font-semibold">{t.headToHead}</h2>
+                    {report.headToHead.played === 0 ? (
+                      <p className="mt-2 text-sm text-gray-400">
+                        {t.neverPlayed}
+                      </p>
+                    ) : (
+                      <>
+                        <p className="mt-2 text-sm text-gray-300">
+                          {format(t.headToHeadSummary, {
+                            played: report.headToHead.played,
+                            wins: report.headToHead.wins,
+                            losses: report.headToHead.losses,
                           })}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-
-              {/* ── Créneaux habituels ───────────────────────────────────── */}
-              <section className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                <h2 className="text-lg font-semibold">{t.usualSlots}</h2>
-                {!report.usualSlots || report.usualSlots.length === 0 ? (
-                  <p className="mt-2 text-sm text-gray-400">
-                    {t.notEnoughData}
-                  </p>
-                ) : (
-                  <>
-                    <p className="mt-2 text-sm text-gray-300">
-                      {report.usualSlots
-                        .map(
-                          (s) => `${dayName(s.weekday)} ${s.hour}h (${s.count})`
-                        )
-                        .join(' · ')}
-                    </p>
-                    <p className="mt-1 text-xs text-gray-500">
-                      {format(t.usualSlotsHint, { timezone: data.timezone })}
-                    </p>
-                  </>
-                )}
-              </section>
-
-              {/* ── Mes notes ────────────────────────────────────────────── */}
-              {data.myNotes.length > 0 && (
-                <section className="mt-4 rounded-2xl border border-blue-400/20 bg-blue-500/5 p-5">
-                  <h2 className="text-lg font-semibold">{t.myNotes}</h2>
-                  <p className="mt-1 text-xs text-gray-400">{t.myNotesHint}</p>
-                  <ul className="mt-3 space-y-3">
-                    {data.myNotes.map((note) => (
-                      <li
-                        key={`${note.subjectType}:${note.subjectId}`}
-                        className="rounded-xl border border-white/10 bg-black/20 px-4 py-3"
-                      >
-                        <p className="text-xs text-gray-500">
-                          {fmtDate(note.playedAt)}
                         </p>
-                        {note.notes && (
-                          <p className="mt-1 whitespace-pre-wrap text-sm text-gray-200">
-                            {note.notes}
-                          </p>
-                        )}
-                        {note.vodUrl && (
-                          <a
-                            href={note.vodUrl}
-                            target="_blank"
-                            rel="noopener noreferrer nofollow"
-                            className="mt-1 inline-block text-xs font-semibold text-blue-300 underline hover:text-blue-200"
+                        <ul className="mt-3 space-y-2">
+                          {report.headToHead.recent.map((game) => (
+                            <li
+                              key={`${game.subjectType}:${game.subjectId}`}
+                              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-2.5"
+                            >
+                              <span className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
+                                <span
+                                  className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${RESULT_TONE[game.result]}`}
+                                >
+                                  {resultLabel(game.result)}
+                                </span>
+                                <span>{fmtDate(game.playedAt)}</span>
+                                <span className="uppercase tracking-wide">
+                                  {game.subjectType === 'match'
+                                    ? t.typeMatch
+                                    : t.typeScrim}
+                                </span>
+                              </span>
+                              {game.myScore != null &&
+                                game.opponentScore != null && (
+                                  <span className="text-sm font-semibold text-white">
+                                    {game.myScore} – {game.opponentScore}
+                                  </span>
+                                )}
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                  </section>
+
+                  {/* ── Forme et bilan ───────────────────────────────────────── */}
+                  <section className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                    <h2 className="text-lg font-semibold">{t.form}</h2>
+                    {!report.recentForm || !report.record ? (
+                      <p className="mt-2 text-sm text-gray-400">
+                        {t.notEnoughData}
+                      </p>
+                    ) : (
+                      <>
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {report.recentForm.map((r, i) => (
+                            <span
+                              key={i}
+                              title={resultLabel(r)}
+                              className={`rounded-lg border px-2.5 py-1 text-xs font-semibold ${RESULT_TONE[r]}`}
+                            >
+                              {resultLabel(r).charAt(0).toUpperCase()}
+                            </span>
+                          ))}
+                        </div>
+                        <p className="mt-3 text-sm text-gray-300">
+                          {format(t.recordSummary, {
+                            played: report.record.played,
+                            wins: report.record.wins,
+                            losses: report.record.losses,
+                          })}
+                        </p>
+                      </>
+                    )}
+                  </section>
+
+                  {/* ── Adversaires communs ──────────────────────────────────── */}
+                  {report.commonOpponents.length > 0 && (
+                    <section className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                      <h2 className="text-lg font-semibold">
+                        {t.commonOpponents}
+                      </h2>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {t.commonOpponentsHint}
+                      </p>
+                      <ul className="mt-3 space-y-2">
+                        {report.commonOpponents.map((c) => (
+                          <li
+                            key={c.teamId}
+                            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-2.5"
                           >
-                            {t.watchVod}
-                          </a>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </section>
+                            <span className="text-sm text-white">
+                              {data.teamNames[c.teamId] ?? '—'}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {format(t.commonOpponentLine, {
+                                myWins: c.myWins,
+                                myLosses: c.myLosses,
+                                theirWins: c.theirWins,
+                                theirLosses: c.theirLosses,
+                              })}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+
+                  {/* ── Créneaux habituels ───────────────────────────────────── */}
+                  <section className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                    <h2 className="text-lg font-semibold">{t.usualSlots}</h2>
+                    {!report.usualSlots || report.usualSlots.length === 0 ? (
+                      <p className="mt-2 text-sm text-gray-400">
+                        {t.notEnoughData}
+                      </p>
+                    ) : (
+                      <>
+                        <p className="mt-2 text-sm text-gray-300">
+                          {report.usualSlots
+                            .map(
+                              (s) =>
+                                `${dayName(s.weekday)} ${s.hour}h (${s.count})`
+                            )
+                            .join(' · ')}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          {format(t.usualSlotsHint, {
+                            timezone: data.timezone,
+                          })}
+                        </p>
+                      </>
+                    )}
+                  </section>
+
+                  {/* ── Mes notes ────────────────────────────────────────────── */}
+                  {data.myNotes.length > 0 && (
+                    <section className="mt-4 rounded-2xl border border-blue-400/20 bg-blue-500/5 p-5">
+                      <h2 className="text-lg font-semibold">{t.myNotes}</h2>
+                      <p className="mt-1 text-xs text-gray-400">
+                        {t.myNotesHint}
+                      </p>
+                      <ul className="mt-3 space-y-3">
+                        {data.myNotes.map((note) => (
+                          <li
+                            key={`${note.subjectType}:${note.subjectId}`}
+                            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3"
+                          >
+                            <p className="text-xs text-gray-500">
+                              {fmtDate(note.playedAt)}
+                            </p>
+                            {note.notes && (
+                              <p className="mt-1 whitespace-pre-wrap text-sm text-gray-200">
+                                {note.notes}
+                              </p>
+                            )}
+                            {note.vodUrl && (
+                              <a
+                                href={note.vodUrl}
+                                target="_blank"
+                                rel="noopener noreferrer nofollow"
+                                className="mt-1 inline-block text-xs font-semibold text-blue-300 underline hover:text-blue-200"
+                              >
+                                {t.watchVod}
+                              </a>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+                </>
               )}
             </>
           )}

@@ -21,12 +21,26 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { logger } from '../../utils/logger';
 import nsPlayerRequests from '@/lib/i18n/locales/fr/playerRequests';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';
+import { loginHrefFor } from '@/utils/player/sessionExpiry';
 
 type Tab = 'transfer' | 'scrim';
 
 export default function PlayerRequestsPage() {
   const router = useRouter();
-  const { user, token, loading: authLoading, ready } = usePlayerSession();
+  // Retour à CETTE page après connexion (`?next=`), requête comprise — sans
+  // quoi un lien partagé (`?tab=scrim&team=…`, un mail, une notification)
+  // perdait sa destination. Avant hydratation `asPath` n'est pas fiable :
+  // repli sur `/player/requests`.
+  const {
+    user,
+    token,
+    loading: authLoading,
+    ready,
+  } = usePlayerSession({
+    redirectTo: loginHrefFor(
+      router.isReady ? router.asPath : '/player/requests'
+    ),
+  });
   const {
     data: managedTeam,
     loading: teamLoading,

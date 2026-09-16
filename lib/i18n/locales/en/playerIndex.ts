@@ -37,6 +37,7 @@ export default {
   pendingScrims: 'Pending scrim requests',
   catProfileTeam: 'Profile & team',
   catCompetition: 'Competition',
+  competitionAllMatches: 'See all my matches',
   catScrims: 'Scrims',
   catQuickActions: 'Quick actions',
   catActivity: 'Activity',

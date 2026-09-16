@@ -19,6 +19,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
 import nsJoinTeam from '@/lib/i18n/locales/fr/joinTeam';
+import { loginHrefFor } from '@/utils/player/sessionExpiry';
 
 type Team = {
   id: string;
@@ -33,7 +34,20 @@ type Team = {
 export default function JoinTeamPage() {
   const t = useT(nsJoinTeam);
   const router = useRouter();
-  const { user, token, loading: authLoading, ready } = usePlayerSession();
+  // Retour à CETTE page après connexion (`?next=`), requête comprise — sans
+  // quoi un lien partagé (`?tab=scrim&team=…`, un mail, une notification)
+  // perdait sa destination. Avant hydratation `asPath` n'est pas fiable :
+  // repli sur `/player/join-team`.
+  const {
+    user,
+    token,
+    loading: authLoading,
+    ready,
+  } = usePlayerSession({
+    redirectTo: loginHrefFor(
+      router.isReady ? router.asPath : '/player/join-team'
+    ),
+  });
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { data: managedTeam, loading: teamLoading } = useManagedTeam();
   const [loading, setLoading] = useState(true);

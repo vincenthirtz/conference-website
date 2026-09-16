@@ -33,6 +33,9 @@ export type DiscoveryCardData = {
 
 const TAGLINE_MAX = 160;
 
+/** Ancre de la carte sur /player/profile — cible de la checklist réseau. */
+export const DISCOVERY_ANCHOR = 'decouverte';
+
 export default function DiscoveryCard() {
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { addToast } = useToast();
@@ -114,8 +117,23 @@ export default function DiscoveryCard() {
     }
   };
 
+  // Arrivée par `/player/profile#decouverte` (étape « découverte » de la
+  // checklist réseau) : la carte vit tout en bas d'une page qui charge en
+  // plusieurs temps, et le navigateur a déjà tenté le défilement quand elle
+  // n'existait pas encore. On le refait une fois l'interrupteur rendu.
+  useEffect(() => {
+    if (loading) return;
+    if (window.location.hash !== `#${DISCOVERY_ANCHOR}`) return;
+    document
+      .getElementById(DISCOVERY_ANCHOR)
+      ?.scrollIntoView({ block: 'start' });
+  }, [loading]);
+
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
+    <section
+      id={DISCOVERY_ANCHOR}
+      className="scroll-mt-24 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6"
+    >
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h2 className="text-lg font-semibold">{t.cardTitle}</h2>
@@ -150,7 +168,7 @@ export default function DiscoveryCard() {
               <p className="text-sm font-medium text-white">
                 {t.masterSwitchLabel}
               </p>
-              <p className="mt-0.5 text-xs text-gray-500">
+              <p className="mt-0.5 text-xs text-gray-400">
                 {t.masterSwitchHint}
               </p>
             </div>
@@ -185,7 +203,7 @@ export default function DiscoveryCard() {
                   className="w-full resize-none px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
                 />
                 <div className="mt-2 flex items-center justify-between gap-3">
-                  <span className="text-xs text-gray-500 tabular-nums">
+                  <span className="text-xs text-gray-400 tabular-nums">
                     {format(t.taglineCounter, { count: tagline.length })}
                   </span>
                   <button
@@ -205,7 +223,7 @@ export default function DiscoveryCard() {
                   <p className="text-sm font-medium text-white">
                     {t.showRatingsLabel}
                   </p>
-                  <p className="mt-0.5 text-xs text-gray-500">
+                  <p className="mt-0.5 text-xs text-gray-400">
                     {t.showRatingsHint}
                   </p>
                 </div>
@@ -223,7 +241,7 @@ export default function DiscoveryCard() {
                   <p className="text-sm font-medium text-white">
                     {t.showTeamsLabel}
                   </p>
-                  <p className="mt-0.5 text-xs text-gray-500">
+                  <p className="mt-0.5 text-xs text-gray-400">
                     {t.showTeamsHint}
                   </p>
                 </div>
