@@ -20,6 +20,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import AlertBanner from '@/components/admin/AlertBanner';
 import AttachGuildModal from '@/components/admin/onboarding/AttachGuildModal';
 import MintApiKeyModal from '@/components/admin/onboarding/MintApiKeyModal';
+import GrantAccessModal from '@/components/admin/onboarding/GrantAccessModal';
 import ApiTokenRevealModal from '@/components/admin/ApiTokenRevealModal';
 import nsAdminOnboarding from '@/lib/i18n/locales/admin-fr/adminOnboarding';
 
@@ -71,7 +72,7 @@ function blockerMeta(
 ): {
   label: string;
   href?: string | null;
-  action?: 'attach_guild' | 'configure_channels';
+  action?: 'attach_guild' | 'configure_channels' | 'grant_access';
 } {
   switch (blocker) {
     case 'inactive':
@@ -79,7 +80,7 @@ function blockerMeta(
     case 'aucun_serveur':
       return { label: t.blockerNoGuild, action: 'attach_guild' };
     case 'personne_rattache':
-      return { label: t.blockerNoStaff, href: `/admin/tenants/${tenantId}` };
+      return { label: t.blockerNoStaff, action: 'grant_access' };
     case 'bot_sans_secrets':
       // Les secrets se posent depuis la fiche de l'espace (onglet Discord),
       // qui porte déjà la rotation.
@@ -142,6 +143,11 @@ export default function TenantReadinessPanel() {
   } | null>(null);
   // Clair fraîchement émis, montré UNE fois puis oublié.
   const [revealed, setRevealed] = useState<string | null>(null);
+  // Espace dont on ouvre l'accès à quelqu'un.
+  const [grantFor, setGrantFor] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -359,6 +365,14 @@ export default function TenantReadinessPanel() {
                     >
                       {t.mintKeyCta}
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setGrantFor({ id: r.id, name: r.name })}
+                      className="text-xs text-violet-300 underline hover:text-violet-200"
+                      data-testid="readiness-grant-access-cta"
+                    >
+                      {t.grantAccessCta}
+                    </button>
                   </div>
                 </div>
 
@@ -377,6 +391,17 @@ export default function TenantReadinessPanel() {
                             >
                               {meta.label} →
                             </Link>
+                          ) : meta.action === 'grant_access' ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setGrantFor({ id: r.id, name: r.name })
+                              }
+                              className="inline-block rounded-lg border border-amber-500/30 bg-amber-500/5 px-2.5 py-1 text-xs text-amber-100 hover:border-amber-400/60"
+                              data-testid="readiness-grant-access"
+                            >
+                              {meta.label} →
+                            </button>
                           ) : meta.action === 'attach_guild' ? (
                             <button
                               type="button"
@@ -434,6 +459,19 @@ export default function TenantReadinessPanel() {
             // Le clair traverse l'état le temps d'une modale, puis disparaît :
             // il n'existe nulle part ailleurs.
             setRevealed(token);
+            void load();
+          }}
+        />
+      )}
+
+      {grantFor && (
+        <GrantAccessModal
+          tenantId={grantFor.id}
+          tenantName={grantFor.name}
+          onClose={() => setGrantFor(null)}
+          onDone={() => {
+            // La modale reste ouverte pour annoncer CE QUI s'est passé
+            // (rattachée vs invitée) ; seule la liste se rafraîchit.
             void load();
           }}
         />

@@ -35,6 +35,26 @@ export default adminNs('adminOnboarding', {
   criterionBotSecrets: 'Secrets bot',
   criterionApiKeys: '{count} clé(s) d’API',
   mintKeyCta: 'Émettre une clé d’API',
+  grantAccessCta: 'Ouvrir l’accès à quelqu’un',
+  grantAccessTitle: 'Ouvrir l’accès à {tenant}',
+  grantAccessIntro:
+    'Une adresse email suffit. Si la personne a déjà un compte, elle est rattachée immédiatement ; sinon elle reçoit une invitation.',
+  grantAccessEmailLabel: 'Adresse email',
+  grantAccessRoleLabel: 'Rôle sur cet espace',
+  grantAccessRoleHint:
+    'Le rôle ne vaut que sur cet espace : il élève, il ne déborde pas. Un owner peut ouvrir l’accès au reste de son équipe lui-même.',
+  grantAccessSubmit: 'Ouvrir l’accès',
+  grantAccessBusy: 'En cours…',
+  grantAccessCancel: 'Annuler',
+  grantAccessClose: 'Fermer',
+  grantAccessAttached: '{email} avait déjà un compte : elle est rattachée.',
+  grantAccessAttachedHint:
+    'Rien de plus à faire. À sa prochaine connexion, cet espace lui est accessible.',
+  grantAccessInvited: 'Invitation envoyée à {email}.',
+  grantAccessInvitedHint:
+    'Valable 14 jours. Elle devra être connectée à cette adresse au moment de cliquer — sans compte, le lien ne peut pas aboutir.',
+  grantAccessError: 'Impossible d’ouvrir l’accès.',
+  grantAccessErrorNoEmail: 'Renseigne une adresse email.',
   mintKeyTitle: 'Clé d’API pour {tenant}',
   mintKeyIntro:
     'La clé sera rattachée à cet espace, et à lui seul. Elle n’est affichée qu’une fois.',

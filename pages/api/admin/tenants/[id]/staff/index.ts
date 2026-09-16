@@ -106,8 +106,14 @@ async function handler(
     if (!requireOwner(ctx, res)) return;
 
     const body = (req.body ?? {}) as Record<string, unknown>;
-    const staffId =
+    // `staff_id` OU `email`. L'UUID était le seul chemin, et il n'apparaît
+    // nulle part dans l'interface : on a vu un `auth_user_id` collé à sa place,
+    // ce qui donne un 404 sans le moindre indice sur la différence. Une adresse
+    // email, elle, est ce que l'opérateur a réellement sous la main.
+    const staffIdInput =
       typeof body.staff_id === 'string' ? body.staff_id.trim() : '';
+    const emailInput =
+      typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
     const roleParsed = staffRoleSchema.safeParse(
       typeof body.role === 'string' && body.role.trim()
         ? body.role.trim()
@@ -121,23 +127,34 @@ async function handler(
     }
     const role = roleParsed.data;
 
-    if (!isValidUUID(staffId)) {
+    if (!staffIdInput && !emailInput) {
+      return res.status(400).json({
+        error: 'staff_id or email is required.',
+        code: 'MISSING_IDENTIFIER',
+      });
+    }
+    if (staffIdInput && !isValidUUID(staffIdInput)) {
       return res
         .status(400)
         .json({ error: 'staff_id must be a UUID.', code: 'INVALID_STAFF_ID' });
     }
 
-    // Verifier que le staff existe globalement.
-    const { data: globalStaff, error: gErr } = await supabaseAdmin
-      .from('staff')
-      .select('id')
-      .eq('id', staffId)
-      .maybeSingle();
+    // Le staff doit exister globalement : on ne CRÉE pas de compte ici, on
+    // rattache. Quand il n'existe pas, le 404 nomme l'adresse cherchée pour
+    // que l'appelant puisse enchaîner sur une invitation sans la redemander.
+    const lookup = supabaseAdmin.from('staff').select('id');
+    const { data: globalStaff, error: gErr } = await (staffIdInput
+      ? lookup.eq('id', staffIdInput)
+      : lookup.ilike('email', emailInput)
+    ).maybeSingle();
     if (gErr || !globalStaff) {
-      return res
-        .status(404)
-        .json({ error: 'Staff not found.', code: 'STAFF_NOT_FOUND' });
+      return res.status(404).json({
+        error: 'Staff not found.',
+        code: 'STAFF_NOT_FOUND',
+        ...(emailInput ? { email: emailInput } : {}),
+      });
     }
+    const staffId = globalStaff.id as string;
 
     const { error } = await supabaseAdmin
       .from('tenant_staff')

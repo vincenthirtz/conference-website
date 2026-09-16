@@ -36,6 +36,26 @@ export default {
   criterionBotSecrets: 'Bot secrets',
   criterionApiKeys: '{count} API key(s)',
   mintKeyCta: 'Issue an API key',
+  grantAccessCta: 'Grant access to someone',
+  grantAccessTitle: 'Grant access to {tenant}',
+  grantAccessIntro:
+    'An email address is enough. If the person already has an account they are attached right away; otherwise they get an invitation.',
+  grantAccessEmailLabel: 'Email address',
+  grantAccessRoleLabel: 'Role on this space',
+  grantAccessRoleHint:
+    'The role applies to this space only: it raises, it never spills over. An owner can grant access to the rest of their team themselves.',
+  grantAccessSubmit: 'Grant access',
+  grantAccessBusy: 'Working…',
+  grantAccessCancel: 'Cancel',
+  grantAccessClose: 'Close',
+  grantAccessAttached: '{email} already had an account: they are now attached.',
+  grantAccessAttachedHint:
+    'Nothing else to do. This space is available to them at their next sign-in.',
+  grantAccessInvited: 'Invitation sent to {email}.',
+  grantAccessInvitedHint:
+    'Valid for 14 days. They must be signed in with that address when they click — without an account the link cannot go through.',
+  grantAccessError: 'Could not grant access.',
+  grantAccessErrorNoEmail: 'Enter an email address.',
   mintKeyTitle: 'API key for {tenant}',
   mintKeyIntro:
     'The key will belong to this space, and only this one. It is shown once.',
