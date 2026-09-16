@@ -37434,6 +37434,12 @@
               "position"
              ]
             },
+            "engagedCopies": {
+             "type": "number"
+            },
+            "recyclableEngaged": {
+             "type": "boolean"
+            },
             "slug": {},
             "name": {},
             "teamId": {},
@@ -37448,7 +37454,9 @@
             "rarity",
             "isFoil",
             "count",
-            "recyclable"
+            "recyclable",
+            "engagedCopies",
+            "recyclableEngaged"
            ]
           },
           {
@@ -37506,6 +37514,12 @@
               "position"
              ]
             },
+            "engagedCopies": {
+             "type": "number"
+            },
+            "recyclableEngaged": {
+             "type": "boolean"
+            },
             "userId": {},
             "displayName": {},
             "teamId": {},
@@ -37520,7 +37534,9 @@
             "rarity",
             "isFoil",
             "count",
-            "recyclable"
+            "recyclable",
+            "engagedCopies",
+            "recyclableEngaged"
            ]
           },
           {
@@ -37590,6 +37606,12 @@
               "position"
              ]
             },
+            "engagedCopies": {
+             "type": "number"
+            },
+            "recyclableEngaged": {
+             "type": "boolean"
+            },
             "userId": {},
             "displayName": {},
             "imageUrl": {}
@@ -37604,7 +37626,9 @@
             "rarity",
             "isFoil",
             "count",
-            "recyclable"
+            "recyclable",
+            "engagedCopies",
+            "recyclableEngaged"
            ]
           }
          ]
@@ -40451,6 +40475,34 @@
      "linked",
      "twitchLogin",
      "linkedAt"
+    ]
+   }
+  },
+  "GET /api/player/update-profile": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "twitch": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "twitchOrigin": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "roster",
+       "self",
+       null
+      ]
+     }
+    },
+    "required": [
+     "twitch",
+     "twitchOrigin"
     ]
    }
   },
@@ -47443,10 +47495,14 @@
     "properties": {
      "success": {
       "type": "boolean"
+     },
+     "rosterSynced": {
+      "type": "boolean"
      }
     },
     "required": [
-     "success"
+     "success",
+     "rosterSynced"
     ]
    }
   },
