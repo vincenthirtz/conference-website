@@ -29,6 +29,9 @@ export default {
   pageTitleTab: "Requests | OW Women's Cup",
   heading: 'Requests',
   intro: 'Request a transfer to another team or propose a scrim.',
+  receivedTitle: 'Received requests',
+  receivedDesc:
+    'Applications to join your team are handled in team management.',
   tabTransfer: 'Transfer',
   tabScrim: 'Scrim',
   noTeamTitle: 'No team',

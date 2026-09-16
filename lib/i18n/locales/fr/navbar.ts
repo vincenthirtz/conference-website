@@ -33,6 +33,10 @@ export default ns('navbar', {
     Classement: 'Classement',
     Ligues: 'Ligues',
     Communauté: 'Communauté',
+    // /recrutement n'etait lie ni en navbar ni en footer : 0 annonce d'equipe
+    // face a 13 joueuses libres. Les deux faces du marche sont cote a cote.
+    'Rejoindre une équipe': 'Rejoindre une équipe',
+    'Recruter une joueuse': 'Recruter une joueuse',
     "L'association": "L'association",
     Ambassadeur·rices: 'Ambassadeur·rices',
     'Cartes à collectionner': 'Cartes à collectionner',

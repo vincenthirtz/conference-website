@@ -316,6 +316,17 @@ export default function TeamCard({
               >
                 {t.joinTeam}
               </Link>
+              {/* Le parcours connecté ne produisait AUCUNE fiche joueuse
+                  libre : /rejoindre n'était lié nulle part dans l'espace
+                  joueuse, d'où 11 fiches sur 13 sans compte rattaché. Placé
+                  juste après « rejoindre » : c'est l'autre moitié du même
+                  geste — au lieu de chercher, se laisser trouver. */}
+              <Link
+                href="/rejoindre"
+                className="block w-full text-center px-4 py-3 rounded-xl border border-[var(--color-green)]/40 bg-[var(--color-green)]/10 hover:bg-[var(--color-green)]/20 text-white text-sm font-medium transition"
+              >
+                {t.signalFreePlayer}
+              </Link>
               <Link
                 href="/player/request-captain"
                 className="block w-full text-center px-4 py-3 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 text-white text-sm font-medium transition"

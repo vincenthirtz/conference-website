@@ -91,8 +91,23 @@ export default {
   listCount: '{count} team(s) recruiting',
   listSince: 'Since {date}',
   listNoContact:
-    'Team contact details are not public: answer an opening from Discord, or add yourself on the “Find a team” page.',
+    'Team contact details are not public: sign in to see them, or add yourself on the “Find a team” page so captains can find you.',
   filterAll: 'All roles',
+  contactCta: 'Contact this team',
+  contactLoading: 'Loading…',
+  contactLoginHint: 'Sign-in required: contact details are not public.',
+  contactEmailLabel: 'Email',
+  contactDiscordLabel: 'Discord',
+  contactCopyEmail: 'Copy email',
+  contactCopyDiscord: 'Copy Discord username',
+  contactNone:
+    'This team left no contact details. Look for it on Discord, or add yourself on the “Find a team” page.',
+  contactRateLimited: 'Too many requests at once. Wait a minute and try again.',
+  contactGone:
+    'This opening is no longer available: the team may have found someone.',
+  contactSession: 'Your session has expired.',
+  contactLoginAgain: 'Sign in again',
+  contactError: 'Could not show contact details. Try again in a moment.',
   altTitle: 'Looking for a team, not for a player?',
   altDesc:
     'Same door, other side: add yourself and recruiting captains will reach out to you.',

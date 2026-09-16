@@ -19,6 +19,8 @@ export default {
   rules: 'Rules',
   news: 'OW news',
   sitemap: 'Sitemap',
+  joinTeam: 'Find a team',
+  recruitPlayer: 'Recruit a player',
   about: 'About',
   installApp: 'Install the app',
   donate: 'Make a donation',

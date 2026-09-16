@@ -28,6 +28,10 @@
         "ref": "/rejoindre"
       },
       {
+        "title": "Recruter une joueuse",
+        "ref": "/recrutement"
+      },
+      {
         "title": "L'association",
         "ref": "/association"
       },

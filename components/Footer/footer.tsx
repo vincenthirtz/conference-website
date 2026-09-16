@@ -26,6 +26,7 @@ import {
   XIcon,
   BlueskyIcon,
   DiscordIcon,
+  LinkIcon,
 } from '@/components/Icons';
 import nsFooter from '@/lib/i18n/locales/fr/footer';
 import { DISPLAY_SOCIALS, type SocialKey } from '@/config/socials';
@@ -55,6 +56,12 @@ const tournoiLinks = (t: FooterDict): FooterLink[] => [
 ];
 
 const communityLinks = (t: FooterDict): FooterLink[] => [
+  // Les deux faces du marché, en tête et côte à côte. /recrutement n'était
+  // relié ni ici ni en navbar : 13 joueuses libres, 0 annonce d'équipe. Une
+  // capitaine qui ne trouve pas la page ne publie pas, et la joueuse qui
+  // s'est signalée attend une annonce qui ne viendra pas.
+  { label: t.joinTeam, href: '/rejoindre', Icon: AboutIcon },
+  { label: t.recruitPlayer, href: '/recrutement', Icon: LinkIcon },
   { label: t.about, href: '/about', Icon: AboutIcon },
   { label: t.installApp, href: '/app', Icon: AppIcon },
   { label: t.donate, href: '/don', Icon: DonationIcon },

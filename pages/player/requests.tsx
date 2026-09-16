@@ -353,7 +353,29 @@ export default function PlayerRequestsPage() {
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
             <h1 className="text-2xl font-bold mb-2">{t.heading}</h1>
-            <p className="text-gray-400 text-sm mb-6">{t.intro}</p>
+            <p className="text-gray-400 text-sm mb-4">{t.intro}</p>
+
+            {/* Cette page n'émet que des demandes. Les candidatures REÇUES
+                vivent dans la gestion d'équipe — une capitaine qui cherche
+                « Demandes » atterrissait ici et n'y trouvait rien. Pas
+                d'ancre : la section candidatures de PlayerManageTeamScreen
+                n'en expose aucune. */}
+            <Link
+              href="/player/manage-team"
+              className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-purple-400/30 bg-purple-500/10 px-4 py-3 text-sm hover:bg-purple-500/20 transition"
+            >
+              <span>
+                <span className="block font-semibold text-white">
+                  {t.receivedTitle}
+                </span>
+                <span className="block text-xs text-gray-400">
+                  {t.receivedDesc}
+                </span>
+              </span>
+              <span aria-hidden="true" className="text-purple-300">
+                &rarr;
+              </span>
+            </Link>
 
             {success && (
               <div

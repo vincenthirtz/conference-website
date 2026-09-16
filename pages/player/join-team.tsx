@@ -319,20 +319,63 @@ export default function JoinTeamPage() {
                     </button>
                   )}
 
-                  {/* Incitation à créer sa propre équipe quand aucune ne recrute. */}
+                  {/* Aucune équipe ouverte : les recours, du plus rapide au
+                      plus lent. L'unique lien d'avant, « créer mon équipe »,
+                      menait à une demande soumise à validation staff sans
+                      délai annoncé — le parcours le plus long présenté comme
+                      le seul. Se signaler (1) ne demande rien à personne ;
+                      voir qui recrute (2) donne un contact direct ; créer (3)
+                      reste possible, mais on dit qu'il faut attendre. */}
                   {!teamsLoading &&
                     !teamsError &&
                     teamsLoaded &&
                     teams.length === 0 && (
-                      <p className="mt-3 text-center text-xs text-gray-500">
-                        {t.emptySubtitle}{' '}
-                        <Link
-                          href="/player/request-captain"
-                          className="text-purple-400 hover:text-purple-300"
-                        >
-                          {t.createMyTeam}
-                        </Link>
-                      </p>
+                      <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                        <p className="text-sm text-gray-300">
+                          {t.emptySubtitle}
+                        </p>
+                        <ol className="mt-3 space-y-2">
+                          <li>
+                            <Link
+                              href="/rejoindre"
+                              className="block rounded-lg border border-purple-400/40 bg-purple-500/10 px-3 py-2 hover:bg-purple-500/20 transition"
+                            >
+                              <span className="block text-sm font-semibold text-white">
+                                {t.emptyFreePlayerCta}
+                              </span>
+                              <span className="block text-xs text-gray-400">
+                                {t.emptyFreePlayerDesc}
+                              </span>
+                            </Link>
+                          </li>
+                          <li>
+                            <Link
+                              href="/recrutement"
+                              className="block rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 hover:bg-white/10 transition"
+                            >
+                              <span className="block text-sm font-semibold text-white">
+                                {t.emptyOpeningsCta}
+                              </span>
+                              <span className="block text-xs text-gray-400">
+                                {t.emptyOpeningsDesc}
+                              </span>
+                            </Link>
+                          </li>
+                          <li>
+                            <Link
+                              href="/player/request-captain"
+                              className="block rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 hover:bg-white/10 transition"
+                            >
+                              <span className="block text-sm font-semibold text-white">
+                                {t.emptyCreateCta}
+                              </span>
+                              <span className="block text-xs text-gray-400">
+                                {t.emptyCreateDesc}
+                              </span>
+                            </Link>
+                          </li>
+                        </ol>
+                      </div>
                     )}
                 </div>
 

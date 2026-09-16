@@ -39,4 +39,5 @@ export default {
   joinTeam: 'Join a team',
   createTeam: 'Create my own team',
   browseTeams: 'Browse teams',
+  signalFreePlayer: 'List myself as a free agent',
 };

@@ -34,6 +34,10 @@ export default {
     Classement: 'Leaderboard',
     Ligues: 'Leagues',
     Communauté: 'Community',
+    // /recrutement n'etait lie ni en navbar ni en footer : 0 annonce d'equipe
+    // face a 13 joueuses libres. Les deux faces du marche sont cote a cote.
+    'Rejoindre une équipe': 'Join a team',
+    'Recruter une joueuse': 'Recruit a player',
     "L'association": 'The association',
     Ambassadeur·rices: 'Ambassadors',
     'Cartes à collectionner': 'Trading cards',

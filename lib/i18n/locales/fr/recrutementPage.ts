@@ -103,8 +103,28 @@ export default ns('recrutementPage', {
   listCount: '{count} équipe(s) en recrutement',
   listSince: 'Depuis le {date}',
   listNoContact:
-    'Les coordonnées des équipes ne sont pas publiques : réponds à une annonce depuis le Discord ou signale-toi sur la page « Rejoindre une équipe ».',
+    'Les coordonnées des équipes ne sont pas publiques : connecte-toi pour les afficher, ou signale-toi sur la page « Rejoindre une équipe » pour que les capitaines te trouvent.',
   filterAll: 'Tous les postes',
+
+  // --- Contacter une équipe (route authentifiée /api/team-openings/contact) --
+  contactCta: 'Contacter cette équipe',
+  contactLoading: 'Chargement…',
+  contactLoginHint:
+    'Connexion requise : les coordonnées ne sont pas publiques.',
+  contactEmailLabel: 'Email',
+  contactDiscordLabel: 'Discord',
+  contactCopyEmail: 'Copier l’email',
+  contactCopyDiscord: 'Copier le pseudo Discord',
+  contactNone:
+    'Cette équipe n’a pas laissé de coordonnées. Cherche-la sur le Discord, ou signale-toi sur la page « Rejoindre une équipe ».',
+  contactRateLimited:
+    'Trop de demandes d’un coup. Patiente une minute avant de réessayer.',
+  contactGone:
+    'Cette annonce n’est plus disponible : l’équipe a peut-être trouvé.',
+  contactSession: 'Ta session a expiré.',
+  contactLoginAgain: 'Se reconnecter',
+  contactError:
+    'Impossible d’afficher les coordonnées. Réessaie dans un instant.',
 
   // --- Renvois -------------------------------------------------------------
   altTitle: 'Tu cherches une équipe, pas une joueuse ?',

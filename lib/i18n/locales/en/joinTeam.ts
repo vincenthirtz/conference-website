@@ -30,8 +30,18 @@ export default {
   slotsOnly: 'Open slots only',
   loading: 'Loading...',
   emptyTitle: 'No team is recruiting right now.',
-  emptySubtitle: 'Come back later, or create your own to start your roster.',
+  emptySubtitle:
+    'No open spot right now. Three ways forward, from fastest to slowest:',
   createMyTeam: 'Create my team →',
+  emptyFreePlayerCta: 'List myself as a free agent',
+  emptyFreePlayerDesc:
+    'It takes two minutes: captains who are recruiting will contact you.',
+  emptyOpeningsCta: 'See teams that are recruiting',
+  emptyOpeningsDesc:
+    'Teams post what they need: contact the ones that fit you directly.',
+  emptyCreateCta: 'Create my team',
+  emptyCreateDesc:
+    'Your captain request must be approved by staff before the team exists.',
   membersSuffix: 'members',
   desiredRoleLabel: 'Desired role',
   rolePlayer: 'Player',

@@ -38,4 +38,6 @@ export default ns('teamCard', {
   joinTeam: 'Rejoindre une equipe',
   createTeam: 'Creer ma propre equipe',
   browseTeams: 'Parcourir les équipes',
+  // Vers /rejoindre : la fiche publique que les capitaines consultent.
+  signalFreePlayer: 'Me signaler comme joueuse libre',
 });

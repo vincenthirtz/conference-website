@@ -12,6 +12,7 @@ import {
   BATTLE_TAG_REGEX,
   roleRequiresBattleTag,
 } from '@/utils/teams/roleKind';
+import { notifyJoinRequest } from '@/utils/joinRequestNotify';
 
 import { logger } from '../../../utils/logger';
 export type JoinRequestBody = {
@@ -213,6 +214,23 @@ export default withSubjectRoute(
         logger.error('[demandes/join] insert error:', insertErr);
         return res.status(500).json({ error: 'Failed to create request.' });
       }
+
+      // Prevenir la capitaine. Sans ca, la candidature attendait qu'elle passe
+      // par hasard sur la gestion d'equipe, et la joueuse lisait le silence
+      // comme un refus. Fire-and-forget APRES l'insert : la demande existe deja,
+      // une notification qui echoue (ou qui throw malgre ses gardes) ne doit
+      // jamais changer la reponse 201. Email seul — pourquoi pas de DM Discord :
+      // cf. l'en-tete de utils/joinRequestNotify.ts.
+      void notifyJoinRequest({
+        tenantId,
+        teamId,
+        playerName: (payload.user_display_name as string | null) ?? null,
+        battleTag,
+        desiredRole,
+        message,
+      }).catch((e) => {
+        logger.error('[demandes/join] notify error:', e);
+      });
 
       // Le tag donne ici devient celui du profil : on ne le redemande pas a
       // l'ecran suivant, et /player/profile cesse de l'afficher vide. Best

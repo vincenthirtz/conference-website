@@ -28,6 +28,11 @@ export default ns('playerRequests', {
   pageTitleTab: "Demandes | OW Women's Cup",
   heading: 'Demandes',
   intro: 'Demande un transfert vers une autre equipe ou propose un scrim.',
+  // Renvoi vers les candidatures recues (/player/manage-team) : cette page
+  // n'emet que des demandes.
+  receivedTitle: 'Demandes reçues',
+  receivedDesc:
+    'Les candidatures pour rejoindre ton équipe se traitent dans la gestion d’équipe.',
   tabTransfer: 'Transfert',
   tabScrim: 'Scrim',
   noTeamTitle: "Pas d'equipe",

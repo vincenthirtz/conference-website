@@ -20,6 +20,12 @@ export default ns('footer', {
   rules: 'Règlement',
   news: 'Actualités OW',
   sitemap: 'Plan du site',
+  // Libellé volontairement distinct de « Rejoindre une équipe » (navbar,
+  // espace joueuse) : le footer est rendu partout, y compris en admin, et un
+  // second texte identique ferait deux correspondances là où un test en attend
+  // une (tests/e2e/admin-player-view.spec.ts).
+  joinTeam: 'Trouver une équipe',
+  recruitPlayer: 'Recruter une joueuse',
   about: 'À propos',
   installApp: "Installer l'app",
   donate: 'Faire un don',

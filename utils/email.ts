@@ -775,6 +775,99 @@ export function sendScrimRequestEmail(opts: {
 }
 
 /**
+ * Candidature d'une joueuse pour rejoindre une équipe → email à la capitaine.
+ *
+ * Existe parce que la candidature partait dans le vide : la route répondait « le
+ * capitaine la validera » sans prévenir personne. La joueuse lisait le silence
+ * comme un refus, la capitaine découvrait la demande des jours plus tard. Même
+ * structure que `sendScrimRequestEmail` (titre, carte de détails, CTA) — un
+ * courrier de l'espace capitaine doit ressembler aux autres.
+ *
+ * Best-effort côté appelant (utils/joinRequestNotify.ts) : un échec ici ne doit
+ * jamais faire échouer la candidature.
+ */
+export function sendJoinRequestEmail(opts: {
+  to: string;
+  recipientTeamName: string;
+  playerName?: string | null;
+  battleTag?: string | null;
+  /** `player` | `substitute` | `coach` — libellé via TEAM_ROLE_EMAIL_LABELS. */
+  desiredRole?: string | null;
+  message?: string | null;
+  ctaUrl: string;
+  /** Espace au nom duquel l'email part (compte d'envoi + marque). */
+  tenantId?: string | null;
+}): Promise<SendEmailResult> {
+  const who = opts.playerName?.trim() || opts.battleTag?.trim() || null;
+  const subject = who
+    ? `Nouvelle candidature pour ${opts.recipientTeamName} : ${who}`
+    : `Nouvelle candidature pour ${opts.recipientTeamName}`;
+
+  const intro = who
+    ? `<strong style="color:#ffffff;">${escapeHtml(who)}</strong> souhaite rejoindre <strong style="color:#ffffff;">${escapeHtml(opts.recipientTeamName)}</strong>.`
+    : `Une joueuse souhaite rejoindre <strong style="color:#ffffff;">${escapeHtml(opts.recipientTeamName)}</strong>.`;
+
+  type InfoRow = { label: string; value: string; highlight?: boolean };
+  const rows: InfoRow[] = [];
+  const roleLabel = opts.desiredRole
+    ? (TEAM_ROLE_EMAIL_LABELS[opts.desiredRole] ?? opts.desiredRole)
+    : null;
+  if (roleLabel) {
+    rows.push({
+      label: 'R&ocirc;le souhait&eacute;',
+      value: escapeHtml(roleLabel),
+      highlight: true,
+    });
+  }
+  if (opts.battleTag) {
+    rows.push({ label: 'BattleTag', value: escapeHtml(opts.battleTag) });
+  }
+  if (opts.message) {
+    rows.push({ label: 'Message', value: escapeHtml(opts.message) });
+  }
+
+  const rowsHtml =
+    rows.length > 0
+      ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">${rows
+          .map((r, i) => {
+            const border =
+              i < rows.length - 1
+                ? 'border-bottom:1px solid rgba(255,255,255,0.06);'
+                : '';
+            return `
+        <tr>
+          <td style="padding:14px 20px;${border}">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">${r.label}</span><br/>
+            <span style="font-size:15px;color:${r.highlight ? '#7bc96a' : '#ffffff'};font-weight:500;">${r.value}</span>
+          </td>
+        </tr>`;
+          })
+          .join('')}</table>`
+      : '';
+
+  return sendEmail({
+    tenantId: opts.tenantId,
+    to: opts.to,
+    subject,
+    tags: ['join-request'],
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">&#128075; Nouvelle candidature</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        ${intro}
+      </p>
+      ${rowsHtml}
+      <p style="margin:0 0 24px;font-size:13px;color:#9081B0;line-height:1.6;">
+        La joueuse attend ta r&eacute;ponse&nbsp;: accepte ou refuse sa demande
+        depuis la gestion de ton &eacute;quipe, m&ecirc;me si c&apos;est pour
+        dire non.
+      </p>
+      ${ctaButton(opts.ctaUrl, 'Voir la candidature')}
+    `),
+  });
+}
+
+/**
  * Urgent check-in reminder sent at T-30 / T-15 to captains who have not yet
  * checked in. Uses the SAME check-in link/token as `sendMatchCheckinEmail`.
  * Critical-transactional — sent unconditionally (a missed reminder = forfeit),

@@ -30,8 +30,20 @@ export default ns('joinTeam', {
   loading: 'Chargement...',
   emptyTitle: 'Aucune equipe ne recrute pour le moment.',
   emptySubtitle:
-    'Reviens plus tard, ou cree la tienne pour lancer ton propre roster.',
+    'Pas de place ouverte pour l’instant. Trois façons d’avancer, de la plus rapide à la plus longue :',
   createMyTeam: 'Creer mon equipe →',
+  // Etat vide « aucune equipe ouverte » : trois recours, du plus rapide au plus
+  // lent. La creation passe par une validation du staff — on le dit, sinon la
+  // joueuse attend sans savoir qu'elle attend.
+  emptyFreePlayerCta: 'Me signaler comme joueuse libre',
+  emptyFreePlayerDesc:
+    'Signale-toi en deux minutes : les capitaines qui recrutent te contactent.',
+  emptyOpeningsCta: 'Voir les équipes qui recrutent',
+  emptyOpeningsDesc:
+    'Des équipes publient leurs besoins : contacte directement celles qui te correspondent.',
+  emptyCreateCta: 'Créer mon équipe',
+  emptyCreateDesc:
+    'Ta demande de capitanat doit être validée par le staff avant que l’équipe existe.',
   membersSuffix: 'membres',
   desiredRoleLabel: 'Role souhaite',
   rolePlayer: 'Joueur',
