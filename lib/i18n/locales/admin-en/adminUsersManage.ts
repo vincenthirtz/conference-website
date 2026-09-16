@@ -63,6 +63,7 @@ export default {
   battleTagMismatchTitle:
     "The player's verified Blizzard account does not match the roster BattleTag (potential impersonation or typo to investigate).",
   playerViewTitle: 'Player view (read-only)',
+  staffViewTitle: 'Open the staff record',
   captainViewTitle: 'Captain view',
   lockedTitle: 'Only an owner can edit an owner or admin account.',
   resendTitle: 'Resend credentials',

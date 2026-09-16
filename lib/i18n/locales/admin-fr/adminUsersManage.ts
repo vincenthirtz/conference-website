@@ -65,6 +65,7 @@ export default adminNs('adminUsersManage', {
   battleTagMismatchTitle:
     'Le compte Blizzard vérifié de la joueuse ne correspond pas au BattleTag du roster (usurpation potentielle ou faute de frappe à investiguer).',
   playerViewTitle: 'Vue player (lecture seule)',
+  staffViewTitle: 'Voir la fiche staff',
   captainViewTitle: 'Vue capitaine',
   lockedTitle: 'Seul un owner peut modifier un compte owner ou admin.',
   resendTitle: 'Renvoyer identifiants',

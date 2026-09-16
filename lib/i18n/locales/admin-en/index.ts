@@ -204,6 +204,7 @@ import enAdminMatchLineups from './adminMatchLineups';
 import enAdminDiscordLogs from './adminDiscordLogs';
 import enAdminDocuments from './adminDocuments';
 import enAdminStaffPermissions from './adminStaffPermissions';
+import enAdminStaffView from './adminStaffView';
 import enAdminFreePlayers from './adminFreePlayers';
 
 const adminEnDict = {
@@ -399,6 +400,7 @@ const adminEnDict = {
   adminDiscordLogs: enAdminDiscordLogs,
   adminDocuments: enAdminDocuments,
   adminStaffPermissions: enAdminStaffPermissions,
+  adminStaffView: enAdminStaffView,
   adminFreePlayers: enAdminFreePlayers,
   adminNetworkFunnel: enAdminNetworkFunnel,
   adminTcgPhotos: enAdminTcgPhotos,

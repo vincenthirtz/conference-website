@@ -1,0 +1,48 @@
+parameters:
+  - in: path
+    name: userId
+    required: true
+    description: Id of the AUTH account (not `staff.id`).
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: The staff record of an account — platform role, state, and spaces.
+  description: |
+    Requires `manage_staff`, platform scope. `/profile` returns the AUTH
+    account's metadata and team, which is what the player and captain views
+    need; nothing there says what this endpoint is for — the `staff` row, and
+    above all `tenant_staff`, that is, WHERE this person holds power. Adding
+    those fields to `/profile` would have served them to two views that have no
+    use for them and whose access right is broader.
+
+    Two dimensions, never conflated: `staff.role` says what someone is on the
+    PLATFORM, `tenant_staff.role` what they are AT a space, and it raises
+    without spilling over. Confusing them is how a partner was created as a
+    global `admin`.
+
+    An account that is not staff answers `404 NOT_STAFF`: the record is
+    missing, not the person.
+  operationId: adminGetUserStaffRecord
+  tags:
+    - admin/users
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: The staff record and its space attachments.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'
