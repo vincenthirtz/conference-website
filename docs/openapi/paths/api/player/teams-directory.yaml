@@ -4,7 +4,13 @@ get:
   summary: Annuaire connecte — qui cherche un scrim, qui recrute, a quel niveau.
   description: >-
     Croise les equipes actives avec leur recherche de scrim vivante, leur rating
-    d'equipe et leur etat de recrutement. Trie par creneaux EN COMMUN avec ma
+    d'equipe et leur etat de recrutement. `opening` porte l'annonce de
+    recrutement ACTIVE (`team_openings`, meme espace, une seule lecture) :
+    rattachee UNIQUEMENT par `team_id` (`linked_by`). Jamais par nom : une
+    annonce publique se depose sans compte, un rattachement par nom laisserait
+    n'importe qui obtenir le badge d'une vraie equipe avec ses propres
+    coordonnees. `is_joinable` seul n'est qu'un etat par
+    defaut et ne signifie pas que l'equipe cherche. Trie par creneaux EN COMMUN avec ma
     propre annonce, puis par presence d'annonce, puis alphabetique. Purge au
     passage les annonces perimees.
   operationId: playerTeamsDirectory

@@ -46,7 +46,12 @@ export default ns('playerTeams', {
   filterRecruiting: 'Recrutent',
   searchPlaceholder: 'Rechercher une équipe…',
   badgeScrim: 'cherche un scrim',
-  badgeRecruiting: 'recrute',
+  badgeOpening: 'Annonce publiée',
+  badgeOpeningRoles: 'Annonce publiée · cherche {roles}',
+  badgeAcceptsRequests: 'Accepte les demandes',
+  badgeAcceptsRequestsHelp:
+    "L'équipe accepte les demandes pour la rejoindre, mais n'a pas publié d'annonce : elle ne cherche pas forcément quelqu'un.",
+  viewOpeningCta: "Voir l'annonce",
   membersCount: '{count} membre(s)',
   ratingLabel: 'niveau {rating}',
   commonSlots: '{count} créneau(x) en commun :',

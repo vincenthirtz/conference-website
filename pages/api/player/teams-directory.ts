@@ -7,7 +7,10 @@
 // maintenant, à mon niveau ? ». Il croise trois sources que le public n'a pas :
 //   - la RECHERCHE de scrim vivante de chaque équipe (créneaux datés, R5) ;
 //   - le rating d'équipe (team_ratings) pour situer le niveau ;
-//   - le recrutement (is_joinable + effectif) pour les joueuses sans équipe.
+//   - le recrutement pour les joueuses sans équipe : l'ANNONCE publiée dans
+//     `team_openings` (déclaration volontaire) d'un côté, `is_joinable` +
+//     effectif de l'autre (simple état par défaut — cf.
+//     utils/teams/directoryRecruitment.ts pour la distinction).
 //
 // Il purge aussi les annonces périmées à la lecture (`expireStaleSearches`) :
 // l'annuaire est précisément l'endroit où une dispo morte fait du dégât.
@@ -51,7 +54,19 @@ import {
 import { overlappingRhythmSlots } from '@/utils/teams/teamRhythm';
 import { MAX_TEAM_PLAYERS } from '@/utils/constants';
 import { countPlayingMembers } from '@/utils/teams/roleKind';
+import {
+  DIRECTORY_OPENING_SELECT,
+  indexOpeningsByTeam,
+  type DirectoryOpening,
+  type DirectoryOpeningRow,
+} from '@/utils/teams/directoryRecruitment';
 import { logger } from '@/utils/logger';
+
+/**
+ * Plafond de lecture des annonces. Aligné sur la liste publique (120) : une
+ * seule requête pour toute la page, jamais une par équipe.
+ */
+const OPENINGS_READ_LIMIT = 120;
 
 /** Fenêtre sur laquelle « on les a déjà jouées » reste une information utile. */
 const ENCOUNTER_WINDOW_DAYS = 90;
@@ -196,6 +211,12 @@ export type DirectoryTeam = {
   member_count: number;
   is_joinable: boolean;
   is_full: boolean;
+  /**
+   * Annonce de recrutement ACTIVE rattachée à l'équipe (`team_openings`), ou
+   * null. C'est le seul signal « cette équipe cherche une joueuse » : un
+   * `is_joinable` à true n'est qu'une valeur par défaut.
+   */
+  opening: DirectoryOpening | null;
   /** Rating d'équipe dérivé des matchs (null si jamais noté). */
   rating: number | null;
   /**
@@ -356,21 +377,47 @@ export default withAuthRoute(async function handler(
   const referenceTimezone =
     (await loadMyRhythmTimezone(tenantId, user.id)) || 'Europe/Paris';
 
-  const [searchesRes, ratingsRes, reliabilityMap, rhythmCores, encounters] =
-    await Promise.all([
-      supabaseAdmin
-        .from('scrim_searches')
-        .select('team_id, slots, format, note, status, expires_at')
-        .eq('tenant_id', tenantId)
-        .eq('status', 'active'),
-      supabaseAdmin
-        .from('team_ratings')
-        .select('team_id, rating')
-        .eq('tenant_id', tenantId),
-      loadReliabilityMap(tenantId, teamIds),
-      loadTeamRhythmCores(tenantId, referenceTimezone, memberCountByTeam),
-      loadRecentEncounters(tenantId, myTeamId),
-    ]);
+  const [
+    searchesRes,
+    ratingsRes,
+    reliabilityMap,
+    rhythmCores,
+    encounters,
+    openingsRes,
+  ] = await Promise.all([
+    supabaseAdmin
+      .from('scrim_searches')
+      .select('team_id, slots, format, note, status, expires_at')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'active'),
+    supabaseAdmin
+      .from('team_ratings')
+      .select('team_id, rating')
+      .eq('tenant_id', tenantId),
+    loadReliabilityMap(tenantId, teamIds),
+    loadTeamRhythmCores(tenantId, referenceTimezone, memberCountByTeam),
+    loadRecentEncounters(tenantId, myTeamId),
+    // Scope espace obligatoire : une annonce d'un autre espace ne doit pas
+    // s'accrocher à une équipe homonyme d'ici.
+    supabaseAdmin
+      .from('team_openings')
+      .select(DIRECTORY_OPENING_SELECT)
+      .eq('tenant_id', tenantId)
+      .order('marked_at', { ascending: false })
+      .limit(OPENINGS_READ_LIMIT),
+  ]);
+
+  // Les annonces sont un complément : si leur lecture tombe, l'annuaire reste
+  // servi (sans badge fort) plutôt que de passer en erreur.
+  if (openingsRes.error) {
+    logger.error('[teams-directory] openings error', openingsRes.error);
+  }
+  const openingByTeam = indexOpeningsByTeam(
+    openingsRes.error
+      ? []
+      : ((openingsRes.data ?? []) as unknown as DirectoryOpeningRow[]),
+    teams.map((t) => ({ id: t.id as string, name: t.name as string | null }))
+  );
 
   const searchByTeam = new Map<string, ScrimSearchRow>();
   for (const row of (searchesRes.data || []) as ScrimSearchRow[]) {
@@ -435,6 +482,7 @@ export default withAuthRoute(async function handler(
         member_count: memberCount,
         is_joinable: Boolean(t.is_joinable),
         is_full: memberCount >= MAX_TEAM_PLAYERS,
+        opening: openingByTeam.get(id) ?? null,
         rating: ratingByTeam.get(id) ?? null,
         skill_average: skillAverageByTeam.get(id) ?? null,
         reliability,

@@ -46,7 +46,12 @@ export default {
   filterRecruiting: 'Recruiting',
   searchPlaceholder: 'Search a team…',
   badgeScrim: 'looking for a scrim',
-  badgeRecruiting: 'recruiting',
+  badgeOpening: 'Opening posted',
+  badgeOpeningRoles: 'Opening posted · looking for {roles}',
+  badgeAcceptsRequests: 'Accepts requests',
+  badgeAcceptsRequestsHelp:
+    'The team accepts requests to join but has not posted an opening: it is not necessarily looking for anyone.',
+  viewOpeningCta: 'View opening',
   membersCount: '{count} member(s)',
   ratingLabel: 'rating {rating}',
   commonSlots: '{count} slot(s) in common:',

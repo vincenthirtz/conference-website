@@ -1,10 +1,12 @@
 // pages/api/teams/index.ts
 // API publique pour lister les équipes actives
 // - GET : liste des équipes avec recherche optionnelle
+// - GET ?ids=a,b,c : lecture GROUPÉE par identifiants (cf. `parseIdsParam`)
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import {
+  isValidUUID,
   parsePagination,
   sanitizeSearch,
   escapePostgrestValue,
@@ -31,6 +33,45 @@ export type PublicTeam = {
   open_for_scrim: boolean;
 };
 
+/**
+ * Nombre maximal d'identifiants par lecture groupée. Borne l'URL (50 UUID ≈
+ * 1,85 Ko, loin des limites des CDN) et la requête `in (...)`. Rester sous la
+ * pagination par défaut (100) garantit qu'un lot n'est jamais tronqué.
+ */
+export const MAX_TEAM_IDS = 50;
+
+/**
+ * `?ids=` : lecture groupée des équipes par identifiant.
+ *
+ * POURQUOI : `hooks/useTeamNames` faisait un `GET /api/teams/:id` PAR équipe
+ * (deux par grille de disponibilités sur le tableau de bord). Une requête pour
+ * N noms à la place.
+ *
+ * Tout-ou-rien : un seul identifiant invalide refuse le lot (400). Filtrer en
+ * silence rendrait une réponse partielle indiscernable d'équipes inexistantes.
+ * Dédupliqué ; l'ORDRE est laissé au client (il trie pour partager le cache
+ * CDN, qui varie sur toute la query — `next.config.js`).
+ *
+ * Renvoie `null` si le paramètre est absent, `{ error }` s'il est invalide.
+ */
+export function parseIdsParam(
+  raw: string | string[] | undefined
+): string[] | null | { error: string } {
+  if (raw === undefined) return null;
+  // `?ids=a&ids=b` est accepté comme `?ids=a,b` : même intention.
+  const parts = (Array.isArray(raw) ? raw : [raw])
+    .flatMap((chunk) => chunk.split(','))
+    .map((id) => id.trim())
+    .filter(Boolean);
+  const unique = Array.from(new Set(parts.map((id) => id.toLowerCase())));
+  if (unique.length === 0) return { error: 'ids must not be empty' };
+  if (unique.length > MAX_TEAM_IDS) {
+    return { error: `ids accepts at most ${MAX_TEAM_IDS} values` };
+  }
+  if (!unique.every(isValidUUID)) return { error: 'ids must be UUIDs' };
+  return unique;
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -46,6 +87,12 @@ export default async function handler(
   }
 
   try {
+    // Validation AVANT toute lecture : un lot invalide ne coûte rien en base.
+    const ids = parseIdsParam(req.query.ids);
+    if (ids && !Array.isArray(ids)) {
+      return res.status(400).json({ error: ids.error });
+    }
+
     const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
     const { limit: limitNum, offset: offsetNum } = parsePagination(req, {
@@ -73,6 +120,12 @@ export default async function handler(
         }
       )
       .eq('tenant_id', tenantId);
+
+    // Scope espace conservé (ci-dessus) : un identifiant d'un autre espace ne
+    // renvoie rien, exactement comme `/api/teams/:id` répond 404.
+    if (ids) {
+      query = query.in('id', ids);
+    }
 
     // Filter by joinable status
     if (onlyJoinable) {

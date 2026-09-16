@@ -48,6 +48,16 @@ get:
       required: false
       schema:
         type: string
+    - name: ids
+      in: query
+      required: false
+      description: >-
+        Lecture groupee par identifiants, separes par des virgules (50 au plus,
+        UUID uniquement, dedupliques). Un seul identifiant invalide refuse le
+        lot (400). Scope espace conserve. Trier les identifiants cote client
+        pour partager le cache CDN.
+      schema:
+        type: string
   responses:
     '200':
       description: Equipes filtrees + total.
@@ -64,5 +74,7 @@ get:
                   $ref: '#/components/schemas/PublicTeamSummary'
               total:
                 type: [integer, 'null']
+    '400':
+      $ref: '#/components/responses/BadRequest'
     '429':
       $ref: '#/components/responses/RateLimited'

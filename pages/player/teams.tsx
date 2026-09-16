@@ -10,7 +10,10 @@
 //   1. MON annonce (créneaux datés qui expirent seuls) — je la pose ici ;
 //   2. les équipes qui cherchent un scrim, triées par créneaux EN COMMUN avec
 //      la mienne — le signal le plus actionnable du réseau ;
-//   3. les équipes qui recrutent, pour une joueuse sans équipe (R7).
+//   3. les équipes qui recrutent, pour une joueuse sans équipe (R7). Deux
+//      signaux distincts : « Annonce publiée » (une capitaine a posé une annonce
+//      dans `team_openings` — elle CHERCHE) et « Accepte les demandes »
+//      (`is_joinable`, vrai par défaut — elle ne dit pas non, sans rien promettre).
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
@@ -35,6 +38,12 @@ import type { OpponentReason } from '../../utils/teams/opponentMatch';
 
 import { logger } from '../../utils/logger';
 import nsPlayerTeams from '@/lib/i18n/locales/fr/playerTeams';
+import nsSpecialty from '@/lib/i18n/locales/fr/specialty';
+import {
+  acceptsRequests,
+  isRecruiting,
+  sortRecruitingFirst,
+} from '@/utils/teams/directoryRecruitment';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 
 type DirectoryResponse = {
@@ -68,6 +77,8 @@ function scoreTone(score: number): string {
 
 function PlayerTeamsPage() {
   const t = useT(nsPlayerTeams);
+  // Libellés des postes : mêmes termes que /recrutement et les fiches joueuses.
+  const tRole = useT(nsSpecialty);
   const locale = useLocale();
   const router = useRouter();
   const { ready, loading: authLoading } = usePlayerSession();
@@ -224,10 +235,9 @@ function PlayerTeamsPage() {
 
   const visibleTeams = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return teams.filter((team) => {
+    const filtered = teams.filter((team) => {
       if (filter === 'scrim' && !team.scrim_search) return false;
-      if (filter === 'recruiting' && (!team.is_joinable || team.is_full))
-        return false;
+      if (filter === 'recruiting' && !isRecruiting(team)) return false;
       if (filter === 'level') {
         const mine = mySkillAverage?.average;
         const theirs = team.skill_average?.average;
@@ -241,12 +251,14 @@ function PlayerTeamsPage() {
         (team.country ?? '').toLowerCase().includes(q)
       );
     });
+    // Sous « recrutent », une annonce publiée passe devant une équipe qui se
+    // contente d'accepter les demandes : c'est la seule qui répondra à coup sûr.
+    // Les autres filtres gardent l'ordre de compatibilité de l'API.
+    return filter === 'recruiting' ? sortRecruitingFirst(filtered) : filtered;
   }, [teams, filter, query, mySkillAverage]);
 
   const scrimCount = teams.filter((x) => x.scrim_search).length;
-  const recruitingCount = teams.filter(
-    (x) => x.is_joinable && !x.is_full
-  ).length;
+  const recruitingCount = teams.filter(isRecruiting).length;
   const levelCount =
     mySkillAverage == null
       ? 0
@@ -446,9 +458,33 @@ function PlayerTeamsPage() {
                             {t.badgeScrim}
                           </span>
                         )}
-                        {team.is_joinable && !team.is_full && (
-                          <span className="rounded-full border border-violet-400/40 bg-violet-500/15 px-2 py-0.5 text-[10px] font-semibold text-violet-200">
-                            {t.badgeRecruiting}
+                        {/* Signal FORT : une annonce existe. Couleur pleine et
+                            postes recherchés, parce que c'est la seule équipe
+                            de la liste qui attend réellement une candidature. */}
+                        {team.opening && (
+                          <span
+                            data-test="badge-opening"
+                            className="rounded-full border border-violet-300/70 bg-violet-600 px-2 py-0.5 text-[10px] font-bold text-white"
+                          >
+                            {team.opening.roles.length > 0
+                              ? format(t.badgeOpeningRoles, {
+                                  roles: team.opening.roles
+                                    .map((r) => tRole[r])
+                                    .join(', '),
+                                })
+                              : t.badgeOpening}
+                          </span>
+                        )}
+                        {/* Signal DISCRET : `is_joinable` vaut true par défaut.
+                            Masqué quand une annonce existe (redondant), et
+                            volontairement terne pour ne rien promettre. */}
+                        {!team.opening && acceptsRequests(team) && (
+                          <span
+                            data-test="badge-accepts-requests"
+                            title={t.badgeAcceptsRequestsHelp}
+                            className="rounded-full border border-white/15 px-2 py-0.5 text-[10px] text-gray-300"
+                          >
+                            {t.badgeAcceptsRequests}
                           </span>
                         )}
                         {/* Score de compatibilité (N4) : il porte le tri, donc
@@ -561,7 +597,19 @@ function PlayerTeamsPage() {
                           {t.proposeCta}
                         </Link>
                       )}
-                      {!myTeamId && team.is_joinable && !team.is_full && (
+                      {/* L'annonce vit sur /recrutement, qui porte le contact
+                          (réservé aux personnes connectées). Pas d'ancre : la
+                          liste (components/TeamOpenings/TeamOpeningsList) ne
+                          pose aucun `id` DOM par annonce. */}
+                      {team.opening && (
+                        <Link
+                          href="/recrutement"
+                          className="rounded-xl border border-violet-400/50 px-4 py-2 text-xs font-semibold text-violet-100 transition hover:bg-violet-500/15"
+                        >
+                          {t.viewOpeningCta}
+                        </Link>
+                      )}
+                      {!myTeamId && acceptsRequests(team) && (
                         <Link
                           href="/player/join-team"
                           className="rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold transition hover:bg-violet-500"
