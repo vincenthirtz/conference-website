@@ -52,6 +52,27 @@ export default ns('homeV2', {
   spotProgressAria: '{pct} % des places prises',
   spotCtaRegister: 'Inscrire mon équipe',
   spotChipFull: 'Complet',
+  // Imminence : ce qui prime quand un début est en vue. `_zero` et `_one` ont
+  // leur propre formulation — « dans 0 jour » et « dans 1 jours » ne se disent
+  // pas.
+  spotChipStarting_zero: 'Ça commence aujourd’hui',
+  spotChipStarting_one: 'Demain',
+  spotChipStarting_other: 'Dans {days} jours',
+  spotStartingLead_zero:
+    'Le coup d’envoi est aujourd’hui — {teams} équipes engagées.',
+  spotStartingLead_one: 'Coup d’envoi demain, avec {teams} équipes engagées.',
+  spotStartingLead_other:
+    'Coup d’envoi dans {days} jours, avec {teams} équipes engagées.',
+  spotStartingLeadFull_zero:
+    'Le coup d’envoi est aujourd’hui — les {teams} équipes sont au complet.',
+  spotStartingLeadFull_one:
+    'Coup d’envoi demain, les {teams} équipes sont au complet.',
+  spotStartingLeadFull_other:
+    'Coup d’envoi dans {days} jours, les {teams} équipes sont au complet.',
+  spotCtaSchedule: 'Voir le calendrier',
+  // Les portes de sortie restent, au second rang : une visiteuse arrivée trop
+  // tard garde les scrims, la recherche d’équipe et la saison suivante.
+  spotAsideLead: 'Pas encore d’équipe ?',
   spotFullLead:
     'Toutes les places sont prises pour cette édition. En attendant la suite :',
   spotCtaScrim: 'Proposer un scrim',
@@ -78,7 +99,8 @@ export default ns('homeV2', {
   matchdayMore_one: '+ {count} autre match ce jour-là',
   matchdayMore_other: '+ {count} autres matchs ce jour-là',
   matchdayAll: 'Tout le calendrier',
-  teamsStripEyebrow: '{count} équipes engagées',
+  teamsStripEyebrow_one: '{count} équipe engagée',
+  teamsStripEyebrow_other: '{count} équipes engagées',
   teamsStripTitle: 'Elles participent à la seconde édition de la Women’s Cup',
   newsEyebrow: 'Actualités',
   newsTitle: 'Les dernières actus',

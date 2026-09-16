@@ -271,11 +271,21 @@ describe('HomeSpotlight — affiches ou équipes, jamais un vide', () => {
     expect(html).toContain('Chocomates');
     expect(html).toContain('Eclypse');
     expect(html).toContain('20:30');
-    // Les affiches PRENNENT LA PLACE de la bande des engagées.
-    expect(html).not.toContain('Elles participent');
   });
 
-  it('retombe sur les équipes engagées sans calendrier publié', () => {
+  // Les affiches ont d'abord PRIS LA PLACE de la bande des engagées : l'une OU
+  // l'autre dans le pied de carte. Donc les semaines où un calendrier est
+  // publié — celles où le tournoi intéresse — les équipes quittaient la page.
+  // Les deux coexistent maintenant : le pied dit qui joue vendredi, la bande
+  // pleine largeur dit qui court.
+  it('n’évince plus la bande des équipes engagées', () => {
+    const html = render(matchday());
+    expect(html).toContain('20:30');
+    expect(html).toContain('Elles participent');
+    expect(html).toContain('href="/team/chocomates"');
+  });
+
+  it('garde les équipes engagées sans calendrier publié', () => {
     const html = render(null);
     expect(html).toContain('Elles participent');
     expect(html).toContain('href="/team/chocomates"');

@@ -1,10 +1,24 @@
-// Section « Le prochain rendez-vous » de l'accueil : ce qu'elle propose quand
-// le tournoi est COMPLET.
+// Section « Le prochain rendez-vous » de l'accueil : ce qu'elle met en avant.
 //
-// Le problème traité : une visiteuse qui arrive une fois les 8 places prises
-// lisait « Inscriptions ouvertes », voyait un bouton « Inscrire mon équipe »
-// qui ne mène nulle part d'utile, et repartait. La section ouvre désormais
-// trois portes — scrim, recherche d'équipe, création pour la saison suivante.
+// DEUX PROBLÈMES SUCCESSIFS, tous deux figés ici.
+//
+// 1. Une visiteuse qui arrivait une fois les 8 places prises lisait
+//    « Inscriptions ouvertes », voyait un bouton « Inscrire mon équipe » qui ne
+//    menait nulle part d'utile, et repartait. La section ouvre trois portes —
+//    scrim, recherche d'équipe, création pour la saison suivante.
+//
+// 2. Le correctif du dessus a fini par se retourner : à DEUX JOURS du coup
+//    d'envoi, la carte menait encore par « Complet », « toutes les places sont
+//    prises » et « en attendant la suite » — pendant que son propre pied
+//    annonçait les matchs du vendredi. Trois messages de porte fermée sur
+//    l'événement le plus imminent de l'année. L'imminence prime désormais, et
+//    les trois portes reculent au second rang sans disparaître.
+//
+// L'HORLOGE EST INJECTÉE. Sans ça ces tests changeraient de résultat selon le
+// jour où on les lance : `startDate` est une date fixe, donc « complet » et
+// « ça commence demain » seraient le même cas rendu différemment en mars et en
+// septembre. Chaque test dit explicitement à quelle distance du départ il se
+// place.
 //
 // Pas de jsdom/testing-library dans ce repo (politique zéro dépendance) : on
 // rend côté serveur via react-dom/server, comme adminCasterSceneEditors.
@@ -20,6 +34,12 @@ import type { HomeTeam } from '@/utils/home/loadHomeData';
 
 const live: TwitchLive = { live: false, parent: null, channel: 'womens_cup' };
 
+const START = '2026-09-18';
+/** Trois mois avant : aucun début en vue, l'état des places décide seul. */
+const LOIN = '2026-06-01';
+/** Deux jours avant : la situation réelle du 16 septembre 2026. */
+const IMMINENT = '2026-09-16';
+
 function tournament(
   over: Partial<UpcomingTournament> = {}
 ): UpcomingTournament {
@@ -29,7 +49,7 @@ function tournament(
     slug: 'ow-womens-cup-2026',
     shortName: 'OWWC26',
     status: 'published',
-    startDate: '2026-09-18',
+    startDate: START,
     endDate: null,
     format: 'Round robin',
     maxTeams: 8,
@@ -38,13 +58,18 @@ function tournament(
   };
 }
 
-function render(t: UpcomingTournament | null, teams: HomeTeam[] = []): string {
+function render(
+  t: UpcomingTournament | null,
+  teams: HomeTeam[] = [],
+  now: string = LOIN
+): string {
   return renderToString(
     createElement(HomeSpotlight, {
       tournament: t,
       prizeCents: null,
       live,
       teams,
+      now,
     })
   );
 }
@@ -58,7 +83,7 @@ describe('HomeSpotlight — places restantes', () => {
   });
 });
 
-describe('HomeSpotlight — tournoi complet', () => {
+describe('HomeSpotlight — tournoi complet, début lointain', () => {
   const full = tournament({ teamCount: 8, maxTeams: 8 });
 
   it('remplace « inscriptions ouvertes » par « complet »', () => {
@@ -110,15 +135,72 @@ describe('HomeSpotlight — tournoi complet', () => {
 });
 
 /* ---------------------------------------------------------------------------
- * Fusion avec la bande des équipes
+ * L'imminence prime
  *
- * « Le prochain rendez-vous » et « elles participent » vivaient dans deux
- * sections successives, qui disaient la même chose à deux endroits. Elles ne
- * font plus qu'une carte : ces tests fixent que le pied en fait bien partie, et
- * qu'il s'efface quand il n'a rien à montrer.
+ * Le cas qui a motivé la refonte : complet ET à deux jours du départ. C'est
+ * exactement la situation du 16 septembre 2026, où la carte disait « en
+ * attendant la suite » au-dessus d'un pied annonçant les matchs du vendredi.
  * ------------------------------------------------------------------------- */
 
-describe('HomeSpotlight — pied « équipes engagées »', () => {
+describe('HomeSpotlight — début imminent', () => {
+  const full = tournament({ teamCount: 8, maxTeams: 8 });
+
+  it('mène par le compte à rebours, pas par « Complet »', () => {
+    const html = render(full, [], IMMINENT);
+    expect(html).toContain('Dans 2 jours');
+    // Le constat de porte fermée ne doit plus être ce qu'on lit en premier.
+    expect(html).not.toContain('Toutes les places sont prises');
+  });
+
+  it('annonce le coup d’envoi et le nombre d’équipes', () => {
+    const html = render(full, [], IMMINENT);
+    expect(html).toContain('Coup d’envoi dans 2 jours');
+    expect(html).toContain('8');
+  });
+
+  it('pousse le calendrier en action principale', () => {
+    const html = render(full, [], IMMINENT);
+    expect(html).toContain('Voir le calendrier');
+    expect(html).toContain('href="/tournament/ow-womens-cup-2026/matches"');
+  });
+
+  // Elles ne disparaissent pas : une visiteuse arrivée trop tard garde les
+  // scrims, la recherche d'équipe et la saison suivante. Elles reculent.
+  it('garde les trois portes de sortie, au second rang', () => {
+    const html = render(full, [], IMMINENT);
+    expect(html).toContain('Pas encore d’équipe ?');
+    expect(html).toContain('Proposer un scrim');
+    expect(html).toContain('Chercher une équipe');
+  });
+
+  it('le jour même se dit autrement que « dans 0 jour »', () => {
+    const html = render(full, [], START);
+    expect(html).toContain('Ça commence aujourd’hui');
+    expect(html).not.toContain('Dans 0 jour');
+  });
+
+  it('un début imminent AVEC des places libres garde l’inscription', () => {
+    // Le compte à rebours ne doit pas fermer une porte encore ouverte : trois
+    // équipes sur huit, à deux jours, il reste tout à fait le temps.
+    const html = render(tournament({ teamCount: 3 }), [], IMMINENT);
+    expect(html).toContain('Inscrire mon équipe');
+    expect(html).toContain('Voir le calendrier');
+    // Le second rang n'a pas lieu d'être : l'inscription est au premier.
+    expect(html).not.toContain('Pas encore d’équipe ?');
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * La bande des équipes
+ *
+ * Elle a été le PIED de la carte, en concurrence avec les affiches de la
+ * journée : l'une OU l'autre. Les semaines où un calendrier est publié, les
+ * équipes disparaissaient donc de la page. Elle est maintenant une section à
+ * part, pleine largeur, rendue par le même composant — ces tests fixent
+ * qu'elle accompagne toujours la carte, et qu'elle s'efface à vide.
+ * ------------------------------------------------------------------------- */
+
+describe('HomeSpotlight — bande « équipes engagées »', () => {
   const teams: HomeTeam[] = [
     {
       id: 'id-1',
@@ -136,13 +218,17 @@ describe('HomeSpotlight — pied « équipes engagées »', () => {
     },
   ];
 
-  it('rend les équipes DANS la carte du rendez-vous', () => {
+  it('accompagne la carte du rendez-vous', () => {
     const html = render(tournament(), teams);
-    // Un seul rendu porte les deux : le titre de la section et les liens
-    // d'équipe. C'est tout l'objet de la fusion.
     expect(html).toContain('Le prochain rendez-vous');
     expect(html).toContain('href="/team/chocomates"');
     expect(html).toContain('href="/team/eclypse"');
+  });
+
+  it('sort du conteneur pour occuper toute la largeur', () => {
+    const html = render(tournament(), teams);
+    // La bande ne doit plus être une cellule de la grille de la carte.
+    expect(html).not.toContain('md:col-span-2');
   });
 
   it('annonce le nombre d’équipes engagées', () => {

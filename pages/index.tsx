@@ -47,6 +47,10 @@ type HomeProps = {
   matchday: HomeMatchday | null;
   countdownTarget: string | null;
   prizeCents: number | null;
+  // L'horloge du rendu (ISR 15 min). Fabriquée ici plutôt que dans la carte :
+  // un `new Date()` côté composant donne le build au serveur et la visite au
+  // client — deux valeurs qui divergent dès qu'un minuit passe entre les deux.
+  nowIso: string;
   // Vrai quand le chargement du contenu dynamique a échoué côté serveur : on le
   // signale plutôt que d'afficher une home faussement vide (hero reste rendu).
   loadError: boolean;
@@ -70,6 +74,7 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
       matchday: data.matchday,
       countdownTarget: data.countdownTarget,
       prizeCents,
+      nowIso: new Date().toISOString(),
       loadError: data.loadError,
     },
     revalidate: 900,
@@ -85,6 +90,7 @@ function Home({
   matchday,
   countdownTarget,
   prizeCents,
+  nowIso,
   loadError,
 }: HomeProps) {
   const t = useT(nsHomeV2);
@@ -122,6 +128,7 @@ function Home({
         live={live}
         teams={teams}
         matchday={matchday}
+        now={nowIso}
       />
 
       <HomeNewsV2 news={news} />

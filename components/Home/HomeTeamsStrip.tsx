@@ -1,12 +1,19 @@
 // components/Home/HomeTeamsStrip.tsx
 //
-// La bande des équipes engagées — le PIED de la carte « prochain rendez-vous »
-// (HomeSpotlight), pas une section autonome.
+// La bande des équipes engagées — une SECTION pleine largeur, juste sous la
+// carte « prochain rendez-vous » (HomeSpotlight).
 //
-// Fusionnée avec la carte de l'événement plutôt que posée en dessous : les
-// deux disaient la même chose à deux endroits — « voici la compétition » puis
-// « voici qui y court ». Séparées, elles se répétaient et diluaient l'une
-// l'autre ; réunies, l'affiche est complète d'un seul regard.
+// ELLE A ÉTÉ LE PIED DE CETTE CARTE, et y partageait la place avec les
+// affiches de la journée : l'une OU l'autre. Les semaines où un calendrier est
+// publié — c'est-à-dire précisément celles où le tournoi intéresse — les
+// équipes disparaissaient donc de la page. Or « qui court » et « qui joue
+// vendredi » ne répondent pas à la même question ; la seconde ne remplace pas
+// la première.
+//
+// PLEINE LARGEUR, et pas dans le conteneur : ce conteneur existe pour cadrer
+// des lignes de texte à une longueur lisible. Une suite de blasons n'est pas
+// du texte — l'y enfermer forçait un défilement horizontal sur des écrans qui
+// avaient largement la place d'afficher les huit équipes d'un seul tenant.
 //
 // PARTI PRIS GRAPHIQUE — ce que ce n'est PAS, et pourquoi :
 //
@@ -66,11 +73,11 @@ function TeamMedallion({ team }: { team: HomeTeam }): JSX.Element {
       href={publicTeamHref(team)}
       // Le nom de l'équipe est DANS le lien : pas d'aria-label à ajouter, il
       // ferait doublon avec le texte visible.
-      className="group flex w-20 shrink-0 snap-center flex-col items-center gap-2 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] sm:w-24"
+      className="group flex w-20 shrink-0 snap-center flex-col items-center gap-2 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] sm:w-24 lg:w-28"
       title={team.name}
     >
       <span
-        className="relative flex h-16 w-16 items-center justify-center rounded-full p-[2px] transition-transform duration-300 group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transform-none sm:h-20 sm:w-20"
+        className="relative flex h-16 w-16 items-center justify-center rounded-full p-[2px] transition-transform duration-300 group-hover:-translate-y-1 group-focus-visible:-translate-y-1 motion-reduce:transform-none sm:h-20 sm:w-20 lg:h-24 lg:w-24"
         aria-hidden="true"
       >
         {/* L'anneau dégradé : invisible au repos, il s'allume au survol et au
@@ -85,7 +92,7 @@ function TeamMedallion({ team }: { team: HomeTeam }): JSX.Element {
           className="h-full w-full"
         />
       </span>
-      <span className="line-clamp-2 text-center text-[11px] font-semibold uppercase leading-tight tracking-wide text-gray-400 transition-colors duration-300 group-hover:text-white group-focus-visible:text-white">
+      <span className="line-clamp-2 text-center text-[11px] font-semibold uppercase leading-tight tracking-wide text-gray-400 lg:text-xs transition-colors duration-300 group-hover:text-white group-focus-visible:text-white">
         {team.name}
       </span>
     </Link>
@@ -104,12 +111,15 @@ export default function HomeTeamsStrip({
   if (!teams.length) return null;
 
   return (
-    // `md:col-span-2` : la bande traverse les deux colonnes de la carte (infos
-    // à gauche, Twitch à droite) au lieu de se ranger dans l'une d'elles.
-    <div className="border-t border-white/10 bg-black/20 py-6 md:col-span-2">
-      <div className="mb-5 flex flex-col items-center gap-0.5 px-6 text-center">
+    <section className="mt-12 w-full border-y border-white/10 bg-black/20 py-10 md:mt-16">
+      <div className="mb-6 flex flex-col items-center gap-0.5 px-6 text-center">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-          {format(t.teamsStripEyebrow, { count: teams.length })}
+          {format(
+            teams.length === 1
+              ? t.teamsStripEyebrow_one
+              : t.teamsStripEyebrow_other,
+            { count: teams.length }
+          )}
         </p>
         <p className="text-balance text-sm font-semibold text-gray-200 md:text-base">
           {t.teamsStripTitle}
@@ -128,6 +138,6 @@ export default function HomeTeamsStrip({
           ))}
         </ul>
       </div>
-    </div>
+    </section>
   );
 }
