@@ -28,6 +28,7 @@ import type { GameResult } from '../../../utils/teams/scouting';
 import { logger } from '../../../utils/logger';
 import nsScouting from '@/lib/i18n/locales/fr/scouting';
 import { useManagedTeam } from '@/hooks/useManagedTeam';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 import { loginHrefFor } from '@/utils/player/sessionExpiry';
 
 /** Lundi 1er janvier 2024 — base neutre pour nommer les jours. */
@@ -77,6 +78,11 @@ function ScoutingPage() {
   const canProposeScrim =
     managedTeam?.permissions.includes('manage_scrims') ?? false;
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  // Le dossier se lit du point de vue de NOTRE équipe (confrontations directes,
+  // adversaires communs, et refus de se scouter soi-même) : une manageuse de
+  // plusieurs équipes doit voir celle du sélecteur, pas celle que le serveur
+  // devinerait sans `?teamId=`.
+  const { withTeam } = useActiveTeam();
 
   const [data, setData] = useState<ScoutingResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -91,7 +97,7 @@ function ScoutingPage() {
     setError(null);
     try {
       const payload = await adminFetchJson<ScoutingResponse>(
-        `/api/player/scouting?team=${encodeURIComponent(teamId)}`
+        withTeam(`/api/player/scouting?team=${encodeURIComponent(teamId)}`)
       );
       setData(payload);
     } catch (err) {
@@ -100,7 +106,7 @@ function ScoutingPage() {
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, teamId, t.errorLoad]);
+  }, [adminFetchJson, teamId, t.errorLoad, withTeam]);
 
   useEffect(() => {
     if (!ready || !teamId) return;

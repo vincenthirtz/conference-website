@@ -881,26 +881,24 @@ PublicTeamOpening:
       type: [string, 'null']
       format: date-time
 ContactTeamOpening:
-  allOf:
-    - $ref: '#/components/schemas/PublicTeamOpening'
-    - type: object
-      description: >
-        Meme annonce, AVEC les coordonnees. Reservee aux appelants authentifies
-        — ne doit jamais transiter par une route publique.
+  type: object
+  description: >
+    Coordonnees d'une annonce, SANS le reste de l'annonce (deja servi par la
+    liste publique) ni l'equipe du site. Reservee aux appelants authentifies
+    — ne doit jamais transiter par une route publique.
+  required:
+    - contact
+  properties:
+    contact:
+      type: object
       required:
-        - contact
+        - email
+        - discord
       properties:
-        teamId:
+        email:
           type: [string, 'null']
-          format: uuid
-          description: Equipe du site quand l'annonce vient d'un espace capitaine.
-        contact:
-          type: object
-          properties:
-            email:
-              type: [string, 'null']
-            discord:
-              type: [string, 'null']
+        discord:
+          type: [string, 'null']
 PlayerProfileResponse:
   # Généré depuis lib/apiContracts/public/v1 (type TS du handler vérifié par test).
   x-zod: response.PlayerProfileResponse

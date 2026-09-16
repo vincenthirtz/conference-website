@@ -579,6 +579,25 @@ describe('GET /api/team-openings/contact', () => {
     expect(res.headers['Cache-Control']).toBe('no-store');
   });
 
+  it('ne renvoie QUE les coordonnées — ni l’annonce, ni l’équipe du site', async () => {
+    // L'interface ne lit que `opening.contact`. `teamId` n'est pas dans la vue
+    // publique : le livrer ici à tout compte connecté ouvrait une corrélation
+    // annonce → équipe inscrite dont aucun écran n'a besoin.
+    seedOpening({ team_id: 'team-9' });
+    setAuthUser({ id: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee' });
+
+    const res = makeRes();
+    await contactHandler(makeAuthedReq({ query: { id: OPENING_ID } }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      opening: {
+        contact: { email: 'capitaine@gmail.com', discord: 'nova#1234' },
+      },
+    });
+    expect(JSON.stringify(res.body)).not.toContain('team-9');
+  });
+
   it('404 sur une annonce périmée — comme sur une annonce inexistante', async () => {
     seedOpening({ expires_at: '2020-01-01T00:00:00.000Z' });
     setAuthUser({ id: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee' });

@@ -16,7 +16,9 @@ vi.mock('@/utils/supabase', async () => {
   return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
 });
 
-import yoga from '../../pages/api/graphql';
+// L'instance yoga elle-même (export nommé) : le handler par défaut ajoute la
+// limite de débit, couverte à part par graphqlRateLimit.test.ts.
+import { yoga } from '../../pages/api/graphql';
 
 async function post(query: string) {
   const res = await yoga.fetch('http://localhost/api/graphql', {

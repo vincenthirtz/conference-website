@@ -234,9 +234,12 @@ pour le déroulé map par map, et `team(idOrSlug: "…") { name logo_url roster 
 - Mêmes règles de visibilité que le REST : tournois `published` / `running` /
   `completed` ; matchs `pending` / `ongoing` / `finished` seulement (un
   walkover, un litige, un match reporté ou annulé n'apparaît pas).
-- Les requêtes ne contrôlent ni le plan, ni un quota, et **aucune limite de
-  débit** n'est appliquée par l'application : restez raisonnables (une requête
-  toutes les 15 à 30 s par overlay suffit).
+- Les requêtes ne contrôlent ni le plan, ni un quota. Une limite de débit
+  s'applique : **600 requêtes par minute par adresse IP**, pour tout l'endpoint.
+  Au-delà, la réponse est un HTTP 429 avec `Retry-After` et
+  `errors[].extensions.code = RATE_LIMITED`. Une requête toutes les 15 à 30 s
+  par overlay en reste très loin — même avec plusieurs overlays derrière la
+  même connexion de régie.
 - Profondeur de requête limitée à 8. Introspection et GraphiQL sont désactivés
   en production : servez-vous des champs ci-dessus et de la référence
   (section « Guide », partie GraphQL).

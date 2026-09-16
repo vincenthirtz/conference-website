@@ -235,15 +235,16 @@ describe('POST /api/admin/notifications/subscribe', () => {
     expect((store.push_subscriptions[0] as any).auth).toBe('new-auth');
   });
 
-  it('200 updated re-assign user_id quand un autre user reprend le device', async () => {
-    // Endpoint déjà associé à un autre user.
+  it('200 updated re-assign user_id quand un autre user reprend le device (mêmes clés)', async () => {
+    // « Appareil prêté » / re-login : le navigateur présente les clés qu'il a
+    // lui-même générées, il prouve donc détenir l'abonnement.
     store.push_subscriptions = [
       {
         id: 'sub-other',
         user_id: OTHER_USER_ID,
         endpoint: validBody.subscription.endpoint,
-        p256dh: 'old',
-        auth: 'old',
+        p256dh: 'pk-key',
+        auth: 'auth-key',
         user_agent: null,
         last_seen_at: '2026-01-01T00:00:00.000Z',
       },
@@ -256,6 +257,40 @@ describe('POST /api/admin/notifications/subscribe', () => {
     // user_id a été réassigné au user courant.
     expect((store.push_subscriptions[0] as any).user_id).toBe(USER_ID);
   });
+
+  it.each([
+    ['auth différent', { p256dh: 'pk-key', auth: 'autre-secret' }],
+    ['p256dh différent', { p256dh: 'autre-cle', auth: 'auth-key' }],
+    ['clés absentes en base', { p256dh: null, auth: null }],
+  ])(
+    '409 : endpoint d’un autre compte (ex. une joueuse), %s → aucun détournement',
+    async (_label, storedKeys) => {
+      // Un compte staff qui connaît l'endpoint d'un appareil (URL qui fuit
+      // facilement) ne doit pas pouvoir se l'attribuer : la table est commune
+      // avec /api/player/push/subscribe, la victime peut être une joueuse.
+      store.push_subscriptions = [
+        {
+          id: 'victim-sub',
+          user_id: OTHER_USER_ID,
+          endpoint: validBody.subscription.endpoint,
+          ...storedKeys,
+          user_agent: null,
+          last_seen_at: '2026-01-01T00:00:00.000Z',
+        },
+      ] as any;
+
+      const res = makeRes();
+      await subscribeHandler(makeReq({ method: 'POST', body: validBody }), res);
+      expect(res.statusCode).toBe(409);
+      expect((res.body as any).code).toBe('SUBSCRIPTION_OWNED_BY_OTHER_USER');
+      expect(store.push_subscriptions).toHaveLength(1);
+      const row = store.push_subscriptions[0] as any;
+      expect(row.user_id).toBe(OTHER_USER_ID);
+      expect(row.p256dh).toBe(storedKeys.p256dh);
+      expect(row.auth).toBe(storedKeys.auth);
+      expect(row.last_seen_at).toBe('2026-01-01T00:00:00.000Z');
+    }
+  );
 });
 
 /* ===========================================================================

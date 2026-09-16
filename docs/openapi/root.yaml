@@ -106,7 +106,8 @@ x-public-description: |
     `QUOTA_EXCEEDED`, avec `X-RateLimit-Scope` et `X-RateLimit-Limit`). Le
     quota est aussi consommé par la mutation GraphQL. Clé partenaire : pas de
     quota.
-  - GraphQL : aucune limite de débit applicative.
+  - GraphQL : 600 requêtes/min par IP (requêtes et mutation) ; au-delà, HTTP
+    429 avec `Retry-After` et `errors[].extensions.code = RATE_LIMITED`.
 
   ## Erreurs
 

@@ -103,8 +103,9 @@ function OpeningContact({ openingId, t }: { openingId: string; t: Dict }) {
         return;
       }
       const data = (await res.json()) as { opening?: ContactTeamOpening };
-      // On ne garde QUE les coordonnées : la route renvoie aussi l'annonce
-      // entière et `teamId`, déjà affichés ou sans usage ici.
+      // La route ne renvoie que les coordonnées (`{ opening: { contact } }`) :
+      // l'annonce est déjà affichée, et rien de plus n'a à sortir d'une route
+      // qui donne un email.
       setState({
         status: 'ready',
         contact: data.opening?.contact ?? { email: null, discord: null },

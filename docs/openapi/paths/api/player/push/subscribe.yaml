@@ -59,5 +59,14 @@ post:
       $ref: '#/components/responses/BadRequest'
     '401':
       $ref: '#/components/responses/Unauthorized'
+    '409':
+      description: >
+        `SUBSCRIPTION_OWNED_BY_OTHER_USER` — endpoint deja abonne par un autre
+        compte, avec d'autres cles (reattribution permise seulement avec les
+        memes `p256dh` et `auth`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     '500':
       $ref: '#/components/responses/ServerError'

@@ -20,7 +20,11 @@ get:
         $ref: '#/components/schemas/Uuid'
   responses:
     '200':
-      description: Annonce avec ses coordonnees.
+      description: >
+        Les coordonnees de l'annonce, et rien d'autre : le reste de l'annonce
+        est deja servi par la liste publique, et l'equipe du site (teamId)
+        n'est pas exposee. Enveloppe `opening` conservee pour le lecteur
+        existant (TeamOpeningsList).
       content:
         application/json:
           schema:

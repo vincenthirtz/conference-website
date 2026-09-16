@@ -1,5 +1,12 @@
 post:
   summary: Register a web push subscription.
+  description: |
+    Idempotent par endpoint : `201 created: true` a la creation, `200
+    created: false` si l'endpoint existait deja. Un endpoint enregistre par un
+    AUTRE compte n'est reattribue que si `p256dh` et `auth` sont ceux en base
+    (meme navigateur qui change de compte) ; sinon `409
+    SUBSCRIPTION_OWNED_BY_OTHER_USER`, rien n'est modifie. Meme regle que
+    `/api/player/push/subscribe` (table commune).
   operationId: adminSubscribeNotifications
   tags:
     - admin/misc
@@ -11,11 +18,62 @@ post:
       application/json:
         schema:
           type: object
-          additionalProperties: true
+          required:
+            - subscription
+          properties:
+            subscription:
+              type: object
+              required:
+                - endpoint
+                - keys
+              properties:
+                endpoint:
+                  type: string
+                  format: uri
+                  maxLength: 2048
+                keys:
+                  type: object
+                  required:
+                    - p256dh
+                    - auth
+                  properties:
+                    p256dh:
+                      type: string
+                      maxLength: 512
+                    auth:
+                      type: string
+                      maxLength: 256
+            user_agent:
+              type: [string, 'null']
+              maxLength: 512
   responses:
     '200':
-      description: Subscribed.
+      description: Subscription existante mise a jour.
       content:
-        application/json: {}
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PlayerPushSubscription'
+    '201':
+      description: Subscription creee.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PlayerPushSubscription'
+    '400':
+      $ref: '#/components/responses/BadRequest'
     '401':
       $ref: '#/components/responses/Unauthorized'
+    '405':
+      description: Methode non autorisee (seul POST est accepte).
+    '409':
+      description: >
+        `SUBSCRIPTION_OWNED_BY_OTHER_USER` — endpoint deja abonne par un autre
+        compte, avec d'autres cles.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

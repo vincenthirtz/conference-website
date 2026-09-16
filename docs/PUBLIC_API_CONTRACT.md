@@ -173,8 +173,10 @@ compteur **durable partagé** (Postgres, pas d'in-memory) applique par tenant :
 - **Lectures REST** `/api/public/v1/*` : 120 requêtes/min par IP et par
   endpoint, en deux passes (limiteur en mémoire dont le 429 n'a **pas** de
   `code`, puis compteur durable `RATE_LIMITED`, fail-open).
-- **GraphQL** : aucune limite de débit applicative (requêtes comme mutation,
-  hors quota de plan de la mutation).
+- **GraphQL** : 600 requêtes/min par IP pour tout l'endpoint (requêtes comme
+  mutation) ; au-delà, HTTP 429, `Retry-After`, et
+  `errors[].extensions.code = RATE_LIMITED`. S'ajoute au quota de plan de la
+  mutation. Un overlay qui interroge toutes les 2 s en consomme 30.
 
 ## 2. Enveloppe & codes d'erreur (REST)
 
@@ -267,8 +269,20 @@ cite chaque code `extensions.code` émis.
 - **Mutations** : exigent un token scopé (`Authorization: Bearer …`) ; ordre :
   token → plan → portée → quota → validation du score → match. Pas de mode
   maintenance, pas d'idempotence (différences avec l'écriture REST).
-- **Limite de débit** : aucune au niveau applicatif (le commentaire du handler
-  renvoie à l'infra).
+- **Limite de débit** : **600 requêtes/min par IP** sur l'endpoint entier
+  (requêtes et mutation confondues), fenêtre glissante d'une minute, en mémoire
+  par instance (`applyRateLimit`, IP lue sur l'en-tête plateforme Netlify,
+  insensible aux en-têtes d'IP forgés). Appliquée **avant** yoga (une requête
+  refusée ne coûte ni parsing ni validation). Dépassement → HTTP `429`,
+  `Retry-After: 60`, corps GraphQL
+  `{ "errors": [{ "message", "extensions": { "code": "RATE_LIMITED", "retryAfterSec": 60, "limit": 600 } }] }`
+  — même code et mêmes extensions que le débit de plan de la mutation, qui
+  reste appliqué en plus. Valeur choisie généreuse : un overlay qui sonde toutes
+  les 2 s consomme 30/min, soit 20 overlays derrière une même IP (une régie) ;
+  c'est aussi 5× le budget d'un endpoint REST de lecture (120/min), puisqu'une
+  requête GraphQL agrège ce que le REST répartit sur plusieurs endpoints.
+  Constante `GRAPHQL_RATE_LIMIT` (`pages/api/graphql.ts`), gardée par
+  `tests/unit/graphqlRateLimit.test.ts`.
 - **Cache** : aucun en-tête de cache public posé ; utiliser `POST`.
 
 ### Schéma (extrait)
@@ -300,6 +314,8 @@ type Mutation {
   resolvers réutilisent `utils/public/read*`, jointures faites une fois → pas de
   N+1).
 - `TournamentDetail.matches` est résolu paresseusement (seulement si demandé).
+- Code d'erreur de l'endpoint (toute opération) : `RATE_LIMITED` (HTTP 429,
+  cf. limite de débit ci-dessus).
 - Codes d'erreur mutation (extensions `code`) : `UNAUTHENTICATED`, `FORBIDDEN`
   (plan : `reason: plan_required` + `requiredCapability` ; ou portée),
   `RATE_LIMITED` / `QUOTA_EXCEEDED` (avec `retryAfterSec`, `limit`),

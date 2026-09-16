@@ -28,6 +28,7 @@ import {
   TEAM_OPENING_SELECT,
   isTeamOpeningActive,
   toContactTeamOpening,
+  type ContactTeamOpening,
   type TeamOpeningRow,
 } from '@/utils/teamOpenings';
 import { logger } from '@/utils/logger';
@@ -36,6 +37,11 @@ import { logger } from '@/utils/logger';
 // qui prouve à l'analyse statique que la valeur passée à la requête n'est pas
 // une entrée libre.
 const querySchema = z.object({ id: z.string().uuid() });
+
+/** Corps 200 : uniquement ce que l'interface consomme (cf. fin du handler). */
+export type TeamOpeningContactResponse = {
+  opening: { contact: ContactTeamOpening['contact'] };
+};
 
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
@@ -106,5 +112,14 @@ export default withAuthRoute(async function handler(
 
   // Jamais de cache : ce corps contient des coordonnées.
   res.setHeader('Cache-Control', 'no-store');
-  return res.status(200).json({ opening });
+  // Les coordonnées, et RIEN d'autre. Le reste de l'annonce est déjà dans la
+  // liste publique, mais `teamId` n'y est pas : la vue publique ne l'expose
+  // pas, et cette route le rendait à tout compte connecté qui itérait sur les
+  // annonces. Un champ qu'aucun écran ne lit est un champ qu'on finit par ne
+  // plus surveiller. L'interface (TeamOpeningsList) ne lit que
+  // `opening.contact` ; l'enveloppe `opening` reste pour ne pas la casser.
+  const body: TeamOpeningContactResponse = {
+    opening: { contact: opening.contact },
+  };
+  return res.status(200).json(body);
 });
