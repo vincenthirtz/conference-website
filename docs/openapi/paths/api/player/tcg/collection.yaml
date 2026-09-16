@@ -131,6 +131,24 @@ get:
                           type: string
                         position:
                           type: integer
+                    engagedCopies:
+                      type: integer
+                      minimum: 0
+                      description: >-
+                        Exemplaires de ce sujet PROMIS dans mes propositions
+                        d'echange en attente (non echues) — meme regle que
+                        `tcg_propose_trade`. Sert a avertir avant un recyclage :
+                        la route de recyclage ne les refuse pas. Lecture
+                        best-effort, `0` si illisible.
+                    recyclableEngaged:
+                      type: boolean
+                      description: >-
+                        L'exemplaire designe par `recyclable` est-il l'un des
+                        exemplaires promis ? Seul cas ou le recycler annulera un
+                        echange a l'acceptation. A valeur egale (rarete et
+                        brillance), la route designe de preference une copie
+                        libre ; jamais une copie plus precieuse. Toujours
+                        `false` quand `recyclable` est `null`.
               distinct:
                 type: integer
                 description: Sujets distincts de la collection ENTIERE, pas de la page.

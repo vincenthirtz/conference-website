@@ -31,7 +31,10 @@ export default ns('tcgFanart', {
     'Dessine une carte, propose-la : le staff la relit, puis elle entre dans les paquets. Ton nom d’artiste apparaît sur la carte et sur la page des crédits.',
   panelSeeCredits: 'Voir les cartes déjà validées',
   labelImage: 'Ton image',
-  hintImage: 'PNG, JPEG ou WebP, 2 Mo au maximum. Format portrait conseillé.',
+  // « Mio », pas « Mo » : le plafond est 2 × 1024 × 1024 octets
+  // (`IMAGE_MAX_BYTES`), et un fichier de 2,05 Mo refusé contredirait l'écran.
+  hintImage:
+    'PNG, JPEG ou WebP, {max} Mio au maximum. Format portrait conseillé.',
   labelTitle: 'Titre de la carte',
   labelArtistName: 'Nom à créditer',
   hintArtistName:
@@ -55,7 +58,19 @@ export default ns('tcgFanart', {
     'Tu as déjà {max} propositions en attente. Attends une relecture avant d’en envoyer une autre.',
   errorLicence:
     'Il faut confirmer que l’œuvre est la tienne et accepter sa diffusion.',
-  errorImage: 'Image refusée : vérifie le format et la taille.',
+  // Un refus DÉFINITIF dit quoi changer, jamais « réessaie » : renvoyer le même
+  // fichier échouerait pareil (cf. `utils/tcg/fanartUploadErrors.ts`).
+  errorMissingImage: 'Choisis l’image à proposer.',
+  errorUnsupportedType:
+    'Format non accepté : utilise un PNG, un JPEG ou un WebP.',
+  errorTooLarge:
+    'Image trop lourde : {max} Mio au maximum. Réduis-la ou exporte-la en JPEG ou WebP.',
+  errorContentMismatch:
+    'Ce fichier n’est pas une image PNG, JPEG ou WebP valide. Réexporte-la depuis ton logiciel.',
+  errorTitle: 'Le titre doit faire entre 2 et {max} caractères.',
+  errorArtistName: 'Le nom à créditer doit faire entre 2 et {max} caractères.',
+  errorArtistUrl:
+    'Lien invalide : colle l’adresse complète, commençant par https://.',
   errorGeneric: 'Envoi impossible pour le moment. Réessaie.',
   loadError: 'Impossible de charger tes propositions.',
 });

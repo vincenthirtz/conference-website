@@ -44,6 +44,19 @@ import { FANART_LIMITS, MAX_PENDING_FANART } from '@/utils/tcg/fanart';
 const BUCKET = TCG_BUCKET;
 const PREFIX = 'tcg-fanart';
 
+export const config = {
+  api: {
+    // Le base64 gonfle d'environ un tiers : 4 Mo de corps pour 2 Mio d'image.
+    //
+    // SANS CETTE LIGNE, la route restait au plafond par défaut de Next (1 Mo) :
+    // base64 + JSON faisaient tomber la limite RÉELLE à ~768 Kio d'image, contre
+    // « 2 Mo » annoncés, et Next répondait 413 sans `code` — l'interface disait
+    // « réessaie » à une artiste dont l'envoi ne pouvait jamais passer. Même
+    // réglage que `photo.ts`, qui vérifie le même `IMAGE_MAX_BYTES`.
+    bodyParser: { sizeLimit: '4mb' },
+  },
+};
+
 const SELECT =
   'id, title, artist_name, artist_url, image_path, status, rarity, review_notes, created_at, reviewed_at';
 

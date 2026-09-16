@@ -12,6 +12,12 @@
 //
 // L'IMAGE PART EN BASE64, comme la photo de carte (`TcgPhotoCard`) : le serveur
 // vérifie le contenu (magic bytes) avant de la poser dans un bucket PUBLIC.
+//
+// TYPE ET TAILLE SONT VÉRIFIÉS AVANT L'ENVOI, et chaque refus a son message
+// (`utils/tcg/fanartUploadErrors.ts`). Auparavant, tout refus d'image disait
+// « vérifie le format et la taille », et un fichier trop lourd pour le
+// bodyParser (413 sans `code`) disait « réessaie » — à une artiste dont l'envoi
+// ne pouvait jamais passer.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
@@ -20,6 +26,14 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import nsTcgFanart from '@/lib/i18n/locales/fr/tcgFanart';
+import { FANART_LIMITS } from '@/utils/tcg/fanart';
+import {
+  FANART_ACCEPT,
+  FANART_MAX_MIB,
+  checkFanartFile,
+  fanartErrorKey,
+  type FanartErrorKey,
+} from '@/utils/tcg/fanartUploadErrors';
 
 type Submission = {
   id: string;
@@ -72,29 +86,39 @@ export default function FanartSubmitPanel({
     void load();
   }, [load]);
 
-  const errorLabel = useCallback(
-    (code: string | undefined, maxPending: number): string => {
-      switch (code) {
-        case 'too_many_pending':
-          return format(t.errorTooManyPending, { max: maxPending });
-        case 'licence':
-          return t.errorLicence;
-        case 'missing_data':
-        case 'unsupported_type':
-        case 'too_large':
-        case 'content_mismatch':
-          return t.errorImage;
-        default:
-          return t.errorGeneric;
-      }
-    },
+  /**
+   * Le texte d'un refus. La CLÉ vient de `utils/tcg/fanartUploadErrors.ts`, où
+   * la règle est testée : un refus définitif (taille, format, contenu, champ)
+   * dit quoi changer, et seul un incident passager invite à réessayer. Ici on
+   * ne fait que remplir les variables du message.
+   */
+  const errorText = useCallback(
+    (key: FanartErrorKey, maxPending: number): string =>
+      format(t[key], {
+        max:
+          key === 'errorTooManyPending'
+            ? maxPending
+            : key === 'errorTitle'
+              ? FANART_LIMITS.title
+              : key === 'errorArtistName'
+                ? FANART_LIMITS.artistName
+                : FANART_MAX_MIB,
+      }),
     [t]
   );
 
   const submit = useCallback(async () => {
     const file = fileRef.current?.files?.[0];
-    if (!file) {
-      addToast(t.errorImage, 'error');
+    // Contrôles CLIENT avant l'envoi, comme `components/player/TcgPhotoCard.tsx`.
+    // Ils ne remplacent pas ceux du serveur (magic bytes compris), ils rendent
+    // le refus LISIBLE : au-delà du plafond du bodyParser, Next répond 413 sans
+    // `code`, avant même le handler.
+    const refused = checkFanartFile(file);
+    if (refused || !file) {
+      addToast(
+        errorText(refused ?? 'errorMissingImage', data?.maxPending ?? 3),
+        'error'
+      );
       return;
     }
     setBusy(true);
@@ -119,7 +143,16 @@ export default function FanartSubmitPanel({
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { code?: string };
-        addToast(errorLabel(body.code, data?.maxPending ?? 3), 'error');
+        addToast(
+          errorText(
+            fanartErrorKey(res.status, body.code),
+            data?.maxPending ?? 3
+          ),
+          'error'
+        );
+        // Relu aussi sur refus : un `too_many_pending` veut dire que la liste
+        // affichée est en retard (une proposition faite depuis un autre onglet).
+        await load();
         return;
       }
       addToast(t.submitted, 'success');
@@ -130,6 +163,11 @@ export default function FanartSubmitPanel({
       await load();
     } catch {
       addToast(t.errorGeneric, 'error');
+      // La réponse n'est pas arrivée, ce qui ne veut pas dire que la
+      // proposition n'a pas été enregistrée : on relit la liste, sans quoi
+      // l'artiste renverrait la même œuvre et consommerait une place de plus
+      // dans sa file d'attente (cf. `utils/tcg/reloadAfterMutation.ts`).
+      await load();
     } finally {
       setBusy(false);
     }
@@ -139,7 +177,7 @@ export default function FanartSubmitPanel({
     artistName,
     artistUrl,
     data?.maxPending,
-    errorLabel,
+    errorText,
     licence,
     load,
     t,
@@ -158,6 +196,9 @@ export default function FanartSubmitPanel({
         await load();
       } catch {
         addToast(t.errorGeneric, 'error');
+        // Refus (déjà relue par le staff) ou réponse perdue après le retrait :
+        // dans les deux cas la liste affichée est fausse, on la relit.
+        await load();
       } finally {
         setBusy(false);
       }
@@ -214,10 +255,24 @@ export default function FanartSubmitPanel({
             id="fanart-image"
             ref={fileRef}
             type="file"
-            accept="image/png,image/jpeg,image/webp"
+            accept={FANART_ACCEPT}
+            aria-describedby="fanart-image-hint"
+            // Refus DÈS LE CHOIX, pas au clic sur « Proposer » après avoir rempli
+            // le formulaire : le fichier est vidé pour qu'on en choisisse un autre.
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const refused = checkFanartFile(file);
+              if (refused) {
+                addToast(errorText(refused, data?.maxPending ?? 3), 'error');
+                e.target.value = '';
+              }
+            }}
             className={`${input} file:mr-3 file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-white`}
           />
-          <p className="mt-1 text-xs text-gray-400">{t.hintImage}</p>
+          <p id="fanart-image-hint" className="mt-1 text-xs text-gray-400">
+            {format(t.hintImage, { max: FANART_MAX_MIB })}
+          </p>
         </div>
         <div>
           <label htmlFor="fanart-title-input" className={label}>
@@ -228,7 +283,7 @@ export default function FanartSubmitPanel({
             className={input}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            maxLength={80}
+            maxLength={FANART_LIMITS.title}
           />
         </div>
         <div>
@@ -240,7 +295,7 @@ export default function FanartSubmitPanel({
             className={input}
             value={artistName}
             onChange={(e) => setArtistName(e.target.value)}
-            maxLength={80}
+            maxLength={FANART_LIMITS.artistName}
             aria-describedby="fanart-artist-hint"
           />
           <p id="fanart-artist-hint" className="mt-1 text-xs text-gray-400">
@@ -257,7 +312,7 @@ export default function FanartSubmitPanel({
             className={input}
             value={artistUrl}
             onChange={(e) => setArtistUrl(e.target.value)}
-            maxLength={300}
+            maxLength={FANART_LIMITS.artistUrl}
           />
         </div>
       </div>

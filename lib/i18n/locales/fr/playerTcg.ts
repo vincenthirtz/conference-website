@@ -218,6 +218,18 @@ export default ns('playerTcg', {
   recycleConfirmKeep_other: 'Il t’en restera {count} exemplaires.',
   recycleConfirmWhich:
     'C’est l’exemplaire le moins précieux qui part : ta carte garde sa meilleure rareté. C’est définitif.',
+  // Échanges en attente : on AVERTIT avant de recycler, on n'interdit pas. Le
+  // premier message est le seul où recycler casse quelque chose.
+  recycleConfirmEngaged:
+    'Cet exemplaire est engagé dans un échange en attente : le recycler annulera cet échange quand ta partenaire voudra l’accepter.',
+  recycleConfirmEngagedOther_one:
+    'Un autre exemplaire est engagé dans un échange en attente : il n’est pas concerné par ce recyclage.',
+  recycleConfirmEngagedOther_other:
+    '{count} autres exemplaires sont engagés dans des échanges en attente : ils ne sont pas concernés par ce recyclage.',
+  // Pastille du lien « Échanger des cartes » : propositions REÇUES en attente.
+  // Le DM Discord ne touche pas qui n'a pas relié Discord ou ferme ses DM.
+  tradesPendingBadge_one: '1 proposition d’échange en attente',
+  tradesPendingBadge_other: '{count} propositions d’échange en attente',
 
   // Historique : les deux cadeaux d'accueil tombaient dans « Mouvement ».
   walletLoading: 'Chargement de l’historique…',

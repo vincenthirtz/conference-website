@@ -170,6 +170,14 @@ export default {
   recycleConfirmKeep_other: 'You will have {count} copies left.',
   recycleConfirmWhich:
     'The least valuable copy goes: your card keeps its best rarity. This is final.',
+  recycleConfirmEngaged:
+    'This copy is promised in a pending trade: recycling it will cancel that trade when your partner tries to accept it.',
+  recycleConfirmEngagedOther_one:
+    'Another copy is promised in a pending trade: it is not affected by this recycling.',
+  recycleConfirmEngagedOther_other:
+    '{count} other copies are promised in pending trades: they are not affected by this recycling.',
+  tradesPendingBadge_one: '1 pending trade offer',
+  tradesPendingBadge_other: '{count} pending trade offers',
 
   walletLoading: 'Loading history…',
   walletError: 'History unavailable right now.',

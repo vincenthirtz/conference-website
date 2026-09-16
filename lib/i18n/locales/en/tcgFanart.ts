@@ -22,7 +22,7 @@ export default {
     'Draw a card and submit it: staff review it, then it joins the packs. Your artist name shows on the card and on the credits page.',
   panelSeeCredits: 'See the approved cards',
   labelImage: 'Your image',
-  hintImage: 'PNG, JPEG or WebP, 2 MB max. Portrait format recommended.',
+  hintImage: 'PNG, JPEG or WebP, {max} MiB max. Portrait format recommended.',
   labelTitle: 'Card title',
   labelArtistName: 'Name to credit',
   hintArtistName:
@@ -46,7 +46,16 @@ export default {
     'You already have {max} submissions waiting. Wait for a review before sending another.',
   errorLicence:
     'You must confirm the artwork is yours and agree to it being published.',
-  errorImage: 'Image rejected: check the format and size.',
+  errorMissingImage: 'Choose the image to submit.',
+  errorUnsupportedType: 'Unsupported format: use a PNG, JPEG or WebP.',
+  errorTooLarge:
+    'Image too large: {max} MiB max. Shrink it or export it as JPEG or WebP.',
+  errorContentMismatch:
+    'This file isn’t a valid PNG, JPEG or WebP image. Export it again from your software.',
+  errorTitle: 'The title must be between 2 and {max} characters.',
+  errorArtistName: 'The name to credit must be between 2 and {max} characters.',
+  errorArtistUrl:
+    'Invalid link: paste the full address, starting with https://.',
   errorGeneric: 'Couldn’t send it right now. Try again.',
   loadError: 'Couldn’t load your submissions.',
 };

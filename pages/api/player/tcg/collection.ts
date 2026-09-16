@@ -41,6 +41,7 @@ import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
 import { readMapFaces, MAP_POOL_SLUGS } from '@/utils/tcg/readMapFaces';
 import { cardSubjectKey } from '@/utils/tcg/subjectKey';
 import { readOwnedCardRows } from '@/utils/tcg/readOwnedCards';
+import { copyRef, readEngagedCopies } from '@/utils/tcg/engagedCards';
 import {
   compareCollectionOrder,
   decodeCollectionCursor,
@@ -72,7 +73,16 @@ type Aggregated = {
    * recyclage. Cf. `worseThan` : plus basse rareté, et non brillant à rareté
    * égale.
    */
-  worst: { packId: string; position: number; rarity: TcgRarity; foil: boolean };
+  worst: {
+    packId: string;
+    position: number;
+    rarity: TcgRarity;
+    foil: boolean;
+    /** Exemplaire promis dans une de mes propositions d'échange en attente. */
+    engaged: boolean;
+  };
+  /** Exemplaires de ce sujet promis dans mes propositions en attente. */
+  engagedCopies: number;
 };
 
 /**
@@ -96,6 +106,27 @@ function worseThan(
   const rb = RARITY_ORDER.indexOf(b.rarity);
   if (ra !== rb) return ra < rb;
   return !a.foil && b.foil;
+}
+
+/**
+ * À valeur ÉGALE (même rareté, même brillance), `a` est-il un meilleur candidat
+ * au recyclage que `b` ?
+ *
+ * Deux copies de même rareté et de même brillance sont indiscernables pour la
+ * joueuse, mais pas pour un échange : l'une peut être PROMISE dans une
+ * proposition en attente (`utils/tcg/engagedCards.ts`). Recycler celle-là
+ * annulerait l'échange à l'acceptation ; recycler sa jumelle libre ne coûte
+ * rien de plus. On désigne donc la libre quand il y en a une.
+ *
+ * JAMAIS AU PRIX DE LA VALEUR : une commune promise reste désignée face à une
+ * épique libre — la page avertit alors (`recyclableEngaged`), elle ne fait pas
+ * brûler l'épique pour sauver un échange.
+ */
+function freerAtEqualValue(
+  a: { rarity: TcgRarity; foil: boolean; engaged: boolean },
+  b: { rarity: TcgRarity; foil: boolean; engaged: boolean }
+): boolean {
+  return a.rarity === b.rarity && a.foil === b.foil && !a.engaged && b.engaged;
 }
 
 export default withAuthRoute(async function handler(
@@ -149,7 +180,21 @@ export default withAuthRoute(async function handler(
   // 1-2) Mes cartes encore possédées : paquets OUVERTS, recyclées exclues, lues
   //      par tranches (cf. `readOwnedCards.ts` — l'ancien `.limit(5000)` était
   //      en réalité plafonné à 1000 lignes par PostgREST).
-  const owned = await readOwnedCardRows(tenantId, userId);
+  //      En parallèle : les exemplaires promis dans mes propositions d'échange
+  //      en attente. BEST-EFFORT — ils ne servent qu'à AVERTIR avant un
+  //      recyclage (la route de recyclage ne les refuse pas, à dessein) ; une
+  //      lecture en échec ne doit pas faire tomber la collection le jour où
+  //      tout le monde ouvre ses paquets.
+  const [owned, engaged] = await Promise.all([
+    readOwnedCardRows(tenantId, userId),
+    readEngagedCopies(tenantId, userId),
+  ]);
+  if (!engaged.ok) {
+    logger.warn(
+      '[tcg/collection] cartes engagées illisibles: %s',
+      engaged.error
+    );
+  }
   if (!owned.ok) {
     logger.error('[tcg/collection] cartes illisibles: %s', owned.error);
     return res.status(500).json({ error: 'Lecture impossible.' });
@@ -181,6 +226,7 @@ export default withAuthRoute(async function handler(
       position: row.position,
       rarity: row.rarity,
       foil: Boolean(row.is_foil),
+      engaged: engaged.copies.has(copyRef(row.pack_id, row.position)),
     };
 
     const existing = byKey.get(key);
@@ -193,6 +239,7 @@ export default withAuthRoute(async function handler(
         rarity: row.rarity,
         hasFoil: Boolean(row.is_foil),
         worst: copy,
+        engagedCopies: engaged.bySubject.get(key) ?? 0,
       });
       continue;
     }
@@ -205,7 +252,12 @@ export default withAuthRoute(async function handler(
     }
     // On suit le pire exemplaire au fil de la lecture : c'est lui qu'on
     // proposera au recyclage, jamais le meilleur.
-    if (worseThan(copy, existing.worst)) existing.worst = copy;
+    if (
+      worseThan(copy, existing.worst) ||
+      freerAtEqualValue(copy, existing.worst)
+    ) {
+      existing.worst = copy;
+    }
   }
 
   // Les plus rares d'abord — une collection se regarde par ses pièces fortes —
@@ -263,6 +315,24 @@ export default withAuthRoute(async function handler(
       ? { packId: a.worst.packId, position: a.worst.position }
       : null;
 
+  /**
+   * Ce que la confirmation de recyclage doit dire des échanges en attente.
+   *
+   * `engagedCopies` : combien d'exemplaires de ce sujet sont promis dans MES
+   * propositions en attente. `recyclableEngaged` : l'exemplaire désigné par
+   * `recyclable` est-il l'un d'eux — le seul cas où recycler annulera un
+   * échange. Toujours `false` sans `recyclable`.
+   *
+   * On AVERTIT, on n'interdit pas : la décision reste à la joueuse, et la
+   * fonction SQL d'acceptation traite déjà proprement la carte disparue.
+   *
+   * Les deux champs sont écrits EN CLAIR dans chaque branche ci-dessous plutôt
+   * qu'étalés (`...`) : `scripts/openapi/infer-responses.cjs` lit la forme
+   * littérale, et un étalement brouillait la réponse déduite de la route.
+   */
+  const recyclableEngagedOf = (a: Aggregated): boolean =>
+    a.count >= 2 && a.worst.engaged;
+
   // L'ordre est déjà celui de `aggregated` : on ne retrie pas la page.
   const cards = page.map((a) => {
     if (a.kind === 'player') {
@@ -276,6 +346,8 @@ export default withAuthRoute(async function handler(
         isFoil: a.hasFoil,
         count: a.count,
         recyclable: recyclableOf(a),
+        engagedCopies: a.engagedCopies,
+        recyclableEngaged: recyclableEngagedOf(a),
       };
     }
     if (a.kind === 'map') {
@@ -289,6 +361,8 @@ export default withAuthRoute(async function handler(
         isFoil: a.hasFoil,
         count: a.count,
         recyclable: recyclableOf(a),
+        engagedCopies: a.engagedCopies,
+        recyclableEngaged: recyclableEngagedOf(a),
       };
     }
     const face = teamFaces.get(a.subjectId);
@@ -303,6 +377,8 @@ export default withAuthRoute(async function handler(
       isFoil: a.hasFoil,
       count: a.count,
       recyclable: recyclableOf(a),
+      engagedCopies: a.engagedCopies,
+      recyclableEngaged: recyclableEngagedOf(a),
     };
   });
 

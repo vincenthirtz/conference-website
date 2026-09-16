@@ -31,6 +31,10 @@ post:
     PUBLIC. La proposition nait `pending` : rien n'entre dans les paquets avant
     relecture du staff. 5 / min, et `MAX_PENDING_FANART` propositions en attente
     au plus par personne.
+
+    Image : 2 Mio au plus (`too_large` au-dela). Le corps JSON est plafonne a
+    4 Mo, le base64 gonflant l'image d'environ un tiers ; au-dela, Next repond
+    413 SANS `code`, avant meme le handler.
   operationId: submitTcgFanart
   security:
     - PlayerBearer: []

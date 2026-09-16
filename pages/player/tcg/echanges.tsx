@@ -37,6 +37,7 @@ import type { TcgRarity } from '@/utils/tcg/rarity';
 // entrer `supabaseAdmin` dans le bundle navigateur.
 import type { TradeCardView, TradeView } from '@/utils/tcg/trades';
 import nsTcgTrade from '@/lib/i18n/locales/fr/tcgTrade';
+import { reloadAfterMutation } from '@/utils/tcg/reloadAfterMutation';
 // Les libellés de rareté vivent déjà là : les recopier donnerait deux jeux de
 // mots libres de diverger.
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
@@ -205,35 +206,41 @@ function PlayerTcgTrades() {
     if (!settings) return;
     const next = !settings.acceptsProposals;
     setBusy('settings');
-    try {
-      const res = await adminFetch('/api/player/tcg/trades/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ acceptsProposals: next }),
-      });
-      const body = (await res.json().catch(() => ({}))) as {
-        code?: string;
-        cancelled?: { received: number; sent: number };
-      };
-      if (!res.ok) {
-        addToast(errorText(body.code), 'error');
-        return;
+    // Relecture sur toutes les issues, `catch` compris (cf.
+    // `reloadAfterMutation`) : désactiver ANNULE les propositions en attente,
+    // et un interrupteur resté sur l'ancien état après une réponse perdue
+    // mentirait sur ce qui a eu lieu.
+    await reloadAfterMutation(
+      async () => {
+        const res = await adminFetch('/api/player/tcg/trades/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ acceptsProposals: next }),
+        });
+        const body = (await res.json().catch(() => ({}))) as {
+          code?: string;
+          cancelled?: { received: number; sent: number };
+        };
+        if (!res.ok) {
+          addToast(errorText(body.code), 'error');
+          return;
+        }
+        const cancelledCount =
+          (body.cancelled?.received ?? 0) + (body.cancelled?.sent ?? 0);
+        const message = next
+          ? t.prefToastOn
+          : cancelledCount > 0
+            ? format(t.prefToastOffCancelled, { count: cancelledCount })
+            : t.prefToastOff;
+        addToast(message, 'success');
+        announce(message);
+      },
+      {
+        reload: loadSettings,
+        onError: () => addToast(t.err_generic, 'error'),
       }
-      const cancelledCount =
-        (body.cancelled?.received ?? 0) + (body.cancelled?.sent ?? 0);
-      const message = next
-        ? t.prefToastOn
-        : cancelledCount > 0
-          ? format(t.prefToastOffCancelled, { count: cancelledCount })
-          : t.prefToastOff;
-      addToast(message, 'success');
-      announce(message);
-      await loadSettings();
-    } catch {
-      addToast(t.err_generic, 'error');
-    } finally {
-      setBusy(null);
-    }
+    );
+    setBusy(null);
   }, [settings, adminFetch, addToast, errorText, t, announce, loadSettings]);
 
   /* ---------------------------------------------------------------------- */
@@ -346,34 +353,45 @@ function PlayerTcgTrades() {
       return card ? subjectRefOf(card) : null;
     };
     setBusy('propose');
-    try {
-      const res = await adminFetch('/api/player/tcg/trades', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipientId: partnerId,
-          offered: offered.map(toRef).filter(Boolean),
-          requested: requested.map(toRef).filter(Boolean),
-        }),
-      });
-      const body = (await res.json().catch(() => ({}))) as { code?: string };
-      if (!res.ok) {
-        addToast(errorText(body.code), 'error');
-        announce(errorText(body.code));
-        return;
+    // Relecture sur toutes les issues, `catch` compris (cf.
+    // `reloadAfterMutation`) : une proposition validée dont la réponse s'est
+    // perdue a RÉSERVÉ les exemplaires offerts ; sans relecture, le composeur
+    // les montrait encore disponibles et un second envoi se heurtait au refus.
+    // PAS `loadTrades` ici : sa fermeture porte encore l'ancienne boîte, et le
+    // passage à « envoyées » la recharge déjà (effet sur `box`) — les deux
+    // lectures se seraient disputé la liste affichée.
+    await reloadAfterMutation(
+      async () => {
+        const res = await adminFetch('/api/player/tcg/trades', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recipientId: partnerId,
+            offered: offered.map(toRef).filter(Boolean),
+            requested: requested.map(toRef).filter(Boolean),
+          }),
+        });
+        const body = (await res.json().catch(() => ({}))) as {
+          code?: string;
+        };
+        if (!res.ok) {
+          addToast(errorText(body.code), 'error');
+          announce(errorText(body.code));
+          return;
+        }
+        addToast(t.proposedToast, 'success');
+        announce(t.proposedToast);
+        setOffered([]);
+        setRequested([]);
+        setBox('sent');
+        setListState('open');
+      },
+      {
+        reload: () => Promise.all([loadComposer(), loadSettings()]),
+        onError: () => addToast(t.err_generic, 'error'),
       }
-      addToast(t.proposedToast, 'success');
-      announce(t.proposedToast);
-      setOffered([]);
-      setRequested([]);
-      setBox('sent');
-      setListState('open');
-      await Promise.all([loadComposer(), loadSettings()]);
-    } catch {
-      addToast(t.err_generic, 'error');
-    } finally {
-      setBusy(null);
-    }
+    );
+    setBusy(null);
   }, [
     canSubmit,
     myCards,
@@ -440,20 +458,29 @@ function PlayerTcgTrades() {
       if (!ok) return;
 
       setBusy(`${action}:${trade.id}`);
-      try {
-        const res = await adminFetch(
-          `/api/player/tcg/trades/${encodeURIComponent(trade.id)}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action }),
+      // Relecture sur toutes les issues, `catch` compris (cf.
+      // `reloadAfterMutation`) : un échange accepté dont la réponse s'est
+      // perdue a DÉJÀ déplacé les cartes. Laisser la proposition affichée « en
+      // attente » invitait à recliquer — la route rend alors un rejeu, mais la
+      // joueuse, elle, ne sait pas ce qui s'est passé.
+      await reloadAfterMutation(
+        async () => {
+          const res = await adminFetch(
+            `/api/player/tcg/trades/${encodeURIComponent(trade.id)}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action }),
+            }
+          );
+          const body = (await res.json().catch(() => ({}))) as {
+            code?: string;
+          };
+          if (!res.ok) {
+            addToast(errorText(body.code), 'error');
+            announce(errorText(body.code));
+            return;
           }
-        );
-        const body = (await res.json().catch(() => ({}))) as { code?: string };
-        if (!res.ok) {
-          addToast(errorText(body.code), 'error');
-          announce(errorText(body.code));
-        } else {
           const message =
             action === 'accept'
               ? t.toastAccepted
@@ -462,13 +489,13 @@ function PlayerTcgTrades() {
                 : t.toastCancelled;
           addToast(message, 'success');
           announce(message);
+        },
+        {
+          reload: () => Promise.all([loadTrades(false, null), loadSettings()]),
+          onError: () => addToast(t.err_generic, 'error'),
         }
-        await Promise.all([loadTrades(false, null), loadSettings()]);
-      } catch {
-        addToast(t.err_generic, 'error');
-      } finally {
-        setBusy(null);
-      }
+      );
+      setBusy(null);
     },
     [
       t,

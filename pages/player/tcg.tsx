@@ -26,6 +26,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
@@ -37,12 +38,7 @@ import TcgCollectionProgress from '@/components/tcg/TcgCollectionProgress';
 import TcgSetsPanel, {
   type TcgSetCompletedNotice,
 } from '@/components/tcg/TcgSetsPanel';
-import PredictionsPanel from '@/components/predictions/PredictionsPanel';
-import FanartSubmitPanel from '@/components/tcg/FanartSubmitPanel';
-import TcgShowcaseEditor from '@/components/tcg/TcgShowcaseEditor';
-import TcgPackReveal, {
-  type TcgRevealCard,
-} from '@/components/tcg/TcgPackReveal';
+import type { TcgRevealCard } from '@/components/tcg/TcgPackReveal';
 import TwitchLinkCard, {
   type TwitchLinkStatus,
 } from '@/components/player/TwitchLinkCard';
@@ -51,6 +47,52 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
 import nsTcgTrade from '@/lib/i18n/locales/fr/tcgTrade';
+import { reloadAfterMutation } from '@/utils/tcg/reloadAfterMutation';
+
+/*
+ * PANNEAUX CHARGÉS À LA DEMANDE (`next/dynamic`), comme les onglets du
+ * back-office (`components/admin/lazyPanel.tsx`) et les panneaux de
+ * `pages/admin/tournament/[id]/bracket.tsx`.
+ *
+ * Les quatre étaient importés statiquement (~44 Kio de source) alors qu'aucun
+ * n'est au-dessus de la ligne de flottaison : pronostics, fan art et vitrine
+ * sont sous le solde et le porte-monnaie, la révélation n'existe qu'après
+ * l'ouverture d'un paquet. Le premier affichage — solde, paquets, bouton
+ * « Ouvrir » — ne doit pas les attendre, le jour où tout le monde vient ouvrir
+ * ses paquets du tournoi.
+ *
+ * `ssr: false` : la page est réservée à une joueuse connectée, et ces panneaux
+ * ne se montent qu'une fois la collection lue (`loadState === 'ready'`) ou un
+ * paquet ouvert — le rendu serveur n'en produirait jamais rien.
+ *
+ * Le squelette de chargement porte la marge (`mt-8`) et une hauteur voisine du
+ * panneau : sans elle, le contenu en dessous sauterait à l'arrivée du chunk.
+ * À déclarer au NIVEAU MODULE, jamais dans le composant (chunk re-résolu à
+ * chaque rendu sinon).
+ */
+const PanelLoading = () => (
+  <Skeleton className="mt-8 h-64 w-full" rounded="rounded-2xl" />
+);
+const PredictionsPanel = dynamic(
+  () => import('@/components/predictions/PredictionsPanel'),
+  { ssr: false, loading: PanelLoading }
+);
+const FanartSubmitPanel = dynamic(
+  () => import('@/components/tcg/FanartSubmitPanel'),
+  { ssr: false, loading: PanelLoading }
+);
+const TcgShowcaseEditor = dynamic(
+  () => import('@/components/tcg/TcgShowcaseEditor'),
+  { ssr: false, loading: PanelLoading }
+);
+/** Même chargeur pour le rendu et pour le préchargement (cf. plus bas). */
+const loadPackReveal = () => import('@/components/tcg/TcgPackReveal');
+const TcgPackReveal = dynamic(loadPackReveal, {
+  ssr: false,
+  loading: () => (
+    <Skeleton className="mt-8 h-96 w-full" rounded="rounded-2xl" />
+  ),
+});
 
 /**
  * Paquets à ouvrir par page. Au-delà, un bouton « voir les autres » : un mur de
@@ -115,40 +157,54 @@ function packOriginLabel(
  */
 type Recyclable = { packId: string; position: number } | null;
 
-type CollectionCard =
-  | {
-      kind: 'player';
-      userId: string;
-      displayName: string | null;
-      imageUrl: string | null;
-      rarity: TcgRarity;
-      isFoil: boolean;
-      count: number;
-      recyclable?: Recyclable;
-    }
-  | {
-      kind: 'team';
-      teamId: string;
-      name: string | null;
-      slug: string | null;
-      logoUrl: string | null;
-      /** Illustration déposée par l'équipe ; `null` ⇒ la carte prend le logo. */
-      cardImageUrl: string | null;
-      rarity: TcgRarity;
-      isFoil: boolean;
-      count: number;
-      recyclable?: Recyclable;
-    }
-  | {
-      kind: 'map';
-      slug: string;
-      name: string | null;
-      imageUrl: string | null;
-      rarity: TcgRarity;
-      isFoil: boolean;
-      count: number;
-      recyclable?: Recyclable;
-    };
+/**
+ * Ce que la collection dit des échanges en attente, pour AVERTIR avant un
+ * recyclage (cf. `utils/tcg/engagedCards.ts`). OPTIONNEL : une réponse d'API
+ * antérieure ne le porte pas, et son absence vaut « rien à signaler ».
+ */
+type Engagement = {
+  /** Exemplaires de ce sujet promis dans mes propositions en attente. */
+  engagedCopies?: number;
+  /** L'exemplaire `recyclable` est-il lui-même promis ? */
+  recyclableEngaged?: boolean;
+};
+
+type CollectionCard = Engagement &
+  (
+    | {
+        kind: 'player';
+        userId: string;
+        displayName: string | null;
+        imageUrl: string | null;
+        rarity: TcgRarity;
+        isFoil: boolean;
+        count: number;
+        recyclable?: Recyclable;
+      }
+    | {
+        kind: 'team';
+        teamId: string;
+        name: string | null;
+        slug: string | null;
+        logoUrl: string | null;
+        /** Illustration déposée par l'équipe ; `null` ⇒ la carte prend le logo. */
+        cardImageUrl: string | null;
+        rarity: TcgRarity;
+        isFoil: boolean;
+        count: number;
+        recyclable?: Recyclable;
+      }
+    | {
+        kind: 'map';
+        slug: string;
+        name: string | null;
+        imageUrl: string | null;
+        rarity: TcgRarity;
+        isFoil: boolean;
+        count: number;
+        recyclable?: Recyclable;
+      }
+  );
 
 /**
  * Une carte tout juste tirée. Même forme que `CollectionCard` à `count` près,
@@ -367,6 +423,38 @@ function PlayerTcg() {
     null
   );
 
+  // Propositions d'échange REÇUES en attente, pour la pastille du lien
+  // « Échanger des cartes ».
+  //
+  // POURQUOI. L'annonce d'une proposition ne passe que par un DM Discord
+  // (`announceTradeProposed`) : sans Discord relié, ou DM fermés — le réglage
+  // de sécurité qu'on recommande —, la joueuse ne savait jamais qu'on lui avait
+  // proposé un échange, qui expirait en silence. La collection est la page où
+  // elle revient : c'est là que la pastille doit se voir.
+  //
+  // UNE LECTURE AU MONTAGE, pas à chaque rechargement après une action : le
+  // compte `pending.received` existe déjà dans la route des préférences, et
+  // l'information n'a pas besoin d'être à la seconde. BEST-EFFORT : illisible
+  // ou `null` (non mesurable), pas de pastille — jamais un « 0 » inventé ni une
+  // erreur affichée pour un accessoire.
+  const [tradesReceived, setTradesReceived] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    adminFetchJson<{ pending?: { received?: number | null } }>(
+      '/api/player/tcg/trades/settings'
+    )
+      .then((data) => {
+        const received = data?.pending?.received;
+        if (!cancelled && typeof received === 'number' && received > 0) {
+          setTradesReceived(received);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [adminFetchJson]);
+
   const packsHeadingRef = useRef<HTMLHeadingElement>(null);
   const collectionListRef = useRef<HTMLUListElement>(null);
 
@@ -507,6 +595,15 @@ function PlayerTcg() {
     void load();
   }, [load]);
 
+  // PRÉCHARGEMENT de la révélation dès qu'un paquet attend : son chunk est
+  // chargé à la demande (cf. l'en-tête du module), et le moment où l'on ouvre
+  // un paquet est le pire pour montrer un squelette à la place des cartes.
+  // Un échec ici est sans conséquence : `dynamic` retentera au rendu.
+  const hasUnopened = unopenedCount > 0;
+  useEffect(() => {
+    if (hasUnopened) void loadPackReveal().catch(() => undefined);
+  }, [hasUnopened]);
+
   const retryLoad = useCallback(() => {
     setLoadState('loading');
     void load();
@@ -569,72 +666,78 @@ function PlayerTcg() {
   const openPack = useCallback(
     async (packId: string) => {
       setBusy(packId);
-      try {
-        const res = await adminFetch('/api/player/tcg/packs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ packId }),
-        });
-        if (!res.ok) {
-          const body = (await res.json().catch(() => ({}))) as {
-            code?: string;
-          };
-          addToast(
-            body.code === 'already_opened'
-              ? t.errAlreadyOpened
-              : body.code === 'empty_pool'
-                ? t.errEmptyPool
-                : t.errGeneric,
-            'error'
-          );
-          await load(cards.length);
-          return;
-        }
+      // Relecture sur TOUTES les issues, `catch` compris (cf.
+      // `reloadAfterMutation`) : un paquet ouvert dont la réponse s'est perdue
+      // resterait sinon affiché fermé.
+      await reloadAfterMutation(
+        async () => {
+          const res = await adminFetch('/api/player/tcg/packs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ packId }),
+          });
+          if (!res.ok) {
+            const body = (await res.json().catch(() => ({}))) as {
+              code?: string;
+            };
+            addToast(
+              body.code === 'already_opened'
+                ? t.errAlreadyOpened
+                : body.code === 'empty_pool'
+                  ? t.errEmptyPool
+                  : t.errGeneric,
+              'error'
+            );
+            return;
+          }
 
-        // LA RÉVÉLATION. Le serveur renvoie les cartes tirées, faces
-        // comprises : on les garde pour les montrer, au lieu de recharger la
-        // collection en silence. Une réponse illisible n'est pas une erreur
-        // d'ouverture — le paquet EST ouvert et les cartes sont en base ; on
-        // se rabat alors sur le rechargement, sans rien annoncer de faux.
-        const body = (await res.json().catch(() => null)) as {
-          cards?: DrawnCard[];
-          setsCompleted?: TcgSetCompletedNotice[];
-        } | null;
-        if (
-          Array.isArray(body?.setsCompleted) &&
-          body.setsCompleted.length > 0
-        ) {
-          setSetsCompleted(body.setsCompleted);
+          // LA RÉVÉLATION. Le serveur renvoie les cartes tirées, faces
+          // comprises : on les garde pour les montrer, au lieu de recharger la
+          // collection en silence. Une réponse illisible n'est pas une erreur
+          // d'ouverture — le paquet EST ouvert et les cartes sont en base ; on
+          // se rabat alors sur le rechargement, sans rien annoncer de faux.
+          const body = (await res.json().catch(() => null)) as {
+            cards?: DrawnCard[];
+            setsCompleted?: TcgSetCompletedNotice[];
+          } | null;
+          if (
+            Array.isArray(body?.setsCompleted) &&
+            body.setsCompleted.length > 0
+          ) {
+            setSetsCompleted(body.setsCompleted);
+          }
+          if (Array.isArray(body?.cards) && body.cards.length > 0) {
+            const drawn = [...body.cards].sort(
+              (a, b) => a.position - b.position
+            );
+            setRevealed({ id: packId, cards: drawn });
+            announce(
+              format(t.revealAnnounce, {
+                cards: drawn
+                  .map((c) => {
+                    const parts = [
+                      format(t.revealAnnounceCard, {
+                        name: cardName(c) ?? t.revealUnnamed,
+                        rarity: labels.rarity[c.rarity],
+                      }),
+                    ];
+                    if (c.isFoil) parts.push(t.revealAnnounceFoil);
+                    if (c.isNew === true) parts.push(t.revealAnnounceNew);
+                    if (c.isNew === false)
+                      parts.push(t.revealAnnounceDuplicate);
+                    return parts.join(', ');
+                  })
+                  .join(' ; '),
+              })
+            );
+          }
+        },
+        {
+          reload: () => load(cards.length),
+          onError: () => addToast(t.errGeneric, 'error'),
         }
-        if (Array.isArray(body?.cards) && body.cards.length > 0) {
-          const drawn = [...body.cards].sort((a, b) => a.position - b.position);
-          setRevealed({ id: packId, cards: drawn });
-          announce(
-            format(t.revealAnnounce, {
-              cards: drawn
-                .map((c) => {
-                  const parts = [
-                    format(t.revealAnnounceCard, {
-                      name: cardName(c) ?? t.revealUnnamed,
-                      rarity: labels.rarity[c.rarity],
-                    }),
-                  ];
-                  if (c.isFoil) parts.push(t.revealAnnounceFoil);
-                  if (c.isNew === true) parts.push(t.revealAnnounceNew);
-                  if (c.isNew === false) parts.push(t.revealAnnounceDuplicate);
-                  return parts.join(', ');
-                })
-                .join(' ; '),
-            })
-          );
-        }
-
-        await load(cards.length);
-      } catch {
-        addToast(t.errGeneric, 'error');
-      } finally {
-        setBusy(null);
-      }
+      );
+      setBusy(null);
     },
     [adminFetch, addToast, announce, load, t, cards.length, labels.rarity]
   );
@@ -722,33 +825,39 @@ function PlayerTcg() {
 
   const buyBooster = useCallback(async () => {
     setBusy('buy');
-    try {
-      const res = await adminFetch('/api/player/tcg/booster', {
-        method: 'POST',
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as {
-          code?: string;
-          price?: number;
-        };
-        addToast(
-          body.code === 'insufficient_funds'
-            ? format(t.errInsufficientFunds, { price: body.price ?? '' })
-            : body.code === 'balance_changed'
-              ? t.errBalanceChanged
-              : t.errGeneric,
-          'error'
-        );
-        await load(cards.length);
-        return;
+    // LE CAS QUI COÛTE DE L'ARGENT. Si la réponse se perd APRÈS le débit, ne
+    // pas relire laissait l'ancien solde et le paquet absent à l'écran : la
+    // joueuse recliquait, et payait un second paquet. On relit donc aussi
+    // depuis le `catch` (cf. `reloadAfterMutation`) — le bouton reste bloqué
+    // (`busy`) jusqu'à ce que l'état réel soit affiché.
+    await reloadAfterMutation(
+      async () => {
+        const res = await adminFetch('/api/player/tcg/booster', {
+          method: 'POST',
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as {
+            code?: string;
+            price?: number;
+          };
+          addToast(
+            body.code === 'insufficient_funds'
+              ? format(t.errInsufficientFunds, { price: body.price ?? '' })
+              : body.code === 'balance_changed'
+                ? t.errBalanceChanged
+                : t.errGeneric,
+            'error'
+          );
+          return;
+        }
+        addToast(t.buySuccess, 'success');
+      },
+      {
+        reload: () => load(cards.length),
+        onError: () => addToast(t.errGeneric, 'error'),
       }
-      addToast(t.buySuccess, 'success');
-      await load(cards.length);
-    } catch {
-      addToast(t.errGeneric, 'error');
-    } finally {
-      setBusy(null);
-    }
+    );
+    setBusy(null);
   }, [adminFetch, addToast, load, t, cards.length]);
 
   /**
@@ -811,6 +920,27 @@ function PlayerTcg() {
                 ? format(t.recycleConfirmKeep_other, { count: left })
                 : t.recycleConfirmKeep_one}
             </p>
+            {/* ÉCHANGES EN ATTENTE. On avertit, on n'interdit pas : la route
+                de recyclage accepte, et l'échange serait annulé à
+                l'acceptation — c'est la PARTENAIRE qui le découvrirait.
+                Deux cas distincts, parce qu'ils n'ont pas la même
+                conséquence : l'exemplaire désigné est lui-même promis
+                (l'échange sera annulé), ou seule une autre copie l'est
+                (rien ne casse, mais la joueuse doit le savoir avant de
+                trier ses doublons). */}
+            {card.recyclableEngaged === true ? (
+              <p className="rounded-lg border border-amber-400/40 bg-amber-500/10 p-2.5 text-amber-200">
+                {t.recycleConfirmEngaged}
+              </p>
+            ) : (card.engagedCopies ?? 0) > 0 ? (
+              <p className="text-neutral-300">
+                {(card.engagedCopies ?? 0) > 1
+                  ? format(t.recycleConfirmEngagedOther_other, {
+                      count: card.engagedCopies ?? 0,
+                    })
+                  : t.recycleConfirmEngagedOther_one}
+              </p>
+            ) : null}
             <p className="text-neutral-400">{t.recycleConfirmWhich}</p>
           </div>
         ),
@@ -818,41 +948,44 @@ function PlayerTcg() {
       if (!ok) return;
 
       setBusy(busyKey);
-      try {
-        const res = await adminFetch('/api/player/tcg/recycle', {
-          method: 'POST',
-          body: JSON.stringify(target),
-        });
-        if (!res.ok) {
+      // Relecture sur toutes les issues, `catch` compris : cf. le paragraphe
+      // ci-dessus et `reloadAfterMutation`.
+      await reloadAfterMutation(
+        async () => {
+          const res = await adminFetch('/api/player/tcg/recycle', {
+            method: 'POST',
+            body: JSON.stringify(target),
+          });
+          if (!res.ok) {
+            const body = (await res.json().catch(() => ({}))) as {
+              code?: string;
+            };
+            addToast(
+              body.code === 'not_a_duplicate'
+                ? t.errNotADuplicate
+                : body.code === 'already_recycled'
+                  ? t.errAlreadyRecycled
+                  : t.errGeneric,
+              'error'
+            );
+            return;
+          }
           const body = (await res.json().catch(() => ({}))) as {
-            code?: string;
+            refund?: number;
           };
           addToast(
-            body.code === 'not_a_duplicate'
-              ? t.errNotADuplicate
-              : body.code === 'already_recycled'
-                ? t.errAlreadyRecycled
-                : t.errGeneric,
-            'error'
+            format(t.recycleSuccess, {
+              refund: body.refund ?? recycleRefund,
+            }),
+            'success'
           );
-          await load(cards.length);
-          return;
+        },
+        {
+          reload: () => load(cards.length),
+          onError: () => addToast(t.errGeneric, 'error'),
         }
-        const body = (await res.json().catch(() => ({}))) as {
-          refund?: number;
-        };
-        addToast(
-          format(t.recycleSuccess, {
-            refund: body.refund ?? recycleRefund,
-          }),
-          'success'
-        );
-        await load(cards.length);
-      } catch {
-        addToast(t.errGeneric, 'error');
-      } finally {
-        setBusy(null);
-      }
+      );
+      setBusy(null);
     },
     [
       adminFetch,
@@ -935,6 +1068,27 @@ function PlayerTcg() {
               className="text-sm font-medium text-purple-300 underline-offset-4 transition hover:text-purple-200 hover:underline"
             >
               {tTrade.entryLink}
+              {/* Pastille des propositions reçues (cf. `tradesReceived`). Le
+                  chiffre est décoratif ; le nom accessible du lien porte la
+                  phrase complète, un « 2 » seul ne dirait rien. */}
+              {tradesReceived > 0 && (
+                <>
+                  <span
+                    aria-hidden
+                    className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-[var(--color-yellow)] px-1.5 text-xs font-bold leading-5 text-neutral-950"
+                  >
+                    {tradesReceived}
+                  </span>
+                  <span className="sr-only">
+                    {' — '}
+                    {tradesReceived > 1
+                      ? format(t.tradesPendingBadge_other, {
+                          count: tradesReceived,
+                        })
+                      : t.tradesPendingBadge_one}
+                  </span>
+                </>
+              )}
             </Link>
           </div>
         </div>

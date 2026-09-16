@@ -28,6 +28,7 @@ import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import { logger } from '@/utils/logger';
 import { compareCollectionOrder } from '@/utils/tcg/pageCursor';
 import { tradeIdSchema } from '@/utils/tcg/tradeRules';
+import { readEngagedCopies } from '@/utils/tcg/engagedCards';
 import {
   readCollectorNames,
   readOwnedCopies,
@@ -142,49 +143,15 @@ async function myCards(res: NextApiResponse, tenantId: string, userId: string) {
   }
 
   // Les exemplaires DÉJÀ promis dans une de mes propositions en attente : ils
-  // ne peuvent pas l'être une seconde fois (la fonction SQL le refuse).
-  const engagedBySubject = new Map<string, number>();
-  const nowIso = new Date().toISOString();
-  const { data: pending, error: pendingError } = await supabaseAdmin!
-    .from('tcg_trades')
-    .select('id')
-    .eq('tenant_id', tenantId)
-    .eq('proposer_id', userId)
-    .eq('status', 'pending')
-    .gt('expires_at', nowIso);
-  if (pendingError) {
-    logger.warn(
-      '[tcg/trades] propositions en attente illisibles: %s',
-      pendingError.message
-    );
+  // ne peuvent pas l'être une seconde fois (la fonction SQL le refuse). Lecture
+  // partagée avec la collection (`utils/tcg/engagedCards.ts`) ; best-effort,
+  // comme avant : illisible, `available` retombe sur les exemplaires
+  // échangeables et c'est la fonction SQL qui tranche à la proposition.
+  const engaged = await readEngagedCopies(tenantId, userId);
+  if (!engaged.ok) {
+    logger.warn('[tcg/trades] cartes engagées illisibles: %s', engaged.error);
   }
-  const pendingIds = ((pending ?? []) as Array<{ id: string }>).map(
-    (r) => r.id
-  );
-  if (pendingIds.length > 0) {
-    const { data: items, error: itemsError } = await supabaseAdmin!
-      .from('tcg_trade_items')
-      .select('subject_kind, card_user_id, card_team_id, card_map_slug')
-      .in('trade_id', pendingIds)
-      .eq('side', 'offered');
-    if (itemsError) {
-      logger.warn(
-        '[tcg/trades] cartes engagées illisibles: %s',
-        itemsError.message
-      );
-    }
-    for (const i of (items ?? []) as Array<{
-      subject_kind: string;
-      card_user_id: string | null;
-      card_team_id: string | null;
-      card_map_slug: string | null;
-    }>) {
-      const id = i.card_user_id ?? i.card_team_id ?? i.card_map_slug;
-      if (!id) continue;
-      const key = `${i.subject_kind}:${id}`;
-      engagedBySubject.set(key, (engagedBySubject.get(key) ?? 0) + 1);
-    }
-  }
+  const engagedBySubject = engaged.bySubject;
 
   const summaries: CopySummary[] = [
     ...summarizeCopies(owned.value).values(),
