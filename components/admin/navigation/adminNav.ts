@@ -1,6 +1,4 @@
 import type { AdminLink } from '@/types/components';
-import type { StaffRole } from '@/utils/staff';
-import { type StaffPermission } from '@/utils/staffPermissions';
 
 /**
  * Source unique de vérité de la navigation admin.
@@ -29,67 +27,14 @@ import { type StaffPermission } from '@/utils/staffPermissions';
  *     (`card.titleKey` / `card.descKey`, résolus par la page).
  */
 
-/** Clés d'icônes SVG. Le rendu JSX vit dans `pages/admin/index.tsx` (map ICON). */
-export type AdminNavIcon =
-  | 'trophy'
-  | 'users'
-  | 'inbox'
-  | 'ticket'
-  | 'shield'
-  | 'mail'
-  | 'clock'
-  | 'cog'
-  | 'signal'
-  | 'chart'
-  | 'medal'
-  | 'bolt'
-  | 'beaker'
-  | 'map'
-  | 'key'
-  | 'trash'
-  | 'help';
-
-/** Métadonnées propres à la carte dashboard (absentes du top-bar). */
-export type AdminNavCardMeta = {
-  /** Position dans la grille de cartes (ordre stable, indépendant de l'arbre). */
-  order: number;
-  /** Clé i18n du titre dans le dictionnaire `adminDashboard`. */
-  titleKey: string;
-  /** Clé i18n de la description dans le dictionnaire `adminDashboard`. */
-  descKey: string;
-  icon: AdminNavIcon;
-  /** Classes Tailwind d'accent (bordure + dégradé + texte). */
-  accent: string;
-};
-
-export type AdminNavNode = {
-  /** Identifiant stable (debug / clés React). */
-  id: string;
-  /** Libellé FR figé du top-bar. Absent => item non exposé dans le top-bar. */
-  topBarLabel?: string;
-  /** Route. Vide/absent pour un conteneur (section/sous-section) pur. */
-  href?: string;
-  /** Rôle minimum requis. Partagé par les deux surfaces (gating identique). */
-  minRole?: StaffRole;
-  /**
-   * Permission exigée par la PAGE cible (lot A2). Quand elle est présente, elle
-   * l'emporte sur `minRole` : c'est elle que la page applique côté serveur, et
-   * un menu qui filtrerait autrement afficherait des entrées menant à un 403.
-   *
-   * Absente = gating historique par rôle, inchangé.
-   */
-  permission?: StaffPermission;
-  /** Métadonnées de carte dashboard. Absent => pas de carte. */
-  card?: AdminNavCardMeta;
-  /**
-   * Marque un nœud comme faisant partie de la « console développeur » (tenant
-   * `kind='developer'`) : facturation, clés API, webhooks, hub dev, docs.
-   * Un tenant développeur ne voit QUE les nœuds `devConsole:true` (le reste de
-   * la nav admin est masqué). Absent/false pour tout le reste (cas organizer).
-   */
-  devConsole?: boolean;
-  children?: AdminNavNode[];
-};
+// Les types vivent à part (cf. adminNavTypes.ts) ; on les ré-exporte pour
+// que les appelants historiques n'aient rien à changer.
+export type {
+  AdminNavIcon,
+  AdminNavCardMeta,
+  AdminNavNode,
+} from './adminNavTypes';
+import type { AdminNavNode } from './adminNavTypes';
 
 /**
  * Arbre unifié. L'ordre des nœuds `topBarLabel` reproduit l'ordre historique
@@ -459,6 +404,25 @@ export const ADMIN_NAV: AdminNavNode[] = [
         href: '/admin/partners',
         permission: 'manage_communications',
         minRole: 'admin',
+      },
+      {
+        // Tableau de bord du TCG : économie, photos à relire, cartes fan art.
+        // Les trois étaient des onglets de Modération, à côté des litiges et du
+        // support — un voisinage faux : ceux-là traitent des CONFLITS entre
+        // personnes, le TCG est un objet de jeu qu'on pilote. On ne le trouvait
+        // pas en cherchant le TCG.
+        id: 'tcg',
+        topBarLabel: 'TCG',
+        href: '/admin/tcg',
+        permission: 'manage_tcg',
+        minRole: 'caster',
+        card: {
+          order: 4,
+          titleKey: 'navTcgTitle',
+          descKey: 'navTcgDesc',
+          icon: 'medal',
+          accent: 'border-violet-500/30 from-violet-500/10 text-violet-300',
+        },
       },
       {
         // Hub « Modération » (lot B) : fusion des ex-pages Commentaires,

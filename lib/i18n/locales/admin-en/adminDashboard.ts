@@ -100,6 +100,8 @@ export default {
   navScrimsDesc: 'Organise and validate scrim requests between teams.',
   catCompetition: 'Competition',
   catContenu: 'Content',
+  navTcgTitle: 'TCG',
+  navTcgDesc: 'Economy, photos to review, fan art cards.',
   catCommunication: 'Communication',
   catStaffAsso: 'Staff & Org',
   catConfiguration: 'Configuration',

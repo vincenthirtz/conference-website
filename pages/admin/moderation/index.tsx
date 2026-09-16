@@ -1,4 +1,6 @@
 import Head from 'next/head';
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { withStaffPage, hasAtLeastRole } from '@/utils/staff';
 import type { StaffRole } from '@/utils/staff';
 import { useAdminT } from '@/lib/i18n/useAdminT';
@@ -11,14 +13,6 @@ import CommentsPanel from '@/components/admin/moderation/CommentsPanel';
 import DisputesPanel from '@/components/admin/moderation/DisputesPanel';
 import type { StaffProps } from '@/types/admin';
 import nsAdminModeration from '@/lib/i18n/locales/admin-fr/adminModeration';
-// Namespace propre à l'onglet TCG : y ajouter une clé dans `adminModeration`
-// aurait touché deux fichiers de plus et leur parité, pour un seul intitulé.
-import nsAdminTcgPhotos from '@/lib/i18n/locales/admin-fr/adminTcgPhotos';
-// Namespace distinct de `adminTcgPhotos` : relire une photo et mesurer une
-// économie sont deux métiers, et mélanger leurs libellés obligerait à toucher
-// la parité des deux à chaque évolution de l'un.
-import nsAdminTcgOverview from '@/lib/i18n/locales/admin-fr/adminTcgOverview';
-import nsAdminTcgFanart from '@/lib/i18n/locales/admin-fr/adminTcgFanart';
 
 import { lazyPanel } from '@/components/admin/lazyPanel';
 
@@ -32,43 +26,19 @@ const EntityBlacklistPanel = lazyPanel(
 const SupportPanel = lazyPanel(
   () => import('@/components/admin/moderation/SupportPanel')
 );
-const TcgPhotosPanel = lazyPanel(
-  () => import('@/components/admin/moderation/TcgPhotosPanel')
-);
-const TcgFanartPanel = lazyPanel(
-  () => import('@/components/admin/moderation/TcgFanartPanel')
-);
-const TcgOverviewPanel = lazyPanel(
-  () => import('@/components/admin/tcg/TcgOverviewPanel')
-);
 // Panneau SÉPARÉ, monté à côté du précédent : le lien d'overlay OBS relève du
 // TCG mais n'a rien à faire dans un fichier qu'on vient d'alléger pour tenir
 // sous le plafond de taille des écrans admin.
-const TcgOverlayCard = lazyPanel(
-  () => import('@/components/admin/tcg/TcgOverlayCard')
-);
 // L'habillage vit dans un troisième composant, pour la même raison que le
 // deuxième : le lien, l'apparence et la vue d'ensemble sont trois sujets.
-const TcgOverlayThemeCard = lazyPanel(
-  () => import('@/components/admin/tcg/TcgOverlayThemeCard')
-);
 // Distribution du cadeau d'accueil : un quatrième sujet, donc un quatrième
 // composant — l'écran d'ensemble, le lien, l'apparence et le cadeau ne se
 // mélangent pas.
-const TcgWelcomeGiftCard = lazyPanel(
-  () => import('@/components/admin/tcg/TcgWelcomeGiftCard')
-);
 // Ajustement manuel d'un solde : une CORRECTION tracée (motif, journal), pas
 // une distribution. Cinquième sujet, cinquième composant ; ses libellés vivent
 // dans son propre namespace plutôt que dans cette page.
-const TcgGrantCard = lazyPanel(
-  () => import('@/components/admin/tcg/TcgGrantCard')
-);
 // Rattrapage de la récompense Battle.net : une distribution collective, donc
 // voisine du cadeau d'accueil, mais un sujet à part (audience, unicité globale).
-const TcgBattlenetBackfillCard = lazyPanel(
-  () => import('@/components/admin/tcg/TcgBattlenetBackfillCard')
-);
 
 const ID_BASE = 'admin-moderation';
 
@@ -91,20 +61,9 @@ export const getServerSideProps = withStaffPage('caster');
  */
 export default function AdminModerationPage({ staff }: StaffProps) {
   const t = useAdminT(nsAdminModeration);
-  const tTcg = useAdminT(nsAdminTcgPhotos);
-  const tTcgOverview = useAdminT(nsAdminTcgOverview);
-  const tTcgFanart = useAdminT(nsAdminTcgFanart);
   const isManager = hasAtLeastRole(staff.role as StaffRole, 'admin');
   // Les onglets TCG suivent la PERMISSION de leurs routes (`manage_tcg` pour
   // photos, vue d'ensemble, overlay, cadeau et ajustement de solde), pas le
-  // rôle : ce droit s'accorde à l'unité, et un caster qui l'a reçu doit voir ce
-  // que l'API lui ouvre. Droit DÉDIÉ et non `moderate_support` : donner le
-  // support pour traiter des tickets ne doit pas ouvrir la correction des
-  // soldes. Repli sur le rôle si la prop manque (fixtures).
-  const canModerateTcg = staff.permissions
-    ? staff.permissions.includes('manage_tcg')
-    : isManager;
-
   const tabs = [
     ...(isManager ? [{ id: 'comments', label: t.tabComments }] : []),
     { id: 'disputes', label: t.tabDisputes },
@@ -114,21 +73,26 @@ export default function AdminModerationPage({ staff }: StaffProps) {
           { id: 'support', label: t.tabSupport },
         ]
       : []),
-    ...(canModerateTcg
-      ? [
-          // Relire la photo d'une personne réelle n'est pas un geste de
-          // caster par défaut : droit `manage_tcg`, admin et owner l'ont.
-          { id: 'tcg-photos', label: tTcg.tabLabel },
-          // Les cartes fan art : même droit, même métier — décider ce qui
-          // entre dans le TCG.
-          { id: 'tcg-fanart', label: tTcgFanart.tabLabel },
-          // Mesurer l'économie expose qui possède quoi, et corriger un solde
-          // la modifie : même permission que la file de photos.
-          { id: 'tcg-overview', label: tTcgOverview.tabLabel },
-        ]
-      : []),
   ];
   const [active, setActive] = useQueryTab(tabs);
+
+  // Les trois onglets TCG sont partis dans /admin/tcg — l'économie et les
+  // files de relecture ne sont pas des conflits entre personnes. Les anciens
+  // liens circulent (messages, documentation) : on les suit jusqu'au bon
+  // onglet plutôt que de les laisser atterrir en silence sur le premier.
+  const router = useRouter();
+  const rawTab = Array.isArray(router.query.tab)
+    ? router.query.tab[0]
+    : router.query.tab;
+  useEffect(() => {
+    if (!rawTab || !rawTab.startsWith('tcg-')) return;
+    const target = rawTab.replace(/^tcg-/, '').replace('overview', 'economie');
+    void router.replace(
+      { pathname: '/admin/tcg', query: { tab: target } },
+      undefined,
+      { shallow: false }
+    );
+  }, [rawTab, router]);
 
   // Sous-onglets de l'onglet Blacklist (joueurs / équipes & structures),
   // deep-linkables via un second param `?bl=players|entities` qui compose avec
@@ -194,94 +158,6 @@ export default function AdminModerationPage({ staff }: StaffProps) {
               </>
             ) : active === 'support' && isManager ? (
               <SupportPanel />
-            ) : active === 'tcg-fanart' && canModerateTcg ? (
-              <TcgFanartPanel />
-            ) : active === 'tcg-photos' && canModerateTcg ? (
-              <TcgPhotosPanel />
-            ) : active === 'tcg-overview' && canModerateTcg ? (
-              <div className="space-y-6">
-                <TcgOverviewPanel labels={tTcgOverview} />
-                <TcgOverlayCard
-                  labels={{
-                    heading: tTcgOverview.overlayHeading,
-                    subtitle: tTcgOverview.overlaySubtitle,
-                    none: tTcgOverview.overlayNone,
-                    createdAt: tTcgOverview.overlayCreatedAt,
-                    lastUsedAt: tTcgOverview.overlayLastUsedAt,
-                    neverUsed: tTcgOverview.overlayNeverUsed,
-                    reveal: tTcgOverview.overlayReveal,
-                    hide: tTcgOverview.overlayHide,
-                    copy: tTcgOverview.overlayCopy,
-                    copied: tTcgOverview.overlayCopied,
-                    create: tTcgOverview.overlayCreate,
-                    rotate: tTcgOverview.overlayRotate,
-                    rotateWarning: tTcgOverview.overlayRotateWarning,
-                    revoke: tTcgOverview.overlayRevoke,
-                    revokeWarning: tTcgOverview.overlayRevokeWarning,
-                    working: tTcgOverview.overlayWorking,
-                    loadError: tTcgOverview.overlayLoadError,
-                    saveError: tTcgOverview.overlaySaveError,
-                    obsHint: tTcgOverview.overlayObsHint,
-                  }}
-                />
-                <TcgOverlayThemeCard
-                  labels={{
-                    heading: tTcgOverview.themeHeading,
-                    subtitle: tTcgOverview.themeSubtitle,
-                    previewTitle: tTcgOverview.themePreviewTitle,
-                    accent: tTcgOverview.themeAccent,
-                    position: tTcgOverview.themePosition,
-                    positionTopLeft: tTcgOverview.themePosTopLeft,
-                    positionTopRight: tTcgOverview.themePosTopRight,
-                    positionBottomLeft: tTcgOverview.themePosBottomLeft,
-                    positionBottomRight: tTcgOverview.themePosBottomRight,
-                    dropLine: tTcgOverview.themeDropLine,
-                    winLine: tTcgOverview.themeWinLine,
-                    linePlaceholder: tTcgOverview.themeLinePlaceholder,
-                    lineHint: tTcgOverview.themeLineHint,
-                    media: tTcgOverview.themeMedia,
-                    mediaHint: tTcgOverview.themeMediaHint,
-                    mediaChoose: tTcgOverview.themeMediaChoose,
-                    mediaRemove: tTcgOverview.themeMediaRemove,
-                    saving: tTcgOverview.themeSaving,
-                    saved: tTcgOverview.themeSaved,
-                    loadError: tTcgOverview.themeLoadError,
-                    saveError: tTcgOverview.themeSaveError,
-                    errUnsupportedType: tTcgOverview.themeErrUnsupportedType,
-                    errTooLarge: tTcgOverview.themeErrTooLarge,
-                    errContentMismatch: tTcgOverview.themeErrContentMismatch,
-                    errInvalidColor: tTcgOverview.themeErrInvalidColor,
-                    previewDropEyebrow: tTcgOverview.themePreviewDropEyebrow,
-                    previewWinEyebrow: tTcgOverview.themePreviewWinEyebrow,
-                    previewDropLine: tTcgOverview.themePreviewDropLine,
-                    previewWinLine: tTcgOverview.themePreviewWinLine,
-                    previewName: tTcgOverview.themePreviewName,
-                  }}
-                />
-                <TcgWelcomeGiftCard
-                  labels={{
-                    heading: tTcgOverview.giftHeading,
-                    subtitle: tTcgOverview.giftSubtitle,
-                    eligible: tTcgOverview.giftEligible,
-                    alreadyGifted: tTcgOverview.giftAlreadyGifted,
-                    teams: tTcgOverview.giftTeams,
-                    reward: tTcgOverview.giftReward,
-                    noTournament: tTcgOverview.giftNoTournament,
-                    nothingToDo: tTcgOverview.giftNothingToDo,
-                    replayHint: tTcgOverview.giftReplayHint,
-                    grant: tTcgOverview.giftGrant,
-                    granting: tTcgOverview.giftGranting,
-                    confirmTitle: tTcgOverview.giftConfirmTitle,
-                    confirmBody: tTcgOverview.giftConfirmBody,
-                    granted: tTcgOverview.giftGranted,
-                    partial: tTcgOverview.giftPartial,
-                    loadError: tTcgOverview.giftLoadError,
-                    grantError: tTcgOverview.giftGrantError,
-                  }}
-                />
-                <TcgBattlenetBackfillCard />
-                <TcgGrantCard />
-              </div>
             ) : (
               <DisputesPanel />
             )}

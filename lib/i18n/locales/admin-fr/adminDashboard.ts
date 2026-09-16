@@ -103,6 +103,8 @@ export default adminNs('adminDashboard', {
   navScrimsDesc: 'Organiser et valider les demandes de scrim entre équipes.',
   catCompetition: 'Compétition',
   catContenu: 'Contenu',
+  navTcgTitle: 'TCG',
+  navTcgDesc: 'Économie, photos à relire, cartes fan art.',
   catCommunication: 'Communication',
   catStaffAsso: 'Staff & Asso',
   catConfiguration: 'Configuration',
