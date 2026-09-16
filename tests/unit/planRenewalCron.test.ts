@@ -337,6 +337,51 @@ describe('runPlanRenewal — lifecycle', () => {
     );
   });
 
+  it('ne relance JAMAIS une association vérifiée sur Découverte', async () => {
+    // La gratuité associative (lot 1 du rapport) : réclamer une somme qu'on ne
+    // demande pas ruine la promesse commerciale plus sûrement qu'un oubli de
+    // facturation. Ni relance, ni bascule en impayé.
+    store.tenants = [
+      {
+        id: TENANT,
+        plan: 'discovery',
+        plan_status: 'active',
+        plan_term: 'month',
+        plan_expires_at: iso(NOW - 2 * DAY),
+        plan_last_reminder_at: null,
+        nonprofit_verified_at: iso(NOW - 30 * DAY),
+      },
+    ] as any;
+    seedOwner(TENANT, 'asso@example.test');
+
+    const c = await runPlanRenewal(NOW);
+
+    expect(c.remindersSent).toBe(0);
+    expect(c.markedPastDue).toBe(0);
+    expect(store.tenants[0].plan_status).toBe('active');
+    expect(sendPlanRenewalReminderEmail).not.toHaveBeenCalled();
+  });
+
+  it('relance quand même une association vérifiée qui a CHOISI un plan payant', async () => {
+    // La gratuité porte sur l'entrée de gamme, pas sur le catalogue : sinon
+    // les espaces qui paient financeraient les autres.
+    store.tenants = [
+      {
+        id: TENANT,
+        plan: 'regie',
+        plan_status: 'active',
+        plan_expires_at: iso(NOW + 10 * DAY),
+        plan_last_reminder_at: null,
+        nonprofit_verified_at: iso(NOW - 30 * DAY),
+      },
+    ] as any;
+    seedOwner(TENANT, 'asso@example.test');
+
+    const c = await runPlanRenewal(NOW);
+
+    expect(c.remindersSent).toBe(1);
+  });
+
   it('skips the reminder (no stamp) when the tenant has no owner email', async () => {
     store.tenants = [
       {

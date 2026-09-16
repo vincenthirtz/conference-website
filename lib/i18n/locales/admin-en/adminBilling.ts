@@ -29,6 +29,7 @@ export default {
   expireInDays: 'expires in {days} days',
   expired: 'Expired',
   trialBadge: 'Free trial',
+  nonprofitBadge: 'Free — verified non-profit',
   trialNotice:
     'Your space is on a free trial. When it ends, it drops back to the Discovery tier and the Discord bot stops responding — subscribe to keep it running.',
   downgradeNoticeTitle: 'Reduced access',

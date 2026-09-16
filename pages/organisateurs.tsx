@@ -20,11 +20,13 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT, format } from '@/lib/i18n/useT';
 import {
   PLAN_LABELS,
   PLAN_PRICES_EUR,
+  entryPlanPrice,
   getPlanFeatures,
   planPrice,
   YEARLY_MONTHS_BILLED,
@@ -32,6 +34,11 @@ import {
   type TenantPlan,
 } from '@/utils/billing/planFeatures';
 import nsOrganisateursPage from '@/lib/i18n/locales/fr/organisateursPage';
+import {
+  readPlatformProof,
+  type PlatformProof,
+  type ProofMetric,
+} from '@/utils/marketing/platformProof';
 
 type Dict = typeof nsOrganisateursPage.fr;
 
@@ -94,7 +101,38 @@ function priceLabel(plan: TenantPlan, term: PlanTerm, t: Dict): string {
     : format(t.pricePerYear, { amount: String(price) });
 }
 
-function OrganisateursPage() {
+/** Libellé d'une métrique de preuve. Les clés vivent dans l'i18n. */
+function proofLabel(metric: ProofMetric, t: Dict): string {
+  switch (metric) {
+    case 'editions':
+      return t.proofEditions;
+    case 'teams':
+      return t.proofTeams;
+    case 'players':
+      return t.proofPlayers;
+    case 'scheduledMatches':
+      return t.proofScheduledMatches;
+    default:
+      return t.proofPlayedMatches;
+  }
+}
+
+type Props = { proof: PlatformProof };
+
+/**
+ * Les chiffres de la preuve sont lus au BUILD et revalidés chaque heure.
+ *
+ * Rendus côté serveur, donc présents dans le HTML : un visiteur sans
+ * JavaScript, et un moteur de recherche, voient la preuve. Un fetch client
+ * l'aurait réservée à ceux qui attendent la fin du chargement — c'est-à-dire
+ * pas la personne qui compare trois plateformes en dix minutes.
+ */
+export const getStaticProps: GetStaticProps<Props> = async () => ({
+  props: { proof: await readPlatformProof() },
+  revalidate: 3600,
+});
+
+function OrganisateursPage({ proof }: Props) {
   const t = useT(nsOrganisateursPage);
   const router = useRouter();
 
@@ -159,6 +197,57 @@ function OrganisateursPage() {
         </div>
       </div>
 
+      {/* La preuve, avant le discours : ce que la plateforme fait tourner
+          vraiment. Rendue seulement si les chiffres passent leurs planchers —
+          cf. utils/marketing/platformProof.ts. */}
+      {proof.tiles.length > 0 && (
+        <section className="mx-auto max-w-5xl px-6 pt-4">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 sm:p-8">
+            <h2 className="text-center text-xl font-bold sm:text-2xl">
+              {t.proofTitle}
+            </h2>
+            <p className="mx-auto mt-2 max-w-2xl text-center text-sm text-gray-400">
+              {t.proofIntro}
+            </p>
+
+            <dl className="mt-8 grid grid-cols-2 gap-6 sm:grid-cols-4">
+              {proof.tiles.map((tile) => (
+                <div key={tile.metric} className="text-center">
+                  <dt className="sr-only">{proofLabel(tile.metric, t)}</dt>
+                  <dd>
+                    <span className="block text-3xl font-black tabular-nums text-white sm:text-4xl">
+                      {tile.value}
+                    </span>
+                    <span className="mt-1 block text-xs text-gray-400">
+                      {proofLabel(tile.metric, t)}
+                    </span>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3 border-t border-white/10 pt-6 text-sm">
+              {proof.showcase && (
+                <Link
+                  href={`/tournament/${proof.showcase.slug}`}
+                  className="rounded-lg border border-white/20 px-4 py-2 font-semibold text-gray-100 transition hover:border-white/40"
+                  data-test="proof-showcase-cta"
+                >
+                  {format(t.proofShowcaseCta, { name: proof.showcase.name })}
+                </Link>
+              )}
+              <span className="text-gray-400">{t.proofDemoLead}</span>
+              <Link
+                href="/contact"
+                className="font-semibold text-purple-300 underline hover:text-purple-200"
+              >
+                {t.proofDemoCta}
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Ce que la plateforme fait */}
       <section className="mx-auto max-w-5xl px-6 py-16">
         <h2 className="text-center text-2xl font-bold sm:text-3xl">
@@ -176,6 +265,31 @@ function OrganisateursPage() {
             [t.what4Title, t.what4Body],
             [t.what5Title, t.what5Body],
             [t.what6Title, t.what6Body],
+          ].map(([title, body]) => (
+            <div
+              key={title}
+              className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"
+            >
+              <h3 className="text-base font-semibold text-white">{title}</h3>
+              <p className="mt-2 text-sm text-gray-300">{body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Pourquoi nous. Quatre affirmations sur NOUS, vérifiables sur le site
+          même — jamais une comparaison avec un concurrent nommé : un tableau
+          de dénigrement vieillit mal et se retourne. */}
+      <section className="mx-auto max-w-5xl px-6 pb-8">
+        <h2 className="text-center text-2xl font-bold sm:text-3xl">
+          {t.whyTitle}
+        </h2>
+        <div className="mt-8 grid gap-5 sm:grid-cols-2">
+          {[
+            [t.why1Title, t.why1Body],
+            [t.why2Title, t.why2Body],
+            [t.why3Title, t.why3Body],
+            [t.why4Title, t.why4Body],
           ].map(([title, body]) => (
             <div
               key={title}
@@ -394,6 +508,24 @@ function OrganisateursPage() {
           </Link>
         </div>
 
+        {/* Gratuité associative. Le compte HelloAsso relié FAIT la vérification
+            (HelloAsso n'ouvre de compte qu'à des organismes à but non
+            lucratif), donc aucune paperasse à demander — cf.
+            utils/billing/nonprofitGrant.ts. */}
+        <div className="mx-auto mt-4 flex max-w-3xl flex-wrap items-center justify-between gap-4 rounded-2xl border border-emerald-400/40 bg-emerald-400/[0.07] p-5">
+          <div className="max-w-xl">
+            <p className="font-semibold text-emerald-50">{t.nonprofitTitle}</p>
+            <p className="mt-1 text-sm text-emerald-50/80">{t.nonprofitBody}</p>
+          </div>
+          <Link
+            href="/onboard/request?plan=discovery"
+            className="rounded-lg border border-emerald-300/50 px-4 py-2 text-sm font-semibold text-emerald-50 transition hover:border-emerald-200"
+            data-test="nonprofit-banner-cta"
+          >
+            {t.nonprofitCta}
+          </Link>
+        </div>
+
         <p className="mx-auto mt-8 max-w-3xl text-center text-sm text-gray-400">
           {t.offersFootnote}{' '}
           <Link href="/contact" className="underline hover:text-gray-200">
@@ -525,14 +657,36 @@ function OrganisateursPage() {
   );
 }
 
+/**
+ * Ce que la description de recherche dit du prix, DÉRIVÉ du barème.
+ *
+ * Elle annonçait « un palier gratuit, puis des offres à partir de 290 € par
+ * an ». Deux mensonges en une phrase : il n'y a pas de palier gratuit (un mois
+ * d'essai, sans carte bancaire), et l'entrée de gamme est à 100 €, pas 290. Le
+ * montant vient maintenant de `PLAN_PRICES_EUR`, comme la grille qu'il résume
+ * — et si un jour plus aucun plan n'a de tarif catalogue, la phrase se tait
+ * sur le prix au lieu d'en inventer un.
+ */
+function pricingSentence(lang: 'fr' | 'en'): string {
+  const entry = entryPlanPrice();
+  if (!entry) {
+    return lang === 'fr'
+      ? "Un mois d'essai pour commencer, sans carte bancaire."
+      : 'A month of trial to start, no card required.';
+  }
+  return lang === 'fr'
+    ? `Un mois d'essai sans carte bancaire, puis des offres à partir de ${entry.yearly} € par an. Découverte offerte aux associations.`
+    : `A month of trial, no card required, then plans from €${entry.yearly} a year. Discovery is free for non-profits.`;
+}
+
 const organisateursSeo: SeoProps = {
   title: {
     fr: 'Organisez vos tournois',
     en: 'Run your tournaments',
   },
   description: {
-    fr: 'La plateforme qui fait tourner la Coupe, ouverte aux organisateurs : inscriptions, brackets, check-in, arbitrage, régie et bot Discord. Un palier gratuit, puis des offres à partir de 290 € par an.',
-    en: 'The platform behind the Cup, open to organisers: sign-ups, brackets, check-in, dispute handling, production and a Discord bot. A free tier, then plans from €290 a year.',
+    fr: `La plateforme qui fait tourner la Coupe, ouverte aux organisateurs : inscriptions, brackets, check-in, arbitrage, régie et bot Discord. ${pricingSentence('fr')}`,
+    en: `The platform behind the Cup, open to organisers: sign-ups, brackets, check-in, dispute handling, production and a Discord bot. ${pricingSentence('en')}`,
   },
 };
 

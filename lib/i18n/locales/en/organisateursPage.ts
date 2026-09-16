@@ -116,5 +116,36 @@ export default {
     'Template rulebook, moderation, player safety, prize pool: our guide is free to use. And women’s and mixed circuits in other games can apply for our partner offer.',
   nicheGuideCta: 'Read the guide',
   nicheCircuitsCta: 'Circuits offer',
+  proofTitle: 'What the platform actually runs',
+  proofIntro:
+    'Figures read from our own database, not from a brochure. They move when the activity moves.',
+  proofEditions: 'public editions',
+  proofTeams: 'teams',
+  proofPlayers: 'players on rosters',
+  proofScheduledMatches: 'matches scheduled',
+  proofPlayedMatches: 'matches played',
+  proofShowcaseCta: 'Go and see {name}',
+  proofDemoLead: 'Want to see it run on your own competition?',
+  proofDemoCta: 'Book a call',
+
+  whyTitle: 'Why us rather than someone else',
+  why1Title: 'Integrity, with tooling',
+  why1Body:
+    'Disputes tracked with evidence and a deadline, matching scores reconciled automatically, Battle.net identity verified against smurf accounts.',
+  why2Title: 'Your brand, not ours',
+  why2Body:
+    'Your space, your domain, your identity: teams sign up with you. You do not become a page on someone else’s website.',
+  why3Title: 'Discord end to end',
+  why3Body:
+    'Check-in, forfeits, team channels, tickets, staff task board: the bot does on your server what the platform decides, without you hosting it.',
+  why4Title: 'Fast, readable, compliant',
+  why4Body:
+    'Server-rendered pages, readable without JavaScript, no tracker before consent: what public partners and local authorities ask for.',
+
+  nonprofitTitle: 'Running a non-profit?',
+  nonprofitBody:
+    'Connect your HelloAsso account and the Discovery plan is on us — no expiry, no payment reminder. It is the same account that will collect your tournament prize pools.',
+  nonprofitCta: 'Create my space',
+
   offersCustomNeed: 'A need that fits none of the three? Write to us.',
 };

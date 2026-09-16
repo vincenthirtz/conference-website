@@ -39,6 +39,7 @@ import {
   type TenantPlan,
   type PurchasablePlan,
 } from '@/utils/billing/planFeatures';
+import { isBillableTenant } from '@/utils/billing/nonprofitGrant';
 
 const DAY_MS = 86_400_000;
 
@@ -162,6 +163,8 @@ type TenantRow = {
   plan_last_reminder_at: string | null;
   plan_term: string | null;
   plan_is_trial?: boolean | null;
+  /** Estampille « association vérifiée » (cf. utils/billing/nonprofitGrant). */
+  nonprofit_verified_at?: string | null;
 };
 
 export type PlanRenewalCounters = {
@@ -187,7 +190,7 @@ export async function runPlanRenewal(
   const { data, error } = await supabaseAdmin
     .from('tenants')
     .select(
-      'id, plan, plan_status, plan_expires_at, plan_last_reminder_at, plan_is_trial, plan_term'
+      'id, plan, plan_status, plan_expires_at, plan_last_reminder_at, plan_is_trial, plan_term, nonprofit_verified_at'
     )
     // Tous les plans FACTURÉS, déduits du barème plutôt que listés à la main.
     // La liste écrite en dur était `regie` + `circuit` : Découverte, devenue
@@ -209,6 +212,12 @@ export async function runPlanRenewal(
 
   for (const t of tenants) {
     try {
+      // Association vérifiée sur le palier d'entrée : la Découverte lui est
+      // OFFERTE. Ni expiration, ni relance — réclamer une somme qu'on ne
+      // demande pas ferait douter de la promesse commerciale plus sûrement
+      // qu'un oubli de facturation.
+      if (!isBillableTenant(t)) continue;
+
       const expMs = t.plan_expires_at ? Date.parse(t.plan_expires_at) : NaN;
       if (!Number.isFinite(expMs)) continue;
 

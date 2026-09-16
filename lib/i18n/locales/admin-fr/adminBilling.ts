@@ -29,6 +29,7 @@ export default adminNs('adminBilling', {
   expireInDays: 'expire dans {days} jours',
   expired: 'Expiré',
   trialBadge: 'Essai gratuit',
+  nonprofitBadge: 'Offert — association vérifiée',
   trialNotice:
     "Votre espace est en essai gratuit. À la fin de l'essai, il repasse sur le palier Découverte et le bot Discord cesse de répondre — souscrivez pour le garder actif.",
   downgradeNoticeTitle: 'Accès réduit',

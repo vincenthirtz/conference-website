@@ -58,6 +58,9 @@ type BillingResponse = {
   /** L'échéance est passée mais les capacités tiennent encore (T10). */
   inGrace?: boolean;
   graceEndsAt?: string | null;
+  /** Découverte offerte : association vérifiée via HelloAsso. */
+  nonprofitFree?: boolean;
+  nonprofitOrgName?: string | null;
   capabilities: PlanFeatures;
   catalog: CatalogItem[];
   payments: PaymentRow[];
@@ -484,6 +487,19 @@ function AdminBillingPage({ staff }: Props) {
                           data-testid="billing-trial-badge"
                         >
                           {t.trialBadge}
+                        </span>
+                      )}
+                      {/* Découverte offerte (association vérifiée). À côté du
+                          palier, pas en note de bas de page : c'est la première
+                          question qu'on se pose devant un écran de
+                          facturation. */}
+                      {data.nonprofitFree && (
+                        <span
+                          className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-200 border border-emerald-500/30"
+                          data-testid="billing-nonprofit-badge"
+                          title={data.nonprofitOrgName ?? undefined}
+                        >
+                          {t.nonprofitBadge}
                         </span>
                       )}
                     </div>

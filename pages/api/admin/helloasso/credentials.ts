@@ -83,6 +83,48 @@ async function readTenantSlug(tenantId: string): Promise<string | null> {
   return (data as { slug?: string } | null)?.slug ?? null;
 }
 
+/**
+ * Pose (ou renouvelle) l'estampille « association vérifiée ».
+ *
+ * Ne lève jamais et ne bloque rien : la colonne peut ne pas exister encore
+ * (migration non appliquée), et un espace qui relie son compte doit pouvoir
+ * encaisser même si la remise commerciale n'a pas pu être enregistrée.
+ */
+async function stampNonprofitVerification(
+  tenantId: string,
+  organizationName: string | null
+): Promise<void> {
+  if (!supabaseAdmin) return;
+  const { error } = await supabaseAdmin
+    .from('tenants')
+    .update({
+      nonprofit_verified_at: new Date().toISOString(),
+      nonprofit_org_name: organizationName ?? null,
+    })
+    .eq('id', tenantId);
+  if (error) {
+    logger.error('[admin/helloasso] estampille association: %s', error.message);
+  }
+}
+
+/**
+ * Retire l'estampille quand le compte est délié.
+ *
+ * La preuve disparaît avec le compte qui la portait : garder la gratuité après
+ * la déliaison, ce serait offrir un palier sur la foi d'un compte qu'on ne peut
+ * plus interroger.
+ */
+async function clearNonprofitVerification(tenantId: string): Promise<void> {
+  if (!supabaseAdmin) return;
+  const { error } = await supabaseAdmin
+    .from('tenants')
+    .update({ nonprofit_verified_at: null, nonprofit_org_name: null })
+    .eq('id', tenantId);
+  if (error) {
+    logger.error('[admin/helloasso] retrait estampille: %s', error.message);
+  }
+}
+
 async function handleGet(res: NextApiResponse, ctx: AuthenticatedStaffContext) {
   if (ctx.tenantId === DEFAULT_TENANT_ID) {
     return res.status(200).json({
@@ -194,13 +236,25 @@ async function handlePut(
       .json({ error: 'Les identifiants n’ont pas pu être enregistrés.' });
   }
 
+  // L'appel HelloAsso qui vient de réussir EST la vérification « association » :
+  // HelloAsso n'ouvre de compte qu'à des organismes à but non lucratif. On
+  // l'estampille ici, et la Découverte cesse d'être facturée pour cet espace
+  // (cf. utils/billing/nonprofitGrant.ts). Best-effort : un espace dont
+  // l'estampille échoue garde son compte relié — il serait absurde de refuser
+  // l'encaissement parce qu'une colonne facultative n'a pas été écrite.
+  await stampNonprofitVerification(ctx.tenantId, check.organizationName);
+
   await logStaffAction({
     staff_id: ctx.staff.id,
     action: 'store_social_credentials',
     entity_type: 'integration_secret',
     entity_id: 'helloasso_client_id',
     tenant_id: ctx.tenantId,
-    payload: { organizationSlug, organizationName: check.organizationName },
+    payload: {
+      organizationSlug,
+      organizationName: check.organizationName,
+      nonprofitVerified: true,
+    },
   });
 
   const tenantSlug = await readTenantSlug(ctx.tenantId);
@@ -234,13 +288,15 @@ async function handleDelete(
     return res.status(500).json({ error: 'Le compte n’a pas pu être délié.' });
   }
 
+  await clearNonprofitVerification(ctx.tenantId);
+
   await logStaffAction({
     staff_id: ctx.staff.id,
     action: 'store_social_credentials',
     entity_type: 'integration_secret',
     entity_id: 'helloasso_client_id',
     tenant_id: ctx.tenantId,
-    payload: { removed: true },
+    payload: { removed: true, nonprofitVerified: false },
   });
 
   return res.status(200).json({ connected: false });

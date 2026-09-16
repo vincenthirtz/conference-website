@@ -392,3 +392,29 @@ export function isPurchasablePlan(plan: string): plan is PurchasablePlan {
   const price = PLAN_PRICES_EUR[plan as TenantPlan];
   return typeof price === 'number' && price > 0;
 }
+
+/**
+ * Le plan d'ENTRÉE payant et son prix annuel : le plus bas tarif catalogue
+ * strictement positif.
+ *
+ * Existe pour une raison précise : la description SEO de `/organisateurs`
+ * annonçait « un palier gratuit, puis des offres à partir de 290 € par an ».
+ * Deux mensonges dans une phrase — il n'y a pas de palier gratuit (un mois
+ * d'essai, sans carte bancaire), et l'entrée de gamme est à 100 €, pas 290. Le
+ * montant était faux le jour où il a été écrit, et l'aurait été à nouveau au
+ * premier changement de barème. Un prix recopié ment toujours, tôt ou tard, et
+ * celui-là mentait dans un résultat de recherche — là où personne de l'équipe
+ * ne va le relire.
+ *
+ * `null` si aucun plan n'a de tarif catalogue : l'appelant doit alors se taire
+ * plutôt qu'afficher « à partir de 0 € ».
+ */
+export function entryPlanPrice(): { plan: TenantPlan; yearly: number } | null {
+  let best: { plan: TenantPlan; yearly: number } | null = null;
+  for (const plan of Object.keys(PLAN_PRICES_EUR) as TenantPlan[]) {
+    const yearly = PLAN_PRICES_EUR[plan];
+    if (typeof yearly !== 'number' || yearly <= 0) continue;
+    if (!best || yearly < best.yearly) best = { plan, yearly };
+  }
+  return best;
+}

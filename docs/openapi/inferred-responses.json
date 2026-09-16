@@ -16175,6 +16175,15 @@
        "null"
       ]
      },
+     "nonprofitFree": {
+      "type": "boolean"
+     },
+     "nonprofitOrgName": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
      "capabilities": {
       "type": "object",
       "properties": {
@@ -16333,6 +16342,8 @@
      "planTerm",
      "inGrace",
      "graceEndsAt",
+     "nonprofitFree",
+     "nonprofitOrgName",
      "capabilities",
      "catalog",
      "payments"

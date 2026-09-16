@@ -20,6 +20,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
+import { nonprofitDiscoveryIsFree } from '@/utils/billing/nonprofitGrant';
 import {
   PLAN_LABELS,
   PLAN_PRICES_EUR,
@@ -44,6 +45,9 @@ type TenantRow = {
   plan_expires_at: string | null;
   plan_is_trial?: boolean | null;
   plan_term?: string | null;
+  /** Estampille « association vérifiée » (cf. utils/billing/nonprofitGrant). */
+  nonprofit_verified_at?: string | null;
+  nonprofit_org_name?: string | null;
 };
 
 type PaymentRow = {
@@ -83,7 +87,7 @@ async function handler(
   const { data: tenant, error: tenantErr } = await supabaseAdmin
     .from('tenants')
     .select(
-      'id, plan, plan_status, plan_started_at, plan_expires_at, plan_is_trial, plan_term'
+      'id, plan, plan_status, plan_started_at, plan_expires_at, plan_is_trial, plan_term, nonprofit_verified_at, nonprofit_org_name'
     )
     .eq('id', id)
     .maybeSingle();
@@ -176,6 +180,14 @@ async function handler(
             Date.parse(planExpiresAt) + PLAN_GRACE_DAYS * DAY_MS
           ).toISOString()
         : null,
+    // Découverte offerte à une association vérifiée : l'écran doit le DIRE,
+    // sinon la remise n'existe que dans la tête de celui qui l'a accordée — et
+    // le client continue de guetter une facture qui ne viendra pas.
+    nonprofitFree: nonprofitDiscoveryIsFree({
+      plan,
+      nonprofit_verified_at: t.nonprofit_verified_at ?? null,
+    }),
+    nonprofitOrgName: t.nonprofit_org_name ?? null,
     capabilities,
     catalog,
     payments,

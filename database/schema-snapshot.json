@@ -1842,6 +1842,8 @@
       "lifecycle_state",
       "logo_url",
       "name",
+      "nonprofit_org_name",
+      "nonprofit_verified_at",
       "plan",
       "plan_expires_at",
       "plan_is_trial",

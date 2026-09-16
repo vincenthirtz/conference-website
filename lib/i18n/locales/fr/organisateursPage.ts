@@ -123,6 +123,39 @@ export default ns('organisateursPage', {
     'Règlement type, modération, sécurité des joueuses, cagnotte : notre guide est libre. Et les circuits féminins et mixtes d’autres jeux peuvent candidater à notre offre partenaire.',
   nicheGuideCta: 'Lire le guide',
   nicheCircuitsCta: 'Offre circuits',
+  // Preuve chiffrée (cf. utils/marketing/platformProof.ts) : lue en base, avec
+  // des planchers — un chiffre trop petit se tait au lieu de se maquiller.
+  proofTitle: 'Ce que la plateforme fait tourner',
+  proofIntro:
+    'Des chiffres lus dans notre base, pas dans une plaquette. Ils bougent quand l’activité bouge.',
+  proofEditions: 'éditions publiques',
+  proofTeams: 'équipes',
+  proofPlayers: 'joueuses sur les rosters',
+  proofScheduledMatches: 'matchs programmés',
+  proofPlayedMatches: 'matchs joués',
+  proofShowcaseCta: 'Aller voir {name}',
+  proofDemoLead: 'Envie de la voir tourner sur votre compétition ?',
+  proofDemoCta: 'Prendre rendez-vous',
+
+  whyTitle: 'Pourquoi nous plutôt qu’un autre',
+  why1Title: 'L’intégrité, outillée',
+  why1Body:
+    'Litiges tracés avec preuves et délai de réponse, réconciliation automatique des scores concordants, identité Battle.net vérifiée contre les comptes secondaires.',
+  why2Title: 'Votre marque, pas la nôtre',
+  why2Body:
+    'Votre espace, votre domaine, votre identité : les équipes s’inscrivent chez vous. Vous ne devenez pas une page du site de quelqu’un d’autre.',
+  why3Title: 'Discord de bout en bout',
+  why3Body:
+    'Check-in, forfaits, salons d’équipe, tickets, tableau de tâches du staff : le bot fait sur votre serveur ce que la plateforme décide, sans que vous l’hébergiez.',
+  why4Title: 'Rapide, lisible, conforme',
+  why4Body:
+    'Pages rendues côté serveur, lisibles sans JavaScript, aucun traceur avant consentement : ce que demandent les partenaires publics et les collectivités.',
+
+  nonprofitTitle: 'Vous êtes une association ?',
+  nonprofitBody:
+    'Reliez votre compte HelloAsso : la formule Découverte vous est offerte, sans échéance ni relance de paiement. C’est le même compte qui encaissera les cagnottes de vos tournois.',
+  nonprofitCta: 'Créer mon espace',
+
   offersCustomNeed:
     'Un besoin qui ne rentre dans aucune des trois ? Écrivez-nous.',
 });
