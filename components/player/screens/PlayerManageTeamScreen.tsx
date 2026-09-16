@@ -18,8 +18,11 @@ import {
   Fragment,
 } from 'react';
 import Head from 'next/head';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
+import { loginHrefFor } from '@/utils/player/sessionExpiry';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useManagedTeam } from '@/hooks/useManagedTeam';
@@ -239,8 +242,18 @@ export default function PlayerManageTeamScreen() {
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
   const showWelcome =
     !isInspecting && router.query.welcome === '1' && !welcomeDismissed;
-  const { user: sessionUser, loading: authLoading, ready } = usePlayerSession();
-  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  // Reconnexion qui RAMÈNE ici : un `/login` nu renvoyait au tableau de bord,
+  // et la capitaine devait retrouver son écran — et perdait `?welcome=1` ou
+  // l'équipe choisie. `asPath` garde ces paramètres ; `loginHrefFor` les
+  // encode et n'accepte qu'un chemin interne. Même cible pour la session
+  // absente au montage et pour un 401 en cours de route.
+  const loginHref = loginHrefFor(router.asPath);
+  const {
+    user: sessionUser,
+    loading: authLoading,
+    ready,
+  } = usePlayerSession({ redirectTo: loginHref });
+  const { adminFetchJson } = useAdminFetch({ loginPath: loginHref });
   const {
     data: managedTeam,
     loading: teamLoading,
@@ -1079,14 +1092,31 @@ export default function PlayerManageTeamScreen() {
 
           {/* Team header */}
           <div className="flex items-center gap-4 mb-8">
-            {team.logo_url && (
-              // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
-              <img
-                src={team.logo_url}
-                alt={team.name}
-                className="w-16 h-16 rounded-full object-cover border border-white/10"
-              />
-            )}
+            {team.logo_url &&
+              // Pas `TeamAvatar` : sa taille `lg` passe à 80 px dès 640 px et
+              // agrandirait l'en-tête ; la pastille reste à 64 px. On reprend
+              // son arbitrage : `next/image` quand l'hôte est déclaré (le logo
+              // descendait à sa taille d'origine pour 64 px), `<img>` sinon —
+              // un hôte non déclaré ferait échouer `next/image` au rendu.
+              (isOptimizableImageUrl(team.logo_url) ? (
+                <Image
+                  src={team.logo_url}
+                  alt={team.name}
+                  width={64}
+                  height={64}
+                  className="w-16 h-16 rounded-full object-cover border border-white/10"
+                />
+              ) : (
+                // biome-ignore lint/performance/noImgElement: hôte hors `remotePatterns`, `next/image` échouerait
+                <img
+                  src={team.logo_url}
+                  alt={team.name}
+                  width={64}
+                  height={64}
+                  decoding="async"
+                  className="w-16 h-16 rounded-full object-cover border border-white/10"
+                />
+              ))}
             <div className="flex-1">
               <h1 className="text-2xl font-bold">{team.name}</h1>
               {team.short_name && (
@@ -1404,7 +1434,7 @@ export default function PlayerManageTeamScreen() {
                       {/* D'OÙ vient le chiffre. « 3k2 » annoncé par la
                           capitaine et « 3k2 » moyenné sur trois fiches sur huit
                           ne se lisent pas pareil. */}
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-gray-400">
                         {skillAverage.source === 'declared'
                           ? tRank.teamDeclaredBasis
                           : format(
@@ -1419,7 +1449,7 @@ export default function PlayerManageTeamScreen() {
                       </span>
                     </>
                   ) : (
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-400">
                       {tRank.teamNotDeclared}
                     </span>
                   )}
@@ -1460,7 +1490,7 @@ export default function PlayerManageTeamScreen() {
                       placeholder={tRank.fieldPlaceholder}
                       className="w-24 bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-400 disabled:opacity-50"
                     />
-                    <span className="text-[11px] text-gray-500">
+                    <span className="text-[11px] text-gray-400">
                       {tRank.teamDeclaredHint}
                     </span>
                   </div>
@@ -1576,7 +1606,7 @@ export default function PlayerManageTeamScreen() {
                   <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-400">
                           {memberLabel(m).slice(0, 2).toUpperCase()}
                         </span>
                       </div>
@@ -1667,7 +1697,7 @@ export default function PlayerManageTeamScreen() {
                               </span>
                             )}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-gray-400">
                           {m.is_captain && (
                             <>
                               <span className="text-purple-300">
@@ -1931,7 +1961,7 @@ export default function PlayerManageTeamScreen() {
               {invitationsError ? (
                 <p className="text-sm text-red-300">{t.invitationsError}</p>
               ) : sentInvitations.length === 0 ? (
-                <p className="text-sm text-gray-500">{t.noSentInvitations}</p>
+                <p className="text-sm text-gray-400">{t.noSentInvitations}</p>
               ) : (
                 <div className="space-y-3">
                   {sentInvitations.map((invitation) => {
@@ -1966,7 +1996,7 @@ export default function PlayerManageTeamScreen() {
                                 {invitation.battle_tag}
                               </div>
                             )}
-                            <div className="text-xs text-gray-500 mt-1">
+                            <div className="text-xs text-gray-400 mt-1">
                               {t.invitedAs}
                               <span className="text-gray-300">{role}</span>
                               {' · '}
@@ -2056,7 +2086,7 @@ export default function PlayerManageTeamScreen() {
               </p>
 
               {joinRequests.length === 0 ? (
-                <p className="text-sm text-gray-500">{t.noPendingRequests}</p>
+                <p className="text-sm text-gray-400">{t.noPendingRequests}</p>
               ) : (
                 <div className="space-y-3">
                   {joinRequests.map((req) => {
@@ -2084,7 +2114,7 @@ export default function PlayerManageTeamScreen() {
                                 </span>
                               )}
                             </div>
-                            <div className="text-xs text-gray-500 mt-1">
+                            <div className="text-xs text-gray-400 mt-1">
                               {t.wantsToJoinAs}
                               <span className="text-gray-300">{role}</span>
                               {' · '}

@@ -27,6 +27,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { JSX } from 'react';
+import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
 import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
 
 /**
@@ -136,6 +137,36 @@ export type TcgCardProps = {
   };
 };
 
+/**
+ * L'image de la carte peut-elle passer par l'optimiseur de Next ?
+ *
+ * POURQUOI CE N'EST PAS « TOUJOURS ». `/player/tcg` affiche 40 cartes d'un
+ * coup, et une photo consentie peut peser 2 Mio : servie brute dans une
+ * vignette de 180 px, c'est toute la collection qui descend en pleine
+ * résolution sur un téléphone en 4G. Mais l'ancien `unoptimized`
+ * inconditionnel avait une raison réelle : une carte d'ÉQUIPE sans
+ * illustration affiche le LOGO, dont l'URL est fournie par l'équipe et peut
+ * viser n'importe quel hôte — et `next/image` ÉCHOUE AU RENDU hors
+ * `remotePatterns`. D'où l'arbitrage partagé `isOptimizableImageUrl` (même
+ * choix que `Team/TeamAvatar.tsx`).
+ *
+ * LE SVG RESTE SERVI TEL QUEL. Les maquettes de maps sont des SVG locaux
+ * (`readMapFaces`) : l'optimiseur n'a rien à réduire dans un vectoriel et le
+ * renverrait inchangé — mais depuis une fonction serveur plutôt que le fichier
+ * statique en cache, et sous une URL distincte par largeur du `srcset`. Pure
+ * perte, et 40 cartes de maps d'un coup dans une collection.
+ *
+ * Exportée pour être testée sans DOM.
+ */
+export function shouldOptimizeCardImage(
+  url: string | null | undefined
+): boolean {
+  if (!isOptimizableImageUrl(url)) return false;
+  // Le chemin seul : un `?v=` de cache ne doit pas masquer l'extension.
+  const path = (url ?? '').trim().split(/[?#]/)[0].toLowerCase();
+  return !path.endsWith('.svg');
+}
+
 function initial(name: string | null): string {
   const trimmed = (name ?? '').trim();
   return trimmed ? trimmed.charAt(0).toUpperCase() : '?';
@@ -189,7 +220,10 @@ export default function TcgCard({
             fill
             sizes="(max-width: 640px) 45vw, 180px"
             className={usesTeamLogo ? 'object-contain p-4' : 'object-cover'}
-            unoptimized
+            // Optimisée seulement quand c'est sûr (cf.
+            // `shouldOptimizeCardImage`) : c'est ce qui rend son `srcset` à
+            // `sizes`, que `unoptimized` rendait lettre morte.
+            unoptimized={!shouldOptimizeCardImage(imageUrl)}
           />
         ) : (
           // Ni photo consentie ni avatar : un aplat de marque et l'initiale.

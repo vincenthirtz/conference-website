@@ -136,13 +136,13 @@ export default function FreePlayersSection({ teamId }: Props) {
       )}
 
       {loading ? (
-        <p className="text-sm text-gray-500">{t.loading}</p>
+        <p className="text-sm text-gray-400">{t.loading}</p>
       ) : error ? (
         <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
           {error}
         </div>
       ) : players.length === 0 ? (
-        <p className="text-sm text-gray-500">{t.empty}</p>
+        <p className="text-sm text-gray-400">{t.empty}</p>
       ) : (
         <div className="space-y-3">
           {players.map((p) => {
@@ -155,7 +155,7 @@ export default function FreePlayersSection({ teamId }: Props) {
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-gray-400">
                         {(displayNameFor(p) || '??').slice(0, 2).toUpperCase()}
                       </span>
                     </div>
@@ -163,7 +163,7 @@ export default function FreePlayersSection({ teamId }: Props) {
                       <div className="font-medium text-sm truncate">
                         {displayNameFor(p)}
                       </div>
-                      <div className="text-xs text-gray-500 truncate">
+                      <div className="text-xs text-gray-400 truncate">
                         {p.discordUsername ? (
                           <span className="font-mono">
                             @{p.discordUsername}
@@ -183,7 +183,7 @@ export default function FreePlayersSection({ teamId }: Props) {
                         )}
                       </div>
                       {p.availability && (
-                        <div className="text-xs text-gray-500 truncate">
+                        <div className="text-xs text-gray-400 truncate">
                           {p.availability}
                         </div>
                       )}
@@ -202,7 +202,7 @@ export default function FreePlayersSection({ teamId }: Props) {
                           {t.contact}
                         </a>
                         {p.contact.discord && (
-                          <span className="text-[11px] text-gray-500 font-mono">
+                          <span className="text-[11px] text-gray-400 font-mono">
                             {p.contact.discord}
                           </span>
                         )}
@@ -212,7 +212,7 @@ export default function FreePlayersSection({ teamId }: Props) {
                         <span className="inline-flex items-center px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] text-gray-400">
                           {t.notLinkedBadge}
                         </span>
-                        <span className="text-[11px] text-gray-500 max-w-[12rem]">
+                        <span className="text-[11px] text-gray-400 max-w-[12rem]">
                           {t.notLinkedHint}
                         </span>
                       </div>

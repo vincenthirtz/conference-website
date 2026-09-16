@@ -15,6 +15,8 @@
 //     fallback ISR (page pas encore générée), où le client doit charger ;
 //   - revalidation sur focus / visibilitychange (activée par défaut, coupable
 //     via `revalidateOnFocus:false`), avec nettoyage des listeners au démontage.
+//     Dédoublonnée : jamais pendant un fetch en vol, et au plus une fois par
+//     `FOCUS_REVALIDATE_MIN_INTERVAL_MS` (cf. `shouldRevalidateOnFocus`).
 //
 // Le hook ne connaît pas la forme des données : il reçoit un `fetcher` qui
 // renvoie soit la donnée fraîche, soit `null` (traité comme "pas de mise à
@@ -47,6 +49,48 @@ export type UseIsrRefreshResult<T> = {
   refresh: () => void;
 };
 
+/**
+ * Écart minimal entre deux rafraîchissements déclenchés par l'onglet.
+ *
+ * POURQUOI. Revenir sur l'onglet d'un téléphone émet `focus` ET
+ * `visibilitychange` quasi simultanément : sans garde, deux fetchs partaient
+ * — sur le profil joueuse, deux fois une agrégation d'environ 18 requêtes
+ * serveur. Et passer d'une appli à l'autre pendant un match (Discord, le
+ * stream, la page) en relançait autant à chaque aller-retour, sur une 4G
+ * déjà chargée. 30 s : assez long pour absorber ces va-et-vient, assez court
+ * pour qu'un score ou un classement ne reste pas figé en revenant plus tard.
+ */
+export const FOCUS_REVALIDATE_MIN_INTERVAL_MS = 30_000;
+
+/**
+ * Faut-il rafraîchir sur ce retour d'onglet ? Pure, pour être testée sans DOM
+ * (`tests/unit/useIsrRefreshFocusGuard.test.ts`).
+ *
+ * - un fetch déjà en vol suffit : le second rapporterait la même donnée ;
+ * - sinon, on attend `minIntervalMs` depuis le DERNIER DÉPART de fetch, quelle
+ *   qu'en soit la source (montage en fallback, focus, `refresh` manuel) — une
+ *   donnée chargée il y a 5 s n'est pas périmée parce qu'on a changé d'appli.
+ *
+ * Le `refresh` manuel (« Réessayer ») ne passe PAS par cette garde : un geste
+ * explicite ne doit jamais être avalé en silence.
+ */
+export function shouldRevalidateOnFocus({
+  inFlight,
+  lastStartedAt,
+  now,
+  minIntervalMs = FOCUS_REVALIDATE_MIN_INTERVAL_MS,
+}: {
+  inFlight: boolean;
+  /** Horodatage (ms) du dernier départ de fetch, `null` s'il n'y en a eu aucun. */
+  lastStartedAt: number | null;
+  now: number;
+  minIntervalMs?: number;
+}): boolean {
+  if (inFlight) return false;
+  if (lastStartedAt === null) return true;
+  return now - lastStartedAt >= minIntervalMs;
+}
+
 export function useIsrRefresh<T>({
   initial,
   fetcher,
@@ -68,8 +112,15 @@ export function useIsrRefresh<T>({
   const whenRef = useRef(when);
   whenRef.current = when;
 
+  // État de la garde de focus (cf. `shouldRevalidateOnFocus`). Des refs et non
+  // du state : les lire ne doit ni re-rendre ni recréer `runFetch`.
+  const inFlightRef = useRef(false);
+  const lastStartedAtRef = useRef<number | null>(null);
+
   const runFetch = useCallback(async () => {
     if (!whenRef.current) return;
+    inFlightRef.current = true;
+    lastStartedAtRef.current = Date.now();
     // Spinner seulement si on n'a rien à afficher (fallback ISR). On lit `data`
     // via l'updater fonctionnel pour garder `runFetch` stable (deps vides).
     setData((prev) => {
@@ -88,6 +139,7 @@ export function useIsrRefresh<T>({
         return prev;
       });
     } finally {
+      inFlightRef.current = false;
       setLoading(false);
     }
   }, []);
@@ -108,13 +160,27 @@ export function useIsrRefresh<T>({
   useEffect(() => {
     if (!revalidateOnFocus) return undefined;
     if (!when) return undefined;
-    const onFocus = () => void runFetch();
+    // Les deux événements passent par la même garde : c'est elle qui fait
+    // qu'un retour d'onglet mobile (qui émet les deux) ne coûte qu'un fetch.
+    const revalidate = () => {
+      if (
+        !shouldRevalidateOnFocus({
+          inFlight: inFlightRef.current,
+          lastStartedAt: lastStartedAtRef.current,
+          now: Date.now(),
+        })
+      ) {
+        return;
+      }
+      void runFetch();
+    };
+    const onFocus = () => revalidate();
     const onVisible = () => {
       if (
         typeof document !== 'undefined' &&
         document.visibilityState === 'visible'
       ) {
-        void runFetch();
+        revalidate();
       }
     };
     window.addEventListener('focus', onFocus);

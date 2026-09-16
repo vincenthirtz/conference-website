@@ -3,8 +3,11 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import Head from 'next/head';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
+import { loginHrefFor } from '@/utils/player/sessionExpiry';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useManagedTeam } from '@/hooks/useManagedTeam';
@@ -70,8 +73,15 @@ export default function MessagesPage() {
   const router = useRouter();
   const t = useT(nsPlayerMessages);
   const locale = useLocale();
-  const { loading: authLoading, ready } = usePlayerSession();
-  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  // Reconnexion qui RAMÈNE ici, conversation ouverte comprise (`asPath` garde
+  // la query) : un `/login` nu renvoyait au tableau de bord. `loginHrefFor`
+  // encode et n'accepte qu'un chemin interne. Même cible pour la session
+  // absente au montage et pour un 401 en cours de route.
+  const loginHref = loginHrefFor(router.asPath);
+  const { loading: authLoading, ready } = usePlayerSession({
+    redirectTo: loginHref,
+  });
+  const { adminFetchJson } = useAdminFetch({ loginPath: loginHref });
   const { withTeam } = useActiveTeam();
   const { data: managedTeam, loading: teamLoading } = useManagedTeam();
   const isCaptain = managedTeam?.isCaptain ?? false;
@@ -507,14 +517,32 @@ export default function MessagesPage() {
 
               {activeConvId && otherTeam && (
                 <div className="flex items-center gap-2">
-                  {otherTeam.logo_url && (
-                    // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
-                    <img
-                      src={otherTeam.logo_url}
-                      alt=""
-                      className="w-6 h-6 rounded-full object-cover border border-white/10"
-                    />
-                  )}
+                  {otherTeam.logo_url &&
+                    // Pas `TeamAvatar` : sa plus petite taille fait 20 px, la
+                    // pastille de cet en-tête 24. On reprend son arbitrage :
+                    // `next/image` quand l'hôte est déclaré (le logo
+                    // descendait à sa taille d'origine pour 24 px), `<img>`
+                    // sinon — un hôte non déclaré ferait échouer
+                    // `next/image` au rendu.
+                    (isOptimizableImageUrl(otherTeam.logo_url) ? (
+                      <Image
+                        src={otherTeam.logo_url}
+                        alt=""
+                        width={24}
+                        height={24}
+                        className="w-6 h-6 rounded-full object-cover border border-white/10"
+                      />
+                    ) : (
+                      // biome-ignore lint/performance/noImgElement: hôte hors `remotePatterns`, `next/image` échouerait
+                      <img
+                        src={otherTeam.logo_url}
+                        alt=""
+                        width={24}
+                        height={24}
+                        decoding="async"
+                        className="w-6 h-6 rounded-full object-cover border border-white/10"
+                      />
+                    ))}
                   <span className="text-sm font-medium">{otherTeam.name}</span>
                 </div>
               )}
@@ -593,7 +621,7 @@ export default function MessagesPage() {
                         />
                       </svg>
                     </div>
-                    <p className="text-sm text-gray-500 mb-2">
+                    <p className="text-sm text-gray-400 mb-2">
                       {t.noConversations}
                     </p>
                     <p className="text-xs text-gray-600">
@@ -629,7 +657,7 @@ export default function MessagesPage() {
                           )}
                         </div>
                         <p
-                          className={`text-sm truncate ${conv.unreadCount > 0 ? 'text-gray-300' : 'text-gray-500'}`}
+                          className={`text-sm truncate ${conv.unreadCount > 0 ? 'text-gray-300' : 'text-gray-400'}`}
                         >
                           {conv.lastMessage.comment || '...'}
                         </p>
@@ -734,7 +762,7 @@ export default function MessagesPage() {
                       className="flex-1 overflow-y-auto px-6 py-4 space-y-3 max-h-[60vh] sm:max-h-[400px]"
                     >
                       {messages.length === 0 && (
-                        <div className="text-center text-sm text-gray-500 py-8">
+                        <div className="text-center text-sm text-gray-400 py-8">
                           {t.noMessages}
                         </div>
                       )}
@@ -762,7 +790,7 @@ export default function MessagesPage() {
                                 {msg.content}
                               </p>
                               <div
-                                className={`text-[10px] mt-1 ${isMine ? 'text-emerald-400/60' : 'text-gray-500'}`}
+                                className={`text-[10px] mt-1 ${isMine ? 'text-emerald-400/60' : 'text-gray-400'}`}
                               >
                                 {formatTime(msg.createdAt, locale)}
                               </div>

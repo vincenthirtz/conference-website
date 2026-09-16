@@ -11,6 +11,8 @@
 // `onSearchChange`) qui pilote généralement un fetch debouncé côté parent.
 
 import { useId, useMemo, useState } from 'react';
+import Image from 'next/image';
+import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
 import { useT, format } from '@/lib/i18n/useT';
 import nsTeamPicker from '@/lib/i18n/locales/fr/teamPicker';
 
@@ -175,12 +177,12 @@ export default function TeamPicker({
           className="max-h-72 overflow-y-auto space-y-2 rounded-xl border border-white/10 bg-black/40 p-2"
         >
           {loading && (
-            <div className="text-sm text-gray-500 text-center py-4">
+            <div className="text-sm text-gray-400 text-center py-4">
               {t.loading}
             </div>
           )}
           {!loading && visibleTeams.length === 0 && (
-            <div className="text-sm text-gray-500 text-center py-4">
+            <div className="text-sm text-gray-400 text-center py-4">
               {emptyLabel}
             </div>
           )}
@@ -202,18 +204,37 @@ export default function TeamPicker({
                 >
                   <div className="w-10 h-10 rounded-full bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
                     {team.logo_url ? (
-                      // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
-                      <img
-                        src={team.logo_url}
-                        alt=""
-                        width={40}
-                        height={40}
-                        loading="lazy"
-                        decoding="async"
-                        className="w-full h-full object-cover"
-                      />
+                      // Pas `TeamAvatar` : il n'a pas de taille 40 px (32 ou
+                      // 48), et changer la pastille décalerait toute la ligne
+                      // d'une liste qu'on fait défiler. On reprend son
+                      // arbitrage : `next/image` quand l'hôte est déclaré —
+                      // une liste d'équipes entière téléchargeait chaque logo à
+                      // sa taille d'origine —, `<img>` sinon, un hôte non
+                      // déclaré faisant échouer `next/image` au rendu.
+                      isOptimizableImageUrl(team.logo_url) ? (
+                        <Image
+                          src={team.logo_url}
+                          alt=""
+                          width={40}
+                          height={40}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        // biome-ignore lint/performance/noImgElement: hôte hors `remotePatterns`, `next/image` échouerait
+                        <img
+                          src={team.logo_url}
+                          alt=""
+                          width={40}
+                          height={40}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover"
+                        />
+                      )
                     ) : (
-                      <span className="text-xs text-gray-500">
+                      // Gris 400, pas 500 : le 500 tombe sous 4,5:1 sur ce
+                      // fond sombre, et le monogramme se lit.
+                      <span className="text-xs text-gray-400">
                         {(team.short_name || team.name)
                           .slice(0, 2)
                           .toUpperCase()}

@@ -9,7 +9,9 @@
 // évite l'imbrication d'ancres (HTML invalide) tout en gardant chaque zone
 // cliquable indépendante.
 
+import Image from 'next/image';
 import Link from 'next/link';
+import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
 import { useT, format } from '@/lib/i18n/useT';
 import FollowButton from './FollowButton';
 import nsPlayerDiscovery from '@/lib/i18n/locales/fr/playerDiscovery';
@@ -60,12 +62,35 @@ export default function DirectoryPlayerCard({
           className="group flex min-w-0 items-center gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60"
         >
           {player.avatarUrl ? (
-            // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
-            <img
-              src={player.avatarUrl}
-              alt=""
-              className="w-12 h-12 rounded-xl border border-purple-500/40 object-cover"
-            />
+            // Pas `PlayerAvatar` : il impose `rounded-full` (non surchargeable
+            // de façon fiable par une classe ajoutée — c'est l'ordre du CSS
+            // généré qui tranche, pas celui des classes) alors que l'annuaire
+            // dessine des avatars CARRÉS arrondis, et son repli gris à une
+            // lettre ne ressemble pas aux initiales violettes ci-dessous.
+            // On reprend donc son arbitrage à la main : `next/image` quand
+            // l'hôte est déclaré (l'avatar descendait à sa taille d'origine,
+            // une grille entière sur mobile), `<img>` sinon — un hôte non
+            // déclaré ferait échouer `next/image` au rendu.
+            isOptimizableImageUrl(player.avatarUrl) ? (
+              <Image
+                src={player.avatarUrl}
+                alt=""
+                width={48}
+                height={48}
+                className="w-12 h-12 rounded-xl border border-purple-500/40 object-cover"
+              />
+            ) : (
+              // biome-ignore lint/performance/noImgElement: hôte hors `remotePatterns`, `next/image` échouerait
+              <img
+                src={player.avatarUrl}
+                alt=""
+                width={48}
+                height={48}
+                loading="lazy"
+                decoding="async"
+                className="w-12 h-12 rounded-xl border border-purple-500/40 object-cover"
+              />
+            )
           ) : (
             <span className="flex w-12 h-12 items-center justify-center rounded-xl border border-purple-500/40 bg-purple-600/20 text-base font-bold text-purple-100">
               {initialsOf(player.displayName)}
@@ -76,7 +101,7 @@ export default function DirectoryPlayerCard({
               {player.displayName}
             </p>
             {player.discordUsername && (
-              <p className="truncate text-xs text-gray-500">
+              <p className="truncate text-xs text-gray-400">
                 @{player.discordUsername}
               </p>
             )}
@@ -123,11 +148,11 @@ export default function DirectoryPlayerCard({
       )}
 
       <div className="mt-auto space-y-1 pt-3">
-        <p className="text-xs text-gray-500 tabular-nums">
+        <p className="text-xs text-gray-400 tabular-nums">
           {format(t.followerCount, { count: player.followerCount })}
         </p>
         {player.stats && (
-          <p className="text-xs text-gray-500 tabular-nums">
+          <p className="text-xs text-gray-400 tabular-nums">
             {format(t.statsLine, {
               games: player.stats.games,
               peak: player.stats.peakRating,

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
+import TeamAvatar from '@/components/Team/TeamAvatar';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { isNonPlayingTeamRole } from '@/utils/teams/roleKind';
@@ -126,11 +127,18 @@ export default function TeamCard({
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             {team.logo_url && (
-              // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
-              <img
-                src={team.logo_url}
-                alt={team.name}
-                className="w-12 h-12 rounded-full object-cover border border-white/10"
+              // `TeamAvatar` (48 px, rond, liseré blanc/10) plutôt qu'un
+              // `<img>` nu : le logo était servi à sa taille d'origine — jusqu'à
+              // plusieurs centaines de Kio pour une pastille de 48 px. Le
+              // composant optimise quand l'hôte est déclaré, `<img>` sinon.
+              // Toujours conditionné au logo : sans lui, la carte n'affichait
+              // rien, et on ne change pas ce repli-là dans ce lot. `alt` vide :
+              // le nom est écrit juste à côté, pas besoin de le lire deux fois.
+              <TeamAvatar
+                name={team.name}
+                shortName={team.short_name}
+                logoUrl={team.logo_url}
+                size="md"
               />
             )}
             <div>
@@ -298,7 +306,7 @@ export default function TeamCard({
                   </>
                 ) : null}
               </div>
-              <div className="text-xs text-gray-500 mt-1">
+              <div className="text-xs text-gray-400 mt-1">
                 {format(t.sentOn, {
                   date: new Date(
                     (pendingCaptainRequest || pendingJoinRequest)!.created_at
@@ -371,7 +379,7 @@ function RoleBadge({
     <span
       className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${
         dimmed
-          ? 'border-white/10 bg-white/[0.03] text-gray-500'
+          ? 'border-white/10 bg-white/[0.03] text-gray-400'
           : ROLE_TONE[tone]
       }`}
     >

@@ -15,8 +15,10 @@
 // N'AFFICHE QUE LES ŒUVRES `approved`. Une œuvre retirée disparaît d'ici au
 // prochain rendu, comme elle disparaît des paquets à venir.
 
+import Image from 'next/image';
 import Link from 'next/link';
 import type { GetStaticProps } from 'next';
+import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
@@ -120,19 +122,46 @@ function FanArtCreditsPage({ credits }: Props) {
                   className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]"
                 >
                   {credit.imageUrl ? (
-                    // Image d'un bucket public, hors `remotePatterns` de
-                    // next/image : balise native, rapport fixe pour éviter tout
-                    // saut de mise en page.
-                    // biome-ignore lint/performance/noImgElement: bucket public hors remotePatterns
-                    <img
-                      src={credit.imageUrl}
-                      alt={format(t.creditsImageAlt, {
-                        title: credit.title,
-                        artist: credit.artistName,
-                      })}
-                      loading="lazy"
-                      className="aspect-[3/4] w-full max-w-full object-cover"
-                    />
+                    // `getPublicUrl()` rend une URL
+                    // `https://<ref>.supabase.co/storage/v1/object/public/…` :
+                    // elle EST couverte par `images.remotePatterns`
+                    // (`**.supabase.co`, préfixe de stockage public). L'ancien
+                    // commentaire affirmait le contraire et servait jusqu'à 200
+                    // illustrations pleine résolution dans des vignettes
+                    // d'environ 310 px. `isOptimizableImageUrl` reste en garde-
+                    // fou : si le stockage changeait d'hôte, on retomberait sur
+                    // `<img>` au lieu d'une page cassée au rendu.
+                    // Le cadre porte le rapport 3/4 et `relative` : `fill` s'y
+                    // loge sans saut de mise en page, comme l'ancienne balise.
+                    <div className="relative aspect-[3/4] w-full">
+                      {isOptimizableImageUrl(credit.imageUrl) ? (
+                        <Image
+                          src={credit.imageUrl}
+                          alt={format(t.creditsImageAlt, {
+                            title: credit.title,
+                            artist: credit.artistName,
+                          })}
+                          fill
+                          // Grille : 1 colonne sous 640 px, 2 jusqu'à 1024 px,
+                          // puis 3 dans `max-w-5xl` (1024 px, moins `px-6` et
+                          // deux gouttières ≈ 310 px la vignette).
+                          sizes="(min-width: 1024px) 310px, (min-width: 640px) 50vw, 100vw"
+                          className="object-cover"
+                        />
+                      ) : (
+                        // biome-ignore lint/performance/noImgElement: hôte hors `remotePatterns`, `next/image` échouerait
+                        <img
+                          src={credit.imageUrl}
+                          alt={format(t.creditsImageAlt, {
+                            title: credit.title,
+                            artist: credit.artistName,
+                          })}
+                          loading="lazy"
+                          decoding="async"
+                          className="absolute inset-0 h-full w-full object-cover"
+                        />
+                      )}
+                    </div>
                   ) : (
                     <div
                       className="aspect-[3/4] w-full bg-white/5"

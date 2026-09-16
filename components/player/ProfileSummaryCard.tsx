@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import PlayerAvatar from '@/components/player/PlayerAvatar';
 import type { User } from '@supabase/supabase-js';
 import { useT } from '@/lib/i18n/useT';
 import nsProfileSummary from '@/lib/i18n/locales/fr/profileSummary';
@@ -35,11 +36,23 @@ export default function ProfileSummaryCard({ user, displayName }: Props) {
 
       <div className="flex items-center gap-3 mb-4">
         {avatarUrl ? (
-          // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
-          <img
-            src={avatarUrl}
-            alt="Avatar"
-            className="h-12 w-12 rounded-full border border-purple-500/40 object-cover"
+          // `PlayerAvatar` plutôt qu'un `<img>` nu : l'avatar était servi à sa
+          // taille d'origine dans une pastille de 48 px, et une image cassée
+          // (lien Discord expiré) laissait un trou. Il optimise quand l'hôte
+          // est déclaré et retombe sur une initiale en cas d'échec.
+          // Les initiales violettes ci-dessous restent le repli « pas
+          // d'avatar du tout » : `PlayerAvatar` n'en rend qu'une, en gris.
+          // `alt` vide (au lieu de « Avatar », qui n'apprenait rien) : le nom
+          // est écrit juste à côté.
+          <PlayerAvatar
+            avatarUrl={avatarUrl}
+            teamName={null}
+            teamSlug={null}
+            teamLogoUrl={null}
+            label={displayName}
+            size={48}
+            className="border border-purple-500/40"
+            initialsClassName="text-sm"
           />
         ) : (
           <span className="flex h-12 w-12 items-center justify-center rounded-full border border-purple-500/40 bg-purple-600/20 text-sm font-bold text-purple-100">
