@@ -10,6 +10,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerClient, supabaseAdmin } from '@/utils/supabase';
 import { upsertDiscordLink } from '@/utils/discordLinks';
+import { claimFreePlayerRows } from '@/utils/freePlayers/claimForAccount';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { logger } from '../../../utils/logger';
 
@@ -100,6 +102,17 @@ export default async function handler(
       .status(500)
       .json({ error: 'Échec de l’enregistrement du lien Discord' });
   }
+
+  // La fiche « joueuse libre » poussée par le rôle Discord « Recherche une
+  // équipe » ne portait qu'un identifiant : elle est maintenant rattachable à
+  // ce compte, ce qui rend l'invitation en un clic possible sur elle.
+  // Fire-and-forget : la liaison Discord ne doit pas échouer pour autant.
+  void claimFreePlayerRows({
+    tenantId: await resolveTenantIdForUserRequestAsync(req),
+    authUserId: user.id,
+    email: user.email ?? null,
+    discordUserId,
+  });
 
   return res.status(200).json({
     success: true,

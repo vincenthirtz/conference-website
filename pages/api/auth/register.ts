@@ -24,6 +24,7 @@ import { supabaseAnonServer, supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit, refundRateLimit } from '@/utils/rateLimit';
 import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
+import { claimFreePlayerRows } from '@/utils/freePlayers/claimForAccount';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/addMember';
 import {
   checkEmailQuality,
@@ -164,7 +165,7 @@ export default async function handler(
 
   const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
-  const { error } = await supabaseAnonServer.auth.signUp({
+  const { data: signUpData, error } = await supabaseAnonServer.auth.signUp({
     email,
     password,
     options: {
@@ -224,6 +225,21 @@ export default async function handler(
       error:
         'Impossible de créer le compte pour le moment. Réessaie plus tard.',
       code: 'SERVER',
+    });
+  }
+
+  // Une fiche « joueuse libre » publiée AVANT ce compte lui est rattachée.
+  // Sans ça, elle reste orpheline pour toujours, et l'invitation en un clic —
+  // qui exige un compte lié — reste indisponible sur elle. Fire-and-forget,
+  // comme la blacklist : rattacher est un confort, échouer ne doit pas coûter
+  // une inscription. Le compte peut être non confirmé à cet instant : la fiche
+  // est simplement prête quand la personne se connectera.
+  const newUserId = signUpData?.user?.id ?? null;
+  if (newUserId) {
+    void claimFreePlayerRows({
+      tenantId,
+      authUserId: newUserId,
+      email,
     });
   }
 

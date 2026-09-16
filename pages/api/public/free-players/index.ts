@@ -30,6 +30,7 @@ import { emitBotEvent } from '@/utils/botEvents';
 import { sendFreePlayerPublishedEmail } from '@/utils/email';
 import { buildFreePlayerRemovalUrl } from '@/utils/freePlayerRemoval';
 import { logger } from '@/utils/logger';
+import { lookupUserIdByEmail } from '@/utils/find-or-create-user';
 import { freePlayerSignupBodySchema } from '@/lib/apiContracts/public/freePlayers';
 import {
   FREE_PLAYER_SELECT,
@@ -138,9 +139,29 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
   const tenantId = await resolveTenantIdForPublicRequestAsync(req);
   const nowIso = new Date().toISOString();
 
+  // Un compte existe-t-il déjà à cette adresse ? Le formulaire se remplit SANS
+  // compte — c'est tout son intérêt — mais rien n'interdit à une personne qui
+  // en a un de passer par là, et c'est même le cas le plus fréquent. Sans ce
+  // rapprochement, sa fiche naît orpheline et l'invitation en un clic, qui
+  // exige un compte lié, reste indisponible sur elle.
+  //
+  // La preuve est la même que partout ailleurs dans ce parcours : l'accès à la
+  // boîte mail. Elle vaut ici ce qu'elle vaut pour le lien de retrait.
+  // `lookupUserIdByEmail` LÈVE en cas d'erreur : ici, une panne de lookup ne
+  // doit pas empêcher quelqu'un de se signaler. On retombe sur « pas de compte »,
+  // qui est l'état d'avant ce lot — et le rattachement se refera à sa prochaine
+  // connexion.
+  let existingAccountId: string | null = null;
+  try {
+    existingAccountId = await lookupUserIdByEmail(email);
+  } catch (err) {
+    logger.error('[api/public/free-players] lookup compte impossible', err);
+  }
+
   const row = {
     tenant_id: tenantId,
     source: 'web' as const,
+    auth_user_id: existingAccountId,
     display_name: body.displayName,
     contact_email: email,
     contact_discord: body.contactDiscord || null,
