@@ -62,7 +62,12 @@ function offerLines(plan: TenantPlan, t: Dict): string[] {
     lines.push(format(t.featLeaguesCount, { n: f.maxLeagues }));
   else lines.push(t.featLeaguesNone);
 
-  lines.push(f.broadcastStudio ? t.featObsYes : t.featObsNo);
+  // Trois états, pas deux : la régie vidéo complète (Éditeur), les seules
+  // sources OBS par match (Régie et Circuit), et rien. La grille doit montrer
+  // ce que Régie a GAGNÉ sans laisser croire qu'elle dirige le direct.
+  if (f.broadcastStudio) lines.push(t.featObsYes);
+  else if (f.matchOverlays) lines.push(t.featOverlaysYes);
+  else lines.push(t.featObsNo);
   lines.push(f.arbitration ? t.featArbitrationYes : t.featArbitrationNo);
   lines.push(f.ratings ? t.featRatingsYes : t.featRatingsNo);
   lines.push(f.whiteLabel ? t.featBrandYes : t.featBrandNo);

@@ -613,3 +613,155 @@ CasterCueAck:
           $ref: '#/components/schemas/Timestamp'
     alreadyAcked:
       type: boolean
+MatchOverlaySource:
+  type: object
+  description: |
+    Ce qu'une source navigateur OBS affiche pour UN match : la rencontre, ses
+    équipes, ses manches et son veto, plus la marque de l'espace.
+
+    PUBLIC et cacheable (`Cache-Control: s-maxage=5, stale-while-revalidate=30`),
+    mais restreint : le tournoi doit être `visibility: public`, et l'espace
+    propriétaire doit porter la capacité de palier `matchOverlays` (sinon
+    `402`). `match` vaut `null` quand il n'y a rien à montrer — c'est l'écran
+    d'attente, pas une erreur.
+  required:
+    - match
+    - tournament
+    - branding
+    - serverTime
+  properties:
+    match:
+      anyOf:
+        - $ref: '#/components/schemas/MatchOverlayView'
+        - type: 'null'
+    tournament:
+      anyOf:
+        - type: object
+          required: [id, slug, name, shortName, game]
+          properties:
+            id:
+              type: string
+              format: uuid
+            slug:
+              type: [string, 'null']
+            name:
+              type: [string, 'null']
+            shortName:
+              type: [string, 'null']
+            game:
+              type: [string, 'null']
+        - type: 'null'
+    branding:
+      anyOf:
+        - type: object
+          required: [name, logoUrl, accent]
+          properties:
+            name:
+              type: [string, 'null']
+            logoUrl:
+              type: [string, 'null']
+            accent:
+              type: [string, 'null']
+        - type: 'null'
+      description: Marque de l'espace (white-label), `null` pour la Coupe elle-même.
+    serverTime:
+      type: string
+      format: date-time
+      description: >-
+        Heure du serveur, dont le compte à rebours se sert au lieu de l'horloge
+        du poste de régie.
+MatchOverlayView:
+  type: object
+  description: Le match tel qu'il s'affiche à l'antenne.
+  required:
+    - id
+    - phase
+    - format
+    - roundName
+    - scheduledAt
+    - startedAt
+    - team1
+    - team2
+    - maps
+    - veto
+  properties:
+    id:
+      type: string
+      format: uuid
+    phase:
+      type: string
+      enum: [upcoming, live, final]
+    format:
+      type: [string, 'null']
+      description: Format du match (`bo1`, `bo3`…), tel que saisi.
+    roundName:
+      type: [string, 'null']
+    scheduledAt:
+      type: [string, 'null']
+      format: date-time
+    startedAt:
+      type: [string, 'null']
+      format: date-time
+    team1:
+      anyOf:
+        - $ref: '#/components/schemas/MatchOverlayTeam'
+        - type: 'null'
+    team2:
+      anyOf:
+        - $ref: '#/components/schemas/MatchOverlayTeam'
+        - type: 'null'
+    maps:
+      type: array
+      items:
+        type: object
+        required: [order, name, team1Score, team2Score, winner]
+        properties:
+          order:
+            type: integer
+          name:
+            type: [string, 'null']
+          team1Score:
+            type: [integer, 'null']
+          team2Score:
+            type: [integer, 'null']
+          winner:
+            type: [integer, 'null']
+            enum: [1, 2, null]
+    veto:
+      type: array
+      items:
+        type: object
+        required: [step, action, map, side]
+        properties:
+          step:
+            type: integer
+          action:
+            type: string
+            enum: [ban, pick, decider]
+          map:
+            type: [string, 'null']
+          side:
+            type: [integer, 'null']
+            enum: [1, 2, null]
+MatchOverlayTeam:
+  type: object
+  description: Une équipe du match, côté écran.
+  required:
+    - name
+    - shortName
+    - logoUrl
+    - score
+    - isWinner
+  properties:
+    name:
+      type: string
+    shortName:
+      type: [string, 'null']
+    logoUrl:
+      type: [string, 'null']
+    score:
+      type: integer
+      description: Manches gagnées. `0` plutôt que `null` quand rien n'est saisi.
+    isWinner:
+      type: boolean
+      description: Lu sur `winner_team_id`, jamais déduit d'une comparaison de scores.

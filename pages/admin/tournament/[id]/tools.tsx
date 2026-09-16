@@ -18,10 +18,17 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
+import StreamSourcesPanel from '@/components/admin/tournament/StreamSourcesPanel';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { logger } from '@/utils/logger';
 import nsAdminTournamentOverview from '@/lib/i18n/locales/admin-fr/adminTournamentOverview';
 import nsAdminTournamentEmbed from '@/lib/i18n/locales/admin-fr/adminTournamentEmbed';
+import {
+  PLAN_LABELS,
+  tenantHasCapability,
+  type PlanStatus,
+  type TenantPlan,
+} from '@/utils/billing/planFeatures';
 
 type TournamentBasics = {
   id: string;
@@ -33,6 +40,15 @@ type TournamentBasics = {
 
 type SsrProps = {
   initialTournament: TournamentBasics | null;
+  /**
+   * Le palier de l'espace ouvre-t-il les sources de stream par match ?
+   *
+   * Calculé côté serveur, comme l'API le calcule : une capacité lue dans le
+   * navigateur serait une capacité négociable.
+   */
+  canUseMatchOverlays: boolean;
+  /** Palier en cours, nommé dans l'encart quand la capacité manque. */
+  planLabel: string;
 };
 
 export const getServerSideProps = withStaffPage<SsrProps>(
@@ -41,7 +57,11 @@ export const getServerSideProps = withStaffPage<SsrProps>(
     const rawId = ctx.params?.id ?? ctx.query.id;
     const id = Array.isArray(rawId) ? rawId[0] : rawId;
     if (!id || !isValidUUID(String(id)) || !supabaseAdmin) {
-      return { initialTournament: null };
+      return {
+        initialTournament: null,
+        canUseMatchOverlays: false,
+        planLabel: PLAN_LABELS.discovery,
+      };
     }
     const { data, error } = await supabaseAdmin
       .from('tournaments')
@@ -52,13 +72,37 @@ export const getServerSideProps = withStaffPage<SsrProps>(
     if (error) {
       logger.error('tools SSR tournament fetch error:', error);
     }
-    return { initialTournament: (data as TournamentBasics | null) ?? null };
+
+    const { data: tenantRow } = await supabaseAdmin
+      .from('tenants')
+      .select('plan, plan_status, plan_expires_at')
+      .eq('id', staffCtx.tenantId)
+      .maybeSingle();
+    const planState = {
+      plan: ((tenantRow as { plan?: string | null } | null)?.plan ??
+        'discovery') as TenantPlan,
+      plan_status: ((tenantRow as { plan_status?: string | null } | null)
+        ?.plan_status ?? 'active') as PlanStatus,
+      plan_expires_at:
+        (tenantRow as { plan_expires_at?: string | null } | null)
+          ?.plan_expires_at ?? null,
+    };
+
+    return {
+      initialTournament: (data as TournamentBasics | null) ?? null,
+      canUseMatchOverlays: tenantHasCapability(planState, 'matchOverlays'),
+      planLabel: PLAN_LABELS[planState.plan] ?? planState.plan,
+    };
   }
 );
 
 type Props = StaffProps & SsrProps;
 
-function TournamentToolsPage({ initialTournament }: Props) {
+function TournamentToolsPage({
+  initialTournament,
+  canUseMatchOverlays,
+  planLabel,
+}: Props) {
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : (id ?? '');
@@ -511,6 +555,21 @@ function TournamentToolsPage({ initialTournament }: Props) {
                   </div>
                 </div>
               )}
+
+              {/* Sources de stream (OBS). Placées ici, avec les widgets embed :
+                  ce sont les deux façons de sortir le tournoi de la plateforme
+                  — l'une vers un site, l'autre vers un direct. */}
+              <div className="mt-6 border-t border-neutral-700/40 pt-5">
+                <h3 className="mb-3 text-sm font-semibold text-white">
+                  {te.sourcesTitle}
+                </h3>
+                <StreamSourcesPanel
+                  tournamentRef={tournament.slug ?? tournament.id}
+                  baseUrl={embedBase}
+                  enabled={canUseMatchOverlays}
+                  planLabel={planLabel}
+                />
+              </div>
             </WidgetCard>
           )}
         </div>

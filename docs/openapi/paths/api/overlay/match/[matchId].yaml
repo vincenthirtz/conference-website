@@ -1,0 +1,83 @@
+get:
+  summary: Source de stream OBS pour un match.
+  description: |
+    PUBLIC (sans authentification), destiné aux sources navigateur d'OBS : ce
+    qu'il faut pour afficher un match à l'antenne — équipes, score, manches,
+    veto, marque de l'espace.
+
+    Deux formes d'URL :
+      - `/api/overlay/match/{uuid}` : ce match précis ;
+      - `/api/overlay/match/next?tournament={id|slug}` : « le match du
+        moment » du tournoi, résolu à chaque appel (match en cours, sinon
+        prochain à jouer, sinon dernier résultat récent). Une régie colle
+        cette URL une fois pour la journée.
+
+    Restrictions : le tournoi doit être `visibility: public`, et l'espace
+    propriétaire doit porter la capacité de palier `matchOverlays` (offre
+    Régie et au-delà) — sinon `402`. Un `next` sans match à montrer répond
+    `200` avec `match: null` : c'est l'écran d'attente, pas une erreur.
+
+    `Cache-Control: public, s-maxage=5, stale-while-revalidate=30`.
+  operationId: getMatchOverlaySource
+  tags:
+    - public/misc
+  security: []
+  parameters:
+    - name: matchId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: UUID du match, ou le mot-clé `next`.
+    - name: tournament
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Identifiant ou slug du tournoi — requis avec `next`.
+    - name: tenant
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Slug de l'espace, pour une source d'un autre organisateur.
+  responses:
+    '200':
+      description: >-
+        État du match, ou `match` nul quand il n'y a rien à montrer.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MatchOverlaySource'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '402':
+      description: >-
+        Le palier de l'espace n'ouvre pas les sources de stream par match
+        (capacité `matchOverlays`). Le corps nomme le palier en cours.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Error'
+            properties:
+              code:
+                type: string
+                enum:
+                  - PLAN_CAPABILITY_REQUIRED
+              capability:
+                type: string
+                enum:
+                  - matchOverlays
+              plan:
+                type: string
+              planLabel:
+                type: string
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '405':
+      description: Méthode non autorisée (seul GET est accepté).
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

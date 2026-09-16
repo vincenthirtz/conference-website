@@ -193,6 +193,11 @@ export const PLAN_FEATURE_ENFORCEMENT: Record<
     where:
       'utils/billing/tenantCapabilityGate.ts → POST/GET /api/admin/broadcast/state + POST /api/admin/broadcast/next-match',
   },
+  matchOverlays: {
+    kind: 'code',
+    where:
+      'utils/billing/tenantCapabilityGate.ts → GET /api/overlay/match/[matchId] (402 si le palier ne l’ouvre pas)',
+  },
   maxLeagues: {
     kind: 'code',
     where: 'utils/billing/planLimits.ts → POST /api/admin/leagues',

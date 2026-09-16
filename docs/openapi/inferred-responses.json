@@ -16209,6 +16209,9 @@
        "broadcastStudio": {
         "type": "boolean"
        },
+       "matchOverlays": {
+        "type": "boolean"
+       },
        "maxLeagues": {
         "type": "number"
        },
@@ -16232,6 +16235,7 @@
        "arbitration",
        "ratings",
        "broadcastStudio",
+       "matchOverlays",
        "maxLeagues",
        "priorityArbitration",
        "apiRateLimitPerMin",
@@ -32318,6 +32322,311 @@
      "createdGuildId",
      "botInviteUrl",
      "secretsRevealUrl"
+    ]
+   }
+  },
+  "GET /api/overlay/match/{matchId}": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "match": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "phase": {
+        "type": "string",
+        "enum": [
+         "final",
+         "live",
+         "upcoming"
+        ]
+       },
+       "format": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "roundName": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "scheduledAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "startedAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "team1": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "properties": {
+         "name": {
+          "type": "string"
+         },
+         "shortName": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "logoUrl": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "score": {
+          "type": "number"
+         },
+         "isWinner": {
+          "type": "boolean"
+         }
+        },
+        "required": [
+         "name",
+         "shortName",
+         "logoUrl",
+         "score",
+         "isWinner"
+        ]
+       },
+       "team2": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "properties": {
+         "name": {
+          "type": "string"
+         },
+         "shortName": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "logoUrl": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "score": {
+          "type": "number"
+         },
+         "isWinner": {
+          "type": "boolean"
+         }
+        },
+        "required": [
+         "name",
+         "shortName",
+         "logoUrl",
+         "score",
+         "isWinner"
+        ]
+       },
+       "maps": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "order": {
+           "type": "number"
+          },
+          "name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "team1Score": {
+           "type": [
+            "number",
+            "null"
+           ]
+          },
+          "team2Score": {
+           "type": [
+            "number",
+            "null"
+           ]
+          },
+          "winner": {
+           "type": [
+            "number",
+            "null"
+           ],
+           "enum": [
+            1,
+            2,
+            null
+           ]
+          }
+         },
+         "required": [
+          "order",
+          "name",
+          "team1Score",
+          "team2Score",
+          "winner"
+         ]
+        }
+       },
+       "veto": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "step": {
+           "type": "number"
+          },
+          "action": {
+           "type": "string",
+           "enum": [
+            "ban",
+            "decider",
+            "pick"
+           ]
+          },
+          "map": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "side": {
+           "type": [
+            "number",
+            "null"
+           ],
+           "enum": [
+            1,
+            2,
+            null
+           ]
+          }
+         },
+         "required": [
+          "step",
+          "action",
+          "map",
+          "side"
+         ]
+        }
+       }
+      },
+      "required": [
+       "id",
+       "phase",
+       "format",
+       "roundName",
+       "scheduledAt",
+       "startedAt",
+       "team1",
+       "team2",
+       "maps",
+       "veto"
+      ]
+     },
+     "tournament": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "slug": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "shortName": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "game": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "id",
+       "slug",
+       "name",
+       "shortName",
+       "game"
+      ]
+     },
+     "branding": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "logoUrl": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "accent": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "name",
+       "logoUrl",
+       "accent"
+      ]
+     },
+     "serverTime": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "match",
+     "tournament",
+     "branding",
+     "serverTime"
     ]
    }
   },

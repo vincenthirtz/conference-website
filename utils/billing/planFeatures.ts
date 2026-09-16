@@ -71,15 +71,36 @@ export type PlanFeatures = {
   /** Rating joueur Glicko-2. */
   ratings: boolean;
   /**
-   * Régie vidéo : direction automatique (l'état de diffusion suit les matchs)
-   * et overlays OBS.
+   * Régie vidéo COMPLÈTE : direction automatique (l'état de diffusion suit les
+   * matchs, un clic passe au suivant) et console de régie.
    *
    * Réservée à `editor` (et à la Coupe elle-même). Elle va avec le logiciel
    * Womenscup OBS, qui se vend sur devis : la donner à Circuit reviendrait à
    * facturer 79 € une chose dont le déploiement se négocie, et à priver
    * l'offre Éditeur de la seule ligne qui la distingue sur la grille.
+   *
+   * À ne pas confondre avec `matchOverlays` ci-dessous : l'un dirige le
+   * direct, l'autre affiche un match.
    */
   broadcastStudio: boolean;
+  /**
+   * Sources navigateur par match pour OBS : tableau de score, présentation des
+   * équipes, maps et veto, compte à rebours, écran d'attente.
+   *
+   * SÉPARÉE de `broadcastStudio` à dessein. Diffuser un match, c'est une URL
+   * collée dans OBS, qui affiche l'état d'un match et se met à jour toute
+   * seule : ça ne demande ni conducteur, ni direction automatique, ni logiciel
+   * installé. Un concurrent vend exactement cela à 30 €/mois ; l'exiger d'un
+   * palier sur devis revenait à dire à une association de 290 € qu'elle ne
+   * peut pas afficher un score à l'écran.
+   *
+   * Ce que ça ne donne PAS, et c'est le point : le direct ne se pilote pas
+   * depuis la plateforme. Passer d'une scène à l'autre, enchaîner sur le match
+   * suivant, déployer Womenscup OBS — tout cela reste `broadcastStudio`, donc
+   * Éditeur. La ligne entre les deux offres tient toujours : ici on AFFICHE,
+   * là-bas on DIRIGE.
+   */
+  matchOverlays: boolean;
   /** Nombre de ligues/saisons simultanées (Infinity = illimité). */
   maxLeagues: number;
   /** File d'arbitrage prioritaire. */
@@ -106,6 +127,7 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     arbitration: true,
     ratings: true,
     broadcastStudio: true,
+    matchOverlays: true,
     maxLeagues: Infinity,
     priorityArbitration: true,
     // Flagship (Coupe féminine) : illimité → compteur durable court-circuité.
@@ -122,6 +144,7 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     arbitration: false,
     ratings: false,
     broadcastStudio: false,
+    matchOverlays: false,
     maxLeagues: 0,
     priorityArbitration: false,
     // Pas d'API (bloqué par le gate plan avant même le quota).
@@ -138,6 +161,7 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     arbitration: true,
     ratings: true,
     broadcastStudio: false,
+    matchOverlays: true,
     maxLeagues: 1,
     priorityArbitration: false,
     apiRateLimitPerMin: 60,
@@ -153,6 +177,7 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     arbitration: true,
     ratings: true,
     broadcastStudio: false,
+    matchOverlays: true,
     maxLeagues: Infinity,
     priorityArbitration: true,
     apiRateLimitPerMin: 120,
@@ -173,6 +198,7 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     arbitration: true,
     ratings: true,
     broadcastStudio: true,
+    matchOverlays: true,
     maxLeagues: Infinity,
     priorityArbitration: true,
     apiRateLimitPerMin: Infinity,

@@ -29,4 +29,24 @@ export default {
   standingsDesc: 'The team standings (wins, losses, points).',
   scheduleName: 'Schedule',
   scheduleDesc: 'The schedule of upcoming and completed matches.',
+
+  sourcesTitle: 'Stream sources (OBS)',
+  sourcesDescription:
+    'In OBS, add a “Browser” source and paste the URL. It follows the current match, so you never have to touch it between games.',
+  sourcesHint:
+    'Replace “next” with a match id to pin a source to that game. Add &scale=1.25 to enlarge, &accent=RRGGBB to change the colour, &theme=light for a light waiting screen.',
+  sourcesLockedBody:
+    'Per-match stream sources are part of the Régie plan. Your space is on {plan}.',
+  sourcesLockedCta: 'See the plans',
+  source_scoreboard_name: 'Scoreboard',
+  source_scoreboard_desc: 'Top banner: teams, score, format and match state.',
+  source_teams_name: 'Team presentation',
+  source_teams_desc: 'Full-frame card before kick-off: logos and match-up.',
+  source_maps_name: 'Maps and veto',
+  source_maps_desc:
+    'Played maps with their score, or the veto while no map has been played.',
+  source_countdown_name: 'Countdown',
+  source_countdown_desc: 'Counts down to kick-off, on server time.',
+  source_waiting_name: 'Waiting screen',
+  source_waiting_desc: 'Opaque backdrop with your brand, between games.',
 };

@@ -31,4 +31,28 @@ export default ns('overlay', {
   resultTitle: 'Résultat',
   resultWithFormat: 'Résultat · {format}',
   resultNoMatchTitle: 'Fin du match',
+
+  // Sources de stream PAR MATCH (`/overlay/match/*`) — cf. la capacité de plan
+  // `matchOverlays`. Vocabulaire volontairement court : ces libellés sont lus à
+  // l'écran, en diagonale, par-dessus une vidéo.
+  matchDocTitle: 'Source de stream — match',
+  matchMissingTournament:
+    'Ajoutez ?tournament=<identifiant ou slug> à l’URL pour suivre le match du moment.',
+  matchWaitingTitle: 'Le direct reprend bientôt',
+  matchWaitingSubtitle: 'La prochaine rencontre arrive.',
+  matchNothingScheduled: 'Aucune rencontre à afficher pour l’instant.',
+  matchPhaseUpcoming: 'À venir',
+  matchPhaseLive: 'En direct',
+  matchPhaseFinal: 'Terminé',
+  matchCountdownLabel: 'Coup d’envoi dans',
+  matchCountdownNow: 'Coup d’envoi',
+  matchCountdownNoTime: 'Horaire à confirmer',
+  matchCountdownDays: '{days} j {time}',
+  matchScheduledAt: 'Coup d’envoi à {time}',
+  matchMapsTitle: 'Maps',
+  matchVetoTitle: 'Veto',
+  matchMapBanned: 'Bannie',
+  matchMapPicked: 'Choisie',
+  matchMapDecider: 'Belle',
+  matchTeamFallback: 'Équipe',
 });
