@@ -20,12 +20,34 @@
 //
 // Auth : x-api-key (BOT_API_KEY). Identite du capitaine verifiee via
 // user_discord_links.
+//
+// Gardes d'integrite (2026-09-16), memes regles que le report web
+// (pages/api/player/matches/[matchId]/report-score.ts, utils/matches/scoreReports.ts) :
+//   * 409 MATCH_NOT_STARTED        : coup d'envoi pas encore passe, match pas 'ongoing' ;
+//   * 400 INVALID_SCORE_FOR_FORMAT : score impossible pour le best-of du match ;
+//   * 409 FINALIZATION_IN_PROGRESS : l'autre capitaine finalise au meme instant.
+// Le bot affiche le champ `error` TEL QUEL a la capitaine (services/discord-bot/
+// report-score.js : « ❌ Report échoué : <error> ») : ces messages sont donc
+// rediges pour etre lus sur Discord, accents et consigne compris.
 
 import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { applyMatchScore } from '@/utils/matches/applyScore';
+import {
+  applyMatchScore,
+  MatchFinalizationConflictError,
+} from '@/utils/matches/applyScore';
+import {
+  invalidScoreForFormatMessage,
+  isReportBeforeKickoff,
+  isScoreValidForBestOf,
+  readFinalizationConflict,
+  resolveSeriesBestOf,
+  isStaffOpenedDispute,
+  DISPUTE_UNDER_STAFF_REVIEW,
+  DISPUTE_UNDER_STAFF_REVIEW_MESSAGE,
+} from '@/utils/matches/scoreReports';
 import { reconcileMatchResult } from '@/utils/matches/reconcile';
 import { getSlaMinutes } from '@/utils/disputes/slaBreaches';
 import { notifyScoreReportDispute } from '@/utils/discord';
@@ -59,6 +81,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     .from('matches')
     .select(
       `id, tournament_id, scrim_id, status, is_bye,
+       scheduled_at, best_of, match_format, dispute_opened_by,
        team1_id, team2_id,
        team1:team1_id (id, name, captain_id),
        team2:team2_id (id, name, captain_id),
@@ -126,6 +149,40 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     return res.status(403).json({
       error:
         "Ce compte Discord n'est pas le capitaine d'une des deux equipes de ce match.",
+    });
+  }
+
+  // 2b) Le match a-t-il commence ? Apres le controle capitaine (un tiers n'a
+  // pas a apprendre l'horaire), avant l'upsert (rien n'est ecrit). Sans cette
+  // garde, deux reports concordants finalisaient un match non joue et
+  // propageaient le bracket. `ongoing` passe toujours.
+  if (
+    isReportBeforeKickoff({
+      status: match.status,
+      scheduledAt: (match as { scheduled_at?: string | null }).scheduled_at,
+      startedStatus: 'ongoing',
+    })
+  ) {
+    return res.status(409).json({
+      error:
+        "Ce match n'a pas encore commencé : reporte le score après le coup d'envoi. S'il a été joué en avance, demande au staff de le passer « en cours ».",
+      code: 'MATCH_NOT_STARTED',
+    });
+  }
+
+  // 2c) Couple de scores coherent avec le best-of (format inconnu : pas de
+  // borne). Le message est affiche tel quel dans Discord.
+  const bestOf = resolveSeriesBestOf(
+    (match as { best_of?: unknown }).best_of,
+    (match as { match_format?: unknown }).match_format
+  );
+  if (
+    bestOf !== null &&
+    !isScoreValidForBestOf(team1Score, team2Score, bestOf)
+  ) {
+    return res.status(400).json({
+      error: `${invalidScoreForFormatMessage(bestOf)} Vérifie le score saisi.`,
+      code: 'INVALID_SCORE_FOR_FORMAT',
     });
   }
 
@@ -251,8 +308,26 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   // Case B: reports agree OR one side auto-wins on opponent silence + evidence
   //         → finalize (close any open dispute first).
   if (outcome.outcome === 'agreed' || outcome.outcome === 'auto_resolved') {
+    // Une dispute ouverte par le STAFF ne se referme pas par l'accord des
+    // capitaines — ni par la résolution
+    // automatique `auto_resolved` : elle instruit souvent autre chose que le score (joueuse
+    // inéligible, triche), sur quoi les deux équipes peuvent s'entendre en étant
+    // toutes deux en cause. Le report reste enregistré pour le staff ; seul le
+    // staff tranche. Cf. isStaffOpenedDispute.
+    if (isStaffOpenedDispute(match)) {
+      return res.status(409).json({
+        error: DISPUTE_UNDER_STAFF_REVIEW_MESSAGE,
+        code: DISPUTE_UNDER_STAFF_REVIEW,
+      });
+    }
+
     // If the match is currently 'disputed', we must clear the status before
     // applyMatchScore (which refuses disputed matches).
+    //
+    // CONDITIONNEL au statut 'disputed' : si les deux capitaines valident en
+    // meme temps, la premiere a pu deja fermer la dispute ET finaliser ; sans
+    // la condition, la seconde remettait un match 'finished' en 'pending'.
+    // Zero ligne touchee n'est pas une erreur : applyMatchScore relit le match.
     if (match.status === 'disputed') {
       const nowIso = new Date().toISOString();
       const { error: clearErr } = await supabaseAdmin
@@ -267,7 +342,10 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
           updated_at: nowIso,
         })
         .eq('tenant_id', req.botContext.tenantId)
-        .eq('id', matchId);
+        .eq('id', matchId)
+        .eq('status', 'disputed')
+        // Même garde côté base : jamais une dispute staff.
+        .is('dispute_opened_by', null);
       if (clearErr) {
         logger.error('[bot/matches/report] clear dispute error', clearErr);
         return res
@@ -295,6 +373,9 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
         markFinished: true,
         staffId: null,
         propagateBracket: !isScrim,
+        // Deux capitaines peuvent valider a la meme seconde : une seule
+        // finalisation (cf. utils/matches/applyScore.ts, etape 4c).
+        claimFinalization: true,
       });
 
       // Auto-award auditable : la finalisation sur silence+preuve n'a pas de
@@ -328,6 +409,44 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
         winnerTeamId: result.winnerTeamId,
       });
     } catch (e) {
+      if (e instanceof MatchFinalizationConflictError) {
+        // Reservation perdue : on relit le match pour repondre juste plutot
+        // qu'un 500 (cf. readFinalizationConflict).
+        const state = await readFinalizationConflict(
+          req.botContext.tenantId,
+          matchId,
+          outcome.team1Score,
+          outcome.team2Score
+        );
+        if (state.kind === 'finalized') {
+          return res.status(200).json({
+            status: 'finalized',
+            resolution: outcome.outcome,
+            reason: outcome.outcome === 'auto_resolved' ? outcome.reason : null,
+            matchId,
+            scrimId: match.scrim_id ?? null,
+            team1Score: outcome.team1Score,
+            team2Score: outcome.team2Score,
+            winnerTeamId: state.winnerTeamId,
+          });
+        }
+        if (state.kind === 'closed') {
+          return res.status(409).json({
+            error:
+              'Ce match vient d’être clôturé par le staff. Contacte le staff pour contester le résultat.',
+            code: 'MATCH_FINALIZED',
+          });
+        }
+        logger.warn('[bot/matches/report] finalization claim lost', {
+          matchId,
+          status: state.status,
+        });
+        return res.status(409).json({
+          error:
+            "L'autre capitaine est en train de valider le même score. Réessaie dans quelques secondes pour voir le résultat.",
+          code: 'FINALIZATION_IN_PROGRESS',
+        });
+      }
       const msg = e instanceof Error ? e.message : String(e);
       logger.error('[bot/matches/report] applyMatchScore error', e);
       return res.status(500).json({
@@ -367,7 +486,10 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   if (!wasAlreadyDisputed) {
     const nowIso = new Date().toISOString();
 
-    const { error: disputeErr } = await supabaseAdmin
+    // CONDITIONNEL au statut lu : l'adversaire (ou le staff) a pu clore le
+    // match entre notre lecture et ce report divergent ; sans la condition, un
+    // report tardif remettait en dispute un match deja 'finished'.
+    const { data: disputedRow, error: disputeErr } = await supabaseAdmin
       .from('matches')
       .update({
         status: 'disputed',
@@ -380,13 +502,23 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
         updated_at: nowIso,
       })
       .eq('tenant_id', req.botContext.tenantId)
-      .eq('id', matchId);
+      .eq('id', matchId)
+      .eq('status', match.status)
+      .select('id')
+      .maybeSingle();
 
     if (disputeErr) {
       logger.error('[bot/matches/report] open dispute error', disputeErr);
       return res
         .status(500)
         .json({ error: "Echec de l'ouverture de la dispute" });
+    }
+    if (!disputedRow) {
+      return res.status(409).json({
+        error:
+          'Le match a changé pendant ton report (il vient d’être clôturé ou modifié). Contacte le staff pour contester le résultat.',
+        code: 'MATCH_FINALIZED',
+      });
     }
 
     void (async () => {

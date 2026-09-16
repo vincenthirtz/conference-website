@@ -45,6 +45,12 @@ patch:
     - `mode='meta'`: updates meta fields (planning, lobby, bracket links).
       Transitioning to `disputed` is rejected — use the `/dispute` endpoint.
     Supports optimistic locking via `expected_updated_at`.
+    Reopening a closed or disputed match (`finished`/`walkover`/`cancelled`/
+    `disputed` → `pending`/`ongoing`/`postponed`) purges both captains' score
+    reports BEFORE the write (logged as `purged_reports`), so a stale report
+    can no longer re-finalize it; also in score mode when the target status is
+    reportable. A score written with a closed status does not purge. Purge
+    failure → 500, match unchanged.
   operationId: adminPatchMatch
   tags:
     - admin/matches

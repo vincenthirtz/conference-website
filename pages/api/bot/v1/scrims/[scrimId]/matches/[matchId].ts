@@ -21,6 +21,11 @@ import { emitBotEvent } from '@/utils/botEvents';
 import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 import { emitScheduleEventsInBackground } from '@/utils/matches/scheduleEvents';
 import { logger } from '@/utils/logger';
+import {
+  matchTransitionPurgesReports,
+  purgeScoreReports,
+  type PurgedScoreReport,
+} from '@/utils/matches/scoreReports';
 import { scrimMatchPatchBodySchema } from '@/lib/apiContracts/bot/scrims/[scrimId]/matches/[matchId]';
 import { scrimMatchQuerySchema } from '@/lib/apiContracts/bot/scrims/[scrimId]/matches/[matchId].query';
 
@@ -139,6 +144,33 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
 
   updatePayload.updated_at = new Date().toISOString();
 
+  // Réouverture d'un match de scrim clos ou en litige depuis Discord : purge des
+  // reports capitaines AVANT l'écriture, comme les routes admin. Un match de
+  // scrim se rapporte par la même route que les matchs de tournoi
+  // (match_score_reports) : sans purge, la gagnante le refinalisait sur l'ancien
+  // report adverse. Même si ce PATCH pose aussi un score : avec un statut
+  // reportable, ce score n'est pas final (cf. matchTransitionPurgesReports).
+  let purgedReports: PurgedScoreReport[] | null = null;
+  if (
+    updatePayload.status !== undefined &&
+    matchTransitionPurgesReports(
+      match.status as string | null,
+      updatePayload.status as string
+    )
+  ) {
+    const purge = await purgeScoreReports(
+      'match',
+      req.botContext.tenantId,
+      matchId
+    );
+    if (!purge.ok) {
+      return res
+        .status(500)
+        .json({ error: `${purge.error} Match non modifié.` });
+    }
+    purgedReports = purge.purged;
+  }
+
   const { data: after, error: updErr } = await supabaseAdmin
     .from('matches')
     .update(updatePayload)
@@ -161,6 +193,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       subject: 'scrim_match_update',
       scrim_id: scrimId,
       changes: updatePayload,
+      ...(purgedReports ? { purged_reports: purgedReports } : {}),
     },
   });
 

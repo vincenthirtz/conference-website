@@ -11,6 +11,11 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { emitScheduleEvents } from '@/utils/matches/scheduleEvents';
+import {
+  matchTransitionPurgesReports,
+  purgeScoreReports,
+  type PurgedScoreReport,
+} from '@/utils/matches/scoreReports';
 
 import { logger } from '../../../../../utils/logger';
 import { readPaidMatchIds } from '@/utils/tcg/paidMatches';
@@ -338,6 +343,32 @@ async function handleBulkUpdate(
     .eq('stage_id', stageId)
     .in('id', matchIds);
 
+  // Réouverture en masse (ex. tout un tour `finished → pending` à rejouer) :
+  // purge des reports capitaines des SEULS matchs qui passent d'un statut clos
+  // ou en litige à un statut reportable, en UNE requête pour tout le lot. Sans
+  // elle, chaque capitaine gagnante pouvait refinaliser son match sur l'ancien
+  // report adverse (cf. utils/matches/scoreReports.ts). Faite AVANT l'écriture ;
+  // échec → rien n'est modifié. Ce PUT ne pose jamais de score.
+  let purgedReports: PurgedScoreReport[] = [];
+  if ('status' in updatePayload) {
+    const reopenedIds = (
+      (snapshotRows ?? []) as unknown as Array<{ id: string; status: string }>
+    )
+      .filter((row) =>
+        matchTransitionPurgesReports(row.status, updatePayload.status as string)
+      )
+      .map((row) => row.id);
+    if (reopenedIds.length > 0) {
+      const purge = await purgeScoreReports('match', ctx.tenantId, reopenedIds);
+      if (!purge.ok) {
+        return res
+          .status(500)
+          .json({ error: `${purge.error} Aucun match modifié.` });
+      }
+      purgedReports = purge.purged;
+    }
+  }
+
   const { error, count } = await supabaseAdmin
     .from('matches')
     .update(updatePayload)
@@ -374,6 +405,7 @@ async function handleBulkUpdate(
         matchIds,
         fields: updatePayload,
         count: matchIds.length,
+        ...(purgedReports.length > 0 ? { purged_reports: purgedReports } : {}),
       },
     });
   }

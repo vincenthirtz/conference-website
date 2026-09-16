@@ -88,13 +88,34 @@ post:
                 type: object
                 additionalProperties: true
     '400':
-      $ref: '#/components/responses/BadRequest'
+      description: |
+        Entree invalide, match bye/incomplet, ou `code: INVALID_SCORE_FOR_FORMAT`
+        (couple de scores impossible pour le best-of : en BO impair le
+        vainqueur a exactement ceil(N/2) manches et le perdant moins ; format
+        inconnu = aucune borne). `error` est redige pour etre affiche tel quel
+        sur Discord.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     '403':
       $ref: '#/components/responses/Forbidden'
     '404':
       $ref: '#/components/responses/NotFound'
     '409':
-      $ref: '#/components/responses/Conflict'
+      description: |
+        `code` : `MATCH_FINALIZED` (match clos, ou clos pendant le report),
+        `MATCH_NOT_STARTED` (coup d'envoi `scheduled_at` pas encore passe et
+        match pas `ongoing`), `FINALIZATION_IN_PROGRESS` (l'autre capitaine
+        finalise le meme score au meme instant — reessayer),
+        `DISPUTE_UNDER_STAFF_REVIEW` (dispute ouverte par le staff : l'accord
+        des capitaines ne la referme pas ; le report est enregistre et seul le
+        staff tranche). `error` est redige pour etre affiche tel quel sur
+        Discord.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     '500':
       $ref: '#/components/responses/ServerError'
   x-zod-query: bot.matches/[matchId]/report.query

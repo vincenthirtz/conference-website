@@ -36,16 +36,15 @@ import {
   type TeamRef,
   type TournamentRef,
 } from '@/utils/matches/playerMatchView';
+import {
+  computeScoreReportState,
+  type ScoreReportState,
+} from '@/utils/matches/scoreReports';
 
 import { logger } from '../../../../utils/logger';
 
 /** État du rapport de score, du point de vue de MON équipe. */
-export type ScoreReportState =
-  | 'none'
-  | 'awaiting_opponent'
-  | 'awaiting_me'
-  | 'agreed'
-  | 'disputed';
+export type { ScoreReportState };
 
 export type PlayerMatchDetail = {
   match: {
@@ -200,12 +199,15 @@ export default withSubjectRoute(async function handler(
   const myReport = (reports ?? []).find((r) => r.team_side === mySide) ?? null;
   const oppReport = (reports ?? []).find((r) => r.team_side !== mySide) ?? null;
 
+  // « D'accord » exige deux reports ÉGAUX, pas seulement présents : si la
+  // bascule en dispute a échoué après l'écriture du report, deux scores
+  // divergents s'affichaient « d'accord » (cf. computeScoreReportState).
   const status = match.status as string;
-  let reportState: ScoreReportState = 'none';
-  if (status === 'disputed') reportState = 'disputed';
-  else if (myReport && oppReport) reportState = 'agreed';
-  else if (myReport) reportState = 'awaiting_opponent';
-  else if (oppReport) reportState = 'awaiting_me';
+  const reportState: ScoreReportState = computeScoreReportState(
+    status,
+    myReport,
+    oppReport
+  );
 
   // Permissions, calquées sur les routes qui écrivent :
   //  - feuille de match → permission d'équipe `validate_lineup` ;

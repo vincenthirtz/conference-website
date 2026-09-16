@@ -46,7 +46,10 @@ patch:
   description: |
     Requires `manager` role. Returns to a normal status with a resolution
     note. Valid resume statuses are `pending`, `ongoing`, `finished`,
-    `walkover`.
+    `walkover`. When no score/forfeit is applied, both captains' score
+    reports are purged BEFORE the match is reopened (and listed in the staff
+    log as `purged_reports`), so a stale report can no longer finalize the
+    match again; if the purge fails the dispute stays open (500).
   operationId: adminResolveMatchDispute
   tags:
     - admin/matches
@@ -91,7 +94,9 @@ patch:
       $ref: '#/components/responses/Forbidden'
 delete:
   summary: Cancel an open dispute without resolution.
-  description: Requires `manager` role.
+  description: |
+    Requires `manager` role. Purges both captains' score reports before
+    reopening the match (same rule as a resolution without score).
   operationId: adminCancelMatchDispute
   tags:
     - admin/matches

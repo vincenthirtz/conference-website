@@ -54,6 +54,12 @@ patch:
       $ref: '#/components/responses/Forbidden'
 put:
   summary: Bulk-replace matches of a stage.
+  description: |
+    Bulk edit (`status`, `best_of`, `round_number`, `notes`, `stream_url`,
+    `lobby_code`). When `status` reopens matches that were closed or disputed,
+    their captains' score reports are purged first, in a single query for the
+    whole batch (logged as `purged_reports`). Purge failure → 500, no match
+    updated.
   operationId: adminStageBulkMatchesPut
   tags:
     - admin/stages

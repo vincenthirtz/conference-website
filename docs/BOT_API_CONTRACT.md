@@ -892,6 +892,30 @@ Response paths (see handler for full logic). All are `200`; branch on
 the other branches. The auto-resolution path (silence + evidence) leans on the
 `/matches/:matchId/evidence` endpoint above and the tenant dispute SLA.
 
+**Refusals (2026-09-16, score integrity).** Checked after the captain check and
+BEFORE the report is stored (nothing is written). Same rules as the web report
+(`POST /api/player/matches/:matchId/report-score`). The `error` string is
+written in French **to be shown as-is to the captain** — the bot already does
+(`report-score.js`: `❌ Report échoué : <error>`), no bot change required:
+
+| HTTP | `code`                     | When                                                                                                                                                                                                                  |
+| ---- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 409  | `MATCH_NOT_STARTED`        | `scheduled_at` is in the future and the match is not `ongoing`. A match played early must be set `ongoing` by staff.                                                                                                  |
+| 400  | `INVALID_SCORE_FOR_FORMAT` | Score pair impossible for the best-of (`best_of`, else `match_format`): odd BO → winner has exactly ceil(N/2), loser fewer; even BO → N/2+1 vs ≤ N/2−1, or N/2–N/2 draw. Unknown/missing/contradictory format → no bound. |
+| 409  | `FINALIZATION_IN_PROGRESS` | Both captains confirmed the same score at the same instant: only one finalization runs (compare-and-swap before bracket writes). Retrying a few seconds later returns `finalized` (idempotent).                        |
+| 409  | `MATCH_FINALIZED`          | Match already closed — or closed by staff/opponent between the read and this report (the dispute is no longer reopened on a finished match).                                                                          |
+| 409  | `DISPUTE_UNDER_STAFF_REVIEW` | The match is `disputed` and the dispute was opened **by staff** (`dispute_opened_by` set). Agreeing captain reports no longer close it — neither `agreed` nor `auto_resolved`: staff disputes often concern something other than the score (eligibility, cheating). The report IS stored; only staff resolves. Disputes opened automatically by divergent reports still close on agreement. |
+
+**Staff reopening purges reports.** When staff reopens a match that was closed
+or disputed without fixing a final score — dispute resolved to
+`pending`/`ongoing` or cancelled (`/resolve-dispute`, admin `/dispute`), admin
+`PATCH /api/admin/matches/:id` or bulk status edit back to a reportable status,
+`PATCH /api/bot/v1/scrims/:scrimId/matches/:matchId` likewise — both captains'
+score reports are deleted first (kept in `staff_logs.payload.purged_reports`).
+Both captains must report again; a pre-decision report no longer counts as a
+vote. Consequence for `GET /matches/:matchId/dispute`: `reports` may be `[]` on
+a dispute resolved without score.
+
 ## Canonical read example — `GET /api/bot/v1/autocomplete/teams`
 
 ```http

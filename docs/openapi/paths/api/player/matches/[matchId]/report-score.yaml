@@ -21,6 +21,21 @@ post:
     Droit de rapport : etre `teams.captain_id` de team1 OU team2 du match.
     Re-soumission supportee (idempotent) ; corriger son report pour rejoindre
     celui de l'adversaire ferme une dispute ouverte.
+
+    Gardes d'integrite (2026-09-16) :
+      - pas de report avant `scheduled_at`, sauf match `ongoing`
+        (`409 MATCH_NOT_STARTED`) ;
+      - le couple de scores doit etre un resultat final possible du best-of
+        (`best_of`, sinon `match_format`) : en BO impair le vainqueur a
+        exactement ceil(N/2) manches et le perdant moins ; en BO pair, N/2+1
+        contre au plus N/2-1, ou nul N/2-N/2. Format absent, inconnu ou
+        contradictoire : aucune borne (`400 INVALID_SCORE_FOR_FORMAT`) ;
+      - deux capitaines qui finalisent au meme instant : une seule
+        finalisation, l'autre recoit `200 finalized` (deja applique) ou
+        `409 FINALIZATION_IN_PROGRESS` ;
+      - quand le staff rouvre le match sans fixer de score (dispute resolue
+        en pending/ongoing ou annulee), les reports des deux camps sont
+        purges : il faut deux nouveaux reports.
   operationId: reportPlayerMatchScore
   security:
     - PlayerBearer: []
@@ -55,7 +70,14 @@ post:
       content:
         application/json: {}
     '400':
-      $ref: '#/components/responses/BadRequest'
+      description: |
+        Entree invalide : identifiant, scores non entiers/negatifs, match bye
+        ou incomplet, ou `code: INVALID_SCORE_FOR_FORMAT` (couple de scores
+        impossible pour le best-of du match).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
@@ -63,7 +85,14 @@ post:
     '404':
       $ref: '#/components/responses/NotFound'
     '409':
-      description: Match deja cloture (status terminal) — modification reservee au staff.
+      description: |
+        `code` : `MATCH_FINALIZED` (match clos, ou clos pendant le report —
+        modification reservee au staff), `MATCH_NOT_STARTED` (coup d'envoi pas
+        encore passe et match pas `ongoing`), `FINALIZATION_IN_PROGRESS`
+        (l'autre capitaine finalise le meme score a l'instant),
+        `DISPUTE_UNDER_STAFF_REVIEW` (dispute ouverte par le staff : l'accord
+        des capitaines ne la referme pas ; le report est enregistre et seul le
+        staff tranche).
       content:
         application/json:
           schema:

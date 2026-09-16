@@ -35,6 +35,42 @@ import type {
 /** Statuses that trigger bracket propagation (match has a winner) */
 const PROPAGATION_STATUSES: MatchStatus[] = ['finished', 'walkover'];
 
+/**
+ * Statuts depuis lesquels une finalisation « réservée » (`claimFinalization`)
+ * peut partir : un match pas encore clos. `disputed` n'y est pas —
+ * applyMatchScore le refuse de toute façon plus haut.
+ */
+const CLAIMABLE_STATUSES: MatchStatus[] = ['pending', 'ongoing', 'postponed'];
+
+/**
+ * Options réservées aux appelants qui peuvent finaliser EN CONCURRENCE avec
+ * eux-mêmes (deux capitaines qui valident à la même seconde). Déclarées ici et
+ * pas dans types/matches.ts : aucun autre appelant n'a à les connaître, et
+ * leur absence laisse le comportement historique strictement inchangé.
+ */
+export type ApplyMatchScoreClaimOptions = {
+  /**
+   * Réserve la finalisation AVANT toute écriture sur le bracket, par un
+   * compare-and-swap sur (`updated_at`, `status`) du match. Un second appel
+   * parti de la même lecture perd la réservation et lève
+   * `MatchFinalizationConflictError` sans avoir touché au bracket.
+   */
+  claimFinalization?: boolean;
+};
+
+/**
+ * La finalisation réservée a été perdue : un autre appel a modifié le match
+ * depuis notre lecture, ou le match n'est plus dans un statut finalisable
+ * (clos par le staff entre-temps). Rien n'a été écrit par CET appel.
+ */
+export class MatchFinalizationConflictError extends Error {
+  readonly code = 'FINALIZATION_CONFLICT';
+  constructor(message: string) {
+    super(message);
+    this.name = 'MatchFinalizationConflictError';
+  }
+}
+
 /* -----------------------------------------------------------
  * Fonction principale
  * ---------------------------------------------------------*/
@@ -50,7 +86,7 @@ const PROPAGATION_STATUSES: MatchStatus[] = ['finished', 'walkover'];
  * - log l'action staff dans staff_logs
  */
 export async function applyMatchScore(
-  input: ApplyMatchScoreInput
+  input: ApplyMatchScoreInput & ApplyMatchScoreClaimOptions
 ): Promise<ApplyMatchScoreResult> {
   const {
     tenantId,
@@ -62,6 +98,7 @@ export async function applyMatchScore(
     staffId,
     propagateBracket = true,
     forfeitTeamId,
+    claimFinalization = false,
   } = input;
 
   let { team1Score, team2Score } = input;
@@ -284,6 +321,51 @@ export async function applyMatchScore(
     };
   }
 
+  // 4c) Réservation de la finalisation (opt-in, cf. ApplyMatchScoreClaimOptions).
+  //
+  //     POURQUOI l'optimistic lock du step 9 ne suffit pas : il ne protège que
+  //     l'UPDATE du match, qui arrive APRÈS le reset de la propagation (step 8).
+  //     Deux capitaines qui valident à la même seconde lisent toutes deux le
+  //     match `pending` ; A reset, écrit, propage ; B reset à son tour — ce qui
+  //     VIDE le slot aval que A vient de remplir —, perd le lock au step 9, puis
+  //     restaure son snapshot pris avant la propagation de A. Résultat : match
+  //     `finished` mais vainqueur absent du tour suivant, sans erreur côté A.
+  //
+  //     Le compare-and-swap ci-dessous déplace le verrou AVANT toute écriture
+  //     sur le bracket : seul l'appel qui fait passer `updated_at` de la valeur
+  //     lue à la sienne continue ; l'autre sort sans rien avoir touché. La
+  //     condition sur le statut couvre aussi le staff qui clôt le match (sur un
+  //     autre score) entre notre lecture et ici.
+  let lockUpdatedAt = match.updated_at;
+  if (claimFinalization) {
+    if (!CLAIMABLE_STATUSES.includes(currentStatus)) {
+      throw new MatchFinalizationConflictError(
+        `Match non finalisable depuis le statut ${currentStatus}.`
+      );
+    }
+    const { data: claimed, error: claimErr } = await supabaseAdmin
+      .from('matches')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('tenant_id', tenantId)
+      .eq('id', matchId)
+      .eq('updated_at', match.updated_at)
+      .eq('status', currentStatus)
+      .select('updated_at')
+      .maybeSingle();
+    if (claimErr) {
+      logger.error('applyMatchScore: claim finalization error', claimErr);
+      throw new Error('Erreur lors de la réservation de la finalisation');
+    }
+    if (!claimed) {
+      throw new MatchFinalizationConflictError(
+        'Le match a été modifié par une autre opération (finalisation concurrente).'
+      );
+    }
+    // Le jeton du step 9 devient NOTRE écriture : un tiers qui modifierait le
+    // match d'ici là fait toujours échouer l'UPDATE, comme avant.
+    lockUpdatedAt = (claimed as { updated_at: string }).updated_at;
+  }
+
   // 5) Préparer la payload d'update
   const updatePayload: Record<string, any> = {
     team1_score: team1Score,
@@ -390,7 +472,7 @@ export async function applyMatchScore(
     .update(updatePayloadFinal)
     .eq('tenant_id', tenantId)
     .eq('id', matchId)
-    .eq('updated_at', match.updated_at)
+    .eq('updated_at', lockUpdatedAt)
     .select('*')
     .maybeSingle();
 
@@ -399,7 +481,7 @@ export async function applyMatchScore(
     if (concurrent) {
       logger.warn('applyMatchScore: optimistic lock conflict', {
         matchId,
-        expectedUpdatedAt: match.updated_at,
+        expectedUpdatedAt: lockUpdatedAt,
       });
     } else {
       logger.error('applyMatchScore: update match error', updateErr);

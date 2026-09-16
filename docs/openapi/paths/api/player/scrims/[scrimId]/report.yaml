@@ -12,7 +12,10 @@ post:
     re-rapport d'un scrim clos permettait de recreer son match miroir et
     d'encaisser a nouveau les recompenses TCG). La bascule en litige est
     conditionnelle : un scrim clos entre la lecture et le report divergent rend
-    aussi `409 SCRIM_CLOSED`. Permission requise : `manage_scrims` sur une des
+    aussi `409 SCRIM_CLOSED`. Pas de report avant `scheduled_date` sauf scrim
+    `running` : `409 SCRIM_NOT_STARTED`. Un scrim rouvert par le staff
+    (completed/cancelled/disputed -> draft/scheduled/running) perd ses reports :
+    il en faut deux nouveaux. Permission requise : `manage_scrims` sur une des
     deux equipes.
   operationId: playerReportScrimScore
   security:

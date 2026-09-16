@@ -15,6 +15,11 @@ import {
 } from '@/utils/teams/scrimConflicts';
 import { emitScrimEvent, statusTransitionEvent } from '@/utils/scrimEvents';
 import { syncScrimRatedMatch } from '@/utils/scrims/ratedMatch';
+import {
+  purgeScoreReports,
+  scrimTransitionPurgesReports,
+  type PurgedScoreReport,
+} from '@/utils/matches/scoreReports';
 import { logger } from '../../../../../utils/logger';
 
 const VALID_STATUSES = [
@@ -223,6 +228,28 @@ async function handlePatch(
       .json({ error: 'team1_id et team2_id doivent etre distincts' });
   }
 
+  // Rouvrir un scrim clos ou en litige (completed/cancelled/disputed →
+  // draft/scheduled/running) invalide les reports déjà posés : ce PATCH ne fixe
+  // jamais de score, et un report resté en base redeviendrait un vote — la
+  // capitaine gagnante n'aurait qu'à renvoyer le sien pour re-clore le scrim
+  // sur le résultat que le staff vient d'écarter. Purge AVANT l'écriture du
+  // statut (aucun intervalle où l'ancien vote compte) ; si elle échoue, rien
+  // n'est modifié.
+  let purgedReports: PurgedScoreReport[] | null = null;
+  if (
+    updatePayload.status !== undefined &&
+    scrimTransitionPurgesReports(
+      before.status as string | null,
+      updatePayload.status as string
+    )
+  ) {
+    const purge = await purgeScoreReports('scrim', ctx.tenantId, id);
+    if (!purge.ok) {
+      return res.status(500).json({ error: purge.error });
+    }
+    purgedReports = purge.purged;
+  }
+
   // Un changement de STATUT n'est appliqué que si le scrim est toujours dans
   // l'état que le staff a lu : sinon une annulation pouvait croiser l'accord
   // des capitaines (ou l'inverse) et écraser un état qu'elle n'a jamais vu.
@@ -261,6 +288,7 @@ async function handlePatch(
         payload: {
           subject: 'update_scrim',
           changes: updatePayload as Record<PatchField, unknown>,
+          ...(purgedReports ? { purged_reports: purgedReports } : {}),
         },
       });
     } catch (e) {

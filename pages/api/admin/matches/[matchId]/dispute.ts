@@ -19,6 +19,7 @@ import { emitBotEvent } from '@/utils/botEvents';
 import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 import { findDownstreamImpact } from '@/utils/bracket/disputeImpact';
 import { reactToMatchStatus } from '@/utils/broadcast/autoDirector';
+import { purgeScoreReports } from '@/utils/matches/scoreReports';
 import type { MatchStatus } from '@/types/admin';
 
 import { logger } from '../../../../../utils/logger';
@@ -392,6 +393,21 @@ async function resolveDispute(
   }
 
   // Cas 2 : pas de changement de score, on remet juste le match dans son flow normal
+  //
+  // Purge des reports capitaines AVANT la réouverture : aucune décision de
+  // score n'est prise ici, donc les reports posés avant la dispute ne valent
+  // plus rien. Sans la purge, « à rejouer » (pending) laissait le report
+  // adverse en base, et la capitaine gagnante rétablissait le score annulé en
+  // renvoyant simplement le sien (cf. utils/matches/scoreReports.ts). Faite
+  // avant l'UPDATE pour qu'aucun report ne puisse s'appuyer sur un ancien vote
+  // dans l'intervalle ; en cas d'échec, la dispute reste ouverte.
+  const purge = await purgeScoreReports('match', ctx.tenantId, matchId);
+  if (!purge.ok) {
+    return res.status(500).json({
+      error: `${purge.error} La dispute reste ouverte.`,
+    });
+  }
+
   const { data: updated, error: updErr } = await supabaseAdmin
     .from('matches')
     .update({
@@ -423,6 +439,9 @@ async function resolveDispute(
         resolution: trimmedResolution,
         resume_status: resumeStatus,
         applied_score: null,
+        // Trace des reports effacés : la purge supprime une donnée, l'audit
+        // doit la conserver.
+        purged_reports: purge.purged,
       },
     });
   }
@@ -491,6 +510,16 @@ async function cancelDispute(
     });
   }
 
+  // Annuler une dispute ne fixe aucun score : mêmes raisons et même ordre que
+  // la résolution sans score (cf. resolveDispute, Cas 2) — purge des reports
+  // avant la réouverture, dispute conservée si la purge échoue.
+  const purge = await purgeScoreReports('match', ctx.tenantId, matchId);
+  if (!purge.ok) {
+    return res.status(500).json({
+      error: `${purge.error} La dispute reste ouverte.`,
+    });
+  }
+
   const nowIso = new Date().toISOString();
 
   const { data: updated, error: updErr } = await supabaseAdmin
@@ -526,6 +555,7 @@ async function cancelDispute(
       payload: {
         prior_reason: match.dispute_reason,
         resume_status: resumeStatus,
+        purged_reports: purge.purged,
       },
     });
   }

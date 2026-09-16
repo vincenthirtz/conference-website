@@ -5,6 +5,11 @@ patch:
   tags:
     - bot/scrims
   summary: Met a jour un match de scrim (score, status, etc.).
+  description: |
+    Rouvrir un match clos ou en litige (`finished`/`walkover`/`cancelled`/
+    `disputed` → `pending`/`ongoing`/`postponed`) purge d'abord les reports de
+    score des capitaines (trace `purged_reports` dans staff_logs), meme si le
+    PATCH pose aussi un score. Echec de purge → 500, match inchange.
   operationId: botUpdateScrimMatch
   parameters:
     - $ref: '#/components/parameters/IdempotencyKey'

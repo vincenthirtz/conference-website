@@ -16,6 +16,11 @@ import { emitBotEvent } from '@/utils/botEvents';
 import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 import { emitScheduleEventsInBackground } from '@/utils/matches/scheduleEvents';
 import { reactToMatchStatus } from '@/utils/broadcast/autoDirector';
+import {
+  matchTransitionPurgesReports,
+  purgeScoreReports,
+  type PurgedScoreReport,
+} from '@/utils/matches/scoreReports';
 
 import { logger } from '../../../../utils/logger';
 import { readPaidMatchIds } from '@/utils/tcg/paidMatches';
@@ -178,14 +183,15 @@ async function handlePut(
   }
 
   // --- Guard: reject score/meta changes if tournament is completed ---
+  // Le statut courant est lu au passage : le mode score en a besoin pour
+  // décider de la purge des reports capitaines (cf. plus bas).
+  const { data: matchForGuard } = await supabaseAdmin
+    .from('matches')
+    .select('tournament_id, status')
+    .eq('id', matchId)
+    .eq('tenant_id', ctx.tenantId)
+    .maybeSingle();
   {
-    const { data: matchForGuard } = await supabaseAdmin
-      .from('matches')
-      .select('tournament_id')
-      .eq('id', matchId)
-      .eq('tenant_id', ctx.tenantId)
-      .maybeSingle();
-
     if (matchForGuard?.tournament_id) {
       const { data: tournament } = await supabaseAdmin
         .from('tournaments')
@@ -258,6 +264,43 @@ async function handlePut(
       }
       return res.status(400).json({
         error: `Invalid status. Allowed values: ${VALID_MATCH_STATUSES.join(', ')}`,
+      });
+    }
+
+    // Réouverture en mode score (ex. `finished → pending` avec un score remis
+    // à zéro, ou `→ ongoing` avec un score en direct) : purge des reports
+    // capitaines AVANT l'écriture. Le score posé ici n'est pas final (statut
+    // reportable) ; sans la purge, deux anciens reports concordants
+    // l'écraseraient dès que la gagnante renvoie le sien. Un score posé avec
+    // un statut clos (défaut : finished) ne purge pas — il fait foi.
+    // Match `disputed` exclu : applyMatchScore le refusera juste après, et une
+    // purge suivie d'un refus effacerait les reports d'un litige en cours.
+    const purge =
+      matchForGuard?.status !== 'disputed' &&
+      matchTransitionPurgesReports(
+        matchForGuard?.status as string | undefined,
+        status as string | undefined
+      )
+        ? await purgeScoreReports('match', ctx.tenantId, matchId)
+        : null;
+    if (purge && !purge.ok) {
+      return res.status(500).json({
+        error: `${purge.error} Match non modifié.`,
+      });
+    }
+    if (purge?.ok && purge.purged.length > 0 && ctx?.staff?.id) {
+      await logStaffAction({
+        staff_id: ctx.staff.id,
+        action: 'update_match',
+        entity_type: 'match',
+        entity_id: matchId,
+        tournament_id: matchForGuard?.tournament_id ?? null,
+        payload: {
+          mode: 'score',
+          purged_reports: purge.purged,
+          from_status: matchForGuard?.status ?? null,
+          to_status: status,
+        },
       });
     }
 
@@ -499,6 +542,29 @@ async function handlePut(
     updatePayload.veto_locked_at = new Date().toISOString();
   }
 
+  // Réouverture d'un match clos ou en litige (`finished → pending` pour « faire
+  // rejouer », `cancelled → pending`…) : purge des reports capitaines AVANT
+  // l'écriture du statut. Sans elle, la capitaine gagnante renvoyait son report,
+  // qui « concordait » avec l'ancien report adverse, et le match repassait
+  // `finished` sur le résultat que le staff venait d'écarter (cf.
+  // utils/matches/scoreReports.ts). Échec de purge → rien n'est modifié.
+  let purgedReports: PurgedScoreReport[] | null = null;
+  if (
+    'status' in updatePayload &&
+    matchTransitionPurgesReports(
+      before.status as string | null,
+      updatePayload.status as string
+    )
+  ) {
+    const purge = await purgeScoreReports('match', ctx.tenantId, matchId);
+    if (!purge.ok) {
+      return res.status(500).json({
+        error: `${purge.error} Match non modifié.`,
+      });
+    }
+    purgedReports = purge.purged;
+  }
+
   const { data: updated, error: updErr } = await supabaseAdmin
     .from('matches')
     .update(updatePayload)
@@ -526,6 +592,7 @@ async function handlePut(
         before,
         after: updated,
         ...(warnings.length > 0 ? { warnings } : {}),
+        ...(purgedReports ? { purged_reports: purgedReports } : {}),
       },
     });
   }

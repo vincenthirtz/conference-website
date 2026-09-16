@@ -45,6 +45,7 @@ import {
 } from '@/utils/scrims/scrimResult';
 import { emitBotEvent } from '@/utils/botEvents';
 import { logger } from '@/utils/logger';
+import { isReportBeforeKickoff } from '@/utils/matches/scoreReports';
 
 /**
  * Un scrim clos ou annulé ne se re-rapporte pas sans le staff. `completed` en
@@ -104,7 +105,7 @@ export default withAuthRoute(async function handler(
 
   const { data: scrim, error: scrimErr } = await supabaseAdmin
     .from('scrims')
-    .select('id, status, team1_id, team2_id, name, ranked')
+    .select('id, status, team1_id, team2_id, name, ranked, scheduled_date')
     .eq('tenant_id', tenantId)
     .eq('id', scrimId)
     .is('deleted_at', null)
@@ -138,6 +139,25 @@ export default withAuthRoute(async function handler(
     return res.status(403).json({
       error: 'Ton équipe ne participe pas à ce scrim.',
       code: 'NOT_PARTICIPANT',
+    });
+  }
+
+  // Pas de report avant l'horaire planifié, sauf scrim lancé (`running`) —
+  // même garde que le report de match (MATCH_NOT_STARTED) : deux reports
+  // concordants sur un scrim de demain le closaient aujourd'hui, miroir noté et
+  // récompenses compris. Évaluée après le contrôle de participation : un tiers
+  // n'a pas à apprendre l'horaire par ce biais. Sans horaire : pas de garde.
+  if (
+    isReportBeforeKickoff({
+      status: scrim.status as string,
+      scheduledAt: scrim.scheduled_date as string | null,
+      startedStatus: 'running',
+    })
+  ) {
+    return res.status(409).json({
+      error:
+        "Le scrim n'a pas encore commencé : le score se rapporte après l'horaire prévu. S'il a été joué en avance, contacte le staff.",
+      code: 'SCRIM_NOT_STARTED',
     });
   }
 

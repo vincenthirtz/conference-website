@@ -5,7 +5,10 @@
 //
 //   - matchId, status, openedAt
 //   - reports : les deux reports de score (team1 + team2) avec qui les a
-//               poses, quand, et le score reporte
+//               poses, quand, et le score reporte. Peut etre VIDE sur une
+//               dispute resolue sans score ou annulee : le staff purge alors
+//               les reports pour qu'ils ne servent plus de vote a la reprise
+//               (cf. utils/matches/scoreReports.ts, trace dans staff_logs).
 //   - staffNote : texte de la decision finale (matches.dispute_resolution)
 //                 ou null si pas encore resolu
 //   - resolution : { resolvedAt, decidedScoreA, decidedScoreB } ou null

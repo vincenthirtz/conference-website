@@ -14,7 +14,8 @@
 //   resumeStatus?      : 'finished' (defaut) | 'walkover' | 'pending' | 'ongoing'
 //
 // Effets : update status, dispute_resolution/by/at, applique le score via
-// applyMatchScore (propage le bracket), log staff_logs.
+// applyMatchScore (propage le bracket), log staff_logs. Sans score (reprise
+// pending/ongoing), les reports capitaines sont purges avant la reouverture.
 
 import { z } from 'zod';
 import type { NextApiResponse } from 'next';
@@ -25,6 +26,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { applyMatchScore } from '@/utils/matches/applyScore';
 import { emitBotEvent } from '@/utils/botEvents';
 import { logger } from '@/utils/logger';
+import { purgeScoreReports } from '@/utils/matches/scoreReports';
 import { resolveDisputeQuerySchema } from '@/lib/apiContracts/bot/matches/[matchId]/resolve-dispute.query';
 
 const VALID_RESUME = new Set(['pending', 'ongoing', 'finished', 'walkover']);
@@ -226,6 +228,21 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
 
   // Cas 2 : pas de score override (resumeStatus pending/ongoing) — simple
   // update.
+  //
+  // Purge des reports capitaines AVANT la réouverture, comme le PATCH admin
+  // sans score : une dispute tranchée « à rejouer » depuis Discord laissait le
+  // report adverse en base, et la capitaine gagnante rétablissait le score
+  // écarté en renvoyant le sien (cf. utils/matches/scoreReports.ts). Si la
+  // purge échoue, la dispute reste ouverte.
+  const purge = await purgeScoreReports(
+    'match',
+    req.botContext.tenantId,
+    matchId
+  );
+  if (!purge.ok) {
+    return res.status(500).json({ error: `${purge.error} Dispute conservee.` });
+  }
+
   const { error: updErr } = await supabaseAdmin
     .from('matches')
     .update({
@@ -252,6 +269,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       resolution,
       resume_status: resumeStatus,
       applied_score: null,
+      purged_reports: purge.purged,
     },
   });
 

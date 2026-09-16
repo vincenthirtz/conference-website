@@ -4,6 +4,11 @@ post:
   tags:
     - bot/matches
   summary: Ferme une dispute en appliquant les scores definitifs decides par le staff.
+  description: |
+    Sans score ni forfait (reprise `pending`/`ongoing`), les reports de score
+    des deux capitaines sont purges AVANT la reouverture : un ancien report ne
+    peut plus finaliser le match. Si la purge echoue, la dispute est conservee
+    (500).
   operationId: botResolveMatchDispute
   parameters:
     - $ref: '#/components/parameters/IdempotencyKey'
