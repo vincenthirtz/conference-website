@@ -199,7 +199,7 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
                     onClick={() => setStatusFilter(tab.value)}
                     className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] ${
                       active
-                        ? 'bg-[var(--color-violet)] text-white'
+                        ? 'bg-[var(--color-violet-cta)] text-white'
                         : 'text-gray-300 hover:text-white'
                     }`}
                   >

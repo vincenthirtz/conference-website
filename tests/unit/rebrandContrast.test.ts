@@ -43,6 +43,16 @@ function ratio(a: string, b: string): number {
 const BG_DEEP = token('bg-deep'); // surface la plus sombre
 const WHITE = '#ffffff';
 
+/**
+ * Tokens de SURFACE : un fond qui porte du texte blanc.
+ *
+ * Ils existent parce qu'un même violet ne peut pas être à la fois lisible EN
+ * TEXTE sur --bg-deep et assez sombre pour porter du blanc — les deux seuils
+ * de 4,5:1 n'ont aucune valeur commune. Séparer les deux métiers est la seule
+ * issue ; ce garde-fou empêche qu'on les refusionne par mégarde.
+ */
+const SURFACE_UNDER_WHITE = ['color-violet-cta'];
+
 // Tokens de marque susceptibles d'être utilisés comme TEXTE sur fond sombre.
 const TEXT_ON_DARK = [
   'color-violet',
@@ -59,6 +69,14 @@ const TEXT_ON_DARK = [
 ];
 
 describe('rebrand — garde-fou contraste WCAG', () => {
+  it.each(SURFACE_UNDER_WHITE)(
+    '%s porte du texte blanc à AA (>= 4.5)',
+    (name) => {
+      const hex = token(name);
+      expect(ratio(WHITE, hex), `${name} = ${hex}`).toBeGreaterThanOrEqual(4.5);
+    }
+  );
+
   it.each(TEXT_ON_DARK)(
     '%s passe AA (≥4.5) comme texte sur --bg-deep',
     (name) => {

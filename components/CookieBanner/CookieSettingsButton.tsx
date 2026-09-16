@@ -16,11 +16,15 @@ export default function CookieSettingsButton() {
   }
 
   return (
+    // Pas d'`aria-label` : le texte visible EST le nom accessible, et il est
+    // déjà explicite. L'ancien libellé — « Gérer les préférences de cookies »
+    // — ne contenait pas le texte affiché « Gérer les cookies », si bien qu'une
+    // commande vocale prononçant ce qu'on lit à l'écran n'activait pas le
+    // bouton (audit Lighthouse `label-content-name-mismatch`).
     <button
       onClick={resetConsent}
       className="cookie-settings-btn"
       type="button"
-      aria-label={t.manageAria}
     >
       {t.manage}
     </button>

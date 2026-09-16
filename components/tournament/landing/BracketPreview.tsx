@@ -195,7 +195,7 @@ export default function BracketPreview({
         align="left"
         action={
           <Link href={ctaHref}>
-            <span className="inline-flex items-center gap-2 rounded-full bg-[var(--color-violet)] px-5 py-2.5 text-xs font-bold text-white transition-transform hover:scale-[1.03]">
+            <span className="inline-flex items-center gap-2 rounded-full bg-[var(--color-violet-cta)] px-5 py-2.5 text-xs font-bold text-white transition-transform hover:scale-[1.03]">
               {hasEliminationBracket ? t.bracketCta : t.bracketCtaSchedule}
               <svg
                 className="h-3.5 w-3.5"

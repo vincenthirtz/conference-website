@@ -83,7 +83,7 @@ function NewsCard({ item }: { item: HomeNewsItem }) {
       </div>
       <div className="flex flex-1 flex-col gap-2 p-5">
         {date && (
-          <span className="text-xs tracking-wide text-gray-500">{date}</span>
+          <span className="text-xs tracking-wide text-gray-400">{date}</span>
         )}
         <h3 className="text-balance text-[17px] font-bold leading-snug text-white">
           <Link

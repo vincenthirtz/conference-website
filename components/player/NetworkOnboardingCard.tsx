@@ -156,7 +156,7 @@ export default function NetworkOnboardingCard({ userId }: { userId: string }) {
             </div>
             <Link
               href={step.href}
-              className="flex-shrink-0 rounded-xl bg-[var(--color-violet)] px-4 py-2 text-xs font-semibold text-white transition hover:brightness-110"
+              className="flex-shrink-0 rounded-xl bg-[var(--color-violet-cta)] px-4 py-2 text-xs font-semibold text-white transition hover:brightness-110"
             >
               {step.cta}
             </Link>

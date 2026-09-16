@@ -262,7 +262,7 @@ export default function PublicNav({
           <Link
             href="/register"
             data-test="nav-Inscription"
-            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-[var(--color-violet)]/50 bg-[var(--color-violet)] px-4 py-1.5 text-[13px] font-semibold text-white shadow-[0_0_20px_-6px_rgba(178,75,224,0.7)] transition-all hover:bg-[var(--color-violet-deep)] hover:shadow-[0_0_24px_-4px_rgba(178,75,224,0.85)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-[var(--color-violet)]/50 bg-[var(--color-violet-cta)] px-4 py-1.5 text-[13px] font-semibold text-white shadow-[0_0_20px_-6px_rgba(178,75,224,0.7)] transition-all hover:bg-[var(--color-violet-deep)] hover:shadow-[0_0_24px_-4px_rgba(178,75,224,0.85)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
           >
             <span>{tNav.signup}</span>
           </Link>

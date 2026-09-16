@@ -338,7 +338,7 @@ function AxisTabs({
             onClick={() => onChange(tab.key)}
             className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] ${
               active
-                ? 'border-[var(--color-violet)] bg-[var(--color-violet)]/20 text-white'
+                ? 'border-[var(--color-violet)] bg-[var(--color-violet-cta)]/20 text-white'
                 : 'border-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-white'
             }`}
           >

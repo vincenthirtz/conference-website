@@ -32,5 +32,4 @@ export default {
   legalPrefix: 'Learn more in our',
   privacyPolicy: 'privacy policy',
   manage: 'Manage cookies',
-  manageAria: 'Manage cookie preferences',
 };

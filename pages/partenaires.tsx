@@ -142,7 +142,7 @@ function PartnersPage({ partners }: PartnersPageProps) {
           <div className="mt-6 flex flex-wrap items-center gap-4">
             <Link
               href="/partenaires/demande"
-              className="rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
+              className="rounded-full bg-[var(--color-violet-cta)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             >
               {t.ctaBecomePartner}
             </Link>
@@ -300,7 +300,7 @@ function PartnersPage({ partners }: PartnersPageProps) {
           <div className="mt-5 flex justify-center gap-3">
             <Link
               href="/partenaires/demande"
-              className="rounded-full bg-[var(--color-violet)] px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
+              className="rounded-full bg-[var(--color-violet-cta)] px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             >
               {t.makeRequest}
             </Link>

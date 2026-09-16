@@ -283,7 +283,7 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
                 onClick={() => setActiveTab(tab.key as typeof activeTab)}
                 className={`px-5 py-2.5 rounded-xl text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)] ${
                   activeTab === tab.key
-                    ? 'bg-[var(--color-violet)]/15 text-white border border-[var(--color-violet)]/60'
+                    ? 'bg-[var(--color-violet-cta)]/15 text-white border border-[var(--color-violet)]/60'
                     : 'text-neutral-400 hover:text-white hover:bg-white/5'
                 }`}
               >

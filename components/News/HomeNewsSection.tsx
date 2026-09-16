@@ -287,7 +287,7 @@ function FilterPill({
       onClick={onClick}
       className={`filter-pill px-3 py-1.5 rounded-full border text-xs uppercase tracking-[0.16em] transition-all duration-300 ${
         active
-          ? 'filter-pill--active border-[var(--color-violet)]/60 bg-[var(--color-violet)]/15 text-white'
+          ? 'filter-pill--active border-[var(--color-violet)]/60 bg-[var(--color-violet-cta)]/15 text-white'
           : 'border-white/15 bg-white/5 text-gray-200 hover:border-[var(--color-violet)]/40'
       }`}
     >

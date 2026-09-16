@@ -113,7 +113,7 @@ function GuidePage(): JSX.Element {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href={REGISTER_TEAM_HREF}
-              className="inline-flex items-center gap-2 rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
+              className="inline-flex items-center gap-2 rounded-full bg-[var(--color-violet-cta)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             >
               {t.createTeam}
               <span aria-hidden>→</span>
@@ -209,7 +209,7 @@ function GuidePage(): JSX.Element {
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <Link
               href={REGISTER_TEAM_HREF}
-              className="inline-flex items-center gap-2 rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-semibold text-white shadow transition hover:-translate-y-0.5 hover:bg-[var(--color-violet-deep)] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
+              className="inline-flex items-center gap-2 rounded-full bg-[var(--color-violet-cta)] px-6 py-3 text-sm font-semibold text-white shadow transition hover:-translate-y-0.5 hover:bg-[var(--color-violet-deep)] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             >
               {t.createTeam}
               <span aria-hidden>→</span>

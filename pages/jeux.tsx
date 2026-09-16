@@ -187,7 +187,7 @@ function GamesPage() {
           <div className="mt-6 flex flex-wrap items-center gap-4">
             <RegisterTeamCta
               label={t.ctaRegisterTeam}
-              className="rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
+              className="rounded-full bg-[var(--color-violet-cta)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             />
             <Link
               href="/tournaments"
@@ -575,7 +575,7 @@ function GamesPage() {
             </p>
             <Link
               href="/onboard"
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[var(--color-violet)] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[var(--color-violet-cta)] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             >
               <svg
                 aria-hidden
@@ -657,7 +657,7 @@ function GamesPage() {
           <div className="mt-5 flex flex-wrap justify-center gap-3">
             <Link
               href="/contact"
-              className="rounded-full bg-[var(--color-violet)] px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
+              className="rounded-full bg-[var(--color-violet-cta)] px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             >
               {t.ctaContact}
             </Link>

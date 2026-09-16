@@ -306,7 +306,7 @@ function LivePage({ channels, loadError }: Props) {
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="rounded-md bg-[var(--color-violet)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
+                className="rounded-md bg-[var(--color-violet-cta)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
               >
                 {t.retry}
               </button>
@@ -339,7 +339,7 @@ function LivePage({ channels, loadError }: Props) {
                 href={DISCORD_INVITE_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="group inline-flex items-center gap-2 rounded-full bg-[var(--color-violet)] px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-[var(--color-violet-deep)]/40 transition-all hover:-translate-y-0.5 hover:bg-[var(--color-violet-deep)] hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
+                className="group inline-flex items-center gap-2 rounded-full bg-[var(--color-violet-cta)] px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-[var(--color-violet-deep)]/40 transition-all hover:-translate-y-0.5 hover:bg-[var(--color-violet-deep)] hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
               >
                 {t.ctaButton}
                 <svg

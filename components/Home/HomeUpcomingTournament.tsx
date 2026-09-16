@@ -144,7 +144,7 @@ export default function TournamentCard({
             {!isRunning && (
               <Link
                 href="/team/create"
-                className="rounded-full bg-[var(--color-violet)] px-4 py-2 text-sm font-semibold text-white shadow transition hover:-translate-y-0.5 hover:bg-[var(--color-violet-deep)] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
+                className="rounded-full bg-[var(--color-violet-cta)] px-4 py-2 text-sm font-semibold text-white shadow transition hover:-translate-y-0.5 hover:bg-[var(--color-violet-deep)] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
               >
                 {t.register}
               </Link>

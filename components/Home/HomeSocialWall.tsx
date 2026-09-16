@@ -147,7 +147,7 @@ function SocialCard({ item }: { item: SocialFeedItem }) {
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <span className="text-xs tracking-wide text-gray-500">
+        <span className="text-xs tracking-wide text-gray-400">
           {[meta?.label, date].filter(Boolean).join(' · ')}
         </span>
         {item.text ? (

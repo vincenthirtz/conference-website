@@ -1014,7 +1014,7 @@ export default function PublicCreateTeamPage() {
                         state === 'done'
                           ? 'bg-[var(--color-green)] text-black'
                           : state === 'current'
-                            ? 'bg-[var(--color-violet)] text-white ring-2 ring-[var(--color-violet)]/40'
+                            ? 'bg-[var(--color-violet-cta)] text-white ring-2 ring-[var(--color-violet)]/40'
                             : 'border border-white/20 bg-white/5 text-gray-400'
                       }`}
                     >

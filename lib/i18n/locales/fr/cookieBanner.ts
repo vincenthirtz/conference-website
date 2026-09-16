@@ -32,5 +32,4 @@ export default ns('cookieBanner', {
   legalPrefix: 'En savoir plus dans notre',
   privacyPolicy: 'politique de confidentialité',
   manage: 'Gérer les cookies',
-  manageAria: 'Gérer les préférences de cookies',
 });

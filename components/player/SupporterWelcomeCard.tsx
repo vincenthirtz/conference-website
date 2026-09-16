@@ -142,7 +142,7 @@ export default function SupporterWelcomeCard() {
           // En inspection admin, le bouton est inerte : la route refuserait de
           // toute façon, autant ne pas le laisser croire le contraire.
           disabled={busy || readOnly}
-          className="rounded-xl bg-[var(--color-violet)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+          className="rounded-xl bg-[var(--color-violet-cta)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
         >
           {busy ? t.supporterWelcomeClaiming : t.supporterWelcomeCta}
         </button>

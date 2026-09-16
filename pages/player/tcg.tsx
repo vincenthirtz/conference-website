@@ -1319,7 +1319,7 @@ function PlayerTcg() {
                   <button
                     type="button"
                     onClick={goToPacks}
-                    className="min-h-11 rounded-xl bg-[var(--color-violet)]/30 px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--color-violet)]/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]"
+                    className="min-h-11 rounded-xl bg-[var(--color-violet-cta)]/30 px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--color-violet-cta)]/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]"
                   >
                     {t.collectionEmptyGoToPacks}
                   </button>

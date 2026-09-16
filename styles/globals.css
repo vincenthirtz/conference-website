@@ -199,6 +199,16 @@
    * ⚠ Hex ESTIMÉS depuis l'aperçu PNG — à confirmer contre le SVG du logo. */
   --color-violet-light: #cd85ec;
   --color-violet: #b24be0;
+  /* Violet des SURFACES qui portent du texte blanc (boutons, pastilles).
+     UN SEUL TOKEN NE PEUT PAS FAIRE LES DEUX MÉTIERS, c'est arithmétique :
+     du texte blanc sur --color-violet ne donne que 4,22:1, sous le 4,5:1 exigé
+     par WCAG AA ; l'assombrir assez pour y arriver le fait passer sous 4,5:1
+     dans l'autre sens, quand ce même violet sert de TEXTE sur --bg-deep (ce que
+     tests/unit/rebrandContrast.test.ts vérifie). Les deux contraintes n'ont
+     aucune valeur commune.
+     D'où ce second token, calé sur le pas 600 de l'échelle : 6,69:1 avec du
+     blanc. --color-violet reste le violet « de marque », utilisable en texte. */
+  --color-violet-cta: #8f21bf;
   --color-violet-deep: #6d1a9c;
   --color-green-light: #a6dd9a;
   --color-green: #7bc96a;

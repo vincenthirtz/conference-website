@@ -758,7 +758,7 @@ function ShareButtons({
       <button
         type="button"
         onClick={handleShare}
-        className="inline-flex items-center gap-2 rounded-md border border-[var(--color-violet)]/40 bg-[var(--color-violet)]/15 px-3 py-1.5 text-sm font-semibold text-[var(--color-violet-light)] transition-colors hover:border-[var(--color-violet)] hover:bg-[var(--color-violet)]/25 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
+        className="inline-flex items-center gap-2 rounded-md border border-[var(--color-violet)]/40 bg-[var(--color-violet-cta)]/15 px-3 py-1.5 text-sm font-semibold text-[var(--color-violet-light)] transition-colors hover:border-[var(--color-violet)] hover:bg-[var(--color-violet-cta)]/25 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
         aria-label={t.shareAriaLabel}
       >
         <svg
@@ -1337,7 +1337,7 @@ function NotFoundState() {
       </p>
       <Link
         href="/leaderboard"
-        className="rounded-md bg-[var(--color-violet)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
+        className="rounded-md bg-[var(--color-violet-cta)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
       >
         {t.viewLeaderboard}
       </Link>
@@ -1369,7 +1369,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
       <button
         type="button"
         onClick={onRetry}
-        className="rounded-md bg-[var(--color-violet)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
+        className="rounded-md bg-[var(--color-violet-cta)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
       >
         {t.retry}
       </button>

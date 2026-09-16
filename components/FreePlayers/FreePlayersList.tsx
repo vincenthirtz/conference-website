@@ -104,7 +104,7 @@ export default function FreePlayersList({
             aria-pressed={roleFilter === null}
             className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
               roleFilter === null
-                ? 'border-[var(--color-violet-light)] bg-[var(--color-violet)]/30 text-white'
+                ? 'border-[var(--color-violet-light)] bg-[var(--color-violet-cta)]/30 text-white'
                 : 'border-white/15 text-gray-300 hover:border-white/30'
             }`}
           >
@@ -118,7 +118,7 @@ export default function FreePlayersList({
               aria-pressed={roleFilter === role}
               className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
                 roleFilter === role
-                  ? 'border-[var(--color-violet-light)] bg-[var(--color-violet)]/30 text-white'
+                  ? 'border-[var(--color-violet-light)] bg-[var(--color-violet-cta)]/30 text-white'
                   : 'border-white/15 text-gray-300 hover:border-white/30'
               }`}
             >

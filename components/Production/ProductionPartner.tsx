@@ -33,7 +33,7 @@ function ProductionPartner({ variant = 'full', className = '' }: Props) {
         target="_blank"
         rel="noopener noreferrer"
         aria-label={format(t.linkAria, { network: 'Twitch' })}
-        className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-[var(--color-violet-light)]/60 hover:bg-[var(--color-violet)]/15 hover:text-[var(--color-violet-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
+        className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-[var(--color-violet-light)]/60 hover:bg-[var(--color-violet-cta)]/15 hover:text-[var(--color-violet-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
       >
         <TwitchIcon className="h-4 w-4" />
         {t.twitchCta}

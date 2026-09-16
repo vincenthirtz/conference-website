@@ -242,7 +242,7 @@ function Inscription2026Page({
             ) : (
               <Link
                 href={REGISTER_HREF}
-                className="rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-[var(--color-violet)]/30 transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
+                className="rounded-full bg-[var(--color-violet-cta)] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-[var(--color-violet)]/30 transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
               >
                 {t.ctaRegister} <span aria-hidden="true">↗</span>
               </Link>
@@ -370,7 +370,7 @@ function Inscription2026Page({
             </div>
             <Link
               href={tournamentFull ? '/team/create' : REGISTER_HREF}
-              className="inline-flex items-center justify-center rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-[var(--color-violet)]/30 transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
+              className="inline-flex items-center justify-center rounded-full bg-[var(--color-violet-cta)] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-[var(--color-violet)]/30 transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
             >
               {tournamentFull ? t.ctaCreateTeam : t.ctaRegister}{' '}
               <span aria-hidden="true">↗</span>

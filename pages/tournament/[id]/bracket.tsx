@@ -257,7 +257,7 @@ export default function TournamentBracketPage({
               <p className="text-sm text-gray-400 mb-4">{t.emptyBody}</p>
               <Link
                 href={`${tournamentPath}/matches`}
-                className="inline-flex items-center gap-2 rounded-full bg-[var(--color-violet)] hover:bg-[var(--color-violet-deep)] px-4 py-2 text-sm font-medium text-white transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--color-violet-cta)] hover:bg-[var(--color-violet-deep)] px-4 py-2 text-sm font-medium text-white transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
               >
                 {t.viewMatches}
               </Link>

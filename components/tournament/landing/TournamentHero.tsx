@@ -178,7 +178,7 @@ export default function TournamentHero({
                 </Link>
               ) : (
                 <Link href={`${tournamentPath}/bracket`}>
-                  <span className="tl-cta-glow inline-flex items-center gap-2 rounded-full bg-[var(--color-violet)] px-7 py-3 text-sm font-bold text-white transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]">
+                  <span className="tl-cta-glow inline-flex items-center gap-2 rounded-full bg-[var(--color-violet-cta)] px-7 py-3 text-sm font-bold text-white transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]">
                     {t.ctaViewBracket}
                     <ArrowGlyph />
                   </span>

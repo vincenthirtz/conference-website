@@ -111,7 +111,7 @@ export default function BattlenetLoginPage() {
                 <p className="text-xs text-gray-400">{t.singleUseNote}</p>
                 <Link
                   href="/login"
-                  className="block w-full rounded-xl bg-[var(--color-violet)] py-2 text-center text-sm font-semibold text-white transition hover:brightness-110"
+                  className="block w-full rounded-xl bg-[var(--color-violet-cta)] py-2 text-center text-sm font-semibold text-white transition hover:brightness-110"
                 >
                   {t.backToLogin}
                 </Link>

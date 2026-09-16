@@ -365,7 +365,7 @@ function TcgGuide(): JSX.Element {
           <p className="mt-1 text-sm text-gray-300">{t.ctaBody}</p>
           <Link
             href="/player/tcg"
-            className="mt-4 inline-flex items-center rounded-xl bg-[var(--color-violet)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+            className="mt-4 inline-flex items-center rounded-xl bg-[var(--color-violet-cta)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
           >
             {t.ctaButton}
           </Link>

@@ -263,7 +263,7 @@ export default function HomeSpotlight({
             {!isRunning && !isFull && (
               <Link
                 href="/team/create"
-                className="rounded-full bg-[var(--color-violet)] px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:-translate-y-0.5 hover:bg-[var(--color-violet-deep)] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] motion-reduce:transform-none"
+                className="rounded-full bg-[var(--color-violet-cta)] px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:-translate-y-0.5 hover:bg-[var(--color-violet-deep)] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] motion-reduce:transform-none"
               >
                 {t.spotCtaRegister}
               </Link>
@@ -272,7 +272,7 @@ export default function HomeSpotlight({
               <>
                 <Link
                   href="/scrim"
-                  className="rounded-full bg-[var(--color-violet)] px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:-translate-y-0.5 hover:bg-[var(--color-violet-deep)] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] motion-reduce:transform-none"
+                  className="rounded-full bg-[var(--color-violet-cta)] px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:-translate-y-0.5 hover:bg-[var(--color-violet-deep)] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] motion-reduce:transform-none"
                 >
                   {t.spotCtaScrim}
                 </Link>

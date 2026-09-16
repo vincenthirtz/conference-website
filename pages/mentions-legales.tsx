@@ -50,7 +50,7 @@ function MentionsLegalesPage() {
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
             <a
               href={`mailto:${contactEmail}?subject=Question%20mentions%20l%C3%A9gales`}
-              className="rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
+              className="rounded-full bg-[var(--color-violet-cta)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
             >
               {t.writeUs}
             </a>

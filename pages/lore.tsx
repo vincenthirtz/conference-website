@@ -249,7 +249,7 @@ export default function LorePage({ media }: LorePageProps) {
                 onClick={() => setActiveTab(tab.key)}
                 className={`px-5 py-2.5 rounded-xl text-sm font-medium transition ${
                   activeTab === tab.key
-                    ? 'border border-[var(--color-violet)]/60 bg-[var(--color-violet)]/15 text-white'
+                    ? 'border border-[var(--color-violet)]/60 bg-[var(--color-violet-cta)]/15 text-white'
                     : 'text-neutral-400 hover:text-white hover:bg-white/5'
                 }`}
               >

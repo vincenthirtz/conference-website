@@ -438,7 +438,7 @@ export default function TournamentMatchesPage({
                     onClick={() => changeViewMode('agenda')}
                     className={`flex items-center gap-1 px-3 py-1.5 text-[11px] transition-colors ${
                       viewMode === 'agenda'
-                        ? 'bg-[var(--color-violet)] text-black font-semibold'
+                        ? 'bg-[var(--color-violet-cta)] text-black font-semibold'
                         : 'bg-transparent text-gray-300 hover:text-white'
                     }`}
                   >
@@ -464,7 +464,7 @@ export default function TournamentMatchesPage({
                     onClick={() => changeViewMode('month')}
                     className={`flex items-center gap-1 px-3 py-1.5 text-[11px] transition-colors border-l border-white/15 ${
                       viewMode === 'month'
-                        ? 'bg-[var(--color-violet)] text-black font-semibold'
+                        ? 'bg-[var(--color-violet-cta)] text-black font-semibold'
                         : 'bg-transparent text-gray-300 hover:text-white'
                     }`}
                   >
@@ -490,7 +490,7 @@ export default function TournamentMatchesPage({
                     onClick={() => changeViewMode('list')}
                     className={`flex items-center gap-1 px-3 py-1.5 text-[11px] transition-colors ${
                       viewMode === 'list'
-                        ? 'bg-[var(--color-violet)] text-black font-semibold'
+                        ? 'bg-[var(--color-violet-cta)] text-black font-semibold'
                         : 'bg-transparent text-gray-300 hover:text-white'
                     }`}
                   >

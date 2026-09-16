@@ -1218,7 +1218,7 @@ export default function TeamPage({
             // négociation, notifications) plutôt que sur le formulaire public.
             <Link
               href={`/player/requests?tab=scrim&team=${encodeURIComponent(team.id)}`}
-              className="flex-shrink-0 px-4 py-2 rounded-lg bg-[var(--color-violet)] hover:brightness-110 text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
+              className="flex-shrink-0 px-4 py-2 rounded-lg bg-[var(--color-violet-cta)] hover:brightness-110 text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
             >
               {t.scrimCtaBtnConnected}
             </Link>
@@ -1226,7 +1226,7 @@ export default function TeamPage({
             <button
               type="button"
               onClick={() => setScrimDialogOpen(true)}
-              className="flex-shrink-0 px-4 py-2 rounded-lg bg-[var(--color-violet)] hover:brightness-110 text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
+              className="flex-shrink-0 px-4 py-2 rounded-lg bg-[var(--color-violet-cta)] hover:brightness-110 text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
             >
               {t.scrimCtaBtn}
             </button>

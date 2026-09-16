@@ -129,7 +129,7 @@ function EspaceCapitainePage() {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/player"
-              className="rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-[var(--color-violet)]/30 transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
+              className="rounded-full bg-[var(--color-violet-cta)] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-[var(--color-violet)]/30 transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
             >
               {t.heroCtaSpace}
             </Link>
@@ -265,7 +265,7 @@ function EspaceCapitainePage() {
             </div>
             <Link
               href="/recrutement"
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--color-violet)]/50 bg-[var(--color-violet)]/15 px-6 py-3 text-sm font-bold text-white transition hover:border-[var(--color-violet)] hover:bg-[var(--color-violet)]/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--color-violet)]/50 bg-[var(--color-violet-cta)]/15 px-6 py-3 text-sm font-bold text-white transition hover:border-[var(--color-violet)] hover:bg-[var(--color-violet-cta)]/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
             >
               {t.recruitCta}
               <span aria-hidden>→</span>
@@ -285,7 +285,7 @@ function EspaceCapitainePage() {
             </div>
             <Link
               href="/player"
-              className="inline-flex items-center justify-center rounded-full bg-[var(--color-violet)] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-[var(--color-violet)]/30 transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
+              className="inline-flex items-center justify-center rounded-full bg-[var(--color-violet-cta)] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-[var(--color-violet)]/30 transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
             >
               {t.ctaButton}
             </Link>

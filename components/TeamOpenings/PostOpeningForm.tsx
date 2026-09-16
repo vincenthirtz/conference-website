@@ -245,7 +245,7 @@ export default function PostOpeningForm({
                 aria-pressed={active}
                 className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
                   active
-                    ? 'border-[var(--color-violet-light)] bg-[var(--color-violet)]/30 text-white'
+                    ? 'border-[var(--color-violet-light)] bg-[var(--color-violet-cta)]/30 text-white'
                     : 'border-white/15 bg-white/[0.03] text-gray-300 hover:border-white/30'
                 }`}
               >

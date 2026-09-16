@@ -386,7 +386,7 @@ export default function TcgShowcaseEditor({
               onClick={() => void save(enabled, selected)}
               disabled={busy || !dirty}
               aria-busy={busy}
-              className="min-h-11 rounded-full bg-[var(--color-violet)]/30 px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--color-violet)]/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)] disabled:opacity-50"
+              className="min-h-11 rounded-full bg-[var(--color-violet-cta)]/30 px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--color-violet-cta)]/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)] disabled:opacity-50"
             >
               {busy ? t.saving : t.save}
             </button>
