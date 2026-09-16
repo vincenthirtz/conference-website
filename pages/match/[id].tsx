@@ -752,7 +752,7 @@ export default function MatchPage({ match, lineups, mvp }: Props) {
                   label={t.infoShareVisual}
                   value={
                     <a
-                      href={`/api/og/match/${encodeURIComponent(match.id)}?format=story`}
+                      href={`/api/og/match/${encodeURIComponent(match.id)}/story`}
                       target="_blank"
                       rel="noreferrer"
                       className="text-pink-300 hover:text-pink-100"

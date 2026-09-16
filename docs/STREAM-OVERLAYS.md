@@ -69,16 +69,23 @@ y voit l'encart qui nomme l'offre, plutôt qu'un panneau absent.
 
 ## Affiche de match
 
-`GET /api/og/match/<uuid>` rend l'affiche du match en PNG : 1200×630 par défaut
-(c'est l'`og:image` de la page du match), `?format=story` en 1080×1920 pour une
-story. La page publique du match propose le lien sous « Visuel ». Aucun logo
-distant n'est chargé (un fetch raté casserait l'image) : les équipes sont
+`GET /api/og/match/<uuid>` rend l'affiche du match en PNG (1200×630 — c'est
+l'`og:image` de la page du match), et `GET /api/og/match/<uuid>/story` la rend
+en 1080×1920. La page publique du match propose le lien sous « Visuel ». Aucun
+logo distant n'est chargé (un fetch raté casserait l'image) : les équipes sont
 dessinées avec leurs initiales.
+
+⚠️ **Deux chemins, pas un paramètre.** Sur Netlify, la clé de cache CDN d'une
+route Next ne varie que sur `__nextDataReq` et `_rsc` (en-tête `netlify-vary`) :
+tout autre paramètre de query est ignoré, donc la première variante mise en
+cache est servie à toutes les autres. La première version utilisait
+`?format=story` et renvoyait la carte 1200×630 en production, y compris avec un
+paramètre anti-cache. Un format qui change la réponse doit changer l'URL.
 
 ## Vérifier à la main
 
 ```bash
 npm run dev
 open 'http://localhost:3000/overlay/match/next?tournament=ow-womens-cup-2026&source=scoreboard'
-open 'http://localhost:3000/api/og/match/<uuid>?format=story'
+open 'http://localhost:3000/api/og/match/<uuid>/story'
 ```
