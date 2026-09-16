@@ -60,6 +60,11 @@ const communityLinks = (t: FooterDict): FooterLink[] => [
   { label: t.donate, href: '/don', Icon: DonationIcon },
   { label: t.support, href: '/support', Icon: SupportIcon },
   { label: t.organisers, href: '/organisateurs', Icon: CodeIcon },
+  {
+    label: t.womenGuide,
+    href: '/organisateurs/tournoi-feminin-ou-mixte',
+    Icon: RulesIcon,
+  },
 ];
 
 const legalLinks = (t: FooterDict): FooterLink[] => [

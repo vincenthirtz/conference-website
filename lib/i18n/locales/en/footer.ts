@@ -24,6 +24,7 @@ export default {
   donate: 'Make a donation',
   support: 'Report / Support',
   organisers: 'Run a tournament',
+  womenGuide: 'Guide: women’s or mixed tournament',
   contact: 'Contact us',
   legal: 'Legal notice',
   terms: 'Terms of sale',

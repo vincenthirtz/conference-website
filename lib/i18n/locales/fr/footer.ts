@@ -25,6 +25,12 @@ export default ns('footer', {
   donate: 'Faire un don',
   support: 'Signalement / Support',
   organisers: 'Organiser un tournoi',
+  // Le guide de la niche, listé À CÔTÉ de la page des offres et non à sa place :
+  // « Organiser un tournoi » mène au produit (ouvert à tout organisateur, y
+  // compris les circuits d'autres jeux) ; ce lien-ci mène au mode d'emploi
+  // féminin et mixte. Renommer le premier aurait donné deux entrées au même
+  // titre pour deux pages différentes.
+  womenGuide: 'Guide : tournoi féminin ou mixte',
   contact: 'Nous contacter',
   legal: 'Mentions légales',
   terms: 'Conditions de vente',
