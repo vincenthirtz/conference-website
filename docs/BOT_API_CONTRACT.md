@@ -921,7 +921,7 @@ code. Les tableaux par domaine ci-dessous gardent le contexte rédigé ; un test
 ce tableau.
 
 <!-- BEGIN GENERATED: bot-inventory -->
-_Tableau généré depuis les options `withBotRoute` des handlers — ne pas éditer à la main : `npm run contract:bot-inventory`. 91 routes._
+_Tableau généré depuis les options `withBotRoute` des handlers — ne pas éditer à la main : `npm run contract:bot-inventory`. 92 routes._
 
 | Route | Méthodes | Idem. | Rate-key | Plafond | Portée / plan |
 | --- | --- | --- | --- | --- | --- |
@@ -939,6 +939,7 @@ _Tableau généré depuis les options `withBotRoute` des handlers — ne pas éd
 | [`events/[id]/ack.ts`](../pages/api/bot/v1/events/[id]/ack.ts) | POST | oui | `bot-events-ack` | 120/min | `crossTenant` |
 | [`events/handled.ts`](../pages/api/bot/v1/events/handled.ts) | POST | — | `bot-events-handled` | 240/min | — |
 | [`events/pending.ts`](../pages/api/bot/v1/events/pending.ts) | GET | — | `bot-events-pending` | 60/min | `crossTenant` |
+| [`free-players/profile.ts`](../pages/api/bot/v1/free-players/profile.ts) | POST | oui | `bot-free-players-profile` | 20/min | — |
 | [`free-players/sync.ts`](../pages/api/bot/v1/free-players/sync.ts) | POST | oui | `bot-free-players-sync` | 30/min | — |
 | [`invitations/[demandeId].ts`](../pages/api/bot/v1/invitations/[demandeId].ts) | POST | oui | `bot-invitations-action` | 30/min | — |
 | [`leaderboards/teams.ts`](../pages/api/bot/v1/leaderboards/teams.ts) | GET | — | `bot-leaderboards-teams` | 30/min | — |

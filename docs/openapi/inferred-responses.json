@@ -1198,6 +1198,38 @@
     ]
    }
   },
+  "DELETE /api/admin/tenants/{id}/api-tokens": {
+   "200": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "revokedAt": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "id",
+       "revokedAt"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "id": {},
+       "revokedAt": {}
+      },
+      "required": [
+       "id",
+       "revokedAt"
+      ]
+     }
+    ]
+   }
+  },
   "DELETE /api/admin/tenants/{id}/invitations/{invitationId}": {
    "200": {
     "type": "object",
@@ -12915,6 +12947,178 @@
     ]
    }
   },
+  "GET /api/admin/tcg/catalogue": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "cards": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "key": {
+         "type": "string"
+        },
+        "kind": {
+         "type": "string",
+         "enum": [
+          "fanart",
+          "map",
+          "player",
+          "team"
+         ]
+        },
+        "id": {
+         "type": "string"
+        },
+        "label": {
+         "type": "string"
+        },
+        "imageUrl": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "owned": {
+         "type": "boolean"
+        },
+        "holders": {
+         "type": "number"
+        }
+       },
+       "required": [
+        "key",
+        "kind",
+        "id",
+        "label",
+        "imageUrl",
+        "owned",
+        "holders"
+       ]
+      }
+     },
+     "total": {
+      "type": "number"
+     },
+     "ownedCount": {
+      "type": "number"
+     },
+     "userId": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "cards",
+     "total",
+     "ownedCount",
+     "userId"
+    ]
+   }
+  },
+  "GET /api/admin/tcg/engagement": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "players": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "userId": {
+         "type": "string"
+        },
+        "displayName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "pending": {
+         "type": "number"
+        },
+        "opened": {
+         "type": "number"
+        },
+        "oldestPendingAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "lastOpenedAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "neverOpened": {
+         "type": "boolean"
+        }
+       },
+       "required": [
+        "userId",
+        "displayName",
+        "pending",
+        "opened",
+        "oldestPendingAt",
+        "lastOpenedAt",
+        "neverOpened"
+       ]
+      }
+     },
+     "weekly": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "week": {
+         "type": "string"
+        },
+        "granted": {
+         "type": "number"
+        },
+        "opened": {
+         "type": "number"
+        }
+       },
+       "required": [
+        "week",
+        "granted",
+        "opened"
+       ]
+      }
+     },
+     "totals": {
+      "type": "object",
+      "properties": {
+       "granted": {
+        "type": "number"
+       },
+       "opened": {
+        "type": "number"
+       },
+       "pending": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "granted",
+       "opened",
+       "pending"
+      ]
+     }
+    },
+    "required": [
+     "players",
+     "weekly",
+     "totals"
+    ]
+   }
+  },
   "GET /api/admin/tcg/fanart": {
    "200": {
     "type": "object",
@@ -15861,6 +16065,15 @@
           "hasEmailSender": {
            "type": "boolean"
           },
+          "apiTokenCount": {
+           "type": "number"
+          },
+          "apiTokenSoonestExpiry": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
           "botEnabled": {
            "type": "boolean"
           },
@@ -15890,6 +16103,8 @@
           "staffCount",
           "hasBotSecrets",
           "hasEmailSender",
+          "apiTokenCount",
+          "apiTokenSoonestExpiry",
           "botEnabled",
           "blockers"
          ]
@@ -16108,6 +16323,46 @@
      "tenant",
      "guilds",
      "staff"
+    ]
+   }
+  },
+  "GET /api/admin/tenants/{id}/api-tokens": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "tokens": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {},
+        "name": {},
+        "token_prefix": {},
+        "scopes": {},
+        "created_at": {},
+        "last_used_at": {},
+        "revoked_at": {},
+        "expires_at": {},
+        "comp": {},
+        "comp_note": {}
+       },
+       "required": [
+        "id",
+        "name",
+        "token_prefix",
+        "scopes",
+        "created_at",
+        "last_used_at",
+        "revoked_at",
+        "expires_at",
+        "comp",
+        "comp_note"
+       ]
+      }
+     }
+    },
+    "required": [
+     "tokens"
     ]
    }
   },
@@ -16702,7 +16957,7 @@
      "volumes": {
       "type": "object",
       "properties": {
-       "tournaments": {
+       "teams": {
         "type": [
          "number",
          "null"
@@ -16714,7 +16969,7 @@
          "null"
         ]
        },
-       "teams": {
+       "tournaments": {
         "type": [
          "number",
          "null"
@@ -16734,9 +16989,9 @@
        }
       },
       "required": [
-       "tournaments",
-       "matches",
        "teams",
+       "matches",
+       "tournaments",
        "members",
        "openTickets"
       ]
@@ -21553,6 +21808,89 @@
     "required": [
      "user",
      "team"
+    ]
+   }
+  },
+  "GET /api/admin/users/{userId}/staff": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "staff": {
+      "type": "object",
+      "properties": {
+       "id": {},
+       "authUserId": {},
+       "email": {},
+       "displayName": {},
+       "role": {},
+       "isActive": {},
+       "isPoleAdmin": {},
+       "createdAt": {}
+      },
+      "required": [
+       "id",
+       "authUserId",
+       "email",
+       "displayName",
+       "role",
+       "isActive",
+       "isPoleAdmin",
+       "createdAt"
+      ]
+     },
+     "spaces": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "tenantId": {
+         "type": "string"
+        },
+        "name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "slug": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "isActive": {
+         "type": [
+          "boolean",
+          "null"
+         ]
+        },
+        "role": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "since": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "tenantId",
+        "name",
+        "slug",
+        "isActive",
+        "role",
+        "since"
+       ]
+      }
+     }
+    },
+    "required": [
+     "staff",
+     "spaces"
     ]
    }
   },
@@ -47368,14 +47706,39 @@
      "tokenMeta": {
       "type": "object",
       "properties": {
-       "id": {},
-       "name": {},
-       "token_prefix": {},
-       "scopes": {},
-       "created_at": {},
-       "expires_at": {},
-       "comp": {},
-       "comp_note": {}
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "token_prefix": {
+        "type": "string"
+       },
+       "scopes": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "created_at": {
+        "type": "string"
+       },
+       "expires_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "comp": {
+        "type": "boolean"
+       },
+       "comp_note": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
       },
       "required": [
        "id",
@@ -54766,6 +55129,68 @@
     ]
    }
   },
+  "POST /api/admin/tenants/{id}/api-tokens": {
+   "201": {
+    "type": "object",
+    "properties": {
+     "token": {
+      "type": "string"
+     },
+     "tokenMeta": {
+      "type": "object",
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "token_prefix": {
+        "type": "string"
+       },
+       "scopes": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "created_at": {
+        "type": "string"
+       },
+       "expires_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "comp": {
+        "type": "boolean"
+       },
+       "comp_note": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "id",
+       "name",
+       "token_prefix",
+       "scopes",
+       "created_at",
+       "expires_at",
+       "comp",
+       "comp_note"
+      ]
+     }
+    },
+    "required": [
+     "token",
+     "tokenMeta"
+    ]
+   }
+  },
   "POST /api/admin/tenants/{id}/domain": {
    "200": {
     "type": "object",
@@ -57669,6 +58094,21 @@
        "status"
       ]
      }
+    ]
+   }
+  },
+  "POST /api/bot/v1/free-players/profile": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "ok": {
+      "type": "boolean"
+     },
+     "id": {}
+    },
+    "required": [
+     "ok",
+     "id"
     ]
    }
   },
