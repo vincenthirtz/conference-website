@@ -1,11 +1,15 @@
 // pages/api/player/data-export.ts
 // GET : exporte toutes les données personnelles de l'utilisateur (droit d'accès RGPD)
+//
+// Les tables exportées viennent du registre `utils/player/personalDataTables.ts`,
+// le même que lit la suppression de compte : ce que la joueuse télécharge est
+// exactement ce que la suppression traitera, et chaque section dit ce qu'il en
+// adviendra (`on_account_deletion`). Tous les tenants, comme la suppression.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { exportPersonalData } from '@/utils/player/exportPersonalData';
 
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
@@ -22,35 +26,7 @@ export default withAuthRoute(async function handler(
   )
     return;
 
-  const userId = user.id;
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: userId });
-
-  // Collect all user data in parallel
-  const [teamMembership, demandes, staffEntry] = await Promise.all([
-    // Team membership + team info
-    supabaseAdmin
-      .from('team_members')
-      // La date d'entrée dans l'équipe est `created_at` ; `joined_at` n'existe
-      // pas, et la citer faisait échouer TOUT l'export (PostgREST 42703).
-      .select('id, role, created_at, team:teams(id, name, short_name)')
-      .eq('user_id', userId)
-      .eq('tenant_id', tenantId),
-
-    // All demandes (requests)
-    supabaseAdmin
-      .from('demandes')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false }),
-
-    // Staff entry if any
-    supabaseAdmin
-      .from('staff')
-      .select('id, role, created_at')
-      .eq('auth_user_id', userId)
-      .maybeSingle(),
-  ]);
+  const { tables, not_exported } = await exportPersonalData(user.id);
 
   const exportData = {
     exported_at: new Date().toISOString(),
@@ -63,9 +39,13 @@ export default withAuthRoute(async function handler(
       battle_tag: user.user_metadata?.battle_tag ?? null,
       role: user.user_metadata?.role ?? null,
     },
-    team_membership: teamMembership.data ?? [],
-    demandes: demandes.data ?? [],
-    staff: staffEntry.data ?? null,
+    tables,
+    not_exported,
+    // Alias de l'ancien format (avant le registre), gardés pour les clients
+    // et tests qui les lisent. Mêmes lignes que `tables.<table>.rows`.
+    team_membership: tables.team_members?.rows ?? [],
+    demandes: tables.demandes?.rows ?? [],
+    staff: tables.staff?.rows[0] ?? null,
   };
 
   res.setHeader('Content-Type', 'application/json');

@@ -67,21 +67,21 @@ export default ns('playerProfile', {
   exporting: 'Export en cours...',
   downloadData: 'Télécharger mes données',
   exportConfirmText:
-    'contenant toutes tes informations personnelles (compte, équipes, demandes) sera téléchargé.',
+    'sera téléchargé : tes données table par table (compte, équipes, demandes, classement, TCG, pronostics, préférences…), avec pour chacune ce que deviendrait la suppression de ton compte. Les secrets (jeton de calendrier, clés de notification) n’y figurent pas.',
   aFile: 'Un fichier',
   confirmDownload: 'Confirmer le téléchargement',
   cancel: 'Annuler',
   dataHelp:
-    "Récupère toutes tes informations personnelles au format JSON (droit d'accès RGPD).",
+    "Récupère au format JSON les données liées à ton compte (droit d'accès RGPD).",
   deleteAccount: 'Supprimer mon compte',
   deleteWarningStart: 'Cette action est',
   deleteWarningBold: 'irréversible',
   deleteWarningEnd:
-    '. Toutes tes données, ton appartenance à une équipe et tes demandes seront définitivement supprimées.',
+    '. Sont supprimés : ton compte, tes équipes et demandes, ta photo de carte, ta collection, tes pièces, tes pronostics, tes jetons de calendrier et tes préférences. Tes fan arts sont retirés et leurs fichiers effacés.',
   deleting: 'Suppression...',
   confirmDelete: 'Confirmer la suppression',
   deleteHelp:
-    "Droit à l'oubli RGPD — ton compte et toutes tes données seront supprimés définitivement.",
+    "Droit à l'oubli RGPD. Ce qui fait aussi partie de l'histoire des autres reste, sans ton nom : ta ligne au classement (affichée « Joueuse retirée »), tes matchs, tes échanges de cartes et les exemplaires de ta carte déjà collectionnés, qui s'affichent sans photo. Tes signalements au support et ta fiche d'adhérente sont conservés par l'association, détachés de ton compte.",
   currentPasswordLabel: 'Mot de passe actuel',
   currentPasswordPlaceholder: 'Ton mot de passe actuel',
   wrongCurrentPassword: 'Mot de passe actuel incorrect.',

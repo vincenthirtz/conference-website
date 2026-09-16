@@ -2,6 +2,12 @@ delete:
   tags:
     - public/auth
   summary: Suppression definitive du compte joueur (RGPD).
+  description: >-
+    Applique le registre utils/player/personalDataTables.ts sur tous les
+    tenants AVANT de supprimer le compte auth : fichiers TCG retires du bucket
+    public (un echec de stockage ne bloque pas, il est journalise), puis lignes
+    supprimees ou anonymisees. Un echec d'ecriture en base rend 500 sans
+    supprimer le compte, pour qu'un nouvel essai retrouve toutes ses lignes.
   operationId: playerDeleteAccount
   security:
     - PlayerBearer: []
@@ -12,8 +18,22 @@ delete:
         application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: Un compte owner ne peut pas se supprimer lui-meme.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     '409':
       description: Sortie bloquee (ex. capitaine d'une equipe active).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    '500':
+      description: >-
+        Nettoyage des donnees impossible (code `personal_data_erase_failed`,
+        compte intact) ou suppression du compte auth en echec.
       content:
         application/json:
           schema:

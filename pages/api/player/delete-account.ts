@@ -1,11 +1,24 @@
 // pages/api/player/delete-account.ts
 // DELETE : l'utilisateur supprime définitivement son propre compte (droit à l'oubli RGPD)
+//
+// Ce que « supprimer » veut dire table par table n'est PAS écrit ici : c'est le
+// registre `utils/player/personalDataTables.ts`, que l'export lit aussi. Avant
+// lui, cette route ne nettoyait que `staff`, `team_members` et `demandes`, et
+// la photo TCG d'une joueuse restait dans le bucket public après son départ.
+//
+// ORDRE : registre (fichiers puis lignes) → `deleteUser` → email. Tout ce qui
+// référence l'utilisatrice passe AVANT `deleteUser`, sans quoi l'identifiant
+// servant à retrouver ses lignes sans clé étrangère disparaîtrait en route.
+// L'email « compte supprimé » part APRÈS : il ne doit pas annoncer une
+// suppression qui vient d'échouer.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { sendAccountDeletedEmail } from '@/utils/email';
 import { withAuthRoute } from '@/utils/staff';
+import { erasePersonalData } from '@/utils/player/erasePersonalData';
+import { revalidatePlayerCard } from '@/utils/tcg/revalidatePlayerCard';
 
 import { logger } from '../../../utils/logger';
 export default withAuthRoute(async function handler(
@@ -44,23 +57,15 @@ export default withAuthRoute(async function handler(
     });
   }
 
-  // Remove staff entry if exists (caster, manager, admin)
-  if (staffEntry) {
-    await supabaseAdmin.from('staff').delete().eq('auth_user_id', userId);
-  }
-
-  // Remove team memberships — droit a l'oubli RGPD : on supprime sur TOUS les
-  // tenants (delibere : si l'user a joue sur 2 tenants, on doit nettoyer les
-  // deux). Pas de filtre tenant_id.
-  await supabaseAdmin.from('team_members').delete().eq('user_id', userId);
-
-  // Remove demandes — meme logique, cross-tenant.
-  await supabaseAdmin.from('demandes').delete().eq('user_id', userId);
-
-  // Send account deleted email (non-blocking)
-  if (user.email) {
-    sendAccountDeletedEmail(user.email).catch((err) => {
-      logger.error('[player/delete-account] email error:', err);
+  // Un échec de FICHIER ne bloque pas (journalisé avec les chemins) ; un échec
+  // de LIGNE bloque, compte intact, pour qu'un nouvel essai retrouve tout.
+  // Détail et justification : utils/player/erasePersonalData.ts.
+  const erased = await erasePersonalData(userId);
+  if (!erased.ok) {
+    return res.status(500).json({
+      error:
+        'Erreur lors de la suppression de tes données. Ton compte n’a pas été supprimé : réessaie dans quelques instants.',
+      code: 'personal_data_erase_failed',
     });
   }
 
@@ -73,6 +78,17 @@ export default withAuthRoute(async function handler(
     return res
       .status(500)
       .json({ error: 'Erreur lors de la suppression du compte.' });
+  }
+
+  // La fiche publique `/player/<id>` est en ISR : sans régénération, elle
+  // servirait encore nom et photo jusqu'à cinq minutes. Best-effort, ne lève pas.
+  await revalidatePlayerCard(res, userId);
+
+  // Send account deleted email (non-blocking)
+  if (user.email) {
+    sendAccountDeletedEmail(user.email).catch((err) => {
+      logger.error('[player/delete-account] email error:', err);
+    });
   }
 
   return res.status(200).json({ success: true });

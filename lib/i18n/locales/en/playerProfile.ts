@@ -68,21 +68,21 @@ export default {
   exporting: 'Exporting...',
   downloadData: 'Download my data',
   exportConfirmText:
-    'containing all your personal information (account, teams, requests) will be downloaded.',
+    'will be downloaded: your data table by table (account, teams, requests, rating, TCG, predictions, preferences…), each with what deleting your account would do to it. Secrets (calendar token, notification keys) are left out.',
   aFile: 'A file',
   confirmDownload: 'Confirm download',
   cancel: 'Cancel',
   dataHelp:
-    'Retrieve all your personal information in JSON format (GDPR right of access).',
+    'Download the data linked to your account in JSON format (GDPR right of access).',
   deleteAccount: 'Delete my account',
   deleteWarningStart: 'This action is',
   deleteWarningBold: 'irreversible',
   deleteWarningEnd:
-    '. All your data, your team membership and your requests will be permanently deleted.',
+    '. Deleted: your account, your teams and requests, your card photo, your collection, your coins, your predictions, your calendar tokens and your preferences. Your fan art is withdrawn and its files erased.',
   deleting: 'Deleting...',
   confirmDelete: 'Confirm deletion',
   deleteHelp:
-    'GDPR right to erasure — your account and all your data will be permanently deleted.',
+    'GDPR right to erasure. What is also part of other players’ history stays, without your name: your leaderboard entry (shown as “Joueuse retirée”, removed player), your matches, your card trades and the copies of your card already collected, which show without a photo. Your support reports and membership record are kept by the association, detached from your account.',
   currentPasswordLabel: 'Current password',
   currentPasswordPlaceholder: 'Your current password',
   wrongCurrentPassword: 'Current password is incorrect.',

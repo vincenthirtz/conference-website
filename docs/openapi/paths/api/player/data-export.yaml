@@ -2,12 +2,20 @@ get:
   tags:
     - public/auth
   summary: Export RGPD des donnees du joueur (JSON complet).
+  description: >-
+    Tables lues depuis le registre utils/player/personalDataTables.ts, le meme
+    que la suppression de compte, sur tous les tenants. `tables.<table>` porte
+    `rows`, `on_account_deletion` (delete | anonymise | cascade | keep), `why`,
+    et le cas echeant `note` et `error` (table illisible, export incomplet).
+    `not_exported` liste les tables du registre omises et pourquoi. Aucun
+    secret (jetons de calendrier, cles push, jetons de verification).
+    `team_membership`, `demandes` et `staff` sont des alias de l'ancien format.
   operationId: playerDataExport
   security:
     - PlayerBearer: []
   responses:
     '200':
-      description: Export complet (profil, demandes, team_members, etc.).
+      description: Export complet, section par table du registre RGPD.
       content:
         application/json:
           schema:
