@@ -18,23 +18,35 @@ const state = (over: Partial<TenantPlanState>): TenantPlanState => ({
 });
 
 describe('planFeatures — matrice', () => {
-  it('discovery (gratuit) : ni API ni white-label ni multi-tenant ni bot', () => {
+  it('discovery : le bot, mais ni API, ni marque blanche, ni multi-espaces', () => {
     const f = getPlanFeatures('discovery');
     expect(f.apiRead).toBe(false);
     expect(f.apiWrite).toBe(false);
     expect(f.whiteLabel).toBe(false);
     expect(f.multiTenant).toBe(false);
     expect(f.maxLeagues).toBe(0);
-    // Le bot est réservé à la Coupe féminine + plans payants.
-    expect(f.discordBot).toBe(false);
+    // Le bot est ouvert à l'entrée de gamme depuis le 2026-09-16 : sans lui,
+    // le palier n'avait aucun intérêt — a fortiori offert aux associations.
+    expect(f.discordBot).toBe(true);
+    // Ce qui reste payant : la production live, l'arbitrage, le classement.
     expect(f.discordEventOps).toBe('none');
+    expect(f.arbitration).toBe(false);
+    expect(f.ratings).toBe(false);
   });
 
-  it('le bot (discordBot) : foundation + plans payants oui, discovery non', () => {
-    expect(getPlanFeatures('foundation').discordBot).toBe(true);
-    expect(getPlanFeatures('regie').discordBot).toBe(true);
-    expect(getPlanFeatures('circuit').discordBot).toBe(true);
-    expect(getPlanFeatures('discovery').discordBot).toBe(false);
+  it('le bot est ouvert à TOUS les paliers ; le premium, non', () => {
+    for (const plan of [
+      'foundation',
+      'discovery',
+      'regie',
+      'circuit',
+      'editor',
+    ] as const) {
+      expect(getPlanFeatures(plan).discordBot).toBe(true);
+    }
+    // La frontière de prix s'est déplacée sur ces trois-là, et elle y reste.
+    expect(getPlanFeatures('discovery').discordEventOps).toBe('none');
+    expect(getPlanFeatures('regie').discordEventOps).toBe('full');
   });
 
   it('regie : white-label + API lecture, mais pas écriture ni multi-tenant', () => {

@@ -80,8 +80,6 @@ function blockerLabel(slug: string, t: Dict): string {
   switch (slug) {
     case 'inactive':
       return t.overviewBlockerInactive;
-    case 'plan_sans_bot':
-      return t.overviewBlockerNoPlan;
     case 'aucun_serveur':
       return t.overviewBlockerNoGuild;
     case 'personne_rattache':

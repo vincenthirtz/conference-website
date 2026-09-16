@@ -2,11 +2,11 @@
 //
 // Essai gratuit ouvert à la CRÉATION d'un espace, quel que soit le chemin.
 //
-// Pourquoi il existe. `tenants.plan` vaut `discovery` par défaut, et
-// `discovery` n'inclut pas le bot Discord (cf. `planFeatures.discordBot`) : le
-// gate baseline de `withBotRoute` répond 403 sur toute route tenant-scopée. Un
-// espace créé sans plan reçoit donc un bot installé et muet, sans que rien ne
-// le signale.
+// Pourquoi il existe. `tenants.plan` vaut `discovery` par défaut. Ce palier a
+// gagné le bot Discord le 2026-09-16, mais pas l'arbitrage outillé, le
+// classement, la production live, la marque blanche ni l'API : l'essai sert
+// désormais à faire essayer CELA, trente jours, plutôt qu'à éviter un bot muet.
+// Sans lui, un espace découvrirait ce qui lui manque en le heurtant.
 //
 // Pourquoi ici. Deux chemins créent un espace — l'auto-claim de l'onboarding
 // self-service et la création par le staff depuis le back-office — et ils

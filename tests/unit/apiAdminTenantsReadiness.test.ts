@@ -197,7 +197,11 @@ describe('diagnostic', () => {
     expect(b.daysRemaining).toBeLessThanOrEqual(3);
   });
 
-  it('un plan expiré ressort comme « plan sans bot »', async () => {
+  it('un plan expiré retombe sur discovery — et garde le bot', async () => {
+    // Le diagnostic « plan sans bot » a disparu avec l'ouverture du bot à tous
+    // les paliers (2026-09-16) : aucun plan ne peut plus le manquer. Ce qui se
+    // perd à l'échéance se voit ailleurs (arbitrage, production, marque
+    // blanche), pas ici.
     (store.tenants as any[])[1].plan_status = 'past_due';
     // T10 : sept jours de grâce suivent l'échéance. Pour tester la perte des
     // capacités, il faut sortir de cette fenêtre — sinon on teste la grâce.
@@ -209,10 +213,9 @@ describe('diagnostic', () => {
     const b = (res.body as any).tenants.find(
       (t: any) => t.slug === 'cup-estivale'
     );
-    // effectivePlan retombe sur `discovery`, qui n'inclut pas le bot.
     expect(b.effectivePlan).toBe('discovery');
-    expect(b.botEnabled).toBe(false);
-    expect(b.blockers).toContain('plan_sans_bot');
+    expect(b.botEnabled).toBe(true);
+    expect(b.blockers).not.toContain('plan_sans_bot');
   });
 
   it('liste les serveurs de l’espace, le principal d’abord, avec leur avancement', async () => {

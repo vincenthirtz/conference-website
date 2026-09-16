@@ -298,7 +298,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     const blockers = computeBlockers({
       isActive: t.is_active !== false,
-      botEnabled,
       guildCount: guilds,
       staffCount: staff,
       configuredKeys: keys,

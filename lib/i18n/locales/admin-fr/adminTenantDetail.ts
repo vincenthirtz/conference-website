@@ -146,7 +146,6 @@ export default adminNs('adminTenantDetail', {
   overviewStaffCount: '{n} membre(s) du staff',
   overviewReadinessLink: 'voir tous les espaces',
   overviewBlockerInactive: 'Espace désactivé',
-  overviewBlockerNoPlan: 'Plan sans bot',
   overviewBlockerNoGuild: 'Aucun serveur Discord',
   overviewBlockerNoStaff: "Personne rattaché à l'espace",
   overviewBlockerNoConfig: 'Discord non configuré',

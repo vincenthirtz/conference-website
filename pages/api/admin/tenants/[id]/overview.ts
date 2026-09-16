@@ -300,7 +300,6 @@ async function handler(
     readiness: {
       blockers: computeBlockers({
         isActive: t.is_active !== false,
-        botEnabled,
         guildCount: guildIds.length,
         staffCount,
         configuredKeys,

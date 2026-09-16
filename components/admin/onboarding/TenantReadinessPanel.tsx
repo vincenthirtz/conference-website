@@ -72,8 +72,6 @@ function blockerMeta(
   switch (blocker) {
     case 'inactive':
       return { label: t.blockerInactive, href: `/admin/tenants/${tenantId}` };
-    case 'plan_sans_bot':
-      return { label: t.blockerNoPlan, href: `/admin/tenants/${tenantId}` };
     case 'aucun_serveur':
       return { label: t.blockerNoGuild, action: 'attach_guild' };
     case 'personne_rattache':

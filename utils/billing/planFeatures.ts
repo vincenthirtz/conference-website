@@ -58,10 +58,18 @@ export type PlanFeatures = {
   /** Gérer plusieurs tenants (réseau / agence). */
   multiTenant: boolean;
   /**
-   * Accès à l'API du bot Discord maison. RÉSERVÉ à la Coupe féminine
-   * (`foundation`) et aux plans payants : le palier gratuit `discovery` n'a PAS
-   * le bot (ni base, ni premium). Seuls les admins Women's Cup utilisent le bot
-   * sans plan.
+   * Accès à l'API du bot Discord maison.
+   *
+   * OUVERT À TOUS LES PALIERS depuis le 2026-09-16. Il était réservé aux plans
+   * payants, ce qui laissait l'entrée de gamme sans le seul outil qu'un
+   * organisateur amateur utilise tous les jours — et rendait la Découverte
+   * offerte aux associations (cf. nonprofitGrant) à peu près sans intérêt.
+   *
+   * Ce qui sépare encore les paliers n'a pas bougé : `discordEventOps: 'full'`
+   * (run-of-show, direction, cast, drafts), `arbitration` et `ratings` restent
+   * à Régie et au-delà. Découverte a donc le bot qui annonce, checke, ouvre des
+   * salons et des tickets ; pas celui qui arbitre ni celui qui dirige un
+   * direct.
    */
   discordBot: boolean;
   /** Profondeur des opérations Discord (Director, waves/stations, voice). */
@@ -139,7 +147,9 @@ const FEATURES: Record<TenantPlan, PlanFeatures> = {
     apiRead: false,
     apiWrite: false,
     multiTenant: false,
-    discordBot: false,
+    // Le bot, oui — l'arbitrage outillé et la production live, non (voir
+    // `discordEventOps` / `arbitration` juste en dessous).
+    discordBot: true,
     discordEventOps: 'none',
     arbitration: false,
     ratings: false,
@@ -215,8 +225,9 @@ export function getPlanFeatures(plan: TenantPlan): PlanFeatures {
  * Période de grâce après échéance (T10).
  *
  * Avant, la bascule était sèche : un plan qui expirait — ou passait `past_due`
- * — retombait IMMÉDIATEMENT sur `discovery`, c'est-à-dire sans bot Discord, du
- * jour au lendemain, pour un retard de paiement d'une journée. Sept jours
+ * — retombait IMMÉDIATEMENT sur `discovery`, c'est-à-dire sans arbitrage, sans
+ * classement ni marque blanche, du jour au lendemain, pour un retard de
+ * paiement d'une journée. Sept jours
  * laissent le temps qu'un virement arrive et qu'un humain réponde à un email.
  *
  * La grâce ne s'applique QU'À l'expiration : un plan `canceled` s'arrête tout

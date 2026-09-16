@@ -36,7 +36,6 @@ export default adminNs('adminOnboarding', {
   criterionOwners: '{count} propriétaire(s)',
   criterionEmail: 'Envoi d’emails',
   blockerInactive: 'Espace désactivé',
-  blockerNoPlan: 'Plan sans bot',
   blockerNoGuild: 'Aucun serveur Discord',
   blockerNoStaff: 'Personne rattaché à l’espace',
   blockerNoConfig: 'Discord non configuré',

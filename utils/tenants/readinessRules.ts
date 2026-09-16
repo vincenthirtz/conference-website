@@ -15,7 +15,9 @@
 /** Les manques possibles, du plus bloquant au plus secondaire. */
 export const READINESS_BLOCKERS = [
   'inactive',
-  'plan_sans_bot',
+  // `plan_sans_bot` a disparu le 2026-09-16 : le bot est ouvert à tous les
+  // paliers, donc aucun plan ne peut plus le manquer. Un diagnostic qui ne
+  // peut plus se déclencher laisse croire qu'un critère est surveillé.
   'aucun_serveur',
   'personne_rattache',
   'discord_non_configure',
@@ -26,8 +28,6 @@ export type ReadinessBlocker = (typeof READINESS_BLOCKERS)[number];
 
 export type ReadinessInputs = {
   isActive: boolean;
-  /** Le plan EFFECTIF inclut-il le bot ? (un plan payant expiré n'en a plus) */
-  botEnabled: boolean;
   guildCount: number;
   /** Nombre de lignes `tenant_staff`, tous rôles confondus. */
   staffCount: number;
@@ -47,7 +47,6 @@ export type ReadinessInputs = {
 export function computeBlockers(i: ReadinessInputs): ReadinessBlocker[] {
   const blockers: ReadinessBlocker[] = [];
   if (!i.isActive) blockers.push('inactive');
-  if (!i.botEnabled) blockers.push('plan_sans_bot');
   if (i.guildCount === 0) blockers.push('aucun_serveur');
   if (i.staffCount === 0) blockers.push('personne_rattache');
   if (i.configuredKeys === 0 && i.guildCount > 0) {

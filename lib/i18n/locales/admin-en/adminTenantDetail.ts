@@ -144,7 +144,6 @@ export default {
   overviewStaffCount: '{n} staff member(s)',
   overviewReadinessLink: 'see every space',
   overviewBlockerInactive: 'Space disabled',
-  overviewBlockerNoPlan: 'Plan without bot',
   overviewBlockerNoGuild: 'No Discord server',
   overviewBlockerNoStaff: 'Nobody attached to the space',
   overviewBlockerNoConfig: 'Discord not configured',

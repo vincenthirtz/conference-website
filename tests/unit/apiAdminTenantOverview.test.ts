@@ -198,9 +198,11 @@ describe('GET /api/admin/tenants/[id]/overview', () => {
     await handler(makeReq(), res);
     const plan = (res.body as any).plan;
     expect(plan.plan).toBe('circuit');
-    // past_due → l'entitlement retombe sur discovery, donc plus de bot.
+    // past_due → l'entitlement retombe sur discovery. Le bot reste (il est
+    // ouvert à tous les paliers depuis le 2026-09-16) ; c'est l'écart entre le
+    // plan facturé et le plan appliqué que cet écran doit dire.
     expect(plan.effectivePlan).toBe('discovery');
-    expect(plan.botEnabled).toBe(false);
+    expect(plan.botEnabled).toBe(true);
   });
 
   it('refuse un id qui n’est pas un UUID', async () => {

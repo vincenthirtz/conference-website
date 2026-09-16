@@ -173,17 +173,22 @@ describe('checkBotPlanCapability()', () => {
     }
   });
 
-  it('discovery est refusé sur le baseline discordBot (plus de bot du tout)', () => {
+  it('le bot de base est ouvert à TOUS les paliers, expiration comprise', () => {
+    // Depuis le 2026-09-16, `discordBot` n'est plus un privilège payant : une
+    // entrée de gamme sans le bot n'avait aucun intérêt, surtout offerte aux
+    // associations. Ce qui distingue les paliers, ce sont les capacités
+    // premium — testées juste en dessous, et elles seules.
     expect(
       checkBotPlanCapability(discoveryState, 'discordBot', NOW)
-    ).toMatchObject({
-      error: 'plan_required',
-      requiredCapability: 'discordBot',
-    });
-    // regie actif a le bot ; regie expiré retombe sur discovery → refusé.
+    ).toBeNull();
     expect(checkBotPlanCapability(regieState, 'discordBot', NOW)).toBeNull();
+    // Un plan payant expiré retombe sur `discovery` : il garde donc le bot qui
+    // annonce, et perd ce qui arbitre et ce qui dirige.
     expect(
       checkBotPlanCapability(regieExpiredState, 'discordBot', NOW)
+    ).toBeNull();
+    expect(
+      checkBotPlanCapability(regieExpiredState, 'arbitration', NOW)
     ).toMatchObject({ error: 'plan_required' });
   });
 
@@ -289,10 +294,11 @@ describe('withBotRoute → gate PLAN premium (discordEventOps:full)', () => {
     expect(res.statusCode).toBe(200);
   });
 
-  it('discovery → 403 (baseline discordBot fire AVANT le premium)', async () => {
-    // discovery n'a pas le bot du tout : le gate baseline `discordBot` refuse
-    // avant même d'évaluer `requireCapability` premium → requiredCapability =
-    // 'discordBot' (message « le bot nécessite un plan »), pas 'discordEventOps:full'.
+  it('discovery → 403 sur le premium, en NOMMANT la capacité qui manque', async () => {
+    // Depuis que le bot de base est ouvert à tous les paliers, le refus ne peut
+    // plus venir du baseline : il vient de `discordEventOps:full`, et le
+    // message doit le dire — sinon un organisateur lit « il vous faut le bot »
+    // alors qu'il l'a déjà.
     let called = false;
     const handler = withBotRoute((_req, res) => {
       called = true;
@@ -303,7 +309,7 @@ describe('withBotRoute → gate PLAN premium (discordEventOps:full)', () => {
     expect(res.statusCode).toBe(403);
     expect(res.body).toMatchObject({
       error: 'plan_required',
-      requiredCapability: 'discordBot',
+      requiredCapability: 'discordEventOps:full',
     });
     expect(called).toBe(false);
   });
@@ -327,7 +333,7 @@ describe('withBotRoute → gate PLAN premium (arbitration)', () => {
     expect(res.statusCode).toBe(200);
   });
 
-  it('discovery → 403 (baseline discordBot fire avant arbitration)', async () => {
+  it('discovery → 403 sur l’arbitrage (la capacité qui manque est nommée)', async () => {
     const handler = withBotRoute((_req, res) => {
       res.status(200).json({ ok: true });
     }, ARBITRATION_OPTS);
@@ -336,13 +342,15 @@ describe('withBotRoute → gate PLAN premium (arbitration)', () => {
     expect(res.statusCode).toBe(403);
     expect(res.body).toMatchObject({
       error: 'plan_required',
-      requiredCapability: 'discordBot',
+      requiredCapability: 'arbitration',
     });
   });
 });
 
-describe('withBotRoute → BASELINE discordBot (le bot = foundation + plans payants)', () => {
-  it('discovery → 403 plan_required (discordBot) même sur une route SANS requireCapability', async () => {
+describe('withBotRoute → BASELINE discordBot (le bot, ouvert à tous les paliers)', () => {
+  it('discovery → 200 sur une route SANS requireCapability', async () => {
+    // Le renversement du 2026-09-16 : l'entrée de gamme a le bot. C'est ce cas
+    // qui rend la Découverte offerte aux associations réellement utilisable.
     let called = false;
     const handler = withBotRoute((_req, res) => {
       called = true;
@@ -350,12 +358,8 @@ describe('withBotRoute → BASELINE discordBot (le bot = foundation + plans paya
     }, BASIC_OPTS);
     const res = makeRes();
     await handler(makeReq(KEY_DISCOVERY), res);
-    expect(res.statusCode).toBe(403);
-    expect(res.body).toMatchObject({
-      error: 'plan_required',
-      requiredCapability: 'discordBot',
-    });
-    expect(called).toBe(false);
+    expect(res.statusCode).toBe(200);
+    expect(called).toBe(true);
   });
 
   it('foundation → 200 sur une route basic + plan attaché', async () => {

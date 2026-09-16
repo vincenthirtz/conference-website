@@ -37,7 +37,6 @@ export default {
   criterionOwners: '{count} owner(s)',
   criterionEmail: 'Email sending',
   blockerInactive: 'Space disabled',
-  blockerNoPlan: 'Plan without bot',
   blockerNoGuild: 'No Discord server',
   blockerNoStaff: 'Nobody attached to the space',
   blockerNoConfig: 'Discord not configured',

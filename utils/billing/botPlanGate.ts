@@ -13,17 +13,19 @@
 // DEUX niveaux (tous deux sur les routes TENANT-SCOPÉES ; les routes
 // `crossTenant` — outbox pending/handled/ack — sont l'infra du bot, jamais
 // gatées) :
-//   - BASELINE `discordBot` : le bot lui-même est réservé à la Coupe féminine
-//     (`foundation`) et aux plans payants. `withBotRoute` le vérifie sur TOUTE
-//     route tenant-scopée → un tenant `discovery` (gratuit) n'a PAS le bot (403
-//     sur toute route, base comprise). Seuls les admins Women's Cup utilisent le
-//     bot sans plan.
+//   - BASELINE `discordBot` : vérifié par `withBotRoute` sur TOUTE route
+//     tenant-scopée. Depuis le 2026-09-16 tous les paliers le portent — une
+//     entrée de gamme sans le bot n'avait aucun intérêt, a fortiori offerte aux
+//     associations. Le gate reste en place : il mord encore sur un espace
+//     désactivé ou sur un plan inconnu, et rien n'oblige un futur palier à
+//     l'inclure.
 //   - PREMIUM (`discordEventOps:full`, `arbitration`, `ratings`) : les routes de
-//     production live / arbitrage déclarent `requireCapability` en plus.
+//     production live / arbitrage déclarent `requireCapability` en plus. C'est
+//     LÀ que passe désormais la frontière de prix.
 //
 // Le tenant flagship `foundation` a toutes les capacités → ce gate ne le mord
 // jamais. Un plan payant expiré / past_due retombe sur `discovery` (via
-// `effectivePlan`) → 403 (plus de bot du tout).
+// `effectivePlan`) : il garde le bot qui annonce et perd celui qui arbitre.
 
 import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';

@@ -223,7 +223,42 @@ describe('clé ordinaire (bot auto-hébergé)', () => {
 });
 
 describe('gate PLAN sur le tenant effectif', () => {
-  it('un tenant impersonné sans plan bot est refusé, même via clé plateforme', async () => {
+  it('le palier vérifié est celui du tenant impersonné, pas celui de la clé', async () => {
+    // Ce que ce cas protège : une clé PLATEFORME ne doit pas ouvrir à un
+    // espace ce que son propre palier lui refuse. Le levier était « discovery
+    // n'a pas le bot » ; depuis que le bot est ouvert à tous les paliers
+    // (2026-09-16), on passe par une route premium — l'intention, elle, n'a
+    // pas bougé d'un pouce.
+    store.tenants.push({
+      id: TENANT_C,
+      is_active: true,
+      plan: 'discovery',
+      plan_status: 'active',
+      plan_expires_at: null,
+    });
+    store.discord_guilds.push({
+      guild_id: GUILD_UNLINKED,
+      tenant_id: TENANT_C,
+    });
+
+    const premiumRoute = withBotRoute(
+      async (req, res) =>
+        res.status(200).json({ tenantId: req.botContext.tenantId }),
+      {
+        methods: ['GET'],
+        rateLimit: { max: 1000, key: 'platform-key-premium' },
+        requireCapability: 'arbitration',
+      }
+    );
+
+    const res = makeRes();
+    await premiumRoute(makeReq({ 'x-guild-id': GUILD_UNLINKED }), res);
+    expect(res.statusCode).toBe(403);
+    expect((res.body as any).error).toBe('plan_required');
+    expect((res.body as any).requiredCapability).toBe('arbitration');
+  });
+
+  it('la même clé plateforme passe sur une route de base (le bot est ouvert)', async () => {
     store.tenants.push({
       id: TENANT_C,
       is_active: true,
@@ -236,8 +271,11 @@ describe('gate PLAN sur le tenant effectif', () => {
       tenant_id: TENANT_C,
     });
     const res = makeRes();
-    await echoRoute()(makeReq({ 'x-guild-id': GUILD_UNLINKED }), res);
-    expect(res.statusCode).toBe(403);
-    expect((res.body as any).error).toBe('plan_required');
+    await echoRoute('platform-key-basic')(
+      makeReq({ 'x-guild-id': GUILD_UNLINKED }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ tenantId: TENANT_C });
   });
 });

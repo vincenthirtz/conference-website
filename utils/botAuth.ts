@@ -664,7 +664,8 @@ export function withBotRoute(
       // Gate PLAN « Régie solidaire ».
       //  - BASELINE : le bot lui-même est réservé à la Coupe féminine
       //    (`foundation`) et aux plans payants. Un tenant `discovery` (gratuit)
-      //    ou un plan payant expiré/past_due n'a PAS le bot → 403 sur TOUTE route
+      //    ou un plan inconnu → 403. Depuis le 2026-09-16, `discovery` porte le
+      //    bot de base : la frontière de prix est passée sur les capacités premium.
       //    tenant-scopée. Seuls les admins Women's Cup utilisent le bot sans plan.
       //  - PREMIUM : sur une route qui déclare `requireCapability` (production
       //    live, arbitrage), on gate en plus.
