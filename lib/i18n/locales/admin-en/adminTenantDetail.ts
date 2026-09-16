@@ -51,6 +51,15 @@ export default {
   localeFr: 'Français (fr)',
   localeEn: 'English (en)',
   activeLabel: 'Active tenant',
+  networkHeading: 'Cross-space network',
+  networkIntro:
+    'You only see if you give: a closed space reads its own listings only. You stay in control, and you can close it again at any time.',
+  networkScrimsLabel: 'Share my teams’ scrim searches',
+  networkScrimsHint:
+    'Teams of yours looking for an opponent appear in other open spaces’ directories — and see theirs.',
+  networkRecruitmentLabel: 'Share my teams’ recruitment listings',
+  networkRecruitmentHint:
+    'Your recruiting teams are readable from other open spaces. Player listings only travel if the player agreed to it.',
   saving: 'Saving…',
   save: 'Save',
   botSecretsHeading: 'Bot secrets',

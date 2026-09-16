@@ -24,6 +24,7 @@ export default ns('recrutementPage', {
 
   // --- Comment ça marche ---------------------------------------------------
   howTitle: 'Comment ça marche',
+  fromSpace: 'via {name}',
   how1Title: 'Tu décris ton besoin',
   how1Desc:
     'Le nom de ton équipe, les postes qu’il te manque, vos créneaux. Rien d’autre n’est obligatoire.',

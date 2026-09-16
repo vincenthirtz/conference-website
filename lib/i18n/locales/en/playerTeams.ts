@@ -53,6 +53,13 @@ export default {
   proposeCta: 'Propose a scrim',
   joinCta: 'Join',
   viewCta: 'View page',
+  networkTitle: 'Teams from partner spaces',
+  networkIntro:
+    'These teams are looking for a scrim from another open space. Their reliability and your past encounters cannot be measured here: reach out on their side.',
+  networkFrom: 'via {name}',
+  networkCommonSlots: '{n} slot(s) shared with your search',
+  networkContactCta: 'Contact on Discord',
+  networkNoContact: 'No public channel listed — go through their space.',
   empty: 'No team matches this filter.',
   errorLoad: 'The directory could not be loaded.',
   retry: 'Retry',

@@ -25,7 +25,10 @@ import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
-import type { DirectoryTeam } from '../api/player/teams-directory';
+import type {
+  DirectoryTeam,
+  NetworkDirectoryTeam,
+} from '../api/player/teams-directory';
 import SkillRatingBadge from '@/components/Team/SkillRatingBadge';
 import type { ResolvedTeamSkillRating } from '@/utils/overwatchRank';
 import type { OpponentReason } from '../../utils/teams/opponentMatch';
@@ -36,6 +39,7 @@ import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 
 type DirectoryResponse = {
   teams: DirectoryTeam[];
+  networkTeams?: NetworkDirectoryTeam[];
   mySkillAverage?: ResolvedTeamSkillRating | null;
   myTeamId: string | null;
   hasOwnSearch: boolean;
@@ -73,6 +77,9 @@ function PlayerTeamsPage() {
   const { addToast } = useToast();
 
   const [teams, setTeams] = useState<DirectoryTeam[]>([]);
+  // Équipes des autres espaces volontaires : vide tant que mon espace n'a pas
+  // ouvert le sien (cf. utils/tenants/networkSharing.ts).
+  const [networkTeams, setNetworkTeams] = useState<NetworkDirectoryTeam[]>([]);
   const [myTeamId, setMyTeamId] = useState<string | null>(null);
   const [mySkillAverage, setMySkillAverage] =
     useState<ResolvedTeamSkillRating | null>(null);
@@ -106,6 +113,7 @@ function PlayerTeamsPage() {
         withTeam('/api/player/teams-directory')
       );
       setTeams(data.teams ?? []);
+      setNetworkTeams(data.networkTeams ?? []);
       setMyTeamId(data.myTeamId ?? null);
       setMySkillAverage(data.mySkillAverage ?? null);
     } catch (err) {
@@ -585,6 +593,60 @@ function PlayerTeamsPage() {
                 </li>
               ))}
             </ul>
+          )}
+
+          {/* Le réseau. Une SECTION à part, jamais mélangée à l'annuaire de
+              l'espace : ces équipes n'ont ni fiabilité ni historique commun
+              mesurables ici, et les ranger côte à côte laisserait croire
+              qu'elles se comparent. */}
+          {networkTeams.length > 0 && (
+            <section className="mt-10" data-test="network-teams">
+              <h2 className="text-lg font-bold text-white">{t.networkTitle}</h2>
+              <p className="mt-1 text-sm text-gray-400">{t.networkIntro}</p>
+              <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+                {networkTeams.map((team) => (
+                  <li
+                    key={`${team.tenant.slug ?? 'x'}-${team.id}`}
+                    className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-white">
+                        {team.name}
+                      </span>
+                      <span className="rounded-full border border-white/15 px-2 py-0.5 text-[11px] text-gray-300">
+                        {format(t.networkFrom, { name: team.tenant.name })}
+                      </span>
+                    </div>
+                    {team.scrim_search.common_slots.length > 0 && (
+                      <p className="mt-2 text-xs font-semibold text-emerald-300">
+                        {format(t.networkCommonSlots, {
+                          n: team.scrim_search.common_slots.length,
+                        })}
+                      </p>
+                    )}
+                    {team.scrim_search.note && (
+                      <p className="mt-2 text-sm text-gray-300">
+                        {team.scrim_search.note}
+                      </p>
+                    )}
+                    {team.discord ? (
+                      <a
+                        href={team.discord}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-flex rounded-xl border border-white/15 px-3 py-1.5 text-xs font-semibold transition hover:bg-white/10"
+                      >
+                        {t.networkContactCta}
+                      </a>
+                    ) : (
+                      <p className="mt-3 text-xs text-gray-500">
+                        {t.networkNoContact}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
         </div>
       </div>

@@ -53,6 +53,13 @@ export default ns('playerTeams', {
   proposeCta: 'Proposer un scrim',
   joinCta: 'Rejoindre',
   viewCta: 'Voir la fiche',
+  networkTitle: 'Équipes des espaces partenaires',
+  networkIntro:
+    'Ces équipes cherchent un scrim depuis un autre espace ouvert. Leur fiabilité et vos confrontations passées ne sont pas mesurables ici : prenez contact chez elles.',
+  networkFrom: 'via {name}',
+  networkCommonSlots: '{n} créneau(x) en commun avec votre recherche',
+  networkContactCta: 'Contacter sur Discord',
+  networkNoContact: 'Pas de canal public renseigné — passez par son espace.',
   empty: 'Aucune équipe ne correspond à ce filtre.',
   errorLoad: "L'annuaire n'a pas pu être chargé.",
   retry: 'Réessayer',

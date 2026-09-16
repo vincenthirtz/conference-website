@@ -20,6 +20,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
+import {
+  readNetworkTenantIds,
+  readTenantLabels,
+} from '@/utils/tenants/networkSharing';
 import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import {
   expireStaleSearches,
@@ -51,6 +55,136 @@ import { logger } from '@/utils/logger';
 
 /** Fenêtre sur laquelle « on les a déjà jouées » reste une information utile. */
 const ENCOUNTER_WINDOW_DAYS = 90;
+
+/**
+ * Une équipe d'un AUTRE espace, vue depuis le mien (lot 4 : le réseau entre
+ * espaces volontaires).
+ *
+ * Volontairement pauvre, et ce n'est pas une économie de code : la fiabilité,
+ * le rating et l'historique de confrontations se mesurent sur les matchs joués
+ * DANS un espace. Les transporter tels quels d'un espace à l'autre donnerait
+ * des chiffres qui ont l'air comparables et ne le sont pas. On garde donc ce
+ * qui se compare sans contexte : qui elle est, ce qu'elle cherche, quand.
+ *
+ * Pas de bouton « proposer un scrim » non plus : la proposition vit dans
+ * l'espace de l'équipe, et une messagerie inter-espaces serait une autre
+ * fonctionnalité. On donne le canal que les équipes utilisent déjà — leur
+ * Discord — et le nom de l'espace d'où vient l'annonce.
+ */
+export type NetworkDirectoryTeam = {
+  id: string;
+  name: string;
+  short_name: string | null;
+  logo_url: string | null;
+  country: string | null;
+  discord: string | null;
+  skill_average: ResolvedTeamSkillRating | null;
+  scrim_search: {
+    slots: unknown[];
+    format: string | null;
+    note: string | null;
+    expires_at: string | null;
+    common_slots: unknown[];
+  };
+  /** D'où vient cette annonce. Sans ça, la ligne est inexplicable. */
+  tenant: { name: string; slug: string | null };
+};
+
+/**
+ * Les équipes des autres espaces volontaires qui cherchent un scrim.
+ *
+ * Ne jette jamais : une panne de lecture rend une liste vide, jamais une
+ * erreur — l'annuaire de mon espace doit s'afficher même si le réseau tousse.
+ */
+async function loadNetworkTeams(
+  tenantId: string,
+  mySlots: unknown[]
+): Promise<NetworkDirectoryTeam[]> {
+  const networkIds = (await readNetworkTenantIds(tenantId, 'scrims')).filter(
+    (id) => id !== tenantId
+  );
+  if (networkIds.length === 0) return [];
+
+  const { data: searchRows, error: searchErr } = await supabaseAdmin
+    .from('scrim_searches')
+    .select('team_id, tenant_id, slots, format, note, status, expires_at')
+    .in('tenant_id', networkIds)
+    .eq('status', 'active');
+  if (searchErr) {
+    logger.error('[teams-directory] network searches error', searchErr);
+    return [];
+  }
+
+  const searches = (
+    (searchRows || []) as (ScrimSearchRow & {
+      tenant_id: string;
+    })[]
+  ).filter((row) => isSearchLive(row));
+  if (searches.length === 0) return [];
+
+  const { data: teamRows, error: teamsErr } = await supabaseAdmin
+    .from('teams')
+    .select(
+      'id, tenant_id, name, short_name, logo_url, country, discord, skill_rating, is_active, deleted_at, team_members(role, skill_rating)'
+    )
+    .in(
+      'id',
+      searches.map((s) => s.team_id)
+    );
+  if (teamsErr) {
+    logger.error('[teams-directory] network teams error', teamsErr);
+    return [];
+  }
+
+  const labels = await readTenantLabels(networkIds);
+  const byTeam = new Map(searches.map((s) => [s.team_id, s]));
+
+  const out: NetworkDirectoryTeam[] = [];
+  for (const row of (teamRows || []) as Array<Record<string, unknown>>) {
+    if (row.is_active === false || row.deleted_at) continue;
+    const search = byTeam.get(row.id as string);
+    if (!search) continue;
+    const label = labels.get(row.tenant_id as string);
+    out.push({
+      id: row.id as string,
+      name: (row.name as string) ?? '',
+      short_name: (row.short_name as string | null) ?? null,
+      logo_url: (row.logo_url as string | null) ?? null,
+      country: (row.country as string | null) ?? null,
+      discord: (row.discord as string | null) ?? null,
+      skill_average: resolveTeamSkillRating(
+        row.skill_rating as number | null | undefined,
+        (row.team_members as {
+          role?: string | null;
+          skill_rating?: number | null;
+        }[]) ?? []
+      ),
+      scrim_search: {
+        slots: search.slots || [],
+        format: search.format,
+        note: search.note,
+        expires_at: search.expires_at,
+        common_slots: overlappingSlots(
+          mySlots as never[],
+          (search.slots || []) as never[]
+        ),
+      },
+      tenant: {
+        name: label?.name ?? '',
+        slug: label?.slug ?? null,
+      },
+    });
+  }
+
+  // Les créneaux en commun d'abord : c'est la seule chose qui rende une équipe
+  // lointaine réellement jouable cette semaine.
+  out.sort((a, b) => {
+    const d =
+      b.scrim_search.common_slots.length - a.scrim_search.common_slots.length;
+    return d !== 0 ? d : a.name.localeCompare(b.name);
+  });
+  return out;
+}
 
 export type DirectoryTeam = {
   id: string;
@@ -336,9 +470,15 @@ export default withAuthRoute(async function handler(
     return a.name.localeCompare(b.name);
   });
 
+  // Le réseau : les équipes des AUTRES espaces volontaires qui cherchent un
+  // scrim en ce moment. Vide tant que mon espace n'a pas ouvert le sien — on ne
+  // voit que si l'on donne (cf. utils/tenants/networkSharing.ts).
+  const networkTeams = await loadNetworkTeams(tenantId, mySlots);
+
   res.setHeader('Cache-Control', 'private, max-age=15');
   return res.status(200).json({
     teams: directory,
+    networkTeams,
     myTeamId,
     hasOwnSearch: mySlots.length > 0,
     // Mon propre niveau moyen : l'annuaire exclut ma team de la liste, donc

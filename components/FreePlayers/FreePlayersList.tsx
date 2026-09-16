@@ -170,7 +170,16 @@ export default function FreePlayersList({
                 className="flex flex-col gap-3 rounded-xl border border-white/10 bg-[var(--bg-elevated)] p-5"
               >
                 <div>
-                  <p className="font-bold text-white">{p.name}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-bold text-white">{p.name}</p>
+                    {/* Une fiche venue d'un autre espace sans étiquette est
+                        inexplicable : on dit d'où elle vient. */}
+                    {p.from?.name && (
+                      <span className="rounded-full border border-white/15 px-2 py-0.5 text-[11px] text-gray-300">
+                        {fmt(t.fromSpace, { name: p.from.name })}
+                      </span>
+                    )}
+                  </div>
                   {p.since && (
                     <p className="text-xs text-gray-500">
                       {fmt(t.listSince, {

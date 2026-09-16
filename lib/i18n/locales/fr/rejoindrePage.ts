@@ -72,6 +72,10 @@ export default ns('rejoindrePage', {
   discordPlaceholder: 'pseudo (facultatif)',
   discordHint:
     'Facultatif, mais utile : avec ton pseudo, une capitaine t’écrit directement en message privé au lieu d’attendre que tu ouvres tes emails.',
+  shareNetworkLabel: 'Rendre ma recherche visible sur les autres espaces',
+  shareNetworkHint:
+    'Des associations partenaires utilisent la même plateforme. Décochée, ton annonce ne sort pas d’ici. Tu peux la retirer à tout moment, partout, avec le lien reçu par email.',
+  fromSpace: 'via {name}',
   captchaLabel: 'Anti-bot — combien font {question} ?',
   captchaPlaceholder: 'Réponds par un nombre',
   honeypotLabel: 'Ne pas remplir',

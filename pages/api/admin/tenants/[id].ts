@@ -25,6 +25,7 @@ import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { canAccessTenant, PROTECTED_TENANT_SLUGS } from '@/utils/adminTenants';
 import { logger } from '@/utils/logger';
 import { logStaffAction } from '@/utils/staffLogs';
+import { resetNetworkSharingCache } from '@/utils/tenants/networkSharing';
 import {
   tenantHasCapability,
   type PlanStatus,
@@ -42,7 +43,7 @@ const HOSTNAME_RE = /^[a-z0-9.-]+\.[a-z]{2,}$/;
 // Colonnes renvoyees au client pour le detail d'un tenant (inclut la marque
 // blanche : logo/couleurs/domaine personnalise).
 const TENANT_DETAIL_COLUMNS =
-  'id, slug, name, is_active, default_locale, logo_url, primary_color, accent_color, custom_domain, created_at';
+  'id, slug, name, is_active, default_locale, logo_url, primary_color, accent_color, custom_domain, created_at, network_share_scrims, network_share_recruitment';
 
 async function handler(
   req: NextApiRequest,
@@ -177,6 +178,28 @@ async function handler(
         });
       }
       update.is_active = body.is_active;
+    }
+
+    // ---- Réseau entre espaces volontaires (lot 4) ----
+    //
+    // Owner-only comme le reste du PATCH, et c'est juste : ouvrir son
+    // recrutement ou ses créneaux engage tout l'espace, pas un écran. La
+    // réciprocité (on ne voit que si l'on donne) est appliquée à la LECTURE,
+    // dans utils/tenants/networkSharing.ts — ici on n'enregistre qu'une
+    // décision.
+    for (const field of [
+      'network_share_scrims',
+      'network_share_recruitment',
+    ] as const) {
+      if (field in body) {
+        if (typeof body[field] !== 'boolean') {
+          return res.status(400).json({
+            error: `${field} must be a boolean.`,
+            code: 'INVALID_NETWORK_SHARING',
+          });
+        }
+        update[field] = body[field];
+      }
     }
 
     // ---- Marque blanche (white-label) ----
@@ -349,6 +372,16 @@ async function handler(
       'is_active' in update
     ) {
       invalidateTenantHostCache();
+    }
+
+    // Le réseau est lu avec un cache d'une minute : sans cette purge, un staff
+    // qui vient d'ouvrir son espace ne verrait rien changer et recliquerait.
+    if (
+      'network_share_scrims' in update ||
+      'network_share_recruitment' in update ||
+      'is_active' in update
+    ) {
+      resetNetworkSharingCache();
     }
 
     return res.status(200).json({ tenant: updated });

@@ -25,6 +25,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { verifyCaptcha } from '@/utils/captcha';
 import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
+import {
+  readNetworkTenantIds,
+  readTenantLabels,
+} from '@/utils/tenants/networkSharing';
 import { checkEmailQuality, normalizeEmail } from '@/utils/emailQuality';
 import { alertIfEntityBlacklisted } from '@/utils/moderation/entityBlacklist';
 import { emitBotEvent } from '@/utils/botEvents';
@@ -73,28 +77,72 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 
   const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
-  const { data, error } = await supabaseAdmin
-    .from('team_openings')
-    .select(TEAM_OPENING_SELECT)
-    .eq('tenant_id', tenantId)
-    .order('marked_at', { ascending: false })
-    .limit(LIST_LIMIT);
+  // Réseau entre espaces volontaires (lot 4). Ici UN seul consentement suffit,
+  // celui du staff qui ouvre son recrutement : une annonce d'équipe engage
+  // l'équipe, pas une personne — contrairement aux joueuses libres, où la
+  // décision appartient à la joueuse elle-même.
+  const networkIds = (
+    await readNetworkTenantIds(tenantId, 'recruitment')
+  ).filter((id) => id !== tenantId);
 
+  const [mineRes, networkRes] = await Promise.all([
+    supabaseAdmin
+      .from('team_openings')
+      .select(TEAM_OPENING_SELECT)
+      .eq('tenant_id', tenantId)
+      .order('marked_at', { ascending: false })
+      .limit(LIST_LIMIT),
+    networkIds.length > 0
+      ? supabaseAdmin
+          .from('team_openings')
+          .select(TEAM_OPENING_SELECT)
+          .in('tenant_id', networkIds)
+          .order('marked_at', { ascending: false })
+          .limit(LIST_LIMIT)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  const { data, error } = mineRes;
   if (error) {
     logger.error('[api/public/team-openings] list error', error);
     return res
       .status(500)
       .json({ error: 'Liste indisponible pour le moment.' });
   }
+  if (networkRes.error) {
+    // Le réseau est un bonus : s'il tombe, la liste de l'espace reste servie.
+    logger.error('[api/public/team-openings] network error', networkRes.error);
+  }
 
   // Filtre de péremption appliqué ici plutôt qu'en SQL : il doit laisser passer
   // les rows sans `expires_at` (aucune aujourd'hui, mais un `.gt()` les
   // exclurait silencieusement le jour où une provenance Discord en produira).
   const now = new Date();
-  const openings = ((data ?? []) as TeamOpeningRow[])
+  const networkRows = (
+    networkRes.error ? [] : ((networkRes.data ?? []) as TeamOpeningRow[])
+  ).filter((row) => isTeamOpeningActive(row, now));
+  const labels =
+    networkRows.length > 0
+      ? await readTenantLabels(
+          networkRows.map((row) => String(row.tenant_id ?? ''))
+        )
+      : new Map<string, { name: string; slug: string | null }>();
+
+  const mine = ((data ?? []) as TeamOpeningRow[])
     .filter((row) => isTeamOpeningActive(row, now))
     .map(toPublicTeamOpening)
     .filter((o): o is NonNullable<typeof o> => o !== null);
+
+  const fromNetwork = networkRows
+    .map((row) => {
+      const projected = toPublicTeamOpening(row);
+      if (!projected) return null;
+      return { ...projected, from: labels.get(String(row.tenant_id ?? '')) ?? null };
+    })
+    .filter((o): o is NonNullable<typeof o> => o !== null);
+
+  // Les annonces de l'espace d'abord : le réseau complète, il ne noie pas.
+  const openings = [...mine, ...fromNetwork].slice(0, LIST_LIMIT);
 
   // Cache CDN court. ATTENTION au piège déjà rencontré côté /rejoindre : le CDN
   // ne varie pas sur la query string, donc pendant une minute une équipe qui

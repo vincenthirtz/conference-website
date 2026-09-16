@@ -18,6 +18,7 @@ export default {
   heroFast: 'Two minutes',
   heroFree: 'Free',
   howTitle: 'How it works',
+  fromSpace: 'via {name}',
   how1Title: 'You describe what you need',
   how1Desc:
     "Your team name, the roles you're missing, your practice slots. Nothing else is required.",

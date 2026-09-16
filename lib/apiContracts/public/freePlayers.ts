@@ -43,5 +43,12 @@ export const freePlayerSignupBodySchema = z.object({
     .trim()
     .max(FREE_PLAYER_LIMITS.contactDiscord)
     .optional(),
+  // Réseau entre espaces (lot 4). Décision de la JOUEUSE, jamais de l'espace :
+  // une annonce déposée sur un site n'a pas été déposée sur tous les autres.
+  // Défaut faux — le silence ne vaut pas accord.
+  shareAcrossTenants: z.boolean().optional().meta({
+    description:
+      "Rendre l'annonce lisible depuis les autres espaces volontaires. Défaut : false.",
+  }),
   ...antiBotFields,
 });

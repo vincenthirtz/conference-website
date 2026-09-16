@@ -88,6 +88,8 @@ export function computeExpiresAt(from: Date = new Date()): string {
 /** Row telle que lue en base (colonnes utiles seulement). */
 export type FreePlayerRow = {
   id: string;
+  /** Espace où l'annonce a été déposée (le réseau inter-espaces en a besoin). */
+  tenant_id?: string | null;
   source: string | null;
   discord_user_id: string | null;
   discord_username: string | null;
@@ -101,6 +103,12 @@ export type FreePlayerRow = {
   contact_discord: string | null;
   marked_at: string | null;
   expires_at: string | null;
+  /**
+   * Décision de la JOUEUSE : son annonce peut-elle être lue depuis les autres
+   * espaces volontaires ? L'espace ne peut pas la prendre à sa place — une
+   * annonce déposée sur un site n'a pas été déposée sur tous les autres.
+   */
+  share_across_tenants?: boolean | null;
 };
 
 /**
@@ -119,6 +127,12 @@ export type PublicFreePlayer = {
   availability: string | null;
   note: string | null;
   since: string | null;
+  /**
+   * L'espace d'origine, renseigné UNIQUEMENT quand l'annonce vient d'ailleurs.
+   * Une ligne venue d'un autre espace sans étiquette est inexplicable pour qui
+   * la lit.
+   */
+  from?: { name: string; slug: string | null } | null;
 };
 
 export function toPublicFreePlayer(
@@ -143,7 +157,7 @@ export function toPublicFreePlayer(
 
 /** Colonnes à sélectionner pour construire l'une ou l'autre projection. */
 export const FREE_PLAYER_SELECT =
-  'id, source, discord_user_id, discord_username, auth_user_id, display_name, roles, availability, level, note, contact_email, contact_discord, marked_at, expires_at';
+  'id, tenant_id, source, discord_user_id, discord_username, auth_user_id, display_name, roles, availability, level, note, contact_email, contact_discord, marked_at, expires_at, share_across_tenants';
 
 /**
  * Une annonce est-elle encore vivante ? `expires_at` nul = pas de péremption

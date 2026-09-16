@@ -509,6 +509,7 @@
       "marked_at",
       "note",
       "roles",
+      "share_across_tenants",
       "source",
       "tenant_id",
       "updated_at"
@@ -1842,6 +1843,8 @@
       "lifecycle_state",
       "logo_url",
       "name",
+      "network_share_recruitment",
+      "network_share_scrims",
       "nonprofit_org_name",
       "nonprofit_verified_at",
       "plan",

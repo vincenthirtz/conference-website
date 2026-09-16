@@ -170,7 +170,14 @@ export default function TeamOpeningsList({
                 className="flex flex-col gap-3 rounded-xl border border-white/10 bg-[var(--bg-elevated)] p-5"
               >
                 <div>
-                  <p className="font-bold text-white">{opening.teamName}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-bold text-white">{opening.teamName}</p>
+                    {opening.from?.name && (
+                      <span className="rounded-full border border-white/15 px-2 py-0.5 text-[11px] text-gray-300">
+                        {fmt(t.fromSpace, { name: opening.from.name })}
+                      </span>
+                    )}
+                  </div>
                   {opening.since && (
                     <p className="text-xs text-gray-500">
                       {fmt(t.listSince, {

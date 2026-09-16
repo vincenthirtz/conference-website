@@ -162,3 +162,50 @@ Suite au sweep qualité (Q022–Q026 dans [IMPROVEMENT_BACKLOG.md](./IMPROVEMENT
 | A4 | Vue mois admin « +N » déroulable sur place — clic sur « +N » affiche tous les événements du jour dans la cellule (+ « − réduire »), sans basculer en vue semaine. | S-M | ✅ LIVRÉ |
 | A5 | Vue mois côté joueur — overview lecture (`PlanningMonthOverview`) : pastilles densité (mes dispos / overlap planifiable) par jour, clic → repagine le calendrier de peinture sur la semaine (prop `focusDate`). 3e onglet Mois. | M-L | ✅ LIVRÉ |
 | A6 | Unification des 3 idiomes temporels (datetime-local négociation / grille When2Meet / agenda drag&drop). Décomposé : **A6a** clarté de fuseau + écho lisible ✅ · **A6b** picker de négociation basé calendrier (`ScrimSlotCalendarPicker`, drop-in ; ancien `ScrimSlotPicker` supprimé) ✅ · **A6c** helpers date/fuseau partagés (`utils/teams/scrimTime.ts` : `fmtHourOfDay`/`formatInstant` ; 5 copies de `fmtHour` + 3 formatteurs lisibles dédupliqués ; tests unitaires) ✅. | L | ✅ LIVRÉ |
+
+---
+
+## Réseau entre espaces volontaires (lot 4 du rapport de comparaison)
+
+Livré le 2026-09-16 : la troisième brique du lot 4 — **scrims et recrutement
+ouverts entre espaces volontaires**. Le catalogue public des tournois et
+l'annuaire des structures restent à faire.
+
+### La règle, en une phrase
+
+**On ne voit que si l'on donne.** Chaque espace décide, interrupteur par
+interrupteur (`tenants.network_share_scrims`, `network_share_recruitment`,
+fermés par défaut, *Admin → Espace → Réseau entre espaces*). Un espace fermé ne
+lit que ses propres annonces : sans cette réciprocité, le réseau se remplirait
+de lecteurs, et ceux qui publient refermeraient.
+
+### Deux consentements, pas un
+
+| Ce qui voyage | Qui décide | Pourquoi |
+|---|---|---|
+| Recherches de scrim d'une équipe | le staff de l'espace | un créneau engage une équipe, pas une personne |
+| Annonces de recrutement d'équipes | le staff de l'espace | idem |
+| Annonce d'une **joueuse libre** | **la joueuse** (`free_players.share_across_tenants`, case au dépôt) | déposer une annonce sur un site n'est pas la déposer sur tous les autres — même doctrine qu'`player_discovery_profiles` : opt-in, jamais rétroactif |
+
+### Ce qui ne traverse pas
+
+La fiabilité, le rating d'équipe et l'historique des confrontations se mesurent
+sur les matchs joués **dans** un espace. Les transporter donnerait des chiffres
+qui ont l'air comparables et ne le sont pas : les équipes du réseau
+s'affichent dans une **section à part**, avec ce qui se compare sans contexte
+(qui elles sont, ce qu'elles cherchent, quand) et le canal qu'elles utilisent
+déjà — leur Discord. Pas de bouton « proposer un scrim » : la proposition vit
+dans l'espace de l'équipe, et une messagerie inter-espaces serait une autre
+fonctionnalité.
+
+### Garde-fous
+
+- Une panne de lecture **referme** l'espace sur lui-même (`[selfId]`), jamais
+  l'inverse : une erreur ne doit pas publier ce que personne n'a accepté.
+- Le réseau est un bonus : s'il tombe, la liste de l'espace s'affiche quand
+  même. L'inverse ferait dépendre ma page du réglage d'un voisin.
+- Toute annonce venue d'ailleurs porte son origine (« via Ardent League »).
+- Cache de 60 s sur la résolution, purgé dès qu'un staff change son réglage.
+
+Code : [`utils/tenants/networkSharing.ts`](../utils/tenants/networkSharing.ts),
+tests [`tests/unit/networkSharing.test.ts`](../tests/unit/networkSharing.test.ts).

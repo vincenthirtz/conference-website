@@ -75,6 +75,8 @@ export function normalizeOpeningRoles(input: unknown): TeamOpeningRole[] {
 /** Row telle que lue en base (colonnes utiles seulement). */
 export type TeamOpeningRow = {
   id: string;
+  /** Espace où l'annonce a été déposée (le réseau inter-espaces en a besoin). */
+  tenant_id?: string | null;
   source: string | null;
   team_id: string | null;
   team_name: string | null;
@@ -90,7 +92,7 @@ export type TeamOpeningRow = {
 
 /** Colonnes à sélectionner pour construire l'une ou l'autre projection. */
 export const TEAM_OPENING_SELECT =
-  'id, source, team_id, team_name, roles, level, availability, note, contact_email, contact_discord, marked_at, expires_at';
+  'id, tenant_id, source, team_id, team_name, roles, level, availability, note, contact_email, contact_discord, marked_at, expires_at';
 
 /**
  * Vue PUBLIQUE d'une annonce — celle que sert `GET /api/public/team-openings`.
@@ -107,6 +109,12 @@ export type PublicTeamOpening = {
   availability: string | null;
   note: string | null;
   since: string | null;
+  /**
+   * L'espace d'origine, renseigné UNIQUEMENT quand l'annonce vient d'ailleurs
+   * (réseau entre espaces volontaires). Une annonce d'une équipe inconnue au
+   * milieu de la liste doit pouvoir s'expliquer d'un coup d'œil.
+   */
+  from?: { name: string; slug: string | null } | null;
 };
 
 export function toPublicTeamOpening(

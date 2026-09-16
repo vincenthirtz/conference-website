@@ -49,6 +49,16 @@ export default adminNs('adminTenantDetail', {
   localeFr: 'Français (fr)',
   localeEn: 'English (en)',
   activeLabel: 'Tenant actif',
+  networkHeading: 'Réseau entre espaces',
+  networkIntro:
+    'Vous ne voyez que si vous donnez : un espace fermé ne lit que ses propres annonces. Vous restez maître de vos données, et vous pouvez refermer à tout moment.',
+  networkScrimsLabel: 'Partager les recherches de scrim de mes équipes',
+  networkScrimsHint:
+    'Vos équipes qui cherchent un adversaire apparaissent dans l’annuaire des autres espaces ouverts — et voient les leurs.',
+  networkRecruitmentLabel:
+    'Partager les annonces de recrutement de mes équipes',
+  networkRecruitmentHint:
+    'Vos équipes qui recrutent sont lues depuis les autres espaces ouverts. Les annonces de joueuses, elles, ne partent que si la joueuse l’a accepté.',
   saving: 'Sauvegarde…',
   save: 'Enregistrer',
   botSecretsHeading: 'Secrets bot',

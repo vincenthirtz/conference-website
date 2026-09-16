@@ -1173,7 +1173,9 @@
        "primary_color": {},
        "accent_color": {},
        "custom_domain": {},
-       "created_at": {}
+       "created_at": {},
+       "network_share_scrims": {},
+       "network_share_recruitment": {}
       },
       "required": [
        "id",
@@ -1185,7 +1187,9 @@
        "primary_color",
        "accent_color",
        "custom_domain",
-       "created_at"
+       "created_at",
+       "network_share_scrims",
+       "network_share_recruitment"
       ]
      }
     },
@@ -16028,7 +16032,9 @@
        "primary_color": {},
        "accent_color": {},
        "custom_domain": {},
-       "created_at": {}
+       "created_at": {},
+       "network_share_scrims": {},
+       "network_share_recruitment": {}
       },
       "required": [
        "id",
@@ -16040,7 +16046,9 @@
        "primary_color",
        "accent_color",
        "custom_domain",
-       "created_at"
+       "created_at",
+       "network_share_scrims",
+       "network_share_recruitment"
       ]
      },
      "guilds": {
@@ -39837,6 +39845,159 @@
        ]
       }
      },
+     "networkTeams": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "name": {
+         "type": "string"
+        },
+        "short_name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "logo_url": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "country": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "discord": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "skill_average": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "average": {
+           "type": "number"
+          },
+          "count": {
+           "type": "number"
+          },
+          "eligible": {
+           "type": "number"
+          },
+          "tier": {
+           "type": [
+            "string",
+            "null"
+           ],
+           "enum": [
+            "bronze",
+            "diamond",
+            "emerald",
+            "gold",
+            "grandmaster",
+            "master",
+            "platinum",
+            "silver",
+            null
+           ]
+          },
+          "source": {
+           "type": "string",
+           "enum": [
+            "average",
+            "declared"
+           ]
+          }
+         },
+         "required": [
+          "average",
+          "count",
+          "eligible",
+          "tier",
+          "source"
+         ]
+        },
+        "scrim_search": {
+         "type": "object",
+         "properties": {
+          "slots": {
+           "type": "array",
+           "items": {}
+          },
+          "format": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "note": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "expires_at": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "common_slots": {
+           "type": "array",
+           "items": {}
+          }
+         },
+         "required": [
+          "slots",
+          "format",
+          "note",
+          "expires_at",
+          "common_slots"
+         ]
+        },
+        "tenant": {
+         "type": "object",
+         "properties": {
+          "name": {
+           "type": "string"
+          },
+          "slug": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "name",
+          "slug"
+         ]
+        }
+       },
+       "required": [
+        "id",
+        "name",
+        "short_name",
+        "logo_url",
+        "country",
+        "discord",
+        "skill_average",
+        "scrim_search",
+        "tenant"
+       ]
+      }
+     },
      "myTeamId": {
       "type": [
        "string",
@@ -39897,6 +40058,7 @@
     },
     "required": [
      "teams",
+     "networkTeams",
      "myTeamId",
      "hasOwnSearch",
      "mySkillAverage"
@@ -40462,6 +40624,27 @@
           "string",
           "null"
          ]
+        },
+        "from": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "name": {
+           "type": "string"
+          },
+          "slug": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "name",
+          "slug"
+         ]
         }
        },
        "required": [
@@ -40569,6 +40752,27 @@
          "type": [
           "string",
           "null"
+         ]
+        },
+        "from": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "name": {
+           "type": "string"
+          },
+          "slug": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "name",
+          "slug"
          ]
         }
        },
@@ -41029,6 +41233,27 @@
         "type": [
          "string",
          "null"
+        ]
+       },
+       "from": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "properties": {
+         "name": {
+          "type": "string"
+         },
+         "slug": {
+          "type": [
+           "string",
+           "null"
+          ]
+         }
+        },
+        "required": [
+         "name",
+         "slug"
         ]
        },
        "teamId": {
@@ -45666,7 +45891,9 @@
        "primary_color": {},
        "accent_color": {},
        "custom_domain": {},
-       "created_at": {}
+       "created_at": {},
+       "network_share_scrims": {},
+       "network_share_recruitment": {}
       },
       "required": [
        "id",
@@ -45678,7 +45905,9 @@
        "primary_color",
        "accent_color",
        "custom_domain",
-       "created_at"
+       "created_at",
+       "network_share_scrims",
+       "network_share_recruitment"
       ]
      }
     },

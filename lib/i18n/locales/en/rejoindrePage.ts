@@ -63,6 +63,10 @@ export default {
   discordPlaceholder: 'handle (optional)',
   discordHint:
     'Optional, but handy: with your handle, a captain can DM you directly instead of waiting for you to check your inbox.',
+  shareNetworkLabel: 'Make my listing visible on partner spaces',
+  shareNetworkHint:
+    'Partner associations use the same platform. Unchecked, your listing stays here. You can remove it anywhere, at any time, with the link sent by email.',
+  fromSpace: 'via {name}',
   captchaLabel: 'Anti-bot — what is {question}?',
   captchaPlaceholder: 'Answer with a number',
   honeypotLabel: 'Do not fill in',

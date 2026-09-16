@@ -24,6 +24,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { verifyCaptcha } from '@/utils/captcha';
 import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
+import {
+  readNetworkTenantIds,
+  readTenantLabels,
+} from '@/utils/tenants/networkSharing';
 import { checkEmailQuality, normalizeEmail } from '@/utils/emailQuality';
 import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
 import { emitBotEvent } from '@/utils/botEvents';
@@ -63,26 +67,74 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 
   const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
-  const { data, error } = await supabaseAdmin
-    .from('free_players')
-    .select(FREE_PLAYER_SELECT)
-    .eq('tenant_id', tenantId)
-    .order('marked_at', { ascending: false })
-    .limit(LIST_LIMIT);
+  // Le réseau entre espaces volontaires (lot 4). DEUX consentements sont
+  // exigés, et c'est voulu : celui de l'ESPACE qui ouvre son recrutement, et
+  // celui de la JOUEUSE qui accepte d'être lue ailleurs. Une annonce déposée
+  // sur un site n'a pas été déposée sur tous les autres.
+  const networkIds = (
+    await readNetworkTenantIds(tenantId, 'recruitment')
+  ).filter((id) => id !== tenantId);
 
+  const [mineRes, networkRes] = await Promise.all([
+    supabaseAdmin
+      .from('free_players')
+      .select(FREE_PLAYER_SELECT)
+      .eq('tenant_id', tenantId)
+      .order('marked_at', { ascending: false })
+      .limit(LIST_LIMIT),
+    networkIds.length > 0
+      ? supabaseAdmin
+          .from('free_players')
+          .select(FREE_PLAYER_SELECT)
+          .in('tenant_id', networkIds)
+          .eq('share_across_tenants', true)
+          .order('marked_at', { ascending: false })
+          .limit(LIST_LIMIT)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  const { data, error } = mineRes;
   if (error) {
     logger.error('[api/public/free-players] list error', error);
     return res.status(500).json({ error: 'Liste indisponible pour le moment.' });
+  }
+  if (networkRes.error) {
+    // Le réseau est un bonus : s'il tombe, la liste de l'espace s'affiche
+    // quand même. L'inverse ferait dépendre ma page du réglage d'un voisin.
+    logger.error('[api/public/free-players] network error', networkRes.error);
   }
 
   // Le filtre de péremption est appliqué ici plutôt qu'en SQL parce qu'il doit
   // laisser passer les rows sans `expires_at` (provenance Discord, fraîcheur
   // garantie par la synchro du bot) — un `.gt()` les exclurait toutes.
   const now = new Date();
-  const players = ((data ?? []) as FreePlayerRow[])
+  const networkRows = (
+    networkRes.error ? [] : ((networkRes.data ?? []) as FreePlayerRow[])
+  ).filter((row) => isActive(row, now));
+  const labels =
+    networkRows.length > 0
+      ? await readTenantLabels(
+          networkRows.map((row) => String(row.tenant_id ?? ''))
+        )
+      : new Map<string, { name: string; slug: string | null }>();
+
+  const mine = ((data ?? []) as FreePlayerRow[])
     .filter((row) => isActive(row, now))
     .map(toPublicFreePlayer)
     .filter((p): p is NonNullable<typeof p> => p !== null);
+
+  const fromNetwork = networkRows
+    .map((row) => {
+      const projected = toPublicFreePlayer(row);
+      if (!projected) return null;
+      const label = labels.get(String(row.tenant_id ?? ''));
+      return { ...projected, from: label ?? null };
+    })
+    .filter((p): p is NonNullable<typeof p> => p !== null);
+
+  // Les annonces de l'espace d'abord : c'est chez soi qu'on recrute en
+  // premier, et le réseau complète au lieu de noyer.
+  const players = [...mine, ...fromNetwork].slice(0, LIST_LIMIT);
 
   // PAS de cache CDN, et c'est délibéré. Un `max-age=60` a été essayé : le CDN
   // Netlify ne varie pas sur la query string, donc une joueuse qui venait de
@@ -160,6 +212,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
 
   const row = {
     tenant_id: tenantId,
+    share_across_tenants: parsed.data.shareAcrossTenants === true,
     source: 'web' as const,
     auth_user_id: existingAccountId,
     display_name: body.displayName,

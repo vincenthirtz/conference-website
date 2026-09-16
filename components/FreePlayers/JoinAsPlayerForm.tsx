@@ -71,6 +71,9 @@ export default function JoinAsPlayerForm({
   const [availability, setAvailability] = useState('');
   const [note, setNote] = useState('');
   const [contactDiscord, setContactDiscord] = useState('');
+  // Réseau entre espaces (lot 4) : SA décision, pas celle du site. Décochée
+  // par défaut — déposer une annonce ici n'est pas la déposer partout.
+  const [shareAcrossTenants, setShareAcrossTenants] = useState(false);
 
   const [honeypot, setHoneypot] = useState('');
   const [captcha, setCaptcha] = useState<Captcha | null>(null);
@@ -153,6 +156,7 @@ export default function JoinAsPlayerForm({
           availability: availability.trim() || undefined,
           note: note.trim() || undefined,
           contactDiscord: contactDiscord.trim() || undefined,
+          shareAcrossTenants,
           honeypot,
           captchaToken: captcha?.token,
           captchaAnswer,
@@ -359,6 +363,24 @@ export default function JoinAsPlayerForm({
           <p className={hintClass}>{t.discordHint}</p>
         </div>
       </div>
+
+      {/* Visibilité au-delà de ce site. Posée ici, juste après les contacts et
+          avant l'envoi : c'est le moment où l'on décide qui pourra la lire. */}
+      <label className="flex items-start gap-3 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={shareAcrossTenants}
+          onChange={(e) => setShareAcrossTenants(e.target.checked)}
+          className="mt-0.5 h-5 w-5 rounded border-white/20 bg-black/40 text-purple-500 focus:ring-purple-400"
+          data-test="free-player-share-network"
+        />
+        <span>
+          <span className="block text-sm font-medium text-gray-100">
+            {t.shareNetworkLabel}
+          </span>
+          <span className={hintClass}>{t.shareNetworkHint}</span>
+        </span>
+      </label>
 
       {/* Honeypot : hors écran, invisible aux lecteurs d'écran, non tabulable. */}
       <div
