@@ -95,7 +95,15 @@ function Navbar(): JSX.Element {
   // Staff takes precedence: never show both bars. The player bar shows only on
   // /player routes, for a signed-in non-staff user, once both sessions resolved.
   const isPlayerRoute = router.pathname.startsWith('/player');
-  const showAdminBar = !loading && isStaff;
+  // `visibleAdminLinks.length > 0` n'est PAS une précaution décorative :
+  // `AdminTopBar` se supprime elle-même quand elle n'a rien à montrer
+  // (`categories.length === 0 && singleLinks.length === 0` → `return null`).
+  // Avec `isStaff` seul, un compte staff dont aucun lien ne passe le filtre —
+  // rôle hors barème, cache amorcé avec un rôle non-staff — obtenait
+  // `hideMarketingNav = true` pour une barre qui ne s'affichait jamais : la
+  // page se retrouvait sans AUCUN en-tête, sur le site public comme ailleurs.
+  // L'en-tête ne se masque que si quelque chose le remplace VRAIMENT.
+  const showAdminBar = !loading && isStaff && visibleAdminLinks.length > 0;
   const showPlayerBar =
     isPlayerRoute && !loading && !playerLoading && !!playerUser && !isStaff;
 

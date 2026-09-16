@@ -10,7 +10,7 @@ import {
   supabaseClient,
   purgeSupabaseAuthStorage,
 } from '@/utils/supabaseBrowser';
-import { STAFF_CACHE_KEY } from '@/hooks/useStaffSession';
+import { STAFF_CACHE_KEY, isStaffRole } from '@/hooks/useStaffSession';
 import { useT } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
@@ -155,7 +155,12 @@ const LoginPage = () => {
         const target = next ?? (me.role === 'captain' ? '/player' : '/admin');
         // Rôle staff (owner/admin/manager/caster) → on amorce le cache pour que
         // la navbar n'ait pas à revalider le staff sur la première page admin.
-        if (me.role !== 'captain') primeStaffCache(me);
+        // MÊME test que `useStaffSession` : `/api/admin/me` répond 200 pour
+        // d'autres rôles que le staff, et amorcer le cache pour l'un d'eux
+        // poserait `isStaff: true` avec un rôle dont aucun lien ne passe le
+        // filtre. Deux listes pour la même question finissent par diverger —
+        // celle-ci ne nommait que `captain`.
+        if (isStaffRole(me.role)) primeStaffCache(me);
         await router.push(target);
         return;
       }
