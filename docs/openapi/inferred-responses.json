@@ -34247,63 +34247,75 @@
        "role"
       ]
      },
+     "tables": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "object",
+       "properties": {
+        "on_account_deletion": {
+         "type": "string",
+         "enum": [
+          "anonymise",
+          "cascade",
+          "delete",
+          "keep"
+         ]
+        },
+        "why": {
+         "type": "string"
+        },
+        "note": {
+         "type": "string"
+        },
+        "rows": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "additionalProperties": {}
+         }
+        },
+        "error": {
+         "type": "boolean",
+         "const": true
+        }
+       },
+       "required": [
+        "on_account_deletion",
+        "why",
+        "rows"
+       ]
+      }
+     },
+     "not_exported": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "string"
+      }
+     },
      "team_membership": {
       "type": "array",
       "items": {
        "type": "object",
-       "properties": {
-        "id": {},
-        "role": {},
-        "created_at": {},
-        "team": {
-         "type": "array",
-         "items": {
-          "type": "object",
-          "properties": {
-           "id": {},
-           "name": {},
-           "short_name": {}
-          },
-          "required": [
-           "id",
-           "name",
-           "short_name"
-          ]
-         }
-        }
-       },
-       "required": [
-        "id",
-        "role",
-        "created_at",
-        "team"
-       ]
+       "additionalProperties": {}
       }
      },
      "demandes": {
       "type": "array",
-      "items": {}
+      "items": {
+       "type": "object",
+       "additionalProperties": {}
+      }
      },
      "staff": {
-      "type": [
-       "object",
-       "null"
-      ],
-      "properties": {
-       "id": {},
-       "role": {},
-       "created_at": {}
-      },
-      "required": [
-       "id",
-       "role",
-       "created_at"
-      ]
+      "type": "object",
+      "additionalProperties": {}
      }
     },
     "required": [
      "exported_at",
      "account",
+     "tables",
+     "not_exported",
      "team_membership",
      "demandes",
      "staff"
@@ -35082,6 +35094,9 @@
             "isOpen",
             "isPassed"
            ]
+          },
+          "canReportScore": {
+           "type": "boolean"
           }
          },
          "required": [
@@ -35097,7 +35112,8 @@
           "score",
           "result",
           "tournament",
-          "checkin"
+          "checkin",
+          "canReportScore"
          ]
         }
        }
@@ -35802,14 +35818,18 @@
        "match": {
         "type": "object",
         "properties": {
-         "id": {},
+         "id": {
+          "type": "string"
+         },
          "scheduledAt": {
           "type": [
            "string",
            "null"
           ]
          },
-         "status": {},
+         "status": {
+          "type": "string"
+         },
          "format": {
           "type": [
            "string",
