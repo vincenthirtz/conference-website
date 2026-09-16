@@ -112,3 +112,97 @@ describe('/api/player/messages/[conversationId] — UUID boundary validation', (
     });
   });
 });
+
+describe('/api/player/messages/[conversationId] — permission du marquage « lu »', () => {
+  // Une coach à qui l'équipe n'a délégué QUE les scrims (surcharge par membre,
+  // ni capitanat ni rôle privilégié). Elle gère l'équipe, donc elle LIT les
+  // conversations — mais elle ne doit pas pouvoir vider la boîte de réception.
+  function seedScrimsOnlyCoachOfTeamA() {
+    store.teams = [
+      { id: TEAM_A, captain_id: 'someone-else', name: 'Phenix' },
+      { id: TEAM_B, captain_id: null, name: 'Dragons' },
+    ];
+    store.team_members = [
+      { team_id: TEAM_A, user_id: USER_ID, role: 'player' },
+    ] as any;
+    store.team_member_permissions = [
+      {
+        team_id: TEAM_A,
+        user_id: USER_ID,
+        permission: 'manage_scrims',
+        revoked_at: null,
+      },
+    ] as any;
+  }
+
+  function seedIncomingPending() {
+    store.demandes = [
+      {
+        id: 'msg-1',
+        type: 'captain_message',
+        team_id: TEAM_A,
+        user_id: 'sender',
+        comment: 'GG',
+        status: 'pending',
+        payload: { from_team_id: TEAM_B, from_team_name: 'Dragons' },
+        created_at: '2026-09-15T20:00:00Z',
+      },
+    ] as any;
+  }
+
+  const conv = `${TEAM_A}_${TEAM_B}`;
+
+  it('PATCH refusé (403) sans send_captain_messages, messages intacts', async () => {
+    seedScrimsOnlyCoachOfTeamA();
+    seedIncomingPending();
+    const res = makeRes();
+    await conversationHandler(
+      makeReq({ method: 'PATCH', query: { conversationId: conv } }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+    expect((store.demandes as any[])[0].status).toBe('pending');
+  });
+
+  it('GET reste ouvert à cette même coach (lecture volontairement libre)', async () => {
+    seedScrimsOnlyCoachOfTeamA();
+    seedIncomingPending();
+    const res = makeRes();
+    await conversationHandler(
+      makeReq({ query: { conversationId: conv } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({ myTeamId: TEAM_A });
+    expect((store.demandes as any[])[0].status).toBe('pending');
+  });
+
+  it('PATCH accepté quand la permission est déléguée', async () => {
+    seedScrimsOnlyCoachOfTeamA();
+    (store.team_member_permissions as any[]).push({
+      team_id: TEAM_A,
+      user_id: USER_ID,
+      permission: 'send_captain_messages',
+      revoked_at: null,
+    });
+    seedIncomingPending();
+    const res = makeRes();
+    await conversationHandler(
+      makeReq({ method: 'PATCH', query: { conversationId: conv } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({ success: true });
+  });
+
+  it('PATCH accepté pour la capitaine (toutes les permissions)', async () => {
+    seedCaptainOfTeamA();
+    seedIncomingPending();
+    const res = makeRes();
+    await conversationHandler(
+      makeReq({ method: 'PATCH', query: { conversationId: conv } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+  });
+});

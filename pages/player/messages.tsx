@@ -214,10 +214,16 @@ export default function MessagesPage() {
       setOtherTeam(data.otherTeam || null);
       setMyTeamId(data.myTeamId);
 
-      // Mark as read
-      await adminFetchJson(withTeam(`/api/player/messages/${convId}`), {
-        method: 'PATCH',
-      });
+      // Marquer comme lu — SEULEMENT pour qui peut répondre. Le PATCH exige
+      // `send_captain_messages` : une coach qui lit la boîte sans ce droit ne
+      // doit pas remettre à zéro les non-lus de la capitaine, qui n'aurait
+      // alors plus aucun signal qu'un message l'attend. Sans ce test, chaque
+      // ouverture de conversation lui renvoyait un 403 en bandeau d'erreur.
+      if (canSend) {
+        await adminFetchJson(withTeam(`/api/player/messages/${convId}`), {
+          method: 'PATCH',
+        });
+      }
 
       if (activeRequestRef.current !== convId) return;
 
@@ -245,9 +251,12 @@ export default function MessagesPage() {
       setMessages(data.messages || []);
       // Mark inbound messages as read on the fly so the unread counter stays
       // accurate without forcing the user to reopen the conversation.
-      await adminFetchJson(withTeam(`/api/player/messages/${activeConvId}`), {
-        method: 'PATCH',
-      });
+      // Même garde qu'à l'ouverture : lire n'est pas répondre.
+      if (canSend) {
+        await adminFetchJson(withTeam(`/api/player/messages/${activeConvId}`), {
+          method: 'PATCH',
+        });
+      }
       loadConversations();
       setTimeout(scrollToBottom, 80);
     } catch (err) {
@@ -256,6 +265,7 @@ export default function MessagesPage() {
   }, [
     activeConvId,
     adminFetchJson,
+    canSend,
     loadConversations,
     scrollToBottom,
     withTeam,

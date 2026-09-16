@@ -25,7 +25,41 @@ function getStore(name: string): Map<string, number[]> {
 
 const IP_RE = /^[\d.a-fA-F:]+$/;
 
+/**
+ * En-tête posé par l'edge Netlify : l'adresse de la connexion TCP réellement
+ * reçue par la plateforme. Contrairement à `cf-connecting-ip`, `x-real-ip` et
+ * `x-forwarded-for` — que n'importe quel client peut envoyer lui-même, et qui
+ * passent tels quels jusqu'à la fonction puisque le site n'est PAS derrière
+ * Cloudflare —, c'est la plateforme qui l'écrit.
+ */
+const NETLIFY_CLIENT_IP_HEADER = 'x-nf-client-connection-ip';
+
 export function getClientIp(req: NextApiRequest): string {
+  // 1) Netlify d'abord, et EXCLUSIVEMENT s'il est là. Avant, une boucle qui
+  //    faisait varier `cf-connecting-ip` obtenait un compteur neuf à chaque
+  //    requête : toutes les limites `applyRateLimit` tombaient.
+  //
+  //    Correctif strictement ADDITIF : on ne retient cet en-tête que s'il est
+  //    présent ET bien formé. Absent (dev local, autre hébergeur) ou illisible
+  //    (valeur dupliquée jointe par une virgule, format inattendu), on retombe
+  //    sur l'algorithme historique ci-dessous, à l'identique. Ce qu'on s'interdit,
+  //    c'est de répondre `'unknown'` à sa place : ce serait ranger TOUT le monde
+  //    dans le même compteur et servir des 429 en masse un soir de match.
+  const nfIp = req.headers[NETLIFY_CLIENT_IP_HEADER];
+  if (typeof nfIp === 'string') {
+    const trimmed = nfIp.trim();
+    if (trimmed && IP_RE.test(trimmed)) return trimmed;
+  }
+
+  return legacyClientIp(req);
+}
+
+/**
+ * Extraction historique, conservée telle quelle (ordre, repli socket, regex).
+ * Ne sert plus en production Netlify que si l'en-tête plateforme manque ; ne pas
+ * la « durcir » ici sans mesurer l'effet sur les environnements sans Netlify.
+ */
+function legacyClientIp(req: NextApiRequest): string {
   // Prefer headers set by trusted reverse proxies (Netlify, Cloudflare)
   const cfIp = req.headers['cf-connecting-ip'];
   const realIp = req.headers['x-real-ip'];

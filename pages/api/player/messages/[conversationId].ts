@@ -8,7 +8,11 @@ import type { User } from '@supabase/supabase-js';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
-import { TEAM_MANAGEMENT_FORBIDDEN } from '@/utils/teams/managementAccess';
+import {
+  assertTeamPermission,
+  TEAM_MANAGEMENT_FORBIDDEN,
+} from '@/utils/teams/managementAccess';
+import type { TeamPermission } from '@/utils/teamRoles';
 import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import { isValidUUID } from '@/utils/apiHelpers';
@@ -20,12 +24,26 @@ async function loadCaptainTeam(
   req: NextApiRequest,
   res: NextApiResponse,
   user: User,
-  tenantId: string
+  tenantId: string,
+  /**
+   * Permission fine exigée, sur le modèle de `/api/player/messages`. La LECTURE
+   * reste volontairement ouverte à qui gère l'équipe (pas de permission) ; le
+   * marquage « lu » l'exige, cf. le PATCH.
+   */
+  permission?: TeamPermission
 ): Promise<CaptainTeam | null> {
   const access = await getManagedTeamForRequest(req, user.id, tenantId);
   if (!access) {
     res.status(403).json({ error: TEAM_MANAGEMENT_FORBIDDEN });
     return null;
+  }
+
+  if (permission) {
+    const denied = assertTeamPermission(access, permission);
+    if (denied) {
+      res.status(denied.status).json({ error: denied.error });
+      return null;
+    }
   }
 
   const { data: myTeam } = await supabaseAdmin
@@ -136,7 +154,17 @@ export default withAuthRoute(async function handler(
   }
 
   if (req.method === 'PATCH') {
-    const team = await loadCaptainTeam(req, res, user, tenantId);
+    // Marquer « lu » n'est pas une lecture : ça passe les messages entrants à
+    // `approved` et remet à zéro les compteurs non lus de la capitaine. Sans
+    // cette garde, une coach à qui l'on n'a délégué que `manage_scrims` pouvait
+    // vider la boîte de réception d'équipe. Même droit que l'ENVOI.
+    const team = await loadCaptainTeam(
+      req,
+      res,
+      user,
+      tenantId,
+      'send_captain_messages'
+    );
     if (!team) return;
 
     if (team.id !== teamIdA && team.id !== teamIdB) {
