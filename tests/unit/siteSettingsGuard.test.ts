@@ -35,8 +35,13 @@ function walk(dir: string, acc: string[] = []): string[] {
 }
 
 describe('site_settings est scopé tenant', () => {
+  // Séparateurs NORMALISÉS. `path.relative` rend `utils\siteSettings.ts` sous
+  // Windows, qui ne correspond à aucune entrée d'ALLOWED : le helper canonique
+  // se dénonçait lui-même, et la garde était rouge en permanence sur un poste
+  // Windows tout en passant en CI. Une garde qui n'est verte que sur la moitié
+  // des machines finit par être ignorée partout.
   const files = ROOTS.flatMap((r) => walk(path.join(process.cwd(), r))).map(
-    (f) => path.relative(process.cwd(), f)
+    (f) => path.relative(process.cwd(), f).split(path.sep).join('/')
   );
 
   it('chaque accès à la table porte un filtre ou une valeur de tenant', () => {

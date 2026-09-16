@@ -99,7 +99,12 @@ describe('docs/openapi/inferred-responses.json', () => {
       OUTPUT,
     } = require('../../scripts/openapi/infer-responses.cjs');
     const expected = serialize(inferResponses(REPO_ROOT));
-    const current = fs.readFileSync(path.join(REPO_ROOT, OUTPUT), 'utf8');
+    // Fins de ligne normalisées : le générateur écrit en LF, le checkout
+    // Windows rend du CRLF (le dépôt n'a pas de `.gitattributes`). Sans ça, le
+    // test réclame une régénération qui ne change pas un octet de contenu.
+    const current = fs
+      .readFileSync(path.join(REPO_ROOT, OUTPUT), 'utf8')
+      .replace(/\r\n/g, '\n');
     expect(
       current === expected,
       'réponses déduites périmées : lancer `npm run openapi:responses`'

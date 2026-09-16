@@ -27,9 +27,22 @@ import { fragmentToApiPath } from '../../utils/openapi/assemble';
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const API_ROOT = path.join(REPO_ROOT, 'pages', 'api');
 const FRAGMENTS_ROOT = path.join(REPO_ROOT, 'docs', 'openapi', 'paths');
+// Où vit le repo voisin. La valeur unique « frère de conference-website » est
+// un pari sur l'arborescence du poste : elle tombe juste chez qui range les
+// deux repos côte à côte, et rend la garde cross-repo rouge en permanence chez
+// les autres (ici `depot/conference-website` et `workspace/docker-box`). Une
+// garde rouge par accident ne protège plus de rien — on essaie donc les
+// emplacements plausibles, l'env gardant le dernier mot.
+const BOT_CLIENT_CANDIDATES = [
+  path.resolve(REPO_ROOT, '..', 'docker-box'),
+  path.resolve(REPO_ROOT, '..', '..', 'workspace', 'docker-box'),
+  path.resolve(REPO_ROOT, '..', '..', 'depot', 'docker-box'),
+].map((root) => path.join(root, 'services', 'discord-bot'));
+
 const BOT_CLIENT_ROOT =
   process.env.BOT_CLIENT_ROOT ??
-  path.resolve(REPO_ROOT, '..', 'docker-box', 'services', 'discord-bot');
+  BOT_CLIENT_CANDIDATES.find((p) => fs.existsSync(p)) ??
+  BOT_CLIENT_CANDIDATES[0];
 
 // ---------------------------------------------------------------------------
 // Allowlists — known drift entries that should NOT fail the test

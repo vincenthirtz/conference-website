@@ -18,10 +18,15 @@ import {
 } from '../../utils/openapi/botInventory';
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
-const CONTRACT = fs.readFileSync(
-  path.join(REPO_ROOT, 'docs', 'BOT_API_CONTRACT.md'),
-  'utf8'
-);
+// FINS DE LIGNE NORMALISÉES. Le générateur écrit en LF ; le dépôt n'a pas de
+// `.gitattributes` et `core.autocrlf` rend du CRLF au checkout sous Windows.
+// Comparées telles quelles, deux chaînes au contenu IDENTIQUE échouaient, et
+// le test réclamait une régénération qui ne changeait pas un octet — vert en
+// CI, rouge en permanence sur un poste Windows. Un retour chariot n'est pas du
+// contenu, et une garde rouge par accident finit par être ignorée.
+const CONTRACT = fs
+  .readFileSync(path.join(REPO_ROOT, 'docs', 'BOT_API_CONTRACT.md'), 'utf8')
+  .replace(/\r\n/g, '\n');
 const ROUTES = extractBotRoutes(REPO_ROOT);
 
 describe('parseBotRouteOptions', () => {
