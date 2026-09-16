@@ -40003,6 +40003,41 @@
         "is_full": {
          "type": "boolean"
         },
+        "opening": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "roles": {
+           "type": "array",
+           "items": {
+            "type": "string",
+            "enum": [
+             "dps",
+             "flex",
+             "support",
+             "tank"
+            ]
+           }
+          },
+          "since": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "linked_by": {
+           "type": "string",
+           "const": "team"
+          }
+         },
+         "required": [
+          "roles",
+          "since",
+          "linked_by"
+         ]
+        },
         "rating": {
          "type": [
           "number",
@@ -40217,6 +40252,7 @@
         "member_count",
         "is_joinable",
         "is_full",
+        "opening",
         "rating",
         "skill_average",
         "reliability",
@@ -41590,88 +41626,6 @@
      "opening": {
       "type": "object",
       "properties": {
-       "id": {
-        "type": "string"
-       },
-       "teamName": {
-        "type": "string"
-       },
-       "roles": {
-        "type": "array",
-        "items": {
-         "type": "string",
-         "enum": [
-          "dps",
-          "flex",
-          "support",
-          "tank"
-         ]
-        }
-       },
-       "level": {
-        "type": [
-         "string",
-         "null"
-        ],
-        "enum": [
-         "bronze",
-         "champion",
-         "diamond",
-         "emerald",
-         "gold",
-         "grandmaster",
-         "master",
-         "platinum",
-         "silver",
-         "unknown",
-         null
-        ]
-       },
-       "availability": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "note": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "since": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "from": {
-        "type": [
-         "object",
-         "null"
-        ],
-        "properties": {
-         "name": {
-          "type": "string"
-         },
-         "slug": {
-          "type": [
-           "string",
-           "null"
-          ]
-         }
-        },
-        "required": [
-         "name",
-         "slug"
-        ]
-       },
-       "teamId": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
        "contact": {
         "type": "object",
         "properties": {
@@ -41695,14 +41649,6 @@
        }
       },
       "required": [
-       "id",
-       "teamName",
-       "roles",
-       "level",
-       "availability",
-       "note",
-       "since",
-       "teamId",
        "contact"
       ]
      }
@@ -52390,38 +52336,6 @@
     ]
    }
   },
-  "POST /api/admin/notifications/subscribe": {
-   "200": {
-    "type": "object",
-    "properties": {
-     "id": {},
-     "endpoint": {},
-     "created": {
-      "type": "boolean"
-     }
-    },
-    "required": [
-     "id",
-     "endpoint",
-     "created"
-    ]
-   },
-   "201": {
-    "type": "object",
-    "properties": {
-     "id": {},
-     "endpoint": {},
-     "created": {
-      "type": "boolean"
-     }
-    },
-    "required": [
-     "id",
-     "endpoint",
-     "created"
-    ]
-   }
-  },
   "POST /api/admin/notifications/test": {
    "200": {
     "type": "object",
@@ -61898,38 +61812,6 @@
      "success",
      "message",
      "conversationId"
-    ]
-   }
-  },
-  "POST /api/player/push/subscribe": {
-   "200": {
-    "type": "object",
-    "properties": {
-     "id": {},
-     "endpoint": {},
-     "created": {
-      "type": "boolean"
-     }
-    },
-    "required": [
-     "id",
-     "endpoint",
-     "created"
-    ]
-   },
-   "201": {
-    "type": "object",
-    "properties": {
-     "id": {},
-     "endpoint": {},
-     "created": {
-      "type": "boolean"
-     }
-    },
-    "required": [
-     "id",
-     "endpoint",
-     "created"
     ]
    }
   },
