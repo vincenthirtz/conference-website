@@ -2,11 +2,23 @@ get:
   tags:
     - public/v1
   summary: Liste des leagues publiques.
+  description: |
+    Ligues de l'espace servi marquées publiques et hors brouillon, triées par
+    date de création décroissante. Pas de pagination.
+
+    Espace servi : voir « Quel espace répond » dans l'introduction. Le jeton
+    `Authorization` est ignoré ici.
+
+    Anonyme, CORS `*`. Limite : 120 requêtes par minute par IP pour cet
+    endpoint. Cache CDN : 120 s.
   operationId: publicV1ListLeagues
   security: []
   responses:
     '200':
       description: Leagues publiques.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PublicCacheControl'
       content:
         application/json:
           schema:
@@ -18,7 +30,26 @@ get:
                 type: array
                 items:
                   $ref: '#/components/schemas/PublicLeague'
+          example:
+            data:
+              - id: 4b3a2918-0f7e-4d6c-95b4-a39281706f5e
+                name: Saison 2026
+                slug: saison-2026
+                description: null
+                game: overwatch
+                status: active
+                start_date: '2026-01-10'
+                end_date: '2026-12-20'
+                points_table:
+                  '1': 100
+                  '2': 70
+                  '3': 50
+                is_public: true
+                created_at: '2025-12-01T10:00:00+00:00'
+                updated_at: '2026-09-01T08:30:00+00:00'
+    '405':
+      $ref: '#/components/responses/PublicMethodNotAllowed'
     '429':
-      $ref: '#/components/responses/RateLimited'
+      $ref: '#/components/responses/PublicRateLimited'
     '500':
-      $ref: '#/components/responses/ServerError'
+      $ref: '#/components/responses/PublicServerError'

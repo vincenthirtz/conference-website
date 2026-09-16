@@ -30,6 +30,7 @@ import { newsletterSubscribeBodySchema } from './public/newsletter';
 import { teamOpeningBodySchema } from './public/teamOpenings';
 import { predictionBodySchema } from './player/predictions/body';
 import { circuitPartnerApplicationBodySchema } from './public/circuitPartners';
+import { mintTokenBodySchema } from './admin/apiTokens';
 
 export type ApiContractEntry = {
   schema: z.ZodType;
@@ -56,6 +57,7 @@ export const API_CONTRACT_SCHEMAS: Record<string, ApiContractEntry> = {
     schema: circuitPartnerApplicationBodySchema,
     io: 'input',
   },
+  'admin.apiTokens.mint': { schema: mintTokenBodySchema, io: 'input' },
   ...BOT_API_CONTRACT_SCHEMAS,
   ...PUBLIC_V1_RESPONSE_SCHEMAS,
   ...QUERY_CONTRACT_SCHEMAS,

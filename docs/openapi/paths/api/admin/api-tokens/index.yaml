@@ -1,5 +1,10 @@
 get:
   summary: List the active tenant's public API tokens (metadata only).
+  description: |
+    Clés d'API publiques de l'espace ACTIF du sélecteur du back-office
+    (cookie `staff_active_tenant_id`), révoquées comprises. Jamais le hash ni
+    le clair. Permission `manage_settings`. Limite : 10 requêtes par minute
+    par IP (compteur partagé avec `/api/admin/api-tokens/{id}`).
   operationId: adminListApiTokens
   tags:
     - admin/misc
@@ -7,22 +12,32 @@ get:
     - StaffSession: []
   responses:
     '200':
-      description: Tokens (jamais le hash ni le plain).
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              tokens:
-                type: array
-                items:
-                  type: object
+      description: Tokens (jamais le hash ni le plain), du plus récent au plus ancien.
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
       $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
 post:
   summary: Mint a new scoped public API token (plain returned once).
+  description: |
+    ATTENTION — ESPACE IMPLICITE : la clé est émise pour l'espace ACTIF du
+    sélecteur du back-office de l'émetteur, que l'écran ne nomme pas. C'est
+    ainsi qu'une clé destinée à un partenaire a déjà été rattachée à l'espace
+    historique. Pour émettre pour un espace désigné explicitement, utiliser
+    `POST /api/admin/tenants/{id}/api-tokens` (owner de la plateforme).
+
+    Le clair (`token`) n'est renvoyé qu'une fois, dans cette réponse ; il est
+    stocké haché et jamais journalisé. Permission `manage_settings` ;
+    `comp: true` exige en plus le rôle `owner`. Limite : 10 requêtes par
+    minute par IP.
+
+    Erreurs 400 : `INVALID_BODY` (corps refusé), `INVALID_SCOPES` (portée
+    inconnue, avec `validScopes`). 403 `FORBIDDEN_COMP` : `comp: true` sans le
+    rôle `owner`.
   operationId: adminCreateApiToken
   tags:
     - admin/misc
@@ -33,32 +48,29 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - name
-            - scopes
-          properties:
-            name:
-              type: string
-            scopes:
-              type: array
-              items:
-                type: string
+          x-zod: admin.apiTokens.mint
+        example:
+          name: Overlays POGTV
+          scopes:
+            - matches:read
+            - tournaments:read
+          expires_in_days: 90
   responses:
     '201':
-      description: Token créé — `token` (plain) renvoyé une seule fois.
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              token:
-                type: string
-              tokenMeta:
-                type: object
+      description: Token créé — `token` (clair) renvoyé une seule fois, `tokenMeta` sans le clair.
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
       $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+    '503':
+      description: Base indisponible.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

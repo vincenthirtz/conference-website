@@ -60,10 +60,15 @@ IdempotencyKey:
   schema:
     type: string
     minLength: 1
-    maxLength: 128
+    maxLength: 200
   description: |
-    Clé d'idempotence client. Pour un même couple (route, clé), la
-    réponse est rejouée 24h. Voir `BOT_API_CONTRACT.md` §Idempotency.
+    Clé d'idempotence client (≤ 200 caractères après trim ; une clé vide ou
+    plus longue est IGNORÉE, sans erreur). Une réponse 2xx est mise en cache
+    5 minutes et rejouée (en-tête `Idempotency-Replay: true`) pour la même
+    route, la même clé ET le même corps : un corps différent est traité comme
+    une nouvelle requête. Les erreurs ne sont pas mises en cache. Portée :
+    espace de la clé (bot, public) ou membre du staff et espace actif
+    (admin). Voir `BOT_API_CONTRACT.md` §Idempotency.
 TournamentId:
   name: tournamentId
   in: path

@@ -21,6 +21,13 @@ get:
   responses:
     '200':
       description: Match et ses games.
+      headers:
+        Deprecation:
+          $ref: '#/components/headers/Deprecation'
+        Sunset:
+          $ref: '#/components/headers/Sunset'
+        Link:
+          $ref: '#/components/headers/SuccessorLink'
       content:
         application/json:
           schema:

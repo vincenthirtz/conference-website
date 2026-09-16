@@ -2,17 +2,27 @@ get:
   tags:
     - public/v1
   summary: Spécification OpenAPI publique (machine-readable).
-  description: >
-    Spec OpenAPI 3.1 filtrée à la surface publique (`/api/public/*`), dérivée de
-    la spec complète (fragments `docs/openapi/`). Anonyme, CORS `*`, rate-limitée (120
-    req/min/IP). `?format=yaml` pour la variante YAML. À importer dans Postman /
-    un générateur de code.
+  description: |
+    Spec OpenAPI 3.1 filtrée à la surface publique (`/api/public/*`), dérivée
+    de la spec complète (fragments `docs/openapi/`). À importer dans Postman ou
+    un générateur de code. Version rendue lisible : `/developpeurs/reference`.
+
+    Anonyme, CORS `*`. Limite : 120 requêtes par minute par IP (le 429 n'a pas
+    de `code`). Cache : `public, max-age=300, s-maxage=3600`.
+
+    ATTENTION — cache CDN : `format` est lu par le code, mais la clé de cache
+    du CDN l'ignore. Pendant une heure, la première variante mise en cache
+    (JSON ou YAML) est servie aux deux. Préférer la variante JSON (sans
+    paramètre) ; `?format=yaml` n'est pas fiable aujourd'hui.
   operationId: publicGetOpenApiSpec
   security: []
   parameters:
     - name: format
       in: query
       required: false
+      description: |
+        `yaml` pour la variante YAML (`text/yaml`), toute autre valeur donne du
+        JSON. Non fiable aujourd'hui (cache CDN, voir la description).
       schema:
         type: string
         enum:
@@ -29,7 +39,9 @@ get:
         text/yaml:
           schema:
             type: string
+    '405':
+      $ref: '#/components/responses/PublicMethodNotAllowed'
     '429':
-      $ref: '#/components/responses/RateLimited'
+      $ref: '#/components/responses/PublicRateLimited'
     '500':
-      $ref: '#/components/responses/ServerError'
+      $ref: '#/components/responses/PublicServerError'

@@ -2,12 +2,31 @@ get:
   tags:
     - public/v1
   summary: Classement Glicko-2 public des joueuses.
+  description: |
+    Joueuses de l'espace servi ayant joué au moins un match classé, triées par
+    `rating` décroissant (départage stable par identifiant). `rank` est la
+    position absolue (`offset` + position dans la page). ATTENTION :
+    `pagination.count` est le nombre d'éléments de CETTE page, pas le total.
+
+    Espace servi : voir « Quel espace répond » dans l'introduction. Le jeton
+    `Authorization` est ignoré ici.
+
+    Anonyme, CORS `*`. Limite : 120 requêtes par minute par IP pour cet
+    endpoint. Cache CDN : 60 s.
+
+    ATTENTION — cache CDN : `limit` et `offset` sont lus par le code, mais la
+    clé de cache du CDN les ignore. Pendant 60 s, cette URL renvoie la première
+    page mise en cache, quels que soient `limit` / `offset` envoyés ensuite.
+    La pagination n'est donc PAS fiable aujourd'hui.
   operationId: publicV1GetLeaderboard
   security: []
   parameters:
     - name: limit
       in: query
       required: false
+      description: |
+        Ramené dans [1, 100] ; une valeur non numérique vaut 50. Non fiable
+        aujourd'hui (cache CDN, voir la description).
       schema:
         type: integer
         minimum: 1
@@ -16,6 +35,9 @@ get:
     - name: offset
       in: query
       required: false
+      description: |
+        Ramené à 0 au minimum. Non fiable aujourd'hui (cache CDN, voir la
+        description).
       schema:
         type: integer
         minimum: 0
@@ -23,6 +45,9 @@ get:
   responses:
     '200':
       description: Page du classement + pagination.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PublicCacheControl'
       content:
         application/json:
           schema:
@@ -36,7 +61,28 @@ get:
                   $ref: '#/components/schemas/LeaderboardPlayer'
               pagination:
                 $ref: '#/components/schemas/PublicV1Pagination'
+          example:
+            data:
+              - userId: 8d7c6b5a-4938-4271-b6a5-948372615049
+                displayName: Nova
+                battleTag: Nova#21456
+                avatarUrl: null
+                teamName: Les Aurores
+                teamSlug: les-aurores
+                teamLogoUrl: https://example.org/logos/aurores.png
+                rating: 1623.4
+                rd: 71.2
+                gamesPlayed: 12
+                wins: 8
+                losses: 4
+                rank: 1
+            pagination:
+              limit: 50
+              offset: 0
+              count: 1
+    '405':
+      $ref: '#/components/responses/PublicMethodNotAllowed'
     '429':
-      $ref: '#/components/responses/RateLimited'
+      $ref: '#/components/responses/PublicRateLimited'
     '500':
-      $ref: '#/components/responses/ServerError'
+      $ref: '#/components/responses/PublicServerError'

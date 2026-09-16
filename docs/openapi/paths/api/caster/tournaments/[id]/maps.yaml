@@ -21,6 +21,13 @@ get:
   responses:
     '200':
       description: Liste des maps activées.
+      headers:
+        Deprecation:
+          $ref: '#/components/headers/Deprecation'
+        Sunset:
+          $ref: '#/components/headers/Sunset'
+        Link:
+          $ref: '#/components/headers/SuccessorLink'
       content:
         application/json:
           schema:

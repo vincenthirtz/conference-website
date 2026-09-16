@@ -3,7 +3,7 @@ get:
   deprecated: true
   description: |
     **Déprécié** (Sunset 2026-12-23). Alias de `/api/caster/v1/tournaments`
-    — réponses identiques + headers `Deprecation`/`Sunset`/`Link`.
+    — réponses identiques. Les en-têtes `Deprecation`, `Sunset` et `Link` sont posés sur toute réponse, erreurs comprises.
     Lecture publique tenant-scopée (`x-tenant-id`) via `supabaseAdmin`.
     Statuts retenus : `running`, `published`.
   operationId: casterListTournaments
@@ -15,6 +15,13 @@ get:
   responses:
     '200':
       description: Liste de tournois.
+      headers:
+        Deprecation:
+          $ref: '#/components/headers/Deprecation'
+        Sunset:
+          $ref: '#/components/headers/Sunset'
+        Link:
+          $ref: '#/components/headers/SuccessorLink'
       content:
         application/json:
           schema:

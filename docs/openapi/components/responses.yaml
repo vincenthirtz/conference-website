@@ -45,3 +45,205 @@ ServerError:
     application/json:
       schema:
         $ref: '#/components/schemas/Error'
+PublicBadRequest:
+  description: Identifiant invalide (UUID exigé) — `BAD_REQUEST`.
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/PublicApiError'
+      example:
+        error: Invalid match id
+        code: BAD_REQUEST
+PublicNotFound:
+  description: |
+    Ressource inconnue dans l'espace servi, ou non publique — `NOT_FOUND`.
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/PublicApiError'
+      example:
+        error: Tournament not found
+        code: NOT_FOUND
+PublicMethodNotAllowed:
+  description: Méthode autre que `GET` / `OPTIONS` — `METHOD_NOT_ALLOWED`.
+  headers:
+    Allow:
+      $ref: '#/components/headers/Allow'
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/PublicApiError'
+      example:
+        error: Method not allowed
+        code: METHOD_NOT_ALLOWED
+PublicRateLimited:
+  description: |
+    Limite de débit par IP dépassée. Deux limiteurs se suivent, avec la même
+    limite (120 requêtes par minute, compteur distinct par endpoint) : un
+    limiteur en mémoire par instance, dont le corps n'a PAS de `code`, puis un
+    compteur durable partagé (`RATE_LIMITED`, laisse passer si le compteur est
+    indisponible). Respecter `Retry-After`.
+  headers:
+    Retry-After:
+      $ref: '#/components/headers/RetryAfter'
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/PublicApiError'
+      examples:
+        memoire:
+          summary: Limiteur en mémoire (sans code)
+          value:
+            error: Trop de requêtes. Réessayez plus tard.
+        durable:
+          summary: Compteur durable
+          value:
+            error: Trop de requêtes. Réessayez plus tard.
+            code: RATE_LIMITED
+PublicServerError:
+  description: Erreur serveur — `INTERNAL`. Réessayer plus tard.
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/PublicApiError'
+      example:
+        error: Internal server error
+        code: INTERNAL
+PublicWriteBadRequest:
+  description: |
+    Validation refusée (`INVALID_QUERY`, `INVALID_BODY`, avec `fields`) ou
+    match inapplicable (`BAD_REQUEST` : `bye`, équipes non assignées).
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/PublicApiError'
+      examples:
+        corps:
+          summary: Score hors bornes
+          value:
+            error: 'Too big: expected number to be <=99'
+            code: INVALID_BODY
+            fields:
+              team1Score:
+                - 'Too big: expected number to be <=99'
+        match:
+          summary: Match sans ses deux équipes
+          value:
+            error: Match incomplet (équipes non assignées)
+            code: BAD_REQUEST
+PublicUnauthorized:
+  description: |
+    Jeton absent, mal formé, inconnu, révoqué ou expiré — `UNAUTHORIZED`. Les
+    cinq cas renvoient la même réponse.
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/PublicApiError'
+      example:
+        error: Invalid or missing API token.
+        code: UNAUTHORIZED
+PublicWriteForbidden:
+  description: |
+    Deux corps possibles, évalués dans cet ordre : plan insuffisant
+    (`PublicPlanDenial`, sans `code`, jamais pour une clé partenaire), puis
+    portée manquante (`INSUFFICIENT_SCOPE`).
+  content:
+    application/json:
+      schema:
+        oneOf:
+          - $ref: '#/components/schemas/PublicPlanDenial'
+          - $ref: '#/components/schemas/PublicApiError'
+      examples:
+        plan:
+          summary: Plan insuffisant
+          value:
+            error: plan_required
+            message: Cette clé API en écriture nécessite le plan Circuit. Le plan Régie n'ouvre que la lecture. Mettez à niveau votre abonnement pour écrire via l'API.
+            requiredCapability: apiWrite
+        portee:
+          summary: Portée manquante
+          value:
+            error: Token lacks required scope 'matches:write'.
+            code: INSUFFICIENT_SCOPE
+PublicWriteRateLimited:
+  description: |
+    Trois limites successives : par IP (corps sans `code`), par jeton
+    (`ACTOR_RATE_LIMIT`), puis quota du plan — débit par minute
+    (`RATE_LIMITED`) ou quota mensuel (`QUOTA_EXCEEDED`), avec
+    `X-RateLimit-Scope` et `X-RateLimit-Limit`. Le quota du plan laisse passer
+    si son compteur est indisponible et ne s'applique pas à une clé
+    partenaire (`comp`).
+  headers:
+    Retry-After:
+      $ref: '#/components/headers/RetryAfter'
+    X-RateLimit-Scope:
+      $ref: '#/components/headers/RateLimitScope'
+    X-RateLimit-Limit:
+      $ref: '#/components/headers/RateLimitLimit'
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/PublicApiError'
+      examples:
+        ip:
+          summary: Limite par IP (sans code)
+          value:
+            error: Trop de requêtes. Réessayez plus tard.
+        jeton:
+          summary: Limite par jeton
+          value:
+            error: Trop de requêtes pour ton compte. Réessaye plus tard.
+            code: ACTOR_RATE_LIMIT
+        minute:
+          summary: Débit du plan
+          value:
+            error: API rate limit exceeded.
+            code: RATE_LIMITED
+        mois:
+          summary: Quota mensuel du plan
+          value:
+            error: Monthly API quota exceeded for this plan.
+            code: QUOTA_EXCEEDED
+PublicConflict:
+  description: Match déjà clôturé (`finished`, `walkover` ou `cancelled`) — `CONFLICT`.
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/PublicApiError'
+      example:
+        error: Match déjà clôturé (status=finished). Contactez le staff pour modifier.
+        code: CONFLICT
+PublicWriteServerError:
+  description: |
+    Erreur serveur — `INTERNAL`, y compris l'échec de la finalisation du score
+    (dont une finalisation concurrente du même match). Relire le match
+    (`GET /api/public/v1/matches/{id}`) avant de réessayer.
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/PublicApiError'
+      example:
+        error: 'Échec de la finalisation : …'
+        code: INTERNAL
+PublicServiceUnavailable:
+  description: |
+    Écritures gelées pendant une maintenance (`MAINTENANCE_MODE`,
+    `Retry-After: 60`), ou base indisponible (`INTERNAL`, sans `Retry-After`).
+  headers:
+    Retry-After:
+      $ref: '#/components/headers/RetryAfter'
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/PublicApiError'
+      examples:
+        maintenance:
+          summary: Maintenance
+          value:
+            error: Site en maintenance, écritures temporairement désactivées.
+            code: MAINTENANCE_MODE
+        base:
+          summary: Base indisponible
+          value:
+            error: Service unavailable.
+            code: INTERNAL

@@ -34,3 +34,117 @@ PublicV1TeamMember:
 PublicV1Team:
   # Généré depuis lib/apiContracts/public/v1 (type TS du handler vérifié par test).
   x-zod: response.PublicV1Team
+PublicApiErrorCode:
+  type: string
+  description: |
+    Catalogue des valeurs de `code` que la surface publique (`/api/public/*`)
+    peut renvoyer. C'est la valeur à tester côté client : `error` est un texte
+    lisible qui peut changer.
+
+    Deux réponses d'erreur n'ont PAS de `code` : le 429 du limiteur par IP
+    (`{ "error": "Trop de requêtes. Réessayez plus tard." }`) et le 403 de plan
+    (`PublicPlanDenial`, où `plan_required` est la valeur de `error`).
+
+    Tenu à jour par `tests/unit/apiErrorCodeCatalog.test.ts` : un code émis par
+    le code et absent d'ici (ou l'inverse) fait échouer la suite.
+  oneOf:
+    - const: BAD_REQUEST
+      description: >-
+        400 — requête invalide détectée par la route (identifiant non-UUID là où un UUID est exigé, match `bye` ou sans ses deux équipes pour une écriture de score).
+    - const: INVALID_BODY
+      description: >-
+        400 — corps JSON refusé par la validation (écriture authentifiée). Le détail par champ est dans `fields`.
+    - const: INVALID_QUERY
+      description: >-
+        400 — paramètres d'URL refusés par la validation (écriture authentifiée ; ex. `id` de match non-UUID). Le détail par champ est dans `fields`.
+    - const: UNAUTHORIZED
+      description: >-
+        401 — jeton absent, mal formé (préfixe `pk_live_` requis), inconnu, révoqué OU expiré. Ces cas ne sont pas distingués.
+    - const: INSUFFICIENT_SCOPE
+      description: >-
+        403 — jeton valide, mais la portée exigée par la route manque (aucune implication entre portées). Vérifié APRÈS le plan.
+    - const: NOT_FOUND
+      description: >-
+        404 — ressource inconnue dans l'espace servi, ou non publique (tournoi en brouillon ou archivé, match dans un statut non public, ligue en brouillon ou privée). Sur les formulaires de retrait, même réponse qu'un lien invalide.
+    - const: METHOD_NOT_ALLOWED
+      description: >-
+        405 — méthode non acceptée ; l'en-tête `Allow` liste les méthodes valides.
+    - const: CONFLICT
+      description: >-
+        409 — conflit d'état (ex. match déjà `finished`, `walkover` ou `cancelled`).
+    - const: RATE_LIMITED
+      description: >-
+        429 — limite de débit dépassée. Sur les lectures, limiteur durable par IP et par endpoint ; sur les écritures authentifiées, débit par minute du plan (`X-RateLimit-Scope: minute`). Respecter `Retry-After`.
+    - const: ACTOR_RATE_LIMIT
+      description: >-
+        429 — limite par jeton dépassée (écriture authentifiée), en plus de la limite par IP. Respecter `Retry-After`.
+    - const: QUOTA_EXCEEDED
+      description: >-
+        429 — quota mensuel du plan épuisé (`X-RateLimit-Scope: month`, `Retry-After` jusqu'au mois suivant, UTC). Jamais pour une clé partenaire.
+    - const: MAINTENANCE_MODE
+      description: >-
+        503 — écritures gelées pendant une maintenance (`Retry-After: 60`). Les lectures restent servies.
+    - const: INTERNAL
+      description: >-
+        500 — erreur serveur. Aussi 503 `Service unavailable.` quand la base est indisponible (écriture authentifiée). Réessayer plus tard.
+    - const: CAPTCHA
+      description: >-
+        400 — formulaires du site uniquement (`free-players`, `team-openings`) — captcha refusé. Hors intégration partenaire.
+    - const: VALIDATION
+      description: >-
+        400 — formulaires du site uniquement (`free-players`, `team-openings`) — champ invalide ou adresse email refusée. Hors intégration partenaire.
+    - const: INVALID_TOKEN
+      description: >-
+        400 — formulaires de retrait uniquement (`free-players/remove`, `team-openings/remove`) — lien de retrait invalide. Hors intégration partenaire.
+PublicApiError:
+  type: object
+  description: |
+    Corps d'erreur de la surface publique. `code` est absent sur le 429 du
+    limiteur par IP ; `fields` n'existe que pour `INVALID_BODY` /
+    `INVALID_QUERY`.
+  required:
+    - error
+  properties:
+    error:
+      type: string
+      description: >-
+        Message lisible. Peut changer sans préavis — ne pas le comparer.
+    code:
+      $ref: '#/components/schemas/PublicApiErrorCode'
+    fields:
+      type: object
+      description: >-
+        Erreurs par champ (`INVALID_BODY` / `INVALID_QUERY` uniquement).
+      additionalProperties:
+        type: array
+        items:
+          type: string
+  additionalProperties: false
+PublicPlanDenial:
+  type: object
+  description: |
+    403 renvoyé quand le plan de l'espace propriétaire du jeton n'ouvre pas
+    l'accès demandé. ATTENTION : `plan_required` est la valeur de `error`, il
+    n'y a PAS de champ `code`. Une clé partenaire (`comp`) n'obtient jamais
+    cette réponse. Évalué AVANT la portée du jeton.
+  required:
+    - error
+    - message
+    - requiredCapability
+  properties:
+    error:
+      type: string
+      const: plan_required
+    message:
+      type: string
+      description: >-
+        Explication lisible (plan à souscrire).
+    requiredCapability:
+      type: string
+      enum:
+        - apiRead
+        - apiWrite
+      description: |
+        Capacité manquante. Seule l'unique route d'écriture passe par ce
+        contrôle aujourd'hui : en pratique `apiWrite`.
+  additionalProperties: false

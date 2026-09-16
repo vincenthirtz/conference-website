@@ -12,9 +12,16 @@ BotTenantId:
   in: header
   name: x-tenant-id
   description: |
-    UUID du tenant. Informationnel uniquement : la clé per-tenant est
-    autoritaire, le header n'est plus requis ni validé (ignoré, et la clé
-    gagne en cas de conflit).
+    UUID d'espace. Effet selon la clé :
+    - clé ordinaire : ignoré — la clé détermine l'espace et l'emporte en cas
+      de conflit (avertissement journalisé) ;
+    - clé plateforme (`tenant_secrets.is_platform_key`) : désigne l'espace
+      servi, SAUF si `x-guild-id` désigne un serveur Discord rattaché, qui
+      l'emporte. Malformé → 400 `INVALID_TENANT_HEADER` ; espace inconnu ou
+      inactif → 404 `UNKNOWN_TENANT` ; `x-guild-id` malformé → 400
+      `INVALID_GUILD_HEADER` ; lecture du rattachement impossible → 503
+      `TENANT_LOOKUP_UNAVAILABLE`. Détail : `BOT_API_CONTRACT.md`
+      §Tenant identification.
 StaffSession:
   type: apiKey
   in: cookie
@@ -41,7 +48,34 @@ PublicApiToken:
   type: http
   scheme: bearer
   description: |
-    Token API public scopé (`Authorization: Bearer pk_live_…`), découplé du
-    bot. Vérifié par `withPublicWrite` : sha256 → `tenant_api_tokens` (non
-    révoqué) ; le tenant est autoritaire, les `scopes` (`resource:action`,
-    ex. `matches:write`) gouvernent l'accès. CSRF-immune (bearer).
+    Jeton d'API d'un espace : `Authorization: Bearer pk_live_<64 hex>`,
+    distinct de la clé bot.
+
+    ESPACE. Le jeton est rattaché à UN espace, fixé à l'émission ; c'est lui
+    qui détermine l'espace des requêtes qu'il authentifie, et aucun paramètre
+    ni en-tête ne peut le déplacer. Deux chemins d'émission, qui ne visent pas
+    le même espace :
+    - `POST /api/admin/api-tokens` (écran `/admin/api-tokens`) émet pour
+      l'espace ACTIF du sélecteur du back-office de l'émetteur — vérifier ce
+      sélecteur avant d'émettre ;
+    - `POST /api/admin/tenants/{id}/api-tokens` (owner de la plateforme) émet
+      pour l'espace désigné par `{id}`, écrit dans l'URL.
+
+    OÙ IL SERT. Aujourd'hui, deux surfaces seulement lisent ce jeton :
+    `POST /api/public/v1/matches/{id}/result` et `POST /api/graphql` (où il
+    fixe l'espace des requêtes et autorise la mutation). Les lectures REST
+    `GET /api/public/v1/*` IGNORENT l'en-tête `Authorization` : le jeton n'y
+    change ni l'espace, ni les limites, ni le cache.
+
+    VALIDITÉ. Affiché en clair une seule fois, à l'émission ; seul le préfixe
+    `pk_live_xxxxxx` reste visible ensuite. Refusé en 401 `UNAUTHORIZED` s'il
+    est inconnu, révoqué (`DELETE /api/admin/api-tokens/{id}` ou
+    `DELETE /api/admin/tenants/{id}/api-tokens?tokenId=`) ou expiré
+    (`expires_at`, durée optionnelle choisie à l'émission), sans distinguer
+    ces cas. Sur GraphQL, un jeton refusé ne produit AUCUNE erreur : la
+    requête est traitée comme anonyme (voir l'introduction).
+
+    PORTÉES. `resource:action` (`tournaments`, `matches`, `teams`, `players`
+    × `read`, `write`), sans implication entre elles. Seule `matches:write`
+    est exigée par une route aujourd'hui ; aucune route ne contrôle une portée
+    `:read`.

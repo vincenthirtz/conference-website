@@ -9,11 +9,24 @@ get:
   tags:
     - public/v1
   summary: Équipe publique + roster public (sans données privées).
+  description: |
+    Équipe de l'espace servi, trouvée par id puis par slug (404 si aucune).
+    Le roster ne porte que le pseudo, le rôle et le statut de remplaçante :
+    ni email, ni identifiant Discord. Ordre du roster non garanti.
+
+    Espace servi : voir « Quel espace répond » dans l'introduction. Le jeton
+    `Authorization` est ignoré ici.
+
+    Anonyme, CORS `*`. Limite : 120 requêtes par minute par IP pour cet
+    endpoint. Cache CDN : 120 s.
   operationId: publicV1GetTeam
   security: []
   responses:
     '200':
       description: Détail équipe.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PublicCacheControl'
       content:
         application/json:
           schema:
@@ -23,11 +36,25 @@ get:
             properties:
               data:
                 $ref: '#/components/schemas/PublicV1Team'
-    '400':
-      $ref: '#/components/responses/BadRequest'
+          example:
+            data:
+              id: 1e2d3c4b-5a69-4788-9a0b-1c2d3e4f5a6b
+              name: Les Aurores
+              short_name: AUR
+              slug: les-aurores
+              logo_url: https://example.org/logos/aurores.png
+              roster:
+                - display_name: Nova
+                  role: player
+                  is_substitute: false
+                - display_name: Kestrel
+                  role: player
+                  is_substitute: true
     '404':
-      $ref: '#/components/responses/NotFound'
+      $ref: '#/components/responses/PublicNotFound'
+    '405':
+      $ref: '#/components/responses/PublicMethodNotAllowed'
     '429':
-      $ref: '#/components/responses/RateLimited'
+      $ref: '#/components/responses/PublicRateLimited'
     '500':
-      $ref: '#/components/responses/ServerError'
+      $ref: '#/components/responses/PublicServerError'

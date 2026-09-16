@@ -5,8 +5,8 @@ La spec OpenAPI 3.1 de `pages/api/*` est découpée ici, puis assemblée par
 
 | Emplacement | Contenu |
 |---|---|
-| `root.yaml` | `openapi`, `info`, `servers`, `tags`, `security` global |
-| `components/<section>.yaml` | une section de `components` (`parameters`, `responses`, `securitySchemes`) |
+| `root.yaml` | `openapi`, `info`, `servers`, `tags`, `security` global, et `x-public-description` (introduction de la spec publique) |
+| `components/<section>.yaml` | une section de `components` (`parameters`, `responses`, `headers`, `securitySchemes`) |
 | `components/schemas/<domaine>.yaml` | les schémas, par domaine : `common`, `competition`, `teams-players`, `rankings`, `draft`, `broadcast`, `prize-pool`, `tcg`, `public`, `public-v1`, `bot`, `cron`, `admin` (fusionnés à l'assemblage, doublons refusés) |
 | `paths/api/…/<route>.yaml` | l'objet « path item » d'UNE route, au même emplacement que son handler |
 
@@ -81,6 +81,30 @@ ajoutée) écrit `docs/openapi/inferred-responses.json`, commité.
   PAS écrire son schéma : le code le fournit ; n'écrire que la description.
 - Une réponse que le script ne sait pas attribuer à une méthode HTTP n'est pas
   documentée (liste `unattributed` du fichier) : jamais de supposition.
+
+## Surface publique (partenaires)
+
+Ce qu'un partenaire lit en premier — la référence `/developpeurs/reference`
+et `GET /api/public/openapi` — ne garde que `/api/public/*`. Règles propres :
+
+- **Introduction** : `x-public-description` dans `root.yaml` (espace servi,
+  cache CDN, clés, limites, erreurs, GraphQL, webhooks, compatibilité).
+  Balisage limité à ce que la page rend : titres `## `, listes `- `,
+  paragraphes, `code` en ligne.
+- **Erreurs** : les fragments `public/v1` ne référencent que des réponses
+  `components/responses.yaml#Public*` (corps `PublicApiError` /
+  `PublicPlanDenial`, avec exemples) ou des réponses écrites avec exemple.
+  Un nouveau `code` émis va dans `PublicApiErrorCode` (`public-v1.yaml`).
+- **Exemples** : chaque réponse 2xx JSON et chaque corps de `public/v1` porte
+  un `example`, validé contre le schéma zod du handler, champ en trop compris.
+  Un nouveau composant de réponse s'ajoute à `COMPONENT_ZOD` du test.
+- **Cache CDN** : un paramètre de query d'une lecture mise en cache est à
+  marquer « non fiable aujourd'hui » (la clé de cache CDN l'ignore).
+
+Gardes : `tests/unit/openapiPublicExamples.test.ts` (exemples) et
+`tests/unit/apiErrorCodeCatalog.test.ts` (codes émis ↔ `PublicApiErrorCode`,
+codes GraphQL ↔ introduction, codes bot ↔ tableau de
+`docs/BOT_API_CONTRACT.md`).
 
 ## Où la spec est lue
 

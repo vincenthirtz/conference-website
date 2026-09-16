@@ -9,11 +9,25 @@ get:
   tags:
     - public/v1
   summary: Détail d'un tournoi public + résumé des stages.
+  description: |
+    Tournoi de l'espace servi, trouvé par id ou slug, s'il est `published`,
+    `running` ou `completed` ; sinon (inconnu, `draft`, `archived`) 404. Les
+    phases sont triées par ordre d'affichage ; leur `status` vaut `active` ou
+    `inactive`.
+
+    Espace servi : voir « Quel espace répond » dans l'introduction. Le jeton
+    `Authorization` est ignoré ici.
+
+    Anonyme, CORS `*`. Limite : 120 requêtes par minute par IP pour cet
+    endpoint. Cache CDN : 60 s.
   operationId: publicV1GetTournament
   security: []
   responses:
     '200':
       description: Détail tournoi.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PublicCacheControl'
       content:
         application/json:
           schema:
@@ -23,11 +37,30 @@ get:
             properties:
               data:
                 $ref: '#/components/schemas/PublicV1TournamentDetail'
-    '400':
-      $ref: '#/components/responses/BadRequest'
+          example:
+            data:
+              id: 3f2c8a1e-6b4d-4c7a-9e21-5d8f0b7a1c34
+              name: Coupe d'automne 2026
+              slug: coupe-automne-2026
+              game: overwatch
+              status: running
+              start_date: '2026-10-03'
+              end_date: '2026-10-25'
+              format: null
+              stages:
+                - id: 7a1d2e3f-4b5c-4d6e-8f70-1a2b3c4d5e6f
+                  name: Phase de groupes
+                  stage_type: group
+                  status: inactive
+                - id: 9b8c7d6e-5f4a-4b3c-a2d1-0e9f8a7b6c5d
+                  name: Bracket final
+                  stage_type: bracket
+                  status: active
     '404':
-      $ref: '#/components/responses/NotFound'
+      $ref: '#/components/responses/PublicNotFound'
+    '405':
+      $ref: '#/components/responses/PublicMethodNotAllowed'
     '429':
-      $ref: '#/components/responses/RateLimited'
+      $ref: '#/components/responses/PublicRateLimited'
     '500':
-      $ref: '#/components/responses/ServerError'
+      $ref: '#/components/responses/PublicServerError'

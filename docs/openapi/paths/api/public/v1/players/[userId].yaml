@@ -2,7 +2,7 @@ parameters:
   - name: userId
     in: path
     required: true
-    description: Id (UUID) de la joueuse.
+    description: Id (UUID) de la joueuse. Un slug ou un pseudo n'est PAS accepté (400).
     schema:
       type: string
       format: uuid
@@ -10,11 +10,26 @@ get:
   tags:
     - public/v1
   summary: Profil public d'une joueuse (rating, historique, H2H, achievements).
+  description: |
+    Profil de la joueuse dans l'espace servi. Une joueuse qui n'a encore joué
+    aucun match classé a quand même un profil si elle figure sur un roster :
+    `player.unrated` vaut alors `true`, `player.rank` vaut `null` et les
+    chiffres de rating valent 0 (ne pas les afficher). 404 si la joueuse n'est
+    connue ni du classement ni d'un roster de l'espace.
+
+    Espace servi : voir « Quel espace répond » dans l'introduction. Le jeton
+    `Authorization` est ignoré ici.
+
+    Anonyme, CORS `*`. Limite : 120 requêtes par minute par IP pour cet
+    endpoint. Cache CDN : 60 s.
   operationId: publicV1GetPlayer
   security: []
   responses:
     '200':
       description: Profil joueur.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PublicCacheControl'
       content:
         application/json:
           schema:
@@ -24,11 +39,63 @@ get:
             properties:
               data:
                 $ref: '#/components/schemas/PlayerProfileResponse'
+          example:
+            data:
+              player:
+                userId: 8d7c6b5a-4938-4271-b6a5-948372615049
+                displayName: Nova
+                battleTag: Nova#21456
+                avatarUrl: null
+                twitch: nova_ow
+                unrated: false
+                rating: 1623.4
+                rd: 71.2
+                volatility: 0.06
+                peakRating: 1650.1
+                gamesPlayed: 12
+                wins: 8
+                losses: 4
+                rank: 3
+              history:
+                - matchId: 5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f
+                  tournamentId: 3f2c8a1e-6b4d-4c7a-9e21-5d8f0b7a1c34
+                  occurredAt: '2026-10-03T19:12:00+00:00'
+                  ratingBefore: 1598.9
+                  ratingAfter: 1623.4
+                  result: win
+                  opponentAvgRating: 1571.3
+              recentMatches:
+                - matchId: 5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f
+                  tournamentId: 3f2c8a1e-6b4d-4c7a-9e21-5d8f0b7a1c34
+                  occurredAt: '2026-10-03T19:12:00+00:00'
+                  result: win
+                  opponentTeamId: 2f3e4d5c-6b7a-4899-8a1b-2c3d4e5f6a7b
+                  opponentTeamName: Nébuleuse
+              h2h:
+                - opponentUserId: 0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d
+                  opponentDisplayName: Orbite
+                  opponentBattleTag: Orbite#1187
+                  wins: 1
+                  losses: 0
+                  games: 1
+              achievements:
+                badges: []
+                palmares:
+                  - tournamentId: 6e5d4c3b-2a19-4087-b6e5-d4c3b2a19087
+                    tournamentName: Coupe de printemps 2026
+                    tournamentSlug: coupe-printemps-2026
+                    teamId: 1e2d3c4b-5a69-4788-9a0b-1c2d3e4f5a6b
+                    teamName: Les Aurores
+                    rank: 2
+                    date: '2026-04-19'
+                seasons: []
     '400':
-      $ref: '#/components/responses/BadRequest'
+      $ref: '#/components/responses/PublicBadRequest'
     '404':
-      $ref: '#/components/responses/NotFound'
+      $ref: '#/components/responses/PublicNotFound'
+    '405':
+      $ref: '#/components/responses/PublicMethodNotAllowed'
     '429':
-      $ref: '#/components/responses/RateLimited'
+      $ref: '#/components/responses/PublicRateLimited'
     '500':
-      $ref: '#/components/responses/ServerError'
+      $ref: '#/components/responses/PublicServerError'

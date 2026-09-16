@@ -9,11 +9,24 @@ get:
   tags:
     - public/v1
   summary: Classement final du tournoi (vide si non finalisé).
+  description: |
+    Classement final d'un tournoi public (404 si le tournoi est inconnu ou
+    non public). Liste VIDE tant que le tournoi n'a pas été finalisé : ce n'est
+    pas une erreur.
+
+    Espace servi : voir « Quel espace répond » dans l'introduction. Le jeton
+    `Authorization` est ignoré ici.
+
+    Anonyme, CORS `*`. Limite : 120 requêtes par minute par IP pour cet
+    endpoint. Cache CDN : 60 s.
   operationId: publicV1GetTournamentStandings
   security: []
   responses:
     '200':
       description: Classement final trié par rank.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PublicCacheControl'
       content:
         application/json:
           schema:
@@ -25,11 +38,19 @@ get:
                 type: array
                 items:
                   $ref: '#/components/schemas/PublicV1Standing'
-    '400':
-      $ref: '#/components/responses/BadRequest'
+          example:
+            data:
+              - rank: 1
+                teamId: 1e2d3c4b-5a69-4788-9a0b-1c2d3e4f5a6b
+                teamName: Les Aurores
+                teamSlug: les-aurores
+                logoUrl: https://example.org/logos/aurores.png
+                prize: null
     '404':
-      $ref: '#/components/responses/NotFound'
+      $ref: '#/components/responses/PublicNotFound'
+    '405':
+      $ref: '#/components/responses/PublicMethodNotAllowed'
     '429':
-      $ref: '#/components/responses/RateLimited'
+      $ref: '#/components/responses/PublicRateLimited'
     '500':
-      $ref: '#/components/responses/ServerError'
+      $ref: '#/components/responses/PublicServerError'

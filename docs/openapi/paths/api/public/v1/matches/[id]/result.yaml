@@ -2,7 +2,7 @@ parameters:
   - name: id
     in: path
     required: true
-    description: Id (UUID) du match.
+    description: Id (UUID) du match. Non-UUID → 400 `INVALID_QUERY`.
     schema:
       type: string
       format: uuid
@@ -11,12 +11,36 @@ post:
     - public/v1
   summary: Pose le score final d'un match (écriture publique authentifiée).
   description: |
-    Écriture publique autoritaire (pas de consensus capitaine) — réutilise
-    `applyMatchScore`. Idempotent (`Idempotency-Key`). Requiert le scope
-    `matches:write`.
+    Écriture AUTORITAIRE : pas de consensus des capitaines. Le match passe en
+    `finished`, le vainqueur est propagé dans le bracket et les notifications
+    partent, comme une saisie du back-office.
+
+    ESPACE. Celui du jeton : un match d'un autre espace répond 404, comme un
+    match inconnu. Aucun paramètre ni en-tête ne change l'espace.
+
+    CONTRÔLES, dans l'ordre (le premier qui échoue répond) : méthode (405) →
+    limite par IP, 30/min (429 sans `code`) → base disponible (503) → jeton
+    (401) → limite par jeton, 15/min (429 `ACTOR_RATE_LIMIT`) → plan de
+    l'espace (403 `plan_required`, sauf clé partenaire) → portée
+    `matches:write` (403 `INSUFFICIENT_SCOPE`) → quota du plan (429
+    `RATE_LIMITED` / `QUOTA_EXCEEDED`, sauf clé partenaire) → maintenance (503)
+    → validation de `id` puis du corps (400) → rejeu d'idempotence → match
+    (404, 400 `bye` ou équipes manquantes, 409 déjà clôturé) → finalisation
+    (500 si elle échoue).
+
+    IDEMPOTENCE. Envoyer `Idempotency-Key` : une réponse 2xx est rejouée
+    pendant 5 minutes pour la même clé ET le même corps (en-tête
+    `Idempotency-Replay: true`). Un corps différent avec la même clé est
+    traité comme une nouvelle requête ; les erreurs ne sont pas mises en
+    cache.
+
+    PAS DE CORS : un appel depuis un navigateur tiers échoue au preflight.
+    Appeler depuis un serveur. Réponses `Cache-Control: no-store`.
   operationId: publicV1ReportMatchResult
   security:
     - PublicApiToken: []
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
   requestBody:
     required: true
     content:
@@ -24,23 +48,57 @@ post:
         schema:
           # Généré depuis le schéma zod du handler (lib/apiContracts).
           x-zod: public.v1.matchResult
+        example:
+          team1Score: 2
+          team2Score: 1
   responses:
     '200':
       description: Match finalisé.
+      headers:
+        Idempotency-Replay:
+          $ref: '#/components/headers/IdempotencyReplay'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/RateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimitRemaining'
       content:
         application/json:
           schema:
             # Généré depuis le contrat zod ; le handler construit sa réponse avec ce type.
             x-zod: public.v1.matchResult.response
+          example:
+            data:
+              matchId: 5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f
+              status: finished
+              team1Score: 2
+              team2Score: 1
+              winnerTeamId: 1e2d3c4b-5a69-4788-9a0b-1c2d3e4f5a6b
     '400':
-      $ref: '#/components/responses/BadRequest'
+      $ref: '#/components/responses/PublicWriteBadRequest'
     '401':
-      $ref: '#/components/responses/Unauthorized'
+      $ref: '#/components/responses/PublicUnauthorized'
     '403':
-      $ref: '#/components/responses/Forbidden'
+      $ref: '#/components/responses/PublicWriteForbidden'
     '404':
-      $ref: '#/components/responses/NotFound'
+      $ref: '#/components/responses/PublicNotFound'
+    '405':
+      description: >-
+        Méthode autre que `POST` — `METHOD_NOT_ALLOWED`, en-tête `Allow: POST`.
+      headers:
+        Allow:
+          $ref: '#/components/headers/Allow'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PublicApiError'
+          example:
+            error: Method not allowed
+            code: METHOD_NOT_ALLOWED
     '409':
-      $ref: '#/components/responses/Conflict'
+      $ref: '#/components/responses/PublicConflict'
     '429':
-      $ref: '#/components/responses/RateLimited'
+      $ref: '#/components/responses/PublicWriteRateLimited'
+    '500':
+      $ref: '#/components/responses/PublicWriteServerError'
+    '503':
+      $ref: '#/components/responses/PublicServiceUnavailable'

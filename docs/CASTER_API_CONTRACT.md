@@ -63,18 +63,22 @@ known**:
 | Family             | Resolver                               | `x-tenant-id` header | Behaviour                                                                 |
 | ------------------ | -------------------------------------- | -------------------- | ------------------------------------------------------------------------- |
 | `/api/caster/v1/*` | `resolveTenantId(req)`                 | **honoured**         | Valid UUID header → that tenant. Missing/malformed → `DEFAULT_TENANT_ID`. |
-| `/api/scrims/*`    | `resolveTenantIdForPublicRequest(req)` | **ignored**          | Always `DEFAULT_TENANT_ID` (conference) regardless of header.             |
+| `/api/scrims/*`    | `resolveTenantIdForPublicRequestAsync(req)` | **ignored**     | Custom domain, path prefix or `?tenant=<slug>` read by the code; otherwise `DEFAULT_TENANT_ID`. **Not documented as reliable** (see below). |
 
 - `/api/caster/v1/*` treats the caster like the bot: an optional
   `x-tenant-id: <uuid>` header (RFC 4122, case-insensitive) selects the tenant,
   falling back to `DEFAULT_TENANT_ID` when absent or malformed. This lets the
   Electron app point at the e2e tenant in E2E mode.
-- `/api/scrims/*` is a legacy public resolver that currently **forces**
-  `DEFAULT_TENANT_ID` and ignores any header — the scrims pages are still
-  mono-tenant on the site. When the public pages migrate to the path-prefix
-  resolver (`resolveTenantIdForPublicRequestAsync`, see `utils/tenant.ts` TODOs),
-  this asymmetry should be revisited. Until then, the caster only ever sees the
-  conference tenant's public scrims via `/api/scrims/*`.
+- `/api/scrims/*` (`pages/api/scrims/index.ts`, `[id].ts`) now uses the async
+  public resolver: `x-tenant-id` is ignored, but a custom domain, a path prefix
+  or `?tenant=<slug>` are read by the code (unknown slug → `DEFAULT_TENANT_ID`,
+  silently). **Do not rely on `?tenant=` here**: on production, the Netlify
+  CDN cache key ignores query parameters (only `__nextDataReq` / `_rsc` vary),
+  which neutralises `?tenant=` on cached public reads (see
+  `docs/PUBLIC_API_CONTRACT.md` « Cache CDN »). These routes set no
+  `Cache-Control` themselves; whether the CDN still caches them has not been
+  verified. In practice the caster (no `?tenant=`) sees the conference
+  tenant's public scrims.
 
 `DEFAULT_TENANT_ID` = `ce69a726-773e-4d12-b5eb-d2503aa752b4` (conference).
 
@@ -274,8 +278,9 @@ is the `Deprecation` / `Sunset` / `Link` response headers. **Sunset:
 
 ## Endpoint inventory — `/api/scrims/*` (public, shared, NOT versioned)
 
-Public read of `is_public = true` scrims, tenant forced to `DEFAULT_TENANT_ID`
-(see asymmetry above). Drafts (`status = 'draft'`) are always hidden.
+Public read of `is_public = true` scrims, tenant resolved by the async public
+resolver — `DEFAULT_TENANT_ID` for the caster (see asymmetry above). Drafts
+(`status = 'draft'`) are always hidden.
 
 **Scrim status enum (canonical)**: `draft`, `scheduled`, `running`,
 `completed`, `cancelled`. (`draft` is never exposed publicly.)

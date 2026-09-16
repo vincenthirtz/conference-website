@@ -9,16 +9,25 @@ get:
   tags:
     - public/v1
   summary: Métriques d'arbitrage agrégées (non-nominatives) du tournoi.
-  description: >
+  description: |
     Agrégat de l'activité d'arbitrage (litiges) d'un tournoi public : volume,
     résolution, respect du SLA, répartition des litiges ouverts. AUCUN
     identifiant ni raison — que des nombres. 404 si le tournoi n'est pas public
     (draft / archived / inconnu).
+
+    Espace servi : voir « Quel espace répond » dans l'introduction. Le jeton
+    `Authorization` est ignoré ici.
+
+    Anonyme, CORS `*`. Limite : 120 requêtes par minute par IP pour cet
+    endpoint. Cache CDN : 60 s.
   operationId: publicV1GetTournamentArbitration
   security: []
   responses:
     '200':
       description: Métriques d'arbitrage agrégées du tournoi.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PublicCacheControl'
       content:
         application/json:
           schema:
@@ -28,11 +37,29 @@ get:
             properties:
               data:
                 $ref: '#/components/schemas/PublicV1TournamentArbitration'
-    '400':
-      $ref: '#/components/responses/BadRequest'
+          example:
+            data:
+              tournamentId: 3f2c8a1e-6b4d-4c7a-9e21-5d8f0b7a1c34
+              tournamentName: Coupe d'automne 2026
+              tournamentSlug: coupe-automne-2026
+              metrics:
+                totalDisputes: 4
+                open: 1
+                resolved: 3
+                avgResolutionMinutes: 43
+                medianResolutionMinutes: 38
+                withinSlaCount: 2
+                slaComplianceRate: 0.6667
+                openBreakdown:
+                  breached: 0
+                  approaching: 1
+                  fresh: 0
+                slaMinutes: 60
     '404':
-      $ref: '#/components/responses/NotFound'
+      $ref: '#/components/responses/PublicNotFound'
+    '405':
+      $ref: '#/components/responses/PublicMethodNotAllowed'
     '429':
-      $ref: '#/components/responses/RateLimited'
+      $ref: '#/components/responses/PublicRateLimited'
     '500':
-      $ref: '#/components/responses/ServerError'
+      $ref: '#/components/responses/PublicServerError'

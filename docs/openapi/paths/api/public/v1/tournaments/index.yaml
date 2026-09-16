@@ -2,12 +2,33 @@ get:
   tags:
     - public/v1
   summary: Liste des tournois publics (published/running/completed).
+  description: |
+    Tournois de l'espace servi dont le statut est `published`, `running` ou
+    `completed` (jamais `draft` ni `archived`), triés par `start_date`
+    décroissante puis `created_at` décroissante. `pagination.count` est le
+    total avant pagination.
+
+    Espace servi : voir « Quel espace répond » dans l'introduction. Le jeton
+    `Authorization` est ignoré ici.
+
+    Anonyme, CORS `*`. Limite : 120 requêtes par minute par IP pour cet
+    endpoint. Cache CDN : 60 s.
+
+    ATTENTION — cache CDN : les paramètres de query ci-dessous sont lus par le
+    code, mais la clé de cache du CDN les ignore. Pendant 60 s, cette URL
+    renvoie la première réponse mise en cache, quelle que soit la combinaison
+    `status` / `game` / `limit` / `offset` envoyée ensuite. Filtres et
+    pagination ne sont donc PAS fiables aujourd'hui.
   operationId: publicV1ListTournaments
   security: []
   parameters:
     - name: status
       in: query
       required: false
+      description: |
+        Filtre sur un statut public. Une valeur hors de l'énumération est
+        ignorée (aucun 400) : la route renvoie alors les trois statuts. Non
+        fiable aujourd'hui (cache CDN, voir la description).
       schema:
         type: string
         enum:
@@ -17,11 +38,17 @@ get:
     - name: game
       in: query
       required: false
+      description: |
+        Égalité stricte sur le jeu. Non fiable aujourd'hui (cache CDN, voir la
+        description).
       schema:
         type: string
     - name: limit
       in: query
       required: false
+      description: |
+        Ramené dans [1, 100] ; une valeur non numérique vaut 50. Non fiable
+        aujourd'hui (cache CDN, voir la description).
       schema:
         type: integer
         minimum: 1
@@ -30,6 +57,9 @@ get:
     - name: offset
       in: query
       required: false
+      description: |
+        Ramené à 0 au minimum. Non fiable aujourd'hui (cache CDN, voir la
+        description).
       schema:
         type: integer
         minimum: 0
@@ -37,6 +67,9 @@ get:
   responses:
     '200':
       description: Page de tournois publics + pagination.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PublicCacheControl'
       content:
         application/json:
           schema:
@@ -50,7 +83,23 @@ get:
                   $ref: '#/components/schemas/PublicV1TournamentSummary'
               pagination:
                 $ref: '#/components/schemas/PublicV1Pagination'
+          example:
+            data:
+              - id: 3f2c8a1e-6b4d-4c7a-9e21-5d8f0b7a1c34
+                name: Coupe d'automne 2026
+                slug: coupe-automne-2026
+                game: overwatch
+                status: running
+                start_date: '2026-10-03'
+                end_date: '2026-10-25'
+                format: null
+            pagination:
+              limit: 50
+              offset: 0
+              count: 1
+    '405':
+      $ref: '#/components/responses/PublicMethodNotAllowed'
     '429':
-      $ref: '#/components/responses/RateLimited'
+      $ref: '#/components/responses/PublicRateLimited'
     '500':
-      $ref: '#/components/responses/ServerError'
+      $ref: '#/components/responses/PublicServerError'

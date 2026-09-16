@@ -2,16 +2,42 @@ get:
   tags:
     - public/v1
   summary: Catalogue public des types d'événements webhook souscriptibles.
-  description: >
-    Catalogue anonyme des event types qu'un tenant peut recevoir en webhook
-    sortant, + la convention de signature. Dérivé du sous-ensemble PUBLIC des
-    noms d'événements outbox (les événements Discord internes n'y figurent
-    jamais). Anonyme, CORS `*`, edge-caché (`s-maxage=3600`).
+  description: |
+    Catalogue anonyme des types d'événements qu'un espace peut recevoir en
+    webhook sortant, et convention de signature. Dérivé de la liste blanche
+    `WEBHOOK_EVENT_TYPES` : les événements Discord internes n'y figurent
+    jamais, même avec un abonnement `*`.
+
+    ATTENTION : `match.forfeit` figure au catalogue mais n'est émis par aucun
+    code aujourd'hui — un abonnement à cet événement ne reçoit rien.
+
+    LIVRAISON (non exposée par cette route, décrite ici pour l'intégration) :
+    - un `POST` par événement et par abonnement actif de l'espace ; corps =
+      `{ id, event, tenantId, timestamp, data }` ; la forme de `data` dépend de
+      l'événement et n'est pas décrite dans cette spec ;
+    - en-têtes : `Content-Type: application/json`,
+      `User-Agent: conference-website-webhooks/1`, `X-Webhook-Event`,
+      `X-Webhook-Id`, `X-Tenant-Id` et `X-Webhook-Signature: sha256=<hex>`
+      (HMAC-SHA256 du corps BRUT avec le secret de l'abonnement, affiché une
+      seule fois à sa création) ;
+    - une livraison réussit sur toute réponse 2xx reçue en moins de 8 s ;
+    - le répartiteur passe chaque minute : un échec est retenté au passage
+      suivant, 5 tentatives au plus, et seuls les événements des dernières
+      24 h sont examinés ;
+    - 15 échecs consécutifs sur un abonnement le désactivent ; un succès remet
+      le compteur à zéro.
+    Abonnements : back-office `/admin/webhooks`.
+
+    Anonyme, CORS `*`. Limite : 120 requêtes par minute par IP. Cache CDN :
+    3600 s.
   operationId: publicGetWebhookEvents
   security: []
   responses:
     '200':
       description: Catalogue d'événements + convention de signature.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PublicCacheControl'
       content:
         application/json:
           schema:
@@ -50,7 +76,18 @@ get:
                         type: string
                       format:
                         type: string
+          example:
+            data:
+              events:
+                - type: match.finished
+                  description: A match has finished and a result has been recorded.
+              signature:
+                header: X-Webhook-Signature
+                algo: HMAC-SHA256
+                format: sha256=<hex>
+    '405':
+      $ref: '#/components/responses/PublicMethodNotAllowed'
     '429':
-      $ref: '#/components/responses/RateLimited'
+      $ref: '#/components/responses/PublicRateLimited'
     '500':
-      $ref: '#/components/responses/ServerError'
+      $ref: '#/components/responses/PublicServerError'

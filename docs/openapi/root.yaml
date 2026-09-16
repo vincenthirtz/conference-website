@@ -13,15 +13,159 @@ info:
 
     **Quatre familles d'endpoints :**
     - `tag:bot` — `/api/bot/v1/*` consommés par le Discord bot. Auth par
-      `x-api-key` (per-tenant) + `x-tenant-id` (legacy env fallback).
+      `x-api-key` per-tenant (autoritaire) ; `x-tenant-id` / `x-guild-id`
+      ne comptent que pour une clé plateforme.
     - `tag:admin` — `/api/admin/*` gated par session staff Supabase (cookies).
     - `tag:cron` — `/api/cron/*` invoqués par Netlify scheduled functions.
     - `tag:public` — tout le reste, accessible sans auth ou auth utilisateur.
+
+    La spec PUBLIQUE (`/api/public/openapi`, `/developpeurs/reference`) ne
+    garde que `/api/public/*` ; son introduction est `x-public-description`
+    ci-dessous (lue par `utils/openapi/publicSpec.ts`).
   contact:
     name: conference-website
     url: https://github.com/
   license:
     name: Proprietary
+# Introduction de la spec publique : c'est le texte que lit un partenaire en
+# premier (page /developpeurs/reference et /api/public/openapi). Format :
+# titres `## `, listes `- `, paragraphes, `code` en ligne — rien d'autre, la
+# page de référence ne rend pas le reste du Markdown.
+x-public-description: |
+  API publique de la plateforme : lectures REST anonymes
+  (`GET /api/public/v1/*`), une écriture REST authentifiée
+  (`POST /api/public/v1/matches/{id}/result`) et un endpoint GraphQL
+  (`POST /api/graphql`, décrit plus bas : il n'a pas d'entrée dans la liste
+  des endpoints). Les surfaces bot, admin et cron sont internes et absentes
+  d'ici. Les routes `free-players`, `team-openings`, `newsletter` et
+  `scrim-requests` servent les formulaires du site (captcha) : elles ne
+  sont pas destinées à une intégration.
+
+  ## Quel espace répond
+
+  La plateforme sert plusieurs espaces (organisations). Une réponse qui
+  vient du mauvais espace n'échoue pas : elle est valide, et fausse.
+
+  - Écriture REST et GraphQL avec jeton : l'espace est celui du jeton,
+    fixé à son émission. Aucun paramètre ni en-tête ne peut le déplacer.
+  - Lectures REST (`GET /api/public/v1/*`) : elles ignorent le jeton. Sur
+    `https://owwomenscup.fr`, elles servent l'espace Women's Cup. Le ciblage
+    d'un autre espace sur ces lectures n'est PAS disponible aujourd'hui : il
+    est bloqué par le cache CDN (section suivante).
+  - GraphQL sans jeton, ou avec un jeton refusé : espace Women's Cup, sans
+    erreur.
+
+  Pour lire les données d'un autre espace aujourd'hui, la voie à utiliser
+  est `POST /api/graphql` avec le jeton de cet espace.
+
+  ## Cache CDN (production)
+
+  Les lectures REST posent `Cache-Control: public, s-maxage=N` (N indiqué
+  sur chaque endpoint : 30 à 3600 s). Sur la production, la clé de cache du
+  CDN ne varie que sur deux paramètres internes de Next (`__nextDataReq`,
+  `_rsc`) : tous les autres paramètres de query sont ignorés. Pendant N
+  secondes, une même URL renvoie donc la première réponse mise en cache,
+  quels que soient les paramètres envoyés ensuite (filtres, pagination,
+  format). Les paramètres concernés sont signalés « non fiable aujourd'hui »
+  sur chaque endpoint. Le chemin, lui, fait partie de la clé : un identifiant
+  ou un slug dans l'URL est fiable.
+
+  `POST /api/graphql` et l'écriture REST ne posent aucun en-tête de cache
+  public (`no-store` pour l'écriture).
+
+  ## Authentification et clés
+
+  - En-tête : `Authorization: Bearer pk_live_<64 hex>`. Détail dans le schéma
+    de sécurité `PublicApiToken`.
+  - Une clé est émise par le staff et rattachée à UN espace. Depuis l'écran
+    `/admin/api-tokens`, c'est l'espace ACTIF du sélecteur du back-office
+    qui la reçoit : le vérifier avant d'émettre. L'owner de la plateforme
+    peut aussi émettre pour un espace nommé.
+  - Affichée une seule fois. Révocable. Expiration optionnelle : une clé
+    révoquée ou expirée répond 401 `UNAUTHORIZED` en REST, comme une clé
+    inconnue — et passe en anonyme sur GraphQL.
+  - Portées `resource:action`, sans implication entre elles. Aujourd'hui,
+    seule `matches:write` est exigée ; aucune route ne contrôle une portée
+    `:read`.
+  - Plan de l'espace : l'écriture exige la capacité `apiWrite` (plans
+    Circuit, Éditeur, Fondation) ; sinon 403 `plan_required` — valeur du
+    champ `error`, pas de `code`. Une clé partenaire (`comp`) n'est jamais
+    soumise au plan ni au quota. Les lectures REST et les requêtes GraphQL
+    ne contrôlent ni plan, ni portée, ni quota.
+
+  ## Limites de débit
+
+  - Lectures REST : 120 requêtes par minute par IP, compteur distinct par
+    endpoint. 429 avec `Retry-After: 60` ; selon le limiteur qui répond, le
+    corps a ou non `code: RATE_LIMITED`.
+  - Écriture REST : 30 par minute par IP, puis 15 par minute par jeton
+    (`ACTOR_RATE_LIMIT`), puis le quota du plan : Circuit 120 par minute et
+    500 000 par mois, Éditeur et Fondation illimités (`RATE_LIMITED` ou
+    `QUOTA_EXCEEDED`, avec `X-RateLimit-Scope` et `X-RateLimit-Limit`). Le
+    quota est aussi consommé par la mutation GraphQL. Clé partenaire : pas de
+    quota.
+  - GraphQL : aucune limite de débit applicative.
+
+  ## Erreurs
+
+  REST : `{ "error": "…", "code": "…" }`. Tester `code`, jamais `error` (texte
+  libre). Liste complète et sens : schéma `PublicApiErrorCode`. Deux corps
+  sans `code` : le 429 du limiteur par IP en mémoire et le 403
+  `plan_required` (schéma `PublicPlanDenial`). `fields` détaille les erreurs
+  de validation (`INVALID_BODY`, `INVALID_QUERY`).
+
+  ## Idempotence
+
+  L'écriture REST honore `Idempotency-Key` (200 caractères au plus) : une
+  réponse 2xx est rejouée pendant 5 minutes pour la même clé ET le même
+  corps, avec `Idempotency-Replay: true`. La mutation GraphQL n'a pas
+  d'idempotence.
+
+  ## GraphQL — POST /api/graphql
+
+  - Corps JSON `{ "query": "…", "variables": { … } }`. Utiliser `POST`.
+  - Espace : celui du jeton `Authorization: Bearer pk_live_…`. Sans jeton,
+    ou si le jeton est inconnu, révoqué, expiré ou mal formé : espace
+    Women's Cup, SANS erreur. Vérifier le résultat : par exemple
+    `{ tournaments { count items { slug name } } }` doit lister les
+    tournois de votre espace.
+  - Requêtes : `tournaments(status, game, limit, offset)` (liste paginée,
+    `limit` ramené dans [1, 100], `count` = total), `tournament(idOrSlug)`,
+    `match(id)`, `team(idOrSlug)`. Champs en `snake_case`, mêmes projections
+    et mêmes règles de visibilité que le REST (tournois `published` /
+    `running` / `completed` ; matchs `pending` / `ongoing` / `finished`).
+    Les requêtes ne contrôlent ni plan, ni portée, ni quota.
+  - Mutation : `reportMatchResult(matchId, team1Score, team2Score)`, portée
+    `matches:write`, mêmes effets que l'écriture REST. Pas de mode
+    maintenance, pas d'idempotence.
+  - Codes (`errors[].extensions.code`) : `UNAUTHENTICATED` (pas de jeton
+    valide), `FORBIDDEN` (plan insuffisant — `reason: plan_required` et
+    `requiredCapability` — ou portée manquante), `RATE_LIMITED` et
+    `QUOTA_EXCEEDED` (avec `retryAfterSec` et `limit`), `BAD_USER_INPUT`
+    (score hors [0, 99], match `bye` ou sans ses deux équipes), `NOT_FOUND`,
+    `CONFLICT` (match déjà clôturé), `INTERNAL_SERVER_ERROR`. Toute autre
+    erreur serveur est masquée derrière un message générique.
+  - Profondeur de requête : 8 au plus. Introspection et GraphiQL désactivés
+    en production : le schéma est celui décrit ici.
+
+  ## Webhooks sortants
+
+  Un espace abonne une URL depuis `/admin/webhooks` et reçoit ses événements
+  en `POST` signé. Catalogue, signature et règles de livraison :
+  `GET /api/public/webhook-events`. `match.forfeit` figure au catalogue mais
+  n'est émis par aucun code aujourd'hui.
+
+  ## Compatibilité et versionnement
+
+  - Aucune politique de versionnement n'est formalisée pour
+    `/api/public/v1/*`. Constaté jusqu'ici : des champs AJOUTÉS aux réponses,
+    et un champ RETIRÉ dans `/v1` même (`tenant_id` des ligues, 2026-09-15).
+  - Les schémas de réponse publiés sont fermés
+    (`additionalProperties: false`) : ils décrivent la réponse du jour. Un
+    client généré ne doit pas rejeter un champ inconnu, sans quoi le moindre
+    ajout le casse.
+  - Les changements de contrat sont datés dans `docs/PUBLIC_API_CONTRACT.md`
+    (section « Changements de contrat »).
 servers:
   - url: https://owwomenscup.fr
     description: Production

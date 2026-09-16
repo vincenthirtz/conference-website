@@ -141,10 +141,90 @@ stashes it on `req.botContext.tenantId`. The `x-tenant-id` header is now
 
 ### Error codes
 
-Tenant resolution no longer emits dedicated error codes: the per-tenant key is
-authoritative, so an unrecognised key simply returns `401`
-(`Invalid or missing API key.`). The former `MISSING_TENANT_ID` /
-`INVALID_TENANT_ID` / `UNKNOWN_TENANT` codes were retired with the env fallback.
+An unrecognised key returns `401 { "error": "Invalid or missing API key." }`
+(no `code`). The former env-fallback codes `MISSING_TENANT_ID` and
+`INVALID_TENANT_ID` are retired. `UNKNOWN_TENANT`, `INVALID_TENANT_HEADER`,
+`INVALID_GUILD_HEADER` and `TENANT_LOOKUP_UNAVAILABLE` are still emitted, but
+only for a **platform key** (see above).
+
+#### Catalogue des codes d'erreur
+
+Toutes les valeurs de `code` qu'une route `/api/bot/v1/*` peut renvoyer. Le
+bot doit brancher sur `code`, jamais sur `error` (texte libre). Beaucoup
+d'erreurs n'ont PAS de `code` (`{ "error": "…" }` seul) : 401 de clé, la
+plupart des 404 « introuvable », 429 du limiteur par IP. Le 403 de plan porte
+`plan_required` dans `error`, sans `code` (voir « Plan gate » ci-dessous).
+
+Tableau gardé par `tests/unit/apiErrorCodeCatalog.test.ts` : un code émis
+absent d'ici, ou listé mais plus émis, fait échouer la suite.
+
+<!-- BOT_ERROR_CODES:BEGIN -->
+
+| Code | HTTP | Sens | Routes |
+| ---- | ---- | ---- | ------ |
+| `INVALID_BODY` | 400 | Corps refusé par la validation zod ; détail par champ dans `fields` quand il vient du middleware. | toutes les routes à `bodySchema`, `moderation/blacklist`, `scrims/requests`, `tenants/request-onboard` |
+| `INVALID_QUERY` | 400 | Paramètres d'URL refusés par la validation zod ; détail dans `fields`. | toutes les routes à `querySchema` |
+| `MAINTENANCE_MODE` | 503 | Écritures gelées (`Retry-After: 60`). | toute écriture |
+| `ACTOR_RATE_LIMIT` | 429 | Limite par acteur Discord dépassée (`Retry-After`). | routes à `perActor` |
+| `INVALID_GUILD_HEADER` | 400 | `x-guild-id` n'est pas un snowflake Discord (clé plateforme). | toutes (clé plateforme) |
+| `INVALID_TENANT_HEADER` | 400 | `x-tenant-id` n'est pas un UUID (clé plateforme). | toutes (clé plateforme) |
+| `UNKNOWN_TENANT` | 404 | Espace désigné inconnu ou inactif (clé plateforme). | toutes (clé plateforme) |
+| `TENANT_LOOKUP_UNAVAILABLE` | 503 | Rattachement serveur Discord → espace illisible ; réessayer. | toutes (clé plateforme) |
+| `MISSING_TENANT` | 400 | Contexte d'espace absent. | `runs/current` |
+| `APPLY_FAILED` | 400 / 500 | Application du score en échec : 400 sur `forfeit`, 500 sur `report` et `resolve-dispute`. | `matches/[matchId]/forfeit`, `matches/[matchId]/report`, `matches/[matchId]/resolve-dispute` |
+| `MATCH_FINALIZED` | 409 | Match déjà clôturé, ou clôturé pendant le report. | `matches/[matchId]/report` |
+| `MATCH_NOT_STARTED` | 409 | Report avant le coup d'envoi du match. | `matches/[matchId]/report` |
+| `INVALID_SCORE_FOR_FORMAT` | 400 | Score incompatible avec le format (BO) du match. | `matches/[matchId]/report` |
+| `FINALIZATION_IN_PROGRESS` | 409 | L'autre capitaine valide le même score au même moment ; réessayer. | `matches/[matchId]/report` |
+| `DISPUTE_UNDER_STAFF_REVIEW` | 409 | Litige ouvert par le staff : l'accord des capitaines ne le referme pas. | `matches/[matchId]/report` |
+| `NOT_DISPUTED` | 409 | Le match n'est pas en litige. | `matches/[matchId]/resolve-dispute` |
+| `TOURNAMENT_COMPLETED` | 403 | Tournoi terminé : le rouvrir avant de modifier le match. | `matches/[matchId]`, `matches/[matchId]/reset` |
+| `ALREADY_COMPLETE` | 400 | Veto déjà complet. | `matches/[matchId]/veto` |
+| `CHANNEL_COLUMN_MISSING` | 503 | Migration du salon de match non appliquée. | `matches/[matchId]/discord` |
+| `MATCH_NOT_FOUND` | 404 | Match introuvable. | `matches/[matchId]/drafts` |
+| `TOURNAMENT_NOT_FOUND` | 404 | Tournoi du match introuvable. | `matches/[matchId]/drafts` |
+| `GAME_NOT_DRAFTABLE` | 400 | Le jeu du tournoi n'a pas de draft. | `matches/[matchId]/drafts` |
+| `GAME_INDEX_OUT_OF_RANGE` | 400 | Numéro de partie hors du format du match. | `matches/[matchId]/drafts` |
+| `FORMAT_NOT_SUPPORTED` | 400 | Format de draft non pris en charge. | `matches/[matchId]/drafts` |
+| `DRAFT_ALREADY_EXISTS` | 409 | Un draft existe déjà pour cette partie. | `matches/[matchId]/drafts` |
+| `DRAFT_NOT_FOUND` | 404 | Draft introuvable après création. | `matches/[matchId]/drafts` |
+| `PICK_TIMER_INVALID` | 400 | Minuteur de pick hors [5, 300] secondes. | `matches/[matchId]/drafts` |
+| `DB_ERROR` | 500 / 503 | Erreur de base (drafts, round suisse). | `matches/[matchId]/drafts`, `stages/[stageId]/next-round` |
+| `ACTIVE_MATCHES_PRESENT` | 409 | Des matchs de la phase ne sont pas terminés. | `stages/[stageId]/finalize` |
+| `ALREADY_INACTIVE` | 409 | Phase déjà inactive. | `stages/[stageId]/finalize` |
+| `STAGE_NOT_FOUND` | 404 | Phase introuvable. | `stages/[stageId]/next-round` |
+| `NOT_SWISS` | 400 | La phase n'est pas de type suisse. | `stages/[stageId]/next-round` |
+| `USE_ADMIN_UI` | 400 | Phase à seuils victoires/défaites : générer depuis l'admin. | `stages/[stageId]/next-round` |
+| `NO_PARTICIPANTS` | 400 | Aucune équipe inscrite à la phase. | `stages/[stageId]/next-round` |
+| `UNFINISHED_PREVIOUS_ROUND` | 400 | Des matchs du round précédent ne sont pas terminés. | `stages/[stageId]/next-round` |
+| `ROUND_TOO_SMALL` | 409 | Le round demandé existe déjà. | `stages/[stageId]/next-round` |
+| `ROUND_BEYOND_TOTAL` | 400 | Round au-delà du nombre de rounds prévu. | `stages/[stageId]/next-round` |
+| `EMPTY_PAIRING` | 400 | Aucun appariement généré. | `stages/[stageId]/next-round` |
+| `REMATCHES_PRESENT` | 409 | L'appariement contient des rematchs : renvoyer `acceptRematches=true`. | `stages/[stageId]/next-round` |
+| `SCRIM_CHANGED` | 409 | Scrim modifié entre-temps (résultat ou statut) : recharger. | `scrims/[scrimId]` |
+| `FORBIDDEN_PERMISSION` | 403 | Le rôle dans l'équipe ne permet pas de gérer les scrims. | `scrims/requests` |
+| `NOT_PARTICIPANT` | 403 | L'acteur ne gère aucune des deux équipes de la demande. | `scrims/requests` |
+| `TEAM_AMBIGUOUS` | 409 | L'acteur encadre plusieurs équipes : quitter depuis le site. | `teams/leave` |
+| `NOT_LINKED` | 404 | Compte Discord non relié à un compte du site. | `players/by-discord/[discordUserId]/*` |
+| `INVALID_DISCORD_ID` | 400 | `discordUserId` invalide. | `players/by-discord/[discordUserId]/twitch` |
+| `FREE_PLAYER_NOT_FOUND` | 404 | Aucune fiche « joueuse libre » pour ce compte Discord. | `free-players/profile` |
+| `INVALID_GUILD_ID` | 400 | Identifiant de serveur Discord invalide. | `tenants/by-guild/[guildId]`, `tenants/link-guild` |
+| `GUILD_NOT_LINKED` | 404 | Serveur Discord non rattaché. | `tenants/by-guild/[guildId]` |
+| `INVALID_OWNER_ID` | 400 | `owner_discord_id` n'est pas un snowflake Discord. | `tenants/link-guild` |
+| `AUTO_CLAIM_FAILED` | 500 | Échec de la création automatique de l'espace. | `tenants/link-guild` |
+| `SLUG_TAKEN` | 409 | Slug déjà réservé ou utilisé. | `tenants/request-onboard` |
+| `REQUEST_ALREADY_PENDING` | 409 | Une demande d'ouverture est déjà en cours. | `tenants/request-onboard` |
+| `CONFLICT` | 409 | Conflit avec une demande existante. | `tenants/request-onboard` |
+| `BOT_INVITE_UNAVAILABLE` | 500 | Lien d'invitation du bot non générable. | `tenants/request-onboard` |
+| `assignee_required` | 400 | Ni `assignSelf` ni assignée fournie. | `tasks/[id]/assign` |
+| `assignee_not_staff` | 400 | L'assignée n'est pas membre du staff. | `tasks/[id]/assign` |
+| `board_not_found` | 404 | Tableau introuvable. | `tasks`, `tasks/board-snapshot` |
+| `column_not_found` | 404 | Colonne introuvable. | `tasks`, `tasks/[id]/move` |
+| `column_not_in_board` | 400 | La colonne n'appartient pas au tableau. | `tasks`, `tasks/[id]/move` |
+| `task_not_found` | 404 | Tâche introuvable. | `tasks/[id]/move`, `tasks/[id]/assign` |
+| `wip_exceeded` | 409 | Limite WIP de la colonne atteinte. | `tasks/[id]/move` |
+
+<!-- BOT_ERROR_CODES:END -->
 
 Example:
 
@@ -853,7 +933,10 @@ Error body shape (consistent across handlers):
 ```
 
 `code` is present on cases the bot needs to branch on
-(`MAINTENANCE_MODE`, dispute-specific codes, etc.).
+(`MAINTENANCE_MODE`, dispute-specific codes, etc.). Full list: « Catalogue des
+codes d'erreur » under [Error codes](#error-codes). Exception to the shape: the
+403 plan denial is `{ "error": "plan_required", "message", "requiredCapability" }`
+— no `code` field.
 
 ## Canonical write example — `POST /api/bot/v1/matches/:matchId/report`
 

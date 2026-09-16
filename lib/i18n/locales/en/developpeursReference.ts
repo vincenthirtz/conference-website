@@ -35,6 +35,14 @@ export default {
   requiredYes: 'required',
   inPath: 'path',
   inQuery: 'query',
+  inHeader: 'header',
+  guideLabel: 'Guide (in French)',
+  securityLabel: 'Authentication',
+  errorCodesLabel: 'Error codes',
+  deprecatedBadge: 'Deprecated',
+  headersLabel: 'Headers',
+  exampleLabel: 'Example',
+  thValue: 'Value',
   generatedNote:
-    "This page is generated from the repository's OpenAPI spec at each deploy — it cannot drift from the API's real behaviour.",
+    "This page is generated from the repository's OpenAPI spec at each deploy. Automated checks compare endpoints, methods, success responses, examples and error codes with the code; everything else is written by hand.",
 };

@@ -96,6 +96,27 @@ function TypeLabel({ schema }: { schema: Json | undefined }) {
       </a>
     );
   }
+  // `oneOf` : alternatives de schémas (`A | B`) ou liste de constantes
+  // documentées une à une (catalogue de codes).
+  if (Array.isArray(schema.oneOf)) {
+    const consts = schema.oneOf.every((s: Json) => s && 'const' in s);
+    return (
+      <span className="text-gray-300">
+        {consts ? 'enum(' : ''}
+        {schema.oneOf.map((s: Json, i: number) => (
+          <span key={i}>
+            {i > 0 ? ' | ' : ''}
+            {consts ? (
+              <code className="text-purple-200">{String(s.const)}</code>
+            ) : (
+              <TypeLabel schema={s} />
+            )}
+          </span>
+        ))}
+        {consts ? ')' : ''}
+      </span>
+    );
+  }
   if (schema.type === 'array') {
     return (
       <span className="text-gray-300">
@@ -126,6 +147,163 @@ function TypeLabel({ schema }: { schema: Json | undefined }) {
       {base}
       {suffix}
     </span>
+  );
+}
+
+// `code` en ligne : le seul balisage reconnu à l'intérieur d'un paragraphe.
+// Rendu en nœuds React — aucun HTML de la spec n'est injecté tel quel.
+function InlineText({ text }: { text: string }) {
+  const parts = text.split('`');
+  return (
+    <>
+      {parts.map((part, i) =>
+        i % 2 === 1 ? (
+          <code
+            key={i}
+            className="rounded bg-white/10 px-1 py-0.5 text-[0.9em] text-purple-200"
+          >
+            {part}
+          </code>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+}
+
+type RichBlock =
+  | { kind: 'heading'; text: string }
+  | { kind: 'paragraph'; text: string }
+  | { kind: 'list'; items: string[] };
+
+/**
+ * Découpe une description de la spec en blocs : titres `## `, listes `- `
+ * (lignes indentées = suite de l'élément), paragraphes (lignes jointes). C'est
+ * tout le Markdown que la spec s'autorise (cf. `x-public-description` dans
+ * docs/openapi/root.yaml).
+ */
+function parseRichText(text: string): RichBlock[] {
+  const blocks: RichBlock[] = [];
+  let paragraph: string[] = [];
+  let list: string[] | null = null;
+  const flush = () => {
+    if (paragraph.length) {
+      blocks.push({ kind: 'paragraph', text: paragraph.join(' ') });
+      paragraph = [];
+    }
+    if (list) {
+      blocks.push({ kind: 'list', items: list });
+      list = null;
+    }
+  };
+  for (const raw of text.replace(/\r\n/g, '\n').split('\n')) {
+    const line = raw.trimEnd();
+    if (!line.trim()) {
+      flush();
+    } else if (line.startsWith('## ')) {
+      flush();
+      blocks.push({ kind: 'heading', text: line.slice(3).trim() });
+    } else if (line.startsWith('- ')) {
+      if (paragraph.length) {
+        blocks.push({ kind: 'paragraph', text: paragraph.join(' ') });
+        paragraph = [];
+      }
+      list = list ?? [];
+      list.push(line.slice(2).trim());
+    } else if (list && /^\s/.test(line)) {
+      list[list.length - 1] += ` ${line.trim()}`;
+    } else {
+      if (list) {
+        blocks.push({ kind: 'list', items: list });
+        list = null;
+      }
+      paragraph.push(line.trim());
+    }
+  }
+  flush();
+  return blocks;
+}
+
+function RichText({
+  text,
+  headingPrefix,
+}: {
+  text: string | undefined;
+  /** Préfixe d'ancre des titres ; sans lui, les titres ne sont pas ancrés. */
+  headingPrefix?: string;
+}) {
+  if (!text) return null;
+  return (
+    <div className="space-y-2">
+      {parseRichText(text).map((block, i) => {
+        if (block.kind === 'heading') {
+          return (
+            <h3
+              key={i}
+              id={
+                headingPrefix
+                  ? `${headingPrefix}-${slugify(block.text)}`
+                  : undefined
+              }
+              className="scroll-mt-24 pt-4 text-lg font-semibold text-white"
+            >
+              <InlineText text={block.text} />
+            </h3>
+          );
+        }
+        if (block.kind === 'list') {
+          return (
+            <ul key={i} className="list-disc space-y-1 pl-5">
+              {block.items.map((item, j) => (
+                <li key={j}>
+                  <InlineText text={item} />
+                </li>
+              ))}
+            </ul>
+          );
+        }
+        return (
+          <p key={i}>
+            <InlineText text={block.text} />
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Exemples d'un « media type » : `example` seul ou `examples` nommés. */
+function mediaExamples(
+  media: Json | undefined
+): Array<{ label?: string; value: unknown }> {
+  if (!media) return [];
+  const out: Array<{ label?: string; value: unknown }> = [];
+  if (media.example !== undefined) out.push({ value: media.example });
+  for (const [name, ex] of Object.entries<Json>(media.examples ?? {})) {
+    out.push({ label: ex?.summary ?? name, value: ex?.value });
+  }
+  return out;
+}
+
+function ExampleBlocks({ media, t }: { media: Json | undefined; t: RefDict }) {
+  const examples = mediaExamples(media);
+  if (examples.length === 0) return null;
+  return (
+    <div className="mt-2 space-y-1">
+      {examples.map((ex, i) => (
+        <details key={i}>
+          <summary className="cursor-pointer text-xs text-gray-400 hover:text-gray-200">
+            {ex.label ? `${t.exampleLabel} — ${ex.label}` : t.exampleLabel}
+          </summary>
+          <pre className="mt-1 overflow-x-auto rounded-lg bg-black/40 p-3 font-mono text-xs text-gray-200">
+            {typeof ex.value === 'string'
+              ? ex.value
+              : JSON.stringify(ex.value, null, 2)}
+          </pre>
+        </details>
+      ))}
+    </div>
   );
 }
 
@@ -220,13 +398,18 @@ function OperationCard({
         >
           {requiresToken ? t.authToken : t.authNone}
         </span>
+        {op.deprecated === true && (
+          <span className="rounded-md border border-rose-400/30 bg-rose-500/10 px-2 py-1 text-xs text-rose-200">
+            {t.deprecatedBadge}
+          </span>
+        )}
       </div>
 
       {op.summary && <p className="text-sm text-gray-200">{op.summary}</p>}
       {op.description && (
-        <p className="whitespace-pre-line text-sm text-gray-400">
-          {op.description}
-        </p>
+        <div className="text-sm text-gray-400">
+          <RichText text={op.description} />
+        </div>
       )}
 
       {params.length > 0 && (
@@ -269,13 +452,17 @@ function OperationCard({
                       )}
                     </td>
                     <td className="py-2 pr-4 text-gray-400">
-                      {p.in === 'path' ? t.inPath : t.inQuery}
+                      {p.in === 'path'
+                        ? t.inPath
+                        : p.in === 'header'
+                          ? t.inHeader
+                          : t.inQuery}
                     </td>
                     <td className="py-2 pr-4 font-mono text-xs">
                       <TypeLabel schema={p.schema} />
                     </td>
                     <td className="py-2 text-gray-400">
-                      {p.description ?? ''}
+                      <RichText text={p.description} />
                     </td>
                   </tr>
                 ))}
@@ -297,6 +484,10 @@ function OperationCard({
               <TypeLabel schema={bodySchema} />
             </p>
           )}
+          <ExampleBlocks
+            media={op.requestBody?.content?.['application/json']}
+            t={t}
+          />
         </div>
       )}
 
@@ -342,7 +533,41 @@ function OperationCard({
                         )}
                       </td>
                       <td className="py-2 text-gray-400">
-                        {resp?.description ?? ''}
+                        <RichText text={resp?.description} />
+                        {resp?.headers && (
+                          <div className="mt-2">
+                            <p className="text-xs font-semibold text-gray-400">
+                              {t.headersLabel}
+                            </p>
+                            <ul className="mt-1 space-y-1">
+                              {Object.entries<Json>(resp.headers).map(
+                                ([name, rawHeader]) => {
+                                  const header =
+                                    typeof rawHeader?.$ref === 'string'
+                                      ? (resolveRef(
+                                          components,
+                                          rawHeader.$ref
+                                        ) ?? {})
+                                      : rawHeader;
+                                  return (
+                                    <li key={name} className="text-xs">
+                                      <code className="rounded bg-white/10 px-1 py-0.5 text-purple-200">
+                                        {name}
+                                      </code>
+                                      <div className="mt-1 text-gray-400">
+                                        <RichText text={header?.description} />
+                                      </div>
+                                    </li>
+                                  );
+                                }
+                              )}
+                            </ul>
+                          </div>
+                        )}
+                        <ExampleBlocks
+                          media={resp?.content?.['application/json']}
+                          t={t}
+                        />
                       </td>
                     </tr>
                   );
@@ -392,6 +617,9 @@ function ApiReferencePage({ spec }: PageProps) {
   }
 
   const schemas: [string, Json][] = Object.entries(components.schemas ?? {});
+  const securitySchemes: [string, Json][] = Object.entries(
+    components.securitySchemes ?? {}
+  );
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
@@ -440,6 +668,30 @@ function ApiReferencePage({ spec }: PageProps) {
         {/* TOC */}
         <nav aria-label={t.tocLabel} className="hidden lg:block">
           <div className="sticky top-24 space-y-1 text-sm">
+            {spec.info?.description && (
+              <a
+                href="#guide-heading"
+                className="block rounded-md px-2 py-1 text-gray-300 hover:bg-white/5 hover:text-white"
+              >
+                {t.guideLabel}
+              </a>
+            )}
+            {securitySchemes.length > 0 && (
+              <a
+                href="#auth-heading"
+                className="block rounded-md px-2 py-1 text-gray-300 hover:bg-white/5 hover:text-white"
+              >
+                {t.securityLabel}
+              </a>
+            )}
+            {components.schemas?.PublicApiErrorCode && (
+              <a
+                href="#schema-PublicApiErrorCode"
+                className="block rounded-md px-2 py-1 text-gray-300 hover:bg-white/5 hover:text-white"
+              >
+                {t.errorCodesLabel}
+              </a>
+            )}
             {operations.map((e) => (
               <a
                 key={e.anchor}
@@ -460,6 +712,40 @@ function ApiReferencePage({ spec }: PageProps) {
         </nav>
 
         <div className="space-y-12">
+          {spec.info?.description && (
+            <section
+              aria-labelledby="guide-heading"
+              className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-gray-300"
+            >
+              <h2 id="guide-heading" className="text-2xl font-bold text-white">
+                {t.guideLabel}
+              </h2>
+              <RichText text={spec.info.description} headingPrefix="guide" />
+            </section>
+          )}
+
+          {securitySchemes.length > 0 && (
+            <section aria-labelledby="auth-heading" className="space-y-5">
+              <h2 id="auth-heading" className="text-2xl font-bold">
+                {t.securityLabel}
+              </h2>
+              {securitySchemes.map(([name, scheme]) => (
+                <article
+                  key={name}
+                  id={`security-${name}`}
+                  className="scroll-mt-24 space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-5"
+                >
+                  <h3 className="font-mono text-base font-semibold text-purple-200">
+                    {name}
+                  </h3>
+                  <div className="text-sm text-gray-400">
+                    <RichText text={scheme.description} />
+                  </div>
+                </article>
+              ))}
+            </section>
+          )}
+
           <section aria-labelledby="endpoints-heading" className="space-y-5">
             <h2 id="endpoints-heading" className="text-2xl font-bold">
               {t.endpointsLabel}
@@ -489,12 +775,45 @@ function ApiReferencePage({ spec }: PageProps) {
                     {name}
                   </h3>
                   {schema.description && (
-                    <p className="text-sm text-gray-400">
-                      {schema.description}
-                    </p>
+                    <div className="text-sm text-gray-400">
+                      <RichText text={schema.description} />
+                    </div>
                   )}
                   {schema.properties ? (
                     <PropertiesTable schema={schema} t={t} />
+                  ) : Array.isArray(schema.oneOf) &&
+                    schema.oneOf.every((v: Json) => v && 'const' in v) ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-white/10 text-gray-400">
+                            <th scope="col" className="py-2 pr-4 font-semibold">
+                              {t.thValue}
+                            </th>
+                            <th scope="col" className="py-2 font-semibold">
+                              {t.thDesc}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {schema.oneOf.map((v: Json) => (
+                            <tr
+                              key={String(v.const)}
+                              className="border-b border-white/5 align-top"
+                            >
+                              <td className="py-2 pr-4">
+                                <code className="rounded bg-white/10 px-1.5 py-0.5 text-purple-200">
+                                  {String(v.const)}
+                                </code>
+                              </td>
+                              <td className="py-2 text-gray-400">
+                                <RichText text={v.description} />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   ) : (
                     <p className="font-mono text-xs text-gray-300">
                       <TypeLabel schema={schema} />

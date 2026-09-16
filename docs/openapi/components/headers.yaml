@@ -1,0 +1,75 @@
+PublicCacheControl:
+  description: |
+    Posé par la route sur toute réponse 200 :
+    `public, s-maxage=<N>, stale-while-revalidate=<N/2>`. La valeur de `N`
+    dépend de l'endpoint (indiquée dans sa description).
+
+    ATTENTION — sur la production (Netlify), la clé de cache du CDN ne varie
+    que sur deux paramètres internes de Next (`__nextDataReq`, `_rsc`). Tous
+    les autres paramètres de query sont IGNORÉS par le cache : pendant `N`
+    secondes, une même URL renvoie la première réponse mise en cache, quels
+    que soient les paramètres de query envoyés ensuite. Voir l'introduction
+    de la référence (« Cache CDN »).
+  schema:
+    type: string
+    example: public, s-maxage=60, stale-while-revalidate=30
+RetryAfter:
+  description: Secondes à attendre avant de réessayer.
+  schema:
+    type: integer
+    example: 60
+Allow:
+  description: Méthodes acceptées par la route.
+  schema:
+    type: string
+    example: GET, OPTIONS
+RateLimitScope:
+  description: |
+    Fenêtre du quota de plan dépassée : `minute` (débit) ou `month` (quota
+    mensuel). Absent des 429 du limiteur par IP ou par token.
+  schema:
+    type: string
+    enum:
+      - minute
+      - month
+RateLimitLimit:
+  description: |
+    Limite de la fenêtre du plan (sur un 429 de quota : limite dépassée ; sur
+    un succès : limite par minute). Absent pour une clé partenaire (`comp`)
+    et pour les plans illimités.
+  schema:
+    type: integer
+    example: 60
+RateLimitRemaining:
+  description: |
+    Requêtes restantes dans la minute pour le plan (succès uniquement). Absent
+    pour une clé partenaire (`comp`) et pour les plans illimités.
+  schema:
+    type: integer
+    example: 59
+IdempotencyReplay:
+  description: |
+    `true` quand la réponse est rejouée depuis le cache d'idempotence
+    (même `Idempotency-Key` ET même corps dans les 5 minutes). Absent sinon.
+  schema:
+    type: string
+    enum:
+      - 'true'
+Deprecation:
+  description: Toujours `true` sur un alias déprécié.
+  schema:
+    type: string
+    enum:
+      - 'true'
+Sunset:
+  description: |
+    Date (RFC 8594) à partir de laquelle l'alias peut disparaître :
+    `Wed, 23 Dec 2026 00:00:00 GMT`.
+  schema:
+    type: string
+    example: Wed, 23 Dec 2026 00:00:00 GMT
+SuccessorLink:
+  description: Route qui remplace l'alias (`<…/v1/…>; rel="successor-version"`).
+  schema:
+    type: string
+    example: </api/caster/v1/tournaments>; rel="successor-version"

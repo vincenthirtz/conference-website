@@ -8,13 +8,25 @@ Error:
       description: Message lisible côté client.
     code:
       type: string
-      description: Code machine (ex. `MISSING_TENANT_ID`, `UNKNOWN_TENANT`).
+      description: |
+        Code machine, présent seulement quand la route en pose un. Catalogues :
+        `PublicApiErrorCode` (surface publique, spec publique) et la section
+        « Catalogue des codes d'erreur » de `docs/BOT_API_CONTRACT.md` (bot).
+    fields:
+      type: object
+      description: |
+        Erreurs de validation par champ (`INVALID_BODY` / `INVALID_QUERY` des
+        middlewares bot et public).
+      additionalProperties:
+        type: array
+        items:
+          type: string
     details:
       type: object
+      description: Détail libre, posé par quelques routes admin seulement.
       additionalProperties: true
   example:
-    error: Invalid or missing API key.
-    code: MISSING_TENANT_ID
+    error: Match introuvable
 Ok:
   type: object
   required:

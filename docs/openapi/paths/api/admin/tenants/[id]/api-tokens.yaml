@@ -55,30 +55,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - name
-            - scopes
-          properties:
-            name:
-              type: string
-              maxLength: 120
-            scopes:
-              type: array
-              minItems: 1
-              items:
-                type: string
-            comp:
-              type: boolean
-              default: false
-            comp_note:
-              type: string
-              maxLength: 500
-            expires_in_days:
-              type: integer
-              minimum: 1
-              maximum: 3650
-              nullable: true
+          x-zod: admin.apiTokens.mint
   responses:
     '201':
       description: Key created. `token` is the plain value, shown once.

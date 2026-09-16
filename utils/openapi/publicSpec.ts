@@ -141,19 +141,21 @@ export function filterPublicSpec(full: OpenApiDoc): OpenApiDoc {
   }
   const fullTags = Array.isArray(full.tags) ? full.tags : [];
   const info = isObject(full.info) ? full.info : {};
+  // L'introduction publique est rédigée dans `docs/openapi/root.yaml`
+  // (`x-public-description`) : c'est la page qu'un partenaire lit en premier,
+  // elle vit avec le reste de la spec plutôt que dans une chaîne de code.
+  const publicDescription =
+    typeof full['x-public-description'] === 'string'
+      ? full['x-public-description']
+      : "Surface publique de l'API conference-website. Les surfaces " +
+        'bot/admin/cron sont internes et ne sont pas documentées ici.';
 
   return {
     openapi: full.openapi ?? '3.1.0',
     info: {
       title: 'Conference Website — API publique',
       version: info.version ?? '1.0.0',
-      description:
-        "Surface publique de l'API conference-website : lecture anonyme " +
-        '(`/api/public/v1/*`, CORS `*`, rate-limitée ~120 req/min/IP) et ' +
-        'écriture authentifiée par token scopé ' +
-        '(`Authorization: Bearer pk_live_…`). Cette spec ne couvre que les ' +
-        'endpoints publics ; les surfaces bot/admin/cron sont internes et ne ' +
-        'sont pas documentées ici.',
+      description: publicDescription,
       contact: info.contact,
       license: info.license,
     },

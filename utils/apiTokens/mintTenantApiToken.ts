@@ -20,7 +20,7 @@
 // LE CLAIR NE SORT QU'ICI, et une seule fois : il n'est ni stocké, ni journalisé.
 
 import crypto from 'node:crypto';
-import { z } from 'zod';
+import { mintTokenBodySchema } from '@/lib/apiContracts/admin/apiTokens';
 import { supabaseAdmin } from '@/utils/supabase';
 import { hasAtLeastRole, type StaffRole } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
@@ -39,24 +39,10 @@ function generateToken(): { plain: string; hash: string; prefix: string } {
   return { plain, hash, prefix };
 }
 
-export const mintTokenBodySchema = z.object({
-  name: z.string().trim().min(1).max(120),
-  scopes: z.array(z.string()).min(1),
-  /**
-   * Exemption partenaire : la clé bypasse le gate de plan (accès gratuit).
-   * Poser `true` exige le rôle `owner` — un simple admin ne peut pas
-   * s'auto-exempter du modèle payant.
-   */
-  comp: z.boolean().optional().default(false),
-  /** Note libre traçant le partenaire / la raison de l'exemption. */
-  comp_note: z.string().trim().max(500).optional(),
-  /**
-   * Durée de vie optionnelle, en jours. null / absent => pas d'expiration.
-   * On accepte des jours (pas un timestamp arbitraire) pour que l'échéance soit
-   * toujours calculée serveur, jamais dictée par le client.
-   */
-  expires_in_days: z.number().int().positive().max(3650).nullable().optional(),
-});
+// Le schéma du corps vit dans lib/apiContracts (source unique handler ↔ spec
+// OpenAPI, `x-zod: admin.apiTokens.mint`). Réexporté ici pour les appelants
+// existants.
+export { mintTokenBodySchema };
 
 export type MintedTokenMeta = {
   id: string;

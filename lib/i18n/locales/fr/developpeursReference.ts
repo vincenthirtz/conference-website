@@ -34,6 +34,14 @@ export default ns('developpeursReference', {
   requiredYes: 'requis',
   inPath: 'chemin',
   inQuery: 'requête',
+  inHeader: 'en-tête',
+  guideLabel: 'Guide',
+  securityLabel: 'Authentification',
+  errorCodesLabel: "Codes d'erreur",
+  deprecatedBadge: 'Déprécié',
+  headersLabel: 'En-têtes',
+  exampleLabel: 'Exemple',
+  thValue: 'Valeur',
   generatedNote:
-    "Cette page est générée depuis la spec OpenAPI du dépôt à chaque déploiement — elle ne peut pas dériver du comportement réel de l'API.",
+    "Cette page est générée depuis la spec OpenAPI du dépôt à chaque déploiement. Des vérifications automatiques confrontent au code les endpoints, les méthodes, les réponses de succès, les exemples et les codes d'erreur ; le reste est rédigé à la main.",
 });

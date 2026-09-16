@@ -2,7 +2,7 @@ parameters:
   - name: id
     in: path
     required: true
-    description: Id (UUID) du match.
+    description: Id (UUID) du match. Un slug n'est PAS accepté (400).
     schema:
       type: string
       format: uuid
@@ -10,11 +10,26 @@ get:
   tags:
     - public/v1
   summary: Détail d'un match public + games (map par map).
+  description: |
+    Match de l'espace servi et ses parties, triées par `map_order`.
+
+    Seuls les statuts `pending`, `ongoing` et `finished` sont servis : un match
+    `walkover`, `disputed`, `postponed` ou `cancelled` renvoie 404, comme un
+    match inconnu.
+
+    Espace servi : voir « Quel espace répond » dans l'introduction. Le jeton
+    `Authorization` est ignoré ici.
+
+    Anonyme, CORS `*`. Limite : 120 requêtes par minute par IP pour cet
+    endpoint. Cache CDN : 30 s.
   operationId: publicV1GetMatch
   security: []
   responses:
     '200':
       description: Détail match.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PublicCacheControl'
       content:
         application/json:
           schema:
@@ -24,11 +39,46 @@ get:
             properties:
               data:
                 $ref: '#/components/schemas/PublicV1MatchDetail'
+          example:
+            data:
+              id: 5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f
+              stage_id: 9b8c7d6e-5f4a-4b3c-a2d1-0e9f8a7b6c5d
+              round_number: 1
+              bracket_side: wb
+              team1_id: 1e2d3c4b-5a69-4788-9a0b-1c2d3e4f5a6b
+              team1_name: Les Aurores
+              team1_logo_url: https://example.org/logos/aurores.png
+              team2_id: 2f3e4d5c-6b7a-4899-8a1b-2c3d4e5f6a7b
+              team2_name: Nébuleuse
+              team2_logo_url: null
+              team1_score: 2
+              team2_score: 1
+              winner_team_id: 1e2d3c4b-5a69-4788-9a0b-1c2d3e4f5a6b
+              status: finished
+              scheduled_at: '2026-10-03T18:00:00+00:00'
+              games:
+                - map_name: Lijiang Tower
+                  map_order: 1
+                  team1_score: 2
+                  team2_score: 0
+                  winner_team_id: 1e2d3c4b-5a69-4788-9a0b-1c2d3e4f5a6b
+                - map_name: King's Row
+                  map_order: 2
+                  team1_score: 2
+                  team2_score: 3
+                  winner_team_id: 2f3e4d5c-6b7a-4899-8a1b-2c3d4e5f6a7b
+                - map_name: Circuit Royal
+                  map_order: 3
+                  team1_score: 1
+                  team2_score: 0
+                  winner_team_id: 1e2d3c4b-5a69-4788-9a0b-1c2d3e4f5a6b
     '400':
-      $ref: '#/components/responses/BadRequest'
+      $ref: '#/components/responses/PublicBadRequest'
     '404':
-      $ref: '#/components/responses/NotFound'
+      $ref: '#/components/responses/PublicNotFound'
+    '405':
+      $ref: '#/components/responses/PublicMethodNotAllowed'
     '429':
-      $ref: '#/components/responses/RateLimited'
+      $ref: '#/components/responses/PublicRateLimited'
     '500':
-      $ref: '#/components/responses/ServerError'
+      $ref: '#/components/responses/PublicServerError'

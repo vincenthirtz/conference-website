@@ -9,17 +9,44 @@ get:
   tags:
     - public/v1
   summary: Matches d'un tournoi (overlays de bracket).
+  description: |
+    Matchs d'un tournoi public (404 si le tournoi est inconnu ou non public),
+    triés par `scheduled_at` croissante. Pas de pagination : tous les matchs
+    retenus sont renvoyés.
+
+    Statuts renvoyés : `pending`, `ongoing`, `finished` UNIQUEMENT. Un match
+    `walkover` (victoire par forfait, qui fait pourtant avancer le bracket),
+    `disputed`, `postponed` ou `cancelled` n'apparaît PAS dans la liste.
+
+    Espace servi : voir « Quel espace répond » dans l'introduction. Le jeton
+    `Authorization` est ignoré ici.
+
+    Anonyme, CORS `*`. Limite : 120 requêtes par minute par IP pour cet
+    endpoint. Cache CDN : 30 s.
+
+    ATTENTION — cache CDN : `stageId` et `status` sont lus par le code, mais la
+    clé de cache du CDN les ignore. Pendant 30 s, cette URL renvoie la première
+    réponse mise en cache, quels que soient les filtres envoyés ensuite.
+    Filtrer côté client sur la liste complète.
   operationId: publicV1ListTournamentMatches
   security: []
   parameters:
     - name: stageId
       in: query
       required: false
+      description: |
+        Égalité stricte sur la phase ; non validé (une valeur inconnue renvoie
+        une liste vide). Non fiable aujourd'hui (cache CDN, voir la
+        description).
       schema:
         type: string
     - name: status
       in: query
       required: false
+      description: |
+        Une valeur hors de l'énumération est ignorée (aucun 400) : la route
+        renvoie alors les trois statuts. Non fiable aujourd'hui (cache CDN,
+        voir la description).
       schema:
         type: string
         enum:
@@ -29,6 +56,9 @@ get:
   responses:
     '200':
       description: Liste des matches publics du tournoi.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/PublicCacheControl'
       content:
         application/json:
           schema:
@@ -40,11 +70,28 @@ get:
                 type: array
                 items:
                   $ref: '#/components/schemas/PublicV1Match'
-    '400':
-      $ref: '#/components/responses/BadRequest'
+          example:
+            data:
+              - id: 5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f
+                stage_id: 9b8c7d6e-5f4a-4b3c-a2d1-0e9f8a7b6c5d
+                round_number: 1
+                bracket_side: wb
+                team1_id: 1e2d3c4b-5a69-4788-9a0b-1c2d3e4f5a6b
+                team1_name: Les Aurores
+                team1_logo_url: https://example.org/logos/aurores.png
+                team2_id: 2f3e4d5c-6b7a-4899-8a1b-2c3d4e5f6a7b
+                team2_name: Nébuleuse
+                team2_logo_url: null
+                team1_score: 2
+                team2_score: 1
+                winner_team_id: 1e2d3c4b-5a69-4788-9a0b-1c2d3e4f5a6b
+                status: finished
+                scheduled_at: '2026-10-03T18:00:00+00:00'
     '404':
-      $ref: '#/components/responses/NotFound'
+      $ref: '#/components/responses/PublicNotFound'
+    '405':
+      $ref: '#/components/responses/PublicMethodNotAllowed'
     '429':
-      $ref: '#/components/responses/RateLimited'
+      $ref: '#/components/responses/PublicRateLimited'
     '500':
-      $ref: '#/components/responses/ServerError'
+      $ref: '#/components/responses/PublicServerError'
