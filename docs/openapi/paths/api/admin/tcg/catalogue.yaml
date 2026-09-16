@@ -1,0 +1,51 @@
+get:
+  summary: The space's TCG catalogue, optionally annotated for one player.
+  description: |
+    Requires `manage_tcg`. Lists every card a pack can hand out in this space —
+    players, teams, maps and approved fan art. With `userId`, each card also
+    says whether that player owns it.
+
+    The attachment of `userId` to the space is re-checked server-side. The
+    picker that produces it already searches within the space, but a route does
+    not guard itself on what its own UI chose to send: without this check any
+    `manage_tcg` holder — a permission every space owner has, including a
+    self-service developer space — could read the collection of ANY account on
+    the platform.
+
+    An unattached player answers `404`, not `403`: saying "forbidden" would
+    confirm the account exists elsewhere. A failed attachment read answers
+    `500` — confusing it with "not attached" would report "player not found"
+    during an outage.
+
+    `Cache-Control: private, no-store`: a collection is personal, and a consent
+    withdrawal must show at the next call.
+  operationId: adminGetTcgCatalogue
+  tags:
+    - admin/tcg
+  security:
+    - StaffSession: []
+  parameters:
+    - in: query
+      name: userId
+      required: false
+      schema:
+        type: string
+        format: uuid
+  responses:
+    '200':
+      description: The catalogue, with ownership when a player was named.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'
