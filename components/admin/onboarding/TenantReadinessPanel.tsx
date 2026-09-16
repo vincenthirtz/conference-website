@@ -19,6 +19,8 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import AlertBanner from '@/components/admin/AlertBanner';
 import AttachGuildModal from '@/components/admin/onboarding/AttachGuildModal';
+import MintApiKeyModal from '@/components/admin/onboarding/MintApiKeyModal';
+import ApiTokenRevealModal from '@/components/admin/ApiTokenRevealModal';
 import nsAdminOnboarding from '@/lib/i18n/locales/admin-fr/adminOnboarding';
 
 type Dict = typeof nsAdminOnboarding.fr;
@@ -47,6 +49,8 @@ type TenantReadiness = {
   staffCount: number;
   hasBotSecrets: boolean;
   hasEmailSender: boolean;
+  apiTokenCount: number;
+  apiTokenSoonestExpiry: string | null;
   botEnabled: boolean;
   blockers: string[];
 };
@@ -76,6 +80,13 @@ function blockerMeta(
       return { label: t.blockerNoGuild, action: 'attach_guild' };
     case 'personne_rattache':
       return { label: t.blockerNoStaff, href: `/admin/tenants/${tenantId}` };
+    case 'bot_sans_secrets':
+      // Les secrets se posent depuis la fiche de l'espace (onglet Discord),
+      // qui porte déjà la rotation.
+      return {
+        label: t.blockerNoBotSecrets,
+        href: `/admin/tenants/${tenantId}?tab=discord`,
+      };
     case 'discord_non_configure':
       // Renseigné par l'appelant : l'écran de réglages est par SERVEUR, donc
       // la destination dépend du serveur principal de l'espace.
@@ -124,6 +135,13 @@ export default function TenantReadinessPanel() {
     id: string;
     name: string;
   } | null>(null);
+  // Espace pour lequel on émet une clé — porte aussi l'ouverture de la modale.
+  const [mintFor, setMintFor] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  // Clair fraîchement émis, montré UNE fois puis oublié.
+  const [revealed, setRevealed] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -271,6 +289,15 @@ export default function TenantReadinessPanel() {
                           count: r.guildCount,
                         })}
                       />
+                      {/* Un serveur rattaché ne veut pas dire un bot qui
+                          répond : sans secrets il ne s'authentifie pas. La
+                          pastille n'a de sens qu'avec un serveur. */}
+                      {r.guildCount > 0 && (
+                        <Pill
+                          ok={r.hasBotSecrets}
+                          label={t.criterionBotSecrets}
+                        />
+                      )}
                       <Pill
                         ok={r.configuredKeys > 0}
                         label={format(t.criterionConfig, {
@@ -284,6 +311,12 @@ export default function TenantReadinessPanel() {
                         })}
                       />
                       <Pill ok={r.hasEmailSender} label={t.criterionEmail} />
+                      <Pill
+                        ok={r.apiTokenCount > 0}
+                        label={format(t.criterionApiKeys, {
+                          count: r.apiTokenCount,
+                        })}
+                      />
                     </div>
                   </div>
 
@@ -313,6 +346,18 @@ export default function TenantReadinessPanel() {
                       {r.guilds.length === 0
                         ? t.attachGuildInviteCta
                         : t.attachGuildCta}
+                    </button>
+                    {/* Émettre depuis la LIGNE de l'espace : la cible est
+                        nommée dans la modale et dans l'URL appelée. C'est tout
+                        l'objet du geste — /admin/api-tokens émet pour l'espace
+                        actif du sélecteur, qu'il n'affiche nulle part. */}
+                    <button
+                      type="button"
+                      onClick={() => setMintFor({ id: r.id, name: r.name })}
+                      className="text-xs text-violet-300 underline hover:text-violet-200"
+                      data-testid="readiness-mint-key-cta"
+                    >
+                      {t.mintKeyCta}
                     </button>
                   </div>
                 </div>
@@ -378,6 +423,28 @@ export default function TenantReadinessPanel() {
           void load();
         }}
       />
+
+      {mintFor && (
+        <MintApiKeyModal
+          tenantId={mintFor.id}
+          tenantName={mintFor.name}
+          onClose={() => setMintFor(null)}
+          onMinted={(token) => {
+            setMintFor(null);
+            // Le clair traverse l'état le temps d'une modale, puis disparaît :
+            // il n'existe nulle part ailleurs.
+            setRevealed(token);
+            void load();
+          }}
+        />
+      )}
+
+      {revealed && (
+        <ApiTokenRevealModal
+          token={revealed}
+          onClose={() => setRevealed(null)}
+        />
+      )}
     </div>
   );
 }

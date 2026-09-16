@@ -84,6 +84,14 @@ export type TenantReadiness = {
   staffCount: number;
   hasBotSecrets: boolean;
   hasEmailSender: boolean;
+  /**
+   * Clés d'API vivantes (ni révoquées, ni échues) et, s'il y en a, la plus
+   * proche échéance. Pas un critère de mise en service : un espace peut très
+   * bien n'en avoir aucune. C'est en revanche d'ici qu'on en émet une pour un
+   * espace NOMMÉ, et le seul endroit d'où l'on voit qu'une clé va expirer.
+   */
+  apiTokenCount: number;
+  apiTokenSoonestExpiry: string | null;
   /** Le plan effectif inclut-il le bot Discord ? */
   botEnabled: boolean;
   /** Ce qui bloque, du plus bloquant au plus secondaire. */
@@ -158,7 +166,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .json({ tenants: [], botInviteUrl: buildBotInviteUrl() });
   }
 
-  const [guildsRes, configRes, staffRes, secretsRes, emailRes] =
+  const [guildsRes, configRes, staffRes, secretsRes, emailRes, tokensRes] =
     await Promise.all([
       supabaseAdmin
         .from('discord_guilds')
@@ -180,6 +188,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         .select('tenant_id')
         .eq('key', 'brevo_api_key')
         .in('tenant_id', ids),
+      // Clés d'API : ni un critère de mise en service (tout espace n'en a pas
+      // besoin), ni un détail — c'est le geste qui s'est trompé d'espace, et
+      // le seul endroit d'où on puisse voir qu'une clé va expirer.
+      supabaseAdmin
+        .from('tenant_api_tokens')
+        .select('tenant_id, expires_at, revoked_at')
+        .is('revoked_at', null)
+        .in('tenant_id', ids),
     ]);
 
   for (const [label, r] of [
@@ -188,6 +204,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     ['tenant_staff', staffRes],
     ['tenant_secrets', secretsRes],
     ['integration_secrets', emailRes],
+    ['tenant_api_tokens', tokensRes],
   ] as const) {
     if (r.error) {
       // Une agrégation qui échoue ne doit pas faire tomber la vue : on le
@@ -275,6 +292,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     )
   );
 
+  // Une clé échue ne vaut pas mieux qu'une clé absente : on ne compte que
+  // celles qui répondraient à un appel fait maintenant.
+  const tokenCount = new Map<string, number>();
+  const tokenSoonest = new Map<string, string>();
+  for (const row of (tokensRes.data ?? []) as Array<{
+    tenant_id: string;
+    expires_at: string | null;
+  }>) {
+    const exp = row.expires_at;
+    if (exp && Date.parse(exp) <= Date.now()) continue;
+    tokenCount.set(row.tenant_id, (tokenCount.get(row.tenant_id) ?? 0) + 1);
+    if (!exp) continue;
+    const current = tokenSoonest.get(row.tenant_id);
+    if (!current || Date.parse(exp) < Date.parse(current)) {
+      tokenSoonest.set(row.tenant_id, exp);
+    }
+  }
+
   const nowMs = Date.now();
 
   const tenants: TenantReadiness[] = rows.map((t) => {
@@ -301,6 +336,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       guildCount: guilds,
       staffCount: staff,
       configuredKeys: keys,
+      hasBotSecrets: withSecrets.has(t.id),
       hasEmailSender,
     });
 
@@ -323,6 +359,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       staffCount: staff,
       hasBotSecrets: withSecrets.has(t.id),
       hasEmailSender,
+      apiTokenCount: tokenCount.get(t.id) ?? 0,
+      apiTokenSoonestExpiry: tokenSoonest.get(t.id) ?? null,
       botEnabled,
       blockers,
     };

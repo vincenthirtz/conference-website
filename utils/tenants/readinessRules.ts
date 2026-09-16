@@ -20,6 +20,11 @@ export const READINESS_BLOCKERS = [
   // peut plus se déclencher laisse croire qu'un critère est surveillé.
   'aucun_serveur',
   'personne_rattache',
+  // Avant `discord_non_configure`, et c'est l'ordre qui compte : sans secrets,
+  // le bot ne s'authentifie pas pour cet espace et ne répond PAS DU TOUT ;
+  // sans salons, il répond mais n'a nulle part où parler. Le premier est une
+  // panne, le second une configuration incomplète.
+  'bot_sans_secrets',
   'discord_non_configure',
   'emails_non_configures',
 ] as const;
@@ -33,6 +38,8 @@ export type ReadinessInputs = {
   staffCount: number;
   /** Clés de configuration Discord renseignées, tous serveurs confondus. */
   configuredKeys: number;
+  /** Une ligne `tenant_secrets` existe-t-elle ? Sans elle, le bot est muet. */
+  hasBotSecrets: boolean;
   hasEmailSender: boolean;
 };
 
@@ -49,6 +56,10 @@ export function computeBlockers(i: ReadinessInputs): ReadinessBlocker[] {
   if (!i.isActive) blockers.push('inactive');
   if (i.guildCount === 0) blockers.push('aucun_serveur');
   if (i.staffCount === 0) blockers.push('personne_rattache');
+  // Les deux manques Discord ne valent que si un serveur est rattaché : sans
+  // serveur, `aucun_serveur` dit déjà tout, et crier deux fois pour la même
+  // cause fait perdre confiance dans la liste.
+  if (!i.hasBotSecrets && i.guildCount > 0) blockers.push('bot_sans_secrets');
   if (i.configuredKeys === 0 && i.guildCount > 0) {
     blockers.push('discord_non_configure');
   }

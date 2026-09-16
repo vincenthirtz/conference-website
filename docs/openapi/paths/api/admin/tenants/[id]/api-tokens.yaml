@@ -1,0 +1,97 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: API keys belonging to one named space.
+  description: |
+    Platform owner only. Metadata only — never the hash, never a plain token.
+    Revoked keys are included so the operator can tell "there was one, it was
+    withdrawn" apart from "there never was one".
+  operationId: adminListTenantApiTokens
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: The space's keys, newest first.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Issue an API key for one named space.
+  description: |
+    Platform owner only. Exists alongside `POST /api/admin/api-tokens`, which
+    mints for the ACTIVE space of the selector — a space its screen names
+    nowhere. A key meant for a partner ended up attached to the historical
+    space that way, and since the token is authoritative over the space, it
+    served perfectly valid and perfectly wrong data. Here the target is in the
+    URL.
+
+    The plain token is returned ONCE, in this response. It is sha256-hashed for
+    storage and never logged.
+
+    `comp: true` (partner exemption, free API access) is owner-gated inside the
+    shared minting module.
+  operationId: adminMintTenantApiToken
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - name
+            - scopes
+          properties:
+            name:
+              type: string
+              maxLength: 120
+            scopes:
+              type: array
+              minItems: 1
+              items:
+                type: string
+            comp:
+              type: boolean
+              default: false
+            comp_note:
+              type: string
+              maxLength: 500
+            expires_in_days:
+              type: integer
+              minimum: 1
+              maximum: 3650
+              nullable: true
+  responses:
+    '201':
+      description: Key created. `token` is the plain value, shown once.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'

@@ -227,7 +227,7 @@ async function handler(
   const botEnabled = getPlanFeatures(eff).discordBot;
 
   // Tout en parallèle : la vue est une photo, pas une séquence.
-  const [volumeValues, signValues, guildsRes, staffRes, emailRes] =
+  const [volumeValues, signValues, guildsRes, staffRes, emailRes, secretsRes] =
     await Promise.all([
       Promise.all(TENANT_DOMAINS.map((d) => countDomain(d, id))),
       Promise.all(LIFE_SIGNS.map((s) => latestDate(s, id))),
@@ -243,6 +243,12 @@ async function handler(
         .from('integration_secrets')
         .select('tenant_id')
         .eq('key', 'brevo_api_key')
+        .eq('tenant_id', id)
+        .maybeSingle(),
+      // Le bot n'est branché que s'il a de quoi s'authentifier pour cet espace.
+      supabaseAdmin
+        .from('tenant_secrets')
+        .select('tenant_id')
         .eq('tenant_id', id)
         .maybeSingle(),
     ]);
@@ -303,6 +309,7 @@ async function handler(
         guildCount: guildIds.length,
         staffCount,
         configuredKeys,
+        hasBotSecrets: Boolean(secretsRes.data),
         hasEmailSender,
       }),
       guildCount: guildIds.length,

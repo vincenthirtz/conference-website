@@ -175,9 +175,13 @@ describe('diagnostic', () => {
     const b = (res.body as any).tenants.find(
       (t: any) => t.slug === 'cup-estivale'
     );
-    // Serveur lié mais vide, personne de rattaché, aucun compte d'envoi.
+    // Serveur lié mais vide, sans secrets bot, personne de rattaché, aucun
+    // compte d'envoi. `bot_sans_secrets` passe AVANT `discord_non_configure` :
+    // sans secrets le bot ne répond pas du tout, sans salons il répond mais
+    // n'a nulle part où parler.
     expect(b.blockers).toEqual([
       'personne_rattache',
+      'bot_sans_secrets',
       'discord_non_configure',
       'emails_non_configures',
     ]);
