@@ -1,6 +1,6 @@
 // pages/admin/onboarding/index.tsx
 //
-// Hub d'onboarding de la plateforme. DEUX onglets :
+// Hub d'onboarding de la plateforme. TROIS onglets :
 //
 //   - « Espaces »    : ce qui manque à chaque espace pour être opérationnel,
 //                      avec le lien qui règle chaque manque. Onglet par défaut,
@@ -8,6 +8,13 @@
 //                      normal — une file d'attente vide est un mauvais accueil.
 //   - « À traiter »  : les deux boîtes d'entrée, demandes d'espace et serveurs
 //                      Discord en attente, avec leurs actions.
+//   - « Clés d'API » : les clés de TOUS les espaces, émission et révocation
+//                      comprises. Rapatrié depuis /admin/api-tokens, qui ne
+//                      montre que l'espace ACTIF du sélecteur sans le nommer —
+//                      c'est ainsi qu'une clé destinée à un partenaire s'est
+//                      retrouvée rattachée à l'espace historique. Cette
+//                      page-là garde son usage (un admin d'organisation y gère
+//                      les siennes) ; la vue transverse appartient au hub.
 //
 // Il y en avait quatre. Le premier, « File d'onboarding », listait les MÊMES
 // lignes que les deux suivants, en lecture seule, avec un lien vers eux pour
@@ -53,11 +60,15 @@ const GuildLinksPanel = lazyPanel(
 const CircuitPartnersPanel = lazyPanel(
   () => import('@/components/admin/onboarding/CircuitPartnersPanel')
 );
+const ApiKeysPanel = lazyPanel(
+  () => import('@/components/admin/onboarding/ApiKeysPanel')
+);
 
 const ID_BASE = 'admin-onboarding';
 
 const TAB_READINESS = 'espaces';
 const TAB_INBOX = 'a-traiter';
+const TAB_API_KEYS = 'cles-api';
 
 /** Anciens identifiants d'onglet, encore présents dans des liens en circulation. */
 const TAB_ALIAS: Record<string, string> = {
@@ -150,6 +161,7 @@ export default function AdminOnboardingPage({ currentStaffDiscordId }: Props) {
         </span>
       ),
     },
+    { id: TAB_API_KEYS, label: t.tabApiKeys },
   ];
 
   const [active, setActive] = useQueryTab(tabs);
@@ -204,7 +216,9 @@ export default function AdminOnboardingPage({ currentStaffDiscordId }: Props) {
             id={tabPanelId(ID_BASE, effective)}
             aria-labelledby={tabButtonId(ID_BASE, effective)}
           >
-            {effective === TAB_INBOX ? (
+            {effective === TAB_API_KEYS ? (
+              <ApiKeysPanel />
+            ) : effective === TAB_INBOX ? (
               // Les deux boîtes d'entrée l'une sous l'autre : ce sont deux
               // objets distincts (une demande d'espace, un serveur qui a invité
               // le bot sans espace), mais une seule question — « qu'est-ce qui

@@ -36,6 +36,19 @@ export default adminNs('adminOnboarding', {
   criterionApiKeys: '{count} clé(s) d’API',
   mintKeyCta: 'Émettre une clé d’API',
   grantAccessCta: 'Ouvrir l’accès à quelqu’un',
+  tabApiKeys: 'Clés d’API',
+  apiKeysIntro:
+    'Les clés de tous les espaces. Émettre depuis la ligne d’un espace garantit qu’elle lui est bien rattachée — le token détermine l’espace, aucun paramètre ne peut le déplacer ensuite.',
+  apiKeysLoadError: 'Impossible de charger les clés.',
+  apiKeysEmpty: 'Aucune clé pour cet espace.',
+  apiKeysCompTag: 'partenaire',
+  apiKeysRevokedTag: 'révoquée',
+  apiKeysExpiredTag: 'expirée',
+  apiKeysExpiringSoon: 'expire dans {days} j',
+  apiKeysRevokeCta: 'Révoquer',
+  apiKeysRevokeConfirm:
+    'Révoquer la clé « {name} » ? Les appels qui s’en servent échoueront immédiatement.',
+  apiKeysRevokeError: 'Révocation impossible.',
   grantAccessTitle: 'Ouvrir l’accès à {tenant}',
   grantAccessIntro:
     'Une adresse email suffit. Si la personne a déjà un compte, elle est rattachée immédiatement ; sinon elle reçoit une invitation.',

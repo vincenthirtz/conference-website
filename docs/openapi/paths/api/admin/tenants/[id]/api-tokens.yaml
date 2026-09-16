@@ -95,3 +95,42 @@ post:
       $ref: '#/components/responses/Forbidden'
     '429':
       $ref: '#/components/responses/RateLimited'
+delete:
+  summary: Revoke one key of this space.
+  description: |
+    Platform owner only. Soft revocation — sets `revoked_at`, and the call is
+    idempotent. The row stays visible: "there was one, it was withdrawn" and
+    "there never was one" are not the same answer.
+
+    The tenant filter is not decorative: without it a key id belonging to
+    ANOTHER space could be revoked from this hub.
+  operationId: adminRevokeTenantApiToken
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  parameters:
+    - in: query
+      name: tokenId
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    '200':
+      description: Key revoked (or already was).
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'

@@ -1,9 +1,13 @@
 // pages/api/admin/tenants/[id]/api-tokens.ts
 //
-// GET  — les clés d'API d'un espace NOMMÉ (métadonnées seules : jamais le hash,
+// GET    — les clés d'API d'un espace NOMMÉ (métadonnées seules : jamais le hash,
 //        jamais un clair). Révoquées comprises, pour que l'écran puisse dire
 //        « il y en avait une, elle a été retirée ».
-// POST — émet une clé pour CET espace. Le clair n'est rendu qu'ici, une fois.
+// POST   — émet une clé pour CET espace. Le clair n'est rendu qu'ici, une fois.
+// DELETE — révoque une clé de cet espace (`?tokenId=`). Soft : on pose
+//          `revoked_at`, et l'opération est idempotente. Une clé révoquée reste
+//          visible, parce que « il y en avait une, elle a été retirée » et « il
+//          n'y en a jamais eu » ne se répondent pas pareil.
 //
 // POURQUOI CETTE ROUTE EXISTE, à côté de `/api/admin/api-tokens`. Cette
 // dernière émet pour l'espace ACTIF du sélecteur, que son écran ne nomme nulle
@@ -30,6 +34,7 @@ import {
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
+import { logStaffAction } from '@/utils/staffLogs';
 import { mintTenantApiToken } from '@/utils/apiTokens/mintTenantApiToken';
 
 async function handler(
@@ -92,7 +97,70 @@ async function handler(
       .json({ token: result.token, tokenMeta: result.tokenMeta });
   }
 
-  res.setHeader('Allow', 'GET, POST');
+  if (req.method === 'DELETE') {
+    const raw = req.query.tokenId;
+    const tokenId = typeof raw === 'string' ? raw.trim() : '';
+    if (!isValidUUID(tokenId)) {
+      return res
+        .status(400)
+        .json({ error: 'tokenId must be a UUID.', code: 'INVALID_TOKEN_ID' });
+    }
+
+    // Le filtre sur `tenant_id` n'est pas décoratif : sans lui, un identifiant
+    // de clé appartenant à un AUTRE espace serait révoqué depuis ce hub.
+    const { data: row, error: readErr } = await supabaseAdmin
+      .from('tenant_api_tokens')
+      .select('id, name, token_prefix, revoked_at')
+      .eq('id', tokenId)
+      .eq('tenant_id', id)
+      .maybeSingle();
+
+    if (readErr) {
+      logger.error('[admin/tenants/api-tokens] revoke read error', readErr, {
+        tenantId: id,
+      });
+      return res.status(500).json({ error: 'Server error.' });
+    }
+    if (!row) {
+      return res
+        .status(404)
+        .json({ error: 'Token not found.', code: 'TOKEN_NOT_FOUND' });
+    }
+    if (row.revoked_at) {
+      return res.status(200).json({ id: row.id, revokedAt: row.revoked_at });
+    }
+
+    const revokedAt = new Date().toISOString();
+    const { error: updErr } = await supabaseAdmin
+      .from('tenant_api_tokens')
+      .update({ revoked_at: revokedAt })
+      .eq('id', tokenId)
+      .eq('tenant_id', id);
+
+    if (updErr) {
+      logger.error('[admin/tenants/api-tokens] revoke error', updErr, {
+        tenantId: id,
+      });
+      return res.status(500).json({ error: 'Failed to revoke token.' });
+    }
+
+    await logStaffAction({
+      staff_id: ctx.staff.id,
+      action: 'other',
+      entity_type: 'api_token',
+      entity_id: tokenId,
+      tenant_id: id,
+      payload: {
+        action: 'revoke_api_token',
+        name: row.name,
+        prefix: row.token_prefix,
+      },
+    });
+
+    return res.status(200).json({ id: tokenId, revokedAt });
+  }
+
+  res.setHeader('Allow', 'GET, POST, DELETE');
   return res.status(405).json({ error: 'Method not allowed.' });
 }
 

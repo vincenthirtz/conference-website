@@ -37,6 +37,19 @@ export default {
   criterionApiKeys: '{count} API key(s)',
   mintKeyCta: 'Issue an API key',
   grantAccessCta: 'Grant access to someone',
+  tabApiKeys: 'API keys',
+  apiKeysIntro:
+    'Keys across every space. Issuing from a space’s own row guarantees it belongs to that space — the token decides the space, and no parameter can move it afterwards.',
+  apiKeysLoadError: 'Could not load the keys.',
+  apiKeysEmpty: 'No key for this space.',
+  apiKeysCompTag: 'partner',
+  apiKeysRevokedTag: 'revoked',
+  apiKeysExpiredTag: 'expired',
+  apiKeysExpiringSoon: 'expires in {days} d',
+  apiKeysRevokeCta: 'Revoke',
+  apiKeysRevokeConfirm:
+    'Revoke the key “{name}”? Calls using it will fail immediately.',
+  apiKeysRevokeError: 'Could not revoke the key.',
   grantAccessTitle: 'Grant access to {tenant}',
   grantAccessIntro:
     'An email address is enough. If the person already has an account they are attached right away; otherwise they get an invitation.',
