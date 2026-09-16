@@ -36,6 +36,7 @@ import {
   notifyVetoStep,
   notifyCheckinReminder,
   notifyCheckinForfeit,
+  notifyCheckinCancelledNoShow,
   notifySupportTicket,
   postMvpPoll,
 } from '../../utils/discord';
@@ -392,6 +393,39 @@ describe('webhook-resolved notifiers', () => {
     expect(body.embeds[0].title).toContain('Forfait');
     expect(body.embeds[0].description).toContain('Alpha');
     expect(body.embeds[0].description).toContain('Beta');
+    // Vrai motif, et aucun délai promis aux équipes : le forfait tombe au
+    // premier passage du cron après le coup d'envoi.
+    expect(body.embeds[0].description).toContain("avant le coup d'envoi");
+    expect(body.embeds[0].description).not.toMatch(/\d+\s*min/);
+  });
+
+  it('notifyCheckinCancelledNoShow : UN message, les deux équipes, et le mot « annulé »', async () => {
+    setNextWebhook({ webhook_url: 'https://x', role_mention: null });
+    const mockFetch = vi.fn().mockResolvedValue(jsonOk());
+    vi.stubGlobal('fetch', mockFetch);
+
+    await notifyCheckinCancelledNoShow({
+      tournamentId: null,
+      matchId: 'm-12345678',
+      team1Name: 'Alpha',
+      team1RoleId: '111',
+      team2Name: 'Beta',
+      team2RoleId: '222',
+    });
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.embeds[0].title).toContain('annulé');
+    expect(body.embeds[0].title).not.toContain('Forfait');
+    expect(body.embeds[0].description).toContain('Alpha');
+    expect(body.embeds[0].description).toContain('Beta');
+    expect(body.embeds[0].description).toContain('sans vainqueur');
+    // Les deux équipes sont réellement mentionnées, et le ping est autorisé.
+    expect(body.content).toContain('<@&111>');
+    expect(body.content).toContain('<@&222>');
+    expect(body.allowed_mentions.roles).toEqual(
+      expect.arrayContaining(['111', '222'])
+    );
   });
 });
 

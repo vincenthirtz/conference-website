@@ -1023,7 +1023,15 @@ export function sendCheckinCancelledEmail(opts: {
 
 /**
  * Notification sent to the captain of a team that was auto-forfeited because
- * it did not check in before the (per-tournament) grace window elapsed.
+ * it did not check in before kickoff.
+ *
+ * Le motif ne cite AUCUN délai : la décision tombe au PREMIER passage du cron après le coup d'envoi. Le
+ * « délai de grâce » par tournoi borne seulement la fenêtre pendant laquelle le
+ * cron peut encore traiter un match en retard (ticks manqués) ; il n'a jamais
+ * laissé N minutes aux équipes. L'ancien motif « aucun check-in après N min »
+ * était donc faux, et invitait une capitaine forfait à contester en croyant
+ * avoir eu une heure.
+ *
  * Transactional — fire-and-forget from the forfeit pipeline; an email failure
  * must never block the forfeit/walkover (caller catches & logs).
  */
@@ -1033,7 +1041,6 @@ export function sendCheckinForfeitEmail(opts: {
   opponentName: string;
   scheduledAt: string;
   tournamentName: string;
-  graceMinutes: number;
   /** Espace au nom duquel l'email part (compte d'envoi + marque). */
   tenantId?: string | null;
 }): Promise<SendEmailResult> {
@@ -1052,7 +1059,7 @@ export function sendCheckinForfeitEmail(opts: {
     }
   })();
 
-  const reason = `aucun check-in après ${opts.graceMinutes} min`;
+  const reason = "aucun check-in avant le coup d'envoi";
 
   return sendEmail({
     tenantId: opts.tenantId,

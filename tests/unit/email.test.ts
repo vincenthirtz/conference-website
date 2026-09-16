@@ -4,6 +4,8 @@ import {
   sendWelcomeEmail,
   sendTeamJoinEmail,
   sendAccountDeletedEmail,
+  sendCheckinForfeitEmail,
+  sendCheckinCancelledEmail,
   sendTestEmail,
   buildFreePlayerPublishedEmailHtml,
 } from '../../utils/email';
@@ -401,5 +403,64 @@ describe('buildFreePlayerPublishedEmailHtml', () => {
 
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).toContain('&lt;script&gt;');
+  });
+});
+
+/* -----------------------------------------------------------
+ * Check-in : forfait et annulation
+ *
+ * Le forfait tombe au premier passage du cron après le coup d'envoi. Le délai
+ * de grâce par tournoi borne le rattrapage du cron, il n'a jamais laissé N
+ * minutes aux équipes : un motif « aucun check-in après 60 min » invitait une
+ * capitaine forfait à contester en croyant avoir eu une heure.
+ * ---------------------------------------------------------*/
+
+describe('sendCheckinForfeitEmail', () => {
+  it('donne le vrai motif — avant le coup d’envoi — sans promettre de délai', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ messageId: 'f1' }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await sendCheckinForfeitEmail({
+      to: 'cap@test.com',
+      teamName: 'Bravo',
+      opponentName: 'Alpha',
+      scheduledAt: '2026-09-18T17:00:00.000Z',
+      tournamentName: 'OW Women’s Cup 2026',
+    });
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.subject).toContain('Forfait');
+    expect(body.htmlContent).toMatch(/avant le coup d.{0,6}envoi/);
+    expect(body.htmlContent).not.toMatch(/après\s+\d+\s*min/);
+  });
+});
+
+describe('sendCheckinCancelledEmail', () => {
+  it('annonce une ANNULATION sans vainqueur, pas un forfait', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ messageId: 'c1' }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await sendCheckinCancelledEmail({
+      to: 'cap@test.com',
+      teamName: 'Bravo',
+      opponentName: 'Alpha',
+      scheduledAt: '2026-09-18T17:00:00.000Z',
+      tournamentName: 'OW Women’s Cup 2026',
+    });
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.subject).toContain('annulé');
+    expect(body.htmlContent).toContain('Bravo');
+    expect(body.htmlContent).toContain('Alpha');
+    expect(body.htmlContent).toContain('sans vainqueur');
+    // Un mail d'annulation qui parlerait de forfait dirait à la capitaine que
+    // son équipe a perdu.
+    expect(body.htmlContent.toLowerCase()).not.toContain('forfait');
   });
 });

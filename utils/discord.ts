@@ -780,12 +780,6 @@ export type CheckinForfeitNotification = {
   forfeitedTeamName: string;
   forfeitedTeamRoleId: string | null | undefined;
   opponentName: string;
-  /**
-   * Optional grace window (minutes) used by the auto-forfeit. When provided,
-   * the embed mentions the per-tournament grace explicitly ("après N min").
-   * Backwards-compatible: omit it for the legacy 60-min behaviour.
-   */
-  graceMinutes?: number | null;
 };
 
 export async function notifyCheckinForfeit(
@@ -806,10 +800,11 @@ export async function notifyCheckinForfeit(
     embeds: [
       {
         title: '🚷 Forfait automatique (no check-in)',
-        description:
-          typeof data.graceMinutes === 'number'
-            ? `**${data.forfeitedTeamName}** n'a pas confirmé sa présence dans les ${data.graceMinutes} min suivant l'heure du match. Le match est attribué à **${data.opponentName}**.`
-            : `**${data.forfeitedTeamName}** n'a pas confirmé sa présence à temps. Le match est attribué à **${data.opponentName}**.`,
+        // Aucun délai cité : le forfait tombe au premier passage du cron après
+        // le coup d'envoi. L'ancienne variante « dans les N min suivant l'heure
+        // du match » décrivait la borne de rattrapage du cron comme un délai
+        // accordé aux équipes — ce qu'elle n'a jamais été.
+        description: `**${data.forfeitedTeamName}** n'a pas confirmé sa présence avant le coup d'envoi. Le match est attribué à **${data.opponentName}**.`,
         color: COLORS.checkinForfeit,
         timestamp: new Date().toISOString(),
         footer: { text: `Match ${data.matchId.slice(0, 8)}` },

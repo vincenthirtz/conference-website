@@ -709,11 +709,11 @@ describe('processMatchCheckin — configurable grace + no_show_reason + email', 
       to: 'b@example.com',
       teamName: 'Bravo',
       opponentName: 'Alpha',
-      graceMinutes: 60,
     });
-    // Discord embed enriched with the grace window.
+    // Le délai de grâce ne transite PLUS vers les messages : il borne le
+    // rattrapage du cron, ce n'est pas un délai accordé aux équipes.
     const dArg = (notifyCheckinForfeit.mock.calls[0] as any[])[0];
-    expect(dArg.graceMinutes).toBe(60);
+    expect(dArg).not.toHaveProperty('graceMinutes');
   });
 
   it('honors a per-tournament checkin_grace_minutes value', async () => {
@@ -734,8 +734,10 @@ describe('processMatchCheckin — configurable grace + no_show_reason + email', 
 
     expect(r.steps[0]).toMatch(/^forfeit \(/);
     expect(applyMatchScore).toHaveBeenCalledOnce();
+    // Le délai élargi a bien permis le forfait (fenêtre de rattrapage), sans
+    // être annoncé aux équipes.
     const arg = (sendCheckinForfeitEmail.mock.calls[0] as any[])[0];
-    expect(arg.graceMinutes).toBe(90);
+    expect(arg).not.toHaveProperty('graceMinutes');
   });
 
   it('does not forfeit yet when still inside a longer grace window', async () => {

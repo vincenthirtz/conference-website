@@ -478,7 +478,7 @@ export async function processMatchCheckin(
     );
     const minutesSinceKickoff = -minutesUntil;
     if (minutesSinceKickoff < graceMinutes) {
-      await runForfeitStep(match, result, graceMinutes);
+      await runForfeitStep(match, result);
     }
   }
 
@@ -842,7 +842,6 @@ async function sendForfeitEmailSafely(opts: {
   opponentName: string;
   scheduledAt: string;
   tournamentName: string;
-  graceMinutes: number;
 }): Promise<void> {
   try {
     const email = await getCaptainEmail(opts.tenantId, opts.teamId);
@@ -854,7 +853,6 @@ async function sendForfeitEmailSafely(opts: {
       opponentName: opts.opponentName,
       scheduledAt: opts.scheduledAt,
       tournamentName: opts.tournamentName,
-      graceMinutes: opts.graceMinutes,
     });
   } catch (e) {
     logger.error('[checkin] sendCheckinForfeitEmail error:', e);
@@ -863,8 +861,7 @@ async function sendForfeitEmailSafely(opts: {
 
 async function runForfeitStep(
   match: MatchLite,
-  result: ProcessStepResult,
-  graceMinutes: number = DEFAULT_GRACE_MINUTES
+  result: ProcessStepResult
 ): Promise<void> {
   const team1CheckedIn = !!match.team1_checked_in_at;
   const team2CheckedIn = !!match.team2_checked_in_at;
@@ -942,14 +939,13 @@ async function runForfeitStep(
 
   // Discord ping for the forfeit (separate from the auto match-result ping
   // that applyMatchScore triggers — this one is on the dedicated checkin
-  // channel). Enriched with the grace window (optional, backwards-compatible).
+  // channel). Pas de délai dans le message : le forfait tombe au coup d'envoi.
   await notifyCheckinForfeit({
     tournamentId: match.tournament_id,
     matchId: match.id,
     forfeitedTeamName: forfeitedName,
     forfeitedTeamRoleId: forfeitedRoleId,
     opponentName: winnerName,
-    graceMinutes,
   }).catch((e) => logger.error('[checkin] notifyCheckinForfeit error:', e));
 
   // Email the forfeited team's captain. Fire-and-forget — an email failure
@@ -962,7 +958,6 @@ async function runForfeitStep(
       opponentName: winnerName,
       scheduledAt: match.scheduled_at,
       tournamentName: match.tournament?.name || "OW Women's Cup",
-      graceMinutes,
     });
   }
 
