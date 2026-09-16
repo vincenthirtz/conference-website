@@ -25,7 +25,9 @@ import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
 
 /** Miroir de `IMAGE_MAX_BYTES` (utils/uploads/imageBytes.ts). Cf. l'en-tête. */
 const MAX_MB = 2;
+const MAX_BYTES = MAX_MB * 1024 * 1024;
 const ACCEPT = 'image/png,image/jpeg,image/webp';
+const ACCEPTED_TYPES = ACCEPT.split(',');
 
 type PhotoStatus = 'none' | 'pending' | 'approved' | 'rejected';
 
@@ -83,6 +85,24 @@ export default function TcgPhotoCard() {
 
   const onPick = useCallback(
     async (file: File) => {
+      // Contrôles CLIENT, comme le dépôt d'illustration d'équipe
+      // (components/Team/TcgTeamImageCard.tsx). Ils ne remplacent pas ceux du
+      // serveur, qui reste seul juge — ils rendent le refus LISIBLE.
+      //
+      // Sans eux, un fichier de plus de ~3 Mio n'atteint jamais le handler :
+      // le base64 le gonfle d'un tiers et dépasse le `sizeLimit: '4mb'` du
+      // bodyParser, qui répond une erreur sans `code`. L'interface retombait
+      // alors sur `errGeneric` — « réessaie dans un instant » — pour une photo
+      // qu'aucune tentative ne ferait passer.
+      if (!ACCEPTED_TYPES.includes(file.type)) {
+        addToast(t.errUnsupportedType, 'error');
+        return;
+      }
+      if (file.size > MAX_BYTES) {
+        addToast(format(t.errTooLarge, { mo: MAX_MB }), 'error');
+        return;
+      }
+
       setBusy('upload');
       try {
         const data = await new Promise<string>((resolve, reject) => {
