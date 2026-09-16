@@ -13,7 +13,7 @@
 // joueur authentifié n'est jamais masqué par cette page.
 
 import { useCallback, useEffect, useState } from 'react';
-import Image from 'next/image';
+import PlayerAvatar from '@/components/player/PlayerAvatar';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useIsrRefresh } from '@/hooks/useIsrRefresh';
@@ -27,7 +27,6 @@ import type {
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type {
   PlayerProfileResponse,
-  PlayerProfileHistoryPoint,
   PlayerProfileRecentMatch,
   PlayerProfileH2H,
   PlayerProfileCore,
@@ -37,7 +36,11 @@ import type {
   ProfileSeason,
 } from '@/types/rating';
 import { readPlayerProfile } from '@/utils/rating/readPlayerProfile';
-import { supabaseAdmin } from '@/utils/supabase';
+import {
+  buildPlayerSeo,
+  coreLabel,
+  readProfileDiscoverable,
+} from '@/utils/rating/playerProfileSeo';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -45,6 +48,7 @@ import { useToast } from '@/components/Toast';
 import nsPlayerPublicProfile from '@/lib/i18n/locales/fr/playerPublicProfile';
 import nsPlayerDiscovery from '@/lib/i18n/locales/fr/playerDiscovery';
 import FollowButton from '@/components/player/FollowButton';
+import RatingChart from '@/components/player/RatingChart';
 import { TwitchIcon } from '@/components/Icons';
 import { socialHandleLabel, socialHref } from '@/utils/social/profileHandles';
 import { XIcon } from '@/components/Icons';
@@ -62,10 +66,6 @@ type FetchState =
   | { status: 'notfound' }
   | { status: 'error' }
   | { status: 'ok'; data: PlayerProfileResponse };
-
-function coreLabel(p: PlayerProfileCore): string {
-  return p.displayName ?? p.battleTag ?? 'Joueuse inconnue';
-}
 
 function formatDate(iso: string, locale: string): string {
   return new Date(iso).toLocaleDateString(locale, {
@@ -939,19 +939,20 @@ function ProfileHeader({
   return (
     <div className="card-brand rounded-2xl bg-neutral-900/40 p-6">
       <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
-        {player.avatarUrl ? (
-          <Image
-            src={player.avatarUrl}
-            alt=""
-            width={80}
-            height={80}
-            className="h-20 w-20 rounded-full object-cover"
-          />
-        ) : (
-          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-neutral-800 text-2xl font-bold uppercase">
-            {label[0]}
-          </span>
-        )}
+        {/* PlayerAvatar plutôt qu'un `next/image` nu : un avatar déjà en base
+            sur un hôte hors `remotePatterns` cassait l'en-tête (400 de
+            l'optimiseur). Pas de logo d'équipe ici — la fiche n'en porte pas —
+            donc avatar, sinon initiales. */}
+        <PlayerAvatar
+          avatarUrl={player.avatarUrl}
+          teamName={null}
+          teamSlug={null}
+          teamLogoUrl={null}
+          label={label}
+          size={80}
+          className="h-20 w-20"
+          initialsClassName="text-2xl"
+        />
 
         <div className="flex-1 text-center sm:text-left">
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1062,119 +1063,6 @@ function Stat({
       <div className="text-xs uppercase tracking-wide text-neutral-500">
         {label}
       </div>
-    </div>
-  );
-}
-
-// --- Sparkline SVG maison (pas de dépendance de charts) --------------------
-function RatingChart({ history }: { history: PlayerProfileHistoryPoint[] }) {
-  const t = useT(nsPlayerPublicProfile);
-  if (history.length < 2) {
-    return (
-      <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-8 text-center text-sm text-neutral-400">
-        {t.chartNotEnough}
-      </div>
-    );
-  }
-
-  const W = 720;
-  const H = 200;
-  const PAD_X = 8;
-  const PAD_Y = 16;
-
-  // On construit la série à partir de ratingAfter (état après chaque match),
-  // précédé du ratingBefore du 1er point pour montrer le point de départ.
-  const values = [
-    history[0].ratingBefore,
-    ...history.map((h) => h.ratingAfter),
-  ];
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
-
-  const stepX = (W - PAD_X * 2) / (values.length - 1);
-  const scaleY = (v: number) =>
-    PAD_Y + (H - PAD_Y * 2) * (1 - (v - min) / span);
-
-  const points = values.map((v, i) => ({
-    x: PAD_X + i * stepX,
-    y: scaleY(v),
-  }));
-
-  const linePath = points
-    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
-    .join(' ');
-  const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(
-    1
-  )} ${H - PAD_Y} L ${points[0].x.toFixed(1)} ${H - PAD_Y} Z`;
-
-  const last = values[values.length - 1];
-  const first = values[0];
-  const delta = Math.round(last - first);
-
-  return (
-    <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-4">
-      <div className="mb-2 flex items-center justify-between text-xs text-neutral-400">
-        <span>{format(t.chartMin, { value: Math.round(min) })}</span>
-        <span
-          className={
-            delta > 0
-              ? 'text-emerald-400'
-              : delta < 0
-                ? 'text-rose-400'
-                : 'text-neutral-400'
-          }
-        >
-          {format(t.chartPts, { delta: `${delta > 0 ? '+' : ''}${delta}` })}
-        </span>
-        <span>{format(t.chartMax, { value: Math.round(max) })}</span>
-      </div>
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="h-40 w-full sm:h-48"
-        preserveAspectRatio="none"
-        role="img"
-        aria-label={format(t.chartAriaLabel, {
-          first: Math.round(first),
-          last: Math.round(last),
-          count: history.length,
-        })}
-      >
-        <defs>
-          <linearGradient id="ratingFill" x1="0" y1="0" x2="0" y2="1">
-            <stop
-              offset="0%"
-              stopColor="var(--color-violet)"
-              stopOpacity="0.35"
-            />
-            <stop
-              offset="100%"
-              stopColor="var(--color-violet)"
-              stopOpacity="0"
-            />
-          </linearGradient>
-        </defs>
-        <path d={areaPath} fill="url(#ratingFill)" />
-        <path
-          d={linePath}
-          fill="none"
-          stroke="var(--color-violet-light)"
-          strokeWidth={2}
-          strokeLinejoin="round"
-          strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
-        />
-        {points.map((p, i) => (
-          <circle
-            key={i}
-            cx={p.x}
-            cy={p.y}
-            r={2.5}
-            fill="var(--color-violet-light)"
-            vectorEffect="non-scaling-stroke"
-          />
-        ))}
-      </svg>
     </div>
   );
 }
@@ -1386,81 +1274,6 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
  * quand même une prop statique de repli pour les pré-rendus dégradés.
  * -------------------------------------------------------------------------*/
 
-function buildPlayerSeo(
-  profile: PlayerProfileResponse,
-  /**
-   * La joueuse a-t-elle activé sa découverte ? C'est ce qui décide de
-   * l'INDEXATION. Une fiche reste accessible par lien dans tous les cas — un
-   * partage, le classement — mais elle n'entre dans un moteur de recherche que
-   * si sa titulaire l'a voulu (décision produit du 2026-07-13).
-   */
-  discoverable: boolean
-): SeoProps {
-  const { player } = profile;
-  const label = coreLabel(player);
-  const total = player.wins + player.losses;
-  const winRate = total > 0 ? Math.round((player.wins / total) * 100) : null;
-  const rating = Math.round(player.rating);
-
-  const plural = player.gamesPlayed > 1;
-
-  // Une joueuse non classée n'a ni rang ni rating : la description générique
-  // sortait « Rang #null · 0 de rating · 0V-0D sur 0 match », et le titre
-  // « Profil de X — 0 ». C'est ce que voient un moteur de recherche et
-  // l'aperçu d'un lien partagé — le pire endroit pour afficher un zéro qui
-  // n'est pas une mesure.
-  const descriptionFr = player.unrated
-    ? `Profil de ${label} : équipe, réseaux et palmarès. Pas encore de match classé.`
-    : `Rang #${player.rank} · ${rating} de rating · ` +
-      `${player.wins}V-${player.losses}D` +
-      (winRate !== null ? ` (${winRate}% de victoires)` : '') +
-      ` sur ${player.gamesPlayed} match${plural ? 's' : ''}. ` +
-      `Progression, derniers matchs et face-à-face de ${label}.`;
-
-  const descriptionEn = player.unrated
-    ? `${label}'s profile: team, socials and achievements. No ranked match yet.`
-    : `Rank #${player.rank} · ${rating} rating · ` +
-      `${player.wins}W-${player.losses}L` +
-      (winRate !== null ? ` (${winRate}% win rate)` : '') +
-      ` across ${player.gamesPlayed} match${plural ? 'es' : ''}. ` +
-      `Progression, recent matches and head-to-head for ${label}.`;
-
-  // JSON-LD ProfilePage → mainEntity Person.
-  const jsonLd: Record<string, unknown> = {
-    '@context': 'https://schema.org',
-    '@type': 'ProfilePage',
-    name: `Profil de ${label}`,
-    mainEntity: {
-      '@type': 'Person',
-      name: label,
-      ...(player.battleTag ? { alternateName: player.battleTag } : {}),
-      ...(player.avatarUrl ? { image: player.avatarUrl } : {}),
-    },
-  };
-
-  // Carte sociale dynamique (1200×630) générée par /api/og/player/[userId].
-  // Absolue (DefaultSeo n'ajoute pas d'origine aux URLs déjà absolues). En
-  // l'absence de NEXT_PUBLIC_SITE_URL (dev), on retombe sur le chemin relatif,
-  // que DefaultSeo laisse tel quel.
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || '';
-  const ogImage = `${baseUrl}/api/og/player/${encodeURIComponent(
-    player.userId
-  )}`;
-
-  return {
-    title: player.unrated
-      ? { fr: `Profil de ${label}`, en: `${label}'s profile` }
-      : {
-          fr: `Profil de ${label} — ${rating}`,
-          en: `${label}'s profile — ${rating}`,
-        },
-    description: { fr: descriptionFr, en: descriptionEn },
-    image: ogImage,
-    jsonLd,
-    noindex: !discoverable,
-  };
-}
-
 // Repli statique (pré-rendu dégradé sans données — ex. fallback avant que
 // `_app.tsx` ait `pageProps.seo`). En pratique l'ISR fournit toujours le SEO
 // dynamique via `props.seo`.
@@ -1505,23 +1318,9 @@ export const getStaticProps: GetStaticProps<{
     return { notFound: true, revalidate: 300 };
   }
 
-  // Opt-in de découverte = autorisation d'indexer. En l'absence de preuve —
-  // pas de ligne, ou lecture impossible — on n'indexe PAS : c'est le sens sûr,
-  // et le seul compatible avec « aucune page publique indexée de personne ».
-  let discoverable = false;
-  try {
-    if (supabaseAdmin) {
-      const { data } = await supabaseAdmin
-        .from('player_discovery_profiles')
-        .select('auth_user_id')
-        .eq('auth_user_id', userId)
-        .eq('discoverable', true)
-        .maybeSingle();
-      discoverable = Boolean(data);
-    }
-  } catch {
-    /* on reste sur false — ne pas indexer par défaut */
-  }
+  // Opt-in de découverte = autorisation d'indexer. La règle (et son sens sûr
+  // par défaut) vit dans utils/rating/playerProfileSeo.ts, sous test.
+  const discoverable = await readProfileDiscoverable(userId);
 
   // Photo de carte TCG — DÉLIBÉRÉMENT HORS DE `PlayerProfileResponse`.
   //

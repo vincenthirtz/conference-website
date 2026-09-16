@@ -8,13 +8,15 @@
 // SANS appel HTTP au build. Le handler API délègue désormais ici et renvoie
 // exactement la même shape.
 //
-// Convention de retour : `null` = joueuse introuvable (aucune ligne
-// `player_ratings`) → 404 côté handler / `notFound: true` côté page.
+// Convention de retour : `null` = joueuse introuvable (ni ligne
+// `player_ratings`, ni fiche de roster) OU compte supprimé (ligne anonymisée,
+// cf. `isAnonymisedRating`) → 404 côté handler / `notFound: true` côté page.
 
 import { maskBattleTag } from '../battleTag';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { computeAchievements } from '@/utils/profile/achievements';
+import { PERSONAL_DATA_TABLES } from '@/utils/player/personalDataTables';
 import type {
   PlayerProfileResponse,
   PlayerProfileCore,
@@ -291,6 +293,110 @@ async function readAchievements(
 }
 
 /**
+ * Colonnes d'identité qu'écrit la suppression de compte sur `player_ratings`,
+ * lues DANS LE REGISTRE RGPD plutôt que recopiées : si le registre change la
+ * valeur de remplacement (ou ajoute une colonne effacée), la détection suit
+ * sans que personne ait à y penser.
+ */
+const RATING_ANONYMISATION: Readonly<Record<string, string | null>> = (() => {
+  const entry = PERSONAL_DATA_TABLES.find((t) => t.table === 'player_ratings');
+  return entry?.policy.kind === 'anonymise' ? entry.policy.set : {};
+})();
+
+/**
+ * La ligne `player_ratings` est-elle celle d'un compte SUPPRIMÉ ?
+ *
+ * POURQUOI. La suppression de compte garde la ligne (la retirer trouerait les
+ * classements et historiques des AUTRES équipes) mais efface son identité.
+ * Sans ce test, `/player/<uuid>` continuait de servir la fiche — courbe,
+ * matchs, face-à-face — sous « Joueuse retirée » : un profil de personne qui a
+ * demandé à disparaître, toujours en ligne, et retrouvable par son lien.
+ *
+ * Toutes les colonnes du `set` doivent correspondre, pas seulement le nom :
+ * une joueuse bien réelle ne tombe pas en 404 parce qu'une ligne partage le
+ * libellé. Un `set` vide (registre modifié au point de ne plus anonymiser)
+ * répond `false` — on ne masque pas au hasard.
+ */
+export function isAnonymisedRating(
+  row: Readonly<Record<string, unknown>>
+): boolean {
+  const entries = Object.entries(RATING_ANONYMISATION);
+  if (entries.length === 0) return false;
+  return entries.every(([column, value]) =>
+    value === null ? row[column] == null : row[column] === value
+  );
+}
+
+/** D'où vient la chaîne Twitch affichée sur le profil public. */
+export type PlayerTwitchOrigin = 'self' | 'roster';
+
+export type PlayerTwitchSource = {
+  /** Valeur telle que publiée (handle nu, @handle ou URL). */
+  value: string;
+  /**
+   * `self` = déclarée par la joueuse sur son compte ; `roster` = saisie sur sa
+   * fiche d'équipe par sa capitaine ou une manager.
+   */
+  origin: PlayerTwitchOrigin;
+};
+
+/**
+ * Règle PURE de choix de la chaîne publiée : la déclaration de la joueuse
+ * gagne, la fiche de roster sert de repli. Partagée entre le profil public
+ * (`readPlayerTwitch`) et le formulaire « Mon profil »
+ * (`readPlayerTwitchSource`) : les deux doivent montrer LA MÊME valeur, sinon
+ * la joueuse voit un champ vide pendant que sa fiche affiche un lien.
+ */
+export function resolvePlayerTwitch(
+  declared: unknown,
+  rosterValues: readonly unknown[]
+): PlayerTwitchSource | null {
+  if (typeof declared === 'string' && declared.trim()) {
+    return { value: declared.trim(), origin: 'self' };
+  }
+  for (const v of rosterValues) {
+    if (typeof v === 'string' && v.trim()) {
+      return { value: v.trim(), origin: 'roster' };
+    }
+  }
+  return null;
+}
+
+/**
+ * Chaîne Twitch EFFECTIVE d'une joueuse et son origine, pour son propre
+ * formulaire de profil.
+ *
+ * Contrairement à `readPlayerTwitch`, une lecture en échec LÈVE : afficher
+ * « aucune chaîne » parce que la lecture a raté ferait croire à la joueuse que
+ * rien n'est publié, alors que sa fiche publique montre peut-être un lien.
+ *
+ * @param declared `user_metadata.twitch` de la joueuse, déjà en main côté route.
+ */
+export async function readPlayerTwitchSource(
+  userId: string,
+  tenantId: string,
+  declared: unknown
+): Promise<PlayerTwitchSource | null> {
+  const self = resolvePlayerTwitch(declared, []);
+  if (self) return self;
+  const { data: rows, error } = await supabaseAdmin
+    .from('team_members')
+    .select('twitch')
+    .eq('tenant_id', tenantId)
+    .eq('user_id', userId)
+    .not('twitch', 'is', null)
+    .limit(1);
+  if (error) {
+    logger.error('[readPlayerProfile] twitch source roster read error', error);
+    throw new Error('Failed to load twitch source');
+  }
+  return resolvePlayerTwitch(
+    null,
+    ((rows ?? []) as Array<{ twitch?: unknown }>).map((r) => r.twitch)
+  );
+}
+
+/**
  * Chaîne Twitch d'une joueuse, pour le profil PUBLIC.
  *
  * DEUX SOURCES, ET UN ORDRE. Une joueuse déclare la sienne sur son compte
@@ -314,10 +420,8 @@ async function readPlayerTwitch(
   try {
     const { data: authUser } =
       await supabaseAdmin.auth.admin.getUserById(userId);
-    const declared = authUser?.user?.user_metadata?.twitch;
-    if (typeof declared === 'string' && declared.trim()) {
-      return declared.trim();
-    }
+    const self = resolvePlayerTwitch(authUser?.user?.user_metadata?.twitch, []);
+    if (self) return self.value;
   } catch (err) {
     logger.error('[readPlayerProfile] twitch metadata read error', err);
   }
@@ -330,10 +434,11 @@ async function readPlayerTwitch(
       .eq('user_id', userId)
       .not('twitch', 'is', null)
       .limit(1);
-    const fromRoster = (rows ?? [])[0]?.twitch;
-    if (typeof fromRoster === 'string' && fromRoster.trim()) {
-      return fromRoster.trim();
-    }
+    const fromRoster = resolvePlayerTwitch(
+      null,
+      ((rows ?? []) as Array<{ twitch?: unknown }>).map((r) => r.twitch)
+    );
+    if (fromRoster) return fromRoster.value;
   } catch (err) {
     logger.error('[readPlayerProfile] twitch roster read error', err);
   }
@@ -417,8 +522,9 @@ async function readUnratedPlayerProfile(
 /**
  * Lit le profil public d'une joueuse pour un tenant donné.
  *
- * @returns la réponse `PlayerProfileResponse` ou `null` si la joueuse n'a
- *   aucune ligne `player_ratings` (= introuvable).
+ * @returns la réponse `PlayerProfileResponse`, ou `null` si la joueuse est
+ *   introuvable (ni classement ni roster) ou si son compte a été supprimé
+ *   (ligne `player_ratings` anonymisée).
  * @throws en cas d'erreur DB non récupérable (le handler / getStaticProps
  *   décide comment la traiter).
  */
@@ -445,6 +551,12 @@ export async function readPlayerProfile(
   // très grande majorité des joueuses, et leur profil public 404ait.
   if (!prRow) {
     return readUnratedPlayerProfile(userId, tenantId);
+  }
+  // Compte supprimé : la ligne reste pour les classements des autres, mais la
+  // fiche n'a plus de titulaire. 404, et pas de repli sur le roster — la
+  // suppression l'a vidé, et un reliquat ne doit pas ressusciter la page.
+  if (isAnonymisedRating(prRow as Record<string, unknown>)) {
+    return null;
   }
   const pr = prRow as Pick<
     PlayerRatingRow,

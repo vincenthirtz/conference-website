@@ -445,6 +445,9 @@ describe('PATCH /api/player/update-profile', () => {
     updateSpy.mockRestore();
   });
 
+  // Un hôte que l'affichage sait servir (stockage public Supabase) : depuis que
+  // la route refuse les hôtes non optimisables, `cdn.example.com` répond 400
+  // AVATAR_HOST_UNSUPPORTED — voir tests/unit/playerUpdateProfilePrivacy.test.ts.
   it('200 accepts a valid avatar_url and writes it to user_metadata', async () => {
     setAuthUser({ id: 'user-1', user_metadata: { existing: 'old' } });
     const updateSpy = vi.spyOn(supabaseAdmin.auth.admin, 'updateUserById');
@@ -454,7 +457,10 @@ describe('PATCH /api/player/update-profile', () => {
       makeReq(
         {
           method: 'PATCH',
-          body: { avatar_url: 'https://cdn.example.com/a.png' },
+          body: {
+            avatar_url:
+              'https://x.supabase.co/storage/v1/object/public/avatars/a.png',
+          },
         },
         true
       ),
@@ -465,8 +471,12 @@ describe('PATCH /api/player/update-profile', () => {
     expect(updateSpy).toHaveBeenCalledOnce();
     const args = updateSpy.mock.calls[0][1] as any;
     expect(args.user_metadata.existing).toBe('old');
-    expect(args.user_metadata.avatar_url).toBe('https://cdn.example.com/a.png');
-    expect((res.body as any).avatar_url).toBe('https://cdn.example.com/a.png');
+    expect(args.user_metadata.avatar_url).toBe(
+      'https://x.supabase.co/storage/v1/object/public/avatars/a.png'
+    );
+    expect((res.body as any).avatar_url).toBe(
+      'https://x.supabase.co/storage/v1/object/public/avatars/a.png'
+    );
     updateSpy.mockRestore();
   });
 

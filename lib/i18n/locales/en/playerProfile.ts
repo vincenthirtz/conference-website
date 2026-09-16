@@ -49,7 +49,19 @@ export default {
     'Your Twitch username or channel URL: it shows on your public profile and on your teams’ rosters. Your captain can also fill it in for you — what you enter here takes precedence. Empty = your own channel is removed.',
   avatarLabel: 'Avatar (URL)',
   avatarPlaceholder: 'https://…',
-  avatarHelp: 'Leave empty to remove the avatar.',
+  avatarHelp:
+    'Image hosted on Discord, Twitch or on the site. Leave empty to remove the avatar.',
+  avatarHostUnsupported:
+    'This image host is not supported: use an image hosted on Discord, Twitch or on the site.',
+  twitchFromRoster:
+    'Filled in by your captain on your team roster — it is visible on your public profile.',
+  twitchRemove: 'Remove this link',
+  twitchRemoving: 'Removing…',
+  twitchRemoved: 'The Twitch link has been removed from your public profile.',
+  twitchSourceError:
+    'Could not check the Twitch channel currently published. Reload the page before changing it.',
+  rosterSyncWarning:
+    'Your profile is saved, but your team roster could not be updated. Try saving again in a moment.',
   saving: 'Saving...',
   save: 'Save',
   changeEmail: 'Change my email',

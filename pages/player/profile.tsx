@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabaseBrowser';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { AdminFetchError, useAdminFetch } from '@/hooks/useAdminFetch';
 import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import DiscoveryCard from '@/components/player/DiscoveryCard';
@@ -15,6 +15,7 @@ import BattlenetVerifyCard from '@/components/player/BattlenetVerifyCard';
 import TcgPhotoCard from '@/components/player/TcgPhotoCard';
 import HeroPreferencesCard from '@/components/player/HeroPreferencesCard';
 import TwitchLinkCard from '@/components/player/TwitchLinkCard';
+import PlayerAvatar from '@/components/player/PlayerAvatar';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
@@ -22,6 +23,16 @@ import nsPlayerProfile from '@/lib/i18n/locales/fr/playerProfile';
 import nsOverwatchRank from '@/lib/i18n/locales/fr/overwatchRank';
 import nsSpecialty from '@/lib/i18n/locales/fr/specialty';
 import { TWITCH_HANDLE_MAX } from '@/utils/social/profileHandles';
+import type { PlayerTwitchOrigin } from '@/utils/rating/readPlayerProfile';
+
+/** Réponse de `GET /api/player/update-profile`. */
+type TwitchSourceResponse = {
+  twitch: string | null;
+  twitchOrigin: PlayerTwitchOrigin | null;
+};
+
+/** Réponse de `PATCH /api/player/update-profile` (champs lus ici). */
+type UpdateProfileResponse = { success: boolean; rosterSynced?: boolean };
 
 function PlayerProfile() {
   const router = useRouter();
@@ -47,6 +58,21 @@ function PlayerProfile() {
   const [editSpecialty, setEditSpecialty] = useState('');
   const [editAvatarUrl, setEditAvatarUrl] = useState('');
   const [editTwitch, setEditTwitch] = useState('');
+  // Chaîne Twitch PUBLIÉE et son origine, lues côté serveur (GET
+  // /api/player/update-profile). POURQUOI : la fiche publique retombe sur la
+  // valeur saisie par la capitaine sur le roster ; initialiser le champ depuis
+  // les seules métadonnées du compte le laissait VIDE pendant que la fiche
+  // affichait un bouton Twitch — la joueuse ne pouvait ni le voir ni le retirer.
+  // `twitchInitial` sert aussi de référence : on n'envoie `twitch` que si elle
+  // l'a changé, pour ne jamais transformer en silence la saisie de la
+  // capitaine en déclaration de la joueuse.
+  const [twitchInitial, setTwitchInitial] = useState('');
+  const [twitchOrigin, setTwitchOrigin] = useState<PlayerTwitchOrigin | null>(
+    null
+  );
+  const [twitchSourceError, setTwitchSourceError] = useState(false);
+  const [twitchRemoving, setTwitchRemoving] = useState(false);
+  const [profileWarning, setProfileWarning] = useState<string | null>(null);
   const [editingInitialized, setEditingInitialized] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
@@ -87,11 +113,51 @@ function PlayerProfile() {
           : ''
       );
       setEditSpecialty((user.user_metadata?.specialty as string) || '');
-      setEditTwitch((user.user_metadata?.twitch as string) || '');
+      // Valeur provisoire, remplacée par la valeur effective dès que la
+      // lecture serveur répond (effet ci-dessous).
+      const declaredTwitch = (user.user_metadata?.twitch as string) || '';
+      setEditTwitch(declaredTwitch);
+      setTwitchInitial(declaredTwitch);
+      setTwitchOrigin(declaredTwitch.trim() ? 'self' : null);
       setEditAvatarUrl((user.user_metadata?.avatar_url as string) || '');
       setEditingInitialized(true);
     }
   }, [user, editingInitialized, displayName]);
+
+  const userId = user?.id;
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    adminFetchJson<TwitchSourceResponse>('/api/player/update-profile')
+      .then((body) => {
+        if (cancelled) return;
+        const value = body.twitch ?? '';
+        setEditTwitch(value);
+        setTwitchInitial(value);
+        setTwitchOrigin(body.twitchOrigin ?? null);
+        setTwitchSourceError(false);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        logger.error('[player] twitch source read error:', err);
+        setTwitchSourceError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, adminFetchJson]);
+
+  /** Message à montrer pour une erreur d'enregistrement du profil. */
+  const profileErrorMessage = (err: unknown): string => {
+    if (
+      err instanceof AdminFetchError &&
+      (err.payload as { code?: unknown } | null)?.code ===
+        'AVATAR_HOST_UNSUPPORTED'
+    ) {
+      return t.avatarHostUnsupported;
+    }
+    return (err as Error)?.message || t.genericError;
+  };
 
   // Arrivee depuis la liaison Discord : ce flux ne demande jamais de BattleTag
   // (pages/auth/discord-member.tsx ne pose que `role`), et sans lui la fiche de
@@ -113,29 +179,75 @@ function PlayerProfile() {
     setProfileSaving(true);
     setProfileError(null);
     setProfileSuccess(null);
+    setProfileWarning(null);
+    const nextTwitch = editTwitch.trim();
+    const twitchChanged = nextTwitch !== twitchInitial.trim();
     try {
-      await adminFetchJson('/api/player/update-profile', {
-        method: 'PATCH',
-        body: JSON.stringify({
-          display_name: editDisplayName,
-          battle_tag: editBattleTag,
-          // Chaîne vide = effacer : c'est ainsi qu'on retire un niveau qu'on
-          // ne veut plus afficher.
-          skill_rating: editSkillRating.trim() || null,
-          // Chaîne vide = effacer le poste ; une valeur inconnue serait
-          // refusée par l'API plutôt que ramenée à null en douce.
-          specialty: editSpecialty || null,
-          twitch: editTwitch.trim() || null,
-          avatar_url: editAvatarUrl,
-        }),
-      });
+      const body = await adminFetchJson<UpdateProfileResponse>(
+        '/api/player/update-profile',
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            display_name: editDisplayName,
+            battle_tag: editBattleTag,
+            // Chaîne vide = effacer : c'est ainsi qu'on retire un niveau qu'on
+            // ne veut plus afficher.
+            skill_rating: editSkillRating.trim() || null,
+            // Chaîne vide = effacer le poste ; une valeur inconnue serait
+            // refusée par l'API plutôt que ramenée à null en douce.
+            specialty: editSpecialty || null,
+            // Twitch : seulement si elle l'a CHANGÉ. Vider le champ est une
+            // demande de retrait du lien publié, roster compris.
+            ...(twitchChanged
+              ? nextTwitch
+                ? { twitch: nextTwitch }
+                : { twitch: null, clear_twitch: true }
+              : {}),
+            avatar_url: editAvatarUrl,
+          }),
+        }
+      );
 
+      if (twitchChanged) {
+        setTwitchInitial(nextTwitch);
+        setTwitchOrigin(nextTwitch ? 'self' : null);
+      }
       await supabaseClient.auth.refreshSession();
       setProfileSuccess(t.profileUpdated);
+      if (body?.rosterSynced === false) setProfileWarning(t.rosterSyncWarning);
     } catch (err: unknown) {
-      setProfileError((err as Error)?.message || t.genericError);
+      setProfileError(profileErrorMessage(err));
     } finally {
       setProfileSaving(false);
+    }
+  };
+
+  // Retire le lien Twitch PUBLIÉ, y compris celui saisi par la capitaine :
+  // `clear_twitch` efface aussi la fiche de roster, là où un simple champ vide
+  // la protège.
+  const handleTwitchRemove = async () => {
+    setTwitchRemoving(true);
+    setProfileError(null);
+    setProfileSuccess(null);
+    setProfileWarning(null);
+    try {
+      const body = await adminFetchJson<UpdateProfileResponse>(
+        '/api/player/update-profile',
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ clear_twitch: true }),
+        }
+      );
+      setEditTwitch('');
+      setTwitchInitial('');
+      setTwitchOrigin(null);
+      await supabaseClient.auth.refreshSession();
+      setProfileSuccess(t.twitchRemoved);
+      if (body?.rosterSynced === false) setProfileWarning(t.rosterSyncWarning);
+    } catch (err: unknown) {
+      setProfileError(profileErrorMessage(err));
+    } finally {
+      setTwitchRemoving(false);
     }
   };
 
@@ -329,12 +441,6 @@ function PlayerProfile() {
   const roleLabel = roleLabels[role] ?? t.rolePlayer;
   const battleTag = (user.user_metadata?.battle_tag as string) || '—';
   const avatarUrl = (user.user_metadata?.avatar_url as string) || '';
-  const initials = displayName
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((p: string) => p.charAt(0).toUpperCase())
-    .join('');
   const createdAt = user.created_at
     ? new Date(user.created_at).toLocaleString(locale)
     : '—';
@@ -360,18 +466,20 @@ function PlayerProfile() {
           <section className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
             <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
               <div className="flex items-center gap-4">
-                {avatarUrl ? (
-                  // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
-                  <img
-                    src={avatarUrl}
-                    alt={t.avatarAlt}
-                    className="w-16 h-16 rounded-xl border-2 border-purple-500/40 shadow-lg object-cover"
-                  />
-                ) : (
-                  <span className="flex w-16 h-16 items-center justify-center rounded-xl border-2 border-purple-500/40 bg-purple-600/20 text-xl font-bold text-purple-100 shadow-lg">
-                    {initials || 'J'}
-                  </span>
-                )}
+                {/* PlayerAvatar plutôt qu'un `<img>` nu : optimisé quand l'hôte
+                    est déclaré, et repli sur l'initiale si l'image échoue au
+                    lieu d'une pastille cassée. Décoratif : le nom est écrit
+                    juste à côté. */}
+                <PlayerAvatar
+                  avatarUrl={avatarUrl || null}
+                  teamName={null}
+                  teamSlug={null}
+                  teamLogoUrl={null}
+                  label={displayName}
+                  size={64}
+                  className="h-16 w-16 border-2 border-purple-500/40 shadow-lg"
+                  initialsClassName="text-xl"
+                />
                 <div>
                   <h2 className="text-2xl font-bold">{displayName}</h2>
                   <span className="inline-block mt-1 px-3 py-1 rounded-full text-sm font-semibold bg-purple-600/20 text-purple-200 border border-purple-500/30">
@@ -383,25 +491,25 @@ function PlayerProfile() {
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">
+                <div className="text-xs text-gray-400 uppercase tracking-wider mb-1">
                   {t.email}
                 </div>
                 <div className="font-medium text-sm truncate">{user.email}</div>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">
+                <div className="text-xs text-gray-400 uppercase tracking-wider mb-1">
                   {t.battleTag}
                 </div>
                 <div className="font-mono text-sm truncate">{battleTag}</div>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">
+                <div className="text-xs text-gray-400 uppercase tracking-wider mb-1">
                   {t.createdOn}
                 </div>
                 <div className="font-medium text-sm">{createdAt}</div>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 col-span-2 md:col-span-3">
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">
+                <div className="text-xs text-gray-400 uppercase tracking-wider mb-1">
                   {t.userId}
                 </div>
                 <div className="font-mono text-xs text-gray-300 break-all">
@@ -422,6 +530,15 @@ function PlayerProfile() {
                 className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200"
               >
                 {profileSuccess}
+              </div>
+            )}
+            {profileWarning && (
+              <div
+                id="player-profile-warning"
+                role="status"
+                className="mb-4 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs text-amber-100"
+              >
+                {profileWarning}
               </div>
             )}
             {profileError && (
@@ -459,7 +576,7 @@ function PlayerProfile() {
                   value={editDisplayName}
                   onChange={(e) => setEditDisplayName(e.target.value)}
                   maxLength={50}
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-400"
                   placeholder={t.displayNamePlaceholder}
                 />
               </div>
@@ -475,7 +592,7 @@ function PlayerProfile() {
                   type="text"
                   value={editBattleTag}
                   onChange={(e) => setEditBattleTag(e.target.value)}
-                  className={`w-full px-3 py-2 rounded-lg bg-white/5 border focus:outline-none text-sm font-mono placeholder:text-gray-500 ${
+                  className={`w-full px-3 py-2 rounded-lg bg-white/5 border focus:outline-none text-sm font-mono placeholder:text-gray-400 ${
                     needsBattleTagSetup
                       ? 'border-amber-400/60 ring-2 ring-amber-400/30 focus:border-amber-300'
                       : 'border-white/10 focus:border-purple-500/50'
@@ -502,7 +619,7 @@ function PlayerProfile() {
                   <option value="support">{tSpec.support}</option>
                   <option value="flex">{tSpec.flex}</option>
                 </select>
-                <p className="text-xs text-gray-500 mt-1">{tSpec.fieldHint}</p>
+                <p className="text-xs text-gray-400 mt-1">{tSpec.fieldHint}</p>
               </div>
               <div>
                 <label
@@ -520,10 +637,10 @@ function PlayerProfile() {
                   step={50}
                   value={editSkillRating}
                   onChange={(e) => setEditSkillRating(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-400"
                   placeholder={tRank.fieldPlaceholder}
                 />
-                <p className="text-xs text-gray-500 mt-1">{tRank.fieldHint}</p>
+                <p className="text-xs text-gray-400 mt-1">{tRank.fieldHint}</p>
               </div>
               <div>
                 <label
@@ -538,10 +655,43 @@ function PlayerProfile() {
                   value={editTwitch}
                   onChange={(e) => setEditTwitch(e.target.value)}
                   maxLength={TWITCH_HANDLE_MAX}
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-400"
                   placeholder={t.twitchPlaceholder}
+                  aria-describedby={
+                    twitchOrigin === 'roster' && twitchInitial.trim()
+                      ? 'player-twitch-origin player-twitch-help'
+                      : 'player-twitch-help'
+                  }
                 />
-                <p className="text-xs text-gray-500 mt-1">{t.twitchHelp}</p>
+                {twitchOrigin === 'roster' && twitchInitial.trim() ? (
+                  <p
+                    id="player-twitch-origin"
+                    className="mt-1 text-xs text-amber-200"
+                  >
+                    {t.twitchFromRoster}
+                  </p>
+                ) : null}
+                {twitchSourceError ? (
+                  <p role="alert" className="mt-1 text-xs text-red-300">
+                    {t.twitchSourceError}
+                  </p>
+                ) : null}
+                {twitchInitial.trim() ? (
+                  <button
+                    type="button"
+                    onClick={handleTwitchRemove}
+                    disabled={twitchRemoving || profileSaving}
+                    className="mt-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-200 transition hover:bg-red-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {twitchRemoving ? t.twitchRemoving : t.twitchRemove}
+                  </button>
+                ) : null}
+                <p
+                  id="player-twitch-help"
+                  className="text-xs text-gray-400 mt-1"
+                >
+                  {t.twitchHelp}
+                </p>
               </div>
               <div>
                 <label
@@ -555,10 +705,10 @@ function PlayerProfile() {
                   type="url"
                   value={editAvatarUrl}
                   onChange={(e) => setEditAvatarUrl(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-400"
                   placeholder={t.avatarPlaceholder}
                 />
-                <p className="text-xs text-gray-500 mt-1">{t.avatarHelp}</p>
+                <p className="text-xs text-gray-400 mt-1">{t.avatarHelp}</p>
               </div>
               <button
                 type="submit"
@@ -637,7 +787,7 @@ function PlayerProfile() {
                   aria-describedby={
                     emailError ? 'player-email-error' : undefined
                   }
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-400"
                   required
                 />
               </div>
@@ -658,7 +808,7 @@ function PlayerProfile() {
                   aria-describedby={
                     emailError ? 'player-email-error' : undefined
                   }
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-400"
                   required
                 />
               </div>
@@ -675,7 +825,7 @@ function PlayerProfile() {
                 {emailChanging ? t.sending : t.changeEmailBtn}
               </button>
             </form>
-            <p className="text-xs text-gray-500 mt-3">{t.emailHelp}</p>
+            <p className="text-xs text-gray-400 mt-3">{t.emailHelp}</p>
           </section>
 
           {/* Changer mon mot de passe */}
@@ -720,7 +870,7 @@ function PlayerProfile() {
                   aria-describedby={
                     passwordError ? 'player-password-error' : undefined
                   }
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-400"
                   required
                 />
               </div>
@@ -742,7 +892,7 @@ function PlayerProfile() {
                   aria-describedby={
                     passwordError ? 'player-password-error' : undefined
                   }
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-400"
                   minLength={8}
                   required
                 />
@@ -765,7 +915,7 @@ function PlayerProfile() {
                   aria-describedby={
                     passwordError ? 'player-password-error' : undefined
                   }
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-500"
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500/50 focus:outline-none text-sm placeholder:text-gray-400"
                   minLength={8}
                   required
                 />
@@ -783,8 +933,8 @@ function PlayerProfile() {
                 {passwordChanging ? t.updatingPassword : t.changePasswordBtn}
               </button>
             </form>
-            <p className="text-xs text-gray-500 mt-3">{t.passwordHelp}</p>
-            <p className="text-xs text-gray-500 mt-1">{t.reauthHelp}</p>
+            <p className="text-xs text-gray-400 mt-3">{t.passwordHelp}</p>
+            <p className="text-xs text-gray-400 mt-1">{t.reauthHelp}</p>
           </section>
 
           {/* Mes données — export & suppression */}
@@ -836,7 +986,7 @@ function PlayerProfile() {
               </div>
             )}
 
-            <p className="text-xs text-gray-500 mb-5">{t.dataHelp}</p>
+            <p className="text-xs text-gray-400 mb-5">{t.dataHelp}</p>
 
             {!deleteConfirm ? (
               <button
@@ -870,7 +1020,7 @@ function PlayerProfile() {
               </div>
             )}
 
-            <p className="text-xs text-gray-500 mt-3">{t.deleteHelp}</p>
+            <p className="text-xs text-gray-400 mt-3">{t.deleteHelp}</p>
           </section>
         </div>
       </main>

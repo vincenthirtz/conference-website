@@ -19,6 +19,7 @@
 import { ImageResponse } from 'next/og';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { maskBattleTag } from '@/utils/battleTag';
+import { isAnonymisedRating } from '@/utils/rating/readPlayerProfile';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { logger } from '@/utils/logger';
@@ -66,13 +67,19 @@ async function readCardData(userId: string): Promise<CardData | null> {
     const { data, error } = await supabaseAdmin
       .from('player_ratings')
       .select(
-        'user_id, display_name, battle_tag, rating, peak_rating, games_played, wins, losses'
+        'user_id, display_name, battle_tag, avatar_url, rating, peak_rating, games_played, wins, losses'
       )
       .eq('tenant_id', DEFAULT_TENANT_ID)
       .eq('user_id', userId)
       .maybeSingle();
 
     if (error || !data) return null;
+
+    // Compte supprimé : la ligne de rating est anonymisée (RGPD) mais conservée
+    // pour les classements des autres. Sa fiche répond déjà 404 ; son image de
+    // partage ne doit pas continuer de circuler avec ses statistiques sous
+    // « Joueuse retirée ». Carte générique, comme pour une joueuse inconnue.
+    if (isAnonymisedRating(data as Record<string, unknown>)) return null;
 
     const row = data as {
       user_id: string;

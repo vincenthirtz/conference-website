@@ -48,7 +48,19 @@ export default ns('playerProfile', {
     "Ton pseudo Twitch ou l'URL de ta chaîne : elle s'affiche sur ton profil public et sur le roster de tes équipes. Ta capitaine peut aussi la renseigner à ta place — ce que tu saisis ici a la priorité. Vide = tu retires la tienne.",
   avatarLabel: 'Avatar (URL)',
   avatarPlaceholder: 'https://…',
-  avatarHelp: "Laisse vide pour retirer l'avatar.",
+  avatarHelp:
+    "Image hébergée sur Discord, Twitch ou sur le site. Laisse vide pour retirer l'avatar.",
+  avatarHostUnsupported:
+    "Cet hébergeur d'image n'est pas pris en charge : utilise une image Discord, Twitch ou hébergée sur le site.",
+  twitchFromRoster:
+    'Renseignée par ta capitaine sur la fiche de ton équipe — elle est visible sur ton profil public.',
+  twitchRemove: 'Retirer ce lien',
+  twitchRemoving: 'Retrait…',
+  twitchRemoved: 'Le lien Twitch a été retiré de ton profil public.',
+  twitchSourceError:
+    'Impossible de vérifier la chaîne Twitch actuellement publiée. Recharge la page avant de la modifier.',
+  rosterSyncWarning:
+    "Ton profil est enregistré, mais ta fiche d'équipe n'a pas pu être mise à jour. Réessaie d'enregistrer dans un instant.",
   saving: 'Enregistrement...',
   save: 'Enregistrer',
   changeEmail: 'Changer mon email',

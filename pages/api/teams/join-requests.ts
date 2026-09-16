@@ -247,6 +247,15 @@ async function handlePost(
     }
 
     // Auto news (effet de bord APRES succes de la RPC, best-effort).
+    //
+    // BROUILLON, JAMAIS PUBLIEE D'OFFICE. L'article nommait la joueuse (prenom
+    // tire de son BattleTag) et partait en ligne a l'instant de l'acceptation :
+    // indexable, repris par le sitemap, AVANT meme qu'elle soit prevenue. Sur
+    // un site communautaire feminin, annoncer publiquement qu'une personne
+    // rejoint telle equipe n'est pas anodin, et ce n'est pas a la capitaine d'en
+    // decider pour elle. Le staff trouve le brouillon dans /admin/news et le
+    // publie s'il y a lieu ; `published_at` reste null, c'est la publication
+    // qui le pose (cf. pages/api/admin/news/[id].ts).
     try {
       const playerName =
         battleTag?.split('#')[0] ||
@@ -261,8 +270,8 @@ async function handlePost(
         content: `${playerName} a rejoint ${captainTeam.name} en tant que ${desiredRole}. Bienvenue !`,
         image_url: captainTeam.logo_url ?? null,
         team_id: captainTeam.id,
-        status: 'published',
-        published_at: new Date().toISOString(),
+        status: 'draft',
+        published_at: null,
         tenant_id: tenantId,
       });
     } catch (newsErr) {
