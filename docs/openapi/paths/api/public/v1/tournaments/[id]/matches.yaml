@@ -22,22 +22,17 @@ get:
     `Authorization` est ignoré ici.
 
     Anonyme, CORS `*`. Limite : 120 requêtes par minute par IP pour cet
-    endpoint. Cache CDN : 30 s.
-
-    ATTENTION — cache CDN : `stageId` et `status` sont lus par le code, mais la
-    clé de cache du CDN les ignore. Pendant 30 s, cette URL renvoie la première
-    réponse mise en cache, quels que soient les filtres envoyés ensuite.
-    Filtrer côté client sur la liste complète.
+    endpoint. Cache : 30 s.
   operationId: publicV1ListTournamentMatches
   security: []
   parameters:
+    - $ref: '#/components/parameters/PublicTenant'
     - name: stageId
       in: query
       required: false
       description: |
         Égalité stricte sur la phase ; non validé (une valeur inconnue renvoie
-        une liste vide). Non fiable aujourd'hui (cache CDN, voir la
-        description).
+        une liste vide).
       schema:
         type: string
     - name: status
@@ -45,8 +40,7 @@ get:
       required: false
       description: |
         Une valeur hors de l'énumération est ignorée (aucun 400) : la route
-        renvoie alors les trois statuts. Non fiable aujourd'hui (cache CDN,
-        voir la description).
+        renvoie alors les trois statuts.
       schema:
         type: string
         enum:

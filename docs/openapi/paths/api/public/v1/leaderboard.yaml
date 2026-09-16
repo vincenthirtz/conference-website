@@ -12,21 +12,16 @@ get:
     `Authorization` est ignoré ici.
 
     Anonyme, CORS `*`. Limite : 120 requêtes par minute par IP pour cet
-    endpoint. Cache CDN : 60 s.
-
-    ATTENTION — cache CDN : `limit` et `offset` sont lus par le code, mais la
-    clé de cache du CDN les ignore. Pendant 60 s, cette URL renvoie la première
-    page mise en cache, quels que soient `limit` / `offset` envoyés ensuite.
-    La pagination n'est donc PAS fiable aujourd'hui.
+    endpoint. Cache : 60 s.
   operationId: publicV1GetLeaderboard
   security: []
   parameters:
+    - $ref: '#/components/parameters/PublicTenant'
     - name: limit
       in: query
       required: false
       description: |
-        Ramené dans [1, 100] ; une valeur non numérique vaut 50. Non fiable
-        aujourd'hui (cache CDN, voir la description).
+        Ramené dans [1, 100] ; une valeur non numérique vaut 50.
       schema:
         type: integer
         minimum: 1
@@ -36,8 +31,7 @@ get:
       in: query
       required: false
       description: |
-        Ramené à 0 au minimum. Non fiable aujourd'hui (cache CDN, voir la
-        description).
+        Ramené à 0 au minimum.
       schema:
         type: integer
         minimum: 0

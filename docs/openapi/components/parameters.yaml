@@ -125,3 +125,16 @@ DiscordUserId:
   schema:
     type: string
     pattern: ^[0-9]{17,20}$
+PublicTenant:
+  name: tenant
+  in: query
+  required: false
+  schema:
+    type: string
+    example: pogtv
+  description: |
+    Slug de l'espace à lire (ex. `pogtv`). Absent, inconnu ou espace
+    désactivé : sur owwomenscup.fr, c'est l'espace Women's Cup qui répond,
+    SANS erreur. Le jeton `Authorization` ne le remplace pas : ces lectures
+    l'ignorent. Appelée sur le domaine propre d'un espace, l'API sert cet
+    espace (le domaine prime sur ce paramètre).

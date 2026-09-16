@@ -9,6 +9,8 @@ get:
     sont exclues. Cache CDN 60 s.
   operationId: listPublicTeamOpenings
   security: []
+  parameters:
+    - $ref: '#/components/parameters/PublicTenant'
   responses:
     '200':
       description: Liste anonymisee.

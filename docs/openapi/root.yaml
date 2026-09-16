@@ -46,29 +46,31 @@ x-public-description: |
   La plateforme sert plusieurs espaces (organisations). Une réponse qui
   vient du mauvais espace n'échoue pas : elle est valide, et fausse.
 
+  - Lectures REST (`GET /api/public/v1/*`) : ajouter `?tenant=<slug>` pour
+    viser un espace, par exemple
+    `/api/public/v1/tournaments?tenant=cup-estivale`. SANS ce paramètre, sur
+    `https://owwomenscup.fr`, c'est l'espace Women's Cup qui répond, jeton ou
+    pas : ces lectures IGNORENT le jeton. Un slug inconnu ou un espace
+    désactivé retombent aussi sur Women's Cup, sans erreur. (Un espace doté
+    d'un domaine propre est aussi reconnu quand l'API est appelée sur ce
+    domaine.)
   - Écriture REST et GraphQL avec jeton : l'espace est celui du jeton,
-    fixé à son émission. Aucun paramètre ni en-tête ne peut le déplacer.
-  - Lectures REST (`GET /api/public/v1/*`) : elles ignorent le jeton. Sur
-    `https://owwomenscup.fr`, elles servent l'espace Women's Cup. Le ciblage
-    d'un autre espace sur ces lectures n'est PAS disponible aujourd'hui : il
-    est bloqué par le cache CDN (section suivante).
+    fixé à son émission. Aucun paramètre ni en-tête ne peut le déplacer ;
+    `?tenant=` n'y a aucun effet.
   - GraphQL sans jeton, ou avec un jeton refusé : espace Women's Cup, sans
     erreur.
 
-  Pour lire les données d'un autre espace aujourd'hui, la voie à utiliser
-  est `POST /api/graphql` avec le jeton de cet espace.
+  Vérification simple : comparer un nom d'équipe ou de tournoi renvoyé avec
+  le back-office de l'espace visé.
 
-  ## Cache CDN (production)
+  ## Cache
 
   Les lectures REST posent `Cache-Control: public, s-maxage=N` (N indiqué
-  sur chaque endpoint : 30 à 3600 s). Sur la production, la clé de cache du
-  CDN ne varie que sur deux paramètres internes de Next (`__nextDataReq`,
-  `_rsc`) : tous les autres paramètres de query sont ignorés. Pendant N
-  secondes, une même URL renvoie donc la première réponse mise en cache,
-  quels que soient les paramètres envoyés ensuite (filtres, pagination,
-  format). Les paramètres concernés sont signalés « non fiable aujourd'hui »
-  sur chaque endpoint. Le chemin, lui, fait partie de la clé : un identifiant
-  ou un slug dans l'URL est fiable.
+  sur chaque endpoint : 30 à 3600 s). Le cache du CDN est tenu par URL
+  complète, paramètres de query compris (`?tenant=`, filtres, pagination,
+  `format`) : deux URL qui diffèrent par un paramètre ont chacune leur
+  réponse. Une donnée modifiée peut donc mettre jusqu'à N secondes à
+  apparaître sur une URL déjà servie.
 
   `POST /api/graphql` et l'écriture REST ne posent aucun en-tête de cache
   public (`no-store` pour l'écriture).

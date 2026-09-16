@@ -12,23 +12,17 @@ get:
     `Authorization` est ignoré ici.
 
     Anonyme, CORS `*`. Limite : 120 requêtes par minute par IP pour cet
-    endpoint. Cache CDN : 60 s.
-
-    ATTENTION — cache CDN : les paramètres de query ci-dessous sont lus par le
-    code, mais la clé de cache du CDN les ignore. Pendant 60 s, cette URL
-    renvoie la première réponse mise en cache, quelle que soit la combinaison
-    `status` / `game` / `limit` / `offset` envoyée ensuite. Filtres et
-    pagination ne sont donc PAS fiables aujourd'hui.
+    endpoint. Cache : 60 s.
   operationId: publicV1ListTournaments
   security: []
   parameters:
+    - $ref: '#/components/parameters/PublicTenant'
     - name: status
       in: query
       required: false
       description: |
         Filtre sur un statut public. Une valeur hors de l'énumération est
-        ignorée (aucun 400) : la route renvoie alors les trois statuts. Non
-        fiable aujourd'hui (cache CDN, voir la description).
+        ignorée (aucun 400) : la route renvoie alors les trois statuts.
       schema:
         type: string
         enum:
@@ -39,16 +33,14 @@ get:
       in: query
       required: false
       description: |
-        Égalité stricte sur le jeu. Non fiable aujourd'hui (cache CDN, voir la
-        description).
+        Égalité stricte sur le jeu.
       schema:
         type: string
     - name: limit
       in: query
       required: false
       description: |
-        Ramené dans [1, 100] ; une valeur non numérique vaut 50. Non fiable
-        aujourd'hui (cache CDN, voir la description).
+        Ramené dans [1, 100] ; une valeur non numérique vaut 50.
       schema:
         type: integer
         minimum: 1
@@ -58,8 +50,7 @@ get:
       in: query
       required: false
       description: |
-        Ramené à 0 au minimum. Non fiable aujourd'hui (cache CDN, voir la
-        description).
+        Ramené à 0 au minimum.
       schema:
         type: integer
         minimum: 0

@@ -63,7 +63,7 @@ known**:
 | Family             | Resolver                               | `x-tenant-id` header | Behaviour                                                                 |
 | ------------------ | -------------------------------------- | -------------------- | ------------------------------------------------------------------------- |
 | `/api/caster/v1/*` | `resolveTenantId(req)`                 | **honoured**         | Valid UUID header → that tenant. Missing/malformed → `DEFAULT_TENANT_ID`. |
-| `/api/scrims/*`    | `resolveTenantIdForPublicRequestAsync(req)` | **ignored**     | Custom domain, path prefix or `?tenant=<slug>` read by the code; otherwise `DEFAULT_TENANT_ID`. **Not documented as reliable** (see below). |
+| `/api/scrims/*`    | `resolveTenantIdForPublicRequestAsync(req)` | **ignored**     | Custom domain, path prefix or `?tenant=<slug>`; otherwise `DEFAULT_TENANT_ID`. |
 
 - `/api/caster/v1/*` treats the caster like the bot: an optional
   `x-tenant-id: <uuid>` header (RFC 4122, case-insensitive) selects the tenant,
@@ -71,14 +71,11 @@ known**:
   Electron app point at the e2e tenant in E2E mode.
 - `/api/scrims/*` (`pages/api/scrims/index.ts`, `[id].ts`) now uses the async
   public resolver: `x-tenant-id` is ignored, but a custom domain, a path prefix
-  or `?tenant=<slug>` are read by the code (unknown slug → `DEFAULT_TENANT_ID`,
-  silently). **Do not rely on `?tenant=` here**: on production, the Netlify
-  CDN cache key ignores query parameters (only `__nextDataReq` / `_rsc` vary),
-  which neutralises `?tenant=` on cached public reads (see
-  `docs/PUBLIC_API_CONTRACT.md` « Cache CDN »). These routes set no
-  `Cache-Control` themselves; whether the CDN still caches them has not been
-  verified. In practice the caster (no `?tenant=`) sees the conference
-  tenant's public scrims.
+  or `?tenant=<slug>` select the tenant (unknown slug → `DEFAULT_TENANT_ID`,
+  silently). The CDN cache key includes the query string (`Netlify-Vary` set
+  in `next.config.js` since commit `3a16425c`; before it, query parameters
+  were ignored by the cache). The caster sends no `?tenant=`, so it sees the
+  conference tenant's public scrims.
 
 `DEFAULT_TENANT_ID` = `ce69a726-773e-4d12-b5eb-d2503aa752b4` (conference).
 

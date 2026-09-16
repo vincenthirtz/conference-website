@@ -17,9 +17,11 @@ get:
     `Authorization` est ignoré ici.
 
     Anonyme, CORS `*`. Limite : 120 requêtes par minute par IP pour cet
-    endpoint. Cache CDN : 120 s.
+    endpoint. Cache : 120 s.
   operationId: publicV1GetLeague
   security: []
+  parameters:
+    - $ref: '#/components/parameters/PublicTenant'
   responses:
     '200':
       description: Détail league.

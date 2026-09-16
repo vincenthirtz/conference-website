@@ -75,12 +75,14 @@ en 1080×1920. La page publique du match propose le lien sous « Visuel ». Aucu
 logo distant n'est chargé (un fetch raté casserait l'image) : les équipes sont
 dessinées avec leurs initiales.
 
-⚠️ **Deux chemins, pas un paramètre.** Sur Netlify, la clé de cache CDN d'une
-route Next ne varie que sur `__nextDataReq` et `_rsc` (en-tête `netlify-vary`) :
-tout autre paramètre de query est ignoré, donc la première variante mise en
-cache est servie à toutes les autres. La première version utilisait
-`?format=story` et renvoyait la carte 1200×630 en production, y compris avec un
-paramètre anti-cache. Un format qui change la réponse doit changer l'URL.
+⚠️ **Deux chemins, pas un paramètre.** Jusqu'au commit `3a16425c`, la clé de
+cache CDN d'une route Next sur Netlify ne variait que sur `__nextDataReq` et
+`_rsc` : tout autre paramètre de query était ignoré. La première version
+utilisait `?format=story` et renvoyait la carte 1200×630 en production, y
+compris avec un paramètre anti-cache. Depuis, `next.config.js` pose
+`Netlify-Vary: query,…` sur `/api/*` et la query fait partie de la clé ; les
+deux chemins restent, et un format qui change la réponse reste mieux servi par
+une URL distincte.
 
 ## Vérifier à la main
 

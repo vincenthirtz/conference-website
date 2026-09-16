@@ -28,7 +28,7 @@ get:
       le compteur à zéro.
     Abonnements : back-office `/admin/webhooks`.
 
-    Anonyme, CORS `*`. Limite : 120 requêtes par minute par IP. Cache CDN :
+    Anonyme, CORS `*`. Limite : 120 requêtes par minute par IP. Cache :
     3600 s.
   operationId: publicGetWebhookEvents
   security: []

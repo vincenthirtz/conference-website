@@ -21,9 +21,11 @@ get:
     `Authorization` est ignoré ici.
 
     Anonyme, CORS `*`. Limite : 120 requêtes par minute par IP pour cet
-    endpoint. Cache CDN : 30 s.
+    endpoint. Cache : 30 s.
   operationId: publicV1GetMatch
   security: []
+  parameters:
+    - $ref: '#/components/parameters/PublicTenant'
   responses:
     '200':
       description: Détail match.

@@ -43,8 +43,9 @@ exigent le plan Circuit ou une clé partenaire) y sont soumises.
    entièrement la facturation** : pas de contrôle de plan, pas de quota, et
    cela **même après le 16 octobre**, quand l'essai `regie` sera retombé sur
    le palier gratuit. Elle sert aujourd'hui à une chose : **fixer votre espace
-   sur GraphQL** (§3.3). Elle ne permet pas d'écrire, faute de la portée
-   `matches:write` (§3.4).
+   sur GraphQL** (§3.3). Les lectures REST n'en ont pas besoin — elles visent
+   votre espace avec `?tenant=pogtv` (§3.2). Elle ne permet pas d'écrire,
+   faute de la portée `matches:write` (§3.4).
 
 > ⚠️ Une clé API **ordinaire** (non partenaire) resterait utilisable pour les
 > requêtes GraphQL après le 16 octobre, mais toute écriture répondrait
@@ -122,61 +123,72 @@ fausse. L'espace servi dépend uniquement de la manière d'appeler :
 
 | Appel                                                                          | Espace servi                                                  |
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| `GET /api/public/v1/…?tenant=pogtv`                                            | **POGTV**                                                     |
+| `GET /api/public/v1/…` **sans** `?tenant=pogtv` — avec ou sans clé             | **Women's Cup** — ces lectures ignorent la clé               |
+| `GET /api/public/v1/…?tenant=<slug mal orthographié>`                          | **Women's Cup**, sans aucune erreur                          |
 | `POST /api/graphql` avec `Authorization: Bearer <votre clé>`                   | **POGTV** — la clé est rattachée à votre espace, rien ne la déplace |
-| `POST /api/public/v1/matches/{id}/result` avec votre clé                       | **POGTV**                                                     |
 | `POST /api/graphql` **sans** clé, ou avec une clé refusée (mal copiée, révoquée, expirée) | **Women's Cup**, sans aucune erreur                  |
-| `GET /api/public/v1/*`, avec ou sans clé                                       | **Women's Cup** — ces lectures ignorent la clé               |
+| `POST /api/public/v1/matches/{id}/result` avec votre clé                       | **POGTV**                                                     |
 
-**Voie recommandée aujourd'hui pour lire vos données : GraphQL en `POST`, avec
-votre clé (§3.3).**
-
-<!-- EN ATTENTE : ciblage de l'espace sur les lectures REST, bloqué par le cache CDN — ne pas publier en l'état -->
+En résumé : **lectures REST → `?tenant=pogtv` sur chaque requête, la clé n'y
+sert à rien. GraphQL et écriture → votre clé.**
 
 > Devant un résultat inattendu (des équipes ou des tournois que vous ne
-> connaissez pas), vérifiez d'abord que la requête part bien en `POST` sur
-> `/api/graphql` **avec** votre clé, et que la clé n'a pas expiré.
+> connaissez pas) : en REST, vérifiez que `?tenant=pogtv` est bien présent et
+> bien orthographié ; en GraphQL, que la clé part bien et n'a pas expiré.
 
-### 3.2 Lectures REST (`GET /api/public/v1/*`)
+### 3.2 Lectures REST (`GET /api/public/v1/*`) — sans clé, avec `?tenant=pogtv`
 
-> ⚠️ Ces lectures servent aujourd'hui l'espace **Women's Cup** (§3.1). Elles
-> sont décrites ici pour la suite ; ne les branchez pas pour POGTV tant que le
-> ciblage de votre espace n'y est pas disponible.
+Premier appel de vérification :
+
+```bash
+curl "https://owwomenscup.fr/api/public/v1/tournaments?tenant=pogtv"
+```
+
+Tant que votre espace n'a aucun tournoi publié, la réponse est :
+
+```json
+{ "data": [], "pagination": { "limit": 50, "offset": 0, "count": 0 } }
+```
+
+La même requête **sans** `?tenant=pogtv` liste les tournois Women's Cup : c'est
+le signe que le paramètre manque.
 
 Enveloppe : `{ "data": [...], "pagination": { ... } }` pour une liste paginée,
-`{ "data": [...] }` ou `{ "data": { ... } }` sinon.
+`{ "data": [...] }` ou `{ "data": { ... } }` sinon. Ces lectures sont anonymes
+et en CORS `*` : une page d'overlay peut les appeler directement, sans clé.
 
 | Endpoint                                          | Ce qu'il sert                                                                                                                                                                  |
 | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `GET /api/public/v1/tournaments`                  | Tournois `published`, `running` ou `completed`. Filtres `status`, `game`, `limit` (≤ 100), `offset` — **non fiables aujourd'hui** (cache CDN, voir plus bas).                    |
+| `GET /api/public/v1/tournaments`                  | Tournois `published`, `running` ou `completed`. Filtres `status`, `game`, `limit` (≤ 100), `offset`.                                                                            |
 | `GET /api/public/v1/tournaments/{id}`             | Détail d'un tournoi + résumé des phases. `{id}` = UUID ou slug.                                                                                                                 |
-| `GET /api/public/v1/tournaments/{id}/matches`     | Matchs du tournoi : phase, round, côté de bracket, équipes (id, nom, logo), scores, vainqueur, statut, horaire. **Seulement** les statuts `pending`, `ongoing` et `finished` : un walkover, un match en litige, reporté ou annulé n'y figure pas. Filtres `stageId` / `status` non fiables aujourd'hui. |
+| `GET /api/public/v1/tournaments/{id}/matches`     | Matchs du tournoi : phase, round, côté de bracket, équipes (id, nom, logo), scores, vainqueur, statut, horaire. **Seulement** les statuts `pending`, `ongoing` et `finished` : un walkover, un match en litige, reporté ou annulé n'y figure pas. Filtres `stageId`, `status`. |
 | `GET /api/public/v1/tournaments/{id}/standings`   | Classement final (vide tant que le tournoi n'est pas finalisé).                                                                                                                 |
 | `GET /api/public/v1/tournaments/{id}/arbitration` | Métriques d'arbitrage agrégées, sans aucune donnée nominative.                                                                                                                  |
 | `GET /api/public/v1/matches/{id}`                 | Détail d'un match + le déroulé map par map. `{id}` = **UUID seulement** (un slug répond 400). Mêmes statuts que ci-dessus, sinon 404.                                          |
 | `GET /api/public/v1/teams/{id}`                   | Équipe + roster public (pseudo, rôle, remplaçante). Ni email ni Discord. `{id}` = UUID ou slug.                                                                                 |
 | `GET /api/public/v1/players/{userId}`             | Profil public : rating, historique, face-à-face, hauts faits. `{userId}` = **UUID seulement**.                                                                                  |
-| `GET /api/public/v1/leaderboard`                  | Classement Glicko-2. Pagination `limit` / `offset` non fiable aujourd'hui.                                                                                                      |
+| `GET /api/public/v1/leaderboard`                  | Classement Glicko-2. Pagination `limit` / `offset` (ici `pagination.count` = taille de la page, pas le total).                                                                  |
 | `GET /api/public/v1/leagues` · `/leagues/{slug}`  | Ligues/saisons publiques.                                                                                                                                                       |
 
-**Cache CDN.** Ces lectures sont mises en cache 30 à 120 s selon l'endpoint.
-Sur la production, la clé de cache **ignore les paramètres de query** : pendant
-cette durée, une même URL renvoie la première réponse mise en cache, quels que
-soient les filtres ou la pagination envoyés ensuite. D'où les mentions « non
-fiable aujourd'hui » ci-dessus.
+**Cache.** Ces lectures sont mises en cache 30 à 120 s selon l'endpoint, par
+URL complète (paramètres compris). Un score posé peut donc mettre jusqu'à cette
+durée à apparaître : un rafraîchissement toutes les 15 à 30 s suffit.
 
 Deux endpoints utiles hors `v1`, eux aussi anonymes :
 
-- `GET /api/public/openapi` — la **spécification OpenAPI** (JSON). La variante
-  `?format=yaml` n'est pas fiable aujourd'hui, pour la même raison de cache.
+- `GET /api/public/openapi` (`?format=yaml` pour du YAML) — la
+  **spécification OpenAPI**. De quoi générer un client.
 - `GET /api/public/webhook-events` — le catalogue des events webhook (§4).
 
 Référence rendue et lisible : **https://owwomenscup.fr/developpeurs/reference**
 
-### 3.3 GraphQL avec votre clé — la voie recommandée
+### 3.3 GraphQL avec votre clé
 
 `POST /api/graphql`, corps JSON `{ "query": "…", "variables": { … } }`, et
-votre clé en en-tête. C'est aujourd'hui le seul moyen de **lire les données de
-POGTV** : la clé fixe l'espace, et un `POST` n'est pas servi depuis le cache.
+votre clé en en-tête : la clé fixe l'espace. Alternative aux lectures REST,
+utile pour récupérer plusieurs objets en une requête — mais la clé ne doit pas
+figurer dans une page publique : appelez GraphQL depuis un serveur.
 
 Premier appel de vérification :
 
@@ -343,21 +355,23 @@ Répondez `2xx` vite (accusez réception, traitez derrière).
 Le chemin recommandé pour un overlay OBS, sans rien installer de notre côté :
 
 1. Une page HTML à vous, en Browser Source dans OBS.
-2. Elle lit ses données auprès d'un **petit service à vous, côté serveur**, qui
-   interroge `POST /api/graphql` avec votre clé (§3.3) — la clé ne doit jamais
-   figurer dans le HTML de l'overlay. Un rafraîchissement toutes les 15 à 30 s
-   suffit largement.
+2. Elle interroge directement
+   `GET /api/public/v1/tournaments/{slug}/matches?tenant=pogtv` — lecture
+   anonyme, sans clé, en CORS `*`. Les réponses sont mises en cache 30 s : un
+   rafraîchissement toutes les 15 à 30 s suffit largement et reste loin de la
+   limite par IP. **N'oubliez pas `?tenant=pogtv`** : sans lui, l'overlay
+   affiche les matchs de Women's Cup.
 3. Les webhooks `match.starting` / `match.finished` déclenchent le changement de
    scène, si vous voulez éviter la latence du polling.
 
-<!-- EN ATTENTE : ciblage de l'espace sur les lectures REST, bloqué par le cache CDN — ne pas publier en l'état -->
+Si vous préférez GraphQL (§3.3), passez par un petit service côté serveur : la
+clé ne doit jamais figurer dans le HTML de l'overlay.
 
-Les champs déjà pensés pour ça (GraphQL, `tournament { matches { … } }`) :
-`team1_name`, `team1_logo_url`, `team1_score`, `round_number`, `bracket_side`,
-`status`, `scheduled_at`, et le détail map par map avec
-`match(id) { games { … } }`. Un match gagné par forfait (`walkover`), en
-litige, reporté ou annulé n'apparaît pas : prévoyez-le dans l'affichage du
-bracket.
+Les champs déjà pensés pour ça : `team1_name`, `team1_logo_url`, `team1_score`,
+`round_number`, `bracket_side`, `status`, `scheduled_at`, et le détail map par
+map sur `/matches/{id}` (ou `match(id) { games { … } }` en GraphQL). Un match
+gagné par forfait (`walkover`), en litige, reporté ou annulé n'apparaît pas :
+prévoyez-le dans l'affichage du bracket.
 
 Notre régie vidéo maison (Womenscup OBS : direction automatique, overlays
 pilotés par l'état des matchs) relève de l'offre **Éditeur**, sur devis, et
@@ -371,11 +385,12 @@ n'est pas incluse ici — mais rien de ce qui précède n'en dépend.
       l'API, pas seulement à l'écran.
 - [ ] Toutes les équipes ont un logo.
 - [ ] La clé `pk_live_5b279c…` est stockée côté serveur, jamais dans le HTML
-      d'un overlay — même en lecture seule, une clé publiée est une clé à
-      remplacer.
+      d'un overlay — les lectures REST n'en ont pas besoin, et une clé publiée
+      est une clé à remplacer.
 - [ ] Les overlays affichent bien les données de POGTV : comparez un nom
-      d'équipe affiché avec le back-office. C'est le test qui attrape une clé
-      absente ou refusée — GraphQL sert alors Women's Cup sans erreur.
+      d'équipe affiché avec le back-office. C'est le test qui attrape un
+      `?tenant=pogtv` oublié ou mal orthographié (REST) et une clé absente ou
+      refusée (GraphQL) : dans les deux cas, Women's Cup répond sans erreur.
 - [ ] Le remplacement de la clé est prévu **avant le 15 décembre 2026**, date
       de son expiration.
 - [ ] Les abonnements webhook sont actifs et ont reçu au moins une livraison en

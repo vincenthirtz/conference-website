@@ -2,14 +2,9 @@ PublicCacheControl:
   description: |
     Posé par la route sur toute réponse 200 :
     `public, s-maxage=<N>, stale-while-revalidate=<N/2>`. La valeur de `N`
-    dépend de l'endpoint (indiquée dans sa description).
-
-    ATTENTION — sur la production (Netlify), la clé de cache du CDN ne varie
-    que sur deux paramètres internes de Next (`__nextDataReq`, `_rsc`). Tous
-    les autres paramètres de query sont IGNORÉS par le cache : pendant `N`
-    secondes, une même URL renvoie la première réponse mise en cache, quels
-    que soient les paramètres de query envoyés ensuite. Voir l'introduction
-    de la référence (« Cache CDN »).
+    dépend de l'endpoint (indiquée dans sa description). Le CDN met en cache
+    par URL complète, paramètres de query compris : une donnée modifiée peut
+    mettre jusqu'à `N` secondes à apparaître sur une URL déjà servie.
   schema:
     type: string
     example: public, s-maxage=60, stale-while-revalidate=30

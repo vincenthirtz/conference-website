@@ -9,11 +9,6 @@ get:
 
     Anonyme, CORS `*`. Limite : 120 requêtes par minute par IP (le 429 n'a pas
     de `code`). Cache : `public, max-age=300, s-maxage=3600`.
-
-    ATTENTION — cache CDN : `format` est lu par le code, mais la clé de cache
-    du CDN l'ignore. Pendant une heure, la première variante mise en cache
-    (JSON ou YAML) est servie aux deux. Préférer la variante JSON (sans
-    paramètre) ; `?format=yaml` n'est pas fiable aujourd'hui.
   operationId: publicGetOpenApiSpec
   security: []
   parameters:
@@ -22,7 +17,7 @@ get:
       required: false
       description: |
         `yaml` pour la variante YAML (`text/yaml`), toute autre valeur donne du
-        JSON. Non fiable aujourd'hui (cache CDN, voir la description).
+        JSON.
       schema:
         type: string
         enum:

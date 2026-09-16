@@ -88,7 +88,7 @@ Ce qu'un partenaire lit en premier — la référence `/developpeurs/reference`
 et `GET /api/public/openapi` — ne garde que `/api/public/*`. Règles propres :
 
 - **Introduction** : `x-public-description` dans `root.yaml` (espace servi,
-  cache CDN, clés, limites, erreurs, GraphQL, webhooks, compatibilité).
+  cache, clés, limites, erreurs, GraphQL, webhooks, compatibilité).
   Balisage limité à ce que la page rend : titres `## `, listes `- `,
   paragraphes, `code` en ligne.
 - **Erreurs** : les fragments `public/v1` ne référencent que des réponses
@@ -98,8 +98,10 @@ et `GET /api/public/openapi` — ne garde que `/api/public/*`. Règles propres :
 - **Exemples** : chaque réponse 2xx JSON et chaque corps de `public/v1` porte
   un `example`, validé contre le schéma zod du handler, champ en trop compris.
   Un nouveau composant de réponse s'ajoute à `COMPONENT_ZOD` du test.
-- **Cache CDN** : un paramètre de query d'une lecture mise en cache est à
-  marquer « non fiable aujourd'hui » (la clé de cache CDN l'ignore).
+- **Espace** : une lecture scopée par espace référence
+  `#/components/parameters/PublicTenant` (`?tenant=<slug>`). Le cache CDN
+  varie sur la query (`Netlify-Vary`, `next.config.js`) : un paramètre de
+  query est fiable sur une réponse mise en cache.
 
 Gardes : `tests/unit/openapiPublicExamples.test.ts` (exemples) et
 `tests/unit/apiErrorCodeCatalog.test.ts` (codes émis ↔ `PublicApiErrorCode`,

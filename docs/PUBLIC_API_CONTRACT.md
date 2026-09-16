@@ -5,8 +5,7 @@
 >
 > - l'API publique **read-only anonyme** (`/api/public/v1/*` en `GET`, CORS `*`,
 >   cf. `utils/publicApi.ts`) — voir « Quel espace répond ? » ci-dessous : ces
->   lectures ignorent le token, et le ciblage d'un autre espace y est en
->   attente (cache CDN) ;
+>   lectures ignorent le token, c'est `?tenant=<slug>` qui désigne l'espace ;
 > - l'API **bot** (`/api/bot/v1/*`, clé per-tenant + acteur Discord, cf.
 >   `docs/BOT_API_CONTRACT.md`).
 >
@@ -31,28 +30,33 @@ point. Aucun paramètre ni en-tête ne peut le déplacer.
 formé) : espace historique (`DEFAULT_TENANT_ID`), **sans erreur**.
 
 **Lectures REST** (`GET /api/public/v1/*`) : elles **ignorent** l'en-tête
-`Authorization`. Sur owwomenscup.fr, elles servent l'espace historique.
+`Authorization` ; sans token, la requête doit désigner l'espace.
+`resolveTenantIdForPublicRequestAsync` reconnaît, du plus fort au plus
+explicite :
 
-<!-- EN ATTENTE : ciblage de l'espace sur les lectures REST, bloqué par le cache CDN — ne pas publier en l'état -->
+| Signal                   | Exemple                                        |
+| ------------------------ | ---------------------------------------------- |
+| Domaine propre du tenant | `https://cup-estivale.fr/api/public/v1/teams`  |
+| Préfixe de chemin        | `/cup-estivale/...` (hérité, peu utilisé)      |
+| `?tenant=<slug>`         | `/api/public/v1/teams?tenant=cup-estivale`     |
 
-Le code sait résoudre un autre espace pour ces lectures
-(`resolveTenantIdForPublicRequestAsync`), mais le cache CDN de production
-neutralise ce ciblage (section « Cache CDN » ci-dessous) : il **n'est pas
-documenté comme disponible**. Aujourd'hui, la voie pour lire les données d'un
-autre espace est `POST /api/graphql` avec le token de cet espace.
+**`?tenant=<slug>` est le mécanisme prévu** pour une intégration tierce
+(paramètre `PublicTenant` de la spec). **Sans** lui — le cas de
+owwomenscup.fr — c'est l'espace historique qui répond, token ou pas. Un slug
+inconnu ou un espace désactivé retombent sur ce même défaut, sans erreur.
 
 NB : un espace n'a **pas** de site public — il dispose du bot, du back-office
-et de l'API.
+et de l'API. Le domaine propre reste reconnu pour l'API seule.
 
-### Cache CDN (production)
+### Cache CDN
 
 Les lectures REST posent `Cache-Control: public, s-maxage=N` (30 à 3600 s
-selon l'endpoint). Sur Netlify, la clé de cache CDN ne varie que sur
-`__nextDataReq` et `_rsc` : **tous les autres paramètres de query sont
-ignorés**. Pendant N secondes, une URL sert la première réponse mise en cache,
-quels que soient ses paramètres. Conséquence : filtres, pagination et
-`?format=` sont non fiables aujourd'hui ; chaque paramètre concerné le dit
-dans la spec. Même piège que celui documenté dans `utils/og/matchPoster.tsx`.
+selon l'endpoint). Le CDN met en cache **par URL complète, query comprise** :
+`next.config.js` pose `Netlify-Vary: query,header=authorization` sur
+`/api/*` et `query,header=x-api-key|x-tenant-id|x-guild-id` sur
+`/api/bot/*`. `?tenant=`, filtres, pagination et `?format=` ont donc chacun
+leur entrée de cache. Une donnée modifiée peut mettre jusqu'à N secondes à
+apparaître sur une URL déjà servie.
 
 ## 1. Authentification
 
@@ -255,8 +259,9 @@ cite chaque code `extensions.code` émis.
 
 - **Espace** (`utils/graphql/context.ts`) : celui du token s'il est valide ;
   sinon — pas de token, ou token inconnu / révoqué / expiré / mal formé —
-  `DEFAULT_TENANT_ID`, **sans erreur**. Aucun `?tenant=`, aucun domaine.
-  C'est aujourd'hui la seule voie pour lire les données d'un autre espace.
+  `DEFAULT_TENANT_ID`, **sans erreur**. Aucun `?tenant=`, aucun domaine : sans
+  token, GraphQL ne lit que l'espace historique (les lectures REST, elles,
+  prennent `?tenant=`).
 - **Queries** : anonymes autorisées. Le token n'y sert qu'à fixer l'espace :
   ni plan, ni portée, ni quota ne sont contrôlés.
 - **Mutations** : exigent un token scopé (`Authorization: Bearer …`) ; ordre :
@@ -315,7 +320,7 @@ curl -X POST https://<host>/api/graphql \
 ## 5. Portail développeur & spec machine-readable
 
 - **Spec publique JSON/YAML** : `GET /api/public/openapi` (anonyme, CORS `*`,
-  `?format=yaml` — non fiable aujourd'hui, cf. « Cache CDN »). Dérivée de la
+  `?format=yaml`). Dérivée de la
   spec complète (fragments `docs/openapi/`) filtrée aux paths
   `/api/public/*` + composants transitivement référencés (aucune fuite
   bot/admin). Son `info.description` vient de `x-public-description`
@@ -337,6 +342,12 @@ curl -X POST https://<host>/api/graphql \
   `developpeursPage` (ancien guide) n'est plus rendu par aucune page.
 
 ### Changements de contrat
+
+- **2026-09-16 — cache CDN par URL complète.** Jusqu'au correctif
+  `3a16425c`, la clé de cache CDN des API ignorait la query : `?tenant=`,
+  filtres, pagination et `?format=` pouvaient renvoyer la réponse mise en
+  cache pour d'autres paramètres (jusqu'à la durée de cache de l'endpoint).
+  Depuis, chaque URL complète a sa propre entrée. Aucun changement de réponse.
 
 - **2026-09-15 — `tenant_id` retiré des ligues publiques.**
   `GET /api/public/v1/leagues`, `GET /api/public/v1/leagues/{slug}` (objet
