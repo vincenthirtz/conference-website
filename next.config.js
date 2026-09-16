@@ -133,6 +133,45 @@ const nextConfig = {
           // CSP is now set dynamically with nonces in middleware.ts
         ],
       },
+      // CLÉ DE CACHE CDN DES API.
+      //
+      // Le runtime Netlify de Next ne fait varier la clé de cache que sur
+      // `__nextDataReq` et `_rsc`. Tous les autres paramètres de query étaient
+      // IGNORÉS : la première réponse mise en cache pour un chemin était servie
+      // à toutes les variantes. Constaté en production le 16/09/2026 :
+      // `/api/public/v1/tournaments?tenant=pogtv` renvoyait les tournois
+      // Women's Cup, y compris avec un paramètre anti-cache jamais envoyé.
+      // Filtres (`status`, `stageId`…), pagination et `?tenant=` étaient donc
+      // neutralisés sur une vingtaine de routes — et un espace pouvait recevoir
+      // les données d'un autre.
+      //
+      // Le plugin LIT et FUSIONNE un `Netlify-Vary` posé par l'application
+      // (@netlify/plugin-nextjs 5.15.13, dist/run/headers.js, setVaryHeaders) :
+      // `query` sans valeur = varier sur TOUS les paramètres. Le poser ici, et
+      // non route par route, couvre aussi les routes à venir — c'est ce qui a
+      // manqué la première fois : le piège était déjà connu
+      // (utils/og/matchPoster.tsx) mais corrigé pour une seule route.
+      //
+      // `header=authorization` : défense en profondeur. Une réponse
+      // authentifiée marquée `public` par erreur ne doit jamais être servie à
+      // une autre porteuse de jeton.
+      {
+        source: '/api/((?!bot/).*)',
+        headers: [{ key: 'Netlify-Vary', value: 'query,header=authorization' }],
+      },
+      // Routes bot : l'espace et l'identité viennent des EN-TÊTES (clé API,
+      // espace, guild), qui ne font pas partie de la clé de cache par défaut.
+      // Deux règles disjointes plutôt qu'une surcharge, pour ne pas dépendre de
+      // l'ordre d'application de Next.
+      {
+        source: '/api/bot/:path*',
+        headers: [
+          {
+            key: 'Netlify-Vary',
+            value: 'query,header=x-api-key|x-tenant-id|x-guild-id',
+          },
+        ],
+      },
     ];
   },
 };
