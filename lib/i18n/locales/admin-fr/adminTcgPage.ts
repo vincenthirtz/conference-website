@@ -17,6 +17,22 @@ export default adminNs('adminTcgPage', {
   subtitle: 'L’économie, les photos à relire et les cartes fan art proposées.',
   tabsAriaLabel: 'Sections du TCG',
   tabCatalogue: 'Vue TCG',
+  tabEngagement: 'Paquets dormants',
+  engagementError: 'Lecture impossible.',
+  engagementSummary:
+    '{pending} paquets attendent d’être ouverts sur {granted} distribués — {rate} % ont été ouverts.',
+  engagementTrendHeading: 'Par semaine',
+  engagementTrendLegend:
+    'Gris : paquets distribués. Vert : paquets ouverts. Deux points suffisent à dire si quelque chose bouge.',
+  engagementTrendPoint:
+    'Semaine du {week} : {granted} distribués, {opened} ouverts.',
+  engagementNoTrend: 'Pas encore assez d’historique.',
+  engagementListHeading: '{count} joueuses avec un paquet en attente',
+  engagementNobody: 'Personne n’a de paquet en attente.',
+  engagementNeverOpened: 'n’a jamais ouvert',
+  engagementPending: '{pending} en attente',
+  engagementSinceDays: 'le plus ancien depuis {days} j',
+  engagementSeeCollection: 'Voir sa collection',
   catalogueIntro:
     'Toutes les cartes que l’espace peut donner. Choisis une joueuse pour voir lesquelles elle possède.',
   catalogueLoading: 'Lecture…',
@@ -33,4 +49,6 @@ export default adminNs('adminTcgPage', {
   catalogueKindTeams: 'Équipes',
   catalogueKindMaps: 'Maps',
   catalogueKindFanart: 'Fan art',
+  catalogueHolders: '{count} détentrice(s)',
+  catalogueNoHolder: 'jamais tirée',
 });

@@ -46,6 +46,15 @@ export type CatalogueCard = {
   imageUrl: string | null;
   /** Toujours `false` quand aucune joueuse n'est demandée. */
   owned: boolean;
+  /**
+   * Combien de personnes DIFFÉRENTES possèdent cette carte, dans cet espace.
+   *
+   * C'est la rareté RÉELLE, celle que le barème ne dit pas : une carte
+   * « commune » que personne n'a jamais tirée est plus rare, dans les faits,
+   * qu'une légendaire distribuée à tout le monde. Un nombre, jamais un nom —
+   * une collection reste personnelle.
+   */
+  holders: number;
 };
 
 export type CatalogueResult =
@@ -58,6 +67,61 @@ export type CatalogueResult =
       };
     }
   | { ok: false; error: string };
+
+/**
+ * Combien de personnes distinctes possèdent chaque carte. Ne lève jamais.
+ *
+ * AGRÉGAT SEUL : on compte des porteuses, on n'en nomme aucune. La question
+ * « qui possède quoi » a déjà sa réponse, nominative et gardée, dans le reste
+ * de ce module — la mélanger ici l'exposerait à un écran qui n'en a pas besoin.
+ */
+async function readHolderCounts(
+  tenantId: string
+): Promise<Map<string, number> | null> {
+  if (!supabaseAdmin) return null;
+
+  const holders = new Map<string, Set<string>>();
+  const PAGE = 1000;
+  for (let page = 0; page < 200; page += 1) {
+    const from = page * PAGE;
+    const { data, error } = await supabaseAdmin
+      .from('tcg_pack_cards')
+      .select(
+        'subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id, tcg_packs!inner(user_id, tenant_id, opened_at)'
+      )
+      .eq('tcg_packs.tenant_id', tenantId)
+      .not('tcg_packs.opened_at', 'is', null)
+      .is('recycled_at', null)
+      .range(from, from + PAGE - 1);
+
+    if (error) {
+      logger.error(
+        '[tcg/catalogue] comptage des détentrices impossible',
+        error
+      );
+      return null;
+    }
+    const rows = (data ?? []) as unknown as Array<
+      Record<string, unknown> & { tcg_packs?: { user_id?: string } }
+    >;
+    for (const row of rows) {
+      const key = cardSubjectKey(row as Parameters<typeof cardSubjectKey>[0]);
+      const owner = row.tcg_packs?.user_id;
+      if (!key || !owner) continue;
+      let set = holders.get(key);
+      if (!set) {
+        set = new Set();
+        holders.set(key, set);
+      }
+      set.add(owner);
+    }
+    if (rows.length < PAGE) break;
+  }
+
+  const counts = new Map<string, number>();
+  for (const [key, set] of holders) counts.set(key, set.size);
+  return counts;
+}
 
 /** Les cartes encore possédées, par clé de sujet. Ne lève jamais. */
 async function readOwnedKeys(
@@ -114,7 +178,7 @@ export async function readTcgCatalogue(
   const { playerIds, teamIds, fanartIds } = pool.value;
   const mapSlugs = [...MAP_POOL_SLUGS];
 
-  const [playerFaces, teamFaces, fanartFaces, mapFaces, ownedKeys] =
+  const [playerFaces, teamFaces, fanartFaces, mapFaces, ownedKeys, holders] =
     await Promise.all([
       readPlayerFaces(tenantId, playerIds),
       readTeamFaces(tenantId, teamIds),
@@ -123,6 +187,7 @@ export async function readTcgCatalogue(
       ownerUserId
         ? readOwnedKeys(tenantId, ownerUserId)
         : Promise.resolve(null),
+      readHolderCounts(tenantId),
     ]);
 
   // Une lecture de possession en échec ne doit pas faire passer une collection
@@ -132,6 +197,9 @@ export async function readTcgCatalogue(
   }
 
   const owns = (key: string) => (ownedKeys ? ownedKeys.has(key) : false);
+  // Un comptage indisponible vaut zéro détentrice AFFICHÉE, pas une erreur :
+  // le catalogue reste lisible sans lui, c'est une colonne de contexte.
+  const holdersOf = (key: string) => holders?.get(key) ?? 0;
   const cards: CatalogueCard[] = [];
 
   for (const id of playerIds) {
@@ -144,6 +212,7 @@ export async function readTcgCatalogue(
       label: face?.displayName ?? id,
       imageUrl: face?.imageUrl ?? null,
       owned: owns(key),
+      holders: holdersOf(key),
     });
   }
   for (const id of teamIds) {
@@ -156,6 +225,7 @@ export async function readTcgCatalogue(
       label: face?.name ?? face?.shortName ?? id,
       imageUrl: face?.logoUrl ?? null,
       owned: owns(key),
+      holders: holdersOf(key),
     });
   }
   for (const slug of mapSlugs) {
@@ -168,6 +238,7 @@ export async function readTcgCatalogue(
       label: face?.name ?? slug,
       imageUrl: face?.imageUrl ?? null,
       owned: owns(key),
+      holders: holdersOf(key),
     });
   }
   for (const id of fanartIds) {
@@ -180,6 +251,7 @@ export async function readTcgCatalogue(
       label: face?.title ?? id,
       imageUrl: face?.imageUrl ?? null,
       owned: owns(key),
+      holders: holdersOf(key),
     });
   }
 

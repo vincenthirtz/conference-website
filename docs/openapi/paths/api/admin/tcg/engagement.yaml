@@ -1,0 +1,44 @@
+get:
+  summary: Who has an unopened pack, and how the distribution is trending.
+  description: |
+    Requires `manage_tcg`, scoped to the staff's own space. `/overview` counts
+    packs granted, opened and pending: enough to OBSERVE — 52 of 58 packs never
+    opened on 16 September 2026 — and useless to ACT on, since none of those
+    numbers says who to talk to.
+
+    The list is ordered as an opinion: those who NEVER opened anything first,
+    then the oldest forgotten pack. They are not the same situation — one may
+    never have known the TCG existed, the other knows and put it off.
+
+    Everything is derived from `tcg_packs.granted_at` / `opened_at`: a measure
+    that can be recomputed is not stored.
+
+    `Cache-Control: private, no-store` — the payload names people.
+  operationId: adminGetTcgEngagement
+  tags:
+    - admin/tcg
+  security:
+    - StaffSession: []
+  parameters:
+    - in: query
+      name: weeks
+      required: false
+      description: Trend window, clamped to 2–26. Defaults to 8.
+      schema:
+        type: integer
+        minimum: 2
+        maximum: 26
+  responses:
+    '200':
+      description: Dormant players, the weekly series, and the totals.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'

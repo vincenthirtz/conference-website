@@ -47,6 +47,9 @@ const TcgFanartPanel = lazyPanel(
 const TcgCataloguePanel = lazyPanel(
   () => import('@/components/admin/tcg/TcgCataloguePanel')
 );
+const TcgEngagementPanel = lazyPanel(
+  () => import('@/components/admin/tcg/TcgEngagementPanel')
+);
 const TcgOverlayCard = lazyPanel(
   () => import('@/components/admin/tcg/TcgOverlayCard')
 );
@@ -76,6 +79,7 @@ export default function AdminTcgPage(_props: StaffProps) {
     { id: 'photos', label: tTcgPhotos.tabLabel },
     { id: 'fanart', label: tTcgFanart.tabLabel },
     { id: 'vue', label: t.tabCatalogue },
+    { id: 'dormants', label: t.tabEngagement },
   ];
   const [active, setActive] = useQueryTab(tabs);
 
@@ -108,7 +112,9 @@ export default function AdminTcgPage(_props: StaffProps) {
             id={tabPanelId(ID_BASE, active)}
             aria-labelledby={tabButtonId(ID_BASE, active)}
           >
-            {active === 'vue' ? (
+            {active === 'dormants' ? (
+              <TcgEngagementPanel />
+            ) : active === 'vue' ? (
               <TcgCataloguePanel />
             ) : active === 'fanart' ? (
               <TcgFanartPanel />

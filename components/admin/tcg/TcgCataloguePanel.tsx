@@ -38,6 +38,7 @@ type CatalogueCard = {
   label: string;
   imageUrl: string | null;
   owned: boolean;
+  holders: number;
 };
 
 type CatalogueResponse = {
@@ -192,6 +193,17 @@ export default function TcgCataloguePanel() {
                     {card.owned ? t.catalogueOwned : t.catalogueMissing}
                   </span>
                 )}
+                {/* La rareté RÉELLE : une commune que personne n'a tirée est
+                    plus rare, dans les faits, qu'une légendaire répandue. */}
+                <span
+                  className={`mt-0.5 block text-[11px] ${
+                    card.holders === 0 ? 'text-amber-300' : 'text-neutral-500'
+                  }`}
+                >
+                  {card.holders === 0
+                    ? t.catalogueNoHolder
+                    : format(t.catalogueHolders, { count: card.holders })}
+                </span>
               </li>
             ))}
           </ul>
