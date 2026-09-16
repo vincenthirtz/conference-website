@@ -17,6 +17,9 @@ export default ns('checkin', {
   subtitle: "Valide ta présence avant le coup d'envoi.",
   signinPrompt: 'Connecte-toi pour valider ton check-in.',
   signin: 'Se connecter',
+  sessionExpired:
+    'Ta session a expiré. Reconnecte-toi pour faire ton check-in.',
+  signinAgain: 'Se reconnecter',
   noMatchTitle: 'Aucun match à valider pour le moment',
   noMatchBody:
     "Le check-in s'ouvre peu avant le coup d'envoi de ton prochain match.",

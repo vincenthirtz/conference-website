@@ -17,6 +17,7 @@
 
 import { MAX_TEAM_PLAYERS } from '@/utils/constants';
 import { isNonPlayingTeamRole } from '@/utils/teams/roleKind';
+import type { MatchStatus } from '@/types/admin';
 
 /** Côté du match occupé par une équipe. `null` = elle n'y participe pas. */
 export type MatchSlot = 1 | 2 | null;
@@ -70,8 +71,54 @@ export function hasCheckedIn(match: LineupMatchLike, teamId: string): boolean {
   return false;
 }
 
-/** Statuts de match sur lesquels composer n'a plus de sens. */
-const CLOSED_MATCH_STATUSES = new Set(['completed', 'cancelled', 'forfeit']);
+/**
+ * Chaque statut de match, classé : la feuille est-elle encore ouverte ?
+ *
+ * Historique du bug : l'ancienne liste fermait sur `completed` et `forfeit`,
+ * deux statuts qui n'existent PAS dans `MatchStatus`, et oubliait `finished`
+ * et `walkover`. Une équipe pouvait donc réécrire qui a joué APRÈS le
+ * résultat — et la feuille pilote l'attribution de rating.
+ *
+ * Un `Record<MatchStatus, …>` plutôt qu'un Set : ajouter un statut à
+ * `MatchStatus` sans le classer ici casse le typecheck, et
+ * `tests/unit/matchLineupStatusParity.test.ts` casse la suite (lecture de
+ * l'union dans types/admin.ts). Une liste qu'on complète à la main est
+ * exactement ce qui a produit ce bug.
+ *
+ *   - `postponed` reste OUVERT : le match n'a pas eu lieu, il sera rejoué.
+ *   - `disputed` est FERMÉ : le match a été joué, c'est le SCORE qui est
+ *     contesté, pas la composition. Laisser réécrire la feuille pendant un
+ *     litige, c'est offrir de la réécrire pour le gagner.
+ */
+export const MATCH_STATUS_LINEUP_PHASE = {
+  pending: 'open',
+  ongoing: 'open',
+  postponed: 'open',
+  finished: 'closed',
+  walkover: 'closed',
+  cancelled: 'closed',
+  disputed: 'closed',
+} as const satisfies Record<MatchStatus, 'open' | 'closed'>;
+
+/**
+ * Libellés hérités, absents de `MatchStatus` mais encore lus ailleurs
+ * (`completed` dans playerMatchView, `finalized` côté fil du match). Ils ne
+ * devraient jamais arriver en base ; s'ils arrivent, ils décrivent un match
+ * fini. Les fermer ne coûte rien, les laisser ouverts rouvrirait le bug.
+ */
+const LEGACY_CLOSED_STATUSES = new Set(['completed', 'forfeit', 'finalized']);
+
+/** `true` si, pour ce statut, composer n'a plus de sens. */
+export function isLineupClosedStatus(
+  status: string | null | undefined
+): boolean {
+  const key = (status ?? '').trim().toLowerCase();
+  if (LEGACY_CLOSED_STATUSES.has(key)) return true;
+  return (
+    (MATCH_STATUS_LINEUP_PHASE as Record<string, 'open' | 'closed'>)[key] ===
+    'closed'
+  );
+}
 
 /**
  * La feuille est-elle ouverte pour cette équipe ?
@@ -91,7 +138,7 @@ export function lineupOpenState(
 ): LineupOpenState {
   const slot = teamSlot(match, teamId);
   if (slot === null) return { open: false, reason: 'not_in_match', slot };
-  if (CLOSED_MATCH_STATUSES.has((match.status ?? '').trim().toLowerCase())) {
+  if (isLineupClosedStatus(match.status)) {
     return { open: false, reason: 'match_over', slot };
   }
   if (!hasCheckedIn(match, teamId)) {

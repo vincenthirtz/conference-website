@@ -63,4 +63,18 @@ export default ns('playerMatches', {
   errRateLimited: 'Trop de tentatives. Réessaie dans un instant.',
   errGeneric: "Échec de l'envoi du score. Réessaie.",
   retry: 'Réessayer',
+  errFinalizationInProgress:
+    "Le score est en cours d'enregistrement (l'adversaire vient de valider le même). Recharge la page dans un instant.",
+  errNotStarted:
+    "Le match n'a pas encore commencé : le score se rapporte après le coup d'envoi.",
+  errStaffReview:
+    "Ce match est en cours d'examen par le staff : ton report est enregistré, mais c'est le staff qui fixera le résultat.",
+  errInvalidForFormat:
+    'Ce score est impossible en BO{bestOf}. Vérifie le nombre de maps gagnées.',
+  errInvalidForFormatGeneric:
+    'Ce score est impossible pour le format du match. Vérifie le nombre de maps gagnées.',
+  errSessionExpired:
+    'Ta session a expiré. Reconnecte-toi puis renvoie le score.',
+  sessionExpired: 'Ta session a expiré.',
+  signinAgain: 'Se reconnecter',
 });

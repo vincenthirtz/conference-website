@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState, type JSX } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { formatMatchDateTime } from '@/utils/dates/formatMatchDateTime';
+import {
+  isSessionExpiredError,
+  loginHrefFor,
+} from '@/utils/player/sessionExpiry';
+import { isCheckinStillOpen } from '@/utils/matches/playerMatchLive';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import { useLang, type Lang } from '@/lib/i18n/LanguageProvider';
 import { localeTag } from '@/lib/i18n/useLocale';
@@ -36,15 +43,7 @@ type NextMatch = {
 };
 
 function formatScheduled(iso: string | null, lang: Lang, t: T): string {
-  if (!iso) return t.noDate;
-  return new Date(iso).toLocaleString(localeTag(lang), {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Europe/Paris',
-  });
+  return formatMatchDateTime(iso, localeTag(lang), 'long', t.noDate);
 }
 
 function formatRelative(iso: string | null, now: number, t: T): string | null {
@@ -89,7 +88,9 @@ export default function NextMatchCard({
   // the loading (hidden) state on mount.
   const [loading, setLoading] = useState(initialData === undefined);
   const [error, setError] = useState<string | null>(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
   const [now, setNow] = useState<number>(() => Date.now());
+  const router = useRouter();
 
   const load = useCallback(async () => {
     try {
@@ -99,7 +100,16 @@ export default function NextMatchCard({
       );
       setData(json);
       setError(null);
+      setSessionExpired(false);
     } catch (err) {
+      // Session expirée : le message générique « impossible de charger »
+      // laissait la capitaine sans issue le soir du match. On dit ce qui se
+      // passe, avec le lien qui ramène ici après reconnexion.
+      if (isSessionExpiredError(err)) {
+        setSessionExpired(true);
+        setError(t.sessionExpired);
+        return;
+      }
       // Surface a discreet inline message instead of silently vanishing; a
       // previously-rendered match stays visible (we only fall back to the error
       // card when there is nothing valid to show).
@@ -175,6 +185,17 @@ export default function NextMatchCard({
         {error ? (
           <p className="mt-3 text-sm text-amber-200/90" role="status">
             {error}
+            {sessionExpired && (
+              <>
+                {' '}
+                <Link
+                  href={loginHrefFor(router.asPath)}
+                  className="font-semibold text-white underline underline-offset-2"
+                >
+                  {t.signinAgain}
+                </Link>
+              </>
+            )}
           </p>
         ) : (
           <>
@@ -200,6 +221,22 @@ export default function NextMatchCard({
 
   return (
     <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-purple-500/10 via-white/[0.03] to-cyan-500/10 backdrop-blur-xl p-6">
+      {/* Match déjà affiché mais session expirée : les données restent, mais
+          le prochain rafraîchissement ne viendra pas. Le dire. */}
+      {sessionExpired && (
+        <p
+          className="mb-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-100"
+          role="status"
+        >
+          {t.sessionExpired}{' '}
+          <Link
+            href={loginHrefFor(router.asPath)}
+            className="font-semibold text-white underline underline-offset-2"
+          >
+            {t.signinAgain}
+          </Link>
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.16em] text-blue-200/80">
         <span className="inline-flex items-center rounded-full border border-blue-300/40 bg-blue-500/15 px-2.5 py-1 text-[10px] font-semibold text-blue-50">
           {t.nextMatch}
@@ -279,11 +316,12 @@ export default function NextMatchCard({
             </svg>
             {t.checkedIn}
           </span>
-        ) : checkin?.isPassed ? (
+        ) : checkin?.isPassed ||
+          (checkin?.closesAt && now > new Date(checkin.closesAt).getTime()) ? (
           <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-400/30 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-100">
             {t.checkinClosed}
           </span>
-        ) : checkin?.token && checkin.isOpen ? (
+        ) : checkin?.token && isCheckinStillOpen(checkin, now) ? (
           <Link
             href={matchHref}
             className="inline-flex items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow transition hover:-translate-y-0.5 hover:shadow-lg"

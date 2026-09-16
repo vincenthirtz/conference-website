@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import AgendaCard from '@/components/player/AgendaCard';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
@@ -21,6 +22,12 @@ import ReportScoreModal, {
 } from '@/components/player/ReportScoreModal';
 import { useLang, type Lang } from '@/lib/i18n/LanguageProvider';
 import { localeTag } from '@/lib/i18n/useLocale';
+import { formatMatchDateTime } from '@/utils/dates/formatMatchDateTime';
+import { canOfferScoreReport } from '@/utils/matches/playerMatchLive';
+import {
+  isSessionExpiredError,
+  loginHrefFor,
+} from '@/utils/player/sessionExpiry';
 import { useT, format } from '@/lib/i18n/useT';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import type { PlayerMatchesPayload } from '@/pages/api/player/matches';
@@ -34,15 +41,7 @@ type PlayerMatch = PlayerMatchesPayload['matches'][number];
 type T = typeof nsPlayerMatches.fr;
 
 function formatScheduled(iso: string | null, lang: Lang, t: T): string {
-  if (!iso) return t.dateToCome;
-  return new Date(iso).toLocaleString(localeTag(lang), {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Europe/Paris',
-  });
+  return formatMatchDateTime(iso, localeTag(lang), 'long', t.dateToCome);
 }
 
 function formatLabel(match: PlayerMatch): string | null {
@@ -63,17 +62,26 @@ function scheduledTime(match: PlayerMatch): number {
   return match.scheduledAt ? new Date(match.scheduledAt).getTime() : 0;
 }
 
-/** Statuts terminaux côté backend : plus rapportables par un capitaine. */
-const TERMINAL_STATUSES = new Set(['finished', 'walkover', 'cancelled']);
-
 /**
- * Un match est rapportable si les deux équipes sont assignées (opponent connu)
- * et que le match n'est pas clôturé. Le droit "capitaine" est vérifié côté
- * serveur (403 sinon) — on ne le connaît pas depuis la liste.
+ * Le bouton « Rapporter le score » n'apparaît que si le serveur l'acceptera.
+ *
+ * Avant : seuls les statuts terminaux étaient écartés. Le bouton s'affichait
+ * donc sur les matchs À VENIR, et pour TOUT le roster — alors que
+ * report-score.ts n'autorise que `teams.captain_id`. Une joueuse remplissait la
+ * modale pour lire « Vous n'êtes pas le capitaine ». Le droit vient désormais
+ * de l'API (`canReportScore`, même règle que la route), le moment de l'horloge
+ * (coup d'envoi passé ou match en cours) — exactement comme le fil du match.
  */
-function isReportable(match: PlayerMatch): boolean {
-  if (!match.opponent) return false;
-  return !TERMINAL_STATUSES.has(match.status);
+function isReportable(match: PlayerMatch, now: number): boolean {
+  return canOfferScoreReport(
+    {
+      status: match.status,
+      scheduledAt: match.scheduledAt,
+      canReport: match.canReportScore === true,
+      hasOpponent: !!match.opponent,
+    },
+    now
+  );
 }
 
 /** État local d'un report soumis durant la session (idempotence côté client). */
@@ -110,6 +118,8 @@ function MatchCard({
   t,
   reportState,
   onReport,
+  teamId,
+  now,
 }: {
   match: PlayerMatch;
   lang: Lang;
@@ -117,12 +127,15 @@ function MatchCard({
   reportState: ReportState | null;
   /** Absent ⇒ lecture seule : le match reste lisible, pas rapportable. */
   onReport?: (match: PlayerMatch) => void;
+  /** Équipe de la liste : la feuille de match doit viser CELLE-CI. */
+  teamId: string | null;
+  now: number;
 }) {
   const upcoming = isUpcoming(match);
   const checkin = match.checkin;
   const label = formatLabel(match);
   const isLive = match.status === 'ongoing';
-  const reportable = isReportable(match);
+  const reportable = isReportable(match, now);
   // Statut report dérivé : état local de session sinon statut serveur "disputed".
   const reportOutcome: ReportOutcome | null =
     reportState?.outcome ?? (match.status === 'disputed' ? 'disputed' : null);
@@ -274,7 +287,7 @@ function MatchCard({
           de toute façon, mais après un aller-retour réseau. */}
       {upcoming && checkin?.alreadyCheckedIn && (
         <div className="mt-4">
-          <MatchLineupCard matchId={match.id} />
+          <MatchLineupCard matchId={match.id} teamId={teamId} />
         </div>
       )}
     </div>
@@ -293,10 +306,22 @@ export default function PlayerMatchesScreen() {
   const { withSubject, readOnly } = usePlayerArea();
   const { withTeam } = useActiveTeam();
   const { lang } = useLang();
+  const router = useRouter();
   const t = useT(nsPlayerMatches);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<PlayerMatchesPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
+  // Horloge locale (minute) : le bouton de report apparaît au coup d'envoi
+  // sans recharger la page. Aucun appel réseau.
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      setNow(Date.now());
+    }, 60_000);
+    return () => clearInterval(id);
+  }, []);
   const [reports, setReports] = useState<Record<string, ReportState>>({});
   const [activeMatch, setActiveMatch] = useState<PlayerMatch | null>(null);
 
@@ -308,9 +333,17 @@ export default function PlayerMatchesScreen() {
         { skipAuthRedirect: true }
       );
       setData(json);
+      setSessionExpired(false);
+      setNow(Date.now());
     } catch (err) {
-      logger.error('[player/matches] load error:', err);
-      setError(t.loadError);
+      // 401 ≠ panne : « Réessayer » échouerait indéfiniment. On propose la
+      // reconnexion qui ramène sur cette page.
+      if (isSessionExpiredError(err)) {
+        setSessionExpired(true);
+      } else {
+        logger.error('[player/matches] load error:', err);
+        setError(t.loadError);
+      }
     } finally {
       setLoading(false);
     }
@@ -392,6 +425,21 @@ export default function PlayerMatchesScreen() {
           <AgendaCard />
         </div>
 
+        {sessionExpired && (
+          <div
+            role="alert"
+            className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"
+          >
+            <span>{t.sessionExpired}</span>
+            <Link
+              href={loginHrefFor(router.asPath)}
+              className="inline-flex min-h-[44px] items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-900"
+            >
+              {t.signinAgain}
+            </Link>
+          </div>
+        )}
+
         {error && (
           <div
             role="alert"
@@ -412,7 +460,7 @@ export default function PlayerMatchesScreen() {
           </div>
         )}
 
-        {!data?.team && !error ? (
+        {sessionExpired && !data ? null : !data?.team && !error ? (
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-8 text-center">
             <p className="text-lg font-semibold text-white">{t.noTeamTitle}</p>
             <p className="mt-2 text-sm text-gray-400">{t.noTeamBody}</p>
@@ -447,6 +495,8 @@ export default function PlayerMatchesScreen() {
                       t={t}
                       reportState={reports[m.id] ?? null}
                       onReport={readOnly ? undefined : setActiveMatch}
+                      teamId={data?.team?.id ?? null}
+                      now={now}
                     />
                   ))}
                 </div>
@@ -470,6 +520,8 @@ export default function PlayerMatchesScreen() {
                       t={t}
                       reportState={reports[m.id] ?? null}
                       onReport={readOnly ? undefined : setActiveMatch}
+                      teamId={data?.team?.id ?? null}
+                      now={now}
                     />
                   ))}
                 </div>

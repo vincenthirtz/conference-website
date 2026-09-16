@@ -5,6 +5,11 @@ get:
   tags:
     - public/auth
   summary: Prochain match du joueur connecte + token check-in.
+  description: |
+    Choix du match : d'abord un match pending dont le check-in de l'equipe est
+    ouvert et pas encore fait ; sinon le plus tot programme parmi les pending
+    dates depuis moins d'une heure et les ongoing quel que soit leur horaire
+    (une soiree en retard ne fait pas disparaitre le match en cours).
   operationId: getPlayerNextMatch
   security:
     - PlayerBearer: []

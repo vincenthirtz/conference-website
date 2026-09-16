@@ -3,7 +3,7 @@
 // Donnees via GET /api/player/next-match ; validation via POST public
 // /api/checkin/{token}.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
@@ -15,6 +15,15 @@ import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { NextMatchPayload } from '@/pages/api/player/next-match';
 import MatchLineupCard from '@/components/player/MatchLineupCard';
+import { formatMatchDateTime } from '@/utils/dates/formatMatchDateTime';
+import {
+  isCheckinStillOpen,
+  matchThreadRefreshMs,
+} from '@/utils/matches/playerMatchLive';
+import {
+  isSessionExpiredError,
+  loginHrefFor,
+} from '@/utils/player/sessionExpiry';
 
 import { logger } from '../../utils/logger';
 import nsCheckin from '@/lib/i18n/locales/fr/checkin';
@@ -23,25 +32,14 @@ import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 type T = typeof nsCheckin.fr;
 
 function formatScheduled(iso: string | null, lang: Lang, t: T): string {
-  if (!iso) return t.dateToCome;
-  return new Date(iso).toLocaleString(localeTag(lang), {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Europe/Paris',
-  });
+  return formatMatchDateTime(iso, localeTag(lang), 'long', t.dateToCome);
 }
 
 function formatTime(iso: string | null, lang: Lang): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleTimeString(localeTag(lang), {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Europe/Paris',
-  });
+  return formatMatchDateTime(iso, localeTag(lang), 'time', '—');
 }
+
+const CHECKIN_PATH = '/player/checkin';
 
 /** "12:34" countdown string between now and target; null when past/invalid. */
 function countdown(targetIso: string | null, now: number): string | null {
@@ -63,7 +61,7 @@ function PlayerCheckin() {
     loading: authLoading,
     ready,
   } = usePlayerSession({
-    redirectTo: '/login?next=/player/checkin',
+    redirectTo: loginHrefFor(CHECKIN_PATH),
   });
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { withTeam } = useActiveTeam();
@@ -73,6 +71,8 @@ function PlayerCheckin() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<NextMatchPayload | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const inFlight = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   // True once THIS session has just turned the check-in green, so the
@@ -80,25 +80,91 @@ function PlayerCheckin() {
   // silently re-rendering. Reset is not needed: the action is one-way.
   const [justConfirmed, setJustConfirmed] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const json = await adminFetchJson<NextMatchPayload>(
-        withTeam('/api/player/next-match'),
-        { skipAuthRedirect: true }
-      );
-      setData(json);
-    } catch (err) {
-      logger.error('[player/checkin] load error:', err);
-      setLoadError(t.loadError);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, t, withTeam]);
+  /**
+   * `background` : un échec de rafraîchissement GARDE l'écran (le bouton de
+   * check-in ne doit pas disparaître derrière « erreur de chargement » parce
+   * qu'une requête a échoué en 4G).
+   */
+  const load = useCallback(
+    async ({ background = false }: { background?: boolean } = {}) => {
+      if (background && inFlight.current) return;
+      inFlight.current = true;
+      try {
+        const json = await adminFetchJson<NextMatchPayload>(
+          withTeam('/api/player/next-match'),
+          { skipAuthRedirect: true }
+        );
+        setData(json);
+        setLoadError(null);
+        setSessionExpired(false);
+      } catch (err) {
+        // 401 : ni message générique ni « réessayer » — un lien de
+        // reconnexion qui ramène ICI. C'était un cul-de-sac à l'heure du
+        // check-in.
+        if (isSessionExpiredError(err)) {
+          setSessionExpired(true);
+        } else if (!background) {
+          logger.error('[player/checkin] load error:', err);
+          setLoadError(t.loadError);
+        } else {
+          logger.warn('[player/checkin] background refresh failed:', err);
+        }
+      } finally {
+        inFlight.current = false;
+        setLoading(false);
+      }
+    },
+    [adminFetchJson, t, withTeam]
+  );
 
   useEffect(() => {
     if (!ready) return;
     load();
   }, [ready, load]);
+
+  // Rafraîchissement. `isOpen` et le jeton sont calculés À LA REQUÊTE : ouverte
+  // à T-65, la page passait à T-60 sur « check-in indisponible » (fenêtre
+  // ouverte côté horloge, mais ni `isOpen` ni jeton dans les données). Même
+  // cadence que le fil du match : 30 s autour de la fenêtre, rien ailleurs,
+  // et un rattrapage au retour sur l'onglet.
+  const [tick, setTick] = useState<number>(() => Date.now());
+  useEffect(() => {
+    if (!ready) return;
+    const clockId = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      setTick(Date.now());
+    }, 30_000);
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      setTick(Date.now());
+      void load({ background: true });
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(clockId);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [ready, load]);
+
+  const refreshMs =
+    data?.match && data.checkin && !data.checkin.alreadyCheckedIn
+      ? matchThreadRefreshMs(
+          {
+            status: data.match.status,
+            checkinOpensAt: data.checkin.opensAt,
+            checkinClosesAt: data.checkin.closesAt,
+          },
+          tick
+        )
+      : null;
+  useEffect(() => {
+    if (!ready || refreshMs === null || sessionExpired) return;
+    const id = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      void load({ background: true });
+    }, refreshMs);
+    return () => clearInterval(id);
+  }, [ready, refreshMs, sessionExpired, load]);
 
   const handleSubmit = async () => {
     const token = data?.checkin?.token;
@@ -122,7 +188,7 @@ function PlayerCheckin() {
         addToast(t.successToast, 'success');
         setJustConfirmed(true);
       }
-      await load();
+      await load({ background: true });
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : t.submitNetwork);
     } finally {
@@ -141,7 +207,7 @@ function PlayerCheckin() {
           <h1 className="text-3xl font-bold text-gradient">{t.title}</h1>
           <p className="mt-4 text-gray-300">{t.signinPrompt}</p>
           <Link
-            href="/login?next=/player/checkin"
+            href={loginHrefFor(CHECKIN_PATH)}
             className="mt-8 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-purple-500/20 transition hover:brightness-110"
           >
             {t.signin}
@@ -173,6 +239,21 @@ function PlayerCheckin() {
           <p className="text-sm text-gray-400 mt-2">{t.subtitle}</p>
         </div>
 
+        {sessionExpired && (
+          <div
+            className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"
+            role="alert"
+          >
+            <span>{t.sessionExpired}</span>
+            <Link
+              href={loginHrefFor(CHECKIN_PATH)}
+              className="inline-flex min-h-[44px] items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-900"
+            >
+              {t.signinAgain}
+            </Link>
+          </div>
+        )}
+
         {loadError && (
           <div
             className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100"
@@ -182,7 +263,7 @@ function PlayerCheckin() {
           </div>
         )}
 
-        {!hasMatch && !loadError ? (
+        {sessionExpired && !data ? null : !hasMatch && !loadError ? (
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-8 text-center">
             <p className="text-lg font-semibold text-white">{t.noMatchTitle}</p>
             <p className="mt-2 text-sm text-gray-400">{t.noMatchBody}</p>
@@ -239,7 +320,10 @@ function PlayerCheckin() {
                 rafraîchir `alreadyCheckedIn`. La carte se tait d'elle-même
                 pour qui n'a pas la permission `validate_lineup`. */}
             {checkin?.alreadyCheckedIn && match?.id && (
-              <MatchLineupCard matchId={match.id} />
+              <MatchLineupCard
+                matchId={match.id}
+                teamId={data?.team?.id ?? null}
+              />
             )}
 
             {/* Le fil du match (J1) porte désormais TOUT le déroulé — check-in
@@ -387,8 +471,10 @@ function CheckinState({
     );
   }
 
-  // 2) Fenetre ouverte + token -> bouton de validation.
-  if (checkin.isOpen && checkin.token) {
+  // 2) Fenetre ouverte + token -> bouton de validation. L'horloge locale ne
+  // fait que REFERMER la fenetre au coup d'envoi (jamais la prolonger : le
+  // forfait tombe au premier passage du cron apres l'heure du match).
+  if (isCheckinStillOpen(checkin, now) && checkin.token) {
     const remaining = countdown(checkin.closesAt, now);
     return (
       <section className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
@@ -449,8 +535,12 @@ function CheckinState({
     );
   }
 
-  // 4) Fenetre passee sans validation.
-  if (checkin.isPassed) {
+  // 4) Fenetre passee sans validation (vue du serveur, ou de l'horloge locale
+  // si la page n'a pas encore ete rafraichie depuis le coup d'envoi).
+  if (
+    checkin.isPassed ||
+    (!!checkin.closesAt && now > new Date(checkin.closesAt).getTime())
+  ) {
     return (
       <section className="rounded-2xl border border-amber-400/30 bg-amber-500/10 backdrop-blur-xl p-6">
         <h3 className="text-lg font-semibold text-amber-50">{t.passedTitle}</h3>

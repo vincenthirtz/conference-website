@@ -9,6 +9,8 @@ export default {
   retry: 'Retry',
   signIn: 'Sign in',
   connectPrompt: 'Sign in to follow your match.',
+  sessionExpired: 'Your session expired.',
+  signinAgain: 'Sign in again',
 
   vs: 'vs',
   dateTbd: 'Date to be confirmed',
@@ -61,6 +63,7 @@ export default {
     'The two reports disagree: staff will arbitrate. You can correct yours.',
   scoreFinal: 'Final score: {mine}–{opponent}.',
   scoreCaptainOnly: 'Only the captain can report the score.',
+  scoreAfterKickoff: 'The score can be reported once the match has kicked off.',
   reviewCta: 'Write the match review ↗',
   reviewBody:
     'A review written while it is fresh beats three memories. It stays in your team memory.',

@@ -18,6 +18,8 @@ export default {
   subtitle: 'Confirm your presence before kickoff.',
   signinPrompt: 'Sign in to confirm your check-in.',
   signin: 'Sign in',
+  sessionExpired: 'Your session expired. Sign in again to check in.',
+  signinAgain: 'Sign in again',
   noMatchTitle: 'No match to confirm right now',
   noMatchBody: 'Check-in opens shortly before your next match kicks off.',
   seeMatches: 'View my matches',

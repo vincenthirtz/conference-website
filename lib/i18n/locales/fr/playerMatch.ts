@@ -17,6 +17,8 @@ export default ns('playerMatch', {
   retry: 'Réessayer',
   signIn: 'Se connecter',
   connectPrompt: 'Connecte-toi pour suivre ton match.',
+  sessionExpired: 'Ta session a expiré.',
+  signinAgain: 'Se reconnecter',
 
   vs: 'vs',
   dateTbd: 'Date à confirmer',
@@ -72,6 +74,7 @@ export default ns('playerMatch', {
     'Les deux reports divergent : le staff arbitre. Tu peux corriger le tien.',
   scoreFinal: 'Score final : {mine}–{opponent}.',
   scoreCaptainOnly: 'Seule la capitaine peut rapporter le score.',
+  scoreAfterKickoff: "Le score se rapporte une fois le coup d'envoi passé.",
   reviewCta: 'Écrire la revue du match ↗',
   reviewBody:
     'Une revue écrite à chaud vaut trois souvenirs. Elle reste dans la mémoire de ton équipe.',

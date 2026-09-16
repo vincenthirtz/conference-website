@@ -22,7 +22,7 @@
 //      bouton mort : « la feuille s'ouvre après le check-in » est actionnable,
 //      un bouton grisé ne l'est pas.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
@@ -30,7 +30,9 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
-import MatchLineupCard from '@/components/player/MatchLineupCard';
+import MatchLineupCard, {
+  MATCH_CHECKIN_ANCHOR,
+} from '@/components/player/MatchLineupCard';
 import MatchPrepCard from '@/components/player/MatchPrepCard';
 import ReportScoreModal, {
   type LocalReport,
@@ -40,6 +42,17 @@ import { useLocale } from '@/lib/i18n/useLocale';
 import nsPlayerMatch from '@/lib/i18n/locales/fr/playerMatch';
 import nsPlayerMatches from '@/lib/i18n/locales/fr/playerMatches';
 import type { PlayerMatchDetail } from '@/pages/api/player/matches/[matchId]';
+import { formatMatchDateTime } from '@/utils/dates/formatMatchDateTime';
+import {
+  canOfferScoreReport,
+  isCheckinStillOpen,
+  matchThreadRefreshMs,
+} from '@/utils/matches/playerMatchLive';
+import { isLineupClosedStatus } from '@/utils/matches/lineup';
+import {
+  isSessionExpiredError,
+  loginHrefFor,
+} from '@/utils/player/sessionExpiry';
 
 import { logger } from '../../../utils/logger';
 
@@ -47,17 +60,13 @@ type T = typeof nsPlayerMatch.fr;
 
 const FINISHED = new Set(['finished', 'completed', 'finalized', 'walkover']);
 
+/**
+ * Heure de PARIS, pas celle du téléphone : le calendrier, les annonces Discord
+ * et le cron de check-in raisonnent tous en Europe/Paris. Sans fuseau épinglé,
+ * « le check-in ouvre à 18:00 » s'affichait 12:00 à Montréal.
+ */
 function formatDateTime(iso: string | null, locale: string, t: T): string {
-  if (!iso) return t.dateTbd;
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return t.dateTbd;
-  return d.toLocaleString(locale, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatMatchDateTime(iso, locale, 'long', t.dateTbd);
 }
 
 /**
@@ -70,11 +79,14 @@ function Step({
   title,
   state,
   children,
+  id,
 }: {
   index: number;
   title: string;
   state: 'done' | 'active' | 'idle';
   children: ReactNode;
+  /** Ancre (ex. `#checkin`, visée par la feuille de match). */
+  id?: string;
 }) {
   const ring =
     state === 'active'
@@ -90,7 +102,10 @@ function Step({
         : 'bg-white/10 text-gray-400';
 
   return (
-    <section className={`rounded-2xl border p-5 backdrop-blur-xl ${ring}`}>
+    <section
+      id={id}
+      className={`scroll-mt-24 rounded-2xl border p-5 backdrop-blur-xl ${ring}`}
+    >
       <h2 className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.14em] text-gray-300">
         <span
           className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold tabular-nums ${badge}`}
@@ -115,37 +130,121 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
   const t = useT(nsPlayerMatch);
   const tMatches = useT(nsPlayerMatches);
   const locale = useLocale();
-  const { user, loading: authLoading, ready } = usePlayerSession();
-  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  // C'est l'URL collée dans le fil Discord du match : une personne pas encore
+  // connectée doit y REVENIR après la connexion, pas atterrir sur /player.
+  const loginHref = loginHrefFor(
+    `/player/match/${encodeURIComponent(matchId)}`
+  );
+  const {
+    user,
+    loading: authLoading,
+    ready,
+  } = usePlayerSession({ redirectTo: loginHref });
+  const { adminFetchJson } = useAdminFetch({ loginPath: loginHref });
   const { withSubject, readOnly } = usePlayerArea();
   const { addToast } = useToast();
 
   const [data, setData] = useState<PlayerMatchDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
   const [checkinBusy, setCheckinBusy] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  // Horloge LOCALE : fait basculer les états qui dépendent de l'heure (fin de
+  // la fenêtre de check-in, bouton de report au coup d'envoi) et décide de la
+  // cadence réseau. Aucun appel réseau à chaque tick.
+  const [now, setNow] = useState<number>(() => Date.now());
+  // Un rafraîchissement en arrière-plan ne doit jamais en chevaucher un autre
+  // (réseau mobile lent + intervalle de 30 s).
+  const inFlight = useRef(false);
 
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      const payload = await adminFetchJson<PlayerMatchDetail>(
-        withSubject(`/api/player/matches/${encodeURIComponent(matchId)}`)
-      );
-      setData(payload);
-    } catch (err) {
-      logger.error('[player/match] load error:', err);
-      setData(null);
-      setError(t.loadError);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, matchId, withSubject, t]);
+  /**
+   * `background` : rafraîchissement silencieux. Un échec y GARDE l'écran tel
+   * quel — remplacer le fil par « erreur de chargement » parce qu'une requête
+   * a échoué en 4G, c'est perdre le bouton de check-in au pire moment. Seul
+   * le premier chargement (ou « Réessayer ») affiche l'erreur.
+   */
+  const load = useCallback(
+    async ({ background = false }: { background?: boolean } = {}) => {
+      if (background && inFlight.current) return;
+      inFlight.current = true;
+      if (!background) setError(null);
+      try {
+        const payload = await adminFetchJson<PlayerMatchDetail>(
+          withSubject(`/api/player/matches/${encodeURIComponent(matchId)}`),
+          { skipAuthRedirect: true }
+        );
+        setData(payload);
+        setSessionExpired(false);
+      } catch (err) {
+        if (isSessionExpiredError(err)) {
+          // Pas de redirection sèche en plein écran : on dit ce qui se passe
+          // et on donne le lien qui ramène ICI.
+          setSessionExpired(true);
+        } else if (!background) {
+          logger.error('[player/match] load error:', err);
+          setData(null);
+          setError(t.loadError);
+        } else {
+          logger.warn('[player/match] background refresh failed:', err);
+        }
+      } finally {
+        inFlight.current = false;
+        setNow(Date.now());
+        setLoading(false);
+      }
+    },
+    [adminFetchJson, matchId, withSubject, t]
+  );
 
   useEffect(() => {
     if (!ready) return;
     load();
   }, [ready, load]);
+
+  // Tick local (30 s, onglet visible seulement) + rattrapage au retour sur
+  // l'onglet — même triptyque que NextMatchCard. Le téléphone verrouillé
+  // entre deux matchs est LE cas nominal d'un vendredi soir.
+  useEffect(() => {
+    if (!ready) return;
+    const clockId = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      setNow(Date.now());
+    }, 30_000);
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      setNow(Date.now());
+      void load({ background: true });
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(clockId);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [ready, load]);
+
+  // Cadence réseau : rapprochée seulement quand quelque chose PEUT bouger
+  // (fenêtre de check-in, match en cours). Recalculée à chaque tick : un fil
+  // ouvert à T-2 h passe tout seul en 30 s à T-70 min, et s'arrête une fois le
+  // match terminé. Rien du tout sur un match lointain.
+  const refreshMs = data
+    ? matchThreadRefreshMs(
+        {
+          status: data.match.status,
+          checkinOpensAt: data.checkin.opensAt,
+          checkinClosesAt: data.checkin.closesAt,
+        },
+        now
+      )
+    : null;
+  useEffect(() => {
+    if (!ready || refreshMs === null || sessionExpired) return;
+    const id = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      void load({ background: true });
+    }, refreshMs);
+    return () => clearInterval(id);
+  }, [ready, refreshMs, sessionExpired, load]);
 
   // Le check-in passe par la route PUBLIQUE à jeton (idempotente) : c'est la
   // même que /player/checkin et que le lien envoyé par le bot. Un second envoi
@@ -165,7 +264,7 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
         json?.alreadyCheckedIn === true ? t.checkinAlready : t.checkinSuccess,
         json?.alreadyCheckedIn === true ? 'info' : 'success'
       );
-      await load();
+      await load({ background: true });
     } catch (err) {
       addToast(err instanceof Error ? err.message : t.checkinFailed, 'error');
     } finally {
@@ -181,11 +280,38 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
         <main className="mx-auto max-w-md px-4 py-10 pt-32 text-center">
           <p className="text-gray-300">{t.connectPrompt}</p>
           <Link
-            href={`/login?next=/player/match/${encodeURIComponent(matchId)}`}
+            href={loginHref}
             className="mt-8 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-6 py-3 text-sm font-bold text-white"
           >
             {t.signIn}
           </Link>
+        </main>
+      </div>
+    );
+  }
+
+  // Session expirée : ni « erreur de chargement », ni « Réessayer » (qui
+  // échouerait à l'infini) — le seul geste utile est de se reconnecter.
+  const sessionNotice = sessionExpired ? (
+    <div
+      role="alert"
+      className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"
+    >
+      <span>{t.sessionExpired}</span>
+      <Link
+        href={loginHref}
+        className="inline-flex min-h-[44px] items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-900"
+      >
+        {t.signinAgain}
+      </Link>
+    </div>
+  ) : null;
+
+  if (!data && sessionExpired) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
+        <main className="mx-auto max-w-2xl px-4 py-10 pt-28">
+          {sessionNotice}
         </main>
       </div>
     );
@@ -226,8 +352,25 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
   const { match, team, opponent, tournament, checkin, readiness, report } =
     data;
   const isFinished = FINISHED.has(match.status);
+  // Restreint par l'horloge locale, jamais élargi (cf. isCheckinStillOpen) :
+  // le forfait tombe au coup d'envoi, un bouton encore ouvert mentirait.
+  const checkinOpen = isCheckinStillOpen(checkin, now);
+  const checkinPassed =
+    checkin.isPassed ||
+    (!!checkin.closesAt && now > new Date(checkin.closesAt).getTime());
   const isDisputed = match.status === 'disputed';
   const canAct = !readOnly;
+  const showReportCta =
+    canAct &&
+    canOfferScoreReport(
+      {
+        status: match.status,
+        scheduledAt: match.scheduledAt,
+        canReport: data.permissions.reportScore,
+        hasOpponent: !!opponent,
+      },
+      now
+    );
 
   const statusLabel = isDisputed
     ? t.statusDisputed
@@ -241,7 +384,7 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
   // manqué. C'est la seule étape dont la fenêtre se referme toute seule.
   const checkinState: 'done' | 'active' | 'idle' = checkin.alreadyCheckedIn
     ? 'done'
-    : checkin.isOpen
+    : checkinOpen
       ? 'active'
       : 'idle';
 
@@ -255,6 +398,7 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
       <main className="mx-auto max-w-2xl px-4 py-10 pt-24">
+        {sessionNotice}
         <Link
           href="/player/matches"
           className="mb-6 inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white"
@@ -336,14 +480,19 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
           </Step>
 
           {/* 2 — Check-in */}
-          <Step index={2} title={t.stepCheckin} state={checkinState}>
+          <Step
+            index={2}
+            title={t.stepCheckin}
+            state={checkinState}
+            id={MATCH_CHECKIN_ANCHOR}
+          >
             {checkin.alreadyCheckedIn ? (
               <p className="text-emerald-200">
                 {format(t.checkinDone, {
                   date: formatDateTime(checkin.checkedInAt, locale, t),
                 })}
               </p>
-            ) : checkin.isOpen ? (
+            ) : checkinOpen ? (
               <>
                 <p>{t.checkinOpenNow}</p>
                 {!checkin.token ? (
@@ -360,7 +509,7 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
                   <p className="mt-2 text-gray-400">{t.checkinReadOnly}</p>
                 )}
               </>
-            ) : checkin.isPassed ? (
+            ) : checkinPassed ? (
               <p className="text-amber-200">{t.checkinMissed}</p>
             ) : (
               <p className="text-gray-400">
@@ -380,7 +529,17 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
               title={t.stepLineup}
               state={checkin.alreadyCheckedIn ? 'active' : 'idle'}
             >
-              <MatchLineupCard matchId={match.id} />
+              {/* `key` : la carte charge une fois, au montage. Sans remontage,
+                  elle affichait encore « fais ton check-in » après le
+                  check-in (ou restait éditable après la fin du match) jusqu'à
+                  un rechargement manuel. On ne remonte QUE sur ces deux
+                  bascules — pas sur pending → ongoing, qui effacerait une
+                  sélection en cours de saisie. */}
+              <MatchLineupCard
+                key={`${checkin.alreadyCheckedIn}-${isLineupClosedStatus(match.status)}`}
+                matchId={match.id}
+                teamId={team.id}
+              />
             </Step>
           )}
 
@@ -442,7 +601,7 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
 
             {/* Le rapport de score est réservé à la capitaine au sens strict
                 (teams.captain_id) — même règle que la route qui l'enregistre. */}
-            {data.permissions.reportScore && canAct ? (
+            {showReportCta ? (
               <button
                 onClick={() => setReportOpen(true)}
                 className="mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
@@ -452,7 +611,11 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
             ) : (
               !isFinished && (
                 <p className="mt-2 text-xs text-gray-500">
-                  {t.scoreCaptainOnly}
+                  {/* Capitaine, mais trop tôt : le dire, plutôt que « réservé
+                      à la capitaine » à la capitaine elle-même. */}
+                  {data.permissions.reportScore && canAct
+                    ? t.scoreAfterKickoff
+                    : t.scoreCaptainOnly}
                 </p>
               )
             )}

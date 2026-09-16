@@ -25,6 +25,7 @@ import { useLocale } from '@/lib/i18n/useLocale';
 import nsPlayerAgenda from '@/lib/i18n/locales/fr/playerAgenda';
 import type { AgendaEntry, PlayerAgenda } from '@/utils/player/agenda';
 import type { AgendaSubscription } from '@/pages/api/player/agenda/subscription';
+import { formatMatchDateTime } from '@/utils/dates/formatMatchDateTime';
 
 import { logger } from '../../utils/logger';
 
@@ -197,12 +198,9 @@ export default function AgendaCard() {
                   const row = (
                     <>
                       <span className="w-[104px] shrink-0 font-mono text-[11px] tabular-nums text-gray-400">
-                        {at.toLocaleString(locale, {
-                          weekday: 'short',
-                          day: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
+                        {/* Heure de Paris, comme le calendrier du tournoi et
+                            les annonces Discord — pas celle du téléphone. */}
+                        {formatMatchDateTime(at, locale, 'agenda')}
                       </span>
                       <span className="min-w-0 flex-1 truncate text-sm text-white">
                         {e.title}
@@ -270,11 +268,11 @@ export default function AgendaCard() {
               <p className="mt-1 text-xs text-gray-500">
                 {sub.createdAt &&
                   format(t.subscribeSince, {
-                    date: new Date(sub.createdAt).toLocaleDateString(locale),
+                    date: formatMatchDateTime(sub.createdAt, locale, 'date'),
                   })}
                 {sub.lastUsedAt
                   ? ` · ${format(t.subscribeLastUsed, {
-                      date: new Date(sub.lastUsedAt).toLocaleDateString(locale),
+                      date: formatMatchDateTime(sub.lastUsedAt, locale, 'date'),
                     })}`
                   : ` · ${t.subscribeNeverUsed}`}
               </p>

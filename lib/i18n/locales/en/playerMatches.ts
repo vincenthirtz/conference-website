@@ -61,4 +61,18 @@ export default {
   errRateLimited: 'Too many attempts. Try again in a moment.',
   errGeneric: 'Failed to send the score. Please try again.',
   retry: 'Retry',
+  errFinalizationInProgress:
+    'The score is being saved (the opponent just confirmed the same one). Reload the page in a moment.',
+  errNotStarted:
+    'The match has not started yet: report the score after kickoff.',
+  errStaffReview:
+    'This match is under staff review: your report is saved, but the staff will set the result.',
+  errInvalidForFormat:
+    'This score is impossible in a BO{bestOf}. Check the number of maps won.',
+  errInvalidForFormatGeneric:
+    'This score is impossible for the match format. Check the number of maps won.',
+  errSessionExpired:
+    'Your session expired. Sign in again, then resend the score.',
+  sessionExpired: 'Your session expired.',
+  signinAgain: 'Sign in again',
 };

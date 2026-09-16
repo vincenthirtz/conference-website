@@ -853,6 +853,82 @@ export function sendCheckinReminderEmail(opts: {
 }
 
 /**
+ * Mail à la capitaine d'un match ANNULÉ parce qu'aucune des deux équipes n'a
+ * pointé.
+ *
+ * Pas `sendCheckinForfeitEmail` : son titre dit « Votre équipe a été déclarée
+ * forfait », avec l'équipe d'en face nommée. Envoyé aux deux capitaines, chacune
+ * lisait qu'elle avait perdu contre l'autre — pour un match sans vainqueur. Et
+ * son motif « aucun check-in après N min » est faux ici : la décision tombe au
+ * coup d'envoi.
+ */
+export function sendCheckinCancelledEmail(opts: {
+  to: string;
+  teamName: string;
+  opponentName: string;
+  scheduledAt: string;
+  tournamentName: string;
+  /** Espace au nom duquel l'email part (compte d'envoi + marque). */
+  tenantId?: string | null;
+}): Promise<SendEmailResult> {
+  const dateStr = (() => {
+    try {
+      return new Date(opts.scheduledAt).toLocaleString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Europe/Paris',
+      });
+    } catch {
+      return opts.scheduledAt;
+    }
+  })();
+
+  return sendEmail({
+    tenantId: opts.tenantId,
+    to: opts.to,
+    subject: `Match annulé — ${opts.teamName} vs ${opts.opponentName}`,
+    tags: ['match-checkin-cancelled'],
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Match annul&eacute;</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        Ni votre &eacute;quipe <strong style="color:#ffffff;">${escapeHtml(opts.teamName)}</strong>
+        ni <strong style="color:#ffffff;">${escapeHtml(opts.opponentName)}</strong>
+        n&apos;ont confirm&eacute; leur pr&eacute;sence avant le coup d&apos;envoi&nbsp;:
+        le match est <strong style="color:#f59e0b;">annul&eacute;</strong>, sans vainqueur.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Tournoi</span><br/>
+            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(opts.tournamentName)}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Match</span><br/>
+            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(opts.teamName)} vs ${escapeHtml(opts.opponentName)}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px;">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">D&eacute;but pr&eacute;vu</span><br/>
+            <span style="font-size:15px;color:#7bc96a;font-weight:500;">${escapeHtml(dateStr)}</span>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0 0 8px;font-size:13px;color:#C6BED9;line-height:1.5;background:rgba(45,204,253,0.08);border:1px solid rgba(45,204,253,0.15);border-radius:8px;padding:10px 14px;">
+        Si vous pensez qu&apos;il s&apos;agit d&apos;une erreur, contactez le staff au plus vite
+        sur le <a href="${DISCORD_URL}" style="color:#5865F2;text-decoration:underline;font-weight:600;">Discord du tournoi</a>.
+      </p>
+    `),
+  });
+}
+
+/**
  * Notification sent to the captain of a team that was auto-forfeited because
  * it did not check in before the (per-tournament) grace window elapsed.
  * Transactional — fire-and-forget from the forfeit pipeline; an email failure

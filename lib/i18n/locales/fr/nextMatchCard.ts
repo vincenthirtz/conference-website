@@ -29,4 +29,6 @@ export default ns('nextMatchCard', {
   emptyBody: 'Ton prochain match programmé apparaîtra ici avec le check-in.',
   loadErrorShort: 'Impossible de charger ton prochain match pour le moment.',
   scoutOpponent: "Préparer l'adversaire",
+  sessionExpired: 'Ta session a expiré.',
+  signinAgain: 'Se reconnecter',
 });

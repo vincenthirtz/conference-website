@@ -5,7 +5,9 @@
 // POST /api/player/matches/{matchId}/report-score.
 //
 // Gère les 3 issues (awaiting_opponent / finalized / disputed) et les erreurs
-// (400 / 403 / 409 MATCH_FINALIZED / 429) via le système de toast partagé. Le
+// (400 INVALID_SCORE_FOR_FORMAT / 400 / 401 / 403 / 409 MATCH_NOT_STARTED /
+// 409 MATCH_FINALIZED / 409 FINALIZATION_IN_PROGRESS / 429) via le système de
+// toast partagé. Le
 // report soumis est remonté au parent (idempotence : re-soumission supportée).
 
 import { useEffect, useState } from 'react';
@@ -48,6 +50,61 @@ type Props = {
    */
   onReported: (outcome: ReportOutcome, report: LocalReport) => void;
 };
+
+/**
+ * Réponse d'erreur de report-score → message affiché.
+ *
+ * Les CODES d'abord, les statuts ensuite : la route renvoie désormais quatre 409
+ * (MATCH_NOT_STARTED, MATCH_FINALIZED, FINALIZATION_IN_PROGRESS,
+ * DISPUTE_UNDER_STAFF_REVIEW) et deux
+ * familles de 400 qui n'appellent
+ * pas le même geste. Tester `status === 409` en premier dirait « match
+ * clôturé » à une capitaine qui rapporte simplement trop tôt — elle irait
+ * chercher le staff pour rien, un soir où il est débordé.
+ *
+ * Exporté et pur pour être testé sans DOM (tests/unit/reportScoreErrors.test.ts).
+ */
+export function reportScoreErrorToast(
+  status: number,
+  code: string | null,
+  bestOf: number | null,
+  t: T
+): { message: string; level: 'error' | 'warning' } {
+  if (code === 'MATCH_NOT_STARTED') {
+    return { message: t.errNotStarted, level: 'warning' };
+  }
+  if (code === 'INVALID_SCORE_FOR_FORMAT') {
+    return {
+      message:
+        bestOf != null
+          ? format(t.errInvalidForFormat, { bestOf })
+          : t.errInvalidForFormatGeneric,
+      level: 'error',
+    };
+  }
+  if (code === 'MATCH_FINALIZED') {
+    return { message: t.errFinalized, level: 'error' };
+  }
+  // Les deux capitaines ont validé à la même seconde : l'AUTRE requête est en
+  // train de finaliser. Rien n'a échoué côté joueuse — on le dit, et on
+  // l'invite à recharger plutôt qu'à renvoyer (ou à ouvrir un ticket).
+  if (code === 'FINALIZATION_IN_PROGRESS') {
+    return { message: t.errFinalizationInProgress, level: 'warning' };
+  }
+  // Dispute ouverte par le staff : l'accord des capitaines ne la referme pas.
+  // Le report est bien enregistré — ce n'est pas un échec, c'est une attente.
+  if (code === 'DISPUTE_UNDER_STAFF_REVIEW') {
+    return { message: t.errStaffReview, level: 'warning' };
+  }
+  if (status === 401) return { message: t.errSessionExpired, level: 'error' };
+  if (status === 403) return { message: t.errNotCaptain, level: 'error' };
+  // 409 sans code connu : trois 409 différents existent désormais, on ne
+  // devine pas lequel — « match clôturé » pourrait être faux.
+  if (status === 409) return { message: t.errGeneric, level: 'error' };
+  if (status === 429) return { message: t.errRateLimited, level: 'warning' };
+  if (status === 400) return { message: t.errInvalidScore, level: 'error' };
+  return { message: t.errGeneric, level: 'error' };
+}
 
 function clampScore(raw: string): number {
   const n = Number.parseInt(raw, 10);
@@ -116,17 +173,13 @@ export default function ReportScoreModal({
           payload && typeof payload === 'object' && 'code' in payload
             ? String((payload as { code: unknown }).code)
             : null;
-        if (res.status === 403) {
-          addToast(t.errNotCaptain, 'error');
-        } else if (res.status === 409 || code === 'MATCH_FINALIZED') {
-          addToast(t.errFinalized, 'error');
-        } else if (res.status === 429) {
-          addToast(t.errRateLimited, 'warning');
-        } else if (res.status === 400) {
-          addToast(t.errInvalidScore, 'error');
-        } else {
-          addToast(t.errGeneric, 'error');
-        }
+        const { message, level } = reportScoreErrorToast(
+          res.status,
+          code,
+          bestOf,
+          t
+        );
+        addToast(message, level);
         return;
       }
 
@@ -145,7 +198,10 @@ export default function ReportScoreModal({
       onClose();
     } catch (err) {
       if (err instanceof AdminFetchError && err.status === 401) {
-        // useAdminFetch a déjà géré la redirection si nécessaire.
+        // Session locale disparue : `useAdminFetch` lève AVANT toute requête,
+        // sans rediriger (et `skipAuthRedirect` coupe de toute façon la
+        // redirection). Se taire laissait la modale ouverte sans explication.
+        addToast(t.errSessionExpired, 'error');
         return;
       }
       addToast(t.errGeneric, 'error');

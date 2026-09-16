@@ -27,6 +27,9 @@ import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { MAX_TEAM_PLAYERS } from '@/utils/constants';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
+import { withTeamParam } from '@/utils/teamScopeParam';
+import { formatMatchDateTime } from '@/utils/dates/formatMatchDateTime';
 import { logger } from '../../utils/logger';
 import nsMatchLineup from '@/lib/i18n/locales/fr/matchLineup';
 
@@ -50,11 +53,43 @@ type LineupPayload = {
   eligible: EligibleMember[];
 };
 
-export default function MatchLineupCard({ matchId }: { matchId: string }) {
+/** Ancre de l'étape check-in sur le fil du match (PlayerMatchScreen). */
+export const MATCH_CHECKIN_ANCHOR = 'checkin';
+
+/** Où faire le check-in de CE match — jamais « le prochain match ». */
+export function matchCheckinHref(matchId: string): string {
+  return `/player/match/${encodeURIComponent(matchId)}#${MATCH_CHECKIN_ANCHOR}`;
+}
+
+export default function MatchLineupCard({
+  matchId,
+  teamId,
+}: {
+  matchId: string;
+  /**
+   * Équipe dont on compose la feuille, quand l'écran la connaît (le fil du
+   * match la tient de la réponse serveur). Sans elle, on retombe sur l'équipe
+   * active du sélecteur — jamais sur « l'équipe par défaut » du serveur.
+   */
+  teamId?: string | null;
+}) {
   const t = useT(nsMatchLineup);
   const locale = useLocale();
   const { withSubject, readOnly } = usePlayerArea();
+  const { withTeam } = useActiveTeam();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+
+  // Portée équipe. Sans elle, une manageuse de plusieurs équipes voyait la
+  // route résoudre son équipe PAR DÉFAUT : sur le match de l'autre, réponse
+  // « pas dans ce match » et la carte se retirait en silence — plus de feuille
+  // le soir du match. Même contrat que NextMatchCard et MatchPrepCard.
+  const scoped = useCallback(
+    (url: string) =>
+      teamId
+        ? withTeamParam(withSubject(url), teamId)
+        : withTeam(withSubject(url)),
+    [teamId, withSubject, withTeam]
+  );
 
   const [data, setData] = useState<LineupPayload | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -69,7 +104,7 @@ export default function MatchLineupCard({ matchId }: { matchId: string }) {
   const load = useCallback(async () => {
     try {
       const payload = await adminFetchJson<LineupPayload>(
-        withSubject(`/api/teams/matches/${matchId}/lineup`),
+        scoped(`/api/teams/matches/${matchId}/lineup`),
         { skipAuthRedirect: true }
       );
       setData(payload);
@@ -97,7 +132,7 @@ export default function MatchLineupCard({ matchId }: { matchId: string }) {
       logger.error('[MatchLineupCard] load', err);
       setHidden(true);
     }
-  }, [adminFetchJson, matchId, withSubject]);
+  }, [adminFetchJson, matchId, scoped]);
 
   useEffect(() => {
     void load();
@@ -126,7 +161,7 @@ export default function MatchLineupCard({ matchId }: { matchId: string }) {
     setError(null);
     try {
       const payload = await adminFetchJson<Partial<LineupPayload>>(
-        withSubject(`/api/teams/matches/${matchId}/lineup`),
+        scoped(`/api/teams/matches/${matchId}/lineup`),
         {
           method: validate ? 'POST' : 'PUT',
           body: JSON.stringify({ starters: [...selected] }),
@@ -160,10 +195,15 @@ export default function MatchLineupCard({ matchId }: { matchId: string }) {
           <p className="text-sm text-gray-300">{data.closedMessage}</p>
           {/* Un message qui constate ne suffit pas : le geste qui débloque est
               à UN clic, autant le donner. Sans ça, « la feuille s'ouvre après
-              le check-in » envoie chercher un bouton dans un autre écran. */}
+              le check-in » envoie chercher un bouton dans un autre écran.
+
+              Le lien vise le check-in de CE match. `/player/checkin` résout
+              « le prochain match » : un soir à deux matchs, la carte du
+              second renvoyait vers le check-in du premier. Sur le fil du
+              match, l'ancre ramène simplement à l'étape au-dessus. */}
           {data.closedReason === 'awaiting_checkin' && !readOnly && (
             <Link
-              href="/player/checkin"
+              href={matchCheckinHref(matchId)}
               className="mt-3 inline-flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-neutral-900 transition hover:-translate-y-0.5"
             >
               {t.goCheckin}
@@ -180,7 +220,7 @@ export default function MatchLineupCard({ matchId }: { matchId: string }) {
       {validated && data.validatedAt && (
         <p className="mt-1 text-xs text-gray-500">
           {format(t.validatedAt, {
-            date: new Date(data.validatedAt).toLocaleString(locale),
+            date: formatMatchDateTime(data.validatedAt, locale, 'stamp'),
           })}
         </p>
       )}

@@ -4,16 +4,20 @@ const {
   sendMatchCheckinEmail,
   sendCheckinReminderEmail,
   sendCheckinForfeitEmail,
+  sendCheckinCancelledEmail,
   notifyCheckinReminder,
   notifyCheckinForfeit,
+  notifyCheckinCancelledNoShow,
   notifyLineupReminder,
   applyMatchScore,
 } = vi.hoisted(() => ({
   sendMatchCheckinEmail: vi.fn(async () => ({ ok: true as const })),
   sendCheckinReminderEmail: vi.fn(async () => ({ ok: true as const })),
   sendCheckinForfeitEmail: vi.fn(async () => ({ ok: true as const })),
+  sendCheckinCancelledEmail: vi.fn(async () => ({ ok: true as const })),
   notifyCheckinReminder: vi.fn(async () => undefined),
   notifyCheckinForfeit: vi.fn(async () => undefined),
+  notifyCheckinCancelledNoShow: vi.fn(async () => undefined),
   notifyLineupReminder: vi.fn(async () => undefined),
   applyMatchScore: vi.fn(async () => undefined),
 }));
@@ -22,10 +26,12 @@ vi.mock('../../utils/email', () => ({
   sendMatchCheckinEmail,
   sendCheckinReminderEmail,
   sendCheckinForfeitEmail,
+  sendCheckinCancelledEmail,
 }));
 vi.mock('../../utils/discord', () => ({
   notifyCheckinReminder,
   notifyCheckinForfeit,
+  notifyCheckinCancelledNoShow,
   notifyLineupReminder,
 }));
 vi.mock('../../utils/matches/applyScore', () => ({ applyMatchScore }));
@@ -122,8 +128,10 @@ beforeEach(() => {
   sendMatchCheckinEmail.mockClear();
   sendCheckinReminderEmail.mockClear();
   sendCheckinForfeitEmail.mockClear();
+  sendCheckinCancelledEmail.mockClear();
   notifyCheckinReminder.mockClear();
   notifyCheckinForfeit.mockClear();
+  notifyCheckinCancelledNoShow.mockClear();
   notifyLineupReminder.mockClear();
   applyMatchScore.mockClear();
 
@@ -625,6 +633,9 @@ describe('processMatchCheckin — forfeit step', () => {
     expect(r.steps).toContain('forfeit_both_cancelled');
     expect((store.matches[0] as any).status).toBe('cancelled');
     expect((store.matches[0] as any).forfeit_processed_at).toBeTruthy();
+    // Annulation, pas forfait : aucun message ne désigne un perdant.
+    expect(notifyCheckinCancelledNoShow).toHaveBeenCalledOnce();
+    expect(notifyCheckinForfeit).not.toHaveBeenCalled();
   });
 
   it('forfeits the missing team to the present one', async () => {
@@ -974,11 +985,16 @@ describe('hasActiveTournamentWindow', () => {
   it('fails open (returns true) when the tournaments query errors', async () => {
     // Force la requête .from('tournaments') à renvoyer une erreur : le garde
     // ne doit JAMAIS couper le check-in à cause d'une erreur transitoire.
+    // `or` : le garde filtre la date de fin par `.or(end_date.gte…, is.null)`.
+    // Sans cette méthode, `.or` lèverait un TypeError et le test passerait par
+    // la branche EXCEPTION — vert, mais sans plus rien prouver sur la branche
+    // « la requête renvoie une erreur », qui est celle qu'il nomme.
     const errChain: any = {
       select: () => errChain,
       in: () => errChain,
       lte: () => errChain,
       gte: () => errChain,
+      or: () => errChain,
       limit: () => Promise.resolve({ data: null, error: { message: 'boom' } }),
     };
     const spy = vi.spyOn(supabaseAdmin, 'from').mockReturnValueOnce(errChain);

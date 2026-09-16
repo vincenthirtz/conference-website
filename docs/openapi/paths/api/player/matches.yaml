@@ -8,8 +8,12 @@ get:
   description: |
     Liste tous les matchs (toute statut) de l'equipe du joueur connecte,
     scopes au tenant resolu, tries par scheduled_at decroissant. Pour chaque
-    match : slot, adversaire, score relatif, resultat win/loss/draw, tournoi
-    et fenetre de check-in pour les matchs pending encore actionnables.
+    match : slot, adversaire, score relatif, resultat win/loss/draw, tournoi,
+    fenetre de check-in pour les matchs pending ou ongoing dates, et
+    `canReportScore` (boolean) : la personne peut-elle rapporter le score
+    (capitaine au sens strict `teams.captain_id`, deux equipes assignees,
+    match non cloture — meme regle que report-score). L'heure du coup d'envoi
+    n'y entre pas : elle est evaluee cote client.
   operationId: getPlayerMatches
   security:
     - PlayerBearer: []

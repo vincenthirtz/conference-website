@@ -821,6 +821,59 @@ export async function notifyCheckinForfeit(
   });
 }
 
+export type CheckinCancelledNoShowNotification = {
+  tournamentId: string | null;
+  matchId: string;
+  team1Name: string;
+  team1RoleId: string | null | undefined;
+  team2Name: string;
+  team2RoleId: string | null | undefined;
+};
+
+/**
+ * Match annulé parce qu'AUCUNE des deux équipes n'a pointé.
+ *
+ * Pas `notifyCheckinForfeit` appelé deux fois : cet embed-là est rédigé pour un
+ * forfait AVEC vainqueur (« Le match est attribué à **X** »). Recyclé, il
+ * postait deux messages « Forfait automatique » pour un match qui n'en compte
+ * aucun, chacun désignant une équipe perdante. Ici : UN message, les deux
+ * équipes mentionnées, et le mot juste — annulé, sans vainqueur.
+ *
+ * Le texte ne cite pas de délai : le forfait tombe au premier passage du cron
+ * après le coup d'envoi, pas « N minutes après » (la grâce de `utils/checkin`
+ * borne le rattrapage du cron, pas la fenêtre des équipes).
+ */
+export async function notifyCheckinCancelledNoShow(
+  data: CheckinCancelledNoShowNotification
+): Promise<void> {
+  const cfg = await resolveWebhook(data.tournamentId, 'checkin_reminders');
+  if (!cfg) return;
+
+  const pings = [
+    formatRoleMention(cfg.roleMention),
+    teamRolePing(data.team1RoleId, data.team1Name),
+    teamRolePing(data.team2RoleId, data.team2Name),
+  ].filter(Boolean);
+
+  await postToDiscordWebhook(cfg.url, {
+    username: "OW Women's Cup",
+    content: pings.join(' '),
+    embeds: [
+      {
+        title: '🚫 Match annulé (aucun check-in)',
+        description: `Ni **${data.team1Name}** ni **${data.team2Name}** n'ont confirmé leur présence avant le coup d'envoi : le match est annulé, sans vainqueur. S'il s'agit d'une erreur, contactez le staff.`,
+        color: COLORS.checkinForfeit,
+        timestamp: new Date().toISOString(),
+        footer: { text: `Match ${data.matchId.slice(0, 8)}` },
+      },
+    ],
+    allowed_mentions: buildAllowedMentions(cfg.roleMention, [
+      data.team1RoleId,
+      data.team2RoleId,
+    ]),
+  });
+}
+
 export async function notifyVetoStep(
   data: VetoStepNotification
 ): Promise<void> {

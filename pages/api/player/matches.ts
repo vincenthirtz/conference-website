@@ -7,8 +7,9 @@
 // Ordered by scheduled_at DESC. No status filter — completed, ongoing and
 // pending matches are all returned. Per match we expose the user's slot, the
 // opponent, the score relative to the user's slot, a derived win/loss/draw
-// result, the tournament, and (for still-actionable pending matches with a
-// scheduled_at) the check-in window/token.
+// result, the tournament, (for still-playable pending/ongoing matches with a
+// scheduled_at) the check-in window/token, and whether the user may report
+// the score (`canReportScore`, same rule as report-score.ts).
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -25,6 +26,9 @@ import {
 } from '@/utils/matches/playerMatchView';
 
 import { logger } from '../../../utils/logger';
+
+/** Miroir de TERMINAL_STATUSES dans report-score.ts (409 MATCH_FINALIZED). */
+const REPORT_CLOSED_STATUSES = new Set(['finished', 'walkover', 'cancelled']);
 
 export type PlayerMatch = {
   id: string;
@@ -49,6 +53,13 @@ export type PlayerMatch = {
     isOpen: boolean;
     isPassed: boolean;
   } | null;
+  /**
+   * Le serveur acceptera-t-il un report de score de CETTE personne ? Même
+   * règle que report-score.ts : capitaine au sens strict (`teams.captain_id`),
+   * deux équipes assignées, match non clôturé. Le MOMENT (coup d'envoi passé)
+   * reste au client, qui a l'horloge qui avance (utils/matches/playerMatchLive).
+   */
+  canReportScore: boolean;
 };
 
 export type PlayerMatchesPayload = {
@@ -94,12 +105,19 @@ export default withSubjectRoute(async function handler(
   // "no team" from "no matches" on this field).
   const { data: teamRow } = await supabaseAdmin
     .from('teams')
-    .select('id, name')
+    .select('id, name, captain_id')
     .eq('id', teamId)
     .maybeSingle();
   const myTeam: TeamRef = teamRow
     ? { id: teamRow.id as string, name: teamRow.name as string }
     : { id: teamId, name: '' };
+  // Le bouton « Rapporter le score » s'affichait pour tout le roster, alors que
+  // report-score.ts n'autorise que `teams.captain_id` : une joueuse remplissait
+  // la modale pour lire « Vous n'êtes pas le capitaine ». Une seule lecture
+  // pour toute la liste — c'est la même équipe sur chaque ligne.
+  const isCaptain =
+    !!teamRow &&
+    (teamRow as { captain_id?: string | null }).captain_id === userId;
 
   // Pull every match where this team is team1 or team2 (any status).
   const { data: rows, error } = await supabaseAdmin
@@ -129,8 +147,11 @@ export default withSubjectRoute(async function handler(
 
     // Check-in : exposé UNIQUEMENT pour un match encore jouable et daté. Sur un
     // match passé, un bloc check-in se lirait comme une action encore ouverte.
+    // `ongoing` en fait partie : le serveur accepte encore le jeton, et le bloc
+    // disparaissait de « Mes matchs » à l'instant où le staff lançait le match
+    // — « Check-in validé » compris, qui est ce qu'on vient vérifier.
     const checkin: PlayerMatch['checkin'] =
-      status === 'pending' && scheduledAt
+      (status === 'pending' || status === 'ongoing') && scheduledAt
         ? (() => {
             const c = buildCheckin(match, side.isTeam1, now);
             return {
@@ -160,6 +181,8 @@ export default withSubjectRoute(async function handler(
       result,
       tournament: side.tournament,
       checkin,
+      canReportScore:
+        isCaptain && !!side.opponent?.id && !REPORT_CLOSED_STATUSES.has(status),
     };
   });
 

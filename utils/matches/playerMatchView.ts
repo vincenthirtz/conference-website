@@ -151,6 +151,62 @@ export function buildCheckin(
   };
 }
 
+/** Rattrapage : un match `pending` reste « le prochain » 1 h après son horaire. */
+export const NEXT_MATCH_PENDING_GRACE_MINUTES = 60;
+
+/**
+ * Choisit « le prochain match » parmi des candidats `pending`/`ongoing`.
+ *
+ * Ce que ça répare : la route filtrait `scheduled_at >= now - 1 h` pour TOUS
+ * les statuts. Une soirée en retard (match de 19:00 encore `ongoing` à 20:05)
+ * faisait disparaître le match EN COURS du dashboard et du check-in.
+ *
+ * Mais « ne jamais exclure un match en cours » ne suffit pas : trié par
+ * horaire, ce match de 19:00 masquerait alors celui de 20:30 pendant toute sa
+ * fenêtre de check-in — et /player/checkin s'appuie sur cette route. Un
+ * check-in manqué, c'est un forfait. D'où l'ordre :
+ *
+ *   1. un match dont MON check-in est ouvert et pas encore fait — le seul
+ *      geste de la soirée qui a une échéance dure ;
+ *   2. sinon le plus tôt programmé, `ongoing` compris quel que soit son âge,
+ *      `pending` seulement dans la fenêtre de rattrapage.
+ *
+ * Pur (horloge injectée) : la route se contente de charger les candidats.
+ */
+export function pickNextMatch<T extends Record<string, unknown>>(
+  rows: readonly T[],
+  teamId: string,
+  now: number = Date.now()
+): T | null {
+  const cutoff = now - NEXT_MATCH_PENDING_GRACE_MINUTES * 60_000;
+  const seen = new Set<unknown>();
+  const time = (r: T) => {
+    const ms = r.scheduled_at
+      ? new Date(r.scheduled_at as string).getTime()
+      : Number.NaN;
+    return Number.isFinite(ms) ? ms : Number.POSITIVE_INFINITY;
+  };
+
+  const candidates = rows
+    .filter((r) => {
+      if (seen.has(r.id)) return false;
+      seen.add(r.id);
+      if (r.status === 'ongoing') return true;
+      if (r.status !== 'pending') return false;
+      const ms = time(r);
+      return Number.isFinite(ms) && ms >= cutoff;
+    })
+    .sort((a, b) => time(a) - time(b));
+
+  const awaitingMyCheckin = candidates.find((r) => {
+    if (r.status !== 'pending') return false;
+    const c = buildCheckin(r, r.team1_id === teamId, now);
+    return c.isOpen && !c.alreadyCheckedIn;
+  });
+
+  return awaitingMyCheckin ?? candidates[0] ?? null;
+}
+
 /**
  * Score du point de vue de l'équipe, et issue dérivée.
  *

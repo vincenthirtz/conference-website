@@ -30,4 +30,6 @@ export default {
   emptyBody: 'Your next scheduled match will show up here along with check-in.',
   loadErrorShort: "Couldn't load your next match right now.",
   scoutOpponent: 'Scout the opponent',
+  sessionExpired: 'Your session expired.',
+  signinAgain: 'Sign in again',
 };

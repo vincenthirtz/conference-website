@@ -16,10 +16,12 @@ import {
   sendMatchCheckinEmail,
   sendCheckinReminderEmail,
   sendCheckinForfeitEmail,
+  sendCheckinCancelledEmail,
 } from './email';
 import {
   notifyCheckinReminder,
   notifyCheckinForfeit,
+  notifyCheckinCancelledNoShow,
   notifyLineupReminder,
 } from './discord';
 import { applyMatchScore } from './matches/applyScore';
@@ -897,6 +899,11 @@ async function runForfeitStep(
       match.id,
       AUTO_FORFEIT_NO_CHECKIN_REASON
     );
+    // Prévenir, comme sur le chemin « une seule équipe absente ». Ce chemin-ci
+    // annulait EN SILENCE : deux équipes découvraient le lendemain qu'un match
+    // n'avait jamais eu lieu, et le staff ne voyait rien passer sur le canal
+    // de check-in. Une annulation silencieuse est pire qu'un forfait bruyant.
+    await notifyBothTeamsNoShow(match, team1Name, team2Name);
     await markForfeitProcessed(match.tenant_id, match.id, result);
     result.steps.push('forfeit_both_cancelled');
     return;
@@ -963,6 +970,64 @@ async function runForfeitStep(
   result.steps.push(`forfeit (${forfeitedName} -> walkover)`);
 }
 
+/**
+ * Notifications du match annulé faute de check-in des DEUX côtés.
+ *
+ * Des messages DÉDIÉS, pas ceux du forfait. Le forfait parle d'un perdant et
+ * d'un vainqueur : son embed dit « Le match est attribué à **X** », son mail
+ * « Votre équipe a été déclarée forfait ». Recyclés pour les deux équipes, ils
+ * publiaient deux forfaits pour un match qui n'en compte aucun, et chaque
+ * capitaine lisait qu'elle avait perdu contre l'autre. Un soir de tournoi, un
+ * message faux vaut un ticket de support.
+ *
+ * Donc : UN embed qui mentionne les deux équipes, et à chaque capitaine un mail
+ * « match annulé » qui nomme l'équipe d'en face. Tout est best-effort : une
+ * notification ratée ne doit ni défaire l'annulation, ni bloquer
+ * `markForfeitProcessed`.
+ */
+async function notifyBothTeamsNoShow(
+  match: MatchLite,
+  team1Name: string,
+  team2Name: string
+): Promise<void> {
+  await notifyCheckinCancelledNoShow({
+    tournamentId: match.tournament_id,
+    matchId: match.id,
+    team1Name,
+    team1RoleId: match.team1?.discord_role_id ?? null,
+    team2Name,
+    team2RoleId: match.team2?.discord_role_id ?? null,
+  }).catch((e) =>
+    logger.error('[checkin] notifyCheckinCancelledNoShow error:', e)
+  );
+
+  if (!match.scheduled_at) return;
+  const scheduledAt = match.scheduled_at;
+  const tournamentName = match.tournament?.name || "OW Women's Cup";
+  const sides = [
+    { teamId: match.team1_id, name: team1Name, opponentName: team2Name },
+    { teamId: match.team2_id, name: team2Name, opponentName: team1Name },
+  ];
+
+  for (const side of sides) {
+    if (!side.teamId) continue;
+    try {
+      const email = await getCaptainEmail(match.tenant_id, side.teamId);
+      if (!email) continue;
+      await sendCheckinCancelledEmail({
+        tenantId: match.tenant_id,
+        to: email,
+        teamName: side.name,
+        opponentName: side.opponentName,
+        scheduledAt,
+        tournamentName,
+      });
+    } catch (e) {
+      logger.error('[checkin] sendCheckinCancelledEmail error:', e);
+    }
+  }
+}
+
 async function markForfeitProcessed(
   tenantId: string,
   matchId: string,
@@ -1000,6 +1065,11 @@ export type BulkProcessResult = {
  * True s'il existe ≥1 tournoi « actif » (status ∈ published|running) dont la
  * fenêtre [start_date, end_date] chevauche [today-1j, today+1j].
  *
+ * Une `end_date` ABSENTE vaut « pas de fin » : `.gte('end_date', …)` seul
+ * excluait ces tournois (NULL >= x n'est jamais vrai en SQL), et un tournoi
+ * créé sans date de fin voyait son check-in coupé — plus de jetons, plus de
+ * rappels, plus de forfaits. D'où le `.or(end_date.gte…, end_date.is.null)`.
+ *
  * Le buffer ±1 jour couvre les matchs proches de minuit et l'écart UTC vs
  * Europe/Paris (start_date/end_date sont des DATE sans fuseau). On compare des
  * chaînes 'YYYY-MM-DD' (slice ISO) — cohérent avec le type DATE côté Postgres.
@@ -1026,7 +1096,7 @@ export async function hasActiveTournamentWindow(
       .select('id')
       .in('status', ['published', 'running'])
       .lte('start_date', upper)
-      .gte('end_date', lower)
+      .or(`end_date.gte.${lower},end_date.is.null`)
       .limit(1);
 
     if (error) {
