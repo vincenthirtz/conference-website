@@ -110,186 +110,271 @@ async function readAchievements(
   playerPairs: Array<{ tournamentId: string; teamId: string }>,
   teamIds: string[]
 ): Promise<ProfileAchievements> {
+  // Palmarès et saisons ne partagent AUCUNE donnée : l'un part des tournois,
+  // l'autre des équipes. Ils partent donc ensemble. Le try/catch englobe le
+  // `Promise.all` : la première erreur de l'un OU de l'autre vide tout le bloc,
+  // exactement comme quand ils s'enchaînaient (une erreur du palmarès
+  // empêchait alors la lecture des saisons, pour le même bloc vide au final).
   try {
-    // --- Palmarès : final_rankings des tournois où le joueur a une équipe ---
-    const tournamentIds = [...new Set(playerPairs.map((p) => p.tournamentId))];
-    const pairKey = (t: string, team: string) => `${t}::${team}`;
-    const wantedPairs = new Set(
-      playerPairs.map((p) => pairKey(p.tournamentId, p.teamId))
-    );
-
-    let placements: ProfilePlacement[] = [];
-    if (tournamentIds.length > 0) {
-      const { data: frRows, error: frErr } = await supabaseAdmin
-        .from('final_rankings')
-        .select('tournament_id, team_id, rank')
-        .eq('tenant_id', tenantId)
-        .in('tournament_id', tournamentIds);
-      if (frErr) throw frErr;
-      const rankings = (
-        (frRows || []) as Array<{
-          tournament_id: string;
-          team_id: string;
-          rank: number;
-        }>
-      ).filter((r) => wantedPairs.has(pairKey(r.tournament_id, r.team_id)));
-
-      const rankedTournamentIds = [
-        ...new Set(rankings.map((r) => r.tournament_id)),
-      ];
-      const rankedTeamIds = [...new Set(rankings.map((r) => r.team_id))];
-
-      const tournamentMeta = new Map<
-        string,
-        {
-          name: string | null;
-          slug: string | null;
-          start_date: string | null;
-          end_date: string | null;
-        }
-      >();
-      if (rankedTournamentIds.length > 0) {
-        const { data: tRows, error: tErr } = await supabaseAdmin
-          .from('tournaments')
-          .select('id, name, slug, start_date, end_date')
-          .eq('tenant_id', tenantId)
-          .in('id', rankedTournamentIds);
-        if (tErr) throw tErr;
-        for (const t of (tRows || []) as Array<{
-          id: string;
-          name: string | null;
-          slug: string | null;
-          start_date: string | null;
-          end_date: string | null;
-        }>) {
-          tournamentMeta.set(t.id, {
-            name: t.name ?? null,
-            slug: t.slug ?? null,
-            start_date: t.start_date ?? null,
-            end_date: t.end_date ?? null,
-          });
-        }
-      }
-
-      const teamNames = new Map<string, string | null>();
-      if (rankedTeamIds.length > 0) {
-        const { data: teamRows, error: teamErr } = await supabaseAdmin
-          .from('teams')
-          .select('id, name')
-          .eq('tenant_id', tenantId)
-          .in('id', rankedTeamIds);
-        if (teamErr) throw teamErr;
-        for (const t of (teamRows || []) as Array<{
-          id: string;
-          name: string | null;
-        }>) {
-          teamNames.set(t.id, t.name ?? null);
-        }
-      }
-
-      placements = rankings.map((r) => {
-        const meta = tournamentMeta.get(r.tournament_id);
-        return {
-          tournamentId: r.tournament_id,
-          tournamentName: meta?.name ?? null,
-          tournamentSlug: meta?.slug ?? null,
-          teamId: r.team_id,
-          teamName: teamNames.get(r.team_id) ?? null,
-          rank: r.rank,
-          date: meta?.start_date ?? meta?.end_date ?? null,
-        };
-      });
-    }
-
-    // --- Saisons : league_standings des équipes du joueur, leagues publiques ---
-    let seasons: ProfileSeason[] = [];
-    if (teamIds.length > 0) {
-      const { data: lsRows, error: lsErr } = await supabaseAdmin
-        .from('league_standings')
-        .select('league_id, team_id, rank, points')
-        .eq('tenant_id', tenantId)
-        .in('team_id', teamIds);
-      if (lsErr) throw lsErr;
-      const standings = (lsRows || []) as Array<{
-        league_id: string;
-        team_id: string;
-        rank: number | null;
-        points: number | null;
-      }>;
-
-      const leagueIds = [...new Set(standings.map((s) => s.league_id))];
-      const leagueMeta = new Map<
-        string,
-        { name: string | null; slug: string | null }
-      >();
-      if (leagueIds.length > 0) {
-        const { data: lRows, error: lErr } = await supabaseAdmin
-          .from('leagues')
-          .select('id, name, slug, is_public, status')
-          .eq('tenant_id', tenantId)
-          .in('id', leagueIds);
-        if (lErr) throw lErr;
-        for (const l of (lRows || []) as Array<{
-          id: string;
-          name: string | null;
-          slug: string | null;
-          is_public: boolean | null;
-          status: string | null;
-        }>) {
-          // Profil public : uniquement les leagues publiées.
-          if (l.is_public === true && l.status !== 'draft') {
-            leagueMeta.set(l.id, {
-              name: l.name ?? null,
-              slug: l.slug ?? null,
-            });
-          }
-        }
-      }
-
-      const teamNames = new Map<string, string | null>();
-      const seasonTeamIds = [
-        ...new Set(
-          standings
-            .filter((s) => leagueMeta.has(s.league_id))
-            .map((s) => s.team_id)
-        ),
-      ];
-      if (seasonTeamIds.length > 0) {
-        const { data: teamRows, error: teamErr } = await supabaseAdmin
-          .from('teams')
-          .select('id, name')
-          .eq('tenant_id', tenantId)
-          .in('id', seasonTeamIds);
-        if (teamErr) throw teamErr;
-        for (const t of (teamRows || []) as Array<{
-          id: string;
-          name: string | null;
-        }>) {
-          teamNames.set(t.id, t.name ?? null);
-        }
-      }
-
-      seasons = standings
-        .filter((s) => leagueMeta.has(s.league_id))
-        .map((s) => {
-          const meta = leagueMeta.get(s.league_id)!;
-          return {
-            leagueId: s.league_id,
-            leagueName: meta.name,
-            leagueSlug: meta.slug,
-            teamId: s.team_id,
-            teamName: teamNames.get(s.team_id) ?? null,
-            rank: s.rank ?? null,
-            points: Number.isFinite(s.points) ? (s.points as number) : 0,
-          };
-        });
-    }
-
+    const [placements, seasons] = await Promise.all([
+      readPlacements(tenantId, playerPairs),
+      readSeasons(tenantId, teamIds),
+    ]);
     return computeAchievements({ placements, stats, results, seasons });
   } catch (err) {
     logger.error('[readPlayerProfile] achievements aggregation error', err);
     return EMPTY_ACHIEVEMENTS;
   }
+}
+
+/** Palmarès : final_rankings des tournois où le joueur a une équipe. LÈVE. */
+async function readPlacements(
+  tenantId: string,
+  playerPairs: Array<{ tournamentId: string; teamId: string }>
+): Promise<ProfilePlacement[]> {
+  const tournamentIds = [...new Set(playerPairs.map((p) => p.tournamentId))];
+  if (tournamentIds.length === 0) return [];
+  const wantedPairs = new Set(
+    playerPairs.map((p) => placementPairKey(p.tournamentId, p.teamId))
+  );
+
+  const { data: frRows, error: frErr } = await supabaseAdmin
+    .from('final_rankings')
+    .select('tournament_id, team_id, rank')
+    .eq('tenant_id', tenantId)
+    .in('tournament_id', tournamentIds);
+  if (frErr) throw frErr;
+  const rankings = (
+    (frRows || []) as Array<{
+      tournament_id: string;
+      team_id: string;
+      rank: number;
+    }>
+  ).filter((r) =>
+    wantedPairs.has(placementPairKey(r.tournament_id, r.team_id))
+  );
+
+  const rankedTournamentIds = [
+    ...new Set(rankings.map((r) => r.tournament_id)),
+  ];
+  const rankedTeamIds = [...new Set(rankings.map((r) => r.team_id))];
+
+  // Libellés des tournois et des équipes : deux lectures indépendantes l'une
+  // de l'autre, qui ne dépendent que des classements ci-dessus.
+  const [tournamentMeta, teamNames] = await Promise.all([
+    readTournamentMeta(tenantId, rankedTournamentIds),
+    readTeamNames(tenantId, rankedTeamIds),
+  ]);
+
+  return rankings.map((r) => {
+    const meta = tournamentMeta.get(r.tournament_id);
+    return {
+      tournamentId: r.tournament_id,
+      tournamentName: meta?.name ?? null,
+      tournamentSlug: meta?.slug ?? null,
+      teamId: r.team_id,
+      teamName: teamNames.get(r.team_id) ?? null,
+      rank: r.rank,
+      date: meta?.start_date ?? meta?.end_date ?? null,
+    };
+  });
+}
+
+type TournamentMeta = {
+  name: string | null;
+  slug: string | null;
+  start_date: string | null;
+  end_date: string | null;
+};
+
+/** Libellés et dates des tournois (aucune lecture si la liste est vide). LÈVE. */
+async function readTournamentMeta(
+  tenantId: string,
+  ids: string[]
+): Promise<Map<string, TournamentMeta>> {
+  const meta = new Map<string, TournamentMeta>();
+  if (ids.length === 0) return meta;
+  const { data: tRows, error: tErr } = await supabaseAdmin
+    .from('tournaments')
+    .select('id, name, slug, start_date, end_date')
+    .eq('tenant_id', tenantId)
+    .in('id', ids);
+  if (tErr) throw tErr;
+  for (const t of (tRows || []) as Array<{ id: string } & TournamentMeta>) {
+    meta.set(t.id, {
+      name: t.name ?? null,
+      slug: t.slug ?? null,
+      start_date: t.start_date ?? null,
+      end_date: t.end_date ?? null,
+    });
+  }
+  return meta;
+}
+
+/** Saisons : league_standings des équipes du joueur, leagues publiques. LÈVE. */
+async function readSeasons(
+  tenantId: string,
+  teamIds: string[]
+): Promise<ProfileSeason[]> {
+  if (teamIds.length === 0) return [];
+  // Enchaînement OBLIGATOIRE ici : les ligues à lire viennent des standings,
+  // et les équipes à nommer viennent du filtre de publication des ligues.
+  const { data: lsRows, error: lsErr } = await supabaseAdmin
+    .from('league_standings')
+    .select('league_id, team_id, rank, points')
+    .eq('tenant_id', tenantId)
+    .in('team_id', teamIds);
+  if (lsErr) throw lsErr;
+  const standings = (lsRows || []) as Array<{
+    league_id: string;
+    team_id: string;
+    rank: number | null;
+    points: number | null;
+  }>;
+
+  const leagueIds = [...new Set(standings.map((s) => s.league_id))];
+  const leagueMeta = new Map<
+    string,
+    { name: string | null; slug: string | null }
+  >();
+  if (leagueIds.length > 0) {
+    const { data: lRows, error: lErr } = await supabaseAdmin
+      .from('leagues')
+      .select('id, name, slug, is_public, status')
+      .eq('tenant_id', tenantId)
+      .in('id', leagueIds);
+    if (lErr) throw lErr;
+    for (const l of (lRows || []) as Array<{
+      id: string;
+      name: string | null;
+      slug: string | null;
+      is_public: boolean | null;
+      status: string | null;
+    }>) {
+      if (isPublishedLeague(l)) {
+        leagueMeta.set(l.id, {
+          name: l.name ?? null,
+          slug: l.slug ?? null,
+        });
+      }
+    }
+  }
+
+  const seasonTeamIds = [
+    ...new Set(
+      standings.filter((s) => leagueMeta.has(s.league_id)).map((s) => s.team_id)
+    ),
+  ];
+  const teamNames = await readTeamNames(tenantId, seasonTeamIds);
+
+  return standings
+    .filter((s) => leagueMeta.has(s.league_id))
+    .map((s) => {
+      const meta = leagueMeta.get(s.league_id)!;
+      return {
+        leagueId: s.league_id,
+        leagueName: meta.name,
+        leagueSlug: meta.slug,
+        teamId: s.team_id,
+        teamName: teamNames.get(s.team_id) ?? null,
+        rank: s.rank ?? null,
+        points: Number.isFinite(s.points) ? (s.points as number) : 0,
+      };
+    });
+}
+
+/** Noms d'équipes (aucune lecture si la liste est vide). LÈVE. */
+async function readTeamNames(
+  tenantId: string,
+  ids: string[]
+): Promise<Map<string, string | null>> {
+  const names = new Map<string, string | null>();
+  if (ids.length === 0) return names;
+  const { data: teamRows, error: teamErr } = await supabaseAdmin
+    .from('teams')
+    .select('id, name')
+    .eq('tenant_id', tenantId)
+    .in('id', ids);
+  if (teamErr) throw teamErr;
+  for (const t of (teamRows || []) as Array<{
+    id: string;
+    name: string | null;
+  }>) {
+    names.set(t.id, t.name ?? null);
+  }
+  return names;
+}
+
+/* ---------------------------------------------------------------------------
+ * Règles PARTAGÉES avec la lecture groupée des badges (readPlayerBadges.ts).
+ *
+ * Le TCG tire la rareté d'une carte des badges du profil. Si la lecture
+ * groupée recopiait ces règles, un changement ici (un filtre de ligue, le sort
+ * des remplaçantes) ferait diverger la carte de la fiche sans qu'aucun test
+ * de ce fichier ne le voie. Elles vivent donc ici, une seule fois.
+ * ------------------------------------------------------------------------- */
+
+/** Clé d'une paire (tournoi, équipe) du palmarès. */
+export function placementPairKey(tournamentId: string, teamId: string): string {
+  return `${tournamentId}::${teamId}`;
+}
+
+/** Profil PUBLIC : seules les ligues publiées comptent. */
+export function isPublishedLeague(l: {
+  is_public: boolean | null;
+  status: string | null;
+}): boolean {
+  return l.is_public === true && l.status !== 'draft';
+}
+
+/** Ordre chronologique ASC de l'historique (chaîne ISO, vide en premier). */
+export function compareOccurredAtAsc(
+  a: { occurred_at: string | null },
+  b: { occurred_at: string | null }
+): number {
+  return (a.occurred_at || '') < (b.occurred_at || '')
+    ? -1
+    : (a.occurred_at || '') > (b.occurred_at || '')
+      ? 1
+      : 0;
+}
+
+/**
+ * Périmètre de la joueuse, à partir de ses participations TITULAIRES (déjà
+ * filtrées) et du tournoi de chaque match connu :
+ *
+ * - `matchIds`    : matchs distincts, dans l'ordre de première apparition ;
+ * - `teamByMatch` : équipe de la joueuse sur chaque match ;
+ * - `playerPairs` : paires distinctes (tournoi du match, équipe) — un match
+ *   inconnu ou sans tournoi ne compte pas (base du palmarès) ;
+ * - `teamIds`     : équipes distinctes, match connu ou non (base des saisons).
+ */
+export function derivePlayerScope(
+  myPartsRows: ReadonlyArray<{ match_id: string; team_id: string }>,
+  tournamentOfMatch: (matchId: string) => string | null | undefined
+): {
+  matchIds: string[];
+  teamByMatch: Map<string, string>;
+  playerPairs: Array<{ tournamentId: string; teamId: string }>;
+  teamIds: string[];
+} {
+  const matchIds = [...new Set(myPartsRows.map((p) => p.match_id))];
+  const teamByMatch = new Map<string, string>();
+  for (const p of myPartsRows) teamByMatch.set(p.match_id, p.team_id);
+
+  const seen = new Set<string>();
+  const playerPairs: Array<{ tournamentId: string; teamId: string }> = [];
+  for (const matchId of matchIds) {
+    const tournamentId = tournamentOfMatch(matchId);
+    const teamId = teamByMatch.get(matchId);
+    if (!tournamentId || !teamId) continue;
+    const key = placementPairKey(tournamentId, teamId);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    playerPairs.push({ tournamentId, teamId });
+  }
+  const teamIds = [...new Set(myPartsRows.map((p) => p.team_id))];
+  return { matchIds, teamByMatch, playerPairs, teamIds };
 }
 
 /**
@@ -573,58 +658,25 @@ export async function readPlayerProfile(
     | 'avatar_url'
   >;
 
-  // 2) Rank par COUNT (aucun transfert de lignes) — fidèle à l'ordre du
-  //    classement (rating desc, tie-break user_id asc), scopé aux joueurs
-  //    notés (games_played > 0).
-  //
-  //    Joueur NOTÉ (games_played > 0) :
-  //      rank = 1 + #{ rating > pr.rating } + #{ rating = pr.rating ∧ uid < pr.uid }
-  //    Joueur NON noté (games_played = 0) : comme avant, il est exclu du
-  //      classement → rang = (nb de notés) + 1 (position juste après le dernier).
-  //
-  //    Les bornes passent par `ratingBand` et non par la valeur brute : voir
-  //    le commentaire de cette fonction — un `>` / `=` sur le nombre relu
-  //    faisait basculer TOUT un groupe d'ex æquo du mauvais côté.
-  let rank: number;
-  if (pr.games_played > 0) {
-    const band = ratingBand(pr.rating);
-    const { count: higherCount, error: higherErr } = await supabaseAdmin
-      .from('player_ratings')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .gt('games_played', 0)
-      .gt('rating', band.high);
-    if (higherErr) {
-      logger.error('[readPlayerProfile] rank higher-count error', higherErr);
-      throw new Error('Failed to load player');
-    }
-    const { count: tieCount, error: tieErr } = await supabaseAdmin
-      .from('player_ratings')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .gt('games_played', 0)
-      .gte('rating', band.low)
-      .lte('rating', band.high)
-      .lt('user_id', pr.user_id);
-    if (tieErr) {
-      logger.error('[readPlayerProfile] rank tie-count error', tieErr);
-      throw new Error('Failed to load player');
-    }
-    rank = 1 + (higherCount ?? 0) + (tieCount ?? 0);
-  } else {
-    const { count: ratedCount, error: ratedErr } = await supabaseAdmin
-      .from('player_ratings')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .gt('games_played', 0);
-    if (ratedErr) {
-      logger.error('[readPlayerProfile] rank rated-count error', ratedErr);
-      throw new Error('Failed to load player');
-    }
-    rank = (ratedCount ?? 0) + 1;
-  }
-
-  const twitch = await readPlayerTwitch(userId, tenantId);
+  // PARALLÉLISME. Une fois la ligne `player_ratings` connue, la fiche se
+  // compose de branches qui ne se lisent pas entre elles :
+  //   - le rang (1 à 2 COUNT, qui LÈVENT) ;
+  //   - la chaîne Twitch (GoTrue puis roster, best-effort, ne lève jamais) ;
+  //   - l'historique (courbe + série de victoires) ;
+  //   - les participations → matchs + participants → noms / adversaires /
+  //     palmarès, chaîne qui reste séquentielle AU-DEDANS (chaque étage lit les
+  //     identifiants produits par le précédent).
+  // Elles partaient une par une : ~18 allers-retours en série, payés par la
+  // première visiteuse d'une fiche (ISR `fallback: 'blocking'` = page blanche
+  // pendant toute la chaîne). Seule l'erreur du rang faisait échouer la page ;
+  // c'est toujours le cas — `Promise.all` rejette avec elle — et les autres
+  // branches gardent leur propre tolérance (erreur ignorée ou try/catch).
+  const [rank, twitch, history, matchBlock] = await Promise.all([
+    readRank(tenantId, pr),
+    readPlayerTwitch(userId, tenantId),
+    readHistory(tenantId, userId),
+    readMatchBlock(tenantId, userId),
+  ]);
 
   const player: PlayerProfileCore = {
     userId: pr.user_id,
@@ -644,69 +696,8 @@ export async function readPlayerProfile(
     rank,
   };
 
-  // 3) History (courbe), chrono ASC.
-  const { data: histRows } = await supabaseAdmin
-    .from('player_rating_history')
-    .select(
-      'match_id, tournament_id, occurred_at, rating_before, rating_after, result, opponent_avg_rating'
-    )
-    .eq('tenant_id', tenantId)
-    .eq('user_id', userId);
-  const historyRaw = (histRows || []) as HistoryRow[];
-  historyRaw.sort((a, b) =>
-    (a.occurred_at || '') < (b.occurred_at || '')
-      ? -1
-      : (a.occurred_at || '') > (b.occurred_at || '')
-        ? 1
-        : 0
-  );
-  const history: PlayerProfileHistoryPoint[] = historyRaw.map((h) => ({
-    matchId: h.match_id,
-    tournamentId: h.tournament_id,
-    occurredAt: h.occurred_at,
-    ratingBefore: h.rating_before,
-    ratingAfter: h.rating_after,
-    result: h.result,
-    opponentAvgRating: h.opponent_avg_rating,
-  }));
-
-  // 4) Participations du joueur (non-sub) → base des recentMatches + H2H.
-  const { data: myParts } = await supabaseAdmin
-    .from('match_participants')
-    .select('match_id, team_id, user_id, battle_tag, is_substitute')
-    .eq('tenant_id', tenantId)
-    .eq('user_id', userId);
-  const myPartsRows = ((myParts || []) as ParticipantRow[]).filter(
-    (p) => !p.is_substitute
-  );
-  const myMatchIds = [...new Set(myPartsRows.map((p) => p.match_id))];
-  const myTeamByMatch = new Map<string, string>();
-  for (const p of myPartsRows) myTeamByMatch.set(p.match_id, p.team_id);
-
-  // 5) Charger les matches concernés + tous les participants de ces matches.
-  const matchById = new Map<string, MatchRow>();
-  const partsByMatch = new Map<string, ParticipantRow[]>();
-  if (myMatchIds.length > 0) {
-    const { data: matchRows } = await supabaseAdmin
-      .from('matches')
-      .select(
-        'id, tournament_id, team1_id, team2_id, winner_team_id, completed_at'
-      )
-      .eq('tenant_id', tenantId)
-      .in('id', myMatchIds);
-    for (const m of (matchRows || []) as MatchRow[]) matchById.set(m.id, m);
-
-    const { data: allParts } = await supabaseAdmin
-      .from('match_participants')
-      .select('match_id, team_id, user_id, battle_tag, is_substitute')
-      .eq('tenant_id', tenantId)
-      .in('match_id', myMatchIds);
-    for (const p of (allParts || []) as ParticipantRow[]) {
-      const arr = partsByMatch.get(p.match_id) ?? [];
-      arr.push(p);
-      partsByMatch.set(p.match_id, arr);
-    }
-  }
+  const { myMatchIds, myTeamByMatch, myPartsRows, matchById, partsByMatch } =
+    matchBlock;
 
   // 6) recentMatches (desc, ~20) + opponent team name.
   const recentSource = myMatchIds
@@ -727,36 +718,6 @@ export async function readPlayerProfile(
     const opponentTeamId = myTeam === m.team1_id ? m.team2_id : m.team1_id;
     if (opponentTeamId) opponentTeamIds.add(opponentTeamId);
   }
-  const teamNames = new Map<string, string>();
-  if (opponentTeamIds.size > 0) {
-    const { data: teamRows } = await supabaseAdmin
-      .from('teams')
-      .select('id, name')
-      .eq('tenant_id', tenantId)
-      .in('id', [...opponentTeamIds]);
-    for (const t of (teamRows || []) as Array<{ id: string; name: string }>) {
-      teamNames.set(t.id, t.name);
-    }
-  }
-
-  const recentMatches: PlayerProfileRecentMatch[] = recentSource.map((m) => {
-    const myTeam = myTeamByMatch.get(m.id) ?? null;
-    const opponentTeamId = myTeam === m.team1_id ? m.team2_id : m.team1_id;
-    let result: 'win' | 'loss' | 'draw' = 'draw';
-    if (m.winner_team_id) {
-      result = m.winner_team_id === myTeam ? 'win' : 'loss';
-    }
-    return {
-      matchId: m.id,
-      tournamentId: m.tournament_id,
-      occurredAt: m.completed_at ?? '',
-      result,
-      opponentTeamId: opponentTeamId ?? null,
-      opponentTeamName: opponentTeamId
-        ? (teamNames.get(opponentTeamId) ?? null)
-        : null,
-    };
-  });
 
   // 7) H2H : agrège par opponent user_id sur toutes les participations.
   type H2HAgg = {
@@ -796,25 +757,68 @@ export async function readPlayerProfile(
     }
   }
 
-  // Best-effort display_name pour les adversaires : via player_ratings.
+  // 8) Achievements (badges / palmarès / saisons). Best-effort : n'échoue
+  //    jamais le profil complet.
+  //    - playerPairs = paires distinctes (tournament_id, team_id) dérivées des
+  //      matches du joueur (tournament_id via `matches`, team_id via la team du
+  //      joueur sur ce match).
+  //    - teamIds = équipes distinctes du joueur (base des saisons de league).
+  const { playerPairs, teamIds } = derivePlayerScope(
+    myPartsRows,
+    (matchId) => matchById.get(matchId)?.tournament_id
+  );
+
+  const results = history.map((h) => ({
+    result: h.result,
+    occurredAt: h.occurredAt,
+  }));
+
+  // Dernier étage : noms des équipes adverses, noms des adversaires H2H et
+  // palmarès ne dépendent que de ce qui précède, pas les uns des autres.
   const oppUserIds = [...h2hAgg.keys()];
-  if (oppUserIds.length > 0) {
-    const { data: oppRatings } = await supabaseAdmin
-      .from('player_ratings')
-      .select('user_id, display_name, battle_tag')
-      .eq('tenant_id', tenantId)
-      .in('user_id', oppUserIds);
-    for (const r of (oppRatings || []) as Array<{
-      user_id: string;
-      display_name: string | null;
-      battle_tag: string | null;
-    }>) {
-      const e = h2hAgg.get(r.user_id);
-      if (e) {
-        if (r.display_name) e.displayName = r.display_name;
-        if (!e.battleTag && r.battle_tag)
-          e.battleTag = maskBattleTag(r.battle_tag);
-      }
+  const [teamNames, oppRatings, achievements] = await Promise.all([
+    readOpponentTeamNames(tenantId, [...opponentTeamIds]),
+    readOpponentRatings(tenantId, oppUserIds),
+    readAchievements(
+      tenantId,
+      {
+        peakRating: pr.peak_rating,
+        gamesPlayed: pr.games_played,
+        wins: pr.wins,
+        losses: pr.losses,
+      },
+      results,
+      playerPairs,
+      teamIds
+    ),
+  ]);
+
+  const recentMatches: PlayerProfileRecentMatch[] = recentSource.map((m) => {
+    const myTeam = myTeamByMatch.get(m.id) ?? null;
+    const opponentTeamId = myTeam === m.team1_id ? m.team2_id : m.team1_id;
+    let result: 'win' | 'loss' | 'draw' = 'draw';
+    if (m.winner_team_id) {
+      result = m.winner_team_id === myTeam ? 'win' : 'loss';
+    }
+    return {
+      matchId: m.id,
+      tournamentId: m.tournament_id,
+      occurredAt: m.completed_at ?? '',
+      result,
+      opponentTeamId: opponentTeamId ?? null,
+      opponentTeamName: opponentTeamId
+        ? (teamNames.get(opponentTeamId) ?? null)
+        : null,
+    };
+  });
+
+  // Best-effort display_name pour les adversaires : via player_ratings.
+  for (const r of oppRatings) {
+    const e = h2hAgg.get(r.user_id);
+    if (e) {
+      if (r.display_name) e.displayName = r.display_name;
+      if (!e.battleTag && r.battle_tag)
+        e.battleTag = maskBattleTag(r.battle_tag);
     }
   }
 
@@ -830,43 +834,6 @@ export async function readPlayerProfile(
     .sort((a, b) => b.games - a.games)
     .slice(0, H2H_TOP_LIMIT);
 
-  // 8) Achievements (badges / palmarès / saisons). Best-effort : n'échoue
-  //    jamais le profil complet.
-  //    - playerPairs = paires distinctes (tournament_id, team_id) dérivées des
-  //      matches du joueur (tournament_id via `matches`, team_id via la team du
-  //      joueur sur ce match).
-  //    - teamIds = équipes distinctes du joueur (base des saisons de league).
-  const playerPairsSet = new Set<string>();
-  const playerPairs: Array<{ tournamentId: string; teamId: string }> = [];
-  for (const matchId of myMatchIds) {
-    const match = matchById.get(matchId);
-    const teamId = myTeamByMatch.get(matchId);
-    if (!match || !match.tournament_id || !teamId) continue;
-    const key = `${match.tournament_id}::${teamId}`;
-    if (playerPairsSet.has(key)) continue;
-    playerPairsSet.add(key);
-    playerPairs.push({ tournamentId: match.tournament_id, teamId });
-  }
-  const teamIds = [...new Set(myPartsRows.map((p) => p.team_id))];
-
-  const results = history.map((h) => ({
-    result: h.result,
-    occurredAt: h.occurredAt,
-  }));
-
-  const achievements = await readAchievements(
-    tenantId,
-    {
-      peakRating: pr.peak_rating,
-      gamesPlayed: pr.games_played,
-      wins: pr.wins,
-      losses: pr.losses,
-    },
-    results,
-    playerPairs,
-    teamIds
-  );
-
   return {
     player,
     history,
@@ -874,4 +841,180 @@ export async function readPlayerProfile(
     h2h,
     achievements,
   };
+}
+
+/**
+ * Rang par COUNT (aucun transfert de lignes) — fidèle à l'ordre du classement
+ * (rating desc, tie-break user_id asc), scopé aux joueurs notés
+ * (games_played > 0).
+ *
+ *   Joueur NOTÉ (games_played > 0) :
+ *     rank = 1 + #{ rating > pr.rating } + #{ rating = pr.rating ∧ uid < pr.uid }
+ *   Joueur NON noté (games_played = 0) : il est exclu du classement → rang =
+ *     (nb de notés) + 1 (position juste après le dernier).
+ *
+ * Les bornes passent par `ratingBand` et non par la valeur brute : voir le
+ * commentaire de cette fonction — un `>` / `=` sur le nombre relu faisait
+ * basculer TOUT un groupe d'ex æquo du mauvais côté.
+ *
+ * Les deux COUNT du joueur noté sont indépendants : ils partent ensemble. LÈVE
+ * (le rang est la seule branche dont l'échec fait tomber la fiche).
+ */
+async function readRank(
+  tenantId: string,
+  pr: Pick<PlayerRatingRow, 'user_id' | 'rating' | 'games_played'>
+): Promise<number> {
+  if (pr.games_played > 0) {
+    const band = ratingBand(pr.rating);
+    const [higher, tie] = await Promise.all([
+      supabaseAdmin
+        .from('player_ratings')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .gt('games_played', 0)
+        .gt('rating', band.high),
+      supabaseAdmin
+        .from('player_ratings')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .gt('games_played', 0)
+        .gte('rating', band.low)
+        .lte('rating', band.high)
+        .lt('user_id', pr.user_id),
+    ]);
+    // Même ordre de contrôle qu'en série : l'erreur du « au-dessus » d'abord.
+    if (higher.error) {
+      logger.error('[readPlayerProfile] rank higher-count error', higher.error);
+      throw new Error('Failed to load player');
+    }
+    if (tie.error) {
+      logger.error('[readPlayerProfile] rank tie-count error', tie.error);
+      throw new Error('Failed to load player');
+    }
+    return 1 + (higher.count ?? 0) + (tie.count ?? 0);
+  }
+  const { count: ratedCount, error: ratedErr } = await supabaseAdmin
+    .from('player_ratings')
+    .select('*', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
+    .gt('games_played', 0);
+  if (ratedErr) {
+    logger.error('[readPlayerProfile] rank rated-count error', ratedErr);
+    throw new Error('Failed to load player');
+  }
+  return (ratedCount ?? 0) + 1;
+}
+
+/** Courbe de rating, chrono ASC. Une erreur de lecture rend une courbe vide. */
+async function readHistory(
+  tenantId: string,
+  userId: string
+): Promise<PlayerProfileHistoryPoint[]> {
+  const { data: histRows } = await supabaseAdmin
+    .from('player_rating_history')
+    .select(
+      'match_id, tournament_id, occurred_at, rating_before, rating_after, result, opponent_avg_rating'
+    )
+    .eq('tenant_id', tenantId)
+    .eq('user_id', userId);
+  const historyRaw = (histRows || []) as HistoryRow[];
+  historyRaw.sort(compareOccurredAtAsc);
+  return historyRaw.map((h) => ({
+    matchId: h.match_id,
+    tournamentId: h.tournament_id,
+    occurredAt: h.occurred_at,
+    ratingBefore: h.rating_before,
+    ratingAfter: h.rating_after,
+    result: h.result,
+    opponentAvgRating: h.opponent_avg_rating,
+  }));
+}
+
+/**
+ * Participations titulaires de la joueuse, puis ses matchs et TOUS leurs
+ * participants. Les participations viennent forcément d'abord (elles donnent
+ * les matchs) ; matchs et participants, eux, se lisent ensemble. Erreurs de
+ * lecture ignorées (listes vides), comme avant.
+ */
+async function readMatchBlock(tenantId: string, userId: string) {
+  const { data: myParts } = await supabaseAdmin
+    .from('match_participants')
+    .select('match_id, team_id, user_id, battle_tag, is_substitute')
+    .eq('tenant_id', tenantId)
+    .eq('user_id', userId);
+  const myPartsRows = ((myParts || []) as ParticipantRow[]).filter(
+    (p) => !p.is_substitute
+  );
+  const myMatchIds = [...new Set(myPartsRows.map((p) => p.match_id))];
+  const myTeamByMatch = new Map<string, string>();
+  for (const p of myPartsRows) myTeamByMatch.set(p.match_id, p.team_id);
+
+  const matchById = new Map<string, MatchRow>();
+  const partsByMatch = new Map<string, ParticipantRow[]>();
+  if (myMatchIds.length > 0) {
+    const [{ data: matchRows }, { data: allParts }] = await Promise.all([
+      supabaseAdmin
+        .from('matches')
+        .select(
+          'id, tournament_id, team1_id, team2_id, winner_team_id, completed_at'
+        )
+        .eq('tenant_id', tenantId)
+        .in('id', myMatchIds),
+      supabaseAdmin
+        .from('match_participants')
+        .select('match_id, team_id, user_id, battle_tag, is_substitute')
+        .eq('tenant_id', tenantId)
+        .in('match_id', myMatchIds),
+    ]);
+    for (const m of (matchRows || []) as MatchRow[]) matchById.set(m.id, m);
+    for (const p of (allParts || []) as ParticipantRow[]) {
+      const arr = partsByMatch.get(p.match_id) ?? [];
+      arr.push(p);
+      partsByMatch.set(p.match_id, arr);
+    }
+  }
+
+  return { myMatchIds, myTeamByMatch, myPartsRows, matchById, partsByMatch };
+}
+
+/** Noms des équipes adverses des matchs récents. Erreur ignorée. */
+async function readOpponentTeamNames(
+  tenantId: string,
+  ids: string[]
+): Promise<Map<string, string>> {
+  const teamNames = new Map<string, string>();
+  if (ids.length === 0) return teamNames;
+  const { data: teamRows } = await supabaseAdmin
+    .from('teams')
+    .select('id, name')
+    .eq('tenant_id', tenantId)
+    .in('id', ids);
+  for (const t of (teamRows || []) as Array<{ id: string; name: string }>) {
+    teamNames.set(t.id, t.name);
+  }
+  return teamNames;
+}
+
+/** Identité des adversaires H2H via player_ratings. Erreur ignorée. */
+async function readOpponentRatings(
+  tenantId: string,
+  ids: string[]
+): Promise<
+  Array<{
+    user_id: string;
+    display_name: string | null;
+    battle_tag: string | null;
+  }>
+> {
+  if (ids.length === 0) return [];
+  const { data: oppRatings } = await supabaseAdmin
+    .from('player_ratings')
+    .select('user_id, display_name, battle_tag')
+    .eq('tenant_id', tenantId)
+    .in('user_id', ids);
+  return (oppRatings || []) as Array<{
+    user_id: string;
+    display_name: string | null;
+    battle_tag: string | null;
+  }>;
 }

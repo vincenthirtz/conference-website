@@ -15,9 +15,8 @@
 //   relâche `opened_at` : mieux vaut un paquet encore fermé qu'un paquet
 //   ouvert et vide, que rien ne permettrait de rejouer.
 //
-// UNE RARETÉ ILLISIBLE NE COÛTE PAS LE PAQUET. `readPlayerProfile` LÈVE sur
-// erreur DB irrécupérable ; on l'attrape par sujet et on retombe sur
-// `common`. Perdre une nuance de rareté est regrettable, perdre le paquet
+// UNE RARETÉ ILLISIBLE NE COÛTE PAS LE PAQUET. `readPlayerBadges` LÈVE sur
+// erreur DB irrécupérable ; on l'attrape et on retombe sur `common`. Perdre une nuance de rareté est regrettable, perdre le paquet
 // serait pire — et la carte reste juste sur l'essentiel : qui elle représente.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -26,10 +25,11 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
-import { readPlayerProfile } from '@/utils/rating/readPlayerProfile';
+import { readPlayerBadges } from '@/utils/rating/readPlayerBadges';
 import { cardRarity, isFoil, MAP_CARD_RARITY } from '@/utils/tcg/rarity';
 import { DEFAULT_FANART_RARITY } from '@/utils/tcg/fanart';
 import type { TcgRarity } from '@/utils/tcg/rarity';
+import type { ProfileBadge } from '@/types/rating';
 import { readTeamRarity } from '@/utils/tcg/readTeamRarity';
 import {
   pickPackSubjects,
@@ -433,9 +433,20 @@ async function openPack(
   }
 
   // 4) La rareté des sujets tirés — cinq calculs, pas un par candidate.
+  //
+  // Les badges des joueuses tirées sont lus EN UNE FOIS : la rareté appelait
+  // `readPlayerProfile` par carte (~17 allers-retours base + GoTrue chacun,
+  // pour n'en garder que les badges). La promesse est lancée sans être
+  // attendue, pour courir en même temps que les lectures d'équipe et de fan
+  // art ; `rarityOf` l'attend. Mêmes badges, même barème : voir la garantie de
+  // parité de `utils/rating/readPlayerBadges.ts`.
+  const playerBadges = readDrawnPlayerBadges(
+    tenantId,
+    subjects.flatMap((s) => (s.kind === 'player' ? [s.userId] : []))
+  );
   const cards = await Promise.all(
     subjects.map(async (subject, position) => {
-      const rarity = await rarityOf(subject, tenantId);
+      const rarity = await rarityOf(subject, tenantId, playerBadges);
       return {
         pack_id: packId,
         position,
@@ -650,14 +661,41 @@ async function readFanartRarity(
 /* Rareté d'un sujet                                                           */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Badges des joueuses tirées, ou `null` si la lecture a échoué. Ne rejette
+ * jamais : la promesse est créée avant d'être attendue, et un rejet pas encore
+ * écouté serait signalé comme non géré.
+ *
+ * Aucune joueuse tirée = aucune lecture (`readPlayerBadges` rend alors une Map
+ * vide sans toucher la base).
+ */
+async function readDrawnPlayerBadges(
+  tenantId: string,
+  userIds: string[]
+): Promise<Map<string, ProfileBadge[]> | null> {
+  try {
+    return await readPlayerBadges(tenantId, userIds);
+  } catch (err) {
+    // Cf. l'en-tête : perdre une nuance de rareté vaut mieux que perdre le
+    // paquet. Chaque carte joueuse retombe sur `common`, comme le faisait
+    // l'échec de sa lecture de profil.
+    logger.warn(
+      '[tcg/packs] rareté indisponible, repli sur common: %s',
+      err instanceof Error ? err.message : String(err)
+    );
+    return null;
+  }
+}
+
 async function rarityOf(
   subject: DrawnSubject,
-  tenantId: string
+  tenantId: string,
+  playerBadges: Promise<Map<string, ProfileBadge[]> | null>
 ): Promise<TcgRarity> {
   try {
     if (subject.kind === 'player') {
-      const profile = await readPlayerProfile(subject.userId, tenantId);
-      return cardRarity(profile?.achievements.badges ?? []);
+      const badges = await playerBadges;
+      return cardRarity(badges?.get(subject.userId) ?? []);
     }
 
     if (subject.kind === 'map') {
