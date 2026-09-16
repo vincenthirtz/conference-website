@@ -82,7 +82,9 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   //   - calculer le set de discord_user_id à supprimer (absents du payload).
   const { data: existingRows, error: existingErr } = await supabaseAdmin
     .from('free_players')
-    .select('discord_user_id, marked_at')
+    .select(
+      'discord_user_id, marked_at, roles, level, availability, note, contact_email, contact_discord'
+    )
     .eq('tenant_id', tenantId)
     // Scopé Discord comme la purge : une inscription web n'a pas de
     // discord_user_id et n'a rien à faire dans ce calcul.
@@ -93,13 +95,47 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       .status(500)
       .json({ error: 'Erreur de lecture des joueurs libres.' });
   }
-  const markedAtByDiscordId = new Map<string, string>();
+  /**
+   * Ce qui SURVIT au full replace, par joueuse.
+   *
+   * `marked_at` survivait déjà : sans lui, chaque synchro remettrait à zéro la
+   * date « libre depuis », et l'ancienneté d'une recherche disparaîtrait toutes
+   * les trente minutes.
+   *
+   * Le PROFIL doit survivre pour la même raison. Le bot ne connaît de Discord
+   * qu'un identifiant et un pseudo : poste, niveau, disponibilité et note ne
+   * peuvent venir que d'ailleurs — d'une saisie de la joueuse, ou d'une
+   * correction du staff. Les laisser hors de cette carte, c'est garantir qu'ils
+   * seront effacés au prochain filet périodique, en silence, et qu'aucune fiche
+   * Discord ne pourra jamais dire autre chose qu'un pseudo.
+   */
+  type Preserved = {
+    marked_at: string;
+    roles: string[] | null;
+    level: string | null;
+    availability: string | null;
+    note: string | null;
+    contact_email: string | null;
+    contact_discord: string | null;
+  };
+  const preservedByDiscordId = new Map<string, Preserved>();
   for (const r of existingRows ?? []) {
-    const did = (r as Record<string, unknown>).discord_user_id;
-    const mat = (r as Record<string, unknown>).marked_at;
-    if (typeof did === 'string' && typeof mat === 'string') {
-      markedAtByDiscordId.set(did, mat);
-    }
+    const row = r as Record<string, unknown>;
+    const did = row.discord_user_id;
+    const mat = row.marked_at;
+    if (typeof did !== 'string' || typeof mat !== 'string') continue;
+    preservedByDiscordId.set(did, {
+      marked_at: mat,
+      roles: Array.isArray(row.roles) ? (row.roles as string[]) : null,
+      level: typeof row.level === 'string' ? row.level : null,
+      availability:
+        typeof row.availability === 'string' ? row.availability : null,
+      note: typeof row.note === 'string' ? row.note : null,
+      contact_email:
+        typeof row.contact_email === 'string' ? row.contact_email : null,
+      contact_discord:
+        typeof row.contact_discord === 'string' ? row.contact_discord : null,
+    });
   }
 
   const nowIso = new Date().toISOString();
@@ -114,6 +150,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   // On compte linked/unlinked en construisant les rows.
   const rows = players.map((p) => {
     const authUserId = linkByDiscordId.get(p.discordUserId) ?? null;
+    const kept = preservedByDiscordId.get(p.discordUserId);
     if (authUserId) linked += 1;
     else unlinkedDiscordIds.push(p.discordUserId);
     return {
@@ -122,8 +159,15 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       discord_user_id: p.discordUserId,
       discord_username: p.username,
       auth_user_id: authUserId,
-      // Préserve la date de marquage initiale si le joueur était déjà présent.
-      marked_at: markedAtByDiscordId.get(p.discordUserId) ?? nowIso,
+      // Préserve la date de marquage initiale si le joueur était déjà présent,
+      // ET tout ce que le bot ne sait pas : le profil vient d'ailleurs.
+      marked_at: kept?.marked_at ?? nowIso,
+      roles: kept?.roles ?? [],
+      level: kept?.level ?? null,
+      availability: kept?.availability ?? null,
+      note: kept?.note ?? null,
+      contact_email: kept?.contact_email ?? null,
+      contact_discord: kept?.contact_discord ?? null,
       updated_at: nowIso,
     };
   });

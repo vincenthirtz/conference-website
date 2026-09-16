@@ -8,6 +8,7 @@ import type { ApiContractEntry } from '../index';
 import { ackBodySchema as s0_cast_assignmentId_ack } from './cast/[assignmentId]/ack';
 import { handledBodySchema as s1_events_handled } from './events/handled';
 import { syncBodySchema as s2_free_players_sync } from './free-players/sync';
+import { profileBodySchema as s2_free_players_profile } from './free-players/profile';
 import { invitationBodySchema as s3_invitations_demandeId } from './invitations/[demandeId]';
 import { lockBodySchema as s4_locks_name } from './locks/[name]';
 import { checkinBodySchema as s5_matches_matchId_checkin } from './matches/[matchId]/checkin';
@@ -85,6 +86,10 @@ export const BOT_API_CONTRACT_SCHEMAS: Record<string, ApiContractEntry> = {
   },
   'bot.events/handled': { schema: s1_events_handled, io: 'input' },
   'bot.free-players/sync': { schema: s2_free_players_sync, io: 'input' },
+  'bot.free-players/profile': {
+    schema: s2_free_players_profile,
+    io: 'input',
+  },
   'bot.invitations/[demandeId]': {
     schema: s3_invitations_demandeId,
     io: 'input',

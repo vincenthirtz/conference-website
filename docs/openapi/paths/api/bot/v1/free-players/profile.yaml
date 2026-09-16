@@ -1,0 +1,46 @@
+post:
+  tags:
+    - bot/free-players
+  summary: La joueuse complete sa fiche "libre" depuis Discord.
+  description: >-
+    Le bot ne connait de Discord qu'un identifiant et un pseudo : les fiches de
+    provenance Discord n'avaient donc ni poste, ni niveau, ni disponibilite (six
+    sur six, mesure le 16 septembre 2026). Une capitaine qui filtre par poste ne
+    les voyait jamais. Cette route porte ce que Discord ne sait pas.
+
+
+    Elle ne CREE rien : sans fiche, la reponse est 404. Creer ici ferait du
+    profil une seconde porte d'entree au marche, avec ses propres regles de
+    peremption, alors que la verite du marche Discord est le ROLE — une joueuse
+    qui le retire disparait a la synchro suivante, et son profil ne doit pas la
+    faire reapparaitre.
+
+
+    /sync reporte desormais poste, niveau, disponibilite et note d'une synchro a
+    l'autre : sans cela, ce que cette route ecrit serait efface au prochain
+    filet periodique.
+  operationId: botSetFreePlayerProfile
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: bot.free-players/profile
+  responses:
+    '200':
+      description: Fiche mise a jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      description: Aucune fiche "joueuse libre" pour ce compte Discord.
+    '429':
+      $ref: '#/components/responses/RateLimited'
