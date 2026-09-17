@@ -14,6 +14,19 @@ import { useEffect, useState } from 'react';
 export const STAGE_W = 1920;
 export const STAGE_H = 1080;
 
+/** Taille de la fenêtre de la source (1920×1080 au rendu serveur). */
+export function useViewportSize(): { width: number; height: number } {
+  const [size, setSize] = useState({ width: STAGE_W, height: STAGE_H });
+  useEffect(() => {
+    const update = () =>
+      setSize({ width: window.innerWidth, height: window.innerHeight });
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  return size;
+}
+
 export function useStageFit(): number {
   const [fit, setFit] = useState(1);
   useEffect(() => {

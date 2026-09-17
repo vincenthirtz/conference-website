@@ -40,6 +40,7 @@ import DonationOverlayPage from '../../pages/overlay/don';
 import StreamSourcesPanel from '../../components/admin/tournament/StreamSourcesPanel';
 import {
   UpcomingScrimsSource,
+  listFit,
   parseScrimsPosition,
 } from '../../components/overlay/match/UpcomingScrimsSource';
 
@@ -282,6 +283,18 @@ describe('source « scrims à venir » : les lignes seules, fond transparent', (
   it('reste vide quand rien n’est programmé', () => {
     expect(render({ ...payload, scrims: [], total: 0 })).toBe('');
     expect(render(null)).toBe('');
+  });
+
+  it('agrandit une ligne seule jusqu’à la largeur de la source', () => {
+    // 1920×1080 : la largeur borne — la ligne de 1600 px passe à ~1900 px.
+    expect(listFit(1, { width: 1920, height: 1080 })).toBeCloseTo(1920 / 1624);
+    // Source calée sur un encart large et bas : toujours toute la largeur.
+    expect(listFit(1, { width: 1070, height: 280 })).toBeCloseTo(1070 / 1624);
+    // Six lignes dans une source basse : c'est la hauteur qui borne.
+    const six = listFit(6, { width: 1920, height: 600 });
+    expect(six * (6 * 112 + 5 * 16 + 24)).toBeCloseTo(600);
+    // ?scale= multiplie.
+    expect(listFit(1, { width: 1624, height: 1080 }, 0.5)).toBeCloseTo(0.5);
   });
 
   it('lit ?position=', () => {

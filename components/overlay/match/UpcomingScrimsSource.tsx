@@ -8,6 +8,10 @@
 // Lisibilité par-dessus n'importe quelle image : chaque ligne porte son propre
 // bandeau sombre et les textes une ombre portée. Pas d'animation continue
 // hormis le point « en direct » (cf. MatchSources).
+//
+// TAILLE : le bloc de lignes s'agrandit jusqu'à REMPLIR la source (cf.
+// listFit). Un cadre 16:9 fixe laissait un seul scrim en fine bande au milieu
+// de la source, minuscule une fois la source calée dans un encart de la scène.
 
 import { useT } from '@/lib/i18n/useT';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
@@ -16,6 +20,7 @@ import type { OverlayScrimView } from '@/utils/overlay/scrimsOverlay';
 import type { OverlayTeamView } from '@/utils/overlay/matchOverlay';
 import { hourLabel } from '@/components/overlay/match/MatchSources';
 import { OVERLAY_DAY_TIME_ZONE } from '@/utils/overlay/dayOverlay';
+import { useViewportSize } from '@/hooks/useStageFit';
 
 type Dict = typeof nsOverlay.fr;
 
@@ -40,6 +45,32 @@ export function scrimDayLabel(
     month: 'short',
     timeZone: OVERLAY_DAY_TIME_ZONE,
   }).format(new Date(ms));
+}
+
+/** Géométrie d'une ligne, en pixels « de conception ». */
+export const SCRIM_ROW_W = 1600;
+export const SCRIM_ROW_H = 112;
+export const SCRIM_ROW_GAP = 16;
+/** Marge gardée autour du bloc, pour que les coins arrondis ne touchent pas le bord. */
+const SCRIM_MARGIN = 12;
+
+/**
+ * Facteur d'échelle qui fait remplir la source au bloc de `count` lignes :
+ * limité par la largeur (une ligne seule occupe toute la largeur) ou par la
+ * hauteur (beaucoup de lignes dans une source basse), multiplié par `?scale=`.
+ */
+export function listFit(
+  count: number,
+  viewport: { width: number; height: number },
+  scale = 1
+): number {
+  const n = Math.max(1, count);
+  const blockH = n * SCRIM_ROW_H + (n - 1) * SCRIM_ROW_GAP;
+  const fit = Math.min(
+    viewport.width / (SCRIM_ROW_W + 2 * SCRIM_MARGIN),
+    viewport.height / (blockH + 2 * SCRIM_MARGIN)
+  );
+  return fit * scale;
 }
 
 const SHADOW = { textShadow: '0 2px 6px rgba(0,0,0,0.8)' } as const;
@@ -83,7 +114,7 @@ function ScrimLine({
   const name2 = scrim.team2?.name?.trim() || t.dayTeamTbd;
 
   return (
-    <li className="flex h-28 w-[1500px] items-center gap-8 rounded-2xl bg-black/70 px-8">
+    <li className="flex h-28 w-[1600px] items-center gap-8 rounded-2xl bg-black/70 px-8">
       {/* L'horaire d'abord : c'est la colonne que l'œil cherche. */}
       <div className="w-48 shrink-0 leading-tight" style={SHADOW}>
         {scrim.phase === 'live' ? (
@@ -136,10 +167,11 @@ function ScrimLine({
   );
 }
 
-const JUSTIFY: Record<ScrimsPosition, string> = {
-  top: 'justify-start pt-16',
-  center: 'justify-center',
-  bottom: 'justify-end pb-16',
+/** Ancrage vertical du bloc dans la source, et origine de sa mise à l'échelle. */
+const ANCHOR: Record<ScrimsPosition, { top: string; y: string }> = {
+  top: { top: `${SCRIM_MARGIN}px`, y: '0' },
+  center: { top: '50%', y: '-50%' },
+  bottom: { top: `calc(100% - ${SCRIM_MARGIN}px)`, y: '-100%' },
 };
 
 export function UpcomingScrimsSource({
@@ -156,17 +188,23 @@ export function UpcomingScrimsSource({
   locale: string;
 }) {
   const t = useT(nsOverlay);
+  const viewport = useViewportSize();
   // Rien à venir : la source reste vide et transparente, plutôt qu'un message
   // qui s'imposerait à l'antenne.
   if (!payload || payload.scrims.length === 0) return null;
 
+  const fit = listFit(payload.scrims.length, viewport, scale);
+  const anchor = ANCHOR[position];
+
   return (
     <ol
-      className={`flex h-full w-full flex-col items-center gap-4 ${JUSTIFY[position]}`}
+      className="absolute left-1/2 flex flex-col"
       style={{
-        transform: scale !== 1 ? `scale(${scale})` : undefined,
-        transformOrigin:
-          position === 'center' ? 'center' : `center ${position}`,
+        width: SCRIM_ROW_W,
+        gap: SCRIM_ROW_GAP,
+        top: anchor.top,
+        transform: `translate(-50%, ${anchor.y}) scale(${fit})`,
+        transformOrigin: `center ${position === 'center' ? 'center' : position}`,
       }}
     >
       {payload.scrims.map((s) => (

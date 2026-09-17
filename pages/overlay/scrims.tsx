@@ -16,8 +16,9 @@
 //   scale     0.5 → 2
 //   tenant    slug d'espace, pour les sources d'un autre organisateur
 //
-// Dessinée sur un cadre 1920×1080 mis à l'échelle de la source (cf.
-// useStageFit). Rendue sans chrome par `_app.tsx`, `noindex`. Restrictions :
+// Le bloc de lignes s'agrandit pour remplir la source, quelle que soit sa
+// taille : réglez la source OBS aux dimensions de l'encart où elle s'affiche
+// (cf. listFit). Rendue sans chrome par `_app.tsx`, `noindex`. Restrictions :
 // cf. `GET /api/overlay/scrims`.
 
 import Head from 'next/head';
@@ -25,7 +26,6 @@ import { useRouter } from 'next/router';
 import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { useOverlayPoll } from '@/hooks/useOverlayPoll';
-import { stageStyle, useStageFit } from '@/hooks/useStageFit';
 import { DEFAULT_OVERLAY_ACCENT } from '@/components/overlay/match/MatchSources';
 import {
   UpcomingScrimsSource,
@@ -54,7 +54,6 @@ export default function ScrimsOverlayPage() {
   const router = useRouter();
   const t = useT(nsOverlay);
   const locale = useLocale();
-  const fit = useStageFit();
 
   // Les paramètres de lecture passent tels quels à l'API, qui les borne.
   const params = new URLSearchParams();
@@ -90,28 +89,23 @@ export default function ScrimsOverlayPage() {
       `}</style>
 
       <div className="relative h-screen w-screen overflow-hidden text-white">
-        <div
-          className="absolute left-1/2 top-1/2 origin-center"
-          style={stageStyle(fit)}
-        >
-          {fatal ? (
-            // Erreur de configuration (palier, espace) : visible dans l'aperçu
-            // OBS dès qu'on colle l'URL, pas découverte en direct.
-            <div className="flex h-full w-full items-center justify-center p-16">
-              <p className="max-w-3xl rounded-2xl border border-red-500/40 bg-black/85 px-10 py-8 text-center text-2xl font-semibold text-red-200">
-                {fatal}
-              </p>
-            </div>
-          ) : (
-            <UpcomingScrimsSource
-              payload={data}
-              accent={accent}
-              scale={parseScale(firstParam(router.query.scale))}
-              position={parseScrimsPosition(firstParam(router.query.position))}
-              locale={locale}
-            />
-          )}
-        </div>
+        {fatal ? (
+          // Erreur de configuration (palier, espace) : visible dans l'aperçu
+          // OBS dès qu'on colle l'URL, pas découverte en direct.
+          <div className="flex h-full w-full items-center justify-center p-16">
+            <p className="max-w-3xl rounded-2xl border border-red-500/40 bg-black/85 px-10 py-8 text-center text-2xl font-semibold text-red-200">
+              {fatal}
+            </p>
+          </div>
+        ) : (
+          <UpcomingScrimsSource
+            payload={data}
+            accent={accent}
+            scale={parseScale(firstParam(router.query.scale))}
+            position={parseScrimsPosition(firstParam(router.query.position))}
+            locale={locale}
+          />
+        )}
       </div>
     </>
   );
