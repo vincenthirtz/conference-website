@@ -171,9 +171,15 @@ describe('POST /api/player/scrims/[scrimId]/report', () => {
     expect(scrim.team1_score).toBe(3);
     expect(scrim.winner_team_id).toBe(TEAM_A);
     expect(scrim.completed_at).toBeTruthy();
-    // Le bot annonce la fin de la rencontre.
-    expect(emitBotEvent).toHaveBeenCalledTimes(1);
+    // Le bot annonce la fin de la rencontre, AVEC les noms d'équipe : l'embed
+    // lit `team1.name` (sans eux, il affichait « Équipe 1 vs Équipe 2 »).
+    await vi.waitFor(() => expect(emitBotEvent).toHaveBeenCalledTimes(1));
     expect(emitBotEvent.mock.calls[0][0]).toBe('scrim.finished');
+    const payload = emitBotEvent.mock.calls[0][1] as any;
+    expect(payload.team1?.name).toBe('Alpha');
+    expect(payload.team2?.name).toBe('Bravo');
+    expect(payload.team1Score).toBe(3);
+    expect(payload.winnerTeamId).toBe(TEAM_A);
   });
 
   it('deux reports divergents : le scrim passe en litige', async () => {

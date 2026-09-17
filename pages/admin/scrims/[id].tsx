@@ -70,6 +70,10 @@ function AdminScrimEditPage(_props: StaffProps) {
   const id = typeof router.query.id === 'string' ? router.query.id : '';
 
   const [scrim, setScrim] = useState<ScrimWithTeams | null>(null);
+  // Statut tel que chargé : le PATCH ne renvoie `status` que s'il a changé.
+  // Sinon enregistrer le nom d'un scrim `disputed` renvoyait ce statut, que le
+  // PATCH refuse (il n'est posé que par les reports divergents) → 400.
+  const [loadedStatus, setLoadedStatus] = useState<string | null>(null);
   const [matches, setMatches] = useState<ScrimMatch[]>([]);
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,6 +99,7 @@ function AdminScrimEditPage(_props: StaffProps) {
         ),
       ]);
       setScrim(s.scrim);
+      setLoadedStatus(s.scrim?.status ?? null);
       setMatches(m.matches || []);
       setTeams(teamsRes.teams || []);
     } catch (err) {
@@ -123,7 +128,7 @@ function AdminScrimEditPage(_props: StaffProps) {
       }
       const body = {
         name: scrim.name,
-        status: scrim.status,
+        ...(scrim.status !== loadedStatus ? { status: scrim.status } : {}),
         ...scrimTeamBody(1, { teamId: scrim.team1_id || '', ...ext1 }),
         ...scrimTeamBody(2, { teamId: scrim.team2_id || '', ...ext2 }),
         scheduled_date: scrim.scheduled_date,
@@ -325,6 +330,14 @@ function AdminScrimEditPage(_props: StaffProps) {
                   <option value="running">{t.statusRunning}</option>
                   <option value="completed">{t.statusCompleted}</option>
                   <option value="cancelled">{t.statusCancelled}</option>
+                  {/* Affiché pour qu'un scrim en litige ne s'affiche pas
+                      « Brouillon » ; non sélectionnable (posé par des reports
+                      divergents, tranché dans la section Résultat). */}
+                  {loadedStatus === 'disputed' && (
+                    <option value="disputed" disabled>
+                      {t.statusDisputed}
+                    </option>
+                  )}
                 </select>
               </div>
             </div>

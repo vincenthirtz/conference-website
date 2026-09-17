@@ -636,6 +636,30 @@ describe('/api/scrims/[id] (public)', () => {
     expect((res.body as any).scrim.id).toBe(SCRIM_ID);
     expect((res.body as any).matches).toHaveLength(1);
   });
+
+  it('GET ne divulgue pas le code de salon des matchs (route publique)', async () => {
+    store.scrims = [
+      {
+        id: SCRIM_ID,
+        name: 'Pub',
+        slug: 'pub',
+        status: 'running',
+        is_public: true,
+      },
+    ] as any;
+    store.matches = [
+      {
+        id: 'm1',
+        scrim_id: SCRIM_ID,
+        status: 'ongoing',
+        lobby_code: 'SECRET-LOBBY',
+      },
+    ] as any;
+    const res = makeRes();
+    await publicScrimIdHandler(makeReq({ query: { id: SCRIM_ID } }), res);
+    expect(res.statusCode).toBe(200);
+    expect(JSON.stringify(res.body)).not.toContain('SECRET-LOBBY');
+  });
 });
 
 /* -----------------------------------------------------------

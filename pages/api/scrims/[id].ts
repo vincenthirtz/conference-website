@@ -57,6 +57,9 @@ export default async function handler(
   }
   if (!scrim) return res.status(404).json({ error: 'Scrim not found' });
 
+  // Pas de `lobby_code` : cette route est publique et sans authentification.
+  // Le code de salon donne l'accès à la partie ; il n'appartient qu'aux équipes
+  // (espace joueuse) et au staff.
   const { data: matches, error: matchesErr } = await supabaseAdmin
     .from('matches')
     .select(
@@ -64,7 +67,7 @@ export default async function handler(
       id, status, is_bye, best_of, match_format,
       team1_id, team2_id, team1_score, team2_score, winner_team_id, forfeit_team_id,
       scheduled_at, started_at, completed_at,
-      stream_url, replay_url, lobby_code,
+      stream_url, replay_url,
       team1:teams!matches_team1_fk(id, name, short_name, logo_url),
       team2:teams!matches_team2_fk(id, name, short_name, logo_url)
     `
@@ -80,6 +83,11 @@ export default async function handler(
 
   return res.status(200).json({
     scrim,
-    matches: matches ?? [],
+    // Retrait explicite en plus du select : si la liste de colonnes change un
+    // jour (ou passe à `*`), le code de salon ne doit toujours pas sortir.
+    matches: (matches ?? []).map((m) => {
+      const { lobby_code: _secret, ...rest } = m as Record<string, unknown>;
+      return rest;
+    }),
   });
 }

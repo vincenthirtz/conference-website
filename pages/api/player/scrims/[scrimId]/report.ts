@@ -43,7 +43,7 @@ import {
   reportsAgree,
   type ScrimReport,
 } from '@/utils/scrims/scrimResult';
-import { emitBotEvent } from '@/utils/botEvents';
+import { emitScrimEvent } from '@/utils/scrimEvents';
 import { logger } from '@/utils/logger';
 import { isReportBeforeKickoff } from '@/utils/matches/scoreReports';
 
@@ -105,7 +105,9 @@ export default withAuthRoute(async function handler(
 
   const { data: scrim, error: scrimErr } = await supabaseAdmin
     .from('scrims')
-    .select('id, status, team1_id, team2_id, name, ranked, scheduled_date')
+    .select(
+      'id, status, team1_id, team2_id, name, ranked, scheduled_date, slug, timezone, is_public, stream_url, description, source_demande_id'
+    )
     .eq('tenant_id', tenantId)
     .eq('id', scrimId)
     .is('deleted_at', null)
@@ -248,20 +250,26 @@ export default withAuthRoute(async function handler(
 
   // Le bot annonce la fin du scrim dans le salon d'équipe. Fire-and-forget :
   // un échec d'émission ne remet pas en cause un résultat déjà persisté.
-  void emitBotEvent(
+  // Via `emitScrimEvent`, qui résout `team1` / `team2` (nom, short_name) : l'embed
+  // du bot lit `team1.name`, et l'émission brute d'avant n'envoyait que les
+  // ids — l'annonce disait « Équipe 1 vs Équipe 2 ». Les champs historiques
+  // (team1Id, scores, vainqueur, ranked) restent dans le payload.
+  void emitScrimEvent(
     'scrim.finished',
+    { ...scrim, status: 'completed' } as unknown as Parameters<
+      typeof emitScrimEvent
+    >[1],
+    tenantId,
     {
-      scrimId,
-      name: scrim.name ?? null,
       team1Id: scrim.team1_id,
       team2Id: scrim.team2_id,
       team1Score,
       team2Score,
       winnerTeamId: applied.winnerTeamId,
       ranked: scrim.ranked !== false,
-    },
-    tenantId
-  ).catch((e) => logger.error('[scrim-report] scrim.finished emit error', e));
+      decidedBy: 'captains',
+    }
+  );
 
   return res.status(200).json({
     outcome: 'completed',
