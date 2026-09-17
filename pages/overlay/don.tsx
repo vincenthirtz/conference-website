@@ -101,11 +101,14 @@ export default function DonationOverlayPage() {
 
       <div className="relative h-screen w-screen overflow-hidden text-white">
         <div
-          className="absolute left-0 top-0 origin-top-left"
+          className="absolute left-1/2 top-1/2 origin-center"
           style={{
             width: STAGE_W,
             height: STAGE_H,
-            transform: fit !== 1 ? `scale(${fit})` : undefined,
+            // Centré dans la fenêtre : quand ses proportions ne sont pas 16:9
+            // (800×600), le cadre réduit laisse une marge des deux côtés
+            // plutôt que tout en bas.
+            transform: `translate(-50%, -50%) scale(${fit})`,
           }}
         >
           {corner ? (
