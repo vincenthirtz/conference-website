@@ -20,6 +20,7 @@
 // Le QR est TOUJOURS posé sur fond blanc : un QR sur fond sombre ou
 // transparent ne se scanne pas depuis un téléphone pointé sur un écran.
 
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useT } from '@/lib/i18n/useT';
@@ -47,6 +48,32 @@ function parseScale(raw: string | undefined): number {
   return Math.min(2, Math.max(0.5, n));
 }
 
+/** Cadre de conception : tout est dessiné en 1920×1080 puis mis à l'échelle. */
+const STAGE_W = 1920;
+const STAGE_H = 1080;
+
+/**
+ * Facteur qui fait tenir le cadre 1920×1080 dans la fenêtre de la source.
+ *
+ * Une source navigateur OBS n'a pas forcément la taille du stream (800×600 par
+ * défaut). Mise en page en pixels dans une fenêtre plus petite, le panneau
+ * débordait et `overflow-hidden` coupait l'accroche. On dessine donc toujours
+ * sur le même cadre, qu'on réduit en bloc : rien ne se déforme ni ne se coupe.
+ */
+function useStageFit(): number {
+  const [fit, setFit] = useState(1);
+  useEffect(() => {
+    const update = () =>
+      setFit(
+        Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H)
+      );
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  return fit;
+}
+
 export default function DonationOverlayPage() {
   const router = useRouter();
   const t = useT(nsOverlay);
@@ -57,6 +84,7 @@ export default function DonationOverlayPage() {
   const scale = parseScale(firstParam(router.query.scale));
   const title =
     firstParam(router.query.title)?.trim().slice(0, 80) || t.donTitle;
+  const fit = useStageFit();
 
   return (
     <>
@@ -72,79 +100,88 @@ export default function DonationOverlayPage() {
       `}</style>
 
       <div className="relative h-screen w-screen overflow-hidden text-white">
-        {corner ? (
-          <div
-            className="absolute bottom-10 right-10 flex origin-bottom-right items-center gap-5 rounded-2xl border border-white/10 bg-black/85 p-4 pr-6 shadow-2xl"
-            style={{ transform: scale !== 1 ? `scale(${scale})` : undefined }}
-          >
-            <div className="shrink-0 rounded-xl bg-white p-2">
-              {/* biome-ignore lint/performance/noImgElement: source OBS — pas de next/image */}
-              <img
-                src={QR_SRC}
-                alt={t.donQrAlt}
-                width={144}
-                height={144}
-                className="block aspect-square h-36 w-36 object-contain [image-rendering:pixelated]"
-              />
-            </div>
-            <div className="max-w-[16rem]">
-              <div
-                className="text-sm font-bold uppercase tracking-[0.2em]"
-                style={{ color: accent }}
-              >
-                {t.donEyebrow}
-              </div>
-              <div className="mt-1 text-2xl font-black leading-tight">
-                {title}
-              </div>
-              <div className="mt-2 text-base font-semibold text-white/70">
-                {DONATION_URL_LABEL}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
+        <div
+          className="absolute left-0 top-0 origin-top-left"
+          style={{
+            width: STAGE_W,
+            height: STAGE_H,
+            transform: fit !== 1 ? `scale(${fit})` : undefined,
+          }}
+        >
+          {corner ? (
             <div
-              className="flex origin-center items-center gap-14 rounded-3xl border border-white/10 bg-black/85 p-12 shadow-2xl"
+              className="absolute bottom-10 right-10 flex origin-bottom-right items-center gap-5 rounded-2xl border border-white/10 bg-black/85 p-4 pr-6 shadow-2xl"
               style={{ transform: scale !== 1 ? `scale(${scale})` : undefined }}
             >
-              {/* `shrink-0` + carré imposé : dans une source OBS plus étroite
-                  que 1920 px, la flexbox rétrécissait la largeur du QR en
-                  gardant sa hauteur — un QR déformé ne se scanne plus. La
-                  taille suit la hauteur du cadre pour tenir en entier. */}
-              <div className="shrink-0 rounded-2xl bg-white p-5">
+              <div className="shrink-0 rounded-xl bg-white p-2">
                 {/* biome-ignore lint/performance/noImgElement: source OBS — pas de next/image */}
                 <img
                   src={QR_SRC}
                   alt={t.donQrAlt}
-                  width={384}
-                  height={384}
-                  className="block aspect-square h-[min(24rem,55vh)] w-[min(24rem,55vh)] object-contain [image-rendering:pixelated]"
+                  width={144}
+                  height={144}
+                  className="block aspect-square h-36 w-36 object-contain [image-rendering:pixelated]"
                 />
               </div>
-              <div className="min-w-0 max-w-xl">
-                {/* biome-ignore lint/performance/noImgElement: source OBS — pas de next/image */}
-                <img src={LOGO_SRC} alt="" className="mb-8 h-24 w-auto" />
+              <div className="w-[18rem]">
                 <div
-                  className="text-xl font-bold uppercase tracking-[0.3em]"
+                  className="text-sm font-bold uppercase tracking-[0.2em]"
                   style={{ color: accent }}
                 >
                   {t.donEyebrow}
                 </div>
-                <h1 className="mt-3 text-6xl font-black leading-tight">
+                <div className="mt-1 text-2xl font-black leading-snug [text-wrap:balance]">
                   {title}
-                </h1>
-                <p className="mt-6 text-3xl text-white/75">{t.donBody}</p>
-                <p
-                  className="mt-8 text-3xl font-bold"
-                  style={{ color: accent }}
-                >
+                </div>
+                <div className="mt-2 text-base font-semibold text-white/70">
                   {DONATION_URL_LABEL}
-                </p>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <div
+                className="flex origin-center items-center gap-14 rounded-3xl border border-white/10 bg-black/85 p-12 shadow-2xl"
+                style={{
+                  transform: scale !== 1 ? `scale(${scale})` : undefined,
+                }}
+              >
+                {/* `shrink-0` + carré imposé : un QR déformé par la flexbox ne
+                  se scanne plus. */}
+                <div className="shrink-0 rounded-2xl bg-white p-5">
+                  {/* biome-ignore lint/performance/noImgElement: source OBS — pas de next/image */}
+                  <img
+                    src={QR_SRC}
+                    alt={t.donQrAlt}
+                    width={384}
+                    height={384}
+                    className="block aspect-square h-96 w-96 object-contain [image-rendering:pixelated]"
+                  />
+                </div>
+                <div className="w-[36rem] shrink-0">
+                  {/* biome-ignore lint/performance/noImgElement: source OBS — pas de next/image */}
+                  <img src={LOGO_SRC} alt="" className="mb-8 h-24 w-auto" />
+                  <div
+                    className="text-xl font-bold uppercase tracking-[0.3em]"
+                    style={{ color: accent }}
+                  >
+                    {t.donEyebrow}
+                  </div>
+                  <h1 className="mt-3 text-6xl font-black leading-[1.15] [text-wrap:balance]">
+                    {title}
+                  </h1>
+                  <p className="mt-6 text-3xl text-white/75">{t.donBody}</p>
+                  <p
+                    className="mt-8 text-3xl font-bold"
+                    style={{ color: accent }}
+                  >
+                    {DONATION_URL_LABEL}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </>
   );
