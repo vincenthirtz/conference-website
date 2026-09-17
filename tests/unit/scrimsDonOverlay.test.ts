@@ -38,6 +38,10 @@ import {
 import handler from '../../pages/api/overlay/scrims';
 import DonationOverlayPage from '../../pages/overlay/don';
 import StreamSourcesPanel from '../../components/admin/tournament/StreamSourcesPanel';
+import {
+  UpcomingScrimsSource,
+  parseScrimsPosition,
+} from '../../components/overlay/match/UpcomingScrimsSource';
 
 const NOW = Date.parse('2026-09-17T18:00:00.000Z');
 const HOUR = 60 * 60 * 1000;
@@ -228,5 +232,60 @@ describe('panneau « Sources de stream »', () => {
     );
     expect(other).toContain('/overlay/scrims');
     expect(other).not.toContain('/overlay/don');
+  });
+});
+
+describe('source « scrims à venir » : les lignes seules, fond transparent', () => {
+  const payload = {
+    scrims: [
+      {
+        id: 's1',
+        name: 'Scrim',
+        slug: 's1',
+        phase: 'upcoming' as const,
+        scheduledAt: '2026-09-18T19:00:00.000Z',
+        team1: {
+          name: 'Venom Valkyries',
+          shortName: 'VV',
+          logoUrl: 'https://owwomenscup.fr/vv.png',
+          score: 0,
+          isWinner: false,
+        },
+        team2: null,
+      },
+    ],
+    total: 1,
+    branding: null,
+    serverTime: '2026-09-17T10:00:00.000Z',
+  };
+  const render = (p: typeof payload | null) =>
+    renderToStaticMarkup(
+      createElement(UpcomingScrimsSource, {
+        payload: p,
+        accent: '#f0e63c',
+        scale: 1,
+        position: 'center',
+        locale: 'fr-FR',
+      })
+    );
+
+  it('ne rend que les lignes : horaire, logos, équipes — sans panneau ni titre', () => {
+    const html = render(payload);
+    expect(html).toContain('21:00'); // 19:00 UTC = 21:00 à Paris
+    expect(html).toContain('src="https://owwomenscup.fr/vv.png"');
+    expect(html).toContain('Venom Valkyries');
+    expect(html).toContain('À déterminer');
+    expect(html).not.toContain('<h1');
+    expect(html).not.toContain('bg-black/85');
+  });
+
+  it('reste vide quand rien n’est programmé', () => {
+    expect(render({ ...payload, scrims: [], total: 0 })).toBe('');
+    expect(render(null)).toBe('');
+  });
+
+  it('lit ?position=', () => {
+    expect(parseScrimsPosition('bottom')).toBe('bottom');
+    expect(parseScrimsPosition('n’importe')).toBe('center');
   });
 });

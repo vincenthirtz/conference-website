@@ -51,7 +51,7 @@ export default {
   source_waiting_desc: 'Opaque backdrop with your brand, between games.',
   source_scrims_name: 'Upcoming scrims',
   source_scrims_desc:
-    'The space’s next public scrims (not just this tournament). Add &days=N for the horizon, &limit=N for the number of rows, &title=… for the heading.',
+    'The space’s next public scrims (not just this tournament). One row per scrim (time, logos, teams) on a transparent background. Add &days=N for the horizon, &limit=N for the number of rows, &position=top or bottom to anchor them.',
   source_don_name: 'Donate (HelloAsso QR)',
   source_don_desc:
     'The association’s donation QR code, same as the /don page. Add &layout=corner for a bottom-right inset to keep on screen during games.',

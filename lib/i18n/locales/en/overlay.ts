@@ -63,11 +63,7 @@ export default {
   dayShownOf: 'Showing {shown} of {total} matches',
 
   scrimsDocTitle: 'Stream source — upcoming scrims',
-  scrimsTitle: 'Upcoming scrims',
-  scrimsBrandDefault: 'OW Women’s Cup',
-  scrimsEmpty: 'No public scrims scheduled yet.',
   scrimsDateTbd: 'Date TBD',
-  scrimsMore: '+ {count} more scheduled scrims',
 
   donDocTitle: 'Stream source — donate',
   donEyebrow: 'Donate',

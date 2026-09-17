@@ -54,7 +54,7 @@ export default adminNs('adminTournamentEmbed', {
   source_waiting_desc: 'Fond opaque avec votre marque, entre deux rencontres.',
   source_scrims_name: 'Scrims à venir',
   source_scrims_desc:
-    'Les prochains scrims publics de l’espace (pas seulement ce tournoi). Ajoutez &days=N pour l’horizon, &limit=N pour le nombre de lignes, &title=… pour le titre.',
+    'Les prochains scrims publics de l’espace (pas seulement ce tournoi). Une ligne par scrim (horaire, logos, équipes) sur fond transparent. Ajoutez &days=N pour l’horizon, &limit=N pour le nombre de lignes, &position=top ou bottom pour les caler en haut ou en bas.',
   source_don_name: 'Faire un don (QR HelloAsso)',
   source_don_desc:
     'Le QR code de don de l’association, le même que la page /don. Ajoutez &layout=corner pour un encart en bas à droite à garder pendant le jeu.',

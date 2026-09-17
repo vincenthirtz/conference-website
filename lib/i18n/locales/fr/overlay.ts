@@ -67,12 +67,7 @@ export default ns('overlay', {
 
   // Source « scrims à venir » (`/overlay/scrims`).
   scrimsDocTitle: 'Source de stream — scrims à venir',
-  scrimsTitle: 'Scrims à venir',
-  // Branding nul = l'espace de la Coupe elle-même (cf. readTenantBranding).
-  scrimsBrandDefault: 'OW Women’s Cup',
-  scrimsEmpty: 'Aucun scrim public programmé pour l’instant.',
   scrimsDateTbd: 'Date à fixer',
-  scrimsMore: '+ {count} autres scrims programmés',
 
   // Source « faire un don » (`/overlay/don`).
   donDocTitle: 'Source de stream — faire un don',

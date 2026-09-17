@@ -20,10 +20,10 @@
 // Le QR est TOUJOURS posé sur fond blanc : un QR sur fond sombre ou
 // transparent ne se scanne pas depuis un téléphone pointé sur un écran.
 
-import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useT } from '@/lib/i18n/useT';
+import { stageStyle, useStageFit } from '@/hooks/useStageFit';
 import { DEFAULT_OVERLAY_ACCENT } from '@/components/overlay/match/MatchSources';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
 
@@ -46,32 +46,6 @@ function parseScale(raw: string | undefined): number {
   const n = Number.parseFloat(raw ?? '');
   if (!Number.isFinite(n)) return 1;
   return Math.min(2, Math.max(0.5, n));
-}
-
-/** Cadre de conception : tout est dessiné en 1920×1080 puis mis à l'échelle. */
-const STAGE_W = 1920;
-const STAGE_H = 1080;
-
-/**
- * Facteur qui fait tenir le cadre 1920×1080 dans la fenêtre de la source.
- *
- * Une source navigateur OBS n'a pas forcément la taille du stream (800×600 par
- * défaut). Mise en page en pixels dans une fenêtre plus petite, le panneau
- * débordait et `overflow-hidden` coupait l'accroche. On dessine donc toujours
- * sur le même cadre, qu'on réduit en bloc : rien ne se déforme ni ne se coupe.
- */
-function useStageFit(): number {
-  const [fit, setFit] = useState(1);
-  useEffect(() => {
-    const update = () =>
-      setFit(
-        Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H)
-      );
-    update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, []);
-  return fit;
 }
 
 export default function DonationOverlayPage() {
@@ -102,14 +76,7 @@ export default function DonationOverlayPage() {
       <div className="relative h-screen w-screen overflow-hidden text-white">
         <div
           className="absolute left-1/2 top-1/2 origin-center"
-          style={{
-            width: STAGE_W,
-            height: STAGE_H,
-            // Centré dans la fenêtre : quand ses proportions ne sont pas 16:9
-            // (800×600), le cadre réduit laisse une marge des deux côtés
-            // plutôt que tout en bas.
-            transform: `translate(-50%, -50%) scale(${fit})`,
-          }}
+          style={stageStyle(fit)}
         >
           {corner ? (
             <div
