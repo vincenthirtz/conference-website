@@ -1870,6 +1870,7 @@
       "map_slug",
       "map_type",
       "order_index",
+      "play_date",
       "round_number",
       "tenant_id",
       "tournament_id"

@@ -9,6 +9,7 @@ import {
   normalizeMapName,
   toOne,
 } from '@/utils/maps/pool';
+import { parisDayKey } from '@/utils/maps/roundPools';
 import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../utils/logger';
@@ -121,7 +122,9 @@ async function handleGet(
 async function loadMapPool(matchId: string, tenantId: string) {
   const { data: match } = await supabaseAdmin!
     .from('matches')
-    .select('tournament_id, tournament:tournaments(game), scrim:scrims(game)')
+    .select(
+      'tournament_id, round_number, scheduled_at, tournament:tournaments(game), scrim:scrims(game)'
+    )
     .eq('id', matchId)
     .eq('tenant_id', tenantId)
     .maybeSingle();
@@ -129,6 +132,8 @@ async function loadMapPool(matchId: string, tenantId: string) {
   type GameHolder = { game?: string | null };
   const row = match as {
     tournament_id?: string | null;
+    round_number?: number | null;
+    scheduled_at?: string | null;
     tournament?: GameHolder | GameHolder[] | null;
     scrim?: GameHolder | GameHolder[] | null;
   } | null;
@@ -139,6 +144,9 @@ async function loadMapPool(matchId: string, tenantId: string) {
     tenantId,
     tournamentId: row?.tournament_id ?? null,
     game,
+    // Même pool que celui proposé à l'arbitre (date > journée > tournoi).
+    roundNumber: row?.round_number ?? null,
+    playDate: parisDayKey(row?.scheduled_at ?? null),
   });
   return maps;
 }

@@ -151,9 +151,13 @@ async function handler(
       .select('map_name, map_slug, map_type, image_url, enabled, order_index')
       .eq('tournament_id', sourceId)
       .eq('tenant_id', ctx.tenantId)
-      // Seul le pool PAR DEFAUT est cloné : les pools par journée dépendent du
-      // calendrier du tournoi source, qui n'est pas celui du nouveau.
+      // Seul le pool PAR DEFAUT est cloné : les pools par journée et par date
+      // dépendent du calendrier du tournoi source, qui n'est pas celui du
+      // nouveau. Filtrer `play_date` est indispensable : sans lui, un pool daté
+      // serait recopié en pool par défaut (doublons refusés par l'index unique,
+      // donc AUCUNE carte clonée).
       .is('round_number', null)
+      .is('play_date', null)
       .order('order_index', { ascending: true });
 
     let copiedMapsCount = 0;

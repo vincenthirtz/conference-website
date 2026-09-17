@@ -36,6 +36,13 @@ export default {
   poolRoundAll: 'Whole tournament',
   poolRoundLabel: 'Pool by match day',
   poolRoundFallback: 'This match day uses the tournament pool.',
+  poolDateChip: '{date} pool',
+  poolDateNotice:
+    '{date} pool: it applies to every match played that day ({rounds}), instead of the match day pool.',
+  poolDateNoticeNoRounds:
+    '{date} pool: it applies to every match played that day.',
+  poolRoundOverridden:
+    '{round} pool, except on {dates}: that day has its own pool.',
   statDistinctMaps: 'Distinct maps',
   statGamesPlayed: 'Games played',
   statOvertimes: 'Overtimes',

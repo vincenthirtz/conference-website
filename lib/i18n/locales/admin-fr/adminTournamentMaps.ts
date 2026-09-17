@@ -92,4 +92,17 @@ export default adminNs('adminTournamentMaps', {
   fillRoundFromDefault: '+ Reprendre le pool du tournoi ({count})',
   confirmFillRound:
     'Ajouter à la journée {round} toutes les maps manquantes du pool du tournoi ?',
+
+  // --- Pool par date --------------------------------------------------------
+  roundDatesLegend: 'Pools par date',
+  roundDatesHint:
+    "Un pool daté s'applique à tous les matchs de ce jour, quelle que soit leur journée, et passe avant le pool de journée.",
+  roundDateInherits: 'Reprend le pool de journée ou du tournoi',
+  datePoolName: 'Pool du {date}',
+  dateScopeNotice:
+    'Vous éditez le pool du {date}. Il remplace, pour tous les matchs de ce jour, le pool de leur journée. Ajouts, modifications et suppressions ne concernent que cette date.',
+  emptyDatePool:
+    'Aucune map propre au {date} : ses matchs utiliseront le pool de leur journée, sinon celui du tournoi. Reprenez le pool du tournoi puis retirez les maps écartées ce jour-là.',
+  confirmFillDate:
+    'Ajouter au pool du {date} toutes les maps manquantes du pool du tournoi ?',
 });

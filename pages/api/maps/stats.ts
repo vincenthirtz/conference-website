@@ -201,9 +201,10 @@ export default async function handler(
         .eq('tournament_id', tournamentId)
         .eq('tenant_id', tenantId)
         .eq('enabled', true)
-        // Pool de référence = celui du tournoi. Sommer les journées compterait
-        // plusieurs fois la même carte.
-        .is('round_number', null),
+        // Pool de référence = celui du tournoi. Sommer les journées ou les
+        // dates compterait plusieurs fois la même carte.
+        .is('round_number', null)
+        .is('play_date', null),
     ]);
 
     if (gErr) {

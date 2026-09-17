@@ -38,6 +38,12 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from './supabase';
 import { resolveTenantId } from './tenant';
 import { applyRateLimit } from './rateLimit';
+import {
+  applyPoolScope,
+  DEFAULT_POOL_SCOPE,
+  parseDateParam,
+  type PoolScope,
+} from './maps/poolScope';
 import { isValidUUID } from './apiHelpers';
 import { logger } from './logger';
 
@@ -205,11 +211,13 @@ export async function handleCasterTournamentMaps(
 
   const tenantId = resolveTenantId(req);
 
+  // `?date=YYYY-MM-DD` : pool de la date de jeu (jour calendaire à Paris).
   // `?round=N` : pool de la journée N (matches.round_number). Le caster
-  // l'envoie pour que son menu de cartes corresponde à la journée diffusée.
-  // Journée sans pool propre, ou paramètre absent → pool par défaut du
-  // tournoi. Le filtre sur `round_number` n'est jamais omis : sans lui, les
-  // pools par journée apparaîtraient en double dans le menu.
+  // les envoie pour que son menu de cartes corresponde au match diffusé.
+  // Priorité date > journée > pool par défaut du tournoi ; un niveau sans pool
+  // propre retombe sur le suivant. Le pool par défaut filtre TOUJOURS les deux
+  // colonnes (cf. applyPoolScope) : sans cela, les pools par journée ou par date
+  // apparaîtraient en double dans le menu.
   const roundRaw = firstQueryValue(req.query.round);
   const round =
     roundRaw !== undefined && roundRaw !== '' ? Number(roundRaw) : null;
@@ -217,34 +225,50 @@ export async function handleCasterTournamentMaps(
     res.status(400).json({ error: 'Invalid round' });
     return;
   }
+  const parsedDate = parseDateParam(firstQueryValue(req.query.date));
+  if (!parsedDate.ok) {
+    res.status(400).json({ error: parsedDate.error });
+    return;
+  }
+  const date = parsedDate.date;
 
-  const selectMaps = (value: number | null) => {
-    const q = supabaseAdmin
-      .from('tournament_maps')
-      .select('id, map_name, map_type, image_url')
-      .eq('tournament_id', id)
-      .eq('tenant_id', tenantId)
-      .eq('enabled', true)
-      .order('map_name', { ascending: true });
-    return value === null
-      ? q.is('round_number', null)
-      : q.eq('round_number', value);
-  };
+  const selectMaps = (scope: PoolScope) =>
+    applyPoolScope(
+      supabaseAdmin
+        .from('tournament_maps')
+        .select('id, map_name, map_type, image_url')
+        .eq('tournament_id', id)
+        .eq('tenant_id', tenantId)
+        .eq('enabled', true),
+      scope
+    ).order('map_name', { ascending: true });
 
+  const scoped: { scope: PoolScope; source: 'date' | 'round' }[] = [];
+  if (date !== null)
+    scoped.push({ scope: { kind: 'date', date }, source: 'date' });
   if (round !== null) {
-    const { data, error } = await selectMaps(round);
+    scoped.push({ scope: { kind: 'round', round }, source: 'round' });
+  }
+
+  for (const { scope, source } of scoped) {
+    const { data, error } = await selectMaps(scope);
     if (error) {
-      logger.error('[caster/tournaments/:id/maps] round error:', error);
+      logger.error(`[caster/tournaments/:id/maps] ${source} error:`, error);
       res.status(500).json({ error: 'Failed to load maps' });
       return;
     }
     if (data && data.length > 0) {
-      res.status(200).json({ maps: data, round, source: 'round' });
+      res.status(200).json({
+        maps: data,
+        round: source === 'round' ? round : null,
+        date: source === 'date' ? date : null,
+        source,
+      });
       return;
     }
   }
 
-  const { data, error } = await selectMaps(null);
+  const { data, error } = await selectMaps(DEFAULT_POOL_SCOPE);
 
   if (error) {
     logger.error('[caster/tournaments/:id/maps] error:', error);
@@ -252,7 +276,12 @@ export async function handleCasterTournamentMaps(
     return;
   }
 
-  res.status(200).json({ maps: data ?? [], round: null, source: 'tournament' });
+  res.status(200).json({
+    maps: data ?? [],
+    round: null,
+    date: null,
+    source: 'tournament',
+  });
 }
 
 /* ------------------------------------------------------------------ *

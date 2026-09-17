@@ -156,6 +156,55 @@ describe('/api/caster/v1/tournaments/[id]/maps', () => {
     expect((res.body as any).maps).toHaveLength(1);
     expect((res.body as any).maps[0].map_name).toBe('Ilios');
   });
+
+  describe('pool par journée / par date', () => {
+    beforeEach(() => {
+      const base = (store.tournament_maps as any[])[0];
+      store.tournament_maps = [
+        base,
+        { ...base, id: 'map-r2', map_name: 'Nepal', round_number: 2 },
+        { ...base, id: 'map-d30', map_name: 'Busan', play_date: '2026-09-30' },
+      ] as any;
+    });
+
+    async function get(query: Record<string, string>) {
+      const res = makeRes();
+      await v1TournamentMapsHandler(
+        makeReq({ query: { id: TOURNAMENT_ID, ...query } }),
+        res
+      );
+      return res;
+    }
+
+    it('sans paramètre : pool par défaut, sans les lignes datées', async () => {
+      const res = await get({});
+      expect((res.body as any).maps.map((m: any) => m.map_name)).toEqual([
+        'Ilios',
+      ]);
+      expect((res.body as any).source).toBe('tournament');
+    });
+
+    it('?date= prime sur ?round=', async () => {
+      const res = await get({ date: '2026-09-30', round: '2' });
+      expect((res.body as any).source).toBe('date');
+      expect((res.body as any).maps.map((m: any) => m.map_name)).toEqual([
+        'Busan',
+      ]);
+    });
+
+    it('date sans pool propre → journée, puis pool par défaut', async () => {
+      expect((await get({ date: '2026-09-23', round: '2' })).body.source).toBe(
+        'round'
+      );
+      expect((await get({ date: '2026-09-23' })).body.source).toBe(
+        'tournament'
+      );
+    });
+
+    it('400 sur une date invalide', async () => {
+      expect((await get({ date: '30/09' })).statusCode).toBe(400);
+    });
+  });
 });
 
 describe('/api/caster/v1/matches/[id]', () => {

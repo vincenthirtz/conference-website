@@ -39,6 +39,15 @@ export default ns('tournamentMaps', {
   poolRoundAll: 'Tout le tournoi',
   poolRoundLabel: 'Pool par journée',
   poolRoundFallback: 'Cette journée reprend le pool du tournoi.',
+  // Pool par date : l'organisation annonce « Map Pool 30/09 ». Un pool daté
+  // remplace, pour son jour, le pool de la journée.
+  poolDateChip: 'Pool du {date}',
+  poolDateNotice:
+    'Pool du {date} : il s’applique à tous les matchs de ce jour ({rounds}), à la place du pool de journée.',
+  poolDateNoticeNoRounds:
+    'Pool du {date} : il s’applique à tous les matchs de ce jour.',
+  poolRoundOverridden:
+    'Pool de {round}, sauf le {dates} : ce jour-là a son propre pool.',
   statDistinctMaps: 'Maps distinctes',
   statGamesPlayed: 'Games joués',
   statOvertimes: 'Overtimes',

@@ -16,6 +16,7 @@ import { useStaffSession } from '@/hooks/useStaffSession';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { VetoFlowStep, VetoStep, MatchVetoState } from '@/types/veto';
 import nsAdminTournamentVeto from '@/lib/i18n/locales/admin-fr/adminTournamentVeto';
+import { useMatchMapPool } from '@/components/admin/tournament/mapPool/useMatchMapPool';
 
 type Dict = typeof nsAdminTournamentVeto.fr;
 
@@ -140,6 +141,8 @@ export default function VetoPanel() {
   const [selectedMatchId, setSelectedMatchId] = useState<string>(
     matchFromQuery ?? ''
   );
+  // Pool EFFECTIF du match (date > journée > tournoi), sinon celui du tournoi.
+  const poolMaps = useMatchMapPool(selectedMatchId, tournamentId) ?? maps;
 
   // Le premier rendu peut précéder l'hydratation du routeur : on rattrape la
   // présélection quand la query arrive, sans jamais écraser un choix manuel.
@@ -629,7 +632,7 @@ export default function VetoPanel() {
                   </h2>
                   <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                     {vetoState.pickedMaps.map((pm, i) => {
-                      const mapData = maps.find(
+                      const mapData = poolMaps.find(
                         (m) => m.map_name === pm.map_name
                       );
                       return (
@@ -691,11 +694,11 @@ export default function VetoPanel() {
                 <div>
                   <h2 className="text-lg font-semibold mb-3">
                     {format(t.availableMapsTitle, {
-                      count: maps.length - usedMapNames.size,
+                      count: poolMaps.length - usedMapNames.size,
                     })}
                   </h2>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                    {maps
+                    {[...poolMaps]
                       .sort(
                         (a, b) =>
                           (a.order_index ?? 0) - (b.order_index ?? 0) ||

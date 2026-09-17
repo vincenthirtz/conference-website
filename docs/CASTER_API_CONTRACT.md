@@ -192,6 +192,11 @@ Enabled maps configured for a tournament.
 
 - **Auth**: none. **Tenant**: `x-tenant-id` (optional).
 - **Request**: path `:id` — tournament UUID (validated).
+  Optional query `date=YYYY-MM-DD` (play date, Europe/Paris calendar day) and
+  `round=N` (`matches.round_number`). Resolution order: the pool of that date,
+  else the pool of that round, else the tournament default pool (rows with
+  neither a round nor a date). Pass both from the match being cast
+  (`scheduled_at` converted to the Paris day) to get the maps actually playable.
 - **Response 200**:
 
 ```json
@@ -203,11 +208,17 @@ Enabled maps configured for a tournament.
       "map_type": "control",
       "image_url": "..."
     }
-  ]
+  ],
+  "round": null,
+  "date": "2026-09-30",
+  "source": "date"
 }
 ```
 
-- **Errors**: `400` (invalid id), `405`, `429`, `500`.
+  `source` is `date`, `round` or `tournament`; `round` / `date` echo the scope
+  that was actually served (null when falling back).
+
+- **Errors**: `400` (invalid id, invalid `round` or `date`), `405`, `429`, `500`.
 
 ### `GET /api/caster/v1/matches/:id`
 

@@ -14,6 +14,23 @@ get:
   security: []
   parameters:
     - $ref: '#/components/parameters/XTenantId'
+    - name: date
+      in: query
+      required: false
+      description: >-
+        Date de jeu `YYYY-MM-DD` (Europe/Paris). Pool de cette date s'il
+        existe ; prioritaire sur `round`. 400 si invalide.
+      schema:
+        type: string
+        format: date
+    - name: round
+      in: query
+      required: false
+      description: >-
+        Journée (`matches.round_number`). Pool de cette journée s'il existe.
+        Sans pool propre (ou sans paramètre) : pool par défaut du tournoi.
+      schema:
+        type: integer
   responses:
     '200':
       description: Liste des maps activées.
@@ -37,6 +54,14 @@ get:
                       type: [string, 'null']
                     image_url:
                       type: [string, 'null']
+              round:
+                type: [integer, 'null']
+              date:
+                type: [string, 'null']
+                format: date
+              source:
+                type: string
+                enum: [date, round, tournament]
     '400':
       $ref: '#/components/responses/BadRequest'
     '429':

@@ -7951,6 +7951,7 @@
        "defaults",
        "tenant",
        "tournament",
+       "tournament-date",
        "tournament-round"
       ]
      }
@@ -43848,6 +43849,12 @@
           "null"
          ]
         },
+        "play_date": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
         "created_at": {
          "type": "string"
         }
@@ -43862,6 +43869,7 @@
         "enabled",
         "order_index",
         "round_number",
+        "play_date",
         "created_at"
        ]
       }
@@ -43887,6 +43895,12 @@
      "round": {
       "type": [
        "number",
+       "null"
+      ]
+     },
+     "date": {
+      "type": [
+       "string",
        "null"
       ]
      },
@@ -43918,13 +43932,40 @@
         "mapsCount"
        ]
       }
+     },
+     "dates": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "date": {
+         "type": "string"
+        },
+        "rounds": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        },
+        "mapsCount": {
+         "type": "number"
+        }
+       },
+       "required": [
+        "date",
+        "rounds",
+        "mapsCount"
+       ]
+      }
      }
     },
     "required": [
      "maps",
      "tournament",
      "round",
-     "rounds"
+     "date",
+     "rounds",
+     "dates"
     ]
    }
   },
@@ -48370,6 +48411,12 @@
          "null"
         ]
        },
+       "play_date": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "created_at": {
         "type": "string"
        }
@@ -48384,6 +48431,7 @@
        "enabled",
        "order_index",
        "round_number",
+       "play_date",
        "created_at"
       ]
      }
@@ -63931,6 +63979,12 @@
           "null"
          ]
         },
+        "play_date": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
         "created_at": {
          "type": "string"
         }
@@ -63945,6 +63999,7 @@
         "enabled",
         "order_index",
         "round_number",
+        "play_date",
         "created_at"
        ]
       }
@@ -64015,6 +64070,12 @@
          "null"
         ]
        },
+       "play_date": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "created_at": {
         "type": "string"
        }
@@ -64029,6 +64090,7 @@
        "enabled",
        "order_index",
        "round_number",
+       "play_date",
        "created_at"
       ]
      }
@@ -65816,6 +65878,12 @@
           "null"
          ]
         },
+        "play_date": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
         "created_at": {
          "type": "string"
         }
@@ -65830,6 +65898,7 @@
         "enabled",
         "order_index",
         "round_number",
+        "play_date",
         "created_at"
        ]
       }

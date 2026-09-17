@@ -16,6 +16,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { resolveEffectiveMapPool, toOne } from '@/utils/maps/pool';
+import { parisDayKey } from '@/utils/maps/roundPools';
 import { logger } from '../../../../../utils/logger';
 
 export default withStaffRoute(handler, { permission: 'arbitrate_matches' });
@@ -44,7 +45,9 @@ async function handler(
     // l'un ou de l'autre.
     const { data, error } = await supabaseAdmin
       .from('matches')
-      .select('tournament_id, tournament:tournaments(game), scrim:scrims(game)')
+      .select(
+        'tournament_id, round_number, scheduled_at, tournament:tournaments(game), scrim:scrims(game)'
+      )
       .eq('id', matchId)
       .eq('tenant_id', ctx.tenantId)
       .maybeSingle();
@@ -57,6 +60,8 @@ async function handler(
 
     const row = data as {
       tournament_id: string | null;
+      round_number: number | null;
+      scheduled_at: string | null;
       tournament: { game: string | null } | { game: string | null }[] | null;
       scrim: { game: string | null } | { game: string | null }[] | null;
     };
@@ -65,6 +70,10 @@ async function handler(
       tenantId: ctx.tenantId,
       tournamentId: row.tournament_id,
       game: toOne(row.tournament)?.game ?? toOne(row.scrim)?.game ?? null,
+      // Pool de la date de jeu, sinon de la journée, sinon du tournoi : l'arbitre
+      // doit voir les cartes réellement jouables CE jour-là.
+      roundNumber: row.round_number,
+      playDate: parisDayKey(row.scheduled_at),
     });
 
     return res.status(200).json({ maps, source });

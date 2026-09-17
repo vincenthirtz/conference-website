@@ -5,6 +5,28 @@ parameters:
     schema:
       type: string
       format: uuid
+  - name: round
+    in: query
+    required: false
+    description: >-
+      Pool d'une JOURNÉE (`matches.round_number`, entier >= 1). Absent (ou
+      `default`) avec `date` absent : pool par défaut du tournoi. Toutes les
+      opérations (GET/POST/PUT/DELETE en masse) sont bornées à ce pool. 400 si
+      illisible ou combiné à `date`.
+    schema:
+      type: string
+      pattern: '^(\d+|default)$'
+  - name: date
+    in: query
+    required: false
+    description: >-
+      Pool d'une DATE de jeu (`YYYY-MM-DD`, jour calendaire Europe/Paris),
+      prioritaire sur le pool de journée pour les matchs de ce jour. Les
+      opérations sont bornées à ce pool ; le DELETE sans `mapId` ne vide que
+      lui. 400 si invalide ou combiné à `round`.
+    schema:
+      type: string
+      format: date
 get:
   tags:
     - public/tournaments
@@ -14,12 +36,17 @@ get:
     - StaffSession: []
   responses:
     '200':
-      description: Maps du tournoi.
+      description: >-
+        Maps du pool ciblé, plus `round` / `date` (portée effective), `rounds`
+        (journées du planning avec leur nombre de cartes) et `dates` (jours
+        programmés `{ date, rounds, mapsCount }`).
       content:
         application/json:
           schema:
             type: object
             additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

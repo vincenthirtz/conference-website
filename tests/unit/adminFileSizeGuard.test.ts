@@ -77,8 +77,10 @@ const BASELINE: Record<string, number> = {
   'pages/admin/scrims/plannings/[planningId].tsx': 813,
   // 576 écrites : le sélecteur de journée, la grille, le formulaire d'ajout et
   // la modale d'édition sont partis dans `components/admin/tournament/mapPool/`
-  // (pool par journée), et le plafond suit.
-  'pages/admin/tournament/[id]/maps.tsx': 586,
+  // (pool par journée), et le plafond suit. 546 : la portée (journée/date), les
+  // libellés et les types de carte sont partis dans `mapPool/usePoolScope.ts`
+  // (pool par date).
+  'pages/admin/tournament/[id]/maps.tsx': 546,
 };
 
 function walk(dir: string, acc: string[] = []): string[] {

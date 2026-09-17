@@ -12,6 +12,8 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 import { formatDateRange } from '@/utils/tournamentDates';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
+import { buildScopedPools, type ScopedPool } from '@/utils/maps/publicPools';
+import { formatPlayDateShort } from '@/utils/maps/poolScope';
 
 import { logger } from '../../../utils/logger';
 import nsTournamentMaps from '@/lib/i18n/locales/fr/tournamentMaps';
@@ -45,19 +47,6 @@ type VetoRow = {
 };
 
 /** Une carte du pool du tournoi (table `tournament_maps`). */
-/**
- * Pool propre a une journee. `dates` sert d'indice au visiteur : les visuels
- * annoncent une date (« Map Pool 18/09 ») alors que le modele indexe la journee
- * (round_number) — une meme date pouvant porter deux journees, la date seule ne
- * suffirait pas a identifier le pool.
- */
-type RoundPool = {
-  round: number;
-  label: string;
-  dates: string[];
-  maps: PoolMap[];
-};
-
 type PoolMap = {
   name: string;
   type: string | null;
@@ -109,7 +98,12 @@ type Props = {
   tournament: Tournament;
   /** Pool jouable, indépendant des stats : il existe dès la publication. */
   pool: PoolMap[];
-  roundPools: RoundPool[];
+  /**
+   * Pools propres à une journée ou à une date, triés chronologiquement (cf.
+   * utils/maps/publicPools). Un pool daté remplace celui de la journée pour son
+   * jour : c'est ainsi que l'organisation les annonce (« Map Pool 30/09 »).
+   */
+  scopedPools: ScopedPool[];
   maps: MapStat[];
   hasVetoData: boolean;
   hasFfaStage: boolean;
@@ -156,80 +150,38 @@ function poolModeLabel(t: MapsDict, mode: string): string {
 }
 
 /**
- * Pools par journée d'un tournoi, enrichis du libellé et des dates de la
- * journée (lus sur `matches`). Ne jette jamais : sans pool par journée, la page
- * se comporte exactement comme avant.
+ * Pools par journée et par date d'un tournoi, enrichis du planning (libellés
+ * et jours, lus sur `matches`). Ne jette jamais : sans pool scopé, la page se
+ * comporte exactement comme avant.
  */
-async function loadRoundPools(
+async function loadScopedPools(
   tenantId: string,
   tournamentId: string
-): Promise<RoundPool[]> {
+): Promise<ScopedPool[]> {
   const [mapsRes, matchesRes] = await Promise.all([
     supabaseAdmin
       .from('tournament_maps')
-      .select('map_name, map_type, image_url, order_index, round_number')
+      .select(
+        'map_name, map_type, image_url, order_index, round_number, play_date'
+      )
       .eq('tenant_id', tenantId)
       .eq('tournament_id', tournamentId)
       .eq('enabled', true)
-      .not('round_number', 'is', null)
+      .or('round_number.not.is.null,play_date.not.is.null')
       .order('order_index', { ascending: true, nullsFirst: false }),
     supabaseAdmin
       .from('matches')
       .select('round_number, round_name, scheduled_at')
       .eq('tenant_id', tenantId)
-      .eq('tournament_id', tournamentId)
-      .not('round_number', 'is', null),
+      .eq('tournament_id', tournamentId),
   ]);
 
   if (mapsRes.error || !mapsRes.data || mapsRes.data.length === 0) return [];
-
-  // Libellé + dates par journée, dédupliqués et triés.
-  const meta = new Map<number, { label: string; dates: Set<string> }>();
-  for (const row of (matchesRes.data ?? []) as {
-    round_number: number;
-    round_name: string | null;
-    scheduled_at: string | null;
-  }[]) {
-    const entry = meta.get(row.round_number) ?? {
-      label: row.round_name || `J${row.round_number}`,
-      dates: new Set<string>(),
-    };
-    if (row.scheduled_at) {
-      entry.dates.add(
-        new Date(row.scheduled_at).toLocaleDateString('fr-FR', {
-          day: '2-digit',
-          month: '2-digit',
-          timeZone: 'Europe/Paris',
-        })
-      );
-    }
-    meta.set(row.round_number, entry);
+  if (matchesRes.error) {
+    logger.error('maps page schedule error:', matchesRes.error);
   }
 
-  const byRound = new Map<number, PoolMap[]>();
-  for (const row of mapsRes.data as {
-    map_name: string;
-    map_type: string | null;
-    image_url: string | null;
-    round_number: number;
-  }[]) {
-    const bucket = byRound.get(row.round_number) ?? [];
-    bucket.push({
-      name: row.map_name,
-      type: row.map_type,
-      image: row.image_url,
-    });
-    byRound.set(row.round_number, bucket);
-  }
-
-  return [...byRound.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([round, poolMaps]) => ({
-      round,
-      label: meta.get(round)?.label ?? `J${round}`,
-      dates: [...(meta.get(round)?.dates ?? [])].sort(),
-      maps: poolMaps,
-    }));
+  return buildScopedPools(mapsRes.data, matchesRes.data ?? []);
 }
 
 /** Regroupe le pool par mode, dans l'ordre ci-dessus, « Autres » en dernier. */
@@ -288,9 +240,10 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       .eq('tenant_id', tenantId)
       .eq('tournament_id', tournamentId)
       .eq('enabled', true)
-      // Pool PAR DEFAUT du tournoi. Sans ce filtre, les cartes des pools par
-      // journee apparaitraient ici en double.
+      // Pool PAR DEFAUT du tournoi. Sans ces filtres, les cartes des pools par
+      // journee ou par date apparaitraient ici en double.
       .is('round_number', null)
+      .is('play_date', null)
       .order('order_index', { ascending: true, nullsFirst: false })
       .order('map_name', { ascending: true }),
     supabaseAdmin
@@ -319,10 +272,14 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     image: row.image_url ?? null,
   }));
 
-  // Pools par journée : une requête pour les cartes, une pour les libellés et
-  // dates de journée (round_name / scheduled_at côté matches). Une journée sans
-  // pool propre n'apparaît pas — elle reprend celui du tournoi.
-  const roundPools = await loadRoundPools(tenantId, tournamentId);
+  // Pools par journée et par date : une requête pour les cartes, une pour le
+  // planning (round_name / scheduled_at côté matches). Une journée ou une date
+  // sans pool propre n'apparaît pas — elle reprend le niveau suivant.
+  //
+  // Fraîcheur : ISR `revalidate: 60` ci-dessous. L'API d'édition du pool ne
+  // déclenche pas de revalidation à la demande ; un pool ajouté ou modifié
+  // (journée comme date) apparaît donc au plus tard une minute après.
+  const scopedPools = await loadScopedPools(tenantId, tournamentId);
 
   const hasFfaStage = (stagesRes.data || []).some(
     (s: any) => s.stage_type === 'ffa'
@@ -389,7 +346,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     props: {
       tournament: tournament as Tournament,
       pool,
-      roundPools,
+      scopedPools,
       maps,
       hasVetoData,
       hasFfaStage,
@@ -402,19 +359,41 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 export default function TournamentMapsPage({
   tournament,
   pool,
-  roundPools,
+  scopedPools,
   maps,
   hasVetoData,
   hasFfaStage,
 }: Props) {
   const t = useT(nsTournamentMaps);
   const { lang } = useLang();
-  // Journée sélectionnée dans le pool. `null` = pool du tournoi. Les pools sont
-  // tous chargés côté serveur : basculer ne recharge rien.
-  const [poolRound, setPoolRound] = useState<number | null>(null);
-  const selectedRoundPool =
-    roundPools.find((r) => r.round === poolRound) ?? null;
-  const shownPool = selectedRoundPool ? selectedRoundPool.maps : pool;
+  // Pool sélectionné : clé `round:N` / `date:YYYY-MM-DD`, `null` = pool du
+  // tournoi. Les pools sont tous chargés côté serveur : basculer ne recharge
+  // rien. Sans pool de tournoi, on ouvre sur le premier pool scopé plutôt que
+  // sur une liste vide.
+  const [poolKey, setPoolKey] = useState<string | null>(
+    pool.length === 0 && scopedPools.length > 0 ? scopedPools[0].key : null
+  );
+  const selectedScopedPool = scopedPools.find((p) => p.key === poolKey) ?? null;
+  const shownPool = selectedScopedPool ? selectedScopedPool.maps : pool;
+  const scopedPoolChip = (p: ScopedPool): string =>
+    p.kind === 'date' && p.date
+      ? format(t.poolDateChip, { date: formatPlayDateShort(p.date) })
+      : `${p.label}${p.dates.length > 0 ? ` · ${p.dates.map(formatPlayDateShort).join(' / ')}` : ''}`;
+  const scopedPoolNotice = (p: ScopedPool): string | null => {
+    if (p.kind === 'date' && p.date) {
+      const date = formatPlayDateShort(p.date);
+      return p.rounds.length > 0
+        ? format(t.poolDateNotice, { date, rounds: p.rounds.join(', ') })
+        : format(t.poolDateNoticeNoRounds, { date });
+    }
+    if (p.overriddenDates.length > 0) {
+      return format(t.poolRoundOverridden, {
+        round: p.label ?? '',
+        dates: p.overriddenDates.map(formatPlayDateShort).join(', '),
+      });
+    }
+    return null;
+  };
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
   const isCompleted =
     tournament.status === 'finished' || tournament.status === 'completed';
@@ -487,7 +466,7 @@ export default function TournamentMapsPage({
 
         {/* Pool jouable — affiché dès la publication du tournoi, alors que les
             statistiques plus bas restent vides jusqu'au premier game. */}
-        {pool.length > 0 && (
+        {(pool.length > 0 || scopedPools.length > 0) && (
           <section className="mb-6">
             <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -509,23 +488,27 @@ export default function TournamentMapsPage({
                 {t.poolSubtitle}
               </Paragraph>
 
-              {/* Sélecteur de journée — n'apparaît que si au moins une journée
-                  a son propre pool. Les dates accompagnent le libellé : les
-                  visuels annoncent une date, le modèle indexe la journée. */}
-              {roundPools.length > 0 && (
+              {/* Sélecteur de pool — n'apparaît que si au moins une journée
+                  ou une date a son propre pool. Ordre chronologique : le
+                  visiteur cherche « le pool du 30/09 », comme annoncé. Un pool
+                  daté remplace celui de la journée pour son jour. */}
+              {scopedPools.length > 0 && (
                 <div
                   className="mt-3 flex flex-wrap items-center gap-2"
                   role="group"
                   aria-label={t.poolRoundLabel}
                 >
-                  {[null, ...roundPools.map((r) => r.round)].map((round) => {
-                    const entry = roundPools.find((r) => r.round === round);
-                    const active = poolRound === round;
+                  {[
+                    ...(pool.length > 0 ? [null] : []),
+                    ...scopedPools.map((p) => p.key),
+                  ].map((key) => {
+                    const entry = scopedPools.find((p) => p.key === key);
+                    const active = poolKey === key;
                     return (
                       <button
-                        key={round ?? 'all'}
+                        key={key ?? 'all'}
                         type="button"
-                        onClick={() => setPoolRound(round)}
+                        onClick={() => setPoolKey(key)}
                         aria-pressed={active}
                         className={`rounded-full border px-3 py-1 text-xs transition ${
                           active
@@ -533,13 +516,16 @@ export default function TournamentMapsPage({
                             : 'border-white/10 bg-white/[0.03] text-gray-300 hover:bg-white/[0.07]'
                         }`}
                       >
-                        {entry
-                          ? `${entry.label}${entry.dates.length > 0 ? ` · ${entry.dates.join(' / ')}` : ''}`
-                          : t.poolRoundAll}
+                        {entry ? scopedPoolChip(entry) : t.poolRoundAll}
                       </button>
                     );
                   })}
                 </div>
+              )}
+              {selectedScopedPool && scopedPoolNotice(selectedScopedPool) && (
+                <p className="mt-2 text-xs text-purple-100/90">
+                  {scopedPoolNotice(selectedScopedPool)}
+                </p>
               )}
 
               <div className="mt-4 flex flex-col gap-5">

@@ -13,6 +13,8 @@ export type TournamentMapRow = {
   enabled: boolean;
   order_index: number | null;
   round_number: number | null;
+  /** Date de jeu `YYYY-MM-DD` d'un pool daté ; null sinon. */
+  play_date?: string | null;
   created_at?: string;
 };
 
@@ -23,6 +25,8 @@ export type RoundOption = {
   days: string[];
   mapsCount: number;
 };
+
+export type { DateOption } from '@/utils/maps/poolScope';
 
 /** Libellé d'un type de carte, ou « — » quand il n'y en a pas. */
 export function typeLabel(

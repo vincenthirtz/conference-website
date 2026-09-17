@@ -377,6 +377,28 @@ describe('POST /api/admin/tournament/[id]/clone', () => {
     expect(logStaffActionMock).toHaveBeenCalledOnce();
   });
 
+  it('201 clones ONLY the default pool: no round nor dated pool leaks into it', async () => {
+    seedSource();
+    const base = (store.tournament_maps as any[])[0];
+    (store.tournament_maps as any[]).push(
+      { ...base, map_name: 'Nepal', round_number: 2 },
+      { ...base, map_name: 'Busan', play_date: '2026-09-30' }
+    );
+    const res = makeRes();
+    await cloneHandler(
+      makeReq({ method: 'POST', query: { id: TID }, body: {} }, true),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    const clonedId = (res.body as any).tournament.id;
+    const cloned = (store.tournament_maps as any[]).filter(
+      (m) => m.tournament_id === clonedId
+    );
+    expect(cloned.map((m) => m.map_name)).toEqual(['Lijiang']);
+    expect(cloned[0].play_date ?? null).toBeNull();
+    expect(cloned[0].round_number ?? null).toBeNull();
+  });
+
   it('201 with explicit name + slug', async () => {
     seedSource();
     const res = makeRes();

@@ -93,4 +93,17 @@ export default {
   fillRoundFromDefault: '+ Copy the tournament pool ({count})',
   confirmFillRound:
     'Add every missing map from the tournament pool to round {round}?',
+
+  // --- Per-date pool ------------------------------------------------------
+  roundDatesLegend: 'Pools by date',
+  roundDatesHint:
+    'A dated pool applies to every match played that day, whatever their round, and takes precedence over the round pool.',
+  roundDateInherits: 'Falls back to the round or tournament pool',
+  datePoolName: '{date} pool',
+  dateScopeNotice:
+    'You are editing the {date} pool. For every match played that day it replaces their round pool. Adding, editing and deleting only affect this date.',
+  emptyDatePool:
+    'No map specific to {date}: its matches will use their round pool, or else the tournament pool. Copy the tournament pool, then remove the maps left out that day.',
+  confirmFillDate:
+    'Add every missing map from the tournament pool to the {date} pool?',
 };

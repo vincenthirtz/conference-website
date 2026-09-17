@@ -16,6 +16,12 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getGame, isGameSlug } from '@/config/games';
+import {
+  applyPoolScope,
+  DEFAULT_POOL_SCOPE,
+  isValidPlayDate,
+  type PoolScope,
+} from './poolScope';
 
 export type PoolMap = {
   name: string;
@@ -26,6 +32,7 @@ export type PoolMap = {
 export type PoolSource =
   | 'tournament'
   | 'tournament-round'
+  | 'tournament-date'
   | 'tenant'
   | 'defaults';
 
@@ -140,29 +147,28 @@ export function normalizeMapName(
 const POOL_COLUMNS = 'map_name, map_type, image_url, order_index';
 
 /**
- * Cartes activées d'un tournoi pour une journée donnée.
+ * Cartes activées d'un tournoi pour une portée donnée (défaut, journée, date).
  *
- * `round === null` cible le POOL PAR DÉFAUT (`round_number IS NULL`), pas
- * « toutes les journées » : sans ce filtre, ajouter le pool d'une journée
- * ferait apparaître ses cartes en double partout où le pool du tournoi est lu
- * (page publique, menu du caster, normalisation des noms à la saisie).
+ * La portée « défaut » cible `round_number IS NULL AND play_date IS NULL`, pas
+ * « toutes les lignes » : sans ce filtre, les pools de journée et de date
+ * apparaîtraient en double partout où le pool du tournoi est lu (page publique,
+ * menu du caster, normalisation des noms à la saisie).
  */
 async function tournamentPoolRows(
   client: SupabaseClient,
   tenantId: string,
   tournamentId: string,
-  round: number | null
+  scope: PoolScope
 ): Promise<PoolRow[] | null> {
-  let query = client
-    .from('tournament_maps')
-    .select(POOL_COLUMNS)
-    .eq('tenant_id', tenantId)
-    .eq('tournament_id', tournamentId)
-    .eq('enabled', true);
-  query =
-    round === null
-      ? query.is('round_number', null)
-      : query.eq('round_number', round);
+  const query = applyPoolScope(
+    client
+      .from('tournament_maps')
+      .select(POOL_COLUMNS)
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournamentId)
+      .eq('enabled', true),
+    scope
+  );
 
   const { data, error } = await query;
   if (error || !data || data.length === 0) return null;
@@ -172,12 +178,16 @@ async function tournamentPoolRows(
 /**
  * Pool effectif applicable à un match.
  *
- * Priorité : le pool de la JOURNÉE demandée (`roundNumber`), puis le pool par
+ * Priorité : le pool de la DATE de jeu (`playDate`, jour calendaire à Paris),
+ * puis celui de la JOURNÉE (`roundNumber`), puis le pool par
  * défaut du tournoi — c'est la sélection que le staff a faite pour cette
  * compétition — puis le pool éditable du tenant pour le jeu, puis le catalogue
  * statique.
  *
- * Une journée sans pool propre retombe donc sur celui du tournoi : déclarer un
+ * La date passe avant la journée : l'organisation publie ses pools par date
+ * (« Map Pool 30/09 ») et une même date réunit plusieurs journées.
+ *
+ * Une date ou une journée sans pool propre retombe donc sur le niveau suivant : déclarer un
  * pool par journée reste facultatif, et les tournois qui n'en veulent pas ne
  * changent pas de comportement.
  *
@@ -197,6 +207,11 @@ export async function resolveEffectiveMapPool(
     includeTournamentMaps?: boolean;
     /** Journée (matches.round_number). Absent → pool par défaut du tournoi. */
     roundNumber?: number | null;
+    /**
+     * Date de jeu `YYYY-MM-DD` (Europe/Paris) — cf. `parisDayKey(scheduled_at)`.
+     * Absente ou invalide → ignorée.
+     */
+    playDate?: string | null;
   }
 ): Promise<{ maps: PoolMap[]; source: PoolSource }> {
   const { tenantId, tournamentId, includeTournamentMaps = true } = params;
@@ -204,18 +219,29 @@ export async function resolveEffectiveMapPool(
   const round = Number.isFinite(params.roundNumber as number)
     ? (params.roundNumber as number)
     : null;
+  const playDate = isValidPlayDate(params.playDate) ? params.playDate : null;
 
   if (includeTournamentMaps && tournamentId) {
+    if (playDate !== null) {
+      const rows = await tournamentPoolRows(client, tenantId, tournamentId, {
+        kind: 'date',
+        date: playDate,
+      });
+      if (rows) return { maps: sortPoolRows(rows), source: 'tournament-date' };
+    }
     if (round !== null) {
-      const rows = await tournamentPoolRows(
-        client,
-        tenantId,
-        tournamentId,
-        round
-      );
+      const rows = await tournamentPoolRows(client, tenantId, tournamentId, {
+        kind: 'round',
+        round,
+      });
       if (rows) return { maps: sortPoolRows(rows), source: 'tournament-round' };
     }
-    const rows = await tournamentPoolRows(client, tenantId, tournamentId, null);
+    const rows = await tournamentPoolRows(
+      client,
+      tenantId,
+      tournamentId,
+      DEFAULT_POOL_SCOPE
+    );
     if (rows) return { maps: sortPoolRows(rows), source: 'tournament' };
   }
 

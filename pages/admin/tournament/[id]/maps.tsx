@@ -1,5 +1,6 @@
 // pages/admin/tournament/[id]/maps.tsx
-// Gestion du pool de cartes d'un tournoi — pool par défaut ET pool par JOURNÉE.
+// Gestion du pool de cartes d'un tournoi — pool par défaut, par JOURNÉE et par
+// DATE de jeu (prioritaire : l'organisation publie « Map Pool 30/09 »).
 //
 // Une compétition annonce un pool par journée (« Map Pool 23/09 »). La colonne
 // `tournament_maps.round_number` le permet en base, mais cet écran ne
@@ -8,13 +9,15 @@
 // Le sélecteur de journée est donc la structure de l'écran, pas un filtre
 // d'affichage : TOUTES les actions sont scopées au pool sélectionné.
 //
-// Les journées viennent du planning (`matches.round_number`), renvoyées par
-// l'API : on ne déclare un pool que pour une journée qui existe au calendrier.
+// Journées et dates viennent du planning, renvoyées par l'API : on ne déclare
+// un pool que pour une journée ou un jour qui existe au calendrier. Portée,
+// URL et libellés : components/admin/tournament/mapPool/usePoolScope.ts.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { formatPlayDateShort, type PoolScope } from '@/utils/maps/poolScope';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
@@ -28,14 +31,19 @@ import AddMapForm, {
 import MapPoolGrid from '@/components/admin/tournament/mapPool/MapPoolGrid';
 import EditMapModal from '@/components/admin/tournament/mapPool/EditMapModal';
 import type {
+  DateOption,
   RoundOption,
   TournamentMapRow,
 } from '@/components/admin/tournament/mapPool/types';
+import {
+  getTypeLabels,
+  scopeTexts,
+  usePoolScope,
+  withScope,
+} from '@/components/admin/tournament/mapPool/usePoolScope';
 import { getGame, type GameDef } from '@/config/games';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentMaps from '@/lib/i18n/locales/admin-fr/adminTournamentMaps';
-
-type Dict = typeof nsAdminTournamentMaps.fr;
 
 type StaffShape = {
   id: string;
@@ -56,35 +64,10 @@ type ApiResponse = {
   maps: TournamentMapRow[];
   tournament?: TournamentMini | null;
   round?: number | null;
+  date?: string | null;
   rounds?: RoundOption[];
+  dates?: DateOption[];
 };
-
-function getTypeLabels(t: Dict): Record<string, string> {
-  return {
-    // Overwatch
-    control: t.typeControl,
-    hybrid: t.typeHybrid,
-    escort: t.typeEscort,
-    push: t.typePush,
-    flashpoint: t.typeFlashpoint,
-    clash: t.typeClash,
-    // Valorant
-    standard: t.typeStandard,
-    // CS2
-    'active-duty': t.typeActiveDuty,
-  };
-}
-
-/** `?round=` à ajouter à l'URL de l'API. Vide pour le pool par défaut. */
-function roundQuery(round: number | null): string {
-  return round === null ? '' : `round=${round}`;
-}
-
-function withRound(url: string, round: number | null): string {
-  const q = roundQuery(round);
-  if (!q) return url;
-  return url.includes('?') ? `${url}&${q}` : `${url}?${q}`;
-}
 
 export const getServerSideProps = withStaffPage({
   permission: 'manage_tournaments',
@@ -106,22 +89,13 @@ function AdminTournamentMapsPage(_: StaffProps) {
   const [maps, setMaps] = useState<TournamentMapRow[]>([]);
   const [tournament, setTournament] = useState<TournamentMini | null>(null);
 
-  // Pool édité : `null` = pool par défaut du tournoi.
-  //
-  // La journée vit dans l'URL, pas dans un état local : un rafraîchissement ou
-  // un lien partagé rouvre le même pool, et le retour arrière du navigateur
-  // fait ce qu'on attend de lui.
-  const round = useMemo(() => {
-    const raw = router.query.round;
-    const value = Array.isArray(raw) ? raw[0] : raw;
-    if (!value || !/^\d+$/.test(value)) return null;
-    const parsed = Number(value);
-    return Number.isSafeInteger(parsed) && parsed >= 1 ? parsed : null;
-  }, [router.query.round]);
+  // Pool édité (défaut / journée / date), porté par l'URL.
+  const { scope, setScope } = usePoolScope();
 
   const [rounds, setRounds] = useState<RoundOption[]>([]);
+  const [dates, setDates] = useState<DateOption[]>([]);
   const [defaultCount, setDefaultCount] = useState(0);
-  // Cartes du pool par défaut : source des propositions pour une journée.
+  // Cartes du pool par défaut : source des propositions pour une journée/date.
   const [defaultPool, setDefaultPool] = useState<TournamentMapRow[]>([]);
 
   const [showAddForm, setShowAddForm] = useState(false);
@@ -135,22 +109,23 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
   /**
    * Charge le pool demandé. Le pool par défaut est chargé EN PLUS dès qu'on
-   * édite une journée : c'est lui qui alimente les propositions d'ajout, une
-   * journée ne pouvant piocher que dans les cartes retenues pour la compétition.
+   * édite une journée ou une date : c'est lui qui alimente les propositions
+   * d'ajout, ne pouvant piocher que dans les cartes retenues pour la compétition.
    */
   const fetchMaps = useCallback(
-    async (target: number | null) => {
+    async (target: PoolScope) => {
       if (!tournamentId) return;
       setLoading(true);
       setErrorMsg(null);
       try {
         const base = `/api/tournament/${tournamentId}/maps`;
-        const json = await adminFetchJson<ApiResponse>(withRound(base, target));
+        const json = await adminFetchJson<ApiResponse>(withScope(base, target));
         setMaps(json.maps || []);
         setTournament(json.tournament ?? null);
         setRounds(json.rounds ?? []);
+        setDates(json.dates ?? []);
 
-        if (target === null) {
+        if (target.kind === 'default') {
           setDefaultPool(json.maps || []);
           setDefaultCount((json.maps || []).length);
         } else {
@@ -169,18 +144,17 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
   useEffect(() => {
     if (!tournamentId) return;
-    fetchMaps(round);
-  }, [tournamentId, round, fetchMaps]);
+    fetchMaps(scope);
+  }, [tournamentId, scope, fetchMaps]);
 
   const gameDef: GameDef | null = tournament?.game
     ? getGame(tournament.game)
     : null;
   const gameLabel = gameDef?.label ?? tournament?.game ?? '';
   const hasMapVeto = !!gameDef?.hasMapVeto;
-  const editingRound = round !== null;
-  const roundLabel =
-    rounds.find((r) => r.round === round)?.label ??
-    (round !== null ? `J${round}` : t.roundDefaultPool);
+  // Journée ou date : même mécanique (pioche dans le pool du tournoi).
+  const editingRound = scope.kind !== 'default';
+  const texts = scopeTexts(t, scope, rounds);
 
   /**
    * Cartes proposables pour le pool édité, privées de celles déjà présentes.
@@ -206,13 +180,6 @@ function AdminTournamentMapsPage(_: StaffProps) {
   // catalogue prédéfini : la liste de propositions suffit.
   const canPickFromList = editingRound ? defaultPool.length > 0 : hasMapVeto;
 
-  const formatDay = useCallback((day: string) => {
-    // `YYYY-MM-DD` est déjà calculé à Paris côté serveur : on le découpe, sans
-    // repasser par un Date qui le ramènerait dans le fuseau du navigateur.
-    const [, month, dayOfMonth] = day.split('-');
-    return month && dayOfMonth ? `${dayOfMonth}/${month}` : day;
-  }, []);
-
   async function handleAddMap(map: {
     name: string;
     type: string;
@@ -223,7 +190,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
     setErrorMsg(null);
     try {
       const res = await addMapMutate(
-        withRound(`/api/tournament/${tournamentId}/maps`, round),
+        withScope(`/api/tournament/${tournamentId}/maps`, scope),
         {
           method: 'POST',
           body: JSON.stringify({
@@ -239,7 +206,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
         throw new Error(json.error || t.errorAdd);
       }
       setShowAddForm(false);
-      await fetchMaps(round);
+      await fetchMaps(scope);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message || t.errorAdd);
     } finally {
@@ -258,7 +225,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
         `/api/tournament/${tournamentId}/maps?mapId=${mapId}`,
         { method: 'DELETE' }
       );
-      await fetchMaps(round);
+      await fetchMaps(scope);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message || t.errorDelete);
     } finally {
@@ -271,17 +238,17 @@ function AdminTournamentMapsPage(_: StaffProps) {
     // Le libellé NOMME le pool visé : la même action détruisait auparavant les
     // pools de toutes les journées sans le dire.
     const ok = await confirm({
-      title: format(t.confirmDeleteAllScoped, { pool: roundLabel }),
+      title: format(t.confirmDeleteAllScoped, { pool: texts.poolName }),
       variant: 'danger',
     });
     if (!ok) return;
     setErrorMsg(null);
     try {
       await adminFetchJson(
-        withRound(`/api/tournament/${tournamentId}/maps`, round),
+        withScope(`/api/tournament/${tournamentId}/maps`, scope),
         { method: 'DELETE' }
       );
-      await fetchMaps(round);
+      await fetchMaps(scope);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message || t.errorDelete);
     }
@@ -301,7 +268,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
         { method: 'PATCH', body: JSON.stringify(patch) }
       );
       setEditingMap(null);
-      await fetchMaps(round);
+      await fetchMaps(scope);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message || t.errorUpdate);
     } finally {
@@ -312,9 +279,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
   async function handleAddAllMaps() {
     if (!tournamentId) return;
     const ok = await confirm({
-      title: editingRound
-        ? format(t.confirmFillRound, { round: roundLabel })
-        : format(t.confirmAddAll, { game: gameLabel }),
+      title: texts.confirmFill ?? format(t.confirmAddAll, { game: gameLabel }),
       variant: 'info',
     });
     if (!ok) return;
@@ -322,7 +287,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
     setErrorMsg(null);
     try {
       const res = await addAllMapsMutate(
-        withRound(`/api/tournament/${tournamentId}/maps`, round),
+        withScope(`/api/tournament/${tournamentId}/maps`, scope),
         { method: 'POST', body: JSON.stringify({ defaults: true }) }
       );
       if (!res.ok) {
@@ -335,7 +300,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
       if ((json.imported ?? 0) === 0) {
         addToast(t.alertAllMapsPresent, 'info');
       }
-      await fetchMaps(round);
+      await fetchMaps(scope);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message || t.errorAddAll);
     } finally {
@@ -389,7 +354,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
                 {t.linkMatches}
               </Link>
               <button
-                onClick={() => fetchMaps(round)}
+                onClick={() => fetchMaps(scope)}
                 className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm hover:bg-white/10"
               >
                 {t.refresh}
@@ -399,21 +364,15 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
           <RoundPoolSelector
             rounds={rounds}
-            value={round}
+            dates={dates}
+            value={scope}
             onChange={(next) => {
               setShowAddForm(false);
-              const query = { ...router.query };
-              if (next === null) delete query.round;
-              else query.round = String(next);
-              // `shallow` : seul le paramètre change, pas la session staff
-              // rechargée par getServerSideProps.
-              router.replace({ pathname: router.pathname, query }, undefined, {
-                shallow: true,
-              });
+              setScope(next);
             }}
             defaultCount={defaultCount}
             disabled={loading}
-            formatDay={formatDay}
+            formatDay={formatPlayDateShort}
             labels={{
               legend: t.roundSelectorLegend,
               defaultPool: t.roundDefaultPool,
@@ -421,12 +380,15 @@ function AdminTournamentMapsPage(_: StaffProps) {
               mapsCount: t.roundMapsCount,
               inheritsDefault: t.roundInheritsDefault,
               noRounds: t.roundNoneScheduled,
+              datesLegend: t.roundDatesLegend,
+              datesHint: t.roundDatesHint,
+              dateInherits: t.roundDateInherits,
             }}
           />
 
-          {editingRound && (
+          {texts.notice && (
             <div className="mb-6 p-3 rounded-lg bg-purple-500/10 border border-purple-400/30 text-purple-100 text-sm">
-              {format(t.roundScopeNotice, { round: roundLabel })}
+              {texts.notice}
             </div>
           )}
 
@@ -474,7 +436,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
                     onClick={handleDeleteAllMaps}
                     className="px-4 py-2 rounded-lg bg-red-600/80 hover:bg-red-700 text-white font-medium text-sm transition-colors"
                   >
-                    {format(t.deleteAllMapsScoped, { pool: roundLabel })}
+                    {format(t.deleteAllMapsScoped, { pool: texts.poolName })}
                   </button>
                 )}
               </div>
@@ -526,9 +488,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
 
           {!loading && !errorMsg && maps.length === 0 && (
             <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-              {editingRound
-                ? format(t.emptyRoundPool, { round: roundLabel })
-                : t.emptyMaps}
+              {texts.empty}
             </div>
           )}
 
