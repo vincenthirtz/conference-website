@@ -316,9 +316,9 @@ describe('rendu', () => {
     // Scrim programmé à 18:30 UTC : l'heure de Paris, pas une attente vague.
     expect(html).toContain('Coup d’envoi à 20:30');
     expect(html).not.toContain('>0<');
-    // Ni tirets : un « VS » à la place du score.
+    // Ni tirets ni « VS » (déjà dans l'habillage de la régie).
     expect(html).not.toContain('>–<');
-    expect(html).toContain('>VS<');
+    expect(html).not.toContain('>VS<');
   });
 
   it('reste vide sans scrim', () => {

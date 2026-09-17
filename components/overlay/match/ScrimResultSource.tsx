@@ -177,11 +177,10 @@ export function ScrimResultSource({
               <span>{scrim.team2?.score ?? 0}</span>
             </div>
           ) : (
-            // Pas encore de score : un « VS » plutôt que « – : – », qui se lisait
-            // comme un score vide à l'antenne.
-            <div className="text-8xl font-black leading-none text-white/45">
-              {t.vs}
-            </div>
+            // Pas encore de score : rien au centre — ni « – : – » (lu comme un
+            // score vide), ni « VS », que l'habillage de la régie porte déjà.
+            // Le bloc garde sa largeur pour que les équipes restent en place.
+            <div className="h-[9rem] w-[20rem]" aria-hidden="true" />
           )}
           {scrim.draw && (
             <span className="mt-3 text-3xl font-bold uppercase tracking-widest text-white/70">
