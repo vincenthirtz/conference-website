@@ -109,7 +109,9 @@ describe('withDefaultTeamLogo', () => {
     expect(await withDefaultTeamLogo('   ', TENANT_ID)).toBe(
       WOMENS_CUP_LOGO_URL
     );
-    expect(WOMENS_CUP_LOGO_URL).toBe('/img/logos/2026-logo.png');
+    expect(WOMENS_CUP_LOGO_URL).toBe(
+      'https://owwomenscup.fr/img/logos/2026-logo.png'
+    );
   });
 
   it('prend le logo de la marque blanche du tenant quand il existe', async () => {

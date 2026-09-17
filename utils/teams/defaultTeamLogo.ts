@@ -8,15 +8,16 @@
 // trou. Le logo de la compétition est un remplissage neutre, et reste
 // remplaçable depuis la fiche équipe.
 //
-// FORME DE L'URL. Chemin racine, comme les logos locaux déjà en base
-// (`/img/teams-images/...`) et comme le repli de la barre de navigation
-// (`branding?.logoUrl ?? '/img/logos/2026-logo.png'`). Un tenant en marque
+// FORME DE L'URL. ABSOLUE, alors que le repli de la barre de navigation est un
+// chemin racine : `teams.logo_url` sort du site (API bot, embeds Discord dont
+// `setThumbnail` refuse une URL relative, widgets, OG). Un tenant en marque
 // blanche garde son propre logo, exactement comme dans le header.
 
 import { readTenantBranding } from '@/utils/tenant';
+import { SITE_URL } from '@/utils/teamMessages';
 
 /** Logo Women's Cup servi par le site (`public/img/logos/2026-logo.png`). */
-export const WOMENS_CUP_LOGO_URL = '/img/logos/2026-logo.png';
+export const WOMENS_CUP_LOGO_URL = `${SITE_URL}/img/logos/2026-logo.png`;
 
 /**
  * Logo à poser sur une équipe auto-créée du tenant : celui de la marque
