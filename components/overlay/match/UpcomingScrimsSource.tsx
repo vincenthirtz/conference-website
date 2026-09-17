@@ -112,7 +112,7 @@ function Logo({
   name: string;
   size: 'md' | 'lg';
 }) {
-  const dim = size === 'lg' ? 'h-36 w-36 text-4xl' : 'h-20 w-20 text-2xl';
+  const dim = size === 'lg' ? 'h-32 w-32 text-4xl' : 'h-20 w-20 text-2xl';
   if (team?.logoUrl) {
     return (
       // biome-ignore lint/performance/noImgElement: source OBS — next/image n'apporte rien et casse sur un logo distant
@@ -166,7 +166,13 @@ function TeamSide({
     >
       <Logo team={team} name={name} size={size} />
       <span
-        className={`truncate font-bold ${size === 'lg' ? 'text-5xl' : 'text-4xl'} ${
+        className={`font-bold ${
+          // Carte : le nom a la place de passer sur deux lignes plutôt que
+          // d'être tronqué (« Team Positiv… »). Ligne : une seule, tronquée.
+          size === 'lg'
+            ? 'line-clamp-2 break-words text-4xl leading-tight'
+            : 'truncate text-4xl'
+        } ${align === 'right' ? 'text-right' : ''} ${
           team ? 'text-white' : 'italic text-white/60'
         }`}
         style={SHADOW}
