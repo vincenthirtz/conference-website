@@ -1,6 +1,7 @@
 // pages/tournament/[id]/maps.tsx
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import { GetStaticPaths, GetStaticProps } from 'next';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
@@ -15,6 +16,7 @@ import TournamentTabs from '@/components/tournament/TournamentTabs';
 import {
   buildScopedPools,
   pickDefaultPoolKey,
+  poolKeyFromQuery,
   type ScopedPool,
 } from '@/utils/maps/publicPools';
 import { parisDayKey } from '@/utils/maps/roundPools';
@@ -393,6 +395,15 @@ export default function TournamentMapsPage({
         ? scopedPools[0].key
         : null
   );
+  // Lien direct vers un pool (`?date=2026-09-30`, `?journee=2`) : lu après
+  // hydratation, la page étant statique (ISR) et la query absente au rendu
+  // serveur.
+  const router = useRouter();
+  useEffect(() => {
+    if (!router.isReady) return;
+    const fromQuery = poolKeyFromQuery(scopedPools, router.query);
+    if (fromQuery) setPoolKey(fromQuery);
+  }, [router.isReady, router.query, scopedPools]);
   const selectedScopedPool = scopedPools.find((p) => p.key === poolKey) ?? null;
   const shownPool = selectedScopedPool ? selectedScopedPool.maps : pool;
   const scopedPoolChip = (p: ScopedPool): string =>

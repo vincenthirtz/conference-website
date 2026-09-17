@@ -22,7 +22,11 @@ import {
   parseDateParam,
   poolScopeColumns,
 } from '@/utils/maps/poolScope';
-import { buildScopedPools, pickDefaultPoolKey } from '@/utils/maps/publicPools';
+import {
+  buildScopedPools,
+  pickDefaultPoolKey,
+  poolKeyFromQuery,
+} from '@/utils/maps/publicPools';
 import {
   sameScope,
   scopeFromQuery,
@@ -318,6 +322,16 @@ describe('pickDefaultPoolKey — pool ouvert par défaut sur la page publique', 
   it('ouvre le pool daté de la prochaine date', () => {
     expect(pickDefaultPoolKey(pools, '2026-09-24')).toBe('date:2026-09-30');
     expect(pickDefaultPoolKey(pools, '2026-09-30')).toBe('date:2026-09-30');
+  });
+
+  it('lien direct : ?date= et ?journee= ouvrent un pool existant', () => {
+    expect(poolKeyFromQuery(pools, { date: '2026-09-30' })).toBe(
+      'date:2026-09-30'
+    );
+    expect(poolKeyFromQuery(pools, { journee: '2' })).toBe('round:2');
+    expect(poolKeyFromQuery(pools, { date: '2026-10-02' })).toBeNull();
+    expect(poolKeyFromQuery(pools, { date: '30/09' })).toBeNull();
+    expect(poolKeyFromQuery(pools, {})).toBeNull();
   });
 
   it('rien à venir → pool du tournoi', () => {

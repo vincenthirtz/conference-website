@@ -205,3 +205,28 @@ export function pickDefaultPoolKey(
   const covering = pools.filter((p) => p.dates.includes(nextDay as string));
   return covering.length === 1 ? covering[0]!.key : null;
 }
+
+/**
+ * Pool demandé par l'URL : `?date=2026-09-30` ou `?journee=2` — le lien à
+ * partager avec le visuel « Map Pool 30/09 ». Clé d'un pool EXISTANT, sinon
+ * `null` (paramètre absent, illisible ou sans pool : on garde le défaut). PURE.
+ */
+export function poolKeyFromQuery(
+  pools: ScopedPool[],
+  query: { date?: unknown; journee?: unknown }
+): string | null {
+  const first = (v: unknown) => (Array.isArray(v) ? v[0] : v);
+  const date = first(query.date);
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const hit = pools.find((p) => p.kind === 'date' && p.date === date);
+    if (hit) return hit.key;
+  }
+  const round = first(query.journee);
+  if (typeof round === 'string' && /^\d+$/.test(round)) {
+    const hit = pools.find(
+      (p) => p.kind === 'round' && p.round === Number(round)
+    );
+    if (hit) return hit.key;
+  }
+  return null;
+}
