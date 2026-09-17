@@ -20,7 +20,7 @@ export const PRESS_ITEMS: PressItem[] = [
   {
     title: "OW Women's Cup 2026",
     source: 'Ranked Actu',
-    url: 'https://rankedactu.fr/article/e-sport/cmmucnmqd000401jv59636io8',
+    url: 'https://rankedactu.fr/article/e-sport/cmu5mmuh8000001mrbw0rj3qc',
     logo: '/img/logos/rankedactu.webp',
   },
 ];
