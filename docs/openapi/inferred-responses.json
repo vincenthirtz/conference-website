@@ -9332,6 +9332,12 @@
        "status": {},
        "team1_id": {},
        "team2_id": {},
+       "team1_score": {},
+       "team2_score": {},
+       "winner_team_id": {},
+       "dispute_reason": {},
+       "completed_at": {},
+       "ranked": {},
        "scheduled_date": {},
        "timezone": {},
        "is_public": {},
@@ -9387,6 +9393,12 @@
        "status",
        "team1_id",
        "team2_id",
+       "team1_score",
+       "team2_score",
+       "winner_team_id",
+       "dispute_reason",
+       "completed_at",
+       "ranked",
        "scheduled_date",
        "timezone",
        "is_public",
@@ -53403,6 +53415,43 @@
     "required": [
      "matches",
      "count"
+    ]
+   }
+  },
+  "POST /api/admin/scrims/{scrimId}/result": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "success": {
+      "type": "boolean"
+     },
+     "scrim": {
+      "type": "object",
+      "additionalProperties": {}
+     },
+     "winner_team_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "correction": {
+      "type": "boolean"
+     },
+     "purged_reports": {
+      "type": "number"
+     },
+     "rating_rebuild_advised": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "success",
+     "scrim",
+     "winner_team_id",
+     "correction",
+     "purged_reports",
+     "rating_rebuild_advised"
     ]
    }
   },

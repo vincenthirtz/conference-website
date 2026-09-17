@@ -1,0 +1,84 @@
+parameters:
+  - $ref: '#/components/parameters/ScrimId'
+post:
+  summary: Record or correct a scrim's final score (staff).
+  description: >-
+    Le staff fixe le score final d'un scrim sans reports de capitaines : scrim
+    contre une equipe exterieure (sans capitaine), litige tranche, ou
+    correction d'un scrim deja `completed`. Le scrim passe `completed`
+    (vainqueur deduit des scores, match nul permis -> `winner_team_id` null,
+    `dispute_reason` efface). Ecriture conditionnelle au statut lu : `409
+    SCRIM_CHANGED` si le scrim a change entre-temps. Statuts acceptes : draft,
+    scheduled, running, disputed, completed ; `cancelled` -> `409
+    SCRIM_CANCELLED`. Equipes manquantes -> `400 SCRIM_TEAMS_MISSING`. Les
+    reports capitaines en attente sont purges, le miroir note est realigne
+    (recompenses TCG clees sur le scrim : une correction ne paie pas deux
+    fois), `scrim.finished` part a la cloture mais pas sur une correction.
+    `rating_rebuild_advised` signale une correction qui retire ou change un
+    vainqueur deja note (le rating incremental ne la rejoue pas). Honore
+    `Idempotency-Key`. Permission : `manage_teams`.
+  operationId: adminRecordScrimResult
+  tags:
+    - admin/scrims
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - team1_score
+            - team2_score
+          properties:
+            team1_score:
+              type: integer
+              minimum: 0
+              maximum: 99
+            team2_score:
+              type: integer
+              minimum: 0
+              maximum: 99
+  responses:
+    '200':
+      description: Resultat enregistre.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - success
+              - scrim
+              - winner_team_id
+              - correction
+              - purged_reports
+              - rating_rebuild_advised
+            properties:
+              success:
+                type: boolean
+              scrim:
+                type: object
+                additionalProperties: true
+                description: Ligne `scrims` apres ecriture (colonnes brutes).
+              winner_team_id:
+                type: [string, 'null']
+                format: uuid
+              correction:
+                type: boolean
+                description: Le scrim etait deja `completed`.
+              purged_reports:
+                type: integer
+                description: Nombre de reports capitaines supprimes.
+              rating_rebuild_advised:
+                type: boolean
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'

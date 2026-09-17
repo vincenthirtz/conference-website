@@ -51,4 +51,36 @@ export default adminNs('adminScrimDetail', {
   defaultTeam1: 'Équipe 1',
   defaultTeam2: 'Équipe 2',
   edit: 'Éditer →',
+  statusDisputed: 'En litige',
+  resultHeading: 'Résultat',
+  resultCurrent: '{team1} {score1} – {score2} {team2}',
+  resultNone: 'Aucun résultat enregistré.',
+  resultWinner: 'Vainqueur : {team}',
+  resultDraw: 'Match nul',
+  resultDisputeNotice: 'Litige en cours : {reason}',
+  resultDisputeNoReason: 'raison non précisée',
+  resultCompletedNotice:
+    'Ce scrim est déjà terminé : enregistrer un nouveau score corrige le résultat existant.',
+  resultCancelledNotice:
+    'Scrim annulé : réinstaure-le (statut) avant de saisir un résultat.',
+  resultTeamsMissing: 'Assigne les deux équipes avant de saisir un résultat.',
+  resultScoreFor: 'Score — {team}',
+  resultSubmit: 'Enregistrer le résultat',
+  resultSubmitting: 'Enregistrement…',
+  resultConfirmTitle: 'Enregistrer le résultat {score} ?',
+  resultConfirmSubtitle:
+    'Le scrim passera « Terminé ». Les reports des capitaines en attente seront supprimés.',
+  resultConfirmOverrideTitle: 'Corriger le résultat de ce scrim ?',
+  resultConfirmOverrideSubtitle:
+    'Score actuel {previous} → nouveau score {next}. Les récompenses déjà versées ne sont ni reprises ni versées une seconde fois.',
+  resultConfirmDisputeSubtitle:
+    'Ce score tranche le litige ({reason}). Les reports des deux capitaines seront supprimés.',
+  resultConfirmLabel: 'Enregistrer',
+  resultSaved: 'Résultat enregistré.',
+  resultRebuildHint:
+    "Le vainqueur a changé : le classement des joueuses n'est pas recalculé automatiquement.",
+  resultRebuildLink: 'Recalculer le classement',
+  resultErrorChanged:
+    'Le scrim a changé entre-temps : il a été rechargé, vérifie avant de réenregistrer.',
+  resultError: "Erreur d'enregistrement du résultat.",
 });

@@ -50,4 +50,36 @@ export default {
   defaultTeam1: 'Team 1',
   defaultTeam2: 'Team 2',
   edit: 'Edit →',
+  statusDisputed: 'Disputed',
+  resultHeading: 'Result',
+  resultCurrent: '{team1} {score1} – {score2} {team2}',
+  resultNone: 'No result recorded yet.',
+  resultWinner: 'Winner: {team}',
+  resultDraw: 'Draw',
+  resultDisputeNotice: 'Dispute in progress: {reason}',
+  resultDisputeNoReason: 'no reason given',
+  resultCompletedNotice:
+    'This scrim is already completed: saving a new score corrects the existing result.',
+  resultCancelledNotice:
+    'Cancelled scrim: reinstate it (status) before entering a result.',
+  resultTeamsMissing: 'Assign both teams before entering a result.',
+  resultScoreFor: 'Score — {team}',
+  resultSubmit: 'Save result',
+  resultSubmitting: 'Saving…',
+  resultConfirmTitle: 'Record the result {score}?',
+  resultConfirmSubtitle:
+    'The scrim will be marked completed. Pending captain reports will be deleted.',
+  resultConfirmOverrideTitle: "Correct this scrim's result?",
+  resultConfirmOverrideSubtitle:
+    'Current score {previous} → new score {next}. Rewards already granted are neither taken back nor granted again.',
+  resultConfirmDisputeSubtitle:
+    "This score settles the dispute ({reason}). Both captains' reports will be deleted.",
+  resultConfirmLabel: 'Save',
+  resultSaved: 'Result saved.',
+  resultRebuildHint:
+    "The winner changed: the player ranking isn't recalculated automatically.",
+  resultRebuildLink: 'Rebuild the ranking',
+  resultErrorChanged:
+    'The scrim changed in the meantime: it has been reloaded, check before saving again.',
+  resultError: 'Error saving the result.',
 };

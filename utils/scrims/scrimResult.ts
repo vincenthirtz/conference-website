@@ -8,6 +8,10 @@
 //   * deux concordants    -> le scrim est clos ('completed') ;
 //   * deux divergents     -> 'disputed', arbitrage humain.
 //
+// Recours staff : `applyStaffScrimResult` (route
+// `POST /api/admin/scrims/[scrimId]/result`) fixe le score sans reports — scrim
+// contre une équipe extérieure sans capitaine, litige tranché, correction.
+//
 // Pourquoi ne pas réutiliser `applyMatchScore` : un scrim n'a pas de bracket à
 // propager, pas de tournoi, pas de check-in — la moitié de ce que fait
 // applyMatchScore n'a pas de sens ici, et l'autre moitié tient en 20 lignes.
@@ -161,4 +165,118 @@ export async function markScrimDisputed(
   // classement, sinon le classement garderait les points d'une partie contestée.
   await syncScrimRatedMatch(tenantId, scrimId);
   return 'disputed';
+}
+
+export type StaffApplyResult =
+  | {
+      ok: true;
+      status: 'completed';
+      winnerTeamId: string | null;
+      /** La ligne `scrims` telle qu'écrite (sert à l'event et à la réponse). */
+      scrim: Record<string, unknown>;
+    }
+  | { ok: false; error: string; status: number; code?: 'SCRIM_CHANGED' };
+
+/**
+ * Statuts depuis lesquels le STAFF peut fixer un score. Différence assumée avec
+ * `applyScrimResult` : `completed` en fait partie — c'est une correction, et le
+ * staff est précisément le recours prévu contre un résultat validé à tort
+ * (cf. l'en-tête de la route de report). `cancelled` n'en fait pas partie : un
+ * scrim annulé se réinstaure d'abord (PATCH de statut), il ne ressuscite pas
+ * par la bande d'un score.
+ */
+export const STAFF_SCRIM_RESULT_STATUSES: ReadonlySet<string> = new Set([
+  'draft',
+  'scheduled',
+  'running',
+  'disputed',
+  'completed',
+]);
+
+/**
+ * Le staff fixe (ou corrige) le score final d'un scrim, sans reports de
+ * capitaines : c'est le seul chemin pour un scrim contre une équipe EXTÉRIEURE
+ * (sans capitaine, cf. utils/teams/externalScrimTeam.ts) et pour trancher un
+ * litige avec un score.
+ *
+ * CONCURRENCE OPTIMISTE, comme le PATCH admin : l'écriture n'a lieu que si le
+ * scrim est TOUJOURS dans le statut lu par la route (`expectedStatus`) et hors
+ * corbeille. Sinon un accord des capitaines, une annulation ou une suppression
+ * arrivés entre-temps seraient écrasés par une décision prise sur un état
+ * périmé → 409 `SCRIM_CHANGED`, rien d'écrit, miroir noté non touché.
+ *
+ * RÉCOMPENSES : rien à faire ici, et c'est voulu. Le paiement passe par
+ * `syncScrimRatedMatch` → `applyMatchRatingIncremental` → `grantVictoryRewards`,
+ * clé `scrim:<scrimId>` (correctif du 2026-09-15) : une correction rejoue la
+ * synchro sans rien verser deux fois. Et un miroir déjà noté (historique de
+ * rating présent) n'est pas re-noté — une correction qui CHANGE le vainqueur ne
+ * réattribue donc ni points ni récompenses : le classement se répare par le
+ * rebuild (`/api/admin/ratings/rebuild`), les gains déjà versés ne sont pas
+ * repris.
+ */
+export async function applyStaffScrimResult(
+  tenantId: string,
+  scrim: { id: string; team1_id: string | null; team2_id: string | null },
+  expectedStatus: string,
+  team1Score: number,
+  team2Score: number
+): Promise<StaffApplyResult> {
+  if (!supabaseAdmin) {
+    return { ok: false, error: 'Service indisponible.', status: 503 };
+  }
+
+  const winnerTeamId = winnerFromScores(
+    scrim.team1_id,
+    scrim.team2_id,
+    team1Score,
+    team2Score
+  );
+
+  const { data: written, error } = await supabaseAdmin
+    .from('scrims')
+    .update({
+      status: 'completed',
+      team1_score: team1Score,
+      team2_score: team2Score,
+      winner_team_id: winnerTeamId,
+      completed_at: new Date().toISOString(),
+      // Le score staff tranche : la raison d'un litige n'a plus lieu d'être
+      // affichée (elle reste au journal staff, dans le `before` de la route).
+      dispute_reason: null,
+    })
+    .eq('id', scrim.id)
+    .eq('tenant_id', tenantId)
+    .eq('status', expectedStatus)
+    .is('deleted_at', null)
+    .select('*');
+
+  if (error) {
+    logger.error('[scrimResult] staff apply error', error);
+    return {
+      ok: false,
+      error: 'Enregistrement du résultat impossible.',
+      status: 500,
+    };
+  }
+
+  const rows = Array.isArray(written) ? written : [];
+  if (rows.length === 0) {
+    return {
+      ok: false,
+      error:
+        'Le scrim a changé entre-temps (résultat déclaré ou statut modifié) : recharge-le avant de saisir le résultat.',
+      status: 409,
+      code: 'SCRIM_CHANGED',
+    };
+  }
+
+  // Même alignement du miroir noté qu'une clôture par accord (idempotent).
+  await syncScrimRatedMatch(tenantId, scrim.id);
+
+  return {
+    ok: true,
+    status: 'completed',
+    winnerTeamId,
+    scrim: rows[0] as Record<string, unknown>,
+  };
 }

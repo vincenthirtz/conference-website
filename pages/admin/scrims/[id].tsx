@@ -15,12 +15,18 @@ import nsAdminScrimDetail from '@/lib/i18n/locales/admin-fr/adminScrimDetail';
 import ScrimTeamField, {
   scrimTeamBody,
 } from '@/components/admin/scrims/ScrimTeamField';
+import ScrimResultPanel from '@/components/admin/scrims/ScrimResultPanel';
 
 const NO_EXTERNAL = { external: false, externalName: '' };
 
 type TeamOption = { id: string; name: string; short_name: string | null };
 
 type ScrimWithTeams = Scrim & {
+  // Résultat (colonnes lues par le GET admin, cf. add_scrim_results.sql).
+  team1_score?: number | null;
+  team2_score?: number | null;
+  winner_team_id?: string | null;
+  dispute_reason?: string | null;
   team1?: { id: string; name: string; logo_url: string | null } | null;
   team2?: { id: string; name: string; logo_url: string | null } | null;
 };
@@ -371,6 +377,8 @@ function AdminScrimEditPage(_props: StaffProps) {
               </button>
             </div>
           </section>
+
+          <ScrimResultPanel scrim={scrim} onSaved={fetchAll} />
 
           <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6">
             <div className="flex justify-between items-center mb-4">

@@ -94,6 +94,8 @@ async function handleGet(
       `
       id, name, slug, game, status,
       team1_id, team2_id,
+      team1_score, team2_score, winner_team_id, dispute_reason, completed_at,
+      ranked,
       scheduled_date, timezone,
       is_public, logo_url, banner_url, description, stream_url,
       source_demande_id, created_at, updated_at,
