@@ -61,4 +61,17 @@ export default {
     'Add ?tournament=<id or slug> to the URL to show the day’s matches.',
   dayTeamTbd: 'TBD',
   dayShownOf: 'Showing {shown} of {total} matches',
+
+  scrimsDocTitle: 'Stream source — upcoming scrims',
+  scrimsTitle: 'Upcoming scrims',
+  scrimsBrandDefault: 'OW Women’s Cup',
+  scrimsEmpty: 'No public scrims scheduled yet.',
+  scrimsDateTbd: 'Date TBD',
+  scrimsMore: '+ {count} more scheduled scrims',
+
+  donDocTitle: 'Stream source — donate',
+  donEyebrow: 'Donate',
+  donTitle: 'Support the association',
+  donBody: 'Scan the QR code to donate via HelloAsso.',
+  donQrAlt: 'HelloAsso donation QR code',
 };

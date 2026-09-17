@@ -1,0 +1,77 @@
+get:
+  summary: Source de stream OBS « scrims à venir ».
+  description: |
+    PUBLIC (sans authentification), destiné aux sources navigateur d'OBS
+    (`/overlay/scrims`) : les prochains scrims publics de l'espace, du plus
+    proche au plus lointain, ceux en cours en tête.
+
+    Mêmes règles d'exposition que `GET /api/scrims` (`is_public`, ni brouillon
+    ni supprimé). Un scrim `scheduled` dépassé de plus de 3 h est écarté (joué
+    mais jamais clos). L'espace doit porter la capacité de palier
+    `matchOverlays` — sinon `402`.
+
+    `Cache-Control: public, s-maxage=30, stale-while-revalidate=120`.
+  operationId: getUpcomingScrimsOverlaySource
+  tags:
+    - public/misc
+  security: []
+  parameters:
+    - name: days
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 60
+        default: 14
+      description: Horizon en jours (borné).
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 10
+        default: 6
+      description: Nombre de scrims renvoyés (borné).
+    - name: tenant
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Slug de l'espace, pour une source d'un autre organisateur.
+  responses:
+    '200':
+      description: Les prochains scrims publics.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UpcomingScrimsOverlaySource'
+    '402':
+      description: >-
+        Le palier de l'espace n'ouvre pas les sources de stream (capacité
+        `matchOverlays`). Le corps nomme le palier en cours.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Error'
+            properties:
+              code:
+                type: string
+                enum:
+                  - PLAN_CAPABILITY_REQUIRED
+              capability:
+                type: string
+                enum:
+                  - matchOverlays
+              plan:
+                type: string
+              planLabel:
+                type: string
+    '405':
+      description: Méthode non autorisée (seul GET est accepté).
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

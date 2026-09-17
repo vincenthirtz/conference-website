@@ -49,6 +49,12 @@ export default {
   source_countdown_desc: 'Counts down to kick-off, on server time.',
   source_waiting_name: 'Waiting screen',
   source_waiting_desc: 'Opaque backdrop with your brand, between games.',
+  source_scrims_name: 'Upcoming scrims',
+  source_scrims_desc:
+    'The space’s next public scrims (not just this tournament). Add &days=N for the horizon, &limit=N for the number of rows, &title=… for the heading.',
+  source_don_name: 'Donate (HelloAsso QR)',
+  source_don_desc:
+    'The association’s donation QR code, same as the /don page. Add &layout=corner for a bottom-right inset to keep on screen during games.',
   source_day_name: 'Today’s matches',
   source_day_desc:
     'The day’s schedule (Paris time): kick-off times, match-ups, live scores, current match highlighted. Add &date=YYYY-MM-DD for another day, &limit=N for the number of rows.',

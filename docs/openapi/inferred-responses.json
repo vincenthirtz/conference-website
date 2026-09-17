@@ -33255,6 +33255,173 @@
     ]
    }
   },
+  "GET /api/overlay/scrims": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "scrims": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "slug": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "phase": {
+         "type": "string",
+         "enum": [
+          "live",
+          "upcoming"
+         ]
+        },
+        "scheduledAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team1": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "name": {
+           "type": "string"
+          },
+          "shortName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "logoUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "score": {
+           "type": "number"
+          },
+          "isWinner": {
+           "type": "boolean"
+          }
+         },
+         "required": [
+          "name",
+          "shortName",
+          "logoUrl",
+          "score",
+          "isWinner"
+         ]
+        },
+        "team2": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "name": {
+           "type": "string"
+          },
+          "shortName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "logoUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "score": {
+           "type": "number"
+          },
+          "isWinner": {
+           "type": "boolean"
+          }
+         },
+         "required": [
+          "name",
+          "shortName",
+          "logoUrl",
+          "score",
+          "isWinner"
+         ]
+        }
+       },
+       "required": [
+        "id",
+        "name",
+        "slug",
+        "phase",
+        "scheduledAt",
+        "team1",
+        "team2"
+       ]
+      }
+     },
+     "total": {
+      "type": "number"
+     },
+     "branding": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "logoUrl": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "accent": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "name",
+       "logoUrl",
+       "accent"
+      ]
+     },
+     "serverTime": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "scrims",
+     "total",
+     "branding",
+     "serverTime"
+    ]
+   }
+  },
   "GET /api/overlay/tcg/{token}": {
    "200": {
     "type": "object",

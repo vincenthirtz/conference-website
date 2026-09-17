@@ -21,6 +21,7 @@ import WidgetCard from '@/components/admin/dashboard/WidgetCard';
 import StreamSourcesPanel from '@/components/admin/tournament/StreamSourcesPanel';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { logger } from '@/utils/logger';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import nsAdminTournamentOverview from '@/lib/i18n/locales/admin-fr/adminTournamentOverview';
 import nsAdminTournamentEmbed from '@/lib/i18n/locales/admin-fr/adminTournamentEmbed';
 import {
@@ -49,6 +50,8 @@ type SsrProps = {
   canUseMatchOverlays: boolean;
   /** Palier en cours, nommé dans l'encart quand la capacité manque. */
   planLabel: string;
+  /** Espace de la Women's Cup : lui seul reçoit la source de don (son QR). */
+  isDefaultTenant: boolean;
 };
 
 export const getServerSideProps = withStaffPage<SsrProps>(
@@ -61,6 +64,7 @@ export const getServerSideProps = withStaffPage<SsrProps>(
         initialTournament: null,
         canUseMatchOverlays: false,
         planLabel: PLAN_LABELS.discovery,
+        isDefaultTenant: false,
       };
     }
     const { data, error } = await supabaseAdmin
@@ -92,6 +96,7 @@ export const getServerSideProps = withStaffPage<SsrProps>(
       initialTournament: (data as TournamentBasics | null) ?? null,
       canUseMatchOverlays: tenantHasCapability(planState, 'matchOverlays'),
       planLabel: PLAN_LABELS[planState.plan] ?? planState.plan,
+      isDefaultTenant: staffCtx.tenantId === DEFAULT_TENANT_ID,
     };
   }
 );
@@ -102,6 +107,7 @@ function TournamentToolsPage({
   initialTournament,
   canUseMatchOverlays,
   planLabel,
+  isDefaultTenant,
 }: Props) {
   const router = useRouter();
   const { id } = router.query;
@@ -568,6 +574,7 @@ function TournamentToolsPage({
                   baseUrl={embedBase}
                   enabled={canUseMatchOverlays}
                   planLabel={planLabel}
+                  showDonation={isDefaultTenant}
                 />
               </div>
             </WidgetCard>

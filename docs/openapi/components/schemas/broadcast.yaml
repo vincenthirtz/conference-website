@@ -854,3 +854,55 @@ DayOverlayMatch:
       anyOf:
         - $ref: '#/components/schemas/MatchOverlayTeam'
         - type: 'null'
+UpcomingScrimsOverlaySource:
+  type: object
+  description: |
+    Les prochains scrims publics d'un espace, tels que la source OBS
+    « scrims à venir » les affiche. PUBLIC et cacheable 30 s.
+  required: [scrims, total, branding, serverTime]
+  properties:
+    scrims:
+      type: array
+      items:
+        type: object
+        required: [id, name, slug, phase, scheduledAt, team1, team2]
+        properties:
+          id:
+            type: string
+            format: uuid
+          name:
+            type: [string, 'null']
+          slug:
+            type: [string, 'null']
+          phase:
+            type: string
+            enum: [live, upcoming]
+          scheduledAt:
+            type: [string, 'null']
+            format: date-time
+          team1:
+            anyOf:
+              - $ref: '#/components/schemas/MatchOverlayTeam'
+              - type: 'null'
+          team2:
+            anyOf:
+              - $ref: '#/components/schemas/MatchOverlayTeam'
+              - type: 'null'
+    total:
+      type: integer
+      description: Nombre de scrims retenus avant la coupe à `limit`.
+    branding:
+      anyOf:
+        - type: object
+          required: [name, logoUrl, accent]
+          properties:
+            name:
+              type: [string, 'null']
+            logoUrl:
+              type: [string, 'null']
+            accent:
+              type: [string, 'null']
+        - type: 'null'
+    serverTime:
+      type: string
+      format: date-time

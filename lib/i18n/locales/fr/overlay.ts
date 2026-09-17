@@ -64,4 +64,20 @@ export default ns('overlay', {
     'Ajoutez ?tournament=<identifiant ou slug> à l’URL pour afficher les matchs du jour.',
   dayTeamTbd: 'À déterminer',
   dayShownOf: '{shown} matchs affichés sur {total}',
+
+  // Source « scrims à venir » (`/overlay/scrims`).
+  scrimsDocTitle: 'Source de stream — scrims à venir',
+  scrimsTitle: 'Scrims à venir',
+  // Branding nul = l'espace de la Coupe elle-même (cf. readTenantBranding).
+  scrimsBrandDefault: 'OW Women’s Cup',
+  scrimsEmpty: 'Aucun scrim public programmé pour l’instant.',
+  scrimsDateTbd: 'Date à fixer',
+  scrimsMore: '+ {count} autres scrims programmés',
+
+  // Source « faire un don » (`/overlay/don`).
+  donDocTitle: 'Source de stream — faire un don',
+  donEyebrow: 'Faire un don',
+  donTitle: 'Soutenez l’association',
+  donBody: 'Scannez le QR code pour faire un don via HelloAsso.',
+  donQrAlt: 'QR code de don HelloAsso',
 });

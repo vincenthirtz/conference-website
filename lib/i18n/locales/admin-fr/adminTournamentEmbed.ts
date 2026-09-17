@@ -52,6 +52,12 @@ export default adminNs('adminTournamentEmbed', {
     'Décompte jusqu’au coup d’envoi, sur l’heure du serveur.',
   source_waiting_name: 'Écran d’attente',
   source_waiting_desc: 'Fond opaque avec votre marque, entre deux rencontres.',
+  source_scrims_name: 'Scrims à venir',
+  source_scrims_desc:
+    'Les prochains scrims publics de l’espace (pas seulement ce tournoi). Ajoutez &days=N pour l’horizon, &limit=N pour le nombre de lignes, &title=… pour le titre.',
+  source_don_name: 'Faire un don (QR HelloAsso)',
+  source_don_desc:
+    'Le QR code de don de l’association, le même que la page /don. Ajoutez &layout=corner pour un encart en bas à droite à garder pendant le jeu.',
   source_day_name: 'Matchs du jour',
   source_day_desc:
     'Le programme de la journée (heure de Paris) : horaires, affiches, scores en direct, match du moment mis en avant. Ajoutez &date=AAAA-MM-JJ pour un autre jour, &limit=N pour le nombre de lignes.',

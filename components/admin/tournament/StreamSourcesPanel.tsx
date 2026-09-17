@@ -27,6 +27,8 @@ type Props = {
   enabled: boolean;
   /** Palier en cours, nommé dans l'encart quand la capacité manque. */
   planLabel: string;
+  /** Espace de la Women's Cup : seul à qui le QR de don appartient. */
+  showDonation?: boolean;
 };
 
 /** Les sources, dans l'ordre où une régie les ajoute à sa scène. */
@@ -39,13 +41,18 @@ const SOURCES = [
   // Pas une source « par match » : elle montre toute la journée, d'où son URL
   // à part (cf. sourceUrl).
   { key: 'day', size: '1920×1080' },
+  // Pas liée au tournoi : les scrims publics de tout l'espace.
+  { key: 'scrims', size: '1920×1080' },
+  // Le QR HelloAsso de la Women's Cup : proposé à son seul espace.
+  { key: 'don', size: '1920×1080' },
 ] as const;
 
 function sourceUrl(baseUrl: string, tournamentRef: string, key: string) {
   const tournament = encodeURIComponent(tournamentRef);
-  return key === 'day'
-    ? `${baseUrl}/overlay/day?tournament=${tournament}`
-    : `${baseUrl}/overlay/match/next?tournament=${tournament}&source=${key}`;
+  if (key === 'day') return `${baseUrl}/overlay/day?tournament=${tournament}`;
+  if (key === 'scrims') return `${baseUrl}/overlay/scrims`;
+  if (key === 'don') return `${baseUrl}/overlay/don`;
+  return `${baseUrl}/overlay/match/next?tournament=${tournament}&source=${key}`;
 }
 
 export default function StreamSourcesPanel({
@@ -53,6 +60,7 @@ export default function StreamSourcesPanel({
   baseUrl,
   enabled,
   planLabel,
+  showDonation = false,
 }: Props) {
   const t = useAdminT(nsAdminTournamentEmbed);
   const [copied, setCopied] = useState<string | null>(null);
@@ -94,7 +102,7 @@ export default function StreamSourcesPanel({
       <p className="text-xs text-neutral-400">{t.sourcesDescription}</p>
 
       <div className="space-y-2">
-        {SOURCES.map((s) => {
+        {SOURCES.filter((s) => s.key !== 'don' || showDonation).map((s) => {
           const url = sourceUrl(baseUrl, tournamentRef, s.key);
           const label = t[`source_${s.key}_name` as keyof typeof t] as string;
           const desc = t[`source_${s.key}_desc` as keyof typeof t] as string;
