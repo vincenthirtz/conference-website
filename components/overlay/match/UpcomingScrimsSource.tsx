@@ -60,7 +60,8 @@ function Logo({ team, name }: { team: OverlayTeamView | null; name: string }) {
       className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-white/10 text-2xl font-black text-white/80"
       aria-hidden="true"
     >
-      {name.slice(0, 2).toUpperCase()}
+      {/* Adversaire pas encore connu : « ? », pas l'initiale de « À déterminer ». */}
+      {team ? name.slice(0, 2).toUpperCase() : '?'}
     </div>
   );
 }
@@ -87,7 +88,7 @@ function ScrimLine({
       <div className="w-48 shrink-0 leading-tight" style={SHADOW}>
         {scrim.phase === 'live' ? (
           <span className="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-1.5 text-lg font-bold uppercase tracking-wider text-white">
-            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-white" />
+            <span className="block h-3 w-3 shrink-0 animate-pulse rounded-full bg-white" />
             {t.matchPhaseLive}
           </span>
         ) : (
