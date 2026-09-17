@@ -5,7 +5,8 @@
 // l'écran de fin de scrim, à la place d'un overlay « résultat final » tenu à
 // la main dans un autre outil : ici le score vient du site, validé.
 //
-// Mêmes partis pris que les autres sources : bandeau sombre, ombres portées,
+// Mêmes partis pris que les autres sources, sans bandeau : fond transparent,
+// ombres portées marquées,
 // pas d'animation continue hormis le point « en direct ». La carte se met à
 // l'échelle pour REMPLIR la source (cf. resultFit), quelle que soit sa taille.
 
@@ -37,7 +38,12 @@ export function resultFit(
   );
 }
 
-const SHADOW = { textShadow: '0 3px 10px rgba(0,0,0,0.85)' } as const;
+// Fond ENTIÈREMENT transparent (demande régie) : plus de carte sombre derrière
+// le texte, c'est l'ombre portée qui garde les noms et le score lisibles sur
+// une image claire.
+const SHADOW = {
+  textShadow: '0 2px 4px rgba(0,0,0,0.9), 0 4px 18px rgba(0,0,0,0.75)',
+} as const;
 
 function Side({
   team,
@@ -126,7 +132,7 @@ export function ScrimResultSource({
 
   return (
     <div
-      className="absolute left-1/2 top-1/2 flex origin-center flex-col items-center justify-center gap-4 rounded-[2.5rem] bg-black/70 px-12"
+      className="absolute left-1/2 top-1/2 flex origin-center flex-col items-center justify-center gap-4 px-12"
       style={style}
       data-phase={scrim.phase}
     >
@@ -164,11 +170,19 @@ export function ScrimResultSource({
             score en cours mis à jour par le staff. Jamais de « 0 : 0 »
             inventé à l'antenne. */}
         <div className="flex flex-col items-center" style={SHADOW}>
-          <div className="flex items-center gap-6 text-[9rem] font-black leading-none tabular-nums text-white">
-            <span>{showScore ? (scrim.team1?.score ?? 0) : '–'}</span>
-            <span className="text-white/35">:</span>
-            <span>{showScore ? (scrim.team2?.score ?? 0) : '–'}</span>
-          </div>
+          {showScore ? (
+            <div className="flex items-center gap-6 text-[9rem] font-black leading-none tabular-nums text-white">
+              <span>{scrim.team1?.score ?? 0}</span>
+              <span className="text-white/35">:</span>
+              <span>{scrim.team2?.score ?? 0}</span>
+            </div>
+          ) : (
+            // Pas encore de score : un « VS » plutôt que « – : – », qui se lisait
+            // comme un score vide à l'antenne.
+            <div className="text-8xl font-black leading-none text-white/45">
+              {t.vs}
+            </div>
+          )}
           {scrim.draw && (
             <span className="mt-3 text-3xl font-bold uppercase tracking-widest text-white/70">
               {t.scrimResultDraw}
