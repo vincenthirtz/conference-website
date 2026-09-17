@@ -77,9 +77,15 @@ export default function DonationOverlayPage() {
             className="absolute bottom-10 right-10 flex origin-bottom-right items-center gap-5 rounded-2xl border border-white/10 bg-black/85 p-4 pr-6 shadow-2xl"
             style={{ transform: scale !== 1 ? `scale(${scale})` : undefined }}
           >
-            <div className="rounded-xl bg-white p-2">
+            <div className="shrink-0 rounded-xl bg-white p-2">
               {/* biome-ignore lint/performance/noImgElement: source OBS — pas de next/image */}
-              <img src={QR_SRC} alt={t.donQrAlt} className="h-36 w-36" />
+              <img
+                src={QR_SRC}
+                alt={t.donQrAlt}
+                width={144}
+                height={144}
+                className="block aspect-square h-36 w-36 object-contain [image-rendering:pixelated]"
+              />
             </div>
             <div className="max-w-[16rem]">
               <div
@@ -102,11 +108,21 @@ export default function DonationOverlayPage() {
               className="flex origin-center items-center gap-14 rounded-3xl border border-white/10 bg-black/85 p-12 shadow-2xl"
               style={{ transform: scale !== 1 ? `scale(${scale})` : undefined }}
             >
-              <div className="rounded-2xl bg-white p-5">
+              {/* `shrink-0` + carré imposé : dans une source OBS plus étroite
+                  que 1920 px, la flexbox rétrécissait la largeur du QR en
+                  gardant sa hauteur — un QR déformé ne se scanne plus. La
+                  taille suit la hauteur du cadre pour tenir en entier. */}
+              <div className="shrink-0 rounded-2xl bg-white p-5">
                 {/* biome-ignore lint/performance/noImgElement: source OBS — pas de next/image */}
-                <img src={QR_SRC} alt={t.donQrAlt} className="h-96 w-96" />
+                <img
+                  src={QR_SRC}
+                  alt={t.donQrAlt}
+                  width={384}
+                  height={384}
+                  className="block aspect-square h-[min(24rem,55vh)] w-[min(24rem,55vh)] object-contain [image-rendering:pixelated]"
+                />
               </div>
-              <div className="max-w-xl">
+              <div className="min-w-0 max-w-xl">
                 {/* biome-ignore lint/performance/noImgElement: source OBS — pas de next/image */}
                 <img src={LOGO_SRC} alt="" className="mb-8 h-24 w-auto" />
                 <div
