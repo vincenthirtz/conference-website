@@ -175,3 +175,33 @@ export function buildScopedPools(
     return (a.round ?? 0) - (b.round ?? 0);
   });
 }
+
+/**
+ * Pool à ouvrir par défaut : celui de la PROCHAINE date de jeu (aujourd'hui
+ * compris, jour calendaire à Paris).
+ *
+ * POURQUOI : la page s'ouvrait toujours sur « Tout le tournoi ». Le visiteur
+ * qui vient voir le pool annoncé (« Map Pool 30/09 ») tombait sur les 30 cartes
+ * du tournoi et devait deviner qu'une pastille en bout de ligne portait le bon.
+ *
+ * Règle : la plus proche date ≥ aujourd'hui couverte par au moins un pool. Si
+ * UN seul pool la couvre (un pool daté, ou une seule journée ce jour-là), on
+ * l'ouvre. Si plusieurs journées se partagent ce jour sans pool daté, aucune
+ * n'est « le » pool du jour : on garde `null` (pool du tournoi) plutôt que de
+ * choisir arbitrairement. Aucune date à venir → `null`. PURE.
+ */
+export function pickDefaultPoolKey(
+  pools: ScopedPool[],
+  today: string | null
+): string | null {
+  if (!today) return null;
+  let nextDay: string | null = null;
+  for (const pool of pools) {
+    for (const day of pool.dates) {
+      if (day >= today && (nextDay === null || day < nextDay)) nextDay = day;
+    }
+  }
+  if (nextDay === null) return null;
+  const covering = pools.filter((p) => p.dates.includes(nextDay as string));
+  return covering.length === 1 ? covering[0]!.key : null;
+}

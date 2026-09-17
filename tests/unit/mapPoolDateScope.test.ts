@@ -22,7 +22,7 @@ import {
   parseDateParam,
   poolScopeColumns,
 } from '@/utils/maps/poolScope';
-import { buildScopedPools } from '@/utils/maps/publicPools';
+import { buildScopedPools, pickDefaultPoolKey } from '@/utils/maps/publicPools';
 import {
   sameScope,
   scopeFromQuery,
@@ -275,6 +275,54 @@ describe('buildScopedPools (page publique)', () => {
       matches
     );
     expect(pools.map((p) => p.key)).toEqual(['date:2026-09-30']);
+  });
+});
+
+describe('pickDefaultPoolKey — pool ouvert par défaut sur la page publique', () => {
+  // Le planning réel de la Coupe : J1 le 18/09 ; le 23/09 mêle J1, J2 et J3 ;
+  // le 30/09 mêle J2 et J3 mais a son propre pool.
+  const matches = [
+    { round_number: 1, round_name: 'J1', scheduled_at: '2026-09-18T17:00:00Z' },
+    { round_number: 1, round_name: 'J1', scheduled_at: '2026-09-23T20:00:00Z' },
+    { round_number: 2, round_name: 'J2', scheduled_at: '2026-09-23T18:30:00Z' },
+    { round_number: 3, round_name: 'J3', scheduled_at: '2026-09-23T17:00:00Z' },
+    { round_number: 2, round_name: 'J2', scheduled_at: '2026-09-30T18:30:00Z' },
+    { round_number: 3, round_name: 'J3', scheduled_at: '2026-09-30T17:00:00Z' },
+  ];
+  const row = (name: string, extra: Record<string, unknown>) => ({
+    map_name: name,
+    map_type: 'control',
+    image_url: null,
+    order_index: 1,
+    ...extra,
+  });
+  const pools = buildScopedPools(
+    [
+      row('Nepal', { round_number: 1 }),
+      row('Oasis', { round_number: 2 }),
+      row('Ilios', { round_number: 3 }),
+      row('Busan', { play_date: '2026-09-30' }),
+    ],
+    matches
+  );
+
+  it('ouvre la journée quand elle est seule ce jour-là', () => {
+    expect(pickDefaultPoolKey(pools, '2026-09-17')).toBe('round:1');
+    expect(pickDefaultPoolKey(pools, '2026-09-18')).toBe('round:1');
+  });
+
+  it('n’en choisit aucune quand plusieurs journées se partagent le jour', () => {
+    expect(pickDefaultPoolKey(pools, '2026-09-20')).toBeNull();
+  });
+
+  it('ouvre le pool daté de la prochaine date', () => {
+    expect(pickDefaultPoolKey(pools, '2026-09-24')).toBe('date:2026-09-30');
+    expect(pickDefaultPoolKey(pools, '2026-09-30')).toBe('date:2026-09-30');
+  });
+
+  it('rien à venir → pool du tournoi', () => {
+    expect(pickDefaultPoolKey(pools, '2026-10-01')).toBeNull();
+    expect(pickDefaultPoolKey(pools, null)).toBeNull();
   });
 });
 

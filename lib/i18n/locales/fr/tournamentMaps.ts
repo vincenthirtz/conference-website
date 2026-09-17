@@ -42,6 +42,10 @@ export default ns('tournamentMaps', {
   // Pool par date : l'organisation annonce « Map Pool 30/09 ». Un pool daté
   // remplace, pour son jour, le pool de la journée.
   poolDateChip: 'Pool du {date}',
+  poolHeadingDate: 'Map pool du {date}',
+  poolHeadingRound: 'Map pool {round}',
+  // Pastille du pool de la prochaine date de jeu, ouvert par défaut.
+  poolNextBadge: 'Prochain',
   poolDateNotice:
     'Pool du {date} : il s’applique à tous les matchs de ce jour ({rounds}), à la place du pool de journée.',
   poolDateNoticeNoRounds:

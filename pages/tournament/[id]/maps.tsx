@@ -12,7 +12,12 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 import { formatDateRange } from '@/utils/tournamentDates';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
-import { buildScopedPools, type ScopedPool } from '@/utils/maps/publicPools';
+import {
+  buildScopedPools,
+  pickDefaultPoolKey,
+  type ScopedPool,
+} from '@/utils/maps/publicPools';
+import { parisDayKey } from '@/utils/maps/roundPools';
 import { formatPlayDateShort } from '@/utils/maps/poolScope';
 
 import { logger } from '../../../utils/logger';
@@ -104,6 +109,12 @@ type Props = {
    * jour : c'est ainsi que l'organisation les annonce (« Map Pool 30/09 »).
    */
   scopedPools: ScopedPool[];
+  /**
+   * Pool ouvert par défaut : celui de la prochaine date de jeu (cf.
+   * pickDefaultPoolKey). Calculé au rendu serveur — l'ISR (60 s) le fait
+   * suivre le calendrier sans flash côté client.
+   */
+  defaultPoolKey?: string | null;
   maps: MapStat[];
   hasVetoData: boolean;
   hasFfaStage: boolean;
@@ -347,6 +358,10 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       tournament: tournament as Tournament,
       pool,
       scopedPools,
+      defaultPoolKey: pickDefaultPoolKey(
+        scopedPools,
+        parisDayKey(new Date().toISOString())
+      ),
       maps,
       hasVetoData,
       hasFfaStage,
@@ -360,6 +375,7 @@ export default function TournamentMapsPage({
   tournament,
   pool,
   scopedPools,
+  defaultPoolKey = null,
   maps,
   hasVetoData,
   hasFfaStage,
@@ -368,10 +384,14 @@ export default function TournamentMapsPage({
   const { lang } = useLang();
   // Pool sélectionné : clé `round:N` / `date:YYYY-MM-DD`, `null` = pool du
   // tournoi. Les pools sont tous chargés côté serveur : basculer ne recharge
-  // rien. Sans pool de tournoi, on ouvre sur le premier pool scopé plutôt que
-  // sur une liste vide.
+  // rien. On ouvre sur le pool de la prochaine date de jeu ; sans elle et sans
+  // pool de tournoi, sur le premier pool scopé plutôt que sur une liste vide.
   const [poolKey, setPoolKey] = useState<string | null>(
-    pool.length === 0 && scopedPools.length > 0 ? scopedPools[0].key : null
+    defaultPoolKey && scopedPools.some((p) => p.key === defaultPoolKey)
+      ? defaultPoolKey
+      : pool.length === 0 && scopedPools.length > 0
+        ? scopedPools[0].key
+        : null
   );
   const selectedScopedPool = scopedPools.find((p) => p.key === poolKey) ?? null;
   const shownPool = selectedScopedPool ? selectedScopedPool.maps : pool;
@@ -470,8 +490,20 @@ export default function TournamentMapsPage({
           <section className="mb-6">
             <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
+                {/* Le titre nomme le pool affiché, comme les visuels de
+                    l'organisation (« Map Pool 30/09 ») : sans lui, rien ne
+                    distingue à l'œil le pool du jour du pool du tournoi. */}
                 <h2 className="text-lg font-semibold text-white">
-                  {t.poolHeading}
+                  {selectedScopedPool?.kind === 'date' &&
+                  selectedScopedPool.date
+                    ? format(t.poolHeadingDate, {
+                        date: formatPlayDateShort(selectedScopedPool.date),
+                      })
+                    : selectedScopedPool
+                      ? format(t.poolHeadingRound, {
+                          round: selectedScopedPool.label ?? '',
+                        })
+                      : t.poolHeading}
                 </h2>
                 <span className="font-mono text-xs tabular-nums text-gray-400">
                   {format(
@@ -517,6 +549,11 @@ export default function TournamentMapsPage({
                         }`}
                       >
                         {entry ? scopedPoolChip(entry) : t.poolRoundAll}
+                        {key !== null && key === defaultPoolKey && (
+                          <span className="ml-1.5 rounded-full bg-[var(--color-green)]/20 px-1.5 py-[1px] text-[10px] font-semibold uppercase tracking-wide text-[var(--color-green)]">
+                            {t.poolNextBadge}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
