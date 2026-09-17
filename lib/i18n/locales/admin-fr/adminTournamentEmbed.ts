@@ -57,7 +57,7 @@ export default adminNs('adminTournamentEmbed', {
     'Les prochains scrims publics de l’espace (pas seulement ce tournoi). Une ligne par scrim (horaire, logos, équipes) sur fond transparent. Ajoutez &days=N pour l’horizon, &limit=N pour le nombre de lignes, &position=top ou bottom pour les caler en haut ou en bas.',
   source_scrimResult_name: 'Résultat de scrim',
   source_scrimResult_desc:
-    'Les deux équipes, le score et le vainqueur, sur fond transparent — pour l’écran de fin de scrim. Suit le scrim en cours, sinon le dernier terminé (moins de 24 h) ; &scrim=<slug> pour en fixer un. Le score apparaît dès qu’il est validé sur le site.',
+    'Les deux équipes, le score et le vainqueur, sur fond transparent — pour l’écran de fin de scrim. Suit le scrim en cours ; sinon le résultat qui vient de tomber, le prochain scrim du jour (pour régler la scène avant le match) ou le dernier terminé (moins de 24 h) ; &scrim=<slug> pour en fixer un. Le score apparaît dès qu’il est validé sur le site.',
   source_don_name: 'Faire un don (QR HelloAsso)',
   source_don_desc:
     'Le QR code de don de l’association, le même que la page /don. Ajoutez &layout=corner pour un encart en bas à droite à garder pendant le jeu.',

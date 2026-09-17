@@ -5,8 +5,10 @@ get:
     (`/overlay/scrim-result`) : les deux équipes d'un scrim, son score et son
     vainqueur.
 
-    `scrim=latest` (défaut) suit le scrim du moment : en cours, sinon le
-    dernier clos depuis moins de 24 h — `scrim: null` s'il n'y en a pas (200).
+    `scrim=latest` (défaut) suit le scrim du moment : en cours, sinon clos
+    depuis moins de 3 h, sinon le prochain programmé dans les 12 h (sans
+    score, `phase: pending`), sinon clos depuis moins de 24 h — `scrim: null`
+    s'il n'y en a pas (200).
     Sinon, `scrim` est l'identifiant ou le slug d'un scrim.
 
     Mêmes règles d'exposition que `GET /api/scrims/{id}` (`is_public`, ni

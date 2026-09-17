@@ -71,10 +71,30 @@ function status(row: { status: string | null }): string {
 }
 
 /**
- * « Le scrim du moment » pour la source résultat :
+ * Un résultat reste « le résultat du moment » pendant 3 h après la clôture,
+ * même si un autre scrim est programmé ensuite : c'est l'écran de fin, qu'on
+ * laisse à l'antenne le temps de conclure le direct.
+ */
+export const RESULT_JUST_ENDED_MS = 3 * 60 * 60 * 1000;
+
+/**
+ * Fenêtre dans laquelle un scrim `scheduled` est « le prochain » : jusqu'à 12 h
+ * avant son heure (la régie prépare sa scène dans l'après-midi), et jusqu'à 3 h
+ * après (coup d'envoi en retard, personne n'a encore cliqué « démarrer »). Au
+ * delà, c'est un scrim jamais clos : on ne le ressort pas.
+ */
+export const UPCOMING_LEAD_MS = 12 * 60 * 60 * 1000;
+export const UPCOMING_LATE_MS = 3 * 60 * 60 * 1000;
+
+/**
+ * « Le scrim du moment » pour la source résultat, par ordre de préférence :
  *   1. un scrim en cours (le plus récemment programmé) ;
- *   2. sinon le dernier scrim clos, s'il l'a été il y a moins de 24 h.
- * Rien d'autre : un scrim à venir n'a pas de résultat à montrer.
+ *   2. un scrim clos il y a moins de 3 h (l'écran de fin du direct) ;
+ *   3. le prochain scrim programmé dans les 12 h (ou en retard de moins de
+ *      3 h) — la carte s'affiche sans score, ce qui permet de régler la scène
+ *      OBS avant le match au lieu d'une source vide ;
+ *   4. le dernier scrim clos depuis moins de 24 h ;
+ *   5. rien.
  */
 export function pickLatestResultScrim<T extends ScrimRowForResult>(
   rows: T[],
@@ -94,7 +114,30 @@ export function pickLatestResultScrim<T extends ScrimRowForResult>(
       return at != null && nowMs - at <= RESULT_FRESH_MS;
     })
     .sort((a, b) => (msOf(b.completed_at) ?? 0) - (msOf(a.completed_at) ?? 0));
-  return finals[0] ?? null;
+  const lastFinal = finals[0] ?? null;
+  if (
+    lastFinal &&
+    nowMs - (msOf(lastFinal.completed_at) ?? 0) <= RESULT_JUST_ENDED_MS
+  ) {
+    return lastFinal;
+  }
+
+  const upcoming = rows
+    .filter((r) => status(r) === 'scheduled')
+    .filter((r) => {
+      const at = msOf(r.scheduled_date);
+      return (
+        at != null &&
+        at - nowMs <= UPCOMING_LEAD_MS &&
+        nowMs - at <= UPCOMING_LATE_MS
+      );
+    })
+    .sort(
+      (a, b) => (msOf(a.scheduled_date) ?? 0) - (msOf(b.scheduled_date) ?? 0)
+    );
+  if (upcoming.length > 0) return upcoming[0]!;
+
+  return lastFinal;
 }
 
 function teamView(

@@ -68,6 +68,7 @@ export default {
   scrimResultDocTitle: 'Stream source — scrim result',
   scrimResultFinal: 'Final result',
   scrimResultPending: 'Awaiting result',
+  scrimResultKickoff: 'Kick-off at {time}',
   scrimResultWinner: 'Winner',
   scrimResultDraw: 'Draw',
 

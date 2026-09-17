@@ -15,6 +15,8 @@ import nsOverlay from '@/lib/i18n/locales/fr/overlay';
 import type { OverlayScrimResultResponse } from '@/pages/api/overlay/scrim-result';
 import type { OverlayTeamView } from '@/utils/overlay/matchOverlay';
 import { useViewportSize } from '@/hooks/useStageFit';
+import { format } from '@/lib/i18n/useT';
+import { hourLabel } from '@/components/overlay/match/MatchSources';
 
 type Dict = typeof nsOverlay.fr;
 
@@ -112,6 +114,8 @@ export function ScrimResultSource({
 
   const final = scrim.phase === 'final';
   const live = scrim.phase === 'live';
+  const kickoff =
+    scrim.phase === 'pending' ? hourLabel(scrim.scheduledAt) : null;
   const showScore = scrim.hasScore && (final || live);
   const anyWinner = !!(scrim.team1?.isWinner || scrim.team2?.isWinner);
   const style: CSSProperties = {
@@ -137,7 +141,13 @@ export function ScrimResultSource({
             className="text-3xl font-black uppercase tracking-[0.35em]"
             style={{ color: accent }}
           >
-            {final ? t.scrimResultFinal : t.scrimResultPending}
+            {final
+              ? t.scrimResultFinal
+              : // Avant le match (scrim « du jour » suivi par `latest`) :
+                // l'heure du coup d'envoi plutôt qu'une attente vague.
+                kickoff
+                ? format(t.scrimResultKickoff, { time: kickoff })
+                : t.scrimResultPending}
           </span>
         )}
       </div>

@@ -6,7 +6,8 @@
 // URL :
 //   /api/overlay/scrim-result?scrim=<id|slug>   → ce scrim
 //   /api/overlay/scrim-result?scrim=latest      → le scrim du moment (défaut) :
-//       en cours, sinon le dernier clos depuis moins de 24 h
+//       en cours, sinon clos < 3 h, sinon le prochain dans les 12 h (sans
+//       score), sinon clos < 24 h — cf. pickLatestResultScrim
 //
 // Mêmes règles d'exposition que `GET /api/scrims/:id` (is_public, ni brouillon
 // ni supprimé) et mêmes restrictions que les autres sources de stream
@@ -102,10 +103,12 @@ export default async function handler(
     let row: ScrimRowForResult | null = null;
 
     if (wantsLatest) {
+      // Les statuts candidats, du plus récent au plus ancien : la sélection fine
+      // (fenêtres de temps) est faite par la fonction pure.
       const { data, error } = await base()
-        .in('status', ['running', 'completed'])
-        .order('completed_at', { ascending: false, nullsFirst: true })
-        .limit(50);
+        .in('status', ['running', 'completed', 'scheduled'])
+        .order('scheduled_date', { ascending: false, nullsFirst: false })
+        .limit(100);
       if (error) {
         logger.error('[overlay/scrim-result] latest error', error);
         return res.status(500).json({ error: 'Lecture impossible.' });

@@ -26,6 +26,7 @@ import {
   buildScrimResultView,
   pickLatestResultScrim,
   RESULT_FRESH_MS,
+  UPCOMING_LATE_MS,
   type ScrimRowForResult,
 } from '../../utils/overlay/scrimResultOverlay';
 import handler from '../../pages/api/overlay/scrim-result';
@@ -102,6 +103,47 @@ describe('le scrim du moment', () => {
       row('live', { status: 'running', completed_at: null }),
     ];
     expect(pickLatestResultScrim(rows, NOW)?.id).toBe('live');
+  });
+
+  it('avant le match, montre le prochain scrim du jour (sans score)', () => {
+    const rows = [
+      row('old-done', {
+        completed_at: new Date(NOW - 20 * HOUR).toISOString(),
+      }),
+      row('tonight', {
+        status: 'scheduled',
+        scheduled_date: new Date(NOW + 2.5 * HOUR).toISOString(),
+        completed_at: null,
+        team1_score: null,
+        team2_score: null,
+        winner_team_id: null,
+      }),
+      row('next-week', {
+        status: 'scheduled',
+        scheduled_date: new Date(NOW + 7 * 24 * HOUR).toISOString(),
+        completed_at: null,
+      }),
+      row('ghost', {
+        status: 'scheduled',
+        scheduled_date: new Date(NOW - UPCOMING_LATE_MS - HOUR).toISOString(),
+        completed_at: null,
+      }),
+    ];
+    const picked = pickLatestResultScrim(rows, NOW);
+    expect(picked?.id).toBe('tonight');
+    expect(buildScrimResultView(picked!).phase).toBe('pending');
+  });
+
+  it('juste après le match, le résultat reste affiché même si un autre scrim suit', () => {
+    const rows = [
+      row('just-done', { completed_at: new Date(NOW - HOUR).toISOString() }),
+      row('later', {
+        status: 'scheduled',
+        scheduled_date: new Date(NOW + 2 * HOUR).toISOString(),
+        completed_at: null,
+      }),
+    ];
+    expect(pickLatestResultScrim(rows, NOW)?.id).toBe('just-done');
   });
 
   it('prend le dernier clos, mais pas au-delà de 24 h', () => {
@@ -271,7 +313,8 @@ describe('rendu', () => {
         row('p', { status: 'scheduled', team1_score: null, team2_score: null })
       )
     );
-    expect(html).toContain('En attente du résultat');
+    // Scrim programmé à 18:30 UTC : l'heure de Paris, pas une attente vague.
+    expect(html).toContain('Coup d’envoi à 20:30');
     expect(html).not.toContain('>0<');
   });
 

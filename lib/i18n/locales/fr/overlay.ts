@@ -73,6 +73,7 @@ export default ns('overlay', {
   scrimResultDocTitle: 'Source de stream — résultat de scrim',
   scrimResultFinal: 'Résultat final',
   scrimResultPending: 'En attente du résultat',
+  scrimResultKickoff: 'Coup d’envoi à {time}',
   scrimResultWinner: 'Victoire',
   scrimResultDraw: 'Match nul',
 
