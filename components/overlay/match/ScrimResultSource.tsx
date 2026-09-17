@@ -79,14 +79,17 @@ function Side({
       >
         {name}
       </div>
-      {team?.isWinner && (
-        <span
-          className="rounded-full px-5 py-1.5 text-xl font-black uppercase tracking-[0.25em] text-black"
-          style={{ backgroundColor: accent }}
-        >
-          {t.scrimResultWinner}
-        </span>
-      )}
+      {/* Place du badge réservée des deux côtés : sans elle, la perdante
+          descend d'un cran et les deux colonnes ne s'alignent plus. */}
+      <span
+        className={`rounded-full px-5 py-1.5 text-xl font-black uppercase tracking-[0.25em] text-black ${
+          team?.isWinner ? '' : 'invisible'
+        }`}
+        style={{ backgroundColor: accent }}
+        aria-hidden={!team?.isWinner}
+      >
+        {t.scrimResultWinner}
+      </span>
     </div>
   );
 }
