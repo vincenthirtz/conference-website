@@ -46,6 +46,8 @@ import nsTeamDetail from '@/lib/i18n/locales/fr/teamDetail';
 import nsOverwatchRank from '@/lib/i18n/locales/fr/overwatchRank';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
 import TcgCard from '@/components/tcg/TcgCard';
+import TeamLogoCredit from '@/components/Team/LogoCredit';
+import { resolveLogoCredit } from '@/utils/teams/logoCredit';
 import { readTeamRarity } from '@/utils/tcg/readTeamRarity';
 import { tcgTeamImageUrl } from '@/utils/tcg/teamCardImage';
 import type { TcgRarity } from '@/utils/tcg/rarity';
@@ -64,6 +66,12 @@ type Team = {
   name: string;
   short_name?: string | null;
   logo_url?: string | null;
+  /**
+   * Crédit d'artiste du logo. Arrive avec le `select('*')` du chargeur : pas de
+   * lecture en plus. Nettoyé au rendu par `resolveLogoCredit` (https seul).
+   */
+  logo_credit_name?: string | null;
+  logo_credit_url?: string | null;
   /** Chemin (pas URL) de l'illustration de la carte TCG. Résolu en prop. */
   tcg_image_path?: string | null;
   banner_url?: string | null;
@@ -800,6 +808,17 @@ export default function TeamPage({
                   </div>
                 )}
               </div>
+              {/* Crédit de l'artiste, SOUS le logo et seulement s'il y a un
+                  logo : sans image, il n'y a rien à créditer. Largeur bornée à
+                  celle du logo pour ne pas pousser le bloc d'infos voisin. */}
+              {team.logo_url && (
+                <TeamLogoCredit
+                  name={team.logo_credit_name}
+                  url={team.logo_credit_url}
+                  label={tTcg.logoCredit}
+                  className="mt-2 w-28 md:w-36 text-xs break-words drop-shadow"
+                />
+              )}
             </div>
 
             {/* Info */}
@@ -1118,6 +1137,11 @@ export default function TeamPage({
                   slug: team.slug ?? null,
                   logoUrl: team.logo_url ?? null,
                   cardImageUrl: tcgImageUrl,
+                  // La carte ne l'affiche que si elle montre le logo.
+                  logoCredit: resolveLogoCredit(
+                    team.logo_credit_name,
+                    team.logo_credit_url
+                  ),
                 }}
                 rarity={tcgRarity}
                 // La carte est déjà sur la page de son sujet : pas de lien
@@ -1132,6 +1156,7 @@ export default function TeamPage({
                   },
                   foil: tTcg.foil,
                   copies: tTcg.copies,
+                  logoCredit: tTcg.logoCredit,
                 }}
               />
             </div>

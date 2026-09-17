@@ -633,6 +633,9 @@ async function openPack(
         slug: face?.slug ?? null,
         logoUrl: face?.logoUrl ?? null,
         cardImageUrl: face?.cardImageUrl ?? null,
+        // Même règle que la collection : la révélation montre la carte au
+        // moment où on la découvre, c'est là que le crédit compte le plus.
+        logoCredit: face?.logoCredit ?? null,
       };
     }),
   });

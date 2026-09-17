@@ -1670,6 +1670,8 @@
       "instagram",
       "is_active",
       "is_joinable",
+      "logo_credit_name",
+      "logo_credit_url",
       "logo_url",
       "name",
       "open_for_scrim",

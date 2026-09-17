@@ -56,6 +56,11 @@ export default adminNs('adminTeamEdit', {
   namePlaceholder: "Nom de l'équipe",
   shortNameLabel: 'Tag / Short name',
   logoLabel: 'Logo',
+  logoCreditNameLabel: 'Artiste du logo',
+  logoCreditNamePlaceholder: 'Pseudo de l’artiste',
+  logoCreditHelp:
+    'Affiché « Logo : <artiste> » sur la fiche publique et sur la carte TCG (si elle montre le logo). À vider si le logo change.',
+  logoCreditUrlLabel: 'Lien vers l’artiste (https://)',
   bannerLabel: 'URL Bannière',
   countryLabel: 'Pays',
   teamActive: 'Équipe active',

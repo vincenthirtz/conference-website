@@ -27,6 +27,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { JSX } from 'react';
+import LogoCredit from '@/components/Team/LogoCredit';
 import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
 import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
 
@@ -107,6 +108,12 @@ export type TcgCardSubject =
        * maquettes) restent valides sans rien changer.
        */
       cardImageUrl?: string | null;
+      /**
+       * Crédit d'artiste du LOGO (`TeamFace.logoCredit`). Rendu uniquement
+       * quand la carte montre le logo : une illustration dédiée n'est pas
+       * l'œuvre de l'artiste du logo, et la créditer serait faux.
+       */
+      logoCredit?: { name: string; url: string | null } | null;
     }
   | {
       kind: 'map';
@@ -129,11 +136,25 @@ export type TcgCardProps = {
    * cours n'apprend rien et ajoute une cible de tabulation de plus.
    */
   noLink?: boolean;
+  /**
+   * La carte est déjà DANS un élément interactif de la page hôte (le bouton de
+   * sélection des échanges). `noLink` retire le lien de la carte, mais le
+   * crédit poserait alors le sien — et un `<a>` dans un `<button>` est aussi
+   * invalide qu'un lien dans un lien : le clic sur le nom choisirait la carte
+   * ET ouvrirait la chaîne de l'artiste. Vrai ⇒ le nom est écrit sans lien.
+   */
+  insideInteractive?: boolean;
   /** Libellés traduits, fournis par la page hôte. */
   labels: {
     rarity: Record<TcgRarity, string>;
     foil: string;
     copies: string;
+    /**
+     * Gabarit du crédit de logo, avec `{artist}` (« Logo : {artist} »).
+     * Optionnel : un écran qui ne le fournit pas n'affiche pas de crédit
+     * plutôt qu'un texte en dur dans une seule langue.
+     */
+    logoCredit?: string;
   };
 };
 
@@ -178,6 +199,7 @@ export default function TcgCard({
   isFoil = false,
   count,
   noLink = false,
+  insideInteractive = false,
   labels,
 }: TcgCardProps): JSX.Element {
   const name =
@@ -257,6 +279,22 @@ export default function TcgCard({
             {isFoil ? ` · ${labels.foil}` : ''}
           </span>
         </p>
+        {usesTeamLogo &&
+          subject.kind === 'team' &&
+          // Sans logo, la carte montre une initiale : rien à créditer.
+          subject.logoUrl &&
+          subject.logoCredit &&
+          labels.logoCredit && (
+            <LogoCredit
+              name={subject.logoCredit.name}
+              url={subject.logoCredit.url}
+              label={labels.logoCredit}
+              // Carte cliquable, ou posée dans un bouton ⇒ pas de lien imbriqué
+              // (cf. `LogoCredit`).
+              linkable={!href && !insideInteractive}
+              className="truncate text-[11px]"
+            />
+          )}
         {typeof count === 'number' && count > 1 && (
           <p className="text-[11px] text-gray-400">
             {labels.copies.replace('{count}', String(count))}

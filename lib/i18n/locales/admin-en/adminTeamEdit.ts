@@ -57,6 +57,11 @@ export default {
   namePlaceholder: 'Team name',
   shortNameLabel: 'Tag / Short name',
   logoLabel: 'Logo',
+  logoCreditNameLabel: 'Logo artist',
+  logoCreditNamePlaceholder: 'Artist handle',
+  logoCreditHelp:
+    'Shown as “Logo by <artist>” on the public team page and on the TCG card (when it shows the logo). Clear it if the logo changes.',
+  logoCreditUrlLabel: 'Link to the artist (https://)',
   bannerLabel: 'Banner URL',
   countryLabel: 'Country',
   teamActive: 'Team active',

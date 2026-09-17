@@ -106,6 +106,19 @@ get:
                     logoUrl:
                       type: [string, 'null']
                       description: Cartes `team` seulement.
+                    logoCredit:
+                      type: [object, 'null']
+                      description: >-
+                        Cartes `team` seulement. Credit de l'artiste du LOGO, deja nettoye :
+                        `null` sans nom ; `url` a `null` si le lien n'est pas `https://`.
+                        Toujours rendu, meme quand la carte a une illustration dediee : c'est
+                        l'interface qui ne l'affiche que si la carte montre le logo.
+                      required: [name, url]
+                      properties:
+                        name:
+                          type: string
+                        url:
+                          type: [string, 'null']
                     rarity:
                       type: string
                       enum: [common, rare, epic, legendary]

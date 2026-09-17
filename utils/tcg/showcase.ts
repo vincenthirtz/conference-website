@@ -27,6 +27,7 @@ import { logger } from '@/utils/logger';
 import { RARITY_ORDER, type TcgRarity } from './rarity';
 import { readOwnedCardRows } from './readOwnedCards';
 import { readPlayerFaces, readTeamFaces } from './readCardFaces';
+import type { LogoCredit } from '@/utils/teams/logoCredit';
 import { readMapFaces } from './readMapFaces';
 import { cardSubjectKey } from './subjectKey';
 
@@ -88,6 +89,8 @@ export type ShowcaseCard =
       slug: string | null;
       logoUrl: string | null;
       cardImageUrl: string | null;
+      /** Crédit du logo (`TeamFace.logoCredit`) ; `null` sans artiste nommée. */
+      logoCredit: LogoCredit | null;
       rarity: TcgRarity;
       isFoil: boolean;
     }
@@ -246,6 +249,9 @@ export async function resolveShowcaseCards(
       slug: face?.slug ?? null,
       logoUrl: face?.logoUrl ?? null,
       cardImageUrl: face?.cardImageUrl ?? null,
+      // La vitrine est affichée sur la fiche PUBLIQUE : c'est la vitrine
+      // d'une joueuse, mais l'œuvre reste celle de l'artiste du logo.
+      logoCredit: face?.logoCredit ?? null,
       rarity,
       isFoil,
     };

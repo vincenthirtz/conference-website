@@ -15,6 +15,7 @@ import {
   SKILL_RATING_MIN,
   isValidSkillRating,
 } from '@/utils/overwatchRank';
+import { parseLogoCreditInput } from '@/utils/teams/logoCredit';
 
 import { logger } from '../../../../utils/logger';
 import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
@@ -24,6 +25,10 @@ export type TeamRow = {
   slug: string | null;
   short_name: string | null;
   logo_url: string | null;
+  /** Crédit d'artiste du logo (2 à 80 caractères), `null` = aucun. */
+  logo_credit_name: string | null;
+  /** Lien vers l'artiste du logo, `https://` uniquement. */
+  logo_credit_url: string | null;
   banner_url: string | null;
   country: string | null;
   description: string | null;
@@ -178,6 +183,8 @@ async function handlePut(
     'slug',
     'short_name',
     'logo_url',
+    'logo_credit_name',
+    'logo_credit_url',
     'banner_url',
     'country',
     'description',
@@ -256,6 +263,23 @@ async function handlePut(
       }
       updatePayload.skill_rating = parsed;
     }
+  }
+
+  // Crédit du logo : mêmes bornes que les CHECK SQL (`utils/teams/logoCredit`),
+  // vérifiées AVANT l'écriture pour rendre une 400 qui dit quoi corriger plutôt
+  // qu'une 500 de contrainte. Volontairement hors de `urlFields` ci-dessous :
+  // `sanitizeUrl` y accepte `http://`, que la contrainte refuse. Et la boucle
+  // d'allowlist recopie la saisie brute : le patch nettoyé (nom rogné, vide →
+  // null) la remplace.
+  if (
+    'logo_credit_name' in updatePayload ||
+    'logo_credit_url' in updatePayload
+  ) {
+    const credit = parseLogoCreditInput(body);
+    if (!credit.ok) {
+      return res.status(400).json({ error: credit.error });
+    }
+    Object.assign(updatePayload, credit.patch);
   }
 
   // discord_role_id: numeric string (Discord snowflake ID) or null

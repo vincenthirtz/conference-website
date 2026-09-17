@@ -25,6 +25,7 @@ import { absoluteSiteUrl } from '@/utils/siteUrl';
 import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
 import { maskBattleTag } from '@/utils/battleTag';
 import { readPlayerFaces, readTeamFaces } from './readCardFaces';
+import type { LogoCredit } from '@/utils/teams/logoCredit';
 import { readMapFaces } from './readMapFaces';
 import {
   MAX_SCAN_PACKS,
@@ -319,6 +320,8 @@ export type TradeCardView =
       slug: string | null;
       logoUrl: string | null;
       cardImageUrl: string | null;
+      /** Crédit du logo (`TeamFace.logoCredit`) ; `null` sans artiste nommée. */
+      logoCredit: LogoCredit | null;
     })
   | (CardBase & {
       kind: 'map';
@@ -369,6 +372,10 @@ export async function readSubjectFaces(
         slug: f?.slug ?? null,
         logoUrl: f?.logoUrl ?? null,
         cardImageUrl: f?.cardImageUrl ?? null,
+        // Une carte proposée à l'échange est la même carte que dans la
+        // collection : elle garde son crédit, sinon il disparaîtrait
+        // précisément quand deux joueuses la regardent de près.
+        logoCredit: f?.logoCredit ?? null,
         ...base,
       };
     }

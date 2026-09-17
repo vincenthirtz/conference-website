@@ -128,6 +128,7 @@ export default {
   rarityLegendary: 'Legendary',
   foil: 'Foil',
   copies: '×{count}',
+  logoCredit: 'Logo by {artist}',
 
   /* --- UX / accessibility pass (2026-09-15) --- */
 

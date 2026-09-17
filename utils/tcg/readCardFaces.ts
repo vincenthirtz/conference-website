@@ -37,6 +37,7 @@ import { recommendCardHero } from '@/utils/heroes/recommendCardHero';
 import { maskBattleTag } from '@/utils/battleTag';
 import { TCG_BUCKET, tcgTeamImageUrl } from '@/utils/tcg/teamCardImage';
 import { displayableArtistUrl } from '@/utils/tcg/fanart';
+import { resolveLogoCredit, type LogoCredit } from '@/utils/teams/logoCredit';
 
 /** Même bucket public que les logos d'équipe. */
 const BUCKET = TCG_BUCKET;
@@ -73,6 +74,16 @@ export type TeamFace = {
    * logos de toutes les équipes qui n'ont rien déposé.
    */
   cardImageUrl: string | null;
+  /**
+   * Crédit d'artiste du LOGO (`teams.logo_credit_*`), déjà nettoyé : `null`
+   * sans nom, et `url` à `null` si le lien n'est pas `https://`.
+   *
+   * Exposé même quand `cardImageUrl` existe : c'est la CARTE qui décide de
+   * l'afficher (seulement quand elle montre le logo), comme elle décide déjà
+   * du cadrage. Le filtrer ici ferait dépendre le crédit d'un détail de rendu
+   * que le lecteur n'a pas à connaître.
+   */
+  logoCredit: LogoCredit | null;
 };
 
 /**
@@ -265,7 +276,9 @@ export async function readTeamFaces(
 
   const { data, error } = await supabaseAdmin
     .from('teams')
-    .select('id, name, short_name, slug, logo_url, tcg_image_path')
+    .select(
+      'id, name, short_name, slug, logo_url, tcg_image_path, logo_credit_name, logo_credit_url'
+    )
     .eq('tenant_id', tenantId)
     .in('id', ids);
 
@@ -281,6 +294,8 @@ export async function readTeamFaces(
     slug: string | null;
     logo_url: string | null;
     tcg_image_path: string | null;
+    logo_credit_name: string | null;
+    logo_credit_url: string | null;
   }>) {
     faces.set(row.id, {
       teamId: row.id,
@@ -292,6 +307,7 @@ export async function readTeamFaces(
       // de paquet et l'overview staff passent tous par ce lecteur, et aucun
       // n'a à savoir qu'un chemin de bucket existe.
       cardImageUrl: tcgTeamImageUrl(supabaseAdmin.storage, row.tcg_image_path),
+      logoCredit: resolveLogoCredit(row.logo_credit_name, row.logo_credit_url),
     });
   }
 

@@ -33,6 +33,7 @@ import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useT, format } from '@/lib/i18n/useT';
 import TcgCard, { type TcgCardSubject } from '@/components/tcg/TcgCard';
+import type { LogoCredit } from '@/utils/teams/logoCredit';
 import { TcgCoin, TcgAmount } from '@/components/tcg/TcgCoin';
 import TcgCollectionProgress from '@/components/tcg/TcgCollectionProgress';
 import TcgSetsPanel, {
@@ -189,6 +190,11 @@ type CollectionCard = Engagement &
         logoUrl: string | null;
         /** Illustration déposée par l'équipe ; `null` ⇒ la carte prend le logo. */
         cardImageUrl: string | null;
+        /**
+         * Crédit de l'artiste du logo. OPTIONNEL : un onglet ouvert avant le
+         * déploiement peut encore recevoir une réponse qui ne le porte pas.
+         */
+        logoCredit?: LogoCredit | null;
         rarity: TcgRarity;
         isFoil: boolean;
         count: number;
@@ -227,6 +233,8 @@ type DrawnCard = { position: number; isNew?: boolean } & (
       slug: string | null;
       logoUrl: string | null;
       cardImageUrl: string | null;
+      /** Crédit du logo — optionnel pour la même raison que `CollectionCard`. */
+      logoCredit?: LogoCredit | null;
       rarity: TcgRarity;
       isFoil: boolean;
     }
@@ -316,6 +324,9 @@ function cardSubject(card: DrawnCard | CollectionCard): TcgCardSubject {
     slug: card.slug,
     logoUrl: card.logoUrl,
     cardImageUrl: card.cardImageUrl,
+    // Collection ET révélation passent par ici : un seul endroit à tenir pour
+    // que le crédit ne manque sur aucune des deux.
+    logoCredit: card.logoCredit ?? null,
   };
 }
 
@@ -467,6 +478,9 @@ function PlayerTcg() {
     } as Record<TcgRarity, string>,
     foil: t.foil,
     copies: t.copies,
+    // Partagé avec la révélation (`labels.card`) : les deux affichent le
+    // crédit, ou aucune.
+    logoCredit: t.logoCredit,
   };
 
   /**

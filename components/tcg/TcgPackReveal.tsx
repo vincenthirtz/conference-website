@@ -55,6 +55,8 @@ export type TcgPackRevealProps = {
       rarity: Record<TcgRarity, string>;
       foil: string;
       copies: string;
+      /** Gabarit du crédit de logo ; absent ⇒ aucun crédit (cf. `TcgCard`). */
+      logoCredit?: string;
     };
   };
 };

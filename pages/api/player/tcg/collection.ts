@@ -373,6 +373,11 @@ export default withAuthRoute(async function handler(
       slug: face?.slug ?? null,
       logoUrl: face?.logoUrl ?? null,
       cardImageUrl: face?.cardImageUrl ?? null,
+      // Le crédit du logo suit la face : cette route recopie les champs un à
+      // un, et un champ oublié ici disparaît de la collection — l'écran où
+      // les joueuses regardent le plus leurs cartes. Seule la branche équipe
+      // le porte : un logo n'existe que sur une carte d'équipe.
+      logoCredit: face?.logoCredit ?? null,
       rarity: a.rarity,
       isFoil: a.hasFoil,
       count: a.count,

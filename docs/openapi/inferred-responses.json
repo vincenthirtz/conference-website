@@ -979,6 +979,18 @@
            "null"
           ]
          },
+         "logo_credit_name": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "logo_credit_url": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "banner_url": {
           "type": [
            "string",
@@ -1064,6 +1076,8 @@
          "slug",
          "short_name",
          "logo_url",
+         "logo_credit_name",
+         "logo_credit_url",
          "banner_url",
          "country",
          "description",
@@ -14739,6 +14753,18 @@
            "null"
           ]
          },
+         "logo_credit_name": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "logo_credit_url": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "banner_url": {
           "type": [
            "string",
@@ -14824,6 +14850,8 @@
          "slug",
          "short_name",
          "logo_url",
+         "logo_credit_name",
+         "logo_credit_url",
          "banner_url",
          "country",
          "description",
@@ -14922,6 +14950,18 @@
            "null"
           ]
          },
+         "logo_credit_name": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "logo_credit_url": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "banner_url": {
           "type": [
            "string",
@@ -15007,6 +15047,8 @@
          "slug",
          "short_name",
          "logo_url",
+         "logo_credit_name",
+         "logo_credit_url",
          "banner_url",
          "country",
          "description",
@@ -24827,6 +24869,9 @@
          "tokenAvailable": {
           "type": "boolean"
          },
+         "canCheckIn": {
+          "type": "boolean"
+         },
          "alreadyCheckedIn": {
           "type": "boolean"
          },
@@ -24857,6 +24902,7 @@
         },
         "required": [
          "tokenAvailable",
+         "canCheckIn",
          "alreadyCheckedIn",
          "checkedInAt",
          "opensAt",
@@ -34123,6 +34169,9 @@
            "null"
           ]
          },
+         "canCheckIn": {
+          "type": "boolean"
+         },
          "alreadyCheckedIn": {
           "type": "boolean"
          },
@@ -34153,6 +34202,7 @@
         },
         "required": [
          "token",
+         "canCheckIn",
          "alreadyCheckedIn",
          "checkedInAt",
          "opensAt",
@@ -35064,6 +35114,9 @@
               "null"
              ]
             },
+            "canCheckIn": {
+             "type": "boolean"
+            },
             "alreadyCheckedIn": {
              "type": "boolean"
             },
@@ -35088,6 +35141,7 @@
            },
            "required": [
             "token",
+            "canCheckIn",
             "alreadyCheckedIn",
             "opensAt",
             "closesAt",
@@ -35287,6 +35341,9 @@
        },
        "isPassed": {
         "type": "boolean"
+       },
+       "canCheckIn": {
+        "type": "boolean"
        }
       },
       "required": [
@@ -35296,7 +35353,8 @@
        "opensAt",
        "closesAt",
        "isOpen",
-       "isPassed"
+       "isPassed",
+       "canCheckIn"
       ]
      },
      "readiness": {
@@ -35969,6 +36027,9 @@
          },
          "isPassed": {
           "type": "boolean"
+         },
+         "canCheckIn": {
+          "type": "boolean"
          }
         },
         "required": [
@@ -35978,7 +36039,8 @@
          "opensAt",
          "closesAt",
          "isOpen",
-         "isPassed"
+         "isPassed",
+         "canCheckIn"
         ]
        }
       },
@@ -37444,7 +37506,8 @@
             "name": {},
             "teamId": {},
             "logoUrl": {},
-            "cardImageUrl": {}
+            "cardImageUrl": {},
+            "logoCredit": {}
            },
            "required": [
             "kind",
@@ -37524,7 +37587,8 @@
             "displayName": {},
             "teamId": {},
             "logoUrl": {},
-            "cardImageUrl": {}
+            "cardImageUrl": {},
+            "logoCredit": {}
            },
            "required": [
             "kind",
@@ -37571,6 +37635,27 @@
              "type": [
               "string",
               "null"
+             ]
+            },
+            "logoCredit": {
+             "type": [
+              "object",
+              "null"
+             ],
+             "properties": {
+              "name": {
+               "type": "string"
+              },
+              "url": {
+               "type": [
+                "string",
+                "null"
+               ]
+              }
+             },
+             "required": [
+              "name",
+              "url"
              ]
             },
             "rarity": {
@@ -37623,6 +37708,7 @@
             "slug",
             "logoUrl",
             "cardImageUrl",
+            "logoCredit",
             "rarity",
             "isFoil",
             "count",
@@ -38376,6 +38462,27 @@
             "null"
            ]
           },
+          "logoCredit": {
+           "type": [
+            "object",
+            "null"
+           ],
+           "properties": {
+            "name": {
+             "type": "string"
+            },
+            "url": {
+             "type": [
+              "string",
+              "null"
+             ]
+            }
+           },
+           "required": [
+            "name",
+            "url"
+           ]
+          },
           "rarity": {
            "type": "string",
            "enum": [
@@ -38397,6 +38504,7 @@
           "slug",
           "logoUrl",
           "cardImageUrl",
+          "logoCredit",
           "rarity",
           "isFoil"
          ]
@@ -38653,6 +38761,22 @@
                "string",
                "null"
               ]
+             },
+             "logoCredit": {
+              "type": [
+               "object",
+               "null"
+              ],
+              "properties": {
+               "name": {
+                "type": "string"
+               },
+               "url": {}
+              },
+              "required": [
+               "name",
+               "url"
+              ]
              }
             },
             "required": [
@@ -38663,7 +38787,8 @@
              "name",
              "slug",
              "logoUrl",
-             "cardImageUrl"
+             "cardImageUrl",
+             "logoCredit"
             ]
            },
            {
@@ -38834,6 +38959,22 @@
                "null"
               ]
              },
+             "logoCredit": {
+              "type": [
+               "object",
+               "null"
+              ],
+              "properties": {
+               "name": {
+                "type": "string"
+               },
+               "url": {}
+              },
+              "required": [
+               "name",
+               "url"
+              ]
+             },
              "ownedCopies": {
               "type": "number"
              },
@@ -38849,7 +38990,8 @@
              "name",
              "slug",
              "logoUrl",
-             "cardImageUrl"
+             "cardImageUrl",
+             "logoCredit"
             ]
            },
            {
@@ -39077,6 +39219,27 @@
               "string",
               "null"
              ]
+            },
+            "logoCredit": {
+             "type": [
+              "object",
+              "null"
+             ],
+             "properties": {
+              "name": {
+               "type": "string"
+              },
+              "url": {
+               "type": [
+                "string",
+                "null"
+               ]
+              }
+             },
+             "required": [
+              "name",
+              "url"
+             ]
             }
            },
            "required": [
@@ -39090,7 +39253,8 @@
             "name",
             "slug",
             "logoUrl",
-            "cardImageUrl"
+            "cardImageUrl",
+            "logoCredit"
            ]
           },
           {
@@ -39284,6 +39448,27 @@
               "string",
               "null"
              ]
+            },
+            "logoCredit": {
+             "type": [
+              "object",
+              "null"
+             ],
+             "properties": {
+              "name": {
+               "type": "string"
+              },
+              "url": {
+               "type": [
+                "string",
+                "null"
+               ]
+              }
+             },
+             "required": [
+              "name",
+              "url"
+             ]
             }
            },
            "required": [
@@ -39294,7 +39479,8 @@
             "name",
             "slug",
             "logoUrl",
-            "cardImageUrl"
+            "cardImageUrl",
+            "logoCredit"
            ]
           },
           {
@@ -45945,6 +46131,18 @@
          "null"
         ]
        },
+       "logo_credit_name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "logo_credit_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "banner_url": {
         "type": [
          "string",
@@ -46030,6 +46228,8 @@
        "slug",
        "short_name",
        "logo_url",
+       "logo_credit_name",
+       "logo_credit_url",
        "banner_url",
        "country",
        "description",
@@ -62190,6 +62390,27 @@
             "null"
            ]
           },
+          "logoCredit": {
+           "type": [
+            "object",
+            "null"
+           ],
+           "properties": {
+            "name": {
+             "type": "string"
+            },
+            "url": {
+             "type": [
+              "string",
+              "null"
+             ]
+            }
+           },
+           "required": [
+            "name",
+            "url"
+           ]
+          },
           "isNew": {
            "type": "boolean"
           },
@@ -62217,6 +62438,7 @@
           "slug",
           "logoUrl",
           "cardImageUrl",
+          "logoCredit",
           "position",
           "rarity",
           "isFoil"
@@ -64723,6 +64945,27 @@
             "null"
            ]
           },
+          "logoCredit": {
+           "type": [
+            "object",
+            "null"
+           ],
+           "properties": {
+            "name": {
+             "type": "string"
+            },
+            "url": {
+             "type": [
+              "string",
+              "null"
+             ]
+            }
+           },
+           "required": [
+            "name",
+            "url"
+           ]
+          },
           "rarity": {
            "type": "string",
            "enum": [
@@ -64744,6 +64987,7 @@
           "slug",
           "logoUrl",
           "cardImageUrl",
+          "logoCredit",
           "rarity",
           "isFoil"
          ]

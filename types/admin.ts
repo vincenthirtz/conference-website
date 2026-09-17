@@ -330,6 +330,12 @@ export type TeamRow = {
   slug: string | null;
   short_name: string | null;
   logo_url: string | null;
+  /**
+   * Crédit d'artiste du logo (`add_team_logo_credit.sql`). Optionnels : les
+   * listes et imports qui fabriquent un `TeamRow` sans les lire restent valides.
+   */
+  logo_credit_name?: string | null;
+  logo_credit_url?: string | null;
   banner_url: string | null;
   country: string | null;
   description: string | null;

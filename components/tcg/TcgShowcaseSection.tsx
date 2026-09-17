@@ -45,6 +45,9 @@ export function showcaseCardSubject(card: ShowcaseCard): TcgCardSubject {
     slug: card.slug,
     logoUrl: card.logoUrl,
     cardImageUrl: card.cardImageUrl,
+    // `?? null` : une carte venue de l'éditeur (collection convertie) peut ne
+    // pas le porter si la réponse précède le déploiement.
+    logoCredit: card.logoCredit ?? null,
   };
 }
 
@@ -82,6 +85,7 @@ export default function TcgShowcaseSection({
                 },
                 foil: tTcg.foil,
                 copies: tTcg.copies,
+                logoCredit: tTcg.logoCredit,
               }}
             />
           </li>

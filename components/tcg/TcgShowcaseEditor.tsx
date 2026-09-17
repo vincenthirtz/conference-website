@@ -27,6 +27,7 @@ import TcgCard from '@/components/tcg/TcgCard';
 import { showcaseCardSubject } from '@/components/tcg/TcgShowcaseSection';
 import { Skeleton } from '@/components/ui/Skeleton';
 import type { ShowcaseCard } from '@/utils/tcg/showcase';
+import type { LogoCredit } from '@/utils/teams/logoCredit';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import { useT, format } from '@/lib/i18n/useT';
 import nsTcgShowcase from '@/lib/i18n/locales/fr/tcgShowcase';
@@ -62,6 +63,9 @@ type CollectionCard =
       slug: string | null;
       logoUrl: string | null;
       cardImageUrl: string | null;
+      // Recopié tel quel dans la carte de vitrine par l'étalement de
+      // `collectionToShowcaseCard` : le déclarer suffit à le faire suivre.
+      logoCredit?: LogoCredit | null;
       rarity: TcgRarity;
       isFoil: boolean;
     }
@@ -85,7 +89,11 @@ export function collectionToShowcaseCard(card: CollectionCard): ShowcaseCard {
   if (card.kind === 'map') {
     return { ...card, key: `map:${card.slug}` };
   }
-  return { ...card, key: `team:${card.teamId}` };
+  return {
+    ...card,
+    key: `team:${card.teamId}`,
+    logoCredit: card.logoCredit ?? null,
+  };
 }
 
 function cardName(card: ShowcaseCard): string | null {
@@ -138,6 +146,7 @@ export default function TcgShowcaseEditor({
     rarity: rarityLabels,
     foil: tTcg.foil,
     copies: tTcg.copies,
+    logoCredit: tTcg.logoCredit,
   };
 
   const apply = useCallback((data: ShowcaseResponse, keepSelection = false) => {

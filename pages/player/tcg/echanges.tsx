@@ -104,6 +104,8 @@ function subjectOf(card: TradeCardView): TcgCardSubject {
       slug: card.slug,
       logoUrl: card.logoUrl,
       cardImageUrl: card.cardImageUrl,
+      // `?? null` : une réponse antérieure au déploiement ne le porte pas.
+      logoCredit: card.logoCredit ?? null,
     };
   }
   return {
@@ -142,6 +144,7 @@ function PlayerTcgTrades() {
       } as Record<TcgRarity, string>,
       foil: tc.foil,
       copies: tc.copies,
+      logoCredit: tc.logoCredit,
     }),
     [tc]
   );
@@ -602,6 +605,10 @@ function PlayerTcgTrades() {
                   rarity={rarity}
                   isFoil={card.isFoil ?? false}
                   noLink
+                  // La carte EST le bouton de sélection : le crédit s'y lit
+                  // sans lien, sinon cliquer le nom choisirait la carte et
+                  // ouvrirait la chaîne de l'artiste d'un même geste.
+                  insideInteractive
                   labels={labels}
                 />
               </button>

@@ -32,31 +32,20 @@ import {
   type TeamRole,
 } from '@/utils/teamRoles';
 import type { StaffProps, TeamRow, TeamMemberRow } from '@/types/admin';
+import TeamLogoCreditFields, {
+  EMPTY_LOGO_CREDIT,
+  logoCreditDraftFromRow,
+  logoCreditPayload,
+} from '@/components/admin/teams/TeamLogoCreditFields';
+import type {
+  TournamentRow,
+  TournamentRegistration,
+} from '@/types/adminTeamEdit';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTeamEdit from '@/lib/i18n/locales/admin-fr/adminTeamEdit';
 import TeamRosterLockPanel from '@/components/admin/teams/TeamRosterLockPanel';
 import TeamHistoryPanel from '@/components/admin/teams/TeamHistoryPanel';
 import TeamQuickLinks from '@/components/admin/teams/TeamQuickLinks';
-
-type TournamentRow = {
-  id: string;
-  name: string;
-  slug: string;
-  game: string;
-  status: string;
-  start_date: string | null;
-  end_date: string | null;
-  max_teams?: number | null;
-  min_players?: number | null;
-};
-
-type TournamentRegistration = TournamentRow & {
-  stages: Array<{
-    stageId: string;
-    stageName: string;
-    stageType: string;
-  }>;
-};
 
 const BATTLE_TAG_RE = BATTLE_TAG_REGEX;
 
@@ -113,6 +102,7 @@ function AdminEditTeamPage({
   const [name, setName] = useState('');
   const [shortName, setShortName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
+  const [logoCredit, setLogoCredit] = useState(EMPTY_LOGO_CREDIT);
   const [bannerUrl, setBannerUrl] = useState('');
   const [country, setCountry] = useState('');
   const [description, setDescription] = useState('');
@@ -195,6 +185,7 @@ function AdminEditTeamPage({
       setName(row.name || '');
       setShortName(row.short_name || '');
       setLogoUrl(row.logo_url || '');
+      setLogoCredit(logoCreditDraftFromRow(row));
       setBannerUrl(row.banner_url || '');
       setCountry(row.country || '');
       setDescription(row.description || '');
@@ -273,6 +264,7 @@ function AdminEditTeamPage({
         name,
         short_name: shortName || null,
         logo_url: logoUrl || null,
+        ...logoCreditPayload(logoCredit),
         banner_url: bannerUrl || null,
         country: country || null,
         description: description || null,
@@ -1105,6 +1097,11 @@ function AdminEditTeamPage({
                         />
                       </div>
                     </div>
+
+                    <TeamLogoCreditFields
+                      value={logoCredit}
+                      onChange={setLogoCredit}
+                    />
 
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>

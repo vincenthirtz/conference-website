@@ -34,6 +34,7 @@ import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import TcgCard, { TcgRarityPips, RARITY_TEXT } from '@/components/tcg/TcgCard';
 import type { TcgRarity } from '@/utils/tcg/rarity';
+import type { LogoCredit as LogoCreditValue } from '@/utils/teams/logoCredit';
 import { MAP_CARD_RARITY } from '@/utils/tcg/rarity';
 import { format, useT } from '@/lib/i18n/useT';
 import nsTcgCatalog from '@/lib/i18n/locales/fr/tcgCatalog';
@@ -49,6 +50,11 @@ type CatalogCard =
       slug: string | null;
       logoUrl: string | null;
       cardImageUrl: string | null;
+      /**
+       * Crédit du logo. OPTIONNEL : une page régénérée en ISR peut encore
+       * servir des props construites avant son ajout.
+       */
+      logoCredit?: LogoCreditValue | null;
       rarity: TcgRarity;
     }
   | {
@@ -87,6 +93,9 @@ function TcgCatalogPage({ cards, playerCount }: Props) {
     },
     foil: tc.foil,
     copies: tc.copies,
+    // Sans ce gabarit, `TcgCard` n'affiche aucun crédit : c'est l'écran qui
+    // décide, pour qu'aucun texte en dur ne s'affiche dans une seule langue.
+    logoCredit: tc.logoCredit,
   };
 
   const earnSteps = [
@@ -264,6 +273,7 @@ function TcgCatalogPage({ cards, playerCount }: Props) {
                           slug: card.slug,
                           logoUrl: card.logoUrl,
                           cardImageUrl: card.cardImageUrl,
+                          logoCredit: card.logoCredit ?? null,
                         }
                       : {
                           kind: 'map',
@@ -419,6 +429,9 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
       slug: face?.slug ?? null,
       logoUrl: face?.logoUrl ?? null,
       cardImageUrl: face?.cardImageUrl ?? null,
+      // Page PUBLIQUE et indexée : la première vitrine du jeu pour qui ne
+      // joue pas encore. Le crédit y a sa place autant que sur la fiche.
+      logoCredit: face?.logoCredit ?? null,
       rarity: rarities.get(id) ?? 'common',
     };
   });

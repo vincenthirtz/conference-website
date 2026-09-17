@@ -167,6 +167,10 @@ export default ns('playerTcg', {
   rarityLegendary: 'Légendaire',
   foil: 'Brillante',
   copies: '×{count}',
+  // Crédit de l'artiste d'un logo d'équipe. Ici plutôt que dans `teamDetail` :
+  // la carte ET la fiche l'affichent, et une seule clé leur garantit la même
+  // formulation. `{artist}` devient le lien vers l'artiste.
+  logoCredit: 'Logo : {artist}',
 
   /* --- Passe UX / accessibilité (2026-09-15) --- */
 
