@@ -74,6 +74,12 @@ get:
                 properties:
                   tokenAvailable:
                     type: boolean
+                  canCheckIn:
+                    type: boolean
+                    description: >-
+                      true si cette personne peut faire le check-in de son equipe
+                      (capitaine, ou role d equipe coach / manager). Le jeton n est
+                      jamais expose par cette route.
                   alreadyCheckedIn:
                     type: boolean
                   checkedInAt:

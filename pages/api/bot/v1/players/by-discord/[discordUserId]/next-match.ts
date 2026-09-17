@@ -11,6 +11,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { resolveMembership } from '@/utils/teams/memberships';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
+import {
+  exposesCheckin,
+  loadCheckinPermission,
+} from '@/utils/teams/canCheckIn';
 import { logger } from '@/utils/logger';
 
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
@@ -130,6 +134,19 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     now <= new Date(closesAt).getTime();
   const isPassed = !!closesAt && now > new Date(closesAt).getTime();
 
+  // Qui peut pointer (capitaine, coach, manager — utils/teams/canCheckIn.ts).
+  // Le jeton ne sort jamais de cette route ; `canCheckIn` dit au bot s'il doit
+  // proposer le bouton ou renvoyer vers la capitaine / le coach / la manager.
+  // Lecture en échec → true : le bouton reste proposé, et c'est la route
+  // d'écriture (matches/[matchId]/checkin) qui tranche.
+  const canCheckIn = exposesCheckin(
+    await loadCheckinPermission(
+      link.auth_user_id,
+      req.botContext.tenantId,
+      teamId
+    )
+  );
+
   const formatStr = (match.match_format as string | null) ?? null;
   const bestOf = formatStr
     ? Number.parseInt(formatStr.replace(/[^\d]/g, ''), 10) || null
@@ -152,9 +169,12 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     opponent: opponent ? { id: opponent.id, name: opponent.name } : null,
     tournament: tn ? { id: tn.id, name: tn.name, slug: tn.slug ?? null } : null,
     checkin: {
-      // Note : on expose le token uniquement pour le capitaine. Pour les
-      // autres membres, on cache le token mais on garde le statut visible.
+      // Le jeton n'est JAMAIS exposé ici, à personne : `tokenAvailable` dit
+      // seulement s'il a été généré (fenêtre ouverte par le cron). Le statut
+      // reste visible de toute l'équipe ; `canCheckIn` dit si CETTE personne
+      // peut pointer.
       tokenAvailable: !!token,
+      canCheckIn,
       alreadyCheckedIn: !!checkedInAt,
       checkedInAt: (checkedInAt as string | null) ?? null,
       opensAt,

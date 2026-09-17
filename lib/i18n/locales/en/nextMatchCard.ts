@@ -17,6 +17,8 @@ export default {
   checkedIn: 'Checked in',
   checkinClosed: 'Check-in closed',
   checkinNow: 'Check in now',
+  checkinRestricted:
+    'Check-in is done by the captain, the coach or the manager.',
   checkin: 'Check-in',
   soon: 'soon',
   noDate: '—',

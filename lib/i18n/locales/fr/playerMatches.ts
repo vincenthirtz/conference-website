@@ -20,6 +20,8 @@ export default ns('playerMatches', {
   liveCast: 'Live cast',
   checkedIn: 'Check-in validé',
   checkin: 'Check-in',
+  checkinRestricted:
+    'Le check-in est fait par la capitaine, le coach ou la manager.',
   title: 'Mes matchs',
   backToDashboard: 'Tableau de bord',
   signinPrompt: 'Connecte-toi pour voir les matchs de ton équipe.',

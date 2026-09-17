@@ -43,6 +43,8 @@ export default {
   checkinNoToken:
     'Check-in for this match is not handled from the player area.',
   checkinReadOnly: 'Only your captain or staff can confirm.',
+  checkinRestricted:
+    'Check-in is done by the captain, the coach or the manager.',
 
   rosterWarning:
     'Your roster is {n} player(s) short of the tournament minimum.',

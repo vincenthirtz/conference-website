@@ -128,6 +128,8 @@ type NextMatchData = {
   tournament: { id: string; name: string; slug: string | null } | null;
   checkin: {
     token: string | null;
+    /** Capitaine, coach ou manager. Optionnel : absent = ancien affichage. */
+    canCheckIn?: boolean;
     alreadyCheckedIn: boolean;
     checkedInAt: string | null;
     opensAt: string | null;
@@ -450,6 +452,14 @@ function MatchReadinessCard({
         >
           {checkinStatus}
         </span>
+
+        {/* Ni capitaine, ni coach, ni manager : l'état reste visible, et on
+            dit qui pointe à la place du bouton. */}
+        {needsCheckin && checkin?.isOpen && checkin.canCheckIn === false && (
+          <span className="text-xs text-gray-400">
+            {t.readinessCheckinRestricted}
+          </span>
+        )}
 
         {needsCheckin && checkin?.token && checkin.isOpen ? (
           <Link

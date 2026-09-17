@@ -193,6 +193,9 @@ describe('/api/player/next-match — payload shape', () => {
 describe('/api/player/next-match — check-in window', () => {
   it('marks the window as open when scheduled in 30 min', async () => {
     seedTeamMembership();
+    // Le jeton n'est remis qu'à la capitaine / coach / manager
+    // (utils/teams/canCheckIn.ts) : l'appelante est capitaine ici.
+    store.teams = [{ id: TEAM_ID, name: 'Phenix', captain_id: USER_ID }];
     seedMatch({
       scheduled_at: new Date(Date.now() + 30 * 60_000).toISOString(),
     });
@@ -202,6 +205,17 @@ describe('/api/player/next-match — check-in window', () => {
     expect(res.body.checkin.isPassed).toBe(false);
     expect(res.body.checkin.alreadyCheckedIn).toBe(false);
     expect(res.body.checkin.token).toBe('token-team1');
+    expect(res.body.checkin.canCheckIn).toBe(true);
+  });
+
+  it('ne remet pas le jeton à une joueuse simple, mais garde la fenêtre', async () => {
+    seedTeamMembership();
+    seedMatch();
+    const res = makeRes();
+    await nextMatchHandler(makeReq(), res);
+    expect(res.body.checkin.isOpen).toBe(true);
+    expect(res.body.checkin.token).toBeNull();
+    expect(res.body.checkin.canCheckIn).toBe(false);
   });
 
   it('marks the window as not yet open when scheduled in 2 hours', async () => {
@@ -241,6 +255,8 @@ describe('/api/player/next-match — check-in window', () => {
 
   it("uses team2's check-in token/state when the user is team2", async () => {
     seedTeamMembership();
+    // Capitaine : seule une autorisée reçoit le jeton (canCheckIn.ts).
+    store.teams = [{ id: TEAM_ID, name: 'Phenix', captain_id: USER_ID }];
     seedMatch({
       team1_id: OTHER_TEAM_ID,
       team2_id: TEAM_ID,

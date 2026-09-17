@@ -53,6 +53,9 @@ export default ns('playerMatch', {
   checkinNoToken:
     "Le check-in de ce match n'est pas géré depuis l'espace joueur.",
   checkinReadOnly: 'Seule ta capitaine ou ton encadrement peut confirmer.',
+  // Membre qui ne peut pas pointer (ni capitaine, ni coach, ni manager).
+  checkinRestricted:
+    'Le check-in est fait par la capitaine, le coach ou la manager.',
 
   rosterWarning:
     'Il manque {n} joueuse(s) au roster pour atteindre le minimum du tournoi.',

@@ -16,6 +16,8 @@ export default ns('nextMatchCard', {
   checkedIn: 'Check-in confirmé',
   checkinClosed: 'Check-in clos',
   checkinNow: 'Check-in maintenant',
+  checkinRestricted:
+    'Le check-in est fait par la capitaine, le coach ou la manager.',
   checkin: 'Check-in',
   soon: 'bientôt',
   noDate: '—',

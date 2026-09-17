@@ -495,7 +495,15 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
             ) : checkinOpen ? (
               <>
                 <p>{t.checkinOpenNow}</p>
-                {!checkin.token ? (
+                {/* Membre qui ne peut pas pointer (ni capitaine, ni coach, ni
+                    manager) : le serveur ne lui envoie pas de jeton. On le dit
+                    AVANT le cas « pas de jeton », sinon elle lirait que le
+                    check-in n'est pas géré ici — faux pour son équipe.
+                    `=== false` : une réponse sans le champ garde l'ancien
+                    affichage plutôt que de masquer un bouton légitime. */}
+                {checkin.canCheckIn === false ? (
+                  <p className="mt-2 text-gray-400">{t.checkinRestricted}</p>
+                ) : !checkin.token ? (
                   <p className="mt-2 text-gray-400">{t.checkinNoToken}</p>
                 ) : canAct ? (
                   <button

@@ -89,6 +89,8 @@ export default ns('playerIndex', {
   readinessCheckinTodo: 'à valider',
   readinessCheckinClosed: 'fermé',
   readinessCheckinAction: 'Faire le check-in',
+  readinessCheckinRestricted:
+    'Le check-in est fait par la capitaine, le coach ou la manager.',
   readinessViewMatch: 'Voir le match',
   proposedSlotsLabel: 'Créneaux proposés',
   acceptSlot: 'Accepter ce créneau',

@@ -18,6 +18,10 @@ import { readRequestedTeamId } from '@/utils/teams/teamScope';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withSubjectRoute } from '@/utils/subject';
 import {
+  exposesCheckin,
+  loadCheckinPermission,
+} from '@/utils/teams/canCheckIn';
+import {
   PLAYER_MATCH_SELECT,
   buildCheckin,
   derivePlayerScore,
@@ -44,7 +48,10 @@ export type PlayerMatch = {
   result: 'win' | 'loss' | 'draw' | null;
   tournament: { id: string; name: string; slug: string | null } | null;
   checkin: {
+    /** `null` pour qui ne peut pas pointer (cf. `canCheckIn`). */
     token: string | null;
+    /** Capitaine, coach ou manager (utils/teams/canCheckIn.ts). */
+    canCheckIn: boolean;
     alreadyCheckedIn: boolean;
     /** Window opens at scheduledAt - CHECKIN_OPEN_MINUTES, closes at scheduledAt. */
     opensAt: string | null;
@@ -119,6 +126,15 @@ export default withSubjectRoute(async function handler(
     !!teamRow &&
     (teamRow as { captain_id?: string | null }).captain_id === userId;
 
+  // Check-in : même équipe sur toutes les lignes, donc UNE décision pour la
+  // liste. Le jeton ne sort que pour la capitaine / coach / manager.
+  const checkinPermission = await loadCheckinPermission(
+    userId,
+    tenantId,
+    teamId
+  );
+  const mayCheckIn = exposesCheckin(checkinPermission);
+
   // Pull every match where this team is team1 or team2 (any status).
   const { data: rows, error } = await supabaseAdmin
     .from('matches')
@@ -155,7 +171,8 @@ export default withSubjectRoute(async function handler(
         ? (() => {
             const c = buildCheckin(match, side.isTeam1, now);
             return {
-              token: c.token,
+              token: mayCheckIn ? c.token : null,
+              canCheckIn: mayCheckIn,
               alreadyCheckedIn: c.alreadyCheckedIn,
               opensAt: c.opensAt,
               closesAt: c.closesAt,

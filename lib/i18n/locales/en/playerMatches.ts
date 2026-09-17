@@ -21,6 +21,8 @@ export default {
   liveCast: 'Live cast',
   checkedIn: 'Checked in',
   checkin: 'Check-in',
+  checkinRestricted:
+    'Check-in is done by the captain, the coach or the manager.',
   title: 'My matches',
   backToDashboard: 'Dashboard',
   signinPrompt: "Sign in to see your team's matches.",

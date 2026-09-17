@@ -113,6 +113,20 @@ export function buildCheckinUrl(token: string): string {
   return `${SITE_URL.replace(/\/$/, '')}/checkin/${token}`;
 }
 
+/**
+ * Lien de check-in à poster là où D'AUTRES que les personnes autorisées le
+ * voient (salon Discord, ping du rôle d'équipe).
+ *
+ * Pas le lien porteur de jeton : `/checkin/<jeton>` fait pointer quiconque le
+ * détient, sans identité. Posté dans un salon, il rendait inopérante la règle
+ * « seules la capitaine, le coach ou la manager pointent ». La page du match,
+ * elle, vérifie qui est connectée avant de proposer le bouton. Le lien porteur
+ * reste réservé aux canaux qui n'atteignent QUE la capitaine (mail, DM).
+ */
+export function buildMatchCheckinPageUrl(matchId: string): string {
+  return `${SITE_URL.replace(/\/$/, '')}/player/match/${matchId}#checkin`;
+}
+
 /* -----------------------------------------------------------
  * Token redemption (called by public route + Draftbot)
  * ---------------------------------------------------------*/
@@ -727,7 +741,8 @@ async function runReminderStep(
         opponentName: team2Name,
         scheduledAt: match.scheduled_at!,
         minutesBeforeKickoff: minutes,
-        checkinUrl: buildCheckinUrl(team1Token),
+        // Salon partagé : page du match (identité vérifiée), jamais le jeton.
+        checkinUrl: buildMatchCheckinPageUrl(match.id),
       })
     );
   }
@@ -742,7 +757,8 @@ async function runReminderStep(
         opponentName: team1Name,
         scheduledAt: match.scheduled_at!,
         minutesBeforeKickoff: minutes,
-        checkinUrl: buildCheckinUrl(team2Token),
+        // Salon partagé : page du match (identité vérifiée), jamais le jeton.
+        checkinUrl: buildMatchCheckinPageUrl(match.id),
       })
     );
   }

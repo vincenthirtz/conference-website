@@ -43,6 +43,8 @@ export default {
     "You didn't confirm your check-in in time. Contact staff if this is a mistake.",
   contactStaff: 'Contact staff',
   unavailable: 'Check-in is not available for this match.',
+  restrictedOpenTitle: 'Check-in open',
+  restrictedBody: 'Check-in is done by the captain, the coach or the manager.',
   successToast: "Attendance confirmed! You're checked in for this match.",
   alreadyToast: 'You were already checked in for this match.',
   confirmedHeading: 'Attendance confirmed ✓',

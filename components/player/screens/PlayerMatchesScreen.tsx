@@ -247,15 +247,29 @@ function MatchCard({
           </span>
         )}
 
-        {upcoming && checkin?.isOpen && !checkin.alreadyCheckedIn && (
-          <Link
-            href={`/player/match/${match.id}`}
-            className="inline-flex items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow transition hover:-translate-y-0.5 hover:shadow-lg"
-          >
-            {t.checkin}
-            <span aria-hidden>→</span>
-          </Link>
-        )}
+        {/* Ni capitaine, ni coach, ni manager : on dit qui pointe au lieu
+            d'un bouton qui mènerait à un écran sans action. */}
+        {upcoming &&
+          checkin?.isOpen &&
+          !checkin.alreadyCheckedIn &&
+          checkin.canCheckIn === false && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-300">
+              {t.checkinRestricted}
+            </span>
+          )}
+
+        {upcoming &&
+          checkin?.isOpen &&
+          !checkin.alreadyCheckedIn &&
+          checkin.canCheckIn !== false && (
+            <Link
+              href={`/player/match/${match.id}`}
+              className="inline-flex items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow transition hover:-translate-y-0.5 hover:shadow-lg"
+            >
+              {t.checkin}
+              <span aria-hidden>→</span>
+            </Link>
+          )}
 
         {reportable && onReport && (
           <button

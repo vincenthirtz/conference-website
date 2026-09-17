@@ -87,6 +87,8 @@ export default {
   readinessCheckinTodo: 'to confirm',
   readinessCheckinClosed: 'closed',
   readinessCheckinAction: 'Check in',
+  readinessCheckinRestricted:
+    'Check-in is done by the captain, the coach or the manager.',
   readinessViewMatch: 'View match',
   proposedSlotsLabel: 'Proposed slots',
   acceptSlot: 'Accept this slot',

@@ -28,6 +28,11 @@ import {
 import { readRequestedTeamId } from '@/utils/teams/teamScope';
 import type { TeamPermission } from '@/utils/teamRoles';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
+import {
+  applyCheckinPermission,
+  exposesCheckin,
+  loadCheckinPermission,
+} from '@/utils/teams/canCheckIn';
 import { readScrimNego } from '@/utils/teams/scrimNegotiation';
 import { loadScrimsAwaitingTeam } from '@/utils/teams/scrimsAwaitingTeam';
 import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
@@ -103,7 +108,10 @@ export type NextMatchSection = {
   opponent: { id: string; name: string } | null;
   tournament: { id: string; name: string; slug: string | null } | null;
   checkin: {
+    /** `null` pour qui ne peut pas pointer (cf. `canCheckIn`). */
     token: string | null;
+    /** Capitaine, coach ou manager (utils/teams/canCheckIn.ts). */
+    canCheckIn: boolean;
     alreadyCheckedIn: boolean;
     checkedInAt: string | null;
     opensAt: string | null;
@@ -345,7 +353,12 @@ export async function loadUnreadMessages(
 export async function loadNextMatch(
   teamId: string,
   tenantId: string,
-  rosterSize: number
+  rosterSize: number,
+  /**
+   * Qui regarde : décide si le jeton de check-in sort (capitaine, coach,
+   * manager seulement — utils/teams/canCheckIn.ts). Sans lui, jamais de jeton.
+   */
+  userId: string | null = null
 ): Promise<NextMatchSection> {
   try {
     const cutoffISO = new Date(Date.now() - 60 * 60_000).toISOString();
@@ -445,15 +458,20 @@ export async function loadNextMatch(
       tournament: tn
         ? { id: tn.id, name: tn.name, slug: tn.slug ?? null }
         : null,
-      checkin: {
-        token: token ?? null,
-        alreadyCheckedIn: !!checkedInAt,
-        checkedInAt: checkedInAt ?? null,
-        opensAt,
-        closesAt,
-        isOpen,
-        isPassed,
-      },
+      // Jeton réservé à la capitaine / coach / manager ; l'état reste visible
+      // de toute l'équipe. Lecture en échec → comportement d'avant.
+      checkin: applyCheckinPermission(
+        {
+          token: token ?? null,
+          alreadyCheckedIn: !!checkedInAt,
+          checkedInAt: checkedInAt ?? null,
+          opensAt,
+          closesAt,
+          isOpen,
+          isPassed,
+        },
+        exposesCheckin(await loadCheckinPermission(userId, tenantId, teamId))
+      ),
       readiness: {
         minPlayers,
         rosterSize,
@@ -515,7 +533,7 @@ export default withSubjectRoute(async function handler(
       ? loadUnreadMessages(teamSlice.teamId, tenantId)
       : Promise.resolve(0),
     teamSlice.teamId
-      ? loadNextMatch(teamSlice.teamId, tenantId, rosterSize)
+      ? loadNextMatch(teamSlice.teamId, tenantId, rosterSize, userId)
       : Promise.resolve(EMPTY_NEXT_MATCH),
     // Invitations reçues : la carte les chargeait déjà de son côté ; le
     // bandeau « à faire » a besoin du seul compte, on le prend ici plutôt que
@@ -599,7 +617,18 @@ export function buildTodo(input: {
   const readiness = input.nextMatch?.readiness ?? null;
 
   // 1. Check-in ouvert et non fait : la seule échéance qui se referme seule.
-  if (match && checkin && checkin.isOpen && !checkin.alreadyCheckedIn) {
+  //    Seulement pour qui peut pointer : une joueuse simple verrait un « à
+  //    faire » qu'elle ne peut pas faire (le check-in revient à la capitaine,
+  //    au coach ou à la manager).
+  if (
+    match &&
+    checkin &&
+    // `!== false` : un bloc sans le champ (forme d'avant la règle) garde
+    // l'ancien comportement plutôt que de taire un check-in à faire.
+    checkin.canCheckIn !== false &&
+    checkin.isOpen &&
+    !checkin.alreadyCheckedIn
+  ) {
     items.push({
       id: 'checkin',
       href: `/player/match/${match.id}`,

@@ -481,6 +481,31 @@ function CheckinState({
     );
   }
 
+  // 1 bis) Fenetre ouverte mais cette personne ne peut pas pointer (ni
+  // capitaine, ni coach, ni manager) : pas de jeton cote serveur. On dit QUI
+  // pointe, au lieu de tomber sur le repli « check-in indisponible », qui
+  // ferait croire a un probleme. `=== false` : une reponse sans le champ garde
+  // l'ancien affichage.
+  if (isCheckinStillOpen(checkin, now) && checkin.canCheckIn === false) {
+    const remaining = countdown(checkin.closesAt, now);
+    return (
+      <section className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
+        <h3 className="text-lg font-semibold text-white">
+          {t.restrictedOpenTitle}
+        </h3>
+        <p className="mt-1 text-sm text-gray-300">{t.restrictedBody}</p>
+        {remaining && (
+          <p className="mt-3 text-sm text-gray-400">
+            {t.closesIn}{' '}
+            <span className="tabular-nums font-semibold text-white">
+              {remaining}
+            </span>
+          </p>
+        )}
+      </section>
+    );
+  }
+
   // 2) Fenetre ouverte + token -> bouton de validation. L'horloge locale ne
   // fait que REFERMER la fenetre au coup d'envoi (jamais la prolonger : le
   // forfait tombe au premier passage du cron apres l'heure du match).

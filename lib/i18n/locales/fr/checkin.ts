@@ -44,6 +44,10 @@ export default ns('checkin', {
     "Tu n'as pas validé ton check-in à temps. Contacte le staff si c'est une erreur.",
   contactStaff: 'Contacter le staff',
   unavailable: "Le check-in n'est pas disponible pour ce match.",
+  // Check-in réservé à la capitaine / coach / manager (règle du 2026-09-17).
+  restrictedOpenTitle: 'Check-in ouvert',
+  restrictedBody:
+    'Le check-in est fait par la capitaine, le coach ou la manager.',
   successToast: 'Présence confirmée ! Tu es bien check-in pour ce match.',
   alreadyToast: 'Tu étais déjà check-in pour ce match.',
   confirmedHeading: 'Présence confirmée ✓',

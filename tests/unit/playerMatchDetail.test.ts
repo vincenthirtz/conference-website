@@ -139,6 +139,9 @@ describe('garde d’accès', () => {
 
 describe('perspective de l’équipe', () => {
   it('donne le jeton et l’adversaire du BON côté quand je suis team1', async () => {
+    // Le jeton n'est remis qu'à la capitaine / coach / manager
+    // (utils/teams/canCheckIn.ts).
+    setAuthUser({ id: CAPTAIN_ID });
     const res = makeRes();
     await handler(makeReq(), res);
 
@@ -148,11 +151,23 @@ describe('perspective de l’équipe', () => {
     expect(b.team.id).toBe(TEAM_ID);
     expect(b.opponent.id).toBe(OTHER_TEAM_ID);
     expect(b.checkin.token).toBe('token-team1');
+    expect(b.checkin.canCheckIn).toBe(true);
+    expect(b.checkin.alreadyCheckedIn).toBe(false);
+  });
+
+  it('une joueuse simple voit l’état du check-in, sans le jeton', async () => {
+    const res = makeRes();
+    await handler(makeReq(), res);
+    const b = res.body as any;
+    expect(b.checkin.token).toBeNull();
+    expect(b.checkin.canCheckIn).toBe(false);
+    expect(b.checkin.isOpen).toBe(true);
     expect(b.checkin.alreadyCheckedIn).toBe(false);
   });
 
   it('bascule côté team2 sans rien inverser d’autre', async () => {
     seed({ slotOfMine: 2 });
+    setAuthUser({ id: CAPTAIN_ID });
     const res = makeRes();
     await handler(makeReq(), res);
 

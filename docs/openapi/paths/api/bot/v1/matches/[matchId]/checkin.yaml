@@ -3,7 +3,7 @@ parameters:
 post:
   tags:
     - bot/matches
-  summary: Valide le check-in d'un capitaine via le bouton DM Discord.
+  summary: Valide le check-in d'une equipe (capitaine, coach ou manager) via Discord.
   operationId: botMatchCheckin
   parameters:
     - $ref: '#/components/parameters/IdempotencyKey'
@@ -27,6 +27,8 @@ post:
       $ref: '#/components/responses/Forbidden'
     '404':
       $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'
     '500':
       $ref: '#/components/responses/ServerError'
   x-zod-query: bot.matches/[matchId]/checkin.query

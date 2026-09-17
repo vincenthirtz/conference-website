@@ -205,6 +205,8 @@ absent d'ici, ou listé mais plus émis, fait échouer la suite.
 | `FORBIDDEN_PERMISSION` | 403 | Le rôle dans l'équipe ne permet pas de gérer les scrims. | `scrims/requests` |
 | `NOT_PARTICIPANT` | 403 | L'acteur ne gère aucune des deux équipes de la demande. | `scrims/requests` |
 | `TEAM_AMBIGUOUS` | 409 | L'acteur encadre plusieurs équipes : quitter depuis le site. | `teams/leave` |
+| `CHECKIN_NOT_ALLOWED` | 403 | L'acteur n'est ni capitaine, ni coach, ni manager d'une des deux équipes du match (ou son compte Discord n'est relié à aucun compte du site). `error` est lisible tel quel sur Discord. | `matches/[matchId]/checkin` |
+| `CHECKIN_TEAM_AMBIGUOUS` | 409 | L'acteur peut pointer pour les deux équipes du match sans en être capitaine d'une seule : pas de choix à sa place. | `matches/[matchId]/checkin` |
 | `NOT_LINKED` | 404 | Compte Discord non relié à un compte du site. | `players/by-discord/[discordUserId]/*` |
 | `INVALID_DISCORD_ID` | 400 | `discordUserId` invalide. | `players/by-discord/[discordUserId]/twitch` |
 | `FREE_PLAYER_NOT_FOUND` | 404 | Aucune fiche « joueuse libre » pour ce compte Discord. | `free-players/profile` |
@@ -905,7 +907,7 @@ doesn't break during a deploy. The mode is toggled via
   | `matches/:matchId/veto` (POST/DELETE) | 5           | `actorDiscordUserId` | staff      |
   | `matches/:matchId/cast` (POST/DELETE) | 5           | `actorDiscordUserId` | staff      |
   | `matches/:matchId/report`             | 5           | `discordUserId`      | captain    |
-  | `matches/:matchId/checkin`            | 10          | `discordUserId`      | captain    |
+  | `matches/:matchId/checkin`            | 10          | `discordUserId`      | captain / coach / manager |
   | `matches/:matchId/evidence` (POST)    | 10          | `discordUserId`      | captain    |
 
 Default window is 60 s. The bot should respect `Retry-After` when it appears.
@@ -2049,6 +2051,33 @@ Limite de corps **15 Mo**.
 > « prend » le compte (tout sauf `manager`), a defaut la plus ancienne. Avant ce
 > choix explicite, la lecture ligne unique tombait en `PGRST116` (500) sur ces
 > comptes.
+
+> **Check-in réservé à la capitaine, au coach et à la manager (2026-09-17).**
+> Règle unique : `utils/teams/canCheckIn.ts` — la capitaine (`teams.captain_id`)
+> ou une membre au rôle d'équipe `coach` / `manager` (casse et espaces
+> ignorés). Le staff n'est pas concerné (routes admin).
+>
+> - `POST /api/bot/v1/matches/:matchId/checkin` : avant, capitaine **seule**
+>   (une équipe sans capitaine ne pouvait pas pointer depuis Discord). Désormais
+>   capitaine, coach ou manager. Refus : `403 CHECKIN_NOT_ALLOWED` (compte non
+>   relié, ou aucun de ces rôles pour les deux équipes du match — une capitaine
+>   adverse est refusée). `409 CHECKIN_TEAM_AMBIGUOUS` si la personne peut
+>   pointer pour les deux équipes sans être capitaine d'une seule (le capitanat
+>   tranche sinon). Lecture des droits en échec : `500`, réessayable. L'ancien
+>   `400 « Aucun capitaine defini »` n'existe plus. Le `error` est rédigé pour
+>   être affiché tel quel (`checkin.js` le préfixe de « Check-in échoué : »).
+>   Le journal `logPlayerAction` porte `payload.authority: 'captain' | 'team_role'`.
+> - `GET .../next-match` : **ajout additif** `checkin.canCheckIn: boolean` — la
+>   personne peut-elle pointer ? Le jeton n'est toujours exposé à personne.
+>   Lecture des droits en échec → `true` (la route d'écriture tranche).
+> - Non modifiés : `players/by-discord/:id/reminders` et `.../actions-todo`
+>   (`match_checkin` / `checkin` restent calculés pour la capitaine seule — un
+>   coach ou une manager doit passer le `match-id` à `/checkin`), et
+>   `GET /api/bot/v1/reminders` (DM T-30 à la capitaine seule).
+>
+> Côté bot (`services/discord-bot/`, rien d'obligatoire pour ce déploiement) :
+> le bouton `checkin:<matchId>` du salon privé du match reste cliquable par
+> toute l'équipe — le refus vient de l'API et s'affiche via `formatResultLine`.
 
 #### `GET /api/bot/v1/players/by-discord/:discordUserId/actions-todo`
 
@@ -3759,7 +3788,7 @@ sa ligne ici **et** dans la fixture.
 | `/cast assigner`                                                                                                                                 | admin   | `POST /api/bot/v1/matches/:matchId/cast`                                                                                              |
 | `/cast retirer`                                                                                                                                  | admin   | `DELETE /api/bot/v1/matches/:matchId/cast`                                                                                            |
 | Job DM T-30 caster + bouton `cast:ack:<id>`                                                                                                      | caster  | `GET /api/bot/v1/cast/upcoming`, `POST /api/bot/v1/cast/:assignmentId/ack`                                                            |
-| `/checkin` + bouton DM `checkin:<matchId>`                                                                                                       | captain | `POST /api/bot/v1/matches/:matchId/checkin`                                                                                           |
+| `/checkin` + bouton DM `checkin:<matchId>`                                                                                                       | captain / coach / manager | `POST /api/bot/v1/matches/:matchId/checkin`                                                                                           |
 | `/preset`                                                                                                                                        | public  | `GET /api/bot/v1/matches/:matchId/preset`                                                                                             |
 | Bouton DM `veto:<matchId>`                                                                                                                       | captain | `GET`/`POST`/`DELETE /api/bot/v1/matches/:matchId/veto`                                                                               |
 | `/report-score` + bouton DM `report:<matchId>`                                                                                                   | captain | `POST /api/bot/v1/matches/:matchId/report`                                                                                            |
@@ -4280,7 +4309,7 @@ trois écrans.
 
 | Route                                                                               | Methods | Auth                               | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | ----------------------------------------------------------------------------------- | ------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`pages/api/player/matches/[matchId].ts`](../pages/api/player/matches/[matchId].ts) | GET     | Bearer joueur (`withSubjectRoute`) | `200 { match, team{slot}, opponent, tournament, checkin, readiness, score, result, report{state,mine}, permissions }`. Accès = appartenir à l'une des deux équipes (membre ou `teams.captain_id`) ; sinon **404** (jamais 403 : on ne confirme pas l'existence d'un match qui ne vous regarde pas). `permissions.validateLineup` = permission d'équipe `validate_lineup` ; `permissions.reportScore` = `teams.captain_id` strict, miroir de `report-score`. Inspectable `?as=`. Rate-limit **60 / min**. |
+| [`pages/api/player/matches/[matchId].ts`](../pages/api/player/matches/[matchId].ts) | GET     | Bearer joueur (`withSubjectRoute`) | `200 { match, team{slot}, opponent, tournament, checkin, readiness, score, result, report{state,mine}, permissions }`. Accès = appartenir à l'une des deux équipes (membre ou `teams.captain_id`) ; sinon **404** (jamais 403 : on ne confirme pas l'existence d'un match qui ne vous regarde pas). `permissions.validateLineup` = permission d'équipe `validate_lineup` ; `permissions.reportScore` = `teams.captain_id` strict, miroir de `report-score`. **`checkin.token` n'est renseigné que pour la capitaine, un coach ou une manager ; `checkin.canCheckIn` le dit à l'écran (2026-09-17, `utils/teams/canCheckIn.ts`) — même règle sur `/api/player/next-match`, `/api/player/matches` et `/api/player/dashboard`.** Inspectable `?as=`. Rate-limit **60 / min**. |
 
 Les dérivations « de quel côté je joue / mon jeton de check-in / mon score »
 sont partagées avec `/api/player/next-match` et `/api/player/matches` via

@@ -14,6 +14,11 @@ import { readRequestedTeamId } from '@/utils/teams/teamScope';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withSubjectRoute } from '@/utils/subject';
 import {
+  applyCheckinPermission,
+  exposesCheckin,
+  loadCheckinPermission,
+} from '@/utils/teams/canCheckIn';
+import {
   NEXT_MATCH_PENDING_GRACE_MINUTES,
   PLAYER_MATCH_SELECT,
   buildCheckin,
@@ -42,7 +47,14 @@ export type NextMatchPayload =
       opponent: { id: string; name: string } | null;
       tournament: { id: string; name: string; slug: string | null } | null;
       checkin: {
+        /**
+         * Clé du check-in (POST /api/checkin/{token}). `null` tant que le cron
+         * ne l'a pas générée (T-60) ET pour qui ne peut pas pointer — seules la
+         * capitaine, une coach ou une manager la reçoivent.
+         */
         token: string | null;
+        /** Cette personne peut-elle pointer ? (utils/teams/canCheckIn.ts) */
+        canCheckIn: boolean;
         alreadyCheckedIn: boolean;
         checkedInAt: string | null;
         /** Window opens at scheduledAt - CHECKIN_OPEN_MINUTES, closes at scheduledAt. */
@@ -160,7 +172,17 @@ export default withSubjectRoute(async function handler(
   // Côté joué, adversaire, check-in : dérivations partagées avec
   // /api/player/matches et /api/player/matches/[matchId] (helper unique).
   const side = resolvePlayerSide(match, teamId);
-  const checkin = buildCheckin(match, side.isTeam1, now);
+  // Jeton réservé à la capitaine / coach / manager ; l'état reste visible de
+  // toute l'équipe. Lecture en échec → comportement d'avant (cf. exposesCheckin).
+  const checkinPermission = await loadCheckinPermission(
+    userId,
+    tenantId,
+    teamId
+  );
+  const checkin = applyCheckinPermission(
+    buildCheckin(match, side.isTeam1, now),
+    exposesCheckin(checkinPermission)
+  );
   const scheduledAt = (match.scheduled_at as string | null) ?? null;
   const formatStr = (match.match_format as string | null) ?? null;
 

@@ -27,6 +27,11 @@ import { withSubjectRoute } from '@/utils/subject';
 import { listMemberships } from '@/utils/teams/memberships';
 import { getManagedTeams } from '@/utils/teams/managementAccess';
 import {
+  applyCheckinPermission,
+  exposesCheckin,
+  loadCheckinPermission,
+} from '@/utils/teams/canCheckIn';
+import {
   PLAYER_MATCH_SELECT,
   buildCheckin,
   derivePlayerScore,
@@ -59,7 +64,12 @@ export type PlayerMatchDetail = {
   team: { id: string; name: string; slot: 1 | 2 };
   opponent: TeamRef;
   tournament: TournamentRef;
-  checkin: PlayerCheckin;
+  /**
+   * `token` n'est renseigné que pour qui peut pointer (capitaine, coach,
+   * manager — utils/teams/canCheckIn.ts) ; `canCheckIn` le dit à l'écran. L'état
+   * (`isOpen`, `alreadyCheckedIn`…) reste visible de toute l'équipe.
+   */
+  checkin: PlayerCheckin & { canCheckIn: boolean };
   /**
    * Effectif comparé au minimum du tournoi. `null` quand le tournoi n'en
    * impose pas — afficher « 0 manquante » sur un tournoi sans minimum ferait
@@ -159,8 +169,21 @@ export default withSubjectRoute(async function handler(
 
   const side = resolvePlayerSide(match, teamId);
   const now = Date.now();
-  const checkin = buildCheckin(match, side.isTeam1, now);
   const { score, result } = derivePlayerScore(match, side.isTeam1, teamId);
+
+  // Check-in réservé à la capitaine / coach / manager : le jeton est la clé du
+  // check-in (POST /api/checkin/{token} ne demande rien d'autre), il ne sort
+  // donc que pour elles. Lecture en échec → on garde l'ancien comportement
+  // plutôt que de cacher son bouton à une capitaine (cf. exposesCheckin).
+  const checkinPermission = await loadCheckinPermission(
+    userId,
+    tenantId,
+    teamId
+  );
+  const checkin = applyCheckinPermission(
+    buildCheckin(match, side.isTeam1, now),
+    exposesCheckin(checkinPermission)
+  );
 
   // Effectif : compté sur le roster ENTIER de l'équipe, comme le fait le
   // dashboard — la règle du tournoi porte sur les inscrites, pas sur celles

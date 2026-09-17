@@ -555,6 +555,19 @@ describe('processMatchCheckin — reminders', () => {
       minutesBeforeKickoff: 30,
     });
     expect(teamB.checkinUrl).toMatch(/\/checkin\/tok-2$/);
+
+    // Le rappel DISCORD part dans un salon partagé (ping du rôle d'équipe) :
+    // il ne doit JAMAIS porter le jeton, sinon n'importe quelle membre du
+    // salon pointe et la règle capitaine/coach/manager tombe. Il renvoie à la
+    // page du match, qui vérifie l'identité.
+    const discordUrls = notifyCheckinReminder.mock.calls.map(
+      (c: any[]) => c[0].checkinUrl
+    ) as string[];
+    for (const url of discordUrls) {
+      expect(url).not.toMatch(/tok-1|tok-2/);
+      expect(url).not.toMatch(/\/checkin\//);
+      expect(url).toMatch(/\/player\/match\/[^/]+#checkin$/);
+    }
   });
 
   it('emails only the un-checked-in captain at T-15 with minutesBeforeKickoff=15', async () => {

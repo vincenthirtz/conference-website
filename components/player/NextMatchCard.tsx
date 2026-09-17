@@ -33,6 +33,8 @@ type NextMatch = {
   tournament: { id: string; name: string; slug: string | null } | null;
   checkin: {
     token: string | null;
+    /** Capitaine, coach ou manager. Optionnel : absent = ancien affichage. */
+    canCheckIn?: boolean;
     alreadyCheckedIn: boolean;
     checkedInAt: string | null;
     opensAt: string | null;
@@ -320,6 +322,13 @@ export default function NextMatchCard({
           (checkin?.closesAt && now > new Date(checkin.closesAt).getTime()) ? (
           <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-400/30 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-100">
             {t.checkinClosed}
+          </span>
+        ) : checkin?.canCheckIn === false &&
+          isCheckinStillOpen(checkin, now) ? (
+          // Ni capitaine, ni coach, ni manager : on dit qui pointe, au lieu
+          // de ne rien afficher pendant la fenêtre.
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-300">
+            {t.checkinRestricted}
           </span>
         ) : checkin?.token && isCheckinStillOpen(checkin, now) ? (
           <Link

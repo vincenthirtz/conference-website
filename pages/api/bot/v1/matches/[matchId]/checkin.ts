@@ -1,21 +1,34 @@
 // POST /api/bot/v1/matches/[matchId]/checkin
 //
-// Permet au bot Discord de valider le check-in d'un capitaine via un clic
-// de bouton DM, sans passage navigateur.
+// Permet au bot Discord de valider le check-in d'une equipe via un clic de
+// bouton (DM T-30, salon prive du match) ou /checkin, sans passage navigateur.
 //
-// Le bot DM les deux capitaines a T-30 (cf. /api/bot/v1/reminders) avec un
-// bouton "Check-in". Au clic, le bot appelle cet endpoint avec le Discord
-// user id du capitaine ; on retrouve l'equipe via user_discord_links et on
-// redeem le token cote serveur — le token n'a jamais besoin de sortir.
+// Au clic, le bot appelle cet endpoint avec le Discord user id de la personne ;
+// on retrouve son compte via user_discord_links, on determine pour QUELLE
+// equipe du match elle peut pointer, et on redeem le token cote serveur — le
+// token n'a jamais besoin de sortir.
 //
-// Auth: x-api-key (BOT_API_KEY) + verification que le discordUserId est
-// bien lie a l'un des deux capitaines du match.
+// Qui peut pointer (decision 2026-09-17, regle unique dans
+// utils/teams/canCheckIn.ts) : la capitaine (teams.captain_id), ou une membre
+// au role d'equipe coach / manager (casse et espaces ignores). Avant : la
+// capitaine SEULE, ce qui laissait une equipe sans capitaine (creee par une
+// manager) sans aucun moyen de pointer depuis Discord.
+//
+// Le bouton est poste dans le salon prive du match, visible des DEUX roles
+// d'equipe : c'est donc ici, et nulle part ailleurs, que se joue le refus
+// d'une joueuse simple ou d'une capitaine adverse.
+//
+// Auth: x-api-key (BOT_API_KEY) + regle ci-dessus sur le discordUserId.
 
 import { z } from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { redeemCheckinToken } from '@/utils/checkin';
+import {
+  loadCheckinPermission,
+  type CheckinPermission,
+} from '@/utils/teams/canCheckIn';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 import { checkinBodySchema } from '@/lib/apiContracts/bot/matches/[matchId]/checkin';
@@ -56,37 +69,88 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     ? (match as any).team2[0]
     : (match as any).team2;
 
-  const captainIds: string[] = [team1?.captain_id, team2?.captain_id].filter(
-    (v): v is string => typeof v === 'string'
-  );
-  if (captainIds.length === 0) {
-    return res
-      .status(400)
-      .json({ error: 'Aucun capitaine defini pour ce match' });
-  }
-
-  // Resolve which captain the discordUserId belongs to.
-  const { data: links, error: linkErr } = await supabaseAdmin
+  // 1. Qui clique ? Sans compte relie, on ne peut rien verifier : refus.
+  //    `discord_user_id` est UNIQUE en base, d'ou maybeSingle.
+  const { data: link, error: linkErr } = await supabaseAdmin
     .from('user_discord_links')
-    .select('auth_user_id, discord_user_id')
-    .in('auth_user_id', captainIds)
+    .select('auth_user_id')
     .eq('discord_user_id', discordUserId)
-    .limit(1);
+    .maybeSingle();
 
   if (linkErr) {
     logger.error('[bot/matches/checkin] link lookup error', linkErr);
-    return res.status(500).json({ error: 'Erreur de verification capitaine' });
-  }
-
-  const matchedCaptainAuthId = links?.[0]?.auth_user_id ?? null;
-  if (!matchedCaptainAuthId) {
-    return res.status(403).json({
-      error:
-        "Ce compte Discord n'est pas le capitaine d'une des deux equipes de ce match.",
+    return res.status(500).json({
+      error: 'Erreur de vérification du compte. Réessaie dans un instant.',
     });
   }
 
-  const side: 1 | 2 = matchedCaptainAuthId === team1?.captain_id ? 1 : 2;
+  const actorAuthId =
+    (link as { auth_user_id?: string | null } | null)?.auth_user_id ?? null;
+  if (!actorAuthId) {
+    return res.status(403).json({
+      error:
+        "Ton compte Discord n'est pas relié à un compte du site : impossible de vérifier que tu peux faire le check-in. Le check-in est fait par la capitaine, le coach ou la manager de l'équipe.",
+      code: 'CHECKIN_NOT_ALLOWED',
+    });
+  }
+
+  // 2. Pour quelle(s) equipe(s) du match peut-elle pointer ? Les deux cotes
+  //    sont evalues : une capitaine adverse est ainsi refusee pour l'autre
+  //    equipe, et on ne suppose pas qu'une personne n'appartient qu'a un cote.
+  const sides = [
+    { slot: 1 as const, teamId: team1?.id ?? match.team1_id ?? null },
+    { slot: 2 as const, teamId: team2?.id ?? match.team2_id ?? null },
+  ].filter((s): s is { slot: 1 | 2; teamId: string } => !!s.teamId);
+
+  const evaluated: { slot: 1 | 2; permission: CheckinPermission }[] =
+    await Promise.all(
+      sides.map(async (s) => ({
+        slot: s.slot,
+        permission: await loadCheckinPermission(
+          actorAuthId,
+          req.botContext.tenantId,
+          s.teamId
+        ),
+      }))
+    );
+
+  const allowedSides = evaluated.filter((e) => e.permission.allowed);
+
+  if (allowedSides.length === 0) {
+    // Lecture en echec : on ne sait pas, on ne refuse pas pour autant — 500,
+    // que le bot affiche et que l'utilisatrice peut rejouer (idempotent).
+    if (evaluated.some((e) => e.permission.failed)) {
+      return res.status(500).json({
+        error:
+          'Erreur de vérification des droits de check-in. Réessaie dans un instant.',
+      });
+    }
+    return res.status(403).json({
+      error:
+        "Le check-in est fait par la capitaine, le coach ou la manager de l'équipe. Tu n'as pas ce rôle pour ce match.",
+      code: 'CHECKIN_NOT_ALLOWED',
+    });
+  }
+
+  // Autorisee des deux cotes (ex. capitaine d'une equipe et manager de
+  // l'autre) : le capitanat tranche. Sinon on ne choisit pas a sa place —
+  // pointer la mauvaise equipe serait pire qu'un refus explicite.
+  let chosen = allowedSides[0];
+  if (allowedSides.length > 1) {
+    const captainSides = allowedSides.filter(
+      (e) => e.permission.authority === 'captain'
+    );
+    if (captainSides.length !== 1) {
+      return res.status(409).json({
+        error:
+          "Tu peux faire le check-in des deux équipes de ce match : impossible de savoir laquelle pointer depuis Discord. Utilise le lien de check-in de l'équipe concernée ou contacte le staff.",
+        code: 'CHECKIN_TEAM_AMBIGUOUS',
+      });
+    }
+    chosen = captainSides[0];
+  }
+
+  const side: 1 | 2 = chosen.slot;
   const token =
     side === 1 ? match.team1_checkin_token : match.team2_checkin_token;
 
@@ -103,20 +167,27 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   }
 
   if (!result.alreadyCheckedIn) {
-    logger.info('[bot/matches/checkin] captain checked in via bot', {
+    logger.info('[bot/matches/checkin] team checked in via bot', {
       matchId: result.matchId,
       teamSlot: result.teamSlot,
       discordUserId,
-      captainAuthId: matchedCaptainAuthId,
+      actorAuthId,
+      authority: chosen.permission.authority,
     });
     void logPlayerAction({
       tenantId: req.botContext.tenantId,
-      actorAuthUserId: matchedCaptainAuthId,
+      actorAuthUserId: actorAuthId,
       actorDiscordUserId: discordUserId,
       action: 'checkin',
       entityType: 'match',
       entityId: result.matchId,
-      payload: { team_slot: result.teamSlot },
+      // `authority` : capitaine ou role d'equipe — l'audit doit dire a quel
+      // titre l'equipe a ete engagee, maintenant que ce n'est plus toujours
+      // la capitaine.
+      payload: {
+        team_slot: result.teamSlot,
+        authority: chosen.permission.authority,
+      },
     });
   }
 
@@ -135,7 +206,8 @@ export default withBotRoute(handler, {
   rateLimit: {
     max: 60,
     key: 'bot-match-checkin',
-    // Action par capitaine : borne par acteur (id sous `discordUserId`).
+    // Action par personne (capitaine, coach, manager) : borne par acteur (id
+    // sous `discordUserId`).
     perActor: { max: 10, windowMs: 60_000, actorField: 'discordUserId' },
   },
   idempotent: true,

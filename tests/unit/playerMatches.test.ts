@@ -100,6 +100,9 @@ describe('/api/player/matches — guards', () => {
 describe('/api/player/matches — list shaping', () => {
   it('returns upcoming (check-in populated) + completed (score/result derived)', async () => {
     seedTeamMembership();
+    // Le jeton n'est remis qu'à la capitaine / coach / manager
+    // (utils/teams/canCheckIn.ts) : l'appelante est coach ici.
+    (store.team_members as any[])[0].role = 'coach';
     const upcomingScheduledAt = new Date(
       Date.now() + 30 * 60_000
     ).toISOString();
@@ -195,6 +198,7 @@ describe('/api/player/matches — list shaping', () => {
     expect(up.result).toBeNull();
     expect(up.checkin).not.toBeNull();
     expect(up.checkin.token).toBe('token-team1');
+    expect(up.checkin.canCheckIn).toBe(true);
     expect(up.checkin.isOpen).toBe(true);
     expect(up.checkin.isPassed).toBe(false);
     expect(up.checkin.alreadyCheckedIn).toBe(false);
