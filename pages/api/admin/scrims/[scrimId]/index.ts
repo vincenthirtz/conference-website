@@ -16,6 +16,10 @@ import {
 import { emitScrimEvent, statusTransitionEvent } from '@/utils/scrimEvents';
 import { syncScrimRatedMatch } from '@/utils/scrims/ratedMatch';
 import {
+  parseExternalTeamNames,
+  resolveScrimExternalTeams,
+} from '@/utils/teams/externalScrimTeam';
+import {
   purgeScoreReports,
   scrimTransitionPurgesReports,
   type PurgedScoreReport,
@@ -136,7 +140,17 @@ async function handlePatch(
     }
   }
 
-  if (Object.keys(updatePayload).length === 0) {
+  // team1_name / team2_name : équipe extérieure créée à la volée (hors
+  // PATCHABLE_FIELDS, ce ne sont pas des colonnes de `scrims`).
+  const externalNames = parseExternalTeamNames(body);
+  if (!externalNames.ok) {
+    return res.status(400).json({ error: externalNames.error });
+  }
+  const hasExternalName = Boolean(
+    externalNames.names.team1Name || externalNames.names.team2Name
+  );
+
+  if (Object.keys(updatePayload).length === 0 && !hasExternalName) {
     return res.status(400).json({ error: 'No fields to update' });
   }
 
@@ -212,6 +226,27 @@ async function handlePatch(
     .eq('tenant_id', ctx.tenantId)
     .maybeSingle();
   if (!before) return res.status(404).json({ error: 'Scrim not found' });
+
+  // Équipes extérieures : résolues une fois le scrim trouvé et le corps
+  // validé, pour ne pas créer d'équipe derrière un 400/404/409.
+  if (hasExternalName) {
+    const external = await resolveScrimExternalTeams({
+      tenantId: ctx.tenantId,
+      names: externalNames.names,
+      team1Id: updatePayload.team1_id as string | null | undefined,
+      team2Id: updatePayload.team2_id as string | null | undefined,
+      staffId: ctx.staff?.id ?? null,
+    });
+    if (!external.ok) {
+      return res.status(external.status).json({ error: external.error });
+    }
+    if (external.team1Id !== undefined) {
+      updatePayload.team1_id = external.team1Id;
+    }
+    if (external.team2Id !== undefined) {
+      updatePayload.team2_id = external.team2Id;
+    }
+  }
 
   // Verifier team1 != team2 sur l'etat resultant
   const effectiveTeam1 =

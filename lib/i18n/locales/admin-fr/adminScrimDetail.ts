@@ -24,6 +24,11 @@ export default adminNs('adminScrimDetail', {
   team1Label: 'Équipe 1',
   team2Label: 'Équipe 2',
   teamNone: '— Aucune —',
+  teamExternalOption: '+ Équipe extérieure…',
+  teamExternalPlaceholder: "Nom de l'équipe extérieure",
+  teamExternalHint:
+    "Créée à l'enregistrement, sans effectif, avec le logo Women's Cup.",
+  errorExternalNameRequired: "Indique le nom de l'équipe extérieure.",
   scheduledLabel: 'Date prévue',
   noDateHint: 'Pas encore de date ?',
   openPlanning: 'Ouvrir une grille de disponibilités',

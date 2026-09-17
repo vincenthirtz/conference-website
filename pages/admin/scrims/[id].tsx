@@ -12,6 +12,11 @@ import { withStaffPage } from '@/utils/staff';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps, Scrim } from '@/types/admin';
 import nsAdminScrimDetail from '@/lib/i18n/locales/admin-fr/adminScrimDetail';
+import ScrimTeamField, {
+  scrimTeamBody,
+} from '@/components/admin/scrims/ScrimTeamField';
+
+const NO_EXTERNAL = { external: false, externalName: '' };
 
 type TeamOption = { id: string; name: string; short_name: string | null };
 
@@ -65,6 +70,9 @@ function AdminScrimEditPage(_props: StaffProps) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [creatingMatch, setCreatingMatch] = useState(false);
+  // Équipe extérieure (saisie libre) en cours, par côté.
+  const [ext1, setExt1] = useState(NO_EXTERNAL);
+  const [ext2, setExt2] = useState(NO_EXTERNAL);
 
   const fetchAll = useCallback(async () => {
     if (!id) return;
@@ -100,11 +108,18 @@ function AdminScrimEditPage(_props: StaffProps) {
     setSaving(true);
     setError(null);
     try {
+      if (
+        (ext1.external && !ext1.externalName.trim()) ||
+        (ext2.external && !ext2.externalName.trim())
+      ) {
+        setError(t.errorExternalNameRequired);
+        return;
+      }
       const body = {
         name: scrim.name,
         status: scrim.status,
-        team1_id: scrim.team1_id,
-        team2_id: scrim.team2_id,
+        ...scrimTeamBody(1, { teamId: scrim.team1_id || '', ...ext1 }),
+        ...scrimTeamBody(2, { teamId: scrim.team2_id || '', ...ext2 }),
         scheduled_date: scrim.scheduled_date,
         is_public: scrim.is_public,
         description: scrim.description,
@@ -115,6 +130,8 @@ function AdminScrimEditPage(_props: StaffProps) {
         method: 'PATCH',
         body: JSON.stringify(body),
       });
+      setExt1(NO_EXTERNAL);
+      setExt2(NO_EXTERNAL);
       await fetchAll();
     } catch (err) {
       setError((err as Error)?.message || t.errorSave);
@@ -216,44 +233,40 @@ function AdminScrimEditPage(_props: StaffProps) {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  {t.team1Label}
-                </label>
-                <select
-                  value={scrim.team1_id || ''}
-                  onChange={(e) =>
-                    setScrim({ ...scrim, team1_id: e.target.value || null })
-                  }
-                  className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
-                >
-                  <option value="">{t.teamNone}</option>
-                  {teams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  {t.team2Label}
-                </label>
-                <select
-                  value={scrim.team2_id || ''}
-                  onChange={(e) =>
-                    setScrim({ ...scrim, team2_id: e.target.value || null })
-                  }
-                  className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
-                >
-                  <option value="">{t.teamNone}</option>
-                  {teams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <ScrimTeamField
+                label={t.team1Label}
+                noneLabel={t.teamNone}
+                externalOptionLabel={t.teamExternalOption}
+                externalPlaceholder={t.teamExternalPlaceholder}
+                externalHint={t.teamExternalHint}
+                teams={teams}
+                currentTeam={scrim.team1}
+                value={{ teamId: scrim.team1_id || '', ...ext1 }}
+                onChange={(v) => {
+                  setScrim({ ...scrim, team1_id: v.teamId || null });
+                  setExt1({
+                    external: v.external,
+                    externalName: v.externalName,
+                  });
+                }}
+              />
+              <ScrimTeamField
+                label={t.team2Label}
+                noneLabel={t.teamNone}
+                externalOptionLabel={t.teamExternalOption}
+                externalPlaceholder={t.teamExternalPlaceholder}
+                externalHint={t.teamExternalHint}
+                teams={teams}
+                currentTeam={scrim.team2}
+                value={{ teamId: scrim.team2_id || '', ...ext2 }}
+                onChange={(v) => {
+                  setScrim({ ...scrim, team2_id: v.teamId || null });
+                  setExt2({
+                    external: v.external,
+                    externalName: v.externalName,
+                  });
+                }}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">

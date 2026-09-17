@@ -5,6 +5,12 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { Scrim } from '@/types/admin';
 import nsAdminScrimsCreate from '@/lib/i18n/locales/admin-fr/adminScrimsCreate';
+import ScrimTeamField, {
+  scrimTeamBody,
+  type ScrimTeamValue,
+} from '@/components/admin/scrims/ScrimTeamField';
+
+const NO_EXTERNAL = { external: false, externalName: '' };
 
 type TeamOption = { id: string; name: string; short_name: string | null };
 
@@ -49,14 +55,22 @@ export default function ScrimFormModal({
 
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [form, setForm] = useState({ ...EMPTY_FORM });
+  // Équipe extérieure (saisie libre) par côté ; l'id reste dans `form`.
+  const [ext1, setExt1] = useState(NO_EXTERNAL);
+  const [ext2, setExt2] = useState(NO_EXTERNAL);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const team1Value: ScrimTeamValue = { teamId: form.team1_id, ...ext1 };
+  const team2Value: ScrimTeamValue = { teamId: form.team2_id, ...ext2 };
 
   // (Ré)initialise le formulaire à l'ouverture ou quand les valeurs
   // pré-remplies changent (ex. clic sur un autre créneau de l'agenda).
   useEffect(() => {
     if (!open) return;
     setForm({ ...EMPTY_FORM, ...(defaults ?? {}) });
+    setExt1(NO_EXTERNAL);
+    setExt2(NO_EXTERNAL);
     setError(null);
     setSubmitting(false);
   }, [open, defaults]);
@@ -92,7 +106,21 @@ export default function ScrimFormModal({
         setSubmitting(false);
         return;
       }
-      if (form.team1_id && form.team2_id && form.team1_id === form.team2_id) {
+      if (
+        (ext1.external && !ext1.externalName.trim()) ||
+        (ext2.external && !ext2.externalName.trim())
+      ) {
+        setError(t.errorExternalNameRequired);
+        setSubmitting(false);
+        return;
+      }
+      if (
+        !ext1.external &&
+        !ext2.external &&
+        form.team1_id &&
+        form.team2_id &&
+        form.team1_id === form.team2_id
+      ) {
         setError(t.errorTeamsDistinct);
         setSubmitting(false);
         return;
@@ -101,8 +129,8 @@ export default function ScrimFormModal({
         name: form.name.trim(),
         game: form.game.trim() || null,
         status: form.status,
-        team1_id: form.team1_id || null,
-        team2_id: form.team2_id || null,
+        ...scrimTeamBody(1, team1Value),
+        ...scrimTeamBody(2, team2Value),
         scheduled_date: form.scheduled_date
           ? new Date(form.scheduled_date).toISOString()
           : null,
@@ -163,40 +191,32 @@ export default function ScrimFormModal({
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm text-neutral-400 mb-1">
-              {t.team1Label}
-            </label>
-            <select
-              value={form.team1_id}
-              onChange={(e) => setForm({ ...form, team1_id: e.target.value })}
-              className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
-            >
-              <option value="">{t.teamPlaceholder}</option>
-              {teams.map((team) => (
-                <option key={team.id} value={team.id}>
-                  {team.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-neutral-400 mb-1">
-              {t.team2Label}
-            </label>
-            <select
-              value={form.team2_id}
-              onChange={(e) => setForm({ ...form, team2_id: e.target.value })}
-              className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
-            >
-              <option value="">{t.teamPlaceholder}</option>
-              {teams.map((team) => (
-                <option key={team.id} value={team.id}>
-                  {team.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <ScrimTeamField
+            label={t.team1Label}
+            noneLabel={t.teamPlaceholder}
+            externalOptionLabel={t.teamExternalOption}
+            externalPlaceholder={t.teamExternalPlaceholder}
+            externalHint={t.teamExternalHint}
+            teams={teams}
+            value={team1Value}
+            onChange={(v) => {
+              setForm((f) => ({ ...f, team1_id: v.teamId }));
+              setExt1({ external: v.external, externalName: v.externalName });
+            }}
+          />
+          <ScrimTeamField
+            label={t.team2Label}
+            noneLabel={t.teamPlaceholder}
+            externalOptionLabel={t.teamExternalOption}
+            externalPlaceholder={t.teamExternalPlaceholder}
+            externalHint={t.teamExternalHint}
+            teams={teams}
+            value={team2Value}
+            onChange={(v) => {
+              setForm((f) => ({ ...f, team2_id: v.teamId }));
+              setExt2({ external: v.external, externalName: v.externalName });
+            }}
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-4">

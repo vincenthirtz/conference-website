@@ -15,6 +15,10 @@ import {
   isValidUUID,
 } from '@/utils/apiHelpers';
 import { emitScrimEvent } from '@/utils/scrimEvents';
+import {
+  parseExternalTeamNames,
+  resolveScrimExternalTeams,
+} from '@/utils/teams/externalScrimTeam';
 import { logger } from '../../../../utils/logger';
 
 const VALID_STATUSES = [
@@ -33,6 +37,10 @@ export type ScrimCreateInput = {
   status?: ScrimStatus | null;
   team1_id?: string | null;
   team2_id?: string | null;
+  /** Équipe extérieure (créée à la volée), exclusif de team1_id. */
+  team1_name?: string | null;
+  /** Équipe extérieure (créée à la volée), exclusif de team2_id. */
+  team2_name?: string | null;
   scheduled_date?: string | null;
   timezone?: string | null;
   is_public?: boolean | null;
@@ -200,6 +208,11 @@ async function handlePost(
       .json({ error: 'team1_id et team2_id doivent etre distincts' });
   }
 
+  const externalNames = parseExternalTeamNames(body as Record<string, unknown>);
+  if (!externalNames.ok) {
+    return res.status(400).json({ error: externalNames.error });
+  }
+
   if (body.scheduled_date && Number.isNaN(Date.parse(body.scheduled_date))) {
     return res.status(400).json({ error: 'scheduled_date invalide' });
   }
@@ -216,14 +229,27 @@ async function handlePost(
     });
   }
 
+  // Équipes extérieures : résolues APRÈS toutes les validations, pour ne pas
+  // laisser d'équipe orpheline derrière un 400/409.
+  const external = await resolveScrimExternalTeams({
+    tenantId: ctx.tenantId,
+    names: externalNames.names,
+    team1Id: body.team1_id ?? null,
+    team2Id: body.team2_id ?? null,
+    staffId: ctx.staff?.id ?? null,
+  });
+  if (!external.ok) {
+    return res.status(external.status).json({ error: external.error });
+  }
+
   const payload = {
     tenant_id: ctx.tenantId,
     name,
     slug,
     game: body.game ?? null,
     status,
-    team1_id: body.team1_id ?? null,
-    team2_id: body.team2_id ?? null,
+    team1_id: external.team1Id ?? null,
+    team2_id: external.team2Id ?? null,
     scheduled_date: body.scheduled_date ?? null,
     timezone: body.timezone ?? 'Europe/Paris',
     is_public: body.is_public ?? false,

@@ -15,6 +15,11 @@ export default adminNs('adminScrimsCreate', {
   team1Label: 'Équipe 1',
   team2Label: 'Équipe 2',
   teamPlaceholder: '— Choisir —',
+  teamExternalOption: '+ Équipe extérieure…',
+  teamExternalPlaceholder: "Nom de l'équipe extérieure",
+  teamExternalHint:
+    "Créée à l'enregistrement, sans effectif, avec le logo Women's Cup.",
+  errorExternalNameRequired: "Indique le nom de l'équipe extérieure.",
   scheduledLabel: 'Date prévue',
   statusLabel: 'Statut',
   statusDraft: 'Brouillon',
