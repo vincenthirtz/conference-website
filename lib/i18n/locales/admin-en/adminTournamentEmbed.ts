@@ -52,6 +52,9 @@ export default {
   source_scrims_name: 'Upcoming scrims',
   source_scrims_desc:
     'The space’s next public scrims (not just this tournament). One row per scrim (time, logos, teams) on a transparent background. Add &days=N for the horizon, &limit=N for the number of rows, &position=top or bottom to anchor them.',
+  source_scrimResult_name: 'Scrim result',
+  source_scrimResult_desc:
+    'Both teams, the score and the winner on a transparent background — for the end-of-scrim screen. Follows the running scrim, else the last one completed (under 24 h); &scrim=<slug> to pin one. The score shows as soon as it is validated on the site.',
   source_don_name: 'Donate (HelloAsso QR)',
   source_don_desc:
     'The association’s donation QR code, same as the /don page. Add &layout=corner for a bottom-right inset to keep on screen during games.',

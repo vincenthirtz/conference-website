@@ -906,3 +906,62 @@ UpcomingScrimsOverlaySource:
     serverTime:
       type: string
       format: date-time
+ScrimResultOverlaySource:
+  type: object
+  description: |
+    Le résultat d'un scrim tel que la source OBS « résultat de scrim »
+    l'affiche. PUBLIC et cacheable 5 s.
+  required: [scrim, branding, serverTime]
+  properties:
+    scrim:
+      anyOf:
+        - type: object
+          required:
+            [id, name, slug, phase, scheduledAt, completedAt, draw, team1, team2]
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: [string, 'null']
+            slug:
+              type: [string, 'null']
+            phase:
+              type: string
+              enum: [final, live, pending]
+              description: >-
+                `final` clos avec un score, `live` en cours, `pending` pas
+                encore de résultat.
+            scheduledAt:
+              type: [string, 'null']
+              format: date-time
+            completedAt:
+              type: [string, 'null']
+              format: date-time
+            draw:
+              type: boolean
+              description: Clos sur une égalité (aucun vainqueur).
+            team1:
+              anyOf:
+                - $ref: '#/components/schemas/MatchOverlayTeam'
+                - type: 'null'
+            team2:
+              anyOf:
+                - $ref: '#/components/schemas/MatchOverlayTeam'
+                - type: 'null'
+        - type: 'null'
+    branding:
+      anyOf:
+        - type: object
+          required: [name, logoUrl, accent]
+          properties:
+            name:
+              type: [string, 'null']
+            logoUrl:
+              type: [string, 'null']
+            accent:
+              type: [string, 'null']
+        - type: 'null'
+    serverTime:
+      type: string
+      format: date-time

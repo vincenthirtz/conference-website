@@ -65,6 +65,12 @@ export default {
   scrimsDocTitle: 'Stream source — upcoming scrims',
   scrimsDateTbd: 'Date TBD',
 
+  scrimResultDocTitle: 'Stream source — scrim result',
+  scrimResultFinal: 'Final result',
+  scrimResultPending: 'Awaiting result',
+  scrimResultWinner: 'Winner',
+  scrimResultDraw: 'Draw',
+
   donDocTitle: 'Stream source — donate',
   donEyebrow: 'Donate',
   donTitle: 'Support the association',

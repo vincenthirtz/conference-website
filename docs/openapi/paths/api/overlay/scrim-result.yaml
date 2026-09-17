@@ -1,0 +1,73 @@
+get:
+  summary: Source de stream OBS « résultat de scrim ».
+  description: |
+    PUBLIC (sans authentification), destiné aux sources navigateur d'OBS
+    (`/overlay/scrim-result`) : les deux équipes d'un scrim, son score et son
+    vainqueur.
+
+    `scrim=latest` (défaut) suit le scrim du moment : en cours, sinon le
+    dernier clos depuis moins de 24 h — `scrim: null` s'il n'y en a pas (200).
+    Sinon, `scrim` est l'identifiant ou le slug d'un scrim.
+
+    Mêmes règles d'exposition que `GET /api/scrims/{id}` (`is_public`, ni
+    brouillon ni supprimé). L'espace doit porter la capacité de palier
+    `matchOverlays` — sinon `402`.
+
+    `Cache-Control: public, s-maxage=5, stale-while-revalidate=30`.
+  operationId: getScrimResultOverlaySource
+  tags:
+    - public/misc
+  security: []
+  parameters:
+    - name: scrim
+      in: query
+      required: false
+      schema:
+        type: string
+        default: latest
+      description: '`latest`, identifiant ou slug du scrim.'
+    - name: tenant
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Slug de l'espace, pour une source d'un autre organisateur.
+  responses:
+    '200':
+      description: Le scrim et son résultat, ou `scrim` nul.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ScrimResultOverlaySource'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '402':
+      description: >-
+        Le palier de l'espace n'ouvre pas les sources de stream (capacité
+        `matchOverlays`). Le corps nomme le palier en cours.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Error'
+            properties:
+              code:
+                type: string
+                enum:
+                  - PLAN_CAPABILITY_REQUIRED
+              capability:
+                type: string
+                enum:
+                  - matchOverlays
+              plan:
+                type: string
+              planLabel:
+                type: string
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '405':
+      description: Méthode non autorisée (seul GET est accepté).
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

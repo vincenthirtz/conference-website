@@ -69,6 +69,13 @@ export default ns('overlay', {
   scrimsDocTitle: 'Source de stream — scrims à venir',
   scrimsDateTbd: 'Date à fixer',
 
+  // Source « résultat de scrim » (`/overlay/scrim-result`).
+  scrimResultDocTitle: 'Source de stream — résultat de scrim',
+  scrimResultFinal: 'Résultat final',
+  scrimResultPending: 'En attente du résultat',
+  scrimResultWinner: 'Victoire',
+  scrimResultDraw: 'Match nul',
+
   // Source « faire un don » (`/overlay/don`).
   donDocTitle: 'Source de stream — faire un don',
   donEyebrow: 'Faire un don',

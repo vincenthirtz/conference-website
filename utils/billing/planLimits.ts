@@ -196,7 +196,7 @@ export const PLAN_FEATURE_ENFORCEMENT: Record<
   matchOverlays: {
     kind: 'code',
     where:
-      'utils/billing/tenantCapabilityGate.ts → GET /api/overlay/match/[matchId] + GET /api/overlay/day + GET /api/overlay/scrims (402 si le palier ne l’ouvre pas)',
+      'utils/billing/tenantCapabilityGate.ts → GET /api/overlay/match/[matchId] + GET /api/overlay/day + GET /api/overlay/scrims + GET /api/overlay/scrim-result (402 si le palier ne l’ouvre pas)',
   },
   maxLeagues: {
     kind: 'code',

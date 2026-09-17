@@ -43,6 +43,7 @@ const SOURCES = [
   { key: 'day', size: '1920×1080' },
   // Pas liée au tournoi : les scrims publics de tout l'espace.
   { key: 'scrims', size: '1920×1080' },
+  { key: 'scrimResult', size: '1920×1080' },
   // Le QR HelloAsso de la Women's Cup : proposé à son seul espace.
   { key: 'don', size: '1920×1080' },
 ] as const;
@@ -51,6 +52,7 @@ function sourceUrl(baseUrl: string, tournamentRef: string, key: string) {
   const tournament = encodeURIComponent(tournamentRef);
   if (key === 'day') return `${baseUrl}/overlay/day?tournament=${tournament}`;
   if (key === 'scrims') return `${baseUrl}/overlay/scrims`;
+  if (key === 'scrimResult') return `${baseUrl}/overlay/scrim-result`;
   if (key === 'don') return `${baseUrl}/overlay/don`;
   return `${baseUrl}/overlay/match/next?tournament=${tournament}&source=${key}`;
 }
