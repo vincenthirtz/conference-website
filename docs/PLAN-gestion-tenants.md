@@ -525,6 +525,85 @@ jour au lendemain, pour un retard de paiement d'une journée.
 
 ---
 
+## Isolation des routes joueuse — quel espace pour une joueuse ? (lot 10, 2026-09-17)
+
+### Le trou
+
+Le back-office tient son espace de la session staff, le bot de sa clé et de la
+guilde, l'API publique de `?tenant=`. Les routes **joueuse**, elles, n'avaient
+pas de réponse :
+
+- `resolveTenantIdForUserRequest` (synchrone) **ignorait ses arguments** et
+  rendait toujours l'espace par défaut (`TODO(S7)`). ~37 routes en dépendaient
+  — report de score, messages, pronostics, les 14 routes TCG, profil, tableau
+  de bord, matchs, notifications, cadeau de bienvenue… Dès qu'un second espace
+  a de vraies joueuses (POGTV), une joueuse de B écrit ses pronostics, pièces
+  et paquets **dans A**, apparaît dans ses classements, et les écrans de B ne
+  voient rien.
+- La version asynchrone lisait `team_members … .limit(1)` **sans ordre** : une
+  joueuse membre d'équipes dans deux espaces obtenait l'un ou l'autre d'une
+  requête à l'autre.
+
+### La règle
+
+Un seul résolveur, `resolvePlayerTenant` (`utils/tenant.ts`), pour
+`pages/api/player/**`, `teams/**`, `demandes/**` et `withSubjectRoute`. Le
+synchrone est **supprimé** ; `resolveTenantIdForUserRequestAsync` garde son nom
+et délègue.
+
+1. **Équipe active** — `?teamId=` (posé par `withTeam()`, ou le segment des
+   routes `/api/teams/[teamId]/…`), **seulement** si la joueuse en est membre
+   (`team_members`) ou capitaine (`teams.captain_id`). Sinon ignoré : un
+   paramètre n'est pas une preuve.
+2. **Domaine propre** — `tenants.custom_domain` vérifié, actif, plan
+   white-label. Rien d'autre à cette étape : ni `?tenant=` (affirmation du
+   client, qu'aucun écran joueuse n'envoie — classé avant l'appartenance, il
+   laisserait une joueuse écrire où elle veut), ni préfixe de chemin (`api` est
+   réservé), ni repli sur le défaut — sur owwomenscup.fr on continue.
+3. **Appartenance stable** — la plus ancienne (`team_members.created_at`), puis
+   `tenant_id`, puis `team_id`. Deux requêtes identiques → même espace.
+4. **Défaut.**
+
+**Lecture impossible → erreur (500), jamais le défaut.** Une panne transitoire
+ne doit pas attribuer l'écriture d'une joueuse de B à A — même principe que
+l'audit du 2026-09-12 sur le résolveur public.
+
+**Inspection staff (`?as=`)** — l'espace est résolu **pour la joueuse
+inspectée** (ses appartenances, son `?teamId=`), en préférant son appartenance
+dans l'espace actif du staff. Un signal positif vers un AUTRE espace → 403
+`subject_other_tenant` (« bascule l'espace actif ») au lieu de l'écran vide
+d'avant ; aucun signal (joueuse sans équipe) → espace actif du staff.
+
+### Coût
+
+Une lecture `team_members` indexée (`user_id`) par requête, qui sert les étapes
+1 et 3 ; mémoïsée **par requête** (WeakMap sur `req`), jamais au-delà — une
+joueuse peut changer d'équipe. S'y ajoutent, rarement, une lecture `teams`
+quand `?teamId=` ne correspond à aucune appartenance, et la lecture des
+domaines propres — jamais sur owwomenscup.fr, les previews ni localhost, cachée
+60 s ailleurs. Avant : 0 lecture pour les routes « synchrones », 1 pour les
+« asynchrones ».
+
+### Preuves
+
+- `tests/unit/playerTenantResolver.test.ts` — chaque étape, stabilité sur 50
+  appels, mémo, erreurs.
+- `tests/unit/playerTenantParity.test.ts` — chaque route (77 d'API + la page
+  `/team/[slug]/edit`) appelée pour 4 profils × 4 hôtes de la plateforme,
+  comparée à un oracle de l'ancien code, sur le résolveur ET sur chaque
+  `tenant_id` filtré ou écrit ; un témoin POGTV prouve que la mesure voit une
+  divergence.
+- `tests/unit/subjectResolution.test.ts` — le cas `?as=`.
+
+### Reste ouvert
+
+- Une appartenance dans un espace **archivé** reste retenue à l'étape 3.
+- `/team/[slug]/edit` résout l'espace avant de chercher l'équipe par slug : une
+  manager multi-espaces qui édite l'équipe de son espace « non stable » sans
+  `?teamId=` tombe sur un 404.
+- Les routes « réseau » (`discovery/*`, `follows`) et `data-export` sont
+  cross-espace par conception et hors de ce résolveur.
+
 ## Hors périmètre, volontairement
 
 | Sujet | Pourquoi pas maintenant |

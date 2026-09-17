@@ -45,7 +45,7 @@ lequel l'admin entre**, via une résolution de sujet explicite au niveau API.
 
 ```ts
 export default withSubjectRoute(async function handler(req, res, { user, subject }) {
-  const { userId, tenantId } = subject; // au lieu de user.id + resolveTenantIdForUserRequest
+  const { userId, tenantId } = subject; // au lieu de user.id + un résolveur d'espace
 });
 ```
 
@@ -56,8 +56,12 @@ Règles appliquées une seule fois, pour tous les endpoints inscrits :
    `subject.userId === user.id` est garanti dans la branche d'écriture. **S4
    doit relire chacun de ces handlers** avant d'assouplir la règle.
 2. **Scope tenant** — en inspection, le tenant est celui **actif côté staff**
-   (cookie `staff_active_tenant_id`), jamais celui résolu pour la cible. Un
-   admin ne peut pas lire hors de son tenant courant.
+   (cookie `staff_active_tenant_id`) : un admin ne peut pas lire hors de son
+   tenant courant. Depuis le lot 10 (2026-09-17), l'espace est d'abord résolu
+   **pour la cible** (`resolvePlayerTenant`, ses appartenances et son
+   `?teamId=`, jamais ceux du staff) : s'il désigne un autre espace → 403
+   `subject_other_tenant` au lieu d'un écran vide ; sans signal (cible sans
+   équipe) → l'espace du staff. Cf. `docs/PLAN-gestion-tenants.md`.
 3. **Existence** — cible inconnue → 404 `subject_not_found`.
 4. **Audit** — une ligne `staff_logs` par requête d'inspection
    (`view_player_data`, ou `view_captain_data` via `auditAction`), avec
@@ -67,7 +71,8 @@ Règles appliquées une seule fois, pour tous les endpoints inscrits :
    requête inspectée (plusieurs handlers posent `max-age=N` *après* le wrapper).
 
 Codes d'erreur renvoyés : `invalid_subject` (400), `subject_read_only` (403),
-`subject_forbidden` (403), `subject_not_found` (404).
+`subject_forbidden` (403), `subject_other_tenant` (403), `subject_not_found`
+(404).
 
 ### Endpoints migrés (15)
 
@@ -87,10 +92,11 @@ Codes d'erreur renvoyés : `invalid_subject` (400), `subject_read_only` (403),
 
 ### Pièges rencontrés
 
-- `resolveTenantIdForUserRequest` (sync) vs `…Async` (lit `team_members`) : le
-  wrapper prend l'option `tenantResolution: 'async'` pour **conserver** le
-  résolveur d'origine de chaque endpoint. Se tromper change silencieusement le
-  scoping tenant.
+- ~~`resolveTenantIdForUserRequest` (sync) vs `…Async` : option
+  `tenantResolution`~~ — **supprimés au lot 10** (2026-09-17). Le synchrone
+  rendait toujours l'espace par défaut, l'asynchrone lisait une appartenance
+  sans ordre ; tous les endpoints passent désormais par `resolvePlayerTenant`
+  (règle dans `utils/tenant.ts` et `docs/PLAN-gestion-tenants.md`).
 - `applyActorRateLimit` reste clé sur **l'appelant** (`user.id`) : sinon une
   inspection consommerait le quota du joueur inspecté.
 - `tests/unit/openapiContractDrift.test.ts` détecte l'auth en scannant la

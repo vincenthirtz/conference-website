@@ -1375,7 +1375,11 @@ intacte, tandis que les paquets achetés coexistent librement.
 ## 6. Surface HTTP
 
 Toutes les routes joueuse sont authentifiées par `withAuthRoute` (Bearer
-joueuse) et scopées au tenant résolu par `resolveTenantIdForUserRequest`.
+joueuse) et scopées au tenant résolu par `resolveTenantIdForUserRequestAsync`
+(`resolvePlayerTenant` : équipe active prouvée → domaine propre → appartenance
+la plus ancienne → défaut ; cf. `docs/PLAN-gestion-tenants.md`). Avant le lot 10
+(2026-09-17), c'était toujours l'espace par défaut : les pièces et paquets d'une
+joueuse d'un autre espace atterrissaient dans celui de l'association.
 
 | Route                                                | Méthodes          | Auth                                 | Rôle                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | ---------------------------------------------------- | ----------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

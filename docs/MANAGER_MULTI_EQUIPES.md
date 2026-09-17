@@ -86,6 +86,13 @@ Trois propriétés à ne pas casser :
    l'équipe à modifier). Les confondre ferait passer une donnée métier pour une
    portée d'autorisation.
 
+Depuis le lot 10 (2026-09-17), le paramètre choisit aussi l'**espace** de la
+requête : `resolvePlayerTenant` (`utils/tenant.ts`) retient l'espace de l'équipe
+active quand la joueuse en est membre ou capitaine — un manager dont les
+équipes vivent dans deux espaces est donc servi dans le bon. Même garde que la
+propriété 1 : une équipe dont on n'est pas membre est ignorée. Règle complète
+dans `docs/PLAN-gestion-tenants.md`.
+
 ### Les lectures d'appartenance
 
 L'index partiel a un corollaire moins visible : une quinzaine de
