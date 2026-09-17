@@ -46,7 +46,12 @@ const SOURCES = [
   { key: 'scrimResult', size: '1920×1080' },
   // Le QR HelloAsso de la Women's Cup : proposé à son seul espace.
   { key: 'don', size: '1920×1080' },
+  // Alertes des dons HelloAsso de l'association : même règle que le QR.
+  { key: 'donAlert', size: '1920×1080' },
 ] as const;
+
+/** Sources propres à l'association (son QR, ses dons). */
+const DONATION_KEYS: ReadonlySet<string> = new Set(['don', 'donAlert']);
 
 function sourceUrl(baseUrl: string, tournamentRef: string, key: string) {
   const tournament = encodeURIComponent(tournamentRef);
@@ -54,6 +59,7 @@ function sourceUrl(baseUrl: string, tournamentRef: string, key: string) {
   if (key === 'scrims') return `${baseUrl}/overlay/scrims`;
   if (key === 'scrimResult') return `${baseUrl}/overlay/scrim-result`;
   if (key === 'don') return `${baseUrl}/overlay/don`;
+  if (key === 'donAlert') return `${baseUrl}/overlay/don-alert`;
   return `${baseUrl}/overlay/match/next?tournament=${tournament}&source=${key}`;
 }
 
@@ -66,6 +72,10 @@ export default function StreamSourcesPanel({
 }: Props) {
   const t = useAdminT(nsAdminTournamentEmbed);
   const [copied, setCopied] = useState<string | null>(null);
+  // Le QR de don et les alertes de don sont ceux de l'association.
+  const sources = SOURCES.filter(
+    (s) => showDonation || !DONATION_KEYS.has(s.key)
+  );
 
   const copy = async (value: string, key: string) => {
     try {
@@ -104,7 +114,7 @@ export default function StreamSourcesPanel({
       <p className="text-xs text-neutral-400">{t.sourcesDescription}</p>
 
       <div className="space-y-2">
-        {SOURCES.filter((s) => s.key !== 'don' || showDonation).map((s) => {
+        {sources.map((s) => {
           const url = sourceUrl(baseUrl, tournamentRef, s.key);
           const label = t[`source_${s.key}_name` as keyof typeof t] as string;
           const desc = t[`source_${s.key}_desc` as keyof typeof t] as string;

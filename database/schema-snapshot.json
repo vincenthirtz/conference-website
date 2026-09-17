@@ -546,6 +546,16 @@
       "went_overtime",
       "winner_team_id"
     ],
+    "helloasso_donations": [
+      "amount_cents",
+      "created_at",
+      "currency",
+      "form_slug",
+      "form_type",
+      "helloasso_payment_id",
+      "id",
+      "tenant_id"
+    ],
     "integration_secrets": [
       "key",
       "tenant_id",
@@ -2309,6 +2319,10 @@
     "games_winner_team_id_fkey": {
       "source": "games",
       "target": "teams"
+    },
+    "helloasso_donations_tenant_id_fkey": {
+      "source": "helloasso_donations",
+      "target": "tenants"
     },
     "integration_secrets_tenant_id_fkey": {
       "source": "integration_secrets",

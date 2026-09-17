@@ -32963,6 +32963,90 @@
     ]
    }
   },
+  "GET /api/overlay/donations": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "donations": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "amountCents": {
+         "type": "number"
+        },
+        "currency": {
+         "type": "string"
+        },
+        "createdAt": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "id",
+        "amountCents",
+        "currency",
+        "createdAt"
+       ]
+      }
+     },
+     "totalCents": {
+      "type": "number"
+     },
+     "count": {
+      "type": "number"
+     },
+     "from": {
+      "type": "string"
+     },
+     "branding": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "logoUrl": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "accent": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "name",
+       "logoUrl",
+       "accent"
+      ]
+     },
+     "serverTime": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "donations",
+     "totalCents",
+     "count",
+     "from",
+     "branding",
+     "serverTime"
+    ]
+   }
+  },
   "GET /api/overlay/match/{matchId}": {
    "200": {
     "type": "object",

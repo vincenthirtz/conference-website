@@ -16,6 +16,11 @@ import {
   isValidWebhookToken,
   tenantIdBySlugForWebhook,
 } from '@/utils/billing/helloassoAccount';
+import {
+  buildDonationRow,
+  classifyDonation,
+} from '@/utils/helloasso/donationEvent';
+import { supabaseAdmin } from '@/utils/supabase';
 
 import { logger } from '../../../utils/logger';
 /**
@@ -175,11 +180,16 @@ export default async function handler(
     // Corrélation via la metadata du checkout-intent (canal primaire) ou le
     // mapping tenant_plan_checkouts (fallback). Un don GÉNÉRIQUE (sans
     // metadata plan) ne matche pas → comportement inchangé.
+    // Ce que les corrélations ont établi, relu plus bas pour décider si le
+    // paiement est un DON (alerte OBS). `null` = inconnu : la lecture a échoué.
+    let planCorrelated: boolean | null = null;
+    let prizeCorrelated: boolean | null = null;
     try {
       // Les abonnements de plan se paient à L'ASSOCIATION : une notification
       // venue du compte d'un espace tiers n'a rien à y appliquer.
       const correlation =
         authSource === 'platform' ? await resolvePlanCorrelation(event) : null;
+      planCorrelated = correlation != null;
       if (correlation) {
         const result = await applyTenantPlanPayment({
           helloassoPaymentId: event.data.id,
@@ -208,6 +218,7 @@ export default async function handler(
     // (colonne TEXT), d'où le String(...).
     try {
       const prize = await resolvePrizeCorrelation(event);
+      prizeCorrelated = prize != null;
       // La cagnotte doit appartenir à l'espace qui s'authentifie : sinon une
       // association pourrait créditer la cagnotte d'une autre avec un paiement
       // encaissé chez elle.
@@ -229,6 +240,37 @@ export default async function handler(
       }
     } catch (err) {
       logger.error('[helloasso/webhook] prize contribution apply error', err);
+    }
+
+    // ── AJOUT « alerte don » (source OBS /overlay/don-alert) ──────────────
+    // Un don générique est persisté — montant et formulaire, JAMAIS le payeur
+    // (cf. utils/helloasso/donationEvent.ts). Idempotent sur
+    // (tenant_id, helloasso_payment_id) : un rejeu n'ajoute rien.
+    try {
+      const classification = classifyDonation(event, {
+        source: authSource,
+        planCorrelated,
+        prizeCorrelated,
+      });
+      // Sans donnée personnelle : sert à vérifier dans les logs quels
+      // formulaires arrivent et comment ils sont classés.
+      logger.info(
+        `[helloasso/webhook] payment ${event.data.id} form: formType=${classification.formType ?? 'none'} formSlug=${classification.formSlug ?? 'none'} donation=${classification.isDonation ? 'yes' : `no (${classification.reason})`}`
+      );
+      const row = buildDonationRow(event, authTenantId, classification);
+      if (row) {
+        const { error } = await supabaseAdmin
+          .from('helloasso_donations')
+          .upsert(row, {
+            onConflict: 'tenant_id,helloasso_payment_id',
+            ignoreDuplicates: true,
+          });
+        if (error) {
+          logger.error('[helloasso/webhook] donation insert error', error);
+        }
+      }
+    } catch (err) {
+      logger.error('[helloasso/webhook] donation record error', err);
     }
   }
 

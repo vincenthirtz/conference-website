@@ -56,6 +56,7 @@ export const TENANT_TABLES: readonly TenantTable[] = [
   { table: 'final_rankings' },
   { table: 'free_players' },
   { table: 'games' },
+  { table: 'helloasso_donations' },
   { table: 'integration_secrets', export: false },
   { table: 'league_scrims' },
   { table: 'league_standings' },

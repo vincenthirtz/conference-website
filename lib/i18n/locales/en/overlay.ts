@@ -77,4 +77,14 @@ export default {
   donTitle: 'Support the association',
   donBody: 'Scan the QR code to donate via HelloAsso.',
   donQrAlt: 'HelloAsso donation QR code',
+
+  donAlertDocTitle: 'Stream source — donation alert',
+  donAlertEyebrow: 'New donation',
+  donAlertThanks: 'Thank you for this donation!',
+  donAlertAnnounce: 'Thank you for this donation of {amount}!',
+  donAlertGaugeLabel: 'Donation goal',
+  donAlertGaugeProgress: '{total} / {goal}',
+  donAlertMissingGoal:
+    'Add ?goal=<amount in euros> to the URL to show the gauge.',
+  donAlertDemoBadge: 'Demo',
 };

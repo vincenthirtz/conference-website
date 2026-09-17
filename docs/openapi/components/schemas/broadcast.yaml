@@ -981,3 +981,57 @@ ScrimResultOverlaySource:
     serverTime:
       type: string
       format: date-time
+DonationsOverlaySource:
+  type: object
+  description: |
+    Les derniers dons HelloAsso d'un espace et le total d'une journée, tels
+    que la source OBS « alerte don » les affiche. PUBLIC et cacheable 5 s.
+    Aucune donnée du donateur (ni nom ni email).
+  required: [donations, totalCents, count, from, branding, serverTime]
+  properties:
+    donations:
+      type: array
+      maxItems: 20
+      description: Dons des dernières 24 h, plus récents d'abord.
+      items:
+        type: object
+        required: [id, amountCents, currency, createdAt]
+        properties:
+          id:
+            type: string
+            format: uuid
+          amountCents:
+            type: integer
+            minimum: 0
+          currency:
+            type: string
+            example: EUR
+          createdAt:
+            type: string
+            format: date-time
+    totalCents:
+      type: integer
+      minimum: 0
+      description: Somme des dons depuis minuit (Paris) du jour `from`.
+    count:
+      type: integer
+      minimum: 0
+      description: Nombre de dons comptés dans `totalCents`.
+    from:
+      type: string
+      format: date
+    branding:
+      anyOf:
+        - type: object
+          required: [name, logoUrl, accent]
+          properties:
+            name:
+              type: [string, 'null']
+            logoUrl:
+              type: [string, 'null']
+            accent:
+              type: [string, 'null']
+        - type: 'null'
+    serverTime:
+      type: string
+      format: date-time

@@ -83,4 +83,16 @@ export default ns('overlay', {
   donTitle: 'Soutenez l’association',
   donBody: 'Scannez le QR code pour faire un don via HelloAsso.',
   donQrAlt: 'QR code de don HelloAsso',
+
+  // Source « alerte don » (`/overlay/don-alert`). Jamais le nom du donateur :
+  // il l'a saisi pour un reçu fiscal, pas pour l'antenne.
+  donAlertDocTitle: 'Source de stream — alerte don',
+  donAlertEyebrow: 'Nouveau don',
+  donAlertThanks: 'Merci pour ce don !',
+  donAlertAnnounce: 'Merci pour ce don de {amount} !',
+  donAlertGaugeLabel: 'Objectif de dons',
+  donAlertGaugeProgress: '{total} / {goal}',
+  donAlertMissingGoal:
+    'Ajoutez ?goal=<montant en euros> à l’URL pour afficher la jauge.',
+  donAlertDemoBadge: 'Démo',
 });

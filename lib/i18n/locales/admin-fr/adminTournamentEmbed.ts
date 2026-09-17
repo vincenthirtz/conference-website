@@ -58,6 +58,9 @@ export default adminNs('adminTournamentEmbed', {
   source_scrimResult_name: 'Résultat de scrim',
   source_scrimResult_desc:
     'Les deux équipes, le score et le vainqueur, sur fond transparent — pour l’écran de fin de scrim. Suit le scrim en cours ; sinon le résultat qui vient de tomber, le prochain scrim du jour (pour régler la scène avant le match) ou le dernier terminé (moins de 24 h) ; &scrim=<slug> pour en fixer un. Le score apparaît dès qu’il est validé sur le site.',
+  source_donAlert_name: 'Alerte don (HelloAsso)',
+  source_donAlert_desc:
+    'Une alerte « Merci pour ce don de 10 € ! » à chaque don HelloAsso reçu par l’association, sur fond transparent — à poser à côté de Streamlabs, qui ne connaît pas HelloAsso. Montant seulement : le nom du donateur n’est jamais affiché (il le saisit pour son reçu fiscal, pas pour l’antenne). Les dons déjà reçus à l’ouverture de la source ne sont pas rejoués. &goal=500 ajoute une jauge (total depuis minuit, ou depuis &from=AAAA-MM-JJ), &gauge=only n’affiche que la jauge, &duration=8 règle la durée d’une alerte (3 à 30 s), &demo=1 envoie de faux dons pour régler la scène.',
   source_don_name: 'Faire un don (QR HelloAsso)',
   source_don_desc:
     'Le QR code de don de l’association, le même que la page /don. Ajoutez &layout=corner pour un encart en bas à droite à garder pendant le jeu.',

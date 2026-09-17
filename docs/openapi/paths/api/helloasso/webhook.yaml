@@ -17,6 +17,13 @@ post:
     don générique ou un don plan-tenant ne matche pas → comportement
     inchangé. L'erreur applicative n'empêche jamais l'ACK 200 (HelloAsso ne
     doit pas retenter en boucle).
+
+    Branche « alerte don » : un `Payment/Authorized` classé comme DON
+    (formulaire `Donation`, ou checkout de la page /don non corrélé à un plan
+    ni à une cagnotte — cf. `utils/helloasso/donationEvent.ts`) est persisté
+    dans `helloasso_donations` (montant et formulaire seulement, jamais le
+    payeur ; idempotent sur `(tenant_id, helloasso_payment_id)`), pour la
+    source OBS `/overlay/don-alert`.
   security: []
   requestBody:
     required: true

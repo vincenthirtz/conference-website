@@ -1,0 +1,88 @@
+get:
+  summary: Source de stream OBS « alerte don » (dons HelloAsso).
+  description: |
+    PUBLIC (sans authentification), destiné aux sources navigateur d'OBS
+    (`/overlay/don-alert`) : les derniers dons HelloAsso reçus par l'espace
+    et le total d'une journée, pour une alerte « Merci pour ce don ! » et une
+    jauge d'objectif.
+
+    AUCUNE DONNÉE DU DONATEUR : ni nom ni email ne sont stockés pour cette
+    fonctionnalité, la réponse ne porte que id, montant, devise et date.
+
+    `donations` : dons des dernières 24 h (au plus 20), plus récents d'abord,
+    éventuellement restreints à ceux postérieurs à `after`.
+    `totalCents` / `count` : somme et nombre des dons depuis minuit (heure de
+    Paris) du jour `from` — aujourd'hui par défaut.
+
+    Est un don : un paiement autorisé d'un formulaire HelloAsso `Donation`, ou
+    le checkout de la page /don. Adhésions, billetterie, boutique, abonnements
+    de plan et contributions de cagnotte n'en sont pas.
+
+    L'espace doit porter la capacité de palier `matchOverlays` — sinon `402`.
+
+    `Cache-Control: public, s-maxage=5, stale-while-revalidate=15`.
+  operationId: getDonationsOverlaySource
+  tags:
+    - public/misc
+  security: []
+  parameters:
+    - name: from
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date
+      description: >-
+        Début du total (`AAAA-MM-JJ`, minuit heure de Paris). Défaut
+        aujourd'hui.
+    - name: after
+      in: query
+      required: false
+      schema:
+        type: string
+      description: >-
+        Identifiant d'un don déjà vu, ou instant ISO 8601 : seuls les dons
+        postérieurs sont rendus dans `donations`.
+    - name: tenant
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Slug de l'espace, pour une source d'un autre organisateur.
+  responses:
+    '200':
+      description: Les derniers dons et le total depuis `from`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DonationsOverlaySource'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '402':
+      description: >-
+        Le palier de l'espace n'ouvre pas les sources de stream (capacité
+        `matchOverlays`). Le corps nomme le palier en cours.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Error'
+            properties:
+              code:
+                type: string
+                enum:
+                  - PLAN_CAPABILITY_REQUIRED
+              capability:
+                type: string
+                enum:
+                  - matchOverlays
+              plan:
+                type: string
+              planLabel:
+                type: string
+    '405':
+      description: Méthode non autorisée (seul GET est accepté).
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

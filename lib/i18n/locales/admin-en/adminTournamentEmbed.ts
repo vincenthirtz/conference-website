@@ -55,6 +55,9 @@ export default {
   source_scrimResult_name: 'Scrim result',
   source_scrimResult_desc:
     'Both teams, the score and the winner on a transparent background — for the end-of-scrim screen. Follows the running scrim; otherwise the result that just came in, today’s next scrim (to set up the scene before the match) or the last one completed (under 24 h); &scrim=<slug> to pin one. The score shows as soon as it is validated on the site.',
+  source_donAlert_name: 'Donation alert (HelloAsso)',
+  source_donAlert_desc:
+    'A “Thank you for this donation of €10!” alert for every HelloAsso donation the association receives, on a transparent background — to sit next to Streamlabs, which has no HelloAsso integration. Amount only: the donor’s name is never shown (they type it for their tax receipt, not for the stream). Donations already received when the source opens are not replayed. &goal=500 adds a gauge (total since midnight, or since &from=YYYY-MM-DD), &gauge=only shows just the gauge, &duration=8 sets how long an alert stays (3 to 30 s), &demo=1 sends fake donations to set up the scene.',
   source_don_name: 'Donate (HelloAsso QR)',
   source_don_desc:
     'The association’s donation QR code, same as the /don page. Add &layout=corner for a bottom-right inset to keep on screen during games.',
