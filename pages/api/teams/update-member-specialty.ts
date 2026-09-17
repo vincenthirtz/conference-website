@@ -145,5 +145,5 @@ export default withSubjectRoute(
         : 'Specialite effacee.',
     });
   },
-  { tenantResolution: 'async', allowActAs: true }
+  { allowActAs: true }
 );

@@ -36,7 +36,7 @@ import { z } from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import {
   applyMatchScore,
   MatchFinalizationConflictError,
@@ -123,7 +123,9 @@ export default withAuthRoute(async function handler(
   }
   const { team1Score, team2Score } = parsedBody.data;
 
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: user.id,
+  });
 
   // 2) Match + capitaines, scope tenant.
   const { data: match, error: matchErr } = await supabaseAdmin

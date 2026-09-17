@@ -47,7 +47,7 @@ import {
   findAuthUserIdByBattleNetId,
 } from '@/utils/auth/battlenetLinks';
 import { supabaseAdmin } from '@/utils/supabase';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { grantBattlenetVerifiedReward } from '@/utils/tcg/grantBattlenetVerified';
 import { withBattlenetRewardParam } from '@/utils/tcg/battlenetRewardDisplay';
 import { LOGIN_STATE_COOKIE } from './login-start';
@@ -129,7 +129,13 @@ async function rewardVerification(
 ): Promise<boolean> {
   try {
     const outcome = await grantBattlenetVerifiedReward({
-      tenantId: resolveTenantIdForUserRequest(req),
+      // Même résolveur que `/api/player/tcg/*`, pour la MÊME joueuse : sans
+      // `authUserId`, la récompense tombait dans l'espace par défaut quel que
+      // soit celui où elle joue. Une lecture impossible lève, et le `catch`
+      // ci-dessous la traite comme un crédit non effectué.
+      tenantId: await resolveTenantIdForUserRequestAsync(req, {
+        authUserId: userId,
+      }),
       userId,
       battleNetId,
     });

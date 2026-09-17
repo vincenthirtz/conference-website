@@ -13,7 +13,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { hasTeamPermission } from '@/utils/teams/permissions';
 import { isValidTwitchValue } from '@/utils/social/profileHandles';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import {
   TEAM_PUBLIC_CONTENT_MAX_LENGTH,
   normalizeAccentColor,
@@ -130,7 +130,9 @@ export default withAuthRoute(async function handler(
     return res.status(400).json({ error: 'teamId invalide.' });
   }
 
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: user.id,
+  });
 
   const allowed = await hasTeamPermission(user.id, teamId, 'edit_public_page');
   if (!allowed) {

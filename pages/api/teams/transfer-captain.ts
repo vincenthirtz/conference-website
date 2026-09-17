@@ -285,5 +285,5 @@ export default withSubjectRoute(
       newCaptainUserId,
     });
   },
-  { tenantResolution: 'async', allowActAs: true }
+  { allowActAs: true }
 );

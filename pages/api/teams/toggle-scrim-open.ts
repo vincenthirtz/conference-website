@@ -84,5 +84,5 @@ export default withSubjectRoute(
         : 'Ton équipe n’est plus affichée comme ouverte aux scrims.',
     });
   },
-  { tenantResolution: 'async', allowActAs: true }
+  { allowActAs: true }
 );

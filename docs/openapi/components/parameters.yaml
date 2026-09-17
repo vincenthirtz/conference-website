@@ -32,7 +32,9 @@ SubjectAs:
     veut lire les donnees, a la place de l'appelant. Reserve au staff
     (role `admin` minimum), scope au tenant actif du staff, refuse sur
     toute methode autre que GET (403 `subject_read_only`) et journalise
-    dans `staff_logs`. Absent = l'appelant lit ses propres donnees.
+    dans `staff_logs`. Une cible rattachee a un AUTRE espace que l'espace
+    actif du staff est refusee (403 `subject_other_tenant`). Absent =
+    l'appelant lit ses propres donnees.
     Voir `utils/subject.ts`.
 TeamScope:
   name: teamId

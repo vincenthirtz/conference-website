@@ -305,5 +305,5 @@ export default withSubjectRoute(
   },
   // Mêmes options que /api/teams/invitations : le staff peut dépanner une
   // capitaine en act-as, et la résolution du tenant est asynchrone.
-  { tenantResolution: 'async', allowActAs: true }
+  { allowActAs: true }
 );

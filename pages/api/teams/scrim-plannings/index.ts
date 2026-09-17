@@ -105,5 +105,5 @@ export default withSubjectRoute(
 
     return res.status(200).json({ plannings: out });
   },
-  { tenantResolution: 'async', auditAction: 'view_captain_data' }
+  { auditAction: 'view_captain_data' }
 );

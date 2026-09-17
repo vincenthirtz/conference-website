@@ -35,7 +35,6 @@ type SearchResponse = { players: PlayerResult[] } | { error: string };
 // SUJET. GET uniquement, donc pas d'`allowActAs` : c'est de la consultation,
 // tracée en `view_captain_data`.
 export default withSubjectRoute(handler, {
-  tenantResolution: 'async',
   auditAction: 'view_captain_data',
 });
 

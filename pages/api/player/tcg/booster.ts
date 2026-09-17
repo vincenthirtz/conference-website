@@ -39,7 +39,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { BOOSTER_PRICE_COINS } from '@/utils/tcg/economy';
 import { purchaseBoosterAtomic } from '@/utils/tcg/walletRpc';
 
@@ -61,7 +61,9 @@ export default withAuthRoute(async function handler(
     return;
   }
 
-  const tenantId = resolveTenantIdForUserRequest(req);
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: user.id,
+  });
 
   const outcome = await purchaseBoosterAtomic({
     tenantId,

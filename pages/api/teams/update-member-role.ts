@@ -196,5 +196,5 @@ export default withSubjectRoute(
       message: `Role mis a jour vers "${newRole}".`,
     });
   },
-  { tenantResolution: 'async', allowActAs: true }
+  { allowActAs: true }
 );

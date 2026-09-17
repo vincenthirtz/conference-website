@@ -38,7 +38,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { RECYCLE_REFUND_COINS } from '@/utils/tcg/economy';
 import { refreshBalance } from '@/utils/tcg/grantVictoryRewards';
 import { cardSubjectKey } from '@/utils/tcg/subjectKey';
@@ -93,7 +93,9 @@ export default withAuthRoute(async function handler(
       .json({ error: 'Carte manquante.', code: 'missing_card' });
   }
 
-  const tenantId = resolveTenantIdForUserRequest(req);
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: user.id,
+  });
   const userId = user.id;
 
   // 1) Mes paquets OUVERTS. Une carte d'un paquet fermé n'est pas encore

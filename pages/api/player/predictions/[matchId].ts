@@ -21,7 +21,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { logger } from '@/utils/logger';
 import { predictionBodySchema } from '@/lib/apiContracts/player/predictions/body';
 import { readPredictionExclusions } from '@/utils/predictions/eligibility';
@@ -83,7 +83,9 @@ export default withAuthRoute(async function handler(
       .json({ error: 'Match invalide.', code: 'invalid_match' });
   }
 
-  const tenantId = resolveTenantIdForUserRequest(req);
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: user.id,
+  });
   const now = new Date();
 
   const matchRead = await readMatchForPrediction(tenantId, matchId);

@@ -2,7 +2,7 @@
 // route staff. Le GET délègue à `loadManagedTeamSlice` (helper serveur partagé
 // avec /api/player/dashboard) : source de vérité UNIQUE pour « mon équipe /
 // suis-je capitaine ». La route est désormais scopée tenant (via
-// resolveTenantIdForUserRequest), ce qui corrige l'ancien bug S5c où
+// withSubjectRoute → resolvePlayerTenant), ce qui corrige l'ancien bug S5c où
 // getManagedTeam était appelé sans tenantId et les queries non scopées.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';

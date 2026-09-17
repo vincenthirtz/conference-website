@@ -24,7 +24,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { logger } from '@/utils/logger';
 import {
   decodePacksCursor,
@@ -110,7 +110,9 @@ export default withAuthRoute(async function handler(
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Service indisponible.' });
   }
-  const tenantId = resolveTenantIdForUserRequest(req);
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: user.id,
+  });
 
   if (req.method === 'GET') return listTrades(req, res, tenantId, user.id);
   if (req.method === 'POST') return proposeTrade(req, res, tenantId, user.id);

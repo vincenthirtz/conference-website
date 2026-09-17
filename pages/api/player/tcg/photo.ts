@@ -30,7 +30,7 @@ import crypto from 'crypto';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import {
   IMAGE_MAX_BYTES,
   decodeImagePayload,
@@ -61,7 +61,9 @@ export default withAuthRoute(async function handler(
     return res.status(503).json({ error: 'Service indisponible.' });
   }
 
-  const tenantId = resolveTenantIdForUserRequest(req);
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: user.id,
+  });
 
   if (req.method === 'GET') return readState(res, user.id, tenantId);
   if (req.method === 'POST') return submitPhoto(req, res, user.id, tenantId);

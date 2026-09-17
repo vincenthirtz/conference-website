@@ -17,7 +17,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
 import { hasTeamPermission } from '@/utils/teams/permissions';
 import { isValidTwitchValue } from '@/utils/social/profileHandles';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import {
   MEMBER_DISPLAY_NAME_MAX,
   MEMBER_PRONOUNS_MAX,
@@ -100,7 +100,9 @@ export default withAuthRoute(async function handler(
     return res.status(400).json({ error: 'memberId invalide.' });
   }
 
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: user.id,
+  });
 
   // Look up the member to confirm she belongs to the team and to get her
   // user_id (needed for the self-edit allowance).

@@ -24,7 +24,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import {
   DEFAULT_TENANT_ID,
-  resolveTenantIdForUserRequest,
+  resolveTenantIdForUserRequestAsync,
 } from '@/utils/tenant';
 import { logger } from '@/utils/logger';
 import { revalidatePlayerCard } from '@/utils/tcg/revalidatePlayerCard';
@@ -51,7 +51,9 @@ export default withAuthRoute(async function handler(
     return res.status(503).json({ error: 'Service indisponible.' });
   }
   res.setHeader('Cache-Control', 'private, no-store');
-  const tenantId = resolveTenantIdForUserRequest(req);
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: user.id,
+  });
 
   if (req.method === 'GET') {
     if (

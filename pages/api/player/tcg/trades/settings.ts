@@ -29,7 +29,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { logger } from '@/utils/logger';
 import { TRADE_LIMITS, tradeSettingsSchema } from '@/utils/tcg/tradeRules';
 import {
@@ -46,7 +46,9 @@ export default withAuthRoute(async function handler(
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Service indisponible.' });
   }
-  const tenantId = resolveTenantIdForUserRequest(req);
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: user.id,
+  });
 
   if (req.method === 'GET') return readSettings(req, res, tenantId, user.id);
   if (req.method === 'PUT') return writeSettings(req, res, tenantId, user.id);

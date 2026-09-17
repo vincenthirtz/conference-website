@@ -40,6 +40,14 @@ import handler from '../../pages/api/player/tcg/booster';
 const PLAYER = '11111111-1111-4111-8111-111111111111';
 const PACK = 'a0000000-0000-4000-8000-000000000001';
 
+/**
+ * Lectures faites AVANT l'achat pour résoudre l'espace de la joueuse
+ * (`resolvePlayerTenant`, lot 10) : appartenances, et domaines propres quand
+ * l'hôte n'est pas celui de la plateforme. Elles n'écrivent rien — les cas
+ * « aucune écriture » les mettent donc de côté.
+ */
+const TENANT_RESOLUTION_READS = new Set(['team_members', 'tenants']);
+
 let _token = 0;
 function makeReq(over: Partial<Record<string, unknown>> = {}): any {
   _token += 1;
@@ -184,8 +192,12 @@ describe('POST /api/player/tcg/booster — issues dégradées', () => {
 
     expect(res.statusCode).toBe(503);
     expect(res.body.code).toBe('purchase_unavailable');
-    // Aucun repli sur l'ancien chemin en plusieurs requêtes.
-    expect(writes).toHaveLength(0);
+    // Aucun repli sur l'ancien chemin en plusieurs requêtes. Seules lectures
+    // admises : la résolution de l'espace de la joueuse (lot 10), qui précède
+    // l'achat et n'écrit rien.
+    expect(writes.filter((t) => !TENANT_RESOLUTION_READS.has(t))).toHaveLength(
+      0
+    );
   });
 
   it('signature introuvable côté Postgres (42883) : même refus', async () => {
@@ -222,7 +234,9 @@ describe('POST /api/player/tcg/booster — issues dégradées', () => {
     const res = await buy();
 
     expect(res.statusCode).toBe(500);
-    expect(touched).toHaveLength(0);
+    expect(touched.filter((t) => !TENANT_RESOLUTION_READS.has(t))).toHaveLength(
+      0
+    );
   });
 
   it('réponse inattendue : 500, jamais un faux succès', async () => {

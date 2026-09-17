@@ -21,7 +21,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { checkCollectionSets } from '@/utils/tcg/grantCollectionSets';
 
 export default withAuthRoute(async function handler(
@@ -43,7 +43,9 @@ export default withAuthRoute(async function handler(
   // Personnel, et peut changer à chaque ouverture de paquet.
   res.setHeader('Cache-Control', 'private, no-store');
 
-  const tenantId = resolveTenantIdForUserRequest(req);
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: user.id,
+  });
   const result = await checkCollectionSets({ tenantId, userId: user.id });
   if (!result.ok) {
     // Une progression illisible n'est pas « aucune série » : l'écran le dit.

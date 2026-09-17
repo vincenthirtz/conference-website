@@ -261,5 +261,5 @@ export default withSubjectRoute(
     res.setHeader('Allow', 'GET,POST');
     return res.status(405).json({ error: 'Method not allowed' });
   },
-  { tenantResolution: 'async', auditAction: 'view_captain_data' }
+  { auditAction: 'view_captain_data' }
 );

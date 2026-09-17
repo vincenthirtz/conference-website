@@ -14,7 +14,7 @@ import {
 } from '@/utils/teams/managementAccess';
 import type { TeamPermission } from '@/utils/teamRoles';
 import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../utils/logger';
@@ -95,7 +95,9 @@ export default withAuthRoute(async function handler(
   }
 
   const [teamIdA, teamIdB] = parts;
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: user.id,
+  });
 
   if (req.method === 'GET') {
     const team = await loadCaptainTeam(req, res, user, tenantId);

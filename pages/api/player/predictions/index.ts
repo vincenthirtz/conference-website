@@ -12,7 +12,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { getStaffByUserId, withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { logger } from '@/utils/logger';
 import { readPlayerPredictions } from '@/utils/predictions/readState';
 
@@ -29,7 +29,9 @@ export default withAuthRoute(async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const tenantId = resolveTenantIdForUserRequest(req);
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: user.id,
+  });
   const staff = await getStaffByUserId(user.id);
   const read = await readPlayerPredictions({
     tenantId,

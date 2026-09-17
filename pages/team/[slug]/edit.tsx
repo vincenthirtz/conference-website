@@ -11,7 +11,7 @@ import Image from 'next/image';
 import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { hasTeamPermission } from '@/utils/teams/permissions';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import {
   TEAM_PUBLIC_CONTENT_MAX_LENGTH,
   renderTeamPublicMarkdown,
@@ -100,7 +100,9 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     };
   }
 
-  const tenantId = resolveTenantIdForUserRequest(ctx.req, {
+  // Résolveur joueuse unique (utils/tenant.ts). `ctx.req` n'a pas de `query` :
+  // le résolveur relit `?teamId=` dans l'URL brute s'il est présent.
+  const tenantId = await resolveTenantIdForUserRequestAsync(ctx.req, {
     authUserId: user.id,
   });
 

@@ -347,5 +347,5 @@ export default withSubjectRoute(
       message: 'Membre mis a jour.',
     });
   },
-  { tenantResolution: 'async', allowActAs: true }
+  { allowActAs: true }
 );

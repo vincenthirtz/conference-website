@@ -24,7 +24,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { readPlayerBadges } from '@/utils/rating/readPlayerBadges';
 import { cardRarity, isFoil, MAP_CARD_RARITY } from '@/utils/tcg/rarity';
 import { DEFAULT_FANART_RARITY } from '@/utils/tcg/fanart';
@@ -86,7 +86,9 @@ export default withAuthRoute(async function handler(
     return res.status(503).json({ error: 'Service indisponible.' });
   }
 
-  const tenantId = resolveTenantIdForUserRequest(req);
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: user.id,
+  });
 
   if (req.method === 'GET') return listPacks(req, res, user.id, tenantId);
   if (req.method === 'POST') return openPack(req, res, user.id, tenantId);

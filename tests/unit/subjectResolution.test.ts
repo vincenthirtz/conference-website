@@ -7,7 +7,9 @@
 //   A. The wrapper itself, exercised through a probe handler, so the gating
 //      rules are asserted independently of any endpoint's business logic.
 //   B. One real endpoint (/api/player/matches) proving that an inspecting
-//      admin gets the TARGET's data, scoped to the STAFF's active tenant.
+//      admin gets the TARGET's data, scoped to the STAFF's active tenant —
+//      and, since lot 10, that the tenant is resolved FOR THE TARGET: a
+//      target who belongs to another space is refused (`subject_other_tenant`).
 //
 // Harness = staff/tenant setup of adminPlayerView.test.ts (staff row +
 // tenant_staff + active-tenant cookie) over the player-endpoint idiom of
@@ -512,15 +514,86 @@ describe('/api/player/matches — inspected via ?as=', () => {
     expect(logStaffActionMock).toHaveBeenCalledTimes(1);
   });
 
-  it("does NOT leak the target's data from another tenant", async () => {
+  it("does NOT leak the target's data from another tenant — and says why", async () => {
     // Target only plays in TENANT_B; the staff is acting in TENANT_A.
+    // Lot 10 : l'espace est résolu POUR LA JOUEUSE (B). Avant, on servait
+    // l'espace du staff à l'aveugle — un écran vide, lu comme « elle n'a
+    // rien ». Désormais un refus explicite, sans ligne de journal.
     seedTargetInTenantB();
+
+    const res = makeRes();
+    await matchesHandler(makeReq({ query: { as: TARGET_USER_ID } }), res);
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body).toMatchObject({ code: 'subject_other_tenant' });
+    expect(logStaffActionMock).not.toHaveBeenCalled();
+  });
+
+  it('resolves the tenant for the TARGET, never from the staff’s memberships', async () => {
+    // Le staff joue lui-même dans B ; la cible dans A, l'espace actif du staff.
+    seedTargetInTenantA();
+    (store.team_members as any[]).push({
+      id: 'tm-staff-b',
+      team_id: TEAM_B_ID,
+      tenant_id: TENANT_B,
+      user_id: STAFF_AUTH_USER_ID,
+      role: 'player',
+      created_at: '2020-01-01T00:00:00Z',
+    });
+
+    const res = makeRes();
+    await matchesHandler(makeReq({ query: { as: TARGET_USER_ID } }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).team).toMatchObject({ id: TEAM_A_ID });
+  });
+
+  it('a multi-space target is inspectable from each of her spaces', async () => {
+    // Appartenance la PLUS ANCIENNE dans B : seule, l'étape 3 choisirait B.
+    // Le staff agit dans A, où elle a aussi une équipe → A l'emporte.
+    seedTargetInTenantA();
+    (store.team_members as any[])[0].created_at = '2026-06-01T00:00:00Z';
+    (store.team_members as any[]).push({
+      id: 'tm-target-b',
+      team_id: TEAM_B_ID,
+      tenant_id: TENANT_B,
+      user_id: TARGET_USER_ID,
+      role: 'player',
+      created_at: '2026-01-01T00:00:00Z',
+    });
+
+    const res = makeRes();
+    await matchesHandler(makeReq({ query: { as: TARGET_USER_ID } }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).team).toMatchObject({ id: TEAM_A_ID });
+  });
+
+  it('a target without any team (no signal) stays inspectable in the staff tenant', async () => {
+    store.teams = [] as any;
+    store.team_members = [] as any;
+    store.matches = [];
 
     const res = makeRes();
     await matchesHandler(makeReq({ query: { as: TARGET_USER_ID } }), res);
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({ team: null, matches: [] });
+  });
+
+  it('ignores a ?teamId= the TARGET is not a member of', async () => {
+    // L'équipe B existe, mais la cible n'y est pas : le paramètre n'est pas
+    // une preuve, on retombe sur son appartenance (A).
+    seedTargetInTenantA();
+
+    const res = makeRes();
+    await probe(
+      makeReq({ query: { as: TARGET_USER_ID, teamId: TEAM_B_ID } }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(lastSubject?.tenantId).toBe(TENANT_A);
   });
 
   it('still serves the caller their own matches when ?as= is absent', async () => {

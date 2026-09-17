@@ -24,11 +24,25 @@
 //      which is why such handlers can keep sharing a single `userId` binding.
 //      Any handler gaining `allowActAs` must be re-read first: from that
 //      moment its write branch really can act on someone else.
-//   2. TENANT SCOPING. When inspecting, the scope is the STAFF's ACTIVE tenant
-//      (cookie `staff_active_tenant_id` → resolveActiveTenant), NOT the tenant
-//      resolved for the target user. This preserves the guarantee of the
-//      player-view/captain-view endpoints: an admin can never read a user's
-//      data outside the tenant they are currently acting in.
+//   2. TENANT SCOPING. Self path: `resolvePlayerTenant` (utils/tenant.ts —
+//      active team, custom domain, stable membership, default). Inspection
+//      path: the tenant is resolved FOR THE INSPECTED PLAYER — with her
+//      memberships and her `?teamId=`, never the staff's — then checked
+//      against the STAFF's ACTIVE tenant (cookie `staff_active_tenant_id` →
+//      resolveActiveTenant):
+//        - same tenant, or no signal at all for the player (a free agent has
+//          no membership: that is not evidence she lives elsewhere) → scope =
+//          the staff's active tenant ;
+//        - a POSITIVE signal pointing to another tenant → 403
+//          `subject_other_tenant`. Lot 10 (2026-09-17): before, the staff's
+//          tenant was used blindly, so inspecting a player of space B from
+//          space A rendered an empty screen that read as « she has nothing ».
+//          Refusing says what is going on (switch the active space) and keeps
+//          the guarantee of the player-view/captain-view endpoints: an admin
+//          can never read a user's data outside the tenant they are acting in.
+//      When the player has memberships in several tenants, the one in the
+//      staff's active tenant wins (`preferTenantId`), so a multi-space player
+//      stays inspectable from each of her spaces.
 //   3. EXISTENCE. An unknown target is a 404, not an empty snapshot.
 //   4. AUDIT. Every inspection request is written to staff_logs
 //      ('view_player_data' by default, 'view_captain_data' for the captain
@@ -80,10 +94,7 @@ import {
   StaffUnauthorizedError,
   type StaffRole,
 } from './staff';
-import {
-  resolveTenantIdForUserRequest,
-  resolveTenantIdForUserRequestAsync,
-} from './tenant';
+import { resolvePlayerTenant } from './tenant';
 import { logStaffAction } from './staffLogs';
 import type { StaffLogAction } from '@/types/staffLogs';
 import {
@@ -110,7 +121,7 @@ const UUID_RE =
 export type SubjectContext = {
   /** Whose data the handler must read. Use this instead of `user.id`. */
   userId: string;
-  /** Tenant to scope every query with. Use this instead of resolveTenantIdForUserRequest(). */
+  /** Tenant to scope every query with. Use this instead of resolving it again. */
   tenantId: string;
   /** The authenticated caller — always the real session user. */
   callerId: string;
@@ -138,15 +149,6 @@ export type SubjectRouteOptions = {
   /** Minimum staff role allowed to inspect. Default 'admin'. */
   minRole?: StaffRole;
   /**
-   * Which tenant resolver to use for the SELF path — must match what the
-   * endpoint used before migrating, otherwise its tenant scoping silently
-   * changes. 'sync' = resolveTenantIdForUserRequest (no DB hit),
-   * 'async' = resolveTenantIdForUserRequestAsync (reads team_members).
-   * Default 'sync'. Irrelevant on the inspection path, where the tenant is
-   * always the staff's active tenant.
-   */
-  tenantResolution?: 'sync' | 'async';
-  /**
    * Autorise les écritures « agir en tant que » (S4) sur cet endpoint.
    *
    * Défaut `false` : `?as=` reste refusé hors GET. Passer `true` est une
@@ -163,7 +165,8 @@ export type SubjectErrorCode =
   | 'invalid_subject'
   | 'subject_read_only'
   | 'subject_forbidden'
-  | 'subject_not_found';
+  | 'subject_not_found'
+  | 'subject_other_tenant';
 
 /**
  * Le client demande-t-il explicitement d'AGIR à la place du sujet ?
@@ -194,12 +197,13 @@ export async function resolveSubject(
   user: User,
   options: SubjectRouteOptions = {}
 ): Promise<SubjectContext | null> {
+  // Un seul résolveur pour tous les endpoints (lot 10). L'ancienne option
+  // `tenantResolution: 'sync' | 'async'` choisissait entre un défaut figé et
+  // une lecture non ordonnée : aucune des deux n'était juste dès deux espaces.
   const self = async (): Promise<SubjectContext> => ({
     userId: user.id,
-    tenantId:
-      options.tenantResolution === 'async'
-        ? await resolveTenantIdForUserRequestAsync(req, { authUserId: user.id })
-        : resolveTenantIdForUserRequest(req, { authUserId: user.id }),
+    tenantId: (await resolvePlayerTenant(req, { authUserId: user.id }))
+      .tenantId,
     callerId: user.id,
     isInspection: false,
     staffId: null,
@@ -268,6 +272,25 @@ export async function resolveSubject(
     return null;
   }
 
+  // Espace de la joueuse INSPECTÉE — ses appartenances, son `?teamId=`, jamais
+  // ceux du staff. Cf. règle 2 en tête de fichier. Avant l'audit : une
+  // inspection refusée n'écrit pas de ligne de journal, comme un 403/404.
+  const targetTenant = await resolvePlayerTenant(req, {
+    authUserId: target,
+    preferTenantId: staffCtx.tenantId,
+  });
+  if (
+    targetTenant.source !== 'default' &&
+    targetTenant.tenantId !== staffCtx.tenantId
+  ) {
+    res.status(403).json({
+      error:
+        "Cette joueuse relève d'un autre espace : bascule l'espace actif pour l'inspecter.",
+      code: 'subject_other_tenant',
+    });
+    return null;
+  }
+
   // Audit — never block the response on a logging failure. Une écriture ne
   // doit JAMAIS être indiscernable d'une consultation dans le journal : slug
   // dédié + méthode HTTP dans le payload.
@@ -308,7 +331,7 @@ export async function resolveSubject(
  * inspectable by staff:
  *
  *   export default withSubjectRoute(async function handler(req, res, { user, subject }) {
- *     const { userId, tenantId } = subject;   // instead of user.id + resolveTenantIdForUserRequest
+ *     const { userId, tenantId } = subject;   // instead of user.id + a tenant resolver
  *     ...
  *   });
  *

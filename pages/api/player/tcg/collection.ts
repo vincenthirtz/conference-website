@@ -34,7 +34,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
 import { POOL_LIMIT } from '@/utils/tcg/drawPack';
 import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
@@ -174,7 +174,9 @@ export default withAuthRoute(async function handler(
   // une copie, page comprise.
   res.setHeader('Cache-Control', 'private, no-store');
 
-  const tenantId = resolveTenantIdForUserRequest(req);
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: user.id,
+  });
   const userId = user.id;
 
   // 1-2) Mes cartes encore possédées : paquets OUVERTS, recyclées exclues, lues

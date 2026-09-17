@@ -172,168 +172,160 @@ async function countUnreviewedEncounters(
   }
 }
 
-export default withSubjectRoute(
-  async function handler(
-    req: NextApiRequest,
-    res: NextApiResponse,
-    { subject }
-  ) {
-    if (req.method !== 'GET') {
-      res.setHeader('Allow', 'GET');
-      return res.status(405).json({ error: 'Method not allowed' });
-    }
+export default withSubjectRoute(async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  { subject }
+) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
-    if (
-      applyRateLimit(req, res, { max: 30, windowMs: 60_000 }, 'team-health')
-    ) {
-      return;
-    }
+  if (applyRateLimit(req, res, { max: 30, windowMs: 60_000 }, 'team-health')) {
+    return;
+  }
 
-    const { userId, tenantId } = subject;
+  const { userId, tenantId } = subject;
 
-    const access = await getManagedTeamForRequest(req, userId, tenantId);
-    if (!access) {
-      // Pas de rôle de gestion : rien à diagnostiquer ici. La checklist
-      // individuelle (R11) couvre déjà ce qu'un membre peut réparer seul.
-      return res.status(200).json(EMPTY);
-    }
-    const teamId = access.teamId;
+  const access = await getManagedTeamForRequest(req, userId, tenantId);
+  if (!access) {
+    // Pas de rôle de gestion : rien à diagnostiquer ici. La checklist
+    // individuelle (R11) couvre déjà ce qu'un membre peut réparer seul.
+    return res.status(200).json(EMPTY);
+  }
+  const teamId = access.teamId;
 
-    const { data: teamRow, error: teamErr } = await supabaseAdmin
-      .from('teams')
-      .select('id, name, captain_id')
-      .eq('id', teamId)
-      .eq('tenant_id', tenantId)
-      .maybeSingle();
+  const { data: teamRow, error: teamErr } = await supabaseAdmin
+    .from('teams')
+    .select('id, name, captain_id')
+    .eq('id', teamId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
 
-    if (teamErr) {
-      logger.error('[team-health] team error', teamErr);
-      return res.status(500).json({ error: "Lecture de l'équipe impossible." });
-    }
-    const team = teamRow as {
-      id: string;
-      name: string;
-      captain_id: string | null;
-    } | null;
-    if (!team) return res.status(200).json(EMPTY);
+  if (teamErr) {
+    logger.error('[team-health] team error', teamErr);
+    return res.status(500).json({ error: "Lecture de l'équipe impossible." });
+  }
+  const team = teamRow as {
+    id: string;
+    name: string;
+    captain_id: string | null;
+  } | null;
+  if (!team) return res.status(200).json(EMPTY);
 
-    const { data: memberRows, error: membersErr } = await supabaseAdmin
-      .from('team_members')
-      .select(
-        'user_id, role, is_substitute, battle_tag, battle_tag_verified_at'
-      )
+  const { data: memberRows, error: membersErr } = await supabaseAdmin
+    .from('team_members')
+    .select('user_id, role, is_substitute, battle_tag, battle_tag_verified_at')
+    .eq('team_id', teamId)
+    .eq('tenant_id', tenantId);
+
+  if (membersErr) {
+    logger.error('[team-health] members error', membersErr);
+    return res.status(500).json({ error: 'Lecture du roster impossible.' });
+  }
+
+  const members = (memberRows || []) as Row[];
+  const memberIds = members
+    .map((m) => m.user_id as string | null)
+    .filter((id): id is string => !!id);
+
+  // L'encadrement (coach / manager) n'aligne personne et n'a pas forcément de
+  // compte Overwatch : il sort de l'effectif ET des constats BattleTag (règle
+  // partagée, cf. utils/teams/roleKind.ts). Les constats « compte dormant » et
+  // « Discord non lié » restent, eux, valables pour tout le monde.
+  const playingMembers = members.filter(
+    (m) => !isNonPlayingTeamRole(m.role as string | null)
+  );
+  const starters = playingMembers.filter((m) => !m.is_substitute).length;
+  const missingBattleTags = playingMembers.filter(
+    (m) => !String(m.battle_tag ?? '').trim()
+  ).length;
+  // Un BattleTag absent est déjà compté ci-dessus : ne pas le recompter ici,
+  // sinon la même personne apparaît dans deux constats et l'équipe croit avoir
+  // deux problèmes là où elle n'en a qu'un.
+  const unverifiedBattleTags = playingMembers.filter(
+    (m) => String(m.battle_tag ?? '').trim() && !m.battle_tag_verified_at
+  ).length;
+
+  const [
+    linksRes,
+    availabilityRes,
+    searchesRes,
+    requiredInfo,
+    neverLoggedIn,
+    unreviewedEncounters,
+  ] = await Promise.all([
+    // `user_discord_links` est GLOBALE (pas de tenant_id). Helper canonique :
+    // la colonne est `auth_user_id`. Filtrée sur `user_id` (inexistante), la
+    // query en ligne d'origine renvoyait une erreur avalée — le constat
+    // `discord_unlinked` comptait donc TOUT le roster, en permanence.
+    getDiscordLinksForUsers(memberIds as string[]),
+    supabaseAdmin
+      .from('team_availability')
+      .select('user_id, timezone, slots')
       .eq('team_id', teamId)
-      .eq('tenant_id', tenantId);
+      .eq('tenant_id', tenantId),
+    supabaseAdmin
+      .from('scrim_searches')
+      .select('team_id, slots, status, expires_at')
+      .eq('tenant_id', tenantId)
+      .eq('team_id', teamId)
+      .eq('status', 'active'),
+    resolveRequiredStarters(tenantId, teamId),
+    countNeverLoggedIn(memberIds),
+    countUnreviewedEncounters(tenantId, teamId),
+  ]);
 
-    if (membersErr) {
-      logger.error('[team-health] members error', membersErr);
-      return res.status(500).json({ error: 'Lecture du roster impossible.' });
-    }
+  const linkedIds = new Set(linksRes.keys());
+  const discordUnlinked = memberIds.filter((id) => !linkedIds.has(id)).length;
 
-    const members = (memberRows || []) as Row[];
-    const memberIds = members
-      .map((m) => m.user_id as string | null)
-      .filter((id): id is string => !!id);
-
-    // L'encadrement (coach / manager) n'aligne personne et n'a pas forcément de
-    // compte Overwatch : il sort de l'effectif ET des constats BattleTag (règle
-    // partagée, cf. utils/teams/roleKind.ts). Les constats « compte dormant » et
-    // « Discord non lié » restent, eux, valables pour tout le monde.
-    const playingMembers = members.filter(
-      (m) => !isNonPlayingTeamRole(m.role as string | null)
-    );
-    const starters = playingMembers.filter((m) => !m.is_substitute).length;
-    const missingBattleTags = playingMembers.filter(
-      (m) => !String(m.battle_tag ?? '').trim()
-    ).length;
-    // Un BattleTag absent est déjà compté ci-dessus : ne pas le recompter ici,
-    // sinon la même personne apparaît dans deux constats et l'équipe croit avoir
-    // deux problèmes là où elle n'en a qu'un.
-    const unverifiedBattleTags = playingMembers.filter(
-      (m) => String(m.battle_tag ?? '').trim() && !m.battle_tag_verified_at
-    ).length;
-
-    const [
-      linksRes,
-      availabilityRes,
-      searchesRes,
-      requiredInfo,
-      neverLoggedIn,
-      unreviewedEncounters,
-    ] = await Promise.all([
-      // `user_discord_links` est GLOBALE (pas de tenant_id). Helper canonique :
-      // la colonne est `auth_user_id`. Filtrée sur `user_id` (inexistante), la
-      // query en ligne d'origine renvoyait une erreur avalée — le constat
-      // `discord_unlinked` comptait donc TOUT le roster, en permanence.
-      getDiscordLinksForUsers(memberIds as string[]),
-      supabaseAdmin
-        .from('team_availability')
-        .select('user_id, timezone, slots')
-        .eq('team_id', teamId)
-        .eq('tenant_id', tenantId),
-      supabaseAdmin
-        .from('scrim_searches')
-        .select('team_id, slots, status, expires_at')
-        .eq('tenant_id', tenantId)
-        .eq('team_id', teamId)
-        .eq('status', 'active'),
-      resolveRequiredStarters(tenantId, teamId),
-      countNeverLoggedIn(memberIds),
-      countUnreviewedEncounters(tenantId, teamId),
-    ]);
-
-    const linkedIds = new Set(linksRes.keys());
-    const discordUnlinked = memberIds.filter((id) => !linkedIds.has(id)).length;
-
-    const memberIdSet = new Set(memberIds);
-    const rhythmInputs: RhythmMemberInput[] = [];
-    for (const row of (availabilityRes.data || []) as Row[]) {
-      const userId = row.user_id as string;
-      if (!memberIdSet.has(userId)) continue;
-      const normalized = normalizeRhythmSlots(row.slots);
-      if (!normalized.ok || normalized.slots.length === 0) continue;
-      rhythmInputs.push({
-        userId,
-        timezone: (row.timezone as string | null) || 'Europe/Paris',
-        slots: normalized.slots,
-      });
-    }
-    const heatmap = buildRhythmHeatmap(rhythmInputs, 'Europe/Paris');
-    const hasRhythmCore =
-      coreRhythmSlots(heatmap, rhythmCoreThreshold(memberIds.length)).length >
-      0;
-
-    const hasLiveScrimSearch = (
-      (searchesRes.data || []) as ScrimSearchRow[]
-    ).some((s) => isSearchLive(s));
-
-    const issues = computeTeamHealth({
-      memberCount: memberIds.length,
-      starters,
-      requiredStarters: requiredInfo.required,
-      hasCaptain: !!team.captain_id,
-      missingBattleTags,
-      unverifiedBattleTags,
-      discordUnlinked,
-      neverLoggedIn,
-      rhythmDeclared: rhythmInputs.length,
-      hasLiveScrimSearch,
-      hasRhythmCore,
-      unreviewedEncounters,
+  const memberIdSet = new Set(memberIds);
+  const rhythmInputs: RhythmMemberInput[] = [];
+  for (const row of (availabilityRes.data || []) as Row[]) {
+    const userId = row.user_id as string;
+    if (!memberIdSet.has(userId)) continue;
+    const normalized = normalizeRhythmSlots(row.slots);
+    if (!normalized.ok || normalized.slots.length === 0) continue;
+    rhythmInputs.push({
+      userId,
+      timezone: (row.timezone as string | null) || 'Europe/Paris',
+      slots: normalized.slots,
     });
+  }
+  const heatmap = buildRhythmHeatmap(rhythmInputs, 'Europe/Paris');
+  const hasRhythmCore =
+    coreRhythmSlots(heatmap, rhythmCoreThreshold(memberIds.length)).length > 0;
 
-    const payload: TeamHealthResponse = {
-      teamId: team.id,
-      teamName: team.name,
-      issues,
-      blockingCount: countBlocking(issues),
-      memberCount: memberIds.length,
-      requiredStarters: requiredInfo.required,
-      requiredStartersSource: requiredInfo.source,
-    };
+  const hasLiveScrimSearch = (
+    (searchesRes.data || []) as ScrimSearchRow[]
+  ).some((s) => isSearchLive(s));
 
-    res.setHeader('Cache-Control', 'private, max-age=30');
-    return res.status(200).json(payload);
-  },
-  { tenantResolution: 'async' }
-);
+  const issues = computeTeamHealth({
+    memberCount: memberIds.length,
+    starters,
+    requiredStarters: requiredInfo.required,
+    hasCaptain: !!team.captain_id,
+    missingBattleTags,
+    unverifiedBattleTags,
+    discordUnlinked,
+    neverLoggedIn,
+    rhythmDeclared: rhythmInputs.length,
+    hasLiveScrimSearch,
+    hasRhythmCore,
+    unreviewedEncounters,
+  });
+
+  const payload: TeamHealthResponse = {
+    teamId: team.id,
+    teamName: team.name,
+    issues,
+    blockingCount: countBlocking(issues),
+    memberCount: memberIds.length,
+    requiredStarters: requiredInfo.required,
+    requiredStartersSource: requiredInfo.source,
+  };
+
+  res.setHeader('Cache-Control', 'private, max-age=30');
+  return res.status(200).json(payload);
+});

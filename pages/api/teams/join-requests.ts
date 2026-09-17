@@ -86,7 +86,6 @@ export default withSubjectRoute(
     return res.status(405).json({ error: 'Method not allowed' });
   },
   {
-    tenantResolution: 'async',
     auditAction: 'view_captain_data',
     allowActAs: true,
   }

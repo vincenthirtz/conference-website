@@ -31,7 +31,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
 import {
@@ -103,7 +103,9 @@ export default withAuthRoute(async function handler(
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Service indisponible.' });
   }
-  const tenantId = resolveTenantIdForUserRequest(req);
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: user.id,
+  });
   const method = req.method ?? 'GET';
 
   if (method === 'GET') return listMine(req, res, user.id, tenantId);

@@ -79,5 +79,5 @@ export default withSubjectRoute(
         : 'Ton equipe est fermee aux nouvelles demandes.',
     });
   },
-  { tenantResolution: 'async', allowActAs: true }
+  { allowActAs: true }
 );

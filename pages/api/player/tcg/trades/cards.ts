@@ -24,7 +24,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { logger } from '@/utils/logger';
 import { compareCollectionOrder } from '@/utils/tcg/pageCursor';
 import { tradeIdSchema } from '@/utils/tcg/tradeRules';
@@ -61,7 +61,9 @@ export default withAuthRoute(async function handler(
     return;
   }
 
-  const tenantId = resolveTenantIdForUserRequest(req);
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+    authUserId: user.id,
+  });
   res.setHeader('Cache-Control', 'private, no-store');
 
   let targetId: string | null = null;

@@ -631,7 +631,14 @@ describe('nombre de lectures', () => {
     await handler(
       {
         method: 'POST',
-        headers: { host: 'h', authorization: `Bearer t-${Math.random()}` },
+        // Hôte de la PLATEFORME : la résolution d'espace de la joueuse (lot 10)
+        // ne lit alors pas les domaines propres. Avec un hôte inconnu, le
+        // premier appel les lisait et le second les trouvait en cache — une
+        // lecture d'écart qui n'a rien à voir avec la taille du paquet.
+        headers: {
+          host: 'owwomenscup.fr',
+          authorization: `Bearer t-${Math.random()}`,
+        },
         cookies: {},
         query: {},
         body: { packId: PACK },

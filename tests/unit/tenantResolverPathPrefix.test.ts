@@ -9,19 +9,17 @@
 // table `tenants` et observer le nombre de `from('tenants')` appelés (le
 // helper expose `fromCalls`).
 
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   resetSupabaseMock,
   store,
   fromCalls,
-  supabaseAdmin,
 } from './__helpers__/supabaseMock';
 import {
   DEFAULT_TENANT_ID,
   __resetTenantSlugCacheForTests,
   getTenantIdBySlug,
   resolveTenantIdForPublicRequestAsync,
-  resolveTenantIdForUserRequestAsync,
 } from '../../utils/tenant';
 
 const CONFERENCE_ID = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
@@ -208,57 +206,8 @@ describe('resolveTenantIdForPublicRequestAsync()', () => {
 });
 
 /* ---------------------------------------------------------------------------
- * resolveTenantIdForUserRequestAsync — membership-based user-level resolution
+ * Résolveur JOUEUSE (`resolveTenantIdForUserRequestAsync` / `resolvePlayerTenant`)
+ *
+ * Couvert par tests/unit/playerTenantResolver.test.ts (règle d'ordre, stabilité,
+ * erreurs) et tests/unit/playerTenantParity.test.ts (parité route par route).
  * ------------------------------------------------------------------------- */
-
-describe('resolveTenantIdForUserRequestAsync()', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('returns the tenant of the user membership when found', async () => {
-    seedTenants();
-    store['team_members'] = [
-      { id: 'm1', user_id: 'user-1', tenant_id: ESPORT_CLUB_ID },
-    ];
-    const id = await resolveTenantIdForUserRequestAsync(makeReq('/tournois'), {
-      authUserId: 'user-1',
-    });
-    expect(id).toBe(ESPORT_CLUB_ID);
-  });
-
-  it('falls back to DEFAULT_TENANT_ID when the user has no membership', async () => {
-    store['team_members'] = [];
-    const id = await resolveTenantIdForUserRequestAsync(makeReq('/tournois'), {
-      authUserId: 'user-without-team',
-    });
-    expect(id).toBe(DEFAULT_TENANT_ID);
-  });
-
-  it('falls back to DEFAULT_TENANT_ID when no authUserId is provided', async () => {
-    const id = await resolveTenantIdForUserRequestAsync(makeReq('/tournois'), {
-      authUserId: null,
-    });
-    expect(id).toBe(DEFAULT_TENANT_ID);
-  });
-
-  it('falls back to DEFAULT_TENANT_ID on a DB error (never throws)', async () => {
-    vi.spyOn(supabaseAdmin, 'from').mockReturnValueOnce({
-      select: () => ({
-        eq: () => ({
-          limit: () => ({
-            maybeSingle: () =>
-              Promise.resolve({
-                data: null,
-                error: { message: 'boom' },
-              }),
-          }),
-        }),
-      }),
-    } as never);
-    const id = await resolveTenantIdForUserRequestAsync(makeReq('/tournois'), {
-      authUserId: 'user-1',
-    });
-    expect(id).toBe(DEFAULT_TENANT_ID);
-  });
-});

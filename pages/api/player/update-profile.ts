@@ -9,7 +9,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
 import { readPlayerTwitchSource } from '@/utils/rating/readPlayerProfile';
 import { ALLOWED_SPECIALTIES, validateSpecialty } from '@/utils/apiHelpers';
@@ -278,7 +278,7 @@ export default withAuthRoute(async function handler(
   // avait rien a propager).
   let rosterSynced = true;
   if (Object.keys(rosterUpdates).length > 0) {
-    const tenantId = resolveTenantIdForUserRequest(req, {
+    const tenantId = await resolveTenantIdForUserRequestAsync(req, {
       authUserId: user.id,
     });
     // L'erreur etait ignoree et la route repondait 200 : compte et roster
@@ -346,7 +346,7 @@ async function handleGet(
   )
     return;
 
-  const tenantId = resolveTenantIdForUserRequest(req, {
+  const tenantId = await resolveTenantIdForUserRequestAsync(req, {
     authUserId: user.id,
   });
   try {

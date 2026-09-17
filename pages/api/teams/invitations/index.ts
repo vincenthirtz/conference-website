@@ -326,5 +326,5 @@ export default withSubjectRoute(
       email_sent: emailSent,
     });
   },
-  { tenantResolution: 'async', allowActAs: true }
+  { allowActAs: true }
 );

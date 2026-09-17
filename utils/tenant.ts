@@ -21,6 +21,10 @@
 //     mécanisme prévu pour ça (une clé d'API authentifiée porte déjà son
 //     tenant, cf. `utils/publicWriteApi.ts`). Le domaine et le préfixe de
 //     chemin restent reconnus, sans usage aujourd'hui.
+//   - Les routes JOUEUSE (`pages/api/player/**`, `teams/**`, `demandes/**`,
+//     `withSubjectRoute`) passent par UN résolveur, `resolvePlayerTenant` :
+//     équipe active prouvée → domaine propre → appartenance stable → défaut.
+//     La règle complète est en tête de ce résolveur, plus bas.
 //   - Le back-office résout le tenant depuis la session staff (tenant actif,
 //     cf. `utils/adminTenants.ts`), et le bot depuis sa clé et le serveur
 //     d'origine (cf. `utils/botAuth.ts`).
@@ -41,6 +45,7 @@ import type { NextApiRequest } from 'next';
 import type { IncomingMessage } from 'http';
 import { supabaseAdmin } from './supabase';
 import { logger } from './logger';
+import { TEAM_SCOPE_QUERY_PARAM } from './teamScopeParam';
 import {
   tenantHasCapability,
   type TenantPlan,
@@ -234,8 +239,8 @@ export async function resolveGuildTenant(
  *     pages qui veulent décider d'un 404 si le slug ne matche pas (utile
  *     dans `getServerSideProps` de `pages/[tenantSlug]/tournois.tsx`).
  *
- * `resolveTenantIdForUserRequest` reste mono-tenant en V1 — voir le TODO
- * dédié.
+ * Les requêtes JOUEUSE authentifiées ont leur propre résolveur,
+ * `resolvePlayerTenant` (plus bas) : ne pas leur appliquer ceux-ci.
  */
 
 /* -----------------------------------------------------------------------
@@ -466,83 +471,283 @@ function extractTenantQueryParam(url: string | undefined): string | null {
   return SLUG_RE.test(slug) ? slug : null;
 }
 
-/**
- * Résout le tenant pour une requête user-level (capitaine/manager, session
- * Supabase active). En V1 mono-tenant, default `DEFAULT_TENANT_ID`. À terme,
- * on lira d'abord la team gérée par le user, puis fallback URL.
+/* ===========================================================================
+ * Résolveur JOUEUSE — l'espace d'une requête authentifiée (lot 10)
+ * ===========================================================================
  *
- * Comme `resolveTenantIdForPublicRequest`, accepte n'importe quel `req`
- * exposant `headers` (NextApiRequest ou IncomingMessage SSR).
+ * UN SEUL résolveur pour toutes les routes où une joueuse (ou une capitaine,
+ * une manager) agit en son nom : `pages/api/player/**`, `pages/api/teams/**`,
+ * `pages/api/demandes/**`, et `withSubjectRoute`.
+ *
+ * POURQUOI — audit du lot 10 (2026-09-17). Il en existait deux :
+ *   - une version SYNCHRONE qui ignorait ses arguments et rendait toujours
+ *     `DEFAULT_TENANT_ID` (`TODO(S7)`). ~37 routes en dépendaient — report de
+ *     score, pronostics, les 14 routes TCG, profil, tableau de bord… Dès qu'un
+ *     second espace a de vraies joueuses, une joueuse de l'espace B écrivait
+ *     ses pronostics, ses pièces et ses paquets DANS L'ESPACE A, et apparaissait
+ *     dans ses classements ;
+ *   - une version ASYNCHRONE qui lisait `team_members … .limit(1)` SANS ORDRE :
+ *     une joueuse membre d'équipes dans deux espaces obtenait l'un ou l'autre
+ *     d'une requête à l'autre, au gré du plan d'exécution de Postgres — pire
+ *     qu'un défaut fixe, parce qu'indétectable.
+ * La version synchrone est supprimée : une résolution d'espace qui ne lit rien
+ * ne peut pas être juste, et la garder invitait à la réutiliser.
+ *
+ * ORDRE DE RÉSOLUTION (décidé par la responsable, du plus explicite au repli) :
+ *
+ *   1. L'ÉQUIPE ACTIVE — `?teamId=` (posé par `withTeam()`, cf.
+ *      `components/player/ActiveTeamContext.tsx` ; les routes
+ *      `/api/teams/[teamId]/...` fournissent la même clé par leur segment).
+ *      Retenue SEULEMENT si la joueuse est membre de l'équipe (ligne
+ *      `team_members`) ou sa capitaine (`teams.captain_id`) : un paramètre
+ *      n'est pas une preuve, et sans cette garde n'importe qui écrirait dans
+ *      n'importe quel espace en changeant un identifiant d'URL. Paramètre
+ *      invalide ou non prouvé → ignoré, on passe à l'étape suivante.
+ *
+ *   2. LE DOMAINE PROPRE de l'espace (`tenants.custom_domain`, vérifié, actif,
+ *      plan white-label — cf. `resolveTenantByHostResult`). Rien d'autre à
+ *      cette étape, et en particulier PAS le repli sur l'espace par défaut : sur
+ *      owwomenscup.fr, qui n'est le domaine propre de personne, on continue.
+ *      Les deux autres signaux du résolveur public sont VOLONTAIREMENT exclus :
+ *        - le préfixe de chemin ne peut pas s'appliquer — `api` est un segment
+ *          réservé, et sur une page SSR le premier segment est un nom de page
+ *          (`/team/...`), pas un espace ;
+ *        - `?tenant=<slug>` est une affirmation du client, qu'aucun écran
+ *          joueuse n'envoie (vérifié le 2026-09-17). Classé AVANT l'appartenance,
+ *          il laisserait une joueuse écrire dans l'espace de son choix.
+ *
+ *   3. UNE APPARTENANCE D'ÉQUIPE choisie de façon STABLE : la plus ancienne
+ *      (`team_members.created_at`), puis `tenant_id`, puis `team_id` pour
+ *      départager. Deux requêtes identiques rendent toujours le même espace.
+ *      (Inspection staff : si l'une des appartenances est dans l'espace actif
+ *      du staff, c'est elle — cf. `preferTenantId` et `utils/subject.ts`.)
+ *
+ *   4. Sinon, `DEFAULT_TENANT_ID`.
+ *
+ * ÉCHEC DE LECTURE ≠ ABSENCE DE SIGNAL. Une erreur Supabase à l'étape 1, 2 ou 3
+ * LÈVE `TenantResolutionError` au lieu de retomber sur l'espace par défaut :
+ * sinon une panne transitoire attribuerait l'écriture d'une joueuse de B à
+ * l'espace A — « valide, et fausse », même raisonnement que l'audit du
+ * 2026-09-12 sur le résolveur public. Les routes sont enveloppées par
+ * `withAuthRoute`, qui traduit l'exception en 500 : l'écran réessaie.
+ * (L'ancienne version asynchrone avalait l'erreur ; c'est un changement
+ * assumé.)
+ *
+ * COÛT. Une lecture `team_members` indexée (`user_id`) par requête, qui sert à
+ * la fois l'étape 1 et l'étape 3. S'y ajoutent, rarement : une lecture `teams`
+ * quand `?teamId=` ne correspond à aucune appartenance (capitaine sans ligne
+ * membre, ou paramètre périmé), et la lecture des domaines propres — jamais
+ * sur owwomenscup.fr, les previews ni localhost, cachée 60 s ailleurs.
+ * Le résultat est MÉMOÏSÉ PAR REQUÊTE (WeakMap sur l'objet `req`) : une route
+ * qui résout deux fois ne relit pas. Pas au-delà de la requête — une joueuse
+ * peut changer d'équipe entre deux appels.
  */
-export function resolveTenantIdForUserRequest(
-  _req: RequestLike,
-  _userContext?: { authUserId?: string | null } | null
-): string {
-  // TODO(S7) : résoudre depuis l'équipe gérée par le user, ou via URL.
-  return DEFAULT_TENANT_ID;
+
+/** D'où vient l'espace retenu — exposé pour les tests et l'inspection staff. */
+export type PlayerTenantSource =
+  | 'active_team'
+  | 'custom_domain'
+  | 'membership'
+  | 'default';
+
+export type PlayerTenantResolution = {
+  tenantId: string;
+  source: PlayerTenantSource;
+};
+
+/**
+ * Lecture impossible pendant la résolution. Distincte d'une erreur métier pour
+ * qu'un appelant qui voudrait la traduire autrement qu'en 500 puisse la
+ * reconnaître.
+ */
+export class TenantResolutionError extends Error {
+  constructor(
+    step: 'active_team' | 'custom_domain' | 'membership',
+    detail: string
+  ) {
+    super(`tenant_resolution_failed(${step}): ${detail}`);
+    this.name = 'TenantResolutionError';
+  }
+}
+
+type MembershipRow = {
+  team_id: string | null;
+  tenant_id: string | null;
+  created_at: string | null;
+};
+
+/**
+ * `?teamId=` d'une requête, validé en UUID.
+ *
+ * Lit `req.query` (routes d'API, segment dynamique compris) puis, à défaut,
+ * l'URL brute (`IncomingMessage` d'un `getServerSideProps`, qui n'a pas de
+ * `query`). Même tolérance que `readRequestedTeamId` : une valeur invalide est
+ * une absence, pas une erreur. Pas d'import de `utils/teams/teamScope` : il
+ * importe ce module, la boucle ferait échouer l'initialisation.
+ */
+function readActiveTeamParam(req: RequestLike): string | null {
+  const query = (req as { query?: Record<string, unknown> }).query;
+  let raw: unknown = query?.[TEAM_SCOPE_QUERY_PARAM];
+  if (raw === undefined) {
+    const url = (req as { url?: string }).url;
+    const qIndex = url ? url.indexOf('?') : -1;
+    if (url && qIndex !== -1) {
+      raw =
+        new URLSearchParams(url.slice(qIndex + 1)).get(
+          TEAM_SCOPE_QUERY_PARAM
+        ) ?? undefined;
+    }
+  }
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return UUID_RE.test(trimmed) ? trimmed.toLowerCase() : null;
 }
 
 /**
- * Version ASYNC du résolveur user-level (S7b).
+ * Mémo PAR REQUÊTE. La clé faible est l'objet `req` lui-même : l'entrée meurt
+ * avec la requête, sans purge ni TTL — c'est exactement la durée voulue.
+ * La clé interne distingue la joueuse résolue (soi-même ou sujet inspecté) et
+ * la préférence d'espace, qui changent le résultat.
+ */
+const perRequestResolution = new WeakMap<
+  object,
+  Map<string, Promise<PlayerTenantResolution>>
+>();
+
+/**
+ * Résout l'espace d'une requête joueuse, avec la source retenue.
  *
- * Pourquoi : le tenant d'une requête authentifiée = le tenant de l'équipe
- * dont le user est membre. On lit donc `team_members.tenant_id` pour le
- * `authUserId` courant. Aujourd'hui neutre (un seul tenant, toutes les rows
- * portent — ou héritent par fallback — `DEFAULT_TENANT_ID`), mais correct dès
- * qu'un 2e tenant existe : deux capitaines d'équipes de tenants différents
- * seront résolus vers leur tenant respectif au lieu du default hardcodé.
+ * `ctx.authUserId` = la joueuse DONT on résout l'espace : l'appelante, ou la
+ * joueuse inspectée quand un staff utilise `?as=` (jamais le staff).
+ * `ctx.preferTenantId` = départage de l'étape 3 : si l'une des appartenances
+ * est dans cet espace, elle l'emporte sur la plus ancienne.
+ */
+export function resolvePlayerTenant(
+  req: RequestLike,
+  ctx?: { authUserId?: string | null; preferTenantId?: string | null } | null
+): Promise<PlayerTenantResolution> {
+  const key = `${ctx?.authUserId ?? ''}|${ctx?.preferTenantId ?? ''}`;
+  let byKey = perRequestResolution.get(req as object);
+  if (!byKey) {
+    byKey = new Map();
+    perRequestResolution.set(req as object, byKey);
+  }
+  const cached = byKey.get(key);
+  if (cached) return cached;
+  const pending = computePlayerTenant(req, ctx ?? {});
+  byKey.set(key, pending);
+  return pending;
+}
+
+async function computePlayerTenant(
+  req: RequestLike,
+  ctx: { authUserId?: string | null; preferTenantId?: string | null }
+): Promise<PlayerTenantResolution> {
+  const authUserId = ctx.authUserId || null;
+
+  // Les appartenances servent aux étapes 1 ET 3 : une seule lecture, faite au
+  // premier besoin. Sur un domaine propre sans `?teamId=`, elle n'a pas lieu.
+  let memberships: MembershipRow[] | null = null;
+  const loadMemberships = async (): Promise<MembershipRow[]> => {
+    if (memberships) return memberships;
+    if (!authUserId) return (memberships = []);
+    if (!supabaseAdmin) {
+      throw new TenantResolutionError(
+        'membership',
+        'supabase_admin_unavailable'
+      );
+    }
+    const { data, error } = await supabaseAdmin
+      .from('team_members')
+      .select('team_id, tenant_id, created_at')
+      .eq('user_id', authUserId)
+      // L'ORDRE EST LE CONTRAT de l'étape 3 : sans lui, « la première ligne »
+      // est celle que le plan d'exécution rend, et elle peut changer.
+      .order('created_at', { ascending: true })
+      .order('tenant_id', { ascending: true })
+      .order('team_id', { ascending: true });
+    if (error) throw new TenantResolutionError('membership', error.message);
+    return (memberships = (data as MembershipRow[] | null) ?? []);
+  };
+
+  // 1) Équipe active, si la joueuse en est membre ou capitaine.
+  const activeTeamId = authUserId ? readActiveTeamParam(req) : null;
+  if (activeTeamId) {
+    const rows = await loadMemberships();
+    const member = rows.find(
+      (r) => r.team_id?.toLowerCase() === activeTeamId && r.tenant_id
+    );
+    if (member?.tenant_id) {
+      return { tenantId: member.tenant_id, source: 'active_team' };
+    }
+    // Capitaine sans ligne `team_members` : cas hérité, mais c'est bien
+    // « gestionnaire de l'équipe ». Une lecture de plus, seulement ici.
+    if (!supabaseAdmin) {
+      throw new TenantResolutionError(
+        'active_team',
+        'supabase_admin_unavailable'
+      );
+    }
+    const { data, error } = await supabaseAdmin
+      .from('teams')
+      .select('tenant_id')
+      .eq('id', activeTeamId)
+      .eq('captain_id', authUserId as string)
+      .maybeSingle();
+    if (error) throw new TenantResolutionError('active_team', error.message);
+    const captainTenant = (data as { tenant_id?: string | null } | null)
+      ?.tenant_id;
+    if (typeof captainTenant === 'string' && captainTenant) {
+      return { tenantId: captainTenant, source: 'active_team' };
+    }
+    // Non prouvé : ignoré, sans erreur — un choix mémorisé périmé (équipe
+    // quittée) ne doit pas casser l'écran.
+  }
+
+  // 2) Domaine propre, et rien d'autre (cf. en-tête).
+  const host = (req.headers as Record<string, unknown>)?.host;
+  const byHost = await resolveTenantByHostResult(
+    Array.isArray(host) ? host[0] : (host as string | undefined)
+  );
+  if (!byHost.ok) {
+    throw new TenantResolutionError('custom_domain', byHost.error);
+  }
+  if (byHost.tenantId) {
+    return { tenantId: byHost.tenantId, source: 'custom_domain' };
+  }
+
+  // 3) Appartenance stable. Les lignes sans `tenant_id` ne portent aucun
+  //    signal (données antérieures à la colonne) : on les saute.
+  const rows = (await loadMemberships()).filter(
+    (r): r is MembershipRow & { tenant_id: string } =>
+      typeof r.tenant_id === 'string' && r.tenant_id !== ''
+  );
+  const preferred = ctx.preferTenantId
+    ? rows.find((r) => r.tenant_id === ctx.preferTenantId)
+    : undefined;
+  const chosen = preferred ?? rows[0];
+  if (chosen) return { tenantId: chosen.tenant_id, source: 'membership' };
+
+  // 4) Aucun signal.
+  return { tenantId: DEFAULT_TENANT_ID, source: 'default' };
+}
+
+/**
+ * L'espace d'une requête joueuse — l'identifiant seul.
  *
- * Résolution :
- *   - `ctx.authUserId` + `supabaseAdmin` dispo → lookup
- *     `team_members.tenant_id` (1re membership) → renvoyé si trouvé.
- *   - Pas de membership / pas d'`authUserId` → fallback sur le résolveur
- *     public path-prefix (`resolveTenantIdForPublicRequestAsync`), qui lui
- *     retombe sur `DEFAULT_TENANT_ID` hors préfixe.
- *   - Erreur DB → warn + `DEFAULT_TENANT_ID`. Ne throw JAMAIS : la résolution
- *     de tenant ne doit pas casser un flow d'inscription/équipe.
- *
- * NB : le stub sync `resolveTenantIdForUserRequest` reste en place pour les
- * call sites legacy hors flow inscription/équipe.
+ * Nom conservé pour les ~30 appelants existants ; la règle complète est dans
+ * l'en-tête ci-dessus et dans `resolvePlayerTenant`. Lève
+ * `TenantResolutionError` sur une lecture impossible.
  */
 export async function resolveTenantIdForUserRequestAsync(
   req: RequestLike,
   ctx?: { authUserId?: string | null } | null
 ): Promise<string> {
-  const authUserId = ctx?.authUserId;
-
-  if (authUserId && supabaseAdmin) {
-    try {
-      const { data, error } = await supabaseAdmin
-        .from('team_members')
-        .select('tenant_id')
-        .eq('user_id', authUserId)
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
-        logger.warn(
-          '[tenant] failed to resolve user tenant from membership, falling back to DEFAULT_TENANT_ID',
-          { error: error.message }
-        );
-        return DEFAULT_TENANT_ID;
-      }
-
-      const tenantId = (data as { tenant_id?: string | null } | null)
-        ?.tenant_id;
-      if (typeof tenantId === 'string' && tenantId) {
-        return tenantId;
-      }
-    } catch (err) {
-      logger.warn(
-        '[tenant] unexpected error resolving user tenant, falling back to DEFAULT_TENANT_ID',
-        { error: err instanceof Error ? err.message : String(err) }
-      );
-      return DEFAULT_TENANT_ID;
-    }
-  }
-
-  // Pas de membership (ou pas d'authUserId) → résolveur public path-prefix.
-  return resolveTenantIdForPublicRequestAsync(req);
+  const { tenantId } = await resolvePlayerTenant(req, {
+    authUserId: ctx?.authUserId ?? null,
+  });
+  return tenantId;
 }
 
 /* ===========================================================================

@@ -199,5 +199,5 @@ export default withSubjectRoute(
       expires_at: refreshed.data.payload?.expires_at ?? null,
     });
   },
-  { tenantResolution: 'async', allowActAs: true }
+  { allowActAs: true }
 );
