@@ -17,6 +17,13 @@ post:
     `rating_rebuild_advised` signale une correction qui retire ou change un
     vainqueur deja note (le rating incremental ne la rejoue pas). Honore
     `Idempotency-Key`. Permission : `manage_teams`.
+
+    Score EN COURS avec `final: false` : met a jour les scores sans clore le
+    scrim (pas de vainqueur, pas de miroir note, pas de purge, pas de
+    `scrim.finished`) pour l'overlay `/overlay/scrim-result`. Seulement depuis
+    `scheduled` (qui passe `running`, avec `scrim.starting`) ou `running` ;
+    sinon `409 SCRIM_NOT_LIVE`. La reponse vaut alors `{ success, live: true,
+    started, scrim }`.
   operationId: adminRecordScrimResult
   tags:
     - admin/scrims
@@ -40,9 +47,17 @@ post:
               type: integer
               minimum: 0
               maximum: 99
+            final:
+              type: boolean
+              default: true
+              description: >-
+                `false` = score en cours, le scrim reste ouvert (cf.
+                description).
   responses:
     '200':
-      description: Resultat enregistre.
+      description: >-
+        Resultat enregistre, ou score en cours mis a jour (`final: false` ->
+        `{ success, live, started, scrim }`).
       content:
         application/json:
           schema:
@@ -50,13 +65,19 @@ post:
             required:
               - success
               - scrim
-              - winner_team_id
-              - correction
-              - purged_reports
-              - rating_rebuild_advised
             properties:
               success:
                 type: boolean
+              live:
+                type: boolean
+                description: >-
+                  Present (true) pour un score en cours (`final: false`) ; les
+                  champs de cloture ci-dessous sont alors absents.
+              started:
+                type: boolean
+                description: >-
+                  Score en cours : le scrim vient de passer de `scheduled` a
+                  `running`.
               scrim:
                 type: object
                 additionalProperties: true

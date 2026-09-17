@@ -445,3 +445,95 @@ describe('POST /api/admin/scrims/[scrimId]/result — correction', () => {
     expect(mirrors()).toHaveLength(1);
   });
 });
+
+describe('POST /api/admin/scrims/[scrimId]/result — score en cours (final: false)', () => {
+  it('scrim planifié : score posé, passe « en cours », rien de clos ni de noté', async () => {
+    const res = await postResult({
+      team1_score: 1,
+      team2_score: 0,
+      final: false,
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({
+      success: true,
+      live: true,
+      started: true,
+    });
+    expect(scrim()).toMatchObject({
+      status: 'running',
+      team1_score: 1,
+      team2_score: 0,
+      winner_team_id: null,
+      completed_at: null,
+    });
+    // Pas de miroir noté, pas de récompenses, pas d'annonce de fin.
+    expect(mirrors()).toHaveLength(0);
+    expect(packsOf(A1)).toHaveLength(0);
+    expect(coinsOf(A1)).toHaveLength(0);
+    const events = emitScrimEventMock.mock.calls.map((c) => c[0]);
+    expect(events).toEqual(['scrim.starting']);
+    expect(lastLog().payload).toMatchObject({
+      subject: 'scrim_live_score',
+      after: { status: 'running', team1_score: 1, team2_score: 0 },
+    });
+  });
+
+  it('scrim en cours : mises à jour successives sans ré-annoncer le début', async () => {
+    seed({ status: 'running' });
+    await postResult({ team1_score: 1, team2_score: 1, final: false });
+    const res = await postResult({
+      team1_score: 2,
+      team2_score: 1,
+      final: false,
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.started).toBe(false);
+    expect(scrim()).toMatchObject({
+      status: 'running',
+      team1_score: 2,
+      team2_score: 1,
+    });
+    expect(emitScrimEventMock).not.toHaveBeenCalled();
+    expect(syncSpy).not.toHaveBeenCalled();
+  });
+
+  it('le résultat final clôt ensuite normalement le scrim', async () => {
+    seed({ status: 'running' });
+    await postResult({ team1_score: 2, team2_score: 1, final: false });
+    const res = await postResult({ team1_score: 3, team2_score: 1 });
+
+    expect(res.statusCode).toBe(200);
+    expect(scrim()).toMatchObject({
+      status: 'completed',
+      team1_score: 3,
+      winner_team_id: TEAM_A,
+    });
+    expect(mirrors()).toHaveLength(1);
+  });
+
+  it.each(['completed', 'disputed', 'draft'])(
+    'refuse un score en cours sur un scrim %s (409 SCRIM_NOT_LIVE)',
+    async (status) => {
+      seed({ status, team1_score: 2, team2_score: 0 });
+      const res = await postResult({
+        team1_score: 1,
+        team2_score: 1,
+        final: false,
+      });
+      expect(res.statusCode).toBe(409);
+      expect(res.body.code).toBe('SCRIM_NOT_LIVE');
+      expect(scrim()).toMatchObject({ status, team1_score: 2, team2_score: 0 });
+    }
+  );
+
+  it('refuse `final` qui n’est pas un booléen', async () => {
+    const res = await postResult({
+      team1_score: 1,
+      team2_score: 0,
+      final: 'non',
+    });
+    expect(res.statusCode).toBe(400);
+  });
+});

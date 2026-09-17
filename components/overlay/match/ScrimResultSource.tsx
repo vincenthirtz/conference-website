@@ -112,6 +112,7 @@ export function ScrimResultSource({
 
   const final = scrim.phase === 'final';
   const live = scrim.phase === 'live';
+  const showScore = scrim.hasScore && (final || live);
   const anyWinner = !!(scrim.team1?.isWinner || scrim.team2?.isWinner);
   const style: CSSProperties = {
     width: RESULT_CARD.w,
@@ -149,14 +150,14 @@ export function ScrimResultSource({
           dim={final && anyWinner && !scrim.team1?.isWinner}
           t={t}
         />
-        {/* Chiffres seulement pour un résultat final : un scrim en cours n'a
-            pas encore de score en base (il est posé à la clôture), et un
-            « 0 : 0 » inventé à l'antenne serait faux. */}
+        {/* Chiffres seulement quand un score est posé : résultat final, ou
+            score en cours mis à jour par le staff. Jamais de « 0 : 0 »
+            inventé à l'antenne. */}
         <div className="flex flex-col items-center" style={SHADOW}>
           <div className="flex items-center gap-6 text-[9rem] font-black leading-none tabular-nums text-white">
-            <span>{final ? (scrim.team1?.score ?? 0) : '–'}</span>
+            <span>{showScore ? (scrim.team1?.score ?? 0) : '–'}</span>
             <span className="text-white/35">:</span>
-            <span>{final ? (scrim.team2?.score ?? 0) : '–'}</span>
+            <span>{showScore ? (scrim.team2?.score ?? 0) : '–'}</span>
           </div>
           {scrim.draw && (
             <span className="mt-3 text-3xl font-bold uppercase tracking-widest text-white/70">

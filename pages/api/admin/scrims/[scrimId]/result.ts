@@ -23,6 +23,11 @@
 //
 // Statuts acceptés : draft / scheduled / running / disputed / completed.
 // `cancelled` → 409 : un scrim annulé se réinstaure d'abord par le PATCH.
+//
+// SCORE EN COURS (`final: false`) : met à jour le score SANS clore le scrim,
+// pour que l'overlay affiche le score pendant le match. Seulement depuis
+// scheduled / running (un `scheduled` passe `running`, annoncé comme par le
+// PATCH) ; aucun des effets 1 à 4 ci-dessus. Cf. `applyStaffLiveScore`.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
@@ -32,9 +37,12 @@ import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { logStaffAction } from '@/utils/staffLogs';
 import { emitScrimEvent } from '@/utils/scrimEvents';
 import {
+  applyStaffLiveScore,
   applyStaffScrimResult,
+  STAFF_SCRIM_LIVE_STATUSES,
   STAFF_SCRIM_RESULT_STATUSES,
 } from '@/utils/scrims/scrimResult';
+import { syncScrimRatedMatch } from '@/utils/scrims/ratedMatch';
 import {
   purgeScoreReports,
   type PurgedScoreReport,
@@ -46,6 +54,8 @@ const querySchema = z.object({ scrimId: z.string().uuid() });
 const bodySchema = z.object({
   team1_score: z.number().int().min(0).max(99),
   team2_score: z.number().int().min(0).max(99),
+  /** `false` = score en cours, le scrim n'est pas clos. Défaut : résultat final. */
+  final: z.boolean().optional(),
 });
 
 type ScrimBefore = {
@@ -93,7 +103,11 @@ async function handler(
       code: 'INVALID_BODY',
     });
   }
-  const { team1_score: team1Score, team2_score: team2Score } = parsedBody.data;
+  const {
+    team1_score: team1Score,
+    team2_score: team2Score,
+    final: isFinal = true,
+  } = parsedBody.data;
 
   const { data: beforeRow, error: readErr } = await supabaseAdmin
     .from('scrims')
@@ -126,6 +140,10 @@ async function handler(
       error: 'Scrim incomplet (équipes non assignées).',
       code: 'SCRIM_TEAMS_MISSING',
     });
+  }
+
+  if (!isFinal) {
+    return handleLiveScore(res, ctx, before, team1Score, team2Score);
   }
 
   const applied = await applyStaffScrimResult(
@@ -237,5 +255,86 @@ async function handler(
     correction: wasCompleted,
     purged_reports: purgedReports.length,
     rating_rebuild_advised: ratingRebuildAdvised,
+  });
+}
+
+/** `final: false` : score en cours, le scrim reste ouvert. */
+async function handleLiveScore(
+  res: NextApiResponse,
+  ctx: AuthenticatedStaffContext,
+  before: ScrimBefore,
+  team1Score: number,
+  team2Score: number
+) {
+  if (!STAFF_SCRIM_LIVE_STATUSES.has(before.status)) {
+    return res.status(409).json({
+      error:
+        'Score en cours impossible : ce scrim est clos, en litige ou en brouillon. Saisis le résultat final.',
+      code: 'SCRIM_NOT_LIVE',
+    });
+  }
+
+  const applied = await applyStaffLiveScore(
+    ctx.tenantId,
+    before.id,
+    before.status,
+    team1Score,
+    team2Score
+  );
+  if (!applied.ok) {
+    return res
+      .status(applied.status)
+      .json(
+        applied.code
+          ? { error: applied.error, code: applied.code }
+          : { error: applied.error }
+      );
+  }
+
+  if (ctx.staff?.id) {
+    try {
+      await logStaffAction({
+        staff_id: ctx.staff.id,
+        action: 'other',
+        entity_type: 'scrim',
+        entity_id: before.id,
+        tournament_id: null,
+        payload: {
+          subject: 'scrim_live_score',
+          before: {
+            status: before.status,
+            team1_score: before.team1_score,
+            team2_score: before.team2_score,
+          },
+          after: {
+            status: applied.started ? 'running' : before.status,
+            team1_score: team1Score,
+            team2_score: team2Score,
+          },
+        },
+      });
+    } catch (e) {
+      logger.error('[admin/scrims/:id/result] live log error', e);
+    }
+  }
+
+  // Passage scheduled → running : mêmes suites qu'un changement de statut par
+  // le PATCH (annonce `scrim.starting`, miroir noté réaligné — neutre tant que
+  // le scrim n'est pas clos). Une simple mise à jour de score n'annonce rien.
+  if (applied.started) {
+    void emitScrimEvent(
+      'scrim.starting',
+      applied.scrim as unknown as Parameters<typeof emitScrimEvent>[1],
+      ctx.tenantId,
+      { previousStatus: before.status }
+    );
+    await syncScrimRatedMatch(ctx.tenantId, before.id);
+  }
+
+  return res.status(200).json({
+    success: true,
+    live: true,
+    started: applied.started,
+    scrim: applied.scrim,
   });
 }

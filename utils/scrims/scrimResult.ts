@@ -280,3 +280,83 @@ export async function applyStaffScrimResult(
     scrim: rows[0] as Record<string, unknown>,
   };
 }
+
+/**
+ * Statuts depuis lesquels le staff peut poser un score EN COURS. Un scrim clos,
+ * en litige ou annulé a déjà (ou attend) un résultat final : on n'y superpose
+ * pas un score provisoire.
+ */
+export const STAFF_SCRIM_LIVE_STATUSES: ReadonlySet<string> = new Set([
+  'scheduled',
+  'running',
+]);
+
+export type StaffLiveScoreResult =
+  | {
+      ok: true;
+      /** `true` si le scrim vient de passer de `scheduled` à `running`. */
+      started: boolean;
+      scrim: Record<string, unknown>;
+    }
+  | { ok: false; error: string; status: number; code?: 'SCRIM_CHANGED' };
+
+/**
+ * Le staff met à jour le score d'un scrim EN COURS, sans le clore : l'overlay
+ * `/overlay/scrim-result` l'affiche en direct, le résultat final reste à
+ * saisir (ou à valider par les capitaines).
+ *
+ * Ce qui n'arrive PAS ici, volontairement : ni `completed`, ni vainqueur, ni
+ * miroir noté, ni récompenses, ni purge des reports. Le classement ne lit que
+ * les scrims `completed` (cf. `loadLadder`, `syncScrimRatedMatch`) : un score
+ * provisoire ne peut rien fausser.
+ *
+ * Un scrim encore `scheduled` passe `running` : un score qui bouge, c'est un
+ * scrim qui se joue — et c'est ce statut que suit la source « résultat »
+ * (`latest`). Même concurrence optimiste que `applyStaffScrimResult`.
+ */
+export async function applyStaffLiveScore(
+  tenantId: string,
+  scrimId: string,
+  expectedStatus: string,
+  team1Score: number,
+  team2Score: number
+): Promise<StaffLiveScoreResult> {
+  if (!supabaseAdmin) {
+    return { ok: false, error: 'Service indisponible.', status: 503 };
+  }
+  const started = expectedStatus === 'scheduled';
+
+  const { data: written, error } = await supabaseAdmin
+    .from('scrims')
+    .update({
+      team1_score: team1Score,
+      team2_score: team2Score,
+      winner_team_id: null,
+      ...(started ? { status: 'running' } : {}),
+    })
+    .eq('id', scrimId)
+    .eq('tenant_id', tenantId)
+    .eq('status', expectedStatus)
+    .is('deleted_at', null)
+    .select('*');
+
+  if (error) {
+    logger.error('[scrimResult] staff live score error', error);
+    return {
+      ok: false,
+      error: 'Mise à jour du score impossible.',
+      status: 500,
+    };
+  }
+  const rows = Array.isArray(written) ? written : [];
+  if (rows.length === 0) {
+    return {
+      ok: false,
+      error:
+        'Le scrim a changé entre-temps (résultat déclaré ou statut modifié) : recharge-le avant de mettre à jour le score.',
+      status: 409,
+      code: 'SCRIM_CHANGED',
+    };
+  }
+  return { ok: true, started, scrim: rows[0] as Record<string, unknown> };
+}

@@ -33315,6 +33315,9 @@
        "draw": {
         "type": "boolean"
        },
+       "hasScore": {
+        "type": "boolean"
+       },
        "team1": {
         "type": [
          "object",
@@ -33396,6 +33399,7 @@
        "scheduledAt",
        "completedAt",
        "draw",
+       "hasScore",
        "team1",
        "team2"
       ]
@@ -53345,38 +53349,66 @@
   },
   "POST /api/admin/scrims/{scrimId}/result": {
    "200": {
-    "type": "object",
-    "properties": {
-     "success": {
-      "type": "boolean"
-     },
-     "scrim": {
+    "anyOf": [
+     {
       "type": "object",
-      "additionalProperties": {}
-     },
-     "winner_team_id": {
-      "type": [
-       "string",
-       "null"
+      "properties": {
+       "success": {
+        "type": "boolean"
+       },
+       "live": {
+        "type": "boolean"
+       },
+       "started": {
+        "type": "boolean"
+       },
+       "scrim": {
+        "type": "object",
+        "additionalProperties": {}
+       }
+      },
+      "required": [
+       "success",
+       "live",
+       "started",
+       "scrim"
       ]
      },
-     "correction": {
-      "type": "boolean"
-     },
-     "purged_reports": {
-      "type": "number"
-     },
-     "rating_rebuild_advised": {
-      "type": "boolean"
+     {
+      "type": "object",
+      "properties": {
+       "success": {
+        "type": "boolean"
+       },
+       "scrim": {
+        "type": "object",
+        "additionalProperties": {}
+       },
+       "winner_team_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "correction": {
+        "type": "boolean"
+       },
+       "purged_reports": {
+        "type": "number"
+       },
+       "rating_rebuild_advised": {
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "success",
+       "scrim",
+       "winner_team_id",
+       "correction",
+       "purged_reports",
+       "rating_rebuild_advised"
+      ]
      }
-    },
-    "required": [
-     "success",
-     "scrim",
-     "winner_team_id",
-     "correction",
-     "purged_reports",
-     "rating_rebuild_advised"
     ]
    }
   },

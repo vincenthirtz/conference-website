@@ -76,6 +76,10 @@ export default {
     "This score settles the dispute ({reason}). Both captains' reports will be deleted.",
   resultConfirmLabel: 'Save',
   resultSaved: 'Result saved.',
+  resultLiveSubmit: 'Update live score',
+  resultLiveSaved: 'Live score updated.',
+  resultLiveHint:
+    'During the match: “Update live score” shows the score on the overlay without ending the scrim (a scheduled scrim becomes “running”). “Save result” ends it.',
   resultRebuildHint:
     "The winner changed: the player ranking isn't recalculated automatically.",
   resultRebuildLink: 'Rebuild the ranking',

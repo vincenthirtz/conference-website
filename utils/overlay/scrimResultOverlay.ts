@@ -44,6 +44,11 @@ export type OverlayScrimResultView = {
   completedAt: string | null;
   /** Clos sur une égalité : aucun vainqueur, et c'est un vrai résultat. */
   draw: boolean;
+  /**
+   * Un score est posé en base : résultat final, ou score EN COURS mis à jour
+   * par le staff pendant le match. Sans lui, l'écran n'affiche pas de chiffres.
+   */
+  hasScore: boolean;
   team1: OverlayTeamView | null;
   team2: OverlayTeamView | null;
 };
@@ -128,6 +133,7 @@ export function buildScrimResultView(
     scheduledAt: row.scheduled_date ?? null,
     completedAt: row.completed_at ?? null,
     draw: phase === 'final' && !row.winner_team_id,
+    hasScore,
     team1: teamView(row.team1, row.team1_score, phase === 'final' && winner1),
     team2: teamView(row.team2, row.team2_score, phase === 'final' && winner2),
   };

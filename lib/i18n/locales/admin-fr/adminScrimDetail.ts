@@ -77,6 +77,10 @@ export default adminNs('adminScrimDetail', {
     'Ce score tranche le litige ({reason}). Les reports des deux capitaines seront supprimés.',
   resultConfirmLabel: 'Enregistrer',
   resultSaved: 'Résultat enregistré.',
+  resultLiveSubmit: 'Mettre à jour le score en cours',
+  resultLiveSaved: 'Score en cours mis à jour.',
+  resultLiveHint:
+    'Pendant le match : « Mettre à jour le score en cours » affiche le score sur l’overlay sans terminer le scrim (un scrim planifié passe « en cours »). « Enregistrer le résultat » le termine.',
   resultRebuildHint:
     "Le vainqueur a changé : le classement des joueuses n'est pas recalculé automatiquement.",
   resultRebuildLink: 'Recalculer le classement',

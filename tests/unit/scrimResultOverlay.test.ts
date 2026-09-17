@@ -229,6 +229,42 @@ describe('rendu', () => {
     expect(html).toContain('Victoire');
   });
 
+  it('affiche le score en cours d’un scrim en direct', () => {
+    const html = render(
+      buildScrimResultView(
+        row('l', {
+          status: 'running',
+          team1_score: 2,
+          team2_score: 1,
+          winner_team_id: null,
+          completed_at: null,
+        })
+      )
+    );
+    expect(html).toContain('En direct');
+    expect(html).toContain('>2<');
+    expect(html).toContain('>1<');
+    // Pas de vainqueur tant que le scrim n'est pas clos.
+    expect(html).not.toMatch(
+      /class="[^"]*rounded-full[^"]*text-black(?![^"]*invisible)[^"]*"[^>]*>Victoire/
+    );
+  });
+
+  it('un scrim en direct sans score n’invente pas « 0 : 0 »', () => {
+    const html = render(
+      buildScrimResultView(
+        row('l0', {
+          status: 'running',
+          team1_score: null,
+          team2_score: null,
+          winner_team_id: null,
+          completed_at: null,
+        })
+      )
+    );
+    expect(html).not.toContain('>0<');
+  });
+
   it('n’affiche pas « 0 : 0 » avant le résultat', () => {
     const html = render(
       buildScrimResultView(

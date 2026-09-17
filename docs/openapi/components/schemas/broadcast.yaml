@@ -917,7 +917,18 @@ ScrimResultOverlaySource:
       anyOf:
         - type: object
           required:
-            [id, name, slug, phase, scheduledAt, completedAt, draw, team1, team2]
+            [
+              id,
+              name,
+              slug,
+              phase,
+              scheduledAt,
+              completedAt,
+              draw,
+              hasScore,
+              team1,
+              team2,
+            ]
           properties:
             id:
               type: string
@@ -941,6 +952,11 @@ ScrimResultOverlaySource:
             draw:
               type: boolean
               description: Clos sur une égalité (aucun vainqueur).
+            hasScore:
+              type: boolean
+              description: >-
+                Un score est posé : résultat final, ou score en cours mis à
+                jour par le staff pendant le match.
             team1:
               anyOf:
                 - $ref: '#/components/schemas/MatchOverlayTeam'

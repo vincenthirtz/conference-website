@@ -1,7 +1,9 @@
 // components/admin/scrims/ScrimResultPanel.tsx
 //
 // Section « Résultat » de la fiche admin d'un scrim : le staff saisit ou
-// corrige le score final (POST /api/admin/scrims/[scrimId]/result).
+// corrige le score final (POST /api/admin/scrims/[scrimId]/result), ou met à
+// jour le score EN COURS sans clore le scrim (`final: false`) — c'est ce score
+// que l'overlay `/overlay/scrim-result` affiche pendant le match.
 //
 // Seul moyen de donner un résultat à un scrim contre une équipe extérieure
 // (pas de capitaine pour rapporter) et de trancher un litige avec un score.
@@ -59,6 +61,7 @@ export default function ScrimResultPanel({ scrim, onSaved }: Props) {
   const [score1, setScore1] = useState<number>(scrim.team1_score ?? 0);
   const [score2, setScore2] = useState<number>(scrim.team2_score ?? 0);
   const [submitting, setSubmitting] = useState(false);
+  const [savingLive, setSavingLive] = useState(false);
   const [rebuildAdvised, setRebuildAdvised] = useState(false);
 
   // Le scrim rechargé (résultat écrit ici, ou par les capitaines entre-temps)
@@ -78,6 +81,10 @@ export default function ScrimResultPanel({ scrim, onSaved }: Props) {
   const isCancelled = scrim.status === 'cancelled';
   const teamsMissing = !scrim.team1_id || !scrim.team2_id;
   const blocked = isCancelled || teamsMissing;
+  // Score en cours : seulement pendant le scrim (planifié ou en cours).
+  const canLive =
+    !teamsMissing &&
+    (scrim.status === 'scheduled' || scrim.status === 'running');
 
   const statusLabels: Record<string, string> = {
     draft: t.statusDraft,
@@ -159,6 +166,41 @@ export default function ScrimResultPanel({ scrim, onSaved }: Props) {
     }
   }
 
+  // Pas de confirmation : pendant un match, le staff met le score à jour
+  // manche après manche. Rien d'irréversible — ni clôture, ni classement.
+  async function submitLive() {
+    if (!canLive) return;
+    setSavingLive(true);
+    try {
+      await mutateJson(`/api/admin/scrims/${scrim.id}/result`, {
+        method: 'POST',
+        body: JSON.stringify({
+          team1_score: score1,
+          team2_score: score2,
+          final: false,
+        }),
+      });
+      addToast(t.resultLiveSaved, 'success');
+      await onSaved();
+    } catch (err) {
+      const code =
+        err instanceof AdminFetchError &&
+        err.payload &&
+        typeof err.payload === 'object' &&
+        'code' in err.payload
+          ? String((err.payload as { code: unknown }).code)
+          : null;
+      if (code === 'SCRIM_CHANGED') {
+        addToast(t.resultErrorChanged, 'error');
+        await onSaved();
+      } else {
+        addToast((err as Error)?.message || t.resultError, 'error');
+      }
+    } finally {
+      setSavingLive(false);
+    }
+  }
+
   return (
     <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6 space-y-4">
       {dialog}
@@ -216,7 +258,7 @@ export default function ScrimResultPanel({ scrim, onSaved }: Props) {
             max={MAX_SCORE}
             step={1}
             value={score1}
-            disabled={blocked || submitting}
+            disabled={blocked || submitting || savingLive}
             onChange={(e) => setScore1(clampScore(e.target.value))}
             className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600 disabled:opacity-50"
           />
@@ -236,7 +278,7 @@ export default function ScrimResultPanel({ scrim, onSaved }: Props) {
             max={MAX_SCORE}
             step={1}
             value={score2}
-            disabled={blocked || submitting}
+            disabled={blocked || submitting || savingLive}
             onChange={(e) => setScore2(clampScore(e.target.value))}
             className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600 disabled:opacity-50"
           />
@@ -252,7 +294,21 @@ export default function ScrimResultPanel({ scrim, onSaved }: Props) {
         </p>
       )}
 
-      <div className="flex gap-3 pt-2">
+      {canLive && (
+        <p className="text-xs text-neutral-400">{t.resultLiveHint}</p>
+      )}
+
+      <div className="flex flex-wrap gap-3 pt-2">
+        {canLive && (
+          <button
+            type="button"
+            onClick={submitLive}
+            disabled={savingLive || submitting}
+            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
+          >
+            {savingLive ? t.resultSubmitting : t.resultLiveSubmit}
+          </button>
+        )}
         <button
           type="button"
           onClick={submit}
