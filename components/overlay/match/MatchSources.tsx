@@ -45,7 +45,7 @@ export const DEFAULT_OVERLAY_ACCENT = '#f0e63c';
 
 /* ── Briques communes ──────────────────────────────────────────────────── */
 
-function TeamLogo({
+export function TeamLogo({
   team,
   size,
   fallback,
@@ -92,7 +92,7 @@ function teamName(team: OverlayTeamView | null, t: Dict): string {
 }
 
 /** Heure locale « 19:00 », sans dépendre du fuseau du poste de régie. */
-function hourLabel(iso: string | null): string | null {
+export function hourLabel(iso: string | null): string | null {
   if (!iso) return null;
   const ms = Date.parse(iso);
   if (!Number.isFinite(ms)) return null;

@@ -52,4 +52,7 @@ export default adminNs('adminTournamentEmbed', {
     'Décompte jusqu’au coup d’envoi, sur l’heure du serveur.',
   source_waiting_name: 'Écran d’attente',
   source_waiting_desc: 'Fond opaque avec votre marque, entre deux rencontres.',
+  source_day_name: 'Matchs du jour',
+  source_day_desc:
+    'Le programme de la journée (heure de Paris) : horaires, affiches, scores en direct, match du moment mis en avant. Ajoutez &date=AAAA-MM-JJ pour un autre jour, &limit=N pour le nombre de lignes.',
 });

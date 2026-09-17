@@ -36,7 +36,17 @@ const SOURCES = [
   { key: 'maps', size: '600×600' },
   { key: 'countdown', size: '1920×1080' },
   { key: 'waiting', size: '1920×1080' },
+  // Pas une source « par match » : elle montre toute la journée, d'où son URL
+  // à part (cf. sourceUrl).
+  { key: 'day', size: '1920×1080' },
 ] as const;
+
+function sourceUrl(baseUrl: string, tournamentRef: string, key: string) {
+  const tournament = encodeURIComponent(tournamentRef);
+  return key === 'day'
+    ? `${baseUrl}/overlay/day?tournament=${tournament}`
+    : `${baseUrl}/overlay/match/next?tournament=${tournament}&source=${key}`;
+}
 
 export default function StreamSourcesPanel({
   tournamentRef,
@@ -85,9 +95,7 @@ export default function StreamSourcesPanel({
 
       <div className="space-y-2">
         {SOURCES.map((s) => {
-          const url = `${baseUrl}/overlay/match/next?tournament=${encodeURIComponent(
-            tournamentRef
-          )}&source=${s.key}`;
+          const url = sourceUrl(baseUrl, tournamentRef, s.key);
           const label = t[`source_${s.key}_name` as keyof typeof t] as string;
           const desc = t[`source_${s.key}_desc` as keyof typeof t] as string;
           return (

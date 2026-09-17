@@ -32728,6 +32728,228 @@
     ]
    }
   },
+  "GET /api/overlay/day": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "date": {
+      "type": "string"
+     },
+     "matches": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "format": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team1": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "name": {
+           "type": "string"
+          },
+          "shortName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "logoUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "score": {
+           "type": "number"
+          },
+          "isWinner": {
+           "type": "boolean"
+          }
+         },
+         "required": [
+          "name",
+          "shortName",
+          "logoUrl",
+          "score",
+          "isWinner"
+         ]
+        },
+        "team2": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "name": {
+           "type": "string"
+          },
+          "shortName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "logoUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "score": {
+           "type": "number"
+          },
+          "isWinner": {
+           "type": "boolean"
+          }
+         },
+         "required": [
+          "name",
+          "shortName",
+          "logoUrl",
+          "score",
+          "isWinner"
+         ]
+        },
+        "scheduledAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "phase": {
+         "type": "string",
+         "enum": [
+          "final",
+          "live",
+          "upcoming"
+         ]
+        },
+        "roundName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "startedAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "id",
+        "format",
+        "team1",
+        "team2",
+        "scheduledAt",
+        "phase",
+        "roundName",
+        "startedAt"
+       ]
+      }
+     },
+     "currentMatchId": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "tournament": {
+      "type": "object",
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "slug": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "shortName": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "game": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "id",
+       "slug",
+       "name",
+       "shortName",
+       "game"
+      ]
+     },
+     "branding": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "logoUrl": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "accent": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "name",
+       "logoUrl",
+       "accent"
+      ]
+     },
+     "serverTime": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "date",
+     "matches",
+     "currentMatchId",
+     "tournament",
+     "branding",
+     "serverTime"
+    ]
+   }
+  },
   "GET /api/overlay/match/{matchId}": {
    "200": {
     "type": "object",

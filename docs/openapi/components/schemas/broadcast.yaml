@@ -765,3 +765,92 @@ MatchOverlayTeam:
     isWinner:
       type: boolean
       description: Lu sur `winner_team_id`, jamais déduit d'une comparaison de scores.
+DayOverlaySource:
+  type: object
+  description: |
+    Le programme d'une journée d'un tournoi, tel que la source OBS
+    « matchs du jour » l'affiche. PUBLIC et cacheable 15 s ; mêmes
+    restrictions que `MatchOverlaySource` (tournoi public, capacité
+    `matchOverlays`).
+  required:
+    - date
+    - matches
+    - currentMatchId
+    - tournament
+    - branding
+    - serverTime
+  properties:
+    date:
+      type: string
+      format: date
+      description: Jour affiché, heure de Paris.
+    matches:
+      type: array
+      description: Matchs du jour dans l'ordre du programme (40 au plus).
+      items:
+        $ref: '#/components/schemas/DayOverlayMatch'
+    currentMatchId:
+      type: [string, 'null']
+      format: uuid
+      description: >-
+        Match mis en avant : en cours, sinon prochain à jouer, sinon dernier
+        résultat récent de la journée.
+    tournament:
+      type: object
+      required: [id, slug, name, shortName, game]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: [string, 'null']
+        name:
+          type: [string, 'null']
+        shortName:
+          type: [string, 'null']
+        game:
+          type: [string, 'null']
+    branding:
+      anyOf:
+        - type: object
+          required: [name, logoUrl, accent]
+          properties:
+            name:
+              type: [string, 'null']
+            logoUrl:
+              type: [string, 'null']
+            accent:
+              type: [string, 'null']
+        - type: 'null'
+    serverTime:
+      type: string
+      format: date-time
+DayOverlayMatch:
+  type: object
+  description: Un match de la journée, côté écran (sans manches ni veto).
+  required: [id, phase, format, roundName, scheduledAt, startedAt, team1, team2]
+  properties:
+    id:
+      type: string
+      format: uuid
+    phase:
+      type: string
+      enum: [upcoming, live, final]
+    format:
+      type: [string, 'null']
+    roundName:
+      type: [string, 'null']
+    scheduledAt:
+      type: [string, 'null']
+      format: date-time
+    startedAt:
+      type: [string, 'null']
+      format: date-time
+    team1:
+      anyOf:
+        - $ref: '#/components/schemas/MatchOverlayTeam'
+        - type: 'null'
+    team2:
+      anyOf:
+        - $ref: '#/components/schemas/MatchOverlayTeam'
+        - type: 'null'

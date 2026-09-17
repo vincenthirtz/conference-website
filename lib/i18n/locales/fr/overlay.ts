@@ -55,4 +55,13 @@ export default ns('overlay', {
   matchMapPicked: 'Choisie',
   matchMapDecider: 'Belle',
   matchTeamFallback: 'Équipe',
+
+  // Source « matchs du jour » (`/overlay/day`).
+  dayDocTitle: 'Source de stream — matchs du jour',
+  dayEyebrow: 'Matchs du jour',
+  dayEmpty: 'Aucun match programmé ce jour-là.',
+  dayMissingTournament:
+    'Ajoutez ?tournament=<identifiant ou slug> à l’URL pour afficher les matchs du jour.',
+  dayTeamTbd: 'À déterminer',
+  dayShownOf: '{shown} matchs affichés sur {total}',
 });

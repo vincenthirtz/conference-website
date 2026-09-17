@@ -1,0 +1,79 @@
+get:
+  summary: Source de stream OBS « matchs du jour » d'un tournoi.
+  description: |
+    PUBLIC (sans authentification), destiné aux sources navigateur d'OBS
+    (`/overlay/day`) : le programme d'une journée d'un tournoi — horaires,
+    équipes, scores — avec le match du moment mis en avant.
+
+    La journée est calculée à l'heure de Paris. Sans `date`, c'est
+    aujourd'hui. Un match sans horaire se range sur son coup d'envoi réel.
+
+    Restrictions : le tournoi doit être `visibility: public`, et l'espace
+    propriétaire doit porter la capacité de palier `matchOverlays` (offre
+    Régie et au-delà) — sinon `402`. Une journée sans match répond `200` avec
+    une liste vide.
+
+    `Cache-Control: public, s-maxage=15, stale-while-revalidate=60`.
+  operationId: getDayOverlaySource
+  tags:
+    - public/misc
+  security: []
+  parameters:
+    - name: tournament
+      in: query
+      required: true
+      schema:
+        type: string
+      description: Identifiant ou slug du tournoi.
+    - name: date
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date
+      description: Jour à afficher (`AAAA-MM-JJ`, heure de Paris). Défaut aujourd'hui.
+    - name: tenant
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Slug de l'espace, pour une source d'un autre organisateur.
+  responses:
+    '200':
+      description: Les matchs de la journée, dans l'ordre du programme.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DayOverlaySource'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '402':
+      description: >-
+        Le palier de l'espace n'ouvre pas les sources de stream (capacité
+        `matchOverlays`). Le corps nomme le palier en cours.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Error'
+            properties:
+              code:
+                type: string
+                enum:
+                  - PLAN_CAPABILITY_REQUIRED
+              capability:
+                type: string
+                enum:
+                  - matchOverlays
+              plan:
+                type: string
+              planLabel:
+                type: string
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '405':
+      description: Méthode non autorisée (seul GET est accepté).
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

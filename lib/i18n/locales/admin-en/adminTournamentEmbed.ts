@@ -49,4 +49,7 @@ export default {
   source_countdown_desc: 'Counts down to kick-off, on server time.',
   source_waiting_name: 'Waiting screen',
   source_waiting_desc: 'Opaque backdrop with your brand, between games.',
+  source_day_name: 'Today’s matches',
+  source_day_desc:
+    'The day’s schedule (Paris time): kick-off times, match-ups, live scores, current match highlighted. Add &date=YYYY-MM-DD for another day, &limit=N for the number of rows.',
 };
