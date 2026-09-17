@@ -1,18 +1,23 @@
 // components/overlay/match/UpcomingScrimsSource.tsx
 //
-// La source « scrims à venir » : les prochains scrims publics, UNE LIGNE PAR
+// La source « scrims à venir » : les prochains scrims publics, UN BANDEAU PAR
 // SCRIM, sur fond transparent — ni panneau, ni titre. La régie compose la
 // scène autour (son habillage, la vidéo) ; la source n'apporte que
 // l'information : quand, et qui contre qui.
 //
-// Lisibilité par-dessus n'importe quelle image : chaque ligne porte son propre
-// bandeau sombre et les textes une ombre portée. Pas d'animation continue
-// hormis le point « en direct » (cf. MatchSources).
+// Lisibilité par-dessus n'importe quelle image : chaque bandeau est sombre et
+// les textes portent une ombre. Pas d'animation continue hormis le point « en
+// direct » (cf. MatchSources).
 //
-// TAILLE : le bloc de lignes s'agrandit jusqu'à REMPLIR la source (cf.
-// listFit). Un cadre 16:9 fixe laissait un seul scrim en fine bande au milieu
-// de la source, minuscule une fois la source calée dans un encart de la scène.
+// TAILLE : le bloc s'agrandit jusqu'à REMPLIR la source (cf. pickScrimsLayout).
+// Deux gabarits, choisis selon la forme de la source :
+//   - `row`  : une ligne longue (horaire | équipe VS équipe), pour une source
+//              large ou beaucoup de scrims ;
+//   - `card` : horaire au-dessus, équipes et grands logos dessous, pour une
+//              source plus haute — typiquement UN scrim dans un encart, où une
+//              ligne longue ne remplirait qu'une fine bande.
 
+import type { CSSProperties } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
 import type { OverlayScrimsResponse } from '@/pages/api/overlay/scrims';
@@ -47,48 +52,80 @@ export function scrimDayLabel(
   }).format(new Date(ms));
 }
 
-/** Géométrie d'une ligne, en pixels « de conception ». */
-export const SCRIM_ROW_W = 1600;
-export const SCRIM_ROW_H = 112;
-export const SCRIM_ROW_GAP = 16;
-/** Marge gardée autour du bloc, pour que les coins arrondis ne touchent pas le bord. */
+/* ── Gabarits et mise à l'échelle ──────────────────────────────────────── */
+
+export type ScrimsLayout = 'row' | 'card';
+
+/** Taille « de conception » d'un bandeau, en pixels, par gabarit. */
+export const SCRIM_LAYOUTS: Record<ScrimsLayout, { w: number; h: number }> = {
+  row: { w: 1600, h: 112 },
+  card: { w: 1200, h: 300 },
+};
+export const SCRIM_GAP = 16;
+/** Marge autour du bloc, pour que les coins arrondis ne touchent pas le bord. */
 const SCRIM_MARGIN = 12;
 
+/** Facteur qui fait tenir `count` bandeaux du gabarit dans la source. */
+export function layoutFit(
+  layout: ScrimsLayout,
+  count: number,
+  viewport: { width: number; height: number }
+): number {
+  const { w, h } = SCRIM_LAYOUTS[layout];
+  const n = Math.max(1, count);
+  const blockH = n * h + (n - 1) * SCRIM_GAP;
+  return Math.min(
+    viewport.width / (w + 2 * SCRIM_MARGIN),
+    viewport.height / (blockH + 2 * SCRIM_MARGIN)
+  );
+}
+
 /**
- * Facteur d'échelle qui fait remplir la source au bloc de `count` lignes :
- * limité par la largeur (une ligne seule occupe toute la largeur) ou par la
- * hauteur (beaucoup de lignes dans une source basse), multiplié par `?scale=`.
+ * Le gabarit qui occupe le plus de surface dans la source, et son échelle
+ * (multipliée par `?scale=`). À surface égale, la ligne l'emporte : elle est la
+ * forme par défaut, la carte n'existe que pour mieux remplir.
  */
-export function listFit(
+export function pickScrimsLayout(
   count: number,
   viewport: { width: number; height: number },
   scale = 1
-): number {
-  const n = Math.max(1, count);
-  const blockH = n * SCRIM_ROW_H + (n - 1) * SCRIM_ROW_GAP;
-  const fit = Math.min(
-    viewport.width / (SCRIM_ROW_W + 2 * SCRIM_MARGIN),
-    viewport.height / (blockH + 2 * SCRIM_MARGIN)
-  );
-  return fit * scale;
+): { layout: ScrimsLayout; fit: number } {
+  const area = (layout: ScrimsLayout) => {
+    const f = layoutFit(layout, count, viewport);
+    const { w, h } = SCRIM_LAYOUTS[layout];
+    return f * f * w * h;
+  };
+  const layout: ScrimsLayout = area('card') > area('row') ? 'card' : 'row';
+  return { layout, fit: layoutFit(layout, count, viewport) * scale };
 }
+
+/* ── Briques ───────────────────────────────────────────────────────────── */
 
 const SHADOW = { textShadow: '0 2px 6px rgba(0,0,0,0.8)' } as const;
 
-function Logo({ team, name }: { team: OverlayTeamView | null; name: string }) {
+function Logo({
+  team,
+  name,
+  size,
+}: {
+  team: OverlayTeamView | null;
+  name: string;
+  size: 'md' | 'lg';
+}) {
+  const dim = size === 'lg' ? 'h-36 w-36 text-4xl' : 'h-20 w-20 text-2xl';
   if (team?.logoUrl) {
     return (
       // biome-ignore lint/performance/noImgElement: source OBS — next/image n'apporte rien et casse sur un logo distant
       <img
         src={team.logoUrl}
         alt=""
-        className="h-20 w-20 shrink-0 object-contain drop-shadow-lg"
+        className={`${dim} shrink-0 object-contain drop-shadow-lg`}
       />
     );
   }
   return (
     <div
-      className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-white/10 text-2xl font-black text-white/80"
+      className={`${dim} flex shrink-0 items-center justify-center rounded-xl bg-white/10 font-black text-white/80`}
       aria-hidden="true"
     >
       {/* Adversaire pas encore connu : « ? », pas l'initiale de « À déterminer ». */}
@@ -97,71 +134,142 @@ function Logo({ team, name }: { team: OverlayTeamView | null; name: string }) {
   );
 }
 
-function ScrimLine({
-  scrim,
-  accent,
-  locale,
-  t,
+function LiveBadge({ t, large }: { t: Dict; large?: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-2 rounded-full bg-red-600 font-bold uppercase tracking-wider text-white ${
+        large ? 'px-5 py-2 text-2xl' : 'px-4 py-1.5 text-lg'
+      }`}
+    >
+      <span className="block h-3 w-3 shrink-0 animate-pulse rounded-full bg-white" />
+      {t.matchPhaseLive}
+    </span>
+  );
+}
+
+function TeamSide({
+  team,
+  name,
+  align,
+  size,
 }: {
+  team: OverlayTeamView | null;
+  name: string;
+  align: 'left' | 'right';
+  size: 'md' | 'lg';
+}) {
+  return (
+    <div
+      className={`flex min-w-0 flex-1 items-center ${
+        size === 'lg' ? 'gap-6' : 'gap-5'
+      } ${align === 'right' ? 'flex-row-reverse' : ''}`}
+    >
+      <Logo team={team} name={name} size={size} />
+      <span
+        className={`truncate font-bold ${size === 'lg' ? 'text-5xl' : 'text-4xl'} ${
+          team ? 'text-white' : 'italic text-white/60'
+        }`}
+        style={SHADOW}
+      >
+        {name}
+      </span>
+    </div>
+  );
+}
+
+type LineProps = {
   scrim: OverlayScrimView;
   accent: string;
   locale: string;
   t: Dict;
-}) {
-  const day = scrimDayLabel(scrim.scheduledAt, locale);
-  const time = hourLabel(scrim.scheduledAt);
-  const name1 = scrim.team1?.name?.trim() || t.dayTeamTbd;
-  const name2 = scrim.team2?.name?.trim() || t.dayTeamTbd;
+};
 
+function lineData({ scrim, locale, t }: LineProps) {
+  return {
+    day: scrimDayLabel(scrim.scheduledAt, locale) ?? t.scrimsDateTbd,
+    time: hourLabel(scrim.scheduledAt) ?? '—',
+    name1: scrim.team1?.name?.trim() || t.dayTeamTbd,
+    name2: scrim.team2?.name?.trim() || t.dayTeamTbd,
+    live: scrim.phase === 'live',
+  };
+}
+
+/** Gabarit `row` : horaire | équipe 1 VS équipe 2, sur une ligne. */
+function ScrimRow(props: LineProps) {
+  const { scrim, accent, t } = props;
+  const d = lineData(props);
+  const { w, h } = SCRIM_LAYOUTS.row;
   return (
-    <li className="flex h-28 w-[1600px] items-center gap-8 rounded-2xl bg-black/70 px-8">
+    <li
+      className="flex items-center gap-8 rounded-2xl bg-black/70 px-8"
+      style={{ width: w, height: h }}
+    >
       {/* L'horaire d'abord : c'est la colonne que l'œil cherche. */}
       <div className="w-48 shrink-0 leading-tight" style={SHADOW}>
-        {scrim.phase === 'live' ? (
-          <span className="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-1.5 text-lg font-bold uppercase tracking-wider text-white">
-            <span className="block h-3 w-3 shrink-0 animate-pulse rounded-full bg-white" />
-            {t.matchPhaseLive}
-          </span>
+        {d.live ? (
+          <LiveBadge t={t} />
         ) : (
           <>
             <div
               className="text-xl font-bold uppercase tracking-wider"
               style={{ color: accent }}
             >
-              {day ?? t.scrimsDateTbd}
+              {d.day}
             </div>
             <div className="text-4xl font-black tabular-nums text-white">
-              {time ?? '—'}
+              {d.time}
             </div>
           </>
         )}
       </div>
-
-      <div className="flex min-w-0 flex-1 items-center justify-end gap-5">
-        <span
-          className={`truncate text-4xl font-bold ${scrim.team1 ? 'text-white' : 'italic text-white/60'}`}
-          style={SHADOW}
-        >
-          {name1}
-        </span>
-        <Logo team={scrim.team1} name={name1} />
-      </div>
-
+      <TeamSide team={scrim.team1} name={d.name1} align="right" size="md" />
       <span
         className="shrink-0 text-3xl font-black text-white/50"
         style={SHADOW}
       >
         {t.vs}
       </span>
+      <TeamSide team={scrim.team2} name={d.name2} align="left" size="md" />
+    </li>
+  );
+}
 
-      <div className="flex min-w-0 flex-1 items-center gap-5">
-        <Logo team={scrim.team2} name={name2} />
+/** Gabarit `card` : horaire au-dessus, équipes et grands logos dessous. */
+function ScrimCard(props: LineProps) {
+  const { scrim, accent, t } = props;
+  const d = lineData(props);
+  const { w, h } = SCRIM_LAYOUTS.card;
+  return (
+    <li
+      className="flex flex-col justify-center gap-5 rounded-3xl bg-black/70 px-10"
+      style={{ width: w, height: h }}
+    >
+      <div className="flex items-baseline justify-center gap-5" style={SHADOW}>
+        {d.live ? (
+          <LiveBadge t={t} large />
+        ) : (
+          <>
+            <span
+              className="text-3xl font-bold uppercase tracking-wider"
+              style={{ color: accent }}
+            >
+              {d.day}
+            </span>
+            <span className="text-5xl font-black tabular-nums text-white">
+              {d.time}
+            </span>
+          </>
+        )}
+      </div>
+      <div className="flex items-center gap-8">
+        <TeamSide team={scrim.team1} name={d.name1} align="right" size="lg" />
         <span
-          className={`truncate text-4xl font-bold ${scrim.team2 ? 'text-white' : 'italic text-white/60'}`}
+          className="shrink-0 text-4xl font-black text-white/50"
           style={SHADOW}
         >
-          {name2}
+          {t.vs}
         </span>
+        <TeamSide team={scrim.team2} name={d.name2} align="left" size="lg" />
       </div>
     </li>
   );
@@ -193,22 +301,29 @@ export function UpcomingScrimsSource({
   // qui s'imposerait à l'antenne.
   if (!payload || payload.scrims.length === 0) return null;
 
-  const fit = listFit(payload.scrims.length, viewport, scale);
+  const { layout, fit } = pickScrimsLayout(
+    payload.scrims.length,
+    viewport,
+    scale
+  );
   const anchor = ANCHOR[position];
+  const Line = layout === 'card' ? ScrimCard : ScrimRow;
+  const style: CSSProperties = {
+    width: SCRIM_LAYOUTS[layout].w,
+    gap: SCRIM_GAP,
+    top: anchor.top,
+    transform: `translate(-50%, ${anchor.y}) scale(${fit})`,
+    transformOrigin: `center ${position === 'center' ? 'center' : position}`,
+  };
 
   return (
     <ol
       className="absolute left-1/2 flex flex-col"
-      style={{
-        width: SCRIM_ROW_W,
-        gap: SCRIM_ROW_GAP,
-        top: anchor.top,
-        transform: `translate(-50%, ${anchor.y}) scale(${fit})`,
-        transformOrigin: `center ${position === 'center' ? 'center' : position}`,
-      }}
+      style={style}
+      data-layout={layout}
     >
       {payload.scrims.map((s) => (
-        <ScrimLine key={s.id} scrim={s} accent={accent} locale={locale} t={t} />
+        <Line key={s.id} scrim={s} accent={accent} locale={locale} t={t} />
       ))}
     </ol>
   );

@@ -40,7 +40,7 @@ import DonationOverlayPage from '../../pages/overlay/don';
 import StreamSourcesPanel from '../../components/admin/tournament/StreamSourcesPanel';
 import {
   UpcomingScrimsSource,
-  listFit,
+  pickScrimsLayout,
   parseScrimsPosition,
 } from '../../components/overlay/match/UpcomingScrimsSource';
 
@@ -285,16 +285,25 @@ describe('source « scrims à venir » : les lignes seules, fond transparent', (
     expect(render(null)).toBe('');
   });
 
-  it('agrandit une ligne seule jusqu’à la largeur de la source', () => {
-    // 1920×1080 : la largeur borne — la ligne de 1600 px passe à ~1900 px.
-    expect(listFit(1, { width: 1920, height: 1080 })).toBeCloseTo(1920 / 1624);
-    // Source calée sur un encart large et bas : toujours toute la largeur.
-    expect(listFit(1, { width: 1070, height: 280 })).toBeCloseTo(1070 / 1624);
-    // Six lignes dans une source basse : c'est la hauteur qui borne.
-    const six = listFit(6, { width: 1920, height: 600 });
-    expect(six * (6 * 112 + 5 * 16 + 24)).toBeCloseTo(600);
-    // ?scale= multiplie.
-    expect(listFit(1, { width: 1624, height: 1080 }, 0.5)).toBeCloseTo(0.5);
+  it('remplit la source : carte pour un scrim dans un encart, ligne sinon', () => {
+    // Encart haut (≈ 3,8:1) avec un seul scrim : la carte remplit mieux.
+    const inset = pickScrimsLayout(1, { width: 1070, height: 280 });
+    expect(inset.layout).toBe('card');
+    // Ses 300 px de haut occupent presque toute la hauteur de la source.
+    expect(inset.fit * 300).toBeGreaterThan(250);
+
+    // Bandeau très large et bas : la ligne longue.
+    expect(pickScrimsLayout(1, { width: 1920, height: 150 }).layout).toBe(
+      'row'
+    );
+
+    // Six scrims en 1920×1080 : des lignes, bornées par la hauteur.
+    const six = pickScrimsLayout(6, { width: 1920, height: 1080 });
+    expect(six.layout).toBe('row');
+
+    // ?scale= multiplie l'échelle retenue.
+    const half = pickScrimsLayout(1, { width: 1070, height: 280 }, 0.5);
+    expect(half.fit).toBeCloseTo(inset.fit * 0.5);
   });
 
   it('lit ?position=', () => {
