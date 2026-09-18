@@ -190,19 +190,27 @@ export default function TournamentHero({
                   {t.ctaViewTeams}
                 </span>
               </Link>
-            </div>
 
-            {tournament.rules_url && (
-              <a
-                href={tournament.rules_url}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-5 inline-flex items-center gap-1.5 text-[12px] text-gray-400 transition-colors hover:text-[var(--color-violet-light)]"
-              >
-                <RulesGlyph />
-                {t.rulesLink}
-              </a>
-            )}
+              {/* LE RÈGLEMENT EST UNE ACTION, PAS UNE NOTE DE BAS DE PAGE.
+                  Il vivait ici en 12 px gris sous les boutons : un texte qu'on
+                  ne voit pas quand on le cherche, et qu'une capitaine doit
+                  pourtant avoir lu avant de jouer. Il rejoint donc la rangée
+                  des CTA, à la même taille que « Voir les équipes ».
+                  L'ACCENT JAUNE le distingue des deux autres sans lui voler la
+                  vedette : c'est le document de référence, pas la destination
+                  principale de la page. */}
+              {tournament.rules_url && (
+                <a
+                  href={tournament.rules_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full border border-[var(--color-yellow)]/40 bg-[var(--color-yellow)]/10 px-6 py-3 text-sm font-semibold text-[var(--color-yellow)] backdrop-blur-sm transition-colors hover:border-[var(--color-yellow)]/70 hover:bg-[var(--color-yellow)]/20"
+                >
+                  <RulesGlyph />
+                  {t.rulesLink}
+                </a>
+              )}
+            </div>
           </div>
 
           {/* Colonne droite : compte à rebours géant */}
@@ -269,7 +277,8 @@ function ArrowGlyph() {
 function RulesGlyph() {
   return (
     <svg
-      className="h-3.5 w-3.5"
+      // Grandi avec le libellé : à 14 px il flottait à côté d'un bouton.
+      className="h-4 w-4"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
