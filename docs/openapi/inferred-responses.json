@@ -12187,20 +12187,7 @@
        "object",
        "null"
       ],
-      "properties": {
-       "enabled": {},
-       "duration_ms": {},
-       "sound_url": {},
-       "sound_volume": {},
-       "accent_color": {}
-      },
-      "required": [
-       "enabled",
-       "duration_ms",
-       "sound_url",
-       "sound_volume",
-       "accent_color"
-      ]
+      "additionalProperties": {}
      },
      "rules": {
       "type": "array",
@@ -12219,11 +12206,45 @@
         "min_amount"
        ]
       }
+     },
+     "media": {
+      "type": "object",
+      "properties": {
+       "frameUrl": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "frameKind": {
+        "type": [
+         "string",
+         "null"
+        ],
+        "enum": [
+         "image",
+         "video",
+         null
+        ]
+       },
+       "soundUrl": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "frameUrl",
+       "frameKind",
+       "soundUrl"
+      ]
      }
     },
     "required": [
      "settings",
-     "rules"
+     "rules",
+     "media"
     ]
    }
   },
@@ -32948,6 +32969,23 @@
          "string",
          "null"
         ]
+       },
+       "frameUrl": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "frameKind": {
+        "type": [
+         "string",
+         "null"
+        ],
+        "enum": [
+         "image",
+         "video",
+         null
+        ]
        }
       },
       "required": [
@@ -32955,7 +32993,9 @@
        "durationMs",
        "soundUrl",
        "soundVolume",
-       "accentColor"
+       "accentColor",
+       "frameUrl",
+       "frameKind"
       ]
      },
      "rules": {
