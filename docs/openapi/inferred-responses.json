@@ -55006,6 +55006,32 @@
     ]
    }
   },
+  "POST /api/admin/stream-alert-test": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "ok": {
+      "type": "boolean"
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "cheer",
+       "donation",
+       "follow",
+       "gift",
+       "raid",
+       "resub",
+       "sub"
+      ]
+     }
+    },
+    "required": [
+     "ok",
+     "kind"
+    ]
+   }
+  },
   "POST /api/admin/support/tickets/{id}/convert-blacklist": {
    "201": {
     "type": "object",

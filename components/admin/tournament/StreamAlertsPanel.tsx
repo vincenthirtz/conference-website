@@ -33,6 +33,7 @@ import StreamAlertsMediaFields, {
   type FileEdit,
 } from '@/components/admin/tournament/StreamAlertsMediaFields';
 import StreamAlertsTwitchCard from '@/components/admin/tournament/StreamAlertsTwitchCard';
+import StreamAlertsTestCard from '@/components/admin/tournament/StreamAlertsTestCard';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminStreamAlerts from '@/lib/i18n/locales/admin-fr/adminStreamAlerts';
 import {
@@ -396,6 +397,7 @@ export default function StreamAlertsPanel() {
       {/* En tête, parce que c'est la panne la plus silencieuse : sans ces
           abonnements, Twitch n'envoie rien et la boîte reste muette. */}
       <StreamAlertsTwitchCard />
+      <StreamAlertsTestCard />
 
       {/* Réglages globaux */}
       <div className="space-y-4 rounded-xl border border-neutral-700/40 bg-neutral-900/50 p-4">

@@ -133,4 +133,12 @@ export default adminNs('adminStreamAlerts', {
   twitchSubscribedPartial:
     'Activation partielle : voir le détail type par type.',
   twitchSubscribeError: 'Activation impossible.',
+  testHeading: 'Alerte de test',
+  testHelp:
+    'Envoie une fausse alerte dans la source OBS « Alertes », par le même chemin qu’un vrai événement Twitch : elle s’affiche en moins de 5 s. Les réglages ci-dessous s’appliquent — un type éteint ou un seuil trop haut la filtre. Le « rejouer » de Streamlabs, lui, n’atteint pas cette source.',
+  testKindLabel: 'Type d’alerte',
+  testButton: 'Lancer une alerte de test',
+  testSending: 'Envoi…',
+  testSent: 'Alerte de test envoyée.',
+  testError: 'Alerte de test impossible.',
 });

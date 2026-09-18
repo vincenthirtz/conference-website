@@ -124,4 +124,12 @@ export default {
   twitchSubscribed: 'Twitch events enabled.',
   twitchSubscribedPartial: 'Partially enabled: see the per-type detail.',
   twitchSubscribeError: 'Could not enable.',
+  testHeading: 'Test alert',
+  testHelp:
+    'Sends a fake alert to the “Alerts” OBS source, through the same path as a real Twitch event: it shows up within 5 s. The settings below apply — a disabled type or a high threshold filters it out. Streamlabs’ “replay” does not reach this source.',
+  testKindLabel: 'Alert type',
+  testButton: 'Send a test alert',
+  testSending: 'Sending…',
+  testSent: 'Test alert sent.',
+  testError: 'Could not send the test alert.',
 };

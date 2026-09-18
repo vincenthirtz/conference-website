@@ -1,0 +1,55 @@
+post:
+  summary: Déclenche une alerte de test dans la boîte d'alertes.
+  description: |
+    Insère un faux événement Twitch dans `stream_alert_events`, pour l'espace
+    du staff, avec `twitch_message_id` = `test-<uuid>`. La source
+    `/overlay/alertes` le lit au poll suivant (≤ 5 s), exactement comme un
+    vrai événement — règles et seuils compris.
+    `kind` ∈ follow · sub · resub · gift · cheer · raid (pas `donation` : les
+    dons viennent de HelloAsso). `name` facultatif, 60 caractères max,
+    « Test » par défaut.
+    Permission `manage_broadcast`. Rate-limit 20 / min.
+  operationId: adminPostStreamAlertTest
+  tags:
+    - admin/broadcast
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - kind
+          properties:
+            kind:
+              type: string
+              enum: [follow, sub, resub, gift, cheer, raid]
+            name:
+              type: string
+              maxLength: 60
+  responses:
+    '200':
+      description: Alerte de test déposée.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              ok:
+                type: boolean
+              kind:
+                type: string
+    '400':
+      description: Type d'alerte invalide.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '405':
+      description: Méthode non autorisée (POST seulement).
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
