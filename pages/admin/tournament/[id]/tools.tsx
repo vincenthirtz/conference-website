@@ -19,6 +19,7 @@ import { useToast } from '@/components/Toast';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
 import StreamSourcesPanel from '@/components/admin/tournament/StreamSourcesPanel';
+import StreamAlertsPanel from '@/components/admin/tournament/StreamAlertsPanel';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { logger } from '@/utils/logger';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
@@ -577,6 +578,18 @@ function TournamentToolsPage({
                   showDonation={isDefaultTenant}
                 />
               </div>
+
+              {/* Les réglages de la boîte d'alertes, sous l'URL qu'ils
+                  pilotent. Même condition que la source elle-même : elle
+                  n'apparaît dans la liste ci-dessus que pour l'espace de
+                  l'association (ce sont SES alertes) et avec la capacité de
+                  régie — un éditeur sans source à régler n'aurait rien à
+                  faire ici. */}
+              {isDefaultTenant && canUseMatchOverlays && (
+                <div className="mt-6 border-t border-neutral-700/40 pt-5">
+                  <StreamAlertsPanel />
+                </div>
+              )}
             </WidgetCard>
           )}
         </div>

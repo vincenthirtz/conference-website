@@ -66,7 +66,14 @@
 // reconsentement. Ce webhook ne se justifie que pour que le drop fonctionne
 // COCKPIT FERMÉ, personne devant l'écran.
 
-import crypto from 'crypto';
+import {
+  EVENTSUB_SECRET_ENV,
+  MAX_MESSAGE_AGE_MS,
+  computeTwitchSignature,
+  constantTimeEqual,
+  header,
+  readRawBody,
+} from '@/utils/twitch/eventsubRequest';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 
@@ -91,7 +98,7 @@ import { sendTwitchChatMessage } from '@/utils/twitchChat';
 export const config = { api: { bodyParser: false } };
 
 /** Secret partagé, choisi PAR NOUS à la création de la souscription EventSub. */
-const SECRET_ENV = 'TWITCH_EVENTSUB_SECRET';
+const SECRET_ENV = EVENTSUB_SECRET_ENV;
 
 /**
  * Clé de la source dans `utils/tcg/earnSources.ts`. Le montant, le nombre de
@@ -116,14 +123,12 @@ const DROP_SUBSCRIPTION_TYPE =
  * UNIQUE empêche déjà le double crédit, mais on ne laisse pas pour autant du
  * trafic périmé atteindre la logique métier.
  */
-const MAX_MESSAGE_AGE_MS = 10 * 60 * 1000;
 
 /**
  * Plafond du corps lu. Une charge EventSub pèse quelques kilo-octets ; le
  * plafond évite qu'une requête sans fin fasse gonfler la mémoire, `bodyParser`
  * étant désactivé — donc sans la limite que Next applique d'ordinaire.
  */
-const MAX_BODY_BYTES = 64 * 1024;
 
 /* -----------------------------------------------------------
  * Validation des charges utiles (zod, jamais un simple `if`)
@@ -211,57 +216,9 @@ const MessageTypeSchema = z.enum([
  * Signature
  * ---------------------------------------------------------*/
 
-/** Comparaison à temps constant (longueurs comparées hors-bande). */
-function constantTimeEqual(provided: string, expected: string): boolean {
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
-}
-
-/**
- * Signature attendue : `sha256=` + HMAC-SHA256(secret, id + timestamp + corps).
- *
- * Exportée pour être testée seule : c'est la seule barrière entre une URL
- * publique et une distribution de récompenses.
- */
-export function computeTwitchSignature(
-  secret: string,
-  messageId: string,
-  timestamp: string,
-  rawBody: Buffer
-): string {
-  const hmac = crypto.createHmac('sha256', secret);
-  hmac.update(messageId + timestamp);
-  hmac.update(rawBody);
-  return `sha256=${hmac.digest('hex')}`;
-}
-
 /* -----------------------------------------------------------
  * Lecture du corps brut
  * ---------------------------------------------------------*/
-
-/** Octets reçus, ou null si le plafond est dépassé. */
-async function readRawBody(req: NextApiRequest): Promise<Buffer | null> {
-  const chunks: Buffer[] = [];
-  let total = 0;
-  for await (const chunk of req) {
-    const buf: Buffer = Buffer.isBuffer(chunk)
-      ? chunk
-      : Buffer.from(chunk as string);
-    total += buf.length;
-    if (total > MAX_BODY_BYTES) return null;
-    chunks.push(buf);
-  }
-  return Buffer.concat(chunks);
-}
-
-/** Première valeur d'un en-tête, doublons ignorés. */
-function header(req: NextApiRequest, name: string): string | null {
-  const raw = req.headers[name];
-  const value = Array.isArray(raw) ? raw[0] : raw;
-  return typeof value === 'string' && value.length > 0 ? value : null;
-}
 
 /* -----------------------------------------------------------
  * Identité : le point de blocage assumé

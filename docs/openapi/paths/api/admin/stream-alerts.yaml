@@ -1,0 +1,120 @@
+get:
+  summary: Réglages de la boîte d'alertes de stream.
+  description: |
+    Rend les réglages de l'espace (`stream_alert_settings`) et les règles
+    d'annonce par type (`stream_alert_rules`), tels qu'ils sont en base.
+    `null` / liste vide = l'espace n'a jamais ouvert l'éditeur, et la source
+    tourne sur les défauts du code.
+    Permission `manage_broadcast`. Rate-limit 60 / min.
+  operationId: adminGetStreamAlerts
+  tags:
+    - admin/broadcast
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Réglages et règles courants.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+patch:
+  summary: Modifier les réglages de la boîte d'alertes.
+  description: |
+    PAR ESPACE, PAS PAR TOURNOI, même si l'éditeur vit dans la page Outils
+    d'un tournoi : les alertes sont celles de LA CHAÎNE. Les ranger sous un
+    tournoi obligerait à tout reconfigurer à chaque édition.
+
+    ÉCRITURE PARTIELLE, JAMAIS UN REMPLACEMENT : seuls les champs reçus sont
+    écrits. Deux membres du staff peuvent régler la boîte en même temps
+    pendant une préparation de direct sans s'écraser l'un l'autre.
+
+    `''` VEUT DIRE « REVIENS AU DÉFAUT » (écrit `NULL`), pas « vide » :
+    effacer une phrase rétablit la formulation par défaut au lieu de laisser
+    une alerte muette à l'antenne.
+
+    Le son doit être un chemin du site ou une URL `https://` — cette valeur
+    finit dans l'attribut `src` d'un lecteur audio, sur une page de régie.
+    Permission `manage_broadcast`.
+  operationId: adminPatchStreamAlerts
+  tags:
+    - admin/broadcast
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            settings:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                durationMs:
+                  type: integer
+                  nullable: true
+                  minimum: 3000
+                  maximum: 60000
+                soundUrl:
+                  type: string
+                  nullable: true
+                soundVolume:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                accentColor:
+                  type: string
+                  nullable: true
+            rules:
+              type: array
+              items:
+                type: object
+                required:
+                  - kind
+                properties:
+                  kind:
+                    type: string
+                    enum:
+                      - follow
+                      - sub
+                      - resub
+                      - gift
+                      - cheer
+                      - raid
+                      - donation
+                  enabled:
+                    type: boolean
+                  message:
+                    type: string
+                    nullable: true
+                    maxLength: 120
+                  minAmount:
+                    type: integer
+                    nullable: true
+  responses:
+    '200':
+      description: Enregistré.
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '405':
+      description: Méthode non autorisée (GET et PATCH seulement).
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

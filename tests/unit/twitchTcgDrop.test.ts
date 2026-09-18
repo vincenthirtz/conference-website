@@ -53,11 +53,14 @@ import {
 } from './__helpers__/supabaseMock';
 import { TWITCH_DROP_COINS, getEarnSource } from '../../utils/tcg/earnSources';
 import handler, {
-  computeTwitchSignature,
   grantTwitchDrop,
   resolveSiteUserFromTwitch,
   writeDropEntry,
 } from '../../pages/api/webhooks/twitch/tcg-drop';
+// La signature a quitté la route : elle sert désormais à DEUX webhooks
+// EventSub (drop TCG et boîte d'alertes), et une fonction de signature
+// recopiée est une fonction qu'on corrigera à un seul endroit.
+import { computeTwitchSignature } from '../../utils/twitch/eventsubRequest';
 
 const TENANT = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
 const BROADCASTER_ID = 'bc-123';

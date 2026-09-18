@@ -1,0 +1,103 @@
+get:
+  summary: État des abonnements EventSub de la boîte d'alertes.
+  description: |
+    Rend l'URL de rappel, la présence du secret partagé, et pour CHAQUE type
+    d'événement : s'il est abonné, et si le scope qu'il exige manque à la
+    connexion de la chaîne.
+    Permission `manage_broadcast`. Rate-limit 30 / min.
+  operationId: adminGetAlertsEventSub
+  tags:
+    - admin/twitch
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: État courant, type par type.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      description: Aucune chaîne connectée (`NOT_CONNECTED`).
+    '502':
+      description: Twitch injoignable (`TWITCH_HELIX_ERROR`).
+post:
+  summary: Créer les abonnements EventSub qui nourrissent la boîte d'alertes.
+  description: |
+    Sans ces abonnements, le récepteur `/api/webhooks/twitch/alerts` ne reçoit
+    jamais rien — sans erreur, sans trace, et on ne s'en aperçoit qu'au
+    premier direct sans alertes.
+
+    JETON D'APPLICATION, PAS JETON DE CHAÎNE. Twitch exige un app access token
+    (`client_credentials`) pour le transport webhook, là où le transport
+    websocket veut un jeton utilisateur. S'y tromper rend un 401 que rien
+    n'explique. La CONDITION porte le `broadcaster_user_id`, donc les scopes
+    doivent avoir été accordés par la chaîne.
+
+    UN ÉCHEC PARTIEL EST UN RÉSULTAT, PAS UNE ERREUR. Les scopes manquants ne
+    concernent que certains types (`channel:read:subscriptions` pour les subs
+    et les gifts, `bits:read` pour les bits) : on crée ce qu'on peut et on
+    rapporte le reste type par type, dans `subscriptions[]` et
+    `missingScopes[]`. Tout refuser parce qu'il manque `bits:read` priverait
+    la chaîne de ses follows et de ses raids pour rien.
+
+    Un raid entrant se souscrit sur `to_broadcaster_user_id` (celle qui
+    REÇOIT) et n'exige aucun scope. `channel.follow` v2 exige en plus
+    `moderator_user_id`, même quand c'est la chaîne elle-même.
+
+    Idempotent : un 409 de Twitch (« déjà abonné ») compte comme créé.
+    Permission `manage_broadcast`.
+  operationId: adminCreateAlertsEventSub
+  tags:
+    - admin/twitch
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Résultat type par type, scopes manquants compris.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      description: >-
+        URL de rappel non publique (`CALLBACK_NOT_PUBLIC`) — Twitch appelle
+        notre serveur, pas l'inverse : impossible depuis un poste local.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      description: Aucune chaîne connectée (`NOT_CONNECTED`).
+    '502':
+      description: Twitch injoignable (`TWITCH_HELIX_ERROR`).
+    '503':
+      description: >-
+        `TWITCH_EVENTSUB_SECRET` absent (`WEBHOOK_SECRET_MISSING`) : les
+        abonnements seraient créés et inertes, le récepteur rejetant chaque
+        livraison en 403.
+delete:
+  summary: Supprimer les abonnements EventSub de la boîte d'alertes.
+  description: |
+    Supprime tous les abonnements pointant vers l'URL de rappel de cette
+    route. Permission `manage_broadcast`.
+  operationId: adminDeleteAlertsEventSub
+  tags:
+    - admin/twitch
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Supprimés (`removed` en donne le nombre).
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '502':
+      description: Liste des abonnements illisible (`TWITCH_HELIX_ERROR`).

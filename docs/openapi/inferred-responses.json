@@ -1375,6 +1375,23 @@
     ]
    }
   },
+  "DELETE /api/admin/twitch/eventsub/alerts": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "ok": {
+      "type": "boolean"
+     },
+     "removed": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "ok",
+     "removed"
+    ]
+   }
+  },
   "DELETE /api/admin/twitch/eventsub/tcg-drop": {
    "200": {
     "type": "object",
@@ -12161,6 +12178,55 @@
     ]
    }
   },
+  "GET /api/admin/stream-alerts": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "settings": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "enabled": {},
+       "duration_ms": {},
+       "sound_url": {},
+       "sound_volume": {},
+       "accent_color": {}
+      },
+      "required": [
+       "enabled",
+       "duration_ms",
+       "sound_url",
+       "sound_volume",
+       "accent_color"
+      ]
+     },
+     "rules": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "kind": {},
+        "enabled": {},
+        "message": {},
+        "min_amount": {}
+       },
+       "required": [
+        "kind",
+        "enabled",
+        "message",
+        "min_amount"
+       ]
+      }
+     }
+    },
+    "required": [
+     "settings",
+     "rules"
+    ]
+   }
+  },
   "GET /api/admin/support/tickets": {
    "200": {
     "type": "object",
@@ -21398,6 +21464,68 @@
        "connected"
       ]
      }
+    ]
+   }
+  },
+  "GET /api/admin/twitch/eventsub/alerts": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "callback": {
+      "type": "string"
+     },
+     "broadcasterLogin": {
+      "type": "null"
+     },
+     "secretConfigured": {
+      "type": "boolean"
+     },
+     "readable": {
+      "type": "boolean"
+     },
+     "subscriptions": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "type": {
+         "type": "string"
+        },
+        "version": {
+         "type": "string"
+        },
+        "scope": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "subscribed": {
+         "type": "boolean"
+        },
+        "missingScope": {
+         "type": "boolean"
+        },
+        "error": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "type",
+        "version",
+        "scope",
+        "subscribed",
+        "missingScope"
+       ]
+      }
+     }
+    },
+    "required": [
+     "callback",
+     "broadcasterLogin",
+     "secretConfigured",
+     "readable",
+     "subscriptions"
     ]
    }
   },
@@ -32738,6 +32866,177 @@
      "createdGuildId",
      "botInviteUrl",
      "secretsRevealUrl"
+    ]
+   }
+  },
+  "GET /api/overlay/alerts": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "alerts": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "kind": {
+         "type": "string",
+         "enum": [
+          "cheer",
+          "donation",
+          "follow",
+          "gift",
+          "raid",
+          "resub",
+          "sub"
+         ]
+        },
+        "actorName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "amount": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "tier": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "createdAt": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "id",
+        "kind",
+        "actorName",
+        "amount",
+        "tier",
+        "createdAt"
+       ]
+      }
+     },
+     "settings": {
+      "type": "object",
+      "properties": {
+       "enabled": {
+        "type": "boolean"
+       },
+       "durationMs": {
+        "type": "number"
+       },
+       "soundUrl": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "soundVolume": {
+        "type": "number"
+       },
+       "accentColor": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "enabled",
+       "durationMs",
+       "soundUrl",
+       "soundVolume",
+       "accentColor"
+      ]
+     },
+     "rules": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "enum": [
+          "cheer",
+          "donation",
+          "follow",
+          "gift",
+          "raid",
+          "resub",
+          "sub"
+         ]
+        },
+        "enabled": {
+         "type": "boolean"
+        },
+        "message": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "minAmount": {
+         "type": [
+          "number",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "kind",
+        "enabled",
+        "message",
+        "minAmount"
+       ]
+      }
+     },
+     "branding": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "name": {
+        "type": "string"
+       },
+       "logoUrl": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "accent": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "name",
+       "logoUrl",
+       "accent"
+      ]
+     },
+     "serverTime": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "alerts",
+     "settings",
+     "rules",
+     "branding",
+     "serverTime"
     ]
    }
   },
@@ -46172,6 +46471,19 @@
     ]
    }
   },
+  "PATCH /api/admin/stream-alerts": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "ok": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "ok"
+    ]
+   }
+  },
   "PATCH /api/admin/support/tickets/{id}": {
    "200": {
     "type": "object",
@@ -58548,6 +58860,66 @@
     ]
    }
   },
+  "POST /api/admin/twitch/eventsub/alerts": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "callback": {
+      "type": "string"
+     },
+     "subscriptions": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "type": {
+         "type": "string"
+        },
+        "version": {
+         "type": "string"
+        },
+        "scope": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "subscribed": {
+         "type": "boolean"
+        },
+        "missingScope": {
+         "type": "boolean"
+        },
+        "error": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "type",
+        "version",
+        "scope",
+        "subscribed",
+        "missingScope"
+       ]
+      }
+     },
+     "missingScopes": {
+      "type": "array",
+      "items": {
+       "type": [
+        "string",
+        "null"
+       ]
+      }
+     }
+    },
+    "required": [
+     "callback",
+     "subscriptions",
+     "missingScopes"
+    ]
+   }
+  },
   "POST /api/admin/twitch/eventsub/subscribe": {
    "200": {
     "type": "object",
@@ -64259,6 +64631,55 @@
      "expires_in",
      "scope",
      "token_type"
+    ]
+   }
+  },
+  "POST /api/webhooks/twitch/alerts": {
+   "200": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "ok": {
+        "type": "boolean"
+       },
+       "status": {
+        "type": "string"
+       },
+       "kind": {
+        "type": "string",
+        "enum": [
+         "cheer",
+         "donation",
+         "follow",
+         "gift",
+         "raid",
+         "resub",
+         "sub"
+        ]
+       }
+      },
+      "required": [
+       "ok",
+       "status",
+       "kind"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "ok": {
+        "type": "boolean"
+       },
+       "status": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "ok",
+       "status"
+      ]
+     }
     ]
    }
   },

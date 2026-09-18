@@ -25,6 +25,7 @@ import enAdminLogs from './adminLogs';
 import enAdminEmailLogs from './adminEmailLogs';
 import enAdminTournamentOverview from './adminTournamentOverview';
 import enAdminTournamentEmbed from './adminTournamentEmbed';
+import enAdminStreamAlerts from './adminStreamAlerts';
 import enAdminTournamentDashboard from './adminTournamentDashboard';
 import enAdminTournamentEdit from './adminTournamentEdit';
 import enAdminRegistrationFields from './adminRegistrationFields';
@@ -221,6 +222,7 @@ const adminEnDict = {
   adminEmailLogs: enAdminEmailLogs,
   adminTournamentOverview: enAdminTournamentOverview,
   adminTournamentEmbed: enAdminTournamentEmbed,
+  adminStreamAlerts: enAdminStreamAlerts,
   adminTournamentDashboard: enAdminTournamentDashboard,
   adminTournamentEdit: enAdminTournamentEdit,
   adminRegistrationFields: enAdminRegistrationFields,

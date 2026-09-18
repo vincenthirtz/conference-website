@@ -44,6 +44,9 @@ const SOURCES = [
   // Pas liée au tournoi : les scrims publics de tout l'espace.
   { key: 'scrims', size: '1920×1080' },
   { key: 'scrimResult', size: '1920×1080' },
+  // Les alertes de LA CHAÎNE (Twitch + dons de l'association) : même règle que
+  // le QR de don. Elles se règlent dans le panneau juste en dessous.
+  { key: 'alerts', size: '1920×1080' },
   // Les partenaires de l'ASSOCIATION, pas ceux d'un tournoi : même règle que
   // le QR de don, l'espace de l'association est seul à qui ils appartiennent.
   { key: 'partners', size: '1920×160' },
@@ -55,6 +58,7 @@ const SOURCES = [
 
 /** Sources propres à l'association (ses partenaires, son QR, ses dons). */
 const DONATION_KEYS: ReadonlySet<string> = new Set([
+  'alerts',
   'partners',
   'don',
   'donAlert',
@@ -66,6 +70,7 @@ function sourceUrl(baseUrl: string, tournamentRef: string, key: string) {
   if (key === 'scrims') return `${baseUrl}/overlay/scrims`;
   if (key === 'scrimResult') return `${baseUrl}/overlay/scrim-result`;
   if (key === 'partners') return `${baseUrl}/overlay/partenaires`;
+  if (key === 'alerts') return `${baseUrl}/overlay/alertes`;
   if (key === 'don') return `${baseUrl}/overlay/don`;
   if (key === 'donAlert') return `${baseUrl}/overlay/don-alert`;
   return `${baseUrl}/overlay/match/next?tournament=${tournament}&source=${key}`;

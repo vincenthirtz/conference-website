@@ -26,6 +26,7 @@ import nsAdminEmailLogs from './adminEmailLogs';
 import nsAdminDiscordLogs from './adminDiscordLogs';
 import nsAdminTournamentOverview from './adminTournamentOverview';
 import nsAdminTournamentEmbed from './adminTournamentEmbed';
+import nsAdminStreamAlerts from './adminStreamAlerts';
 import nsAdminTournamentDashboard from './adminTournamentDashboard';
 import nsAdminTournamentEdit from './adminTournamentEdit';
 import nsAdminRegistrationFields from './adminRegistrationFields';
@@ -222,6 +223,7 @@ export const frDict = {
   adminDiscordLogs: nsAdminDiscordLogs.fr,
   adminTournamentOverview: nsAdminTournamentOverview.fr,
   adminTournamentEmbed: nsAdminTournamentEmbed.fr,
+  adminStreamAlerts: nsAdminStreamAlerts.fr,
   adminTournamentDashboard: nsAdminTournamentDashboard.fr,
   adminTournamentEdit: nsAdminTournamentEdit.fr,
   adminRegistrationFields: nsAdminRegistrationFields.fr,

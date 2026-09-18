@@ -61,6 +61,9 @@ export default adminNs('adminTournamentEmbed', {
   source_donAlert_name: 'Alerte don (HelloAsso)',
   source_donAlert_desc:
     'Une alerte « Merci pour ce don de 10 € ! » à chaque don HelloAsso reçu par l’association, sur fond transparent — à poser à côté de Streamlabs, qui ne connaît pas HelloAsso. Montant seulement : le nom du donateur n’est jamais affiché (il le saisit pour son reçu fiscal, pas pour l’antenne). Les dons déjà reçus à l’ouverture de la source ne sont pas rejoués. &goal=500 ajoute une jauge (total depuis minuit, ou depuis &from=AAAA-MM-JJ), &gauge=only n’affiche que la jauge, &duration=8 règle la durée d’une alerte (3 à 30 s), &demo=1 envoie de faux dons pour régler la scène.',
+  source_alerts_name: 'Boîte d’alertes (Twitch + dons)',
+  source_alerts_desc:
+    'Subs, réabos, abonnements offerts, bits, follows, raids et dons HelloAsso dans un seul habillage animé, sur fond transparent. Une alerte à la fois, jamais deux fois la même, et rien de ce qui s’est passé avant l’ouverture de la source. Ce qu’elle annonce se règle juste en dessous. Ajoutez &demo=1 pour faire défiler un exemple de chaque type et cadrer la scène, &position=top ou bottom, &scale=1.4.',
   source_partners_name: 'Partenaires',
   source_partners_desc:
     'Les partenaires de l’association en bandeau, sur fond transparent — à poser en bas d’écran. Source conseillée : 1920×160. Un partenaire sans logo affiche son nom. Ajoutez &categories=super,major pour n’en montrer qu’un palier, &limit=N pour le nombre, &position=top ou center pour le caler ailleurs, &heading=0 pour ne garder que les logos.',

@@ -1,0 +1,73 @@
+get:
+  summary: Source de stream OBS « boîte d'alertes » (Twitch + dons).
+  description: |
+    PUBLIC (sans authentification), destinée à la source navigateur d'OBS
+    `/overlay/alertes` : les événements Twitch reçus par webhook EventSub
+    (follow, sub, resub, gift, cheer, raid), les dons HelloAsso, ET la
+    configuration de la boîte — le tout en UN appel.
+
+    UN SEUL APPEL, À DESSEIN. La source poll toutes les 5 s pendant six
+    heures ; trois requêtes au lieu d'une, c'est trois fois plus d'occasions
+    qu'une d'elles échoue et laisse l'écran incohérent (des alertes sans
+    leurs règles annonceraient ce que la régie a éteint).
+
+    LA CONFIGURATION VOYAGE AVEC LES ALERTES pour qu'un changement fait en
+    admin s'applique en moins de cinq secondes : en plein direct, on ne
+    recolle pas une URL dans OBS.
+
+    FENÊTRE COURTE (15 min), pas d'historique : la source n'annonce jamais ce
+    qui s'est passé avant son ouverture, lui servir plus serait du trafic pur.
+
+    COUPE-CIRCUIT : quand `settings.enabled` est faux, `alerts` est VIDE.
+    Ce qui ne part pas sur le réseau ne peut pas s'afficher par accident.
+
+    Les identifiants d'alerte sont PRÉFIXÉS par source (`tw:` / `don:`) :
+    deux tables, deux espaces d'identifiants, et le registre « déjà vu » de
+    la source ne doit pas les confondre.
+
+    L'espace doit porter la capacité de palier `matchOverlays` — sinon `402`.
+
+    `Cache-Control: public, s-maxage=5, stale-while-revalidate=15`.
+  operationId: getAlertsOverlaySource
+  tags:
+    - public/misc
+  security: []
+  parameters:
+    - name: tenant
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Slug de l'espace, pour une source d'un autre organisateur.
+  responses:
+    '200':
+      description: Les alertes récentes, les réglages et les règles d'annonce.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '402':
+      description: >-
+        Le palier de l'espace n'ouvre pas les sources de stream (capacité
+        `matchOverlays`). Le corps nomme le palier en cours.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Error'
+            properties:
+              code:
+                type: string
+                enum:
+                  - PLAN_CAPABILITY_REQUIRED
+              capability:
+                type: string
+                enum:
+                  - matchOverlays
+    '405':
+      description: Méthode non autorisée (seul GET est accepté).
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

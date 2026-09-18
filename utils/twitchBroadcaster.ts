@@ -55,6 +55,14 @@ export const BROADCASTER_SCOPES: readonly string[] = [
   // liste dans `missing_scopes`) → il faut reconnecter la chaîne.
   'moderator:read:followers',
   'moderator:read:shoutouts',
+  // Boîte d'alertes (pages/api/webhooks/twitch/alerts.ts) — subs, réabos et
+  // abonnements offerts d'un côté, bits de l'autre. Les raids n'exigent aucun
+  // scope. MÊME AVERTISSEMENT QUE CI-DESSUS, et il s'applique ici pour de bon :
+  // la connexion en place date du 13/09/2026 et n'a NI l'un NI l'autre. Tant
+  // que la chaîne n'est pas reconnectée, la boîte n'annoncera que follows,
+  // raids et dons — sans erreur visible ailleurs que dans `missing_scopes`.
+  'channel:read:subscriptions',
+  'bits:read',
 ];
 
 /* -----------------------------------------------------------

@@ -1,0 +1,101 @@
+post:
+  tags:
+    - webhooks
+  summary: Boîte d'alertes — réception EventSub Twitch.
+  description: |
+    Reçoit les événements Twitch qui alimentent la source OBS
+    `/overlay/alertes` : `channel.follow`, `channel.subscribe`,
+    `channel.subscription.gift`, `channel.subscription.message`,
+    `channel.cheer`, `channel.raid`.
+
+    POURQUOI UN WEBHOOK alors que l'EventSub du cockpit existe : celui-là est
+    en transport WEBSOCKET, lié à l'onglet staff qui l'ouvre. Une source OBS
+    n'a pas de session, et une régie ne garde pas un onglet d'admin ouvert
+    pour que ses alertes marchent.
+
+    `bodyParser: false` — le HMAC couvre les OCTETS EXACTS du corps.
+    Signature `sha256=` sur `id + timestamp + corps brut`, comparée en temps
+    constant, vérifiée AVANT tout parsing et tout accès base. Fail-closed en
+    503 si `TWITCH_EVENTSUB_SECRET` est absent. Horodatage hors ±10 min
+    rejeté (anti-rejeu). Vérification partagée avec le webhook du drop TCG
+    (`utils/twitch/eventsubRequest.ts`) : une fonction de signature recopiée
+    est une fonction qu'on corrigera à un seul endroit.
+
+    `security: []` À DESSEIN : la garde est cryptographique, pas un schéma
+    OpenAPI. Aucune clé bot, aucune session ne donne accès à cette route.
+
+    ACQUITTER LARGEMENT, REFUSER ÉTROITEMENT. Tout ce qui est signé mais
+    inexploitable repart en 200 : un non-2xx fait retenter Twitch puis
+    DÉSACTIVER la souscription, et personne ne s'en aperçoit avant le direct
+    suivant. Cas acquittés : type d'événement hors périmètre, chaîne
+    qu'aucun espace n'a connectée, et surtout le `channel.subscribe` d'un sub
+    OFFERT — offrir 20 abonnements déclenche 1 `gift` + 20 `subscribe`, et
+    sans ce filtre une seule générosité bloquerait l'antenne plusieurs
+    minutes.
+
+    IDEMPOTENT sur `message_id` : Twitch rejoue un message quand il n'a pas
+    eu son 2xx à temps. La contrainte d'unicité empêche d'annoncer deux fois
+    le même sub.
+
+    Seules la signature invalide, le message périmé et les pannes
+    transitoires (503 + `Retry-After`) sortent du 200.
+  operationId: twitchAlertsWebhook
+  security: []
+  parameters:
+    - name: Twitch-Eventsub-Message-Id
+      in: header
+      required: true
+      schema:
+        type: string
+    - name: Twitch-Eventsub-Message-Timestamp
+      in: header
+      required: true
+      schema:
+        type: string
+    - name: Twitch-Eventsub-Message-Signature
+      in: header
+      required: true
+      schema:
+        type: string
+    - name: Twitch-Eventsub-Message-Type
+      in: header
+      required: true
+      schema:
+        type: string
+        enum:
+          - webhook_callback_verification
+          - notification
+          - revocation
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: >-
+        Acquitté. `status` dit ce qui a été fait : `stored`,
+        `ignored_event_type`, `ignored_message_type`, `unknown_channel`,
+        `no_broadcaster`, `revoked` — ou, pour l'activation, le `challenge`
+        rendu tel quel en `text/plain`.
+    '400':
+      description: >-
+        En-têtes manquants (`MISSING_HEADERS`), horodatage illisible
+        (`INVALID_TIMESTAMP`), JSON invalide (`INVALID_JSON`), charge
+        inexploitable (`INVALID_PAYLOAD`, `INVALID_CHALLENGE`).
+    '403':
+      description: >-
+        Signature invalide (`INVALID_SIGNATURE`) ou message hors fenêtre
+        anti-rejeu (`STALE_MESSAGE`).
+    '405':
+      description: Méthode non autorisée (seul POST est accepté).
+    '413':
+      description: Corps au-delà du plafond de 64 Kio (`PAYLOAD_TOO_LARGE`).
+    '503':
+      description: >-
+        Secret absent (`WEBHOOK_NOT_CONFIGURED`), base indisponible
+        (`DB_UNAVAILABLE`), lecture de la chaîne en échec
+        (`CHANNEL_LOOKUP_FAILED`) ou écriture en échec (`WRITE_FAILED`).
+        Réessayable — `Retry-After` est posé.

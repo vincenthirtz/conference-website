@@ -1260,6 +1260,34 @@
       "tenant_id",
       "winner_team_id"
     ],
+    "stream_alert_events": [
+      "actor_name",
+      "amount",
+      "created_at",
+      "id",
+      "kind",
+      "tenant_id",
+      "tier",
+      "twitch_message_id"
+    ],
+    "stream_alert_rules": [
+      "enabled",
+      "kind",
+      "message",
+      "min_amount",
+      "tenant_id",
+      "updated_at"
+    ],
+    "stream_alert_settings": [
+      "accent_color",
+      "duration_ms",
+      "enabled",
+      "sound_url",
+      "sound_volume",
+      "tenant_id",
+      "updated_at",
+      "updated_by"
+    ],
     "support_tickets": [
       "category",
       "converted_entity_blacklist_id",
@@ -2767,6 +2795,18 @@
     "stages_tournament_fk": {
       "source": "tournament_stages",
       "target": "tournaments"
+    },
+    "stream_alert_events_tenant_id_fkey": {
+      "source": "stream_alert_events",
+      "target": "tenants"
+    },
+    "stream_alert_rules_tenant_id_fkey": {
+      "source": "stream_alert_rules",
+      "target": "tenants"
+    },
+    "stream_alert_settings_tenant_id_fkey": {
+      "source": "stream_alert_settings",
+      "target": "tenants"
     },
     "support_tickets_converted_entity_blacklist_id_fkey": {
       "source": "support_tickets",

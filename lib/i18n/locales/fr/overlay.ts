@@ -70,6 +70,9 @@ export default ns('overlay', {
   scrimsDateTbd: 'Date à fixer',
 
   // Source « partenaires » (`/overlay/partenaires`).
+  // Source « boîte d'alertes » (`/overlay/alertes`).
+  alertsDocTitle: 'Source de stream — boîte d’alertes',
+
   partnersDocTitle: 'Source de stream — partenaires',
   partnersHeading: 'Ils nous soutiennent',
 
