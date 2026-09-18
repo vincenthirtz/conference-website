@@ -2265,6 +2265,31 @@ ajoute un POST par arrivee/depart, en plus du POST par cycle).
 | [`tournament-help/inventory.ts`](../pages/api/bot/v1/tournament-help/inventory.ts) | GET     | —     | `bot-tournament-help-inventory` |
 | [`runs/current.ts`](../pages/api/bot/v1/runs/current.ts)                           | GET     | —     | `bot-runs-current`              |
 
+#### `GET /api/bot/v1/twitch/live`
+
+Live status of the tenant's Twitch channels, enriched from Helix (title, game,
+viewer count, `startedAt`, profile image for the live ones). The bot never calls
+Twitch itself.
+
+**Query**
+
+| Param            | Effect                                                                        |
+| ---------------- | ----------------------------------------------------------------------------- |
+| `includeOffline` | `1`/`true` → also return offline channels (default: live only)                 |
+| `channels`       | Comma-separated Twitch logins — poll **these** instead of the `twitch_channels` table |
+
+`channels` exists for **our own channel**, which is deliberately absent from
+`twitch_channels`: that table feeds the public partner-channel lists
+(`/association`, `/live`), so adding ourselves there would list us among our own
+ambassadors. The bot asks for the login by name and announces it in its own
+Discord channel (see `OFFICIAL_TWITCH_CHANNEL` in the bot's env).
+
+Logins are filtered to `^[a-z0-9_]{1,25}$`, de-duplicated and capped at 20 —
+whatever survives is what reaches Helix. Explicitly requested channels come back
+with `label`, `badge`, `description` and `backgroundUrl` set to `null`: that
+dressing lives in the table, and the caller already knows which channel it asked
+for.
+
 #### `GET /api/bot/v1/runs/current`
 
 Returns the current live `event_run` of the tenant plus its segments —
