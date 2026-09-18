@@ -122,7 +122,13 @@ beforeEach(() => {
 
 describe('phase du match', () => {
   it('un match clos est final, quelle que soit l’orthographe du statut', () => {
-    for (const status of ['finished', 'completed', 'forfeit', 'cancelled']) {
+    for (const status of [
+      'finished',
+      'completed',
+      'forfeit',
+      'walkover',
+      'cancelled',
+    ]) {
       expect(matchPhase({ status, started_at: null })).toBe('final');
     }
   });

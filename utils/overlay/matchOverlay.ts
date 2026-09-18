@@ -26,11 +26,17 @@ export type OverlaySide = 1 | 2;
  * volontairement tolérante (`completed` ET `finished`) — les deux orthographes
  * circulent dans le code selon l'âge des chemins, et une source de stream
  * n'est pas le bon endroit pour trancher ce débat.
+ *
+ * `walkover` AUSSI : c'est le statut qu'écrit le forfait automatique (équipe
+ * non enregistrée à l'heure). L'oublier laissait un match déjà tranché « à
+ * venir » — sans score, et même désigné match du moment (constaté le
+ * 2026-09-18 sur `/overlay/day`).
  */
 const CLOSED_STATUSES = new Set([
   'finished',
   'completed',
   'forfeit',
+  'walkover',
   'cancelled',
   'canceled',
 ]);
