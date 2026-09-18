@@ -151,7 +151,6 @@ export default function HomeSpotlight({
 
   if (!tournament) return null;
 
-  const isRunning = tournament.status === 'running';
   const range = formatRange(tournament.startDate, tournament.endDate, locale);
   const detailHref = tournament.slug
     ? `/tournament/${tournament.slug}`
@@ -167,6 +166,9 @@ export default function HomeSpotlight({
     {
       status: tournament.status,
       startDate: tournament.startDate,
+      // La date de fin sert à distinguer « commence bientôt » de « se joue en
+      // ce moment » quand le staff n'a pas basculé le statut en `running`.
+      endDate: tournament.endDate,
       teamCount: tournament.teamCount,
       maxTeams: tournament.maxTeams,
     },
@@ -267,7 +269,7 @@ export default function HomeSpotlight({
               lignes plus bas — « BO3 · finales en BO5 » s'affichait deux fois
               dans le même coup d'œil. */}
             <div className="flex flex-wrap gap-2">
-              {isRunning ? (
+              {lead.kind === 'live' ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-400/40 bg-rose-500/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-rose-100">
                   <span className="relative flex h-1.5 w-1.5" aria-hidden>
                     <span className="absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-60 motion-safe:animate-ping" />
@@ -399,7 +401,7 @@ export default function HomeSpotlight({
                 href={detailHref}
                 className="rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-medium text-white transition hover:border-[var(--color-green)]/60 hover:bg-[var(--color-green)]/10 hover:text-[var(--color-green-light)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
               >
-                {isRunning ? t.spotCtaView : t.spotCtaTeams}
+                {lead.kind === 'live' ? t.spotCtaView : t.spotCtaTeams}
               </Link>
             </div>
 

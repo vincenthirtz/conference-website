@@ -21,6 +21,7 @@ import {
   loadNextMatchday,
   type HomeMatchday,
 } from '@/utils/home/loadNextMatchday';
+import { getWallClockParts, SITE_TIMEZONE } from '@/utils/timezone';
 
 // Marge de troncature du `content` des news de la home. HomeNewsSection ne rend
 // qu'un excerpt d'au plus ~220 caractères ; on garde une marge confortable.
@@ -111,6 +112,65 @@ export async function loadContendingTeams(
   return teams;
 }
 
+/**
+ * Le jour CALENDAIRE (YYYY-MM-DD, heure de Paris) d'une borne de tournoi.
+ *
+ * `start_date` / `end_date` sont des colonnes `date` : « 2026-09-18 » désigne
+ * une journée, pas un instant. La passer à `new Date()` en fait minuit UTC,
+ * soit 2 h du matin à Paris — c'est exactement ce qui faisait disparaître le
+ * tournoi de la home au milieu de la nuit du coup d'envoi.
+ */
+function tournamentDay(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const iso = /^(\d{4}-\d{2}-\d{2})/.exec(value.trim());
+  if (iso) return iso[1];
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return getWallClockParts(parsed, SITE_TIMEZONE).date;
+}
+
+type FeaturableTournament = {
+  status?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+};
+
+/**
+ * Le tournoi que la home met en avant, parmi ceux lus en base.
+ *
+ * LA RÈGLE : ce qui se joue, sinon le prochain à se jouer — et un tournoi
+ * reste « à venir » TANT QU'IL N'EST PAS FINI, pas seulement tant qu'il n'a
+ * pas commencé.
+ *
+ * POURQUOI. Le test était `start_date >= maintenant`. Le 18 septembre 2026 à
+ * 2 h du matin, le tournoi qui commençait LE JOUR MÊME est sorti de la home :
+ * plus de carte « L'événement », et avec elle plus de bande des affiches du
+ * soir ni des équipes engagées — le jour de tous les jours où on venait les
+ * lire. Le statut `running` n'est posé qu'à la main par le staff ; la home ne
+ * peut pas dépendre de ce geste pour annoncer un tournoi qui se joue.
+ *
+ * PURE, `now` INJECTÉ : la home est rendue en ISR, et cette décision doit être
+ * testable sans attendre la bonne date.
+ */
+export function pickFeaturedTournament<T extends FeaturableTournament>(
+  rows: T[],
+  now: Date
+): T | null {
+  const running = rows.find((t) => t.status === 'running');
+  if (running) return running;
+
+  const today = getWallClockParts(now, SITE_TIMEZONE).date;
+  const upcoming = rows.find((t) => {
+    if (t.status !== 'published') return false;
+    const start = tournamentDay(t.start_date);
+    if (!start) return false;
+    // Sans date de fin, l'événement tient sur sa journée de départ.
+    const last = tournamentDay(t.end_date) ?? start;
+    return last >= today;
+  });
+  return upcoming ?? null;
+}
+
 // S5d: tenant id du build courant. `getStaticProps` n'a pas d'accès à la
 // requête, donc on est forcés sur DEFAULT_TENANT_ID. TODO(S7) — quand on
 // passera multi-tenant, ces pages basculeront en SSR (ou ISR par tenant).
@@ -128,13 +188,7 @@ export async function loadUpcomingTournament(
     .order('start_date', { ascending: true, nullsFirst: false });
   if (error || !data?.length) return null;
 
-  const now = Date.now();
-  const running = data.find((t) => t.status === 'running');
-  const upcoming = data.find((t) => {
-    if (t.status !== 'published' || !t.start_date) return false;
-    return new Date(t.start_date).getTime() >= now;
-  });
-  const picked = running || upcoming;
+  const picked = pickFeaturedTournament(data, new Date());
   if (!picked) return null;
 
   const { count } = await supabaseAdmin

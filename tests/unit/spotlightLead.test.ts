@@ -96,6 +96,38 @@ describe('spotlightLead — les bords', () => {
     ).toEqual({ kind: 'full' });
   });
 
+  // Le pendant du bug de l'imminence, côté APRÈS le coup d'envoi : le 19
+  // septembre, le tournoi de la veille se jouait encore (jusqu'au 23 octobre)
+  // et la carte remettait « Complet » en titre, faute d'un `running` posé à la
+  // main.
+  it('commencé mais pas fini : ça SE JOUE, statut ou pas', () => {
+    const enCours = {
+      startDate: '2026-09-18',
+      endDate: '2026-10-23',
+      teamCount: 8,
+      maxTeams: 8,
+    };
+    expect(spotlightLead(enCours, at('2026-09-19'))).toEqual({ kind: 'live' });
+    // Le dernier jour compte encore.
+    expect(spotlightLead(enCours, at('2026-10-23'))).toEqual({ kind: 'live' });
+    // Le lendemain de la fin, non.
+    expect(spotlightLead(enCours, at('2026-10-24'))).toEqual({ kind: 'full' });
+  });
+
+  it('avant le départ, la date de fin ne change rien', () => {
+    expect(
+      spotlightLead(
+        {
+          startDate: '2026-09-18',
+          endDate: '2026-10-23',
+          teamCount: 8,
+          maxTeams: 8,
+        },
+        at('2026-09-16')
+      )
+    ).toEqual({ kind: 'starting', days: 2 });
+  });
+
   it('sans plafond déclaré, un tournoi n’est jamais complet', () => {
     // 40 inscrites ne font pas un tournoi plein si personne n'a dit combien il
     // en fallait.

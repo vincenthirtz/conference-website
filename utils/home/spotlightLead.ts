@@ -74,6 +74,7 @@ export function spotlightLead(
   input: {
     status?: string | null;
     startDate?: string | null;
+    endDate?: string | null;
     teamCount?: number | null;
     maxTeams?: number | null;
   },
@@ -84,6 +85,16 @@ export function spotlightLead(
   const days = daysUntilStart(input.startDate, now);
   if (days !== null && days >= 0 && days <= SPOTLIGHT_IMMINENT_DAYS) {
     return { kind: 'starting', days };
+  }
+
+  // COMMENCÉ, PAS FINI : ça se joue. Le statut `running` est posé à la main par
+  // le staff, et il ne l'est pas toujours — sans ce test, le lendemain du coup
+  // d'envoi la carte remettait « Complet » en titre pendant que le tournoi se
+  // jouait. Une date de fin est requise : sans elle on ne présume pas d'une
+  // durée.
+  if (days !== null && days < 0) {
+    const daysLeft = daysUntilStart(input.endDate, now);
+    if (daysLeft !== null && daysLeft >= 0) return { kind: 'live' };
   }
 
   // « Complet » se DÉDUIT des places : le jour où une équipe se désiste, la
