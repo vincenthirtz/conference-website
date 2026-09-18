@@ -115,4 +115,22 @@ export default adminNs('adminStreamAlerts', {
   unit_cheer: 'bits',
   unit_raid: 'spectateurs',
   unit_donation: '€',
+  twitchHeading: 'Événements Twitch',
+  twitchHelp:
+    'Pour que subs, follows, bits et raids arrivent dans la boîte, Twitch doit être abonné à la chaîne. Les dons HelloAsso n’en dépendent pas.',
+  twitchCount: '{active}/{total} actifs',
+  twitchSubOk: 'actif',
+  twitchSubMissing: 'non abonné',
+  twitchSubMissingScope:
+    'permission {scope} manquante — reconnecter la chaîne (Diffusion → Live)',
+  twitchSecretMissing:
+    'TWITCH_EVENTSUB_SECRET absent côté serveur : aucun abonnement possible.',
+  twitchUnreadable:
+    'Liste des abonnements Twitch illisible pour l’instant : l’état ci-dessous peut être incomplet.',
+  twitchSubscribe: 'Activer les événements Twitch',
+  twitchSubscribing: 'Activation…',
+  twitchSubscribed: 'Événements Twitch activés.',
+  twitchSubscribedPartial:
+    'Activation partielle : voir le détail type par type.',
+  twitchSubscribeError: 'Activation impossible.',
 });

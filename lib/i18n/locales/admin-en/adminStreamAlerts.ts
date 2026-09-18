@@ -107,4 +107,21 @@ export default {
   unit_cheer: 'bits',
   unit_raid: 'viewers',
   unit_donation: '€',
+  twitchHeading: 'Twitch events',
+  twitchHelp:
+    'For subs, follows, bits and raids to reach the box, Twitch must be subscribed to the channel. HelloAsso donations do not depend on it.',
+  twitchCount: '{active}/{total} active',
+  twitchSubOk: 'active',
+  twitchSubMissing: 'not subscribed',
+  twitchSubMissingScope:
+    '{scope} permission missing — reconnect the channel (Broadcast → Live)',
+  twitchSecretMissing:
+    'TWITCH_EVENTSUB_SECRET missing on the server: no subscription possible.',
+  twitchUnreadable:
+    'Twitch subscription list unreadable right now: the state below may be incomplete.',
+  twitchSubscribe: 'Enable Twitch events',
+  twitchSubscribing: 'Enabling…',
+  twitchSubscribed: 'Twitch events enabled.',
+  twitchSubscribedPartial: 'Partially enabled: see the per-type detail.',
+  twitchSubscribeError: 'Could not enable.',
 };

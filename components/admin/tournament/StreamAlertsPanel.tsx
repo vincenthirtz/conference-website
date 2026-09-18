@@ -32,6 +32,7 @@ import StreamAlertsMediaFields, {
   type AlertMedia,
   type FileEdit,
 } from '@/components/admin/tournament/StreamAlertsMediaFields';
+import StreamAlertsTwitchCard from '@/components/admin/tournament/StreamAlertsTwitchCard';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminStreamAlerts from '@/lib/i18n/locales/admin-fr/adminStreamAlerts';
 import {
@@ -391,6 +392,10 @@ export default function StreamAlertsPanel() {
           faire de ce namespace que de l'afficher. */}
       <h3 className="text-sm font-semibold text-white">{t.title}</h3>
       <p className="text-xs text-neutral-400">{t.description}</p>
+
+      {/* En tête, parce que c'est la panne la plus silencieuse : sans ces
+          abonnements, Twitch n'envoie rien et la boîte reste muette. */}
+      <StreamAlertsTwitchCard />
 
       {/* Réglages globaux */}
       <div className="space-y-4 rounded-xl border border-neutral-700/40 bg-neutral-900/50 p-4">
