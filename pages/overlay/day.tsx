@@ -11,7 +11,6 @@
 //   date        AAAA-MM-JJ ; absent = aujourd'hui, heure de Paris
 //   limit       1 → 12 lignes (8 par défaut) ; au-delà, la liste suit le match
 //               du moment
-//   accent      RRGGBB, sinon la couleur de l'espace, sinon le jaune de la Coupe
 //   scale       0.5 → 2
 //   tenant      slug d'espace, pour les sources d'un autre organisateur
 //
@@ -22,20 +21,12 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useT } from '@/lib/i18n/useT';
 import { useDayOverlay } from '@/hooks/useDayOverlay';
-import { DEFAULT_OVERLAY_ACCENT } from '@/components/overlay/match/MatchSources';
 import { DayScheduleSource } from '@/components/overlay/match/DayScheduleSource';
 import { parseDayLimit } from '@/utils/overlay/dayOverlay';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
 
 function firstParam(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
-}
-
-/** `?accent=RRGGBB` → hex strict, sinon null (anti-injection CSS). */
-function parseAccent(raw: string | undefined): string | null {
-  if (!raw) return null;
-  const value = raw.startsWith('#') ? raw.slice(1) : raw;
-  return /^[0-9a-fA-F]{6}$/.test(value) ? `#${value}` : null;
 }
 
 function parseScale(raw: string | undefined): number {
@@ -63,10 +54,6 @@ export default function DayOverlayPage() {
     enabled: router.isReady && !configError,
   });
 
-  const accent =
-    parseAccent(firstParam(router.query.accent)) ??
-    data?.branding?.accent ??
-    DEFAULT_OVERLAY_ACCENT;
   const message = configError ?? fatal;
 
   return (
@@ -92,7 +79,6 @@ export default function DayOverlayPage() {
         ) : (
           <DayScheduleSource
             payload={data}
-            accent={accent}
             scale={parseScale(firstParam(router.query.scale))}
             limit={parseDayLimit(firstParam(router.query.limit))}
           />
