@@ -28,7 +28,6 @@ import {
 } from '../../utils/overlay/dayOverlay';
 import type { MatchRowForOverlay } from '../../utils/overlay/matchOverlay';
 import handler from '../../pages/api/overlay/day';
-import { dayLabel } from '../../components/overlay/match/DayScheduleSource';
 
 const T1 = 'aaaaaaaa-0000-4000-8000-000000000001';
 const T2 = 'aaaaaaaa-0000-4000-8000-000000000002';
@@ -83,10 +82,6 @@ describe('journée à Paris', () => {
   it('refuse une date mal formée ou impossible', () => {
     expect(resolveDayBounds('18/09/2026', 0)).toBeNull();
     expect(resolveDayBounds('2026-02-31', 0)).toBeNull();
-  });
-
-  it('libelle le jour dans la langue demandée', () => {
-    expect(dayLabel('2026-09-18', 'fr-FR')).toBe('vendredi 18 septembre');
   });
 });
 

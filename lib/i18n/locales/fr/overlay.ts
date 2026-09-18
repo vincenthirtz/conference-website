@@ -58,12 +58,9 @@ export default ns('overlay', {
 
   // Source « matchs du jour » (`/overlay/day`).
   dayDocTitle: 'Source de stream — matchs du jour',
-  dayEyebrow: 'Matchs du jour',
-  dayEmpty: 'Aucun match programmé ce jour-là.',
   dayMissingTournament:
     'Ajoutez ?tournament=<identifiant ou slug> à l’URL pour afficher les matchs du jour.',
   dayTeamTbd: 'À déterminer',
-  dayShownOf: '{shown} matchs affichés sur {total}',
 
   // Source « scrims à venir » (`/overlay/scrims`).
   scrimsDocTitle: 'Source de stream — scrims à venir',

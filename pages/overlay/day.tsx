@@ -21,7 +21,6 @@
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useT } from '@/lib/i18n/useT';
-import { useLocale } from '@/lib/i18n/useLocale';
 import { useDayOverlay } from '@/hooks/useDayOverlay';
 import { DEFAULT_OVERLAY_ACCENT } from '@/components/overlay/match/MatchSources';
 import { DayScheduleSource } from '@/components/overlay/match/DayScheduleSource';
@@ -48,7 +47,6 @@ function parseScale(raw: string | undefined): number {
 export default function DayOverlayPage() {
   const router = useRouter();
   const t = useT(nsOverlay);
-  const locale = useLocale();
 
   const tournament = firstParam(router.query.tournament)?.trim() || null;
   const date = firstParam(router.query.date) ?? null;
@@ -97,7 +95,6 @@ export default function DayOverlayPage() {
             accent={accent}
             scale={parseScale(firstParam(router.query.scale))}
             limit={parseDayLimit(firstParam(router.query.limit))}
-            locale={locale}
           />
         )}
       </div>

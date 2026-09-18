@@ -1,36 +1,26 @@
 // components/overlay/match/DayScheduleSource.tsx
 //
 // La source « matchs du jour » : le programme d'une journée, tel qu'il
-// s'affiche dans OBS (plein cadre 1920×1080, fond transparent autour du
-// panneau).
+// s'affiche dans OBS (plein cadre 1920×1080).
 //
-// Mêmes partis pris visuels que les sources par match (cf. MatchSources) :
-// panneau sombre opaque, gros caractères, aucune animation continue hormis le
-// point « en direct ». Le match du moment est cerclé de la couleur d'accent ;
-// les matchs terminés passent en retrait pour que l'œil aille à ce qui vient.
+// RIEN QUE LES LIGNES. Ni panneau, ni titre, ni date, ni compteur : la régie
+// pose la source sur sa propre scène, qui porte déjà l'habillage et le titre.
+// Fond entièrement transparent ; une ombre portée sur le texte le garde
+// lisible sur n'importe quel décor. Journée sans match = cadre vide.
+//
+// Gros caractères, aucune animation continue hormis le point « en direct ».
+// Le match du moment est cerclé de la couleur d'accent ; les matchs terminés
+// passent en retrait pour que l'œil aille à ce qui vient.
 
-import { useT, format } from '@/lib/i18n/useT';
+import { useT } from '@/lib/i18n/useT';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
 import type { OverlayDayResponse } from '@/pages/api/overlay/day';
 import type { OverlayDayMatchView } from '@/utils/overlay/dayOverlay';
-import { dayWindow, OVERLAY_DAY_TIME_ZONE } from '@/utils/overlay/dayOverlay';
+import { dayWindow } from '@/utils/overlay/dayOverlay';
 import type { OverlayTeamView } from '@/utils/overlay/matchOverlay';
 import { TeamLogo, hourLabel } from '@/components/overlay/match/MatchSources';
 
 type Dict = typeof nsOverlay.fr;
-
-/** « vendredi 18 septembre », à partir de la clé `YYYY-MM-DD`. */
-export function dayLabel(date: string, locale: string): string {
-  const [y, m, d] = date.split('-').map(Number);
-  // Midi UTC : toujours le même jour calendaire à Paris, quelle que soit l'heure.
-  const noon = new Date(Date.UTC(y!, (m ?? 1) - 1, d ?? 1, 12));
-  return new Intl.DateTimeFormat(locale, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    timeZone: OVERLAY_DAY_TIME_ZONE,
-  }).format(noon);
-}
 
 function TeamCell({
   team,
@@ -80,7 +70,7 @@ function MatchLine({
   return (
     <li
       className={`flex items-center gap-6 rounded-xl border-2 px-6 py-4 ${
-        current ? 'bg-white/[0.09]' : 'border-transparent bg-white/[0.03]'
+        current ? '' : 'border-transparent'
       }`}
       style={current ? { borderColor: accent } : undefined}
     >
@@ -125,71 +115,34 @@ export function DayScheduleSource({
   accent,
   scale,
   limit,
-  locale,
 }: {
   payload: OverlayDayResponse | null;
   accent: string;
   scale: number;
   limit: number;
-  locale: string;
 }) {
   const t = useT(nsOverlay);
   if (!payload) return null;
 
   const rows = dayWindow(payload.matches, payload.currentMatchId, limit);
-  const title =
-    payload.tournament.name ?? payload.branding?.name ?? t.brandFallback;
+  if (rows.length === 0) return null;
 
   return (
     <div className="flex h-full w-full items-center justify-center">
-      <div
-        className="w-[1500px] origin-center rounded-3xl border border-white/10 bg-black/85 p-10 shadow-2xl"
+      <ol
+        className="flex w-[1500px] origin-center flex-col gap-3 [text-shadow:0_2px_8px_rgba(0,0,0,0.9)]"
         style={{ transform: scale !== 1 ? `scale(${scale})` : undefined }}
       >
-        <header className="mb-8 flex items-end justify-between gap-6">
-          <div className="min-w-0">
-            <div
-              className="text-lg font-bold uppercase tracking-[0.3em]"
-              style={{ color: accent }}
-            >
-              {t.dayEyebrow}
-            </div>
-            <h1 className="mt-1 truncate text-5xl font-black text-white">
-              {title}
-            </h1>
-          </div>
-          <div className="shrink-0 text-3xl font-semibold capitalize text-white/70">
-            {dayLabel(payload.date, locale)}
-          </div>
-        </header>
-
-        {rows.length === 0 ? (
-          <p className="py-16 text-center text-3xl text-white/60">
-            {t.dayEmpty}
-          </p>
-        ) : (
-          <ol className="flex flex-col gap-3">
-            {rows.map((m) => (
-              <MatchLine
-                key={m.id}
-                match={m}
-                current={m.id === payload.currentMatchId}
-                accent={accent}
-                t={t}
-              />
-            ))}
-          </ol>
-        )}
-
-        {payload.matches.length > rows.length && (
-          <p className="mt-6 text-right text-xl text-white/40">
-            {format(t.dayShownOf, {
-              shown: rows.length,
-              total: payload.matches.length,
-            })}
-          </p>
-        )}
-      </div>
+        {rows.map((m) => (
+          <MatchLine
+            key={m.id}
+            match={m}
+            current={m.id === payload.currentMatchId}
+            accent={accent}
+            t={t}
+          />
+        ))}
+      </ol>
     </div>
   );
 }

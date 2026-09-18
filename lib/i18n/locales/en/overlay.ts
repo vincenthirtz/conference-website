@@ -55,12 +55,9 @@ export default {
   matchTeamFallback: 'Team',
 
   dayDocTitle: 'Stream source — today’s matches',
-  dayEyebrow: 'Today’s matches',
-  dayEmpty: 'No matches scheduled that day.',
   dayMissingTournament:
     'Add ?tournament=<id or slug> to the URL to show the day’s matches.',
   dayTeamTbd: 'TBD',
-  dayShownOf: 'Showing {shown} of {total} matches',
 
   scrimsDocTitle: 'Stream source — upcoming scrims',
   scrimsDateTbd: 'Date TBD',
