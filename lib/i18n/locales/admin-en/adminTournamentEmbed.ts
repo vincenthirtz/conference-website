@@ -58,6 +58,9 @@ export default {
   source_donAlert_name: 'Donation alert (HelloAsso)',
   source_donAlert_desc:
     'A “Thank you for this donation of €10!” alert for every HelloAsso donation the association receives, on a transparent background — to sit next to Streamlabs, which has no HelloAsso integration. Amount only: the donor’s name is never shown (they type it for their tax receipt, not for the stream). Donations already received when the source opens are not replayed. &goal=500 adds a gauge (total since midnight, or since &from=YYYY-MM-DD), &gauge=only shows just the gauge, &duration=8 sets how long an alert stays (3 to 30 s), &demo=1 sends fake donations to set up the scene.',
+  source_partners_name: 'Partners',
+  source_partners_desc:
+    'The association’s partners as a strip on a transparent background — to sit at the bottom of the screen. Suggested source size: 1920×160. A partner with no logo shows its name instead. Add &categories=super,major to show a single tier, &limit=N for how many, &position=top or center to anchor it elsewhere, &heading=0 to keep only the logos.',
   source_don_name: 'Donate (HelloAsso QR)',
   source_don_desc:
     'The association’s donation QR code, same as the /don page. Add &layout=corner for a bottom-right inset to keep on screen during games.',

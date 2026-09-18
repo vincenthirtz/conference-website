@@ -69,6 +69,10 @@ export default ns('overlay', {
   scrimsDocTitle: 'Source de stream — scrims à venir',
   scrimsDateTbd: 'Date à fixer',
 
+  // Source « partenaires » (`/overlay/partenaires`).
+  partnersDocTitle: 'Source de stream — partenaires',
+  partnersHeading: 'Ils nous soutiennent',
+
   // Source « résultat de scrim » (`/overlay/scrim-result`).
   scrimResultDocTitle: 'Source de stream — résultat de scrim',
   scrimResultFinal: 'Résultat final',

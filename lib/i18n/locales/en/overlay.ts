@@ -65,6 +65,9 @@ export default {
   scrimsDocTitle: 'Stream source — upcoming scrims',
   scrimsDateTbd: 'Date TBD',
 
+  partnersDocTitle: 'Stream source — partners',
+  partnersHeading: 'They support us',
+
   scrimResultDocTitle: 'Stream source — scrim result',
   scrimResultFinal: 'Final result',
   scrimResultPending: 'Awaiting result',
