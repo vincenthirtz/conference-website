@@ -105,31 +105,19 @@ export function hourLabel(iso: string | null): string | null {
 
 /* ── 1. Tableau de score (bandeau haut) ────────────────────────────────── */
 
-function Scoreboard({
-  match,
-  accent,
-  t,
-}: {
-  match: OverlayMatchView;
-  accent: string;
-  t: Dict;
-}) {
-  const bo = formatBadge(match.format);
+// RIEN QUE LA LIGNE DU MATCH : logo, nom, score, nom, logo. Ni panneau, ni
+// ligne de phase / format, fond entièrement transparent — la régie pose la
+// source sur sa propre scène, qui porte déjà l'habillage. Une ombre portée
+// garde le texte lisible sur n'importe quel décor. Les noms ne sont jamais
+// tronqués : un nom coupé ne se devine pas à l'antenne, il passe à la ligne.
+function Scoreboard({ match, t }: { match: OverlayMatchView; t: Dict }) {
   return (
-    <div className="flex items-stretch overflow-hidden rounded-2xl border border-white/10 bg-black/85 shadow-2xl">
+    <div className="flex items-center gap-6 [text-shadow:0_2px_8px_rgba(0,0,0,0.9)]">
       <TeamSide team={match.team1} align="right" t={t} />
-      <div className="flex min-w-[10rem] flex-col items-center justify-center bg-white/[0.06] px-6 py-3">
-        <div className="flex items-center gap-4 text-6xl font-black leading-none text-white tabular-nums">
-          <span>{match.team1?.score ?? 0}</span>
-          <span className="text-white/30">:</span>
-          <span>{match.team2?.score ?? 0}</span>
-        </div>
-        <div
-          className="mt-2 text-xs font-bold uppercase tracking-[0.2em]"
-          style={{ color: accent }}
-        >
-          {bo ? `${phaseLabel(match, t)} · ${bo}` : phaseLabel(match, t)}
-        </div>
+      <div className="flex shrink-0 items-center gap-4 px-2 text-6xl font-black leading-none text-white tabular-nums">
+        <span>{match.team1?.score ?? 0}</span>
+        <span className="text-white/40">:</span>
+        <span>{match.team2?.score ?? 0}</span>
       </div>
       <TeamSide team={match.team2} align="left" t={t} />
     </div>
@@ -148,12 +136,12 @@ function TeamSide({
   const name = teamName(team, t);
   return (
     <div
-      className={`flex w-[22rem] items-center gap-4 px-6 py-4 ${
+      className={`flex w-[26rem] items-center gap-4 ${
         align === 'right' ? 'flex-row-reverse text-right' : 'text-left'
-      } ${team?.isWinner ? 'bg-white/[0.08]' : ''}`}
+      }`}
     >
       <TeamLogo team={team} size="sm" fallback={t.matchTeamFallback} />
-      <span className="truncate text-3xl font-bold text-white drop-shadow">
+      <span className="min-w-0 break-words text-3xl font-bold leading-tight text-white">
         {name}
       </span>
     </div>
@@ -444,7 +432,7 @@ export function MatchSourceSurface({
         className="fixed left-1/2 top-8 -translate-x-1/2 origin-top"
         style={zoom}
       >
-        <Scoreboard match={match} accent={accent} t={t} />
+        <Scoreboard match={match} t={t} />
       </div>
     );
   }
