@@ -26,6 +26,11 @@ import { resolveEmbedTenantId } from '@/utils/embed';
 import { readTenantBranding } from '@/utils/tenant';
 import { capabilityDenial } from '@/utils/billing/tenantCapabilityGate';
 import {
+  resolveAlertFrame,
+  resolveAlertSoundUrl,
+  type AlertFrameKind,
+} from '@/utils/overlay/alertMedia';
+import {
   ALERT_KINDS,
   clampAlertDurationMs,
   clampVolume,
@@ -47,9 +52,16 @@ const ALERTS_LIMIT = 50;
 export type OverlayAlertSettings = {
   enabled: boolean;
   durationMs: number;
+  /** Résolu ici : fichier déposé, sinon URL externe, sinon muet. */
   soundUrl: string | null;
   soundVolume: number;
   accentColor: string | null;
+  /**
+   * Habillage déposé par la régie. `null` = celui du CODE (le nœud animé), pas
+   * « aucun » — la source sait quoi faire de ce `null`.
+   */
+  frameUrl: string | null;
+  frameKind: AlertFrameKind | null;
 };
 
 export type OverlayAlertRule = {
@@ -80,6 +92,8 @@ function defaultSettings(): OverlayAlertSettings {
     soundUrl: null,
     soundVolume: clampVolume(null),
     accentColor: null,
+    frameUrl: null,
+    frameKind: null,
   };
 }
 
@@ -132,7 +146,9 @@ export default async function handler(
           .limit(ALERTS_LIMIT),
         supabaseAdmin
           .from('stream_alert_settings')
-          .select('enabled, duration_ms, sound_url, sound_volume, accent_color')
+          .select(
+            'enabled, duration_ms, sound_url, sound_volume, accent_color, frame_path, frame_kind, sound_path'
+          )
           .eq('tenant_id', tenantId)
           .maybeSingle(),
         supabaseAdmin
@@ -163,23 +179,25 @@ export default async function handler(
     if (settingsRes.error) {
       logger.error('[overlay/alerts] settings error', settingsRes.error);
     }
-    const settings: OverlayAlertSettings = settingsRow
-      ? {
-          enabled: (settingsRow as { enabled?: unknown }).enabled !== false,
-          durationMs: clampAlertDurationMs(
-            (settingsRow as { duration_ms?: number | null }).duration_ms ?? null
-          ),
-          soundUrl:
-            (settingsRow as { sound_url?: string | null }).sound_url || null,
-          soundVolume: clampVolume(
-            (settingsRow as { sound_volume?: number | null }).sound_volume ??
-              null
-          ),
-          accentColor:
-            (settingsRow as { accent_color?: string | null }).accent_color ||
-            null,
-        }
-      : defaultSettings();
+    let settings: OverlayAlertSettings;
+    if (settingsRow) {
+      const row = settingsRow as Record<string, unknown>;
+      const frame = resolveAlertFrame(row);
+      settings = {
+        enabled: row.enabled !== false,
+        durationMs: clampAlertDurationMs(
+          (row.duration_ms as number | null) ?? null
+        ),
+        // Fichier déposé d'abord, URL externe ensuite : cf. `alertMedia`.
+        soundUrl: resolveAlertSoundUrl(row),
+        soundVolume: clampVolume((row.sound_volume as number | null) ?? null),
+        accentColor: (row.accent_color as string | null) || null,
+        frameUrl: frame.url,
+        frameKind: frame.kind,
+      };
+    } else {
+      settings = defaultSettings();
+    }
 
     const rules: OverlayAlertRule[] = [];
     for (const raw of (rulesRes.error ? [] : (rulesRes.data ?? [])) as Array<{

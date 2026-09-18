@@ -38,10 +38,53 @@ export default adminNs('adminStreamAlerts', {
   soundUrlLabel: 'Son joué',
   soundUrlPlaceholder: '/sounds/alerte.mp3',
   soundUrlHelp:
-    'Chemin servi par le site (/…) ou URL https complète. Vide = alerte muette.',
+    'Chemin servi par le site (/…) ou URL https complète. Vide = alerte muette. Un fichier déposé ci-dessous PRIME sur cette URL ; le retirer fait retomber dessus.',
   soundUrlInvalid:
     'Le son doit être un chemin du site (/…) ou une URL https://.',
   volumeLabel: 'Volume',
+
+  // --- Fichiers (habillage, son) -----------------------------------------
+  // « Retirer » ne veut jamais dire « aucun » : l'habillage retiré rétablit
+  // celui du CODE (l'animation du nœud), le son retiré retombe sur l'URL.
+  frameLabel: 'Habillage de la boîte',
+  frameHelp:
+    'Image PNG, JPEG ou WebP (2 Mio max), ou vidéo MP4 / WebM (8 Mio max). Le fichier remplace l’habillage Women’s Cup dans la source OBS.',
+  frameChoose: 'Déposer un habillage',
+  frameReplace: 'Remplacer l’habillage',
+  frameReset: 'Revenir à l’habillage Women’s Cup',
+  frameIsDefault:
+    'Habillage Women’s Cup : l’animation du nœud, livrée avec le site. C’est le défaut, pas une absence d’habillage.',
+  framePreviewAlt: 'Aperçu de l’habillage des alertes',
+  frameResetPending:
+    'Au prochain enregistrement, la boîte reprendra l’habillage Women’s Cup.',
+  frameTypeRefused:
+    'Habillage refusé : formats acceptés PNG, JPEG, WebP, MP4, WebM.',
+  frameTooLargeClient:
+    'Habillage trop lourd ({size}) : {max} maximum pour ce format.',
+
+  soundFileLabel: 'Fichier son déposé',
+  soundFileHelp:
+    'MP3, OGG ou WAV, 2 Mio max. Un fichier déposé prime sur l’URL ci-dessus ; le retirer fait retomber dessus.',
+  soundChoose: 'Déposer un son',
+  soundReplace: 'Remplacer le son',
+  soundFileRemove: 'Retirer le fichier déposé',
+  soundFileNone: 'Aucun fichier déposé, et aucune URL de son renseignée.',
+  soundFromFile: 'Ce son vient du fichier déposé.',
+  soundFromUrl: 'Ce son vient de l’URL ci-dessus.',
+  soundRemovePending:
+    'Au prochain enregistrement, le fichier sera retiré : le son retombera sur l’URL, ou se taira si elle est vide.',
+  soundTypeRefused: 'Son refusé : formats acceptés MP3, OGG, WAV.',
+  soundTooLargeClient: 'Son trop lourd ({size}) : {max} maximum.',
+
+  filePending:
+    'Prêt à envoyer : {name}. Cliquer « Enregistrer » pour l’appliquer.',
+  fileSizeUnit: 'Mio',
+  fileUnreadable: 'Fichier illisible : réenregistre-le puis réessaie.',
+  fileUnsupportedType: 'Format de fichier refusé par le serveur.',
+  fileTooLarge: 'Fichier trop lourd : {max} maximum.',
+  fileTooLargeAny: '2 Mio pour un son ou une image, 8 Mio pour une vidéo',
+  fileContentMismatch:
+    'Le contenu du fichier ne correspond pas au format annoncé.',
 
   accentLabel: 'Couleur d’accent',
   accentHelp: 'Teinte de l’habillage. « Défaut » rend la couleur de la charte.',

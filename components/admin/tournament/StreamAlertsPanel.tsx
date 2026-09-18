@@ -27,6 +27,11 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
+import StreamAlertsMediaFields, {
+  alertFileErrorMessage,
+  type AlertMedia,
+  type FileEdit,
+} from '@/components/admin/tournament/StreamAlertsMediaFields';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminStreamAlerts from '@/lib/i18n/locales/admin-fr/adminStreamAlerts';
 import {
@@ -77,6 +82,12 @@ type SettingsRow = {
   sound_url: string | null;
   sound_volume: number;
   accent_color: string | null;
+  /**
+   * Le CHEMIN de bucket du son déposé. Inaffichable tel quel — il ne sert qu'à
+   * savoir s'il existe un fichier à retirer, ce que `media.soundUrl` ne dit pas
+   * (l'API y sert déjà le repli sur l'URL collée).
+   */
+  sound_path: string | null;
 };
 
 type RuleRow = {
@@ -86,7 +97,24 @@ type RuleRow = {
   min_amount: number | null;
 };
 
-type ApiResponse = { settings: SettingsRow | null; rules: RuleRow[] };
+type ApiResponse = {
+  settings: SettingsRow | null;
+  rules: RuleRow[];
+  /** URLs SERVABLES de ce qui est déjà en place (cf. `utils/overlay/alertMedia`). */
+  media?: {
+    frameUrl: string | null;
+    frameKind: 'image' | 'video' | null;
+    soundUrl: string | null;
+  };
+};
+
+/** Aucun fichier connu : l'état de départ, et celui d'une lecture sans `media`. */
+const NO_MEDIA: AlertMedia = {
+  frameUrl: null,
+  frameKind: null,
+  soundUrl: null,
+  hasSoundFile: false,
+};
 
 /** Brouillon : tout ce qui peut être vide est une chaîne, pas un `null`. */
 type SettingsDraft = {
@@ -133,6 +161,12 @@ export default function StreamAlertsPanel() {
 
   const [settings, setSettings] = useState<SettingsDraft | null>(null);
   const [rules, setRules] = useState<RuleDrafts>(emptyRules);
+  const [media, setMedia] = useState<AlertMedia>(NO_MEDIA);
+  // Les fichiers en attente d'envoi. `undefined` = intact : l'éditeur ne doit
+  // PAS envoyer une clé `frame`/`sound` qu'on n'a pas touchée (cf. les trois
+  // états du PATCH), sinon enregistrer un volume effacerait l'habillage.
+  const [frameEdit, setFrameEdit] = useState<FileEdit>(undefined);
+  const [soundEdit, setSoundEdit] = useState<FileEdit>(undefined);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -149,6 +183,16 @@ export default function StreamAlertsPanel() {
         soundVolume: clampVolume(row?.sound_volume),
         accentColor: row?.accent_color ?? '',
       });
+      setMedia({
+        frameUrl: json.media?.frameUrl ?? null,
+        frameKind: json.media?.frameKind ?? null,
+        soundUrl: json.media?.soundUrl ?? null,
+        hasSoundFile: Boolean(row?.sound_path),
+      });
+      // Un brouillon de fichier ne survit pas à une relecture : il porterait
+      // sur un état que la base ne montre plus.
+      setFrameEdit(undefined);
+      setSoundEdit(undefined);
       const next = emptyRules();
       for (const rule of json.rules ?? []) {
         if (!(rule.kind in next)) continue; // type inconnu : on n'invente pas
@@ -272,28 +316,54 @@ export default function StreamAlertsPanel() {
       });
     }
 
+    const body: Record<string, unknown> = {
+      settings: {
+        enabled: settings.enabled,
+        durationMs,
+        // `''` échouerait la validation hexadécimale côté API : un choix
+        // vide, c'est `null` (« garde le défaut »), pas une chaîne vide.
+        accentColor: accent === '' ? null : accent,
+        soundUrl: soundUrl === '' ? null : soundUrl,
+        soundVolume: clampVolume(settings.soundVolume),
+      },
+      rules: payloadRules,
+    };
+    // CLÉ ABSENTE = « n'y touche pas ». On n'envoie `frame`/`sound` que si la
+    // régie a déposé ou retiré quelque chose ; le `name` reste ici, l'API ne
+    // le connaît pas et le corps est déjà assez lourd comme ça.
+    const mediaTouched = frameEdit !== undefined || soundEdit !== undefined;
+    if (frameEdit !== undefined) {
+      body.frame = frameEdit && {
+        data: frameEdit.data,
+        mimeType: frameEdit.mimeType,
+      };
+    }
+    if (soundEdit !== undefined) {
+      body.sound = soundEdit && {
+        data: soundEdit.data,
+        mimeType: soundEdit.mimeType,
+      };
+    }
+
     setSaving(true);
     try {
       await mutateJson(ENDPOINT, {
         method: 'PATCH',
-        body: JSON.stringify({
-          settings: {
-            enabled: settings.enabled,
-            durationMs,
-            // `''` échouerait la validation hexadécimale côté API : un choix
-            // vide, c'est `null` (« garde le défaut »), pas une chaîne vide.
-            accentColor: accent === '' ? null : accent,
-            soundUrl: soundUrl === '' ? null : soundUrl,
-            soundVolume: clampVolume(settings.soundVolume),
-          },
-          rules: payloadRules,
-        }),
+        body: JSON.stringify(body),
       });
       setDirty(false);
       addToast(t.saved, 'success');
+      // Un dépôt change les URLs servies : sans relecture, l'aperçu montrerait
+      // encore le `data:` du brouillon et « retirer » porterait sur du vide.
+      if (mediaTouched) await load();
     } catch (err) {
       logger.error('[admin/stream-alerts] save error:', err);
-      addToast((err as Error)?.message || t.saveError, 'error');
+      // Un refus de fichier a un `code` : le traduire évite le « Enregistrement
+      // impossible » qui ne dit ni quel fichier, ni pourquoi.
+      addToast(
+        alertFileErrorMessage(t, err) || (err as Error)?.message || t.saveError,
+        'error'
+      );
     } finally {
       setSaving(false);
     }
@@ -449,6 +519,23 @@ export default function StreamAlertsPanel() {
             </div>
           </div>
         </div>
+
+        {/* Les fichiers en dernier : on règle d'abord ce qui se lit d'un coup
+            d'œil, puis ce qui demande d'aller chercher un fichier. */}
+        <StreamAlertsMediaFields
+          media={media}
+          frameEdit={frameEdit}
+          soundEdit={soundEdit}
+          onFrameEdit={(edit) => {
+            setFrameEdit(edit);
+            setDirty(true);
+          }}
+          onSoundEdit={(edit) => {
+            setSoundEdit(edit);
+            setDirty(true);
+          }}
+          disabled={saving}
+        />
       </div>
 
       {/* Une ligne par type d'alerte */}

@@ -25,6 +25,11 @@ get:
     deux tables, deux espaces d'identifiants, et le registre « déjà vu » de
     la source ne doit pas les confondre.
 
+    `settings.frameUrl` / `frameKind` : l'habillage déposé par la régie.
+    `null` NE VEUT PAS DIRE « aucun habillage » mais « celui du code » —
+    l'animation du nœud, que la source porte elle-même. `settings.soundUrl`
+    est résolu ici : fichier déposé d'abord, URL externe ensuite, sinon muet.
+
     L'espace doit porter la capacité de palier `matchOverlays` — sinon `402`.
 
     `Cache-Control: public, s-maxage=5, stale-while-revalidate=15`.

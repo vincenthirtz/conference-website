@@ -1,8 +1,10 @@
 get:
   summary: Réglages de la boîte d'alertes de stream.
   description: |
-    Rend les réglages de l'espace (`stream_alert_settings`) et les règles
-    d'annonce par type (`stream_alert_rules`), tels qu'ils sont en base.
+    Rend les réglages de l'espace (`stream_alert_settings`), les règles
+    d'annonce par type (`stream_alert_rules`), et un bloc `media` qui donne
+    les URLs SERVABLES des fichiers déposés — la base ne garde que des
+    chemins de bucket, inaffichables tels quels par un éditeur.
     `null` / liste vide = l'espace n'a jamais ouvert l'éditeur, et la source
     tourne sur les défauts du code.
     Permission `manage_broadcast`. Rate-limit 60 / min.
@@ -44,6 +46,25 @@ patch:
 
     Le son doit être un chemin du site ou une URL `https://` — cette valeur
     finit dans l'attribut `src` d'un lecteur audio, sur une page de régie.
+
+    FICHIERS DÉPOSÉS (`frame`, `sound`) : base64, avec ou sans préfixe
+    `data:`. TROIS ÉTATS chacun — un objet dépose, `null` RETIRE, la clé
+    absente ne touche à rien. Un éditeur qui n'envoie pas de fichier ne doit
+    pas effacer celui d'hier.
+
+    RETIRER L'HABILLAGE NE LAISSE PAS L'ÉCRAN VIDE : `frame: null` rétablit
+    l'habillage du CODE (l'animation du nœud, dont la bande de texte est
+    mesurée au pixel). Le fichier par défaut reste dans le dépôt pour ça.
+
+    Le son DÉPOSÉ prime sur l'URL collée ; le retirer fait retomber sur
+    l'URL si elle existe.
+
+    Formats : habillage image PNG/JPEG/WebP (2 Mio) ou vidéo MP4/WebM
+    (8 Mio) ; son MP3/OGG/WAV (2 Mio). Le contenu réel est vérifié (magic
+    bytes) — le `mimeType` d'une requête est une affirmation du client, et
+    ces fichiers atterrissent dans un bucket PUBLIC. Corps plafonné à 12 Mo,
+    le base64 gonflant d'un tiers.
+
     Permission `manage_broadcast`.
   operationId: adminPatchStreamAlerts
   tags:
@@ -77,6 +98,43 @@ patch:
                 accentColor:
                   type: string
                   nullable: true
+            frame:
+              nullable: true
+              description: >-
+                Habillage déposé. `null` rétablit celui du code (le nœud).
+              type: object
+              required:
+                - data
+                - mimeType
+              properties:
+                data:
+                  type: string
+                  description: base64, préfixe `data:` toléré.
+                mimeType:
+                  type: string
+                  enum:
+                    - image/png
+                    - image/jpeg
+                    - image/webp
+                    - video/mp4
+                    - video/webm
+            sound:
+              nullable: true
+              description: >-
+                Son déposé. `null` le retire et fait retomber sur `soundUrl`.
+              type: object
+              required:
+                - data
+                - mimeType
+              properties:
+                data:
+                  type: string
+                mimeType:
+                  type: string
+                  enum:
+                    - audio/mpeg
+                    - audio/ogg
+                    - audio/wav
             rules:
               type: array
               items:
@@ -107,7 +165,12 @@ patch:
     '200':
       description: Enregistré.
     '400':
-      $ref: '#/components/responses/BadRequest'
+      description: >-
+        Réglage refusé, ou fichier refusé : `code` vaut alors
+        `unsupported_type`, `too_large`, `content_mismatch`,
+        `invalid_base64` ou `missing_data`, et `maxBytes` donne le plafond
+        applicable au type envoyé — pour que l'interface annonce la bonne
+        limite au lieu d'en inventer une.
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

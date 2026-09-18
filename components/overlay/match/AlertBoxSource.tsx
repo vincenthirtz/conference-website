@@ -16,6 +16,13 @@
 // Il n'y a PAS de repli MP4 : le H.264 n'a pas d'alpha, un repli afficherait un
 // rectangle noir en plein direct — mieux vaut le texte seul.
 //
+// UN HABILLAGE DÉPOSÉ REMPLACE LE NŒUD, MAIS PAS SES RÈGLES. Les bornes
+// ci-dessus sont mesurées sur CE fichier-là ; sur une image ou une vidéo
+// quelconque, elles ne veulent rien dire. Le texte s'affiche donc tout de
+// suite, dans un bandeau sobre posé en bas de l'habillage — lisible sur
+// n'importe quel fond, ce que la bande verte n'est que sur le nœud.
+// Retirer le fichier rétablit le nœud : il reste le défaut du code.
+//
 // SI LA VIDÉO NE PART PAS, L'ALERTE PASSE QUAND MÊME. Décodeur absent, fichier
 // manquant, autoplay refusé : on affiche le texte sur une plaque sobre plutôt
 // que de laisser un silence. Une alerte ratée ne se voit pas ; c'est ce qui la
@@ -92,6 +99,9 @@ type Props = {
   soundUrl?: string | null;
   /** 0 → 100. */
   soundVolume?: number;
+  /** Habillage déposé par la régie. `null` = celui du code (le nœud). */
+  frameUrl?: string | null;
+  frameKind?: 'image' | 'video' | null;
   locale?: string;
 };
 
@@ -102,6 +112,8 @@ export function AlertBoxSource({
   position = 'center',
   soundUrl = null,
   soundVolume = 70,
+  frameUrl = null,
+  frameKind = null,
   locale = 'fr-FR',
 }: Props) {
   const view = useViewportSize();
@@ -198,7 +210,9 @@ export function AlertBoxSource({
   if (!alert) return null;
 
   const cardHeight = cardWidth * CARD_RATIO;
-  const showText = videoFailed || bandOpen;
+  // Un habillage déposé n'a pas de bande mesurée : le texte ne l'attend pas.
+  const custom = Boolean(frameUrl && frameKind);
+  const showText = custom || videoFailed || bandOpen;
   const fontSize = fitAlertFontSize(message, cardWidth);
 
   const justify =
@@ -228,11 +242,21 @@ export function AlertBoxSource({
         role="status"
         aria-live="polite"
       >
-        {!videoFailed && (
+        {custom && frameKind === 'image' && (
+          // biome-ignore lint/performance/noImgElement: source OBS, hors next/image (même exclusion que SponsorRotator)
+          <img
+            src={frameUrl as string}
+            alt=""
+            aria-hidden
+            className="pointer-events-none absolute inset-0 h-full w-full object-contain"
+          />
+        )}
+
+        {!videoFailed && (!custom || frameKind === 'video') && (
           <video
             // La clé force un élément neuf par alerte : l'animation repart du
             // premier plan, y compris si deux alertes s'enchaînent.
-            key={alert.id}
+            key={`${alert.id}:${frameUrl ?? 'defaut'}`}
             ref={videoRef}
             aria-hidden
             autoPlay
@@ -246,15 +270,27 @@ export function AlertBoxSource({
             onError={() => setVideoFailed(true)}
           >
             {/* Pas de repli MP4 : le H.264 n'a pas d'alpha (cf. en-tête). */}
-            <source src={ALERT_FRAME_SRC} type="video/webm" />
+            <source src={custom ? (frameUrl as string) : ALERT_FRAME_SRC} />
           </video>
         )}
 
         {/* Plaque de repli, uniquement quand la vidéo ne peut pas jouer. */}
-        {videoFailed && (
+        {(videoFailed || custom) && (
+          // Plaque sobre : elle porte le texte quand la bande verte du nœud
+          // n'est pas là — repli d'erreur, ou habillage déposé dont on ignore
+          // tout de la composition.
+          //
+          // EN BAS SUR UN HABILLAGE DÉPOSÉ, au centre sur le repli. Au centre
+          // d'une image, la plaque masque le sujet — vérifié au rendu : elle
+          // barrait le visuel en plein milieu. Un bas d'image est le placement
+          // conventionnel d'un sous-titre, et le moins destructeur quand on ne
+          // sait rien de la composition. Sur le repli il n'y a aucune image
+          // derrière : le centre est alors le bon endroit.
           <div
             aria-hidden
-            className="absolute inset-x-[8%] top-1/2 -translate-y-1/2 rounded-2xl border border-white/15 bg-black/75 backdrop-blur-sm"
+            className={`absolute inset-x-[6%] rounded-2xl border border-white/15 bg-black/75 backdrop-blur-sm ${
+              custom ? 'bottom-[6%]' : 'top-1/2 -translate-y-1/2'
+            }`}
             style={{ padding: cardWidth * 0.03 }}
           />
         )}
@@ -262,7 +298,13 @@ export function AlertBoxSource({
         <div
           ref={bandRef}
           className="absolute flex items-center justify-center overflow-hidden text-center"
-          style={videoFailed ? { inset: '0 8%' } : bandStyle}
+          style={
+            custom
+              ? { left: '6%', right: '6%', bottom: '6%', height: '16%' }
+              : videoFailed
+                ? { inset: '0 8%' }
+                : bandStyle
+          }
         >
           <span
             ref={textRef}
@@ -277,10 +319,11 @@ export function AlertBoxSource({
               opacity: showText ? 1 : 0,
               // Texte sombre SUR la bande verte (elle est claire), clair sur la
               // plaque de repli. Deux fonds, deux contrastes.
-              color: videoFailed ? '#ffffff' : '#14210f',
-              textShadow: videoFailed
-                ? '0 2px 10px rgba(0,0,0,0.9)'
-                : '0 1px 0 rgba(255,255,255,0.25)',
+              color: videoFailed || custom ? '#ffffff' : '#14210f',
+              textShadow:
+                videoFailed || custom
+                  ? '0 2px 10px rgba(0,0,0,0.9)'
+                  : '0 1px 0 rgba(255,255,255,0.25)',
             }}
           >
             {message}

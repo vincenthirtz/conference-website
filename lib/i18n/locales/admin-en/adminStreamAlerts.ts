@@ -35,9 +35,48 @@ export default {
   soundUrlLabel: 'Sound',
   soundUrlPlaceholder: '/sounds/alert.mp3',
   soundUrlHelp:
-    'A path served by the site (/…) or a full https URL. Empty = silent alert.',
+    'A path served by the site (/…) or a full https URL. Empty = silent alert. An uploaded file below TAKES PRECEDENCE over this URL; removing it falls back to it.',
   soundUrlInvalid: 'The sound must be a site path (/…) or an https:// URL.',
   volumeLabel: 'Volume',
+
+  // --- Files (frame, sound) ----------------------------------------------
+  frameLabel: 'Alert box frame',
+  frameHelp:
+    'PNG, JPEG or WebP image (2 MiB max), or MP4 / WebM video (8 MiB max). The file replaces the Women’s Cup frame in the OBS source.',
+  frameChoose: 'Upload a frame',
+  frameReplace: 'Replace the frame',
+  frameReset: 'Back to the Women’s Cup frame',
+  frameIsDefault:
+    'Women’s Cup frame: the knot animation shipped with the site. That is the default, not the absence of a frame.',
+  framePreviewAlt: 'Preview of the alert frame',
+  frameResetPending:
+    'On the next save, the box will go back to the Women’s Cup frame.',
+  frameTypeRefused:
+    'Frame rejected: accepted formats are PNG, JPEG, WebP, MP4, WebM.',
+  frameTooLargeClient:
+    'Frame too heavy ({size}): {max} maximum for this format.',
+
+  soundFileLabel: 'Uploaded sound file',
+  soundFileHelp:
+    'MP3, OGG or WAV, 2 MiB max. An uploaded file takes precedence over the URL above; removing it falls back to it.',
+  soundChoose: 'Upload a sound',
+  soundReplace: 'Replace the sound',
+  soundFileRemove: 'Remove the uploaded file',
+  soundFileNone: 'No uploaded file, and no sound URL set.',
+  soundFromFile: 'This sound comes from the uploaded file.',
+  soundFromUrl: 'This sound comes from the URL above.',
+  soundRemovePending:
+    'On the next save, the file will be removed: the sound falls back to the URL, or goes silent if it is empty.',
+  soundTypeRefused: 'Sound rejected: accepted formats are MP3, OGG, WAV.',
+  soundTooLargeClient: 'Sound too heavy ({size}): {max} maximum.',
+
+  filePending: 'Ready to upload: {name}. Click “Save” to apply it.',
+  fileSizeUnit: 'MiB',
+  fileUnreadable: 'Unreadable file: export it again, then retry.',
+  fileUnsupportedType: 'File format rejected by the server.',
+  fileTooLarge: 'File too heavy: {max} maximum.',
+  fileTooLargeAny: '2 MiB for a sound or an image, 8 MiB for a video',
+  fileContentMismatch: 'The file contents do not match the declared format.',
 
   accentLabel: 'Accent colour',
   accentHelp: 'Overlay tint. “Default” restores the brand colour.',

@@ -103,6 +103,10 @@ function useDemoFeed(enabled: boolean): OverlayAlertsResponse | null {
         soundUrl: null,
         soundVolume: 70,
         accentColor: null,
+        // La démo montre l'habillage du CODE : régler la scène avec le nœud,
+        // puis découvrir un autre habillage en direct, n'aiderait personne.
+        frameUrl: null,
+        frameKind: null,
       },
       rules: [],
       branding: null,
@@ -210,6 +214,8 @@ export default function AlertBoxOverlayPage() {
             position={parsePosition(firstParam(router.query.position))}
             soundUrl={feed?.settings.soundUrl ?? null}
             soundVolume={feed?.settings.soundVolume ?? 70}
+            frameUrl={feed?.settings.frameUrl ?? null}
+            frameKind={feed?.settings.frameKind ?? null}
             locale={locale}
           />
         )}
