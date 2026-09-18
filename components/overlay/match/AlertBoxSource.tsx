@@ -58,6 +58,9 @@ export const BAND = { left: 0.17, top: 0.535, width: 0.66, height: 0.135 };
 export const BAND_IN_S = 5.5;
 export const BAND_OUT_S = 14.6;
 
+/** Délai au-delà duquel une vidéo qui n'a pas démarré cède le texte à la plaque. */
+const STALL_MS = 2500;
+
 /** Largeur « de conception » de l'habillage, à l'échelle 1. */
 const CARD_W = 900;
 const CARD_RATIO = 281 / 500;
@@ -127,8 +130,12 @@ export function AlertBoxSource({
   // `bandOpen` suit la VIDÉO, pas une minuterie : une vidéo qui démarre en
   // retard (décodage, première lecture) décalerait le texte d'autant.
   const [bandOpen, setBandOpen] = useState(false);
-  // Vrai quand la vidéo ne peut pas jouer : on bascule sur la plaque sobre.
+  // Vrai quand la vidéo NE PEUT PAS jouer (erreur, autoplay refusé) : on la
+  // retire et on bascule sur la plaque sobre.
   const [videoFailed, setVideoFailed] = useState(false);
+  // Vrai quand la vidéo TARDE : le texte passe sur la plaque, mais la vidéo
+  // reste montée et reprend la main dès qu'elle joue (cf. `onPlaying`).
+  const [stalled, setStalled] = useState(false);
 
   const message = useMemo(
     () => (alert ? renderAlertMessage(alert, rules, locale) : ''),
@@ -141,6 +148,7 @@ export function AlertBoxSource({
   useEffect(() => {
     setBandOpen(false);
     setVideoFailed(false);
+    setStalled(false);
     const video = videoRef.current;
     if (!video) return undefined;
     try {
@@ -174,14 +182,20 @@ export function AlertBoxSource({
     return undefined;
   }, [alert?.id, soundUrl, soundVolume, alert]);
 
-  // Repli : si la vidéo n'a rien joué au bout d'une seconde, on montre le texte
-  // plutôt que d'attendre un événement qui ne viendra pas.
+  // Repli : si la vidéo n'a rien joué au bout de STALL_MS, on montre le texte
+  // plutôt que d'attendre un événement qui ne viendra peut-être pas.
+  //
+  // SANS RETIRER LA VIDÉO. Ce délai retirait l'élément pour de bon : dans
+  // Streamlabs, un premier chargement plus lent qu'une seconde suffisait à
+  // faire disparaître l'habillage pour toute l'alerte (constaté le
+  // 2026-09-18). Une vidéo lente n'est pas une vidéo cassée : seul `onError`
+  // ou un autoplay refusé la retirent.
   useEffect(() => {
     if (!alert) return undefined;
     const timer = setTimeout(() => {
       const video = videoRef.current;
-      if (!video || video.currentTime === 0) setVideoFailed(true);
-    }, 1000);
+      if (!video || video.currentTime === 0) setStalled(true);
+    }, STALL_MS);
     return () => clearTimeout(timer);
   }, [alert?.id, alert]);
 
@@ -212,7 +226,9 @@ export function AlertBoxSource({
   const cardHeight = cardWidth * CARD_RATIO;
   // Un habillage déposé n'a pas de bande mesurée : le texte ne l'attend pas.
   const custom = Boolean(frameUrl && frameKind);
-  const showText = custom || videoFailed || bandOpen;
+  // Plaque de repli : vidéo cassée, ou vidéo qui tarde (et pas encore jouée).
+  const fallback = videoFailed || stalled;
+  const showText = custom || fallback || bandOpen;
   const fontSize = fitAlertFontSize(message, cardWidth);
 
   const justify =
@@ -267,6 +283,7 @@ export function AlertBoxSource({
               const t = e.currentTarget.currentTime;
               setBandOpen(t >= BAND_IN_S && t <= BAND_OUT_S);
             }}
+            onPlaying={() => setStalled(false)}
             onError={() => setVideoFailed(true)}
           >
             {/* Pas de repli MP4 : le H.264 n'a pas d'alpha (cf. en-tête). */}
@@ -275,7 +292,7 @@ export function AlertBoxSource({
         )}
 
         {/* Plaque de repli, uniquement quand la vidéo ne peut pas jouer. */}
-        {(videoFailed || custom) && (
+        {(fallback || custom) && (
           // Plaque sobre : elle porte le texte quand la bande verte du nœud
           // n'est pas là — repli d'erreur, ou habillage déposé dont on ignore
           // tout de la composition.
@@ -301,7 +318,7 @@ export function AlertBoxSource({
           style={
             custom
               ? { left: '6%', right: '6%', bottom: '6%', height: '16%' }
-              : videoFailed
+              : fallback
                 ? { inset: '0 8%' }
                 : bandStyle
           }
@@ -319,9 +336,9 @@ export function AlertBoxSource({
               opacity: showText ? 1 : 0,
               // Texte sombre SUR la bande verte (elle est claire), clair sur la
               // plaque de repli. Deux fonds, deux contrastes.
-              color: videoFailed || custom ? '#ffffff' : '#14210f',
+              color: fallback || custom ? '#ffffff' : '#14210f',
               textShadow:
-                videoFailed || custom
+                fallback || custom
                   ? '0 2px 10px rgba(0,0,0,0.9)'
                   : '0 1px 0 rgba(255,255,255,0.25)',
             }}
