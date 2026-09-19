@@ -1,0 +1,52 @@
+get:
+  summary: Figurine voxel d'un rôle, pour une carte TCG sans photo.
+  description: |
+    PUBLIC. Rend en SVG l'une des trois figurines de rôle du TCG — tank,
+    dégâts, soutien — dans la couleur d'équipe demandée. Ce sont des
+    personnages ORIGINAUX : aucun n'est modelé sur un héros du jeu, dont
+    aucune illustration n'est sous licence ici.
+
+    Tout est dans le chemin (`/api/tcg/figure/v1/tank/a62edb.svg`), rien dans
+    la query : la sortie ne dépend que de l'URL, d'où
+    `Cache-Control: public, max-age=31536000, immutable`. La version du modèle
+    est dans le chemin pour qu'une retouche se propage sans attendre
+    l'expiration du cache ; une version dépassée répond `404`.
+  operationId: getTcgRoleFigure
+  tags:
+    - public/misc
+  security: []
+  parameters:
+    - name: version
+      in: path
+      required: true
+      schema:
+        type: string
+        example: v1
+      description: Version du modèle (`v1`). Seule la version courante est servie.
+    - name: role
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [tank, damage, support]
+    - name: file
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[0-9a-fA-F]{6}\.svg$'
+        example: a62edb.svg
+      description: Couleur d'équipe `RRGGBB`, suivie de `.svg`.
+  responses:
+    '200':
+      description: Le SVG de la figurine.
+      content:
+        image/svg+xml:
+          schema:
+            type: string
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '405':
+      description: Méthode non autorisée (seuls GET et HEAD sont acceptés).

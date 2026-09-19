@@ -129,6 +129,9 @@ export default {
   foil: 'Foil',
   copies: '×{count}',
   logoCredit: 'Logo by {artist}',
+  roleTank: 'Tank',
+  roleDamage: 'Damage',
+  roleSupport: 'Support',
 
   /* --- UX / accessibility pass (2026-09-15) --- */
 

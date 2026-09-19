@@ -38467,6 +38467,51 @@
               "null"
              ]
             },
+            "figure": {
+             "type": [
+              "object",
+              "null"
+             ],
+             "properties": {
+              "role": {
+               "type": "string",
+               "enum": [
+                "damage",
+                "support",
+                "tank"
+               ]
+              },
+              "color": {
+               "type": [
+                "string",
+                "null"
+               ]
+              },
+              "heroName": {
+               "type": [
+                "string",
+                "null"
+               ]
+              },
+              "heroSource": {
+               "type": [
+                "string",
+                "null"
+               ],
+               "enum": [
+                "pick",
+                "role",
+                null
+               ]
+              }
+             },
+             "required": [
+              "role",
+              "color",
+              "heroName",
+              "heroSource"
+             ]
+            },
             "rarity": {
              "type": "string",
              "enum": [
@@ -38518,6 +38563,7 @@
             "userId",
             "displayName",
             "imageUrl",
+            "figure",
             "rarity",
             "isFoil",
             "count",
@@ -38589,6 +38635,7 @@
             },
             "userId": {},
             "displayName": {},
+            "figure": {},
             "teamId": {},
             "logoUrl": {},
             "cardImageUrl": {},
@@ -38703,7 +38750,8 @@
             },
             "userId": {},
             "displayName": {},
-            "imageUrl": {}
+            "imageUrl": {},
+            "figure": {}
            },
            "required": [
             "kind",
@@ -63322,6 +63370,51 @@
             "null"
            ]
           },
+          "figure": {
+           "type": [
+            "object",
+            "null"
+           ],
+           "properties": {
+            "role": {
+             "type": "string",
+             "enum": [
+              "damage",
+              "support",
+              "tank"
+             ]
+            },
+            "color": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "heroName": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "heroSource": {
+             "type": [
+              "string",
+              "null"
+             ],
+             "enum": [
+              "pick",
+              "role",
+              null
+             ]
+            }
+           },
+           "required": [
+            "role",
+            "color",
+            "heroName",
+            "heroSource"
+           ]
+          },
           "isNew": {
            "type": "boolean"
           },
@@ -63347,6 +63440,7 @@
           "teamId",
           "displayName",
           "imageUrl",
+          "figure",
           "position",
           "rarity",
           "isFoil"

@@ -58,6 +58,7 @@ import { readPlayerFaces } from '@/utils/tcg/readCardFaces';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
 import TcgShowcaseSection from '@/components/tcg/TcgShowcaseSection';
 import { readPublicShowcase, type ShowcaseCard } from '@/utils/tcg/showcase';
+import { cardFigureOf, type CardFigure } from '@/utils/tcg/roleFigures';
 
 type PlayerProfileDict = typeof nsPlayerPublicProfile.fr;
 
@@ -78,6 +79,7 @@ function formatDate(iso: string, locale: string): string {
 export default function PlayerProfilePage({
   profile,
   tcgPhotoUrl,
+  tcgFigure,
   tcgShowcase,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
   const t = useT(nsPlayerPublicProfile);
@@ -136,6 +138,7 @@ export default function PlayerProfilePage({
           <Profile
             data={state.data}
             tcgPhotoUrl={tcgPhotoUrl ?? null}
+            tcgFigure={tcgFigure ?? null}
             tcgShowcase={tcgShowcase ?? null}
           />
         )}
@@ -147,10 +150,12 @@ export default function PlayerProfilePage({
 function Profile({
   data,
   tcgPhotoUrl,
+  tcgFigure,
   tcgShowcase,
 }: {
   data: PlayerProfileResponse;
   tcgPhotoUrl: string | null;
+  tcgFigure: CardFigure | null;
   tcgShowcase: ShowcaseCard[] | null;
 }) {
   const t = useT(nsPlayerPublicProfile);
@@ -168,6 +173,7 @@ function Profile({
         label={label}
         badges={achievements.badges}
         tcgPhotoUrl={tcgPhotoUrl}
+        tcgFigure={tcgFigure}
       />
 
       {/* La vitrine n'existe que si la joueuse l'a ACTIVÉE : `null` sinon, et
@@ -441,11 +447,13 @@ function TcgCardSection({
   label,
   badges,
   tcgPhotoUrl,
+  tcgFigure,
 }: {
   player: PlayerProfileCore;
   label: string;
   badges: ProfileBadge[];
   tcgPhotoUrl: string | null;
+  tcgFigure: CardFigure | null;
 }) {
   const t = useT(nsPlayerPublicProfile);
   const tTcg = useT(nsPlayerTcg);
@@ -467,6 +475,9 @@ function TcgCardSection({
               // fiche — celui du roster pour une joueuse non classée, que
               // `readPlayerFaces` n'aurait pas. Jamais un portrait inventé.
               imageUrl: tcgPhotoUrl ?? player.avatarUrl,
+              // Sans photo ni avatar : la figurine de son rôle (cf.
+              // utils/tcg/roleFigures.ts) plutôt que l'aplat de marque.
+              figure: tcgFigure,
             }}
             rarity={cardRarity(badges)}
             // La carte est déjà sur la page de son sujet : pas de lien vers
@@ -481,6 +492,11 @@ function TcgCardSection({
               },
               foil: tTcg.foil,
               copies: tTcg.copies,
+              roles: {
+                tank: tTcg.roleTank,
+                damage: tTcg.roleDamage,
+                support: tTcg.roleSupport,
+              },
             }}
           />
         </div>
@@ -1297,6 +1313,7 @@ export const getStaticProps: GetStaticProps<{
   profile: PlayerProfileResponse;
   seo: SeoProps;
   tcgPhotoUrl: string | null;
+  tcgFigure: CardFigure | null;
   tcgShowcase: ShowcaseCard[] | null;
 }> = async (ctx) => {
   const rawUserId = ctx.params?.userId;
@@ -1331,6 +1348,10 @@ export const getStaticProps: GetStaticProps<{
   // entrer par simple ajout de champ serait un élargissement de portée
   // silencieux — d'où une prop de page, alimentée par l'ISR seul.
   let tcgPhotoUrl: string | null = null;
+  // Figurine de rôle : même voie que la photo (prop de page, JAMAIS dans
+  // `PlayerProfileResponse`), pour la même raison — ce qui illustre la carte
+  // sur le site n'a pas à entrer dans l'API partenaire.
+  let tcgFigure: CardFigure | null = null;
   try {
     const face = (await readPlayerFaces(DEFAULT_TENANT_ID, [userId])).get(
       userId
@@ -1339,6 +1360,7 @@ export const getStaticProps: GetStaticProps<{
     // `readPlayerFaces` renvoie sinon. On ne veut que la première : la fiche a
     // déjà un meilleur avatar pour les joueuses non classées.
     tcgPhotoUrl = face?.hasTcgPhoto ? (face.imageUrl ?? null) : null;
+    tcgFigure = cardFigureOf(face);
   } catch {
     /* la carte s'affichera avec l'avatar public — dégradé, jamais cassé */
   }
@@ -1356,6 +1378,7 @@ export const getStaticProps: GetStaticProps<{
       profile,
       seo: buildPlayerSeo(profile, discoverable),
       tcgPhotoUrl,
+      tcgFigure,
       tcgShowcase,
     },
     revalidate: 300,

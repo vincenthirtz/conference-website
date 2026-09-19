@@ -29,6 +29,7 @@ import Link from 'next/link';
 import type { JSX } from 'react';
 import LogoCredit from '@/components/Team/LogoCredit';
 import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
+import { figureUrl, type FigureRole } from '@/utils/tcg/roleFigures';
 import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
 
 /**
@@ -95,6 +96,17 @@ export type TcgCardSubject =
       userId: string;
       displayName: string | null;
       imageUrl: string | null;
+      /**
+       * Figurine voxel du RÔLE, affichée seulement sans photo ni avatar
+       * (`utils/tcg/roleFigures.ts`). Optionnelle : un appelant qui ne la
+       * fournit pas garde l'aplat de marque d'avant.
+       */
+      figure?: {
+        role: FigureRole;
+        color: string | null;
+        heroName: string | null;
+        heroSource: 'pick' | 'role' | null;
+      } | null;
     }
   | {
       kind: 'team';
@@ -155,6 +167,12 @@ export type TcgCardProps = {
      * plutôt qu'un texte en dur dans une seule langue.
      */
     logoCredit?: string;
+    /**
+     * Nom de chaque rôle, sous la figurine (« Tank »). Optionnel : sans lui,
+     * seule une héroïne CHOISIE par la joueuse est nommée — jamais de texte
+     * en dur dans une seule langue.
+     */
+    roles?: Record<FigureRole, string>;
   };
 };
 
@@ -232,6 +250,17 @@ export default function TcgCard({
             `/team/${subject.slug}`
           : null;
 
+  const figure = subject.kind === 'player' ? (subject.figure ?? null) : null;
+  // Une héroïne CHOISIE par la joueuse est nommée ; une héroïne seulement
+  // DÉDUITE de sa spécialité ne l'est pas — la carte dit alors le rôle, comme
+  // la figurine. Affirmer « elle joue Reinhardt » parce qu'elle joue tank
+  // serait parler à sa place (cf. utils/heroes/recommendCardHero.ts).
+  const figureCaption = figure
+    ? figure.heroSource === 'pick' && figure.heroName
+      ? `♥ ${figure.heroName}`
+      : (labels.roles?.[figure.role] ?? null)
+    : null;
+
   const inner = (
     <>
       <div className="relative aspect-[3/4] w-full overflow-hidden rounded-t-xl bg-gradient-to-br from-[var(--color-violet)]/25 to-[var(--color-green)]/15">
@@ -247,8 +276,27 @@ export default function TcgCard({
             // `sizes`, que `unoptimized` rendait lettre morte.
             unoptimized={!shouldOptimizeCardImage(imageUrl)}
           />
+        ) : figure ? (
+          // Ni photo consentie ni avatar, mais un rôle connu : la figurine de
+          // ce rôle, aux couleurs de son équipe. Jamais l'image d'un héros du
+          // jeu (aucune n'est sous licence ici, cf. utils/tcg/roleFigures.ts).
+          <>
+            {/* biome-ignore lint/performance/noImgElement: SVG rendu par nos soins — next/image n'optimise pas le SVG */}
+            <img
+              src={figureUrl(figure.role, figure.color)}
+              alt=""
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-contain"
+            />
+            {figureCaption && (
+              <span className="absolute bottom-1.5 left-1/2 max-w-[90%] -translate-x-1/2 truncate rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white/90">
+                {figureCaption}
+              </span>
+            )}
+          </>
         ) : (
-          // Ni photo consentie ni avatar : un aplat de marque et l'initiale.
+          // Ni photo, ni avatar, ni rôle connu : un aplat de marque et
+          // l'initiale — on n'attribue pas un rôle au hasard.
           <span
             aria-hidden
             className="absolute inset-0 flex items-center justify-center text-4xl font-black text-white/70"

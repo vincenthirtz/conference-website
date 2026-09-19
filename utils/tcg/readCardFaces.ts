@@ -38,6 +38,11 @@ import { maskBattleTag } from '@/utils/battleTag';
 import { TCG_BUCKET, tcgTeamImageUrl } from '@/utils/tcg/teamCardImage';
 import { displayableArtistUrl } from '@/utils/tcg/fanart';
 import { resolveLogoCredit, type LogoCredit } from '@/utils/teams/logoCredit';
+import {
+  figureRoleFromHeroRole,
+  normalizeFigureColor,
+  type FigureRole,
+} from '@/utils/tcg/roleFigures';
 
 /** Même bucket public que les logos d'équipe. */
 const BUCKET = TCG_BUCKET;
@@ -56,6 +61,18 @@ export type PlayerFace = {
   heroName: string | null;
   /** `pick` = elle l'a choisi ; `role` = déduit de sa spécialité. */
   heroSource: 'pick' | 'role' | null;
+  /**
+   * La figurine voxel de son RÔLE (`utils/tcg/roleFigures.ts`), qui illustre
+   * la carte quand il n'y a ni photo ni avatar. Déduite du même héros que
+   * `heroName` — donc `null` exactement quand lui l'est : pas de rôle connu,
+   * pas de figurine, jamais un rôle tiré au hasard.
+   */
+  figureRole: FigureRole | null;
+  /**
+   * Couleur de SON équipe (`teams.accent_color`, à défaut `secondary_color`),
+   * portée par la figurine. `null` → le violet du logo.
+   */
+  teamColor: string | null;
 };
 
 export type TeamFace = {
@@ -127,7 +144,7 @@ export async function readPlayerFaces(
     // La spécialité, elle, est propre à l'équipe : filtrée par tenant.
     supabaseAdmin
       .from('team_members')
-      .select('user_id, specialty')
+      .select('user_id, specialty, team_id')
       .eq('tenant_id', tenantId)
       .in('user_id', ids),
   ]);
@@ -181,13 +198,45 @@ export async function readPlayerFaces(
   // la PREMIÈRE spécialité renseignée. Choisir entre deux rôles déclarés serait
   // arbitraire, et la préférence explicite prime de toute façon sur le rôle.
   const specialtyByUser = new Map<string, string>();
+  // L'équipe dont la figurine porte la couleur : la PREMIÈRE rencontrée, même
+  // règle que la spécialité — choisir entre deux clubs serait arbitraire.
+  const teamByUser = new Map<string, string>();
   for (const row of (membersRes.data ?? []) as Array<{
     user_id: string | null;
     specialty: string | null;
+    team_id: string | null;
   }>) {
-    if (!row.user_id || !row.specialty) continue;
+    if (!row.user_id) continue;
+    if (row.team_id && !teamByUser.has(row.user_id)) {
+      teamByUser.set(row.user_id, row.team_id);
+    }
+    if (!row.specialty) continue;
     if (!specialtyByUser.has(row.user_id)) {
       specialtyByUser.set(row.user_id, row.specialty);
+    }
+  }
+
+  // Couleurs d'équipe, en une lecture. Une panne rend le violet du logo : une
+  // figurine dans la mauvaise couleur vaut mieux qu'une carte cassée.
+  const colorByTeam = new Map<string, string>();
+  const teamIds = [...new Set(teamByUser.values())];
+  if (teamIds.length > 0) {
+    const { data: teamRows, error: teamErr } = await supabaseAdmin
+      .from('teams')
+      .select('id, accent_color, secondary_color')
+      .in('id', teamIds);
+    if (teamErr) {
+      logger.warn('[tcg] couleurs d’équipe illisibles: %s', teamErr.message);
+    }
+    for (const row of (teamRows ?? []) as Array<{
+      id: string;
+      accent_color: string | null;
+      secondary_color: string | null;
+    }>) {
+      const color =
+        normalizeFigureColor(row.accent_color) ??
+        normalizeFigureColor(row.secondary_color);
+      if (color) colorByTeam.set(row.id, color);
     }
   }
 
@@ -221,9 +270,12 @@ export async function readPlayerFaces(
       bans: prefs?.bans,
       specialty: specialtyByUser.get(userId) ?? null,
     });
+    const teamId = teamByUser.get(userId);
     return {
       heroName: reco?.hero.name ?? null,
       heroSource: reco?.source ?? null,
+      figureRole: figureRoleFromHeroRole(reco?.hero.role),
+      teamColor: teamId ? (colorByTeam.get(teamId) ?? null) : null,
     };
   };
 

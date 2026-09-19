@@ -30,6 +30,7 @@
 // coût (une lecture de consentement et de profil par sujet).
 
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { cardFigureOf } from '@/utils/tcg/roleFigures';
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
@@ -342,6 +343,7 @@ export default withAuthRoute(async function handler(
         userId: a.subjectId,
         displayName: face?.displayName ?? null,
         imageUrl: face?.imageUrl ?? null,
+        figure: cardFigureOf(face),
         rarity: a.rarity,
         isFoil: a.hasFoil,
         count: a.count,

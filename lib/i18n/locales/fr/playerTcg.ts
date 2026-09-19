@@ -171,6 +171,9 @@ export default ns('playerTcg', {
   // la carte ET la fiche l'affichent, et une seule clé leur garantit la même
   // formulation. `{artist}` devient le lien vers l'artiste.
   logoCredit: 'Logo : {artist}',
+  roleTank: 'Tank',
+  roleDamage: 'Dégâts',
+  roleSupport: 'Soutien',
 
   /* --- Passe UX / accessibilité (2026-09-15) --- */
 

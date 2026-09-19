@@ -20,6 +20,7 @@
 // serait pire — et la carte reste juste sur l'essentiel : qui elle représente.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { cardFigureOf } from '@/utils/tcg/roleFigures';
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
@@ -593,6 +594,7 @@ async function openPack(
           teamId: null,
           displayName: face?.displayName ?? null,
           imageUrl: face?.imageUrl ?? null,
+          figure: cardFigureOf(face),
         };
       }
       if (c.subject_kind === 'fanart') {

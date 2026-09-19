@@ -33,6 +33,7 @@ import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useT, format } from '@/lib/i18n/useT';
 import TcgCard, { type TcgCardSubject } from '@/components/tcg/TcgCard';
+import type { CardFigure } from '@/utils/tcg/roleFigures';
 import type { LogoCredit } from '@/utils/teams/logoCredit';
 import { TcgCoin, TcgAmount } from '@/components/tcg/TcgCoin';
 import TcgCollectionProgress from '@/components/tcg/TcgCollectionProgress';
@@ -177,6 +178,8 @@ type CollectionCard = Engagement &
         userId: string;
         displayName: string | null;
         imageUrl: string | null;
+        /** Figurine de rôle ; OPTIONNELLE pour les réponses d'avant. */
+        figure?: CardFigure | null;
         rarity: TcgRarity;
         isFoil: boolean;
         count: number;
@@ -223,6 +226,7 @@ type DrawnCard = { position: number; isNew?: boolean } & (
       userId: string;
       displayName: string | null;
       imageUrl: string | null;
+      figure?: CardFigure | null;
       rarity: TcgRarity;
       isFoil: boolean;
     }
@@ -307,6 +311,7 @@ function cardSubject(card: DrawnCard | CollectionCard): TcgCardSubject {
       userId: card.userId,
       displayName: card.displayName,
       imageUrl: card.imageUrl,
+      figure: card.figure ?? null,
     };
   }
   if (card.kind === 'map') {
@@ -481,6 +486,12 @@ function PlayerTcg() {
     // Partagé avec la révélation (`labels.card`) : les deux affichent le
     // crédit, ou aucune.
     logoCredit: t.logoCredit,
+    // Sous la figurine d'une joueuse sans photo : le rôle qu'elle représente.
+    roles: {
+      tank: t.roleTank,
+      damage: t.roleDamage,
+      support: t.roleSupport,
+    },
   };
 
   /**
