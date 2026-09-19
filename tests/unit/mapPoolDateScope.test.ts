@@ -23,7 +23,10 @@ import {
   poolScopeColumns,
 } from '@/utils/maps/poolScope';
 import {
+  buildEveningPools,
   buildScopedPools,
+  eveningKeyFromQuery,
+  pickDefaultEveningKey,
   pickDefaultPoolKey,
   poolKeyFromQuery,
 } from '@/utils/maps/publicPools';
@@ -372,5 +375,128 @@ describe('usePoolScope — helpers purs', () => {
     expect(sameScope({ kind: 'round', round: 2 }, { kind: 'default' })).toBe(
       false
     );
+  });
+});
+
+/* ── Vue par SOIRÉE (sélecteur de la page publique) ─────────────────────── */
+
+describe('buildEveningPools — la maille est la soirée, pas la journée', () => {
+  // Le cas réel de la Cup 2026 : les journées s'étalent sur plusieurs soirées
+  // ET plusieurs journées tombent le même soir. Le sélecteur par journée
+  // affichait « J2 · 23/09 / 25/09 / 16/10 » — exact, et inutilisable pour
+  // qui veut savoir ce qui se joue ce soir.
+  const matches = [
+    { round_number: 1, round_name: 'J1', scheduled_at: '2026-09-18T17:00:00Z' },
+    { round_number: 1, round_name: 'J1', scheduled_at: '2026-09-23T17:00:00Z' },
+    { round_number: 2, round_name: 'J2', scheduled_at: '2026-09-23T19:00:00Z' },
+    { round_number: 3, round_name: 'J3', scheduled_at: '2026-09-23T20:30:00Z' },
+    { round_number: 2, round_name: 'J2', scheduled_at: '2026-09-30T19:00:00Z' },
+    { round_number: 3, round_name: 'J3', scheduled_at: '2026-09-30T20:30:00Z' },
+  ];
+  const mapRows = [
+    {
+      map_name: 'Nepal',
+      map_type: 'control',
+      image_url: null,
+      round_number: 1,
+    },
+    {
+      map_name: 'Oasis',
+      map_type: 'control',
+      image_url: null,
+      round_number: 2,
+    },
+    {
+      map_name: 'Ilios',
+      map_type: 'control',
+      image_url: null,
+      round_number: 3,
+    },
+    {
+      map_name: 'Busan',
+      map_type: 'control',
+      image_url: null,
+      play_date: '2026-09-30',
+    },
+  ];
+  const evenings = buildEveningPools(
+    buildScopedPools(mapRows, matches),
+    matches
+  );
+
+  it('produit une entrée par soirée, jamais par journée', () => {
+    expect(evenings.map((e) => e.date)).toEqual([
+      '2026-09-18',
+      '2026-09-23',
+      '2026-09-30',
+    ]);
+  });
+
+  it('une soirée à une seule journée montre le pool de cette journée', () => {
+    const first = evenings[0]!;
+    expect(first.blocks).toHaveLength(1);
+    expect(first.blocks[0]!.label).toBe('J1');
+    expect(first.blocks[0]!.maps.map((m) => m.name)).toEqual(['Nepal']);
+  });
+
+  it('une soirée à trois journées montre les TROIS pools, sans en choisir un', () => {
+    // Le cœur du correctif : choisir l'un des trois serait inventer une règle
+    // que l'organisation n'a pas posée.
+    const evening = evenings.find((e) => e.date === '2026-09-23')!;
+    expect(evening.blocks.map((b) => b.label)).toEqual(['J1', 'J2', 'J3']);
+    expect(evening.rounds).toEqual(['J1', 'J2', 'J3']);
+  });
+
+  it('un pool daté remplace ceux des journées pour son soir', () => {
+    const evening = evenings.find((e) => e.date === '2026-09-30')!;
+    expect(evening.blocks).toHaveLength(1);
+    expect(evening.blocks[0]!.kind).toBe('date');
+    expect(evening.blocks[0]!.maps.map((m) => m.name)).toEqual(['Busan']);
+    // Les journées du soir restent nommées, pour que la page puisse le dire.
+    expect(evening.rounds).toEqual(['J2', 'J3']);
+  });
+
+  it('garde visible le pool d’une journée pas encore programmée', () => {
+    const withUnplanned = buildEveningPools(
+      buildScopedPools(
+        [
+          ...mapRows,
+          {
+            map_name: 'Dorado',
+            map_type: 'escort',
+            image_url: null,
+            round_number: 9,
+          },
+        ],
+        matches
+      ),
+      matches
+    );
+    const orphan = withUnplanned.find((e) => e.date === null);
+    expect(orphan?.label).toBe('J9');
+    expect(orphan?.blocks[0]!.maps.map((m) => m.name)).toEqual(['Dorado']);
+  });
+
+  it('ouvre la prochaine soirée, même quand trois journées s’y croisent', () => {
+    // L'ancienne règle rendait `null` dès qu'un jour portait plusieurs pools :
+    // le visiteur tombait sur les 30 cartes du tournoi la veille du match.
+    expect(pickDefaultEveningKey(evenings, '2026-09-19')).toBe(
+      'day:2026-09-23'
+    );
+    expect(pickDefaultEveningKey(evenings, '2026-09-30')).toBe(
+      'day:2026-09-30'
+    );
+    expect(pickDefaultEveningKey(evenings, '2026-10-01')).toBeNull();
+  });
+
+  it('résout les liens partagés : ?date= et ?journee=', () => {
+    expect(eveningKeyFromQuery(evenings, { date: '2026-09-30' })).toBe(
+      'day:2026-09-30'
+    );
+    // Une journée étalée ouvre sa PREMIÈRE soirée, faute de mieux.
+    expect(eveningKeyFromQuery(evenings, { journee: '2' })).toBe(
+      'day:2026-09-23'
+    );
+    expect(eveningKeyFromQuery(evenings, { date: '2026-12-25' })).toBeNull();
   });
 });

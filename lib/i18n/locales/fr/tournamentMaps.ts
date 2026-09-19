@@ -42,6 +42,13 @@ export default ns('tournamentMaps', {
   // Pool par date : l'organisation annonce « Map Pool 30/09 ». Un pool daté
   // remplace, pour son jour, le pool de la journée.
   poolDateChip: 'Pool du {date}',
+  // Vue par SOIRÉE : plusieurs journées peuvent tomber le même soir, chacune
+  // avec son pool. On le dit plutôt que d'en choisir une.
+  poolEveningMultiple:
+    'Plusieurs journées se jouent le {date} ({rounds}) : voici le pool de chacune.',
+  poolEveningFromRound:
+    'Pool de la journée {round}, appliqué à la soirée du {date}.',
+  poolBlockHeading: 'Pool {round}',
   poolHeadingDate: 'Map pool du {date}',
   poolHeadingRound: 'Map pool {round}',
   // Pastille du pool de la prochaine date de jeu, ouvert par défaut.

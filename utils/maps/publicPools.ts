@@ -230,3 +230,192 @@ export function poolKeyFromQuery(
   }
   return null;
 }
+
+/* ── Vue PAR SOIRÉE ─────────────────────────────────────────────────────── */
+
+/**
+ * Un pool affiché sous une soirée : celui du jour, ou celui d'une journée qui
+ * s'y joue.
+ */
+export type EveningBlock = {
+  /** Clé du `ScopedPool` d'origine — sert au lien partageable. */
+  key: string;
+  kind: 'round' | 'date';
+  /** « J2 » pour un pool de journée ; null pour un pool daté. */
+  label: string | null;
+  maps: PublicPoolMap[];
+};
+
+export type EveningPool = {
+  /** `day:2026-09-30`, ou `round:5` pour une journée sans date programmée. */
+  key: string;
+  /** `YYYY-MM-DD`, ou null pour une journée encore non planifiée. */
+  date: string | null;
+  /** Libellé de repli quand il n'y a pas de date (« J5 »). */
+  label: string | null;
+  /** Journées qui se jouent ce soir-là (« J1 », « J2 »…). */
+  rounds: string[];
+  /** Un bloc, ou plusieurs quand la soirée réunit des journées distinctes. */
+  blocks: EveningBlock[];
+};
+
+/**
+ * Regroupe les pools PAR SOIRÉE de jeu, et non par journée.
+ *
+ * POURQUOI CE CHANGEMENT DE MAILLE. Une joueuse vient chercher « les maps de
+ * ce soir ». Or une journée s'étale sur plusieurs soirées quand des matchs
+ * sont reportés, et surtout plusieurs journées tombent le même soir : à la Cup
+ * 2026, le 23/09 réunit J1, J2 et J3, qui ont trois pools différents. Le
+ * sélecteur affichait donc « J1 · 18/09 / 23/09 », « J2 · 23/09 / 25/09 /
+ * 16/10 », « J3 · 23/09 / 25/09 » — exact, illisible, et incapable de répondre
+ * à la seule question posée. L'organisation avait déjà tranché à la main en
+ * créant un pool daté pour le 30/09 : cette fonction généralise sa façon de
+ * faire.
+ *
+ * Priorité, reprise de `utils/maps/pool.ts` : un pool daté REMPLACE ceux des
+ * journées pour son jour. Sans pool daté, la soirée montre le pool de chaque
+ * journée qui s'y joue — plusieurs blocs plutôt qu'un choix arbitraire entre
+ * trois pools également valables.
+ *
+ * Une journée dont aucun match n'est encore programmé n'a pas de soirée : son
+ * pool sort quand même, en fin de liste, sous son propre libellé — sinon un
+ * pool saisi par le staff deviendrait invisible le temps que le calendrier se
+ * fasse. PURE.
+ */
+export function buildEveningPools(
+  pools: ScopedPool[],
+  matches: MatchRow[]
+): EveningPool[] {
+  const roundsByDay = new Map<string, Map<number, string>>();
+  const daysOfRound = new Map<number, Set<string>>();
+  for (const m of matches) {
+    const round = typeof m.round_number === 'number' ? m.round_number : null;
+    const day = parisDayKey(m.scheduled_at ?? null);
+    if (!day || round === null) continue;
+    const labels = roundsByDay.get(day) ?? new Map<number, string>();
+    if (!labels.has(round)) labels.set(round, m.round_name || `J${round}`);
+    roundsByDay.set(day, labels);
+    const days = daysOfRound.get(round) ?? new Set<string>();
+    days.add(day);
+    daysOfRound.set(round, days);
+  }
+
+  const datePools = new Map(
+    pools.filter((p) => p.kind === 'date' && p.date).map((p) => [p.date!, p])
+  );
+  const roundPools = new Map(
+    pools
+      .filter((p) => p.kind === 'round' && p.round !== null)
+      .map((p) => [p.round!, p])
+  );
+
+  const evenings: EveningPool[] = [];
+  const days = new Set<string>([...roundsByDay.keys(), ...datePools.keys()]);
+
+  for (const day of [...days].sort()) {
+    const labels = roundsByDay.get(day);
+    const rounds = labels
+      ? [...labels.entries()].sort((a, b) => a[0] - b[0]).map(([, l]) => l)
+      : [];
+
+    const dated = datePools.get(day);
+    const blocks: EveningBlock[] = [];
+    if (dated) {
+      blocks.push({
+        key: dated.key,
+        kind: 'date',
+        label: null,
+        maps: dated.maps,
+      });
+    } else {
+      for (const round of [...(labels?.keys() ?? [])].sort((a, b) => a - b)) {
+        const pool = roundPools.get(round);
+        if (!pool) continue;
+        blocks.push({
+          key: pool.key,
+          kind: 'round',
+          label: pool.label ?? labels?.get(round) ?? `J${round}`,
+          maps: pool.maps,
+        });
+      }
+    }
+
+    // Soirée sans aucun pool propre : le pool du tournoi s'applique, et la page
+    // l'affiche déjà sous « Tout le tournoi ». Un onglet vide n'apprendrait
+    // rien.
+    if (blocks.length === 0) continue;
+
+    evenings.push({
+      key: `day:${day}`,
+      date: day,
+      label: null,
+      rounds,
+      blocks,
+    });
+  }
+
+  // Les pools de journées encore non planifiées, pour qu'ils restent visibles.
+  for (const [round, pool] of roundPools) {
+    if ((daysOfRound.get(round)?.size ?? 0) > 0) continue;
+    evenings.push({
+      key: pool.key,
+      date: null,
+      label: pool.label ?? `J${round}`,
+      rounds: pool.label ? [pool.label] : [`J${round}`],
+      blocks: [
+        {
+          key: pool.key,
+          kind: 'round',
+          label: pool.label ?? `J${round}`,
+          maps: pool.maps,
+        },
+      ],
+    });
+  }
+
+  return evenings;
+}
+
+/**
+ * Soirée à ouvrir par défaut : la prochaine à jouer (aujourd'hui compris).
+ *
+ * Plus simple que l'ancienne règle par pool, et plus juste : une soirée n'est
+ * jamais ambiguë, même quand trois journées s'y croisent — c'est tout l'objet
+ * de la maille. Aucune soirée à venir → `null` (pool du tournoi). PURE.
+ */
+export function pickDefaultEveningKey(
+  evenings: EveningPool[],
+  today: string | null
+): string | null {
+  if (!today) return null;
+  const upcoming = evenings
+    .filter((e) => e.date && e.date >= today)
+    .sort((a, b) => (a.date as string).localeCompare(b.date as string));
+  return upcoming[0]?.key ?? null;
+}
+
+/**
+ * Soirée demandée par l'URL : `?date=2026-09-30` (le lien partagé avec le
+ * visuel « Map Pool 30/09 »), ou `?journee=2` — qui ouvre la PREMIÈRE soirée où
+ * cette journée se joue, faute de mieux. Clé existante, sinon `null`. PURE.
+ */
+export function eveningKeyFromQuery(
+  evenings: EveningPool[],
+  query: { date?: unknown; journee?: unknown }
+): string | null {
+  const first = (v: unknown) => (Array.isArray(v) ? v[0] : v);
+
+  const date = first(query.date);
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const hit = evenings.find((e) => e.date === date);
+    if (hit) return hit.key;
+  }
+
+  const round = first(query.journee);
+  if (typeof round === 'string' && /^\d+$/.test(round)) {
+    const key = `round:${Number(round)}`;
+    const hit = evenings.find((e) => e.blocks.some((b) => b.key === key));
+    if (hit) return hit.key;
+  }
+  return null;
+}

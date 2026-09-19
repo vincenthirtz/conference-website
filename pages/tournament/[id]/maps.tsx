@@ -16,7 +16,9 @@ import TournamentTabs from '@/components/tournament/TournamentTabs';
 import {
   buildScopedPools,
   pickDefaultPoolKey,
-  poolKeyFromQuery,
+  buildEveningPools,
+  eveningKeyFromQuery,
+  type EveningPool,
   type ScopedPool,
 } from '@/utils/maps/publicPools';
 import { parisDayKey } from '@/utils/maps/roundPools';
@@ -111,6 +113,8 @@ type Props = {
    * jour : c'est ainsi que l'organisation les annonce (« Map Pool 30/09 »).
    */
   scopedPools: ScopedPool[];
+  /** Les mêmes pools, regroupés par SOIRÉE de jeu — la maille du sélecteur. */
+  evenings: EveningPool[];
   /**
    * Pool ouvert par défaut : celui de la prochaine date de jeu (cf.
    * pickDefaultPoolKey). Calculé au rendu serveur — l'ISR (60 s) le fait
@@ -170,7 +174,7 @@ function poolModeLabel(t: MapsDict, mode: string): string {
 async function loadScopedPools(
   tenantId: string,
   tournamentId: string
-): Promise<ScopedPool[]> {
+): Promise<{ scopedPools: ScopedPool[]; evenings: EveningPool[] }> {
   const [mapsRes, matchesRes] = await Promise.all([
     supabaseAdmin
       .from('tournament_maps')
@@ -189,12 +193,20 @@ async function loadScopedPools(
       .eq('tournament_id', tournamentId),
   ]);
 
-  if (mapsRes.error || !mapsRes.data || mapsRes.data.length === 0) return [];
+  if (mapsRes.error || !mapsRes.data || mapsRes.data.length === 0) {
+    return { scopedPools: [], evenings: [] };
+  }
   if (matchesRes.error) {
     logger.error('maps page schedule error:', matchesRes.error);
   }
 
-  return buildScopedPools(mapsRes.data, matchesRes.data ?? []);
+  const scopedPools = buildScopedPools(mapsRes.data, matchesRes.data ?? []);
+  // Le regroupement par soirée se fait ICI, au rendu serveur : les onglets
+  // sont dans le HTML, donc lisibles sans JavaScript et par les moteurs.
+  return {
+    scopedPools,
+    evenings: buildEveningPools(scopedPools, matchesRes.data ?? []),
+  };
 }
 
 /** Regroupe le pool par mode, dans l'ordre ci-dessus, « Autres » en dernier. */
@@ -292,7 +304,10 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   // Fraîcheur : ISR `revalidate: 60` ci-dessous. L'API d'édition du pool ne
   // déclenche pas de revalidation à la demande ; un pool ajouté ou modifié
   // (journée comme date) apparaît donc au plus tard une minute après.
-  const scopedPools = await loadScopedPools(tenantId, tournamentId);
+  const { scopedPools, evenings } = await loadScopedPools(
+    tenantId,
+    tournamentId
+  );
 
   const hasFfaStage = (stagesRes.data || []).some(
     (s: any) => s.stage_type === 'ffa'
@@ -360,6 +375,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       tournament: tournament as Tournament,
       pool,
       scopedPools,
+      evenings,
       defaultPoolKey: pickDefaultPoolKey(
         scopedPools,
         parisDayKey(new Date().toISOString())
@@ -376,7 +392,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 export default function TournamentMapsPage({
   tournament,
   pool,
-  scopedPools,
+  evenings,
   defaultPoolKey = null,
   maps,
   hasVetoData,
@@ -388,42 +404,110 @@ export default function TournamentMapsPage({
   // tournoi. Les pools sont tous chargés côté serveur : basculer ne recharge
   // rien. On ouvre sur le pool de la prochaine date de jeu ; sans elle et sans
   // pool de tournoi, sur le premier pool scopé plutôt que sur une liste vide.
+  // LA MAILLE EST LA SOIRÉE, pas la journée : une joueuse vient voir « les maps
+  // de ce soir », et à la Cup 2026 trois journées tombent le même soir. Les
+  // pools par journée restent la donnée saisie ; ils sont regroupés ici.
+  // La soirée à ouvrir : celle que le serveur a désignée, ou celle qui contient
+  // le pool désigné (le défaut est calculé par pool, cf. pickDefaultPoolKey).
+  const defaultEveningKey =
+    evenings.find(
+      (e) =>
+        e.key === defaultPoolKey ||
+        e.blocks.some((b) => b.key === defaultPoolKey)
+    )?.key ?? null;
   const [poolKey, setPoolKey] = useState<string | null>(
-    defaultPoolKey && scopedPools.some((p) => p.key === defaultPoolKey)
-      ? defaultPoolKey
-      : pool.length === 0 && scopedPools.length > 0
-        ? scopedPools[0].key
-        : null
+    defaultEveningKey ??
+      (pool.length === 0 && evenings.length > 0 ? evenings[0].key : null)
   );
-  // Lien direct vers un pool (`?date=2026-09-30`, `?journee=2`) : lu après
-  // hydratation, la page étant statique (ISR) et la query absente au rendu
-  // serveur.
+  // Lien direct (`?date=2026-09-30`, `?journee=2`) : lu après hydratation, la
+  // page étant statique (ISR) et la query absente au rendu serveur.
   const router = useRouter();
   useEffect(() => {
     if (!router.isReady) return;
-    const fromQuery = poolKeyFromQuery(scopedPools, router.query);
+    const fromQuery = eveningKeyFromQuery(evenings, router.query);
     if (fromQuery) setPoolKey(fromQuery);
-  }, [router.isReady, router.query, scopedPools]);
-  const selectedScopedPool = scopedPools.find((p) => p.key === poolKey) ?? null;
-  const shownPool = selectedScopedPool ? selectedScopedPool.maps : pool;
-  const scopedPoolChip = (p: ScopedPool): string =>
-    p.kind === 'date' && p.date
-      ? format(t.poolDateChip, { date: formatPlayDateShort(p.date) })
-      : `${p.label}${p.dates.length > 0 ? ` · ${p.dates.map(formatPlayDateShort).join(' / ')}` : ''}`;
-  const scopedPoolNotice = (p: ScopedPool): string | null => {
-    if (p.kind === 'date' && p.date) {
-      const date = formatPlayDateShort(p.date);
-      return p.rounds.length > 0
-        ? format(t.poolDateNotice, { date, rounds: p.rounds.join(', ') })
-        : format(t.poolDateNoticeNoRounds, { date });
-    }
-    if (p.overriddenDates.length > 0) {
-      return format(t.poolRoundOverridden, {
-        round: p.label ?? '',
-        dates: p.overriddenDates.map(formatPlayDateShort).join(', '),
+  }, [router.isReady, router.query, evenings]);
+  const selectedEvening = evenings.find((e) => e.key === poolKey) ?? null;
+  // Une soirée à un seul bloc s'affiche comme avant ; à plusieurs, chaque bloc
+  // est titré par sa journée (cf. le rendu plus bas).
+  const shownPool = selectedEvening
+    ? selectedEvening.blocks.flatMap((b) => b.maps)
+    : pool;
+  // Compteur : les cartes DISTINCTES. Une soirée à trois pools en additionnait
+  // les tailles et annonçait « 33 cartes » là où le même terrain revient dans
+  // deux pools — un chiffre que personne ne peut retrouver à l'écran.
+  const shownCount = new Set(shownPool.map((m) => m.name)).size;
+  /**
+   * Les cartes d'un pool, groupées par mode. Extrait en fonction parce qu'une
+   * soirée peut en afficher PLUSIEURS : quand trois journées tombent le même
+   * soir sans pool daté, chacune garde le sien plutôt qu'on n'en choisisse un
+   * au hasard.
+   */
+  const renderModes = (list: PoolMap[]) =>
+    groupPoolByMode(list).map(({ mode, maps: modeMaps }) => (
+      <div key={mode}>
+        <h3 className="text-xs uppercase tracking-[0.18em] text-purple-200">
+          {poolModeLabel(t, mode)}
+        </h3>
+        <ul className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {modeMaps.map((map) => (
+            <li
+              key={map.name}
+              className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]"
+            >
+              {/* Le dégradé sert de repli : si la vignette manque ou
+                              échoue, la tuile reste présentable sans JS. */}
+              <div className="relative aspect-[16/10] w-full bg-gradient-to-br from-purple-900/40 to-black/50">
+                {map.image && (
+                  // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
+                  <img
+                    src={map.image}
+                    alt={map.name}
+                    loading="lazy"
+                    className="h-full w-full object-cover"
+                  />
+                )}
+              </div>
+              <p
+                className="truncate px-2 py-1.5 text-xs font-medium text-gray-100"
+                title={map.name}
+              >
+                {map.name}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ));
+
+  const eveningChip = (e: EveningPool): string =>
+    e.date
+      ? format(t.poolDateChip, { date: formatPlayDateShort(e.date) })
+      : (e.label ?? '');
+  /**
+   * Ce qu'il faut savoir sur la soirée affichée : quelles journées s'y jouent,
+   * et d'où vient le pool montré. Sans cette phrase, un visiteur ne peut pas
+   * distinguer « pool écrit pour ce soir » de « pool de la journée, appliqué à
+   * ce soir » — deux choses que l'organisation gère différemment.
+   */
+  const eveningNotice = (e: EveningPool): string | null => {
+    if (!e.date) return null;
+    const date = formatPlayDateShort(e.date);
+    if (e.blocks.length > 1) {
+      return format(t.poolEveningMultiple, {
+        date,
+        rounds: e.blocks.map((b) => b.label ?? '').join(', '),
       });
     }
-    return null;
+    const only = e.blocks[0];
+    if (only?.kind === 'date') {
+      return e.rounds.length > 0
+        ? format(t.poolDateNotice, { date, rounds: e.rounds.join(', ') })
+        : format(t.poolDateNoticeNoRounds, { date });
+    }
+    return only
+      ? format(t.poolEveningFromRound, { date, round: only.label ?? '' })
+      : null;
   };
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
   const isCompleted =
@@ -497,7 +581,7 @@ export default function TournamentMapsPage({
 
         {/* Pool jouable — affiché dès la publication du tournoi, alors que les
             statistiques plus bas restent vides jusqu'au premier game. */}
-        {(pool.length > 0 || scopedPools.length > 0) && (
+        {(pool.length > 0 || evenings.length > 0) && (
           <section className="mb-6">
             <div className="bg-black/60 border border-white/5 rounded-2xl p-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -505,21 +589,20 @@ export default function TournamentMapsPage({
                     l'organisation (« Map Pool 30/09 ») : sans lui, rien ne
                     distingue à l'œil le pool du jour du pool du tournoi. */}
                 <h2 className="text-lg font-semibold text-white">
-                  {selectedScopedPool?.kind === 'date' &&
-                  selectedScopedPool.date
+                  {selectedEvening?.date
                     ? format(t.poolHeadingDate, {
-                        date: formatPlayDateShort(selectedScopedPool.date),
+                        date: formatPlayDateShort(selectedEvening.date),
                       })
-                    : selectedScopedPool
+                    : selectedEvening
                       ? format(t.poolHeadingRound, {
-                          round: selectedScopedPool.label ?? '',
+                          round: selectedEvening.label ?? '',
                         })
                       : t.poolHeading}
                 </h2>
                 <span className="font-mono text-xs tabular-nums text-gray-400">
                   {format(
-                    shownPool.length > 1 ? t.poolCount_other : t.poolCount_one,
-                    { count: shownPool.length }
+                    shownCount > 1 ? t.poolCount_other : t.poolCount_one,
+                    { count: shownCount }
                   )}
                 </span>
               </div>
@@ -535,7 +618,7 @@ export default function TournamentMapsPage({
                   ou une date a son propre pool. Ordre chronologique : le
                   visiteur cherche « le pool du 30/09 », comme annoncé. Un pool
                   daté remplace celui de la journée pour son jour. */}
-              {scopedPools.length > 0 && (
+              {evenings.length > 0 && (
                 <div
                   className="mt-3 flex flex-wrap items-center gap-2"
                   role="group"
@@ -543,9 +626,9 @@ export default function TournamentMapsPage({
                 >
                   {[
                     ...(pool.length > 0 ? [null] : []),
-                    ...scopedPools.map((p) => p.key),
+                    ...evenings.map((e) => e.key),
                   ].map((key) => {
-                    const entry = scopedPools.find((p) => p.key === key);
+                    const entry = evenings.find((e) => e.key === key);
                     const active = poolKey === key;
                     return (
                       <button
@@ -559,8 +642,8 @@ export default function TournamentMapsPage({
                             : 'border-white/10 bg-white/[0.03] text-gray-300 hover:bg-white/[0.07]'
                         }`}
                       >
-                        {entry ? scopedPoolChip(entry) : t.poolRoundAll}
-                        {key !== null && key === defaultPoolKey && (
+                        {entry ? eveningChip(entry) : t.poolRoundAll}
+                        {key !== null && key === defaultEveningKey && (
                           <span className="ml-1.5 rounded-full bg-[var(--color-green)]/20 px-1.5 py-[1px] text-[10px] font-semibold uppercase tracking-wide text-[var(--color-green)]">
                             {t.poolNextBadge}
                           </span>
@@ -570,49 +653,35 @@ export default function TournamentMapsPage({
                   })}
                 </div>
               )}
-              {selectedScopedPool && scopedPoolNotice(selectedScopedPool) && (
+              {selectedEvening && eveningNotice(selectedEvening) && (
                 <p className="mt-2 text-xs text-purple-100/90">
-                  {scopedPoolNotice(selectedScopedPool)}
+                  {eveningNotice(selectedEvening)}
                 </p>
               )}
 
-              <div className="mt-4 flex flex-col gap-5">
-                {groupPoolByMode(shownPool).map(({ mode, maps: modeMaps }) => (
-                  <div key={mode}>
-                    <h3 className="text-xs uppercase tracking-[0.18em] text-purple-200">
-                      {poolModeLabel(t, mode)}
-                    </h3>
-                    <ul className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                      {modeMaps.map((map) => (
-                        <li
-                          key={map.name}
-                          className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]"
-                        >
-                          {/* Le dégradé sert de repli : si la vignette manque ou
-                              échoue, la tuile reste présentable sans JS. */}
-                          <div className="relative aspect-[16/10] w-full bg-gradient-to-br from-purple-900/40 to-black/50">
-                            {map.image && (
-                              // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
-                              <img
-                                src={map.image}
-                                alt={map.name}
-                                loading="lazy"
-                                className="h-full w-full object-cover"
-                              />
-                            )}
-                          </div>
-                          <p
-                            className="truncate px-2 py-1.5 text-xs font-medium text-gray-100"
-                            title={map.name}
-                          >
-                            {map.name}
-                          </p>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
+              {selectedEvening && selectedEvening.blocks.length > 1 ? (
+                /* Plusieurs journées ce soir-là, chacune avec son pool : on les
+                   montre toutes. Choisir l'une des trois serait inventer une
+                   règle que l'organisation n'a pas posée. */
+                <div className="mt-4 flex flex-col gap-6">
+                  {selectedEvening.blocks.map((block) => (
+                    <div key={block.key}>
+                      <h3 className="text-sm font-semibold text-white">
+                        {format(t.poolBlockHeading, {
+                          round: block.label ?? '',
+                        })}
+                      </h3>
+                      <div className="mt-2 flex flex-col gap-5">
+                        {renderModes(block.maps)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-4 flex flex-col gap-5">
+                  {renderModes(shownPool)}
+                </div>
+              )}
             </div>
           </section>
         )}

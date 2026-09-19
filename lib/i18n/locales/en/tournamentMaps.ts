@@ -37,6 +37,10 @@ export default {
   poolRoundLabel: 'Pool by match day',
   poolRoundFallback: 'This match day uses the tournament pool.',
   poolDateChip: '{date} pool',
+  poolEveningMultiple:
+    'Several rounds are played on {date} ({rounds}): here is each one’s pool.',
+  poolEveningFromRound: 'Round {round} pool, applied to the {date} evening.',
+  poolBlockHeading: '{round} pool',
   poolHeadingDate: '{date} map pool',
   poolHeadingRound: '{round} map pool',
   poolNextBadge: 'Next',
