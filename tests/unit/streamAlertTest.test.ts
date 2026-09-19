@@ -66,8 +66,7 @@ type EventRow = {
   tier: string | null;
 };
 
-const events = () =>
-  (store.stream_alert_events ?? []) as unknown as EventRow[];
+const events = () => (store.stream_alert_events ?? []) as unknown as EventRow[];
 
 beforeEach(() => {
   resetSupabaseMock();

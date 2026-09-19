@@ -41,7 +41,10 @@ describe('resolveAlertFrame', () => {
         frame_path: 'stream-alerts/t-abc.png',
         frame_kind: 'image',
       })
-    ).toEqual({ url: 'https://cdn.test/stream-alerts/t-abc.png', kind: 'image' });
+    ).toEqual({
+      url: 'https://cdn.test/stream-alerts/t-abc.png',
+      kind: 'image',
+    });
   });
 
   it('sans dépôt, rend `null` — c’est-à-dire LE NŒUD', () => {
@@ -56,7 +59,10 @@ describe('resolveAlertFrame', () => {
     // ne doit pas éteindre le défaut : la source ne saurait pas s'il faut un
     // <img> ou une <video>, et rendrait un cadre vide.
     expect(
-      resolveAlertFrame({ frame_path: 'stream-alerts/t-abc.png', frame_kind: null })
+      resolveAlertFrame({
+        frame_path: 'stream-alerts/t-abc.png',
+        frame_kind: null,
+      })
     ).toEqual({ url: null, kind: null });
     expect(
       resolveAlertFrame({

@@ -18,7 +18,9 @@ import {
 } from '@/utils/uploads/audioBytes';
 
 /** Un fichier minimal mais crédible, du type demandé. */
-function sample(kind: 'mp3-id3' | 'mp3-frame' | 'ogg' | 'wav' | 'webp'): Buffer {
+function sample(
+  kind: 'mp3-id3' | 'mp3-frame' | 'ogg' | 'wav' | 'webp'
+): Buffer {
   const pad = Buffer.alloc(32);
   switch (kind) {
     case 'mp3-id3':
