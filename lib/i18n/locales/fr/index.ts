@@ -112,6 +112,7 @@ import nsTournamentBracket from './tournamentBracket';
 import nsTournamentMatches from './tournamentMatches';
 import nsTournamentMaps from './tournamentMaps';
 import nsTournamentStats from './tournamentStats';
+import nsTournamentStandings from './tournamentStandings';
 import nsTournamentMvp from './tournamentMvp';
 import nsTournamentPodium from './tournamentPodium';
 import nsTournamentTeams from './tournamentTeams';
@@ -283,6 +284,7 @@ export const frDict = {
   tournamentMatches: nsTournamentMatches.fr,
   tournamentMaps: nsTournamentMaps.fr,
   tournamentStats: nsTournamentStats.fr,
+  tournamentStandings: nsTournamentStandings.fr,
   tournamentMvp: nsTournamentMvp.fr,
   tournamentPodium: nsTournamentPodium.fr,
   tournamentTeams: nsTournamentTeams.fr,

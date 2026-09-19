@@ -15,6 +15,7 @@ export default ns('tournamentTabs', {
   matches: 'Matchs',
   bracket: 'Bracket',
   maps: 'Maps',
+  standings: 'Classement',
   stats: 'Stats',
   mvp: 'MVP',
   podium: 'Podium',

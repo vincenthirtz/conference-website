@@ -1,7 +1,7 @@
 // components/tournament/TournamentTabs.tsx
 // Barre d'onglets partagée par toutes les sous-pages publiques d'un tournoi.
 // Rendue en tête de chaque page pour offrir une navigation cohérente (Hub,
-// Équipes, Matchs, Maps, Stats, MVP, + Podium/FFA conditionnels). Chaque onglet
+// Équipes, Matchs, Classement, Maps, Stats, MVP, + Podium/FFA conditionnels). Chaque onglet
 // est un <Link> Next stylisé (HTML valide + navigation client), avec état actif
 // et focus clavier visible. Aucun fetch : présentation pure.
 
@@ -14,6 +14,7 @@ export type TournamentTabKey =
   | 'teams'
   | 'matches'
   | 'bracket'
+  | 'standings'
   | 'maps'
   | 'stats'
   | 'mvp'
@@ -54,6 +55,11 @@ export default function TournamentTabs({
           },
         ]
       : []),
+    {
+      key: 'standings',
+      label: t.standings,
+      href: `${tournamentPath}/standings`,
+    },
     { key: 'maps', label: t.maps, href: `${tournamentPath}/maps` },
     { key: 'stats', label: t.stats, href: `${tournamentPath}/stats` },
     { key: 'mvp', label: t.mvp, href: `${tournamentPath}/mvp` },
