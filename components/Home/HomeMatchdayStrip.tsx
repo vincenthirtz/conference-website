@@ -165,51 +165,29 @@ export default function HomeMatchdayStrip({
   matchesHref,
 }: {
   matchday: HomeMatchday;
-  /** La journée d'APRÈS, en résumé d'une ligne par affiche. */
+  /** La journée d'APRÈS, affichée comme celle du jour — mêmes affiches. */
   following?: HomeMatchday | null;
   matchesHref: string;
 }): JSX.Element | null {
   const t = useT(nsHomeV2);
-  const locale = useLocale();
 
   if (!matchday.matches.length) return null;
 
-  // Le jour se formate depuis un INSTANT réel (le premier coup d'envoi) plutôt
-  // que depuis la chaîne `YYYY-MM-DD` : c'est la seule façon d'être sûr que le
-  // jour affiché est celui qu'on a calculé à Paris, quel que soit le fuseau du
-  // serveur de rendu.
-  const dayLabel = formatSiteDate(matchday.matches[0].scheduledAt, locale, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
   const hidden = matchday.totalCount - matchday.matches.length;
 
   return (
     // `md:col-span-2` : la bande traverse les deux colonnes de la carte
     // (infos à gauche, Twitch à droite) au lieu de se ranger dans l'une d'elles.
     <div className="border-t border-white/10 bg-black/20 py-6 md:col-span-2">
-      <div className="mb-4 flex flex-col items-center gap-0.5 px-6 text-center">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-          {dayLabel}
-        </p>
-        <p className="text-balance text-sm font-semibold text-gray-200 md:text-base">
-          {format(
-            matchday.totalCount > 1
-              ? t.matchdayTitle_other
-              : t.matchdayTitle_one,
-            { count: matchday.totalCount }
-          )}
-        </p>
-      </div>
+      <DaySection matchday={matchday} />
 
-      <ul className="grid list-none grid-cols-1 gap-2 px-4 sm:px-6 lg:grid-cols-2">
-        {matchday.matches.map((m) => (
-          <MatchRow key={m.id} match={m} />
-        ))}
-      </ul>
-
-      {following && <FollowingDay matchday={following} />}
+      {/* La journée d'après, rendue À L'IDENTIQUE : mêmes affiches, mêmes
+          blasons. Elle a d'abord été un résumé d'une ligne par match — deux
+          traitements pour la même information, et l'œil ne s'y retrouvait
+          pas. Seul le titre la distingue (« Puis vendredi 25 septembre »). */}
+      {following && following.matches.length > 0 && (
+        <DaySection matchday={following} following />
+      )}
 
       <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-6 text-center">
         {hidden > 0 && (
@@ -232,15 +210,26 @@ export default function HomeMatchdayStrip({
 }
 
 /**
- * La journée SUIVANTE, en retrait : une ligne par affiche, heure en tête.
+ * Une journée : son titre, le nombre d'affiches, puis les affiches.
  *
- * Volontairement plus pauvre que la journée qui vient — même poids visuel, et
- * on ne saurait plus laquelle se joue ce soir. Elle répond à une seule
- * question : quand rejoue-t-on, et contre qui.
+ * Le jour se formate depuis un INSTANT réel (le premier coup d'envoi) plutôt
+ * que depuis la chaîne `YYYY-MM-DD` : c'est la seule façon d'être sûr que le
+ * jour affiché est celui qu'on a calculé à Paris, quel que soit le fuseau du
+ * serveur de rendu.
+ *
+ * `following` ne change que le titre et l'espacement — pas les affiches : la
+ * journée d'après se lit de la même façon que celle du jour.
  */
-function FollowingDay({ matchday }: { matchday: HomeMatchday }): JSX.Element {
+function DaySection({
+  matchday,
+  following = false,
+}: {
+  matchday: HomeMatchday;
+  following?: boolean;
+}): JSX.Element {
   const t = useT(nsHomeV2);
   const locale = useLocale();
+
   const dayLabel = formatSiteDate(matchday.matches[0].scheduledAt, locale, {
     weekday: 'long',
     day: 'numeric',
@@ -249,36 +238,29 @@ function FollowingDay({ matchday }: { matchday: HomeMatchday }): JSX.Element {
   const hidden = matchday.totalCount - matchday.matches.length;
 
   return (
-    <div className="mt-5 border-t border-white/5 px-4 pt-4 sm:px-6">
-      <p className="mb-2 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
-        {format(t.matchdayNextDay, { day: dayLabel })}
-      </p>
-      <ul className="mx-auto grid max-w-2xl list-none grid-cols-1 gap-1 sm:grid-cols-2">
+    <div className={following ? 'mt-6 border-t border-white/5 pt-6' : ''}>
+      <div className="mb-4 flex flex-col items-center gap-0.5 px-6 text-center">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
+          {following ? format(t.matchdayNextDay, { day: dayLabel }) : dayLabel}
+        </p>
+        <p className="text-balance text-sm font-semibold text-gray-200 md:text-base">
+          {format(
+            matchday.totalCount > 1
+              ? t.matchdayTitle_other
+              : t.matchdayTitle_one,
+            { count: matchday.totalCount }
+          )}
+        </p>
+      </div>
+
+      <ul className="grid list-none grid-cols-1 gap-2 px-4 sm:px-6 lg:grid-cols-2">
         {matchday.matches.map((m) => (
-          <li key={m.id}>
-            <Link
-              href={`/match/${m.id}`}
-              className="flex items-center gap-2 rounded-lg px-2 py-1 text-xs text-gray-300 transition-colors hover:bg-white/5 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
-            >
-              <span className="shrink-0 tabular-nums font-semibold text-gray-200">
-                {formatSiteDate(m.scheduledAt, locale, {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </span>
-              <span className="truncate">
-                {m.team1.shortName || m.team1.name}
-                <span className="mx-1 text-gray-500" aria-hidden>
-                  –
-                </span>
-                {m.team2.shortName || m.team2.name}
-              </span>
-            </Link>
-          </li>
+          <MatchRow key={m.id} match={m} />
         ))}
       </ul>
-      {hidden > 0 && (
-        <p className="mt-1 text-center text-[11px] text-gray-500">
+
+      {following && hidden > 0 && (
+        <p className="mt-2 text-center text-xs text-gray-400">
           {format(hidden > 1 ? t.matchdayMore_other : t.matchdayMore_one, {
             count: hidden,
           })}

@@ -374,6 +374,11 @@ describe('HomeMatchdayStrip — journée suivante en résumé', () => {
     );
     expect(html).toContain('Puis');
     expect(html).toContain('href="/match/m-2"');
+    // MÊME AFFICHE que la journée du jour (blasons, mise en miroir), pas un
+    // résumé en une ligne : deux traitements pour la même information, et
+    // l'œil ne s'y retrouvait pas.
+    const cards = html.split('grid-cols-[1fr_auto_1fr]').length - 1;
+    expect(cards).toBe(2);
   });
 
   it('ne montre rien de plus sans journée suivante', () => {
