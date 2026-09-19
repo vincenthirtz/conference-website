@@ -14,6 +14,8 @@
 
 import Link from 'next/link';
 import { format } from '@/lib/i18n/useAdminT';
+import { readHeroBans, type HeroBan } from '@/utils/matches/heroBans';
+import MatchGamePickBans from './MatchGamePickBans';
 
 export type MatchGameInput = {
   map_name: string;
@@ -22,9 +24,45 @@ export type MatchGameInput = {
   team2_score: number;
   is_tiebreaker: boolean;
   went_overtime: boolean;
+  picked_by_team_id: string | null;
+  hero_bans: HeroBan[];
 };
 
-type TeamMini = { name?: string | null; short_name?: string | null } | null;
+/** Une partie telle que l'API admin la renvoie (`games(*)`). */
+export type MatchGameRow = {
+  id?: string;
+  map_name: string | null;
+  map_order: number | null;
+  team1_score: number | null;
+  team2_score: number | null;
+  is_tiebreaker: boolean | null;
+  went_overtime: boolean | null;
+  picked_by_team_id?: string | null;
+  hero_bans?: unknown;
+};
+
+/** Lignes de la base → état éditable, dans l'ordre des maps. */
+export function gamesFromRows(rows: MatchGameRow[]): MatchGameInput[] {
+  return rows
+    .slice()
+    .sort((a, b) => (a.map_order ?? 0) - (b.map_order ?? 0))
+    .map((g, idx) => ({
+      map_name: g.map_name || '',
+      map_order: g.map_order ?? idx,
+      team1_score: g.team1_score ?? 0,
+      team2_score: g.team2_score ?? 0,
+      is_tiebreaker: g.is_tiebreaker ?? false,
+      went_overtime: g.went_overtime ?? false,
+      picked_by_team_id: g.picked_by_team_id ?? null,
+      hero_bans: readHeroBans(g.hero_bans),
+    }));
+}
+
+type TeamMini = {
+  id?: string | null;
+  name?: string | null;
+  short_name?: string | null;
+} | null;
 
 type Props = {
   games: MatchGameInput[];
@@ -37,6 +75,8 @@ type Props = {
   vetoComplete?: boolean | null;
   /** Lien vers le veto du match. null pour un scrim (pas de tournoi). */
   vetoHref?: string | null;
+  /** Saisie des picks et bans de héros (Overwatch uniquement). */
+  showPickBans?: boolean;
   t: Record<string, string>;
 };
 
@@ -48,6 +88,7 @@ export default function MatchGamesPanel({
   team2,
   vetoComplete = null,
   vetoHref = null,
+  showPickBans = false,
   t,
 }: Props) {
   return (
@@ -85,6 +126,8 @@ export default function MatchGamesPanel({
                 team2_score: 0,
                 is_tiebreaker: false,
                 went_overtime: false,
+                picked_by_team_id: null,
+                hero_bans: [],
               },
             ])
           }
@@ -181,6 +224,28 @@ export default function MatchGamesPanel({
                   }}
                 />
               </div>
+              {showPickBans && (
+                <MatchGamePickBans
+                  pickedBy={g.picked_by_team_id}
+                  bans={g.hero_bans}
+                  team1={team1}
+                  team2={team2}
+                  t={t}
+                  onChange={({ pickedBy, bans }) =>
+                    setGames((prev) =>
+                      prev.map((row, i) =>
+                        i === idx
+                          ? {
+                              ...row,
+                              picked_by_team_id: pickedBy,
+                              hero_bans: bans,
+                            }
+                          : row
+                      )
+                    )
+                  }
+                />
+              )}
             </div>
 
             <div className="flex flex-col items-center gap-2 pt-5">

@@ -115,7 +115,7 @@ async function handleGet(
     team1:team1_id(id, name, short_name, logo_url),
     team2:team2_id(id, name, short_name, logo_url),
     stage:stage_id(id, name, stage_type, is_active),
-    tournament:tournament_id(id, name, slug, status)
+    tournament:tournament_id(id, name, slug, status, game)
   `;
 
   if (!supabaseAdmin) {

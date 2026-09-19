@@ -68,6 +68,15 @@ export default {
   ot: 'OT',
   tb: 'TB',
   deleteMapTitle: 'Delete this map',
+  pickedByLabel: 'Picked by',
+  pickedByNone: 'Imposed / unknown',
+  heroBansLabel: 'Hero bans',
+  banTeamPlaceholder: 'Team…',
+  banHeroPlaceholder: 'Hero…',
+  addBan: '+ Ban',
+  removeBanTitle: 'Remove this ban',
+  heroBansHint:
+    'In ban order. A hero already banned on this map is no longer offered.',
   notesHeading: 'Internal notes',
   notesPlaceholder:
     'Info for referees / casters (setup, lobby code, casters, specifics, etc.).',

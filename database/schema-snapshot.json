@@ -534,11 +534,13 @@
     "games": [
       "created_at",
       "duration_minutes",
+      "hero_bans",
       "id",
       "is_tiebreaker",
       "map_name",
       "map_order",
       "match_id",
+      "picked_by_team_id",
       "team1_score",
       "team2_score",
       "tenant_id",
@@ -2342,6 +2344,10 @@
     "games_match_fk": {
       "source": "games",
       "target": "matches"
+    },
+    "games_picked_by_team_id_fkey": {
+      "source": "games",
+      "target": "teams"
     },
     "games_tenant_id_fkey": {
       "source": "games",

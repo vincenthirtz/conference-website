@@ -51,6 +51,12 @@ put:
   tags:
     - public/misc
   summary: Remplace les games d'un match. Staff manager+.
+  description: >-
+    Corps `{ games, recomputeMode }`. Chaque partie peut porter
+    `picked_by_team_id` (equipe qui a choisi la map, parmi les deux du match)
+    et `hero_bans` (tableau ordonne de `{ team_id, hero }`, `hero` = cle du
+    manifeste ow-heroes). Tout est valide avant le remplacement ; une partie
+    refusee renvoie 400 avec `error` et `gameIndex`, sans rien effacer.
   operationId: staffReplaceMatchGames
   security:
     - StaffSession: []

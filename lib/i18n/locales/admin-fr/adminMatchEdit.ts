@@ -67,6 +67,15 @@ export default adminNs('adminMatchEdit', {
   ot: 'OT',
   tb: 'TB',
   deleteMapTitle: 'Supprimer cette map',
+  pickedByLabel: 'Choisie par',
+  pickedByNone: 'Imposée / inconnue',
+  heroBansLabel: 'Bans de héros',
+  banTeamPlaceholder: 'Équipe…',
+  banHeroPlaceholder: 'Héros…',
+  addBan: '+ Ban',
+  removeBanTitle: 'Retirer ce ban',
+  heroBansHint:
+    'Dans l’ordre des bans. Un héros déjà banni sur cette map n’est plus proposé.',
   notesHeading: 'Notes internes',
   notesPlaceholder:
     'Infos pour les arbitres / casters (setup, lobby code, casters, spécificités, etc.).',

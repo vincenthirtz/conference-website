@@ -16,7 +16,9 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import MatchGamesPanel, {
+  gamesFromRows,
   type MatchGameInput,
+  type MatchGameRow,
 } from '@/components/admin/matches/MatchGamesPanel';
 import type {
   StaffProps,
@@ -38,16 +40,6 @@ const STATUS_ORDER: Record<string, number> = {
   finished: 3,
   walkover: 3,
   cancelled: 4,
-};
-
-type MatchGameRow = {
-  id?: string;
-  map_name: string | null;
-  map_order: number | null;
-  team1_score: number | null;
-  team2_score: number | null;
-  is_tiebreaker: boolean | null;
-  went_overtime: boolean | null;
 };
 
 type MatchWithGames = Match & { games?: MatchGameRow[] | null };
@@ -226,19 +218,7 @@ function AdminMatchEditPage(_props: StaffProps) {
       // Load games
       const matchGames = m.games;
       if (matchGames && Array.isArray(matchGames)) {
-        setGames(
-          matchGames
-            .slice()
-            .sort((a, b) => (a.map_order ?? 0) - (b.map_order ?? 0))
-            .map((g, idx) => ({
-              map_name: g.map_name || '',
-              map_order: g.map_order ?? idx,
-              team1_score: g.team1_score ?? 0,
-              team2_score: g.team2_score ?? 0,
-              is_tiebreaker: g.is_tiebreaker ?? false,
-              went_overtime: g.went_overtime ?? false,
-            }))
-        );
+        setGames(gamesFromRows(matchGames));
       } else {
         setGames([]);
       }
@@ -837,6 +817,7 @@ function AdminMatchEditPage(_props: StaffProps) {
                   team1={team1}
                   team2={team2}
                   vetoComplete={vetoComplete}
+                  showPickBans={tournament?.game === 'overwatch'}
                   vetoHref={
                     match?.tournament_id
                       ? `/admin/tournament/${match.tournament_id}/bracket?tab=veto&match=${matchId}`

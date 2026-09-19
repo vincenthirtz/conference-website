@@ -94,6 +94,8 @@ export type TournamentMini = {
   name: string;
   slug: string | null;
   status?: string | null;
+  /** Slug du jeu (`overwatch`…) ; décide des champs propres au jeu. */
+  game?: string | null;
   /** Fuseau IANA du tournoi (ex. `Europe/Paris`), pour afficher les créneaux. */
   timezone?: string | null;
 };

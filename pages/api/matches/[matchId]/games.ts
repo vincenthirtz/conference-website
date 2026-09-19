@@ -11,6 +11,11 @@ import {
 } from '@/utils/maps/pool';
 import { parisDayKey } from '@/utils/maps/roundPools';
 import { logStaffAction } from '@/utils/staffLogs';
+import {
+  normalizeHeroBans,
+  normalizePickedBy,
+  type HeroBan,
+} from '@/utils/matches/heroBans';
 
 import { logger } from '../../../../utils/logger';
 export default withStaffRoute(handler, { permission: 'arbitrate_matches' });
@@ -30,6 +35,8 @@ type GameRow = {
   duration_minutes: number | null;
   is_tiebreaker: boolean | null;
   went_overtime: boolean | null;
+  picked_by_team_id: string | null;
+  hero_bans: HeroBan[];
   created_at: string;
 };
 
@@ -43,6 +50,8 @@ type GameInput = {
   duration_minutes?: number | null;
   is_tiebreaker?: boolean | null;
   went_overtime?: boolean | null;
+  picked_by_team_id?: string | null;
+  hero_bans?: unknown;
 };
 
 type RecomputeMode = 'none' | 'from_games';
@@ -151,6 +160,41 @@ async function loadMapPool(matchId: string, tenantId: string) {
   return maps;
 }
 
+/** Les deux équipes du match : seules à pouvoir choisir une map ou bannir. */
+async function loadMatchTeams(
+  matchId: string,
+  tenantId: string
+): Promise<[string | null, string | null]> {
+  const { data } = await supabaseAdmin!
+    .from('matches')
+    .select('team1_id, team2_id')
+    .eq('id', matchId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+  return [data?.team1_id ?? null, data?.team2_id ?? null];
+}
+
+/**
+ * Valide choix de map et bans d'une partie. Appelé AVANT toute écriture : le
+ * PUT remplace toutes les parties, une saisie refusée ne doit rien effacer.
+ */
+function validatePickAndBans(
+  g: GameInput,
+  teamIds: [string | null, string | null]
+):
+  | { ok: true; picked_by_team_id: string | null; hero_bans: HeroBan[] }
+  | { ok: false; error: string } {
+  const picked = normalizePickedBy(g.picked_by_team_id, teamIds);
+  if (!picked.ok) return picked;
+  const bans = normalizeHeroBans(g.hero_bans, teamIds);
+  if (!bans.ok) return bans;
+  return {
+    ok: true,
+    picked_by_team_id: picked.teamId,
+    hero_bans: bans.bans,
+  };
+}
+
 /* -----------------------------------------------------------
  * POST : créer une nouvelle game pour le match
  * body: GameInput (sans id)
@@ -164,6 +208,14 @@ async function handlePost(
 ) {
   const body = req.body as GameInput;
 
+  const checked = validatePickAndBans(
+    body,
+    await loadMatchTeams(matchId, ctx.tenantId)
+  );
+  if (!checked.ok) {
+    return res.status(400).json({ error: checked.error });
+  }
+
   const pool = await loadMapPool(matchId, ctx.tenantId);
 
   const payload = {
@@ -176,6 +228,8 @@ async function handlePost(
     duration_minutes: body.duration_minutes ?? null,
     is_tiebreaker: body.is_tiebreaker ?? false,
     went_overtime: body.went_overtime ?? false,
+    picked_by_team_id: checked.picked_by_team_id,
+    hero_bans: checked.hero_bans,
     tenant_id: ctx.tenantId,
   };
 
@@ -231,6 +285,21 @@ async function handlePut(
       .json({ error: "Body must include an array 'games'" });
   }
 
+  // 0) Validation complète AVANT le remplacement : rien n'est effacé si une
+  //    seule partie est refusée.
+  const teamIds = await loadMatchTeams(matchId, ctx.tenantId);
+  const checkedGames: {
+    picked_by_team_id: string | null;
+    hero_bans: HeroBan[];
+  }[] = [];
+  for (const [i, g] of games.entries()) {
+    const checked = validatePickAndBans(g, teamIds);
+    if (!checked.ok) {
+      return res.status(400).json({ error: checked.error, gameIndex: i });
+    }
+    checkedGames.push(checked);
+  }
+
   // 1) On supprime les games existantes du match (remplacement complet)
   const { error: delErr } = await supabaseAdmin
     .from('games')
@@ -258,6 +327,8 @@ async function handlePut(
     duration_minutes: g.duration_minutes ?? null,
     is_tiebreaker: g.is_tiebreaker ?? false,
     went_overtime: g.went_overtime ?? false,
+    picked_by_team_id: checkedGames[idx].picked_by_team_id,
+    hero_bans: checkedGames[idx].hero_bans,
     tenant_id: ctx.tenantId,
   }));
 
@@ -283,16 +354,7 @@ async function handlePut(
   let recomputeResult: any = null;
 
   if (recomputeMode === 'from_games') {
-    // Fetch match to know team IDs for winner deduction per game
-    const { data: matchRow } = await supabaseAdmin
-      .from('matches')
-      .select('team1_id, team2_id')
-      .eq('id', matchId)
-      .eq('tenant_id', ctx.tenantId)
-      .maybeSingle();
-
-    const team1Id = matchRow?.team1_id ?? null;
-    const team2Id = matchRow?.team2_id ?? null;
+    const [team1Id, team2Id] = teamIds;
 
     // Auto-fill winner_team_id on games that don't have one set
     if (team1Id && team2Id && newGames.length > 0) {

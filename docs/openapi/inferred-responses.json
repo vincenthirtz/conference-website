@@ -20117,6 +20117,12 @@
          "null"
         ]
        },
+       "game": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "timezone": {
         "type": [
          "string",
@@ -32694,6 +32700,30 @@
           "null"
          ]
         },
+        "picked_by_team_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "hero_bans": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "team_id": {
+            "type": "string"
+           },
+           "hero": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "team_id",
+           "hero"
+          ]
+         }
+        },
         "created_at": {
          "type": "string"
         }
@@ -32709,6 +32739,8 @@
         "duration_minutes",
         "is_tiebreaker",
         "went_overtime",
+        "picked_by_team_id",
+        "hero_bans",
         "created_at"
        ]
       }
@@ -48621,6 +48653,30 @@
           "null"
          ]
         },
+        "picked_by_team_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "hero_bans": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "team_id": {
+            "type": "string"
+           },
+           "hero": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "team_id",
+           "hero"
+          ]
+         }
+        },
         "created_at": {
          "type": "string"
         }
@@ -48636,6 +48692,8 @@
         "duration_minutes",
         "is_tiebreaker",
         "went_overtime",
+        "picked_by_team_id",
+        "hero_bans",
         "created_at"
        ]
       }
@@ -62845,6 +62903,30 @@
          "null"
         ]
        },
+       "picked_by_team_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "hero_bans": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "team_id": {
+           "type": "string"
+          },
+          "hero": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "team_id",
+          "hero"
+         ]
+        }
+       },
        "created_at": {
         "type": "string"
        }
@@ -62860,6 +62942,8 @@
        "duration_minutes",
        "is_tiebreaker",
        "went_overtime",
+       "picked_by_team_id",
+       "hero_bans",
        "created_at"
       ]
      }
