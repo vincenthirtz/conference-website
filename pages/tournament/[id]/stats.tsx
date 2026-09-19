@@ -12,6 +12,10 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 import { formatDateRange } from '@/utils/tournamentDates';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
+import HeroBanStats, {
+  type HeroBanStatView,
+} from '@/components/tournament/HeroBanStats';
+import { computeHeroBanStats } from '@/utils/matches/heroBans';
 
 import { logger } from '../../../utils/logger';
 import nsTournamentStats from '@/lib/i18n/locales/fr/tournamentStats';
@@ -49,6 +53,7 @@ type GameRow = {
   match_id: string;
   team1_score: number | null;
   team2_score: number | null;
+  hero_bans?: unknown;
 };
 
 type TeamStat = {
@@ -68,6 +73,7 @@ type TeamStat = {
 type Props = {
   tournament: Tournament;
   teamStats: TeamStat[];
+  heroBans: { mapsWithBans: number; heroes: HeroBanStatView[] };
   hasFfaStage: boolean;
   seo: SeoProps;
 };
@@ -162,7 +168,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     matchIds.length > 0
       ? supabaseAdmin
           .from('games')
-          .select('match_id, team1_score, team2_score')
+          .select('match_id, team1_score, team2_score, hero_bans')
           .eq('tenant_id', tenantId)
           .in('match_id', matchIds)
       : Promise.resolve({ data: [] as GameRow[], error: null }),
@@ -187,6 +193,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       props: {
         tournament: tournament as Tournament,
         teamStats: [],
+        heroBans: { mapsWithBans: 0, heroes: [] },
         hasFfaStage,
         seo: buildStatsSeo(tournament as Tournament),
       },
@@ -196,11 +203,31 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 
   const games = (gamesRes.data || []) as GameRow[];
   const teamStats = computeTeamStats(teams, matches, games);
+  const banStats = computeHeroBanStats(games);
+  const teamLabel = (id: string) => {
+    const tm = teamMap.get(id);
+    return tm?.short_name || tm?.name || '—';
+  };
+  const heroBans = {
+    mapsWithBans: banStats.mapsWithBans,
+    heroes: banStats.heroes.map((h) => ({
+      hero: h.hero,
+      name: h.name,
+      role: h.role,
+      bans: h.bans,
+      rate: h.rate,
+      bannedBy: h.byTeam.map((b) => ({
+        team: teamLabel(b.teamId),
+        count: b.count,
+      })),
+    })),
+  };
 
   return {
     props: {
       tournament: tournament as Tournament,
       teamStats,
+      heroBans,
       hasFfaStage,
       seo: buildStatsSeo(tournament as Tournament),
     },
@@ -211,6 +238,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 export default function TournamentStatsPage({
   tournament,
   teamStats,
+  heroBans,
   hasFfaStage,
 }: Props) {
   const t = useT(nsTournamentStats);
@@ -360,6 +388,11 @@ export default function TournamentStatsPage({
             </div>
           </section>
         )}
+
+        <HeroBanStats
+          mapsWithBans={heroBans.mapsWithBans}
+          heroes={heroBans.heroes}
+        />
 
         {/* Tableau complet */}
         {teamStats.length > 0 && (

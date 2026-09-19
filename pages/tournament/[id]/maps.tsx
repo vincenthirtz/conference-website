@@ -13,6 +13,7 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 import { formatDateRange } from '@/utils/tournamentDates';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
+import { vetoPicksFromGames } from '@/utils/matches/heroBans';
 import {
   buildScopedPools,
   pickDefaultPoolKey,
@@ -74,6 +75,7 @@ type GameRow = {
   team2_score: number | null;
   is_tiebreaker: boolean | null;
   went_overtime: boolean | null;
+  picked_by_team_id: string | null;
 };
 
 type TeamMapWinrate = {
@@ -332,7 +334,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       supabaseAdmin
         .from('games')
         .select(
-          'match_id, map_name, team1_score, team2_score, is_tiebreaker, went_overtime'
+          'match_id, map_name, team1_score, team2_score, is_tiebreaker, went_overtime, picked_by_team_id'
         )
         .eq('tenant_id', tenantId)
         .in('match_id', matchIds),
@@ -353,8 +355,14 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     let vetos: VetoRow[] = [];
     if (!vetoRes.error && vetoRes.data) {
       vetos = vetoRes.data as VetoRow[];
-      hasVetoData = vetos.length > 0;
     }
+    // Picks saisis sur les parties (map choisie en cours de match, sans veto).
+    if (!gamesRes.error && gamesRes.data) {
+      vetos = vetos.concat(
+        vetoPicksFromGames(gamesRes.data as GameRow[], vetos)
+      );
+    }
+    hasVetoData = vetos.length > 0;
 
     const teamNames = new Map<string, string>();
     for (const t of (teamsRes.data || []) as TeamMini[]) {
