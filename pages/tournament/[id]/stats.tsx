@@ -553,6 +553,10 @@ function computeTeamStats(
       const isTeam1 = m.team1_id === t.id;
       const isTeam2 = m.team2_id === t.id;
       if (!isTeam1 && !isTeam2) continue;
+      // Seul un match TERMINÉ a été joué. Un match programmé comptait comme
+      // « joué » (0 V / 0 D) : une équipe qui n'avait pas encore joué
+      // apparaissait au classement avec un match à 0 % de victoire.
+      if (m.status !== 'finished') continue;
 
       matchesPlayed += 1;
 
