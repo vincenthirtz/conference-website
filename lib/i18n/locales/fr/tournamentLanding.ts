@@ -71,22 +71,8 @@ export default ns('tournamentLanding', {
   formatCta: 'Voir le bracket complet',
   formatMatchLabel: 'Format : {format}',
   formatSwissRounds: '{count} rounds',
-  scheduleEyebrow: 'Le calendrier',
   scheduleHeading: 'Les grandes étapes',
-  scheduleSubtitle:
-    "Le déroulé de l'édition, de l'ouverture des inscriptions à la grande finale.",
-  scheduleStatusDone: 'Terminé',
-  scheduleStatusClosed: 'Fermé',
-  scheduleStatusLive: 'En cours',
-  scheduleStatusUpcoming: 'À venir',
   scheduleEmpty: 'Le calendrier détaillé arrive bientôt.',
-  milestoneRegistration: 'Ouverture des inscriptions',
-  milestoneRegistrationText:
-    "Les équipes constituent leur roster et s'inscrivent.",
-  milestoneKickoff: "Coup d'envoi",
-  milestoneKickoffText: 'Le tournoi démarre, les premières manches se jouent.',
-  milestoneFinal: 'Grande finale',
-  milestoneFinalText: "Les deux meilleures équipes s'affrontent pour le titre.",
   bracketEyebrow: 'Le bracket',
   bracketHeading: "L'arbre du tournoi",
   bracketSubtitle:

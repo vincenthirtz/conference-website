@@ -20,7 +20,6 @@ import QuickFacts from '@/components/tournament/landing/QuickFacts';
 import TournamentStats from '@/components/tournament/landing/TournamentStats';
 import TeamRoster from '@/components/tournament/landing/TeamRoster';
 import FormatInfographic from '@/components/tournament/landing/FormatInfographic';
-import ScheduleTimeline from '@/components/tournament/landing/ScheduleTimeline';
 import BracketPreview from '@/components/tournament/landing/BracketPreview';
 import PrizeTeaser from '@/components/tournament/landing/PrizeTeaser';
 import PrizePoolCard from '@/components/tournament/landing/PrizePoolCard';
@@ -431,12 +430,6 @@ export default function TournamentPage({
         scheduleDetails={tournament.schedule_details}
         scheduleRules={tournament.schedule_rules}
         formatDetails={tournament.format_details}
-      />
-
-      <ScheduleTimeline
-        tournament={tournament}
-        phase={phase}
-        registrationClosed={placesRemaining === 0}
       />
 
       <BracketPreview
