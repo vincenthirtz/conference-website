@@ -25840,6 +25840,13 @@
           },
           "checkinUrl": {
            "type": "string"
+          },
+          "locale": {
+           "type": "string",
+           "enum": [
+            "en",
+            "fr"
+           ]
           }
          },
          "required": [
@@ -25853,7 +25860,8 @@
           "opponentName",
           "tournamentName",
           "scrimName",
-          "checkinUrl"
+          "checkinUrl",
+          "locale"
          ]
         },
         {

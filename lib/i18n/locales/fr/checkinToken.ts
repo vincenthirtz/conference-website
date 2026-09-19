@@ -29,5 +29,8 @@ export default ns('checkinToken', {
   footer: "OW Women's Cup — Check-in",
   errInvalidLink: 'Lien invalide',
   errNetwork: 'Erreur réseau',
+  nextStepBody:
+    'Étape suivante : la capitaine, la manager ou la coach valide la feuille de match (les joueuses alignées) avant le coup d’envoi.',
+  nextStepCta: 'Remplir la feuille de match',
   errCheckinFailed: 'Échec du check-in',
 });

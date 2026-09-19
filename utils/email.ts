@@ -600,74 +600,296 @@ export function sendTournamentNotificationEmail(
   });
 }
 
+/* -----------------------------------------------------------
+ * Emails de check-in — FR / EN
+ * ---------------------------------------------------------*/
+
 /**
- * Match check-in email sent to the captain ~1h before kickoff.
- * Contains the unique check-in URL and a deadline.
+ * Langue d'un mail de check-in. Suit `teams.preferred_locale` : une équipe
+ * internationale recevait jusqu'ici tout en français, y compris le mail qui
+ * lui évite le forfait (cas Chocomates, 18/09/2026).
  */
-export function sendMatchCheckinEmail(opts: {
+export type CheckinEmailLocale = 'fr' | 'en';
+
+/** Le même gabarit sert aux quatre mails ; seule la copie change. */
+const CHECKIN_COPY = {
+  fr: {
+    dateLocale: 'fr-FR',
+    tournament: 'Tournoi',
+    match: 'Match',
+    start: 'D&eacute;but pr&eacute;vu',
+    reasonLabel: 'Motif',
+    directLink: 'Lien direct',
+    forfeitWarning:
+      'Sans check-in avant le d&eacute;but du match, votre &eacute;quipe sera d&eacute;clar&eacute;e <strong>forfait</strong> automatiquement.',
+    nextStep:
+      'Ensuite&nbsp;: validez la <strong>feuille de match</strong> (les joueuses align&eacute;es) depuis la page du match, avant le coup d&apos;envoi.',
+    contactStaff: (discord: string) =>
+      `Si vous pensez qu&apos;il s&apos;agit d&apos;une erreur, contactez le staff au plus vite sur le <a href="${discord}" style="color:#5865F2;text-decoration:underline;font-weight:600;">Discord du tournoi</a>.`,
+    open: {
+      subject: (m: string) => `Check-in : ${m}`,
+      title: 'Check-in requis',
+      body: 'Votre prochain match d&eacute;bute dans environ <strong style="color:#7bc96a;">1 heure</strong>. Confirmez votre pr&eacute;sence pour &eacute;viter le forfait automatique.',
+      cta: 'Confirmer ma présence',
+    },
+    reminder: {
+      subject: (mins: number, m: string) =>
+        `⏰ Check-in dans ${mins} min — ${m}`,
+      title: 'Dernier rappel — check-in',
+      body: (mins: number) =>
+        `Votre match commence dans <strong style="color:#f0e63c;">${mins} minutes</strong> et votre &eacute;quipe n&apos;a <strong style="color:#f59e0b;">toujours pas confirm&eacute; sa pr&eacute;sence</strong>. Confirmez maintenant pour &eacute;viter le forfait automatique.`,
+      cta: 'Confirmer ma présence maintenant',
+    },
+    cancelled: {
+      subject: (m: string) => `Match annulé — ${m}`,
+      title: 'Match annul&eacute;',
+      body: (team: string, opp: string) =>
+        `Ni votre &eacute;quipe <strong style="color:#ffffff;">${team}</strong> ni <strong style="color:#ffffff;">${opp}</strong> n&apos;ont confirm&eacute; leur pr&eacute;sence avant le coup d&apos;envoi&nbsp;: le match est <strong style="color:#f59e0b;">annul&eacute;</strong>, sans vainqueur.`,
+    },
+    forfeit: {
+      subject: (m: string) => `Forfait automatique — ${m}`,
+      title: 'Forfait automatique',
+      reason: "aucun check-in avant le coup d'envoi",
+      body: (team: string, reason: string) =>
+        `Votre &eacute;quipe <strong style="color:#ffffff;">${team}</strong> a &eacute;t&eacute; d&eacute;clar&eacute;e <strong style="color:#f59e0b;">forfait</strong> sur ce match&nbsp;: ${reason}.`,
+    },
+  },
+  en: {
+    dateLocale: 'en-GB',
+    tournament: 'Tournament',
+    match: 'Match',
+    start: 'Scheduled start (Paris time)',
+    reasonLabel: 'Reason',
+    directLink: 'Direct link',
+    forfeitWarning:
+      'If your team does not check in before the match starts, it will be declared a <strong>forfeit</strong> automatically.',
+    nextStep:
+      'Next: confirm your <strong>match sheet</strong> (the players in your line-up) from the match page, before kick-off.',
+    contactStaff: (discord: string) =>
+      `If you think this is a mistake, contact the staff as soon as possible on the <a href="${discord}" style="color:#5865F2;text-decoration:underline;font-weight:600;">tournament Discord</a>.`,
+    open: {
+      subject: (m: string) => `Check-in: ${m}`,
+      title: 'Check-in required',
+      body: 'Your next match starts in about <strong style="color:#7bc96a;">1 hour</strong>. Confirm your attendance to avoid an automatic forfeit.',
+      cta: 'Confirm attendance',
+    },
+    reminder: {
+      subject: (mins: number, m: string) =>
+        `⏰ Check-in closes in ${mins} min — ${m}`,
+      title: 'Final reminder — check-in',
+      body: (mins: number) =>
+        `Your match starts in <strong style="color:#f0e63c;">${mins} minutes</strong> and your team has <strong style="color:#f59e0b;">not confirmed its attendance yet</strong>. Confirm now to avoid an automatic forfeit.`,
+      cta: 'Confirm attendance now',
+    },
+    cancelled: {
+      subject: (m: string) => `Match cancelled — ${m}`,
+      title: 'Match cancelled',
+      body: (team: string, opp: string) =>
+        `Neither your team <strong style="color:#ffffff;">${team}</strong> nor <strong style="color:#ffffff;">${opp}</strong> confirmed attendance before kick-off: the match is <strong style="color:#f59e0b;">cancelled</strong>, with no winner.`,
+    },
+    forfeit: {
+      subject: (m: string) => `Automatic forfeit — ${m}`,
+      title: 'Automatic forfeit',
+      reason: 'no check-in before kick-off',
+      body: (team: string, reason: string) =>
+        `Your team <strong style="color:#ffffff;">${team}</strong> has been declared a <strong style="color:#f59e0b;">forfeit</strong> for this match: ${reason}.`,
+    },
+  },
+} as const;
+
+type CheckinEmailBase = {
   to: string;
   teamName: string;
   opponentName: string;
   scheduledAt: string;
-  checkinUrl: string;
   tournamentName: string;
   /** Espace au nom duquel l'email part (compte d'envoi + marque). */
   tenantId?: string | null;
-}): Promise<SendEmailResult> {
-  const dateStr = (() => {
-    try {
-      return new Date(opts.scheduledAt).toLocaleString('fr-FR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'Europe/Paris',
-      });
-    } catch {
-      return opts.scheduledAt;
-    }
-  })();
+  /** Langue de l'équipe destinataire. Défaut : français. */
+  locale?: CheckinEmailLocale | null;
+};
 
+function checkinCopy(locale?: CheckinEmailLocale | null) {
+  return CHECKIN_COPY[locale === 'en' ? 'en' : 'fr'];
+}
+
+function checkinDate(scheduledAt: string, dateLocale: string): string {
+  try {
+    return new Date(scheduledAt).toLocaleString(dateLocale, {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Paris',
+    });
+  } catch {
+    return scheduledAt;
+  }
+}
+
+/** Tableau Tournoi / Match / Début (+ Motif), commun aux quatre mails. */
+function checkinDetailsTable(
+  opts: CheckinEmailBase,
+  c: ReturnType<typeof checkinCopy>,
+  reason?: string
+): string {
+  const row = (label: string, value: string, color: string, last: boolean) => `
+        <tr>
+          <td style="padding:14px 20px;${last ? '' : 'border-bottom:1px solid rgba(255,255,255,0.06);'}">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">${label}</span><br/>
+            <span style="font-size:15px;color:${color};font-weight:500;">${value}</span>
+          </td>
+        </tr>`;
+  return `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
+        ${row(c.tournament, escapeHtml(opts.tournamentName), '#ffffff', false)}
+        ${row(c.match, `${escapeHtml(opts.teamName)} vs ${escapeHtml(opts.opponentName)}`, '#ffffff', false)}
+        ${row(c.start, escapeHtml(checkinDate(opts.scheduledAt, c.dateLocale)), '#7bc96a', !reason)}
+        ${reason ? row(c.reasonLabel, escapeHtml(reason), '#ffffff', true) : ''}
+      </table>`;
+}
+
+function checkinTitle(title: string, body: string): string {
+  return `
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">${title}</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">${body}</p>`;
+}
+
+function checkinNote(html: string, tone: 'warn' | 'info'): string {
+  const style =
+    tone === 'warn'
+      ? 'color:#f59e0b;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.15);'
+      : 'color:#C6BED9;background:rgba(45,204,253,0.08);border:1px solid rgba(45,204,253,0.15);';
+  return `<p style="margin:0 0 8px;font-size:13px;line-height:1.5;border-radius:8px;padding:10px 14px;${style}">${html}</p>`;
+}
+
+function checkinLinkFooter(url: string, label: string): string {
+  return `<p style="margin:24px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
+        ${label}&nbsp;: <a href="${url}" style="color:#9081B0;">${escapeHtml(url)}</a>
+      </p>`;
+}
+
+/**
+ * Match check-in email sent to the captain ~1h before kickoff.
+ * Contains the unique check-in URL and a deadline — and names the NEXT step,
+ * the match sheet: on 18/09/2026 two teams checked in and never knew a sheet
+ * was expected of them.
+ */
+export function sendMatchCheckinEmail(
+  opts: CheckinEmailBase & { checkinUrl: string }
+): Promise<SendEmailResult> {
+  const c = checkinCopy(opts.locale);
+  const m = `${opts.teamName} vs ${opts.opponentName}`;
   return sendEmail({
     tenantId: opts.tenantId,
     to: opts.to,
-    subject: `Check-in : ${opts.teamName} vs ${opts.opponentName}`,
+    subject: c.open.subject(m),
     tags: ['match-checkin'],
     html: emailLayout(`
-      ${gradientBar()}
-      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Check-in requis</h1>
-      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
-        Votre prochain match d&eacute;bute dans environ <strong style="color:#7bc96a;">1 heure</strong>.
-        Confirmez votre pr&eacute;sence pour &eacute;viter le forfait automatique.
-      </p>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
-        <tr>
-          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
-            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Tournoi</span><br/>
-            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(opts.tournamentName)}</span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
-            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Match</span><br/>
-            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(opts.teamName)} vs ${escapeHtml(opts.opponentName)}</span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:14px 20px;">
-            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">D&eacute;but pr&eacute;vu</span><br/>
-            <span style="font-size:15px;color:#7bc96a;font-weight:500;">${escapeHtml(dateStr)}</span>
-          </td>
-        </tr>
-      </table>
-      <p style="margin:0 0 8px;font-size:13px;color:#f59e0b;line-height:1.5;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.15);border-radius:8px;padding:10px 14px;">
-        Sans check-in avant le d&eacute;but du match, votre &eacute;quipe sera d&eacute;clar&eacute;e forfait automatiquement.
-      </p>
-      ${ctaButton(opts.checkinUrl, 'Confirmer ma présence')}
-      <p style="margin:24px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
-        Lien direct&nbsp;: <a href="${opts.checkinUrl}" style="color:#9081B0;">${escapeHtml(opts.checkinUrl)}</a>
-      </p>
+      ${checkinTitle(c.open.title, c.open.body)}
+      ${checkinDetailsTable(opts, c)}
+      ${checkinNote(c.forfeitWarning, 'warn')}
+      ${checkinNote(c.nextStep, 'info')}
+      ${ctaButton(opts.checkinUrl, c.open.cta)}
+      ${checkinLinkFooter(opts.checkinUrl, c.directLink)}
+    `),
+  });
+}
+
+/**
+ * Urgent check-in reminder sent at T-30 / T-15 to captains who have not yet
+ * checked in. Uses the SAME check-in link/token as `sendMatchCheckinEmail`.
+ * Critical-transactional — sent unconditionally (a missed reminder = forfeit),
+ * no opt-out consulted, consistent with the T-60 check-in email.
+ */
+export function sendCheckinReminderEmail(
+  opts: CheckinEmailBase & { checkinUrl: string; minutesBeforeKickoff: number }
+): Promise<SendEmailResult> {
+  const c = checkinCopy(opts.locale);
+  const m = `${opts.teamName} vs ${opts.opponentName}`;
+  const mins = opts.minutesBeforeKickoff;
+  return sendEmail({
+    tenantId: opts.tenantId,
+    to: opts.to,
+    subject: c.reminder.subject(mins, m),
+    tags: ['match-checkin-reminder'],
+    html: emailLayout(`
+      ${checkinTitle(c.reminder.title, c.reminder.body(mins))}
+      ${checkinDetailsTable(opts, c)}
+      ${checkinNote(c.forfeitWarning, 'warn')}
+      ${ctaButton(opts.checkinUrl, c.reminder.cta)}
+      ${checkinLinkFooter(opts.checkinUrl, c.directLink)}
+    `),
+  });
+}
+
+/**
+ * Mail à la capitaine d'un match ANNULÉ parce qu'aucune des deux équipes n'a
+ * pointé.
+ *
+ * Pas `sendCheckinForfeitEmail` : son titre dit « Votre équipe a été déclarée
+ * forfait », avec l'équipe d'en face nommée. Envoyé aux deux capitaines, chacune
+ * lisait qu'elle avait perdu contre l'autre — pour un match sans vainqueur. Et
+ * son motif « aucun check-in après N min » est faux ici : la décision tombe au
+ * coup d'envoi.
+ */
+export function sendCheckinCancelledEmail(
+  opts: CheckinEmailBase
+): Promise<SendEmailResult> {
+  const c = checkinCopy(opts.locale);
+  const m = `${opts.teamName} vs ${opts.opponentName}`;
+  return sendEmail({
+    tenantId: opts.tenantId,
+    to: opts.to,
+    subject: c.cancelled.subject(m),
+    tags: ['match-checkin-cancelled'],
+    html: emailLayout(`
+      ${checkinTitle(
+        c.cancelled.title,
+        c.cancelled.body(
+          escapeHtml(opts.teamName),
+          escapeHtml(opts.opponentName)
+        )
+      )}
+      ${checkinDetailsTable(opts, c)}
+      ${checkinNote(c.contactStaff(DISCORD_URL), 'info')}
+    `),
+  });
+}
+
+/**
+ * Notification sent to the captain of a team that was auto-forfeited because
+ * it did not check in before kickoff.
+ *
+ * Le motif ne cite AUCUN délai : la décision tombe au PREMIER passage du cron après le coup d'envoi. Le
+ * « délai de grâce » par tournoi borne seulement la fenêtre pendant laquelle le
+ * cron peut encore traiter un match en retard (ticks manqués) ; il n'a jamais
+ * laissé N minutes aux équipes. L'ancien motif « aucun check-in après N min »
+ * était donc faux, et invitait une capitaine forfait à contester en croyant
+ * avoir eu une heure.
+ *
+ * Transactional — fire-and-forget from the forfeit pipeline; an email failure
+ * must never block the forfeit/walkover (caller catches & logs).
+ */
+export function sendCheckinForfeitEmail(
+  opts: CheckinEmailBase
+): Promise<SendEmailResult> {
+  const c = checkinCopy(opts.locale);
+  const m = `${opts.teamName} vs ${opts.opponentName}`;
+  return sendEmail({
+    tenantId: opts.tenantId,
+    to: opts.to,
+    subject: c.forfeit.subject(m),
+    tags: ['match-checkin-forfeit'],
+    html: emailLayout(`
+      ${checkinTitle(
+        c.forfeit.title,
+        c.forfeit.body(escapeHtml(opts.teamName), escapeHtml(c.forfeit.reason))
+      )}
+      ${checkinDetailsTable(opts, c, c.forfeit.reason)}
+      ${checkinNote(c.contactStaff(DISCORD_URL), 'info')}
     `),
   });
 }
@@ -863,247 +1085,6 @@ export function sendJoinRequestEmail(opts: {
         dire non.
       </p>
       ${ctaButton(opts.ctaUrl, 'Voir la candidature')}
-    `),
-  });
-}
-
-/**
- * Urgent check-in reminder sent at T-30 / T-15 to captains who have not yet
- * checked in. Uses the SAME check-in link/token as `sendMatchCheckinEmail`.
- * Critical-transactional — sent unconditionally (a missed reminder = forfeit),
- * no opt-out consulted, consistent with the T-60 check-in email.
- */
-export function sendCheckinReminderEmail(opts: {
-  to: string;
-  teamName: string;
-  opponentName: string;
-  scheduledAt: string;
-  checkinUrl: string;
-  tournamentName: string;
-  minutesBeforeKickoff: number;
-  /** Espace au nom duquel l'email part (compte d'envoi + marque). */
-  tenantId?: string | null;
-}): Promise<SendEmailResult> {
-  const dateStr = (() => {
-    try {
-      return new Date(opts.scheduledAt).toLocaleString('fr-FR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'Europe/Paris',
-      });
-    } catch {
-      return opts.scheduledAt;
-    }
-  })();
-
-  const mins = opts.minutesBeforeKickoff;
-
-  return sendEmail({
-    tenantId: opts.tenantId,
-    to: opts.to,
-    subject: `⏰ Check-in dans ${mins} min — ${opts.teamName} vs ${opts.opponentName}`,
-    tags: ['match-checkin-reminder'],
-    html: emailLayout(`
-      ${gradientBar()}
-      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Dernier rappel — check-in</h1>
-      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
-        Votre match commence dans <strong style="color:#f0e63c;">${mins} minutes</strong>
-        et votre &eacute;quipe n&apos;a <strong style="color:#f59e0b;">toujours pas confirm&eacute; sa pr&eacute;sence</strong>.
-        Confirmez maintenant pour &eacute;viter le forfait automatique.
-      </p>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
-        <tr>
-          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
-            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Tournoi</span><br/>
-            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(opts.tournamentName)}</span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
-            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Match</span><br/>
-            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(opts.teamName)} vs ${escapeHtml(opts.opponentName)}</span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:14px 20px;">
-            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">D&eacute;but pr&eacute;vu</span><br/>
-            <span style="font-size:15px;color:#7bc96a;font-weight:500;">${escapeHtml(dateStr)}</span>
-          </td>
-        </tr>
-      </table>
-      <p style="margin:0 0 8px;font-size:13px;color:#f59e0b;line-height:1.5;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.15);border-radius:8px;padding:10px 14px;">
-        Sans check-in avant le d&eacute;but du match, votre &eacute;quipe sera d&eacute;clar&eacute;e <strong>forfait</strong> automatiquement.
-      </p>
-      ${ctaButton(opts.checkinUrl, 'Confirmer ma présence maintenant')}
-      <p style="margin:24px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
-        Lien direct&nbsp;: <a href="${opts.checkinUrl}" style="color:#9081B0;">${escapeHtml(opts.checkinUrl)}</a>
-      </p>
-    `),
-  });
-}
-
-/**
- * Mail à la capitaine d'un match ANNULÉ parce qu'aucune des deux équipes n'a
- * pointé.
- *
- * Pas `sendCheckinForfeitEmail` : son titre dit « Votre équipe a été déclarée
- * forfait », avec l'équipe d'en face nommée. Envoyé aux deux capitaines, chacune
- * lisait qu'elle avait perdu contre l'autre — pour un match sans vainqueur. Et
- * son motif « aucun check-in après N min » est faux ici : la décision tombe au
- * coup d'envoi.
- */
-export function sendCheckinCancelledEmail(opts: {
-  to: string;
-  teamName: string;
-  opponentName: string;
-  scheduledAt: string;
-  tournamentName: string;
-  /** Espace au nom duquel l'email part (compte d'envoi + marque). */
-  tenantId?: string | null;
-}): Promise<SendEmailResult> {
-  const dateStr = (() => {
-    try {
-      return new Date(opts.scheduledAt).toLocaleString('fr-FR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'Europe/Paris',
-      });
-    } catch {
-      return opts.scheduledAt;
-    }
-  })();
-
-  return sendEmail({
-    tenantId: opts.tenantId,
-    to: opts.to,
-    subject: `Match annulé — ${opts.teamName} vs ${opts.opponentName}`,
-    tags: ['match-checkin-cancelled'],
-    html: emailLayout(`
-      ${gradientBar()}
-      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Match annul&eacute;</h1>
-      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
-        Ni votre &eacute;quipe <strong style="color:#ffffff;">${escapeHtml(opts.teamName)}</strong>
-        ni <strong style="color:#ffffff;">${escapeHtml(opts.opponentName)}</strong>
-        n&apos;ont confirm&eacute; leur pr&eacute;sence avant le coup d&apos;envoi&nbsp;:
-        le match est <strong style="color:#f59e0b;">annul&eacute;</strong>, sans vainqueur.
-      </p>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
-        <tr>
-          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
-            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Tournoi</span><br/>
-            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(opts.tournamentName)}</span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
-            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Match</span><br/>
-            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(opts.teamName)} vs ${escapeHtml(opts.opponentName)}</span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:14px 20px;">
-            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">D&eacute;but pr&eacute;vu</span><br/>
-            <span style="font-size:15px;color:#7bc96a;font-weight:500;">${escapeHtml(dateStr)}</span>
-          </td>
-        </tr>
-      </table>
-      <p style="margin:0 0 8px;font-size:13px;color:#C6BED9;line-height:1.5;background:rgba(45,204,253,0.08);border:1px solid rgba(45,204,253,0.15);border-radius:8px;padding:10px 14px;">
-        Si vous pensez qu&apos;il s&apos;agit d&apos;une erreur, contactez le staff au plus vite
-        sur le <a href="${DISCORD_URL}" style="color:#5865F2;text-decoration:underline;font-weight:600;">Discord du tournoi</a>.
-      </p>
-    `),
-  });
-}
-
-/**
- * Notification sent to the captain of a team that was auto-forfeited because
- * it did not check in before kickoff.
- *
- * Le motif ne cite AUCUN délai : la décision tombe au PREMIER passage du cron après le coup d'envoi. Le
- * « délai de grâce » par tournoi borne seulement la fenêtre pendant laquelle le
- * cron peut encore traiter un match en retard (ticks manqués) ; il n'a jamais
- * laissé N minutes aux équipes. L'ancien motif « aucun check-in après N min »
- * était donc faux, et invitait une capitaine forfait à contester en croyant
- * avoir eu une heure.
- *
- * Transactional — fire-and-forget from the forfeit pipeline; an email failure
- * must never block the forfeit/walkover (caller catches & logs).
- */
-export function sendCheckinForfeitEmail(opts: {
-  to: string;
-  teamName: string;
-  opponentName: string;
-  scheduledAt: string;
-  tournamentName: string;
-  /** Espace au nom duquel l'email part (compte d'envoi + marque). */
-  tenantId?: string | null;
-}): Promise<SendEmailResult> {
-  const dateStr = (() => {
-    try {
-      return new Date(opts.scheduledAt).toLocaleString('fr-FR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'Europe/Paris',
-      });
-    } catch {
-      return opts.scheduledAt;
-    }
-  })();
-
-  const reason = "aucun check-in avant le coup d'envoi";
-
-  return sendEmail({
-    tenantId: opts.tenantId,
-    to: opts.to,
-    subject: `Forfait automatique — ${opts.teamName} vs ${opts.opponentName}`,
-    tags: ['match-checkin-forfeit'],
-    html: emailLayout(`
-      ${gradientBar()}
-      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Forfait automatique</h1>
-      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
-        Votre &eacute;quipe <strong style="color:#ffffff;">${escapeHtml(opts.teamName)}</strong>
-        a &eacute;t&eacute; d&eacute;clar&eacute;e <strong style="color:#f59e0b;">forfait</strong> sur ce match&nbsp;:
-        ${escapeHtml(reason)}.
-      </p>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
-        <tr>
-          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
-            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Tournoi</span><br/>
-            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(opts.tournamentName)}</span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
-            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Match</span><br/>
-            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(opts.teamName)} vs ${escapeHtml(opts.opponentName)}</span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
-            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">D&eacute;but pr&eacute;vu</span><br/>
-            <span style="font-size:15px;color:#7bc96a;font-weight:500;">${escapeHtml(dateStr)}</span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:14px 20px;">
-            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Motif</span><br/>
-            <span style="font-size:15px;color:#ffffff;font-weight:500;">${escapeHtml(reason)}</span>
-          </td>
-        </tr>
-      </table>
-      <p style="margin:0 0 8px;font-size:13px;color:#C6BED9;line-height:1.5;background:rgba(45,204,253,0.08);border:1px solid rgba(45,204,253,0.15);border-radius:8px;padding:10px 14px;">
-        Si vous pensez qu&apos;il s&apos;agit d&apos;une erreur, contactez le staff au plus vite
-        sur le <a href="${DISCORD_URL}" style="color:#5865F2;text-decoration:underline;font-weight:600;">Discord du tournoi</a>.
-      </p>
     `),
   });
 }

@@ -8,6 +8,8 @@ import { useRouter } from 'next/router';
 import { useT, format } from '@/lib/i18n/useT';
 import { ANALYTICS_EVENTS, trackEvent } from '@/lib/analytics/track';
 import { useLocale } from '@/lib/i18n/useLocale';
+import { useLang } from '@/lib/i18n/LanguageProvider';
+import Link from 'next/link';
 import nsCheckinToken from '@/lib/i18n/locales/fr/checkinToken';
 
 type ResolveResponse =
@@ -46,8 +48,17 @@ export default function CheckinPage() {
   const router = useRouter();
   const t = useT(nsCheckinToken);
   const locale = useLocale();
+  const { setLang } = useLang();
   const { token } = router.query;
   const tokenStr = Array.isArray(token) ? token[0] : token;
+
+  // Le lien envoyé à une équipe réglée en anglais porte `?lang=en` (cf.
+  // buildCheckinUrl) : la page s'ouvre dans sa langue sans qu'elle ait à
+  // trouver le sélecteur — c'est la page qui lui évite le forfait.
+  const langParam = router.query.lang;
+  useEffect(() => {
+    if (langParam === 'en' || langParam === 'fr') setLang(langParam);
+  }, [langParam, setLang]);
 
   const [info, setInfo] = useState<ResolveResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -189,6 +200,16 @@ export default function CheckinPage() {
                       </p>
                     </div>
                     <p className="text-emerald-300/90">{t.confirmedBody}</p>
+                    {/* L'étape suivante, nommée ici : le 18/09/2026, deux
+                        équipes ont pointé puis ignoraient qu'une feuille de
+                        match leur était demandée. */}
+                    <p className="mt-3 text-emerald-100/90">{t.nextStepBody}</p>
+                    <Link
+                      href={`/player/match/${data.matchId}`}
+                      className="mt-2 inline-block rounded-lg bg-emerald-500/20 border border-emerald-400/50 px-3 py-1.5 font-medium text-emerald-100 hover:bg-emerald-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+                    >
+                      {t.nextStepCta}
+                    </Link>
                   </div>
                 ) : data.matchStatus !== 'pending' &&
                   data.matchStatus !== 'ongoing' ? (

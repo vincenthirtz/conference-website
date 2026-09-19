@@ -18,7 +18,7 @@
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { buildCheckinUrl } from '@/utils/checkin';
+import { buildCheckinUrl, teamLocale } from '@/utils/checkin';
 import { getDiscordLinksForUsers } from '@/utils/discordLinks';
 import { logger } from '@/utils/logger';
 
@@ -40,6 +40,8 @@ type MatchCheckinReminder = {
   tournamentName: string | null;
   scrimName: string | null;
   checkinUrl: string;
+  /** Langue de l'équipe (`teams.preferred_locale`) : le bot rédige le MP dedans. */
+  locale: 'fr' | 'en';
 };
 
 type TournamentJ1Reminder = {
@@ -121,8 +123,8 @@ async function collectMatchCheckinReminders(
        team1_captain_dm_30_sent_at, team2_captain_dm_30_sent_at,
        team1_checkin_token, team2_checkin_token,
        team1_checked_in_at, team2_checked_in_at,
-       team1:team1_id (id, name, captain_id),
-       team2:team2_id (id, name, captain_id),
+       team1:team1_id (id, name, captain_id, preferred_locale),
+       team2:team2_id (id, name, captain_id, preferred_locale),
        tournament:tournament_id (id, name),
        scrim:scrim_id (id, name)`
     )
@@ -197,7 +199,8 @@ async function collectMatchCheckinReminders(
         opponentName: opponentTeam?.name ?? 'Adversaire',
         tournamentName: m.tournament?.name ?? null,
         scrimName: m.scrim?.name ?? null,
-        checkinUrl: buildCheckinUrl(token),
+        checkinUrl: buildCheckinUrl(token, teamLocale(team)),
+        locale: teamLocale(team),
       });
     }
   }

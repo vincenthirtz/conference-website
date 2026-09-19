@@ -17,6 +17,7 @@ import {
   sendCheckinReminderEmail,
   sendCheckinForfeitEmail,
   sendCheckinCancelledEmail,
+  type CheckinEmailLocale,
 } from './email';
 import {
   notifyCheckinReminder,
@@ -109,8 +110,20 @@ export function generateCheckinToken(): string {
   return crypto.randomBytes(24).toString('base64url');
 }
 
-export function buildCheckinUrl(token: string): string {
-  return `${SITE_URL.replace(/\/$/, '')}/checkin/${token}`;
+export function buildCheckinUrl(
+  token: string,
+  locale?: CheckinEmailLocale | null
+): string {
+  const base = `${SITE_URL.replace(/\/$/, '')}/checkin/${token}`;
+  // La page de check-in s'ouvre dans la langue de l'équipe (cf. checkin/[token]).
+  return locale === 'en' ? `${base}?lang=en` : base;
+}
+
+/** Langue des messages adressés à l'équipe (`teams.preferred_locale`). */
+export function teamLocale(
+  team: { preferred_locale?: string | null } | null | undefined
+): CheckinEmailLocale {
+  return team?.preferred_locale === 'en' ? 'en' : 'fr';
 }
 
 /**
@@ -357,11 +370,13 @@ async function sendReminderEmailSafely(opts: {
   checkinUrl: string;
   tournamentName: string;
   minutesBeforeKickoff: number;
+  locale: CheckinEmailLocale;
 }): Promise<void> {
   try {
     const email = await getCaptainEmail(opts.tenantId, opts.teamId);
     if (!email) return;
     await sendCheckinReminderEmail({
+      locale: opts.locale,
       tenantId: opts.tenantId,
       to: email,
       teamName: opts.teamName,
@@ -379,6 +394,13 @@ async function sendReminderEmailSafely(opts: {
 /* -----------------------------------------------------------
  * Per-match orchestration (the actual state machine)
  * ---------------------------------------------------------*/
+
+type MatchLiteTeam = {
+  id: string;
+  name: string;
+  discord_role_id: string | null;
+  preferred_locale?: string | null;
+};
 
 type MatchLite = {
   id: string;
@@ -406,8 +428,8 @@ type MatchLite = {
   team1_lineup_reminder_sent_at?: string | null;
   team2_lineup_reminder_sent_at?: string | null;
   forfeit_processed_at: string | null;
-  team1?: { id: string; name: string; discord_role_id: string | null } | null;
-  team2?: { id: string; name: string; discord_role_id: string | null } | null;
+  team1?: MatchLiteTeam | null;
+  team2?: MatchLiteTeam | null;
   tournament?: { id: string; name: string } | null;
 };
 
@@ -555,8 +577,9 @@ async function runCheckinOpenStep(
         teamName: team1Name,
         opponentName: team2Name,
         scheduledAt: match.scheduled_at!,
-        checkinUrl: buildCheckinUrl(team1Token),
+        checkinUrl: buildCheckinUrl(team1Token, teamLocale(match.team1)),
         tournamentName,
+        locale: teamLocale(match.team1),
       })
     );
   }
@@ -568,8 +591,9 @@ async function runCheckinOpenStep(
         teamName: team2Name,
         opponentName: team1Name,
         scheduledAt: match.scheduled_at!,
-        checkinUrl: buildCheckinUrl(team2Token),
+        checkinUrl: buildCheckinUrl(team2Token, teamLocale(match.team2)),
         tournamentName,
+        locale: teamLocale(match.team2),
       })
     );
   }
@@ -696,6 +720,7 @@ async function runLineupReminderStep(
         scheduledAt: match.scheduled_at!,
         minutesBeforeKickoff: minutesLeft,
         lineupUrl,
+        locale: teamLocale(s.team),
       })
     )
   );
@@ -743,6 +768,7 @@ async function runReminderStep(
         minutesBeforeKickoff: minutes,
         // Salon partagé : page du match (identité vérifiée), jamais le jeton.
         checkinUrl: buildMatchCheckinPageUrl(match.id),
+        locale: teamLocale(match.team1),
       })
     );
   }
@@ -759,6 +785,7 @@ async function runReminderStep(
         minutesBeforeKickoff: minutes,
         // Salon partagé : page du match (identité vérifiée), jamais le jeton.
         checkinUrl: buildMatchCheckinPageUrl(match.id),
+        locale: teamLocale(match.team2),
       })
     );
   }
@@ -780,9 +807,10 @@ async function runReminderStep(
       teamName: team1Name,
       opponentName: team2Name,
       scheduledAt: match.scheduled_at!,
-      checkinUrl: buildCheckinUrl(team1Token),
+      checkinUrl: buildCheckinUrl(team1Token, teamLocale(match.team1)),
       tournamentName,
       minutesBeforeKickoff: minutes,
+      locale: teamLocale(match.team1),
     });
   }
   if (!match.team2_checked_in_at && team2Token) {
@@ -792,9 +820,10 @@ async function runReminderStep(
       teamName: team2Name,
       opponentName: team1Name,
       scheduledAt: match.scheduled_at!,
-      checkinUrl: buildCheckinUrl(team2Token),
+      checkinUrl: buildCheckinUrl(team2Token, teamLocale(match.team2)),
       tournamentName,
       minutesBeforeKickoff: minutes,
+      locale: teamLocale(match.team2),
     });
   }
 
@@ -858,11 +887,13 @@ async function sendForfeitEmailSafely(opts: {
   opponentName: string;
   scheduledAt: string;
   tournamentName: string;
+  locale: CheckinEmailLocale;
 }): Promise<void> {
   try {
     const email = await getCaptainEmail(opts.tenantId, opts.teamId);
     if (!email) return;
     await sendCheckinForfeitEmail({
+      locale: opts.locale,
       tenantId: opts.tenantId,
       to: email,
       teamName: opts.teamName,
@@ -962,6 +993,9 @@ async function runForfeitStep(
     forfeitedTeamName: forfeitedName,
     forfeitedTeamRoleId: forfeitedRoleId,
     opponentName: winnerName,
+    locale: teamLocale(
+      forfeitTeamId === match.team1_id ? match.team1 : match.team2
+    ),
   }).catch((e) => logger.error('[checkin] notifyCheckinForfeit error:', e));
 
   // Email the forfeited team's captain. Fire-and-forget — an email failure
@@ -974,6 +1008,9 @@ async function runForfeitStep(
       opponentName: winnerName,
       scheduledAt: match.scheduled_at,
       tournamentName: match.tournament?.name || "OW Women's Cup",
+      locale: teamLocale(
+        forfeitTeamId === match.team1_id ? match.team1 : match.team2
+      ),
     });
   }
 
@@ -1016,8 +1053,18 @@ async function notifyBothTeamsNoShow(
   const scheduledAt = match.scheduled_at;
   const tournamentName = match.tournament?.name || "OW Women's Cup";
   const sides = [
-    { teamId: match.team1_id, name: team1Name, opponentName: team2Name },
-    { teamId: match.team2_id, name: team2Name, opponentName: team1Name },
+    {
+      teamId: match.team1_id,
+      name: team1Name,
+      opponentName: team2Name,
+      locale: teamLocale(match.team1),
+    },
+    {
+      teamId: match.team2_id,
+      name: team2Name,
+      opponentName: team1Name,
+      locale: teamLocale(match.team2),
+    },
   ];
 
   for (const side of sides) {
@@ -1032,6 +1079,7 @@ async function notifyBothTeamsNoShow(
         opponentName: side.opponentName,
         scheduledAt,
         tournamentName,
+        locale: side.locale,
       });
     } catch (e) {
       logger.error('[checkin] sendCheckinCancelledEmail error:', e);
@@ -1129,8 +1177,8 @@ const SELECT_FIELDS = `
   checkin_email_sent_at, reminder_30_sent_at, reminder_15_sent_at,
   team1_lineup_reminder_sent_at, team2_lineup_reminder_sent_at,
   forfeit_processed_at,
-  team1:team1_id(id, name, discord_role_id),
-  team2:team2_id(id, name, discord_role_id),
+  team1:team1_id(id, name, discord_role_id, preferred_locale),
+  team2:team2_id(id, name, discord_role_id, preferred_locale),
   tournament:tournament_id(id, name)
 `;
 

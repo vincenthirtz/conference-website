@@ -656,6 +656,8 @@ export type CheckinReminderNotification = {
   scheduledAt: string;
   minutesBeforeKickoff: number; // 30 or 15
   checkinUrl: string;
+  /** Langue de l'équipe pinguée (`teams.preferred_locale`). Défaut : fr. */
+  locale?: 'fr' | 'en';
 };
 
 /**
@@ -680,6 +682,8 @@ export type LineupReminderNotification = {
   scheduledAt: string;
   minutesBeforeKickoff: number;
   lineupUrl: string;
+  /** Langue de l'équipe pinguée (`teams.preferred_locale`). Défaut : fr. */
+  locale?: 'fr' | 'en';
 };
 
 export async function notifyLineupReminder(
@@ -691,15 +695,24 @@ export async function notifyLineupReminder(
   const teamPing = teamRolePing(data.teamRoleId, data.teamName);
   const channelPing = formatRoleMention(cfg.roleMention);
 
+  const en = data.locale === 'en';
   const fields: DiscordEmbedField[] = [
-    { name: 'Adversaire', value: data.opponentName, inline: true },
+    {
+      name: en ? 'Opponent' : 'Adversaire',
+      value: data.opponentName,
+      inline: true,
+    },
   ];
   const dateLabel = formatDateFr(data.scheduledAt);
   if (dateLabel) {
-    fields.push({ name: 'Début', value: dateLabel, inline: true });
+    fields.push({
+      name: en ? 'Start (Paris time)' : 'Début',
+      value: dateLabel,
+      inline: true,
+    });
   }
   fields.push({
-    name: 'Feuille de match',
+    name: en ? 'Match sheet' : 'Feuille de match',
     value: data.lineupUrl,
     inline: false,
   });
@@ -712,11 +725,16 @@ export async function notifyLineupReminder(
     content: contentParts.join(' '),
     embeds: [
       {
-        title: `📋 Feuille de match : il reste ${data.minutesBeforeKickoff} minutes`,
-        description:
-          `**${data.teamName}** a fait son check-in mais n'a pas encore déclaré ` +
-          `qui joue contre **${data.opponentName}**. Sans feuille validée, le ` +
-          `classement retiendra le roster entier, remplaçantes comprises.`,
+        title: en
+          ? `📋 Match sheet: ${data.minutesBeforeKickoff} minutes left`
+          : `📋 Feuille de match : il reste ${data.minutesBeforeKickoff} minutes`,
+        description: en
+          ? `**${data.teamName}** has checked in but has not yet declared who ` +
+            `plays against **${data.opponentName}**. Without a confirmed sheet, ` +
+            `the ranking will count the whole roster, substitutes included.`
+          : `**${data.teamName}** a fait son check-in mais n'a pas encore déclaré ` +
+            `qui joue contre **${data.opponentName}**. Sans feuille validée, le ` +
+            `classement retiendra le roster entier, remplaçantes comprises.`,
         color: COLORS.checkinReminder,
         fields,
         timestamp: new Date().toISOString(),
@@ -736,15 +754,24 @@ export async function notifyCheckinReminder(
   const teamPing = teamRolePing(data.teamRoleId, data.teamName);
   const channelPing = formatRoleMention(cfg.roleMention);
 
+  const en = data.locale === 'en';
   const fields: DiscordEmbedField[] = [
-    { name: 'Adversaire', value: data.opponentName, inline: true },
+    {
+      name: en ? 'Opponent' : 'Adversaire',
+      value: data.opponentName,
+      inline: true,
+    },
   ];
   const dateLabel = formatDateFr(data.scheduledAt);
   if (dateLabel) {
-    fields.push({ name: 'Début', value: dateLabel, inline: true });
+    fields.push({
+      name: en ? 'Start (Paris time)' : 'Début',
+      value: dateLabel,
+      inline: true,
+    });
   }
   fields.push({
-    name: 'Lien check-in',
+    name: en ? 'Check-in link' : 'Lien check-in',
     value: data.checkinUrl,
     inline: false,
   });
@@ -760,10 +787,16 @@ export async function notifyCheckinReminder(
     content: contentParts.join(' '),
     embeds: [
       {
-        title: isUrgent
-          ? `⚠️ Check-in : il reste ${minutes} minutes`
-          : `⏰ Rappel check-in (${minutes} min)`,
-        description: `**${data.teamName}** doit confirmer sa présence pour le match contre **${data.opponentName}**.`,
+        title: en
+          ? isUrgent
+            ? `⚠️ Check-in: ${minutes} minutes left`
+            : `⏰ Check-in reminder (${minutes} min)`
+          : isUrgent
+            ? `⚠️ Check-in : il reste ${minutes} minutes`
+            : `⏰ Rappel check-in (${minutes} min)`,
+        description: en
+          ? `**${data.teamName}** must confirm its attendance for the match against **${data.opponentName}**, or it will be declared a forfeit at kick-off.`
+          : `**${data.teamName}** doit confirmer sa présence pour le match contre **${data.opponentName}**.`,
         color: COLORS.checkinReminder,
         fields,
         timestamp: new Date().toISOString(),
@@ -780,6 +813,8 @@ export type CheckinForfeitNotification = {
   forfeitedTeamName: string;
   forfeitedTeamRoleId: string | null | undefined;
   opponentName: string;
+  /** Langue de l'équipe forfait (`teams.preferred_locale`). Défaut : fr. */
+  locale?: 'fr' | 'en';
 };
 
 export async function notifyCheckinForfeit(
@@ -799,12 +834,18 @@ export async function notifyCheckinForfeit(
     content: [channelPing, teamPing].filter(Boolean).join(' '),
     embeds: [
       {
-        title: '🚷 Forfait automatique (no check-in)',
+        title:
+          data.locale === 'en'
+            ? '🚷 Automatic forfeit (no check-in)'
+            : '🚷 Forfait automatique (no check-in)',
         // Aucun délai cité : le forfait tombe au premier passage du cron après
         // le coup d'envoi. L'ancienne variante « dans les N min suivant l'heure
         // du match » décrivait la borne de rattrapage du cron comme un délai
         // accordé aux équipes — ce qu'elle n'a jamais été.
-        description: `**${data.forfeitedTeamName}** n'a pas confirmé sa présence avant le coup d'envoi. Le match est attribué à **${data.opponentName}**.`,
+        description:
+          data.locale === 'en'
+            ? `**${data.forfeitedTeamName}** did not confirm its attendance before kick-off. The match is awarded to **${data.opponentName}**.`
+            : `**${data.forfeitedTeamName}** n'a pas confirmé sa présence avant le coup d'envoi. Le match est attribué à **${data.opponentName}**.`,
         color: COLORS.checkinForfeit,
         timestamp: new Date().toISOString(),
         footer: { text: `Match ${data.matchId.slice(0, 8)}` },

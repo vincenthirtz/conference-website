@@ -30,5 +30,8 @@ export default {
   footer: "OW Women's Cup — Check-in",
   errInvalidLink: 'Invalid link',
   errNetwork: 'Network error',
+  nextStepBody:
+    'Next step: the captain, manager or coach confirms the match sheet (the players in the line-up) before kick-off.',
+  nextStepCta: 'Fill in the match sheet',
   errCheckinFailed: 'Check-in failed',
 };
