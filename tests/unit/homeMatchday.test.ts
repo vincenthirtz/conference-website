@@ -20,9 +20,11 @@ import { renderToString } from 'react-dom/server';
 
 import {
   selectNextMatchday,
+  selectNextMatchdays,
   shapeMatchdayMatch,
   type HomeMatchday,
 } from '@/utils/home/loadNextMatchday';
+import { matchRevalidationPaths } from '@/utils/matches/revalidateMatchPages';
 import type { PublicMatch } from '@/utils/public/readMatches';
 import type { HomeTeam } from '@/utils/home/loadHomeData';
 import HomeMatchdayStrip from '@/components/Home/HomeMatchdayStrip';
@@ -254,14 +256,14 @@ describe('HomeSpotlight — affiches ou équipes, jamais un vide', () => {
     },
   ];
 
-  function render(m: HomeMatchday | null): string {
+  function render(...days: (HomeMatchday | null)[]): string {
     return renderToString(
       createElement(HomeSpotlight, {
         tournament,
         prizeCents: null,
         live,
         teams,
-        matchday: m,
+        matchdays: days.filter((d): d is HomeMatchday => d !== null),
       })
     );
   }
@@ -289,5 +291,123 @@ describe('HomeSpotlight — affiches ou équipes, jamais un vide', () => {
     const html = render(null);
     expect(html).toContain('Elles participent');
     expect(html).toContain('href="/team/chocomates"');
+  });
+});
+
+/* ── « Et après ? » ────────────────────────────────────────────────────────
+ *
+ * Une seule journée laissait la question ouverte : à la Cup 2026 on joue le
+ * mercredi et le vendredi, et savoir « ce soir » sans savoir « et après »
+ * oblige à ouvrir le calendrier.
+ */
+
+describe('selectNextMatchdays — la journée suivante', () => {
+  const nextWednesday = '2026-09-23T18:00:00.000Z';
+
+  it('rend les deux prochaines journées, dans l’ordre', () => {
+    const days = selectNextMatchdays(
+      [
+        match({ id: 'm-2', scheduled_at: nextWednesday }),
+        match(),
+        match({ id: 'm-3', scheduled_at: '2026-09-25T18:30:00.000Z' }),
+      ],
+      NOW_THURSDAY
+    );
+    expect(days.map((d) => d.date)).toEqual(['2026-09-18', '2026-09-23']);
+  });
+
+  it('n’en rend qu’une quand il n’y a rien après', () => {
+    expect(selectNextMatchdays([match()], NOW_THURSDAY)).toHaveLength(1);
+  });
+
+  it('ignore la journée du jour entièrement jouée, comme la sélection simple', () => {
+    const days = selectNextMatchdays(
+      [
+        match({ status: 'finished' }),
+        match({ id: 'm-2', scheduled_at: nextWednesday }),
+      ],
+      new Date('2026-09-18T21:00:00.000Z')
+    );
+    expect(days.map((d) => d.date)).toEqual(['2026-09-23']);
+  });
+});
+
+describe('HomeMatchdayStrip — journée suivante en résumé', () => {
+  function day(date: string, id: string): HomeMatchday {
+    return {
+      date: date.slice(0, 10),
+      totalCount: 1,
+      matches: [
+        {
+          id,
+          scheduledAt: date,
+          status: 'pending',
+          team1: {
+            id: CHOCO,
+            name: 'Chocomates',
+            shortName: 'CHOC',
+            slug: 'chocomates',
+            logoUrl: null,
+          },
+          team2: {
+            id: ECLYPSE,
+            name: 'Eclypse',
+            shortName: 'ECL',
+            slug: 'eclypse',
+            logoUrl: null,
+          },
+          team1Score: null,
+          team2Score: null,
+          winnerTeamId: null,
+        },
+      ],
+    };
+  }
+
+  it('annonce la journée d’après sous les affiches du jour', () => {
+    const html = renderToString(
+      createElement(HomeMatchdayStrip, {
+        matchday: day('2026-09-18T18:30:00.000Z', 'm-1'),
+        following: day('2026-09-23T18:00:00.000Z', 'm-2'),
+        matchesHref: '/tournament/cup/matches',
+      })
+    );
+    expect(html).toContain('Puis');
+    expect(html).toContain('href="/match/m-2"');
+  });
+
+  it('ne montre rien de plus sans journée suivante', () => {
+    const html = renderToString(
+      createElement(HomeMatchdayStrip, {
+        matchday: day('2026-09-18T18:30:00.000Z', 'm-1'),
+        matchesHref: '/tournament/cup/matches',
+      })
+    );
+    expect(html).not.toContain('Puis');
+  });
+});
+
+/* ── Fraîcheur ─────────────────────────────────────────────────────────────
+ *
+ * L'accueil et les pages de tournoi sont statiques (ISR 15 min). Un score
+ * saisi doit s'y voir tout de suite : sinon la carte « prochain rendez-vous »
+ * annonce encore un match déjà joué, ce qui s'est produit le 18/09/2026.
+ */
+
+describe('matchRevalidationPaths', () => {
+  it('rafraîchit l’accueil, la fiche du match et les pages du tournoi', () => {
+    expect(matchRevalidationPaths('m-1', 'ow-womens-cup-2026')).toEqual([
+      '/',
+      '/match/m-1',
+      '/tournament/ow-womens-cup-2026',
+      '/tournament/ow-womens-cup-2026/matches',
+      '/tournament/ow-womens-cup-2026/standings',
+      '/tournament/ow-womens-cup-2026/stats',
+      '/tournament/ow-womens-cup-2026/bracket',
+    ]);
+  });
+
+  it('se limite à l’accueil et au match pour un scrim (sans tournoi)', () => {
+    expect(matchRevalidationPaths('m-1', null)).toEqual(['/', '/match/m-1']);
   });
 });

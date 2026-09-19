@@ -56,6 +56,7 @@ import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 import { reportBodySchema } from '@/lib/apiContracts/bot/matches/[matchId]/report';
+import { revalidateMatchPages } from '@/utils/matches/revalidateMatchPages';
 import { reportQuerySchema } from '@/lib/apiContracts/bot/matches/[matchId]/report.query';
 
 const SITE_URL =
@@ -376,6 +377,11 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
         // Deux capitaines peuvent valider a la meme seconde : une seule
         // finalisation (cf. utils/matches/applyScore.ts, etape 4c).
         claimFinalization: true,
+      });
+
+      await revalidateMatchPages(res, {
+        tenantId: req.botContext.tenantId,
+        matchId,
       });
 
       // Auto-award auditable : la finalisation sur silence+preuve n'a pas de

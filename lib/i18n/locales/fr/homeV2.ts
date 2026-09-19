@@ -24,6 +24,15 @@ export default ns('homeV2', {
   heroTournamentFullHint:
     'Les {count} places de l’édition {year} sont pourvues.',
   heroCtaCreateTeam: 'Créer mon équipe',
+  // LE TOURNOI EST LANCÉ. Annoncer « complet » n'a plus de sens une fois la
+  // première journée jouée : à ce moment-là, ce qu'on vient chercher sur la
+  // home, c'est le classement, la prochaine affiche et le direct.
+  heroRunningHint: 'Saison régulière en cours · {teams} équipes en lice',
+  heroRunningHintUntil:
+    'Saison régulière en cours · {teams} équipes en lice · finale le {date}',
+  heroCtaStandings: 'Voir le classement',
+  heroCtaSchedule: 'Calendrier & résultats',
+  heroCtaWatch: 'Regarder le direct',
   // Lot 1 acquisition : la joueuse SANS équipe n'avait aucune porte d'entrée
   // dans le hero. CTA de rang égal, pas un lien de repli.
   heroCtaJoin: 'Je cherche une équipe',
@@ -98,6 +107,18 @@ export default ns('homeV2', {
   matchdayMatchAriaScore: '{home} {score1} – {away} {score2}, à {time}',
   matchdayMore_one: '+ {count} autre match ce jour-là',
   matchdayMore_other: '+ {count} autres matchs ce jour-là',
+  standingsTitle: 'Classement de la saison',
+  standingsAll: 'Classement complet',
+  standingsColTeam: 'Équipe',
+  standingsColRecord: 'V–D',
+  standingsColRecordTitle: 'Victoires – défaites',
+  standingsColDiff: '+/-',
+  standingsColDiffTitle: 'Différence de maps',
+  standingsColPoints: 'Pts',
+  standingsColPointsTitle: 'Points',
+  standingsNote:
+    '3 points par victoire · départage à la confrontation directe.',
+  matchdayNextDay: 'Puis {day}',
   matchdayAll: 'Tout le calendrier',
   teamsStripEyebrow_one: '{count} équipe engagée',
   teamsStripEyebrow_other: '{count} équipes engagées',

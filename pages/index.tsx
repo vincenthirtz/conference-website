@@ -23,6 +23,7 @@ import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournamen
 import { type HomePartner } from '@/components/Home/HomeSponsors';
 import { type HomeTeam } from '@/utils/home/loadHomeData';
 import { type HomeMatchday } from '@/utils/home/loadNextMatchday';
+import { type HomeStandingRow } from '@/utils/home/loadHomeData';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import {
   loadHomeData,
@@ -31,6 +32,7 @@ import {
 import { useT } from '@/lib/i18n/useT';
 import { useTwitchLive } from '@/components/Home/useTwitchLive';
 import HomeHeroV2 from '@/components/Home/HomeHeroV2';
+import HomeStandings from '@/components/Home/HomeStandings';
 import HomeSpotlight from '@/components/Home/HomeSpotlight';
 import HomeNewsV2 from '@/components/Home/HomeNewsV2';
 import HomeSupportStrip from '@/components/Home/HomeSupportStrip';
@@ -44,7 +46,8 @@ type HomeProps = {
   upcomingTournament: UpcomingTournament | null;
   partners: HomePartner[];
   teams: HomeTeam[];
-  matchday: HomeMatchday | null;
+  matchdays: HomeMatchday[];
+  standings: HomeStandingRow[];
   countdownTarget: string | null;
   prizeCents: number | null;
   // L'horloge du rendu (ISR 15 min). Fabriquée ici plutôt que dans la carte :
@@ -71,7 +74,8 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
       upcomingTournament: data.upcomingTournament,
       partners: data.partners,
       teams: data.teams,
-      matchday: data.matchday,
+      matchdays: data.matchdays,
+      standings: data.standings,
       countdownTarget: data.countdownTarget,
       prizeCents,
       nowIso: new Date().toISOString(),
@@ -81,13 +85,31 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
   };
 };
 
+/**
+ * La compétition est-elle LANCÉE ? Le coup d'envoi est passé et l'édition n'est
+ * ni terminée ni annulée. Sans date de début, on s'en tient à « non » : mieux
+ * vaut inviter à s'inscrire une journée de trop que d'annoncer une saison qui
+ * n'a pas commencé.
+ */
+function isTournamentRunning(
+  tournament: UpcomingTournament | null,
+  nowIso: string
+): boolean {
+  if (!tournament?.startDate) return false;
+  if (['completed', 'finished', 'cancelled'].includes(tournament.status)) {
+    return false;
+  }
+  return new Date(tournament.startDate).getTime() <= new Date(nowIso).getTime();
+}
+
 function Home({
   news,
   socialFeed,
   upcomingTournament,
   partners,
   teams,
-  matchday,
+  matchdays,
+  standings,
   countdownTarget,
   prizeCents,
   nowIso,
@@ -109,6 +131,17 @@ function Home({
           upcomingTournament.teamCount >= upcomingTournament.maxTeams
         }
         tournamentMaxTeams={upcomingTournament?.maxTeams ?? null}
+        // Lancé = la date de début est passée et l'édition n'est pas close.
+        // Calculé ici, avec l'horloge du rendu, pour que SSR et client disent
+        // la même chose.
+        tournamentRunning={isTournamentRunning(upcomingTournament, nowIso)}
+        tournamentTeamCount={upcomingTournament?.teamCount ?? null}
+        tournamentEndDate={upcomingTournament?.endDate ?? null}
+        tournamentPath={
+          upcomingTournament
+            ? `/tournament/${upcomingTournament.slug || upcomingTournament.id}`
+            : null
+        }
       />
 
       {loadError && (
@@ -127,9 +160,20 @@ function Home({
         prizeCents={prizeCents}
         live={live}
         teams={teams}
-        matchday={matchday}
+        matchdays={matchdays}
         now={nowIso}
       />
+
+      {/* OÙ EN EST LA SAISON. Après « ce qui se joue », avant les actus :
+          entre deux journées, c'est la question qu'on vient poser. */}
+      {upcomingTournament && (
+        <HomeStandings
+          rows={standings}
+          standingsHref={`/tournament/${
+            upcomingTournament.slug || upcomingTournament.id
+          }/standings`}
+        />
+      )}
 
       <HomeNewsV2 news={news} />
 

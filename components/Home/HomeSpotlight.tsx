@@ -43,10 +43,11 @@ type HomeSpotlightProps = {
   /** Équipes engagées, rendues en bande pleine largeur sous la carte. */
   teams: HomeTeam[];
   /**
-   * Les affiches de la prochaine journée (« vendredi, X contre Y à 20 h 30 »),
-   * quand il y en a. Optionnel : la carte sait vivre sans.
+   * Les affiches des deux prochaines journées (« vendredi, X contre Y à
+   * 20 h 30 », puis la suivante en résumé). Optionnel : la carte sait vivre
+   * sans.
    */
-  matchday?: HomeMatchday | null;
+  matchdays?: HomeMatchday[];
   /**
    * L'horloge du rendu, en ISO, fabriquée par `getStaticProps`.
    *
@@ -143,7 +144,7 @@ export default function HomeSpotlight({
   prizeCents,
   live,
   teams,
-  matchday = null,
+  matchdays = [],
   now = null,
 }: HomeSpotlightProps): JSX.Element | null {
   const t = useT(nsHomeV2);
@@ -428,8 +429,14 @@ export default function HomeSpotlight({
             chercher ici un soir de match, et ça change toutes les semaines.
             Sans journée publiée, le pied s'efface : la carte est complète sans
             lui, et un squelette vide ne vaut pas mieux que rien. */}
-          {matchday && (
-            <HomeMatchdayStrip matchday={matchday} matchesHref={matchesHref} />
+          {matchdays[0] && (
+            <HomeMatchdayStrip
+              matchday={matchdays[0]}
+              // « Et après ? » : la journée suivante, en résumé. Sans elle, il
+              // fallait ouvrir le calendrier pour savoir quand on rejoue.
+              following={matchdays[1] ?? null}
+              matchesHref={matchesHref}
+            />
           )}
         </div>
       </section>

@@ -18,10 +18,11 @@ import { resolveNewsImage } from '@/utils/news/newsImage';
 import { logger } from '@/utils/logger';
 import { loadSocialFeed, type SocialFeedItem } from '@/utils/social/socialFeed';
 import {
-  loadNextMatchday,
+  loadNextMatchdays,
   type HomeMatchday,
 } from '@/utils/home/loadNextMatchday';
 import { getWallClockParts, SITE_TIMEZONE } from '@/utils/timezone';
+import { readPublicStandings } from '@/utils/stages/publicStandings';
 
 // Marge de troncature du `content` des news de la home. HomeNewsSection ne rend
 // qu'un excerpt d'au plus ~220 caractères ; on garde une marge confortable.
@@ -36,16 +37,39 @@ export type HomeData = {
   /** Équipes engagées dans l'édition en cours — cf. `loadContendingTeams`. */
   teams: HomeTeam[];
   /**
-   * La prochaine journée de matchs (les affiches du jour) — cf.
-   * `loadNextMatchday`. `null` quand rien n'est programmé : la carte du
-   * rendez-vous retombe alors sur les équipes engagées.
+   * Les deux prochaines journées de matchs — cf. `loadNextMatchdays`. Vide
+   * quand rien n'est programmé : la carte du rendez-vous retombe alors sur les
+   * équipes engagées. La seconde journée répond à « et après ? », sans quoi il
+   * faut ouvrir le calendrier.
    */
-  matchday: HomeMatchday | null;
+  matchdays: HomeMatchday[];
+  /**
+   * Le classement de la phase à points en cours, tel que la page Classement
+   * l'affiche (même calcul, départages compris). Vide tant qu'aucun match n'a
+   * été joué : un tableau de zéros n'apprend rien.
+   */
+  standings: HomeStandingRow[];
   countdownTarget: string | null;
   // Vrai quand le chargement du contenu dynamique (news / annonces) a échoué
   // côté serveur. Permet d'afficher un avis d'erreur distinct d'un site
   // simplement vide, sans masquer le hero statique.
   loadError: boolean;
+};
+
+/** Une ligne de classement, réduite à ce que l'accueil affiche. */
+export type HomeStandingRow = {
+  rank: number;
+  teamId: string;
+  name: string;
+  shortName: string | null;
+  slug: string | null;
+  logoUrl: string | null;
+  played: number;
+  wins: number;
+  losses: number;
+  points: number;
+  /** Différence de maps, déjà calculée : l'accueil ne recompte pas. */
+  diff: number;
 };
 
 /** Une équipe telle que la bande d'accueil en a besoin, et rien de plus. */
@@ -262,7 +286,8 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
   let upcomingTournament: UpcomingTournament | null = null;
   let partners: HomePartner[] = [];
   let teams: HomeTeam[] = [];
-  let matchday: HomeMatchday | null = null;
+  let matchdays: HomeMatchday[] = [];
+  let standings: HomeStandingRow[] = [];
   let countdownTarget: string | null = null;
   // Client absent = on n'a pas pu charger le contenu : on le signale plutôt
   // que d'afficher une home faussement vide.
@@ -303,11 +328,42 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
     // qu'on vient de charger (nom court, slug) plutôt que d'aller les relire.
     // Comme le mur des réseaux, un calendrier vide n'est pas une panne : il
     // n'entre PAS dans `loadError`, la carte retombe sur les engagées.
-    matchday = await loadNextMatchday(
+    matchdays = await loadNextMatchdays(
       tenantId,
       upcomingTournament?.id ?? null,
       teams
     );
+
+    // Le classement de la saison en cours. Même source que l'onglet Classement
+    // (confrontation directe et départages du staff compris) : deux calculs
+    // finiraient par se contredire, et c'est le classement qu'on conteste.
+    if (upcomingTournament?.id) {
+      try {
+        const tables = await readPublicStandings(
+          tenantId,
+          upcomingTournament.id
+        );
+        const rows = tables[0]?.rows ?? [];
+        standings = rows.some((r) => r.played > 0)
+          ? rows.map((r) => ({
+              rank: r.rank,
+              teamId: r.teamId,
+              name: r.teamName,
+              shortName: r.shortName,
+              slug: r.slug,
+              logoUrl: r.logoUrl,
+              played: r.played,
+              wins: r.wins,
+              losses: r.losses,
+              points: r.points,
+              diff: r.mapsWon - r.mapsLost,
+            }))
+          : [];
+      } catch (error) {
+        // Un classement illisible n'est pas une panne de la home.
+        logger.error('[loadHomeData] standings error', error);
+      }
+    }
 
     // Une erreur sur la requête de contenu signale une panne, à distinguer
     // d'un contenu légitimement vide.
@@ -351,7 +407,8 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
     upcomingTournament,
     partners,
     teams,
-    matchday,
+    matchdays,
+    standings,
     countdownTarget,
     loadError,
   };

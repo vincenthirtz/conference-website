@@ -74,6 +74,22 @@ export function selectNextMatchday(
   matches: PublicMatch[],
   now: Date
 ): { date: string; matches: PublicMatch[] } | null {
+  return selectNextMatchdays(matches, now, 1)[0] ?? null;
+}
+
+/**
+ * Les `limit` PROCHAINES journées, dans l'ordre.
+ *
+ * Une seule ne suffit pas : à la Cup 2026 les journées tombent le mercredi et
+ * le vendredi, et savoir « ce soir » sans savoir « et après » oblige à ouvrir
+ * le calendrier. Même règle de sélection que ci-dessus, appliquée jour après
+ * jour.
+ */
+export function selectNextMatchdays(
+  matches: PublicMatch[],
+  now: Date,
+  limit = 2
+): { date: string; matches: PublicMatch[] }[] {
   const today = getWallClockParts(now, SITE_TIMEZONE).date;
   const byDate = new Map<string, PublicMatch[]>();
 
@@ -89,19 +105,21 @@ export function selectNextMatchday(
     else byDate.set(date, [m]);
   }
 
+  const picked: { date: string; matches: PublicMatch[] }[] = [];
   for (const date of [...byDate.keys()].sort()) {
+    if (picked.length >= limit) break;
     const day = byDate.get(date) as PublicMatch[];
     if (date === today && day.every((m) => m.status === 'finished')) continue;
-    return {
+    picked.push({
       date,
       matches: day
         .slice()
         .sort((a, b) =>
           (a.scheduled_at as string).localeCompare(b.scheduled_at as string)
         ),
-    };
+    });
   }
-  return null;
+  return picked;
 }
 
 /**
@@ -164,7 +182,20 @@ export async function loadNextMatchday(
   teams: HomeTeam[],
   now: Date = new Date()
 ): Promise<HomeMatchday | null> {
-  if (!tournamentId) return null;
+  return (
+    (await loadNextMatchdays(tenantId, tournamentId, teams, now, 1))[0] ?? null
+  );
+}
+
+/** Les prochaines journées (par défaut deux : celle qui vient et la suivante). */
+export async function loadNextMatchdays(
+  tenantId: string,
+  tournamentId: string | null,
+  teams: HomeTeam[],
+  now: Date = new Date(),
+  limit = 2
+): Promise<HomeMatchday[]> {
+  if (!tournamentId) return [];
 
   let all: PublicMatch[];
   try {
@@ -173,21 +204,25 @@ export async function loadNextMatchday(
     // Une panne de calendrier ne doit pas emporter la home : on log, on
     // retombe sur les équipes engagées.
     logger.error('[loadNextMatchday] matches error', error);
-    return null;
+    return [];
   }
 
-  const picked = selectNextMatchday(all, now);
-  if (!picked) return null;
-
   const known = new Map(teams.map((t) => [t.id, t]));
-  const shaped = picked.matches
-    .map((m) => shapeMatchdayMatch(m, known))
-    .filter((m): m is HomeMatchdayMatch => m !== null);
-  if (!shaped.length) return null;
+  const days: HomeMatchday[] = [];
 
-  return {
-    date: picked.date,
-    totalCount: shaped.length,
-    matches: shaped.slice(0, HOME_MATCHDAY_MAX),
-  };
+  for (const picked of selectNextMatchdays(all, now, limit)) {
+    const shaped = picked.matches
+      .map((m) => shapeMatchdayMatch(m, known))
+      .filter((m): m is HomeMatchdayMatch => m !== null);
+    // Une journée dont aucune affiche n'est complète ne s'affiche pas — mais
+    // elle ne doit pas non plus masquer la suivante.
+    if (!shaped.length) continue;
+    days.push({
+      date: picked.date,
+      totalCount: shaped.length,
+      matches: shaped.slice(0, HOME_MATCHDAY_MAX),
+    });
+  }
+
+  return days;
 }

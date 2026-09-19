@@ -11,6 +11,7 @@ import {
 } from '@/utils/maps/pool';
 import { parisDayKey } from '@/utils/maps/roundPools';
 import { logStaffAction } from '@/utils/staffLogs';
+import { revalidateMatchPages } from '@/utils/matches/revalidateMatchPages';
 import {
   normalizeHeroBans,
   normalizePickedBy,
@@ -420,6 +421,10 @@ async function handlePut(
         recompute_mode: recomputeMode ?? 'none',
       },
     });
+  }
+
+  if (recomputeMode === 'from_games') {
+    await revalidateMatchPages(res, { tenantId: ctx.tenantId, matchId });
   }
 
   return res.status(200).json({

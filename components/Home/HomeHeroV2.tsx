@@ -5,6 +5,11 @@
 // pastille de statut INTÉGRÉE qui fusionne le libellé live/prochain rendez-vous
 // et le compte à rebours (plus de bande countdown séparée).
 //
+// TROIS ÉTATS, un seul hero. Avant l'ouverture on invite à s'inscrire ; les
+// places prises, on le DIT (un état, pas une porte) ; et une fois la compétition
+// LANCÉE, on cesse de parler d'inscriptions : ce qu'on vient chercher un soir de
+// match, c'est le classement, la prochaine affiche et le direct.
+//
 // La logique de timer reprend celle de `HomeCountdown` : on démarre à null pour
 // que SSR et premier rendu client concordent (pas de CLS / d'hydration
 // mismatch), puis on calcule côté client dans un effet. Réduit-motion safe.
@@ -15,6 +20,7 @@ import { useT, format } from '@/lib/i18n/useT';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 import RegisterTeamCta from '@/components/RegisterTeamCta';
 import { socialUrl } from '@/config/socials';
+import { useLang } from '@/lib/i18n/LanguageProvider';
 
 type HomeHeroV2Props = {
   /** ISO du prochain jalon (coup d'envoi / ouverture des matchs). */
@@ -29,6 +35,17 @@ type HomeHeroV2Props = {
   tournamentFull?: boolean;
   /** Nombre de places du tournoi, pour le dire au lieu de le sous-entendre. */
   tournamentMaxTeams?: number | null;
+  /**
+   * La compétition a commencé : le hero bascule sur « suivre », pas « rejoindre ».
+   * Calculé côté serveur (cf. pages/index) pour que SSR et client concordent.
+   */
+  tournamentRunning?: boolean;
+  /** Équipes engagées, pour l'annoncer au lieu de le sous-entendre. */
+  tournamentTeamCount?: number | null;
+  /** Fin du tournoi (ISO), affichée comme horizon de la saison. */
+  tournamentEndDate?: string | null;
+  /** Base des liens du tournoi, ex. `/tournament/ow-womens-cup-2026`. */
+  tournamentPath?: string | null;
 };
 
 type Parts = { days: number; hours: number; minutes: number; seconds: number };
@@ -48,15 +65,31 @@ function pad(n: number) {
 }
 
 const DISCORD_URL = socialUrl('discord');
+const TWITCH_URL = socialUrl('twitch');
 
 export default function HomeHeroV2({
   countdownTarget,
   isLive = false,
   tournamentFull = false,
   tournamentMaxTeams = null,
+  tournamentRunning = false,
+  tournamentTeamCount = null,
+  tournamentEndDate = null,
+  tournamentPath = null,
 }: HomeHeroV2Props): JSX.Element {
   const t = useT(nsHomeV2);
+  const { lang } = useLang();
   const currentYear = new Date().getFullYear();
+
+  // « finale le 23 octobre » : jour + mois suffisent, l'année est dans le titre.
+  const finalDate = tournamentEndDate
+    ? new Date(tournamentEndDate).toLocaleDateString(
+        lang === 'fr' ? 'fr-FR' : 'en-GB',
+        { day: 'numeric', month: 'long', timeZone: 'Europe/Paris' }
+      )
+    : null;
+  const standingsHref = tournamentPath ? `${tournamentPath}/standings` : null;
+  const matchesHref = tournamentPath ? `${tournamentPath}/matches` : null;
 
   const targetMs = countdownTarget ? new Date(countdownTarget).getTime() : NaN;
   const isValidTarget = Number.isFinite(targetMs);
@@ -105,17 +138,63 @@ export default function HomeHeroV2({
           <span className="font-medium text-white">{t.heroTaglineStrong}</span>
         </p>
 
-        {tournamentFull && (
+        {tournamentRunning ? (
           <p className="mt-4 max-w-[52ch] text-sm text-[var(--color-yellow)]/90">
-            {format(t.heroTournamentFullHint, {
-              count: String(tournamentMaxTeams ?? ''),
-              year: String(currentYear),
-            })}
+            {finalDate
+              ? format(t.heroRunningHintUntil, {
+                  teams: String(tournamentTeamCount ?? ''),
+                  date: finalDate,
+                })
+              : format(t.heroRunningHint, {
+                  teams: String(tournamentTeamCount ?? ''),
+                })}
           </p>
+        ) : (
+          tournamentFull && (
+            <p className="mt-4 max-w-[52ch] text-sm text-[var(--color-yellow)]/90">
+              {format(t.heroTournamentFullHint, {
+                count: String(tournamentMaxTeams ?? ''),
+                year: String(currentYear),
+              })}
+            </p>
+          )
         )}
 
         <div className="mt-8 flex w-full max-w-md flex-col items-center justify-center gap-3 sm:max-w-none sm:flex-row sm:gap-4">
-          {tournamentFull ? (
+          {tournamentRunning && standingsHref && matchesHref ? (
+            // Compétition lancée : la porte d'entrée n'est plus l'inscription,
+            // c'est le suivi. En direct, la diffusion passe devant tout.
+            <>
+              <Link
+                href={isLive ? TWITCH_URL : standingsHref}
+                {...(isLive ? { target: '_blank', rel: 'noreferrer' } : {})}
+                className="esport-cta group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-3.5 text-base font-extrabold uppercase tracking-wider text-white shadow-2xl transition-all duration-300 hover:scale-105 sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
+              >
+                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                <span className="relative">
+                  {isLive ? t.heroCtaWatch : t.heroCtaStandings}
+                </span>
+                <svg
+                  className="relative h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 sm:h-5 sm:w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </Link>
+              <Link
+                href={isLive ? standingsHref : matchesHref}
+                className="hero-secondary-btn hero-secondary-btn--violet group flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-medium text-white backdrop-blur transition-all duration-300 sm:w-auto sm:px-6 sm:text-base"
+              >
+                {isLive ? t.heroCtaStandings : t.heroCtaSchedule}
+              </Link>
+            </>
+          ) : tournamentFull ? (
             // Un ETAT, pas un bouton : il n'y a plus rien a cliquer pour
             // rejoindre, et rien ne doit ressembler a une porte. On garde
             // neanmoins le poids visuel du CTA qu'il remplace — c'est
@@ -167,27 +246,31 @@ export default function HomeHeroV2({
           )}
           {/* Lot 1 acquisition : la porte d'entrée des joueuses SANS équipe.
               Placée juste après « Inscrire mon équipe » et avant Discord —
-              c'est le plus gros gisement, il n'avait aucun CTA. */}
-          <Link
-            href="/rejoindre"
-            className="hero-secondary-btn hero-secondary-btn--violet group flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-medium text-white backdrop-blur transition-all duration-300 sm:w-auto sm:px-6 sm:text-base"
-          >
-            <svg
-              className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 sm:h-5 sm:w-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+              c'est le plus gros gisement, il n'avait aucun CTA. Retirée
+              pendant la compétition : quatre boutons ne se hiérarchisent plus,
+              et la carte du prochain rendez-vous porte le même lien. */}
+          {!tournamentRunning && (
+            <Link
+              href="/rejoindre"
+              className="hero-secondary-btn hero-secondary-btn--violet group flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-medium text-white backdrop-blur transition-all duration-300 sm:w-auto sm:px-6 sm:text-base"
             >
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M19 8v6M22 11h-6" />
-            </svg>
-            {t.heroCtaJoin}
-          </Link>
+              <svg
+                className="h-4 w-4 transition-transform duration-300 group-hover:scale-110 sm:h-5 sm:w-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M19 8v6M22 11h-6" />
+              </svg>
+              {t.heroCtaJoin}
+            </Link>
+          )}
           <Link
             href={DISCORD_URL}
             target="_blank"

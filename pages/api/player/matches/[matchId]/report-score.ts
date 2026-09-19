@@ -54,6 +54,7 @@ import { notifyScoreReportDispute } from '@/utils/discord';
 import { emitBotEvent } from '@/utils/botEvents';
 import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 
+import { revalidateMatchPages } from '@/utils/matches/revalidateMatchPages';
 import { logger } from '../../../../../utils/logger';
 
 const SITE_URL =
@@ -342,6 +343,7 @@ export default withAuthRoute(async function handler(
         // reservation garantit une seule finalisation (cf. applyScore.ts 4c).
         claimFinalization: true,
       });
+      await revalidateMatchPages(res, { tenantId, matchId });
       return res.status(200).json({
         status: 'finalized',
         matchId,

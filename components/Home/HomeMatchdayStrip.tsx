@@ -161,9 +161,12 @@ function MatchRow({ match }: { match: HomeMatchdayMatch }): JSX.Element {
 
 export default function HomeMatchdayStrip({
   matchday,
+  following = null,
   matchesHref,
 }: {
   matchday: HomeMatchday;
+  /** La journée d'APRÈS, en résumé d'une ligne par affiche. */
+  following?: HomeMatchday | null;
   matchesHref: string;
 }): JSX.Element | null {
   const t = useT(nsHomeV2);
@@ -206,6 +209,8 @@ export default function HomeMatchdayStrip({
         ))}
       </ul>
 
+      {following && <FollowingDay matchday={following} />}
+
       <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-6 text-center">
         {hidden > 0 && (
           <span className="text-xs text-gray-400">
@@ -222,6 +227,63 @@ export default function HomeMatchdayStrip({
           <span aria-hidden>→</span>
         </Link>
       </div>
+    </div>
+  );
+}
+
+/**
+ * La journée SUIVANTE, en retrait : une ligne par affiche, heure en tête.
+ *
+ * Volontairement plus pauvre que la journée qui vient — même poids visuel, et
+ * on ne saurait plus laquelle se joue ce soir. Elle répond à une seule
+ * question : quand rejoue-t-on, et contre qui.
+ */
+function FollowingDay({ matchday }: { matchday: HomeMatchday }): JSX.Element {
+  const t = useT(nsHomeV2);
+  const locale = useLocale();
+  const dayLabel = formatSiteDate(matchday.matches[0].scheduledAt, locale, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+  const hidden = matchday.totalCount - matchday.matches.length;
+
+  return (
+    <div className="mt-5 border-t border-white/5 px-4 pt-4 sm:px-6">
+      <p className="mb-2 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
+        {format(t.matchdayNextDay, { day: dayLabel })}
+      </p>
+      <ul className="mx-auto grid max-w-2xl list-none grid-cols-1 gap-1 sm:grid-cols-2">
+        {matchday.matches.map((m) => (
+          <li key={m.id}>
+            <Link
+              href={`/match/${m.id}`}
+              className="flex items-center gap-2 rounded-lg px-2 py-1 text-xs text-gray-300 transition-colors hover:bg-white/5 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
+            >
+              <span className="shrink-0 tabular-nums font-semibold text-gray-200">
+                {formatSiteDate(m.scheduledAt, locale, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+              <span className="truncate">
+                {m.team1.shortName || m.team1.name}
+                <span className="mx-1 text-gray-500" aria-hidden>
+                  –
+                </span>
+                {m.team2.shortName || m.team2.name}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      {hidden > 0 && (
+        <p className="mt-1 text-center text-[11px] text-gray-500">
+          {format(hidden > 1 ? t.matchdayMore_other : t.matchdayMore_one, {
+            count: hidden,
+          })}
+        </p>
+      )}
     </div>
   );
 }

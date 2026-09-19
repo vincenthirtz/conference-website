@@ -23,6 +23,7 @@ import {
 } from '@/utils/matches/scoreReports';
 
 import { logger } from '../../../../utils/logger';
+import { revalidateMatchPages } from '@/utils/matches/revalidateMatchPages';
 import { readPaidMatchIds } from '@/utils/tcg/paidMatches';
 // Idempotency-Key (optionnel) : l'UI admin (ScoreEntryModal via
 // useIdempotentMutation) envoie une clé sur le PATCH de score. Un rejeu avec
@@ -317,6 +318,10 @@ async function handlePut(
       staffId: ctx.staff?.id ?? null,
       propagateBracket: propagate !== false,
     });
+
+    // Le score est écrit : l'accueil et les pages du tournoi doivent le dire
+    // sans attendre le prochain passage de l'ISR.
+    await revalidateMatchPages(res, { tenantId: ctx.tenantId, matchId });
 
     return res.status(200).json(result);
   }
