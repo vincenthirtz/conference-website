@@ -19,6 +19,7 @@ import {
   PULSE_SOURCES,
   keyOutBlack,
 } from '../../components/Navbar/LiveLogoPulse';
+import { parseGap, parseLogo, parseSize } from '../../pages/overlay/logo';
 
 function pixel(r: number, g: number, b: number) {
   const data = new Uint8ClampedArray([r, g, b, 255]);
@@ -66,5 +67,43 @@ describe('keyOutBlack', () => {
     expect(b).toBe(255);
     expect(r).toBeCloseTo(170, -1);
     expect(g).toBeCloseTo(42, -1);
+  });
+});
+
+/* ── La source OBS autonome ────────────────────────────────────────────────
+ *
+ * Le même pulse, mais SANS condition de direct : une source d'habillage n'a pas
+ * à deviner l'état du stream, c'est OBS qui décide quand la scène est à
+ * l'écran. Les paramètres viennent d'une URL collée à la main dans OBS, donc
+ * personne ne les valide à la saisie.
+ */
+
+describe('/overlay/logo — paramètres', () => {
+  it('borne la taille et retombe sur le défaut', () => {
+    expect(parseSize('480')).toBe(480);
+    expect(parseSize(undefined)).toBe(256);
+    expect(parseSize('abc')).toBe(256);
+    expect(parseSize('5000')).toBe(720);
+    expect(parseSize('1')).toBe(64);
+  });
+
+  it('accepte un enchaînement sans pause, borne le reste', () => {
+    expect(parseGap('0')).toBe(0);
+    expect(parseGap('1500')).toBe(1500);
+    expect(parseGap(undefined)).toBe(3600);
+    expect(parseGap('999999')).toBe(60000);
+  });
+
+  it('refuse une image hors du site', () => {
+    // La page est publique : une URL libre en paramètre afficherait n'importe
+    // quoi à l'antenne.
+    expect(parseLogo('/img/logos/2025-logo.png')).toBe(
+      '/img/logos/2025-logo.png'
+    );
+    expect(parseLogo('https://exemple.test/pub.png')).toBe(
+      '/img/logos/2026-logo.png'
+    );
+    expect(parseLogo('/img/../../etc/passwd')).toBe('/img/logos/2026-logo.png');
+    expect(parseLogo(undefined)).toBe('/img/logos/2026-logo.png');
   });
 });

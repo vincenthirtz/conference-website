@@ -16,6 +16,32 @@ analysé le 15 septembre 2026 (lot 2 du rapport).
 La ligne entre les deux offres tient : Régie affiche, Éditeur dirige. Un espace
 Régie n'a ni conducteur, ni bouton « match suivant », ni logiciel déployé.
 
+## Habillage : le logo qui pulse (`/overlay/logo`)
+
+Une source à part, sans donnée ni appel réseau : le logo de la Cup entouré du
+pulse violet de la charte, en boucle. Le même motif que la navbar quand la
+chaîne est en direct — mais **sans la condition de direct** : un habillage n'a
+pas à deviner l'état du stream, c'est OBS qui décide quand la scène est à
+l'écran.
+
+```
+https://<site>/overlay/logo
+https://<site>/overlay/logo?size=420&gap=2000
+https://<site>/overlay/logo?logo=/img/logos/2025-logo.png&glow=off
+```
+
+| Paramètre | Valeurs | Défaut | Effet |
+|---|---|---|---|
+| `size` | 64 → 720 | 256 | taille du logo en px ; le pulse suit |
+| `gap` | 0 → 60000 | 3600 | silence entre deux battements (ms) ; `0` enchaîne |
+| `logo` | chemin `/img/…` du site | logo 2026 | autre image (une URL externe est ignorée) |
+| `glow` | `off` | — | retire le halo violet sous le logo |
+
+Fond transparent : dans OBS, source **Navigateur**, taille de la scène,
+« Éteindre la source quand elle n'est pas visible » recommandé. Le rendu détoure
+le noir lui-même (cf. `components/brand/PulseCanvas`), donc aucun mode de fusion
+à régler côté OBS.
+
 ## Les URLs
 
 ```
