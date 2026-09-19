@@ -46,6 +46,9 @@ import nsAdminTeamEdit from '@/lib/i18n/locales/admin-fr/adminTeamEdit';
 import TeamRosterLockPanel from '@/components/admin/teams/TeamRosterLockPanel';
 import TeamHistoryPanel from '@/components/admin/teams/TeamHistoryPanel';
 import TeamQuickLinks from '@/components/admin/teams/TeamQuickLinks';
+import TeamCommsFields, {
+  type TeamLocaleValue,
+} from '@/components/admin/teams/TeamCommsFields';
 
 const BATTLE_TAG_RE = BATTLE_TAG_REGEX;
 
@@ -109,6 +112,7 @@ function AdminEditTeamPage({
   const [twitter, setTwitter] = useState('');
   const [discord, setDiscord] = useState('');
   const [discordRoleId, setDiscordRoleId] = useState('');
+  const [preferredLocale, setPreferredLocale] = useState<TeamLocaleValue>('');
   const [website, setWebsite] = useState('');
   const [isActive, setIsActive] = useState(true);
   // SR d'ensemble déclaré : saisi en chaîne (champ de formulaire), '' = effacer
@@ -192,6 +196,7 @@ function AdminEditTeamPage({
       setTwitter(row.twitter || '');
       setDiscord(row.discord || '');
       setDiscordRoleId(row.discord_role_id || '');
+      setPreferredLocale((row.preferred_locale as TeamLocaleValue) || '');
       setWebsite(row.website || '');
       setSkillRating(row.skill_rating != null ? String(row.skill_rating) : '');
       setIsActive(row.is_active !== false);
@@ -271,6 +276,7 @@ function AdminEditTeamPage({
         twitter: twitter || null,
         discord: discord || null,
         discord_role_id: discordRoleId.trim() || null,
+        preferred_locale: preferredLocale || null,
         website: website || null,
         is_active: isActive,
         // Chaîne vide = effacer, pas « ne rien changer » : c'est la seule façon
@@ -1170,21 +1176,13 @@ function AdminEditTeamPage({
                           placeholder="discord.gg/..."
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm text-neutral-400 mb-1">
-                          {t.discordRoleIdLabel}
-                        </label>
-                        <input
-                          type="text"
-                          value={discordRoleId}
-                          onChange={(e) => setDiscordRoleId(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
-                          placeholder="1234567890123456789"
-                        />
-                        <p className="text-xs text-neutral-500 mt-1">
-                          {t.discordRoleIdHelp}
-                        </p>
-                      </div>
+                      <TeamCommsFields
+                        discordRoleId={discordRoleId}
+                        onDiscordRoleIdChange={setDiscordRoleId}
+                        locale={preferredLocale}
+                        onLocaleChange={setPreferredLocale}
+                        t={t as unknown as Record<string, string>}
+                      />
                       <div>
                         <label className="block text-sm text-neutral-400 mb-1">
                           {t.websiteLabel}

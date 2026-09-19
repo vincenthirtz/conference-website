@@ -70,6 +70,12 @@ export default {
   twitterLabel: 'X',
   discordLabel: 'Discord',
   discordRoleIdLabel: 'Discord role ID',
+  localeLabel: 'Language of match messages',
+  localeDefault: 'Default (French)',
+  localeFr: 'French',
+  localeEn: 'English',
+  localeHelp:
+    'Check-in emails, check-in link, Discord reminders and bot DM. Does not affect the site language, which each person picks.',
   discordRoleIdHelp:
     'Pinged automatically for match announcements (T-15min, results).',
   skillRatingLabel: 'Team SR (overall rating)',

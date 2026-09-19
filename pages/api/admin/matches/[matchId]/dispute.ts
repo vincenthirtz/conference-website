@@ -329,6 +329,10 @@ async function resolveDispute(
         forfeitTeamId: hasForfeit ? (body.forfeitTeamId as string) : undefined,
         status: resumeStatus,
         markFinished: resumeStatus === 'finished',
+        // L'arbitrage peut clore une série qui n'ira pas à son terme
+        // (sanction, abandon) : le garde-fou « score incomplet » ne s'applique
+        // pas à une décision de litige.
+        allowIncompleteSeries: true,
         staffId: resolverId,
         propagateBracket: true,
       });

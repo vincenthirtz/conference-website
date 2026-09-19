@@ -344,6 +344,12 @@ export type TeamRow = {
   twitter: string | null;
   discord: string | null;
   discord_role_id: string | null;
+  /**
+   * Langue des messages de match adressés à l'équipe (`fr` | `en`).
+   * `null` = langue par défaut de l'espace. Cf. utils/checkin (mails, lien de
+   * check-in, rappels Discord, MP du bot).
+   */
+  preferred_locale?: string | null;
   website: string | null;
   is_active: boolean;
   captain_id: string | null;

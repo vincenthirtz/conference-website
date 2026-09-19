@@ -44,7 +44,7 @@ const BASELINE: Record<string, number> = {
   'pages/admin/demandes/index.tsx': 1614,
   'pages/admin/tournament/[id]/dashboard.tsx': 1614,
   'pages/admin/teams/[teamId]/edit.tsx': 1503,
-  'pages/admin/matches/[matchId]/edit.tsx': 1324,
+  'pages/admin/matches/[matchId]/edit.tsx': 1315,
   'pages/admin/teams/index.tsx': 1445,
   'pages/admin/events/[runId]/director.tsx': 1277,
   'components/admin/moderation/SupportPanel.tsx': 1167,

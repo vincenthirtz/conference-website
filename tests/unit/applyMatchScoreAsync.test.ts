@@ -261,6 +261,77 @@ describe('applyMatchScore — happy path', () => {
 });
 
 /* -----------------------------------------------------------
+ * Série incomplète
+ * ---------------------------------------------------------*/
+
+describe('applyMatchScore — score de série incomplet', () => {
+  it('laisse le match EN COURS tant que le format n’est pas atteint', async () => {
+    // Le 18/09/2026, la saisie map par map d'un BO3 terminait le match dès le
+    // 1-0 : la feuille de match se fermait avant que les équipes l'aient
+    // validée, et match.finished partait à chaque map.
+    seedMatch({ match_format: 'bo3' });
+    seedTournament();
+
+    const r = await applyMatchScore({
+      tenantId: TENANT_ID,
+      matchId: 'm1',
+      team1Score: 1,
+      team2Score: 0,
+    });
+
+    expect(r.keptOngoing).toBe(true);
+    const m = store.matches[0] as any;
+    expect(m.status).toBe('ongoing');
+    expect(m.team1_score).toBe(1);
+    expect(m.completed_at).toBeFalsy();
+  });
+
+  it('termine dès que le format est atteint', async () => {
+    seedMatch({ match_format: 'bo3' });
+    seedTournament();
+
+    const r = await applyMatchScore({
+      tenantId: TENANT_ID,
+      matchId: 'm1',
+      team1Score: 2,
+      team2Score: 1,
+    });
+
+    expect(r.keptOngoing).toBe(false);
+    expect((store.matches[0] as any).status).toBe('finished');
+  });
+
+  it('n’entrave pas une décision d’arbitrage explicite', async () => {
+    seedMatch({ match_format: 'bo3' });
+    seedTournament();
+
+    await applyMatchScore({
+      tenantId: TENANT_ID,
+      matchId: 'm1',
+      team1Score: 1,
+      team2Score: 0,
+      status: 'finished',
+      allowIncompleteSeries: true,
+    });
+
+    expect((store.matches[0] as any).status).toBe('finished');
+  });
+
+  it('ne touche pas au forfait, qui clôt une série non jouée', async () => {
+    seedMatch({ match_format: 'bo3' });
+    seedTournament();
+
+    await applyMatchScore({
+      tenantId: TENANT_ID,
+      matchId: 'm1',
+      forfeitTeamId: 'team-b',
+    });
+
+    expect((store.matches[0] as any).status).toBe('walkover');
+  });
+});
+
+/* -----------------------------------------------------------
  * Forfeit
  * ---------------------------------------------------------*/
 

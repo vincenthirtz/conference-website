@@ -186,6 +186,14 @@ export interface ApplyMatchScoreInput {
    * dans le bracket (next_match_win/lose).
    */
   propagateBracket?: boolean;
+
+  /**
+   * Autorise un match à être TERMINÉ sur un score de série incomplet
+   * (ex. 1-0 en BO3). Par défaut `false` : un score partiel laisse le match
+   * « en cours ». Réservé aux décisions d'arbitrage qui closent une série sans
+   * qu'elle ait été jouée jusqu'au bout (résolution de litige, sanction).
+   */
+  allowIncompleteSeries?: boolean;
 }
 
 export interface ApplyMatchScoreResult {
@@ -193,6 +201,12 @@ export interface ApplyMatchScoreResult {
   updated: boolean;
   match?: any;
   winnerTeamId: string | null;
+  /**
+   * `true` quand le score reçu ne suffisait pas à décider la série : le match
+   * reste « en cours » au lieu d'être terminé. L'appelant peut le dire à
+   * l'arbitre plutôt que de le laisser croire que le match est clos.
+   */
+  keptOngoing?: boolean;
 }
 
 export interface PlannedSlot {

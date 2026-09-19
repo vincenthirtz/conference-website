@@ -1027,6 +1027,12 @@
            "null"
           ]
          },
+         "preferred_locale": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "discord_channel_id": {
           "type": [
            "string",
@@ -1084,6 +1090,7 @@
          "twitter",
          "discord",
          "discord_role_id",
+         "preferred_locale",
          "discord_channel_id",
          "discord_voice_channel_id",
          "website",
@@ -14901,6 +14908,12 @@
            "null"
           ]
          },
+         "preferred_locale": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "discord_channel_id": {
           "type": [
            "string",
@@ -14958,6 +14971,7 @@
          "twitter",
          "discord",
          "discord_role_id",
+         "preferred_locale",
          "discord_channel_id",
          "discord_voice_channel_id",
          "website",
@@ -15098,6 +15112,12 @@
            "null"
           ]
          },
+         "preferred_locale": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "discord_channel_id": {
           "type": [
            "string",
@@ -15155,6 +15175,7 @@
          "twitter",
          "discord",
          "discord_role_id",
+         "preferred_locale",
          "discord_channel_id",
          "discord_voice_channel_id",
          "website",
@@ -25861,6 +25882,68 @@
           "tournamentName",
           "scrimName",
           "checkinUrl",
+          "locale"
+         ]
+        },
+        {
+         "type": "object",
+         "properties": {
+          "kind": {
+           "type": "string",
+           "const": "match_lineup"
+          },
+          "id": {
+           "type": "string"
+          },
+          "discordUserId": {
+           "type": "string"
+          },
+          "discordUsername": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "matchId": {
+           "type": "string"
+          },
+          "scheduledAt": {
+           "type": "string"
+          },
+          "teamName": {
+           "type": "string"
+          },
+          "opponentName": {
+           "type": "string"
+          },
+          "tournamentName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "lineupUrl": {
+           "type": "string"
+          },
+          "locale": {
+           "type": "string",
+           "enum": [
+            "en",
+            "fr"
+           ]
+          }
+         },
+         "required": [
+          "kind",
+          "id",
+          "discordUserId",
+          "discordUsername",
+          "matchId",
+          "scheduledAt",
+          "teamName",
+          "opponentName",
+          "tournamentName",
+          "lineupUrl",
           "locale"
          ]
         },
@@ -45475,6 +45558,9 @@
          "string",
          "null"
         ]
+       },
+       "keptOngoing": {
+        "type": "boolean"
        }
       },
       "required": [
@@ -47249,6 +47335,12 @@
          "null"
         ]
        },
+       "preferred_locale": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "discord_channel_id": {
         "type": [
          "string",
@@ -47306,6 +47398,7 @@
        "twitter",
        "discord",
        "discord_role_id",
+       "preferred_locale",
        "discord_channel_id",
        "discord_voice_channel_id",
        "website",
@@ -48589,6 +48682,9 @@
        "string",
        "null"
       ]
+     },
+     "keptOngoing": {
+      "type": "boolean"
      }
     },
     "required": [

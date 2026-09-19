@@ -9,6 +9,7 @@ const {
   notifyCheckinForfeit,
   notifyCheckinCancelledNoShow,
   notifyLineupReminder,
+  notifyCheckinOpened,
   applyMatchScore,
 } = vi.hoisted(() => ({
   sendMatchCheckinEmail: vi.fn(async () => ({ ok: true as const })),
@@ -19,6 +20,7 @@ const {
   notifyCheckinForfeit: vi.fn(async () => undefined),
   notifyCheckinCancelledNoShow: vi.fn(async () => undefined),
   notifyLineupReminder: vi.fn(async () => undefined),
+  notifyCheckinOpened: vi.fn(async () => undefined),
   applyMatchScore: vi.fn(async () => undefined),
 }));
 
@@ -33,6 +35,7 @@ vi.mock('../../utils/discord', () => ({
   notifyCheckinForfeit,
   notifyCheckinCancelledNoShow,
   notifyLineupReminder,
+  notifyCheckinOpened,
 }));
 vi.mock('../../utils/matches/applyScore', () => ({ applyMatchScore }));
 
@@ -133,6 +136,7 @@ beforeEach(() => {
   notifyCheckinForfeit.mockClear();
   notifyCheckinCancelledNoShow.mockClear();
   notifyLineupReminder.mockClear();
+  notifyCheckinOpened.mockClear();
   applyMatchScore.mockClear();
 
   // Le bulk scanner (cron, sans tournamentId) est désormais gardé par

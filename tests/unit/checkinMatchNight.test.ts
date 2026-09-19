@@ -19,6 +19,7 @@ const {
   notifyCheckinForfeit,
   notifyCheckinCancelledNoShow,
   notifyLineupReminder,
+  notifyCheckinOpened,
   applyMatchScore,
 } = vi.hoisted(() => ({
   sendMatchCheckinEmail: vi.fn(async () => ({ ok: true as const })),
@@ -29,6 +30,7 @@ const {
   notifyCheckinForfeit: vi.fn(async () => undefined),
   notifyCheckinCancelledNoShow: vi.fn(async () => undefined),
   notifyLineupReminder: vi.fn(async () => undefined),
+  notifyCheckinOpened: vi.fn(async () => undefined),
   applyMatchScore: vi.fn(async () => undefined),
 }));
 
@@ -43,6 +45,7 @@ vi.mock('../../utils/discord', () => ({
   notifyCheckinForfeit,
   notifyCheckinCancelledNoShow,
   notifyLineupReminder,
+  notifyCheckinOpened,
 }));
 vi.mock('../../utils/matches/applyScore', () => ({ applyMatchScore }));
 
@@ -95,6 +98,7 @@ beforeEach(() => {
     notifyCheckinForfeit,
     notifyCheckinCancelledNoShow,
     notifyLineupReminder,
+    notifyCheckinOpened,
     applyMatchScore,
   ]) {
     fn.mockClear();
@@ -185,5 +189,115 @@ describe('hasActiveTournamentWindow — end_date absente', () => {
       },
     ] as any;
     expect(await hasActiveTournamentWindow(now)).toBe(false);
+  });
+});
+
+/* ── Langue de l'équipe et destinataires ──────────────────────────────────
+ *
+ * Le 18/09/2026, Chocomates (équipe internationale) a été déclarée forfait :
+ * sa capitaine n'a pas de Discord lié et n'a reçu que du français, tandis que
+ * ses deux coachs — habilités à pointer — n'ont rien reçu du tout.
+ */
+
+describe('messages de check-in : langue et destinataires', () => {
+  function internationalTeams() {
+    setAdminUser('captain-a', 'captain@example.com');
+    setAdminUser('coach-a', 'coach@example.com');
+    setAdminUser('captain-b', 'b@example.com');
+    store.teams = [
+      {
+        id: 'team-a',
+        tenant_id: TENANT_ID,
+        captain_id: 'captain-a',
+        preferred_locale: 'en',
+      },
+      { id: 'team-b', tenant_id: TENANT_ID, captain_id: 'captain-b' },
+    ] as any;
+    store.team_members = [
+      {
+        tenant_id: TENANT_ID,
+        team_id: 'team-a',
+        user_id: 'coach-a',
+        role: 'Coach',
+      },
+      {
+        tenant_id: TENANT_ID,
+        team_id: 'team-a',
+        user_id: 'player-a',
+        role: 'player',
+      },
+    ] as any;
+  }
+
+  it('ouvre le check-in en anglais, pour la capitaine ET son encadrement', async () => {
+    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
+    internationalTeams();
+
+    await processMatchCheckin(
+      lite({
+        // T-40 : seule l'étape d'ouverture doit tourner.
+        scheduled_at: new Date(Date.now() + 40 * 60_000).toISOString(),
+        checkin_email_sent_at: null,
+        reminder_30_sent_at: null,
+        reminder_15_sent_at: null,
+        team1: {
+          id: 'team-a',
+          name: 'Alpha',
+          discord_role_id: '111',
+          preferred_locale: 'en',
+        },
+      })
+    );
+
+    const mails = sendMatchCheckinEmail.mock.calls.map((c: any[]) => c[0]);
+    const alpha = mails.filter((m: any) => m.teamName === 'Alpha');
+    // Capitaine + coach ; la joueuse simple n'est pas destinataire.
+    expect(alpha.map((m: any) => m.to).sort()).toEqual([
+      'captain@example.com',
+      'coach@example.com',
+    ]);
+    for (const m of alpha) {
+      expect(m.locale).toBe('en');
+      expect(m.checkinUrl).toContain('lang=en');
+    }
+    // L'autre équipe garde le français.
+    const bravo = mails.find((m: any) => m.teamName === 'Bravo');
+    expect(bravo.locale).toBe('fr');
+    expect(bravo.checkinUrl).not.toContain('lang=en');
+
+    // L'ouverture s'annonce aussi sur Discord — elle n'existait nulle part.
+    expect(notifyCheckinOpened).toHaveBeenCalledTimes(1);
+    expect((notifyCheckinOpened.mock.calls[0] as any[])[0]).toMatchObject({
+      bilingual: true,
+    });
+  });
+
+  it('annonce le forfait dans la langue de l’équipe forfait', async () => {
+    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
+    internationalTeams();
+
+    await processMatchCheckin(
+      lite({
+        team2_checked_in_at: new Date().toISOString(),
+        team1: {
+          id: 'team-a',
+          name: 'Alpha',
+          discord_role_id: '111',
+          preferred_locale: 'en',
+        },
+      })
+    );
+
+    expect(notifyCheckinForfeit).toHaveBeenCalledTimes(1);
+    expect((notifyCheckinForfeit.mock.calls[0] as any[])[0]).toMatchObject({
+      forfeitedTeamName: 'Alpha',
+      locale: 'en',
+    });
+    const mails = sendCheckinForfeitEmail.mock.calls.map((c: any[]) => c[0]);
+    expect(mails.map((m: any) => m.to).sort()).toEqual([
+      'captain@example.com',
+      'coach@example.com',
+    ]);
+    expect(mails[0].locale).toBe('en');
   });
 });

@@ -158,6 +158,10 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
         forfeitTeamId: hasForfeit ? forfeitTeamId : undefined,
         status: resumeStatus,
         markFinished: resumeStatus === 'finished',
+        // L'arbitrage peut clore une série qui n'ira pas à son terme
+        // (sanction, abandon) : le garde-fou « score incomplet » ne s'applique
+        // pas à une décision de litige.
+        allowIncompleteSeries: true,
         staffId: actor.staffId,
         propagateBracket: true,
       });

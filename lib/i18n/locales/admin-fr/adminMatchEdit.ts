@@ -76,6 +76,8 @@ export default adminNs('adminMatchEdit', {
   removeBanTitle: 'Retirer ce ban',
   heroBansHint:
     'Dans l’ordre des bans. Un héros déjà banni sur cette map n’est plus proposé.',
+  scoreKeptOngoing:
+    'Score partiel : la série n’est pas décidée pour ce format, le match reste « en cours » et la feuille de match des équipes reste ouverte.',
   notesHeading: 'Notes internes',
   notesPlaceholder:
     'Infos pour les arbitres / casters (setup, lobby code, casters, spécificités, etc.).',

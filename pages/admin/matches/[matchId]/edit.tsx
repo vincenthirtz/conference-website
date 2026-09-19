@@ -15,6 +15,7 @@ import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import { isoToLocalInput } from '@/utils/dateFormatters';
 import MatchGamesPanel, {
   gamesFromRows,
   type MatchGameInput,
@@ -55,22 +56,6 @@ type ApiResponse = {
 export const getServerSideProps = withStaffPage({
   permission: 'arbitrate_matches',
 });
-
-function formatToInputDateTime(iso: string | null): string {
-  if (!iso) return '';
-  try {
-    const d = new Date(iso);
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const year = d.getFullYear();
-    const month = pad(d.getMonth() + 1);
-    const day = pad(d.getDate());
-    const hours = pad(d.getHours());
-    const minutes = pad(d.getMinutes());
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  } catch {
-    return '';
-  }
-}
 
 function formatDateTimeNice(iso: string | null): string {
   if (!iso) return '—';
@@ -234,7 +219,7 @@ function AdminMatchEditPage(_props: StaffProps) {
         status: m.status || 'pending',
         best_of: m.best_of ? String(m.best_of) : '',
         round_number: m.round_number ? String(m.round_number) : '',
-        scheduled_at: formatToInputDateTime(m.scheduled_at),
+        scheduled_at: isoToLocalInput(m.scheduled_at),
         stream_url: m.stream_url || '',
         notes: m.notes || '',
         team1_score: m.team1_score != null ? String(m.team1_score) : '',
@@ -370,6 +355,12 @@ function AdminMatchEditPage(_props: StaffProps) {
             return;
           }
           throw new Error(json.error || t.errorUpdateScore);
+        }
+        // Score partiel : le match reste « en cours » pour ne pas fermer la
+        // feuille de match. Le dire, sinon l'arbitre croit avoir clos le match.
+        const scoreJson = await scoreRes.json().catch(() => ({}));
+        if (scoreJson?.keptOngoing) {
+          setWarningMsgs((prev) => [...prev, t.scoreKeptOngoing]);
         }
       }
 

@@ -745,6 +745,79 @@ export async function notifyLineupReminder(
   });
 }
 
+export type CheckinOpenedNotification = {
+  tournamentId: string | null;
+  matchId: string;
+  team1Name: string;
+  team1RoleId: string | null | undefined;
+  team2Name: string;
+  team2RoleId: string | null | undefined;
+  scheduledAt: string | null;
+  checkinUrl: string;
+  /** Une des deux équipes lit l'anglais : le message porte les deux langues. */
+  bilingual?: boolean;
+};
+
+/**
+ * Ouverture du check-in (T-60), annoncée dans le salon de check-in.
+ *
+ * Le site émettait déjà l'événement `checkin.opened` pour le bot, qui n'en
+ * faisait rien (« event inconnu » dans ses journaux) : l'ouverture ne se voyait
+ * donc nulle part sur Discord, seuls les mails partaient. Le 18/09/2026, une
+ * équipe dont la capitaine n'a pas de Discord lié n'a eu aucun rappel visible
+ * par son encadrement, et a été déclarée forfait.
+ *
+ * Même webhook que les rappels : c'est le même salon et le même public.
+ */
+export async function notifyCheckinOpened(
+  data: CheckinOpenedNotification
+): Promise<void> {
+  const cfg = await resolveWebhook(data.tournamentId, 'checkin_reminders');
+  if (!cfg) return;
+
+  const pings = [
+    formatRoleMention(cfg.roleMention),
+    teamRolePing(data.team1RoleId, data.team1Name),
+    teamRolePing(data.team2RoleId, data.team2Name),
+  ].filter(Boolean);
+
+  const fields: DiscordEmbedField[] = [];
+  const dateLabel = formatDateFr(data.scheduledAt);
+  if (dateLabel) {
+    fields.push({ name: 'Début', value: dateLabel, inline: true });
+  }
+  fields.push({ name: 'Check-in', value: data.checkinUrl, inline: false });
+
+  const description =
+    `Le check-in est ouvert pour **${data.team1Name}** vs **${data.team2Name}**. ` +
+    `Capitaine, coach ou manager : confirmez votre présence, puis validez la ` +
+    `feuille de match. Sans check-in au coup d'envoi, c'est forfait.` +
+    (data.bilingual
+      ? `\n\nCheck-in is open for this match. Captain, coach or manager: confirm ` +
+        `your attendance, then confirm your match sheet. No check-in at kick-off ` +
+        `means a forfeit.`
+      : '');
+
+  await postToDiscordWebhook(cfg.url, {
+    username: "OW Women's Cup",
+    content: pings.join(' '),
+    embeds: [
+      {
+        title: '🟢 Check-in ouvert',
+        description,
+        color: COLORS.checkinReminder,
+        fields,
+        timestamp: new Date().toISOString(),
+        footer: { text: `Match ${data.matchId.slice(0, 8)}` },
+      },
+    ],
+    allowed_mentions: buildAllowedMentions(cfg.roleMention, [
+      data.team1RoleId,
+      data.team2RoleId,
+    ]),
+  });
+}
+
 export async function notifyCheckinReminder(
   data: CheckinReminderNotification
 ): Promise<void> {

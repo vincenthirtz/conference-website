@@ -69,6 +69,12 @@ export default adminNs('adminTeamEdit', {
   twitterLabel: 'X',
   discordLabel: 'Discord',
   discordRoleIdLabel: 'ID rôle Discord',
+  localeLabel: 'Langue des messages de match',
+  localeDefault: 'Par défaut (français)',
+  localeFr: 'Français',
+  localeEn: 'Anglais',
+  localeHelp:
+    'Mails de check-in, lien de check-in, rappels Discord et MP du bot. N’affecte pas la langue du site, que chaque personne choisit.',
   discordRoleIdHelp:
     'Pingé automatiquement lors des annonces de match (J-15min, résultats).',
   skillRatingLabel: 'SR d’équipe (niveau d’ensemble)',

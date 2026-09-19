@@ -21,12 +21,14 @@ import {
 } from './email';
 import {
   notifyCheckinReminder,
+  notifyCheckinOpened,
   notifyCheckinForfeit,
   notifyCheckinCancelledNoShow,
   notifyLineupReminder,
 } from './discord';
 import { applyMatchScore } from './matches/applyScore';
 import { emitBotEvent } from './botEvents';
+import { isCheckinTeamRole } from './teams/canCheckIn';
 import { grantCheckinStreakReward } from './tcg/grantCheckinStreak';
 
 import { logger } from './logger';
@@ -138,6 +140,11 @@ export function teamLocale(
  */
 export function buildMatchCheckinPageUrl(matchId: string): string {
   return `${SITE_URL.replace(/\/$/, '')}/player/match/${matchId}#checkin`;
+}
+
+/** Page où l'équipe déclare qui joue (feuille de match). */
+export function buildMatchLineupPageUrl(matchId: string): string {
+  return `${SITE_URL.replace(/\/$/, '')}/player/match/${matchId}#feuille`;
 }
 
 /* -----------------------------------------------------------
@@ -327,33 +334,75 @@ export async function redeemCheckinToken(
 }
 
 /* -----------------------------------------------------------
- * Captain email lookup
+ * Destinataires des mails de check-in
  * ---------------------------------------------------------*/
 
-async function getCaptainEmail(
+/**
+ * Les adresses à prévenir pour une équipe : celles des personnes qui peuvent
+ * réellement pointer (capitaine, coach, manager — cf. utils/teams/canCheckIn).
+ *
+ * POURQUOI PAS LA SEULE CAPITAINE. Le 18/09/2026, Chocomates a été déclarée
+ * forfait automatique : sa capitaine n'a pas de Discord lié, le mail français
+ * était son unique canal, et ses deux coachs — qui avaient le droit de pointer
+ * — n'ont rien reçu. Un seul destinataire, c'est un seul point de défaillance
+ * un soir de match.
+ *
+ * Ne lève jamais : une lecture ratée renvoie ce qui a pu être lu.
+ */
+export async function getCheckinRecipientEmails(
   tenantId: string,
   teamId: string
-): Promise<string | null> {
-  if (!supabaseAdmin) return null;
+): Promise<string[]> {
+  if (!supabaseAdmin) return [];
 
-  const { data: team } = await supabaseAdmin
-    .from('teams')
-    .select('captain_id')
-    .eq('tenant_id', tenantId)
-    .eq('id', teamId)
-    .maybeSingle();
-
-  if (!team?.captain_id) return null;
-
+  const userIds: string[] = [];
   try {
-    const { data } = await supabaseAdmin.auth.admin.getUserById(
-      team.captain_id
-    );
-    return data?.user?.email ?? null;
+    const [teamRes, membersRes] = await Promise.all([
+      supabaseAdmin
+        .from('teams')
+        .select('captain_id')
+        .eq('tenant_id', tenantId)
+        .eq('id', teamId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from('team_members')
+        .select('user_id, role')
+        .eq('tenant_id', tenantId)
+        .eq('team_id', teamId),
+    ]);
+
+    const captainId =
+      (teamRes.data as { captain_id?: string | null } | null)?.captain_id ??
+      null;
+    if (captainId) userIds.push(captainId);
+
+    for (const m of (membersRes.data ?? []) as {
+      user_id?: string | null;
+      role?: string | null;
+    }[]) {
+      if (
+        m.user_id &&
+        isCheckinTeamRole(m.role) &&
+        !userIds.includes(m.user_id)
+      ) {
+        userIds.push(m.user_id);
+      }
+    }
   } catch (e) {
-    logger.error('[checkin] getCaptainEmail error:', e);
-    return null;
+    logger.error('[checkin] recipients lookup error:', e);
   }
+
+  const emails: string[] = [];
+  for (const userId of userIds) {
+    try {
+      const { data } = await supabaseAdmin.auth.admin.getUserById(userId);
+      const email = data?.user?.email ?? null;
+      if (email && !emails.includes(email)) emails.push(email);
+    } catch (e) {
+      logger.error('[checkin] recipient email lookup error:', e);
+    }
+  }
+  return emails;
 }
 
 /**
@@ -373,19 +422,20 @@ async function sendReminderEmailSafely(opts: {
   locale: CheckinEmailLocale;
 }): Promise<void> {
   try {
-    const email = await getCaptainEmail(opts.tenantId, opts.teamId);
-    if (!email) return;
-    await sendCheckinReminderEmail({
-      locale: opts.locale,
-      tenantId: opts.tenantId,
-      to: email,
-      teamName: opts.teamName,
-      opponentName: opts.opponentName,
-      scheduledAt: opts.scheduledAt,
-      checkinUrl: opts.checkinUrl,
-      tournamentName: opts.tournamentName,
-      minutesBeforeKickoff: opts.minutesBeforeKickoff,
-    });
+    const emails = await getCheckinRecipientEmails(opts.tenantId, opts.teamId);
+    for (const to of emails) {
+      await sendCheckinReminderEmail({
+        locale: opts.locale,
+        tenantId: opts.tenantId,
+        to,
+        teamName: opts.teamName,
+        opponentName: opts.opponentName,
+        scheduledAt: opts.scheduledAt,
+        checkinUrl: opts.checkinUrl,
+        tournamentName: opts.tournamentName,
+        minutesBeforeKickoff: opts.minutesBeforeKickoff,
+      });
+    }
   } catch (e) {
     logger.error('[checkin] sendCheckinReminderEmail error:', e);
   }
@@ -558,22 +608,22 @@ async function runCheckinOpenStep(
   // 2) Send emails to both captains (only if not already checked in)
   const tournamentName = match.tournament?.name || "OW Women's Cup";
 
-  const team1Email = match.team1_checked_in_at
-    ? null
-    : await getCaptainEmail(match.tenant_id, match.team1_id!);
-  const team2Email = match.team2_checked_in_at
-    ? null
-    : await getCaptainEmail(match.tenant_id, match.team2_id!);
+  const team1Emails = match.team1_checked_in_at
+    ? []
+    : await getCheckinRecipientEmails(match.tenant_id, match.team1_id!);
+  const team2Emails = match.team2_checked_in_at
+    ? []
+    : await getCheckinRecipientEmails(match.tenant_id, match.team2_id!);
 
   const team1Name = match.team1?.name || 'Équipe 1';
   const team2Name = match.team2?.name || 'Équipe 2';
 
   const sends: Promise<unknown>[] = [];
-  if (team1Email) {
+  for (const to of team1Emails) {
     sends.push(
       sendMatchCheckinEmail({
         tenantId: match.tenant_id,
-        to: team1Email,
+        to,
         teamName: team1Name,
         opponentName: team2Name,
         scheduledAt: match.scheduled_at!,
@@ -583,11 +633,11 @@ async function runCheckinOpenStep(
       })
     );
   }
-  if (team2Email) {
+  for (const to of team2Emails) {
     sends.push(
       sendMatchCheckinEmail({
         tenantId: match.tenant_id,
-        to: team2Email,
+        to,
         teamName: team2Name,
         opponentName: team1Name,
         scheduledAt: match.scheduled_at!,
@@ -615,8 +665,23 @@ async function runCheckinOpenStep(
   }
 
   result.steps.push(
-    `email_sent (${[team1Email, team2Email].filter(Boolean).length} recipients)`
+    `email_sent (${team1Emails.length + team2Emails.length} recipients)`
   );
+
+  // Annonce dans le salon de check-in, en plus des mails : c'est le seul
+  // canal que TOUTE l'équipe voit.
+  await notifyCheckinOpened({
+    tournamentId: match.tournament_id,
+    matchId: match.id,
+    team1Name,
+    team1RoleId: match.team1?.discord_role_id ?? null,
+    team2Name,
+    team2RoleId: match.team2?.discord_role_id ?? null,
+    scheduledAt: match.scheduled_at,
+    checkinUrl: buildMatchCheckinPageUrl(match.id),
+    bilingual:
+      teamLocale(match.team1) === 'en' || teamLocale(match.team2) === 'en',
+  }).catch((e) => logger.error('[checkin] notifyCheckinOpened error:', e));
 
   await emitBotEvent(
     'checkin.opened',
@@ -890,17 +955,18 @@ async function sendForfeitEmailSafely(opts: {
   locale: CheckinEmailLocale;
 }): Promise<void> {
   try {
-    const email = await getCaptainEmail(opts.tenantId, opts.teamId);
-    if (!email) return;
-    await sendCheckinForfeitEmail({
-      locale: opts.locale,
-      tenantId: opts.tenantId,
-      to: email,
-      teamName: opts.teamName,
-      opponentName: opts.opponentName,
-      scheduledAt: opts.scheduledAt,
-      tournamentName: opts.tournamentName,
-    });
+    const emails = await getCheckinRecipientEmails(opts.tenantId, opts.teamId);
+    for (const to of emails) {
+      await sendCheckinForfeitEmail({
+        locale: opts.locale,
+        tenantId: opts.tenantId,
+        to,
+        teamName: opts.teamName,
+        opponentName: opts.opponentName,
+        scheduledAt: opts.scheduledAt,
+        tournamentName: opts.tournamentName,
+      });
+    }
   } catch (e) {
     logger.error('[checkin] sendCheckinForfeitEmail error:', e);
   }
@@ -1070,17 +1136,21 @@ async function notifyBothTeamsNoShow(
   for (const side of sides) {
     if (!side.teamId) continue;
     try {
-      const email = await getCaptainEmail(match.tenant_id, side.teamId);
-      if (!email) continue;
-      await sendCheckinCancelledEmail({
-        tenantId: match.tenant_id,
-        to: email,
-        teamName: side.name,
-        opponentName: side.opponentName,
-        scheduledAt,
-        tournamentName,
-        locale: side.locale,
-      });
+      const emails = await getCheckinRecipientEmails(
+        match.tenant_id,
+        side.teamId
+      );
+      for (const to of emails) {
+        await sendCheckinCancelledEmail({
+          tenantId: match.tenant_id,
+          to,
+          teamName: side.name,
+          opponentName: side.opponentName,
+          scheduledAt,
+          tournamentName,
+          locale: side.locale,
+        });
+      }
     } catch (e) {
       logger.error('[checkin] sendCheckinCancelledEmail error:', e);
     }

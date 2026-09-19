@@ -77,6 +77,8 @@ export default {
   removeBanTitle: 'Remove this ban',
   heroBansHint:
     'In ban order. A hero already banned on this map is no longer offered.',
+  scoreKeptOngoing:
+    'Partial score: the series is not decided for this format, the match stays « ongoing » and the teams’ match sheet stays open.',
   notesHeading: 'Internal notes',
   notesPlaceholder:
     'Info for referees / casters (setup, lobby code, casters, specifics, etc.).',

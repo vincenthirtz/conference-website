@@ -11,7 +11,7 @@ import {
 import type { PropagationSnapshot } from '../bracket/propagate';
 import { createBracketSnapshot } from '../bracket/snapshot';
 import { logStaffAction } from '../staffLogs';
-import { computeRequiredWins } from './computeRequiredWins';
+import { computeRequiredWins, isSeriesFinished } from './computeRequiredWins';
 import { invalidateStandingsCache } from '../stages/standingsCache';
 import { tryAutoAdvanceFromMatch } from '../stages/autoAdvance';
 import {
@@ -99,6 +99,7 @@ export async function applyMatchScore(
     propagateBracket = true,
     forfeitTeamId,
     claimFinalization = false,
+    allowIncompleteSeries = false,
   } = input;
 
   let { team1Score, team2Score } = input;
@@ -255,6 +256,29 @@ export async function applyMatchScore(
     newStatus = 'finished';
   }
 
+  // 2b) UN SCORE DE SÉRIE INCOMPLET NE TERMINE PAS LE MATCH.
+  //
+  //     Le 18/09/2026, l'arbitrage saisissait les BO3 map par map : le 1-0 de
+  //     la première map passait le match en « terminé ». Conséquences en
+  //     cascade — la feuille de match se fermait avant que les équipes l'aient
+  //     validée (elle ne s'ouvre qu'entre check-in et fin du match), et
+  //     `match.finished` partait une fois par map.
+  //
+  //     Le forfait et le bye en sont exclus : ils closent une série qui ne sera
+  //     pas jouée. `allowIncompleteSeries` laisse l'arbitrage forcer la clôture
+  //     (résolution de litige, sanction), le reste retombe sur « en cours ».
+  let keptOngoing = false;
+  if (
+    newStatus === 'finished' &&
+    !resolvedForfeitTeamId &&
+    !match.is_bye &&
+    !allowIncompleteSeries &&
+    !isSeriesFinished(team1Score, team2Score, match.match_format)
+  ) {
+    newStatus = 'ongoing';
+    keptOngoing = true;
+  }
+
   // 3) Calculer le vainqueur si besoin
   let newWinnerTeamId: string | null;
 
@@ -318,6 +342,7 @@ export async function applyMatchScore(
       updated: false,
       match,
       winnerTeamId: match.winner_team_id ?? null,
+      keptOngoing,
     };
   }
 
@@ -740,6 +765,7 @@ export async function applyMatchScore(
     updated: true,
     match: updated,
     winnerTeamId: newWinnerTeamId,
+    keptOngoing,
   };
 }
 

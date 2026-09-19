@@ -18,7 +18,12 @@
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import { buildCheckinUrl, teamLocale } from '@/utils/checkin';
+import {
+  buildCheckinUrl,
+  buildMatchLineupPageUrl,
+  teamLocale,
+} from '@/utils/checkin';
+import { isCheckinTeamRole } from '@/utils/teams/canCheckIn';
 import { getDiscordLinksForUsers } from '@/utils/discordLinks';
 import { logger } from '@/utils/logger';
 
@@ -67,8 +72,31 @@ type CastBriefingReminder = {
   team2Name: string | null;
 };
 
+/**
+ * Rappel « feuille de match » EN MP, le complément du message de salon envoyé
+ * par le cron : le 18/09/2026 les deux équipes du match de 20h30 ont pointé,
+ * ignoré le message de salon, et joué sans feuille. Le MP, lui, avait bien
+ * déclenché leurs check-in.
+ *
+ * Adressé à qui peut valider (capitaine, coach, manager), pas au roster.
+ */
+type MatchLineupReminder = {
+  kind: 'match_lineup';
+  id: string; // `${matchId}:team${side}:${discordUserId}`
+  discordUserId: string;
+  discordUsername: string | null;
+  matchId: string;
+  scheduledAt: string;
+  teamName: string;
+  opponentName: string;
+  tournamentName: string | null;
+  lineupUrl: string;
+  locale: 'fr' | 'en';
+};
+
 type Reminder =
   | MatchCheckinReminder
+  | MatchLineupReminder
   | TournamentJ1Reminder
   | CastBriefingReminder;
 
@@ -83,6 +111,14 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   } catch (e) {
     logger.error('[bot/reminders] match_checkin error', e);
     errors.push('match_checkin');
+  }
+
+  try {
+    const lineups = await collectMatchLineupReminders(tenantId);
+    reminders.push(...lineups);
+  } catch (e) {
+    logger.error('[bot/reminders] match_lineup error', e);
+    errors.push('match_lineup');
   }
 
   try {
@@ -211,7 +247,11 @@ async function collectMatchCheckinReminders(
 async function claimMatchSide(
   tenantId: string,
   matchId: string,
-  field: 'team1_captain_dm_30_sent_at' | 'team2_captain_dm_30_sent_at'
+  field:
+    | 'team1_captain_dm_30_sent_at'
+    | 'team2_captain_dm_30_sent_at'
+    | 'team1_lineup_dm_sent_at'
+    | 'team2_lineup_dm_sent_at'
 ): Promise<boolean> {
   const { data, error } = await supabaseAdmin!
     .from('matches')
@@ -225,6 +265,127 @@ async function claimMatchSide(
     return false;
   }
   return (data?.length ?? 0) > 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * match_lineup
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Équipes qui ont POINTÉ mais n'ont pas encore validé leur feuille, dans la
+ * même fenêtre que le rappel de check-in. Une feuille déjà validée, un match
+ * qui n'est plus jouable ou un côté déjà relancé ne produisent rien.
+ */
+async function collectMatchLineupReminders(
+  tenantId: string
+): Promise<MatchLineupReminder[]> {
+  const now = Date.now();
+  const windowStart = new Date(now + WINDOW_MIN * 60_000).toISOString();
+  const windowEnd = new Date(now + WINDOW_MAX * 60_000).toISOString();
+
+  const { data: matches, error } = await supabaseAdmin!
+    .from('matches')
+    .select(
+      `id, scheduled_at, status, is_bye,
+       team1_id, team2_id,
+       team1_checked_in_at, team2_checked_in_at,
+       team1_lineup_dm_sent_at, team2_lineup_dm_sent_at,
+       team1:team1_id (id, name, captain_id, preferred_locale),
+       team2:team2_id (id, name, captain_id, preferred_locale),
+       tournament:tournament_id (id, name)`
+    )
+    .eq('tenant_id', tenantId)
+    .gte('scheduled_at', windowStart)
+    .lte('scheduled_at', windowEnd)
+    .eq('status', 'pending')
+    .neq('is_bye', true)
+    .or('team1_lineup_dm_sent_at.is.null,team2_lineup_dm_sent_at.is.null');
+
+  if (error) throw error;
+  if (!matches || matches.length === 0) return [];
+
+  const reminders: MatchLineupReminder[] = [];
+
+  for (const m of matches as any[]) {
+    // Feuilles déjà validées pour ce match : on ne relance pas ces équipes-là.
+    const { data: lineups } = await supabaseAdmin!
+      .from('match_lineups')
+      .select('team_id, status')
+      .eq('match_id', m.id);
+    const validated = new Set(
+      ((lineups ?? []) as { team_id: string; status: string }[])
+        .filter((l) => l.status === 'validated')
+        .map((l) => l.team_id)
+    );
+
+    for (const side of [1, 2] as const) {
+      const team = side === 1 ? m.team1 : m.team2;
+      const opponent = side === 1 ? m.team2 : m.team1;
+      const sentField =
+        side === 1 ? 'team1_lineup_dm_sent_at' : 'team2_lineup_dm_sent_at';
+      const checkedField =
+        side === 1 ? 'team1_checked_in_at' : 'team2_checked_in_at';
+
+      if (m[sentField]) continue; // déjà relancé
+      if (!m[checkedField]) continue; // la feuille n'est pas encore ouverte
+      if (!team?.id || validated.has(team.id)) continue;
+
+      const userIds = await lineupResponsibleUserIds(tenantId, team);
+      if (userIds.length === 0) continue;
+      const links = await getDiscordLinksForUsers(userIds);
+      if (links.size === 0) continue;
+
+      // Claim par côté : les destinataires d'un même côté partent ensemble.
+      const claimed = await claimMatchSide(tenantId, m.id, sentField);
+      if (!claimed) continue;
+
+      for (const [, link] of links) {
+        reminders.push({
+          kind: 'match_lineup',
+          id: `${m.id}:team${side}:${link.discordUserId}`,
+          discordUserId: link.discordUserId,
+          discordUsername: link.discordUsername,
+          matchId: m.id,
+          scheduledAt: m.scheduled_at,
+          teamName: team.name ?? `Équipe ${side}`,
+          opponentName: opponent?.name ?? 'Adversaire',
+          tournamentName: m.tournament?.name ?? null,
+          lineupUrl: buildMatchLineupPageUrl(m.id),
+          locale: teamLocale(team),
+        });
+      }
+    }
+  }
+
+  return reminders;
+}
+
+/** Capitaine + encadrement (coach / manager) : celles qui peuvent valider. */
+async function lineupResponsibleUserIds(
+  tenantId: string,
+  team: { id: string; captain_id?: string | null }
+): Promise<string[]> {
+  const ids: string[] = [];
+  if (team.captain_id) ids.push(team.captain_id);
+
+  const { data, error } = await supabaseAdmin!
+    .from('team_members')
+    .select('user_id, role')
+    .eq('tenant_id', tenantId)
+    .eq('team_id', team.id);
+  if (error) {
+    logger.error('[bot/reminders] lineup responsibles error', error);
+    return ids;
+  }
+  for (const m of (data ?? []) as {
+    user_id?: string | null;
+    role?: string | null;
+  }[]) {
+    if (m.user_id && isCheckinTeamRole(m.role) && !ids.includes(m.user_id)) {
+      ids.push(m.user_id);
+    }
+  }
+  return ids;
 }
 
 /* ---------------------------------------------------------------------------

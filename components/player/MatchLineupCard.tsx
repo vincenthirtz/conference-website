@@ -180,7 +180,12 @@ export default function MatchLineupCard({
   const canAct = data.open && data.editable && !readOnly;
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl">
+    // `#feuille` : cible du MP de rappel envoyé par le bot, pour tomber sur la
+    // carte plutôt qu'en haut d'une page longue.
+    <div
+      id="feuille"
+      className="scroll-mt-24 rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl"
+    >
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <h3 className="text-base font-semibold text-white">{t.title}</h3>
         {validated && (

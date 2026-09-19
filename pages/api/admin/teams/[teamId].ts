@@ -35,6 +35,8 @@ export type TeamRow = {
   twitter: string | null;
   discord: string | null;
   discord_role_id: string | null;
+  /** Langue des messages de match (`fr` | `en`) ; `null` = défaut de l'espace. */
+  preferred_locale: string | null;
   discord_channel_id: string | null;
   discord_voice_channel_id: string | null;
   website: string | null;
@@ -191,6 +193,7 @@ async function handlePut(
     'twitter',
     'discord',
     'discord_role_id',
+    'preferred_locale',
     'website',
     'is_active',
     'captain_id',
@@ -203,6 +206,19 @@ async function handlePut(
     if (key in body) {
       updatePayload[key as keyof TeamRow] = body[key];
     }
+  }
+
+  // Langue des messages de match : liste fermée, car chaque valeur doit avoir
+  // sa traduction réelle derrière (cf. migration teams_preferred_locale).
+  if (
+    'preferred_locale' in body &&
+    body.preferred_locale !== null &&
+    body.preferred_locale !== 'fr' &&
+    body.preferred_locale !== 'en'
+  ) {
+    return res.status(400).json({
+      error: 'preferred_locale must be "fr", "en" or null',
+    });
   }
 
   if (Object.keys(updatePayload).length === 0) {
