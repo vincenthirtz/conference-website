@@ -253,7 +253,20 @@ describe('GET /api/teams/invitations', () => {
 
 describe('POST /api/teams/invitations/[invitationId] — relance', () => {
   it('remplace le lien privé, repousse l’expiration et renvoie l’email', async () => {
-    const row = seedInvitation();
+    // EXPIRATION SEMÉE À 3 JOURS, pas à 7. La relance repose l'échéance à sept
+    // jours À PARTIR DE MAINTENANT : semer la même valeur faisait comparer deux
+    // dates calculées à quelques microsecondes d'écart, et l'assertion tombait
+    // quand les deux atterrissaient sur la même milliseconde. Un test qui
+    // échoue une fois sur mille est un test qu'on finit par ignorer.
+    const row = seedInvitation({
+      payload: {
+        desired_role: 'player',
+        expires_at: inDays(3),
+        invite_email: 'invitee@example.com',
+        invite_token_hash: 'ancien-hash',
+        captain_auth_user_id: CAPTAIN_ID,
+      },
+    });
     const oldHash = (row.payload as any).invite_token_hash;
     const oldExpiry = (row.payload as any).expires_at;
     setAuthUser({ id: CAPTAIN_ID });

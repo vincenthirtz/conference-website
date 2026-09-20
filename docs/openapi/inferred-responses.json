@@ -39288,6 +39288,20 @@
        "total": {
         "type": "number"
        },
+       "pool": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "properties": {
+         "distinct": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "distinct"
+        ]
+       },
        "nextCursor": {
         "type": "null"
        }
@@ -39296,6 +39310,7 @@
        "cards",
        "distinct",
        "total",
+       "pool",
        "nextCursor"
       ]
      }
