@@ -145,20 +145,26 @@ function Navbar(): JSX.Element {
   // sans AUCUN en-tête : ni nav publique, ni top-bar.
   const hideMarketingNav = showAdminBar || showPlayerBar;
 
-  const handleLogout = async () => {
+  // Pas de signOut ICI : /admin/logout s'en charge (et purge en plus les
+  // cookies serveur). L'awaiter ajoutait un aller-retour réseau COMPLET —
+  // `signOut()` sans portée = révocation globale côté Supabase — avant même
+  // que l'écran « déconnexion en cours » s'affiche : bouton figé, puis le même
+  // travail refait une seconde fois par la page.
+  const handleLogout = () => {
     setDrawerOpen(false);
     clear();
-    try {
-      await supabaseClient.auth.signOut();
-    } catch {}
     router.push('/admin/logout');
   };
 
-  const handlePlayerLogout = async () => {
+  // La révocation GLOBALE est conservée (un jeton volé ne doit pas survivre à
+  // la déconnexion) mais n'est plus attendue : la requête survit à une
+  // navigation côté client, alors que l'`await` immobilisait le bouton le
+  // temps de l'aller-retour. L'accueil ne dépend d'aucune session ; la barre
+  // joueuse disparaît à l'événement SIGNED_OUT, quelques centaines de ms plus
+  // tard.
+  const handlePlayerLogout = () => {
     setDrawerOpen(false);
-    try {
-      await supabaseClient.auth.signOut();
-    } catch {}
+    void supabaseClient.auth.signOut().catch(() => {});
     router.push('/');
   };
 
