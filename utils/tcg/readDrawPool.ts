@@ -39,18 +39,30 @@ export type DrawPoolResult =
  *     `NULL <> false` ne vaut pas vrai —, d'où le `or(...)` qui accepte les
  *     deux formes de « active ».
  */
-export async function readDrawPool(tenantId: string): Promise<DrawPoolResult> {
-  if (!supabaseAdmin) return { ok: false, error: 'supabaseAdmin absent' };
-
-  const [playersRes, teamsRes, fanartRes] = await Promise.all([
-    supabaseAdmin
+/**
+ * Les trois requêtes du vivier, à une projection près.
+ *
+ * LES FILTRES NE SONT ÉCRITS QU'ICI. C'est toute la raison d'être de ce
+ * module : `readDrawPool` (qui veut les identifiants) et `readDrawPoolSizes`
+ * (qui ne veut que les nombres) partent de la MÊME définition. Deux fonctions
+ * qui recopieraient chacune `is_active.is.null,is_active.eq.true` finiraient
+ * par ne plus décrire le même vivier — et le dénominateur de la collection
+ * promettrait des cartes qu'aucun paquet ne peut donner.
+ *
+ * `head` : `true` ne rapatrie aucune ligne et ne demande que le compte.
+ */
+function poolQueries(tenantId: string, head: boolean) {
+  const db = supabaseAdmin!;
+  const count = head ? ({ count: 'exact', head: true } as const) : undefined;
+  return [
+    db
       .from('player_ratings')
-      .select('user_id')
+      .select('user_id', count)
       .eq('tenant_id', tenantId)
       .limit(POOL_LIMIT),
-    supabaseAdmin
+    db
       .from('teams')
-      .select('id')
+      .select('id', count)
       .eq('tenant_id', tenantId)
       .is('deleted_at', null)
       .or('is_active.is.null,is_active.eq.true')
@@ -58,13 +70,74 @@ export async function readDrawPool(tenantId: string): Promise<DrawPoolResult> {
     // Fan arts : seules les APPROUVÉES. Une œuvre retirée (`revoked`) sort du
     // vivier immédiatement — le retrait doit valoir pour les paquets à venir,
     // même si les cartes déjà tirées, elles, restent (cf. la migration).
-    supabaseAdmin
+    db
       .from('tcg_fanart_cards')
-      .select('id')
+      .select('id', count)
       .eq('tenant_id', tenantId)
       .eq('status', 'approved')
       .limit(POOL_LIMIT),
-  ]);
+  ] as const;
+}
+
+export type DrawPoolSizes = {
+  players: number;
+  teams: number;
+  fanarts: number;
+};
+
+export type DrawPoolSizesResult =
+  | { ok: true; value: DrawPoolSizes }
+  | { ok: false; error: string };
+
+/**
+ * La TAILLE du vivier, sans en rapatrier le contenu.
+ *
+ * POURQUOI CETTE VARIANTE EXISTE. Le dénominateur de la collection n'a besoin
+ * que de trois entiers, et il est calculé à CHAQUE affichage. Le faire passer
+ * par `readDrawPool` ramenait jusqu'à trois mille UUID — une centaine de
+ * kilo-octets sur le réseau, à chaque ouverture d'une page qui n'en fait rien.
+ * Les compteurs `head: true` ne rapportent que le nombre.
+ *
+ * Plafonné à `POOL_LIMIT` par l'appelant, comme les identifiants le sont par
+ * `.limit()` : au delà, le tirage ne regarde pas les sujets suivants, donc les
+ * compter rendrait la complétion inatteignable.
+ */
+export async function readDrawPoolSizes(
+  tenantId: string
+): Promise<DrawPoolSizesResult> {
+  if (!supabaseAdmin) return { ok: false, error: 'supabaseAdmin absent' };
+
+  const [playersRes, teamsRes, fanartRes] = await Promise.all(
+    poolQueries(tenantId, true)
+  );
+
+  if (playersRes.error || teamsRes.error || fanartRes.error) {
+    return {
+      ok: false,
+      error:
+        playersRes.error?.message ??
+        teamsRes.error?.message ??
+        fanartRes.error?.message ??
+        'inconnue',
+    };
+  }
+
+  return {
+    ok: true,
+    value: {
+      players: playersRes.count ?? 0,
+      teams: teamsRes.count ?? 0,
+      fanarts: fanartRes.count ?? 0,
+    },
+  };
+}
+
+export async function readDrawPool(tenantId: string): Promise<DrawPoolResult> {
+  if (!supabaseAdmin) return { ok: false, error: 'supabaseAdmin absent' };
+
+  const [playersRes, teamsRes, fanartRes] = await Promise.all(
+    poolQueries(tenantId, false)
+  );
 
   if (playersRes.error || teamsRes.error || fanartRes.error) {
     return {

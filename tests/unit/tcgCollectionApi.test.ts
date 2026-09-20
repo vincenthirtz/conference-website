@@ -42,6 +42,8 @@ import {
   setAuthUser,
 } from './__helpers__/supabaseMock';
 import { DEFAULT_TENANT_ID } from '../../utils/tenant';
+import { MAP_POOL_SLUGS } from '../../utils/tcg/readMapFaces';
+import { GAME_MASCOT_SLUGS } from '../../utils/tcg/gameMascots';
 
 import handler from '../../pages/api/player/tcg/collection';
 
@@ -215,6 +217,10 @@ describe('GET /api/player/tcg/collection — périmètre', () => {
       cards: [],
       distinct: 0,
       total: 0,
+      // Le vivier est servi MÊME vide : sans lui, la barre de progression est
+      // masquée sur l'écran d'une joueuse qui n'a encore rien — soit
+      // exactement là où « 0 sur 1247 » donne envie d'ouvrir un paquet.
+      pool: { distinct: MAP_POOL_SLUGS.length + GAME_MASCOT_SLUGS.length },
       nextCursor: null,
     });
   });
@@ -254,6 +260,13 @@ describe('GET /api/player/tcg/collection — périmètre', () => {
       cards: [],
       distinct: 0,
       total: 0,
+      // Le VIVIER n'est pas la collection : il compte ce qui EXISTE dans
+      // l'espace, donc la joueuse semée ici en fait partie même si aucune de
+      // ses cartes n'appartient à l'appelante. C'est ce qu'on veut — le
+      // dénominateur décrit l'horizon, pas la possession.
+      pool: {
+        distinct: 1 + MAP_POOL_SLUGS.length + GAME_MASCOT_SLUGS.length,
+      },
       nextCursor: null,
     });
   });
@@ -282,6 +295,59 @@ describe('GET /api/player/tcg/collection — périmètre', () => {
 /* -------------------------------------------------------------------------- */
 
 describe('GET /api/player/tcg/collection — agrégation', () => {
+  it('compte les CINQ types dans le dénominateur du vivier', async () => {
+    // CE QUE LA JOUEUSE LIT : « X sur Y ». Le Y comptait joueuses + équipes +
+    // maps pendant que le tirage distribuait aussi des fan arts et des
+    // mascottes. Conséquence exacte : une carte hors dénominateur fait lire
+    // « 1210 sur 1200 », ou bloque sous un total déjà dépassé — et rien, ni
+    // erreur ni journal, ne dit pourquoi.
+    seedRating(OWNER, 'Alice');
+    seedRating('22222222-2222-4222-8222-222222222222', 'Bea');
+    (store.teams ||= []).push({
+      id: '33333333-3333-4333-8333-333333333331',
+      tenant_id: DEFAULT_TENANT_ID,
+      deleted_at: null,
+      is_active: true,
+    });
+    (store.tcg_fanart_cards ||= []).push({
+      id: '44444444-4444-4444-8444-444444444441',
+      tenant_id: DEFAULT_TENANT_ID,
+      status: 'approved',
+    });
+
+    const res = await getCollection();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.pool.distinct).toBe(
+      2 + 1 + MAP_POOL_SLUGS.length + 1 + GAME_MASCOT_SLUGS.length
+    );
+  });
+
+  it('exclut du vivier ce que le tirage ne peut pas donner', async () => {
+    // Le dénominateur doit décrire le MÊME ensemble que le tirage. Une équipe
+    // supprimée et une fan art non approuvée ne sortiront jamais d'un paquet :
+    // les compter promettrait des cartes inatteignables, donc une collection
+    // qu'on ne peut pas terminer.
+    seedRating(OWNER, 'Alice');
+    (store.teams ||= []).push({
+      id: '33333333-3333-4333-8333-333333333332',
+      tenant_id: DEFAULT_TENANT_ID,
+      deleted_at: '2026-01-01T00:00:00.000Z',
+      is_active: true,
+    });
+    (store.tcg_fanart_cards ||= []).push({
+      id: '44444444-4444-4444-8444-444444444442',
+      tenant_id: DEFAULT_TENANT_ID,
+      status: 'pending',
+    });
+
+    const res = await getCollection();
+
+    expect(res.body.pool.distinct).toBe(
+      1 + MAP_POOL_SLUGS.length + GAME_MASCOT_SLUGS.length
+    );
+  });
+
   it('regroupe par sujet : deux exemplaires = 1 carte distincte, 2 exemplaires', async () => {
     // La distinction « distinct » / « total » est ce que la page affiche
     // (« 1 carte différente · 2 exemplaires »). Un regroupement qui casserait

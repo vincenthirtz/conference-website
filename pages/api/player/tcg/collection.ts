@@ -42,7 +42,7 @@ import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
 import { readMapFaces, MAP_POOL_SLUGS } from '@/utils/tcg/readMapFaces';
 import { cardSubjectKey, type TcgCardKind } from '@/utils/tcg/subjectKey';
 import { readOwnedCardRows } from '@/utils/tcg/readOwnedCards';
-import { readDrawPool } from '@/utils/tcg/readDrawPool';
+import { readDrawPoolSizes } from '@/utils/tcg/readDrawPool';
 import { GAME_MASCOT_SLUGS } from '@/utils/tcg/gameMascots';
 import { copyRef, readEngagedCopies } from '@/utils/tcg/engagedCards';
 import {
@@ -132,6 +132,49 @@ function freerAtEqualValue(
   return a.rarity === b.rarity && a.foil === b.foil && !a.engaged && b.engaged;
 }
 
+/**
+ * Le VIVIER : combien de sujets EXISTENT, pour que « 12 cartes » devienne
+ * « 12 sur 48 ». Sans dénominateur, une collection n'a pas d'horizon.
+ *
+ * LE VIVIER EST CELUI DU TIRAGE, PAR CONSTRUCTION : `readDrawPoolSizes` vit
+ * dans le module que lit `packs.ts` à l'ouverture. Cette route recomptait
+ * naguère joueuses et équipes avec ses propres `.eq()` / `.or()`, copiés « au
+ * mot près » de l'ouverture — et deux copies d'un filtre finissent par
+ * diverger.
+ *
+ * COMPTÉ, PAS RAPATRIÉ. Trois entiers suffisent, et cette route est appelée à
+ * chaque affichage : lire les identifiants ramenait jusqu'à trois mille UUID
+ * pour n'en garder que la longueur.
+ *
+ * LES CINQ TYPES. Le dénominateur a compté joueuses + équipes + maps pendant
+ * que le tirage distribuait déjà des fan arts, puis des mascottes. Une carte
+ * hors dénominateur fait lire « 1210 sur 1200 », ou bloque sous un total déjà
+ * dépassé. Maps et mascottes ne se comptent pas en base : leur vivier EST le
+ * registre en mémoire, celui que reçoit le tirage.
+ *
+ * Plafonné à `POOL_LIMIT`, la constante que le tirage lit aussi : au delà, il
+ * ne regarde pas les sujets suivants, donc les compter rendrait la complétion
+ * inatteignable.
+ *
+ * BEST-EFFORT : un vivier illisible rend `null`, pas `0`. Le composant de
+ * progression masque alors sa barre au lieu d'annoncer « 12 sur 0 ».
+ */
+async function readPoolDistinct(
+  tenantId: string
+): Promise<{ distinct: number } | null> {
+  const sizes = await readDrawPoolSizes(tenantId);
+  if (!sizes.ok) {
+    logger.warn('[tcg/collection] vivier illisible: %s', sizes.error);
+    return null;
+  }
+  const players = Math.min(sizes.value.players, POOL_LIMIT);
+  const teams = Math.min(sizes.value.teams, POOL_LIMIT);
+  const fanarts = Math.min(sizes.value.fanarts, POOL_LIMIT);
+  const maps = Math.min(MAP_POOL_SLUGS.length, POOL_LIMIT);
+  const mascots = Math.min(GAME_MASCOT_SLUGS.length, POOL_LIMIT);
+  return { distinct: players + teams + maps + fanarts + mascots };
+}
+
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -210,9 +253,17 @@ export default withAuthRoute(async function handler(
   }
   const cardRows = owned.value;
   if (cardRows.length === 0) {
-    return res
-      .status(200)
-      .json({ cards: [], distinct: 0, total: 0, nextCursor: null });
+    // LE DÉNOMINATEUR AUSSI POUR UNE COLLECTION VIDE. Ce raccourci le
+    // sautait : une joueuse qui n'a encore rien recevait `pool` absent, donc
+    // une barre de progression masquée — précisément sur l'écran où connaître
+    // l'horizon (« 0 sur 1247 ») est ce qui donne envie d'ouvrir un paquet.
+    return res.status(200).json({
+      cards: [],
+      distinct: 0,
+      total: 0,
+      pool: await readPoolDistinct(tenantId),
+      nextCursor: null,
+    });
   }
 
   // 3) Agrégation par sujet.
@@ -416,19 +467,12 @@ export default withAuthRoute(async function handler(
   //
   //    BEST-EFFORT : un vivier illisible rend `null`, pas `0`. Le composant de
   //    progression masque alors sa barre au lieu d'annoncer « 12 sur 0 ».
-  let pool: { distinct: number } | null = null;
-  const drawPool = await readDrawPool(tenantId);
-
-  if (!drawPool.ok) {
-    logger.warn('[tcg/collection] vivier illisible: %s', drawPool.error);
-  } else {
-    const players = Math.min(drawPool.value.playerIds.length, POOL_LIMIT);
-    const teams = Math.min(drawPool.value.teamIds.length, POOL_LIMIT);
-    const fanarts = Math.min(drawPool.value.fanartIds.length, POOL_LIMIT);
-    const maps = Math.min(MAP_POOL_SLUGS.length, POOL_LIMIT);
-    const mascots = Math.min(GAME_MASCOT_SLUGS.length, POOL_LIMIT);
-    pool = { distinct: players + teams + maps + fanarts + mascots };
-  }
+  //    COMPTÉ, PAS RAPATRIÉ. Trois entiers suffisent ici, et cette route est
+  //    appelée à chaque affichage de la collection : passer par la lecture des
+  //    identifiants ramenait jusqu'à trois mille UUID pour n'en garder que la
+  //    longueur. `readDrawPoolSizes` vit dans le même module et applique les
+  //    mêmes filtres — la source reste unique, seule la projection change.
+  const pool = await readPoolDistinct(tenantId);
 
   return res.status(200).json({
     cards,
