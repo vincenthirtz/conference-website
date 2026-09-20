@@ -23,7 +23,6 @@ import {
   settlePrediction,
   type PredictionMatch,
 } from '../../utils/predictions/rules';
-import { TCG_EARN_SOURCES } from '../../utils/tcg/earnSources';
 
 const A = 'aaaaaaaa-0000-4000-8000-000000000001';
 const B = 'bbbbbbbb-0000-4000-8000-000000000002';
@@ -199,17 +198,5 @@ describe('migration match_predictions.sql', () => {
 
   it('un pronostic par personne et par match', () => {
     expect(flat).toContain('UNIQUE (tenant_id, match_id, user_id)');
-  });
-
-  it('le CHECK du porte-monnaie liste toutes les sources du registre', () => {
-    const check = flat.slice(
-      flat.indexOf('ADD CONSTRAINT tcg_wallet_entries_source_kind_check')
-    );
-    for (const source of TCG_EARN_SOURCES) {
-      expect(check).toContain(`'${source.key}'`);
-    }
-    // Et la valeur hors registre qui existe en base.
-    expect(check).toContain("'admin_grant'");
-    expect(check).toContain("'card_recycled'");
   });
 });

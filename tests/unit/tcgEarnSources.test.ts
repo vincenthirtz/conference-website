@@ -13,6 +13,8 @@
 // paierait mieux que jouer.
 
 import { describe, expect, it } from 'vitest';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import {
   BOOSTER_PRICE_COINS,
@@ -452,5 +454,64 @@ describe('getEarnSource / isEarnSourceKey', () => {
 
   it('rend null sur une clé inconnue', () => {
     expect(getEarnSource('card_recycled')).toBeNull();
+  });
+});
+
+describe('le CHECK du porte-monnaie et le registre', () => {
+  /**
+   * POURQUOI CE TEST A CHANGÉ DE MAISON. Il vivait dans
+   * `matchPredictionRules.test.ts` et lisait `match_predictions.sql`, parce que
+   * c'était la dernière migration à avoir redéfini la contrainte. Mais le CHECK
+   * DÉMÉNAGE : chaque élargissement le réécrit dans un NOUVEAU fichier, et le
+   * test continuait d'interroger l'ancien. Il est tombé le 2026-09-20 en
+   * réclamant `staff_welcome` à une migration écrite avant que cette source
+   * existe — en accusant le mauvais fichier.
+   *
+   * On cherche donc la contrainte dans TOUTES les migrations, et on exige
+   * qu'au moins une la décrive au complet. Le compromis est assumé : ce test
+   * ne dit pas LAQUELLE fait autorité en base. C'est le bon prix pour qu'il ne
+   * dépende plus d'un nom de fichier, et l'état réel de la production se
+   * vérifie par `npm run tcg:audit`.
+   */
+  const MIGRATIONS = 'database/migrations';
+  const CONSTRAINT = 'tcg_wallet_entries_source_kind_check';
+
+  function checkBlocks(): string[] {
+    const out: string[] = [];
+    for (const name of readdirSync(MIGRATIONS)) {
+      if (!name.endsWith('.sql')) continue;
+      const sql = readFileSync(join(MIGRATIONS, name), 'utf8');
+      const at = sql.indexOf(`ADD CONSTRAINT ${CONSTRAINT}`);
+      if (at === -1) continue;
+      out.push(sql.slice(at));
+    }
+    return out;
+  }
+
+  it('une migration au moins liste TOUTES les sources du registre', () => {
+    const blocks = checkBlocks();
+    expect(blocks.length).toBeGreaterThan(0);
+
+    // Le message compte : sans lui, on saurait que « ça ne passe plus » sans
+    // savoir QUELLE source manque.
+    const missing = TCG_EARN_SOURCES.filter(
+      (source) => !blocks.some((b) => b.includes(`'${source.key}'`))
+    ).map((s) => s.key);
+    expect(missing).toEqual([]);
+
+    const complete = blocks.find((block) =>
+      TCG_EARN_SOURCES.every((source) => block.includes(`'${source.key}'`))
+    );
+    // Toutes présentes, mais éparpillées sur plusieurs migrations, laisserait
+    // la base sans CHECK complet : c'est la dernière appliquée qui règne.
+    expect(complete).toBeDefined();
+  });
+
+  it('garde les deux valeurs HORS registre qui existent en base', () => {
+    // `admin_grant` et `card_recycled` ne sont pas des voies de GAIN : elles
+    // n'ont rien à faire dans le registre, mais tout à faire dans le CHECK.
+    const blocks = checkBlocks();
+    expect(blocks.some((b) => b.includes("'admin_grant'"))).toBe(true);
+    expect(blocks.some((b) => b.includes("'card_recycled'"))).toBe(true);
   });
 });
