@@ -2,8 +2,20 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    # `work` EST la branche de production (Netlify y construit et déploie).
+    # Elle a longtemps manqué ici : comme on committe directement dessus, sans
+    # branche ni PR, la CI ne tournait sur RIEN de ce qui partait en prod.
+    # `master` est l'archive legacy, gardée par prudence.
+    #
+    # La CI arrive donc APRÈS le déploiement : c'est un détecteur, pas une
+    # barrière. Pour bloquer avant la mise en ligne, il faudrait passer par des
+    # PR — ce que ce dépôt a écarté. Le filet local reste `npm run verify`.
+    branches: [work, master]
   pull_request:
+  # Rejouer la CI à la demande, sur n'importe quelle branche, sans pousser un
+  # commit vide — utile quand la machine locale ne peut pas faire tourner la
+  # suite (cf. `npm run verify -- --serial` et `VERIFY_JOBS`).
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
