@@ -14,11 +14,7 @@ import { logStaffAction } from '../staffLogs';
 import { computeRequiredWins, isSeriesFinished } from './computeRequiredWins';
 import { invalidateStandingsCache } from '../stages/standingsCache';
 import { tryAutoAdvanceFromMatch } from '../stages/autoAdvance';
-import {
-  notifyMatchResult,
-  notifyBracketUpdate,
-  postMvpPoll,
-} from '../discord';
+import { notifyMatchResult, notifyBracketUpdate } from '../discord';
 import { emitBotEvent } from '../botEvents';
 import { enrichMatchEvent } from './botEventEnrich';
 import { applyMatchRatingIncremental } from '../rating/applyMatchRating';
@@ -728,18 +724,6 @@ export async function applyMatchScore(
       );
     }
 
-    // MVP poll: only on real finishes (not forfeits — there's no game to vote
-    // an MVP for). Fire-and-forget; failures are logged but don't block.
-    if (newStatus === 'finished' && !resolvedForfeitTeamId) {
-      void sendMvpPollForMatch({
-        tenantId,
-        matchId,
-        tournamentId: match.tournament_id ?? null,
-        team1Id: match.team1_id ?? null,
-        team2Id: match.team2_id ?? null,
-      }).catch((e: unknown) => logger.error('[discord] mvp poll error:', e));
-    }
-
     // Auto-director (Feature: Production broadcast automatisée) : bascule la
     // scene overlay vers 'results' si ce match est celui du segment live.
     // Best-effort, non-bloquant — comme les emits bot ci-dessus.
@@ -920,103 +904,4 @@ export function computeWinnerFromScores(
 
   // égalité → aucun vainqueur défini par défaut
   return null;
-}
-
-/* -----------------------------------------------------------
- * MVP poll auto-post (after a real "finished" match)
- * ---------------------------------------------------------*/
-
-async function sendMvpPollForMatch(params: {
-  tenantId: string;
-  matchId: string;
-  tournamentId: string | null;
-  team1Id: string | null;
-  team2Id: string | null;
-}): Promise<void> {
-  if (!params.team1Id || !params.team2Id) return;
-
-  // Skip if a poll was already posted for this match (idempotency)
-  const { data: existing } = await supabaseAdmin
-    .from('match_mvp_polls')
-    .select('id, posted_at')
-    .eq('tenant_id', params.tenantId)
-    .eq('match_id', params.matchId)
-    .maybeSingle();
-
-  if (existing?.posted_at) return;
-
-  // Fetch team names + non-substitute roster
-  const teamIds = [params.team1Id, params.team2Id];
-  const { data: teams } = await supabaseAdmin
-    .from('teams')
-    .select('id, name')
-    .eq('tenant_id', params.tenantId)
-    .in('id', teamIds);
-
-  const teamById = new Map<string, string>();
-  for (const t of teams || []) teamById.set(t.id, t.name);
-  const team1Name = teamById.get(params.team1Id) || 'Équipe 1';
-  const team2Name = teamById.get(params.team2Id) || 'Équipe 2';
-
-  const { data: members } = await supabaseAdmin
-    .from('team_members')
-    .select('id, team_id, battle_tag, is_substitute')
-    .eq('tenant_id', params.tenantId)
-    .in('team_id', teamIds);
-
-  const candidates = (members || [])
-    .filter((m: any) => !m.is_substitute && m.battle_tag)
-    .map((m: any) => ({
-      id: m.id as string,
-      teamId: m.team_id as string,
-      battleTag: m.battle_tag as string,
-    }))
-    // Discord native polls: max 10 answers
-    .slice(0, 10);
-
-  if (candidates.length < 2) return; // Discord requires >=2 answers
-
-  const teamShort: Record<string, string> = {
-    [params.team1Id]: team1Name.slice(0, 12),
-    [params.team2Id]: team2Name.slice(0, 12),
-  };
-
-  const pollAnswers = candidates.map((c) => ({
-    displayLabel: `[${teamShort[c.teamId] || '?'}] ${c.battleTag}`,
-  }));
-
-  const result = await postMvpPoll({
-    tournamentId: params.tournamentId,
-    matchId: params.matchId,
-    team1Name,
-    team2Name,
-    candidates: pollAnswers,
-    durationHours: 24,
-  });
-
-  if (!result.posted) return;
-
-  // Persist the poll state (candidates, posted_at)
-  const candidateIds = candidates.map((c) => c.id);
-
-  if (existing?.id) {
-    await supabaseAdmin
-      .from('match_mvp_polls')
-      .update({
-        posted_at: new Date().toISOString(),
-        duration_hours: 24,
-        candidate_player_ids: candidateIds,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('tenant_id', params.tenantId)
-      .eq('id', existing.id);
-  } else {
-    await supabaseAdmin.from('match_mvp_polls').insert({
-      tenant_id: params.tenantId,
-      match_id: params.matchId,
-      posted_at: new Date().toISOString(),
-      duration_hours: 24,
-      candidate_player_ids: candidateIds,
-    });
-  }
 }

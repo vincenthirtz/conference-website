@@ -1196,7 +1196,6 @@ export async function fetchDashboardData(
       'veto_live',
       'checkin_reminders',
       'support_tickets',
-      'mvp_polls',
     ] as const;
 
     const webhookRows = (discordWebhooksRes.data ?? []) as {
@@ -1217,8 +1216,6 @@ export async function fetchDashboardData(
           return ongoingMatches > 0 || finishedMatches > 0;
         case 'checkin_reminders':
           return checkin24h.upcoming > 0;
-        case 'mvp_polls':
-          return finishedMatches > 0;
         default:
           return false; // veto/support → on ne flag pas comme stale
       }

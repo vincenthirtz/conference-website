@@ -10,7 +10,6 @@ const {
   tryAutoAdvanceFromMatch,
   notifyMatchResult,
   notifyBracketUpdate,
-  postMvpPoll,
 } = vi.hoisted(() => ({
   resetPropagationForMatch: vi.fn(async () => undefined),
   propagateBracketForMatch: vi.fn(async (matchId: string) => ({
@@ -34,7 +33,6 @@ const {
   tryAutoAdvanceFromMatch: vi.fn(async () => undefined),
   notifyMatchResult: vi.fn(async () => undefined),
   notifyBracketUpdate: vi.fn(async () => undefined),
-  postMvpPoll: vi.fn(async () => ({ posted: false })),
 }));
 
 vi.mock('../../utils/bracket/propagate', () => ({
@@ -58,7 +56,6 @@ vi.mock('../../utils/stages/autoAdvance', () => ({ tryAutoAdvanceFromMatch }));
 vi.mock('../../utils/discord', () => ({
   notifyMatchResult,
   notifyBracketUpdate,
-  postMvpPoll,
 }));
 
 import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
@@ -109,7 +106,6 @@ beforeEach(() => {
   tryAutoAdvanceFromMatch.mockClear();
   notifyMatchResult.mockClear();
   notifyBracketUpdate.mockClear();
-  postMvpPoll.mockClear();
 });
 
 /* -----------------------------------------------------------
@@ -522,18 +518,6 @@ describe('applyMatchScore — side effects', () => {
       stageId: 'stage-1',
       staffId: null,
     });
-  });
-
-  it('skips MVP poll on a forfeit (walkover)', async () => {
-    seedMatch();
-    seedTournament();
-    await applyMatchScore({
-      tenantId: TENANT_ID,
-      matchId: 'm1',
-      forfeitTeamId: 'team-a',
-    });
-    await new Promise((r) => setImmediate(r));
-    expect(postMvpPoll).not.toHaveBeenCalled();
   });
 
   it('auto-computes scores from match_format=bo1 on forfeit of team2', async () => {

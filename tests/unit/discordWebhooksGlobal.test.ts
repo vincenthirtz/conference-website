@@ -165,7 +165,7 @@ describe('PUT /api/admin/site-settings/discord-webhooks', () => {
       makeAuthedReq({
         method: 'PUT',
         body: {
-          channelType: 'mvp_polls',
+          channelType: 'support_tickets',
           webhookUrl: VALID_DISCORD_URL,
           roleMention: '1234567890',
         },
@@ -176,7 +176,7 @@ describe('PUT /api/admin/site-settings/discord-webhooks', () => {
     const rows = store.discord_webhooks as any[];
     expect(rows.length).toBe(1);
     expect(rows[0].tournament_id).toBeNull();
-    expect(rows[0].channel_type).toBe('mvp_polls');
+    expect(rows[0].channel_type).toBe('support_tickets');
     expect(rows[0].webhook_url).toBe(VALID_DISCORD_URL);
     expect(rows[0].role_mention).toBe('1234567890');
     // Régression : `discord_webhooks.tenant_id` est NOT NULL sans default en

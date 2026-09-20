@@ -128,8 +128,8 @@ export default adminNs('adminMatchEdit', {
   mvpLoading: 'Chargement...',
   mvpPollPostedPrefix: 'Sondage Discord posté le',
   mvpPollDuration: '— durée {hours}h',
-  mvpNoPollPrefix: 'Aucun sondage Discord posté (webhook',
-  mvpNoPollSuffix: 'non configuré ou moins de 2 candidates).',
+  mvpNoPoll:
+    "Aucun vote MVP ouvert sur ce match. Le bot en ouvre un automatiquement à la fin d'un match joué ; sinon, /mvp ouvrir le rattrape.",
   mvpRegistered: 'MVP enregistré',
   mvpImportedPrefix: '· importé le',
   clearBtn: 'Effacer',

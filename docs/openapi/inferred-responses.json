@@ -9714,10 +9714,6 @@
         {
          "type": "string",
          "const": "support_tickets"
-        },
-        {
-         "type": "string",
-         "const": "mvp_polls"
         }
        ]
       }
@@ -19418,10 +19414,6 @@
         {
          "type": "string",
          "const": "support_tickets"
-        },
-        {
-         "type": "string",
-         "const": "mvp_polls"
         }
        ]
       }

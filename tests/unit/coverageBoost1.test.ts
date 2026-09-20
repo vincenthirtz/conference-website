@@ -17,7 +17,6 @@ const {
   notifyCheckinReminderMock,
   notifyCheckinForfeitMock,
   notifySupportTicketMock,
-  postMvpPollMock,
   postToDiscordWebhookMock,
 } = vi.hoisted(() => ({
   logStaffActionMock: vi.fn(async () => undefined),
@@ -35,7 +34,6 @@ const {
   notifyCheckinReminderMock: vi.fn(async () => undefined),
   notifyCheckinForfeitMock: vi.fn(async () => undefined),
   notifySupportTicketMock: vi.fn(async () => undefined),
-  postMvpPollMock: vi.fn(async () => undefined),
   postToDiscordWebhookMock: vi.fn(async () => undefined),
 }));
 
@@ -54,7 +52,6 @@ vi.mock('@/utils/discord', () => ({
   notifyCheckinReminder: notifyCheckinReminderMock,
   notifyCheckinForfeit: notifyCheckinForfeitMock,
   notifySupportTicket: notifySupportTicketMock,
-  postMvpPoll: postMvpPollMock,
   postToDiscordWebhook: postToDiscordWebhookMock,
 }));
 

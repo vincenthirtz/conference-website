@@ -97,6 +97,8 @@ export async function listMvpCandidates(
     roundName: string | null;
     team1Id: string | null;
     team2Id: string | null;
+    /** Forfait ou bye : une série qui n'a PAS été jouée. */
+    isWalkover: boolean;
     /** Noms des deux équipes : le bot en a besoin pour son message quand
      *  l'ouverture vient d'une commande et non de l'événement du match. */
     team1Name: string | null;
@@ -106,7 +108,9 @@ export async function listMvpCandidates(
 }> {
   const { data: match } = await supabaseAdmin
     .from('matches')
-    .select('id, status, tournament_id, round_name, team1_id, team2_id')
+    .select(
+      'id, status, tournament_id, round_name, team1_id, team2_id, forfeit_team_id, is_bye'
+    )
     .eq('tenant_id', tenantId)
     .eq('id', matchId)
     .maybeSingle();
@@ -125,6 +129,7 @@ export async function listMvpCandidates(
         roundName: match.round_name ?? null,
         team1Id: match.team1_id ?? null,
         team2Id: match.team2_id ?? null,
+        isWalkover: !!match.forfeit_team_id || !!match.is_bye,
         team1Name: null,
         team2Name: null,
       },
@@ -199,6 +204,7 @@ export async function listMvpCandidates(
       roundName: match.round_name ?? null,
       team1Id: match.team1_id ?? null,
       team2Id: match.team2_id ?? null,
+      isWalkover: !!match.forfeit_team_id || !!match.is_bye,
       team1Name: match.team1_id ? (teamName.get(match.team1_id) ?? null) : null,
       team2Name: match.team2_id ? (teamName.get(match.team2_id) ?? null) : null,
     },

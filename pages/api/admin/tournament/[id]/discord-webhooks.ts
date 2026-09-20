@@ -18,7 +18,6 @@ const VALID_CHANNEL_TYPES = [
   'veto_live',
   'checkin_reminders',
   'support_tickets',
-  'mvp_polls',
 ] as const;
 
 type ChannelType = (typeof VALID_CHANNEL_TYPES)[number];

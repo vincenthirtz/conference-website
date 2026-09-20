@@ -75,7 +75,6 @@ vi.mock('../../utils/stages/autoAdvance', () => ({
 vi.mock('../../utils/discord', () => ({
   notifyMatchResult: vi.fn(async () => undefined),
   notifyBracketUpdate: vi.fn(async () => undefined),
-  postMvpPoll: vi.fn(async () => ({ posted: false })),
   notifyScoreReportDispute,
 }));
 vi.mock('../../utils/botEvents', () => ({ emitBotEvent }));

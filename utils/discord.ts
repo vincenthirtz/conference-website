@@ -29,28 +29,11 @@ type DiscordEmbed = {
   thumbnail?: { url: string };
 };
 
-type DiscordPollMedia = {
-  text: string;
-};
-
-type DiscordPollAnswer = {
-  poll_media: DiscordPollMedia;
-};
-
-type DiscordPoll = {
-  question: DiscordPollMedia;
-  answers: DiscordPollAnswer[];
-  duration: number; // hours, max 768
-  allow_multiselect?: boolean;
-  layout_type?: 1;
-};
-
 type DiscordWebhookPayload = {
   content?: string;
   username?: string;
   avatar_url?: string;
   embeds?: DiscordEmbed[];
-  poll?: DiscordPoll;
   allowed_mentions?: {
     parse?: ('roles' | 'users' | 'everyone')[];
     roles?: string[];
@@ -69,7 +52,6 @@ const COLORS = {
   supportLow: 0x3b82f6, // blue-500
   supportMedium: 0xf59e0b, // amber-500
   supportHigh: 0xdc2626, // red-600
-  mvpPoll: 0xf0e63c, // jaune (marque)
 };
 
 /* -----------------------------------------------------------
@@ -1248,96 +1230,4 @@ export async function notifySupportTicket(
   }
 
   return { messageId };
-}
-
-/* -----------------------------------------------------------
- * MVP poll (Discord native poll via webhook)
- * ---------------------------------------------------------*/
-
-export type MvpPollNotification = {
-  tournamentId: string | null;
-  matchId: string;
-  team1Name: string;
-  team2Name: string;
-  /** Up to 10 answers, each up to 55 chars (Discord limits) */
-  candidates: { displayLabel: string }[];
-  durationHours?: number; // default 24
-};
-
-export async function postMvpPoll(
-  data: MvpPollNotification
-): Promise<{ messageId: string | null; posted: boolean }> {
-  const cfg = await resolveWebhook(data.tournamentId, 'mvp_polls');
-  if (!cfg) return { messageId: null, posted: false };
-
-  // Discord native polls: max 10 answers, each text max 55 chars.
-  // We keep up to 10 candidates and truncate each label.
-  const answers: DiscordPollAnswer[] = data.candidates
-    .slice(0, 10)
-    .map((c) => ({
-      poll_media: { text: c.displayLabel.slice(0, 55) || '—' },
-    }));
-
-  if (answers.length < 2) {
-    // Discord requires at least 2 answers. Skip silently.
-    logger.warn(
-      '[discord] postMvpPoll skipped: not enough candidates for match',
-      data.matchId
-    );
-    return { messageId: null, posted: false };
-  }
-
-  const duration = Math.max(1, Math.min(768, data.durationHours ?? 24));
-  const channelPing = formatRoleMention(cfg.roleMention);
-
-  const url = `${cfg.url}?wait=true`;
-  let messageId: string | null = null;
-
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: "OW Women's Cup",
-        content: channelPing || undefined,
-        embeds: [
-          {
-            title: '🏅 Vote MVP',
-            description: `**${data.team1Name}** vs **${data.team2Name}** — qui mérite le titre de MVP du match ?`,
-            color: COLORS.mvpPoll,
-            timestamp: new Date().toISOString(),
-            footer: {
-              text: `Match ${data.matchId.slice(0, 8)} — sondage ouvert ${duration}h`,
-            },
-          },
-        ],
-        poll: {
-          question: { text: 'MVP du match ?' },
-          answers,
-          duration,
-          allow_multiselect: false,
-          layout_type: 1,
-        },
-        allowed_mentions: buildAllowedMentions(cfg.roleMention),
-      }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      logger.error(
-        '[discord] mvp poll POST failed:',
-        res.status,
-        text.slice(0, 300)
-      );
-      return { messageId: null, posted: false };
-    }
-
-    const body = await res.json().catch(() => null);
-    messageId = body?.id ?? null;
-  } catch (e) {
-    logger.error('[discord] mvp poll POST error:', e);
-    return { messageId: null, posted: false };
-  }
-
-  return { messageId, posted: true };
 }

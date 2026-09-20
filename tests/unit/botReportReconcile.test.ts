@@ -26,7 +26,6 @@ const {
   tryAutoAdvanceFromMatch,
   notifyMatchResult,
   notifyBracketUpdate,
-  postMvpPoll,
   notifyScoreReportDispute,
   emitBotEvent,
   enrichMatchEvent,
@@ -53,7 +52,6 @@ const {
   tryAutoAdvanceFromMatch: vi.fn(async () => undefined),
   notifyMatchResult: vi.fn(async () => undefined),
   notifyBracketUpdate: vi.fn(async () => undefined),
-  postMvpPoll: vi.fn(async () => ({ posted: false })),
   notifyScoreReportDispute: vi.fn(async () => undefined),
   emitBotEvent: vi.fn(async () => ({ ok: true })),
   enrichMatchEvent: vi.fn(async () => null),
@@ -83,7 +81,6 @@ vi.mock('../../utils/stages/autoAdvance', () => ({ tryAutoAdvanceFromMatch }));
 vi.mock('../../utils/discord', () => ({
   notifyMatchResult,
   notifyBracketUpdate,
-  postMvpPoll,
   notifyScoreReportDispute,
 }));
 vi.mock('../../utils/botEvents', () => ({ emitBotEvent }));

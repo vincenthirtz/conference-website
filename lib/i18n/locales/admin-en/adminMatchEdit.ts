@@ -129,8 +129,8 @@ export default {
   mvpLoading: 'Loading...',
   mvpPollPostedPrefix: 'Discord poll posted on',
   mvpPollDuration: '— duration {hours}h',
-  mvpNoPollPrefix: 'No Discord poll posted (webhook',
-  mvpNoPollSuffix: 'not configured or fewer than 2 candidates).',
+  mvpNoPoll:
+    'No MVP vote is open on this match. The bot opens one automatically when a played match ends; otherwise /mvp ouvrir catches it up.',
   mvpRegistered: 'MVP recorded',
   mvpImportedPrefix: '· imported on',
   clearBtn: 'Clear',

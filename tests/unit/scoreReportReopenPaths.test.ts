@@ -64,14 +64,12 @@ vi.mock('../../utils/stages/autoAdvance', () => ({
 vi.mock('../../utils/discord', () => ({
   notifyMatchResult: vi.fn(async () => undefined),
   notifyBracketUpdate: vi.fn(async () => undefined),
-  postMvpPoll: vi.fn(async () => ({ posted: false })),
   notifyScoreReportDispute: vi.fn(async () => undefined),
   notifyMatchStarting: vi.fn(async () => undefined),
 }));
 vi.mock('@/utils/discord', () => ({
   notifyMatchResult: vi.fn(async () => undefined),
   notifyBracketUpdate: vi.fn(async () => undefined),
-  postMvpPoll: vi.fn(async () => ({ posted: false })),
   notifyScoreReportDispute: vi.fn(async () => undefined),
   notifyMatchStarting: vi.fn(async () => undefined),
 }));

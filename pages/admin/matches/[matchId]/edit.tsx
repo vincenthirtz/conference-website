@@ -1225,9 +1225,7 @@ function MvpSection({ matchId }: { matchId: string }) {
                   {format(t.mvpPollDuration, { hours: poll.duration_hours })}
                 </>
               ) : (
-                <span>
-                  {t.mvpNoPollPrefix} <code>mvp_polls</code> {t.mvpNoPollSuffix}
-                </span>
+                <span>{t.mvpNoPoll}</span>
               )}
             </div>
 

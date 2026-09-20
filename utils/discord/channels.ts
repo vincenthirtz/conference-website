@@ -18,7 +18,6 @@ export const DISCORD_CHANNEL_TYPES = [
   'veto_live',
   'checkin_reminders',
   'support_tickets',
-  'mvp_polls',
 ] as const;
 
 export type DiscordChannelType = (typeof DISCORD_CHANNEL_TYPES)[number];
@@ -67,11 +66,6 @@ export const DISCORD_CHANNEL_META: Record<
     label: 'Tickets de support',
     description:
       'Signalements (litiges, comportement, technique). Sévérité HAUTE = ping du rôle modération.',
-  },
-  mvp_polls: {
-    label: 'Sondages MVP',
-    description:
-      'Sondage Discord natif (24h) pour élire la MVP, posté automatiquement à la fin de chaque match.',
   },
 };
 

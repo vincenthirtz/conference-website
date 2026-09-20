@@ -72,6 +72,16 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
         .json({ error: "Le match n'est pas terminé", status: match.status });
     }
 
+    // Forfait ou bye : il n'y a pas eu de partie, donc personne à élire. Règle
+    // héritée de l'auto-post par webhook, qui la portait explicitement — la
+    // perdre en changeant de canal aurait fait voter sur des matchs non joués,
+    // `match.finished` étant émis pour les walkovers aussi (isForfeit: true).
+    if (match.isWalkover) {
+      return res.status(409).json({
+        error: "Ce match n'a pas été joué (forfait ou bye) : pas de MVP",
+      });
+    }
+
     const opened = await openMvpVote(tenantId, matchId, {
       channelId: body.channelId ?? null,
       messageId: body.messageId ?? null,

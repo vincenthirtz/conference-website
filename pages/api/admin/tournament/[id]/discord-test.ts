@@ -15,7 +15,6 @@ const VALID_CHANNEL_TYPES = [
   'veto_live',
   'checkin_reminders',
   'support_tickets',
-  'mvp_polls',
 ] as const;
 
 export default withStaffRoute(handler, { permission: 'manage_tournaments' });

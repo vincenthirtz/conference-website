@@ -38,7 +38,6 @@ import {
   notifyCheckinForfeit,
   notifyCheckinCancelledNoShow,
   notifySupportTicket,
-  postMvpPoll,
 } from '../../utils/discord';
 
 const origEnv = { ...process.env };
@@ -545,119 +544,5 @@ describe('notifySupportTicket', () => {
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     const auteur = body.embeds[0].fields.find((f: any) => f.name === 'Auteur');
     expect(auteur.value).toContain('anonyme');
-  });
-});
-
-/* -----------------------------------------------------------
- * postMvpPoll
- * ---------------------------------------------------------*/
-
-describe('postMvpPoll', () => {
-  it('skips if no webhook is configured', async () => {
-    setNextWebhook(null);
-    const mockFetch = vi.fn();
-    vi.stubGlobal('fetch', mockFetch);
-
-    const out = await postMvpPoll({
-      tournamentId: null,
-      matchId: 'm',
-      team1Name: 'A',
-      team2Name: 'B',
-      candidates: [{ displayLabel: 'X' }, { displayLabel: 'Y' }],
-    });
-
-    expect(out).toEqual({ messageId: null, posted: false });
-    expect(mockFetch).not.toHaveBeenCalled();
-  });
-
-  it('skips when fewer than 2 candidates are provided', async () => {
-    setNextWebhook({ webhook_url: 'https://x', role_mention: null });
-    const mockFetch = vi.fn();
-    vi.stubGlobal('fetch', mockFetch);
-
-    const out = await postMvpPoll({
-      tournamentId: null,
-      matchId: 'm-12345678',
-      team1Name: 'A',
-      team2Name: 'B',
-      candidates: [{ displayLabel: 'Solo' }],
-    });
-
-    expect(out.posted).toBe(false);
-    expect(mockFetch).not.toHaveBeenCalled();
-  });
-
-  it('caps to 10 answers and truncates labels at 55 chars', async () => {
-    setNextWebhook({ webhook_url: 'https://x', role_mention: null });
-    const mockFetch = vi.fn().mockResolvedValue(jsonOk({ id: 'poll-1' }));
-    vi.stubGlobal('fetch', mockFetch);
-
-    const candidates = Array.from({ length: 15 }, (_, i) => ({
-      displayLabel: `${'a'.repeat(60)}-${i}`,
-    }));
-
-    const out = await postMvpPoll({
-      tournamentId: null,
-      matchId: 'm-12345678',
-      team1Name: 'A',
-      team2Name: 'B',
-      candidates,
-    });
-
-    expect(out).toEqual({ messageId: 'poll-1', posted: true });
-
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(body.poll.answers).toHaveLength(10);
-    for (const a of body.poll.answers) {
-      expect(a.poll_media.text.length).toBeLessThanOrEqual(55);
-    }
-  });
-
-  it('clamps duration into the [1, 768] hour range', async () => {
-    setNextWebhook({ webhook_url: 'https://x', role_mention: null });
-    const mockFetch = vi.fn().mockResolvedValue(jsonOk());
-    vi.stubGlobal('fetch', mockFetch);
-
-    await postMvpPoll({
-      tournamentId: null,
-      matchId: 'm-12345678',
-      team1Name: 'A',
-      team2Name: 'B',
-      candidates: [{ displayLabel: 'X' }, { displayLabel: 'Y' }],
-      durationHours: 9999,
-    });
-
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(body.poll.duration).toBe(768);
-
-    mockFetch.mockClear();
-    setNextWebhook({ webhook_url: 'https://x', role_mention: null });
-
-    await postMvpPoll({
-      tournamentId: null,
-      matchId: 'm-12345678',
-      team1Name: 'A',
-      team2Name: 'B',
-      candidates: [{ displayLabel: 'X' }, { displayLabel: 'Y' }],
-      durationHours: 0,
-    });
-
-    const body2 = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(body2.poll.duration).toBe(1);
-  });
-
-  it('returns posted: false when Discord rejects the request', async () => {
-    setNextWebhook({ webhook_url: 'https://x', role_mention: null });
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(nonOk(400, 'bad')));
-
-    const out = await postMvpPoll({
-      tournamentId: null,
-      matchId: 'm-12345678',
-      team1Name: 'A',
-      team2Name: 'B',
-      candidates: [{ displayLabel: 'X' }, { displayLabel: 'Y' }],
-    });
-
-    expect(out).toEqual({ messageId: null, posted: false });
   });
 });

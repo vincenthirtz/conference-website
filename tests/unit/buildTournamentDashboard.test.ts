@@ -59,7 +59,7 @@ describe('fetchDashboardData', () => {
     expect(r.data.stages).toEqual([]);
     expect(r.data.upcomingMatches).toEqual([]);
     // 7 channel types
-    expect(r.data.signals.discordHealth.channels.length).toBe(7);
+    expect(r.data.signals.discordHealth.channels.length).toBe(6);
     expect(r.data.signals.disputesOpen.count).toBe(0);
     expect(r.data.signals.checkinNext24h.upcoming).toBe(0);
     // status guards: 5 entries, with 'draft' / 'archived' always allowed
@@ -364,7 +364,7 @@ describe('fetchDashboardData', () => {
     );
 
     // Discord webhook health
-    expect(r.data.signals.discordHealth.channels.length).toBe(7);
+    expect(r.data.signals.discordHealth.channels.length).toBe(6);
 
     // Cron checkin heartbeat
     expect(r.data.signals.cronCheckin.lastRunAt).toBeTruthy();
