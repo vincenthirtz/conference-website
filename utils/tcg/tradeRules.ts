@@ -95,16 +95,33 @@ const UUID = z
   .transform((s) => s.toLowerCase());
 
 /**
- * Un SUJET de carte : joueuse ou équipe par UUID, map par slug du registre.
- * Même forme que les clés de `subjectKey.ts` (`<kind>:<id>`), en objet.
+ * Un SUJET de carte : joueuse, équipe ou fanart par UUID, map et mascotte par
+ * slug. Même forme que les clés de `subjectKey.ts` (`<kind>:<id>`), en objet.
+ *
+ * LES CINQ TYPES, PAS TROIS. Cette union a longtemps listé joueuse / équipe /
+ * map alors que la base connaissait déjà les fanarts, et les mascottes sont
+ * arrivées après. Une carte absente d'ici n'est pas « non échangeable » de
+ * façon lisible : elle est refusée en `invalid_body` par le schéma, ou en
+ * `invalid_items` par la fonction SQL — deux messages qui parlent d'une
+ * proposition malformée alors que la joueuse a simplement proposé une carte
+ * qu'elle possède. Ajouter un type de carte impose de passer ici, dans
+ * `subjectKey.ts`, et dans les deux fonctions `tcg_propose_trade` /
+ * `tcg_accept_trade`.
  */
 export const tradeSubjectSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('player'), id: UUID }).strict(),
   z.object({ kind: z.literal('team'), id: UUID }).strict(),
+  z.object({ kind: z.literal('fanart'), id: UUID }).strict(),
   z
     .object({
       kind: z.literal('map'),
       id: z.string().regex(/^[a-z0-9-]{1,64}$/, 'slug de map attendu'),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('mascot'),
+      id: z.string().regex(/^[a-z0-9-]{1,64}$/, 'slug de mascotte attendu'),
     })
     .strict(),
 ]);

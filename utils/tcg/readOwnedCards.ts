@@ -37,10 +37,19 @@ export const MAX_SCAN_PACKS = 10_000;
 export type OwnedCardRow = {
   pack_id: string;
   position: number;
-  subject_kind: 'player' | 'team' | 'map';
+  subject_kind: 'player' | 'team' | 'map' | 'fanart' | 'mascot';
   card_user_id: string | null;
   card_team_id: string | null;
   card_map_slug: string | null;
+  /**
+   * Fan arts et mascottes. ABSENTES DE CETTE LECTURE JUSQU'AU 2026-09-20 :
+   * seules trois colonnes sur cinq étaient sélectionnées, donc une carte de
+   * fan art ou de mascotte était lue SANS SUJET et sautée par tous les
+   * appelants — invisible dans la collection de celle qui venait de l'ouvrir.
+   * Rien n'échouait ; la carte n'existait simplement pour personne.
+   */
+  card_fanart_id?: string | null;
+  card_mascot_slug?: string | null;
   rarity: TcgRarity;
   is_foil: boolean;
 };
@@ -121,7 +130,7 @@ export async function readCardsOfPacks(
       const { data, error } = await supabaseAdmin
         .from('tcg_pack_cards')
         .select(
-          'pack_id, position, subject_kind, card_user_id, card_team_id, card_map_slug, rarity, is_foil'
+          'pack_id, position, subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id, card_mascot_slug, rarity, is_foil'
         )
         .in('pack_id', chunk)
         .is('recycled_at', null)
@@ -171,7 +180,14 @@ export async function readOwnedCardRows(
 export async function readOwnedSubjectKeys(
   tenantId: string,
   userId: string,
-  subjects: { players: string[]; teams: string[]; maps: string[] },
+  subjects: {
+    players: string[];
+    teams: string[];
+    maps: string[];
+    /** Optionnels : un appelant qui ne s'y intéresse pas ne les passe pas. */
+    fanarts?: string[];
+    mascots?: string[];
+  },
   excludePackId: string
 ): Promise<ReadResult<Set<string>>> {
   if (!supabaseAdmin) return { ok: false, error: 'supabaseAdmin absent' };
@@ -184,13 +200,20 @@ export async function readOwnedSubjectKeys(
   // Une requête PAR type de sujet plutôt qu'un `.or(in.(…))` : trois filtres
   // simples et indexables, et aucune valeur interpolée dans une expression.
   const lookups: Array<{
-    kind: 'player' | 'team' | 'map';
-    column: 'card_user_id' | 'card_team_id' | 'card_map_slug';
+    kind: 'player' | 'team' | 'map' | 'fanart' | 'mascot';
+    column:
+      | 'card_user_id'
+      | 'card_team_id'
+      | 'card_map_slug'
+      | 'card_fanart_id'
+      | 'card_mascot_slug';
     ids: string[];
   }> = [
     { kind: 'player', column: 'card_user_id', ids: subjects.players },
     { kind: 'team', column: 'card_team_id', ids: subjects.teams },
     { kind: 'map', column: 'card_map_slug', ids: subjects.maps },
+    { kind: 'fanart', column: 'card_fanart_id', ids: subjects.fanarts ?? [] },
+    { kind: 'mascot', column: 'card_mascot_slug', ids: subjects.mascots ?? [] },
   ];
 
   for (let i = 0; i < packIds.length; i += PACK_CHUNK) {

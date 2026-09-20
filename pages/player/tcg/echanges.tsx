@@ -33,6 +33,7 @@ import TcgCard, { type TcgCardSubject } from '@/components/tcg/TcgCard';
 import { Skeleton } from '@/components/ui/Skeleton';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { TcgRarity } from '@/utils/tcg/rarity';
+import type { GameMascotSlug } from '@/utils/tcg/gameMascots';
 // Types SEULEMENT : effacés à la compilation. Importer le module lui-même ferait
 // entrer `supabaseAdmin` dans le bundle navigateur.
 import type { TradeCardView, TradeView } from '@/utils/tcg/trades';
@@ -74,16 +75,28 @@ type LoadState = 'loading' | 'ready' | 'error';
 type Box = 'received' | 'sent';
 type ListState = 'open' | 'closed';
 
-/** Clé d'un sujet : même forme que `utils/tcg/subjectKey.ts`. */
+/**
+ * Clé d'un sujet : même forme que `utils/tcg/subjectKey.ts`.
+ *
+ * LES CINQ TYPES. Ces trois fonctions ont longtemps traité `map` comme cas
+ * final : tout sujet qu'elles ne nommaient pas devenait une carte de map au
+ * slug `undefined`. Deux cartes mascotte partageaient alors la clé
+ * `map:undefined` — même clé React, même identité pour la sélection : cocher
+ * l'une cochait l'autre. Rien n'échouait. Discriminer explicitement.
+ */
 function keyOf(card: TradeCardView): string {
   if (card.kind === 'player') return `player:${card.userId}`;
   if (card.kind === 'team') return `team:${card.teamId}`;
+  if (card.kind === 'fanart') return `fanart:${card.fanartId}`;
+  if (card.kind === 'mascot') return `mascot:${card.slug}`;
   return `map:${card.slug}`;
 }
 
 function subjectRefOf(card: TradeCardView): { kind: string; id: string } {
   if (card.kind === 'player') return { kind: 'player', id: card.userId };
   if (card.kind === 'team') return { kind: 'team', id: card.teamId };
+  if (card.kind === 'fanart') return { kind: 'fanart', id: card.fanartId };
+  if (card.kind === 'mascot') return { kind: 'mascot', id: card.slug };
   return { kind: 'map', id: card.slug };
 }
 
@@ -108,6 +121,24 @@ function subjectOf(card: TradeCardView): TcgCardSubject {
       logoCredit: card.logoCredit ?? null,
     };
   }
+  if (card.kind === 'fanart') {
+    return {
+      kind: 'fanart',
+      fanartId: card.fanartId,
+      // Le titre de l'œuvre EST son nom de carte ; son crédit la suit.
+      name: card.title,
+      imageUrl: card.imageUrl,
+      artistName: card.artistName,
+      artistUrl: card.artistUrl,
+    };
+  }
+  if (card.kind === 'mascot') {
+    return {
+      kind: 'mascot',
+      slug: card.slug as GameMascotSlug,
+      name: card.name,
+    };
+  }
   return {
     kind: 'map',
     slug: card.slug,
@@ -117,7 +148,9 @@ function subjectOf(card: TradeCardView): TcgCardSubject {
 }
 
 function nameOf(card: TradeCardView): string | null {
-  return card.kind === 'player' ? card.displayName : card.name;
+  if (card.kind === 'player') return card.displayName;
+  if (card.kind === 'fanart') return card.title;
+  return card.name;
 }
 
 const FOCUS_RING =

@@ -1489,7 +1489,9 @@
       "user_id"
     ],
     "tcg_trade_items": [
+      "card_fanart_id",
       "card_map_slug",
+      "card_mascot_slug",
       "card_team_id",
       "card_user_id",
       "from_pack_id",

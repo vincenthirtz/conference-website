@@ -76,6 +76,23 @@ type CollectionCard =
       imageUrl: string | null;
       rarity: TcgRarity;
       isFoil: boolean;
+    }
+  | {
+      kind: 'fanart';
+      fanartId: string;
+      title: string | null;
+      artistName: string | null;
+      artistUrl: string | null;
+      imageUrl: string | null;
+      rarity: TcgRarity;
+      isFoil: boolean;
+    }
+  | {
+      kind: 'mascot';
+      slug: string;
+      name: string | null;
+      rarity: TcgRarity;
+      isFoil: boolean;
     };
 
 /**
@@ -89,6 +106,12 @@ export function collectionToShowcaseCard(card: CollectionCard): ShowcaseCard {
   if (card.kind === 'map') {
     return { ...card, key: `map:${card.slug}` };
   }
+  if (card.kind === 'fanart') {
+    return { ...card, key: `fanart:${card.fanartId}` };
+  }
+  if (card.kind === 'mascot') {
+    return { ...card, key: `mascot:${card.slug}` };
+  }
   return {
     ...card,
     key: `team:${card.teamId}`,
@@ -97,7 +120,9 @@ export function collectionToShowcaseCard(card: CollectionCard): ShowcaseCard {
 }
 
 function cardName(card: ShowcaseCard): string | null {
-  return card.kind === 'player' ? card.displayName : card.name;
+  if (card.kind === 'player') return card.displayName;
+  if (card.kind === 'fanart') return card.title;
+  return card.name;
 }
 
 export default function TcgShowcaseEditor({
@@ -433,7 +458,11 @@ export default function TcgShowcaseEditor({
                         ? t.kindPlayer
                         : card.kind === 'team'
                           ? t.kindTeam
-                          : t.kindMap;
+                          : card.kind === 'fanart'
+                            ? t.kindFanart
+                            : card.kind === 'mascot'
+                              ? t.kindMascot
+                              : t.kindMap;
                     return (
                       <li key={card.key}>
                         <label

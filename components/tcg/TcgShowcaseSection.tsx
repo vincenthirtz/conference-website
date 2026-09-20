@@ -16,6 +16,7 @@
 import type { JSX } from 'react';
 import TcgCard, { type TcgCardSubject } from '@/components/tcg/TcgCard';
 import type { ShowcaseCard } from '@/utils/tcg/showcase';
+import type { GameMascotSlug } from '@/utils/tcg/gameMascots';
 import { useT } from '@/lib/i18n/useT';
 import nsTcgShowcase from '@/lib/i18n/locales/fr/tcgShowcase';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
@@ -36,6 +37,23 @@ export function showcaseCardSubject(card: ShowcaseCard): TcgCardSubject {
       slug: card.slug,
       name: card.name,
       imageUrl: card.imageUrl,
+    };
+  }
+  if (card.kind === 'fanart') {
+    return {
+      kind: 'fanart',
+      fanartId: card.fanartId,
+      name: card.title,
+      imageUrl: card.imageUrl,
+      artistName: card.artistName,
+      artistUrl: card.artistUrl,
+    };
+  }
+  if (card.kind === 'mascot') {
+    return {
+      kind: 'mascot',
+      slug: card.slug as GameMascotSlug,
+      name: card.name,
     };
   }
   return {

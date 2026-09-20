@@ -42,6 +42,8 @@ import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
 import { readMapFaces, MAP_POOL_SLUGS } from '@/utils/tcg/readMapFaces';
 import { cardSubjectKey } from '@/utils/tcg/subjectKey';
 import { readOwnedCardRows } from '@/utils/tcg/readOwnedCards';
+import { readDrawPool } from '@/utils/tcg/readDrawPool';
+import { GAME_MASCOT_SLUGS } from '@/utils/tcg/gameMascots';
 import { copyRef, readEngagedCopies } from '@/utils/tcg/engagedCards';
 import {
   compareCollectionOrder,
@@ -60,7 +62,7 @@ import { logger } from '@/utils/logger';
 const DEFAULT_PAGE_SIZE = 40;
 
 type Aggregated = {
-  kind: 'player' | 'team' | 'map';
+  kind: 'player' | 'team' | 'map' | 'fanart' | 'mascot';
   /** `<kind>:<id>` — second critère de l'ordre total, et contenu du curseur. */
   key: string;
   subjectId: string;
@@ -392,46 +394,40 @@ export default withAuthRoute(async function handler(
   // 5) LE VIVIER — combien de sujets EXISTENT, pour que « 12 cartes » devienne
   //    « 12 sur 48 ». Sans dénominateur, une collection n'a pas d'horizon.
   //
-  //    LES FILTRES SONT CEUX DU TIRAGE, AU MOT PRÈS (cf. l'étape 2 de
-  //    `packs.ts`) : joueuses sans filtre, équipes non supprimées et actives —
-  //    `is_active` étant NULLABLE, le `or(...)` accepte NULL comme `true`, là
-  //    où un `neq` exclurait les lignes non renseignées. Un dénominateur plus
-  //    large que le tirage promettrait des cartes qu'aucun paquet ne peut
-  //    donner.
+  //    LE VIVIER EST CELUI DU TIRAGE, PAR CONSTRUCTION : `readDrawPool` est le
+  //    module que lit `packs.ts` à l'ouverture. Cette route recomptait naguère
+  //    les joueuses et les équipes avec ses propres `.eq()` / `.or()`, copiés
+  //    « au mot près » de l'ouverture — et deux copies d'un filtre finissent
+  //    par diverger. Le vivier se LIT une fois, ici comme là-bas.
   //
-  //    Plafonné à `POOL_LIMIT`, la constante que le tirage lit lui aussi : au
-  //    delà, le tirage ne regarde pas les sujets suivants, donc les compter
-  //    rendrait la complétion inatteignable.
+  //    LES CINQ TYPES, PAS TROIS. Le dénominateur a compté joueuses + équipes +
+  //    maps pendant que le tirage distribuait déjà des fanarts, puis des
+  //    mascottes. Conséquence exacte : une joueuse qui possède une carte hors
+  //    dénominateur lit « 1210 sur 1200 », ou reste bloquée sous un total
+  //    qu'elle a déjà dépassé sans comprendre pourquoi. Le compteur doit
+  //    décrire le MÊME ensemble que le tirage, sinon il ment dans les deux
+  //    sens.
+  //
+  //    Les maps et les mascottes ne se comptent pas en base : leur vivier EST
+  //    le registre en mémoire, et c'est la même liste que celle passée au
+  //    tirage. Plafonnés à `POOL_LIMIT`, la constante que le tirage lit lui
+  //    aussi : au delà, il ne regarde pas les sujets suivants, donc les
+  //    compter rendrait la complétion inatteignable.
   //
   //    BEST-EFFORT : un vivier illisible rend `null`, pas `0`. Le composant de
   //    progression masque alors sa barre au lieu d'annoncer « 12 sur 0 ».
   let pool: { distinct: number } | null = null;
-  const [poolPlayersRes, poolTeamsRes] = await Promise.all([
-    supabaseAdmin
-      .from('player_ratings')
-      .select('user_id', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId),
-    supabaseAdmin
-      .from('teams')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .is('deleted_at', null)
-      .or('is_active.is.null,is_active.eq.true'),
-  ]);
+  const drawPool = await readDrawPool(tenantId);
 
-  if (poolPlayersRes.error || poolTeamsRes.error) {
-    logger.warn(
-      '[tcg/collection] vivier illisible: %s',
-      poolPlayersRes.error?.message ?? poolTeamsRes.error?.message
-    );
+  if (!drawPool.ok) {
+    logger.warn('[tcg/collection] vivier illisible: %s', drawPool.error);
   } else {
-    const players = Math.min(poolPlayersRes.count ?? 0, POOL_LIMIT);
-    const teams = Math.min(poolTeamsRes.count ?? 0, POOL_LIMIT);
-    // Les maps ne se comptent pas en base : leur vivier EST le registre, et
-    // c'est la même liste que celle passée au tirage — deux comptages séparés
-    // finiraient par promettre des cartes qu'aucun paquet ne peut donner.
+    const players = Math.min(drawPool.value.playerIds.length, POOL_LIMIT);
+    const teams = Math.min(drawPool.value.teamIds.length, POOL_LIMIT);
+    const fanarts = Math.min(drawPool.value.fanartIds.length, POOL_LIMIT);
     const maps = Math.min(MAP_POOL_SLUGS.length, POOL_LIMIT);
-    pool = { distinct: players + teams + maps };
+    const mascots = Math.min(GAME_MASCOT_SLUGS.length, POOL_LIMIT);
+    pool = { distinct: players + teams + maps + fanarts + mascots };
   }
 
   return res.status(200).json({

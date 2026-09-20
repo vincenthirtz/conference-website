@@ -137,6 +137,24 @@ export type TcgCardSubject =
     }
   | {
       /**
+       * Une FAN ART validée : l'œuvre d'une joueuse, pas celle du jeu.
+       *
+       * Son nom est le TITRE donné par l'autrice, et son crédit est
+       * obligatoire — une fan art affichée sans nom d'artiste n'est pas une
+       * carte, c'est une œuvre prise sans le dire. Le crédit passe par le même
+       * composant que celui des logos d'équipe : une seule façon de créditer.
+       *
+       * Pas de page de destination : aucune fiche par œuvre n'existe.
+       */
+      kind: 'fanart';
+      fanartId: string;
+      name: string | null;
+      imageUrl: string | null;
+      artistName: string | null;
+      artistUrl: string | null;
+    }
+  | {
+      /**
        * Une MASCOTTE du jeu (Pachimari, Ganymede, Murphy…).
        *
        * Elle n'a ni photo ni avatar par nature : son visuel est TOUJOURS la
@@ -269,9 +287,9 @@ export default function TcgCard({
     ? null
     : subject.kind === 'player'
       ? `/player/${subject.userId}`
-      : subject.kind === 'mascot'
-        ? // Aucune page par mascotte n'existe, et en créer une pour rendre la
-          // carte cliquable donnerait une page vide.
+      : subject.kind === 'mascot' || subject.kind === 'fanart'
+        ? // Aucune page par mascotte ni par œuvre n'existe, et en créer une
+          // pour rendre la carte cliquable donnerait une page vide.
           null
         : subject.kind === 'map'
           ? // Aucune page par map n'existe : on vise l'ancre de la maquette sur
@@ -397,6 +415,17 @@ export default function TcgCard({
               label={labels.logoCredit}
               // Carte cliquable, ou posée dans un bouton ⇒ pas de lien imbriqué
               // (cf. `LogoCredit`).
+              linkable={!href && !insideInteractive}
+              className="truncate text-[11px]"
+            />
+          )}
+        {subject.kind === 'fanart' &&
+          subject.artistName &&
+          labels.logoCredit && (
+            <LogoCredit
+              name={subject.artistName}
+              url={subject.artistUrl}
+              label={labels.logoCredit}
               linkable={!href && !insideInteractive}
               className="truncate text-[11px]"
             />

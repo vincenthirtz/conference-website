@@ -39,6 +39,8 @@ export default {
   kindPlayer: 'Player',
   kindTeam: 'Team',
   kindMap: 'Map',
+  kindFanart: 'Fan art',
+  kindMascot: 'Mascot',
 
   save: 'Save showcase',
   saving: 'Saving…',

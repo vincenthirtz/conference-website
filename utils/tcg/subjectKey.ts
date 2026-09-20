@@ -12,6 +12,14 @@
 // dépôt a déjà payé quatre fois ce travers (listes de plans, seuils de badges,
 // barèmes de rareté, pool de maps) : une source, donc.
 //
+// ET LE PIÈGE S'EST REFERMÉ QUAND MÊME, le 2026-09-20 : les cartes MASCOTTE
+// ont été ajoutées au tirage, à la base et à l'affichage sans que ce `switch`
+// les connaisse. Il rendait donc `null`, et chaque appelant les SAUTAIT en
+// silence — invisibles dans la collection, dans le recyclage, dans la vue
+// staff. Rien n'échouait : les cartes n'existaient simplement pour personne.
+// Ajouter un type de carte impose de passer ici, et ce commentaire est là pour
+// que la prochaine fois on le sache avant de le découvrir.
+//
 // PUR, SANS ENTRÉE-SORTIE. Il ne lit rien : il interprète une ligne déjà lue.
 
 /** La part « sujet » d'une ligne de `tcg_pack_cards`. */
@@ -21,6 +29,7 @@ export type CardSubjectRow = {
   card_team_id?: string | null;
   card_map_slug?: string | null;
   card_fanart_id?: string | null;
+  card_mascot_slug?: string | null;
 };
 
 /**
@@ -43,6 +52,8 @@ export function cardSubjectId(row: CardSubjectRow): string | null {
       return row.card_map_slug ?? null;
     case 'fanart':
       return row.card_fanart_id ?? null;
+    case 'mascot':
+      return row.card_mascot_slug ?? null;
     default:
       return null;
   }

@@ -24,7 +24,12 @@ import { getDiscordLinksForUsers } from '@/utils/discordLinks';
 import { absoluteSiteUrl } from '@/utils/siteUrl';
 import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
 import { maskBattleTag } from '@/utils/battleTag';
-import { readPlayerFaces, readTeamFaces } from './readCardFaces';
+import {
+  readPlayerFaces,
+  readTeamFaces,
+  readFanartFaces,
+} from './readCardFaces';
+import { gameMascotDisplayName } from './gameMascots';
 import type { LogoCredit } from '@/utils/teams/logoCredit';
 import { readMapFaces } from './readMapFaces';
 import {
@@ -244,7 +249,7 @@ export async function readOwnedCopies(
 }
 
 export type CopySummary = {
-  kind: 'player' | 'team' | 'map';
+  kind: 'player' | 'team' | 'map' | 'fanart' | 'mascot';
   key: string;
   subjectId: string;
   copies: number;
@@ -328,9 +333,34 @@ export type TradeCardView =
       slug: string;
       name: string | null;
       imageUrl: string | null;
+    })
+  | (CardBase & {
+      kind: 'fanart';
+      fanartId: string;
+      title: string | null;
+      /** Le crédit voyage AVEC la carte : une fan art sans son autrice n'est
+       *  pas une carte, c'est une œuvre prise sans le dire. */
+      artistName: string | null;
+      artistUrl: string | null;
+      imageUrl: string | null;
+    })
+  | (CardBase & {
+      kind: 'mascot';
+      slug: string;
+      name: string | null;
     });
 
-export type SubjectRef = { kind: 'player' | 'team' | 'map'; id: string };
+/**
+ * LES CINQ TYPES, pas trois. Les cartes de fan art et de mascotte étaient
+ * inéchangeables jusqu'au 2026-09-20 : `tcg_trade_items` n'avait pas de colonne
+ * pour elles, et ce type le reflétait. On pouvait les ouvrir, les posséder, les
+ * voir — jamais les proposer. Le trou ne produisait aucune erreur : la carte
+ * n'apparaissait simplement pas dans ce qu'on peut offrir.
+ */
+export type SubjectRef = {
+  kind: 'player' | 'team' | 'map' | 'fanart' | 'mascot';
+  id: string;
+};
 
 /**
  * Relit les faces d'un lot de sujets, en un aller-retour par type, et rend de
@@ -341,7 +371,7 @@ export async function readSubjectFaces(
   tenantId: string,
   subjects: readonly SubjectRef[]
 ): Promise<(s: SubjectRef, base: CardBase) => TradeCardView> {
-  const [players, teams, maps] = await Promise.all([
+  const [players, teams, maps, fanarts] = await Promise.all([
     readPlayerFaces(
       tenantId,
       subjects.filter((s) => s.kind === 'player').map((s) => s.id)
@@ -351,6 +381,10 @@ export async function readSubjectFaces(
       subjects.filter((s) => s.kind === 'team').map((s) => s.id)
     ),
     readMapFaces(subjects.filter((s) => s.kind === 'map').map((s) => s.id)),
+    readFanartFaces(
+      tenantId,
+      subjects.filter((s) => s.kind === 'fanart').map((s) => s.id)
+    ),
   ]);
   return (s, base) => {
     if (s.kind === 'player') {
@@ -379,6 +413,31 @@ export async function readSubjectFaces(
         ...base,
       };
     }
+    if (s.kind === 'fanart') {
+      const f = fanarts.get(s.id);
+      return {
+        kind: 'fanart',
+        fanartId: s.id,
+        title: f?.title ?? null,
+        artistName: f?.artistName ?? null,
+        artistUrl: f?.artistUrl ?? null,
+        imageUrl: f?.imageUrl ?? null,
+        ...base,
+      };
+    }
+    if (s.kind === 'mascot') {
+      // Une mascotte n'a ni photo ni page : son nom vient du registre, sa
+      // figurine est calculée par la carte depuis son slug. Rien à lire.
+      return {
+        kind: 'mascot',
+        slug: s.id,
+        name: gameMascotDisplayName(s.id),
+        ...base,
+      };
+    }
+    // `map` en dernier, et SEULEMENT pour `map`. Cette branche était le
+    // fourre-tout final : un sujet qu'elle ne connaissait pas ressortait en
+    // carte de map au nom et à l'image nuls — une carte vide, sans erreur.
     const f = maps.get(s.id);
     return {
       kind: 'map',
@@ -613,10 +672,12 @@ export type TradeItemRow = {
   trade_id: string;
   side: 'offered' | 'requested';
   ordinal: number;
-  subject_kind: 'player' | 'team' | 'map';
+  subject_kind: 'player' | 'team' | 'map' | 'fanart' | 'mascot';
   card_user_id: string | null;
   card_team_id: string | null;
   card_map_slug: string | null;
+  card_fanart_id: string | null;
+  card_mascot_slug: string | null;
   rarity: TcgRarity | null;
   is_foil: boolean | null;
 };
@@ -661,7 +722,7 @@ export async function hydrateTrades(
   const { data, error } = await supabaseAdmin
     .from('tcg_trade_items')
     .select(
-      'trade_id, side, ordinal, subject_kind, card_user_id, card_team_id, card_map_slug, rarity, is_foil'
+      'trade_id, side, ordinal, subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id, card_mascot_slug, rarity, is_foil'
     )
     .in(
       'trade_id',

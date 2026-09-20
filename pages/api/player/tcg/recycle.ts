@@ -51,10 +51,15 @@ import { logger } from '@/utils/logger';
 type CardRow = {
   pack_id: string;
   position: number;
-  subject_kind: 'player' | 'team' | 'map';
+  // Les CINQ types de sujet. Le recyclage ne distingue pas les natures — il
+  // compte des doublons — mais un type trop étroit faisait SAUTER les cartes
+  // de fan art et de mascotte, donc interdisait de les recycler.
+  subject_kind: 'player' | 'team' | 'map' | 'fanart' | 'mascot';
   card_user_id: string | null;
   card_team_id: string | null;
   card_map_slug: string | null;
+  card_fanart_id?: string | null;
+  card_mascot_slug?: string | null;
 };
 
 export default withAuthRoute(async function handler(

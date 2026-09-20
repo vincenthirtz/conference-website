@@ -39974,6 +39974,109 @@
           "rarity",
           "isFoil"
          ]
+        },
+        {
+         "type": "object",
+         "properties": {
+          "key": {
+           "type": "string"
+          },
+          "kind": {
+           "type": "string",
+           "const": "fanart"
+          },
+          "fanartId": {
+           "type": "string"
+          },
+          "title": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "artistName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "artistUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "imageUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "rarity": {
+           "type": "string",
+           "enum": [
+            "common",
+            "epic",
+            "legendary",
+            "rare"
+           ]
+          },
+          "isFoil": {
+           "type": "boolean"
+          }
+         },
+         "required": [
+          "key",
+          "kind",
+          "fanartId",
+          "title",
+          "artistName",
+          "artistUrl",
+          "imageUrl",
+          "rarity",
+          "isFoil"
+         ]
+        },
+        {
+         "type": "object",
+         "properties": {
+          "key": {
+           "type": "string"
+          },
+          "kind": {
+           "type": "string",
+           "const": "mascot"
+          },
+          "slug": {
+           "type": "string"
+          },
+          "name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "rarity": {
+           "type": "string",
+           "enum": [
+            "common",
+            "epic",
+            "legendary",
+            "rare"
+           ]
+          },
+          "isFoil": {
+           "type": "boolean"
+          }
+         },
+         "required": [
+          "key",
+          "kind",
+          "slug",
+          "name",
+          "rarity",
+          "isFoil"
+         ]
         }
        ]
       }
@@ -40259,6 +40362,115 @@
              "name",
              "imageUrl"
             ]
+           },
+           {
+            "type": "object",
+            "properties": {
+             "rarity": {
+              "type": [
+               "string",
+               "null"
+              ],
+              "enum": [
+               "common",
+               "epic",
+               "legendary",
+               "rare",
+               null
+              ]
+             },
+             "isFoil": {
+              "type": [
+               "boolean",
+               "null"
+              ]
+             },
+             "kind": {
+              "type": "string",
+              "const": "fanart"
+             },
+             "fanartId": {
+              "type": "string"
+             },
+             "title": {
+              "type": [
+               "string",
+               "null"
+              ]
+             },
+             "artistName": {
+              "type": [
+               "string",
+               "null"
+              ]
+             },
+             "artistUrl": {
+              "type": [
+               "string",
+               "null"
+              ]
+             },
+             "imageUrl": {
+              "type": [
+               "string",
+               "null"
+              ]
+             }
+            },
+            "required": [
+             "rarity",
+             "isFoil",
+             "kind",
+             "fanartId",
+             "title",
+             "artistName",
+             "artistUrl",
+             "imageUrl"
+            ]
+           },
+           {
+            "type": "object",
+            "properties": {
+             "rarity": {
+              "type": [
+               "string",
+               "null"
+              ],
+              "enum": [
+               "common",
+               "epic",
+               "legendary",
+               "rare",
+               null
+              ]
+             },
+             "isFoil": {
+              "type": [
+               "boolean",
+               "null"
+              ]
+             },
+             "kind": {
+              "type": "string",
+              "const": "mascot"
+             },
+             "slug": {
+              "type": "string"
+             },
+             "name": {
+              "type": [
+               "string",
+               "null"
+              ]
+             }
+            },
+            "required": [
+             "rarity",
+             "isFoil",
+             "kind",
+             "slug",
+             "name"
+            ]
            }
           ]
          }
@@ -40467,6 +40679,127 @@
              "slug",
              "name",
              "imageUrl"
+            ]
+           },
+           {
+            "type": "object",
+            "properties": {
+             "rarity": {
+              "type": [
+               "string",
+               "null"
+              ],
+              "enum": [
+               "common",
+               "epic",
+               "legendary",
+               "rare",
+               null
+              ]
+             },
+             "isFoil": {
+              "type": [
+               "boolean",
+               "null"
+              ]
+             },
+             "kind": {
+              "type": "string",
+              "const": "fanart"
+             },
+             "fanartId": {
+              "type": "string"
+             },
+             "title": {
+              "type": [
+               "string",
+               "null"
+              ]
+             },
+             "artistName": {
+              "type": [
+               "string",
+               "null"
+              ]
+             },
+             "artistUrl": {
+              "type": [
+               "string",
+               "null"
+              ]
+             },
+             "imageUrl": {
+              "type": [
+               "string",
+               "null"
+              ]
+             },
+             "ownedCopies": {
+              "type": "number"
+             },
+             "tradeableCopies": {
+              "type": "number"
+             }
+            },
+            "required": [
+             "rarity",
+             "isFoil",
+             "kind",
+             "fanartId",
+             "title",
+             "artistName",
+             "artistUrl",
+             "imageUrl"
+            ]
+           },
+           {
+            "type": "object",
+            "properties": {
+             "rarity": {
+              "type": [
+               "string",
+               "null"
+              ],
+              "enum": [
+               "common",
+               "epic",
+               "legendary",
+               "rare",
+               null
+              ]
+             },
+             "isFoil": {
+              "type": [
+               "boolean",
+               "null"
+              ]
+             },
+             "kind": {
+              "type": "string",
+              "const": "mascot"
+             },
+             "slug": {
+              "type": "string"
+             },
+             "name": {
+              "type": [
+               "string",
+               "null"
+              ]
+             },
+             "ownedCopies": {
+              "type": "number"
+             },
+             "tradeableCopies": {
+              "type": "number"
+             }
+            },
+            "required": [
+             "rarity",
+             "isFoil",
+             "kind",
+             "slug",
+             "name"
             ]
            }
           ]
@@ -40737,6 +41070,139 @@
             "name",
             "imageUrl"
            ]
+          },
+          {
+           "type": "object",
+           "properties": {
+            "copies": {
+             "type": "number"
+            },
+            "tradeableCopies": {
+             "type": "number"
+            },
+            "available": {
+             "type": "number"
+            },
+            "rarity": {
+             "type": [
+              "string",
+              "null"
+             ],
+             "enum": [
+              "common",
+              "epic",
+              "legendary",
+              "rare",
+              null
+             ]
+            },
+            "isFoil": {
+             "type": [
+              "boolean",
+              "null"
+             ]
+            },
+            "kind": {
+             "type": "string",
+             "const": "fanart"
+            },
+            "fanartId": {
+             "type": "string"
+            },
+            "title": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "artistName": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "artistUrl": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "imageUrl": {
+             "type": [
+              "string",
+              "null"
+             ]
+            }
+           },
+           "required": [
+            "copies",
+            "tradeableCopies",
+            "available",
+            "rarity",
+            "isFoil",
+            "kind",
+            "fanartId",
+            "title",
+            "artistName",
+            "artistUrl",
+            "imageUrl"
+           ]
+          },
+          {
+           "type": "object",
+           "properties": {
+            "copies": {
+             "type": "number"
+            },
+            "tradeableCopies": {
+             "type": "number"
+            },
+            "available": {
+             "type": "number"
+            },
+            "rarity": {
+             "type": [
+              "string",
+              "null"
+             ],
+             "enum": [
+              "common",
+              "epic",
+              "legendary",
+              "rare",
+              null
+             ]
+            },
+            "isFoil": {
+             "type": [
+              "boolean",
+              "null"
+             ]
+            },
+            "kind": {
+             "type": "string",
+             "const": "mascot"
+            },
+            "slug": {
+             "type": "string"
+            },
+            "name": {
+             "type": [
+              "string",
+              "null"
+             ]
+            }
+           },
+           "required": [
+            "copies",
+            "tradeableCopies",
+            "available",
+            "rarity",
+            "isFoil",
+            "kind",
+            "slug",
+            "name"
+           ]
           }
          ]
         }
@@ -40950,6 +41416,115 @@
             "slug",
             "name",
             "imageUrl"
+           ]
+          },
+          {
+           "type": "object",
+           "properties": {
+            "rarity": {
+             "type": [
+              "string",
+              "null"
+             ],
+             "enum": [
+              "common",
+              "epic",
+              "legendary",
+              "rare",
+              null
+             ]
+            },
+            "isFoil": {
+             "type": [
+              "boolean",
+              "null"
+             ]
+            },
+            "kind": {
+             "type": "string",
+             "const": "fanart"
+            },
+            "fanartId": {
+             "type": "string"
+            },
+            "title": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "artistName": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "artistUrl": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "imageUrl": {
+             "type": [
+              "string",
+              "null"
+             ]
+            }
+           },
+           "required": [
+            "rarity",
+            "isFoil",
+            "kind",
+            "fanartId",
+            "title",
+            "artistName",
+            "artistUrl",
+            "imageUrl"
+           ]
+          },
+          {
+           "type": "object",
+           "properties": {
+            "rarity": {
+             "type": [
+              "string",
+              "null"
+             ],
+             "enum": [
+              "common",
+              "epic",
+              "legendary",
+              "rare",
+              null
+             ]
+            },
+            "isFoil": {
+             "type": [
+              "boolean",
+              "null"
+             ]
+            },
+            "kind": {
+             "type": "string",
+             "const": "mascot"
+            },
+            "slug": {
+             "type": "string"
+            },
+            "name": {
+             "type": [
+              "string",
+              "null"
+             ]
+            }
+           },
+           "required": [
+            "rarity",
+            "isFoil",
+            "kind",
+            "slug",
+            "name"
            ]
           }
          ]
@@ -67216,6 +67791,109 @@
           "slug",
           "name",
           "imageUrl",
+          "rarity",
+          "isFoil"
+         ]
+        },
+        {
+         "type": "object",
+         "properties": {
+          "key": {
+           "type": "string"
+          },
+          "kind": {
+           "type": "string",
+           "const": "fanart"
+          },
+          "fanartId": {
+           "type": "string"
+          },
+          "title": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "artistName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "artistUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "imageUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "rarity": {
+           "type": "string",
+           "enum": [
+            "common",
+            "epic",
+            "legendary",
+            "rare"
+           ]
+          },
+          "isFoil": {
+           "type": "boolean"
+          }
+         },
+         "required": [
+          "key",
+          "kind",
+          "fanartId",
+          "title",
+          "artistName",
+          "artistUrl",
+          "imageUrl",
+          "rarity",
+          "isFoil"
+         ]
+        },
+        {
+         "type": "object",
+         "properties": {
+          "key": {
+           "type": "string"
+          },
+          "kind": {
+           "type": "string",
+           "const": "mascot"
+          },
+          "slug": {
+           "type": "string"
+          },
+          "name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "rarity": {
+           "type": "string",
+           "enum": [
+            "common",
+            "epic",
+            "legendary",
+            "rare"
+           ]
+          },
+          "isFoil": {
+           "type": "boolean"
+          }
+         },
+         "required": [
+          "key",
+          "kind",
+          "slug",
+          "name",
           "rarity",
           "isFoil"
          ]

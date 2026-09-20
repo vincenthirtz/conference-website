@@ -26,7 +26,12 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { RARITY_ORDER, type TcgRarity } from './rarity';
 import { readOwnedCardRows } from './readOwnedCards';
-import { readPlayerFaces, readTeamFaces } from './readCardFaces';
+import {
+  readPlayerFaces,
+  readTeamFaces,
+  readFanartFaces,
+} from './readCardFaces';
+import { gameMascotDisplayName } from './gameMascots';
 import type { LogoCredit } from '@/utils/teams/logoCredit';
 import { readMapFaces } from './readMapFaces';
 import { cardSubjectKey } from './subjectKey';
@@ -42,7 +47,9 @@ const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export type ShowcaseSubject =
   | { kind: 'player'; id: string }
   | { kind: 'team'; id: string }
-  | { kind: 'map'; id: string };
+  | { kind: 'map'; id: string }
+  | { kind: 'fanart'; id: string }
+  | { kind: 'mascot'; id: string };
 
 /**
  * Lit une clé de sujet. `null` = forme invalide.
@@ -57,12 +64,22 @@ export function parseShowcaseKey(value: unknown): ShowcaseSubject | null {
   if (separator <= 0) return null;
   const kind = value.slice(0, separator);
   const id = value.slice(separator + 1);
-  if ((kind === 'player' || kind === 'team') && UUID_RE.test(id)) {
+  if (
+    (kind === 'player' || kind === 'team' || kind === 'fanart') &&
+    UUID_RE.test(id)
+  ) {
     return { kind, id: id.toLowerCase() };
   }
-  if (kind === 'map' && id.length <= 64 && SLUG_RE.test(id)) {
+  if (
+    (kind === 'map' || kind === 'mascot') &&
+    id.length <= 64 &&
+    SLUG_RE.test(id)
+  ) {
     return { kind, id };
   }
+  // Un type absent d'ici n'est pas « refusé » de façon lisible : la carte
+  // disparaît simplement de la vitrine, sans message. C'est ce qui est arrivé
+  // aux mascottes et aux fan arts.
   return null;
 }
 
@@ -100,6 +117,25 @@ export type ShowcaseCard =
       slug: string;
       name: string | null;
       imageUrl: string | null;
+      rarity: TcgRarity;
+      isFoil: boolean;
+    }
+  | {
+      key: string;
+      kind: 'fanart';
+      fanartId: string;
+      title: string | null;
+      artistName: string | null;
+      artistUrl: string | null;
+      imageUrl: string | null;
+      rarity: TcgRarity;
+      isFoil: boolean;
+    }
+  | {
+      key: string;
+      kind: 'mascot';
+      slug: string;
+      name: string | null;
       rarity: TcgRarity;
       isFoil: boolean;
     };
@@ -198,7 +234,7 @@ export async function resolveShowcaseCards(
     .filter((s): s is ShowcaseSubject => s !== null);
 
   // Les faces, par les lecteurs porteurs du filtre de consentement.
-  const [playerFaces, teamFaces, mapFaces] = await Promise.all([
+  const [playerFaces, teamFaces, mapFaces, fanartFaces] = await Promise.all([
     readPlayerFaces(
       tenantId,
       subjects.filter((s) => s.kind === 'player').map((s) => s.id)
@@ -208,6 +244,10 @@ export async function resolveShowcaseCards(
       subjects.filter((s) => s.kind === 'team').map((s) => s.id)
     ),
     readMapFaces(subjects.filter((s) => s.kind === 'map').map((s) => s.id)),
+    readFanartFaces(
+      tenantId,
+      subjects.filter((s) => s.kind === 'fanart').map((s) => s.id)
+    ),
   ]);
 
   const cards: ShowcaseCard[] = subjects.map((subject) => {
@@ -236,6 +276,31 @@ export async function resolveShowcaseCards(
         slug: subject.id,
         name: face?.name ?? null,
         imageUrl: face?.imageUrl ?? null,
+        rarity,
+        isFoil,
+      };
+    }
+    if (subject.kind === 'fanart') {
+      const face = fanartFaces.get(subject.id);
+      return {
+        key,
+        kind: 'fanart',
+        fanartId: subject.id,
+        title: face?.title ?? null,
+        // La vitrine est PUBLIQUE : c'est là que le crédit compte le plus.
+        artistName: face?.artistName ?? null,
+        artistUrl: face?.artistUrl ?? null,
+        imageUrl: face?.imageUrl ?? null,
+        rarity,
+        isFoil,
+      };
+    }
+    if (subject.kind === 'mascot') {
+      return {
+        key,
+        kind: 'mascot',
+        slug: subject.id,
+        name: gameMascotDisplayName(subject.id),
         rarity,
         isFoil,
       };

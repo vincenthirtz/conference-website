@@ -47,6 +47,7 @@ import TwitchLinkCard, {
 import { Skeleton } from '@/components/ui/Skeleton';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { TcgRarity } from '@/utils/tcg/rarity';
+import type { GameMascotSlug } from '@/utils/tcg/gameMascots';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
 import nsTcgTrade from '@/lib/i18n/locales/fr/tcgTrade';
 import { reloadAfterMutation } from '@/utils/tcg/reloadAfterMutation';
@@ -213,6 +214,28 @@ type CollectionCard = Engagement &
         count: number;
         recyclable?: Recyclable;
       }
+    | {
+        kind: 'fanart';
+        fanartId: string;
+        /** Le TITRE donné par l'autrice : c'est le nom de la carte. */
+        title: string | null;
+        artistName: string | null;
+        artistUrl: string | null;
+        imageUrl: string | null;
+        rarity: TcgRarity;
+        isFoil: boolean;
+        count: number;
+        recyclable?: Recyclable;
+      }
+    | {
+        kind: 'mascot';
+        slug: string;
+        name: string | null;
+        rarity: TcgRarity;
+        isFoil: boolean;
+        count: number;
+        recyclable?: Recyclable;
+      }
   );
 
 /**
@@ -247,6 +270,23 @@ type DrawnCard = { position: number; isNew?: boolean } & (
       slug: string;
       name: string | null;
       imageUrl: string | null;
+      rarity: TcgRarity;
+      isFoil: boolean;
+    }
+  | {
+      kind: 'fanart';
+      fanartId: string;
+      title: string | null;
+      artistName: string | null;
+      artistUrl: string | null;
+      imageUrl: string | null;
+      rarity: TcgRarity;
+      isFoil: boolean;
+    }
+  | {
+      kind: 'mascot';
+      slug: string;
+      name: string | null;
       rarity: TcgRarity;
       isFoil: boolean;
     }
@@ -300,6 +340,8 @@ type CollectionResponse = {
 function subjectKey(card: DrawnCard | CollectionCard): string {
   if (card.kind === 'player') return `p-${card.userId}`;
   if (card.kind === 'map') return `m-${card.slug}`;
+  if (card.kind === 'fanart') return `f-${card.fanartId}`;
+  if (card.kind === 'mascot') return `x-${card.slug}`;
   return `t-${card.teamId}`;
 }
 
@@ -322,6 +364,27 @@ function cardSubject(card: DrawnCard | CollectionCard): TcgCardSubject {
       imageUrl: card.imageUrl,
     };
   }
+  if (card.kind === 'fanart') {
+    return {
+      kind: 'fanart',
+      fanartId: card.fanartId,
+      name: card.title,
+      imageUrl: card.imageUrl,
+      artistName: card.artistName,
+      artistUrl: card.artistUrl,
+    };
+  }
+  if (card.kind === 'mascot') {
+    return {
+      kind: 'mascot',
+      slug: card.slug as GameMascotSlug,
+      name: card.name,
+    };
+  }
+  // `team` en DERNIER, et seulement pour `team`. Cette branche était le
+  // fourre-tout : une carte mascotte en ressortait en équipe sans identifiant
+  // — clé `t-undefined` partagée par toutes, donc deux mascottes confondues
+  // dans la liste, sans la moindre erreur.
   return {
     kind: 'team',
     teamId: card.teamId,
@@ -337,7 +400,11 @@ function cardSubject(card: DrawnCard | CollectionCard): TcgCardSubject {
 
 /** Le nom lisible d'une carte, ou `null` si la face n'en porte pas. */
 function cardName(card: DrawnCard | CollectionCard): string | null {
-  return card.kind === 'player' ? card.displayName : card.name;
+  if (card.kind === 'player') return card.displayName;
+  // Une fan art porte un TITRE, pas un nom : c'est le même champ pour la
+  // lectrice, et l'omettre laisserait la carte anonyme.
+  if (card.kind === 'fanart') return card.title;
+  return card.name;
 }
 
 /** Un mouvement du registre. `amount` est signé : gain positif, dépense négative. */

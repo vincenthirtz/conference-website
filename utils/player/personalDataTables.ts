@@ -137,7 +137,7 @@ export const PERSONAL_DATA_TABLES: readonly PersonalDataTable[] = [
         'resolved_at',
       ],
       embeds: [
-        'items:tcg_trade_items(side, ordinal, subject_kind, card_user_id, card_team_id, card_map_slug, rarity, is_foil)',
+        'items:tcg_trade_items(side, ordinal, subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id, card_mascot_slug, rarity, is_foil)',
       ],
     },
   },

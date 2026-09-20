@@ -50,6 +50,8 @@ export default ns('tcgShowcase', {
   kindPlayer: 'Joueuse',
   kindTeam: 'Équipe',
   kindMap: 'Map',
+  kindFanart: 'Fan art',
+  kindMascot: 'Mascotte',
 
   save: 'Enregistrer la vitrine',
   saving: 'Enregistrement…',
