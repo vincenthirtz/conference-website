@@ -151,6 +151,15 @@ export const PERSONAL_DATA_TABLES: readonly PersonalDataTable[] = [
     },
   },
   {
+    table: 'tcg_photo_purges',
+    columns: ['user_id'],
+    policy: { kind: 'keep' },
+    why: 'Une dette de suppression, pas une trace. La ligne ne porte qu’un chemin de stockage et existe UNIQUEMENT tant que le fichier n’est pas effacé du bucket public — c’est elle qui garantit qu’il le sera. La supprimer à la clôture du compte ferait exactement le contraire de ce que la clôture demande : la photo resterait joignable par son URL, sans plus personne pour connaître son chemin. Le balayage horaire l’efface, puis la ligne part d’elle-même.',
+    export: {
+      omit: 'File de travail interne : ne contient qu’un chemin de fichier en cours de suppression, jamais un contenu.',
+    },
+  },
+  {
     table: 'tcg_player_cards',
     columns: ['user_id'],
     policy: { kind: 'delete' },
