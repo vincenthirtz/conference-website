@@ -107,16 +107,47 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     }
   }
 
+  // ÉDITIONS CLOSES : jamais proposées par défaut.
+  //
+  // Les matchs de la Cup 2025 (tournoi `completed`) remontaient dans
+  // `/mvp ouvrir`, qui est le premier appelant à demander des matchs
+  // `finished` — les autres commandes cherchent du pending/ongoing/disputed,
+  // dont une édition terminée n'a plus. Proposer d'ouvrir un vote MVP sur un
+  // match d'il y a un an n'a aucun sens, et le risque n'est pas théorique :
+  // les libellés se ressemblent d'une édition à l'autre.
+  //
+  // Le filtre ne s'applique QU'EN L'ABSENCE de `tournamentId` explicite :
+  // quand quelqu'un désigne un tournoi, on lui rend ce qu'il a demandé.
+  //
+  // Le tri est EXPRESSÉMENT fait ici, en JavaScript, et non en PostgREST : un
+  // `not.in` écarterait aussi les scrims (`tournament_id` NULL, et NULL NOT IN
+  // (…) ne vaut pas VRAI en SQL), et la disjonction qui corrige ça ne se
+  // vérifie pas en test — le mock Supabase ne l'implémente pas et rendrait un
+  // vert trompeur. Une règle d'affichage qu'on ne peut pas tester n'en est pas
+  // une.
+  const closedTournamentIds = new Set<string>();
+  if (!tournamentId) {
+    const { data: closed } = await supabaseAdmin
+      .from('tournaments')
+      .select('id')
+      .eq('tenant_id', req.botContext.tenantId)
+      .in('status', ['completed', 'archived', 'cancelled']);
+    for (const t of closed ?? []) closedTournamentIds.add(t.id as string);
+  }
+
   let query = supabaseAdmin
     .from('matches')
     .select(
-      `id, status, round_number, round_name, scheduled_at, scrim_id,
+      `id, status, round_number, round_name, scheduled_at, scrim_id, tournament_id,
        team1:team1_id (id, name, short_name),
        team2:team2_id (id, name, short_name)`
     )
     .eq('tenant_id', req.botContext.tenantId)
     .order('scheduled_at', { ascending: true, nullsFirst: false })
-    .limit(limit);
+    // Sur-récupération : les éditions closes sont les plus ANCIENNES, donc les
+    // premières dans un tri croissant. S'en tenir à `limit` ici pourrait ne
+    // ramener qu'elles, et rendre une liste vide après filtrage.
+    .limit(closedTournamentIds.size > 0 ? Math.min(limit * 4, 100) : limit);
 
   if (tournamentId) query = query.eq('tournament_id', tournamentId);
   if (statusFilter.length > 0) query = query.in('status', statusFilter);
@@ -139,7 +170,14 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     return res.status(200).json({ results: [] });
   }
 
-  const results = (data ?? []).map((m) => {
+  const visible = (data ?? []).filter((m) => {
+    const tid = (m as { tournament_id?: string | null }).tournament_id;
+    // Un scrim n'appartient à aucun tournoi : il n'est jamais « d'une édition
+    // close ».
+    return !tid || !closedTournamentIds.has(tid);
+  });
+
+  const results = visible.slice(0, limit).map((m) => {
     const t1 = Array.isArray((m as any).team1)
       ? (m as any).team1[0]
       : (m as any).team1;
