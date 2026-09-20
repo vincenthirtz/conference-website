@@ -94,6 +94,8 @@ post:
                 type: boolean
               award:
                 type: ['object', 'null']
+              winnerLabel:
+                type: [string, 'null']
               reason:
                 type: [string, 'null']
               tallies:

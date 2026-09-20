@@ -23510,6 +23510,83 @@
     ]
    }
   },
+  "GET /api/bot/v1/matches/mvp-due": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "due": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "matchId": {
+         "type": "string"
+        },
+        "closesAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "channelId": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "messageId": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "roundName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "tournamentId": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team1Name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team2Name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "matchId",
+        "closesAt",
+        "channelId",
+        "messageId",
+        "roundName",
+        "tournamentId",
+        "team1Name",
+        "team2Name"
+       ]
+      }
+     },
+     "count": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "due",
+     "count"
+    ]
+   }
+  },
   "GET /api/bot/v1/matches/{matchId}": {
    "200": {
     "type": "object",
@@ -60897,6 +60974,12 @@
          "totalVotes"
         ]
        },
+       "winnerLabel": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "reason": {
         "type": [
          "string",
@@ -61006,6 +61089,7 @@
       "required": [
        "success",
        "award",
+       "winnerLabel",
        "reason",
        "tallies"
       ]

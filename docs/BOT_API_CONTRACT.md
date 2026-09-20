@@ -1030,7 +1030,7 @@ code. Les tableaux par domaine ci-dessous gardent le contexte rédigé ; un test
 ce tableau.
 
 <!-- BEGIN GENERATED: bot-inventory -->
-_Tableau généré depuis les options `withBotRoute` des handlers — ne pas éditer à la main : `npm run contract:bot-inventory`. 92 routes._
+_Tableau généré depuis les options `withBotRoute` des handlers — ne pas éditer à la main : `npm run contract:bot-inventory`. 94 routes._
 
 | Route | Méthodes | Idem. | Rate-key | Plafond | Portée / plan |
 | --- | --- | --- | --- | --- | --- |
@@ -1061,11 +1061,13 @@ _Tableau généré depuis les options `withBotRoute` des handlers — ne pas éd
 | [`matches/[matchId]/drafts.ts`](../pages/api/bot/v1/matches/[matchId]/drafts.ts) | POST | oui | `bot-match-draft-init` | 30/min | plan `discordEventOps:full` |
 | [`matches/[matchId]/evidence.ts`](../pages/api/bot/v1/matches/[matchId]/evidence.ts) | GET, POST | oui | `bot-match-evidence` | 40/min (+10/acteur) | — |
 | [`matches/[matchId]/forfeit.ts`](../pages/api/bot/v1/matches/[matchId]/forfeit.ts) | POST | oui | `bot-match-forfeit` | 20/min (+5/acteur) | — |
+| [`matches/[matchId]/mvp.ts`](../pages/api/bot/v1/matches/[matchId]/mvp.ts) | GET, POST | — | `bot-match-mvp` | 600/min (+20/acteur) | — |
 | [`matches/[matchId]/preset.ts`](../pages/api/bot/v1/matches/[matchId]/preset.ts) | GET | — | `bot-match-preset` | 60/min | — |
 | [`matches/[matchId]/report.ts`](../pages/api/bot/v1/matches/[matchId]/report.ts) | POST | oui | `bot-match-report` | 30/min (+5/acteur) | — |
 | [`matches/[matchId]/reset.ts`](../pages/api/bot/v1/matches/[matchId]/reset.ts) | POST | oui | `bot-match-reset` | 20/min (+5/acteur) | — |
 | [`matches/[matchId]/resolve-dispute.ts`](../pages/api/bot/v1/matches/[matchId]/resolve-dispute.ts) | POST | oui | `bot-match-resolve-dispute` | 20/min (+5/acteur) | plan `arbitration` |
 | [`matches/[matchId]/veto.ts`](../pages/api/bot/v1/matches/[matchId]/veto.ts) | GET, POST, DELETE | oui | `bot-match-veto` | 30/min (+5/acteur) | plan `discordEventOps:full` |
+| [`matches/mvp-due.ts`](../pages/api/bot/v1/matches/mvp-due.ts) | GET | — | `bot-mvp-due` | 120/min | — |
 | [`moderation/blacklist.ts`](../pages/api/bot/v1/moderation/blacklist.ts) | GET, POST, DELETE | oui | `bot-moderation` | 30/min (+10/acteur) | — |
 | [`moderation/blacklist-alert.ts`](../pages/api/bot/v1/moderation/blacklist-alert.ts) | POST | oui | `bot-moderation` | 30/min | plan `arbitration` |
 | [`player-actions.ts`](../pages/api/bot/v1/player-actions.ts) | GET | — | `bot-player-actions` | 30/min | — |

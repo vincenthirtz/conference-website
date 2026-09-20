@@ -707,17 +707,34 @@
     ],
     "match_mvp_polls": [
       "candidate_player_ids",
+      "closed_at",
+      "closes_at",
       "created_at",
+      "discord_channel_id",
+      "discord_message_id",
       "duration_hours",
       "id",
       "match_id",
       "posted_at",
       "tenant_id",
+      "total_votes",
       "updated_at",
       "winner_battle_tag",
       "winner_imported_at",
       "winner_imported_by",
-      "winner_member_id"
+      "winner_member_id",
+      "winner_source",
+      "winner_votes"
+    ],
+    "match_mvp_votes": [
+      "created_at",
+      "id",
+      "match_id",
+      "member_id",
+      "source",
+      "tenant_id",
+      "updated_at",
+      "voter_key"
     ],
     "match_participants": [
       "battle_tag",
@@ -2491,6 +2508,18 @@
     "match_mvp_polls_winner_member_id_fkey": {
       "source": "match_mvp_polls",
       "target": "team_members"
+    },
+    "match_mvp_votes_match_id_fkey": {
+      "source": "match_mvp_votes",
+      "target": "matches"
+    },
+    "match_mvp_votes_member_id_fkey": {
+      "source": "match_mvp_votes",
+      "target": "team_members"
+    },
+    "match_mvp_votes_tenant_id_fkey": {
+      "source": "match_mvp_votes",
+      "target": "tenants"
     },
     "match_participants_match_id_fkey": {
       "source": "match_participants",

@@ -124,6 +124,18 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const settled = await settleMatchMvp(tenantId, matchId, { close: true });
   if (!settled) return res.status(404).json({ error: 'Match introuvable' });
 
+  // Le bot annonce la gagnante en éditant son message : il lui faut un NOM,
+  // pas un identifiant. On le rend ici plutôt que de lui faire un second
+  // aller-retour — et parce que c'est le site, pas le bot, qui sait comment
+  // une joueuse veut être nommée (display_name avant BattleTag).
+  let winnerLabel: string | null = null;
+  if (settled.award) {
+    const { candidates } = await listMvpCandidates(tenantId, matchId);
+    winnerLabel =
+      candidates.find((c) => c.memberId === settled.award!.memberId)?.label ??
+      null;
+  }
+
   logger.info(
     `[bot/mvp] close match=${matchId} winner=${settled.award?.memberId ?? 'none'} reason=${settled.reason ?? '-'}`
   );
@@ -131,6 +143,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   return res.status(200).json({
     success: true,
     award: settled.award,
+    winnerLabel,
     reason: settled.reason,
     tallies: settled.tallies,
   });

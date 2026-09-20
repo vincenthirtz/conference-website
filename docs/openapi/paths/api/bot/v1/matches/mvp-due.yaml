@@ -1,0 +1,50 @@
+get:
+  tags:
+    - bot/matches
+  summary: Votes MVP dont la fenetre est ecoulee et qui restent a depouiller.
+  description: >-
+    Consomme par la boucle de cloture du bot. C'est le bot qui clot, parce que
+    c'est lui seul qui peut ensuite editer son message pour annoncer la
+    gagnante : clore cote site laisserait un message qui continue d'inviter a
+    voter.
+  operationId: botGetMvpVotesDue
+  responses:
+    '200':
+      description: Liste des votes echus (au plus 25).
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - due
+              - count
+            properties:
+              count:
+                type: integer
+              due:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    matchId:
+                      $ref: '#/components/schemas/Uuid'
+                    closesAt:
+                      anyOf:
+                        - $ref: '#/components/schemas/Timestamp'
+                        - type: 'null'
+                    channelId:
+                      type: [string, 'null']
+                    messageId:
+                      type: [string, 'null']
+                    roundName:
+                      type: [string, 'null']
+                    tournamentId:
+                      anyOf:
+                        - $ref: '#/components/schemas/Uuid'
+                        - type: 'null'
+                    team1Name:
+                      type: [string, 'null']
+                    team2Name:
+                      type: [string, 'null']
+    '500':
+      $ref: '#/components/responses/ServerError'
