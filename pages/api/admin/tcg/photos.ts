@@ -51,6 +51,11 @@ import {
   type AdminUserProfile,
 } from '@/utils/adminUserProfiles';
 import { logger } from '@/utils/logger';
+import {
+  enqueuePhotoPurge,
+  tryPurgeNow,
+  cancelPhotoPurge,
+} from '@/utils/tcg/photoPurge';
 
 /** Même bucket public que les logos d'équipe (cf. l'endpoint joueuse). */
 const BUCKET = 'teams-images';
@@ -218,6 +223,28 @@ async function decide(
   const nowIso = new Date().toISOString();
   const approving = decision === 'approve';
 
+  // LA FILE AVANT LE POINTEUR, pour un REFUS. Même raison que le retrait côté
+  // joueuse : une fois `photo_path` à NULL, plus rien ne porte le chemin, et
+  // un `.remove()` en échec laisserait la photo joignable dans un bucket
+  // public. Une photo refusée l'a justement été parce qu'elle pose problème —
+  // c'est le dernier fichier qu'on peut se permettre d'oublier.
+  //
+  // Mise en file AVANT l'écriture conditionnelle, qui peut PERDRE la course
+  // (la joueuse a remplacé sa photo entre-temps). Il resterait alors une ligne
+  // de file pour un fichier encore référencé, que le balayage effacerait —
+  // une carte cassée. D'où le `cancelPhotoPurge` sur cette branche, plus bas.
+  if (!approving) {
+    const queued = await enqueuePhotoPurge({
+      tenantId: ctx.tenantId,
+      userId,
+      storagePath: photoPath,
+      reason: 'rejected',
+    });
+    if (!queued) {
+      return res.status(500).json({ error: 'Enregistrement impossible.' });
+    }
+  }
+
   // L'ÉCRITURE CONDITIONNELLE — la seule garantie. Entre la relecture et ici,
   // la joueuse peut encore remplacer ou retirer sa photo : la condition sur le
   // CHEMIN fait alors toucher zéro ligne, au lieu d'approuver une inconnue.
@@ -245,7 +272,10 @@ async function decide(
   }
   if (!Array.isArray(written) || written.length === 0) {
     // Course perdue : la photo a changé entre la relecture et l'écriture.
-    // Rien n'est approuvé, rien n'est supprimé.
+    // Rien n'est approuvé, rien n'est supprimé — et la ligne de file posée
+    // au-dessus doit partir, sans quoi le balayage effacerait un fichier que
+    // la base référence toujours (une carte cassée, l'inverse du but).
+    if (!approving) await cancelPhotoPurge(photoPath);
     return photoChanged(res);
   }
 
@@ -254,15 +284,9 @@ async function decide(
   // disparu. C'est le chemin CONFIRMÉ par l'écriture conditionnelle — donc le
   // fichier que la relectrice a vu et refusé, jamais celui d'un remplacement.
   if (!approving) {
-    const { error: removeError } = await supabaseAdmin!.storage
-      .from(BUCKET)
-      .remove([photoPath]);
-    if (removeError) {
-      logger.error(
-        '[admin/tcg] fichier refusé non supprimé: %s',
-        removeError.message
-      );
-    }
+    // L'échec n'est plus une impasse : le chemin est en file, le balayage
+    // horaire reprendra.
+    await tryPurgeNow(photoPath);
   }
 
   await logStaffAction({

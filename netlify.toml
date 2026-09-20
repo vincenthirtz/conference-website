@@ -109,6 +109,14 @@
 [functions."tcg-trades-expire-cron"]
   schedule = "17 * * * *"
 
+# Scheduled function: reprise des photos de carte non supprimées. Le bucket
+# `teams-images` est PUBLIC ; une suppression ratée au retrait de consentement
+# laissait la photo joignable pour toujours, la base ne portant plus le chemin.
+# `tcg_photo_purges` garde le chemin, ce balayage l'efface. Décalé de l'heure
+# ronde ET des échanges pour ne pas empiler deux fonctions sur la même minute.
+[functions."tcg-photo-purge-cron"]
+  schedule = "41 * * * *"
+
 # Scheduled function: paid-plan lifecycle (« Régie solidaire », axe 06 — revenu
 # récurrent). Une fois par jour à 08:00 UTC. Sur les tenants regie/circuit :
 # bascule en 'past_due' les plans actifs expirés, et envoie aux owners une

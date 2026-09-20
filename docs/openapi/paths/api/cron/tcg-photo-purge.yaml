@@ -1,0 +1,56 @@
+get:
+  tags:
+    - cron
+  summary: Reprend les photos de carte dont la suppression a echoue.
+  operationId: cronTcgPhotoPurgeGet
+  description: |
+    Schedule: hourly (`41 * * * *`) via Netlify scheduled function
+    `tcg-photo-purge-cron`.
+
+    Le bucket `teams-images` est PUBLIC. Un retrait de consentement ou un
+    refus de moderation coupe `photo_path` en base PUIS supprime le
+    fichier ; quand cette suppression echouait, plus rien ne portait le
+    chemin et la photo restait joignable par son URL, indefiniment. La file
+    `tcg_photo_purges` garde le chemin, ce balayage l'efface.
+
+    Les plus anciennes d'abord, au plus 50 par passage. Un fichier
+    introuvable compte comme un succes : le but est qu'il ne soit plus la.
+    Une ligne dont `attempts` grimpe n'est JAMAIS supprimee — abandonner
+    reviendrait a oublier une photo publique.
+
+    Auth: `Authorization: Bearer <CRON_SECRET>` header OR
+    `?secret=<CRON_SECRET>` query string (constant-time). Both GET and POST
+    accepted.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: '`{ examined, purged, failed, duration_ms }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              examined:
+                type: integer
+              purged:
+                type: integer
+              failed:
+                type: integer
+              duration_ms:
+                type: integer
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+post:
+  tags:
+    - cron
+  summary: Reprend les photos de carte dont la suppression a echoue.
+  operationId: cronTcgPhotoPurgePost
+  description: Same as `GET /api/cron/tcg-photo-purge`.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: '`{ examined, purged, failed, duration_ms }`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'

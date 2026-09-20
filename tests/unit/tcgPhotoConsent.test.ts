@@ -39,6 +39,8 @@ import {
   storageRemovals,
   storageUploads,
   supabaseAdmin,
+  setStorageRemoveResult,
+  setTableWriteError,
 } from './__helpers__/supabaseMock';
 import { invalidateStaffCache } from '../../utils/staff';
 import { DEFAULT_TENANT_ID } from '../../utils/tenant';
@@ -287,6 +289,57 @@ describe('DELETE /api/player/tcg/photo — retrait de l’accord', () => {
     // laisserait la photo joignable par son URL, indéfiniment.
     expect(storageRemovals).toHaveLength(1);
     expect(storageRemovals[0].paths).toEqual([PHOTO_PATH]);
+  });
+
+  it('met le chemin en file AVANT de couper le pointeur', async () => {
+    seedPlayer();
+    seedCard();
+    // Le bucket refuse : c'est le mode d'échec qui laissait, avant la file,
+    // une photo publique dont plus personne ne connaissait le chemin.
+    setStorageRemoveResult({ data: null, error: { message: 'storage down' } });
+
+    const res = makeRes();
+    await photoHandler(makeReq({ method: 'DELETE' }), res);
+
+    // Le retrait est acquis pour la joueuse : la base ne référence plus rien.
+    expect(res.statusCode).toBe(200);
+    expect(cardRow().photo_path).toBeNull();
+    // Et le chemin n'est pas perdu : le balayage horaire pourra reprendre.
+    const queued = (store.tcg_photo_purges ?? []) as Array<{
+      storage_path: string;
+      reason: string;
+    }>;
+    expect(queued).toHaveLength(1);
+    expect(queued[0].storage_path).toBe(PHOTO_PATH);
+    expect(queued[0].reason).toBe('revoked');
+  });
+
+  it('vide la file quand le fichier est bien parti', async () => {
+    seedPlayer();
+    seedCard();
+
+    await photoHandler(makeReq({ method: 'DELETE' }), makeRes());
+
+    // Une ligne de file est une DETTE, pas un journal : elle n'existe que
+    // tant que le fichier existe.
+    expect(store.tcg_photo_purges ?? []).toHaveLength(0);
+  });
+
+  it('REFUSE de couper le pointeur si la file n’a pas pu être écrite', async () => {
+    seedPlayer();
+    seedCard();
+    setTableWriteError('tcg_photo_purges', { message: 'file indisponible' });
+
+    const res = makeRes();
+    await photoHandler(makeReq({ method: 'DELETE' }), res);
+
+    // L'INVARIANT DU LOT. Couper `photo_path` sans avoir mis le chemin à
+    // l'abri, c'est accepter de le perdre — et laisser la photo joignable
+    // pour toujours. Mieux vaut un retrait à recommencer : la joueuse voit
+    // une erreur, sa photo est encore là, et elle peut réessayer.
+    expect(res.statusCode).toBe(500);
+    expect(cardRow().photo_path).toBe(PHOTO_PATH);
+    expect(storageRemovals).toHaveLength(0);
   });
 
   it('conserve la trace de l’accord, et ne supprime pas la ligne', async () => {

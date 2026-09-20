@@ -1467,6 +1467,17 @@
       "tenant_id",
       "user_id"
     ],
+    "tcg_photo_purges": [
+      "attempts",
+      "created_at",
+      "id",
+      "last_attempt_at",
+      "last_error",
+      "reason",
+      "storage_path",
+      "tenant_id",
+      "user_id"
+    ],
     "tcg_player_cards": [
       "created_at",
       "opted_in_at",

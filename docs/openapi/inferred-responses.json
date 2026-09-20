@@ -13081,6 +13081,7 @@
          "enum": [
           "fanart",
           "map",
+          "mascot",
           "player",
           "team"
          ]
@@ -31073,6 +31074,31 @@
     "required": [
      "processed",
      "emitted"
+    ]
+   }
+  },
+  "GET /api/cron/tcg-photo-purge": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "duration_ms": {
+      "type": "number"
+     },
+     "examined": {
+      "type": "number"
+     },
+     "purged": {
+      "type": "number"
+     },
+     "failed": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "duration_ms",
+     "examined",
+     "purged",
+     "failed"
     ]
    }
   },
@@ -63747,6 +63773,31 @@
     "required": [
      "processed",
      "emitted"
+    ]
+   }
+  },
+  "POST /api/cron/tcg-photo-purge": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "duration_ms": {
+      "type": "number"
+     },
+     "examined": {
+      "type": "number"
+     },
+     "purged": {
+      "type": "number"
+     },
+     "failed": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "duration_ms",
+     "examined",
+     "purged",
+     "failed"
     ]
    }
   },

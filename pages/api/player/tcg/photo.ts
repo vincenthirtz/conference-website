@@ -37,6 +37,7 @@ import {
 } from '@/utils/uploads/imageBytes';
 import { revalidatePlayerCard } from '@/utils/tcg/revalidatePlayerCard';
 import { logger } from '@/utils/logger';
+import { enqueuePhotoPurge, tryPurgeNow } from '@/utils/tcg/photoPurge';
 
 /** Même bucket public que les logos d'équipe, sous un préfixe dédié. */
 const BUCKET = 'teams-images';
@@ -288,6 +289,23 @@ async function revoke(
     path =
       (existing as { photo_path?: string | null } | null)?.photo_path ?? null;
 
+    // LA FILE D'ABORD, LE POINTEUR ENSUITE. Couper `photo_path` avant d'avoir
+    // mis le chemin à l'abri, c'était accepter de le perdre si la suppression
+    // échouait — et laisser la photo joignable par son URL pour toujours, dans
+    // un bucket public (cf. `utils/tcg/photoPurge.ts`). On refuse plutôt de
+    // continuer : un retrait à recommencer vaut mieux qu'un fichier orphelin.
+    if (path) {
+      const queued = await enqueuePhotoPurge({
+        tenantId,
+        userId,
+        storagePath: path,
+        reason: 'revoked',
+      });
+      if (!queued) {
+        return res.status(500).json({ error: 'Retrait impossible.' });
+      }
+    }
+
     const nowIso = new Date().toISOString();
     // On garde la ligne : `revoked_at` est un fait à conserver, et `opted_in_at`
     // atteste qu'il y a eu accord. Effacer la ligne effacerait cette histoire.
@@ -328,17 +346,10 @@ async function revoke(
   // Le fichier part APRÈS que la base ne le référence plus : dans l'autre
   // ordre, un échec d'écriture laisserait une ligne pointant vers un fichier
   // disparu — une carte cassée plutôt qu'une carte sans photo.
-  if (path) {
-    const { error: removeError } = await supabaseAdmin!.storage
-      .from(BUCKET)
-      .remove([path]);
-    if (removeError) {
-      logger.error(
-        '[tcg/photo] fichier non supprimé après retrait: %s',
-        removeError.message
-      );
-    }
-  }
+  //
+  // L'échec n'est plus une impasse : le chemin est en file depuis l'étape
+  // précédente, et le balayage horaire reprendra.
+  if (path) await tryPurgeNow(path);
 
   // LE POINT LE PLUS IMPORTANT DE CE FICHIER. Sans cette régénération, la photo
   // resterait affichée sur la fiche publique jusqu'à cinq minutes après le
