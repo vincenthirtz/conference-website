@@ -143,3 +143,48 @@ describe('HomeSpotlight — l’ordre du bloc', () => {
     expect(html).toContain('href="/team/chocomates"');
   });
 });
+
+/* ── L'appel à Twitch ──────────────────────────────────────────────────────
+ *
+ * PIÈGE HELIX, payé une fois : avec `started_at` SEUL, l'API borne la fenêtre à
+ * started_at + 7 jours. « Les 30 derniers jours » renvoyait donc les clips
+ * d'il y a 30 à 23 jours — zéro clip en production, sans la moindre erreur.
+ */
+
+describe('fetchTwitchClips — la fenêtre demandée', () => {
+  it('envoie started_at ET ended_at', async () => {
+    const calls: string[] = [];
+    const realFetch = globalThis.fetch;
+    process.env.TWITCH_CLIENT_ID = 'id';
+    process.env.TWITCH_CLIENT_SECRET = 'secret';
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      calls.push(url);
+      if (url.includes('oauth2/token')) {
+        return new Response(
+          JSON.stringify({ access_token: 't', expires_in: 3600 }),
+          { status: 200 }
+        );
+      }
+      if (url.includes('helix/users')) {
+        return new Response(JSON.stringify({ data: [{ id: '42' }] }), {
+          status: 200,
+        });
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200 });
+    }) as typeof fetch;
+
+    try {
+      const { fetchTwitchClips } = await import('@/utils/twitch');
+      await fetchTwitchClips('womens_cup', { limit: 4, days: 30 });
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+
+    const clipsCall = calls.find((c) => c.includes('helix/clips'));
+    expect(clipsCall).toBeDefined();
+    expect(clipsCall).toContain('started_at=');
+    expect(clipsCall).toContain('ended_at=');
+    expect(clipsCall).toContain('broadcaster_id=42');
+  });
+});

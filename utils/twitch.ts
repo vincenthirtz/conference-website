@@ -264,11 +264,16 @@ export async function fetchTwitchClips(
   const broadcasterId = await fetchBroadcasterId(login);
   if (!broadcasterId) return [];
 
-  const startedAt = new Date(Date.now() - days * 86_400_000).toISOString();
+  // `ended_at` EST OBLIGATOIRE EN PRATIQUE : avec `started_at` seul, Helix
+  // borne la fenêtre à started_at + 7 JOURS. Demander « les 30 derniers
+  // jours » renvoyait donc les clips d'il y a 30 à 23 jours — soit, pour cette
+  // chaîne, aucun. Vérifié contre l'API le 2026-09-20.
+  const now = Date.now();
   const search = new URLSearchParams({
     broadcaster_id: broadcasterId,
     first: String(limit),
-    started_at: startedAt,
+    started_at: new Date(now - days * 86_400_000).toISOString(),
+    ended_at: new Date(now).toISOString(),
   });
 
   try {
