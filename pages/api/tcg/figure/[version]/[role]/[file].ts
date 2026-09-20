@@ -25,6 +25,11 @@ import {
   renderRoleFigureSvg,
   type FigureRole,
 } from '@/utils/tcg/roleFigures';
+import {
+  MASCOT_SLUG,
+  MASCOT_VERSION,
+  renderMascotSvg,
+} from '@/utils/tcg/mascotFigure';
 
 const FILE_RE = /^([0-9a-fA-F]{6})\.svg$/;
 
@@ -38,15 +43,23 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // La mascotte partage cette route : même politique de cache, même validation
+  // stricte, une seule porte pour tout ce que le moteur voxel rend. Elle porte
+  // SA PROPRE version : retoucher le nœud ne doit pas invalider le cache des
+  // trois figurines de rôle, ni l'inverse.
+  const version = first(req.query.version);
+  const slug = first(req.query.role);
+  const isMascot = slug === MASCOT_SLUG;
+
+  const expected = isMascot ? `v${MASCOT_VERSION}` : `v${FIGURE_VERSION}`;
   // Une ancienne version n'est plus servie : lui rendre le modèle courant
   // mettrait en cache, pour un an et sous l'ancienne URL, un dessin qui n'est
   // pas le sien.
-  if (first(req.query.version) !== `v${FIGURE_VERSION}`) {
+  if (version !== expected) {
     return res.status(404).json({ error: 'Figurine introuvable.' });
   }
 
-  const role = first(req.query.role) as FigureRole;
-  if (!(FIGURE_ROLES as readonly string[]).includes(role)) {
+  if (!isMascot && !(FIGURE_ROLES as readonly string[]).includes(slug)) {
     return res.status(404).json({ error: 'Figurine introuvable.' });
   }
 
@@ -58,7 +71,9 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       .json({ error: 'Couleur invalide (RRGGBB attendu).' });
   }
 
-  const svg = renderRoleFigureSvg(role, color);
+  const svg = isMascot
+    ? renderMascotSvg(color)
+    : renderRoleFigureSvg(slug as FigureRole, color);
 
   res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
