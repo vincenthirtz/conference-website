@@ -1520,6 +1520,36 @@ Quelques conventions transverses :
 
 **Ce qui reste :**
 
+- **Douze héros du registre n'ont pas de figurine voxel** (Domina, D.Mon,
+  Anran, Emre, Freja, Shion, Sierra, Doctrine, Fika, Juno, Mizuki, Wuyang) :
+  arrivés après la campagne de sculpture, ils retombent sur la figurine de leur
+  RÔLE. C'est un repli correct, pas un trou. La file d'attente est tenue dans
+  `tests/unit/heroFigureCoverage.test.ts` : un héros ajouté au registre sans
+  figurine y fait échouer le test tant que personne ne l'a inscrit — donc tant
+  que personne n'a regardé.
+
+  ⚠️ Ce test est né d'un cas qui, lui, était un BOGUE : **Soldier: 76** avait sa
+  figurine et ne l'affichait jamais, la conversion du nom en slug n'enlevant pas
+  les deux-points. Le repli sur le rôle étant silencieux par conception, rien ne
+  pouvait le signaler — la carte s'affichait, simplement avec la mauvaise
+  figurine. Corrigé le 2026-09-20 ; la normalisation retire désormais les
+  accents et tout ce qui n'est ni lettre ni chiffre.
+
+- **Les pronostics sont fermés au STAFF, et c'est une décision.**
+  `pages/api/player/predictions/[matchId].ts` refuse un compte staff au même
+  titre qu'une joueuse d'un des deux rosters : qui arbitre ne parie pas sur ce
+  qu'il arbitre. Conséquence assumée : un compte staff n'a pas accès à cette
+  voie de gain — d'où l'accueil `staff_welcome`, qui lui ouvre la porte du jeu
+  par ailleurs.
+
+- **La voie FAN ART n'a jamais servi**, et ce n'est pas une panne : le dépôt
+  (`FanartSubmitPanel`, espace joueuse) et la modération
+  (`TcgFanartPanel`, `/admin/tcg`) sont montés des deux côtés et couverts par
+  23 tests unitaires ; simplement, aucune œuvre n'a encore été soumise, donc
+  aucune carte de fan art n'a jamais été tirée. À vérifier en conditions
+  réelles à la première soumission, plutôt qu'à supposer.
+
+
 
 - **Échanges × séries : tranché (2026-09-15), dit des deux côtés (2026-09-20).**
   Une carte reçue par échange (paquet `trade`) ne compte ni pour la récompense

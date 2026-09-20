@@ -129,7 +129,19 @@ export function heroFigureSlugFromName(
   const key = (name ?? '')
     .trim()
     .toLowerCase()
-    .replace(/[.\s·]/g, '');
+    // LES ACCENTS D'ABORD : « Lúcio » et « Torbjörn » sont les orthographes
+    // OFFICIELLES du jeu. Le registre les écrit sans accent, mais rien ne
+    // garantit que toute source fasse de même — une préférence saisie à la
+    // main, un import, une API éditeur.
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    // PUIS TOUT CE QUI N'EST NI LETTRE NI CHIFFRE. La version précédente
+    // n'enlevait que `.`, les espaces et `·` — et laissait donc les
+    // DEUX-POINTS. « Soldier: 76 » devenait `soldier:76`, qui ne
+    // correspondait à aucun slug : sa figurine ÉTAIT sculptée
+    // (`soldier76`) et ne s'est jamais affichée. La carte retombait sur la
+    // figurine générique de son rôle, sans que rien ne le signale.
+    .replace(/[^a-z0-9]/g, '');
   return isHeroFigureSlug(key) ? key : null;
 }
 
