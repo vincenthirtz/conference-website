@@ -102,6 +102,10 @@ post:
                 type: [string, 'null']
               tallies:
                 type: object
+              channelId:
+                type: [string, 'null']
+              messageId:
+                type: [string, 'null']
     '400':
       $ref: '#/components/responses/BadRequest'
     '404':

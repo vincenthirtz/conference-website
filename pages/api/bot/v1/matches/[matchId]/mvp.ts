@@ -139,6 +139,14 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       null;
   }
 
+  // L'ancrage du message accompagne le résultat. Sans lui, une clôture demandée
+  // AVANT l'échéance (`/mvp clore`) dépouillerait en base sans toucher au
+  // message Discord : le sélecteur continuerait d'inviter à voter sur un vote
+  // clos — exactement le décrochage que ce système existe pour empêcher. La
+  // liste des votes échus, elle, porte déjà l'ancrage ; une clôture à la
+  // demande n'y figure pas, par définition.
+  const poll = await readMvpPoll(tenantId, matchId);
+
   logger.info(
     `[bot/mvp] close match=${matchId} winner=${settled.award?.memberId ?? 'none'} reason=${settled.reason ?? '-'}`
   );
@@ -149,6 +157,8 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     winnerLabel,
     reason: settled.reason,
     tallies: settled.tallies,
+    channelId: poll?.discord_channel_id ?? null,
+    messageId: poll?.discord_message_id ?? null,
   });
 }
 

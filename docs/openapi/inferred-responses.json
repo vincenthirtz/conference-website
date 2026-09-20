@@ -61120,6 +61120,18 @@
          "discord",
          "twitch"
         ]
+       },
+       "channelId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "messageId": {
+        "type": [
+         "string",
+         "null"
+        ]
        }
       },
       "required": [
@@ -61127,7 +61139,9 @@
        "award",
        "winnerLabel",
        "reason",
-       "tallies"
+       "tallies",
+       "channelId",
+       "messageId"
       ]
      },
      {
