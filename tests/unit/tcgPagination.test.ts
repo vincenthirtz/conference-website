@@ -550,8 +550,15 @@ describe('POST /api/player/tcg/packs — isNew', () => {
     expect((byId.get(P[1]) as any).isNew).toBe(true);
     expect((byId.get(P[2]) as any).isNew).toBe(true);
     expect((byId.get(TEAM) as any).isNew).toBe(true);
-    const map = res.body.cards.find((c: any) => c.kind === 'map');
-    expect(map.isNew).toBe(true);
+    // La carte de DÉCOR, quelle que soit sa nature : l'emplacement rend une
+    // map, une mascotte ou une fan art selon le tirage. Épingler `kind ===
+    // 'map'` rendait ce test aléatoire — il tombait le jour où une mascotte
+    // sortait, et `find` renvoyait alors `undefined`.
+    const decor = res.body.cards.find(
+      (c: any) => c.kind !== 'player' && c.kind !== 'team'
+    );
+    expect(decor).toBeDefined();
+    expect(decor.isNew).toBe(true);
   });
 
   it('ne compte pas le paquet qu’on vient d’ouvrir comme « déjà possédé »', async () => {
