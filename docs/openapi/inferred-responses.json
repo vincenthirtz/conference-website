@@ -59761,12 +59761,16 @@
        "string",
        "null"
       ]
+     },
+     "transferred": {
+      "type": "boolean"
      }
     },
     "required": [
      "success",
      "discordUserId",
-     "discordUsername"
+     "discordUsername",
+     "transferred"
     ]
    }
   },

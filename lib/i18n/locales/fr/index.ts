@@ -184,6 +184,7 @@ import nsPlayerAgenda from './playerAgenda';
 import nsPlayerMyTeams from './playerMyTeams';
 import nsProductionPartner from './productionPartner';
 import nsPlayerHeroPrefs from './playerHeroPrefs';
+import nsPlayerDiscordLink from './playerDiscordLink';
 import nsPlayerTwitchLink from './playerTwitchLink';
 import nsOverlayTcg from './overlayTcg';
 
@@ -365,6 +366,7 @@ export const frDict = {
   circuitPartnersPage: nsCircuitPartnersPage.fr,
   tcgShowcase: nsTcgShowcase.fr,
   playerHeroPrefs: nsPlayerHeroPrefs.fr,
+  playerDiscordLink: nsPlayerDiscordLink.fr,
   playerTwitchLink: nsPlayerTwitchLink.fr,
   overlayTcg: nsOverlayTcg.fr,
 };

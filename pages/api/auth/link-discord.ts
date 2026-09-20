@@ -6,10 +6,18 @@
 //
 // No body required. The endpoint is idempotent: re-calling it refreshes the
 // stored Discord username.
+//
+// `{ transfer: true }` REPREND le lien quand ce compte Discord est déjà
+// rattaché à un autre compte du site. C'est la sortie du piège du double
+// compte (un compte e-mail au roster + un compte Discord OAuth hors roster),
+// qui faisait retirer le rôle d'équipe toutes les 30 minutes sans que
+// personne puisse rien y faire sans passer par la base. L'identifiant Discord
+// vient de l'identité OAuth de la session, jamais d'une saisie : le reprendre
+// exige donc de prouver qu'on contrôle ce compte Discord.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerClient, supabaseAdmin } from '@/utils/supabase';
-import { upsertDiscordLink } from '@/utils/discordLinks';
+import { claimDiscordLink } from '@/utils/discordLinks';
 import { claimFreePlayerRows } from '@/utils/freePlayers/claimForAccount';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { applyRateLimit } from '@/utils/rateLimit';
@@ -89,18 +97,41 @@ export default async function handler(
     identityData.name ||
     null;
 
-  const result = await upsertDiscordLink(user.id, discordUserId, username);
+  const allowTransfer =
+    (req.body as { transfer?: unknown } | null)?.transfer === true;
+
+  const result = await claimDiscordLink(user.id, discordUserId, username, {
+    allowTransfer,
+  });
+
   if (!result.ok) {
-    // Most common failure is the UNIQUE constraint on discord_user_id —
-    // surface a clearer message in that case.
-    if (result.error?.includes('duplicate key')) {
+    if (result.code === 'held_by_other') {
+      // 409 AVEC un code et l'adresse masquée de l'autre compte : sans ça,
+      // l'écran ne peut que dire « déjà lié » et laisser la personne devant
+      // un mur. Avec, il peut proposer la reprise — et elle reconnaît son
+      // propre second compte.
+      const { data: other } = await supabaseAdmin.auth.admin.getUserById(
+        result.heldBy
+      );
       return res.status(409).json({
-        error: 'Ce compte Discord est déjà lié à un autre utilisateur du site.',
+        error: 'Ce compte Discord est déjà lié à un autre compte du site.',
+        code: 'HELD_BY_OTHER',
+        heldByEmail: maskEmail(other?.user?.email ?? null),
+        canTransfer: true,
       });
     }
     return res
       .status(500)
       .json({ error: 'Échec de l’enregistrement du lien Discord' });
+  }
+
+  if (result.transferredFrom) {
+    logger.info(
+      '[link-discord] lien repris discord=%s de=%s vers=%s',
+      discordUserId,
+      result.transferredFrom,
+      user.id
+    );
   }
 
   // La fiche « joueuse libre » poussée par le rôle Discord « Recherche une
@@ -118,5 +149,20 @@ export default async function handler(
     success: true,
     discordUserId,
     discordUsername: username,
+    transferred: !!result.transferredFrom,
   });
+}
+
+/**
+ * `ve***@gmail.com` — assez pour reconnaître SON propre second compte, pas
+ * assez pour apprendre l'adresse de quelqu'un d'autre. Le cas nominal est une
+ * personne qui a deux comptes ; le cas à protéger est celui où ce n'en est
+ * pas une.
+ */
+function maskEmail(email: string | null): string | null {
+  if (!email) return null;
+  const [local, domain] = email.split('@');
+  if (!domain) return null;
+  const head = local.slice(0, 2);
+  return `${head}${'*'.repeat(Math.max(1, local.length - 2))}@${domain}`;
 }

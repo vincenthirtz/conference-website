@@ -1,178 +1,248 @@
 // components/player/DiscordLinkCard.tsx
-// Shows whether the current user has linked their Discord, and lets them
-// link or unlink it. Used to allow the bot to DM reminders to email-only
-// accounts that never went through Discord OAuth on signup.
+//
+// Carte « Mon compte Discord » du profil joueuse : voir à quel compte Discord
+// on est rattachée, le délier, et le RATTACHER AILLEURS quand il s'est fixé au
+// mauvais compte du site.
+//
+// POURQUOI CETTE CARTE EXISTE. Beaucoup de joueuses se sont inscrites deux fois
+// le même jour : un compte e-mail — celui qui figure au roster — et un compte
+// Discord OAuth. Le role-sync du bot raisonne sur `team_members.user_id` : le
+// compte du roster n'a pas de Discord, le compte Discord n'est dans aucun
+// roster, donc le rôle d'équipe est RETIRÉ toutes les 30 minutes. Le 18/09,
+// deux joueuses l'ont perdu quatre fois dans la soirée ; le staff le redonnait
+// à la main, le bot le reprenait.
+//
+// Jusqu'ici la seule issue était une correction en base par le staff :
+// `user_discord_links.discord_user_id` est UNIQUE, donc rattacher son Discord
+// au bon compte butait sur un refus définitif, sans rien proposer. Cette carte
+// ouvre cette porte — et c'est la joueuse elle-même qui la franchit.
+//
+// POURQUOI C'EST SÛR. L'identifiant Discord ne vient jamais d'une saisie mais
+// de l'identité OAuth de la session : reprendre le lien exige de prouver, à
+// l'instant, qu'on contrôle ce compte Discord. Celle qui le prouve est
+// légitime à décider où il pointe. La reprise reste un second geste, explicite,
+// après un premier refus qui NOMME le compte détenteur (adresse masquée) —
+// assez pour reconnaître son propre second compte, pas assez pour apprendre
+// celle de quelqu'un d'autre.
+//
+// MÊME PATRON QUE `TwitchLinkCard` : la carte porte son état, lit son statut,
+// et ne rend rien tant qu'elle n'a pas pu lire.
 
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
+
 import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
-import { useT } from '@/lib/i18n/useT';
+import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useT, format } from '@/lib/i18n/useT';
 import { logger } from '../../utils/logger';
-import nsDiscordLinkCard from '@/lib/i18n/locales/fr/discordLinkCard';
+import nsPlayerDiscordLink from '@/lib/i18n/locales/fr/playerDiscordLink';
 
-type LinkState = {
+type LinkStatus = {
   linked: boolean;
+  discordUserId: string | null;
   discordUsername: string | null;
   linkedAt: string | null;
 };
 
-export default function DiscordLinkCard() {
-  const t = useT(nsDiscordLinkCard);
-  const { adminFetchJson } = useAdminFetch();
-  const [state, setState] = useState<LinkState | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState(false);
+/** Le refus « déjà pris », avec de quoi proposer la reprise. */
+type HeldByOther = {
+  heldByEmail: string | null;
+};
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+export default function DiscordLinkCard({ id }: { id?: string }) {
+  const t = useT(nsPlayerDiscordLink);
+  const router = useRouter();
+  const { adminFetchJson } = useAdminFetch();
+  const { addToast } = useToast();
+  const { confirm, dialog } = useConfirmDialog();
+
+  const [status, setStatus] = useState<LinkStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [heldByOther, setHeldByOther] = useState<HeldByOther | null>(null);
+
+  const load = useCallback(async () => {
     try {
-      const data = await adminFetchJson<LinkState>('/api/auth/discord-link');
-      setState(data);
-    } catch (e) {
-      logger.error('[DiscordLinkCard] refresh', e);
-      setError(t.statusError);
-    } finally {
-      setLoading(false);
+      setStatus(await adminFetchJson<LinkStatus>('/api/auth/discord-link'));
+    } catch (err) {
+      logger.error('[player/discord-link] status error:', err);
+      setStatus(null);
     }
-  }, [adminFetchJson, t]);
+  }, [adminFetchJson]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    void load();
+  }, [load]);
 
-  async function handleLink() {
+  const onUnlink = async () => {
+    const ok = await confirm({
+      title: t.unlinkConfirmTitle,
+      subtitle: t.unlinkConfirmBody,
+      confirmLabel: t.unlink,
+    });
+    if (!ok) return;
+
     setBusy(true);
-    setError(null);
-    try {
-      const baseUrl =
-        process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, '') ||
-        (typeof window !== 'undefined' ? window.location.origin : '');
-      const redirectTo = baseUrl
-        ? `${baseUrl}/auth/discord-member?next=/player`
-        : undefined;
-
-      // linkIdentity attaches Discord as a new provider to the EXISTING user
-      // (vs signInWithOAuth which would log them in as a different account).
-      const { data, error: linkErr } = await (
-        supabaseClient.auth as unknown as {
-          linkIdentity: (args: {
-            provider: 'discord';
-            options?: { redirectTo?: string; scopes?: string };
-          }) => Promise<{ data: { url: string | null }; error: Error | null }>;
-        }
-      ).linkIdentity({
-        provider: 'discord',
-        options: { redirectTo, scopes: 'identify email' },
-      });
-
-      if (linkErr) throw linkErr;
-      if (data?.url) {
-        window.location.href = data.url;
-        return;
-      }
-      // No URL returned → already linked, refresh state.
-      await refresh();
-    } catch (e) {
-      const msg = (e as Error).message || t.linkError;
-      setError(msg);
-      logger.error('[DiscordLinkCard] link', e);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleUnlink() {
-    setBusy(true);
-    setError(null);
     try {
       await adminFetchJson('/api/auth/discord-link', { method: 'DELETE' });
-      await refresh();
-    } catch (e) {
-      setError((e as Error).message || t.unlinkError);
+      addToast(t.toastUnlinked, 'success');
+      setHeldByOther(null);
+      await load();
+    } catch (err) {
+      logger.error('[player/discord-link] unlink error:', err);
+      addToast((err as Error)?.message || t.toastError, 'error');
     } finally {
       setBusy(false);
-      setConfirming(false);
     }
-  }
+  };
+
+  /**
+   * Rattache le Discord de la SESSION à ce compte. `transfer` n'est vrai qu'au
+   * second passage, après que le premier a nommé le compte détenteur : on ne
+   * reprend jamais un lien par surprise.
+   */
+  const onLink = async (transfer: boolean) => {
+    setBusy(true);
+    try {
+      const res = await adminFetchJson<{ transferred?: boolean }>(
+        '/api/auth/link-discord',
+        { method: 'POST', body: JSON.stringify({ transfer }) }
+      );
+      addToast(
+        res?.transferred ? t.toastTransferred : t.toastLinked,
+        'success'
+      );
+      setHeldByOther(null);
+      await load();
+    } catch (err) {
+      const payload = (err as { payload?: Record<string, unknown> })?.payload;
+      if (payload?.code === 'HELD_BY_OTHER') {
+        setHeldByOther({
+          heldByEmail: (payload.heldByEmail as string) ?? null,
+        });
+        return;
+      }
+      logger.error('[player/discord-link] link error:', err);
+      addToast((err as Error)?.message || t.toastError, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * Attacher l'identité Discord au compte COURANT, puis poser le lien.
+   *
+   * `linkIdentity` et non `signInWithOAuth` : le second CHANGERAIT de compte —
+   * il connecterait au compte Discord, c'est-à-dire précisément celui dont on
+   * essaie de sortir. Le premier ajoute Discord au compte déjà connecté, qui
+   * est celui du roster.
+   *
+   * Demande que « Manual linking » soit activé côté Supabase ; sinon l'appel
+   * est refusé et on le DIT, plutôt que de renvoyer vers une page blanche.
+   */
+  const onAttachIdentity = async () => {
+    setBusy(true);
+    try {
+      const { error } = await supabaseClient.auth.linkIdentity({
+        provider: 'discord',
+        options: {
+          redirectTo: `${window.location.origin}${router.pathname}`,
+        },
+      });
+      if (error) throw error;
+      // Redirection Discord en cours : rien à afficher ici.
+    } catch (err) {
+      logger.error('[player/discord-link] linkIdentity error:', err);
+      addToast(t.errorIdentityLinking, 'error');
+      setBusy(false);
+    }
+  };
+
+  // État illisible : on ne rend rien plutôt qu'un bouton qui finirait en 401.
+  if (!status) return null;
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold">{t.title}</h2>
-        {state?.linked && (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-600/30 text-indigo-200 border border-indigo-500/40">
-            {t.linkedBadge}
-          </span>
-        )}
-      </div>
+    <section
+      id={id}
+      aria-labelledby={id ? `${id}-title` : undefined}
+      className="scroll-mt-24 rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl"
+    >
+      <h2
+        id={id ? `${id}-title` : undefined}
+        className="mb-4 text-lg font-semibold text-white"
+      >
+        {t.title}
+      </h2>
 
-      <p className="text-sm text-gray-400 mb-4">{t.intro}</p>
+      {status.linked ? (
+        <>
+          <p className="text-sm text-gray-200">
+            {format(t.linkedAs, { username: status.discordUsername ?? '—' })}
+          </p>
+          <p className="mt-1 max-w-prose text-xs text-gray-400">
+            {t.linkedNote}
+          </p>
+          <button
+            type="button"
+            onClick={onUnlink}
+            disabled={busy}
+            className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 disabled:opacity-50"
+          >
+            {t.unlink}
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="max-w-prose text-sm text-gray-200">{t.notLinked}</p>
+          <p className="mt-1 max-w-prose text-xs text-gray-400">{t.whyNote}</p>
 
-      {loading ? (
-        <div className="text-sm text-neutral-500">{t.loading}</div>
-      ) : state?.linked ? (
-        <div className="space-y-3 text-sm">
-          <div className="flex justify-between">
-            <span className="text-gray-400">{t.account}</span>
-            <span className="font-mono text-indigo-200">
-              @{state.discordUsername || t.unknown}
-            </span>
-          </div>
-          {!confirming ? (
+          {/* Le compte Discord de la session peut déjà être rattaché ici, sans
+              que le lien ait été posé (inscription par Discord puis par
+              e-mail). Le bouton tente donc d'abord SANS reprise. */}
+          <div className="mt-4 flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={() => setConfirming(true)}
+              onClick={() => onLink(false)}
               disabled={busy}
-              className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-50 text-sm transition"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#5865F2] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#4752c4] disabled:opacity-50"
             >
-              {t.unlink}
+              {t.linkCta}
             </button>
-          ) : (
-            <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-3 space-y-3">
-              <p className="text-xs text-red-200">{t.unlinkConfirm}</p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={handleUnlink}
-                  disabled={busy}
-                  className="flex-1 px-3 py-2 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 text-sm font-medium transition"
-                >
-                  {busy ? t.busy : t.confirmUnlink}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirming(false)}
-                  disabled={busy}
-                  className="px-3 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-50 text-sm transition"
-                >
-                  {t.cancel}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={handleLink}
-          disabled={busy}
-          className="w-full px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-sm font-medium transition"
-        >
-          {busy ? t.busy : t.link}
-        </button>
+            <button
+              type="button"
+              onClick={onAttachIdentity}
+              disabled={busy}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 disabled:opacity-50"
+            >
+              {t.attachIdentityCta}
+            </button>
+          </div>
+        </>
       )}
 
-      {error && (
-        <div
-          role="alert"
-          className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200"
-        >
-          {error}
+      {heldByOther && (
+        <div className="mt-4 rounded-xl border border-amber-400/40 bg-amber-500/10 p-4">
+          <p className="text-sm text-amber-100">
+            {format(t.heldByOther, {
+              email: heldByOther.heldByEmail ?? t.anotherAccount,
+            })}
+          </p>
+          <p className="mt-1 max-w-prose text-xs text-amber-200/80">
+            {t.heldByOtherNote}
+          </p>
+          <button
+            type="button"
+            onClick={() => onLink(true)}
+            disabled={busy}
+            className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-amber-400 disabled:opacity-50"
+          >
+            {t.transferCta}
+          </button>
         </div>
       )}
-    </div>
+
+      {dialog}
+    </section>
   );
 }

@@ -15,6 +15,7 @@ import BattlenetVerifyCard from '@/components/player/BattlenetVerifyCard';
 import TcgPhotoCard from '@/components/player/TcgPhotoCard';
 import HeroPreferencesCard from '@/components/player/HeroPreferencesCard';
 import TwitchLinkCard from '@/components/player/TwitchLinkCard';
+import DiscordLinkCard from '@/components/player/DiscordLinkCard';
 import PlayerAvatar from '@/components/player/PlayerAvatar';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
@@ -733,6 +734,12 @@ function PlayerProfile() {
               carte réclamée pendant un direct n'a aucun destinataire. Ne rend
               rien si la fonctionnalité est dormante. */}
           <TwitchLinkCard />
+
+          {/* Mon compte Discord — placée juste après Twitch, les deux cartes de
+              rattachement voisines. Celle-ci est la seule sortie en libre-service du
+              piège du double compte : sans elle, un rôle d'équipe retiré
+              toutes les 30 minutes ne se répare qu'en base. */}
+          <DiscordLinkCard id="discord" />
 
           {/* Mes héros — placée AVANT la carte à collectionner parce qu'elle en
               est le repli : le héros préféré ne sert que si aucune photo n'est

@@ -8,6 +8,13 @@ post:
     Lit l'identite Discord attachee a auth.users (provider='discord'),
     upsert dans user_discord_links pour permettre les DMs du bot.
     Idempotent : un re-call rafraichit le username stocke.
+
+    Corps optionnel `{ transfer: true }` : REPREND le lien quand ce compte
+    Discord est deja rattache a un autre compte du site. C'est la sortie du
+    piege du double compte (compte e-mail au roster + compte Discord hors
+    roster), qui faisait retirer le role d'equipe toutes les 30 minutes.
+    L'identifiant Discord venant de l'identite OAuth de la session, reprendre
+    le lien exige de prouver qu'on controle ce compte Discord.
   security: []
   responses:
     '200':
@@ -25,13 +32,28 @@ post:
                 $ref: '#/components/schemas/DiscordId'
               discordUsername:
                 type: [string, 'null']
+              transferred:
+                type: boolean
+                description: Le lien a ete repris a un autre compte du site.
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':
       $ref: '#/components/responses/Unauthorized'
     '409':
-      description: Ce compte Discord est deja lie a un autre utilisateur.
+      description: >-
+        Ce compte Discord est deja lie a un autre compte du site. La reponse
+        porte `code: HELD_BY_OTHER` et l'adresse MASQUEE du detenteur, de quoi
+        proposer la reprise sans divulguer l'adresse de quelqu'un d'autre.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+              heldByEmail:
+                type: [string, 'null']
+              canTransfer:
+                type: boolean

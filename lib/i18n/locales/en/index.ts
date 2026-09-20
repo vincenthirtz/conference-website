@@ -190,6 +190,7 @@ import enProductionPartner from './productionPartner';
 import enPalmaresPage from './palmaresPage';
 import enMapsVoxelPage from './mapsVoxelPage';
 import enPlayerHeroPrefs from './playerHeroPrefs';
+import enPlayerDiscordLink from './playerDiscordLink';
 import enPlayerTwitchLink from './playerTwitchLink';
 import enOverlayTcg from './overlayTcg';
 
@@ -371,6 +372,7 @@ const enDict = {
   circuitPartnersPage: enCircuitPartnersPage,
   tcgShowcase: enTcgShowcase,
   playerHeroPrefs: enPlayerHeroPrefs,
+  playerDiscordLink: enPlayerDiscordLink,
   playerTwitchLink: enPlayerTwitchLink,
   overlayTcg: enOverlayTcg,
 };
