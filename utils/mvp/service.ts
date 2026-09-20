@@ -23,8 +23,17 @@ import {
 } from '@/utils/mvp/awards';
 import { logger } from '@/utils/logger';
 
-/** Durée d'ouverture par défaut d'un vote de match. */
-export const DEFAULT_VOTE_WINDOW_HOURS = 24;
+/**
+ * Durée d'ouverture par défaut d'un vote de match.
+ *
+ * 48 h et non 24 (décision du 2026-09-20) : une journée se joue en soirée, et
+ * 24 h fermaient le vote le lendemain soir — avant que la plupart des gens
+ * aient vu passer le message. Deux jours laissent le vote ouvert jusqu'à la
+ * veille de la journée suivante, qui tombe deux à trois jours plus tard.
+ * Le staff peut toujours allonger (`/mvp ouvrir duree-heures`, max 168) ou
+ * clore à la demande (`/mvp clore`).
+ */
+export const DEFAULT_VOTE_WINDOW_HOURS = 48;
 
 /** Bornes acceptées pour la fenêtre de vote (1 h → 7 j). */
 const MIN_WINDOW_HOURS = 1;
