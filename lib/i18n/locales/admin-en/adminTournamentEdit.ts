@@ -60,6 +60,9 @@ export default {
   rulesHelp:
     'Shown as a "Tournament rules" link on the public page. PDF max 5 MB.',
   openCurrentRules: 'Open current rules ↗',
+  defaultStreamLabel: 'Broadcast channel (default)',
+  defaultStreamHelp:
+    'The channel this tournament is broadcast on. Every match inherits it, so there is no need to repeat it match by match, and the \u201Cno stream assigned\u201D alert only fires when nobody is broadcasting. A match carries its own URL only when it differs (partner channel, team co-stream).',
   sectionPublic: 'Public information',
   publicHelp:
     "These fields are shown on the tournament's public page only if they're filled in.",

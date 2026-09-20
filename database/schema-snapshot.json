@@ -1988,6 +1988,7 @@
       "banner_url",
       "checkin_grace_minutes",
       "created_at",
+      "default_stream_url",
       "description_info",
       "end_date",
       "format",

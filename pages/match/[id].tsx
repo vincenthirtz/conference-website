@@ -10,6 +10,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { maskBattleTag } from '@/utils/battleTag';
+import { resolveStreamUrl } from '@/utils/matches/streamUrl';
 import { formatSiteDate } from '@/utils/timezone';
 import { splitTeamMembers, isNonPlayingTeamRole } from '@/utils/teams/roleKind';
 import {
@@ -67,6 +68,8 @@ type Tournament = {
   short_name?: string | null;
   game?: string | null;
   visibility?: string | null;
+  /** Chaîne du tournoi : un match sans `stream_url` propre en hérite. */
+  default_stream_url?: string | null;
 };
 
 type Stage = {
@@ -286,7 +289,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       notes,
       team1:team1_id ( id, slug, name, short_name, logo_url, captain_id ),
       team2:team2_id ( id, slug, name, short_name, logo_url, captain_id ),
-      tournament:tournament_id ( id, slug, name, short_name, game, visibility ),
+      tournament:tournament_id ( id, slug, name, short_name, game, visibility, default_stream_url ),
       stage:stage_id ( id, name, stage_type ),
       games (*)
     `
@@ -455,6 +458,11 @@ export default function MatchPage({ match, lineups, mvp }: Props) {
   const t1 = match.team1;
   const t2 = match.team2;
   const isBye = match.is_bye;
+
+  // Un match sans `stream_url` propre n'est pas pour autant invisible : il
+  // hérite de la chaîne du tournoi. Une URL propre reste une DÉROGATION
+  // (chaîne partenaire, co-stream d'une équipe) et passe devant.
+  const { url: streamUrl } = resolveStreamUrl(match, match.tournament);
 
   const t1Name = t1?.short_name || t1?.name || t.teamFallback1;
   const t2Name =
@@ -713,12 +721,12 @@ export default function MatchPage({ match, lineups, mvp }: Props) {
                     }
                   />
                 )}
-                {match.stream_url && (
+                {streamUrl && (
                   <InfoRow
                     label={t.infoStream}
                     value={
                       <a
-                        href={match.stream_url}
+                        href={streamUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="text-emerald-300 hover:text-emerald-100"

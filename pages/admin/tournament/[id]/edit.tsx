@@ -7,11 +7,11 @@ import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
-import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import RegistrationFieldsEditor, {
   hasRegistrationFieldErrors,
 } from '@/components/admin/RegistrationFieldsEditor';
+import TournamentVisualsSection from '@/components/admin/tournament/TournamentVisualsSection';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { StaffProps, Tournament } from '@/types/admin';
 import type { RegistrationField } from '@/utils/registrationFields';
@@ -55,7 +55,6 @@ function AdminTournamentEditPage(_props: StaffProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
-  const { mutate: uploadRules } = useIdempotentMutation();
   const t = useAdminT(nsAdminTournamentEdit);
   const tf = useAdminT(nsAdminRegistrationFields);
 
@@ -66,9 +65,6 @@ function AdminTournamentEditPage(_props: StaffProps) {
   >([]);
 
   const [dateError, setDateError] = useState<string | null>(null);
-
-  const [uploadingRules, setUploadingRules] = useState(false);
-  const [rulesError, setRulesError] = useState<string | null>(null);
 
   const [form, setForm] = useState<{
     name: string;
@@ -89,6 +85,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
     logo_url: string;
     banner_url: string;
     rules_url: string;
+    default_stream_url: string;
     description_info: string;
     schedule_details: string;
     schedule_rules: string;
@@ -112,6 +109,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
     logo_url: '',
     banner_url: '',
     rules_url: '',
+    default_stream_url: '',
     description_info: '',
     schedule_details: '',
     schedule_rules: '',
@@ -134,53 +132,6 @@ function AdminTournamentEditPage(_props: StaffProps) {
     () => gameConfig?.registrationPresets ?? [],
     [gameConfig]
   );
-
-  async function handleRulesPdfChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-
-    setRulesError(null);
-
-    if (file.type !== 'application/pdf') {
-      setRulesError(t.errorPdfOnly);
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setRulesError(t.errorPdfTooLarge);
-      return;
-    }
-
-    setUploadingRules(true);
-    try {
-      const dataUrl: string = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result));
-        reader.onerror = () => reject(reader.error || new Error('read failed'));
-        reader.readAsDataURL(file);
-      });
-
-      const res = await uploadRules('/api/admin/upload', {
-        method: 'POST',
-        body: JSON.stringify({
-          data: dataUrl,
-          mimeType: 'application/pdf',
-          filename: file.name,
-        }),
-      });
-
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(json.error || t.errorRulesUpload);
-      }
-      updateField('rules_url', json.url || '');
-      addToast(t.toastRulesUploaded, 'success');
-    } catch (err: unknown) {
-      setRulesError((err as Error)?.message ?? t.errorUploadFailed);
-    } finally {
-      setUploadingRules(false);
-    }
-  }
 
   // Chargement initial mémoïsé : deps toutes stables (id ; adminFetchJson figé
   // par le hook ; t figé au niveau module par useAdminT). `toLocalInputValue`
@@ -218,6 +169,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
         logo_url: tour.logo_url || '',
         banner_url: tour.banner_url || '',
         rules_url: tour.rules_url || '',
+        default_stream_url: tour.default_stream_url || '',
         description_info: tour.description_info || '',
         schedule_details: tour.schedule_details || '',
         schedule_rules: tour.schedule_rules || '',
@@ -291,6 +243,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
       logo_url: form.logo_url.trim() || null,
       banner_url: form.banner_url.trim() || null,
       rules_url: form.rules_url.trim() || null,
+      default_stream_url: form.default_stream_url.trim() || null,
       description_info: form.description_info.trim() || null,
       schedule_details: form.schedule_details.trim() || null,
       schedule_rules: form.schedule_rules.trim() || null,
@@ -660,101 +613,11 @@ function AdminTournamentEditPage(_props: StaffProps) {
                       </div>
                     </section>
 
-                    {/* Visuels */}
-                    <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-                      <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <svg
-                          className="w-5 h-5 text-neutral-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                        {t.sectionVisuals}
-                      </h2>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm mb-1 text-neutral-300">
-                            {t.logoLabel}
-                          </label>
-                          <input
-                            type="text"
-                            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={form.logo_url}
-                            onChange={(e) =>
-                              updateField('logo_url', e.target.value)
-                            }
-                            placeholder="https://…"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm mb-1 text-neutral-300">
-                            {t.bannerLabel}
-                          </label>
-                          <input
-                            type="text"
-                            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={form.banner_url}
-                            onChange={(e) =>
-                              updateField('banner_url', e.target.value)
-                            }
-                            placeholder="https://…"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="mt-4">
-                        <label className="block text-sm mb-1 text-neutral-300">
-                          {t.rulesLabel}
-                        </label>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <input
-                            type="text"
-                            className="flex-1 px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={form.rules_url}
-                            onChange={(e) =>
-                              updateField('rules_url', e.target.value)
-                            }
-                            placeholder="https://…/reglement.pdf"
-                          />
-                          <label className="inline-flex items-center justify-center px-3 py-2 rounded-lg bg-neutral-700/60 hover:bg-neutral-700 border border-neutral-600 text-sm cursor-pointer whitespace-nowrap">
-                            {uploadingRules ? t.uploading : t.uploadPdf}
-                            <input
-                              type="file"
-                              accept="application/pdf"
-                              className="hidden"
-                              disabled={uploadingRules}
-                              onChange={handleRulesPdfChange}
-                            />
-                          </label>
-                        </div>
-                        <p className="text-xs text-neutral-500 mt-1">
-                          {t.rulesHelp}
-                        </p>
-                        {rulesError && (
-                          <p className="text-xs text-red-400 mt-1">
-                            {rulesError}
-                          </p>
-                        )}
-                        {form.rules_url && (
-                          <a
-                            href={form.rules_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-block text-xs text-blue-400 hover:text-blue-300 mt-1"
-                          >
-                            {t.openCurrentRules}
-                          </a>
-                        )}
-                      </div>
-                    </section>
+                    {/* Visuels : logo, bannière, règlement, chaîne de diffusion */}
+                    <TournamentVisualsSection
+                      form={form}
+                      updateField={updateField}
+                    />
 
                     {/* Informations publiques */}
                     <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">

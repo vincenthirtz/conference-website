@@ -51,7 +51,12 @@ const BASELINE: Record<string, number> = {
   'components/admin/broadcast/TwitchCommandsPanel.tsx': 1203,
   'pages/admin/regie.tsx': 1038,
   'pages/admin/users/[userId]/player-view.tsx': 1092,
-  'pages/admin/tournament/[id]/edit.tsx': 996,
+  // 860 écrites : le panneau « Visuels » (logo, bannière, règlement PDF, et
+  // désormais la chaîne de diffusion par défaut) est parti dans
+  // `components/admin/tournament/TournamentVisualsSection.tsx`, avec l'upload
+  // du PDF — le seul endroit qui s'en servait. Le gel suit la baisse : un
+  // plafond qui ne descend jamais finit par ne plus rien geler.
+  'pages/admin/tournament/[id]/edit.tsx': 859,
   'pages/admin/stages/[stageId]/seeding.tsx': 964,
   // 692 écrites : la liste des champs et le type de la config sont partis dans
   // `utils/discord/discordConfigFields.ts` — non pour gagner des lignes, mais

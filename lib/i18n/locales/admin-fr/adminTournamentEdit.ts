@@ -59,6 +59,10 @@ export default adminNs('adminTournamentEdit', {
   rulesHelp:
     'Affiché en lien « Règlement du tournoi » sur la page publique. PDF max 5 Mo.',
   openCurrentRules: 'Ouvrir le règlement actuel ↗',
+  defaultStreamLabel: 'Chaîne de diffusion (par défaut)',
+  defaultStreamHelp:
+    "Chaîne sur laquelle le tournoi est diffusé. Chaque match en hérite : inutile de la répéter match par match, et l'alerte « sans stream attribué » ne se déclenche plus que si personne ne diffuse. Un match ne porte une URL propre que s'il déroge (chaîne partenaire, co-stream d'une équipe).",
+
   sectionPublic: 'Informations publiques',
   publicHelp:
     "Ces champs sont affichés sur la page publique du tournoi uniquement s'ils sont remplis.",

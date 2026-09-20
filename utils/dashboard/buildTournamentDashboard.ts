@@ -8,6 +8,7 @@
 import { supabaseAdmin } from '../supabase';
 import { isValidUUID } from '../apiHelpers';
 import { DEFAULT_TENANT_ID } from '../tenant';
+import { hasNoStream } from '../matches/streamUrl';
 
 import { logger } from '../logger';
 /* -----------------------------------------------------------
@@ -577,7 +578,7 @@ export async function fetchDashboardData(
     const { data: tournament, error: tErr } = await supabaseAdmin
       .from('tournaments')
       .select(
-        'id, name, status, start_date, end_date, timezone, format, min_players, max_teams, roster_locked_at, roster_unlocked_until'
+        'id, name, status, start_date, end_date, timezone, format, min_players, max_teams, roster_locked_at, roster_unlocked_until, default_stream_url'
       )
       .eq('id', tournamentId)
       .eq('tenant_id', tenantId)
@@ -760,11 +761,15 @@ export async function fetchDashboardData(
 
     // Alerts (héritées)
     const alerts: Alert[] = [];
+    // Un match sans `stream_url` n'est pas forcément sans diffusion : il hérite
+    // de la chaîne du tournoi. L'alerte comptait la colonne, pas le fait — d'où
+    // « 27 match(s) a venir sans stream attribue » sur un tournoi entièrement
+    // diffusé, qu'on ne pouvait faire taire qu'en recopiant 27 fois la même URL.
     const noStreamCount = matches.filter(
       (m) =>
         (m.status === 'pending' || m.status === 'ongoing') &&
-        !m.stream_url &&
-        !m.is_bye
+        !m.is_bye &&
+        hasNoStream(m, tournament)
     ).length;
     if (noStreamCount > 0) {
       alerts.push({

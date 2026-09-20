@@ -32,6 +32,8 @@ type TournamentDetail = {
   logo_url: string | null;
   banner_url: string | null;
   rules_url: string | null;
+  /** Chaîne du tournoi. Un match sans `stream_url` propre en hérite. */
+  default_stream_url: string | null;
   description_info: string | null;
   schedule_details: string | null;
   schedule_rules: string | null;
@@ -118,6 +120,7 @@ async function handleGet(
         logo_url,
         banner_url,
         rules_url,
+        default_stream_url,
         description_info,
         schedule_details,
         schedule_rules,
@@ -175,6 +178,7 @@ async function handlePatch(
       logo_url,
       banner_url,
       rules_url,
+      default_stream_url,
       description_info,
       schedule_details,
       schedule_rules,
@@ -373,6 +377,9 @@ async function handlePatch(
     if (logo_url !== undefined) updatePayload.logo_url = logo_url;
     if (banner_url !== undefined) updatePayload.banner_url = banner_url;
     if (rules_url !== undefined) updatePayload.rules_url = rules_url;
+    if (default_stream_url !== undefined) {
+      updatePayload.default_stream_url = default_stream_url;
+    }
     if (description_info !== undefined)
       updatePayload.description_info = description_info;
     if (schedule_details !== undefined)
@@ -416,6 +423,7 @@ async function handlePatch(
         logo_url,
         banner_url,
         rules_url,
+        default_stream_url,
         description_info,
         schedule_details,
         schedule_rules,

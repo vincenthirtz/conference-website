@@ -17560,6 +17560,12 @@
          "null"
         ]
        },
+       "default_stream_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "description_info": {
         "type": [
          "string",
@@ -17661,6 +17667,7 @@
        "logo_url",
        "banner_url",
        "rules_url",
+       "default_stream_url",
        "description_info",
        "schedule_details",
        "schedule_rules",
@@ -66568,6 +66575,12 @@
          "null"
         ]
        },
+       "default_stream_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "description_info": {
         "type": [
          "string",
@@ -66669,6 +66682,7 @@
        "logo_url",
        "banner_url",
        "rules_url",
+       "default_stream_url",
        "description_info",
        "schedule_details",
        "schedule_rules",
