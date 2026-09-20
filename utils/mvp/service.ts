@@ -61,11 +61,21 @@ function shortTeam(name: string | null | undefined): string {
 }
 
 /**
- * Candidates d'un match : les TITULAIRES des deux équipes.
+ * Candidates d'un match : CELLES QUI ONT JOUÉ, pas le roster du jour.
  *
- * Les remplaçantes sont exclues — elles ne sont pas garanties d'avoir joué, et
- * une liste de 20 noms rend le vote illisible. Même règle que l'ancien
- * auto-post Discord, conservée volontairement.
+ * `match_participants` est le relevé immuable de la composition au moment du
+ * match ; `team_members` est le roster COURANT, qui dérive. Sur un match déjà
+ * joué de la Cup 2026, l'écart est de 13 noms proposés pour 10 qui ont joué —
+ * trois joueuses arrivées depuis, votables pour un match qu'elles n'ont pas
+ * disputé, et une remplaçante réellement entrée en jeu qui ne l'est pas.
+ *
+ * Repli sur le roster courant quand aucune participante n'est relevée (match
+ * ancien, ou relevé pas encore écrit) : mieux vaut une liste approximative
+ * qu'aucun vote.
+ *
+ * Les remplaçantes sont exclues dans les deux cas — une liste de vingt noms
+ * rend le vote illisible, et `is_substitute` du relevé dit bien « n'a pas
+ * commencé », ce qui reste le meilleur signal disponible.
  */
 export async function listMvpCandidates(
   tenantId: string,
@@ -109,7 +119,7 @@ export async function listMvpCandidates(
 
   const { data: members } = await supabaseAdmin
     .from('team_members')
-    .select('id, team_id, battle_tag, display_name, is_substitute')
+    .select('id, team_id, user_id, battle_tag, display_name, is_substitute')
     .eq('tenant_id', tenantId)
     .in('team_id', teamIds);
 
@@ -122,8 +132,30 @@ export async function listMvpCandidates(
   const teamName = new Map<string, string>();
   for (const t of teams || []) teamName.set(t.id, t.name);
 
+  // Qui a joué CE match. Le vote porte sur une partie, pas sur un effectif.
+  const { data: participants } = await supabaseAdmin
+    .from('match_participants')
+    .select('user_id, battle_tag, is_substitute')
+    .eq('tenant_id', tenantId)
+    .eq('match_id', matchId);
+
+  // Le relevé ne porte pas de `team_member_id` : on raccroche par compte, et à
+  // défaut par BattleTag (fiches synthétiques des joueuses sans compte).
+  const playedUserIds = new Set<string>();
+  const playedTags = new Set<string>();
+  for (const p of participants || []) {
+    if (p.is_substitute) continue;
+    if (p.user_id) playedUserIds.add(p.user_id);
+    if (p.battle_tag) playedTags.add(p.battle_tag.toLowerCase());
+  }
+  const hasLineup = playedUserIds.size > 0 || playedTags.size > 0;
+
+  const played = (m: { user_id?: string | null; battle_tag?: string | null }) =>
+    (m.user_id && playedUserIds.has(m.user_id)) ||
+    (m.battle_tag != null && playedTags.has(m.battle_tag.toLowerCase()));
+
   const candidates: MvpCandidate[] = (members || [])
-    .filter((m) => !m.is_substitute)
+    .filter((m) => (hasLineup ? played(m) : !m.is_substitute))
     .map((m) => {
       const name = m.display_name || m.battle_tag || null;
       return {

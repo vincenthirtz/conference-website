@@ -37,6 +37,13 @@ const BEA = '33333333-3333-4333-8333-333333333bbb';
 const CHLOE = '33333333-3333-4333-8333-333333333ccc';
 const SUB = '33333333-3333-4333-8333-3333333333ff';
 
+// Comptes : `match_participants` ne porte pas de team_member_id, le
+// raccrochage se fait par user_id (puis par BattleTag).
+const U_ALICE = '44444444-4444-4444-8444-444444444aaa';
+const U_BEA = '44444444-4444-4444-8444-444444444bbb';
+const U_CHLOE = '44444444-4444-4444-8444-444444444ccc';
+const U_SUB = '44444444-4444-4444-8444-4444444444ff';
+
 function makeRes() {
   const res: any = {
     statusCode: 200,
@@ -130,6 +137,7 @@ function seed() {
       id: ALICE,
       tenant_id: TENANT,
       team_id: TEAM_A,
+      user_id: U_ALICE,
       battle_tag: 'Alice#1111',
       display_name: 'Alice',
       is_substitute: false,
@@ -138,6 +146,7 @@ function seed() {
       id: BEA,
       tenant_id: TENANT,
       team_id: TEAM_A,
+      user_id: U_BEA,
       battle_tag: 'Bea#2222',
       display_name: 'Bea',
       is_substitute: false,
@@ -146,6 +155,7 @@ function seed() {
       id: CHLOE,
       tenant_id: TENANT,
       team_id: TEAM_B,
+      user_id: U_CHLOE,
       battle_tag: 'Chloe#3333',
       display_name: 'Chloe',
       is_substitute: false,
@@ -154,12 +164,16 @@ function seed() {
       id: SUB,
       tenant_id: TENANT,
       team_id: TEAM_B,
+      user_id: U_SUB,
       battle_tag: 'Sub#4444',
       display_name: 'Sub',
       is_substitute: true,
     },
   ] as any;
 
+  // Aucun relevé de participation par défaut : le repli sur le roster courant
+  // est le comportement attendu tant que la composition n'est pas connue.
+  store.match_participants = [] as any;
   store.match_mvp_polls = [] as any;
   store.match_mvp_votes = [] as any;
 }
@@ -175,7 +189,7 @@ describe('/api/bot/v1/matches/[matchId]/mvp', () => {
     expect((await call(MATCH_FOREIGN)).statusCode).toBe(404);
   });
 
-  it('liste les titulaires des deux équipes, sans les remplaçantes', async () => {
+  it('à défaut de composition relevée, retombe sur les titulaires du roster', async () => {
     const res = await call(MATCH);
     expect(res.statusCode).toBe(200);
     const ids = (res.body as any).candidates.map((c: any) => c.memberId);
@@ -183,6 +197,72 @@ describe('/api/bot/v1/matches/[matchId]/mvp', () => {
     expect(ids).not.toContain(SUB);
     expect((res.body as any).candidates[0].label).toBe('[Les Alpines] Alice');
     expect((res.body as any).poll).toBeNull();
+  });
+
+  it('propose CELLES QUI ONT JOUÉ quand la composition est relevée', async () => {
+    // Le roster courant contient Alice, Bea et Chloe. Le relevé du match dit
+    // qu'Alice n'a pas joué et que la remplaçante est entrée : proposer le
+    // roster reviendrait à faire voter pour une absente et à priver de voix
+    // quelqu'un qui était sur le serveur.
+    store.match_participants = [
+      {
+        tenant_id: TENANT,
+        match_id: MATCH,
+        user_id: U_BEA,
+        battle_tag: 'Bea#2222',
+        is_substitute: false,
+      },
+      {
+        tenant_id: TENANT,
+        match_id: MATCH,
+        user_id: U_CHLOE,
+        battle_tag: 'Chloe#3333',
+        is_substitute: false,
+      },
+      {
+        tenant_id: TENANT,
+        match_id: MATCH,
+        user_id: U_SUB,
+        battle_tag: 'Sub#4444',
+        is_substitute: false,
+      },
+      // Alice était sur la feuille, mais remplaçante ce jour-là.
+      {
+        tenant_id: TENANT,
+        match_id: MATCH,
+        user_id: U_ALICE,
+        battle_tag: 'Alice#1111',
+        is_substitute: true,
+      },
+    ] as any;
+
+    const res = await call(MATCH);
+    const ids = (res.body as any).candidates.map((c: any) => c.memberId);
+    expect(ids).toEqual([BEA, CHLOE, SUB]);
+    expect(ids).not.toContain(ALICE);
+  });
+
+  it('raccroche une joueuse sans compte par son BattleTag', async () => {
+    store.match_participants = [
+      {
+        tenant_id: TENANT,
+        match_id: MATCH,
+        user_id: null,
+        battle_tag: 'Alice#1111',
+        is_substitute: false,
+      },
+      {
+        tenant_id: TENANT,
+        match_id: MATCH,
+        user_id: null,
+        battle_tag: 'Chloe#3333',
+        is_substitute: false,
+      },
+    ] as any;
+
+    const res = await call(MATCH);
+    const ids = (res.body as any).candidates.map((c: any) => c.memberId);
+    expect(ids).toEqual([ALICE, CHLOE]);
   });
 
   it("refuse d'ouvrir un vote sur un match non terminé", async () => {
