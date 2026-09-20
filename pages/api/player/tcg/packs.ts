@@ -27,7 +27,12 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import { readPlayerBadges } from '@/utils/rating/readPlayerBadges';
-import { cardRarity, isFoil, MAP_CARD_RARITY } from '@/utils/tcg/rarity';
+import {
+  cardRarity,
+  isFoil,
+  MAP_CARD_RARITY,
+  MASCOT_CARD_RARITY,
+} from '@/utils/tcg/rarity';
 import { DEFAULT_FANART_RARITY } from '@/utils/tcg/fanart';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import type { ProfileBadge } from '@/types/rating';
@@ -38,6 +43,10 @@ import {
   type DrawnSubject,
 } from '@/utils/tcg/drawPack';
 import { readMapFaces, MAP_POOL_SLUGS } from '@/utils/tcg/readMapFaces';
+import {
+  GAME_MASCOT_SLUGS,
+  gameMascotDisplayName,
+} from '@/utils/tcg/gameMascots';
 // Barèmes du drop en direct et du cadeau d'accueil. Rendus à l'interface pour
 // la même raison que le prix du booster : elle les AFFICHE sans les connaître,
 // et les recopier côté client les ferait mentir au premier réglage — c'est
@@ -388,6 +397,9 @@ async function openPack(
     // Fan arts validées : elles partagent l'emplacement de DÉCOR avec les maps
     // (une fois sur deux), jamais celui d'une joueuse.
     fanartIds,
+    // Mascottes du jeu : même emplacement de DÉCOR, une fois sur quatre.
+    // Registre en mémoire comme les maps — aucune requête de plus.
+    mascotSlugs: GAME_MASCOT_SLUGS,
     decorRoll: Math.random(),
     // Quatre fois la taille du paquet : trois viviers, chacun avec son repli.
     // Un tableau trop court n'échouerait pas — `pickDistinct` retombe sur « le
@@ -455,6 +467,7 @@ async function openPack(
         card_user_id: subject.kind === 'player' ? subject.userId : null,
         card_team_id: subject.kind === 'team' ? subject.teamId : null,
         card_map_slug: subject.kind === 'map' ? subject.slug : null,
+        card_mascot_slug: subject.kind === 'mascot' ? subject.slug : null,
         card_fanart_id: subject.kind === 'fanart' ? subject.fanartId : null,
         rarity,
         is_foil: isFoil(Math.random()),
@@ -613,6 +626,19 @@ async function openPack(
           imageUrl: face?.imageUrl ?? null,
         };
       }
+      if (c.subject_kind === 'mascot') {
+        // Une mascotte n'a ni photo ni page : son nom vient du registre, son
+        // visuel est calculé par la carte depuis son slug. Rien à lire en base
+        // au-delà du slug lui-même.
+        return {
+          ...base,
+          kind: 'mascot' as const,
+          userId: null,
+          teamId: null,
+          slug: c.card_mascot_slug,
+          name: gameMascotDisplayName(c.card_mascot_slug as string),
+        };
+      }
       if (c.subject_kind === 'map') {
         const face = mapFaces.get(c.card_map_slug as string);
         return {
@@ -708,6 +734,12 @@ async function rarityOf(
       // de prestige à mesurer. Le détail du raisonnement est dans
       // `utils/tcg/rarity.ts`, où vivent toutes les décisions de rareté.
       return MAP_CARD_RARITY;
+    }
+
+    if (subject.kind === 'mascot') {
+      // Rareté FIXE, comme les maps : une mascotte n'a pas de palmarès. Le
+      // raisonnement complet est dans `utils/tcg/rarity.ts`.
+      return MASCOT_CARD_RARITY;
     }
 
     if (subject.kind === 'fanart') {

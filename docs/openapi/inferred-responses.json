@@ -64348,6 +64348,61 @@
          "properties": {
           "kind": {
            "type": "string",
+           "const": "mascot"
+          },
+          "userId": {
+           "type": "null"
+          },
+          "teamId": {
+           "type": "null"
+          },
+          "slug": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "isNew": {
+           "type": "boolean"
+          },
+          "position": {
+           "type": "number"
+          },
+          "rarity": {
+           "type": "string",
+           "enum": [
+            "common",
+            "epic",
+            "legendary",
+            "rare"
+           ]
+          },
+          "isFoil": {
+           "type": "boolean"
+          }
+         },
+         "required": [
+          "kind",
+          "userId",
+          "teamId",
+          "slug",
+          "name",
+          "position",
+          "rarity",
+          "isFoil"
+         ]
+        },
+        {
+         "type": "object",
+         "properties": {
+          "kind": {
+           "type": "string",
            "const": "map"
           },
           "userId": {

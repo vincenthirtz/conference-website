@@ -59,7 +59,8 @@ export type DrawnSubject =
   | { kind: 'player'; userId: string }
   | { kind: 'team'; teamId: string }
   | { kind: 'map'; slug: string }
-  | { kind: 'fanart'; fanartId: string };
+  | { kind: 'fanart'; fanartId: string }
+  | { kind: 'mascot'; slug: string };
 
 /**
  * Choisit `count` éléments distincts, ou moins si le vivier est trop petit.
@@ -116,6 +117,12 @@ export function pickPackSubjects(input: {
    */
   fanartIds?: readonly string[];
   /**
+   * Mascottes du jeu ; vide = comportement d'avant les mascottes. Elles
+   * partagent l'emplacement de DÉCOR avec les maps et les fan arts — jamais
+   * celui d'une joueuse.
+   */
+  mascotSlugs?: readonly string[];
+  /**
    * Tirage qui décide du décor : map ou fan art. Séparé des `rolls` pour que
    * l'ajout des fan arts ne décale pas l'aléa des autres emplacements — un
    * paquet tiré avec les mêmes `rolls` qu'avant sort identique tant qu'aucune
@@ -128,6 +135,7 @@ export function pickPackSubjects(input: {
   const { playerIds, teamIds, rolls } = input;
   const mapSlugs = input.mapSlugs ?? [];
   const fanartIds = input.fanartIds ?? [];
+  const mascotSlugs = input.mascotSlugs ?? [];
 
   const teamCount = Math.min(TEAM_SLOTS, teamIds.length);
   const teams = pickDistinct(teamIds, teamCount, rolls);
@@ -138,33 +146,49 @@ export function pickPackSubjects(input: {
     roll: input.decorRoll ?? Number.NaN,
     hasFanart: fanartIds.length > 0,
     hasMaps: mapSlugs.length > 0,
+    hasMascots: mascotSlugs.length > 0,
   });
 
   const mapCount = decor === 'map' ? Math.min(MAP_SLOTS, mapSlugs.length) : 0;
   const maps = pickDistinct(mapSlugs, mapCount, rolls.slice(teamCount));
+
+  const mascotCount =
+    decor === 'mascot' ? Math.min(DECOR_SLOTS, mascotSlugs.length) : 0;
+  const mascots = pickDistinct(
+    mascotSlugs,
+    mascotCount,
+    rolls.slice(teamCount + mapCount)
+  );
 
   const fanartCount =
     decor === 'fanart' ? Math.min(DECOR_SLOTS, fanartIds.length) : 0;
   const fanarts = pickDistinct(
     fanartIds,
     fanartCount,
-    rolls.slice(teamCount + mapCount)
+    rolls.slice(teamCount + mapCount + mascotCount)
   );
 
   // Les joueuses occupent le reste, et comblent les emplacements réservés
   // laissés vacants par un vivier d'équipes ou de décor trop court.
-  const playerCount = PACK_SIZE - teams.length - maps.length - fanarts.length;
+  const playerCount =
+    PACK_SIZE - teams.length - maps.length - fanarts.length - mascots.length;
   const players = pickDistinct(
     playerIds,
     playerCount,
-    rolls.slice(teamCount + mapCount + fanartCount)
+    rolls.slice(teamCount + mapCount + mascotCount + fanartCount)
   );
 
   // Si les joueuses n'ont pas suffi, on complète avec d'autres équipes, puis
   // avec d'autres maps — dans cet ordre, cf. l'en-tête de la fonction.
   let shortfall =
-    PACK_SIZE - teams.length - maps.length - fanarts.length - players.length;
-  const consumed = teamCount + mapCount + fanartCount + players.length;
+    PACK_SIZE -
+    teams.length -
+    maps.length -
+    fanarts.length -
+    mascots.length -
+    players.length;
+  const consumed =
+    teamCount + mapCount + mascotCount + fanartCount + players.length;
 
   const extraTeams =
     shortfall > 0
@@ -188,6 +212,7 @@ export function pickPackSubjects(input: {
   return [
     ...players.map((userId): DrawnSubject => ({ kind: 'player', userId })),
     ...teams.map((teamId): DrawnSubject => ({ kind: 'team', teamId })),
+    ...mascots.map((slug): DrawnSubject => ({ kind: 'mascot', slug })),
     ...extraTeams.map((teamId): DrawnSubject => ({ kind: 'team', teamId })),
     ...maps.map((slug): DrawnSubject => ({ kind: 'map', slug })),
     ...extraMaps.map((slug): DrawnSubject => ({ kind: 'map', slug })),

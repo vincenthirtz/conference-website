@@ -111,6 +111,42 @@ export function gameMascotSlugFromName(
   return isGameMascotSlug(key) ? key : null;
 }
 
+/**
+ * Le NOM LISIBLE d'une mascotte, à partir de son slug.
+ *
+ * Il vit ici et nulle part ailleurs : une carte, une collection et un échange
+ * doivent écrire le même nom, et le déduire du slug à chaque endroit
+ * produirait « Dva », « D Va » et « D.Va » sur trois écrans. Les accents et la
+ * ponctuation ne survivent pas à un slug — c'est bien pour ça qu'il faut une
+ * table.
+ */
+const DISPLAY_NAMES: Record<GameMascotSlug, string> = {
+  pachimari: 'Pachimari',
+  ganymede: 'Ganymede',
+  snowball: 'Snowball',
+  bob: 'B.O.B.',
+  yachemon: 'Yachemon',
+  geranman: 'Geranman',
+  murphy: 'Murphy',
+  mitzi: 'Mitzi',
+  chuno: 'Chuño',
+  zomnic: 'Zomnic',
+  pachimonarch: 'Pachimonarch',
+  gingermari: 'Gingermari',
+  vampachimari: 'Vampachimari',
+  pachimummy: 'Pachimummy',
+  snorkelmari: 'Snorkelmari',
+};
+
+/**
+ * Nom lisible d'un slug. Rend `null` pour un slug inconnu — une carte tirée
+ * avant qu'une mascotte soit retirée du registre s'affichera sans nom plutôt
+ * qu'avec un slug brut.
+ */
+export function gameMascotDisplayName(slug: string): string | null {
+  return isGameMascotSlug(slug) ? DISPLAY_NAMES[slug] : null;
+}
+
 /*
  * REPÈRE, identique aux figurines de héros. Le moteur voit les faces +x
  * (droite, bien éclairée) et +z (gauche). La figurine regarde vers +x : sa

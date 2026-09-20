@@ -53,7 +53,9 @@ describe('pickPackSubjects', () => {
           ? s.slug
           : s.kind === 'fanart'
             ? s.fanartId
-            : s.teamId
+            : s.kind === 'mascot'
+              ? s.slug
+              : s.teamId
     );
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -122,7 +124,9 @@ describe('pickPackSubjects', () => {
           ? s.slug
           : s.kind === 'fanart'
             ? s.fanartId
-            : s.teamId
+            : s.kind === 'mascot'
+              ? s.slug
+              : s.teamId
     );
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -225,5 +229,69 @@ describe('pickPackSubjects', () => {
         rolls: MANY_ZEROS,
       })
     ).toEqual([]);
+  });
+});
+
+// -- Les mascottes partagent l'emplacement de DÉCOR ---------------------------
+//
+// Le risque n'est pas qu'elles n'apparaissent jamais : c'est qu'elles prennent
+// la place d'une joueuse. La composition d'un paquet — trois joueuses, une
+// équipe, un décor — ne doit pas bouger parce qu'un troisième type de décor
+// existe.
+
+describe('cartes mascotte', () => {
+  const PLAYERS = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'];
+  const TEAMS = ['t1', 't2'];
+  const MAPS = ['m1', 'm2'];
+  const MASCOTS = ['pachimari', 'ganymede'];
+
+  it('occupe le décor sans jamais évincer une joueuse', () => {
+    // SANS FAN ART, la part de la mascotte reste la sienne (0 → 0,25) et la
+    // map prend tout le reste : la part du vivier absent ne lui revient pas.
+    const subjects = pickPackSubjects({
+      playerIds: PLAYERS,
+      teamIds: TEAMS,
+      mapSlugs: MAPS,
+      mascotSlugs: MASCOTS,
+      decorRoll: 0.1,
+      rolls: [0, 0, 0, 0, 0, 0],
+    });
+
+    const kinds = subjects.map((s) => s.kind);
+    expect(subjects).toHaveLength(5);
+    expect(kinds.filter((k) => k === 'mascot')).toHaveLength(1);
+    expect(kinds.filter((k) => k === 'map')).toHaveLength(0);
+    // Une équipe et trois joueuses : exactement la composition d'avant.
+    expect(kinds.filter((k) => k === 'team')).toHaveLength(1);
+    expect(kinds.filter((k) => k === 'player')).toHaveLength(3);
+  });
+
+  it('laisse la map au décor quand le tirage ne désigne pas la mascotte', () => {
+    const subjects = pickPackSubjects({
+      playerIds: PLAYERS,
+      teamIds: TEAMS,
+      mapSlugs: MAPS,
+      mascotSlugs: MASCOTS,
+      decorRoll: 0.9,
+      rolls: [0, 0, 0, 0, 0, 0],
+    });
+    const kinds = subjects.map((s) => s.kind);
+    expect(kinds.filter((k) => k === 'map')).toHaveLength(1);
+    expect(kinds.filter((k) => k === 'mascot')).toHaveLength(0);
+  });
+
+  it('ne change RIEN quand aucune mascotte n’est fournie', () => {
+    const args = {
+      playerIds: PLAYERS,
+      teamIds: TEAMS,
+      mapSlugs: MAPS,
+      decorRoll: 0.9,
+      rolls: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
+    };
+    // Le tirage d'un paquet sans mascotte doit être identique, au sujet près,
+    // à ce qu'il était avant leur arrivée : `mascotSlugs` absent ou vide.
+    expect(pickPackSubjects({ ...args, mascotSlugs: [] })).toEqual(
+      pickPackSubjects(args)
+    );
   });
 });

@@ -125,6 +125,23 @@ export function isFoil(roll: number): boolean {
  */
 export const MAP_CARD_RARITY: TcgRarity = 'common';
 
+/**
+ * La rareté d'une carte de MASCOTTE — la même pour toutes, toujours.
+ *
+ * Même raisonnement que les maps, et il s'applique encore plus directement :
+ * une mascotte ne gagne rien, ne progresse pas, et n'a pas de palmarès. La
+ * hiérarchiser demanderait d'inventer un second critère de valeur — la
+ * popularité, l'ancienneté, le goût de qui écrit la liste — c'est-à-dire une
+ * seconde échelle de prestige à côté de celle des joueuses.
+ *
+ * `rare` et non `common` : une mascotte ne sort qu'une fois sur quatre sur le
+ * seul emplacement de décor (`MASCOT_DECOR_SHARE`), là où une map sort trois
+ * fois plus souvent. La rareté d'une carte dit ce qu'on a de la peine à
+ * obtenir ; ici la fréquence de tirage le justifie sans rien mesurer du
+ * prestige de personne.
+ */
+export const MASCOT_CARD_RARITY: TcgRarity = 'rare';
+
 /* ---------------------------------------------------------------------------
  * Cartes d'ÉQUIPE
  * ------------------------------------------------------------------------- */

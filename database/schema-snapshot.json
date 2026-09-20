@@ -1448,6 +1448,7 @@
     "tcg_pack_cards": [
       "card_fanart_id",
       "card_map_slug",
+      "card_mascot_slug",
       "card_team_id",
       "card_user_id",
       "is_foil",

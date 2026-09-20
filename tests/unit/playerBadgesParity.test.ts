@@ -26,11 +26,22 @@ vi.mock('@/utils/supabase', async () => {
   return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
 });
 
-// Sans maps, un vivier de joueuses seules donne un paquet 100 % joueuses : le
-// test de comptage mesure alors exactement ce qu'il prétend mesurer.
+// Sans maps NI MASCOTTES, un vivier de joueuses seules donne un paquet 100 %
+// joueuses : le test de comptage mesure alors exactement ce qu'il prétend
+// mesurer.
+//
+// Les deux viviers sont des REGISTRES EN MÉMOIRE, donc jamais vides et non
+// injectables : les neutraliser ici est le seul moyen d'isoler les joueuses.
+// L'oubli du second a fait tomber ce test à l'arrivée des cartes mascotte —
+// un paquet d'une joueuse en rendait deux, et la carte de décor n'avait pas
+// de `userId` à confronter aux badges.
 vi.mock('@/utils/tcg/readMapFaces', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return { ...actual, MAP_POOL_SLUGS: [] };
+});
+vi.mock('@/utils/tcg/gameMascots', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, GAME_MASCOT_SLUGS: [] };
 });
 
 import {

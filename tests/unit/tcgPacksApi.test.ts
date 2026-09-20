@@ -349,11 +349,18 @@ describe('POST /api/player/tcg/packs — ouverture', () => {
     await handler(makeReq({ method: 'POST', body: { packId: PACK } }), res);
 
     expect(res.statusCode).toBe(200);
-    // Le paquet reste COMPLET : l'emplacement de map, puis quatre maps de
+    // Le paquet reste COMPLET : l'emplacement de décor, puis quatre maps de
     // comblement — les viviers absents ne l'amputent pas.
     expect(res.body.cards).toHaveLength(PACK_SIZE);
+    // DÉCOR, et non « map » : depuis les cartes mascotte, l'emplacement de
+    // décor rend une map OU une mascotte selon le tirage. Épingler « map »
+    // reviendrait à figer un détail du tirage alors que ce test garantit autre
+    // chose — qu'un espace sans joueuse ni équipe reçoive un paquet plein
+    // plutôt qu'un refus.
     expect(
-      res.body.cards.every((c: { kind: string }) => c.kind === 'map')
+      res.body.cards.every(
+        (c: { kind: string }) => c.kind === 'map' || c.kind === 'mascot'
+      )
     ).toBe(true);
     // Et le paquet est bien consommé, puisqu'il a distribué quelque chose.
     expect((store.tcg_packs?.[0] as any).opened_at).toBeTruthy();

@@ -58,28 +58,66 @@ export const DEFAULT_FANART_RARITY: TcgRarity = 'rare';
 export const FANART_DECOR_SHARE = 0.5;
 
 /**
- * La carte de décor de ce paquet : une map, ou une fan art.
+ * Part des paquets où la carte de décor est une MASCOTTE, quand le registre en
+ * contient.
+ *
+ * UNE SUR QUATRE, soit la moitié de la part des fan arts. Les deux ne jouent
+ * pas le même rôle : une fan art est le geste d'une autrice, qui perd son sens
+ * si personne ne la voit, alors que les mascottes sont un fonds permanent de
+ * quinze figurines qui ne demande rien. Leur donner autant de place que les
+ * fan arts aurait repoussé maps ET fan arts à un quart chacune.
+ */
+export const MASCOT_DECOR_SHARE = 0.25;
+
+/**
+ * La carte de décor de ce paquet : une map, une fan art, ou une mascotte.
  *
  * `roll` dans [0, 1) — même convention que `isFoil` : l'aléa entre par un
  * paramètre, jamais par `Math.random()` ici, pour que le tirage reste
  * reproductible et testable.
  *
- * UN TIRAGE ABSENT OU ABERRANT REND « map » : c'est le comportement d'avant les
- * fan arts. Un doute ne doit pas faire apparaître une carte d'un type nouveau.
+ * LES PARTS SE LISENT DANS L'ORDRE, chacune sur le segment qui lui revient :
+ * fan art en premier (0 → 0,5), mascotte ensuite (0,5 → 0,75), map pour le
+ * reste. Quand un vivier manque, sa part revient aux autres au lieu de
+ * produire un trou — un paquet ne doit jamais sortir avec un décor vide alors
+ * qu'un vivier était disponible.
+ *
+ * UN TIRAGE ABSENT OU ABERRANT REND « map » : c'est le comportement d'avant
+ * les fan arts. Un doute ne doit pas faire apparaître une carte d'un type
+ * nouveau.
  */
 export function pickDecorKind(input: {
   roll: number;
   hasFanart: boolean;
   hasMaps: boolean;
-}): 'map' | 'fanart' | 'none' {
-  if (!input.hasFanart && !input.hasMaps) return 'none';
-  if (!input.hasFanart) return 'map';
-  if (!input.hasMaps) return 'fanart';
+  /** Le registre des mascottes ; absent = comportement d'avant les mascottes. */
+  hasMascots?: boolean;
+}): 'map' | 'fanart' | 'mascot' | 'none' {
+  const hasMascots = input.hasMascots === true;
+  if (!input.hasFanart && !input.hasMaps && !hasMascots) return 'none';
+
   const safe =
     Number.isFinite(input.roll) && input.roll >= 0 && input.roll < 1
       ? input.roll
       : 1;
-  return safe < FANART_DECOR_SHARE ? 'fanart' : 'map';
+
+  // Un seul vivier disponible : il prend tout, le tirage ne sert à rien.
+  if (!input.hasFanart && !hasMascots) return 'map';
+  if (!input.hasMaps && !hasMascots) return 'fanart';
+  if (!input.hasFanart && !input.hasMaps) return 'mascot';
+
+  // Deux viviers sur trois : la part du manquant revient au vivier de repli,
+  // qui est la map quand elle existe, sinon le premier disponible.
+  if (!hasMascots) return safe < FANART_DECOR_SHARE ? 'fanart' : 'map';
+  if (!input.hasFanart) return safe < MASCOT_DECOR_SHARE ? 'mascot' : 'map';
+  if (!input.hasMaps) {
+    return safe < FANART_DECOR_SHARE ? 'fanart' : 'mascot';
+  }
+
+  // Les trois : segments successifs.
+  if (safe < FANART_DECOR_SHARE) return 'fanart';
+  if (safe < FANART_DECOR_SHARE + MASCOT_DECOR_SHARE) return 'mascot';
+  return 'map';
 }
 
 /** Une fan art, telle que la lisent le tirage, les faces et les crédits. */
