@@ -23854,6 +23854,173 @@
     ]
    }
   },
+  "GET /api/bot/v1/matches/{matchId}/mvp": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "matchId": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     },
+     "roundName": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "candidates": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "memberId": {
+         "type": "string"
+        },
+        "teamId": {
+         "type": "string"
+        },
+        "teamName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "battleTag": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "displayName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "label": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "memberId",
+        "teamId",
+        "teamName",
+        "battleTag",
+        "displayName",
+        "label"
+       ]
+      }
+     },
+     "poll": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "match_id": {
+        "type": "string"
+       },
+       "posted_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "closes_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "closed_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "candidate_player_ids": {
+        "type": [
+         "array",
+         "null"
+        ],
+        "items": {
+         "type": "string"
+        }
+       },
+       "winner_member_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "winner_battle_tag": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "winner_source": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "winner_votes": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "total_votes": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "discord_channel_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "discord_message_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "id",
+       "match_id",
+       "posted_at",
+       "closes_at",
+       "closed_at",
+       "candidate_player_ids",
+       "winner_member_id",
+       "winner_battle_tag",
+       "winner_source",
+       "winner_votes",
+       "total_votes",
+       "discord_channel_id",
+       "discord_message_id"
+      ]
+     }
+    },
+    "required": [
+     "matchId",
+     "status",
+     "roundName",
+     "candidates",
+     "poll"
+    ]
+   }
+  },
   "GET /api/bot/v1/matches/{matchId}/preset": {
    "200": {
     "type": "object",
@@ -60526,6 +60693,342 @@
      "team1Score",
      "team2Score",
      "status"
+    ]
+   }
+  },
+  "POST /api/bot/v1/matches/{matchId}/mvp": {
+   "200": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "poll": {
+        "type": "object",
+        "properties": {
+         "id": {
+          "type": "string"
+         },
+         "match_id": {
+          "type": "string"
+         },
+         "posted_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "closes_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "closed_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "candidate_player_ids": {
+          "type": [
+           "array",
+           "null"
+          ],
+          "items": {
+           "type": "string"
+          }
+         },
+         "winner_member_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "winner_battle_tag": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "winner_source": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "winner_votes": {
+          "type": [
+           "number",
+           "null"
+          ]
+         },
+         "total_votes": {
+          "type": [
+           "number",
+           "null"
+          ]
+         },
+         "discord_channel_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "discord_message_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         }
+        },
+        "required": [
+         "id",
+         "match_id",
+         "posted_at",
+         "closes_at",
+         "closed_at",
+         "candidate_player_ids",
+         "winner_member_id",
+         "winner_battle_tag",
+         "winner_source",
+         "winner_votes",
+         "total_votes",
+         "discord_channel_id",
+         "discord_message_id"
+        ]
+       },
+       "candidates": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "memberId": {
+           "type": "string"
+          },
+          "teamId": {
+           "type": "string"
+          },
+          "teamName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "battleTag": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "displayName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "label": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "memberId",
+          "teamId",
+          "teamName",
+          "battleTag",
+          "displayName",
+          "label"
+         ]
+        }
+       },
+       "votable": {
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "poll",
+       "candidates",
+       "votable"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "success": {
+        "type": "boolean"
+       },
+       "award": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "properties": {
+         "matchId": {
+          "type": "string"
+         },
+         "roundName": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "memberId": {
+          "type": "string"
+         },
+         "source": {
+          "type": "string",
+          "enum": [
+           "discord",
+           "twitch"
+          ]
+         },
+         "winnerVotes": {
+          "type": "number"
+         },
+         "totalVotes": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "matchId",
+         "roundName",
+         "memberId",
+         "source",
+         "winnerVotes",
+         "totalVotes"
+        ]
+       },
+       "reason": {
+        "type": [
+         "string",
+         "null"
+        ],
+        "enum": [
+         "no_votes",
+         "tie",
+         "too_few_votes",
+         null
+        ]
+       },
+       "tallies": {
+        "type": "object",
+        "properties": {
+         "discord": {
+          "type": "object",
+          "properties": {
+           "source": {
+            "type": "string",
+            "enum": [
+             "discord",
+             "twitch"
+            ]
+           },
+           "rows": {
+            "type": "array",
+            "items": {
+             "type": "object",
+             "properties": {
+              "memberId": {
+               "type": "string"
+              },
+              "votes": {
+               "type": "number"
+              },
+              "share": {
+               "type": "number"
+              }
+             },
+             "required": [
+              "memberId",
+              "votes",
+              "share"
+             ]
+            }
+           },
+           "total": {
+            "type": "number"
+           }
+          },
+          "required": [
+           "source",
+           "rows",
+           "total"
+          ]
+         },
+         "twitch": {
+          "type": "object",
+          "properties": {
+           "source": {
+            "type": "string",
+            "enum": [
+             "discord",
+             "twitch"
+            ]
+           },
+           "rows": {
+            "type": "array",
+            "items": {
+             "type": "object",
+             "properties": {
+              "memberId": {
+               "type": "string"
+              },
+              "votes": {
+               "type": "number"
+              },
+              "share": {
+               "type": "number"
+              }
+             },
+             "required": [
+              "memberId",
+              "votes",
+              "share"
+             ]
+            }
+           },
+           "total": {
+            "type": "number"
+           }
+          },
+          "required": [
+           "source",
+           "rows",
+           "total"
+          ]
+         }
+        },
+        "required": [
+         "discord",
+         "twitch"
+        ]
+       }
+      },
+      "required": [
+       "success",
+       "award",
+       "reason",
+       "tallies"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "success": {
+        "type": "boolean"
+       },
+       "memberId": {
+        "type": "string"
+       },
+       "changed": {
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "success",
+       "memberId",
+       "changed"
+      ]
+     }
     ]
    }
   },

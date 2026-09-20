@@ -1,0 +1,110 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+get:
+  tags:
+    - bot/matches
+  summary: Candidates et etat du vote MVP d'un match.
+  description: >-
+    Sert au bot a (re)poster le message de vote : la liste des titulaires des
+    deux equipes, et l'etat du vote s'il a deja ete ouvert.
+  operationId: botGetMatchMvp
+  responses:
+    '200':
+      description: Match trouve.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - matchId
+              - candidates
+            properties:
+              matchId:
+                $ref: '#/components/schemas/Uuid'
+              status:
+                type: string
+              roundName:
+                type: [string, 'null']
+              candidates:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    memberId:
+                      $ref: '#/components/schemas/Uuid'
+                    teamId:
+                      $ref: '#/components/schemas/Uuid'
+                    teamName:
+                      type: [string, 'null']
+                    battleTag:
+                      type: [string, 'null']
+                    displayName:
+                      type: [string, 'null']
+                    label:
+                      type: string
+              poll:
+                type: ['object', 'null']
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '500':
+      $ref: '#/components/responses/ServerError'
+  x-zod-query: bot.matches/[matchId]/mvp.query
+post:
+  tags:
+    - bot/matches
+  summary: Ouvre le vote MVP, encaisse une voix, ou clot et depouille.
+  description: >-
+    Trois actions sur la meme route. `open` fige les candidates et ancre le
+    message poste par le bot ; `vote` enregistre une voix (une par personne, la
+    derniere compte) ; `close` ferme le vote et desige la gagnante. Le
+    depouillement fait passer les voix Twitch devant les voix Discord quand le
+    chat du live a vote.
+  operationId: botPostMatchMvp
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: bot.matches/[matchId]/mvp
+  responses:
+    '200':
+      description: Action effectuee.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              poll:
+                type: ['object', 'null']
+              candidates:
+                type: array
+                items:
+                  type: object
+              votable:
+                type: boolean
+              memberId:
+                anyOf:
+                  - $ref: '#/components/schemas/Uuid'
+                  - type: 'null'
+              changed:
+                type: boolean
+              award:
+                type: ['object', 'null']
+              reason:
+                type: [string, 'null']
+              tallies:
+                type: object
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      description: Vote clos, match non termine, ou candidate invalide.
+    '500':
+      $ref: '#/components/responses/ServerError'
+  x-zod: bot.matches/[matchId]/mvp
+  x-zod-query: bot.matches/[matchId]/mvp.query

@@ -12,6 +12,7 @@ import { profileBodySchema as s2_free_players_profile } from './free-players/pro
 import { invitationBodySchema as s3_invitations_demandeId } from './invitations/[demandeId]';
 import { lockBodySchema as s4_locks_name } from './locks/[name]';
 import { checkinBodySchema as s5_matches_matchId_checkin } from './matches/[matchId]/checkin';
+import { mvpBodySchema as s5b_matches_matchId_mvp } from './matches/[matchId]/mvp';
 import { draftsBodySchema as s6_matches_matchId_drafts } from './matches/[matchId]/drafts';
 import { evidencePostSchema as s7_matches_matchId_evidence } from './matches/[matchId]/evidence';
 import { forfeitBodySchema as s8_matches_matchId_forfeit } from './matches/[matchId]/forfeit';
@@ -49,6 +50,7 @@ import { lockQuerySchema as q3_locks_name } from './locks/[name].query';
 import { metaQuerySchema as q4_matches_matchId } from './matches/[matchId].query';
 import { castQuerySchema as q5_matches_matchId_cast } from './matches/[matchId]/cast.query';
 import { checkinQuerySchema as q6_matches_matchId_checkin } from './matches/[matchId]/checkin.query';
+import { mvpQuerySchema as q6b_matches_matchId_mvp } from './matches/[matchId]/mvp.query';
 import { discordQuerySchema as q7_matches_matchId_discord } from './matches/[matchId]/discord.query';
 import { draftsQuerySchema as q8_matches_matchId_drafts } from './matches/[matchId]/drafts.query';
 import { evidenceQuerySchema as q9_matches_matchId_evidence } from './matches/[matchId]/evidence.query';
@@ -95,6 +97,10 @@ export const BOT_API_CONTRACT_SCHEMAS: Record<string, ApiContractEntry> = {
     io: 'input',
   },
   'bot.locks/[name]': { schema: s4_locks_name, io: 'input' },
+  'bot.matches/[matchId]/mvp': {
+    schema: s5b_matches_matchId_mvp,
+    io: 'input',
+  },
   'bot.matches/[matchId]/checkin': {
     schema: s5_matches_matchId_checkin,
     io: 'input',
@@ -208,6 +214,10 @@ export const BOT_API_CONTRACT_SCHEMAS: Record<string, ApiContractEntry> = {
   'bot.matches/[matchId].query': { schema: q4_matches_matchId, io: 'input' },
   'bot.matches/[matchId]/cast.query': {
     schema: q5_matches_matchId_cast,
+    io: 'input',
+  },
+  'bot.matches/[matchId]/mvp.query': {
+    schema: q6b_matches_matchId_mvp,
     io: 'input',
   },
   'bot.matches/[matchId]/checkin.query': {
