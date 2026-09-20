@@ -2417,3 +2417,153 @@ a:focus-visible,
     padding: 0 !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Révélation d'un paquet TCG (`components/tcg/TcgPackReveal.tsx`)
+ *
+ * C'EST LE MOMENT DU JEU. Une carte arrive FACE CACHÉE, puis se retourne. Le
+ * retournement est décoratif : le contenu de la carte est dans le DOM depuis
+ * le premier rendu, donc un lecteur d'écran l'annonce sans attendre la fin de
+ * l'animation, et le dos est `aria-hidden` + `pointer-events: none`.
+ *
+ * TOUT EST NEUTRALISÉ SOUS `prefers-reduced-motion` (fin de bloc) : les cartes
+ * sont alors posées face visible d'emblée. Aucune information n'en dépend.
+ * ------------------------------------------------------------------------- */
+
+.tcg-flip {
+  perspective: 1200px;
+}
+
+.tcg-flip-inner {
+  position: relative;
+  transform-style: preserve-3d;
+  /* Assez lent pour qu'on voie le dos partir, assez court pour ne pas faire
+     attendre sur un paquet de cinq cartes. */
+  transition: transform 640ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  /* Face cachée au départ : c'est l'état par défaut, pour qu'un rendu serveur
+     sans JavaScript ne montre pas les cartes avant l'animation. */
+  transform: rotateY(180deg);
+}
+
+.tcg-flip-inner[data-revealed="true"] {
+  transform: rotateY(0deg);
+}
+
+.tcg-flip-face,
+.tcg-flip-back {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.tcg-flip-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-violet) 45%, transparent);
+  /* Le dos est un motif de marque, pas une image : rien à charger, rien à
+     autoriser dans la CSP, et il reste net à toutes les tailles. */
+  background:
+    repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--color-violet) 22%, transparent) 0 10px,
+      transparent 10px 20px
+    ),
+    radial-gradient(
+      circle at 50% 38%,
+      color-mix(in srgb, var(--color-green) 34%, transparent) 0%,
+      transparent 62%
+    ),
+    linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--color-violet) 55%, #0b0b12) 0%,
+      #0b0b12 70%
+    );
+}
+
+/* Le losange central du dos : le même repère de forme que les pips de rareté. */
+.tcg-flip-back::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 28%;
+  aspect-ratio: 1;
+  transform: rotate(45deg);
+  border: 2px solid color-mix(in srgb, var(--color-green) 55%, transparent);
+  border-radius: 0.2rem;
+  box-shadow: 0 0 22px -4px
+    color-mix(in srgb, var(--color-green) 60%, transparent);
+}
+
+/* Le halo de rareté, joué UNE fois quand la carte se retourne. Son intensité
+   est portée par `--tcg-halo`, que le composant règle selon la rareté : une
+   légendaire doit se remarquer de l'autre bout de la grille, une commune non. */
+.tcg-halo[data-revealed="true"] {
+  animation: tcg-halo-burst 900ms ease-out 1;
+}
+
+@keyframes tcg-halo-burst {
+  0% {
+    box-shadow: 0 0 0 0 var(--tcg-halo);
+  }
+  55% {
+    box-shadow: 0 0 26px 6px var(--tcg-halo);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+/* Reflet balayant, réservé aux cartes BRILLANTES : c'est ce qui distingue un
+   foil d'un exemplaire ordinaire, et il ne se voit bien qu'en mouvement. */
+.tcg-sheen[data-revealed="true"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: 0.75rem;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 62%
+  );
+  animation: tcg-sheen-sweep 1100ms ease-out 1;
+  opacity: 0;
+}
+
+@keyframes tcg-sheen-sweep {
+  0% {
+    opacity: 0;
+    transform: translateX(-120%);
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(120%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tcg-flip-inner,
+  .tcg-flip-inner[data-revealed="true"] {
+    transition: none;
+    transform: none;
+  }
+  /* Sans retournement, le dos ne doit plus exister : il recouvrirait la carte. */
+  .tcg-flip-back {
+    display: none;
+  }
+  .tcg-halo[data-revealed="true"],
+  .tcg-sheen[data-revealed="true"]::before {
+    animation: none;
+  }
+  .tcg-sheen[data-revealed="true"]::before {
+    content: none;
+  }
+}

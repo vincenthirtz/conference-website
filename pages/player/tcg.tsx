@@ -1370,6 +1370,7 @@ function PlayerTcg() {
                   ? format(t.revealDuplicateHint, { refund: recycleRefund })
                   : null,
               dismiss: t.revealDismiss,
+              revealAll: t.revealAll,
               newCard: t.revealNewCard,
               duplicate: t.revealDuplicate,
               card: labels,

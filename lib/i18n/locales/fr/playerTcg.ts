@@ -111,6 +111,7 @@ export default ns('playerTcg', {
   revealTitle: 'Ton paquet',
   revealSubtitle: 'Les cartes que tu viens d’obtenir.',
   revealDismiss: 'Fermer',
+  revealAll: 'Tout révéler',
   revealNewCard: 'Nouvelle',
 
   // Historique du porte-monnaie. Les libellés sont ici et non côté serveur :

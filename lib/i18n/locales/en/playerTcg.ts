@@ -85,6 +85,7 @@ export default {
   revealTitle: 'Your pack',
   revealSubtitle: 'The cards you just pulled.',
   revealDismiss: 'Close',
+  revealAll: 'Reveal all',
   revealNewCard: 'New',
 
   walletTitle: 'My coins',
