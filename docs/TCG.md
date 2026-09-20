@@ -1466,73 +1466,46 @@ Quelques conventions transverses :
 
 ## 7. Ce qui reste à faire
 
-- **Correctifs de sécurité du 2026-09-15 : livrés, migrations NON appliquées.**
-  Ordre de déploiement :
-  1. appliquer `tcg_wallet_atomic_balance.sql` et
-     `tcg_admin_search_players_scoped.sql` **avant** le site (fonctions seules,
-     aucune table touchée) ;
-  2. déployer le site ;
-  3. appliquer `tcg_scrim_win_stable_ref.sql` **juste après** (données,
-     rejouable — elle peut aussi passer avant ET après).
+> **État vérifié en production le 2026-09-20.** Cette section a longtemps
+> annoncé des migrations « non appliquées » et des briques « pas encore en
+> service » qui l'étaient depuis des jours. Une liste de choses à faire qui
+> décrit un passé révolu est pire qu'une liste vide : on y cherche du travail
+> qui n'existe plus, et on rate celui qui reste. Les constats ci-dessous ont
+> été relus contre la base, un par un.
+>
+> Pour les refaire : `npm run tcg:audit` (sept contrôles d'intégrité, aucune
+> écriture). Passage du 2026-09-20 : 80 écritures au registre, tout au vert.
 
-  Site déployé **sans** les deux premières : le recalcul de solde se replie sur
-  une somme paginée (sans danger) ; l'achat de booster et le retrait staff sont
-  **refusés** (`503`), la recherche de joueuses aussi — jamais un achat sans
-  verrou ni une recherche globale. Tant que la troisième manque, un scrim déjà
-  payé qui repasse de « litige » à « terminé » (geste staff désormais) crédite
-  **une** fois de plus ses pièces, sans paquet.
+**Ce qui EST en service** (constaté en base, pas déduit du code) :
 
-  **Ce que la migration de données ne rattrape pas** : les gains `scrim_win` dont
-  le miroir a déjà été supprimé (litiges passés, ou exploitation de la boucle) ne
-  disent plus à quel scrim ils appartiennent. Les repérer pour audit — plusieurs
-  lignes orphelines rapprochées pour la même joueuse sont la signature de
-  l'exploitation :
+- Les migrations de sécurité du 2026-09-15 sont appliquées :
+  `tcg_purchase_booster`, `tcg_refresh_wallet_balance` et
+  `admin_search_tcg_players` existent, et aucun gain `scrim_win` ne porte plus
+  de référence instable (0 orphelin).
+- Les séries (`collection_set`) et la vitrine sont en service : la valeur est
+  au `CHECK` de `tcg_wallet_entries`, et une vitrine est configurée.
+- La récompense de vérification Battle.net distribue : `battlenet_verified`
+  figure parmi les gains réellement écrits, avec `match_win`,
+  `match_prediction` et `welcome_gift`.
+- Un thème d'overlay et un jeton sont posés ; douze photos de carte existent.
+- Les échanges sont DÉPLOYÉS (tables, fonctions à cinq types de sujet) mais
+  personne ne les a encore activés : zéro réglage, zéro proposition. Ce n'est
+  pas une panne, c'est un opt-in que personne n'a coché — à ne pas confondre au
+  prochain passage.
 
-  ```sql
-  SELECT e.tenant_id, e.user_id, e.source_ref, e.amount, e.created_at
-  FROM public.tcg_wallet_entries e
-  LEFT JOIN public.matches m ON m.id::text = e.source_ref
-  WHERE e.source_kind = 'scrim_win' AND e.source_ref NOT LIKE 'scrim:%'
-    AND m.id IS NULL
-  ORDER BY e.user_id, e.created_at;
-  ```
-
-  Les paquets correspondants ont disparu en cascade avec leur miroir ; seules
-  les pièces restent, corrigeables par `admin_grant` négatif si l'abus est avéré.
-  De même, un **solde gonflé** par la course des achats a laissé des registres
-  négatifs (plafonnés à 0 dans le cache) : `SELECT tenant_id, user_id,
-  SUM(amount) FROM tcg_wallet_entries GROUP BY 1, 2 HAVING SUM(amount) < 0`.
+**Ce qui reste :**
 
 
-- **Séries et vitrine : livrées (2026-09-15), pas encore en service.** Ordre de
-  déploiement : (1) le bot apprend `tcg.set_completed` ; (2) appliquer
-  `tcg_collection_set.sql` (après avoir énuméré les `CHECK` en place : la liste
-  recopiée est celle des onze valeurs en production) et `tcg_showcases.sql`,
-  puis `node scripts/refresh-schema-snapshot.mjs` ; (3) déployer le site. Site
-  sans migration : les séries s'affichent, les récompenses sont refusées et
-  retentées à chaque lecture ; la vitrine répond `500` (écran d'erreur dans
-  l'espace joueuse) et la fiche
-  publique n'en montre aucune. Ni l'une ni l'autre n'a été vue en navigateur
-  (aucun `next dev` pendant le lot) : relire `/player/tcg` et une fiche
-  `/player/[userId]` à 360 / 768 / 1280 px, clavier et lecteur d'écran.
-- **Échanges × séries : tranché (2026-09-15).** Une carte reçue par échange
-  (paquet `trade`) ne compte ni pour la récompense ni pour la progression d'une
-  série (`readOwnedCardRows(…, { excludeTradedIn: true })`). La règle est dite
-  sur la page des échanges ; le panneau des séries, lui, ne l'explique pas
-  encore.
+- **Échanges × séries : tranché (2026-09-15), dit des deux côtés (2026-09-20).**
+  Une carte reçue par échange (paquet `trade`) ne compte ni pour la récompense
+  ni pour la progression d'une série
+  (`readOwnedCardRows(…, { excludeTradedIn: true })`) — sans quoi deux comptes
+  s'échangeraient les mêmes cartes en boucle. La règle n'était écrite que sur
+  la page des échanges, c'est-à-dire là où personne ne cherche à comprendre
+  pourquoi une série stagne ; elle est désormais dite AUSSI dans le panneau des
+  séries, avec sa raison.
 - **Échanges × vitrine : fait.** Accepter régénère les fiches des deux
   joueuses (`revalidatePlayerCard`).
-- **Échanges : livrés (2026-09-15), pas encore en service.** Ordre : (1) le bot
-  apprend `tcg.trade_proposed` et `tcg.trade_resolved` ; (2) énumérer les
-  `CHECK` de `tcg_packs` en place, puis appliquer `tcg_card_trades.sql` et
-  `node scripts/refresh-schema-snapshot.mjs` ; (3) déployer le site (le cron
-  horaire part avec). Site sans migration : les routes d'échange répondent
-  `500`, rien d'autre n'est touché. **Le SQL n'a été exécuté nulle part** (aucun
-  Postgres pendant le lot, tests par lecture du fichier) : le jouer sur une
-  base LOCALE avec deux comptes — proposer, recycler la carte offerte, accepter
-  (doit annuler), double-cliquer accepter, accepter deux échanges croisés en
-  parallèle. Page non vue en navigateur (360 / 768 / 1280 px, clavier, lecteur
-  d'écran).
 - **Échanges : décisions laissées à l'humain.** (a) Aucun équilibre de VALEUR :
   la parité porte sur le nombre de cartes, pas sur la rareté — une commune
   contre une légendaire passe si la destinataire accepte ; (b) pas de blocage
@@ -1543,19 +1516,6 @@ Quelques conventions transverses :
 - **Un mécanisme « ne pas figurer dans le TCG »** n'existe pas. S'il est créé,
   le brancher sur `readDrawPool` : les séries suivront d'elles-mêmes.
 
-- **Récompense de vérification Battle.net : pas encore en service.** Ordre de
-  déploiement imposé : (1) le bot apprend `reason: 'battlenet_verified'` sans
-  tournoi (`services/discord-bot/tcg-events.js`, `REWARD_REASONS` +
-  `buildRewardGrantedDm`, et la clé de dédoublonnage qui filtre sur
-  `REWARD_REASONS`) ; (2) appliquer `tcg_battlenet_verified.sql` ; (3) déployer
-  le site. Site sans migration : vérification intacte, pièces rejetées en
-  `23514` et journalisées, rien de perdu — une vérification ultérieure crédite.
-- **Rattrapage et incitation Battle.net : livrés (2026-09-15), pas encore
-  exercés.** Le rattrapage attend un geste staff APRÈS la migration et le bot ;
-  à lancer depuis chaque espace concerné (audience = l'espace). Ni la carte ni le
-  toast de retour n'ont été vus en navigateur (aucun `next dev` pendant le lot) :
-  relire la phrase sur `/player/profile` et l'onboarding `manage-team?welcome=1`,
-  et un vrai aller-retour Blizzard sur une base LOCALE.
 - **L'aide du barème (`earnHint`, `/player/tcg`) ne cite toujours pas la
   vérification** : l'incitation vit sur la carte de vérification, là où le geste
   se fait. L'y ajouter demanderait un champ de plus dans `earn`.
@@ -1577,10 +1537,14 @@ Quelques conventions transverses :
   Tant que rien n'est lié seulement ; ensuite, la confirmation habituelle. Le
   flux OAuth est inchangé. Reste à MESURER l'effet (compter les
   `user_twitch_links` dans deux semaines) — aucune donnée ne le dit encore.
-- **Ni overlay émis, ni habillage réglé, ni cadeau distribué** au 2026-09-14 :
-  les trois attendent un geste de la régie, par construction. Un lien d'overlay
-  s'émet, un cadeau se distribue — ni l'un ni l'autre ne doit être l'effet de
-  bord d'un déploiement.
+- **Overlay et cadeau : partis (constaté le 2026-09-20).** Un thème
+  d'habillage et un jeton d'overlay existent, et `welcome_gift` figure parmi
+  les gains réellement écrits. Ce constat remplace celui du 2026-09-14 (« ni
+  overlay émis, ni habillage réglé, ni cadeau distribué »), qui décrivait
+  correctement un état depuis dépassé. Le principe tient toujours : les trois
+  demandent un geste de la régie, par construction — un lien d'overlay s'émet,
+  un cadeau se distribue, ni l'un ni l'autre n'est l'effet de bord d'un
+  déploiement.
 - **La carte « Ajuster un solde » n'affiche pas le solde AVANT correction** :
   aucune route staff ne lit le porte-monnaie d'une autre joueuse, et le solde
   résultant n'arrive qu'avec la réponse.
