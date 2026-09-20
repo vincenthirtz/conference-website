@@ -10,8 +10,8 @@
 // responsabilité d'une écriture, et rendu son contrat faux en inspection admin.
 //
 // ELLE DISPARAÎT QUAND IL N'Y A RIEN À PROPOSER, comme le reste de cet écran.
-// `supporterClaimable` vient de la route, qui l'évalue avec
-// `grantSupporterWelcome({ dryRun: true })` — donc avec EXACTEMENT les
+// `welcomeClaimable` vient de la route, qui l'évalue avec
+// `grantSelfWelcome({ dryRun: true })` — donc avec EXACTEMENT les
 // conditions du POST. Proposer un bouton que le serveur refuserait ensuite
 // serait pire que ne rien proposer.
 //
@@ -59,13 +59,13 @@ export default function SupporterWelcomeCard({
   // fourni ; l'état reste LOCAL, parce qu'une réclamation le fait passer à
   // `false` sans que la réponse de la page change.
   const [claimable, setClaimable] = useState<boolean | undefined>(
-    selfLoads ? undefined : (data?.supporterClaimable ?? false)
+    selfLoads ? undefined : (data?.welcomeClaimable ?? false)
   );
 
   // La page republie sa lecture (premier chargement, rechargement) : on suit.
   useEffect(() => {
     if (selfLoads) return;
-    setClaimable(data?.supporterClaimable ?? false);
+    setClaimable(data?.welcomeClaimable ?? false);
   }, [selfLoads, data]);
   const [coins, setCoins] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -77,7 +77,7 @@ export default function SupporterWelcomeCard({
         withSubject('/api/player/tcg/welcome-gift'),
         { skipAuthRedirect: true }
       );
-      setClaimable(payload.supporterClaimable);
+      setClaimable(payload.welcomeClaimable);
     } catch (err) {
       logger.error('[SupporterWelcomeCard] load error', err);
       // `false` et non `undefined` : la carte se retire au lieu de rester en

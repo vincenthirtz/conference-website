@@ -3,18 +3,19 @@ get:
     - public/auth
   summary: Ai-je recu un cadeau de bienvenue, et lequel ?
   description: |
-    `200 { gift: { coins, receivedAt } | null, supporterClaimable }`.
+    `200 { gift: { coins, receivedAt } | null, welcomeClaimable }`.
     Alimente la carte du tableau de bord, qui se retire d'elle-meme quand
     il n'y a rien a dire.
 
-    LES DEUX ACCUEILS SONT CONFONDUS ici (`welcome_gift`, celui d'une
-    edition, et `supporter_welcome`, celui d'une supportrice) : filtrer sur
-    la seule cle d'origine aurait rendu le second invisible sur l'ecran
-    meme qui sert a l'annoncer.
+    LES TROIS ACCUEILS SONT CONFONDUS ici : `welcome_gift` (celui d'une
+    edition), `supporter_welcome` (celui d'une supportrice) et
+    `staff_welcome` (celui d'un compte staff hors roster, depuis le
+    2026-09-20). Filtrer sur une seule cle d'origine rendrait les autres
+    invisibles sur l'ecran meme qui sert a les annoncer.
 
-    `supporterClaimable` est calcule par `grantSupporterWelcome({ dryRun:
-    true })`, donc avec les conditions EXACTES du POST : proposer un bouton
-    que le serveur refuserait ensuite serait pire que ne rien proposer.
+    `welcomeClaimable` est calcule par `grantSelfWelcome({ dryRun: true })`,
+    donc avec les conditions EXACTES du POST : proposer un bouton que le
+    serveur refuserait ensuite serait pire que ne rien proposer.
 
     L'ABSENCE DE CADEAU EST UN ETAT NORMAL, pas une erreur : une joueuse
     d'une equipe non engagee, ou arrivee apres la distribution, n'en a pas.
@@ -52,7 +53,7 @@ get:
 post:
   tags:
     - public/auth
-  summary: Reclamer le cadeau d'accueil d'une supportrice
+  summary: Reclamer l'accueil qu'on se reclame (supportrice ou staff)
   description: |
     `200 { status, coins?, packGranted? }`. Une fois par COMPTE.
 
@@ -62,11 +63,20 @@ post:
     Faire porter deux regles d'unicite a une meme cle aurait rendu « une
     fois » ambigu.
 
+    DEUX MOTIFS, UNE SEULE ECRITURE. `staff` pour un compte du staff en
+    activite (owner, admin, caster) ; `supporter` sinon, si le role de
+    compte le dit. Le motif ne change PAS le montant — un staff qui
+    s'accorderait plus qu'une joueuse ne jouerait plus au meme jeu qu'elle
+    — seulement l'etiquette laissee au registre. Cette distinction est
+    decisive : `supporter_welcome` figure dans les origines qui PROUVENT
+    une presence qu'un staff n'a pas pu fabriquer, et `staff_welcome` ne
+    doit jamais y entrer.
+
     REFUS ORDINAIRES, rendus en 200 avec un motif lisible plutot qu'en 4xx :
-    `not_supporter` (le role de compte n'est pas `supporter`),
-    `on_roster` (elle figure sur un roster — le role n'etant qu'une
-    etiquette choisie a l'inscription, sans ce refus une joueuse
-    cumulerait les deux accueils), `already` (rejeu).
+    `not_eligible` (ni staff en activite, ni role de compte `supporter`),
+    `on_roster` (le compte figure sur un roster — c'est le cadeau
+    d'EDITION qui le concerne, et les deux ne se cumulent pas ; vaut aussi
+    pour un staff qui joue), `already` (rejeu).
 
     ⚠️ `allowActAs` N'EST PAS ACTIVE sur cette route : `?as=` est donc
     refuse hors GET, et `subject.userId === user.id` est garanti ici. Un
@@ -76,7 +86,7 @@ post:
     `packGranted` est RENDU a l'appelant : si l'insertion du paquet echoue,
     les pieces sont deja ecrites et ne seront pas rejouees, et l'ecran doit
     le dire au lieu d'afficher un succes. Rate-limit 6 / min.
-  operationId: claimSupporterTcgWelcomeGift
+  operationId: claimSelfTcgWelcomeGift
   security:
     - PlayerBearer: []
   responses:

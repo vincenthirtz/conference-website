@@ -94,7 +94,9 @@ describe('dossier d’adversaire — état vide', () => {
 describe('cadeaux d’accueil — lecture passée par la page', () => {
   const response = {
     gift: { coins: 150 },
-    supporterClaimable: true,
+    // Renommé le 2026-09-20 : la carte sert AUSSI le staff, pas seulement
+    // les supportrices (cf. `grantSelfWelcome`).
+    welcomeClaimable: true,
   } as any;
 
   it('WelcomeGiftCard rend le cadeau fourni dès le premier rendu', () => {

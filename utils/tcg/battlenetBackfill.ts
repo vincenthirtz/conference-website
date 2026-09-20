@@ -23,7 +23,7 @@
 // lui verser. On ne rattrape donc que les comptes RATTACHÉS à l'espace, au sens
 // de `utils/tcg/tenantAttachment.ts` :
 //   - une ligne de roster (`team_members.tenant_id`), la définition de
-//     « participante » de `grantWelcomeGift` et `grantSupporterWelcome` ;
+//     « participante » de `grantWelcomeGift` et `grantSelfWelcome` ;
 //   - un GAIN RÉEL au registre du tenant (victoire, drop, cadeau… — liste
 //     blanche) : elle collectionne déjà dans cet espace, sans être sur un roster.
 // ⚠️ PLUS « UN PORTE-MONNAIE » (correctif du 2026-09-15). Un porte-monnaie se

@@ -53,6 +53,7 @@ describe('intégrité du registre', () => {
         'tournament_placement',
         'welcome_gift',
         'supporter_welcome',
+        'staff_welcome',
         'battlenet_verified',
         'collection_set',
         'match_prediction',
@@ -311,6 +312,9 @@ describe('schemaReady', () => {
       'match_prediction',
       'match_win',
       'scrim_win',
+      // `tcg_staff_welcome.sql` (appliquée le 2026-09-20) : la porte d'entrée
+      // d'un compte staff hors roster, qui n'en avait aucune.
+      'staff_welcome',
       'supporter_welcome',
       'tournament_placement',
       'twitch_drop',

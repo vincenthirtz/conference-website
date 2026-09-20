@@ -39,7 +39,7 @@ export default function WelcomeGiftCard({
    * Réponse de `/api/player/tcg/welcome-gift` déjà lue par la page. Le tableau
    * de bord la passe à cette carte ET à `SupporterWelcomeCard` : chacune
    * appelait la route de son côté, et la route exécute un
-   * `grantSupporterWelcome({ dryRun: true })` — deux fois le même calcul au
+   * `grantSelfWelcome({ dryRun: true })` — deux fois le même calcul au
    * même instant. `undefined` = la carte lit elle-même ; `null` = la page lit
    * (pas encore de réponse, ou échec) — la carte reste masquée.
    */

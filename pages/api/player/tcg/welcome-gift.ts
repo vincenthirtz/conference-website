@@ -26,7 +26,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withSubjectRoute } from '@/utils/subject';
 import { logger } from '@/utils/logger';
-import { grantSupporterWelcome } from '@/utils/tcg/grantSupporterWelcome';
+import { grantSelfWelcome } from '@/utils/tcg/grantSelfWelcome';
 
 export type PlayerWelcomeGift = {
   coins: number;
@@ -38,17 +38,17 @@ export type PlayerWelcomeGiftResponse = {
   /**
    * Le cadeau d'accueil SUPPORTRICE est-il réclamable par ce compte ?
    *
-   * Calculé par `grantSupporterWelcome({ dryRun: true })`, donc avec exactement
+   * Calculé par `grantSelfWelcome({ dryRun: true })`, donc avec exactement
    * les conditions du chemin d'écriture : proposer un bouton que le POST
    * refuserait ensuite serait pire que ne rien proposer.
    */
-  supporterClaimable: boolean;
+  welcomeClaimable: boolean;
 };
 
 /** Réponse du POST de réclamation. `status` suffit à la carte pour brancher. */
 export type PlayerWelcomeClaimResponse =
   | { status: 'granted'; coins: number; packGranted: boolean }
-  | { status: 'already' | 'not_supporter' | 'on_roster' };
+  | { status: 'already' | 'not_eligible' | 'on_roster' };
 
 export default withSubjectRoute(async function handler(
   req: NextApiRequest,
@@ -84,7 +84,14 @@ export default withSubjectRoute(async function handler(
       // `tcg_supporter_welcome.sql`, une supportrice a le sien. Filtrer sur la
       // seule clé d'origine aurait rendu son cadeau invisible sur l'écran
       // même qui sert à l'annoncer.
-      .in('source_kind', ['welcome_gift', 'supporter_welcome'])
+      .in('source_kind', [
+        'welcome_gift',
+        'supporter_welcome',
+        // Depuis `tcg_staff_welcome.sql` : un compte staff hors roster a le
+        // sien. L'omettre rendrait son cadeau invisible sur l'écran même qui
+        // sert à l'annoncer — c'est l'erreur déjà faite pour les supportrices.
+        'staff_welcome',
+      ])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -103,11 +110,11 @@ export default withSubjectRoute(async function handler(
     // Inutile si le cadeau est déjà là.
     const probe = row
       ? null
-      : await grantSupporterWelcome({ tenantId, userId, dryRun: true });
+      : await grantSelfWelcome({ tenantId, userId, dryRun: true });
 
     return res.status(200).json({
       gift: row ? { coins: row.amount, receivedAt: row.created_at } : null,
-      supporterClaimable: probe?.status === 'claimable',
+      welcomeClaimable: probe?.status === 'claimable',
     } satisfies PlayerWelcomeGiftResponse);
   }
 
@@ -127,7 +134,7 @@ export default withSubjectRoute(async function handler(
       return;
     }
 
-    const outcome = await grantSupporterWelcome({ tenantId, userId });
+    const outcome = await grantSelfWelcome({ tenantId, userId });
 
     if (outcome.status === 'error') {
       return res.status(500).json({ error: 'Réclamation impossible.' });

@@ -237,6 +237,7 @@ export type TcgEarnSourceKey =
   | 'tournament_placement'
   | 'welcome_gift'
   | 'supporter_welcome'
+  | 'staff_welcome'
   | 'battlenet_verified'
   | 'collection_set'
   | 'match_prediction';
@@ -423,6 +424,33 @@ export const TCG_EARN_SOURCES: readonly TcgEarnSource[] = [
     coins: WELCOME_GIFT_COINS,
     // `source_ref` = le TENANT : « une fois, jamais deux », appliqué par la
     // contrainte UNIQUE et par rien d'autre.
+    refKind: 'tenant',
+    maxPerRef: 1,
+    schemaReady: true,
+  },
+  {
+    // ALLUMÉE le 2026-09-20 avec `tcg_staff_welcome.sql` (CHECK élargi).
+    //
+    // POURQUOI ELLE EXISTE. Un compte staff hors roster n'avait AUCUNE porte
+    // d'entrée : le cadeau d'édition énumère les rosters, celui de supportrice
+    // exige l'étiquette `supporter`, les pronostics refusent le staff (qui
+    // arbitre ne parie pas sur ce qu'il arbitre), et victoires comme séries de
+    // check-ins supposent qu'on joue. La personne qui fait tourner le tournoi
+    // arrivait donc sur une collection vide, définitivement.
+    //
+    // ORIGINE DISTINCTE, JAMAIS `supporter_welcome` RÉUTILISÉ : celle-ci
+    // figure dans `TENANT_ATTACHING_WALLET_SOURCES`, la liste des gains qui
+    // prouvent une présence qu'un staff n'a pas pu fabriquer. Y faire entrer un
+    // cadeau que le staff se réclame à lui-même viderait la garde de son sens.
+    key: 'staff_welcome',
+    // Un paquet, comme les deux autres accueils : c'est l'ouverture qui fait le
+    // TCG.
+    packs: 1,
+    // LE MÊME MONTANT que les deux autres. Un staff qui s'accorderait plus
+    // qu'une joueuse ne jouerait plus au même jeu qu'elle.
+    coins: WELCOME_GIFT_COINS,
+    // `source_ref` = le TENANT : une fois par compte et par espace, appliqué
+    // par la contrainte UNIQUE et par rien d'autre.
     refKind: 'tenant',
     maxPerRef: 1,
     schemaReady: true,

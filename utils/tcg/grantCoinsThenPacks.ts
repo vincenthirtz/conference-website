@@ -5,7 +5,7 @@
 // POURQUOI CE MODULE. Trois sources sans match doivent faire apparaître un
 // paquet : le drop Twitch, la série de check-ins et le palmarès de fin de
 // tournoi. Les deux cadeaux d'accueil (`grantWelcomeGift`,
-// `grantSupporterWelcome`) portent déjà chacun leur copie de la mécanique ; en
+// `grantSelfWelcome`) portent déjà chacun leur copie de la mécanique ; en
 // écrire trois de plus aurait donné cinq versions d'un ordre d'écriture dont UNE
 // SEULE inversion suffit à multiplier les paquets. Les nouvelles sources passent
 // donc par ici, et seulement par ici.

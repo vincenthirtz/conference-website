@@ -41872,13 +41872,13 @@
        "receivedAt"
       ]
      },
-     "supporterClaimable": {
+     "welcomeClaimable": {
       "type": "boolean"
      }
     },
     "required": [
      "gift",
-     "supporterClaimable"
+     "welcomeClaimable"
     ]
    }
   },
@@ -65409,7 +65409,7 @@
         "type": "string",
         "enum": [
          "already",
-         "not_supporter",
+         "not_eligible",
          "on_roster"
         ]
        }

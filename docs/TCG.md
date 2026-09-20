@@ -650,13 +650,38 @@ aucune unicité exploitable ici. Distribuer reste un **geste de staff** explicit
 et journalisé (`tcg_welcome_gift_grant`), jamais un effet de bord de
 déploiement.
 
-### Le cadeau d'accueil d'une supportrice
+### L'accueil qu'on se réclame : supportrices ET staff
 
-[`utils/tcg/grantSupporterWelcome.ts`](../utils/tcg/grantSupporterWelcome.ts)
-offre **un paquet et `MATCH_WIN_COINS`**, une fois par compte, à qui porte le
-rôle de compte `supporter` (cf. §1). Les six autres sources supposent toutes
-qu'on joue : sans lui, une supportrice arrive sur une collection vide et sa
-seule voie — le drop Twitch — n'existe que pendant un direct.
+[`utils/tcg/grantSelfWelcome.ts`](../utils/tcg/grantSelfWelcome.ts) offre **un
+paquet et `MATCH_WIN_COINS`**, une fois par compte et par espace, à qui n'a
+aucune autre porte d'entrée. Deux motifs, un seul chemin d'écriture.
+
+**`supporter`** — à qui porte le rôle de compte `supporter` (cf. §1). Les
+autres sources supposent toutes qu'on joue : sans lui, une supportrice arrive
+sur une collection vide et sa seule voie — le drop Twitch — n'existe que
+pendant un direct.
+
+**`staff`** (2026-09-20) — à tout compte du staff EN ACTIVITÉ (owner, admin,
+caster) qui ne figure sur aucun roster. Ces comptes n'avaient strictement
+aucune entrée : le cadeau d'édition énumère les rosters engagés, celui de
+supportrice exige l'étiquette de compte, les pronostics **refusent le staff**
+(qui arbitre ne parie pas sur ce qu'il arbitre), et victoires comme séries de
+check-ins supposent qu'on joue. Constat du jour : **six des sept comptes staff
+étaient hors roster, avec zéro écriture au registre**. Les personnes qui font
+tourner le tournoi en étaient exclues, définitivement.
+
+Le motif ne change **pas le montant** — un staff qui s'accorderait plus qu'une
+joueuse ne jouerait plus au même jeu qu'elle — mais il change l'**étiquette**
+laissée au registre (`supporter_welcome` / `staff_welcome`), et c'est décisif :
+`supporter_welcome` figure dans `TENANT_ATTACHING_WALLET_SOURCES`, la liste des
+gains qui prouvent une présence dans l'espace **qu'un staff n'a pas pu
+fabriquer**. Y faire entrer un cadeau que le staff se réclame à lui-même
+viderait cette garde de son sens ; `staff_welcome` n'y est pas, et ne doit
+jamais y entrer.
+
+Un compte sur un roster est renvoyé vers le cadeau d'**édition**, quel que soit
+son motif : les deux ne se cumulent pas, et un staff qui joue reçoit le sien
+comme n'importe quelle joueuse.
 
 **Une fois par COMPTE, pas par édition**, et c'est toute la différence avec le
 cadeau ci-dessus. L'unicité du registre étant
@@ -1395,7 +1420,7 @@ joueuse) et scopées au tenant résolu par `resolveTenantIdForUserRequest`.
 | `/api/admin/tcg/grant`                               | POST              | staff, permission `manage_tcg`       | Corriger le solde d'une joueuse (`admin_grant`, crédit ou retrait, valeur absolue ≤ 10 000, motif obligatoire). **Une correction tracée, pas une vente.** Registre d'abord, `source_ref` = `idempotencyKey` : l'unicité du registre porte l'idempotence, un rejeu rend `replayed: true` sans double crédit. **Joueuse rattachée à l'espace seulement** (sinon `404 USER_NOT_FOUND`). Un retrait ne passe jamais sous zéro (`409 INSUFFICIENT_BALANCE`) : fonction SQL `tcg_admin_debit`, sous verrou ; `503 WITHDRAWAL_UNAVAILABLE` sans la migration. Motif journalisé `tcg_admin_grant` (le registre n'a pas de colonne pour lui). 30/min. |
 | `/api/admin/tcg/battlenet-backfill`                  | GET, POST         | staff, permission `manage_tcg`       | Rattraper la récompense Battle.net des comptes liés avant elle, **dans l'espace du staff** (roster ou gain réel au registre du tenant — plus un simple porte-monnaie). `GET` simule (`eligible`, `alreadyRewarded`, `wouldGrant`, `discordDms`, `outsideSpace`, `ready`, `reward`) ; `POST` passe chaque lien par l'écrivain du callback, rend `{ eligible, granted, already, errors, reward }`. Audience illisible → `500`, rien écrit. `Idempotency-Key`. Journalisé `tcg_battlenet_backfill`. 20/min. |
 | `/api/admin/tcg/players`                             | GET               | staff, permission `manage_tcg`       | Recherche de comptes pour la carte « Ajuster un solde », **cantonnée à l'espace** (RPC `admin_search_tcg_players`, pseudo + BattleTag, 20 résultats, `email` toujours `null`), sans exiger `manage_staff`. `503 SEARCH_UNAVAILABLE` sans la migration. |
-| `/api/player/tcg/welcome-gift`                       | GET, POST         | joueuse (**`withSubjectRoute`**)     | `GET` : « Ai-je reçu un cadeau ? » — `{ gift: { coins, receivedAt } \| null, supporterClaimable }`, les DEUX accueils confondus (`welcome_gift` et `supporter_welcome`) ; `supporterClaimable` vient de `grantSupporterWelcome({ dryRun: true })`, donc des conditions EXACTES du POST — proposer un bouton que le serveur refuserait serait pire que ne rien proposer. `POST` : réclamer le cadeau **supportrice**, une fois par compte, `{ status, coins, packGranted }` — `packGranted: false` DIT l'écriture partielle au lieu de la masquer. Seule route `tcg/` à honorer `?as=`, mais **sans `allowActAs`** : le `POST` est donc refusé en inspection, un cadeau réclamé ne se rendant pas. 60/min en GET, 6/min en POST. |
+| `/api/player/tcg/welcome-gift`                       | GET, POST         | joueuse (**`withSubjectRoute`**)     | `GET` : « Ai-je reçu un cadeau ? » — `{ gift: { coins, receivedAt } \| null, welcomeClaimable }`, les DEUX accueils confondus (`welcome_gift` et `supporter_welcome`) ; `welcomeClaimable` vient de `grantSelfWelcome({ dryRun: true })`, donc des conditions EXACTES du POST — proposer un bouton que le serveur refuserait serait pire que ne rien proposer. `POST` : réclamer le cadeau **supportrice**, une fois par compte, `{ status, coins, packGranted }` — `packGranted: false` DIT l'écriture partielle au lieu de la masquer. Seule route `tcg/` à honorer `?as=`, mais **sans `allowActAs`** : le `POST` est donc refusé en inspection, un cadeau réclamé ne se rendant pas. 60/min en GET, 6/min en POST. |
 | `/api/player/tcg/sets`                               | GET               | joueuse                              | Mes séries : `{ sets[], rewardCoins, newlyRewarded[] }`. Chaque série : `key`, `kind`, faits bruts (`mode`, `tournamentName`, `teamName`), `total`, `owned`, `complete`, `missingNamed` (équipes et maps SEULEMENT), `missingPlayers` (un nombre), `rewarded`, `justRewarded`. **Lecture qui peut écrire** (récompense idempotente, `tcg.set_completed`). Lecture partielle → `500 sets_unreadable`, rien d'écrit. Pas de `?as=`. 30/min. |
 | `/api/player/tcg/trades`                             | GET, POST         | joueuse                              | **Échanges.** GET : mes propositions `box=received\|sent`, `state=open\|closed`, curseur ; expiration paresseuse avant lecture ; faces relues ; `ownedCopies` de l'appelante sur les cartes demandées d'une reçue en attente, rien de la collection de l'autre. POST : proposer (corps strict, parité, 1..5) par `tcg_propose_trade` — `201`, annonce `tcg.trade_proposed`. 60/min, 10/min. |
 | `/api/player/tcg/trades/{tradeId}`                   | POST              | joueuse                              | `accept` (`tcg_accept_trade`, atomique, **idempotent**), `decline`, `cancel`. 404 hors de la paire ou du tenant. Annonce `tcg.trade_resolved`. 30/min. |
