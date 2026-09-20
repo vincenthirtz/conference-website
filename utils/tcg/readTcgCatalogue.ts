@@ -32,9 +32,14 @@ import {
   readFanartFaces,
 } from './readCardFaces';
 import { readMapFaces, MAP_POOL_SLUGS } from './readMapFaces';
+import {
+  GAME_MASCOT_SLUGS,
+  gameMascotDisplayName,
+  gameMascotUrl,
+} from './gameMascots';
 import { cardSubjectKey } from './subjectKey';
 
-export type CatalogueKind = 'player' | 'team' | 'map' | 'fanart';
+export type CatalogueKind = 'player' | 'team' | 'map' | 'fanart' | 'mascot';
 
 export type CatalogueCard = {
   /** `<type>:<identifiant>` — la même clé que partout ailleurs. */
@@ -87,7 +92,7 @@ async function readHolderCounts(
     const { data, error } = await supabaseAdmin
       .from('tcg_pack_cards')
       .select(
-        'subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id, tcg_packs!inner(user_id, tenant_id, opened_at)'
+        'subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id, card_mascot_slug, tcg_packs!inner(user_id, tenant_id, opened_at)'
       )
       .eq('tcg_packs.tenant_id', tenantId)
       .not('tcg_packs.opened_at', 'is', null)
@@ -143,7 +148,7 @@ async function readOwnedKeys(
     const { data, error } = await supabaseAdmin
       .from('tcg_pack_cards')
       .select(
-        'subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id'
+        'subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id, card_mascot_slug'
       )
       .in('pack_id', chunk)
       // Une carte recyclée a été rendue : elle n'est plus possédée.
@@ -250,6 +255,22 @@ export async function readTcgCatalogue(
       id,
       label: face?.title ?? id,
       imageUrl: face?.imageUrl ?? null,
+      owned: owns(key),
+      holders: holdersOf(key),
+    });
+  }
+  // Les mascottes, comme les maps : leur vivier EST le registre en mémoire,
+  // celui que le tirage reçoit (`GAME_MASCOT_SLUGS`). Rien à lire en base, et
+  // leur figurine est une route — jamais un fichier stocké.
+  for (const slug of GAME_MASCOT_SLUGS) {
+    const key = `mascot:${slug}`;
+    cards.push({
+      key,
+      kind: 'mascot',
+      id: slug,
+      // `?? slug` comme partout ici : un libellé n'est jamais vide.
+      label: gameMascotDisplayName(slug) ?? slug,
+      imageUrl: gameMascotUrl(slug),
       owned: owns(key),
       holders: holdersOf(key),
     });

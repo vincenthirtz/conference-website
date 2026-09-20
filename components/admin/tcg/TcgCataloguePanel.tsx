@@ -29,7 +29,7 @@ import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
 import nsAdminTcgPage from '@/lib/i18n/locales/admin-fr/adminTcgPage';
 import nsAdminTcgGrant from '@/lib/i18n/locales/admin-fr/adminTcgGrant';
 
-type CatalogueKind = 'player' | 'team' | 'map' | 'fanart';
+type CatalogueKind = 'player' | 'team' | 'map' | 'fanart' | 'mascot';
 
 type CatalogueCard = {
   key: string;
@@ -48,7 +48,16 @@ type CatalogueResponse = {
   userId: string | null;
 };
 
-const KIND_ORDER: CatalogueKind[] = ['player', 'team', 'map', 'fanart'];
+// L'ORDRE EST CELUI DE L'AFFICHAGE, et il décide aussi de ce qui EXISTE :
+// un type absent d'ici n'a pas de groupe, donc ses cartes ne sont rendues
+// nulle part — sans erreur, sans compteur faux, simplement absentes.
+const KIND_ORDER: CatalogueKind[] = [
+  'player',
+  'team',
+  'map',
+  'fanart',
+  'mascot',
+];
 
 export default function TcgCataloguePanel() {
   const t = useAdminT(nsAdminTcgPage);
@@ -103,7 +112,9 @@ export default function TcgCataloguePanel() {
         ? t.catalogueKindTeams
         : kind === 'map'
           ? t.catalogueKindMaps
-          : t.catalogueKindFanart;
+          : kind === 'mascot'
+            ? t.catalogueKindMascots
+            : t.catalogueKindFanart;
 
   return (
     <div>

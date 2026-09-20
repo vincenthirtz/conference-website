@@ -40,6 +40,7 @@ export default {
   catalogueKindTeams: 'Teams',
   catalogueKindMaps: 'Maps',
   catalogueKindFanart: 'Fan art',
+  catalogueKindMascots: 'Mascots',
   catalogueHolders: '{count} holder(s)',
   catalogueNoHolder: 'never drawn',
 };
