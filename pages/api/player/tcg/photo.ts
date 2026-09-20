@@ -64,7 +64,7 @@ export default withAuthRoute(async function handler(
 
   const tenantId = resolveTenantIdForUserRequest(req);
 
-  if (req.method === 'GET') return readState(res, user.id, tenantId);
+  if (req.method === 'GET') return readState(req, res, user.id, tenantId);
   if (req.method === 'POST') return submitPhoto(req, res, user.id, tenantId);
   if (req.method === 'DELETE') return revoke(req, res, user.id, tenantId);
 
@@ -83,10 +83,30 @@ export default withAuthRoute(async function handler(
  * la responsabilité du lecteur PUBLIC des cartes, pas de celui-ci.
  */
 async function readState(
+  req: NextApiRequest,
   res: NextApiResponse,
   userId: string,
   tenantId: string
 ) {
+  // LE GET AUSSI. Il était la seule méthode de ce fichier sans plafond — une
+  // asymétrie sans justification, dans un fichier qui documente tout le reste.
+  // Lecture authentifiée et bon marché, donc le plafond est large : il n'est
+  // pas là contre un abus coûteux, il est là pour qu'aucune méthode ne soit
+  // l'exception qu'on oublie.
+  //
+  // `true` = REQUÊTE BLOQUÉE, réponse déjà envoyée (convention du helper, et
+  // celle des deux autres méthodes ci-dessous).
+  if (
+    applyRateLimit(
+      req,
+      res,
+      { max: 60, windowMs: 60_000 },
+      'player-tcg-photo-read'
+    )
+  ) {
+    return;
+  }
+
   const { data, error } = await supabaseAdmin!
     .from('tcg_player_cards')
     .select(
