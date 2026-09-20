@@ -10,6 +10,7 @@
 // les valeurs sont de type `string` — des types litteraux la feraient echouer.
 
 export default {
+  importSourceAria: 'Import source',
   headTitle: 'Admin – Teams',
   heading: 'Teams',
   teamCount_one: '{count} team registered',

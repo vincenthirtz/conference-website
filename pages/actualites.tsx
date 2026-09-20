@@ -271,8 +271,14 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
             </div>
           </div>
 
-          {/* Tabs */}
-          <div className="flex justify-center gap-2 mb-10">
+          {/* UN FILTRE, PAS DES ONGLETS : ces boutons restreignent une seule
+              liste, ils ne changent pas de panneau. Groupe nommé + bascules
+              (`aria-pressed`), cf. la même barre sur `/lore`. */}
+          <div
+            role="group"
+            aria-label={t.filterAria}
+            className="flex justify-center gap-2 mb-10"
+          >
             {[
               { key: 'all', label: t.tabAll },
               { key: 'patch', label: t.tabPatch },
@@ -280,6 +286,8 @@ function ActualitesPage({ patchNotes, news, loadError }: ActualitesProps) {
             ].map((tab) => (
               <button
                 key={tab.key}
+                type="button"
+                aria-pressed={activeTab === tab.key}
                 onClick={() => setActiveTab(tab.key as typeof activeTab)}
                 className={`px-5 py-2.5 rounded-xl text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)] ${
                   activeTab === tab.key

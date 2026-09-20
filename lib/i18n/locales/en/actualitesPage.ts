@@ -10,6 +10,7 @@
 // les valeurs sont de type `string` — des types litteraux la feraient echouer.
 
 export default {
+  filterAria: 'Filter news',
   badgePatch: 'Patch Notes',
   readDetails: 'Read the details',
   categoryFallback: 'News',

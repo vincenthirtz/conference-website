@@ -64,6 +64,18 @@ type TabsProps = {
    */
   idBase: string;
   className?: string;
+  /**
+   * L'habillage. `underline` (défaut) : un trait sous l'onglet actif, sur une
+   * bordure de séparation — la barre d'onglets classique. `segmented` : des
+   * pastilles dans un cadre, pour un choix court et visuellement compact.
+   *
+   * POURQUOI UNE VARIANTE PLUTÔT QU'UN SECOND COMPOSANT. Ce qui fait la
+   * difficulté d'une barre d'onglets n'est pas son apparence, c'est le clavier
+   * (un seul arrêt de tabulation, flèches, Home/Fin). Un second composant, si
+   * joli soit-il, recopierait cette partie-là — et c'est précisément celle qui
+   * manquait partout où l'on avait réinventé la barre à la main.
+   */
+  variant?: 'underline' | 'segmented';
 };
 
 /**
@@ -80,6 +92,7 @@ export default function Tabs({
   ariaLabel,
   idBase,
   className = '',
+  variant = 'underline',
 }: TabsProps) {
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
 
@@ -120,7 +133,11 @@ export default function Tabs({
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className={`flex flex-wrap gap-1 border-b border-neutral-700/60 ${className}`}
+      className={`${
+        variant === 'segmented'
+          ? 'inline-flex rounded-xl border border-white/10 bg-white/[0.03] p-1'
+          : 'flex flex-wrap gap-1 border-b border-neutral-700/60'
+      } ${className}`}
     >
       {tabs.map((t) => {
         const selected = t.id === active;
@@ -138,11 +155,19 @@ export default function Tabs({
             type="button"
             onClick={() => onChange(t.id)}
             onKeyDown={onKeyDown}
-            className={`-mb-px rounded-t-lg px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
-              selected
-                ? 'border-b-2 border-purple-500 text-white'
-                : 'border-b-2 border-transparent text-neutral-400 hover:text-neutral-200'
-            }`}
+            className={
+              variant === 'segmented'
+                ? `rounded-lg px-4 py-1.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 ${
+                    selected
+                      ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-purple-500/20'
+                      : 'text-gray-300 hover:bg-white/[0.06] hover:text-white'
+                  }`
+                : `-mb-px rounded-t-lg px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
+                    selected
+                      ? 'border-b-2 border-purple-500 text-white'
+                      : 'border-b-2 border-transparent text-neutral-400 hover:text-neutral-200'
+                  }`
+            }
           >
             {t.label}
           </button>

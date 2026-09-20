@@ -9,6 +9,7 @@
 import { ns } from '../../ns';
 
 export default ns('actualitesPage', {
+  filterAria: 'Filtrer les actualités',
   badgePatch: 'Patch Notes',
   readDetails: 'Lire les détails',
   categoryFallback: 'Actualité',

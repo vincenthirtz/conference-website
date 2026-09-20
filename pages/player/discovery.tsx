@@ -10,6 +10,7 @@
 // Les trois rendent la même fiche (DirectoryPlayerCard) : avatar, accroche,
 // badges d'équipes, compteur d'abonnés, bouton Suivre.
 
+import Tabs, { tabButtonId, tabPanelId } from '@/components/ui/Tabs';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
@@ -299,39 +300,24 @@ function PlayerDiscovery() {
           </div>
         )}
 
-        {/* Onglets (segmented control) */}
-        <div
-          role="tablist"
-          aria-label={t.tabsAria}
-          className="mb-6 inline-flex rounded-xl border border-white/10 bg-white/[0.03] p-1"
-        >
-          {tabs.map(({ key, label }) => {
-            const active = tab === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                id={`discovery-tab-${key}`}
-                aria-selected={active}
-                aria-controls="discovery-tabpanel"
-                onClick={() => setTab(key)}
-                className={`rounded-lg px-4 py-1.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 ${
-                  active
-                    ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-purple-500/20'
-                    : 'text-gray-300 hover:bg-white/[0.06] hover:text-white'
-                }`}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
+        {/* Onglets. L'apparence « segmentée » est conservée — c'est la
+            variante de la primitive, pas une barre réécrite : la version
+            précédente portait les bons attributs ARIA mais AUCUNE navigation
+            aux flèches, ce qu'un `role="tablist"` promet pourtant. */}
+        <Tabs
+          tabs={tabs.map(({ key, label }) => ({ id: key, label }))}
+          active={tab}
+          onChange={(id) => setTab(id as DirectoryTab)}
+          ariaLabel={t.tabsAria}
+          idBase="discovery"
+          variant="segmented"
+          className="mb-6"
+        />
 
         <div
           role="tabpanel"
-          id="discovery-tabpanel"
-          aria-labelledby={`discovery-tab-${tab}`}
+          id={tabPanelId('discovery', tab)}
+          aria-labelledby={tabButtonId('discovery', tab)}
         >
           {/* Recherche — uniquement sur l'onglet Découvrir */}
           {tab === 'discover' && (

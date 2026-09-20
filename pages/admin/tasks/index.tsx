@@ -8,6 +8,7 @@
 // supprimer) + colonnes en flex horizontal scrollable, cartes drag & drop
 // natif (HTML5) avec update optimiste et rollback en cas d'erreur.
 
+import Tabs from '@/components/ui/Tabs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import Head from 'next/head';
@@ -1843,37 +1844,20 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
               <p className="text-sm text-neutral-400 mt-1">{t.subtitle}</p>
             </div>
             <div className="flex items-center gap-2">
-              {/* Bascule Board ↔ Mes tâches */}
-              <div
-                role="tablist"
-                aria-label={t.viewMyTasks}
-                className="inline-flex rounded-lg bg-white/5 border border-white/10 p-0.5"
-              >
-                <button
-                  role="tab"
-                  aria-selected={viewMode === 'board'}
-                  onClick={() => setViewMode('board')}
-                  className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-                    viewMode === 'board'
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-neutral-300 hover:bg-white/10'
-                  }`}
-                >
-                  {t.viewBoard}
-                </button>
-                <button
-                  role="tab"
-                  aria-selected={viewMode === 'mine'}
-                  onClick={() => setViewMode('mine')}
-                  className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-                    viewMode === 'mine'
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-neutral-300 hover:bg-white/10'
-                  }`}
-                >
-                  {t.viewMyTasks}
-                </button>
-              </div>
+              {/* Bascule Board ↔ Mes tâches. La primitive partagée : la
+                  barre déclarait `tablist` sans les flèches ni le focus
+                  roving que ce rôle promet. */}
+              <Tabs
+                tabs={[
+                  { id: 'board', label: t.viewBoard },
+                  { id: 'mine', label: t.viewMyTasks },
+                ]}
+                active={viewMode}
+                onChange={(id) => setViewMode(id as 'board' | 'mine')}
+                ariaLabel={t.viewMyTasks}
+                idBase="tasks-view"
+                variant="segmented"
+              />
               {viewMode === 'board' ? (
                 <button
                   onClick={() => fetchBoards({ keepActive: true })}
@@ -1911,35 +1895,25 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
               {/* Sélecteur de board */}
               {!loadingBoards && boards.length > 0 && (
                 <div className="mb-5 flex flex-wrap items-center gap-2">
-                  <div
-                    role="tablist"
-                    aria-label={t.boardTabsLabel}
-                    className="flex flex-wrap gap-2"
-                  >
-                    {visibleBoards.map((b) => {
-                      const selected = b.id === activeBoardId;
-                      return (
-                        <button
-                          key={b.id}
-                          role="tab"
-                          aria-selected={selected}
-                          onClick={() => setActiveBoardId(b.id)}
-                          className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
-                            selected
-                              ? 'bg-indigo-600 border-indigo-500 text-white'
-                              : 'bg-white/5 border-white/10 text-neutral-200 hover:bg-white/10'
-                          }`}
-                        >
+                  <Tabs
+                    tabs={visibleBoards.map((b) => ({
+                      id: b.id,
+                      label: b.isArchived ? (
+                        <span className="inline-flex items-center gap-2">
                           {b.name}
-                          {b.isArchived && (
-                            <span className="ml-2 text-[10px] uppercase tracking-wide text-amber-300">
-                              {t.archivedBadge}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
+                          <span className="text-[10px] uppercase tracking-wide text-amber-300">
+                            {t.archivedBadge}
+                          </span>
+                        </span>
+                      ) : (
+                        b.name
+                      ),
+                    }))}
+                    active={activeBoardId ?? ''}
+                    onChange={(id) => setActiveBoardId(id)}
+                    ariaLabel={t.boardTabsLabel}
+                    idBase="tasks-board"
+                  />
                   <label className="ml-auto inline-flex items-center gap-2 text-xs text-neutral-400 cursor-pointer">
                     <input
                       type="checkbox"

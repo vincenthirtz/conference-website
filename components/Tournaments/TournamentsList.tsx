@@ -182,9 +182,14 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
         {/* Filtres */}
         <section className="mb-10" aria-label={t.filtersAriaLabel}>
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            {/* Statut : segmented control */}
+            {/* STATUT : UN FILTRE, PAS DES ONGLETS. Ces boutons restreignent
+                la liste de tournois ; ils ne font pas apparaître des panneaux
+                distincts. `role="tablist"` promettait à un lecteur d'écran une
+                navigation aux flèches qui n'existait pas, et annonçait des
+                panneaux absents. Un groupe de bascules dit exactement ce qui se
+                passe : chaque bouton est enfoncé ou non. */}
             <div
-              role="tablist"
+              role="group"
               aria-label={t.statusFilterAriaLabel}
               className="inline-flex flex-wrap gap-1 rounded-full border border-white/10 bg-white/5 p-1"
             >
@@ -194,8 +199,7 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
                   <button
                     key={tab.value}
                     type="button"
-                    role="tab"
-                    aria-selected={active}
+                    aria-pressed={active}
                     onClick={() => setStatusFilter(tab.value)}
                     className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] ${
                       active

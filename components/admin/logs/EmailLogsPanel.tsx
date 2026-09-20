@@ -1,3 +1,4 @@
+import Tabs from '@/components/ui/Tabs';
 import { useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
@@ -437,38 +438,20 @@ export default function EmailLogsPanel() {
       </section>
 
       {/* Sélecteur de vue : Messages (1 ligne / email) vs Événements (détail) */}
-      <div
-        className="mb-4 inline-flex rounded-xl border border-neutral-700/50 bg-neutral-800/50 p-1"
-        role="tablist"
-        aria-label={t.viewToggleAria}
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={view === 'messages'}
-          onClick={() => setView('messages')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            view === 'messages'
-              ? 'bg-blue-600 text-white'
-              : 'text-neutral-300 hover:text-white'
-          }`}
-        >
-          {t.viewMessages}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={view === 'events'}
-          onClick={() => setView('events')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            view === 'events'
-              ? 'bg-blue-600 text-white'
-              : 'text-neutral-300 hover:text-white'
-          }`}
-        >
-          {t.viewEvents}
-        </button>
-      </div>
+      {/* Deux VUES du même journal : de vrais onglets. La barre déclarait
+          `tablist` sans les flèches ni le focus roving — l'habillage rejoint
+          celui des autres barres de l'espace admin. */}
+      <Tabs
+        tabs={[
+          { id: 'messages', label: t.viewMessages },
+          { id: 'events', label: t.viewEvents },
+        ]}
+        active={view}
+        onChange={(id) => setView(id as 'messages' | 'events')}
+        ariaLabel={t.viewToggleAria}
+        idBase="email-logs"
+        className="mb-4"
+      />
 
       {/* Liste */}
       <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">

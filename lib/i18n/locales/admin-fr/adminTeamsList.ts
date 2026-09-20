@@ -9,6 +9,7 @@
 import { adminNs } from '../../ns';
 
 export default adminNs('adminTeamsList', {
+  importSourceAria: 'Source d’import',
   headTitle: 'Admin – Équipes',
   heading: 'Équipes',
   teamCount_one: '{count} équipe enregistrée',

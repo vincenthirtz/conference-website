@@ -9,6 +9,7 @@
 import { ns } from '../../ns';
 
 export default ns('lorePage', {
+  filterAria: 'Filtrer par type de média',
   headTitle: 'Lore & Médias Overwatch | OW World Cup',
   headDesc:
     "Découvrez l'univers d'Overwatch : bandes dessinées, nouvelles, musiques et images officielles de Blizzard.",

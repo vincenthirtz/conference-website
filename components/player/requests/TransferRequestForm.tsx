@@ -5,6 +5,7 @@
 // sont passés en props. Extrait sans changement de comportement (mêmes rôles
 // ARIA, mêmes branches capitaine/manager, même i18n `playerRequests`).
 
+import Tabs, { tabButtonId, tabPanelId } from '@/components/ui/Tabs';
 import Link from 'next/link';
 import TeamPicker from '@/components/player/TeamPicker';
 import { useT } from '@/lib/i18n/useT';
@@ -297,50 +298,27 @@ export default function TransferRequestForm({
 
   return (
     <>
-      {/* Mode toggle — réservé à qui peut proposer pour autrui. */}
+      {/* Mode toggle — réservé à qui peut proposer pour autrui.
+          La primitive partagée : la bascule déclarait `tablist` sans fournir
+          les flèches ni le focus roving que ce rôle promet. */}
       {canProposeForOthers && (
-        <div
-          role="tablist"
-          aria-label={t.transferModeAria}
-          className="flex gap-2 mb-6"
-        >
-          <button
-            type="button"
-            role="tab"
-            id="transfer-mode-tab-propose"
-            aria-selected={transferMode === 'propose'}
-            aria-controls="transfer-mode-panel"
-            onClick={() => switchMode('propose')}
-            className={`flex-1 px-4 py-3 rounded-xl text-sm font-semibold transition border ${
-              transferMode === 'propose'
-                ? 'bg-purple-600/30 border-purple-400/50 text-white'
-                : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-            }`}
-          >
-            {t.proposeTransferMode}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="transfer-mode-tab-self"
-            aria-selected={transferMode === 'self'}
-            aria-controls="transfer-mode-panel"
-            onClick={() => switchMode('self')}
-            className={`flex-1 px-4 py-3 rounded-xl text-sm font-semibold transition border ${
-              transferMode === 'self'
-                ? 'bg-purple-600/30 border-purple-400/50 text-white'
-                : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-            }`}
-          >
-            {t.selfTransferMode}
-          </button>
-        </div>
+        <Tabs
+          tabs={[
+            { id: 'propose', label: t.proposeTransferMode },
+            { id: 'self', label: t.selfTransferMode },
+          ]}
+          active={transferMode}
+          onChange={(id) => switchMode(id as 'propose' | 'self')}
+          ariaLabel={t.transferModeAria}
+          idBase="transfer-mode"
+          className="mb-6"
+        />
       )}
 
       <div
         role="tabpanel"
-        id="transfer-mode-panel"
-        aria-labelledby={`transfer-mode-tab-${transferMode}`}
+        id={tabPanelId('transfer-mode', transferMode)}
+        aria-labelledby={tabButtonId('transfer-mode', transferMode)}
       >
         {/* Capitaine : mode "mon transfert" bloque */}
         {isCaptain && transferMode === 'self' && (

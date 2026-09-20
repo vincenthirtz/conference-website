@@ -22,6 +22,7 @@
 // Page gated 'admin' ; le changement de rôle applique les mêmes garde-fous que
 // manage.tsx (le serveur les revérifie).
 
+import Tabs from '@/components/ui/Tabs';
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -663,41 +664,35 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                 </div>
               </div>
 
-              {/* Tabs */}
-              <div
-                role="tablist"
-                aria-label={t.tablistLabel}
-                className="flex flex-wrap gap-2 mb-6 border-b border-neutral-700/50 pb-3"
-              >
-                {getTabs(t).map((tab_) => {
-                  const active = tab === tab_.key;
-                  const badge =
-                    tab_.key === 'profil' && pendingDemandes.length > 0
-                      ? pendingDemandes.length
-                      : null;
-                  return (
-                    <button
-                      key={tab_.key}
-                      type="button"
-                      role="tab"
-                      aria-selected={active}
-                      onClick={() => setTab(tab_.key)}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
-                        active
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-neutral-800/60 text-neutral-300 hover:bg-neutral-700/60'
-                      }`}
-                    >
-                      {tab_.label}
-                      {badge !== null && (
+              {/* ONGLETS — la primitive partagée. La version précédente
+                  déclarait `role="tablist"` et `role="tab"` sans fournir ce
+                  que ces rôles PROMETTENT : pas de flèches, pas de focus
+                  roving, pas d'anneau de focus, et aucun `aria-controls` vers
+                  le panneau. Annoncer « onglet 2 sur 5 » à qui appuie ensuite
+                  sur une flèche sans effet est pire que de ne rien annoncer.
+                  L'habillage rejoint au passage celui des autres barres de
+                  l'espace admin. */}
+              <Tabs
+                tabs={getTabs(t).map((tab_) => ({
+                  id: tab_.key,
+                  label:
+                    tab_.key === 'profil' && pendingDemandes.length > 0 ? (
+                      <span className="flex items-center gap-2">
+                        {tab_.label}
                         <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-amber-500 text-[10px] font-bold text-neutral-900">
-                          {badge}
+                          {pendingDemandes.length}
                         </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+                      </span>
+                    ) : (
+                      tab_.label
+                    ),
+                }))}
+                active={tab}
+                onChange={(id) => setTab(id as TabKey)}
+                ariaLabel={t.tablistLabel}
+                idBase="player-view"
+                className="mb-6"
+              />
 
               {/* Profil — identité + actions staff */}
               {tab === 'profil' && (

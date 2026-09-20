@@ -10,6 +10,7 @@
 // les valeurs sont de type `string` — des types litteraux la feraient echouer.
 
 export default {
+  filterAria: 'Filter by media type',
   headTitle: 'Overwatch Lore & Media | OW World Cup',
   headDesc:
     'Explore the world of Overwatch: comics, short stories, music and official artwork from Blizzard.',

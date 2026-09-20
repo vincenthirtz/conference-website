@@ -237,7 +237,17 @@ export default function LorePage({ media }: LorePageProps) {
         </div>
 
         {/* Tabs */}
-        <div className="flex flex-wrap justify-center gap-2 mb-10">
+        {/* UN FILTRE, PAS DES ONGLETS. Ces boutons ne changent pas de
+            panneau : ils restreignent UNE liste. Leur coller `role="tab"`
+            annoncerait des panneaux qui n'existent pas ; le motif juste est un
+            groupe de bascules, dont chacune dit si elle est enfoncée
+            (`aria-pressed`). Le groupe porte un nom, sans quoi on entend cinq
+            boutons sans savoir ce qu'ils commandent. */}
+        <div
+          role="group"
+          aria-label={t.filterAria}
+          className="flex flex-wrap justify-center gap-2 mb-10"
+        >
           {tabs.map((tab) => {
             const count =
               tab.key === 'all' ? media.length : counts[tab.key] || 0;
@@ -246,8 +256,13 @@ export default function LorePage({ media }: LorePageProps) {
             return (
               <button
                 key={tab.key}
+                type="button"
+                aria-pressed={activeTab === tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-5 py-2.5 rounded-xl text-sm font-medium transition ${
+                // `focus-visible` : la version précédente n'avait AUCUN
+                // indicateur de focus — au clavier, on ne savait pas où on
+                // était.
+                className={`px-5 py-2.5 rounded-xl text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)] ${
                   activeTab === tab.key
                     ? 'border border-[var(--color-violet)]/60 bg-[var(--color-violet-cta)]/15 text-white'
                     : 'text-neutral-400 hover:text-white hover:bg-white/5'

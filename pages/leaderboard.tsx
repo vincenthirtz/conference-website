@@ -17,6 +17,7 @@
 // (offset > 0) reste en fetch client via GET /api/players/leaderboard.
 // Chaque ligne pointe vers /player/[userId].
 
+import Tabs from '@/components/ui/Tabs';
 import { useCallback, useState } from 'react';
 import Link from 'next/link';
 import PlayerAvatar from '@/components/player/PlayerAvatar';
@@ -321,32 +322,18 @@ function AxisTabs({
       : []),
   ];
 
+  // La primitive partagée : cette barre déclarait `tablist` sans fournir les
+  // flèches ni le focus roving que le rôle promet.
   return (
-    <div
-      role="tablist"
-      aria-label={t.axisNavLabel}
-      className="mb-6 flex flex-wrap justify-center gap-2"
-    >
-      {tabs.map((tab) => {
-        const active = tab.key === axis;
-        return (
-          <button
-            key={tab.key}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(tab.key)}
-            className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] ${
-              active
-                ? 'border-[var(--color-violet)] bg-[var(--color-violet-cta)]/20 text-white'
-                : 'border-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-white'
-            }`}
-          >
-            {tab.label}
-          </button>
-        );
-      })}
-    </div>
+    <Tabs
+      tabs={tabs.map((tab) => ({ id: tab.key, label: tab.label }))}
+      active={axis}
+      onChange={(id) => onChange(id as typeof axis)}
+      ariaLabel={t.axisNavLabel}
+      idBase="leaderboard-axis"
+      variant="segmented"
+      className="mb-6 justify-center"
+    />
   );
 }
 

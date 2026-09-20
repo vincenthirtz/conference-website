@@ -10,7 +10,10 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { makeTeamPermissionCheck } from '@/utils/teams/clientPermissions';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
-import RequestTabs from '@/components/player/requests/RequestTabs';
+import RequestTabs, {
+  REQUESTS_TAB_BASE,
+} from '@/components/player/requests/RequestTabs';
+import { tabButtonId, tabPanelId } from '@/components/ui/Tabs';
 import TransferRequestForm from '@/components/player/requests/TransferRequestForm';
 import ScrimRequestForm from '@/components/player/requests/ScrimRequestForm';
 import type { Team } from '@/components/player/requests/types';
@@ -419,10 +422,13 @@ export default function PlayerRequestsPage() {
             {/* Onglets */}
             <RequestTabs tab={tab} onTabChange={handleTabChange} />
 
+            {/* Les identifiants viennent de la primitive : les écrire à la
+                main des deux côtés, c'était accepter qu'ils divergent le jour
+                où l'un des deux change. */}
             <div
               role="tabpanel"
-              id="requests-tabpanel"
-              aria-labelledby={`requests-tab-${tab}`}
+              id={tabPanelId(REQUESTS_TAB_BASE, tab)}
+              aria-labelledby={tabButtonId(REQUESTS_TAB_BASE, tab)}
             >
               {/* Contenu transfert */}
               {tab === 'transfer' && (
