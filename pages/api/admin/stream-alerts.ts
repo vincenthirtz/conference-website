@@ -319,12 +319,73 @@ async function patch(
       row.accent_color = emptyToNull(settings?.accentColor ?? null);
     }
 
+    // On RELIT la ligne écrite (`select()` sur l'upsert) au lieu de se fier au
+    // seul « pas d'erreur ».
+    //
+    // WHY. Le 18/09, deux dépôts d'habillage à vingt minutes d'un direct ont
+    // laissé le fichier dans le bucket et `frame_path` à NULL — sans la moindre
+    // erreur. Le panneau affichait la vidéo (c'est l'aperçu LOCAL du fichier
+    // choisi, pas ce qui est en base), et la régie a cru l'avoir enregistrée.
+    // Au rechargement suivant, il n'y avait jamais rien eu. Le son, lui, était
+    // passé : même code, même requête.
+    //
+    // Faute de trace, la cause n'a pas pu être isolée après coup. D'où les deux
+    // ajouts ici : on VÉRIFIE que les chemins écrits sont ceux qu'on voulait, et
+    // on les JOURNALISE. Sur une fonction qu'on règle vingt minutes avant
+    // l'antenne, échouer bruyamment vaut mieux qu'un panneau qui semble avoir
+    // enregistré.
     const { error } = await supabaseAdmin
       .from('stream_alert_settings')
       .upsert(row, { onConflict: 'tenant_id' });
     if (error) {
       logger.error('[admin/stream-alerts] settings write error', error);
       return res.status(500).json({ error: 'Enregistrement impossible.' });
+    }
+
+    // Relecture INDÉPENDANTE, et non le `RETURNING` de l'écriture : c'est
+    // justement l'écriture dont on se méfie. Un `select()` chaîné rend ce que
+    // la requête croit avoir écrit ; une relecture rend ce que la table
+    // contient.
+    const { data: written } = await supabaseAdmin
+      .from('stream_alert_settings')
+      .select('frame_path, frame_kind, sound_path')
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
+
+    const mismatched = (
+      ['frame_path', 'frame_kind', 'sound_path'] as const
+    ).filter(
+      (col) =>
+        col in mediaRow &&
+        (written as Record<string, unknown> | null)?.[col] !== mediaRow[col]
+    );
+
+    if (mismatched.length > 0) {
+      // Le fichier est déjà dans le bucket : le laisser là plutôt que de le
+      // supprimer, c'est garder la pièce à conviction pour le diagnostic —
+      // un orphelin ne coûte rien, une panne muette si.
+      logger.error(
+        '[admin/stream-alerts] chemins non persistés: %s (voulu %j, relu %j)',
+        mismatched.join(', '),
+        mediaRow,
+        written
+      );
+      return res.status(500).json({
+        error:
+          "Le fichier a été envoyé mais n'a pas pu être enregistré. Réessaie ; si ça recommence, le fichier est déjà en ligne et le problème est côté base.",
+        code: 'MEDIA_PATH_NOT_PERSISTED',
+        fields: mismatched,
+      });
+    }
+
+    if (Object.keys(mediaRow).length > 0) {
+      // Trace du chemin RÉELLEMENT en base, pour pouvoir remonter un dépôt
+      // après coup sans avoir à fouiller le bucket.
+      logger.info(
+        '[admin/stream-alerts] médias enregistrés tenant=%s %j',
+        tenantId,
+        written
+      );
     }
   }
 
