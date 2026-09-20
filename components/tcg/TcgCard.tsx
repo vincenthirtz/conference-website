@@ -30,6 +30,7 @@ import type { JSX } from 'react';
 import LogoCredit from '@/components/Team/LogoCredit';
 import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
 import { figureUrl, type FigureRole } from '@/utils/tcg/roleFigures';
+import { heroFigureSlugFromName, heroFigureUrl } from '@/utils/tcg/heroFigures';
 import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
 
 /**
@@ -255,6 +256,12 @@ export default function TcgCard({
   // DÉDUITE de sa spécialité ne l'est pas — la carte dit alors le rôle, comme
   // la figurine. Affirmer « elle joue Reinhardt » parce qu'elle joue tank
   // serait parler à sa place (cf. utils/heroes/recommendCardHero.ts).
+  // Le héros déclaré, s'il est sculpté. `heroFigureSlugFromName` ne rend un
+  // slug que pour les héros modelés : c'est elle qui porte le repli.
+  const heroSlug = figure?.heroName
+    ? heroFigureSlugFromName(figure.heroName)
+    : null;
+
   const figureCaption = figure
     ? figure.heroSource === 'pick' && figure.heroName
       ? `♥ ${figure.heroName}`
@@ -277,13 +284,21 @@ export default function TcgCard({
             unoptimized={!shouldOptimizeCardImage(imageUrl)}
           />
         ) : figure ? (
-          // Ni photo consentie ni avatar, mais un rôle connu : la figurine de
-          // ce rôle, aux couleurs de son équipe. Jamais l'image d'un héros du
-          // jeu (aucune n'est sous licence ici, cf. utils/tcg/roleFigures.ts).
+          // Ni photo consentie ni avatar, mais un rôle connu : une figurine.
+          //
+          // Celle de SON HÉROS quand il est déclaré ET sculpté, sinon celle de
+          // son rôle, aux couleurs de son équipe. L'ordre compte : une joueuse
+          // qui a nommé son héros préfère le voir lui plutôt qu'un archétype,
+          // et les 42 héros du registre ne sont pas tous modelés — un héros
+          // sans figurine retombe donc sur son rôle, jamais sur un trou.
           <>
             {/* biome-ignore lint/performance/noImgElement: SVG rendu par nos soins — next/image n'optimise pas le SVG */}
             <img
-              src={figureUrl(figure.role, figure.color)}
+              src={
+                heroSlug
+                  ? heroFigureUrl(heroSlug)
+                  : figureUrl(figure.role, figure.color)
+              }
               alt=""
               loading="lazy"
               className="absolute inset-0 h-full w-full object-contain"

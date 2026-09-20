@@ -1,0 +1,40 @@
+get:
+  tags:
+    - public/tcg
+  summary: Figurine voxel d’une mascotte du jeu, en SVG.
+  description: >-
+    Rendue a la volee par le moteur des maquettes. Tout est dans le CHEMIN et
+    rien dans la query : le cache CDN ne distingue pas deux variantes d'une
+    meme URL par leurs parametres. La sortie ne dependant que du chemin, elle
+    se met en cache un an, et la version (v1) permet a une retouche des modeles
+    de se propager sans attendre l'expiration.
+
+    PAS DE COULEUR D'EQUIPE, contrairement aux figurines de role : une mascotte a
+    SES couleurs, et c'est la couleur dominante qui la fait reconnaitre a cette
+    taille.
+  operationId: tcgGameMascotSvg
+  security: []
+  parameters:
+    - name: version
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Version des modeles, `v1`. Une autre version rend 404.
+    - name: file
+      in: path
+      required: true
+      schema:
+        type: string
+      description: "`<slug>.svg`, le slug d’une mascotte sculptee (ex. `pachimari.svg`)."
+  responses:
+    '200':
+      description: Le SVG de la figurine.
+      content:
+        image/svg+xml:
+          schema:
+            type: string
+    '404':
+      description: Version inconnue, ou mascotte non sculptee.
+    '405':
+      description: Methode non autorisee.

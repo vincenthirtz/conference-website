@@ -78,6 +78,20 @@ export const GAME_MASCOT_SLUGS = [
   'ganymede',
   'snowball',
   'bob',
+  'yachemon',
+  'geranman',
+  'murphy',
+  'mitzi',
+  'chuno',
+  'zomnic',
+  // Variantes de Pachimari dont l'apparence a été vérifiée sur image. Les ~100
+  // autres noms attestés par le wiki ne sont décrits nulle part : les sculpter
+  // reviendrait à les inventer, donc elles ne sont pas ici.
+  'pachimonarch',
+  'gingermari',
+  'vampachimari',
+  'pachimummy',
+  'snorkelmari',
 ] as const;
 
 export type GameMascotSlug = (typeof GAME_MASCOT_SLUGS)[number];
@@ -129,6 +143,26 @@ const PALETTES: Record<GameMascotSlug, MascotPalette> = {
   snowball: { body: '#eef4fa', main: '#3f7cc0', glow: '#8fe3ff' },
   // Costume sombre, métal crème de l'omniaque, plastron clair.
   bob: { body: '#2f3542', main: '#c6ac7e', glow: '#f0e7d4' },
+  // Rose chair du corps, rose soutenu des ombres, corail de la langue.
+  yachemon: { body: '#f7c9c2', main: '#e8968c', glow: '#ff6b52' },
+  // Blanc de la coquille et des bois, jaune d'œuf, magenta de la langue.
+  geranman: { body: '#f6f1e4', main: '#f0b429', glow: '#d94f9a' },
+  // Robe noire, marques blanches, rose des oreilles et de la langue.
+  murphy: { body: '#241f22', main: '#f4efe6', glow: '#f08ba0' },
+  // Crème du persan, gris des ombres, ambre des yeux.
+  mitzi: { body: '#f7f1e3', main: '#cfc6b6', glow: '#f0b429' },
+  // Toison noire, masque crème, mèches paille.
+  chuno: { body: '#1f1c1e', main: '#efe4cc', glow: '#e4c76a' },
+  // Laiton vieilli, plaques olive, fentes oculaires jaunes.
+  zomnic: { body: '#7a6a3c', main: '#6e7a4a', glow: '#ffd94a' },
+  // Les variantes gardent la SILHOUETTE de Pachimari et ne changent que la
+  // palette et l'accessoire — règle vérifiée sur la peluche officielle
+  // « Anran Pachimari ». Le corps n'est jamais remodelé.
+  pachimonarch: { body: '#fff8ec', main: '#e6c68f', glow: '#f2c230' },
+  gingermari: { body: '#8a5a33', main: '#4f8f3a', glow: '#fdfaf3' },
+  vampachimari: { body: '#6f6480', main: '#2a2334', glow: '#f7f2fa' },
+  pachimummy: { body: '#e6d9b8', main: '#cdbb92', glow: '#9fb39a' },
+  snorkelmari: { body: '#efe0bf', main: '#8b4fd6', glow: '#6fe0c0' },
 };
 
 /**
@@ -400,11 +434,349 @@ function buildBob(b: SceneBuilder): void {
   b.box(4, 19, -2, 1, 1, 4, 'highlight');
 }
 
+/**
+ * LE CORPS DE PACHIMARI, ISOLÉ, parce que ses variantes le REPRENNENT TEL QUEL.
+ *
+ * Règle de construction vérifiée sur la peluche officielle « Anran Pachimari » :
+ * une variante « hero-mari » garde la silhouette (bulbe + moignons + yeux) et
+ * ne change que la palette et l'accessoire posé dessus. Remodeler le corps à
+ * chaque variante aurait produit cent peluches qui ne se ressemblent pas —
+ * or c'est justement la ressemblance qui fait la collection.
+ *
+ * `tentacles: false` pour les variantes qui les remplacent (la cape de
+ * Vampachimari), `eyes: false` pour celles qui les couvrent (le masque de
+ * Snorkelmari).
+ */
+function pachiBody(
+  b: SceneBuilder,
+  opts: { tentacles?: boolean; eyes?: boolean } = {}
+): void {
+  if (opts.tentacles !== false) {
+    for (const [x0, z0] of [
+      [6, -1],
+      [3, 5],
+      [3, -7],
+      [-4, 4],
+      [-4, -6],
+    ] as const) {
+      b.box(x0, 2, z0, 3, 3, 3, 'accent');
+    }
+  }
+  stack(b, 4, PACHI_BULB, 'structure');
+  if (opts.eyes !== false) {
+    b.box(7, 10, 1, 1, 2, 2, 'ground');
+    b.box(7, 10, -3, 1, 2, 2, 'ground');
+  }
+}
+
+/** La tige verte de Pachimari, en couronne à quatre bras (cf. buildPachimari). */
+function pachiSprout(b: SceneBuilder, role: BrickRole = 'highlight'): void {
+  b.box(0, 12, -1, 3, 3, 3, role);
+  b.box(0, 14, 2, 3, 2, 2, role);
+  b.box(0, 14, -3, 3, 2, 2, role);
+  b.box(3, 14, -1, 2, 2, 3, role);
+  b.box(-2, 14, -1, 2, 2, 3, role);
+  b.box(0, 16, -1, 3, 2, 3, role);
+}
+
+/**
+ * PACHIMONARCH — Pachimari couronné. La forme canonique plus une couronne d'or
+ * à cinq pointes ; c'est la meilleure référence de la silhouette de base.
+ */
+function buildPachimonarch(b: SceneBuilder): void {
+  pedestal(b, 8, 'ground');
+  pachiBody(b);
+  // Bandeau plein, puis cinq pointes. Le bandeau est indispensable : sans lui,
+  // les pointes seules se lisaient comme une deuxième touffe de feuilles.
+  b.box(-2, 12, -4, 7, 2, 9, 'highlight');
+  for (const [x, z] of [
+    [4, -1],
+    [2, 3],
+    [2, -5],
+    [-1, 2],
+    [-1, -4],
+  ] as const) {
+    b.box(x, 14, z, 2, 2, 2, 'highlight');
+  }
+}
+
+/** GINGERMARI — Pachimari en pain d'épices : bulbe brun, anneau de glaçage. */
+function buildGingermari(b: SceneBuilder): void {
+  pedestal(b, 8, 'ground');
+  pachiBody(b);
+  // L'anneau de glaçage cerne la plage faciale : deux traits clairs qui
+  // encadrent les yeux. Posé à plat sur le bulbe il disparaissait ; en saillie
+  // d'une brique, il porte son ombre.
+  b.box(7, 13, -4, 1, 1, 8, 'highlight');
+  b.box(7, 8, -4, 1, 1, 8, 'highlight');
+  // La goutte de glaçage qui fait la bouche.
+  b.box(7, 9, -1, 1, 1, 2, 'highlight');
+  pachiSprout(b, 'accent');
+}
+
+/**
+ * VAMPACHIMARI — Pachimari vampire. Les moignons sont REMPLACÉS par un col-cape
+ * en dents de scie : c'est la seule variante dont la silhouette basse change.
+ */
+function buildVampachimari(b: SceneBuilder): void {
+  pedestal(b, 8, 'ground');
+  pachiBody(b, { tentacles: false });
+  // Le col-cape : une couronne sombre qui monte derrière le bulbe et retombe
+  // en pointes sur les côtés.
+  b.ring(1, 0, 7, 2, 4, 3, 'accent');
+  for (const [x, z] of [
+    [-5, -1],
+    [-3, 4],
+    [-3, -6],
+  ] as const) {
+    b.box(x, 7, z, 2, 3, 2, 'accent');
+  }
+  // Pointe de veuve : un coin clair au sommet de la face, qui dessine le M.
+  b.box(7, 12, -1, 1, 2, 2, 'highlight');
+  // Les deux crocs, sous la plage faciale.
+  b.box(7, 8, 0, 1, 1, 1, 'highlight');
+  b.box(7, 8, -2, 1, 1, 1, 'highlight');
+}
+
+/** PACHIMUMMY — Pachimari momie : bandelettes croisées, fente faciale. */
+function buildPachimummy(b: SceneBuilder): void {
+  pedestal(b, 8, 'ground');
+  pachiBody(b, { eyes: false });
+  // Les bandelettes : trois bandes horizontales décalées, en saillie. Des
+  // diagonales auraient été plus fidèles, mais en voxel une diagonale à cette
+  // échelle se lit comme un escalier, pas comme un bandage.
+  b.box(7, 12, -4, 1, 1, 7, 'accent');
+  b.box(7, 9, -3, 1, 1, 7, 'accent');
+  b.box(7, 6, -4, 1, 1, 6, 'accent');
+  // La fente laisse voir la plage faciale vert-de-gris et les deux yeux.
+  b.box(7, 10, -4, 1, 2, 8, 'highlight');
+  b.box(8, 10, 1, 1, 2, 2, 'ground');
+  b.box(8, 10, -3, 1, 2, 2, 'ground');
+}
+
+/** SNORKELMARI — Pachimari plongeur : masque couvrant les deux yeux, tuba. */
+function buildSnorkelmari(b: SceneBuilder): void {
+  pedestal(b, 8, 'ground');
+  pachiBody(b, { eyes: false });
+  // Le masque : un bandeau menthe qui couvre toute la plage faciale, avec la
+  // sangle qui fait le tour du bulbe — c'est la sangle qui dit « masque »
+  // plutôt que « bandeau ».
+  b.box(7, 10, -4, 1, 3, 8, 'highlight');
+  b.ring(1, 0, 6.3, 1, 11, 1, 'ground');
+  // Le tuba, qui remonte sur le côté visible.
+  b.box(6, 12, 4, 2, 5, 2, 'highlight');
+  b.box(6, 16, 3, 2, 2, 2, 'highlight');
+  pachiSprout(b, 'accent');
+}
+
+/**
+ * YACHEMON — la gélule. Silhouette : deux fois plus haute que large, arrondie
+ * aux deux bouts. Accessoire : la langue corail qui pend — le seul élément
+ * qu'on dessine de mémoire.
+ */
+function buildYachemon(b: SceneBuilder): void {
+  pedestal(b, 6, 'ground');
+  // Corps en gélule : un profil qui monte vite, tient longtemps, retombe vite.
+  stack(b, 2, [3.4, 4.2, 4.6, 4.6, 4.6, 4.6, 4.6, 4.4, 4.0, 3.2], 'structure');
+  // Deux bras nouille, plantés HAUT sur le corps et écartés.
+  b.box(0, 9, -7, 2, 2, 3, 'accent');
+  b.box(0, 9, 5, 2, 2, 3, 'accent');
+  b.box(2, 8, -8, 2, 2, 2, 'accent');
+  b.box(2, 8, 6, 2, 2, 2, 'accent');
+  // Les deux pousses du sommet.
+  b.box(1, 12, -2, 2, 2, 2, 'accent');
+  b.box(1, 12, 1, 2, 2, 2, 'accent');
+  // Yeux ovales rapprochés, et la LANGUE qui pend sous la bouche ouverte.
+  b.box(5, 8, 0, 1, 2, 1, 'ground');
+  b.box(5, 8, -2, 1, 2, 1, 'ground');
+  b.box(5, 5, -1, 1, 3, 2, 'highlight');
+}
+
+/**
+ * GERANMAN — la moitié d'œuf. Silhouette : un ovale blanc posé à plat, un jaune
+ * décentré vers le bas. Accessoire : les bois de cerf blancs, en V.
+ */
+function buildGeranman(b: SceneBuilder): void {
+  pedestal(b, 7, 'ground');
+  // Le blanc d'œuf : un dôme large et bas.
+  stack(b, 2, [5.6, 6.0, 6.0, 5.8, 5.2, 4.2, 2.8], 'structure');
+  // Le jaune, décentré vers le BAS de la face — c'est ce décentrage qui fait
+  // lire « jaune dans un blanc » plutôt que « deux couleurs empilées ».
+  b.box(6, 4, -3, 2, 4, 6, 'accent');
+  b.box(8, 5, -2, 1, 2, 4, 'accent');
+  // Visage sur le jaune : yeux fermés en arc, trait épais autour de la bouche.
+  b.box(8, 7, -2, 1, 1, 1, 'ground');
+  b.box(8, 7, 1, 1, 1, 1, 'ground');
+  b.box(8, 4, -2, 1, 1, 4, 'ground');
+  b.box(8, 5, 0, 1, 1, 2, 'highlight');
+  // LES BOIS : deux V à deux andouillers chacun, partant du sommet. Comme la
+  // tige de Pachimari, ils sont posés en croix (±z ET vers l'avant) pour ne
+  // pas se projeter en diagonale et se lire comme un éclair.
+  for (const z of [-4, 3] as const) {
+    b.box(1, 9, z, 2, 3, 2, 'structure');
+    b.box(1, 11, z + (z < 0 ? -2 : 2), 2, 2, 2, 'structure');
+    b.box(3, 11, z, 2, 2, 2, 'structure');
+  }
+}
+
+/**
+ * MURPHY — le corgi. Silhouette : corps LONG et BAS sur pattes courtes.
+ * Accessoire : les deux grandes oreilles dressées, aussi hautes que le crâne.
+ */
+function buildMurphy(b: SceneBuilder): void {
+  pedestal(b, 8, 'ground');
+  // Corps long : l'allongement est la signature du corgi, avant la couleur.
+  b.box(-5, 2, -4, 12, 5, 8, 'structure');
+  // Pattes courtes, à bouts blancs.
+  for (const [x, z] of [
+    [-4, -4],
+    [-4, 2],
+    [4, -4],
+    [4, 2],
+  ] as const) {
+    b.box(x, 2, z, 2, 2, 2, 'accent');
+  }
+  // Poitrail blanc.
+  b.box(6, 3, -3, 1, 3, 6, 'accent', { keepExisting: false });
+  // Tête ronde, museau court et blanc.
+  b.box(5, 7, -3, 4, 4, 6, 'structure');
+  b.box(9, 7, -2, 2, 2, 4, 'accent');
+  // Flamme blanche entre les yeux.
+  b.box(8, 9, -1, 1, 2, 2, 'accent', { keepExisting: false });
+  // Truffe et langue pendante.
+  b.box(11, 8, -1, 1, 1, 2, 'ground');
+  b.box(10, 6, -1, 1, 2, 2, 'highlight');
+  // LES OREILLES : triangulaires, dressées, aussi hautes que le crâne.
+  for (const z of [-3, 2] as const) {
+    b.box(5, 11, z, 3, 3, 2, 'structure');
+    b.box(6, 14, z, 2, 2, 2, 'structure');
+    b.box(8, 12, z, 1, 2, 2, 'highlight');
+  }
+}
+
+/**
+ * MITZI — la boule. Silhouette : un persan « chonk », masse ronde très large et
+ * basse, pattes invisibles sous la fourrure. Accessoire : la face aplatie.
+ */
+function buildMitzi(b: SceneBuilder): void {
+  pedestal(b, 8, 'ground');
+  // Une masse, pas un chat : le corps est plus large que haut.
+  stack(b, 2, [5.4, 6.4, 6.8, 6.6, 6.0, 5.0, 3.6], 'structure');
+  // Mèches hérissées sur le pourtour : ce sont elles qui disent « poil long ».
+  for (const [x, z] of [
+    [7, -1],
+    [5, 4],
+    [5, -6],
+    [-4, 3],
+    [-4, -5],
+    [-6, -1],
+  ] as const) {
+    b.box(x, 3, z, 2, 2, 2, 'accent');
+  }
+  // Tête ronde posée sur le corps, face APLATIE (une seule brique d'avancée).
+  stack(b, 8, [3.6, 4.0, 3.6], 'structure');
+  b.box(5, 9, -2, 1, 2, 4, 'accent', { keepExisting: false });
+  // Yeux ambre, rapprochés, sur la face plate.
+  b.box(6, 10, 0, 1, 1, 1, 'highlight');
+  b.box(6, 10, -2, 1, 1, 1, 'highlight');
+  // Sourcils froncés : deux briques sombres juste au-dessus — l'air contrarié
+  // est l'élément que tout le monde cite en la décrivant.
+  b.box(6, 11, 0, 1, 1, 1, 'ground');
+  b.box(6, 11, -2, 1, 1, 1, 'ground');
+  // Petites oreilles pointues.
+  b.box(2, 11, -3, 2, 2, 2, 'structure');
+  b.box(2, 11, 2, 2, 2, 2, 'structure');
+}
+
+/**
+ * CHUÑO — le lama. Silhouette : corps ovoïde sur quatre pattes, LONG COU droit
+ * vers l'avant-haut. Accessoire : le masque facial crème sur la toison noire.
+ */
+function buildChuno(b: SceneBuilder): void {
+  pedestal(b, 8, 'ground');
+  for (const [x, z] of [
+    [-4, -4],
+    [-4, 2],
+    [3, -4],
+    [3, 2],
+  ] as const) {
+    b.box(x, 2, z, 2, 5, 2, 'structure');
+  }
+  // Corps ovoïde et laineux.
+  b.box(-5, 7, -5, 11, 5, 10, 'structure');
+  // Mèches hirsutes sur le poitrail et les flancs — la toison longue.
+  for (const [x, z] of [
+    [6, -1],
+    [4, 4],
+    [4, -6],
+    [-6, 3],
+    [-6, -5],
+  ] as const) {
+    b.box(x, 8, z, 2, 2, 2, 'structure');
+  }
+  // LE COU, long et droit, incliné vers l'avant — la signature du lama.
+  b.box(4, 12, -2, 3, 6, 4, 'structure');
+  // Tête allongée, masque crème qui contraste fort avec le noir.
+  b.box(6, 17, -2, 4, 3, 4, 'structure');
+  b.box(9, 17, -2, 2, 2, 4, 'accent');
+  b.box(10, 18, -1, 1, 1, 2, 'ground');
+  // Oreilles en feuille de banane, dressées.
+  b.box(6, 20, -2, 2, 3, 1, 'structure');
+  b.box(6, 20, 2, 2, 3, 1, 'structure');
+  // Mèches paille sur le crâne et le cou.
+  b.box(5, 20, -1, 2, 2, 3, 'highlight');
+  b.box(4, 16, -1, 2, 2, 3, 'highlight');
+}
+
+/**
+ * ZOMNIC — l'omniaque décharné. Silhouette : voûté, et surtout des MEMBRES
+ * DÉTACHÉS qui flottent — épaules et mains séparées du torse par du vide.
+ *
+ * C'est le seul modèle de tout le TCG où des briques flottantes sont VOULUES :
+ * ailleurs, elles trahissent une erreur (les pétales de Lifeweaver). Ici, le
+ * vide entre le torse et les membres EST le personnage.
+ */
+function buildZomnic(b: SceneBuilder): void {
+  pedestal(b, 7, 'ground');
+  // Jambes en tiges fines, sans pieds.
+  b.box(0, 2, -3, 2, 6, 2, 'accent');
+  b.box(0, 2, 2, 2, 6, 2, 'accent');
+  // Torse large en carapace, voûté vers l'avant.
+  b.box(-1, 8, -5, 5, 7, 10, 'structure');
+  b.box(3, 9, -3, 1, 5, 6, 'accent', { keepExisting: false });
+  // MEMBRES DÉTACHÉS : épaules séparées du torse par une brique de vide,
+  // mains séparées des épaules de même.
+  for (const z of [-8, 6] as const) {
+    b.box(0, 12, z, 3, 3, 3, 'structure');
+    b.box(0, 7, z, 3, 3, 3, 'structure');
+  }
+  // Crâne étroit à mâchoire pendante.
+  b.box(0, 16, -2, 3, 3, 4, 'structure');
+  b.box(1, 15, -1, 2, 1, 2, 'structure');
+  // Fentes oculaires jaunes.
+  b.box(3, 17, -2, 1, 1, 4, 'highlight', { keepExisting: false });
+  // Couronne de pointes sur le crâne.
+  for (const z of [-2, 0, 2] as const) {
+    b.box(1, 19, z, 2, 2, 1, 'accent');
+  }
+}
+
 const BUILDERS: Record<GameMascotSlug, (b: SceneBuilder) => void> = {
   pachimari: buildPachimari,
   ganymede: buildGanymede,
   snowball: buildSnowball,
   bob: buildBob,
+  yachemon: buildYachemon,
+  geranman: buildGeranman,
+  murphy: buildMurphy,
+  mitzi: buildMitzi,
+  chuno: buildChuno,
+  zomnic: buildZomnic,
+  pachimonarch: buildPachimonarch,
+  gingermari: buildGingermari,
+  vampachimari: buildVampachimari,
+  pachimummy: buildPachimummy,
+  snorkelmari: buildSnorkelmari,
 };
 
 /** Bornes inclusives d'une liste de briques. */

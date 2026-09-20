@@ -1221,68 +1221,74 @@ function buildSoldier76(b: SceneBuilder): void {
 }
 
 /**
- * SOMBRA — le violet et la crête. Silhouette : manteau à col montant, crête de
- * cheveux qui file vers l'arrière. Accessoire : la main levée, néon dans la
- * paume — c'est le seul geste du lot, et c'est lui qui la distingue d'une
- * silhouette violette quelconque.
+ * SOMBRA — la coiffure. DEUXIÈME REPRISE.
+ *
+ * Premier jet : un bloc violet sur un bloc noir, rien qui la nomme. Deuxième :
+ * je l'ai faite ACCROUPIE pour qu'elle soit la plus basse du lot — ça la
+ * distinguait d'une silhouette debout, mais « basse » n'est pas « Sombra ».
+ * L'erreur était de chercher à sculpter son ATTITUDE (furtive, embusquée) :
+ * il n'y a rien à modeler dans « discrète ».
+ *
+ * Ce qu'on peut modeler, c'est sa TÊTE. Sa coiffure — nuque rasée sombre,
+ * masse claire balayée haut vers l'arrière — casse la silhouette du crâne,
+ * et c'est le seul héros du lot dont le contour de la tête n'est pas un cube.
+ * À cette échelle, un contour qui sort du gabarit commun vaut dix détails.
+ * Même levier que les quatre pattes d'Orisa ou le vide sous Zenyatta.
  */
 function buildSombra(b: SceneBuilder): void {
   pedestal(b, 6);
+  // Debout, jambes fines mais épaisses en briques, appui égal.
   b.box(0, 2, -4, 3, 6, 3, 'structure');
   b.box(0, 2, 1, 3, 6, 3, 'structure');
-  b.box(-1, 8, -5, 5, 6, 10, 'accent');
-  b.box(3, 9, -2, 1, 4, 4, 'structure', { keepExisting: false });
-  // Col montant, plus haut que les épaules, qui encadre la tête.
-  b.box(-1, 14, -5, 5, 3, 10, 'accent');
-  b.box(-1, 14, -5, 5, 3, 2, 'structure', { keepExisting: false });
-  b.box(-1, 14, 3, 5, 3, 2, 'structure', { keepExisting: false });
-  // Bras gauche le long du corps, bras droit LEVÉ, paume en néon.
-  b.box(0, 9, 6, 3, 5, 3, 'structure');
-  b.box(0, 10, -8, 3, 5, 3, 'structure');
-  b.box(1, 15, -8, 3, 3, 3, 'structure');
-  b.box(4, 16, -9, 3, 4, 5, 'highlight');
-  head(b, 16, -2, { visor: false });
-  // Crête : trois marches qui partent en arrière, en dégradé.
-  b.box(0, 20, -2, 4, 2, 4, 'accent');
-  b.box(-2, 20, -1, 2, 3, 2, 'accent');
-  b.box(-4, 19, -1, 2, 3, 2, 'highlight');
+  // Manteau violet mi-long : le violet COUVRE, il ne ponctue pas.
+  b.box(-1, 8, -5, 5, 7, 10, 'accent');
+  b.box(-2, 8, -4, 1, 5, 8, 'accent');
+  // Circuits lumineux sur le devant du manteau, en saillie d'une brique.
+  b.box(4, 10, -3, 1, 1, 6, 'highlight');
+  b.box(4, 12, -2, 1, 1, 4, 'highlight');
+  // Bras tendu, main ouverte, et le halo du piratage AU BOUT — écarté du
+  // corps mais RATTACHÉ au bras, jamais flottant.
+  b.box(1, 11, -8, 3, 3, 3, 'accent');
+  b.box(3, 10, -11, 3, 5, 4, 'highlight');
+  // Tête : nuque et bas du crâne sombres — la partie rasée.
+  b.box(0, 15, -2, 4, 4, 4, 'structure');
+  // LA COIFFURE, l'élément qui porte tout : une masse claire posée sur le
+  // dessus, qui DÉBORDE vers l'arrière et monte en marches. Elle double la
+  // hauteur de la tête et lui donne un profil que personne d'autre n'a.
+  b.box(0, 19, -2, 4, 2, 4, 'highlight');
+  b.box(-2, 20, -2, 3, 2, 4, 'highlight');
+  b.box(-4, 21, -1, 3, 2, 3, 'highlight');
+  b.box(-6, 22, -1, 2, 2, 2, 'highlight');
 }
 
 /**
- * SYMMETRA — la tourelle. Silhouette : robe longue qui s'évase jusqu'au socle.
- * Accessoire : la tourelle, plantée à côté d'elle — une griffe à trois pointes
- * turquoise qu'aucun autre héros ne porte.
+ * SYMMETRA — la géométrie. REPRISE : le premier jet était un amas turquoise
+ * sans silhouette, avec des cubes flottants sur le côté.
+ *
+ * Son motif est la CONSTRUCTION ordonnée : ce qui la nomme n'est ni sa
+ * silhouette ni une arme, mais une tourelle géométrique posée devant elle.
+ * On sculpte donc une figure sobre et droite, et un objet net à côté — deux
+ * volumes propres valent mieux qu'un tas de cubes « techniques ».
  */
 function buildSymmetra(b: SceneBuilder): void {
   pedestal(b, 7);
-  // La robe : un tronc de cône, pas de jambes.
-  for (let y = 2; y <= 12; y += 1) {
-    const r = 5.6 - (y - 2) * 0.28;
-    b.disc(1, 0, r, y, 1, 'accent');
-  }
-  b.ring(1, 0, 5.6, 1.4, 2, 1, 'structure', { keepExisting: false });
-  b.box(-1, 12, -4, 5, 4, 8, 'accent');
-  b.box(3, 9, -2, 1, 6, 4, 'structure', { keepExisting: false });
-  // Bracelets d'or aux deux bras, bras droit tendu vers l'avant.
-  b.box(0, 11, -7, 3, 4, 3, 'accent');
-  b.box(0, 11, -7, 3, 1, 3, 'structure', { keepExisting: false });
-  b.box(0, 11, 5, 3, 4, 3, 'accent');
-  b.box(0, 11, 5, 3, 1, 3, 'structure', { keepExisting: false });
-  b.box(4, 11, -7, 3, 3, 3, 'highlight');
-  head(b, 16, -2, { visor: false });
-  b.box(-1, 16, -3, 3, 5, 6, 'structure');
-  // LA TOURELLE, posée au sol côté +z : socle, fût, trois pointes.
-  b.box(0, 2, 9, 4, 2, 4, 'structure');
-  b.box(1, 4, 10, 2, 3, 2, 'accent');
-  for (const [x, z] of [
-    [0, 10],
-    [3, 10],
-    [1, 12],
-  ] as const) {
-    b.box(x, 7, z, 1, 3, 1, 'highlight');
-    b.box(x, 10, z, 1, 2, 1, 'highlight');
-  }
-  b.box(1, 7, 10, 2, 2, 2, 'accent');
+  b.box(0, 2, -3, 3, 6, 3, 'structure');
+  b.box(0, 2, 1, 3, 6, 3, 'structure');
+  // Robe droite, longue, fendue : une silhouette VERTICALE et calme.
+  b.box(-1, 6, -4, 5, 8, 8, 'accent');
+  b.box(0, 14, -3, 3, 4, 6, 'accent');
+  b.box(3, 7, -3, 1, 8, 6, 'highlight', { keepExisting: false });
+  head(b, 18, -2, { visor: false });
+  // Chignon bas, un bloc net.
+  b.box(-2, 18, -2, 2, 3, 4, 'structure');
+  // Bras tendu vers la tourelle : c'est lui qui RELIE la figure à l'objet.
+  b.box(1, 14, -6, 3, 3, 3, 'accent');
+  // LA TOURELLE : une pyramide à trois étages, posée au sol à côté d'elle.
+  // Franche, géométrique, séparée — mais alignée sur le bras, donc lue comme
+  // « son » objet et non comme un cube égaré.
+  b.box(0, 2, -11, 5, 2, 5, 'highlight');
+  b.box(1, 4, -10, 3, 2, 3, 'highlight');
+  b.box(2, 6, -9, 1, 3, 1, 'accent');
 }
 
 /**
@@ -1315,32 +1321,33 @@ function buildTorbjorn(b: SceneBuilder): void {
 }
 
 /**
- * WIDOWMAKER — la natte et le fusil. Silhouette : peau bleue contre
- * combinaison violette, longue natte qui descend dans le dos. Accessoire : le
- * fusil, debout côté +z, gros viseur à mi-hauteur.
+ * WIDOWMAKER — le fusil. REPRISE : le premier jet était une masse violette
+ * indistincte avec un fusil rouge trop petit, posé contre le corps.
+ *
+ * Elle n'a qu'une chose à dire, et c'est son ARME. Le fusil devient donc la
+ * pièce la plus grosse du modèle — un tiers de la figurine — tenu à l'écart du
+ * torse et à l'horizontale, comme le marteau de Reinhardt est tenu debout.
+ * Tout le reste est du support.
  */
 function buildWidowmaker(b: SceneBuilder): void {
-  pedestal(b, 6);
-  b.box(0, 2, -4, 3, 6, 3, 'accent');
-  b.box(0, 2, 1, 3, 6, 3, 'accent');
-  b.box(-1, 8, -5, 5, 6, 10, 'accent');
-  // Décolleté et bras NUS, en peau bleue : c'est le contraste peau/combinaison
-  // qui la nomme, pas la couleur violette seule (Sombra l'a déjà).
-  b.box(3, 10, -2, 1, 4, 4, 'structure');
-  b.box(0, 9, -8, 3, 5, 3, 'structure');
-  b.box(0, 9, 6, 3, 5, 3, 'structure');
-  b.box(-1, 13, -6, 5, 2, 12, 'accent');
-  head(b, 14, -2, { visor: false });
-  b.box(0, 14, -2, 4, 3, 4, 'structure', { keepExisting: false });
-  b.box(3, 15, -2, 1, 1, 4, 'highlight', { keepExisting: false });
-  // La natte : elle part du crâne et descend derrière jusqu'aux reins.
-  b.box(-1, 16, -2, 4, 3, 4, 'accent');
-  b.box(-2, 7, -1, 2, 10, 2, 'accent');
-  b.box(-2, 5, -1, 2, 2, 2, 'highlight');
-  // LE FUSIL, debout côté +z, viseur en saillie.
-  b.box(1, 3, 9, 2, 17, 2, 'accent');
-  b.box(0, 3, 8, 4, 3, 3, 'accent');
-  b.box(3, 12, 8, 2, 2, 4, 'highlight');
+  pedestal(b, 7);
+  b.box(0, 2, -4, 3, 6, 3, 'structure');
+  b.box(0, 2, 1, 3, 6, 3, 'structure');
+  b.box(0, 2, -4, 3, 1, 3, 'accent', { keepExisting: false });
+  b.box(0, 2, 1, 3, 1, 3, 'accent', { keepExisting: false });
+  // Buste et combinaison violette.
+  b.box(-1, 8, -4, 5, 7, 8, 'accent');
+  b.box(3, 9, -3, 1, 5, 6, 'structure', { keepExisting: false });
+  head(b, 15, -2, { visor: true });
+  // Cheveux ramassés en un bloc dans le dos.
+  b.box(-2, 15, -2, 2, 4, 4, 'structure');
+  // LE FUSIL, énorme et horizontal, tenu écarté côté +z. Fût long vers
+  // l'avant, lunette en saillie sur le dessus, crosse en arrière.
+  b.box(-3, 10, 6, 13, 3, 3, 'structure');
+  b.box(7, 13, 7, 4, 2, 2, 'highlight');
+  b.box(-4, 9, 6, 3, 4, 3, 'structure');
+  // Bras qui le porte : il RELIE l'arme au corps, sinon elle flotte.
+  b.box(1, 10, 4, 3, 3, 3, 'accent');
 }
 
 /**
@@ -1486,37 +1493,33 @@ function buildKiriko(b: SceneBuilder): void {
 }
 
 /**
- * LIFEWEAVER — le lotus. Silhouette : robe longue, épaules dégagées.
- * Accessoire : la fleur, un disque de pétales roses bâti dans le plan vertical
- * à côté de lui — la seule forme rayonnante du lot.
+ * LIFEWEAVER — les pétales. REPRISE : le premier jet posait quatre cubes roses
+ * SANS CONTACT avec le corps. Détachés au point de flotter, ils ne se lisaient
+ * pas comme des pétales mais comme un défaut de rendu.
+ *
+ * « Détaché » voulait dire ÉCARTÉ tout en restant rattaché — c'est ce qui fait
+ * marcher les poings de Winston. Ici, les pétales partent donc de l'épaule et
+ * s'ouvrent en éventail, chacun touchant le précédent.
  */
 function buildLifeweaver(b: SceneBuilder): void {
   pedestal(b, 7);
-  // Robe longue jusqu'au socle, pas de jambes.
-  for (let y = 2; y <= 12; y += 1) {
-    const r = 5.2 - (y - 2) * 0.2;
-    b.disc(1, 0, r, y, 1, 'structure');
-  }
-  b.box(-1, 12, -4, 5, 5, 8, 'structure');
-  // Écharpe rose en travers du torse, en saillie.
-  b.box(3, 12, -3, 2, 5, 3, 'accent');
-  b.box(-1, 16, -5, 5, 2, 10, 'accent');
-  b.box(0, 12, -7, 3, 5, 3, 'structure');
-  b.box(0, 12, 5, 3, 5, 3, 'structure');
-  // Bracelet de lumière verte au bras avant.
-  b.box(0, 12, -7, 3, 1, 3, 'highlight', { keepExisting: false });
-  head(b, 18, -2, { visor: false });
-  b.box(-1, 18, -3, 3, 4, 6, 'accent');
-  // LE LOTUS : un cœur et six pétales, dans le plan (x, y), côté +z.
-  const fx = 0;
-  const fy = 12;
-  for (let k = 0; k < 6; k += 1) {
-    const a = (k * Math.PI) / 3;
-    const px = Math.round(fx + 5 * Math.cos(a));
-    const py = Math.round(fy + 5 * Math.sin(a));
-    b.box(px - 1, py - 1, 9, 3, 3, 3, 'accent');
-  }
-  b.box(-1, 11, 9, 3, 3, 3, 'highlight');
+  b.box(0, 2, -3, 3, 6, 3, 'structure');
+  b.box(0, 2, 1, 3, 6, 3, 'structure');
+  // Tunique longue, rose, évasée.
+  b.box(-2, 6, -5, 6, 6, 10, 'accent');
+  b.box(-1, 12, -3, 5, 5, 6, 'accent');
+  b.box(3, 13, -2, 1, 3, 4, 'highlight', { keepExisting: false });
+  head(b, 17, -2, { visor: false });
+  // Chignon haut.
+  b.box(0, 21, -1, 3, 2, 2, 'structure');
+  // LES PÉTALES : un éventail ANCRÉ à l'épaule (+z), chaque élément en contact
+  // avec le suivant, montant et s'écartant. Trois suffisent — un quatrième
+  // sortait du cadre et se retrouvait isolé.
+  b.box(0, 13, 4, 4, 4, 3, 'highlight');
+  b.box(-1, 16, 6, 4, 4, 3, 'highlight');
+  b.box(-2, 19, 8, 4, 4, 3, 'highlight');
+  // Le bras qui les porte, pour que l'éventail parte de QUELQUE CHOSE.
+  b.box(1, 12, 3, 3, 3, 2, 'accent');
 }
 
 /**

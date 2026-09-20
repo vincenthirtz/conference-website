@@ -235,6 +235,8 @@ tags:
     description: Endpoints joueurs/casters (auth Bearer).
   - name: public/onboard
     description: 'Inscription d''un nouvel espace.'
+  - name: public/tcg
+    description: 'Figurines voxel du TCG (héros, mascottes), servies en SVG.'
   - name: public/misc
     description: 'Autres endpoints publics.'
   - name: public/v1
