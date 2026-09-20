@@ -128,3 +128,37 @@ describe('fonctions SECURITY DEFINER — aucune ouverte au tout-venant', () => {
     }
   });
 });
+
+describe('vues — aucune n’ignore la RLS de qui l’interroge', () => {
+  /**
+   * UNE VUE SANS `security_invoker` S'EXÉCUTE AVEC LES DROITS DE SON
+   * PROPRIÉTAIRE : elle traverse la RLS de l'appelante. Les tables de ce
+   * schéma ont la RLS activée SANS politique — donc fermées à `anon` — et une
+   * telle vue leur ouvre une fenêtre par-dessus cette fermeture.
+   *
+   * CE TEST EXISTE À CAUSE D'UN ALLER-RETOUR. Une migration avait posé
+   * l'option sur `team_stats_view` par `ALTER VIEW` ; une migration
+   * ULTÉRIEURE a recréé la vue par `CREATE OR REPLACE VIEW` sans l'option, et
+   * l'a donc effacée EN SILENCE. Six mois plus tard, le linter de Supabase
+   * l'a signalée comme si elle n'avait jamais été corrigée.
+   *
+   * D'où la règle vérifiée ici : l'option doit être DANS le `CREATE`, pas dans
+   * un `ALTER` à côté. Un `ALTER` se perd à la recréation suivante ; un
+   * `CREATE` qui la porte survit au rejeu du script.
+   */
+  it('chaque CREATE VIEW porte security_invoker', () => {
+    const offenders: string[] = [];
+    for (const file of readdirSync(MIGRATIONS)) {
+      if (!file.endsWith('.sql')) continue;
+      const sql = readFileSync(join(MIGRATIONS, file), 'utf8');
+      const re =
+        /CREATE\s+(?:OR\s+REPLACE\s+)?VIEW\s+public\.([a-z0-9_]+)([\s\S]{0,200})/gi;
+      for (const m of sql.matchAll(re)) {
+        if (!/security_invoker/i.test(m[2])) {
+          offenders.push(`${m[1]} (${file})`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});

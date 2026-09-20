@@ -67,7 +67,14 @@ BEGIN;
 DROP MATERIALIZED VIEW IF EXISTS public.team_stats_view;
 DROP VIEW IF EXISTS public.team_stats_view;
 
-CREATE OR REPLACE VIEW public.team_stats_view AS
+-- ⚠️ `WITH (security_invoker = on)` EST DANS LE `CREATE`, ET DOIT Y RESTER.
+-- Un `CREATE OR REPLACE VIEW` qui l'omet REMET la vue en droits du
+-- propriétaire, en silence. C'est ce qui s'est produit : une migration
+-- antérieure avait posé l'option par `ALTER VIEW`, et ce fichier-ci l'a
+-- effacée en recréant la vue. Rejouer ce script sans l'option rouvrirait donc
+-- la fenêtre par-dessus la RLS (cf. `harden_view_and_search_path.sql`).
+CREATE OR REPLACE VIEW public.team_stats_view
+WITH (security_invoker = on) AS
 WITH match_maps AS (
   SELECT
     m.id,
