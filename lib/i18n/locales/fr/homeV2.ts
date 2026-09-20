@@ -71,7 +71,6 @@ export default ns('homeV2', {
   matchdayMore_one: '+ {count} autre match ce jour-là',
   matchdayMore_other: '+ {count} autres matchs ce jour-là',
   standingsTitle: 'Classement de la saison',
-  standingsAll: 'Classement complet',
   standingsColTeam: 'Équipe',
   standingsColRecord: 'V–D',
   standingsColRecordTitle: 'Victoires – défaites',

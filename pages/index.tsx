@@ -157,14 +157,7 @@ function Home({
 
       {/* OÙ EN EST LA SAISON. Après « ce qui se joue », avant les actus :
           entre deux journées, c'est la question qu'on vient poser. */}
-      {upcomingTournament && (
-        <HomeStandings
-          rows={standings}
-          standingsHref={`/tournament/${
-            upcomingTournament.slug || upcomingTournament.id
-          }/standings`}
-        />
-      )}
+      {upcomingTournament && <HomeStandings rows={standings} />}
 
       <HomeNewsV2 news={news} />
 

@@ -49,7 +49,6 @@ export default {
   matchdayMore_one: '+ {count} more match that day',
   matchdayMore_other: '+ {count} more matches that day',
   standingsTitle: 'Season standings',
-  standingsAll: 'Full standings',
   standingsColTeam: 'Team',
   standingsColRecord: 'W–L',
   standingsColRecordTitle: 'Wins – losses',

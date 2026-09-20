@@ -12,8 +12,10 @@
 // compris). Deux calculs finiraient par se contredire.
 //
 // Volontairement plus pauvre que la page dédiée : rang, équipe, bilan,
-// différence de maps, points. Pas de forme, pas de critère de départage — la
-// page complète est à un lien.
+// différence de maps, points. Pas de forme, pas de critère de départage. Pas
+// de lien « classement complet » non plus (retiré le 2026-09-20) : l'accueil
+// répond à la question sur place, l'onglet Classement du tournoi reste la
+// porte d'entrée pour le détail.
 
 import type { JSX } from 'react';
 import Link from 'next/link';
@@ -44,10 +46,8 @@ function Monogram({ row }: { row: HomeStandingRow }) {
 
 export default function HomeStandings({
   rows,
-  standingsHref,
 }: {
   rows: HomeStandingRow[];
-  standingsHref: string;
 }): JSX.Element | null {
   const t = useT(nsHomeV2);
   if (rows.length === 0) return null;
@@ -55,16 +55,10 @@ export default function HomeStandings({
   return (
     <section className="container mx-auto px-4 pt-10">
       <div className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur sm:p-6">
-        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+        <div className="mb-4">
           <h2 className="text-lg font-bold text-white sm:text-xl">
             {t.standingsTitle}
           </h2>
-          <Link
-            href={standingsHref}
-            className="rounded-full text-xs font-semibold text-[var(--color-green-light)] transition hover:text-[var(--color-green)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
-          >
-            {t.standingsAll} <span aria-hidden>→</span>
-          </Link>
         </div>
 
         <table className="w-full text-sm">
