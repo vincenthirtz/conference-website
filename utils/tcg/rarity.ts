@@ -25,6 +25,10 @@
 // classement.
 
 import type { ProfileBadge, ProfileBadgeTier } from '@/types/rating';
+import {
+  PEAK_RATING_TIERS,
+  type PeakRatingTierKey,
+} from '@/utils/profile/achievements';
 
 export type TcgRarity = 'common' | 'rare' | 'epic' | 'legendary';
 
@@ -155,14 +159,27 @@ export const MASCOT_CARD_RARITY: TcgRarity = 'rare';
  * `computeAchievements` en dérive ; une équipe n'ayant pas de badges, on les lui
  * applique directement sur `team_ratings.rating`.
  *
- * Les recopier sans le dire créerait deux barèmes jumeaux libres de diverger —
- * si l'un bouge, l'autre doit bouger.
+ * ILS NE SONT PLUS RECOPIÉS. Ce tableau portait les trois nombres en clair,
+ * sous un commentaire qui disait « si l'un bouge, l'autre doit bouger » — et
+ * rien ne le garantissait. Ils sont maintenant DÉRIVÉS de `PEAK_RATING_TIERS`,
+ * et seule la correspondance palier → rareté reste ici, parce qu'elle seule
+ * appartient au TCG.
+ *
+ * Le `Record` est exhaustif sur `PeakRatingTierKey` : ajouter un palier de
+ * badge fait échouer la compilation ICI, au lieu de laisser une équipe sans
+ * rareté correspondante.
  */
-export const RATING_TIERS: ReadonlyArray<{ min: number; rarity: TcgRarity }> = [
-  { min: 2000, rarity: 'legendary' },
-  { min: 1800, rarity: 'epic' },
-  { min: 1600, rarity: 'rare' },
-] as const;
+const PEAK_TIER_RARITY: Record<PeakRatingTierKey, TcgRarity> = {
+  peak_master: 'legendary',
+  peak_elite: 'epic',
+  peak_contender: 'rare',
+};
+
+export const RATING_TIERS: ReadonlyArray<{ min: number; rarity: TcgRarity }> =
+  PEAK_RATING_TIERS.map((t) => ({
+    min: t.min,
+    rarity: PEAK_TIER_RARITY[t.key],
+  }));
 
 /**
  * La rareté de la carte d'une équipe.

@@ -62,6 +62,7 @@ import {
   MATCH_WIN_COINS,
   SCRIM_WIN_COINS,
 } from './economy';
+import { STREAK_BADGE_MIN } from '@/utils/profile/achievements';
 
 /* ---------------------------------------------------------------------------
  * Montants dérivés
@@ -90,12 +91,12 @@ export const TWITCH_DROP_COINS = Math.max(1, Math.round(SCRIM_WIN_COINS / 2));
  * partir de quand une suite devient une « série » ; en choisir une autre ici
  * ferait dire deux choses différentes au même mot sur le même site.
  *
- * ⚠️ Ce seuil est RECOPIÉ, faute d'être exporté par `achievements.ts` (il y est
- * écrit en clair dans `computeAchievements`). S'il bouge là-bas, il doit bouger
- * ici : le test unitaire le rappelle, et l'exporter à la source serait le vrai
- * correctif.
+ * IL N'EST PLUS RECOPIÉ. Ce seuil valait `5` en clair, sous un avertissement
+ * disant qu'il faudrait l'exporter à la source. C'est fait : il vient
+ * désormais de `achievements.ts`, et le changer là-bas le change ici, sans
+ * que personne ait à y penser.
  */
-export const CHECKIN_STREAK_LENGTH = 5;
+export const CHECKIN_STREAK_LENGTH: number = STREAK_BADGE_MIN;
 
 /**
  * Ce que rapporte une série de `CHECKIN_STREAK_LENGTH` check-ins.

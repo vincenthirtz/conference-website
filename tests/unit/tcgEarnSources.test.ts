@@ -33,6 +33,11 @@ import {
   placementTier,
   writableEarnSources,
 } from '../../utils/tcg/earnSources';
+import { RATING_TIERS } from '../../utils/tcg/rarity';
+import {
+  STREAK_BADGE_MIN,
+  PEAK_RATING_TIERS,
+} from '../../utils/profile/achievements';
 
 describe('intégrité du registre', () => {
   it('décrit toutes les voies attendues, une seule fois chacune', () => {
@@ -129,11 +134,31 @@ describe('montants dérivés', () => {
     expect(CHECKIN_STREAK_COINS).toBe(SCRIM_WIN_COINS);
   });
 
-  it('garde la longueur de série sur le seuil des badges', () => {
-    // `achievements.ts` : « série de victoires consécutives >= 5 ». Le seuil y
-    // est écrit en clair et non exporté — ce test est le rappel que les deux
-    // doivent bouger ensemble.
-    expect(CHECKIN_STREAK_LENGTH).toBe(5);
+  it('tient la longueur de série DEPUIS le seuil des badges', () => {
+    // CE TEST ÉTAIT UNE TAUTOLOGIE. Il assérait `CHECKIN_STREAK_LENGTH === 5`
+    // en se présentant comme le rappel que ce nombre et le `streak >= 5` de
+    // `achievements.ts` doivent bouger ensemble — alors qu'il ne pouvait RIEN
+    // détecter : changer le seuil des badges l'aurait laissé vert, et changer
+    // celui-ci l'aurait fait échouer en désignant le mauvais coupable.
+    //
+    // Le seuil est désormais exporté par `achievements.ts` et dérivé ici. Ce
+    // qu'on vérifie n'est plus une valeur, c'est le LIEN : les deux ne peuvent
+    // plus diverger, quelle que soit la valeur choisie là-bas.
+    expect(CHECKIN_STREAK_LENGTH).toBe(STREAK_BADGE_MIN);
+  });
+
+  it('dérive les paliers de rareté d’équipe des paliers de badge', () => {
+    // Même histoire : `RATING_TIERS` recopiait 2000/1800/1600 sous un
+    // commentaire « si l'un bouge, l'autre doit bouger ». Les seuils viennent
+    // maintenant de la même source, et la correspondance palier → rareté est
+    // exhaustive par le type — ajouter un palier de badge ne compile plus tant
+    // que le TCG n'a pas dit quelle rareté lui donner.
+    expect(RATING_TIERS.map((t) => t.min)).toEqual(
+      PEAK_RATING_TIERS.map((t) => t.min)
+    );
+    // Décroissant : le premier palier atteint est le plus haut, des deux côtés.
+    const mins = RATING_TIERS.map((t) => t.min);
+    expect(mins).toEqual([...mins].sort((a, b) => b - a));
   });
 
   it('dérive chaque palier de palmarès de la victoire de match', () => {

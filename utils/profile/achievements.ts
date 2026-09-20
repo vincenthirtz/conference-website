@@ -143,6 +143,54 @@ export function longestWinStreak(
 // Moteur
 // ---------------------------------------------------------------------------
 
+/**
+ * À partir de combien une suite devient une « SÉRIE ».
+ *
+ * Exporté parce que ce dépôt a arbitré le mot une fois, et que d'autres
+ * barèmes s'y alignent — la série de check-ins du TCG
+ * (`utils/tcg/earnSources.ts`) notamment. Tant que ce seuil vivait en clair
+ * dans la fonction ci-dessous, ces barèmes le RECOPIAIENT : deux nombres
+ * jumeaux, libres de diverger, et le même mot qui aurait fini par dire deux
+ * choses sur le même site.
+ */
+export const STREAK_BADGE_MIN = 5;
+
+/**
+ * Paliers de pic de classement, du plus haut au plus bas.
+ *
+ * L'ORDRE EST LA RÈGLE : on garde le premier palier atteint, donc décroissant.
+ *
+ * Exporté pour la même raison que `STREAK_BADGE_MIN`. `utils/tcg/rarity.ts`
+ * applique EXACTEMENT ces seuils aux cartes d'équipe (qui n'ont pas de badges,
+ * donc reçoivent la rareté directement) : il les recopiait, avec un commentaire
+ * disant « si l'un bouge, l'autre doit bouger » et rien pour le garantir. Il les
+ * dérive désormais, et son `Record` de correspondance est exhaustif — ajouter un
+ * palier ici fait échouer la compilation là-bas plutôt que de passer inaperçu.
+ */
+export const PEAK_RATING_TIERS = [
+  {
+    min: 2000,
+    key: 'peak_master',
+    label: 'Maîtresse',
+    badgeTier: 'platinum',
+  },
+  { min: 1800, key: 'peak_elite', label: 'Élite', badgeTier: 'gold' },
+  {
+    min: 1600,
+    key: 'peak_contender',
+    label: 'Prétendante',
+    badgeTier: 'silver',
+  },
+] as const satisfies ReadonlyArray<{
+  min: number;
+  key: string;
+  label: string;
+  badgeTier: ProfileBadgeTier;
+}>;
+
+/** La clé d'un palier de pic — ce que `rarity.ts` doit savoir traduire. */
+export type PeakRatingTierKey = (typeof PEAK_RATING_TIERS)[number]['key'];
+
 export function computeAchievements(
   input: AchievementsInput
 ): ProfileAchievements {
@@ -217,26 +265,16 @@ export function computeAchievements(
   const peak = Number.isFinite(input.stats?.peakRating)
     ? input.stats.peakRating
     : 0;
-  if (peak >= 2000) {
+  // Décroissant, donc le premier qui passe EST le plus haut — même règle que
+  // la chaîne de `else if` qu'il remplace, mais lisible depuis `PEAK_RATING_TIERS`
+  // par les barèmes qui en dépendent (cf. `utils/tcg/rarity.ts`).
+  const peakTier = PEAK_RATING_TIERS.find((t) => peak >= t.min);
+  if (peakTier) {
     add({
-      key: 'peak_master',
-      label: 'Maîtresse',
-      description: 'Pic de classement à 2000 ou plus.',
-      tier: 'platinum',
-    });
-  } else if (peak >= 1800) {
-    add({
-      key: 'peak_elite',
-      label: 'Élite',
-      description: 'Pic de classement à 1800 ou plus.',
-      tier: 'gold',
-    });
-  } else if (peak >= 1600) {
-    add({
-      key: 'peak_contender',
-      label: 'Prétendante',
-      description: 'Pic de classement à 1600 ou plus.',
-      tier: 'silver',
+      key: peakTier.key,
+      label: peakTier.label,
+      description: `Pic de classement à ${peakTier.min} ou plus.`,
+      tier: peakTier.badgeTier,
     });
   }
 
@@ -269,7 +307,7 @@ export function computeAchievements(
 
   // --- Série de victoires ---
   const streak = longestWinStreak(results);
-  if (streak >= 5) {
+  if (streak >= STREAK_BADGE_MIN) {
     add({
       key: 'win_streak',
       label: 'Série gagnante',
