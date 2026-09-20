@@ -84,25 +84,21 @@ patch:
                 enabled:
                   type: boolean
                 durationMs:
-                  type: integer
-                  nullable: true
+                  type: [integer, 'null']
                   minimum: 3000
                   maximum: 60000
                 soundUrl:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
                 soundVolume:
                   type: integer
                   minimum: 0
                   maximum: 100
                 accentColor:
-                  type: string
-                  nullable: true
+                  type: [string, 'null']
             frame:
-              nullable: true
               description: >-
                 Habillage déposé. `null` rétablit celui du code (le nœud).
-              type: object
+              type: ['object', 'null']
               required:
                 - data
                 - mimeType
@@ -119,10 +115,9 @@ patch:
                     - video/mp4
                     - video/webm
             sound:
-              nullable: true
               description: >-
                 Son déposé. `null` le retire et fait retomber sur `soundUrl`.
-              type: object
+              type: ['object', 'null']
               required:
                 - data
                 - mimeType
@@ -155,12 +150,10 @@ patch:
                   enabled:
                     type: boolean
                   message:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
                     maxLength: 120
                   minAmount:
-                    type: integer
-                    nullable: true
+                    type: [integer, 'null']
   responses:
     '200':
       description: Enregistré.

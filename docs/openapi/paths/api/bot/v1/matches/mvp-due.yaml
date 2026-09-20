@@ -46,5 +46,9 @@ get:
                       type: [string, 'null']
                     team2Name:
                       type: [string, 'null']
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
     '500':
       $ref: '#/components/responses/ServerError'

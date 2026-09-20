@@ -114,5 +114,8 @@ post:
       description: Vote clos, match non termine, ou candidate invalide.
     '500':
       $ref: '#/components/responses/ServerError'
-  x-zod: bot.matches/[matchId]/mvp
+  # PAS de `x-zod` au niveau de l'opération : l'assembleur remplace ce nœud
+  # par le JSON Schema là où il le trouve, donc ici il déversait
+  # `type`/`properties`/`required` dans `post` lui-même. Le corps se déclare
+  # dans `requestBody` (ci-dessus), et nulle part ailleurs.
   x-zod-query: bot.matches/[matchId]/mvp.query
