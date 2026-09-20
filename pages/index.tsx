@@ -13,7 +13,7 @@
 //     étant plein.
 //
 // Le chargement des données passe par le loader partagé `loadHomeData`
-// (+ `loadTournamentPrizeCents` pour le spotlight). Les présentateurs V2 vivent
+// Les présentateurs V2 vivent
 // sous `components/Home/*`.
 
 import type { GetStaticProps } from 'next';
@@ -23,12 +23,9 @@ import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournamen
 import { type HomePartner } from '@/components/Home/HomeSponsors';
 import { type HomeTeam } from '@/utils/home/loadHomeData';
 import { type HomeMatchday } from '@/utils/home/loadNextMatchday';
-import { type HomeStandingRow } from '@/utils/home/loadHomeData';
+import { type HomeClip, type HomeStandingRow } from '@/utils/home/loadHomeData';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
-import {
-  loadHomeData,
-  loadTournamentPrizeCents,
-} from '@/utils/home/loadHomeData';
+import { loadHomeData } from '@/utils/home/loadHomeData';
 import { useT } from '@/lib/i18n/useT';
 import { useTwitchLive } from '@/components/Home/useTwitchLive';
 import HomeHeroV2 from '@/components/Home/HomeHeroV2';
@@ -48,8 +45,8 @@ type HomeProps = {
   teams: HomeTeam[];
   matchdays: HomeMatchday[];
   standings: HomeStandingRow[];
+  clips: HomeClip[];
   countdownTarget: string | null;
-  prizeCents: number | null;
   // L'horloge du rendu (ISR 15 min). Fabriquée ici plutôt que dans la carte :
   // un `new Date()` côté composant donne le build au serveur et la visite au
   // client — deux valeurs qui divergent dès qu'un minuit passe entre les deux.
@@ -63,10 +60,6 @@ type HomeProps = {
 // par tenant en multi-tenant.
 export const getStaticProps: GetStaticProps<HomeProps> = async () => {
   const data = await loadHomeData(DEFAULT_TENANT_ID);
-  const prizeCents = data.upcomingTournament
-    ? await loadTournamentPrizeCents(data.upcomingTournament.id)
-    : null;
-
   return {
     props: {
       news: data.news,
@@ -76,8 +69,8 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
       teams: data.teams,
       matchdays: data.matchdays,
       standings: data.standings,
+      clips: data.clips,
       countdownTarget: data.countdownTarget,
-      prizeCents,
       nowIso: new Date().toISOString(),
       loadError: data.loadError,
     },
@@ -110,8 +103,8 @@ function Home({
   teams,
   matchdays,
   standings,
+  clips,
   countdownTarget,
-  prizeCents,
   nowIso,
   loadError,
 }: HomeProps) {
@@ -157,11 +150,9 @@ function Home({
 
       <HomeSpotlight
         tournament={upcomingTournament}
-        prizeCents={prizeCents}
-        live={live}
         teams={teams}
         matchdays={matchdays}
-        now={nowIso}
+        clips={clips}
       />
 
       {/* OÙ EN EST LA SAISON. Après « ce qui se joue », avant les actus :

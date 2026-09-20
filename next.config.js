@@ -45,6 +45,11 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'static-cdn.jtvnw.net',
       },
+      // Vignettes des clips Twitch (bloc « clips du moment » de l'accueil).
+      {
+        protocol: 'https',
+        hostname: 'clips-media-assets2.twitch.tv',
+      },
       {
         protocol: 'https',
         hostname: 'cdn.discordapp.com',

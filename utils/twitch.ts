@@ -199,3 +199,105 @@ export async function fetchTwitchProfileImages(
     return {};
   }
 }
+
+/* -----------------------------------------------------------
+ * Clips
+ * ---------------------------------------------------------*/
+
+export type TwitchClip = {
+  id: string;
+  title: string;
+  url: string;
+  thumbnailUrl: string;
+  viewCount: number;
+  createdAt: string;
+  /** Durée en secondes, telle que Twitch la donne. */
+  duration: number;
+  creatorName: string | null;
+};
+
+/** Identifiant Helix d'une chaîne, par login. Vide si l'appel échoue. */
+async function fetchBroadcasterId(login: string): Promise<string | null> {
+  const creds = clientCreds();
+  const token = await getAccessToken();
+  if (!creds || !token) return null;
+  try {
+    const resp = await fetch(
+      `https://api.twitch.tv/helix/users?login=${encodeURIComponent(login)}`,
+      { headers: { 'Client-ID': creds.id, Authorization: `Bearer ${token}` } }
+    );
+    if (!resp.ok) {
+      logger.error('[twitch] users (clips) error', resp.status);
+      return null;
+    }
+    const data = await resp.json();
+    return (data?.data?.[0]?.id as string | undefined) ?? null;
+  } catch (e) {
+    logger.error('[twitch] users (clips) exception', e);
+    return null;
+  }
+}
+
+/**
+ * Les clips les plus vus d'une chaîne sur les `days` derniers jours.
+ *
+ * FENÊTRE GLISSANTE, et pas le palmarès de tous les temps : la home montre « la
+ * chaîne en ce moment ». Sans `started_at`, Helix renverrait éternellement le
+ * même clip de 2025, et le bloc cesserait de vouloir dire quoi que ce soit.
+ *
+ * Ne lève jamais : sans identifiants, sans réseau ou sur une erreur Helix, on
+ * renvoie une liste vide et l'appelant n'affiche rien.
+ */
+export async function fetchTwitchClips(
+  channel: string,
+  opts: { limit?: number; days?: number } = {}
+): Promise<TwitchClip[]> {
+  const login = channel.trim().toLowerCase();
+  if (!login) return [];
+  const limit = Math.min(20, Math.max(1, opts.limit ?? 4));
+  const days = Math.min(365, Math.max(1, opts.days ?? 30));
+
+  const creds = clientCreds();
+  const token = await getAccessToken();
+  if (!creds || !token) return [];
+
+  const broadcasterId = await fetchBroadcasterId(login);
+  if (!broadcasterId) return [];
+
+  const startedAt = new Date(Date.now() - days * 86_400_000).toISOString();
+  const search = new URLSearchParams({
+    broadcaster_id: broadcasterId,
+    first: String(limit),
+    started_at: startedAt,
+  });
+
+  try {
+    const resp = await fetch(
+      `https://api.twitch.tv/helix/clips?${search.toString()}`,
+      { headers: { 'Client-ID': creds.id, Authorization: `Bearer ${token}` } }
+    );
+    if (!resp.ok) {
+      logger.error('[twitch] clips error', resp.status);
+      return [];
+    }
+    const data = await resp.json();
+    return ((data?.data ?? []) as Array<Record<string, unknown>>)
+      .map((c) => ({
+        id: String(c.id ?? ''),
+        title: String(c.title ?? '').trim(),
+        url: String(c.url ?? ''),
+        // Helix rend un gabarit `%{width}x%{height}` sur certains clips.
+        thumbnailUrl: String(c.thumbnail_url ?? '')
+          .replace('%{width}', '480')
+          .replace('%{height}', '272'),
+        viewCount: Number(c.view_count ?? 0),
+        createdAt: String(c.created_at ?? ''),
+        duration: Number(c.duration ?? 0),
+        creatorName: (c.creator_name as string | undefined)?.trim() || null,
+      }))
+      .filter((c) => c.id && c.url && c.thumbnailUrl.startsWith('https://'));
+  } catch (e) {
+    logger.error('[twitch] clips exception', e);
+    return [];
+  }
+}

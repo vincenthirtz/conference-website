@@ -30,7 +30,6 @@ import type { HomeTeam } from '@/utils/home/loadHomeData';
 import HomeMatchdayStrip from '@/components/Home/HomeMatchdayStrip';
 import HomeSpotlight from '@/components/Home/HomeSpotlight';
 import type { UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
-import type { TwitchLive } from '@/components/Home/useTwitchLive';
 
 const CHOCO = 'team-choco';
 const ECLYPSE = 'team-eclypse';
@@ -233,7 +232,6 @@ describe('HomeMatchdayStrip', () => {
 });
 
 describe('HomeSpotlight — affiches ou équipes, jamais un vide', () => {
-  const live: TwitchLive = { live: false, parent: null, channel: 'womens_cup' };
   const tournament: UpcomingTournament = {
     id: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b',
     name: "OW WOMEN's CUP 2026",
@@ -260,8 +258,6 @@ describe('HomeSpotlight — affiches ou équipes, jamais un vide', () => {
     return renderToString(
       createElement(HomeSpotlight, {
         tournament,
-        prizeCents: null,
-        live,
         teams,
         matchdays: days.filter((d): d is HomeMatchday => d !== null),
       })

@@ -23,10 +23,14 @@ import {
 } from '@/utils/home/loadNextMatchday';
 import { getWallClockParts, SITE_TIMEZONE } from '@/utils/timezone';
 import { readPublicStandings } from '@/utils/stages/publicStandings';
+import { fetchTwitchClips } from '@/utils/twitch';
 
 // Marge de troncature du `content` des news de la home. HomeNewsSection ne rend
 // qu'un excerpt d'au plus ~220 caractères ; on garde une marge confortable.
 const HOME_NEWS_CONTENT_MAX = 300;
+
+/** La chaîne de la Cup — même login que `components/Home/useTwitchLive`. */
+const TWITCH_CHANNEL = 'womens_cup';
 
 export type HomeData = {
   news: HomeNewsItem[];
@@ -49,11 +53,26 @@ export type HomeData = {
    * été joué : un tableau de zéros n'apprend rien.
    */
   standings: HomeStandingRow[];
+  /**
+   * Les clips les plus vus de la chaîne sur le mois écoulé. Vide quand la
+   * chaîne n'en a pas, ou quand Twitch est injoignable : le bloc disparaît.
+   */
+  clips: HomeClip[];
   countdownTarget: string | null;
   // Vrai quand le chargement du contenu dynamique (news / annonces) a échoué
   // côté serveur. Permet d'afficher un avis d'erreur distinct d'un site
   // simplement vide, sans masquer le hero statique.
   loadError: boolean;
+};
+
+/** Un clip Twitch, réduit à ce que l'accueil affiche. */
+export type HomeClip = {
+  id: string;
+  title: string;
+  url: string;
+  thumbnailUrl: string;
+  viewCount: number;
+  duration: number;
 };
 
 /** Une ligne de classement, réduite à ce que l'accueil affiche. */
@@ -288,6 +307,7 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
   let teams: HomeTeam[] = [];
   let matchdays: HomeMatchday[] = [];
   let standings: HomeStandingRow[] = [];
+  let clips: HomeClip[] = [];
   let countdownTarget: string | null = null;
   // Client absent = on n'a pas pu charger le contenu : on le signale plutôt
   // que d'afficher une home faussement vide.
@@ -333,6 +353,23 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
       upcomingTournament?.id ?? null,
       teams
     );
+
+    // Les clips du moment. Appel TIERS : jamais bloquant, jamais compté comme
+    // panne du site — sans Twitch, le bloc n'existe simplement pas.
+    try {
+      clips = (
+        await fetchTwitchClips(TWITCH_CHANNEL, { limit: 4, days: 30 })
+      ).map((c) => ({
+        id: c.id,
+        title: c.title,
+        url: c.url,
+        thumbnailUrl: c.thumbnailUrl,
+        viewCount: c.viewCount,
+        duration: c.duration,
+      }));
+    } catch (error) {
+      logger.error('[loadHomeData] clips error', error);
+    }
 
     // Le classement de la saison en cours. Même source que l'onglet Classement
     // (confrontation directe et départages du staff compris) : deux calculs
@@ -409,6 +446,7 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
     teams,
     matchdays,
     standings,
+    clips,
     countdownTarget,
     loadError,
   };

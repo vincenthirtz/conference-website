@@ -50,52 +50,15 @@ export default ns('homeV2', {
   // Lu par les lecteurs d'écran à la place des cellules (décoratives) : à la
   // minute, sans les secondes, qui changeaient à chaque lecture.
   cdSrRemaining: '{days} jours, {hours} heures et {minutes} minutes',
-  spotEyebrow: "L'événement",
-  spotTitle: 'Le prochain rendez-vous',
-  spotSeeTournament: 'Voir le tournoi',
-  spotChipLive: 'En cours',
-  spotChipOpen: 'Inscriptions ouvertes',
-  spotFactFormat: 'Format',
-  spotFactPrize: 'Cash-prize',
-  spotFactTeams: 'Équipes',
-  spotProgressAria: '{pct} % des places prises',
-  spotCtaRegister: 'Inscrire mon équipe',
-  spotChipFull: 'Complet',
+  // Le bloc ne porte plus la fiche du tournoi (dates, format, places) : il
+  // montre la chaîne et les prochaines rencontres. Son titre suit.
+  spotEyebrow: 'En ce moment',
+  spotTitle: 'À suivre',
   // Imminence : ce qui prime quand un début est en vue. `_zero` et `_one` ont
   // leur propre formulation — « dans 0 jour » et « dans 1 jours » ne se disent
   // pas.
-  spotChipStarting_zero: 'Ça commence aujourd’hui',
-  spotChipStarting_one: 'Demain',
-  spotChipStarting_other: 'Dans {days} jours',
-  spotStartingLead_zero:
-    'Le coup d’envoi est aujourd’hui — {teams} équipes engagées.',
-  spotStartingLead_one: 'Coup d’envoi demain, avec {teams} équipes engagées.',
-  spotStartingLead_other:
-    'Coup d’envoi dans {days} jours, avec {teams} équipes engagées.',
-  spotStartingLeadFull_zero:
-    'Le coup d’envoi est aujourd’hui — les {teams} équipes sont au complet.',
-  spotStartingLeadFull_one:
-    'Coup d’envoi demain, les {teams} équipes sont au complet.',
-  spotStartingLeadFull_other:
-    'Coup d’envoi dans {days} jours, les {teams} équipes sont au complet.',
-  spotCtaSchedule: 'Voir le calendrier',
   // Les portes de sortie restent, au second rang : une visiteuse arrivée trop
   // tard garde les scrims, la recherche d’équipe et la saison suivante.
-  spotAsideLead: 'Pas encore d’équipe ?',
-  spotFullLead:
-    'Toutes les places sont prises pour cette édition. En attendant la suite :',
-  spotCtaScrim: 'Proposer un scrim',
-  spotCtaFindTeam: 'Chercher une équipe',
-  spotCtaCreateTeamNext: 'Créer une équipe (prochaine saison)',
-  spotCtaView: 'Voir le tournoi',
-  spotCtaTeams: 'Voir les équipes engagées',
-  spotLiveNow: 'En direct sur Twitch',
-  spotLiveIframeTitle: 'Lecteur Twitch en direct',
-  spotViewers_one: '{count} spectateur connecté',
-  spotViewers_other: '{count} spectateurs connectés',
-  spotTwitchHandle: 'Twitch · womens_cup',
-  spotNextLive: "Le lecteur s'ouvre ici quand la chaîne est en direct.",
-  spotNextLiveHint: 'Suivre sur Twitch →',
   // Les affiches de la prochaine journée, en pied de la carte du rendez-vous.
   // Le jour lui-même n'est pas une clé : c'est une donnée, formatée par Intl
   // dans la langue de l'interface (« vendredi 18 septembre »).
@@ -118,6 +81,10 @@ export default ns('homeV2', {
   standingsColPointsTitle: 'Points',
   standingsNote:
     '3 points par victoire · départage à la confrontation directe.',
+  clipsTitle: 'Les clips du moment',
+  clipsChannel: 'La chaîne',
+  clipsViews_one: '{count} vue',
+  clipsViews_other: '{count} vues',
   matchdayNextDay: 'Puis {day}',
   matchdayAll: 'Tout le calendrier',
   teamsStripEyebrow_one: '{count} équipe engagée',
