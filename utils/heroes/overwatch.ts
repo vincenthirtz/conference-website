@@ -54,6 +54,12 @@ export const OVERWATCH_HEROES: readonly OverwatchHero[] = [
   { name: 'Winston', role: 'Tank' },
   { name: 'Wrecking Ball', role: 'Tank' },
   { name: 'Zarya', role: 'Tank' },
+  // Ajoutés le 2026-09-20 : le registre s'était arrêté à 42 héros alors que le
+  // roster en compte 54. Vérifiés un par un sur l'API du wiki Overwatch
+  // (`action=parse&page=<héros>`), rôle compris — il n'existe aucune API
+  // officielle de héros pour ce jeu, c'est la seule source disponible.
+  { name: 'Domina', role: 'Tank' },
+  { name: 'D.Mon', role: 'Tank' },
 
   // Damage
   { name: 'Ashe', role: 'Damage' },
@@ -75,6 +81,11 @@ export const OVERWATCH_HEROES: readonly OverwatchHero[] = [
   { name: 'Torbjorn', role: 'Damage' },
   { name: 'Tracer', role: 'Damage' },
   { name: 'Widowmaker', role: 'Damage' },
+  { name: 'Anran', role: 'Damage' },
+  { name: 'Emre', role: 'Damage' },
+  { name: 'Freja', role: 'Damage' },
+  { name: 'Shion', role: 'Damage' },
+  { name: 'Sierra', role: 'Damage' },
 
   // Supports
   { name: 'Ana', role: 'Support' },
@@ -87,6 +98,13 @@ export const OVERWATCH_HEROES: readonly OverwatchHero[] = [
   { name: 'Mercy', role: 'Support' },
   { name: 'Moira', role: 'Support' },
   { name: 'Zenyatta', role: 'Support' },
+  { name: 'Doctrine', role: 'Support' },
+  // « Fika » est le nom de l'héroïne ; « Jetpack Cat » est son indicatif, et
+  // le titre de sa page sur le wiki. On garde le nom, c'est celui qu'on dit.
+  { name: 'Fika', role: 'Support' },
+  { name: 'Juno', role: 'Support' },
+  { name: 'Mizuki', role: 'Support' },
+  { name: 'Wuyang', role: 'Support' },
 ] as const;
 
 /** Index par nom, pour valider une saisie sans parcourir la liste. */

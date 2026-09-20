@@ -31,6 +31,7 @@ import LogoCredit from '@/components/Team/LogoCredit';
 import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
 import { figureUrl, type FigureRole } from '@/utils/tcg/roleFigures';
 import { heroFigureSlugFromName, heroFigureUrl } from '@/utils/tcg/heroFigures';
+import { gameMascotUrl, type GameMascotSlug } from '@/utils/tcg/gameMascots';
 import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
 
 /**
@@ -133,6 +134,22 @@ export type TcgCardSubject =
       slug: string;
       name: string | null;
       imageUrl: string | null;
+    }
+  | {
+      /**
+       * Une MASCOTTE du jeu (Pachimari, Ganymede, Murphy…).
+       *
+       * Elle n'a ni photo ni avatar par nature : son visuel est TOUJOURS la
+       * figurine voxel, rendue par `/api/tcg/mascot/...`. C'est le seul type de
+       * carte dont l'image ne peut pas manquer, donc le seul sans repli.
+       *
+       * Et le seul sans page de destination : aucune fiche par mascotte
+       * n'existe, et en inventer une pour que la carte soit cliquable
+       * reviendrait à créer une page vide. La carte reste donc muette au clic.
+       */
+      kind: 'mascot';
+      slug: GameMascotSlug;
+      name: string | null;
     };
 
 export type TcgCardProps = {
@@ -235,21 +252,37 @@ export default function TcgCard({
   const imageUrl =
     subject.kind === 'team'
       ? (subject.cardImageUrl ?? subject.logoUrl)
-      : subject.imageUrl;
+      : subject.kind === 'mascot'
+        ? // PAS ici : `imageUrl` part dans `next/image`, qui ne sert pas de
+          // SVG. La figurine de la mascotte est rendue plus bas par une balise
+          // `img` brute, comme celle des rôles et des héros.
+          null
+        : subject.imageUrl;
+
+  /**
+   * La figurine d'une mascotte. Elle ne manque JAMAIS — c'est le seul visuel de
+   * carte sans repli, puisqu'une mascotte n'a ni photo consentie ni avatar.
+   */
+  const mascotUrl =
+    subject.kind === 'mascot' ? gameMascotUrl(subject.slug) : null;
   const href = noLink
     ? null
     : subject.kind === 'player'
       ? `/player/${subject.userId}`
-      : subject.kind === 'map'
-        ? // Aucune page par map n'existe : on vise l'ancre de la maquette sur
-          // la page du pool, que `MapCard` pose sur son article.
-          `/maps-voxel#${subject.slug}`
-        : subject.slug
-          ? // `/team/` au SINGULIER : c'est la route publique réelle
-            // (pages/team/[slug]/index.tsx). Le pluriel menait à un 404 sur
-            // chaque carte d'équipe.
-            `/team/${subject.slug}`
-          : null;
+      : subject.kind === 'mascot'
+        ? // Aucune page par mascotte n'existe, et en créer une pour rendre la
+          // carte cliquable donnerait une page vide.
+          null
+        : subject.kind === 'map'
+          ? // Aucune page par map n'existe : on vise l'ancre de la maquette sur
+            // la page du pool, que `MapCard` pose sur son article.
+            `/maps-voxel#${subject.slug}`
+          : subject.slug
+            ? // `/team/` au SINGULIER : c'est la route publique réelle
+              // (pages/team/[slug]/index.tsx). Le pluriel menait à un 404 sur
+              // chaque carte d'équipe.
+              `/team/${subject.slug}`
+            : null;
 
   const figure = subject.kind === 'player' ? (subject.figure ?? null) : null;
   // Une héroïne CHOISIE par la joueuse est nommée ; une héroïne seulement
@@ -283,6 +316,16 @@ export default function TcgCard({
             // `sizes`, que `unoptimized` rendait lettre morte.
             unoptimized={!shouldOptimizeCardImage(imageUrl)}
           />
+        ) : mascotUrl ? (
+          <>
+            {/* biome-ignore lint/performance/noImgElement: SVG rendu par nos soins — next/image n'optimise pas le SVG */}
+            <img
+              src={mascotUrl}
+              alt=""
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-contain"
+            />
+          </>
         ) : figure ? (
           // Ni photo consentie ni avatar, mais un rôle connu : une figurine.
           //
