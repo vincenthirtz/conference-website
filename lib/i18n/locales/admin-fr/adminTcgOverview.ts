@@ -102,6 +102,8 @@ export default adminNs('adminTcgOverview', {
   kindPlayer: 'Joueuse',
   kindTeam: 'Équipe',
   kindMap: 'Map',
+  kindFanart: 'Fan art',
+  kindMascot: 'Mascotte',
   unknownSubject: 'Sujet inconnu',
 
   // Source navigateur OBS / Streamlabs. Le lien est un secret PORTEUR : les

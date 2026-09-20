@@ -66,7 +66,16 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { formatZodError } from '@/utils/validation';
 import { BOOSTER_PRICE_COINS } from '@/utils/tcg/economy';
 import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
-import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
+import {
+  readPlayerFaces,
+  readTeamFaces,
+  readFanartFaces,
+} from '@/utils/tcg/readCardFaces';
+import {
+  gameMascotDisplayName,
+  gameMascotUrl,
+  type GameMascotSlug,
+} from '@/utils/tcg/gameMascots';
 import { readMapFaces } from '@/utils/tcg/readMapFaces';
 import { cardSubjectKey } from '@/utils/tcg/subjectKey';
 import { logger } from '@/utils/logger';
@@ -122,6 +131,24 @@ export type TcgTopSubject =
   | {
       kind: 'map';
       /** Le slug EST l'identifiant : les maps vivent dans un registre, pas en base. */
+      slug: string;
+      name: string | null;
+      imageUrl: string | null;
+      count: number;
+      foilCount: number;
+    }
+  | {
+      kind: 'fanart';
+      fanartId: string;
+      /** Le TITRE de l'œuvre ; le crédit n'est pas montré dans ce panneau. */
+      name: string | null;
+      imageUrl: string | null;
+      count: number;
+      foilCount: number;
+    }
+  | {
+      /** Comme les maps : le slug est l'identifiant, le registre la source. */
+      kind: 'mascot';
       slug: string;
       name: string | null;
       imageUrl: string | null;
@@ -496,7 +523,7 @@ async function handler(
   const bySubject = new Map<
     string,
     {
-      kind: 'player' | 'team' | 'map';
+      kind: 'player' | 'team' | 'map' | 'fanart' | 'mascot';
       subjectId: string;
       count: number;
       foilCount: number;
@@ -510,7 +537,7 @@ async function handler(
     const { data, error } = await db
       .from('tcg_pack_cards')
       .select(
-        'pack_id, subject_kind, card_user_id, card_team_id, card_map_slug, rarity, is_foil, recycled_at'
+        'pack_id, subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id, card_mascot_slug, rarity, is_foil, recycled_at'
       )
       .in('pack_id', packIds)
       .limit(MAX_CARDS);
@@ -524,10 +551,12 @@ async function handler(
       for (const rarity of RARITY_ORDER) rarityCounts[rarity] = null;
     } else {
       const cardRows = (data ?? []) as Array<{
-        subject_kind: 'player' | 'team' | 'map';
+        subject_kind: 'player' | 'team' | 'map' | 'fanart' | 'mascot';
         card_user_id: string | null;
         card_team_id: string | null;
         card_map_slug: string | null;
+        card_fanart_id: string | null;
+        card_mascot_slug: string | null;
         rarity: TcgRarity;
         is_foil: boolean | null;
         recycled_at: string | null;
@@ -589,7 +618,7 @@ async function handler(
   // non retiré). Lire `tcg_player_cards` en direct pour gagner une requête
   // contournerait ce filtre, et le panneau staff afficherait des photos que le
   // site public n'a plus le droit de montrer.
-  const [playerFaces, teamFaces, mapFaces] = await Promise.all([
+  const [playerFaces, teamFaces, mapFaces, fanartFaces] = await Promise.all([
     readPlayerFaces(
       tenantId,
       ranked.filter((s) => s.kind === 'player').map((s) => s.subjectId)
@@ -602,6 +631,10 @@ async function handler(
     // tenant. Rien à filtrer non plus — une maquette n'est pas une photo.
     readMapFaces(
       ranked.filter((s) => s.kind === 'map').map((s) => s.subjectId)
+    ),
+    readFanartFaces(
+      tenantId,
+      ranked.filter((s) => s.kind === 'fanart').map((s) => s.subjectId)
     ),
   ]);
 
@@ -624,6 +657,29 @@ async function handler(
         userId: subject.subjectId,
         name: face?.displayName ?? null,
         imageUrl: face?.imageUrl ?? null,
+        count: subject.count,
+        foilCount: subject.foilCount,
+      };
+    }
+    if (subject.kind === 'fanart') {
+      const face = fanartFaces.get(subject.subjectId);
+      return {
+        kind: 'fanart' as const,
+        fanartId: subject.subjectId,
+        name: face?.title ?? null,
+        imageUrl: face?.imageUrl ?? null,
+        count: subject.count,
+        foilCount: subject.foilCount,
+      };
+    }
+    if (subject.kind === 'mascot') {
+      // Une mascotte n'a rien à lire : son nom vient du registre, sa figurine
+      // est une route, pas un fichier stocké.
+      return {
+        kind: 'mascot' as const,
+        slug: subject.subjectId,
+        name: gameMascotDisplayName(subject.subjectId),
+        imageUrl: gameMascotUrl(subject.subjectId as GameMascotSlug),
         count: subject.count,
         foilCount: subject.foilCount,
       };

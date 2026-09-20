@@ -96,7 +96,7 @@ export type TcgOverviewPhotos = {
 };
 
 export type TcgOverviewSubject = {
-  kind: 'player' | 'team' | 'map';
+  kind: 'player' | 'team' | 'map' | 'fanart' | 'mascot';
   /** Identifiant du sujet, `null` si la réponse n'en portait pas. */
   id: string | null;
   name: string | null;
@@ -172,6 +172,10 @@ function asText(value: unknown): string | null {
 
 function normalizeSubject(raw: unknown): TcgOverviewSubject | null {
   const rec = asRecord(raw);
+  // LES CINQ TYPES. Une nature absente d'ici rend `null`, donc la ligne est
+  // ÉCARTÉE : c'est volontaire pour une valeur inconnue, mais ça a rendu les
+  // mascottes et les fan arts invisibles dans le panneau staff — un total de
+  // cartes distribuées faux, sans rien qui le signale.
   const kind =
     rec.kind === 'player'
       ? 'player'
@@ -179,7 +183,11 @@ function normalizeSubject(raw: unknown): TcgOverviewSubject | null {
         ? 'team'
         : rec.kind === 'map'
           ? 'map'
-          : null;
+          : rec.kind === 'fanart'
+            ? 'fanart'
+            : rec.kind === 'mascot'
+              ? 'mascot'
+              : null;
   // Sans nature, on ne sait ni comment étiqueter la ligne ni où elle pointe :
   // on l'écarte plutôt que d'inventer l'une ou l'autre.
   if (!kind) return null;
@@ -192,11 +200,23 @@ function normalizeSubject(raw: unknown): TcgOverviewSubject | null {
     asText(rec.teamId) ?? (kind === 'team' ? asText(rec.id) : null);
   // Pour une map, le slug EST l'identifiant : elle n'a pas d'uuid, son registre
   // n'étant pas une table. Pour une équipe, le slug n'est qu'une adresse.
-  const slug = asText(rec.slug) ?? (kind === 'map' ? asText(rec.id) : null);
+  // Une mascotte s'identifie comme une map : par son slug.
+  const slug =
+    asText(rec.slug) ??
+    (kind === 'map' || kind === 'mascot' ? asText(rec.id) : null);
+  const fanartId =
+    asText(rec.fanartId) ?? (kind === 'fanart' ? asText(rec.id) : null);
 
   return {
     kind,
-    id: kind === 'player' ? userId : kind === 'map' ? slug : teamId,
+    id:
+      kind === 'player'
+        ? userId
+        : kind === 'map' || kind === 'mascot'
+          ? slug
+          : kind === 'fanart'
+            ? fanartId
+            : teamId,
     name: asText(rec.name),
     imageUrl: asText(rec.imageUrl),
     count: asCount(rec.count),
@@ -212,10 +232,15 @@ function normalizeSubject(raw: unknown): TcgOverviewSubject | null {
             slug
             ? `/maps-voxel#${slug}`
             : null
-          : // Une équipe s'adresse par son slug ; son uuid ne mène nulle part.
-            slug
-            ? `/team/${slug}`
-            : null,
+          : kind === 'mascot' || kind === 'fanart'
+            ? // Ni mascotte ni œuvre n'a de page. Sans ce test, une mascotte
+              // tombait dans la branche « équipe » et sortait avec un lien
+              // `/team/<slug-de-mascotte>` — un 404 offert au clic.
+              null
+            : // Une équipe s'adresse par son slug ; son uuid ne mène nulle part.
+              slug
+              ? `/team/${slug}`
+              : null,
   };
 }
 

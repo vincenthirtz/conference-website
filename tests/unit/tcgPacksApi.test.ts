@@ -52,6 +52,7 @@ import {
   earnReward,
 } from '../../utils/tcg/earnSources';
 import { PACK_SIZE } from '../../utils/tcg/drawPack';
+import { GAME_MASCOT_SLUGS } from '../../utils/tcg/gameMascots';
 
 import handler from '../../pages/api/player/tcg/packs';
 
@@ -282,7 +283,12 @@ describe('POST /api/player/tcg/packs — ouverture', () => {
 
     for (const card of res.body.cards) {
       expect(typeof card.position).toBe('number');
-      expect(['player', 'team', 'map']).toContain(card.kind);
+      // CINQ types, parce que l'emplacement de DÉCOR rend une map, une
+      // mascotte ou une fan art selon le tirage. Épingler trois types faisait
+      // échouer ce test au hasard, le jour où une mascotte sortait.
+      expect(['player', 'team', 'map', 'mascot', 'fanart']).toContain(
+        card.kind
+      );
       // La face : un nom lisible, pas seulement un identifiant.
       if (card.kind === 'player') {
         expect(card.displayName).toMatch(/^Joueuse \d$/);
@@ -291,6 +297,12 @@ describe('POST /api/player/tcg/packs — ouverture', () => {
         // n'a été semée pour elle, et elle doit malgré tout être complète.
         expect(typeof card.name).toBe('string');
         expect(card.imageUrl).toMatch(/^\/img\/maps\/overwatch\/.+\.svg$/);
+      } else if (card.kind === 'mascot') {
+        // Même exigence qu'une map : son nom vient du registre, et son slug
+        // doit être celui d'une mascotte connue — pas une chaîne quelconque.
+        expect(typeof card.name).toBe('string');
+        expect(card.name!.length).toBeGreaterThan(0);
+        expect(GAME_MASCOT_SLUGS).toContain(card.slug);
       } else {
         expect(card.name).toBe('Hinode Sparkles');
         expect(card.slug).toBe('hinode-sparkles');

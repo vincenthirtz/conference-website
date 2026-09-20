@@ -87,6 +87,8 @@ export default {
   kindPlayer: 'Player',
   kindTeam: 'Team',
   kindMap: 'Map',
+  kindFanart: 'Fan art',
+  kindMascot: 'Mascot',
   unknownSubject: 'Unknown subject',
 
   overlayHeading: 'OBS overlay',

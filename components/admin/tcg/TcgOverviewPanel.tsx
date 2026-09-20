@@ -163,6 +163,8 @@ export type TcgOverviewLabels = {
   kindPlayer: string;
   kindTeam: string;
   kindMap: string;
+  kindFanart: string;
+  kindMascot: string;
   unknownSubject: string;
 };
 
@@ -658,7 +660,11 @@ export default function TcgOverviewPanel({ labels }: Props): JSX.Element {
                           ? labels.kindTeam
                           : subject.kind === 'map'
                             ? labels.kindMap
-                            : labels.kindPlayer}
+                            : subject.kind === 'fanart'
+                              ? labels.kindFanart
+                              : subject.kind === 'mascot'
+                                ? labels.kindMascot
+                                : labels.kindPlayer}
                       </span>
 
                       {/* Un brillant est un exemplaire, pas une carte de plus :
