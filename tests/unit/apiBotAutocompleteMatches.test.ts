@@ -14,6 +14,7 @@
 //   - les scrims (tournament_id NULL) survivent au filtre — `not.in` seul les
 //     aurait écartés, NULL NOT IN (…) ne valant pas VRAI en SQL
 //   - un `tournamentId` explicite est honoré, même sur une édition close
+//   - l'horaire du libellé est celui du FUSEAU DU TOURNOI, pas l'UTC du serveur
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
@@ -74,7 +75,13 @@ function seed() {
   ] as any;
 
   store.tournaments = [
-    { id: T_RUNNING, tenant_id: TENANT, status: 'running', name: 'Cup 2026' },
+    {
+      id: T_RUNNING,
+      tenant_id: TENANT,
+      status: 'running',
+      name: 'Cup 2026',
+      timezone: 'Europe/Paris',
+    },
     {
       id: T_COMPLETED,
       tenant_id: TENANT,
@@ -159,6 +166,23 @@ describe('/api/bot/v1/autocomplete/matches', () => {
     const got = ids(await call());
     expect(got).toContain(M_RUNNING);
     expect(got.some((id: string) => id.startsWith('44444444'))).toBe(false);
+  });
+
+  it("affiche l'horaire dans le fuseau du tournoi, pas en UTC", async () => {
+    // Le match est à 17:00 UTC, soit 19:00 à Paris. Le libellé rendait
+    // auparavant `toISOString()`, donc « 17:00 » — deux heures avant l'heure
+    // réelle, et parfaitement plausible.
+    const res = await call();
+    const row = (res.body.results as any[]).find((r) => r.value === M_RUNNING);
+    expect(row.label).toContain('19:00');
+    expect(row.label).not.toContain('17:00');
+    expect(row.label).toContain('18/09');
+  });
+
+  it('retombe sur Europe/Paris pour un match sans tournoi (scrim)', async () => {
+    const res = await call();
+    const row = (res.body.results as any[]).find((r) => r.value === M_SCRIM);
+    expect(row.label).toContain('19:00');
   });
 
   it('honore un tournoi explicitement demandé, même clos', async () => {

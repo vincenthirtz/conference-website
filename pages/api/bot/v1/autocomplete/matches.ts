@@ -16,6 +16,10 @@ import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { resolveActorPlayer } from '@/utils/botActor';
 import { escapePostgrestValue, isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
+import {
+  DEFAULT_TOURNAMENT_TZ,
+  resolveTournamentTz,
+} from '@/utils/matches/adminMatchesTz';
 
 const MAX_RESULTS = 25;
 const DISCORD_LABEL_MAX = 100;
@@ -36,13 +40,37 @@ function trimLabel(s: string): string {
     : s;
 }
 
-function formatScheduled(iso: string | null): string {
+/**
+ * Horaire d'un match, dans le fuseau du TOURNOI (Europe/Paris à défaut).
+ *
+ * Avant, ce libellé rendait `toISOString()` — donc de l'UTC brut. Un match
+ * programmé à 19 h à Paris s'affichait « 17:00 » dans l'autocomplete, deux
+ * heures avant l'heure réelle, alors que tout le reste du produit (embeds
+ * Discord, écrans admin, calendrier) formate en heure locale. Un libellé
+ * d'autocomplete sert à RECONNAÎTRE un match : une heure fausse le rend
+ * inutilisable, et pire, plausible.
+ *
+ * Un format sans fuseau explicite serait tout aussi faux : sur Netlify le
+ * serveur tourne en UTC, et `toLocaleString` sans `timeZone` rendrait
+ * l'heure du serveur.
+ */
+function formatScheduled(iso: string | null, timeZone: string): string {
   if (!iso) return '';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-  // YYYY-MM-DD HH:MM (UTC, court — Discord render relative via {value,label}
-  // mais ici on ne peut pas mettre de timestamp tag dans le label).
-  return d.toISOString().slice(0, 16).replace('T', ' ');
+  try {
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone,
+    })
+      .format(d)
+      .replace(', ', ' ');
+  } catch {
+    return '';
+  }
 }
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
@@ -126,13 +154,26 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   // vert trompeur. Une règle d'affichage qu'on ne peut pas tester n'en est pas
   // une.
   const closedTournamentIds = new Set<string>();
-  if (!tournamentId) {
-    const { data: closed } = await supabaseAdmin
-      .from('tournaments')
-      .select('id')
-      .eq('tenant_id', req.botContext.tenantId)
-      .in('status', ['completed', 'archived', 'cancelled']);
-    for (const t of closed ?? []) closedTournamentIds.add(t.id as string);
+  // Fuseau par tournoi : l'horaire du libellé doit être celui que les joueuses
+  // ont en tête, pas l'UTC du serveur.
+  const tournamentTz = new Map<string, string>();
+
+  const { data: tournamentRows } = await supabaseAdmin
+    .from('tournaments')
+    .select('id, status, timezone')
+    .eq('tenant_id', req.botContext.tenantId);
+
+  for (const t of tournamentRows ?? []) {
+    const id = t.id as string;
+    tournamentTz.set(id, resolveTournamentTz(t.timezone as string | null));
+    // Un tournoi explicitement demandé n'est jamais écarté : quand quelqu'un
+    // désigne un tournoi, on lui rend ce qu'il a demandé.
+    if (
+      !tournamentId &&
+      ['completed', 'archived', 'cancelled'].includes(String(t.status))
+    ) {
+      closedTournamentIds.add(id);
+    }
   }
 
   let query = supabaseAdmin
@@ -187,7 +228,10 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     const round =
       (m as any).round_name ??
       ((m as any).round_number != null ? `R${(m as any).round_number}` : null);
-    const sched = formatScheduled((m as any).scheduled_at);
+    const tid = (m as { tournament_id?: string | null }).tournament_id;
+    // Un scrim n'appartient à aucun tournoi : fuseau par défaut.
+    const tz = (tid && tournamentTz.get(tid)) || DEFAULT_TOURNAMENT_TZ;
+    const sched = formatScheduled((m as any).scheduled_at, tz);
     const teams = `${t1?.name ?? '?'} vs ${t2?.name ?? '?'}`;
     const isScrim = !!(m as any).scrim_id;
     const tail = [isScrim ? 'Scrim' : null, round, sched]
