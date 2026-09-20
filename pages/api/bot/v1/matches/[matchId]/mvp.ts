@@ -87,6 +87,9 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       poll: opened.poll,
       candidates: opened.candidates,
       votable: opened.candidates.length >= 2,
+      // Noms des équipes : le bot compose son message sans eux quand
+      // l'ouverture vient d'une commande staff et non de l'événement du match.
+      match: opened.match,
     });
   }
 

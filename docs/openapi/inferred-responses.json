@@ -60926,12 +60926,41 @@
        },
        "votable": {
         "type": "boolean"
+       },
+       "match": {
+        "type": "object",
+        "properties": {
+         "roundName": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "team1Name": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "team2Name": {
+          "type": [
+           "string",
+           "null"
+          ]
+         }
+        },
+        "required": [
+         "roundName",
+         "team1Name",
+         "team2Name"
+        ]
        }
       },
       "required": [
        "poll",
        "candidates",
-       "votable"
+       "votable",
+       "match"
       ]
      },
      {

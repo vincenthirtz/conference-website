@@ -86,6 +86,8 @@ post:
                   type: object
               votable:
                 type: boolean
+              match:
+                type: ['object', 'null']
               memberId:
                 anyOf:
                   - $ref: '#/components/schemas/Uuid'

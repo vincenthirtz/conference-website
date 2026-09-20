@@ -88,6 +88,10 @@ export async function listMvpCandidates(
     roundName: string | null;
     team1Id: string | null;
     team2Id: string | null;
+    /** Noms des deux équipes : le bot en a besoin pour son message quand
+     *  l'ouverture vient d'une commande et non de l'événement du match. */
+    team1Name: string | null;
+    team2Name: string | null;
   } | null;
   candidates: MvpCandidate[];
 }> {
@@ -112,6 +116,8 @@ export async function listMvpCandidates(
         roundName: match.round_name ?? null,
         team1Id: match.team1_id ?? null,
         team2Id: match.team2_id ?? null,
+        team1Name: null,
+        team2Name: null,
       },
       candidates: [],
     };
@@ -184,6 +190,8 @@ export async function listMvpCandidates(
       roundName: match.round_name ?? null,
       team1Id: match.team1_id ?? null,
       team2Id: match.team2_id ?? null,
+      team1Name: match.team1_id ? (teamName.get(match.team1_id) ?? null) : null,
+      team2Name: match.team2_id ? (teamName.get(match.team2_id) ?? null) : null,
     },
     candidates,
   };
@@ -221,9 +229,22 @@ export async function openMvpVote(
     messageId?: string | null;
     durationHours?: number;
   } = {}
-): Promise<{ poll: MvpPollRow; candidates: MvpCandidate[] } | null> {
+): Promise<{
+  poll: MvpPollRow;
+  candidates: MvpCandidate[];
+  match: {
+    roundName: string | null;
+    team1Name: string | null;
+    team2Name: string | null;
+  };
+} | null> {
   const { match, candidates } = await listMvpCandidates(tenantId, matchId);
   if (!match) return null;
+  const matchInfo = {
+    roundName: match.roundName,
+    team1Name: match.team1Name,
+    team2Name: match.team2Name,
+  };
 
   const existing = await readMvpPoll(tenantId, matchId);
   const hours = Math.max(
@@ -247,7 +268,11 @@ export async function openMvpVote(
       .eq('id', existing.id)
       .select('*')
       .maybeSingle();
-    return { poll: (data as MvpPollRow) ?? existing, candidates };
+    return {
+      poll: (data as MvpPollRow) ?? existing,
+      candidates,
+      match: matchInfo,
+    };
   }
 
   const closesAt = new Date(now.getTime() + hours * 3600_000).toISOString();
@@ -273,7 +298,7 @@ export async function openMvpVote(
       logger.error('[mvp] openMvpVote update error:', error);
       return null;
     }
-    return { poll: data as MvpPollRow, candidates };
+    return { poll: data as MvpPollRow, candidates, match: matchInfo };
   }
 
   const { data, error } = await supabaseAdmin
@@ -285,7 +310,7 @@ export async function openMvpVote(
     logger.error('[mvp] openMvpVote insert error:', error);
     return null;
   }
-  return { poll: data as MvpPollRow, candidates };
+  return { poll: data as MvpPollRow, candidates, match: matchInfo };
 }
 
 export type CastVoteResult =
