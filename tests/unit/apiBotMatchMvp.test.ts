@@ -75,8 +75,21 @@ async function call(
   return res;
 }
 
-const open = (matchId = MATCH) =>
-  call(matchId, { method: 'POST', body: { action: 'open' } });
+// Le corps EXACT que le bot envoie : `channelId`/`messageId` explicitement à
+// null au premier appel — le message n'existe pas encore. Un test qui
+// n'envoyait que `{ action: 'open' }` a laissé passer un contrat qui refusait
+// ce null, et aucun vote ne pouvait s'ouvrir en production.
+const open = (matchId = MATCH, over: Record<string, unknown> = {}) =>
+  call(matchId, {
+    method: 'POST',
+    body: {
+      action: 'open',
+      channelId: '1543901793690591262',
+      messageId: null,
+      durationHours: undefined,
+      ...over,
+    },
+  });
 
 const vote = (discordUserId: string, memberId: string, matchId = MATCH) =>
   call(matchId, {
@@ -282,6 +295,22 @@ describe('/api/bot/v1/matches/[matchId]/mvp', () => {
     ]);
     expect((res.body as any).poll.posted_at).toBeTruthy();
     expect((res.body as any).poll.closes_at).toBeTruthy();
+  });
+
+  it("accepte un ancrage null : le message n'existe pas encore", async () => {
+    // Régression : `.optional()` rejetait `null` (« expected string, received
+    // null ») et rendait 400 sur TOUTE ouverture, à la main comme à la fin
+    // d'un match. Absent et « connu comme vide » sont deux choses.
+    const res = await open(MATCH, { messageId: null, channelId: null });
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).poll.posted_at).toBeTruthy();
+  });
+
+  it('ancre le message au second appel', async () => {
+    await open();
+    const res = await open(MATCH, { messageId: '999' });
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).poll.discord_message_id).toBe('999');
   });
 
   it('refuse une voix tant que le vote n’est pas ouvert', async () => {

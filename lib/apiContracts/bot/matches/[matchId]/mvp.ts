@@ -11,15 +11,22 @@ import {
 // Un seul objet plutôt qu'une union discriminée : les champs conditionnels sont
 // vérifiés dans le handler, qui rend un message par action. Une union produirait
 // ici un `anyOf` illisible dans la spec pour trois formes très proches.
+// `.nullish()` et non `.optional()` : le bot envoie explicitement `null` pour
+// ce qu'il n'a pas encore. À la PREMIÈRE ouverture, `messageId` VAUT null — le
+// message n'est posté qu'ensuite, et c'est un second appel qui l'ancre. Avec
+// `.optional()`, zod refusait ce null (« expected string, received null ») et
+// rendait 400 : aucun vote ne pouvait s'ouvrir, ni à la main ni à la fin d'un
+// match. Absent et « connu comme vide » sont deux choses, et l'API doit
+// accepter les deux.
 export const mvpBodySchema = z.object({
   action: z.enum(['open', 'vote', 'close']),
   /** Votante (action `vote`) — son identifiant Discord tient l'unicité. */
-  discordUserId: discordIdSchema.optional(),
+  discordUserId: discordIdSchema.nullish(),
   /** Joueuse choisie (action `vote`). */
-  memberId: uuidSchema.optional(),
+  memberId: uuidSchema.nullish(),
   /** Ancrage du message posté par le bot (action `open`). */
-  channelId: z.string().min(1).max(64).optional(),
-  messageId: z.string().min(1).max(64).optional(),
-  /** Fenêtre de vote en heures (action `open`), 24 par défaut. */
-  durationHours: z.number().int().min(1).max(168).optional(),
+  channelId: z.string().min(1).max(64).nullish(),
+  messageId: z.string().min(1).max(64).nullish(),
+  /** Fenêtre de vote en heures (action `open`), 48 par défaut. */
+  durationHours: z.number().int().min(1).max(168).nullish(),
 });

@@ -85,7 +85,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     const opened = await openMvpVote(tenantId, matchId, {
       channelId: body.channelId ?? null,
       messageId: body.messageId ?? null,
-      durationHours: body.durationHours,
+      durationHours: body.durationHours ?? undefined,
     });
     if (!opened) {
       return res.status(500).json({ error: "Échec de l'ouverture du vote" });
