@@ -226,6 +226,13 @@ export default function TcgSetsPanel({
           : t.introNoReward}
       </p>
       <p className="mt-1 max-w-prose text-xs text-gray-500">{t.privacyNote}</p>
+      {/* LA RÈGLE DES ÉCHANGES SE DIT ICI AUSSI. Une carte reçue par échange
+          ne compte pas pour une série (`readOwnedCardRows(…, {
+          excludeTradedIn: true })`). La règle était écrite sur la page des
+          échanges — c'est-à-dire à l'endroit où l'on ne cherche PAS à savoir
+          pourquoi une série ne progresse pas. Sans elle ici, une joueuse voit
+          sa série bloquée après un échange et ne peut que conclure à un bogue. */}
+      <p className="mt-1 max-w-prose text-xs text-gray-500">{t.tradeNote}</p>
 
       {/* Région d'annonce, montée VIDE en permanence. */}
       <p role="status" aria-live="polite" className="sr-only">

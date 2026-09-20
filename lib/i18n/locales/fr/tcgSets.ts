@@ -20,6 +20,8 @@ export default ns('tcgSets', {
     'Des ensembles de cartes à compléter : toutes les maps d’un mode, les équipes d’une édition, le roster d’une équipe.',
   privacyNote:
     'Pour les joueuses, on indique combien de cartes il te manque, jamais lesquelles.',
+  tradeNote:
+    'Une carte reçue par échange ne compte pas pour une série : sinon deux comptes pourraient s’échanger les mêmes cartes en boucle pour encaisser la récompense.',
   loading: 'Chargement des séries…',
   error: 'Impossible de charger tes séries pour le moment.',
   retry: 'Réessayer',

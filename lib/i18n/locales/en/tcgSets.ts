@@ -11,6 +11,8 @@ export default {
     'Groups of cards to complete: every map of a mode, the teams of an edition, a team’s roster.',
   privacyNote:
     'For players, we tell you how many cards you are missing, never which ones.',
+  tradeNote:
+    'A card received in a trade does not count towards a set: otherwise two accounts could swap the same cards back and forth to farm the reward.',
   loading: 'Loading sets…',
   error: 'Your sets cannot be loaded right now.',
   retry: 'Try again',
