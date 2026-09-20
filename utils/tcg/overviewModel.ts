@@ -32,6 +32,7 @@
 // que `TcgCard` a déjà payé sur chaque carte d'équipe.
 
 import { RARITY_ORDER } from '@/utils/tcg/rarity';
+import type { TcgCardKind } from './subjectKey';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 
 /* ---------------------------------------------------------------------------
@@ -96,7 +97,7 @@ export type TcgOverviewPhotos = {
 };
 
 export type TcgOverviewSubject = {
-  kind: 'player' | 'team' | 'map' | 'fanart' | 'mascot';
+  kind: TcgCardKind;
   /** Identifiant du sujet, `null` si la réponse n'en portait pas. */
   id: string | null;
   name: string | null;

@@ -37,9 +37,17 @@ import {
   gameMascotDisplayName,
   gameMascotUrl,
 } from './gameMascots';
-import { cardSubjectKey } from './subjectKey';
+import { cardSubjectKey, type TcgCardKind } from './subjectKey';
 
-export type CatalogueKind = 'player' | 'team' | 'map' | 'fanart' | 'mascot';
+/**
+ * Les types de carte du catalogue — c'est-à-dire TOUS.
+ *
+ * Alias, et pas une union écrite à la main : cette liste en était une, et elle
+ * a passé des semaines à quatre éléments pendant que le tirage en distribuait
+ * cinq. Un type absent ici ne provoquait aucune erreur, il retirait simplement
+ * ses cartes du catalogue.
+ */
+export type CatalogueKind = TcgCardKind;
 
 export type CatalogueCard = {
   /** `<type>:<identifiant>` — la même clé que partout ailleurs. */

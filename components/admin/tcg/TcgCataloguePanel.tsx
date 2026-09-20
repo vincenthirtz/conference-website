@@ -26,10 +26,14 @@ import TcgPlayerPicker, {
   type PickedUser,
 } from '@/components/admin/tcg/TcgPlayerPicker';
 import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
+import type { TcgCardKind } from '@/utils/tcg/subjectKey';
 import nsAdminTcgPage from '@/lib/i18n/locales/admin-fr/adminTcgPage';
 import nsAdminTcgGrant from '@/lib/i18n/locales/admin-fr/adminTcgGrant';
 
-type CatalogueKind = 'player' | 'team' | 'map' | 'fanart' | 'mascot';
+// Importé, jamais recopié : ce type a vécu ici en double de celui du serveur,
+// et c'est cette copie qui ignorait les mascottes. `subjectKey.ts` est pur
+// (aucune lecture, aucun import serveur), donc sans effet sur le bundle client.
+type CatalogueKind = TcgCardKind;
 
 type CatalogueCard = {
   key: string;

@@ -39,7 +39,7 @@ import {
   type OwnedCardRow,
   type ReadResult,
 } from './readOwnedCards';
-import { cardSubjectKey } from './subjectKey';
+import { cardSubjectKey, type TcgCardKind } from './subjectKey';
 import { RARITY_ORDER, type TcgRarity } from './rarity';
 import {
   TRADE_MIN_ACCOUNT_AGE_DAYS,
@@ -249,7 +249,7 @@ export async function readOwnedCopies(
 }
 
 export type CopySummary = {
-  kind: 'player' | 'team' | 'map' | 'fanart' | 'mascot';
+  kind: TcgCardKind;
   key: string;
   subjectId: string;
   copies: number;
@@ -358,7 +358,7 @@ export type TradeCardView =
  * n'apparaissait simplement pas dans ce qu'on peut offrir.
  */
 export type SubjectRef = {
-  kind: 'player' | 'team' | 'map' | 'fanart' | 'mascot';
+  kind: TcgCardKind;
   id: string;
 };
 
@@ -672,7 +672,7 @@ export type TradeItemRow = {
   trade_id: string;
   side: 'offered' | 'requested';
   ordinal: number;
-  subject_kind: 'player' | 'team' | 'map' | 'fanart' | 'mascot';
+  subject_kind: TcgCardKind;
   card_user_id: string | null;
   card_team_id: string | null;
   card_map_slug: string | null;

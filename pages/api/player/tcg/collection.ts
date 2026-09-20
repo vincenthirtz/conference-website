@@ -40,7 +40,7 @@ import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
 import { POOL_LIMIT } from '@/utils/tcg/drawPack';
 import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
 import { readMapFaces, MAP_POOL_SLUGS } from '@/utils/tcg/readMapFaces';
-import { cardSubjectKey } from '@/utils/tcg/subjectKey';
+import { cardSubjectKey, type TcgCardKind } from '@/utils/tcg/subjectKey';
 import { readOwnedCardRows } from '@/utils/tcg/readOwnedCards';
 import { readDrawPool } from '@/utils/tcg/readDrawPool';
 import { GAME_MASCOT_SLUGS } from '@/utils/tcg/gameMascots';
@@ -62,7 +62,7 @@ import { logger } from '@/utils/logger';
 const DEFAULT_PAGE_SIZE = 40;
 
 type Aggregated = {
-  kind: 'player' | 'team' | 'map' | 'fanart' | 'mascot';
+  kind: TcgCardKind;
   /** `<kind>:<id>` — second critère de l'ordre total, et contenu du curseur. */
   key: string;
   subjectId: string;

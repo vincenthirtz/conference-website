@@ -25,6 +25,7 @@
 // l'affaire de `readCardFaces.ts`, seul porteur du filtre de consentement.
 
 import { supabaseAdmin } from '@/utils/supabase';
+import type { TcgCardKind } from './subjectKey';
 import type { TcgRarity } from './rarity';
 
 /** Taille d'une page de lecture : le plafond PostgREST. */
@@ -37,7 +38,7 @@ export const MAX_SCAN_PACKS = 10_000;
 export type OwnedCardRow = {
   pack_id: string;
   position: number;
-  subject_kind: 'player' | 'team' | 'map' | 'fanart' | 'mascot';
+  subject_kind: TcgCardKind;
   card_user_id: string | null;
   card_team_id: string | null;
   card_map_slug: string | null;
@@ -200,7 +201,7 @@ export async function readOwnedSubjectKeys(
   // Une requête PAR type de sujet plutôt qu'un `.or(in.(…))` : trois filtres
   // simples et indexables, et aucune valeur interpolée dans une expression.
   const lookups: Array<{
-    kind: 'player' | 'team' | 'map' | 'fanart' | 'mascot';
+    kind: TcgCardKind;
     column:
       | 'card_user_id'
       | 'card_team_id'

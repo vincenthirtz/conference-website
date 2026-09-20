@@ -77,7 +77,7 @@ import {
   type GameMascotSlug,
 } from '@/utils/tcg/gameMascots';
 import { readMapFaces } from '@/utils/tcg/readMapFaces';
-import { cardSubjectKey } from '@/utils/tcg/subjectKey';
+import { cardSubjectKey, type TcgCardKind } from '@/utils/tcg/subjectKey';
 import { logger } from '@/utils/logger';
 import { querySchema } from '@/lib/apiContracts/admin/tcg/overview.query';
 
@@ -523,7 +523,7 @@ async function handler(
   const bySubject = new Map<
     string,
     {
-      kind: 'player' | 'team' | 'map' | 'fanart' | 'mascot';
+      kind: TcgCardKind;
       subjectId: string;
       count: number;
       foilCount: number;
@@ -551,7 +551,7 @@ async function handler(
       for (const rarity of RARITY_ORDER) rarityCounts[rarity] = null;
     } else {
       const cardRows = (data ?? []) as Array<{
-        subject_kind: 'player' | 'team' | 'map' | 'fanart' | 'mascot';
+        subject_kind: TcgCardKind;
         card_user_id: string | null;
         card_team_id: string | null;
         card_map_slug: string | null;

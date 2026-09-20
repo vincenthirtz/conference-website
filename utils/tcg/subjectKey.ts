@@ -22,6 +22,44 @@
 //
 // PUR, SANS ENTRÉE-SORTIE. Il ne lit rien : il interprète une ligne déjà lue.
 
+/**
+ * LES TYPES DE CARTE, une fois pour tout le dépôt.
+ *
+ * Cette liste n'existait pas : chaque lecteur réécrivait sa propre union
+ * `'player' | 'team' | 'map'`, et le 2026-09-20 il a fallu en corriger dix,
+ * une par une, parce que les mascottes n'y figuraient dans aucune. Rien
+ * n'échouait — les cartes disparaissaient simplement, ou tombaient dans le
+ * `return` final d'un lecteur et ressortaient déguisées en équipe.
+ *
+ * L'ORDRE EST CELUI DU TIRAGE : les trois sujets du site d'abord, puis les
+ * deux qui se partagent l'emplacement de décor.
+ */
+export const TCG_CARD_KINDS = [
+  'player',
+  'team',
+  'map',
+  'fanart',
+  'mascot',
+] as const;
+
+export type TcgCardKind = (typeof TCG_CARD_KINDS)[number];
+
+/**
+ * La colonne qui porte le sujet, par type.
+ *
+ * C'EST LA PIÈCE QUI REND L'OUBLI IMPOSSIBLE. Le `Record` est exhaustif sur
+ * `TcgCardKind` : ajouter un type sans dire quelle colonne le porte ne compile
+ * plus. Avant, on ajoutait une branche à un `switch` — et en oublier une ne
+ * coûtait qu'un `null` silencieux.
+ */
+export const CARD_SUBJECT_COLUMN = {
+  player: 'card_user_id',
+  team: 'card_team_id',
+  map: 'card_map_slug',
+  fanart: 'card_fanart_id',
+  mascot: 'card_mascot_slug',
+} as const satisfies Record<TcgCardKind, keyof CardSubjectRow>;
+
 /** La part « sujet » d'une ligne de `tcg_pack_cards`. */
 export type CardSubjectRow = {
   subject_kind: string;
@@ -31,6 +69,11 @@ export type CardSubjectRow = {
   card_fanart_id?: string | null;
   card_mascot_slug?: string | null;
 };
+
+/** `true` si ce `subject_kind` est un type que le code connaît. */
+export function isTcgCardKind(value: string): value is TcgCardKind {
+  return (TCG_CARD_KINDS as readonly string[]).includes(value);
+}
 
 /**
  * L'identifiant du sujet, quel que soit son type — ou `null`.
@@ -43,20 +86,11 @@ export type CardSubjectRow = {
  * ici, ce serait inventer un sujet.
  */
 export function cardSubjectId(row: CardSubjectRow): string | null {
-  switch (row.subject_kind) {
-    case 'player':
-      return row.card_user_id ?? null;
-    case 'team':
-      return row.card_team_id ?? null;
-    case 'map':
-      return row.card_map_slug ?? null;
-    case 'fanart':
-      return row.card_fanart_id ?? null;
-    case 'mascot':
-      return row.card_mascot_slug ?? null;
-    default:
-      return null;
-  }
+  // Plus de `switch` : la correspondance est une donnée (`CARD_SUBJECT_COLUMN`),
+  // exhaustive par le type. Une branche oubliée ne rendait qu'un `null` de
+  // plus, que chaque appelant traduisait en « carte sautée, en silence ».
+  if (!isTcgCardKind(row.subject_kind)) return null;
+  return row[CARD_SUBJECT_COLUMN[row.subject_kind]] ?? null;
 }
 
 /**

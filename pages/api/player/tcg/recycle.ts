@@ -41,7 +41,7 @@ import { withAuthRoute } from '@/utils/staff';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import { RECYCLE_REFUND_COINS } from '@/utils/tcg/economy';
 import { refreshBalance } from '@/utils/tcg/grantVictoryRewards';
-import { cardSubjectKey } from '@/utils/tcg/subjectKey';
+import { cardSubjectKey, type TcgCardKind } from '@/utils/tcg/subjectKey';
 import {
   readCardsOfPacks,
   readOpenedPackIds,
@@ -54,7 +54,7 @@ type CardRow = {
   // Les CINQ types de sujet. Le recyclage ne distingue pas les natures — il
   // compte des doublons — mais un type trop étroit faisait SAUTER les cartes
   // de fan art et de mascotte, donc interdisait de les recycler.
-  subject_kind: 'player' | 'team' | 'map' | 'fanart' | 'mascot';
+  subject_kind: TcgCardKind;
   card_user_id: string | null;
   card_team_id: string | null;
   card_map_slug: string | null;
