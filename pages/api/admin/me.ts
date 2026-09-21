@@ -17,6 +17,52 @@ const patchProfileSchema = z.object({
 });
 
 import { logger } from '../../../utils/logger';
+
+/**
+ * La fiche staff telle que ce fichier la lit.
+ *
+ * `avatar_url` EST OPTIONNEL, et c'est le cœur du fichier : la colonne peut ne
+ * pas exister en base (déploiement antérieur à sa migration), auquel cas le
+ * `select` la retire et la route repose la valeur à `null`. Une forme où elle
+ * serait obligatoire aurait forcé un cast à chaque branche — c'est exactement
+ * ce que faisaient les quatre `as any` d'avant.
+ */
+type StaffMeRow = {
+  id: string;
+  auth_user_id: string;
+  email: string | null;
+  display_name: string | null;
+  avatar_url?: string | null;
+  role: string;
+  created_at: string;
+  extra_permissions: string[] | null;
+};
+
+/**
+ * Le code d'erreur PostgREST, s'il y en a un.
+ *
+ * POURQUOI UNE FONCTION PLUTÔT QU'UN CAST. Ce fichier interrogeait
+ * `(error as any).code` à quatre endroits pour détecter la MÊME chose : une
+ * colonne `avatar_url` absente du schéma (`42703` côté Postgres, `PGRST204`
+ * côté cache PostgREST). Le cast éteignait le compilateur sur tout l'objet
+ * d'erreur ; une faute de frappe sur `code` aurait rendu `undefined`, le repli
+ * ne se serait jamais déclenché, et la route aurait répondu 500 au lieu de
+ * réessayer sans la colonne.
+ */
+function errorCode(error: unknown): string | null {
+  if (!error || typeof error !== 'object') return null;
+  const code = (error as { code?: unknown }).code;
+  return typeof code === 'string' ? code : null;
+}
+
+/** Les deux codes qui signalent « cette colonne n'existe pas ». */
+const MISSING_COLUMN_CODES = new Set(['42703', 'PGRST204']);
+
+function isMissingColumn(error: unknown): boolean {
+  const code = errorCode(error);
+  return code !== null && MISSING_COLUMN_CODES.has(code);
+}
+
 type MeResponse =
   | {
       id: string;
@@ -100,17 +146,20 @@ export default withAuthRoute(async function handler(
         .select(withAvatar ? selectWithAvatar : selectWithoutAvatar)
         .maybeSingle();
 
-    let { data: updated, error: updateError } = await doUpdate(true);
+    // ⚠️ CONVERSION PAR `unknown`, ET CE N'EST PAS DE LA PARESSE. Le `select`
+    // est construit par un ternaire entre deux chaînes : supabase-js ne peut
+    // donc pas l'analyser (son parseur rend un `ParserError`), et le type de
+    // retour de cette requête était déjà inexploitable AVANT — le `as any` le
+    // masquait. On déclare la forme réelle ici, au point d'entrée, plutôt que
+    // de la recaster à chaque usage.
+    const firstUpdate = await doUpdate(true);
+    let updated = firstUpdate.data as unknown as StaffMeRow | null;
+    let updateError = firstUpdate.error;
 
     // Si la colonne avatar_url n'existe pas (code 42703), on réessaie sans
-    if (
-      updateError &&
-      typeof updateError === 'object' &&
-      ((updateError as any).code === '42703' ||
-        (updateError as any).code === 'PGRST204')
-    ) {
+    if (isMissingColumn(updateError)) {
       const retry = await doUpdate(false);
-      updated = retry.data as any;
+      updated = retry.data as unknown as StaffMeRow | null;
       updateError = retry.error;
     }
 
@@ -125,7 +174,7 @@ export default withAuthRoute(async function handler(
 
     // Forcer avatar_url à null si absent du select
     if (!('avatar_url' in updated)) {
-      (updated as any).avatar_url = null;
+      updated.avatar_url = null;
     }
 
     return res.status(200).json(updated as unknown as MeResponse);
@@ -135,17 +184,20 @@ export default withAuthRoute(async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  let { data: staff, error: staffError } = await fetchStaff(true);
+  // ⚠️ CONVERSION PAR `unknown`, ET CE N'EST PAS DE LA PARESSE. Le `select`
+  // est construit par un ternaire entre deux chaînes : supabase-js ne peut
+  // donc pas l'analyser (son parseur rend un `ParserError`), et le type de
+  // retour de cette requête était déjà inexploitable AVANT — le `as any` le
+  // masquait. On déclare la forme réelle ici, au point d'entrée, plutôt que
+  // de la recaster à chaque usage.
+  const firstFetch = await fetchStaff(true);
+  let staff = firstFetch.data as unknown as StaffMeRow | null;
+  let staffError = firstFetch.error;
 
-  if (
-    staffError &&
-    typeof staffError === 'object' &&
-    ((staffError as any).code === '42703' ||
-      (staffError as any).code === 'PGRST204')
-  ) {
+  if (isMissingColumn(staffError)) {
     // Colonne avatar_url manquante → refetch sans
     const retry = await fetchStaff(false);
-    staff = retry.data as any;
+    staff = retry.data as unknown as StaffMeRow | null;
     staffError = retry.error;
   }
 
@@ -176,7 +228,7 @@ export default withAuthRoute(async function handler(
   }
 
   if (!('avatar_url' in staff)) {
-    (staff as any).avatar_url = null;
+    staff.avatar_url = null;
   }
 
   // Résolution du tenant actif → nature (organizer/developer) pour permettre

@@ -117,15 +117,94 @@ type SourceDescriptor = {
   // true si la table porte une colonne tenant_id (filtrage multi-tenant requis).
   // partners / adherents / staff = global → false.
   tenantScoped: boolean;
-  buildCountQuery: (ctx: AuthenticatedStaffContext) => any;
+  buildCountQuery: (ctx: AuthenticatedStaffContext) => PromiseLike<CountResult>;
   fetchSlice: (
     ctx: AuthenticatedStaffContext,
     limit: number
   ) => Promise<DeletedItem[]>;
 };
 
+/**
+ * LES LIGNES DE LA CORBEILLE, une forme par source.
+ *
+ * Chacune recopie le `.select()` de sa source. Elles étaient toutes lues en
+ * `(x: any)` dans un `.map()` : le compilateur ne voyait donc rien, et une
+ * colonne mal nommée serait devenue un `undefined` affiché comme « sans nom »
+ * ou comme une date vide — sans erreur, sur un écran dont le rôle est
+ * justement de RETROUVER ce qu'on a supprimé.
+ *
+ * LA NULLABILITÉ SUIT LA BASE, vérifiée dans `information_schema` et non
+ * supposée. Déclarer nullable « par prudence » ce qui est NOT NULL rendrait
+ * nécessaires des replis (« Phase sans nom ») que rien ne déclencherait — et
+ * un repli mort se lit comme un cas réel.
+ */
+type DeletedStageRow = {
+  id: string;
+  name: string;
+  stage_type: string;
+  tournament_id: string | null;
+  deleted_at: string;
+};
+type DeletedTeamRow = {
+  id: string;
+  name: string;
+  short_name: string | null;
+  deleted_at: string;
+};
+type DeletedMatchRow = {
+  id: string;
+  team1_id: string | null;
+  team2_id: string | null;
+  round_number: number | null;
+  tournament_id: string | null;
+  deleted_at: string;
+};
+type DeletedPartnerRow = {
+  id: string;
+  name: string;
+  category: string;
+  deleted_at: string;
+};
+type DeletedCastMemberRow = {
+  id: string;
+  name: string;
+  title: string | null;
+  deleted_at: string;
+};
+type DeletedAdherentRow = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  deleted_at: string;
+};
+type DeletedStaffRow = {
+  id: string;
+  display_name: string | null;
+  email: string;
+  role: string;
+  deleted_at: string;
+};
+type DeletedScrimRow = {
+  id: string;
+  name: string;
+  slug: string | null;
+  status: string;
+  deleted_at: string;
+};
+
+/** Ce que rend un `select(..., { count: 'exact', head: true })`. */
+type CountResult = { count: number | null; error: unknown };
+
 // Filtre commun "soft-deleted" : deleted_at NOT NULL.
-function notDeleted(query: any) {
+/**
+ * GÉNÉRIQUE SUR LE CONSTRUCTEUR, pas `any` : le type de la requête traverse le
+ * filtre, donc `.order()` et `.range()` restent vérifiés en aval. Avec `any`,
+ * tout ce qui suivait cet appel échappait au compilateur.
+ */
+function notDeleted<T extends { not: (c: string, op: string, v: null) => T }>(
+  query: T
+): T {
   return query.not('deleted_at', 'is', null);
 }
 
@@ -149,7 +228,7 @@ const SOURCES: Record<DeletedType, SourceDescriptor> = {
         .order('deleted_at', { ascending: false })
         .range(0, limit - 1);
 
-      return (data || []).map((s: any) => ({
+      return ((data || []) as DeletedStageRow[]).map((s) => ({
         id: s.id,
         type: 'stage' as const,
         name: s.name || 'Phase sans nom',
@@ -179,7 +258,7 @@ const SOURCES: Record<DeletedType, SourceDescriptor> = {
         .order('deleted_at', { ascending: false })
         .range(0, limit - 1);
 
-      return (data || []).map((t: any) => ({
+      return ((data || []) as DeletedTeamRow[]).map((t) => ({
         id: t.id,
         type: 'team' as const,
         name: t.name || 'Equipe sans nom',
@@ -233,7 +312,7 @@ const SOURCES: Record<DeletedType, SourceDescriptor> = {
         }
       }
 
-      return rows.map((m: any) => {
+      return (rows as DeletedMatchRow[]).map((m) => {
         const t1 = m.team1_id ? teamNameMap.get(m.team1_id) || 'TBD' : 'TBD';
         const t2 = m.team2_id ? teamNameMap.get(m.team2_id) || 'TBD' : 'TBD';
         return {
@@ -264,7 +343,7 @@ const SOURCES: Record<DeletedType, SourceDescriptor> = {
         .order('deleted_at', { ascending: false })
         .range(0, limit - 1);
 
-      return (data || []).map((p: any) => ({
+      return ((data || []) as DeletedPartnerRow[]).map((p) => ({
         id: p.id,
         type: 'partner' as const,
         name: p.name || 'Partenaire sans nom',
@@ -295,7 +374,7 @@ const SOURCES: Record<DeletedType, SourceDescriptor> = {
         .order('deleted_at', { ascending: false })
         .range(0, limit - 1);
 
-      return (data || []).map((c: any) => ({
+      return ((data || []) as DeletedCastMemberRow[]).map((c) => ({
         id: c.id,
         type: 'cast_member' as const,
         name: c.name || 'Membre sans nom',
@@ -324,7 +403,7 @@ const SOURCES: Record<DeletedType, SourceDescriptor> = {
         .order('deleted_at', { ascending: false })
         .range(0, limit - 1);
 
-      return (data || []).map((a: any) => {
+      return ((data || []) as DeletedAdherentRow[]).map((a) => {
         const fullName = [a.first_name, a.last_name].filter(Boolean).join(' ');
         return {
           id: a.id,
@@ -355,7 +434,7 @@ const SOURCES: Record<DeletedType, SourceDescriptor> = {
         .order('deleted_at', { ascending: false })
         .range(0, limit - 1);
 
-      return (data || []).map((s: any) => ({
+      return ((data || []) as DeletedStaffRow[]).map((s) => ({
         id: s.id,
         type: 'staff' as const,
         name: s.display_name || s.email || 'Staff sans nom',
@@ -385,11 +464,13 @@ const SOURCES: Record<DeletedType, SourceDescriptor> = {
         .order('deleted_at', { ascending: false })
         .range(0, limit - 1);
 
-      return (data || []).map((s: any) => ({
+      return ((data || []) as DeletedScrimRow[]).map((s) => ({
         id: s.id,
         type: 'scrim' as const,
         name: s.name,
-        details: `${s.status} · ${s.slug}`,
+        // `slug` est nullable : sans ce repli, l'écran affichait le mot
+        // « null » à côté du statut.
+        details: s.slug ? `${s.status} · ${s.slug}` : s.status,
         deleted_at: s.deleted_at,
         tournament_id: null,
       }));
@@ -446,7 +527,7 @@ async function handleGet(
     const boundedSlice = offset + limit; // au plus ce qu'il faut pour la page
 
     const countPromises = ALL_TYPES.map((t) =>
-      SOURCES[t].buildCountQuery(ctx).then((r: any) => {
+      Promise.resolve(SOURCES[t].buildCountQuery(ctx)).then((r) => {
         if (r.error) throw r.error;
         return typeof r.count === 'number' ? r.count : 0;
       })

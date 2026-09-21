@@ -27,6 +27,25 @@ import { parsePagination } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../utils/logger';
 
+/** Les deux lectures d'appoint, déclarées une fois — elles recopient les `.select()`. */
+type ScheduleRow = {
+  campaign_id: string;
+  /** NOT NULL en base, vérifié dans `information_schema`. */
+  wave_size: number;
+  /**
+   * La colonne est un `text` libre en base ; l'écran n'en connaît que trois
+   * valeurs. On les déclare ici, et une quatrième arrivant un jour par
+   * migration deviendra une erreur de compilation plutôt qu'un affichage muet.
+   */
+  status: 'scheduled' | 'paused' | 'completed';
+  last_wave_at: string | null;
+  total_recipients: number;
+};
+type RecipientStatusRow = {
+  campaign_id: string;
+  status: 'pending' | 'sent' | 'failed';
+};
+
 type CampaignStats = {
   totalSent: number;
   totalFailed: number;
@@ -169,12 +188,12 @@ async function handler(
     return res.status(500).json({ error: 'Echec du chargement des plannings' });
   }
 
-  for (const row of schedules ?? []) {
-    scheduleByCampaign.set((row as any).campaign_id, {
-      waveSize: (row as any).wave_size,
-      status: (row as any).status,
-      lastWaveAt: (row as any).last_wave_at ?? null,
-      totalRecipients: (row as any).total_recipients ?? 0,
+  for (const row of (schedules ?? []) as ScheduleRow[]) {
+    scheduleByCampaign.set(row.campaign_id, {
+      waveSize: row.wave_size,
+      status: row.status,
+      lastWaveAt: row.last_wave_at ?? null,
+      totalRecipients: row.total_recipients ?? 0,
     });
   }
 
@@ -196,9 +215,9 @@ async function handler(
       .json({ error: 'Echec du chargement des destinataires' });
   }
 
-  for (const row of recipients ?? []) {
-    const cid = (row as any).campaign_id as string;
-    const s = (row as any).status as 'pending' | 'sent' | 'failed';
+  for (const row of (recipients ?? []) as RecipientStatusRow[]) {
+    const cid = row.campaign_id;
+    const s = row.status;
     const cur = recipientCounts.get(cid) ?? {
       pending: 0,
       sent: 0,

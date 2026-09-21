@@ -7,6 +7,19 @@ import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../utils/logger';
+
+/** Les deux lectures, déclarées une fois — elles recopient les `.select()`. */
+type SwissMatchRow = {
+  id: string;
+  round_number: number | null;
+  status: string;
+  is_bye: boolean | null;
+  team1_id: string | null;
+  team2_id: string | null;
+  winner_team_id: string | null;
+};
+type StageTeamRow = { team_id: string };
+
 export default withStaffRoute(handler, 'caster');
 
 async function handler(
@@ -69,7 +82,7 @@ async function handler(
 
     // Current round
     const currentRound = allMatches.reduce(
-      (acc: number, m: any) => Math.max(acc, m.round_number ?? 0),
+      (acc: number, m: SwissMatchRow) => Math.max(acc, m.round_number ?? 0),
       0
     );
 
@@ -89,17 +102,17 @@ async function handler(
 
     // Round status for current round
     const currentRoundMatches = allMatches.filter(
-      (m: any) => m.round_number === currentRound
+      (m: SwissMatchRow) => m.round_number === currentRound
     );
 
     const finished = currentRoundMatches.filter(
-      (m: any) => m.status === 'finished'
+      (m: SwissMatchRow) => m.status === 'finished'
     ).length;
     const pending = currentRoundMatches.filter(
-      (m: any) => m.status === 'pending'
+      (m: SwissMatchRow) => m.status === 'pending'
     ).length;
     const ongoing = currentRoundMatches.filter(
-      (m: any) => m.status === 'ongoing'
+      (m: SwissMatchRow) => m.status === 'ongoing'
     ).length;
 
     const allCurrentRoundFinished =
@@ -109,7 +122,7 @@ async function handler(
 
     // Compute W/L per team from finished matches for threshold tracking
     const finishedMatchList = allMatches.filter(
-      (m: any) => m.status === 'finished'
+      (m: SwissMatchRow) => m.status === 'finished'
     );
     const winsMap = new Map<string, number>();
     const lossesMap = new Map<string, number>();
@@ -137,7 +150,9 @@ async function handler(
       .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', id);
 
-    const allTeamIds = (stageTeams || []).map((st: any) => st.team_id);
+    const allTeamIds = ((stageTeams || []) as StageTeamRow[]).map(
+      (st) => st.team_id
+    );
 
     // Identify eliminated teams (with guard to keep >= 2 active)
     type EliminatedInfo = {

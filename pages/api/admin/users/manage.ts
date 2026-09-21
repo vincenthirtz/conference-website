@@ -1,3 +1,4 @@
+import { oneRelation } from '@/utils/supabase/relation';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import {
@@ -16,6 +17,45 @@ import { computeBattleTagMismatch } from '@/utils/auth/battleTagMismatch';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
 
 import { logger } from '../../../../utils/logger';
+
+/**
+ * LES MÉTADONNÉES DE COMPTE, telles que ce dépôt les y range.
+ *
+ * Ce projet n'a PAS de table `profiles` : le profil vit dans
+ * `auth.users.raw_user_meta_data`, que supabase-js expose en
+ * `user_metadata` — typé `{ [key: string]: any }` par la bibliothèque. Le
+ * `as any` ne faisait donc que reconduire ce flou, en y ajoutant le risque de
+ * faute de frappe (`display_nmae` compilait et valait `undefined`).
+ *
+ * Champs optionnels, parce qu'un compat ancien peut n'en porter aucun.
+ */
+type AccountMetadata = {
+  role?: string;
+  display_name?: string;
+};
+
+/** Les trois lectures d'enrichissement, déclarées une fois chacune. */
+type DiscordLinkRow = {
+  auth_user_id: string;
+  discord_user_id: string | null;
+  discord_username: string | null;
+};
+type BattlenetLinkRow = {
+  auth_user_id: string;
+  battle_tag: string | null;
+};
+type TeamMemberRow = {
+  // NOT NULL en base, vérifié dans `information_schema` : les déclarer
+  // nullables imposerait des replis que rien ne déclencherait.
+  user_id: string;
+  team_id: string;
+  role: string;
+  battle_tag: string | null;
+  battle_tag_verified_at: string | null;
+  verified_battle_net_id: string | null;
+  team: { id: string; name: string } | { id: string; name: string }[] | null;
+};
+
 type TeamMembership = {
   team_id: string;
   team_name: string;
@@ -96,7 +136,8 @@ async function loadTarget(userId: string): Promise<TargetAccount | null> {
     await supabaseAdmin.auth.admin.getUserById(userId);
   if (error || !target?.user) return null;
 
-  const metadataRole = (target.user.user_metadata as any)?.role ?? null;
+  const metadataRole =
+    (target.user.user_metadata as AccountMetadata)?.role ?? null;
   const { data: targetStaff } = await supabaseAdmin
     .from('staff')
     .select('role')
@@ -302,7 +343,7 @@ async function handler(
           .in('user_id', pageUserIds),
       ]);
 
-      (discordLinks ?? []).forEach((row: any) => {
+      ((discordLinks ?? []) as DiscordLinkRow[]).forEach((row) => {
         if (row?.auth_user_id && row?.discord_user_id) {
           discordByUser.set(row.auth_user_id, {
             discord_user_id: String(row.discord_user_id),
@@ -312,18 +353,21 @@ async function handler(
       });
 
       const linkedTagByUser = new Map<string, string>();
-      (bnetLinks ?? []).forEach((row: any) => {
+      ((bnetLinks ?? []) as BattlenetLinkRow[]).forEach((row) => {
         if (row?.auth_user_id && row?.battle_tag) {
           linkedTagByUser.set(row.auth_user_id, String(row.battle_tag));
         }
       });
 
       if (!tmErr && teamMembers) {
-        teamMembers.forEach((row: any) => {
-          if (row?.user_id && row?.team) {
+        (teamMembers as TeamMemberRow[]).forEach((row) => {
+          // PostgREST rend l'embed en objet OU en tableau selon la relation
+          // résolue (cf. `utils/supabase/relation.ts`).
+          const team = oneRelation(row.team);
+          if (row?.user_id && team) {
             const membership: TeamMembership = {
-              team_id: row.team.id,
-              team_name: row.team.name,
+              team_id: team.id,
+              team_name: team.name,
               role: row.role,
               battle_tag: row.battle_tag || null,
               battle_tag_verified_at: row.battle_tag_verified_at || null,
@@ -629,7 +673,9 @@ async function handler(
         .select('battle_tag')
         .eq('auth_user_id', userId)
         .limit(1);
-      const linkedTag = (bnetLink as any)?.[0]?.battle_tag ?? null;
+      const linkedTag =
+        ((bnetLink ?? []) as { battle_tag: string | null }[])[0]?.battle_tag ??
+        null;
 
       // Relecture plutôt que prédiction : le trigger a pu (re)poser
       // l'estampille, et une pastille qui ment jusqu'au prochain rafraîchissement
@@ -688,7 +734,7 @@ async function handler(
         });
       }
 
-      const existingMeta = (target.user.user_metadata as any) || {};
+      const existingMeta = (target.user.user_metadata as AccountMetadata) || {};
       const previousDisplayName = existingMeta.display_name ?? null;
       const nextDisplayName = req.body.display_name.trim() || null;
 
@@ -742,8 +788,9 @@ async function handler(
         user: {
           id: u.id,
           email: u.email ?? null,
-          role: (u.user_metadata as any)?.role ?? null,
-          display_name: (u.user_metadata as any)?.display_name ?? null,
+          role: (u.user_metadata as AccountMetadata)?.role ?? null,
+          display_name:
+            (u.user_metadata as AccountMetadata)?.display_name ?? null,
           created_at: u.created_at ?? null,
           last_sign_in_at:
             (u as { last_sign_in_at?: string | null }).last_sign_in_at ?? null,
@@ -859,7 +906,8 @@ async function handler(
         await supabaseAdmin.from('staff').insert({
           auth_user_id: userId,
           role,
-          display_name: (data.user.user_metadata as any)?.display_name || null,
+          display_name:
+            (data.user.user_metadata as AccountMetadata)?.display_name || null,
           email: data.user.email || null,
         });
       }
@@ -907,8 +955,8 @@ async function handler(
     const userLite: UserLite = {
       id: u.id,
       email: u.email ?? null,
-      role: (u.user_metadata as any)?.role ?? null,
-      display_name: (u.user_metadata as any)?.display_name ?? null,
+      role: (u.user_metadata as AccountMetadata)?.role ?? null,
+      display_name: (u.user_metadata as AccountMetadata)?.display_name ?? null,
       last_sign_in_at:
         (u as { last_sign_in_at?: string | null }).last_sign_in_at ?? null,
       created_at: u.created_at ?? null,

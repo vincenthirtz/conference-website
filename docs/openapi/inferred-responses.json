@@ -3221,7 +3221,55 @@
           "null"
          ]
         },
-        "payload": {},
+        "payload": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "field_values": {
+           "type": "object",
+           "additionalProperties": {}
+          },
+          "team_name": {
+           "type": "string"
+          },
+          "tournament_name": {
+           "type": "string"
+          },
+          "desired_role": {
+           "type": "string"
+          },
+          "user_battle_tag": {
+           "type": "string"
+          },
+          "user_display_name": {
+           "type": "string"
+          },
+          "user_email": {
+           "type": "string"
+          },
+          "from_team_id": {
+           "type": "string"
+          },
+          "from_team_name": {
+           "type": "string"
+          },
+          "target_team_name": {
+           "type": "string"
+          },
+          "preferred_date": {
+           "type": "string"
+          },
+          "existing_team_id": {
+           "type": "string"
+          },
+          "request_type": {
+           "type": "string"
+          },
+          "members": {}
+         }
+        },
         "created_at": {
          "type": "string"
         },
@@ -8901,135 +8949,68 @@
   },
   "GET /api/admin/recycle-bin": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "items": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "id": {
-           "type": "string"
-          },
-          "type": {
-           "type": "string",
-           "enum": [
-            "adherent",
-            "cast_member",
-            "match",
-            "partner",
-            "scrim",
-            "staff",
-            "stage",
-            "team"
-           ]
-          },
-          "name": {
-           "type": "string"
-          },
-          "details": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "deleted_at": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "tournament_id": {
-           "type": [
-            "string",
-            "null"
-           ]
-          }
-         },
-         "required": [
-          "id",
-          "type",
-          "name",
-          "details",
-          "deleted_at",
-          "tournament_id"
+    "type": "object",
+    "properties": {
+     "items": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "type": {
+         "type": "string",
+         "enum": [
+          "adherent",
+          "cast_member",
+          "match",
+          "partner",
+          "scrim",
+          "staff",
+          "stage",
+          "team"
+         ]
+        },
+        "name": {
+         "type": "string"
+        },
+        "details": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "deleted_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "tournament_id": {
+         "type": [
+          "string",
+          "null"
          ]
         }
        },
-       "total": {
-        "type": "number"
-       }
-      },
-      "required": [
-       "items",
-       "total"
-      ]
+       "required": [
+        "id",
+        "type",
+        "name",
+        "details",
+        "deleted_at",
+        "tournament_id"
+       ]
+      }
      },
-     {
-      "type": "object",
-      "properties": {
-       "items": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "id": {
-           "type": "string"
-          },
-          "type": {
-           "type": "string",
-           "enum": [
-            "adherent",
-            "cast_member",
-            "match",
-            "partner",
-            "scrim",
-            "staff",
-            "stage",
-            "team"
-           ]
-          },
-          "name": {
-           "type": "string"
-          },
-          "details": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "deleted_at": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "tournament_id": {
-           "type": [
-            "string",
-            "null"
-           ]
-          }
-         },
-         "required": [
-          "id",
-          "type",
-          "name",
-          "details",
-          "deleted_at",
-          "tournament_id"
-         ]
-        }
-       },
-       "total": {}
-      },
-      "required": [
-       "items",
-       "total"
-      ]
+     "total": {
+      "type": "number"
      }
+    },
+    "required": [
+     "items",
+     "total"
     ]
    }
   },
@@ -49230,6 +49211,62 @@
           ]
          },
          "created_at": {
+          "type": "string"
+         },
+         "last_sign_in_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         }
+        },
+        "required": [
+         "id",
+         "email",
+         "role",
+         "display_name",
+         "created_at",
+         "last_sign_in_at"
+        ]
+       }
+      },
+      "required": [
+       "success",
+       "user"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "success": {
+        "type": "boolean",
+        "const": true
+       },
+       "user": {
+        "type": "object",
+        "properties": {
+         "id": {
+          "type": "string"
+         },
+         "email": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "role": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "display_name": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "created_at": {
           "type": [
            "string",
            "null"
@@ -49298,52 +49335,6 @@
             "battle_tag_mismatch"
            ]
           }
-         }
-        },
-        "required": [
-         "id",
-         "email",
-         "role",
-         "display_name",
-         "created_at",
-         "last_sign_in_at"
-        ]
-       }
-      },
-      "required": [
-       "success",
-       "user"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "success": {
-        "type": "boolean",
-        "const": true
-       },
-       "user": {
-        "type": "object",
-        "properties": {
-         "id": {
-          "type": "string"
-         },
-         "email": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "role": {},
-         "display_name": {},
-         "created_at": {
-          "type": "string"
-         },
-         "last_sign_in_at": {
-          "type": [
-           "string",
-           "null"
-          ]
          }
         },
         "required": [

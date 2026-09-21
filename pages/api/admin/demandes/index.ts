@@ -35,6 +35,47 @@ export type DemandeType =
 
 export type DemandeStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
+/**
+ * Le contenu JSONB d'une demande, tel que les ÉCRIVAINS le remplissent.
+ *
+ * TOUS LES CHAMPS SONT OPTIONNELS, et c'est exact : ce que porte `payload`
+ * dépend du `type` de la demande (transfert, inscription, capitanat…). Une
+ * demande de transfert n'a pas de `members`, une création d'équipe n'a pas de
+ * `from_team_id`.
+ *
+ * POURQUOI DÉCLARER PLUTÔT QUE `any`. Le `any` n'apportait aucune sécurité ici
+ * — ce fichier se défend DÉJÀ à l'exécution (`typeof`, `Array.isArray`, replis
+ * par `||`), parce qu'une colonne JSONB n'a pas de schéma. Il faisait juste
+ * passer les fautes de frappe : `payload.team_nmae` compilait, valait
+ * `undefined`, et le repli `|| 'Équipe'` rendait la faute invisible.
+ *
+ * CETTE DÉCLARATION N'EST PAS UNE GARANTIE, c'est une DESCRIPTION. Les gardes
+ * d'exécution restent en place pour cette raison : rien n'empêche une ligne
+ * ancienne, ou écrite à la main, de contenir autre chose.
+ */
+export type DemandePayload = {
+  /** Réponses aux champs personnalisés du formulaire d'inscription (flux B). */
+  field_values?: Record<string, unknown>;
+  team_name?: string;
+  tournament_name?: string;
+  desired_role?: string;
+  user_battle_tag?: string;
+  user_display_name?: string;
+  user_email?: string;
+  from_team_id?: string;
+  from_team_name?: string;
+  target_team_name?: string;
+  preferred_date?: string;
+  existing_team_id?: string;
+  request_type?: string;
+  /**
+   * `unknown` À DESSEIN : le code vérifie `Array.isArray` puis le contenu de
+   * chaque entrée. Déclarer un tableau typé ici laisserait croire que la
+   * vérification est superflue.
+   */
+  members?: unknown;
+};
+
 export type DemandeRow = {
   id: string;
   user_id: string | null;
@@ -47,7 +88,7 @@ export type DemandeRow = {
   processed_by_staff_id: string | null;
   processed_at: string | null;
   source: string | null; // "website", "discord", etc.
-  payload: any | null; // JSONB extra
+  payload: DemandePayload | null; // JSONB extra
   created_at: string;
   updated_at: string | null;
 };
@@ -601,7 +642,7 @@ async function handlePost(
               team_id: d.team_id,
               status: 'registered',
               // Réponses aux champs custom capturées à la soumission (Flow B).
-              field_values: (d.payload as any)?.field_values ?? {},
+              field_values: d.payload?.field_values ?? {},
             });
 
           if (regErr) {
@@ -659,9 +700,8 @@ async function handlePost(
 
             // Auto news: team approved for tournament
             try {
-              const teamName = (d.payload as any)?.team_name || 'Équipe';
-              const tournamentName =
-                (d.payload as any)?.tournament_name || 'tournoi';
+              const teamName = d.payload?.team_name || 'Équipe';
+              const tournamentName = d.payload?.tournament_name || 'tournoi';
               const { data: teamData } = await supabaseAdmin
                 .from('teams')
                 .select('logo_url')
@@ -698,7 +738,7 @@ async function handlePost(
     for (const d of afterList as DemandeRow[]) {
       if (d.type !== 'scrim') continue;
 
-      const payload = (d.payload as Record<string, any> | null) || {};
+      const payload: DemandePayload = d.payload ?? {};
       const fromTeamName = payload.from_team_name || 'Équipe inconnue';
       const fromTeamId = payload.from_team_id || null;
       const preferredDate = payload.preferred_date || null;
@@ -808,14 +848,14 @@ async function handlePost(
           .maybeSingle();
 
         if (!existingMember) {
-          const desiredRole = (d.payload as any)?.desired_role || 'player';
+          const desiredRole = d.payload?.desired_role || 'player';
           // Prefer the staff-corrected BattleTag (inline fix) over the stored
           // payload value when one was provided for this demande.
           const overrideTag =
             typeof battleTagOverrides[d.id] === 'string'
               ? battleTagOverrides[d.id].trim()
               : null;
-          const storedTag = (d.payload as any)?.user_battle_tag || null;
+          const storedTag = d.payload?.user_battle_tag || null;
           const battleTag = overrideTag || storedTag;
           if (overrideTag && overrideTag !== storedTag) {
             outcomes[d.id] = { ...outcomes[d.id], tagCorrected: true };
@@ -839,9 +879,9 @@ async function handlePost(
             try {
               const playerName =
                 battleTag?.split('#')[0] ||
-                (d.payload as any)?.user_display_name ||
+                d.payload?.user_display_name ||
                 'Joueur';
-              const teamName = (d.payload as any)?.team_name || 'Équipe';
+              const teamName = d.payload?.team_name || 'Équipe';
               const { data: teamData } = await supabaseAdmin
                 .from('teams')
                 .select('logo_url')
@@ -886,7 +926,7 @@ async function handlePost(
       if (d.type !== 'captain_request' || !d.user_id) continue;
 
       try {
-        const payload = (d.payload as Record<string, any> | null) || {};
+        const payload: DemandePayload = d.payload ?? {};
         const overrideTag =
           typeof battleTagOverrides[d.id] === 'string'
             ? battleTagOverrides[d.id].trim()
@@ -1101,9 +1141,8 @@ async function handlePost(
       try {
         // Resolve email + display_name for the staff row. Prefer the auth user
         // (source of truth); fall back to the demande payload snapshot.
-        let email: string | null = (d.payload as any)?.user_email ?? null;
-        let displayName: string | null =
-          (d.payload as any)?.user_display_name ?? null;
+        let email: string | null = d.payload?.user_email ?? null;
+        let displayName: string | null = d.payload?.user_display_name ?? null;
 
         try {
           const { data: authData } = await supabaseAdmin.auth.admin.getUserById(
