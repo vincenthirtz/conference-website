@@ -38,6 +38,7 @@ import { invalidateStaffCache } from '../../utils/staff';
 import { DEFAULT_TENANT_ID } from '../../utils/tenant';
 
 import availabilityHandler from '../../pages/api/admin/teams/[teamId]/availability';
+import tournamentAvailabilityHandler from '../../pages/api/admin/tournament/[id]/availability';
 import diagnosticsHandler from '../../pages/api/admin/tournament/[id]/schedule-diagnostics';
 import moveHandler from '../../pages/api/admin/tournament/[id]/schedule-move';
 
@@ -257,6 +258,279 @@ describe('/api/admin/teams/[teamId]/availability', () => {
       res
     );
     expect(res.statusCode).toBe(405);
+  });
+
+  /* ---------------------------------------------------------------------
+   * PATCH / DELETE — les deux chemins d'ÉCRITURE qui n'avaient aucun test.
+   *
+   * POURQUOI ILS COMPTENT PLUS QUE LE RESTE. Une contrainte de disponibilité
+   * n'est pas une préférence d'affichage : c'est une donnée que le PLANIFICATEUR
+   * lit pour décider des créneaux. Une modification qui passe à côté de sa
+   * validation, ou une suppression qui touche la contrainte d'une AUTRE équipe,
+   * ne se voit pas tout de suite — elle se voit au calendrier publié.
+   * ------------------------------------------------------------------------ */
+
+  /** Pose une contrainte en base, telle que la route l'écrirait. */
+  function seedConstraint(over: Partial<Record<string, unknown>> = {}): string {
+    const id = String(over.id ?? '33333333-3333-4333-8333-333333333331');
+    (store.team_availability_constraints ||= [] as never).push({
+      id,
+      tenant_id: DEFAULT_TENANT_ID,
+      team_id: TEAM_A,
+      tournament_id: null,
+      kind: 'earliest',
+      time_of_day: '21:00',
+      weekdays: null,
+      starts_on: null,
+      ends_on: null,
+      timezone: 'Europe/Paris',
+      note: null,
+      created_by: null,
+      created_at: '2026-09-01T00:00:00.000Z',
+      updated_at: '2026-09-01T00:00:00.000Z',
+      ...over,
+    } as never);
+    return id;
+  }
+
+  it('PATCH 400 sur un identifiant de contrainte invalide', async () => {
+    const res = makeRes();
+    await availabilityHandler(
+      makeReq({
+        method: 'PATCH',
+        query: { teamId: TEAM_A, id: 'pas-un-uuid' },
+        body: { time_of_day: '22:00' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect(res.body.code).toBe('INVALID_ID');
+  });
+
+  it('PATCH 404 sur la contrainte d’une AUTRE équipe', async () => {
+    // L'ISOLATION EST LE POINT. `loadOwned` filtre sur `team_id` ET
+    // `tenant_id` : sans ce filtre, connaître un identifiant suffirait à
+    // modifier les disponibilités de n'importe quelle équipe.
+    const id = seedConstraint({ team_id: TEAM_B });
+    const res = makeRes();
+    await availabilityHandler(
+      makeReq({
+        method: 'PATCH',
+        query: { teamId: TEAM_A, id },
+        body: { time_of_day: '22:00' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(404);
+    expect(res.body.code).toBe('NOT_FOUND');
+    // Et rien n'a bougé chez l'autre équipe.
+    const row = (store.team_availability_constraints as any[])[0];
+    expect(row.time_of_day).toBe('21:00');
+  });
+
+  it('PATCH modifie l’heure d’une contrainte existante', async () => {
+    const id = seedConstraint();
+    const res = makeRes();
+    await availabilityHandler(
+      makeReq({
+        method: 'PATCH',
+        query: { teamId: TEAM_A, id },
+        body: { time_of_day: '22:00' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body.constraint.timeOfDay).toBe('22:00');
+  });
+
+  it('PATCH IGNORE les champs d’une autre nature', async () => {
+    // Comportement documenté dans la route : un formulaire complet envoie
+    // souvent tous les champs, et le CHECK SQL rejetterait les incohérents.
+    // Les refuser rendrait l'écran inutilisable pour une faute qui n'en est
+    // pas une.
+    const id = seedConstraint();
+    const res = makeRes();
+    await availabilityHandler(
+      makeReq({
+        method: 'PATCH',
+        query: { teamId: TEAM_A, id },
+        body: {
+          time_of_day: '22:00',
+          weekdays: [1, 2],
+          starts_on: '2026-01-01',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const row = (store.team_availability_constraints as any[])[0];
+    expect(row.time_of_day).toBe('22:00');
+    expect(row.weekdays).toBeNull();
+    expect(row.starts_on).toBeNull();
+  });
+
+  it('PATCH refuse une plage inversée même en ne touchant QU’UNE borne', async () => {
+    // LE CAS SUBTIL. La validation compare la borne modifiée à celle DÉJÀ en
+    // base (`update.starts_on ?? existing.starts_on`). Ne vérifier que les
+    // deux bornes envoyées ensemble laisserait passer une plage inversée en
+    // deux requêtes.
+    const id = seedConstraint({
+      kind: 'blackout',
+      time_of_day: null,
+      starts_on: '2026-09-20',
+      ends_on: '2026-09-25',
+    });
+    const res = makeRes();
+    await availabilityHandler(
+      makeReq({
+        method: 'PATCH',
+        query: { teamId: TEAM_A, id },
+        body: { ends_on: '2026-09-10' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect(res.body.code).toBe('INVALID_RANGE');
+    const row = (store.team_availability_constraints as any[])[0];
+    expect(row.ends_on).toBe('2026-09-25');
+  });
+
+  it('DELETE 404 sur la contrainte d’une AUTRE équipe, et ne supprime rien', async () => {
+    const id = seedConstraint({ team_id: TEAM_B });
+    const res = makeRes();
+    await availabilityHandler(
+      makeReq({ method: 'DELETE', query: { teamId: TEAM_A, id } }),
+      res
+    );
+    expect(res.statusCode).toBe(404);
+    expect(store.team_availability_constraints).toHaveLength(1);
+  });
+
+  it('DELETE retire la contrainte et rend 204', async () => {
+    const id = seedConstraint();
+    const res = makeRes();
+    await availabilityHandler(
+      makeReq({ method: 'DELETE', query: { teamId: TEAM_A, id } }),
+      res
+    );
+    expect(res.statusCode).toBe(204);
+    expect(store.team_availability_constraints).toHaveLength(0);
+  });
+});
+
+/* -----------------------------------------------------------
+ * /api/admin/tournament/[id]/availability
+ *
+ * AUCUN TEST NE CITAIT CETTE ROUTE. C'est pourtant la LECTURE que consomment
+ * le diagnostic de planning, le calendrier et l'auto-scheduler : ce qu'elle
+ * oublie de rendre, les trois l'ignorent en silence, et le calendrier publié
+ * viole une contrainte que personne n'a vue passer.
+ * ---------------------------------------------------------*/
+
+describe('/api/admin/tournament/[id]/availability', () => {
+  /** Pose une contrainte, globale (`tournamentId: null`) ou propre au tournoi. */
+  function seedConstraint(over: Record<string, unknown>): void {
+    (store.team_availability_constraints ||= [] as never).push({
+      id: `c-${(store.team_availability_constraints as unknown[]).length + 1}`,
+      tenant_id: DEFAULT_TENANT_ID,
+      team_id: TEAM_A,
+      tournament_id: null,
+      kind: 'earliest',
+      time_of_day: '21:00',
+      weekdays: null,
+      starts_on: null,
+      ends_on: null,
+      timezone: 'Europe/Paris',
+      note: null,
+      created_by: null,
+      created_at: '2026-09-01T00:00:00.000Z',
+      updated_at: '2026-09-01T00:00:00.000Z',
+      ...over,
+    } as never);
+  }
+
+  it('405 sur autre chose qu’un GET', async () => {
+    const res = makeRes();
+    await tournamentAvailabilityHandler(
+      makeReq({ method: 'POST', query: { id: TOURNOI } }),
+      res
+    );
+    expect(res.statusCode).toBe(405);
+  });
+
+  it('404 sur un tournoi hors du tenant', async () => {
+    store.tournaments = [
+      { id: TOURNOI, tenant_id: 'un-autre-tenant', name: 'Ailleurs' },
+    ] as never;
+    const res = makeRes();
+    await tournamentAvailabilityHandler(
+      makeReq({ query: { id: TOURNOI } }),
+      res
+    );
+    expect(res.statusCode).toBe(404);
+    expect(res.body.code).toBe('TOURNAMENT_NOT_FOUND');
+  });
+
+  it('liste les équipes engagées MÊME sans contrainte déclarée', async () => {
+    // L'admin doit voir qui n'a rien déclaré autant que qui a déclaré : une
+    // équipe absente de la liste se lit « pas de contrainte », alors qu'elle
+    // veut dire « pas regardée ».
+    const res = makeRes();
+    await tournamentAvailabilityHandler(
+      makeReq({ query: { id: TOURNOI } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    // SUR LES IDENTIFIANTS, PAS LES NOMS : le mock Supabase ne résout pas
+    // l'embed `team:teams!...(id, name)`, donc `name` revient `null` ici quoi
+    // que fasse la route. Le tri alphabétique et le nom affiché ne sont donc
+    // PAS couverts par ce test — le dire vaut mieux que de l'assérer contre un
+    // mock qui ne peut pas répondre.
+    expect(
+      (res.body.teams as { id: string }[]).map((t) => t.id).sort()
+    ).toEqual([TEAM_A, TEAM_B].sort());
+    expect(res.body.constraints).toEqual([]);
+  });
+
+  it('rend AUSSI les contraintes globales, pas seulement celles du tournoi', async () => {
+    // LE POINT DE CETTE ROUTE. Une règle permanente (« jamais le lundi ») pèse
+    // sur ce tournoi comme sur les autres. La filtrer donnerait un diagnostic
+    // rassurant et faux — c'est écrit dans l'en-tête de la route, et rien ne
+    // le vérifiait.
+    seedConstraint({ tournament_id: null, time_of_day: '21:00' });
+    seedConstraint({
+      tournament_id: TOURNOI,
+      team_id: TEAM_B,
+      time_of_day: '22:00',
+    });
+
+    const res = makeRes();
+    await tournamentAvailabilityHandler(
+      makeReq({ query: { id: TOURNOI } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body.constraints).toHaveLength(2);
+    const alpha = (
+      res.body.teams as { id: string; constraints: unknown[] }[]
+    ).find((t) => t.id === TEAM_A);
+    expect(alpha?.constraints).toHaveLength(1);
+    expect((alpha?.constraints as { timeOfDay: string }[])[0].timeOfDay).toBe(
+      '21:00'
+    );
+  });
+
+  it('ignore la contrainte d’une équipe NON engagée', async () => {
+    const autreEquipe = '44444444-4444-4444-8444-444444444444';
+    seedConstraint({ team_id: autreEquipe, time_of_day: '18:00' });
+
+    const res = makeRes();
+    await tournamentAvailabilityHandler(
+      makeReq({ query: { id: TOURNOI } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body.constraints).toEqual([]);
   });
 });
 
