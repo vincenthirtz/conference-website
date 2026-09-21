@@ -54,7 +54,7 @@ const BUDGET: Record<string, number> = {
   'pages/api/player': 0,
   'pages/api/cron': 0,
   'pages/api/webhooks': 0,
-  utils: 82,
+  utils: 43,
   components: 9,
   lib: 0,
   netlify: 10,

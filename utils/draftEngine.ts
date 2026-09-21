@@ -25,6 +25,24 @@ import type {
 import { getGame, type GameSlug, type MatchFormat } from '@/config/games';
 import { supabaseAdmin } from '@/utils/supabase';
 
+/**
+ * LES LECTURES D'APPOINT DE CE MOTEUR, déclarées une fois chacune — elles
+ * recopient exactement leurs `.select()`.
+ *
+ * Elles étaient lues derrière `as any`. C'est le moteur de draft : une colonne
+ * mal nommée n'y donne pas un écran vide, elle donne un pick appliqué au
+ * mauvais héros ou un délai jamais déclenché.
+ */
+type HeroGameRow = { id: string; game: string };
+type PriorDraftRow = { id: string };
+type PickedStepRow = { hero_id: string | null };
+type ExpiringStepRow = {
+  hero_id: string | null;
+  deadline_at: string | null;
+};
+type DraftIdRow = { draft_id: string };
+type InProgressDraftRow = { id: string; tenant_id: string };
+
 type DraftGameSlug = 'lol' | 'dota2';
 
 /** Valid side values per game — single source of truth. */
@@ -767,10 +785,11 @@ export async function commitDraftStep(
   if (!heroRow) {
     throw new DraftEngineError('HERO_NOT_FOUND', 'Hero not found.', 404);
   }
-  if ((heroRow as any).game !== ctx.game) {
+  const hero = heroRow as HeroGameRow;
+  if (hero.game !== ctx.game) {
     throw new DraftEngineError(
       'HERO_WRONG_GAME',
-      `Hero belongs to "${(heroRow as any).game}", not "${ctx.game}".`,
+      `Hero belongs to "${hero.game}", not "${ctx.game}".`,
       400
     );
   }
@@ -835,7 +854,7 @@ export async function commitDraftStep(
     if (priorErr) {
       throw new DraftEngineError('DB_ERROR', priorErr.message, 500);
     }
-    const priorIds = (priorDrafts ?? []).map((d: any) => d.id as string);
+    const priorIds = ((priorDrafts ?? []) as PriorDraftRow[]).map((d) => d.id);
     if (priorIds.length > 0) {
       const { data: priorSteps, error: priorStepErr } = await client
         .from('match_draft_steps')
@@ -846,8 +865,8 @@ export async function commitDraftStep(
         throw new DraftEngineError('DB_ERROR', priorStepErr.message, 500);
       }
       const pickedBefore = new Set(
-        (priorSteps ?? [])
-          .map((s: any) => s.hero_id as string | null)
+        ((priorSteps ?? []) as PickedStepRow[])
+          .map((s) => s.hero_id)
           .filter((id): id is string => !!id)
       );
       if (pickedBefore.has(input.heroId)) {
@@ -966,9 +985,10 @@ export async function applyAutoPickIfExpired(
   if (stepErr) {
     throw new DraftEngineError('DB_ERROR', stepErr.message, 500);
   }
-  if (!stepRow || (stepRow as any).hero_id) return null;
+  const step = stepRow as ExpiringStepRow | null;
+  if (!step || step.hero_id) return null;
 
-  const deadlineIso = (stepRow as any).deadline_at as string | null;
+  const deadlineIso = step.deadline_at;
   if (!deadlineIso) return null;
   const nowMs = input.now ?? Date.now();
   if (Date.parse(deadlineIso) > nowMs) return null;
@@ -1008,7 +1028,7 @@ export async function applyAutoPickIfExpired(
     if (priorErr) {
       throw new DraftEngineError('DB_ERROR', priorErr.message, 500);
     }
-    const priorIds = (priorDrafts ?? []).map((d: any) => d.id as string);
+    const priorIds = ((priorDrafts ?? []) as PriorDraftRow[]).map((d) => d.id);
     if (priorIds.length > 0) {
       const { data: priorPicks, error: priorPicksErr } = await client
         .from('match_draft_steps')
@@ -1018,7 +1038,7 @@ export async function applyAutoPickIfExpired(
       if (priorPicksErr) {
         throw new DraftEngineError('DB_ERROR', priorPicksErr.message, 500);
       }
-      for (const s of (priorPicks ?? []) as any[]) {
+      for (const s of (priorPicks ?? []) as PickedStepRow[]) {
         if (s.hero_id) usedIds.add(s.hero_id);
       }
     }
@@ -1099,7 +1119,7 @@ export async function runDraftAutoPickTick(
   // on an earlier step (cleared after commit on real DB but possible on
   // the in-memory mock) shouldn't trigger the same draft twice.
   const draftIds = Array.from(
-    new Set(((rows ?? []) as any[]).map((r) => r.draft_id as string))
+    new Set(((rows ?? []) as DraftIdRow[]).map((r) => r.draft_id))
   );
 
   // Fetch each draft's tenant_id so we can scope the engine calls.
@@ -1119,7 +1139,7 @@ export async function runDraftAutoPickTick(
   if (dErr) {
     throw new DraftEngineError('DB_ERROR', dErr.message, 500);
   }
-  for (const d of (drafts ?? []) as any[]) {
+  for (const d of (drafts ?? []) as InProgressDraftRow[]) {
     try {
       const result = await applyAutoPickIfExpired({
         draftId: d.id,

@@ -10,9 +10,32 @@
 // Best-effort : toute erreur DB renvoie une liste vide plutôt que de faire
 // tomber la page.
 
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
 import { maskBattleTag } from '../battleTag';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+
+/** Les lectures d'appoint, déclarées une fois — elles recopient les `.select()`. */
+type ParticipantRow = {
+  tournament_id: string;
+  team_id: string;
+  user_id: string | null;
+};
+type HallTeamRow = {
+  id: string;
+  name: string;
+  slug: string | null;
+  logo_url: string | null;
+};
+type IdentityRow = {
+  user_id: string;
+  display_name: string | null;
+  battle_tag: string | null;
+  avatar_url: string | null;
+};
+type MvpWinnerRow = { winner_member_id: string };
+type CastOrTeamMemberRow = { id: string; user_id: string | null };
+
 import {
   buildHallOfFame,
   type HallOfFameEntry,
@@ -69,12 +92,18 @@ export async function readHallOfFame(
     } | null;
   };
 
-  const visible = ((rankings ?? []) as any[])
+  // La relation arrive en objet OU en tableau selon PostgREST : on la dénoue
+  // avant de filtrer, pour n'avoir pas à porter l'ambiguïté plus loin.
+  const visible = (
+    (rankings ?? []) as Array<
+      Omit<RankingRow, 'tournament'> & {
+        tournament: Relation<NonNullable<RankingRow['tournament']>>;
+      }
+    >
+  )
     .map((r) => ({
       ...r,
-      tournament: Array.isArray(r.tournament)
-        ? (r.tournament[0] ?? null)
-        : (r.tournament ?? null),
+      tournament: oneRelation(r.tournament),
     }))
     .filter(
       (r: RankingRow) =>
@@ -105,11 +134,11 @@ export async function readHallOfFame(
 
   // (tournament_id, team_id) -> joueuses distinctes
   const rosterByTournamentTeam = new Map<string, Set<string>>();
-  for (const p of (participants ?? []) as any[]) {
+  for (const p of (participants ?? []) as ParticipantRow[]) {
     if (!p.user_id) continue;
     const key = `${p.tournament_id}:${p.team_id}`;
     const set = rosterByTournamentTeam.get(key) ?? new Set<string>();
-    set.add(p.user_id as string);
+    set.add(p.user_id);
     rosterByTournamentTeam.set(key, set);
   }
 
@@ -126,7 +155,7 @@ export async function readHallOfFame(
       .select('id, name, slug, logo_url')
       .eq('tenant_id', tenantId)
       .in('id', teamIds);
-    for (const t of (teams ?? []) as any[]) {
+    for (const t of (teams ?? []) as HallTeamRow[]) {
       teamById.set(t.id, {
         name: t.name ?? null,
         slug: t.slug ?? null,
@@ -172,7 +201,7 @@ export async function readHallOfFame(
     );
 
   const byUser = new Map(
-    ((identities ?? []) as any[]).map((row) => [row.user_id as string, row])
+    ((identities ?? []) as IdentityRow[]).map((row) => [row.user_id, row])
   );
 
   return candidates.map((entry, index) => {
@@ -211,7 +240,7 @@ async function readMvpCounts(tenantId: string): Promise<Map<string, number>> {
   }
 
   const memberIds = Array.from(
-    new Set(data.map((row: any) => row.winner_member_id as string))
+    new Set((data as MvpWinnerRow[]).map((row) => row.winner_member_id))
   );
   const { data: members } = await supabaseAdmin
     .from('team_members')
@@ -220,12 +249,14 @@ async function readMvpCounts(tenantId: string): Promise<Map<string, number>> {
     .in('id', memberIds);
 
   const memberToUser = new Map(
-    ((members ?? []) as any[])
-      .filter((m) => m.user_id)
-      .map((m) => [m.id as string, m.user_id as string])
+    ((members ?? []) as CastOrTeamMemberRow[])
+      .filter(
+        (m): m is CastOrTeamMemberRow & { user_id: string } => !!m.user_id
+      )
+      .map((m) => [m.id, m.user_id])
   );
 
-  for (const row of data as any[]) {
+  for (const row of data as MvpWinnerRow[]) {
     const userId = memberToUser.get(row.winner_member_id);
     if (!userId) continue;
     counts.set(userId, (counts.get(userId) ?? 0) + 1);

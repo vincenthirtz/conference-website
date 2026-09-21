@@ -5,9 +5,66 @@
 // assigned to the segment's match + the active stream URL, alongside
 // the persisted `broadcast_state` JSONB.
 
+import type { EventRunStatus } from '@/types/events';
 import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
 import { getDiscordLinksForUsers } from '@/utils/discordLinks';
+
+/**
+ * LES FORMES DES LECTURES DE CE FICHIER, déclarées une fois chacune — elles
+ * recopient exactement leurs `.select()`.
+ *
+ * CE FICHIER PORTE LA TRACE DE DEUX BOGUES DE CETTE EXACTE NATURE, et ses
+ * propres commentaires les racontent : un `display_name` demandé là où la
+ * colonne s'appelle `name` (la requête échouait, l'overlay n'affichait AUCUN
+ * caster), et un filtre sur `user_id` là où la colonne est `auth_user_id`
+ * (erreur avalée, aucune mention Discord ne partait). Les deux étaient lus
+ * derrière `as any` — le compilateur n'avait rien à dire.
+ */
+type LiveRunRow = {
+  id: string;
+  /** NOT NULL en base, vérifié dans `information_schema`. */
+  name: string;
+  slug: string;
+  /**
+   * La colonne est un `text` libre ; le type du domaine
+   * (`EventRunStatus`) en fixe les trois valeurs. Les déclarer ici fait
+   * échouer la compilation si une quatrième arrive par migration, plutôt que
+   * de la laisser traverser l'overlay sans rien afficher.
+   */
+  status: EventRunStatus;
+  started_at: string | null;
+  scheduled_at: string | null;
+  broadcast_state: unknown;
+};
+
+type LiveSegmentRow = {
+  id: string;
+  ord: number;
+  type: string;
+  title: string | null;
+  status: string;
+  match_id: string | null;
+  duration_min: number | null;
+};
+
+type SegmentTeamRow = {
+  id: string;
+  name: string;
+  short_name: string | null;
+  logo_url: string | null;
+};
+
+type CastAssignmentRow = { cast_member_id: string | null };
+
+type CastMemberRow = {
+  id: string;
+  name: string;
+  auth_user_id: string | null;
+};
+
+/** La partie `pip` de l'état de diffusion (colonne JSONB, donc sans schéma). */
+type PipState = { enabled?: unknown };
 
 /**
  * Production "scene" the overlay renderer switches to. Drives the automated
@@ -117,7 +174,8 @@ function normalizeScene(raw: unknown): BroadcastScene {
 export function normalizeState(raw: unknown): BroadcastStateV1 {
   if (!raw || typeof raw !== 'object') return { ...DEFAULT_BROADCAST_STATE };
   const r = raw as Record<string, unknown>;
-  const pip = r.pip && typeof r.pip === 'object' ? (r.pip as any) : {};
+  const pip: PipState =
+    r.pip && typeof r.pip === 'object' ? (r.pip as PipState) : {};
   return {
     v: 1,
     on_air: r.on_air === true,
@@ -165,7 +223,8 @@ export async function fetchLiveBroadcastState(
 
   if (!run) return empty;
 
-  const state = normalizeState((run as any).broadcast_state);
+  const liveRun = run as LiveRunRow;
+  const state = normalizeState(liveRun.broadcast_state);
 
   // Current segment = first segment in status='live' (ordered by ord).
   // V1 supposes a single live segment at any time — the Director enforces
@@ -174,20 +233,21 @@ export async function fetchLiveBroadcastState(
     .from('event_segments')
     .select('id, ord, type, title, status, match_id, duration_min')
     .eq('tenant_id', tenantId)
-    .eq('event_run_id', (run as any).id)
+    .eq('event_run_id', liveRun.id)
     .eq('status', 'live')
     .order('ord', { ascending: true })
     .limit(1);
 
-  const currentSegment: LiveSegmentLite | null = (segments ?? [])[0]
+  const firstSegment = ((segments ?? []) as LiveSegmentRow[])[0] ?? null;
+  const currentSegment: LiveSegmentLite | null = firstSegment
     ? ({
-        id: (segments![0] as any).id,
-        ord: (segments![0] as any).ord,
-        type: (segments![0] as any).type,
-        title: (segments![0] as any).title,
-        status: (segments![0] as any).status,
-        match_id: (segments![0] as any).match_id ?? null,
-        duration_min: (segments![0] as any).duration_min ?? null,
+        id: firstSegment.id,
+        ord: firstSegment.ord,
+        type: firstSegment.type,
+        title: firstSegment.title,
+        status: firstSegment.status,
+        match_id: firstSegment.match_id ?? null,
+        duration_min: firstSegment.duration_min ?? null,
       } as LiveSegmentLite)
     : null;
 
@@ -213,7 +273,7 @@ export async function fetchLiveBroadcastState(
           .select('id, name, short_name, logo_url')
           .eq('tenant_id', tenantId)
           .in('id', teamIds);
-        for (const t of (teams ?? []) as any[]) {
+        for (const t of (teams ?? []) as SegmentTeamRow[]) {
           teamMap.set(t.id, {
             id: t.id,
             name: t.name,
@@ -238,8 +298,8 @@ export async function fetchLiveBroadcastState(
         .eq('tenant_id', tenantId)
         .eq('match_id', matchId);
 
-      const memberIds = ((assignments ?? []) as any[])
-        .map((a) => a.cast_member_id as string | null)
+      const memberIds = ((assignments ?? []) as CastAssignmentRow[])
+        .map((a) => a.cast_member_id)
         .filter((v): v is string => typeof v === 'string' && v.length > 0);
 
       if (memberIds.length > 0) {
@@ -254,7 +314,7 @@ export async function fetchLiveBroadcastState(
           .in('id', memberIds);
 
         // Resolve Discord user IDs from auth_user_id.
-        const authIds = ((members ?? []) as any[])
+        const authIds = ((members ?? []) as CastMemberRow[])
           .map((m2) => m2.auth_user_id)
           .filter((v): v is string => typeof v === 'string' && v.length > 0);
         // Helper canonique : la colonne est `auth_user_id`. Filtrée sur
@@ -266,7 +326,7 @@ export async function fetchLiveBroadcastState(
           discordByAuth.set(authId, link.discordUserId);
         }
 
-        casters = ((members ?? []) as any[]).map((m2) => ({
+        casters = ((members ?? []) as CastMemberRow[]).map((m2) => ({
           castMemberId: m2.id,
           displayName: m2.name ?? null,
           discordUserId: m2.auth_user_id
@@ -279,12 +339,12 @@ export async function fetchLiveBroadcastState(
 
   return {
     run: {
-      id: (run as any).id,
-      name: (run as any).name,
-      slug: (run as any).slug,
-      status: (run as any).status,
-      startedAt: (run as any).started_at ?? null,
-      scheduledAt: (run as any).scheduled_at ?? null,
+      id: liveRun.id,
+      name: liveRun.name,
+      slug: liveRun.slug,
+      status: liveRun.status,
+      startedAt: liveRun.started_at ?? null,
+      scheduledAt: liveRun.scheduled_at ?? null,
     },
     currentSegment,
     match,
@@ -313,7 +373,9 @@ export async function updateBroadcastState(
     .maybeSingle();
   if (!row) return null;
 
-  const current = normalizeState((row as any).broadcast_state);
+  const current = normalizeState(
+    (row as { broadcast_state?: unknown }).broadcast_state
+  );
   const next: BroadcastStateV1 = {
     v: 1,
     on_air: typeof patch.on_air === 'boolean' ? patch.on_air : current.on_air,
@@ -377,7 +439,9 @@ export async function setBroadcastScene(
     .maybeSingle();
   if (!row) return null;
 
-  const current = normalizeState((row as any).broadcast_state);
+  const current = normalizeState(
+    (row as { broadcast_state?: unknown }).broadcast_state
+  );
   const next: BroadcastStateV1 = {
     ...current,
     scene: normalizeScene(scene),
