@@ -44792,19 +44792,74 @@
       "items": {
        "type": "object",
        "properties": {
-        "id": {},
-        "user_id": {},
-        "status": {},
-        "comment": {},
-        "payload": {},
-        "created_at": {},
+        "id": {
+         "type": "string"
+        },
+        "user_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "status": {
+         "type": "string"
+        },
+        "comment": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "payload": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "desired_role": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "user_battle_tag": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "user_display_name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "from_team_id": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "from_team_name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         }
+        },
+        "created_at": {
+         "type": "string"
+        },
         "user": {
          "type": [
           "object",
           "null"
          ],
          "properties": {
-          "id": {},
+          "id": {
+           "type": "string"
+          },
           "email": {
            "type": [
             "string",
@@ -45489,19 +45544,74 @@
       "items": {
        "type": "object",
        "properties": {
-        "id": {},
-        "user_id": {},
-        "status": {},
-        "comment": {},
-        "payload": {},
-        "created_at": {},
+        "id": {
+         "type": "string"
+        },
+        "user_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "status": {
+         "type": "string"
+        },
+        "comment": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "payload": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "desired_role": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "user_battle_tag": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "user_display_name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "from_team_id": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "from_team_name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         }
+        },
+        "created_at": {
+         "type": "string"
+        },
         "user": {
          "type": [
           "object",
           "null"
          ],
          "properties": {
-          "id": {},
+          "id": {
+           "type": "string"
+          },
           "email": {
            "type": [
             "string",
