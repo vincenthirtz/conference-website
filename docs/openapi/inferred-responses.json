@@ -58303,7 +58303,18 @@
     "properties": {
      "stages": {
       "type": "array",
-      "items": {}
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "id"
+       ],
+       "additionalProperties": {}
+      }
      }
     },
     "required": [
@@ -58791,7 +58802,10 @@
      "tournament": {},
      "stages": {
       "type": "array",
-      "items": {}
+      "items": {
+       "type": "object",
+       "additionalProperties": {}
+      }
      },
      "maps": {
       "type": "number"

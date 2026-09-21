@@ -12,7 +12,20 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { TOURNAMENT_TEMPLATES } from '@/config/tournament-templates';
 
 import { logger } from '../../../../../utils/logger';
-type ApiResponse = { stages: any[] } | { error: string };
+
+/**
+ * Un gabarit personnalisé, tel qu'il est rangé en JSON dans `site_settings`.
+ *
+ * `unknown` pour les champs que ce fichier ne lit pas : le JSON vient d'une
+ * colonne texte, personne ne garantit sa forme, et ne déclarer que ce qu'on
+ * utilise évite de prétendre en savoir plus.
+ */
+type CustomTemplate = { id?: unknown; name?: unknown; stages?: unknown };
+
+/** Les étapes créées, telles que l'écran les reçoit (`insert().select('*')`). */
+type CreatedStageRow = Record<string, unknown> & { id: string };
+
+type ApiResponse = { stages: CreatedStageRow[] } | { error: string };
 
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'tournament-apply-template' }),
@@ -62,7 +75,9 @@ async function handler(
         try {
           const custom = JSON.parse(settingsRow.value);
           if (Array.isArray(custom)) {
-            template = custom.find((t: any) => t.id === templateId);
+            template = (custom as CustomTemplate[]).find(
+              (t) => t.id === templateId
+            ) as typeof template;
           }
         } catch {
           /* ignore */
@@ -154,7 +169,9 @@ async function handler(
             template_id: templateId,
             template_name: template.name,
             append: !!append,
-            created_stage_ids: createdStages.map((s: any) => s.id),
+            created_stage_ids: (createdStages as CreatedStageRow[]).map(
+              (s) => s.id
+            ),
           },
         });
       } catch (e) {
@@ -162,7 +179,7 @@ async function handler(
       }
     }
 
-    return res.status(201).json({ stages: createdStages });
+    return res.status(201).json({ stages: createdStages as CreatedStageRow[] });
   } catch (err: unknown) {
     logger.error('[/api/admin/tournament/[id]/apply-template] error:', err);
     return res.status(500).json({ error: 'Internal server error' });

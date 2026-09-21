@@ -22,6 +22,21 @@ import {
 } from '@/utils/stages/autoSeed';
 import { logger } from '../../../../../utils/logger';
 
+/** Les trois lectures d'appoint, déclarées une fois — elles recopient les `.select()`. */
+type SiblingStageRow = {
+  id: string;
+  name: string;
+  stage_type: string;
+  order_index: number | null;
+};
+type StageTeamIdRow = { team_id: string };
+type SeedingTeamRow = {
+  id: string;
+  name: string;
+  short_name: string | null;
+  logo_url: string | null;
+};
+
 type TeamLite = {
   id: string;
   name: string;
@@ -141,7 +156,9 @@ async function handler(
       .neq('id', targetStageId)
       .order('order_index', { ascending: true });
 
-    const sources: SourceStage[] = (siblingsRaw ?? []).map((s: any) => ({
+    const sources: SourceStage[] = (
+      (siblingsRaw ?? []) as SiblingStageRow[]
+    ).map((s) => ({
       id: s.id,
       name: s.name,
       stage_type: s.stage_type,
@@ -186,8 +203,8 @@ async function handler(
       .select('team_id')
       .eq('tenant_id', ctx.tenantId)
       .eq('stage_id', targetStageId);
-    const stageTeamIds = ((stageTeamsRaw ?? []) as any[]).map(
-      (r) => r.team_id as string
+    const stageTeamIds = ((stageTeamsRaw ?? []) as StageTeamIdRow[]).map(
+      (r) => r.team_id
     );
     for (const tid of stageTeamIds) allTeamIds.add(tid);
 
@@ -198,7 +215,7 @@ async function handler(
         .select('id, name, short_name, logo_url')
         .in('id', Array.from(allTeamIds))
         .eq('tenant_id', ctx.tenantId);
-      for (const t of (teams ?? []) as any[]) {
+      for (const t of (teams ?? []) as SeedingTeamRow[]) {
         teamsById.set(t.id, {
           id: t.id,
           name: t.name,

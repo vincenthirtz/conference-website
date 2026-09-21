@@ -49,7 +49,7 @@ const BUDGET: Record<string, number> = {
   // serait le trou par lequel le total remonte sans que rien ne le dise.
   pagesScreens: 72,
   'pages/api/bot/v1': 5,
-  'pages/api/admin': 73,
+  'pages/api/admin': 54,
   'pages/api/teams': 12,
   'pages/api/player': 0,
   'pages/api/cron': 0,

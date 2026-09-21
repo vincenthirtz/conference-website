@@ -19,6 +19,31 @@ import {
 
 import { logger } from '../../../../../utils/logger';
 import { readPaidMatchIds } from '@/utils/tcg/paidMatches';
+
+/**
+ * Une entrée du corps `schedules`, telle que l'écran l'envoie.
+ *
+ * `unknown` sur `matchId`, ET C'EST VOLONTAIRE : ce corps vient du RÉSEAU, pas
+ * de la base. Le code vérifie déjà `typeof === 'string'` juste après ; déclarer
+ * `string` ici laisserait croire que la vérification est superflue.
+ */
+type ScheduleEntry = { matchId?: unknown; scheduled_at?: unknown };
+
+/** L'instantané d'un match avant écriture, pour pouvoir revenir en arrière. */
+type ScheduleSnapshotRow = { id: string; scheduled_at: string | null };
+
+/**
+ * Une ligne d'instantané dont les colonnes varient selon l'opération : on lit
+ * les champs par leur nom (`fieldKeys`), d'où l'index signature.
+ *
+ * ⚠️ La conversion passe par `unknown` : le `.select()` est construit à
+ * l'exécution à partir de `fieldKeys`, donc supabase-js ne peut pas l'analyser
+ * et rend un `GenericStringError`. Le type de cette requête était déjà
+ * inexploitable AVANT — le `as any` le masquait. Le fichier convertit d'ailleurs
+ * déjà de la même façon quelques lignes plus bas.
+ */
+type UndoSnapshotRow = { id: string } & Record<string, unknown>;
+
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'stage-bulk-matches' }),
   { permission: 'manage_tournaments' }
@@ -123,9 +148,12 @@ async function handleBulkSchedule(
   }> = [];
 
   // Snapshot current scheduled_at values for rollback capability
-  const validMatchIds = schedules
-    .filter((e: any) => e.matchId && typeof e.matchId === 'string')
-    .map((e: any) => e.matchId);
+  const validMatchIds = (schedules as ScheduleEntry[])
+    .filter(
+      (e): e is ScheduleEntry & { matchId: string } =>
+        typeof e.matchId === 'string' && e.matchId.length > 0
+    )
+    .map((e) => e.matchId);
 
   const { data: snapshots } =
     validMatchIds.length > 0
@@ -138,7 +166,10 @@ async function handleBulkSchedule(
       : { data: [] };
 
   const snapshotMap = new Map(
-    (snapshots || []).map((s: any) => [s.id, s.scheduled_at])
+    ((snapshots || []) as ScheduleSnapshotRow[]).map((s) => [
+      s.id,
+      s.scheduled_at,
+    ])
   );
 
   for (const entry of schedules) {
@@ -384,13 +415,15 @@ async function handleBulkUpdate(
   // Build undo payload from snapshots
   const undoPayload = {
     type: 'bulk_update' as const,
-    snapshots: (snapshotRows || []).map((row: any) => {
-      const fields: Record<string, unknown> = {};
-      for (const k of fieldKeys) {
-        fields[k] = row[k] ?? null;
+    snapshots: ((snapshotRows || []) as unknown as UndoSnapshotRow[]).map(
+      (row) => {
+        const fields: Record<string, unknown> = {};
+        for (const k of fieldKeys) {
+          fields[k] = row[k] ?? null;
+        }
+        return { matchId: row.id, fields };
       }
-      return { matchId: row.id as string, fields };
-    }),
+    ),
   };
 
   if (ctx?.staff?.id) {
@@ -459,15 +492,17 @@ async function handleBulkDelete(
 
     undoPayload = {
       type: 'bulk_cancel',
-      snapshots: (snapshotRows || []).map((row: any) => ({
-        matchId: row.id as string,
-        fields: {
-          status: row.status,
-          team1_score: row.team1_score,
-          team2_score: row.team2_score,
-          winner_team_id: row.winner_team_id,
-        },
-      })),
+      snapshots: ((snapshotRows || []) as unknown as UndoSnapshotRow[]).map(
+        (row) => ({
+          matchId: row.id,
+          fields: {
+            status: row.status,
+            team1_score: row.team1_score,
+            team2_score: row.team2_score,
+            winner_team_id: row.winner_team_id,
+          },
+        })
+      ),
     };
   }
 

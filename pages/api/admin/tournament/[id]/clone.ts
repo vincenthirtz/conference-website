@@ -12,8 +12,44 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import slugify from 'slugify';
 
 import { logger } from '../../../../../utils/logger';
+
+/**
+ * LES DEUX LECTURES SOURCES, déclarées une fois — elles recopient exactement
+ * leurs `.select()`.
+ *
+ * L'enjeu est particulier ici : ces valeurs sont RECOPIÉES dans un INSERT. Une
+ * colonne mal nommée n'aurait pas affiché un vide, elle aurait cloné un
+ * tournoi avec des étapes ou un pool de maps incomplets, en silence.
+ */
+type SourceStageRow = {
+  name: string;
+  slug: string | null;
+  stage_type: string;
+  order_index: number | null;
+  settings: Record<string, unknown> | null;
+};
+
+type SourceMapRow = {
+  map_name: string;
+  map_slug: string | null;
+  map_type: string | null;
+  image_url: string | null;
+  enabled: boolean | null;
+  order_index: number | null;
+};
+
+/**
+ * Le tournoi cloné et ses étapes, tels que l'écran les reçoit.
+ *
+ * `Record<string, unknown>` plutôt qu'`any` : les deux `insert().select('*')`
+ * rendent toutes les colonnes, et les énumérer ici dupliquerait le schéma pour
+ * une charge que l'appelant ne fait que réafficher. `unknown` dit « je ne
+ * garantis pas la forme » ; `any` disait « ne vérifie plus rien ».
+ */
+type ClonedRow = Record<string, unknown>;
+
 type ApiResponse =
-  | { tournament: any; stages: any[]; maps: number }
+  | { tournament: ClonedRow; stages: ClonedRow[]; maps: number }
   | { error: string };
 
 export default withStaffRoute(
@@ -117,9 +153,9 @@ async function handler(
       .eq('tenant_id', ctx.tenantId)
       .order('order_index', { ascending: true });
 
-    let createdStages: any[] = [];
+    let createdStages: ClonedRow[] = [];
     if (sourceStages && sourceStages.length > 0) {
-      const stageInserts = sourceStages.map((s: any) => ({
+      const stageInserts = (sourceStages as SourceStageRow[]).map((s) => ({
         tenant_id: ctx.tenantId,
         tournament_id: cloned.id,
         name: s.name,
@@ -141,7 +177,7 @@ async function handler(
       if (stagesErr) {
         logger.error('clone: copy stages error', stagesErr);
       } else {
-        createdStages = stages || [];
+        createdStages = (stages ?? []) as ClonedRow[];
       }
     }
 
@@ -162,7 +198,7 @@ async function handler(
 
     let copiedMapsCount = 0;
     if (sourceMaps && sourceMaps.length > 0) {
-      const mapInserts = sourceMaps.map((m: any) => ({
+      const mapInserts = (sourceMaps as SourceMapRow[]).map((m) => ({
         tenant_id: ctx.tenantId,
         tournament_id: cloned.id,
         map_name: m.map_name,

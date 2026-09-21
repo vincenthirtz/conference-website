@@ -10,6 +10,37 @@ import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../utils/logger';
+
+/**
+ * Les deux lectures sources du clonage.
+ *
+ * `select('*')` : on ne déclare que les colonnes RECOPIÉES dans l'insert — ce
+ * sont les seules que ce fichier lit, et les énumérer toutes dupliquerait le
+ * schéma sans rien garder de plus. Une faute de frappe sur l'une d'elles
+ * clonerait une étape amputée, en silence.
+ */
+type SourceMatchRow = {
+  id: string;
+  is_bye: boolean | null;
+  match_format: string | null;
+  round_name: string | null;
+  round_number: number | null;
+  bracket_side: string | null;
+  group_key: string | null;
+  best_of: number | null;
+  team1_id: string | null;
+  team2_id: string | null;
+  scheduled_at: string | null;
+  notes: string | null;
+  next_match_win_slot: number | null;
+  next_match_lose_slot: number | null;
+};
+
+type SourceStageTeamRow = {
+  team_id: string;
+  seed: number | null;
+};
+
 export default withStaffRoute(
   withAdminIdempotency(handler, { key: 'stage-clone' }),
   { permission: 'manage_tournaments' }
@@ -105,7 +136,7 @@ async function handler(
         const oldToNew = new Map<string, string>();
 
         // First pass: prepare all matches with new IDs (let DB generate them)
-        const matchPayloads = sourceMatches.map((m: any) => ({
+        const matchPayloads = (sourceMatches as SourceMatchRow[]).map((m) => ({
           tenant_id: ctx.tenantId,
           tournament_id: tournamentId,
           stage_id: cloned.id,
@@ -145,7 +176,7 @@ async function handler(
           clonedMatchCount = inserted.length;
 
           // Map old IDs to new IDs (insertion order matches source order)
-          sourceMatches.forEach((m: any, i: number) => {
+          (sourceMatches as SourceMatchRow[]).forEach((m, i) => {
             if (inserted[i]) {
               oldToNew.set(m.id, inserted[i].id);
             }
@@ -200,7 +231,7 @@ async function handler(
       .eq('stage_id', id);
 
     if (stageTeams && stageTeams.length > 0) {
-      const teamPayloads = stageTeams.map((st: any) => ({
+      const teamPayloads = (stageTeams as SourceStageTeamRow[]).map((st) => ({
         tenant_id: ctx.tenantId,
         stage_id: cloned.id,
         team_id: st.team_id,
