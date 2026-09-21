@@ -29,6 +29,35 @@ import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 import { registerBodySchema } from '@/lib/apiContracts/bot/tournaments/[tournamentId]/teams';
 import { teamsQuerySchema } from '@/lib/apiContracts/bot/tournaments/[tournamentId]/teams.query';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
+
+/**
+ * LES TROIS LECTURES, déclarées une fois chacune — elles recopient exactement
+ * les `.select()` plus bas.
+ */
+type TeamRel = {
+  id: string;
+  name: string | null;
+  slug: string | null;
+  short_name: string | null;
+  logo_url: string | null;
+  country: string | null;
+  captain_id: string | null;
+};
+
+type StageTeamRow = {
+  team_id: string;
+  team: Relation<TeamRel>;
+  tournament_stages: Relation<{ tournament_id: string | null }>;
+};
+
+type MemberRow = { team_id: string };
+
+type DiscordLinkRow = {
+  auth_user_id: string;
+  discord_user_id: string;
+  discord_username: string | null;
+};
 
 const STAFF_PRIVILEGED = new Set(['admin', 'owner']);
 
@@ -81,10 +110,8 @@ async function handleList(
       captainAuthUserId: string | null;
     }
   >();
-  for (const r of rows ?? []) {
-    const t = Array.isArray((r as any).team)
-      ? (r as any).team[0]
-      : (r as any).team;
+  for (const r of (rows ?? []) as StageTeamRow[]) {
+    const t = oneRelation(r.team);
     if (!t?.id || teamsById.has(t.id)) continue;
     teamsById.set(t.id, {
       id: t.id,
@@ -117,24 +144,24 @@ async function handleList(
           .from('user_discord_links')
           .select('auth_user_id, discord_user_id, discord_username')
           .in('auth_user_id', captainAuthIds)
-      : Promise.resolve({ data: [] as any[] }),
+      : Promise.resolve({ data: [] as DiscordLinkRow[] }),
   ]);
 
   const memberCountByTeam = new Map<string, number>();
-  for (const m of members ?? []) {
+  for (const m of (members ?? []) as MemberRow[]) {
     memberCountByTeam.set(
-      (m as any).team_id,
-      (memberCountByTeam.get((m as any).team_id) ?? 0) + 1
+      m.team_id,
+      (memberCountByTeam.get(m.team_id) ?? 0) + 1
     );
   }
   const linkByAuthId = new Map<
     string,
     { discordUserId: string; discordUsername: string | null }
   >();
-  for (const l of links ?? []) {
-    linkByAuthId.set((l as any).auth_user_id, {
-      discordUserId: (l as any).discord_user_id,
-      discordUsername: (l as any).discord_username ?? null,
+  for (const l of (links ?? []) as DiscordLinkRow[]) {
+    linkByAuthId.set(l.auth_user_id, {
+      discordUserId: l.discord_user_id,
+      discordUsername: l.discord_username ?? null,
     });
   }
 

@@ -29,6 +29,10 @@ import {
 } from '@/utils/matches/gamesFromVeto';
 import { vetoQuerySchema } from '@/lib/apiContracts/bot/matches/[matchId]/veto.query';
 
+/** Les deux lectures d'appoint, déclarées une fois. */
+type TeamNameRow = { id: string; name: string | null };
+type VetoMapRow = { map_name: string };
+
 async function handleGet(
   res: NextApiResponse,
   matchId: string,
@@ -65,7 +69,8 @@ async function handleGet(
       .select('id, name')
       .eq('tenant_id', tenantId)
       .in('id', teamIds);
-    for (const t of teams ?? []) teamNames[(t as any).id] = (t as any).name;
+    for (const t of (teams ?? []) as TeamNameRow[])
+      teamNames[t.id] = t.name ?? '';
   }
 
   const format = match.match_format || 'bo3';
@@ -169,7 +174,7 @@ async function handlePost(
     .select('map_name')
     .eq('tenant_id', req.botContext.tenantId)
     .eq('match_id', matchId);
-  if ((existing ?? []).some((e) => (e as any).map_name === mapName)) {
+  if (((existing ?? []) as VetoMapRow[]).some((e) => e.map_name === mapName)) {
     return res
       .status(400)
       .json({ error: 'Cette map a déjà été utilisée dans ce veto.' });

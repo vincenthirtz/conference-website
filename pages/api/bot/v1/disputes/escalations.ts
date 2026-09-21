@@ -22,6 +22,17 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { listOpenDisputes } from '@/utils/disputes/slaBreaches';
 import { logger } from '@/utils/logger';
 
+/**
+ * Les deux lectures d'appoint, déclarées une fois.
+ *
+ * `name` est NOT NULL sur `teams` comme sur `tournaments` — vérifié dans
+ * `information_schema`. Le déclarer nullable « par prudence » aurait imposé
+ * des `?? ''` que rien ne déclencherait jamais, et qui feraient croire à un
+ * cas réel.
+ */
+type NamedRow = { id: string; name: string };
+type TournamentRow = { id: string; name: string; slug: string | null };
+
 const MAX_LIMIT = 50;
 const DEFAULT_LIMIT = 30;
 
@@ -74,7 +85,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
         .select('id, name')
         .eq('tenant_id', tenantId)
         .in('id', Array.from(teamIds));
-      for (const t of (teams ?? []) as any[]) {
+      for (const t of (teams ?? []) as NamedRow[]) {
         teamNames.set(t.id, t.name);
       }
     }
@@ -89,7 +100,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
         .select('id, name, slug')
         .eq('tenant_id', tenantId)
         .in('id', Array.from(tournamentIds));
-      for (const t of (tns ?? []) as any[]) {
+      for (const t of (tns ?? []) as TournamentRow[]) {
         tournamentInfo.set(t.id, {
           id: t.id,
           name: t.name,

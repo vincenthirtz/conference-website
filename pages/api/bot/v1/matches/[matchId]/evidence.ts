@@ -33,6 +33,18 @@ import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 import { evidencePostSchema } from '@/lib/apiContracts/bot/matches/[matchId]/evidence';
 import { evidenceQuerySchema } from '@/lib/apiContracts/bot/matches/[matchId]/evidence.query';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
+
+/** La forme de la lecture, déclarée une fois — elle recopie le `.select()`. */
+type TeamRel = { id: string; name: string | null; captain_id: string | null };
+
+type EvidenceMatchRow = {
+  id: string;
+  team1_id: string | null;
+  team2_id: string | null;
+  team1: Relation<TeamRel>;
+  team2: Relation<TeamRel>;
+};
 
 // Le body peut porter un fichier binaire en base64 (~10 Mo max -> ~13.4 Mo en
 // base64 + overhead JSON). La limite par defaut de Next (1mb) le rejetterait.
@@ -80,12 +92,9 @@ async function loadMatchTeams(
     return null;
   }
 
-  const t1 = Array.isArray((match as any).team1)
-    ? (match as any).team1[0]
-    : (match as any).team1;
-  const t2 = Array.isArray((match as any).team2)
-    ? (match as any).team2[0]
-    : (match as any).team2;
+  const row = match as EvidenceMatchRow;
+  const t1 = oneRelation(row.team1);
+  const t2 = oneRelation(row.team2);
 
   if (!t1?.id || !t2?.id) {
     res.status(400).json({ error: 'Match incomplet (equipes non assignees)' });

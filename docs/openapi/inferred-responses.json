@@ -22546,7 +22546,9 @@
         "items": {
          "type": "object",
          "properties": {
-          "value": {},
+          "value": {
+           "type": "string"
+          },
           "label": {
            "type": "string"
           }
@@ -26007,15 +26009,39 @@
         "items": {
          "type": "object",
          "properties": {
-          "id": {},
-          "userId": {},
-          "role": {},
-          "battleTag": {},
-          "isSubstitute": {},
+          "id": {
+           "type": "string"
+          },
+          "userId": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "role": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "battleTag": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "isSubstitute": {
+           "type": [
+            "boolean",
+            "null"
+           ]
+          },
           "isCaptain": {
            "type": "boolean"
           },
-          "joinedAt": {}
+          "joinedAt": {
+           "type": "string"
+          }
          },
          "required": [
           "id",
@@ -27054,23 +27080,63 @@
       "items": {
        "type": "object",
        "properties": {
-        "id": {},
-        "createdAt": {},
-        "action": {},
-        "entityType": {},
-        "entityId": {},
-        "tournamentId": {},
-        "via": {},
-        "summary": {},
+        "id": {
+         "type": "string"
+        },
+        "createdAt": {
+         "type": "string"
+        },
+        "action": {
+         "type": "string"
+        },
+        "entityType": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "entityId": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "tournamentId": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "via": {
+         "type": "string"
+        },
+        "summary": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
         "staff": {
          "type": [
           "object",
           "null"
          ],
          "properties": {
-          "id": {},
-          "displayName": {},
-          "role": {}
+          "id": {
+           "type": "string"
+          },
+          "displayName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "role": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
          },
          "required": [
           "id",

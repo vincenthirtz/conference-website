@@ -19,10 +19,13 @@
 //
 // LA CORRECTION N'EST PAS `as any` → `as Machin`, qui déplacerait le mensonge.
 // C'est de déclarer la forme de la ligne UNE fois, en recopiant le `.select()`
-// — alors une colonne absente devient une erreur de compilation. Les quatre
-// fichiers ramenés à zéro le 2026-09-21 en sont les exemples travaillés, et
-// l'exercice a révélé trois écarts réels (un repli mort, un type trop
-// pessimiste, un `.get()` sur une clé nullable).
+// — alors une colonne absente devient une erreur de compilation.
+//
+// `pages/api/bot/v1` est passé de 144 à 5 le 2026-09-21, et l'exercice a
+// révélé cinq écarts réels, tous invisibles auparavant : un repli mort, deux
+// types trop pessimistes, un `Map.get()` sur une clé nullable, et un rappel de
+// briefing qui pouvait partir avec `matchId: null` alors que le contrat du bot
+// annonce une chaîne.
 //
 // LES TESTS NE SONT PAS COMPTÉS. Un `as any` dans un test sert à fabriquer une
 // fixture partielle : c'est un usage légitime, et les y interdire pousserait à
@@ -45,7 +48,7 @@ const BUDGET: Record<string, number> = {
   // `pages` HORS `pages/api` : les écrans. Compté à part, sinon cette zone
   // serait le trou par lequel le total remonte sans que rien ne le dise.
   pagesScreens: 72,
-  'pages/api/bot/v1': 80,
+  'pages/api/bot/v1': 5,
   'pages/api/admin': 126,
   'pages/api/teams': 12,
   'pages/api/player': 0,

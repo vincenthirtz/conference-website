@@ -18,6 +18,30 @@ import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
+
+/**
+ * LA FORME DE LA LECTURE, déclarée une fois — elle recopie exactement le
+ * `.select()` plus bas. `payload` reste libre : son contenu dépend de
+ * l'`action` journalisée, et lui inventer une forme unique ferait mentir la
+ * déclaration.
+ */
+type StaffRel = {
+  id: string;
+  display_name: string | null;
+  role: string | null;
+};
+
+type StaffLogRow = {
+  id: string;
+  action: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  tournament_id: string | null;
+  payload: Record<string, unknown> | null;
+  created_at: string;
+  staff: Relation<StaffRel>;
+};
 
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 20;
@@ -75,18 +99,16 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     return res.status(500).json({ error: 'Erreur de lecture des logs' });
   }
 
-  const logs = (data ?? []).map((row) => {
-    const staffRel = Array.isArray((row as any).staff)
-      ? (row as any).staff[0]
-      : (row as any).staff;
-    const payload = (row as any).payload ?? {};
+  const logs = ((data ?? []) as StaffLogRow[]).map((row) => {
+    const staffRel = oneRelation(row.staff);
+    const payload = row.payload ?? {};
     return {
-      id: (row as any).id,
-      createdAt: (row as any).created_at,
-      action: (row as any).action,
-      entityType: (row as any).entity_type ?? null,
-      entityId: (row as any).entity_id ?? null,
-      tournamentId: (row as any).tournament_id ?? null,
+      id: row.id,
+      createdAt: row.created_at,
+      action: row.action,
+      entityType: row.entity_type ?? null,
+      entityId: row.entity_id ?? null,
+      tournamentId: row.tournament_id ?? null,
       via: typeof payload?.via === 'string' ? payload.via : 'website',
       summary:
         typeof payload?.action_type === 'string' ? payload.action_type : null,

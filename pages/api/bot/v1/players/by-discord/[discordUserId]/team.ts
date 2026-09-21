@@ -11,6 +11,16 @@ import { listMemberships, pickMembership } from '@/utils/teams/memberships';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { logger } from '@/utils/logger';
 
+/** La forme des coéquipières, telle que le `.select()` la demande. */
+type TeammateRow = {
+  id: string;
+  user_id: string | null;
+  role: string | null;
+  battle_tag: string | null;
+  is_substitute: boolean | null;
+  created_at: string;
+};
+
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
@@ -121,7 +131,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       description: team.description,
       website: team.website,
     },
-    teammates: (teammates ?? []).map((m: any) => ({
+    teammates: ((teammates ?? []) as TeammateRow[]).map((m) => ({
       id: m.id,
       userId: m.user_id,
       role: m.role,

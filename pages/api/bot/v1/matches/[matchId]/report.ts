@@ -58,6 +58,31 @@ import { logger } from '@/utils/logger';
 import { reportBodySchema } from '@/lib/apiContracts/bot/matches/[matchId]/report';
 import { revalidateMatchPages } from '@/utils/matches/revalidateMatchPages';
 import { reportQuerySchema } from '@/lib/apiContracts/bot/matches/[matchId]/report.query';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
+
+/**
+ * LA FORME DE LA LECTURE, déclarée une fois — elle recopie exactement le
+ * `.select()` plus bas.
+ */
+type TeamRel = { id: string; name: string | null; captain_id: string | null };
+type TournamentRel = { id: string; name: string | null };
+
+type ReportMatchRow = {
+  id: string;
+  tournament_id: string | null;
+  scrim_id: string | null;
+  status: string;
+  is_bye: boolean | null;
+  scheduled_at: string | null;
+  best_of: number | null;
+  match_format: string | null;
+  dispute_opened_by: string | null;
+  team1_id: string | null;
+  team2_id: string | null;
+  team1: Relation<TeamRel>;
+  team2: Relation<TeamRel>;
+  tournament: Relation<TournamentRel>;
+};
 
 const SITE_URL =
   process.env.SITE_URL ||
@@ -97,6 +122,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     return res.status(500).json({ error: 'Erreur de lecture du match' });
   }
   if (!match) return res.status(404).json({ error: 'Match introuvable' });
+  const row = match as ReportMatchRow;
   if (match.is_bye) {
     return res.status(400).json({ error: 'Match marque bye' });
   }
@@ -107,15 +133,9 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     });
   }
 
-  const team1 = Array.isArray((match as any).team1)
-    ? (match as any).team1[0]
-    : (match as any).team1;
-  const team2 = Array.isArray((match as any).team2)
-    ? (match as any).team2[0]
-    : (match as any).team2;
-  const tournament = Array.isArray((match as any).tournament)
-    ? (match as any).tournament[0]
-    : (match as any).tournament;
+  const team1 = oneRelation(row.team1);
+  const team2 = oneRelation(row.team2);
+  const tournament = oneRelation(row.tournament);
 
   if (!team1?.id || !team2?.id) {
     return res

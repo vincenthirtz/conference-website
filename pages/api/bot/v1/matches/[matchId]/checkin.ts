@@ -33,6 +33,23 @@ import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 import { checkinBodySchema } from '@/lib/apiContracts/bot/matches/[matchId]/checkin';
 import { checkinQuerySchema } from '@/lib/apiContracts/bot/matches/[matchId]/checkin.query';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
+
+/** La forme de la lecture, déclarée une fois — elle recopie le `.select()`. */
+type TeamRel = { id: string; name: string | null; captain_id: string | null };
+
+type CheckinMatchRow = {
+  id: string;
+  status: string;
+  scheduled_at: string | null;
+  is_bye: boolean | null;
+  team1_id: string | null;
+  team2_id: string | null;
+  team1_checkin_token: string | null;
+  team2_checkin_token: string | null;
+  team1: Relation<TeamRel>;
+  team2: Relation<TeamRel>;
+};
 
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { matchId } = req.botQuery as z.infer<typeof checkinQuerySchema>;
@@ -62,12 +79,9 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       .json({ error: 'Match marque bye, check-in inutile' });
   }
 
-  const team1 = Array.isArray((match as any).team1)
-    ? (match as any).team1[0]
-    : (match as any).team1;
-  const team2 = Array.isArray((match as any).team2)
-    ? (match as any).team2[0]
-    : (match as any).team2;
+  const row = match as CheckinMatchRow;
+  const team1 = oneRelation(row.team1);
+  const team2 = oneRelation(row.team2);
 
   // 1. Qui clique ? Sans compte relie, on ne peut rien verifier : refus.
   //    `discord_user_id` est UNIQUE en base, d'ou maybeSingle.

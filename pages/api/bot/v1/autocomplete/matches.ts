@@ -16,6 +16,26 @@ import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { resolveActorPlayer } from '@/utils/botActor';
 import { escapePostgrestValue, isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
+
+/**
+ * LA FORME DE LA LECTURE, déclarée une fois — elle recopie exactement le
+ * `.select()` plus bas. Elle était lue derrière `as any`, un cast par accès.
+ */
+type TeamRel = { id: string; name: string; short_name: string | null };
+
+type AutocompleteMatchRow = {
+  id: string;
+  status: string;
+  round_number: number | null;
+  round_name: string | null;
+  scheduled_at: string | null;
+  scrim_id: string | null;
+  tournament_id: string | null;
+  team1: Relation<TeamRel>;
+  team2: Relation<TeamRel>;
+};
+
 import {
   DEFAULT_TOURNAMENT_TZ,
   resolveTournamentTz,
@@ -211,34 +231,29 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     return res.status(200).json({ results: [] });
   }
 
-  const visible = (data ?? []).filter((m) => {
-    const tid = (m as { tournament_id?: string | null }).tournament_id;
+  const visible = ((data ?? []) as AutocompleteMatchRow[]).filter((m) => {
+    const tid = m.tournament_id;
     // Un scrim n'appartient à aucun tournoi : il n'est jamais « d'une édition
     // close ».
     return !tid || !closedTournamentIds.has(tid);
   });
 
   const results = visible.slice(0, limit).map((m) => {
-    const t1 = Array.isArray((m as any).team1)
-      ? (m as any).team1[0]
-      : (m as any).team1;
-    const t2 = Array.isArray((m as any).team2)
-      ? (m as any).team2[0]
-      : (m as any).team2;
+    const t1 = oneRelation(m.team1);
+    const t2 = oneRelation(m.team2);
     const round =
-      (m as any).round_name ??
-      ((m as any).round_number != null ? `R${(m as any).round_number}` : null);
+      m.round_name ?? (m.round_number != null ? `R${m.round_number}` : null);
     const tid = (m as { tournament_id?: string | null }).tournament_id;
     // Un scrim n'appartient à aucun tournoi : fuseau par défaut.
     const tz = (tid && tournamentTz.get(tid)) || DEFAULT_TOURNAMENT_TZ;
-    const sched = formatScheduled((m as any).scheduled_at, tz);
+    const sched = formatScheduled(m.scheduled_at, tz);
     const teams = `${t1?.name ?? '?'} vs ${t2?.name ?? '?'}`;
-    const isScrim = !!(m as any).scrim_id;
+    const isScrim = !!m.scrim_id;
     const tail = [isScrim ? 'Scrim' : null, round, sched]
       .filter(Boolean)
       .join(' · ');
     const label = tail ? `${teams} — ${tail}` : teams;
-    return { value: (m as any).id, label: trimLabel(label) };
+    return { value: m.id, label: trimLabel(label) };
   });
 
   return res.status(200).json({ results });

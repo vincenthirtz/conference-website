@@ -19,6 +19,32 @@ import { logger } from '@/utils/logger';
 import { cloneBodySchema } from '@/lib/apiContracts/bot/tournaments/[tournamentId]/clone';
 import { cloneQuerySchema } from '@/lib/apiContracts/bot/tournaments/[tournamentId]/clone.query';
 
+/**
+ * LES DEUX LECTURES SOURCES, déclarées une fois — elles recopient exactement
+ * les `.select()` plus bas.
+ *
+ * Elles étaient lues derrière `as any`, un cast par colonne. Ici l'enjeu est
+ * particulier : ces valeurs sont RECOPIÉES dans un INSERT. Une colonne mal
+ * nommée n'aurait pas seulement affiché un vide — elle aurait cloné un tournoi
+ * avec des étapes ou un pool de maps incomplets, en silence.
+ */
+type SourceStageRow = {
+  name: string;
+  slug: string | null;
+  stage_type: string;
+  order_index: number | null;
+  settings: Record<string, unknown> | null;
+};
+
+type SourceMapRow = {
+  map_name: string;
+  map_slug: string | null;
+  map_type: string | null;
+  image_url: string | null;
+  enabled: boolean | null;
+  order_index: number | null;
+};
+
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { tournamentId: sourceId } = req.botQuery as z.infer<
     typeof cloneQuerySchema
@@ -96,18 +122,18 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
 
   let createdStages: unknown[] = [];
   if (sourceStages && sourceStages.length > 0) {
-    const inserts = sourceStages.map((s) => ({
+    const inserts = (sourceStages as SourceStageRow[]).map((s) => ({
       tenant_id: req.botContext.tenantId,
       tournament_id: cloned.id,
-      name: (s as any).name,
-      slug: (s as any).slug,
-      stage_type: (s as any).stage_type,
-      order_index: (s as any).order_index,
+      name: s.name,
+      slug: s.slug,
+      stage_type: s.stage_type,
+      order_index: s.order_index,
       is_active: false,
       is_public: false,
       start_date: null,
       end_date: null,
-      settings: (s as any).settings,
+      settings: s.settings,
     }));
     const { data: stages, error: stagesErr } = await supabaseAdmin
       .from('tournament_stages')
@@ -134,15 +160,15 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
 
   let mapsCount = 0;
   if (sourceMaps && sourceMaps.length > 0) {
-    const inserts = sourceMaps.map((m) => ({
+    const inserts = (sourceMaps as SourceMapRow[]).map((m) => ({
       tenant_id: req.botContext.tenantId,
       tournament_id: cloned.id,
-      map_name: (m as any).map_name,
-      map_slug: (m as any).map_slug,
-      map_type: (m as any).map_type,
-      image_url: (m as any).image_url,
-      enabled: (m as any).enabled,
-      order_index: (m as any).order_index,
+      map_name: m.map_name,
+      map_slug: m.map_slug,
+      map_type: m.map_type,
+      image_url: m.image_url,
+      enabled: m.enabled,
+      order_index: m.order_index,
     }));
     const { error: mapsErr } = await supabaseAdmin
       .from('tournament_maps')

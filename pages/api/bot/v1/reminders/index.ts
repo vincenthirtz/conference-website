@@ -27,6 +27,112 @@ import { isCheckinTeamRole } from '@/utils/teams/canCheckIn';
 import { getDiscordLinksForUsers } from '@/utils/discordLinks';
 import { logger } from '@/utils/logger';
 
+/**
+ * LES QUATRE LECTURES DE CE FICHIER, déclarées une fois chacune — elles
+ * recopient exactement leurs `.select()` respectifs.
+ *
+ * Elles étaient parcourues en `as any[]`, ce qui éteint le compilateur sur
+ * TOUT l'objet d'un coup : pas seulement les colonnes, mais aussi les
+ * relations imbriquées. Le mock Supabase des tests ne validant pas les noms de
+ * colonnes, une faute de frappe ici n'aurait cassé qu'en production, dans le
+ * bot — et sur des rappels dont l'absence ne se remarque pas tout de suite.
+ */
+/**
+ * ⚠️ POURQUOI UNE CONVERSION PAR `unknown`. supabase-js infère les relations
+ * embarquées comme des TABLEAUX dès qu'il ne peut pas prouver l'unicité de la
+ * jointure — ici, faute de types de base générés, il ne le peut jamais.
+ * PostgREST, lui, rend un OBJET pour un embed « vers-un » par clé étrangère
+ * (`team1:team1_id (...)`), et tout ce fichier le lit ainsi depuis toujours.
+ *
+ * L'hypothèse était auparavant cachée derrière `as any[]`, qui éteignait la
+ * vérification des colonnes EN PLUS de celle des relations. La conversion
+ * ci-dessous ne garde que la seconde, et la dit. Si un jour une de ces
+ * relations revenait en tableau, c'est ici qu'il faudrait passer par
+ * `oneRelation` (`utils/supabase/relation.ts`).
+ */
+type ReminderTeamRel = {
+  id: string;
+  name: string | null;
+  captain_id: string | null;
+  preferred_locale: string | null;
+};
+type NamedRel = { id: string; name: string | null };
+
+type CheckinReminderMatchRow = {
+  id: string;
+  /**
+   * NON NULL ICI bien que la colonne l'autorise : la requête filtre
+   * `scheduled_at` avec `.gte()` ET `.lte()`, et une comparaison avec NULL
+   * n'est jamais vraie en SQL — les lignes sans date sont exclues par
+   * construction.
+   */
+  scheduled_at: string;
+  status: string;
+  is_bye: boolean | null;
+  team1_id: string | null;
+  team2_id: string | null;
+  team1_captain_dm_30_sent_at: string | null;
+  team2_captain_dm_30_sent_at: string | null;
+  team1_checkin_token: string | null;
+  team2_checkin_token: string | null;
+  team1_checked_in_at: string | null;
+  team2_checked_in_at: string | null;
+  team1: ReminderTeamRel | null;
+  team2: ReminderTeamRel | null;
+  tournament: NamedRel | null;
+  scrim: NamedRel | null;
+};
+
+type LineupReminderMatchRow = {
+  id: string;
+  /**
+   * NON NULL ICI bien que la colonne l'autorise : la requête filtre
+   * `scheduled_at` avec `.gte()` ET `.lte()`, et une comparaison avec NULL
+   * n'est jamais vraie en SQL — les lignes sans date sont exclues par
+   * construction.
+   */
+  scheduled_at: string;
+  status: string;
+  is_bye: boolean | null;
+  team1_id: string | null;
+  team2_id: string | null;
+  team1_checked_in_at: string | null;
+  team2_checked_in_at: string | null;
+  team1_lineup_dm_sent_at: string | null;
+  team2_lineup_dm_sent_at: string | null;
+  team1: ReminderTeamRel | null;
+  team2: ReminderTeamRel | null;
+  tournament: NamedRel | null;
+};
+
+type StageTeamCaptainRow = {
+  team: { id: string; name: string | null; captain_id: string | null } | null;
+};
+
+type CastBriefingRow = {
+  id: string;
+  /** NOT NULL en base — vérifié dans `information_schema`. */
+  briefing_at: string;
+  briefing_reminder_sent_at: string | null;
+  /**
+   * NULLABLE : une affectation de cast peut ne viser aucun match. Le contrat
+   * `CastBriefingReminder` annonce pourtant `matchId: string` — d'où le filtre
+   * explicite plus bas, cf. son commentaire.
+   */
+  match_id: string | null;
+  cast_member: {
+    id: string;
+    name: string | null;
+    auth_user_id: string | null;
+  } | null;
+  match: {
+    id: string;
+    scheduled_at: string | null;
+    team1: { name: string | null } | null;
+    team2: { name: string | null } | null;
+  } | null;
+};
+
 // Polling window — matches scheduled in this interval are eligible.
 // Bot polls every ~5 min so a 25–35 min window catches every match exactly
 // once (T-30) with a small margin for clock drift.
@@ -178,7 +284,7 @@ async function collectMatchCheckinReminders(
 
   // Collect captain auth_user_ids for bulk Discord-link lookup.
   const captainIds = new Set<string>();
-  for (const m of matches as any[]) {
+  for (const m of matches as unknown as CheckinReminderMatchRow[]) {
     if (
       !m.team1_captain_dm_30_sent_at &&
       m.team1?.captain_id &&
@@ -198,7 +304,7 @@ async function collectMatchCheckinReminders(
   const linksByUser = await getDiscordLinksForUsers([...captainIds]);
   const reminders: MatchCheckinReminder[] = [];
 
-  for (const m of matches as any[]) {
+  for (const m of matches as unknown as CheckinReminderMatchRow[]) {
     for (const side of [1, 2] as const) {
       const team = side === 1 ? m.team1 : m.team2;
       const sentField =
@@ -306,7 +412,7 @@ async function collectMatchLineupReminders(
 
   const reminders: MatchLineupReminder[] = [];
 
-  for (const m of matches as any[]) {
+  for (const m of matches as unknown as LineupReminderMatchRow[]) {
     // Feuilles déjà validées pour ce match : on ne relance pas ces équipes-là.
     const { data: lineups } = await supabaseAdmin!
       .from('match_lineups')
@@ -436,7 +542,7 @@ async function collectTournamentJ1Reminders(
       string,
       { teamId: string; teamName: string; captainId: string }
     >();
-    for (const row of (stageTeams ?? []) as any[]) {
+    for (const row of (stageTeams ?? []) as unknown as StageTeamCaptainRow[]) {
       const team = row.team;
       if (!team?.id || !team.captain_id) continue;
       if (!captainByTeam.has(team.id)) {
@@ -526,7 +632,7 @@ async function collectCastBriefingReminders(
   if (!assignments || assignments.length === 0) return [];
 
   const casterAuthIds = new Set<string>();
-  for (const a of assignments as any[]) {
+  for (const a of assignments as unknown as CastBriefingRow[]) {
     const authId = a.cast_member?.auth_user_id;
     if (authId) casterAuthIds.add(authId);
   }
@@ -534,9 +640,17 @@ async function collectCastBriefingReminders(
 
   const reminders: CastBriefingReminder[] = [];
 
-  for (const a of assignments as any[]) {
+  for (const a of assignments as unknown as CastBriefingRow[]) {
     const authId = a.cast_member?.auth_user_id;
     if (!authId) continue;
+    // UNE AFFECTATION SANS MATCH NE DONNE PAS DE RAPPEL. `match_id` est
+    // nullable en base, alors que le contrat `CastBriefingReminder` annonce
+    // `matchId: string`. Tant que ces lignes étaient parcourues en `as any[]`,
+    // le cas passait inaperçu : le bot recevait `matchId: null` pour un champ
+    // que le contrat dit être une chaîne. Un rappel de briefing sans match
+    // n'est de toute façon pas actionnable — mieux vaut ne pas l'émettre que
+    // d'émettre une charge que le consommateur ne sait pas lire.
+    if (!a.match_id) continue;
     const link = linksByUser.get(authId);
     if (!link) continue;
 
