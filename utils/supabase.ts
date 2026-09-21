@@ -53,9 +53,22 @@ export { supabaseClient, purgeSupabaseAuthStorage } from './supabaseBrowser';
  *    - C'est celui que tu utilises via getServerClient(req, res)
  * ---------------------------------------------------------*/
 
-type SupabaseServerReq = NextApiRequest | GetServerSidePropsContext['req'];
+/**
+ * Les deux natures de requête serveur du pages-router : route API et SSR.
+ *
+ * Exportées parce que la chaîne d'authentification staff traverse LES DEUX —
+ * elle ne lit que `headers` et `cookies`, communs aux deux. Les fonctions qui
+ * n'en lisent pas plus doivent accepter l'union, sinon l'appel SSR doit être
+ * casté, et un cast masque le jour où l'une d'elles se met à appeler
+ * `res.status()`, qui n'existe pas côté SSR.
+ */
+export type SupabaseServerReq =
+  | NextApiRequest
+  | GetServerSidePropsContext['req'];
 
-type SupabaseServerRes = NextApiResponse | GetServerSidePropsContext['res'];
+export type SupabaseServerRes =
+  | NextApiResponse
+  | GetServerSidePropsContext['res'];
 
 function appendSetCookie(res: SupabaseServerRes, cookie: string) {
   const existing = res.getHeader('Set-Cookie');

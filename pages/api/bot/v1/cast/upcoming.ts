@@ -65,19 +65,24 @@ async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
   // Lot 9 : cast_assignments est polymorphe (match_id XOR scrim_id). On
   // requete les deux variantes en parallele puis on merge.
   //
-  // `scopeToKey` n'ajoute le filtre tenant que pour un bot auto-hébergé ; le
-  // bot mutualisé garde la vue complète dont il a besoin pour router.
-  const scopeToKey = <T>(q: T): T =>
-    req.botKey.isPlatformKey
-      ? q
-      : ((q as any).eq('tenant_id', req.botKey.tenantId) as T);
+  // Le filtre tenant ne s'applique qu'à un bot auto-hébergé ; le bot mutualisé
+  // garde la vue complète dont il a besoin pour router.
+  //
+  // C'était un helper générique `scopeToKey<T>` dont le corps faisait
+  // `(q as any).eq(...)`. Deux raisons de l'avoir défait plutôt que de typer
+  // son `T` : le cast acceptait n'importe quoi, y compris un objet SANS `.eq`
+  // — le filtre tenant aurait alors disparu à l'exécution et un bot
+  // auto-hébergé aurait vu tous les espaces, en silence ; et typer le
+  // générique correctement fait exploser l'inférence de supabase-js
+  // (TS2589 : « type instantiation is excessively deep »), parce que les
+  // builders PostgREST se référencent eux-mêmes. Appliquer `.eq` en place ne
+  // demande aucun type intermédiaire : TypeScript infère tout.
+  const tenantScope = req.botKey.isPlatformKey ? null : req.botKey.tenantId;
 
-  const [matchRes, scrimRes] = await Promise.all([
-    scopeToKey(
-      supabaseAdmin
-        .from('cast_assignments')
-        .select(
-          `id, tenant_id, match_id, briefing_at, acked_at, cast_member_id,
+  let matchQuery = supabaseAdmin
+    .from('cast_assignments')
+    .select(
+      `id, tenant_id, match_id, briefing_at, acked_at, cast_member_id,
          cast_member:cast_member_id (id, name, title, auth_user_id),
          match:match_id (
            id, status, scheduled_at, is_bye,
@@ -85,28 +90,29 @@ async function handler(req: BotCrossTenantRequest, res: NextApiResponse) {
            team2:team2_id (id, name, short_name),
            tournament:tournament_id (id, name, slug)
          )`
-        )
-        .is('acked_at', null)
-        .not('match_id', 'is', null)
-        .order('briefing_at', { ascending: true })
-    ),
-    scopeToKey(
-      supabaseAdmin
-        .from('cast_assignments')
-        .select(
-          `id, tenant_id, scrim_id, briefing_at, acked_at, cast_member_id,
+    )
+    .is('acked_at', null)
+    .not('match_id', 'is', null)
+    .order('briefing_at', { ascending: true });
+  if (tenantScope) matchQuery = matchQuery.eq('tenant_id', tenantScope);
+
+  let scrimQuery = supabaseAdmin
+    .from('cast_assignments')
+    .select(
+      `id, tenant_id, scrim_id, briefing_at, acked_at, cast_member_id,
          cast_member:cast_member_id (id, name, title, auth_user_id),
          scrim:scrim_id (
            id, name, slug, status, scheduled_date, stream_url,
            team1:team1_id (id, name, short_name),
            team2:team2_id (id, name, short_name)
          )`
-        )
-        .is('acked_at', null)
-        .not('scrim_id', 'is', null)
-        .order('briefing_at', { ascending: true })
-    ),
-  ]);
+    )
+    .is('acked_at', null)
+    .not('scrim_id', 'is', null)
+    .order('briefing_at', { ascending: true });
+  if (tenantScope) scrimQuery = scrimQuery.eq('tenant_id', tenantScope);
+
+  const [matchRes, scrimRes] = await Promise.all([matchQuery, scrimQuery]);
 
   if (matchRes.error) {
     logger.error('[bot/cast/upcoming] match query error', matchRes.error);

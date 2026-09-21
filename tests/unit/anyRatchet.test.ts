@@ -39,25 +39,36 @@ import { join } from 'node:path';
 /**
  * Plafonds par zone, au 2026-09-21. Un chiffre ne doit que DESCENDRE.
  *
- * `pages/api/player`, `pages/api/cron` et `pages/api/webhooks` sont à ZÉRO, et
- * ce n'est pas un hasard : ce sont les zones écrites le plus récemment, où la
- * convention « déclarer la forme de la ligne » a été suivie dès le départ.
- * Elles servent de preuve que la règle tient à l'usage.
+ * SEPT ZONES SUR ONZE SONT À ZÉRO. Les trois premières (`player`, `cron`,
+ * `webhooks`) le sont parce qu'elles ont été écrites après la convention
+ * « déclarer la forme de la ligne ». Les quatre autres (`bot/v1`, `teams`,
+ * `components`, `netlify`) y sont descendues à la main, et chaque descente a
+ * sorti un défaut réel : un filtre tenant qui pouvait disparaître sans bruit
+ * dans `bot/v1/cast/upcoming`, un statut de VM `undefined` déguisé en chaîne
+ * dans `netlify/functions/telegram-vm`, et huit casts dans
+ * `netlify/functions/builds` qui ne servaient plus à rien depuis que les
+ * champs figuraient au type.
+ *
+ * Ce n'est pas un décompte d'hygiène : c'est ce que les zones restantes
+ * cachent encore.
  */
 const BUDGET: Record<string, number> = {
   // `pages` HORS `pages/api` : les écrans. Compté à part, sinon cette zone
   // serait le trou par lequel le total remonte sans que rien ne le dise.
-  pagesScreens: 72,
-  'pages/api/bot/v1': 5,
+  pagesScreens: 59,
+  'pages/api/bot/v1': 0,
   'pages/api/admin': 54,
-  'pages/api/teams': 12,
+  'pages/api/teams': 0,
   'pages/api/player': 0,
   'pages/api/cron': 0,
   'pages/api/webhooks': 0,
-  utils: 43,
-  components: 9,
+  // Un seul, et assumé : la signature d'implémentation des overloads de
+  // `withBotRoute` (cf. le commentaire sur place — l'union et l'intersection
+  // ont été essayées, elles cassent les appelants).
+  utils: 1,
+  components: 0,
   lib: 0,
-  netlify: 10,
+  netlify: 0,
 };
 
 /**
@@ -144,7 +155,16 @@ describe('cliquet des `any` — le code de production ne se dégrade pas', () =>
   it('les zones à zéro le restent', () => {
     // Elles sont la preuve que la convention tient. Une seule régression y
     // suffirait à la rendre discutable.
-    for (const zone of ['pages/api/player', 'pages/api/cron']) {
+    for (const zone of [
+      'pages/api/player',
+      'pages/api/cron',
+      'pages/api/webhooks',
+      'pages/api/bot/v1',
+      'pages/api/teams',
+      'components',
+      'netlify',
+      'lib',
+    ]) {
       expect(countAny(sourceFiles(zone))).toBe(0);
     }
   });

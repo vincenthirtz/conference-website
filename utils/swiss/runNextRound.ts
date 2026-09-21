@@ -362,8 +362,8 @@ export async function runSwissNextRound(
     .select('id, name')
     .in('id', teamIds);
   const nameById = new Map<string, string | null>();
-  for (const t of teams ?? []) {
-    nameById.set((t as any).id, (t as any).name ?? null);
+  for (const t of (teams ?? []) as { id: string; name: string | null }[]) {
+    nameById.set(t.id, t.name ?? null);
   }
   const preview: PreviewPairing[] = pairings.map((p) => ({
     team1Id: p.player1Id,

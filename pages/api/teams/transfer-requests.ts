@@ -22,6 +22,7 @@ import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
 
 import { logger } from '../../../utils/logger';
+import type { DemandeRow, DemandePayload } from '@/utils/teams/demandeRows';
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -116,11 +117,10 @@ async function handleGet(
 
   // Enrich with user info. Batch-resolve every auth user_id in ONE RPC instead
   // of N getUserById round-trips; unknown ids stay absent from the Map.
-  const profiles = await fetchAdminUserProfiles(
-    (demandes || []).map((d: any) => d.user_id)
-  );
+  const rows = (demandes || []) as DemandeRow[];
+  const profiles = await fetchAdminUserProfiles(rows.map((d) => d.user_id));
 
-  const enriched = (demandes || []).map((d: any) => {
+  const enriched = rows.map((d) => {
     let userInfo = null;
     if (d.user_id) {
       const p = profiles.get(d.user_id);
@@ -183,6 +183,10 @@ async function handlePost(
       .json({ error: 'Demande introuvable ou deja traitee.' });
   }
 
+  // Le JSONB ne garantit aucune clé : le type le dit, les replis plus bas le
+  // gèrent. C'était `(demande.payload as any)?.champ`, répété à chaque lecture.
+  const payload = (demande.payload ?? null) as DemandePayload | null;
+
   const newStatus = action === 'approve' ? 'approved' : 'rejected';
 
   if (action === 'approve') {
@@ -190,8 +194,8 @@ async function handlePost(
     // roster (retrait ancienne equipe + ajout cible) est deleguee a la RPC
     // transactionnelle, qui resout l'appartenance REELLE du joueur — on
     // n'utilise plus payload.from_team_id pour muter (il pouvait etre perime).
-    const desiredRole = validateRole((demande.payload as any)?.desired_role);
-    const battleTag = (demande.payload as any)?.user_battle_tag || null;
+    const desiredRole = validateRole(payload?.desired_role);
+    const battleTag = payload?.user_battle_tag || null;
 
     // Roster lock cote team cible : refuser si un tournoi l'a verrouille.
     // (Garde absente auparavant.) L'admin peut forcer via /api/admin/*.
@@ -224,11 +228,8 @@ async function handlePost(
     // Auto news (effet de bord APRES succes de la RPC, best-effort).
     try {
       const playerName =
-        battleTag?.split('#')[0] ||
-        (demande.payload as any)?.user_display_name ||
-        'Joueur';
-      const fromTeamName =
-        (demande.payload as any)?.from_team_name || 'une equipe';
+        battleTag?.split('#')[0] || payload?.user_display_name || 'Joueur';
+      const fromTeamName = payload?.from_team_name || 'une equipe';
       const newsSlug = `team-${captainTeam.id}-transfer-${Date.now().toString(36)}`;
       await supabaseAdmin!.from('news').insert({
         title: `${playerName} transfere vers ${captainTeam.name}`,

@@ -74,10 +74,15 @@ export default function LiveTwitchSection({
         const channelsParam = twitchChannels.map((c) => c.channel).join(',');
         const resp = await fetch(`/api/twitch/live?channels=${channelsParam}`);
         if (!resp.ok) throw new Error('Twitch status error');
-        const json = await resp.json();
+        // Forme rendue par `/api/twitch/live` : une entrée par chaîne
+        // demandée. `live` reste optionnel — l'API Twitch peut être muette sur
+        // une chaîne sans que la réponse soit en erreur.
+        const json = (await resp.json()) as {
+          statuses?: Record<string, { live?: boolean } | null>;
+        };
         const statuses: Record<string, boolean> = {};
-        Object.entries(json.statuses || {}).forEach(([ch, info]: any) => {
-          statuses[ch] = Boolean((info as any)?.live);
+        Object.entries(json.statuses || {}).forEach(([ch, info]) => {
+          statuses[ch] = Boolean(info?.live);
         });
         setLiveStatus(statuses);
       } catch (err) {

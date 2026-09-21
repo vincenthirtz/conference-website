@@ -15,6 +15,7 @@
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
 
 /**
  * Les chemins à rafraîchir pour un match : l'accueil (carte du prochain
@@ -60,9 +61,16 @@ export async function revalidateMatchPages(
       .eq('tenant_id', opts.tenantId)
       .eq('id', opts.matchId)
       .maybeSingle();
-    const tournament = Array.isArray((data as any)?.tournament)
-      ? (data as any).tournament[0]
-      : (data as any)?.tournament;
+    // `oneRelation` remplace le `Array.isArray(...) ? [0] : ...` recopié ici :
+    // même dénouement, mais la forme de la ligne est déclarée au lieu d'être
+    // devinée à l'exécution.
+    const tournament = oneRelation(
+      (
+        data as {
+          tournament: Relation<{ id: string; slug: string | null }>;
+        } | null
+      )?.tournament
+    );
     tournamentRef = tournament?.slug || tournament?.id || null;
   } catch (err) {
     logger.warn('[revalidateMatchPages] tournoi illisible', err);

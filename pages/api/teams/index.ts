@@ -159,8 +159,20 @@ export default async function handler(
       return res.status(500).json({ error: 'Failed to fetch teams' });
     }
 
-    // Aplatir le count des membres
-    let teams: PublicTeam[] = (data || []).map((t: any) => ({
+    // Aplatir le count des membres. La forme recopie le `.select()` ci-dessus :
+    // `team_members` est un embed PostgREST, donc un tableau (éventuellement
+    // vide), et c'est exactement ce que `countPlayingMembers` tolère.
+    type TeamListRow = {
+      id: string;
+      name: string;
+      short_name: string | null;
+      logo_url: string | null;
+      country: string | null;
+      is_joinable: boolean | null;
+      open_for_scrim: boolean | null;
+      team_members: { role: string | null }[] | null;
+    };
+    let teams: PublicTeam[] = ((data || []) as TeamListRow[]).map((t) => ({
       id: t.id,
       name: t.name,
       short_name: t.short_name,

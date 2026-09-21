@@ -1014,7 +1014,7 @@ export async function applyAutoPickIfExpired(
   }
   const usedIds = new Set(
     (usedSteps ?? [])
-      .map((s: any) => s.hero_id as string | null)
+      .map((s) => (s as { hero_id: string | null }).hero_id)
       .filter((id): id is string => !!id)
   );
 

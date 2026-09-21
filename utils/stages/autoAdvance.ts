@@ -35,6 +35,24 @@ export type AutoAdvanceResult = {
  *   - on ne propage que si tous les matchs (hors cancelled) sont en 'finished'
  *   - on saute si l'equipe est deja dans le stage cible (gere par advance.ts logic)
  */
+/**
+ * Recopie du `.select()` du stage source.
+ *
+ * `settings` est une colonne JSONB : ses clés ne sont garanties par rien, d'où
+ * l'optionnalité. C'est là que vivent les règles d'avancement, lues juste après.
+ */
+type SourceStageRow = {
+  id: string;
+  tournament_id: string;
+  stage_type: string | null;
+  is_active: boolean | null;
+  settings: {
+    advancement_rules?: AdvancementRules;
+    /** Top N par groupe : quelles équipes dans quel groupe. */
+    group_assignments?: Record<string, string[]>;
+  } | null;
+};
+
 export async function tryAutoAdvanceFromMatch(params: {
   tenantId?: string | null;
   stageId: string | null;
@@ -48,17 +66,23 @@ export async function tryAutoAdvanceFromMatch(params: {
 
   // tenantId optionnel pour preserver la compat des tests / call-sites legacy.
   // Quand fourni, on scope toutes les queries au tenant ; sinon comportement legacy.
-  // (typage volontairement large : Supabase builder chains ne s'auto-resolvent
-  // pas correctement quand on les passe via generique.)
-  const scoped = (q: any): any => (tenantId ? q.eq('tenant_id', tenantId) : q);
+  //
+  // C'ÉTAIT UN HELPER `scoped = (q: any): any`. Le commentaire d'origine disait
+  // vrai sur le symptôme — typer son générique fait exploser l'inférence de
+  // supabase-js (TS2589) — mais la conclusion coûtait cher : rendant `any`, il
+  // contaminait TOUT ce qui en sortait. `stage`, `target` et `existingTarget`
+  // étaient donc `any`, et `stage.settings?.advancement_rules` n'était vérifié
+  // nulle part. Appliquer le filtre en place ne demande aucun type
+  // intermédiaire : TypeScript infère chaque chaîne telle qu'elle est.
 
   // 1) Charger le stage source
-  const { data: stage, error: stageErr } = await scoped(
-    supabaseAdmin
-      .from('tournament_stages')
-      .select('id, tournament_id, stage_type, is_active, settings')
-      .eq('id', stageId)
-  ).maybeSingle();
+  let stageQuery = supabaseAdmin
+    .from('tournament_stages')
+    .select('id, tournament_id, stage_type, is_active, settings')
+    .eq('id', stageId);
+  if (tenantId) stageQuery = stageQuery.eq('tenant_id', tenantId);
+  const { data: stageData, error: stageErr } = await stageQuery.maybeSingle();
+  const stage = stageData as SourceStageRow | null;
 
   if (stageErr || !stage) {
     return { triggered: false, reason: 'stage_not_found' };
@@ -80,13 +104,13 @@ export async function tryAutoAdvanceFromMatch(params: {
   }
 
   // 2) Verifier que tous les matchs du stage sont termines
-  const { data: matches, error: matchesErr } = await scoped(
-    supabaseAdmin
-      .from('matches')
-      .select('id, status')
-      .eq('stage_id', stageId)
-      .neq('status', 'cancelled')
-  );
+  let matchesQuery = supabaseAdmin
+    .from('matches')
+    .select('id, status')
+    .eq('stage_id', stageId)
+    .neq('status', 'cancelled');
+  if (tenantId) matchesQuery = matchesQuery.eq('tenant_id', tenantId);
+  const { data: matches, error: matchesErr } = await matchesQuery;
 
   if (matchesErr) {
     return { triggered: false, reason: 'matches_fetch_error' };
@@ -105,12 +129,13 @@ export async function tryAutoAdvanceFromMatch(params: {
   }
 
   // 3) Verifier que la phase cible existe et appartient au meme tournoi
-  const { data: target, error: tgtErr } = await scoped(
-    supabaseAdmin
-      .from('tournament_stages')
-      .select('id, tournament_id')
-      .eq('id', rules.target_stage_id)
-  ).maybeSingle();
+  let targetQuery = supabaseAdmin
+    .from('tournament_stages')
+    .select('id, tournament_id')
+    .eq('id', rules.target_stage_id);
+  if (tenantId) targetQuery = targetQuery.eq('tenant_id', tenantId);
+  const { data: targetData, error: tgtErr } = await targetQuery.maybeSingle();
+  const target = targetData as { id: string; tournament_id: string } | null;
 
   if (tgtErr || !target) {
     return { triggered: false, reason: 'target_stage_not_found' };
@@ -167,27 +192,27 @@ export async function tryAutoAdvanceFromMatch(params: {
   }
 
   // 5) Filtrer celles deja presentes dans le stage cible
-  const { data: existingTarget } = await scoped(
-    supabaseAdmin
-      .from('stage_teams')
-      .select('team_id')
-      .eq('stage_id', rules.target_stage_id)
-  );
+  let existingQuery = supabaseAdmin
+    .from('stage_teams')
+    .select('team_id')
+    .eq('stage_id', rules.target_stage_id);
+  if (tenantId) existingQuery = existingQuery.eq('tenant_id', tenantId);
+  const { data: existingTarget } = await existingQuery;
 
   const existingIds = new Set(
-    (existingTarget || []).map((r: any) => r.team_id)
+    ((existingTarget || []) as { team_id: string }[]).map((r) => r.team_id)
   );
   const newTeams = teamIdsToAdvance.filter((id) => !existingIds.has(id));
 
   if (newTeams.length === 0) {
     // Toutes les equipes ciblees sont deja avancees : on considere que le travail
     // a deja ete fait, on desactive le stage source pour respecter l'idempotence.
-    await scoped(
-      supabaseAdmin
-        .from('tournament_stages')
-        .update({ is_active: false })
-        .eq('id', stageId)
-    );
+    let deactivate = supabaseAdmin
+      .from('tournament_stages')
+      .update({ is_active: false })
+      .eq('id', stageId);
+    if (tenantId) deactivate = deactivate.eq('tenant_id', tenantId);
+    await deactivate;
     return {
       triggered: false,
       reason: 'already_advanced',
@@ -228,12 +253,12 @@ export async function tryAutoAdvanceFromMatch(params: {
   }
 
   // 7) Desactiver le stage source (idempotence)
-  await scoped(
-    supabaseAdmin
-      .from('tournament_stages')
-      .update({ is_active: false })
-      .eq('id', stageId)
-  );
+  let deactivateSource = supabaseAdmin
+    .from('tournament_stages')
+    .update({ is_active: false })
+    .eq('id', stageId);
+  if (tenantId) deactivateSource = deactivateSource.eq('tenant_id', tenantId);
+  await deactivateSource;
 
   // 8) Log staff
   if (staffId) {

@@ -43,6 +43,25 @@ type MatchOption = {
   status: string;
 };
 
+/**
+ * Ligne telle que `/api/admin/tournament/[id]/matches` la rend.
+ *
+ * `team1` / `team2` sont les embeds PostgREST, optionnels : la route peut les
+ * omettre. C'est précisément ce que le repli `m.team1?.name || m.team1_id`
+ * couvre — le type le rend visible au lieu de le laisser deviner.
+ */
+type AdminMatchRow = {
+  id: string;
+  round_name: string | null;
+  round_number: number | null;
+  match_format: string | null;
+  team1_id: string | null;
+  team2_id: string | null;
+  status: string;
+  team1?: { name?: string | null } | null;
+  team2?: { name?: string | null } | null;
+};
+
 function getTypeLabels(t: Dict): Record<string, string> {
   return {
     control: t.typeControl,
@@ -174,15 +193,21 @@ export default function VetoPanel() {
         `/api/admin/tournament/${tournamentId}/matches?limit=100`
       );
       if (matchesRes.ok) {
-        const json = await matchesRes.json();
-        const allMatches = (json.matches || [])
+        // Recopie des champs réellement lus plus bas. `any` laissait passer
+        // `m.team1?.name` sans que rien ne garantisse que l'embed soit demandé
+        // par la requête : le repli sur l'UUID brut se déclenchait alors
+        // toujours, et le panneau affichait des identifiants au lieu des noms.
+        const json = (await matchesRes.json()) as {
+          matches?: AdminMatchRow[];
+        };
+        const allMatches: MatchOption[] = (json.matches || [])
           .filter(
-            (m: any) =>
+            (m) =>
               m.team1_id &&
               m.team2_id &&
               (m.status === 'pending' || m.status === 'ongoing')
           )
-          .map((m: any) => ({
+          .map((m) => ({
             id: m.id,
             round_name: m.round_name,
             round_number: m.round_number,

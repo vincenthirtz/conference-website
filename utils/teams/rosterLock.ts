@@ -75,8 +75,12 @@ export async function isTeamRosterLocked(
     .eq('tenant_id', tenantId)
     .eq('team_id', teamId);
 
-  const tournamentIds = (registrations || [])
-    .map((r: any) => r.tournament_id)
+  const tournamentIds = (
+    (registrations || []) as {
+      tournament_id: string | null;
+    }[]
+  )
+    .map((r) => r.tournament_id)
     .filter((x): x is string => !!x);
 
   // Fenêtre par équipe, indexée par tournoi.

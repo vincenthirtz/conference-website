@@ -26,6 +26,13 @@ type CaptainInfo = {
   discordUserId: string | null;
 };
 
+/** Recopie du `.select()` ci-dessous : une colonne retirée devient une erreur. */
+type MatchTeamsRow = {
+  id: string;
+  team1_id: string | null;
+  team2_id: string | null;
+};
+
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { matchId } = req.botQuery as z.infer<typeof draftsQuerySchema>;
   const { gameIndex, fearless } = req.botInput as z.infer<
@@ -75,15 +82,19 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     },
   ];
   try {
-    const { data: match, error: matchErr } = await supabaseAdmin
+    const { data, error: matchErr } = await supabaseAdmin
       .from('matches')
       .select('id, team1_id, team2_id')
       .eq('id', matchId)
       .eq('tenant_id', tenantId)
       .maybeSingle();
     if (matchErr) throw matchErr;
+    // Les deux camps sont nullables : un match de bracket existe avant que ses
+    // qualifiés soient connus. Les filtres `typeof v === 'string'` plus bas
+    // existaient déjà pour cette raison — le type le dit maintenant aussi.
+    const match = data as MatchTeamsRow | null;
 
-    const teamIds = [(match as any)?.team1_id, (match as any)?.team2_id].filter(
+    const teamIds = [match?.team1_id, match?.team2_id].filter(
       (v): v is string => typeof v === 'string'
     );
 
@@ -120,8 +131,8 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     );
 
     const slots: Array<{ slot: 1 | 2; teamId: string | null | undefined }> = [
-      { slot: 1, teamId: (match as any)?.team1_id },
-      { slot: 2, teamId: (match as any)?.team2_id },
+      { slot: 1, teamId: match?.team1_id },
+      { slot: 2, teamId: match?.team2_id },
     ];
     for (const { slot, teamId } of slots) {
       const team = teamId ? teamById.get(teamId) : null;

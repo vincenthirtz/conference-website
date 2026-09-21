@@ -7,7 +7,12 @@ import type {
   GetServerSidePropsContext,
 } from 'next';
 import type { User } from '@supabase/supabase-js';
-import { supabaseAdmin, getServerClient } from './supabase';
+import {
+  supabaseAdmin,
+  getServerClient,
+  type SupabaseServerReq,
+  type SupabaseServerRes,
+} from './supabase';
 import type { StaffRole } from '@/types/admin';
 import {
   effectiveStaffPermissions,
@@ -293,8 +298,8 @@ const STAFF_CTX_KEY = Symbol.for('ow.staffContext');
  * plusieurs fois durant le même cycle de requête (ex: middleware + handler).
  */
 export async function getStaffContextFromRequest(
-  req: NextApiRequest,
-  res: NextApiResponse
+  req: SupabaseServerReq,
+  res: SupabaseServerRes
 ): Promise<StaffContext> {
   const reqWithCache = req as unknown as Record<symbol, unknown>;
   const memoized = reqWithCache[STAFF_CTX_KEY] as StaffContext | undefined;
@@ -330,8 +335,10 @@ export async function getStaffContextFromRequest(
 
       if (cookieError) {
         // On ignore les erreurs "Auth session missing" qui sont normales
-        const msg = (cookieError as any)?.message || '';
-        const status = (cookieError as any)?.status;
+        // `AuthError` porte déjà `message` et `status` : les deux casts ne
+        // servaient à rien d'autre qu'à éteindre la vérification.
+        const msg = cookieError.message || '';
+        const status = cookieError.status;
 
         const isMissingSession =
           msg.includes('Auth session missing') || status === 400;
@@ -377,8 +384,8 @@ export async function getStaffContextFromRequest(
  * - Retourne le StaffContext
  */
 export async function requireStaffRoleFromRequest(
-  req: NextApiRequest,
-  res: NextApiResponse,
+  req: SupabaseServerReq,
+  res: SupabaseServerRes,
   minRole: StaffRole,
   opts?: { scope?: StaffGuardScope }
 ): Promise<AuthenticatedStaffContext> {
@@ -466,8 +473,8 @@ export async function requireStaffRoleFromRequest(
  * cette fonction délègue, elle ne réimplémente rien.
  */
 export async function requireStaffPermissionFromRequest(
-  req: NextApiRequest,
-  res: NextApiResponse,
+  req: SupabaseServerReq,
+  res: SupabaseServerRes,
   permission: StaffPermission,
   opts?: { scope?: StaffGuardScope }
 ): Promise<AuthenticatedStaffContext> {
@@ -568,9 +575,20 @@ export type StaffGuard =
  * partagé par `withStaffRoute` et `withStaffPage` pour qu'une garde se lise
  * exactement pareil côté API et côté page.
  */
+/**
+ * Accepte l'union API/SSR : cette chaîne ne lit que `headers` et `cookies`, et
+ * ne répond jamais elle-même — elle LÈVE (`StaffUnauthenticatedError` /
+ * `StaffUnauthorizedError`), que l'appelant traduit selon son contexte.
+ *
+ * C'était `NextApiRequest` / `NextApiResponse`, et `withStaffPage` passait le
+ * contexte SSR derrière `req as any, res as any`. Le cast tenait tant que rien
+ * ici n'appelait `res.status()` — une méthode qui n'existe pas sur la réponse
+ * SSR. Rien ne garantissait que ça reste vrai, et l'échec aurait été un 500
+ * opaque sur une page admin.
+ */
 async function resolveGuard(
-  req: NextApiRequest,
-  res: NextApiResponse,
+  req: SupabaseServerReq,
+  res: SupabaseServerRes,
   guard: StaffGuard
 ): Promise<AuthenticatedStaffContext> {
   if (typeof guard === 'string') {
@@ -725,7 +743,7 @@ export function withStaffPage<
     const { req, res } = ctx;
 
     try {
-      const staffCtx = await resolveGuard(req as any, res as any, guard);
+      const staffCtx = await resolveGuard(req, res, guard);
 
       // Nature du tenant actif (organizer/developer) : sert à filtrer la nav
       // admin et les cartes du dashboard côté SSR. Fail-safe 'organizer' en cas

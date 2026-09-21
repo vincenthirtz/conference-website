@@ -69,6 +69,25 @@ export function ageInMinutes(
 }
 
 /**
+ * Recopie du `.select()` des deux lectures de `matches` ci-dessous.
+ *
+ * `findUnpingedBreaches` ne demande PAS `discord_dispute_thread_id` : la
+ * colonne est donc optionnelle ici, et le déclarer évite de faire croire que
+ * le fil Discord est toujours disponible. C'est le genre d'écart que `any`
+ * effaçait — les deux requêtes n'ont jamais eu la même forme.
+ */
+type DisputeMatchRow = {
+  id: string;
+  tournament_id: string | null;
+  team1_id: string | null;
+  team2_id: string | null;
+  dispute_reason: string | null;
+  dispute_opened_at: string | null;
+  escalation_pinged_at: string | null;
+  discord_dispute_thread_id?: string | null;
+};
+
+/**
  * Returns every `disputed` match in the tenant, with age + classification.
  * No `escalation_pinged_at IS NULL` filter — the bot endpoint wants to
  * show already-pinged disputes too (as "pingé X min ago").
@@ -101,7 +120,7 @@ export async function listOpenDisputes(
     return [];
   }
 
-  return (data ?? []).map((m: any) => {
+  return ((data ?? []) as DisputeMatchRow[]).map((m) => {
     const ageMinutes = ageInMinutes(m.dispute_opened_at, nowMs);
     return {
       matchId: m.id,
@@ -145,7 +164,7 @@ export async function findUnpingedBreaches(
   }
 
   const out: DisputeBreach[] = [];
-  for (const m of (data ?? []) as any[]) {
+  for (const m of (data ?? []) as DisputeMatchRow[]) {
     const age = ageInMinutes(m.dispute_opened_at, nowMs);
     if (age === null || age < slaMinutes) continue;
     if (!m.dispute_opened_at) continue;
@@ -199,7 +218,8 @@ export async function getSlaMinutes(tenantId: string): Promise<number> {
     .select('dispute_sla_minutes')
     .eq('id', tenantId)
     .maybeSingle();
-  const v = (data as any)?.dispute_sla_minutes;
+  const v = (data as { dispute_sla_minutes?: unknown } | null)
+    ?.dispute_sla_minutes;
   if (typeof v === 'number' && Number.isFinite(v) && v >= 1) return v;
   return 60;
 }

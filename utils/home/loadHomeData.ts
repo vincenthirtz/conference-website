@@ -14,7 +14,7 @@ import { type HomeNewsItem } from '@/components/News/HomeNewsSection';
 import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
 import { type HomePartner } from '@/components/Home/HomeSponsors';
 import { supabaseAdmin } from '@/utils/supabase';
-import { resolveNewsImage } from '@/utils/news/newsImage';
+import { resolveNewsImage, type NewsTeamEmbed } from '@/utils/news/newsImage';
 import { logger } from '@/utils/logger';
 import { loadSocialFeed, type SocialFeedItem } from '@/utils/social/socialFeed';
 import {
@@ -254,6 +254,58 @@ export async function loadUpcomingTournament(
   };
 }
 
+/**
+ * Le filtre des catégories affichées, en GARDE DE TYPE.
+ *
+ * Il était écrit en trois comparaisons dans un `.filter()`, sur des lignes
+ * typées `any` : TypeScript ne voyait donc pas que `category` en ressortait
+ * restreinte, et rien ne reliait cette liste à celle de `HomePartner`. Une
+ * catégorie ajoutée au type sans être ajoutée ici disparaîtrait de la home
+ * sans un mot ; désormais la compilation le dit.
+ */
+function isShownPartner(
+  row: PartnerRow
+): row is PartnerRow & { category: HomePartner['category'] } {
+  return (
+    row.category === 'super' ||
+    row.category === 'major' ||
+    row.category === 'cultural'
+  );
+}
+
+/** Recopie du `.select()` de `loadPartners`. */
+type PartnerRow = {
+  id: string;
+  name: string;
+  /** NOT NULL en base ; la garde ci-dessus restreint aux catégories affichées. */
+  category: string;
+  logo_url: string | null;
+  website_url: string | null;
+  display_order: number | null;
+};
+
+/**
+ * Recopie du `.select()` des actualités de la home.
+ *
+ * `news_comments(count)` est un agrégat PostgREST : il arrive en TABLEAU d'un
+ * élément, d'où le `?.[0]?.count` plus bas. `teams` est l'embed du logo, et
+ * `NewsTeamEmbed` en accepte déjà les deux formes.
+ */
+type HomeNewsRow = {
+  id: string;
+  title: string;
+  slug: string;
+  tag: string | null;
+  excerpt: string | null;
+  content: string | null;
+  image_url: string | null;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string | null;
+  news_comments?: { count: number }[] | null;
+  teams?: NewsTeamEmbed | null;
+};
+
 export async function loadPartners(): Promise<HomePartner[]> {
   // `partners` n'est pas une table tenant-scopée (global / cross-tenant) —
   // on ne filtre pas par tenant_id ici (rappel S5d).
@@ -265,20 +317,13 @@ export async function loadPartners(): Promise<HomePartner[]> {
     .order('display_order', { ascending: true })
     .order('created_at', { ascending: true });
   if (error || !data) return [];
-  return data
-    .filter(
-      (row: any) =>
-        row.category === 'super' ||
-        row.category === 'major' ||
-        row.category === 'cultural'
-    )
-    .map((row: any) => ({
-      id: row.id,
-      name: row.name,
-      category: row.category,
-      logoUrl: row.logo_url ?? null,
-      websiteUrl: row.website_url ?? null,
-    }));
+  return (data as PartnerRow[]).filter(isShownPartner).map((row) => ({
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    logoUrl: row.logo_url ?? null,
+    websiteUrl: row.website_url ?? null,
+  }));
 }
 
 export async function loadCountdownSetting(): Promise<string | null> {
@@ -409,7 +454,7 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
     }
 
     if (!newsRes.error && newsRes.data) {
-      news = newsRes.data.map((row: any) => {
+      news = (newsRes.data as HomeNewsRow[]).map((row) => {
         const image = resolveNewsImage(row.image_url, row.teams);
         return {
           id: row.id,

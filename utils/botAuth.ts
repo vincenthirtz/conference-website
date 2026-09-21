@@ -576,9 +576,19 @@ export function withBotRoute(
   options: BotRouteOptions & { crossTenant: true }
 ): NextApiHandler;
 export function withBotRoute(
-  // Signature d'implémentation : `any` pour rester compatible avec les deux
-  // overloads ci-dessus (le narrowing réel est porté par les signatures
-  // publiques BotTenantRequest / BotCrossTenantRequest).
+  // Signature d'IMPLÉMENTATION d'une paire d'overloads : `any` est ici le bon
+  // choix, et c'est le seul du dossier `utils`.
+  //
+  // Les deux formes publiques s'excluent (`botContext` défini d'un côté,
+  // `undefined` de l'autre) : leur intersection se réduit à `never`, et leur
+  // union est refusée par `strictFunctionTypes` — un handler déclaré sur une
+  // seule des deux formes ne lui serait plus assignable. Les deux tentatives
+  // ont été faites ; elles cassent les appelants.
+  //
+  // Ce qui protège vraiment, ce sont les signatures publiques au-dessus : un
+  // appelant ne voit jamais cette ligne. Le cliquet `tests/unit/anyRatchet`
+  // garde donc un plafond de 1 sur `utils` plutôt que de forcer un
+  // contournement plus obscur que le problème.
   handler: (req: any, res: NextApiResponse) => unknown | Promise<unknown>,
   options: BotRouteOptions
 ): NextApiHandler {

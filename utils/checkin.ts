@@ -32,6 +32,7 @@ import { isCheckinTeamRole } from './teams/canCheckIn';
 import { grantCheckinStreakReward } from './tcg/grantCheckinStreak';
 
 import { logger } from './logger';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
 export const CHECKIN_OPEN_MINUTES = 60;
 export const REMINDER_30_MINUTES = 30;
 export const REMINDER_15_MINUTES = 15;
@@ -1364,6 +1365,23 @@ export type CheckinStatusRow = {
   forfeitProcessedAt: string | null;
 };
 
+/** Recopie du `.select()` de `listCheckinStatus`, embeds compris. */
+type CheckinMatchRow = {
+  id: string;
+  scheduled_at: string | null;
+  status: string;
+  team1_id: string | null;
+  team2_id: string | null;
+  team1_checked_in_at: string | null;
+  team2_checked_in_at: string | null;
+  checkin_email_sent_at: string | null;
+  reminder_30_sent_at: string | null;
+  reminder_15_sent_at: string | null;
+  forfeit_processed_at: string | null;
+  team1: Relation<{ id: string; name: string }>;
+  team2: Relation<{ id: string; name: string }>;
+};
+
 export async function listCheckinStatus(
   tenantId: string,
   tournamentId: string
@@ -1392,9 +1410,11 @@ export async function listCheckinStatus(
     return [];
   }
 
-  return (data || []).map((m: any) => {
-    const t1 = Array.isArray(m.team1) ? m.team1[0] : m.team1;
-    const t2 = Array.isArray(m.team2) ? m.team2[0] : m.team2;
+  return ((data || []) as CheckinMatchRow[]).map((m) => {
+    // `oneRelation` remplace le dénouement recopié à la main : même résultat,
+    // mais la forme de l'embed est déclarée au lieu d'être testée à l'aveugle.
+    const t1 = oneRelation(m.team1);
+    const t2 = oneRelation(m.team2);
     return {
       matchId: m.id,
       scheduledAt: m.scheduled_at ?? null,

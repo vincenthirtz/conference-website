@@ -22,6 +22,7 @@ import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
 import { resolveDemandeBattleTag } from '@/utils/teams/demandeBattleTag';
 
 import { logger } from '../../../utils/logger';
+import type { DemandeRow, DemandePayload } from '@/utils/teams/demandeRows';
 export default withSubjectRoute(
   async function handler(
     req: NextApiRequest,
@@ -127,11 +128,10 @@ async function handleGet(
 
   // Enrich with user info. Batch-resolve every auth user_id in ONE RPC instead
   // of N getUserById round-trips; unknown ids stay absent from the Map.
-  const profiles = await fetchAdminUserProfiles(
-    (demandes || []).map((d: any) => d.user_id)
-  );
+  const rows = (demandes || []) as DemandeRow[];
+  const profiles = await fetchAdminUserProfiles(rows.map((d) => d.user_id));
 
-  const enriched = (demandes || []).map((d: any) => {
+  const enriched = rows.map((d) => {
     let userInfo = null;
     if (d.user_id) {
       const p = profiles.get(d.user_id);
@@ -194,12 +194,16 @@ async function handlePost(
       .json({ error: 'Demande introuvable ou deja traitee.' });
   }
 
+  // Le JSONB ne garantit aucune clé : le type le dit, les replis plus bas le
+  // gèrent. C'était `(demande.payload as any)?.champ`, répété à chaque lecture.
+  const payload = (demande.payload ?? null) as DemandePayload | null;
+
   const newStatus = action === 'approve' ? 'approved' : 'rejected';
 
   // If approving, add the player to team_members via the transactional RPC.
   if (action === 'approve') {
     // Determine role/battle_tag from payload (utilise pour la news + roster-lock).
-    const desiredRole = validateRole((demande.payload as any)?.desired_role);
+    const desiredRole = validateRole(payload?.desired_role);
 
     // Roster lock : refuser l'ajout si un tournoi a verrouille le roster.
     // Garde alignee sur add-member (elle etait absente ici). L'admin peut
@@ -258,9 +262,7 @@ async function handlePost(
     // qui le pose (cf. pages/api/admin/news/[id].ts).
     try {
       const playerName =
-        battleTag?.split('#')[0] ||
-        (demande.payload as any)?.user_display_name ||
-        'Joueur';
+        battleTag?.split('#')[0] || payload?.user_display_name || 'Joueur';
       const newsSlug = `team-${captainTeam.id}-join-${Date.now().toString(36)}`;
       await supabaseAdmin!.from('news').insert({
         title: `${playerName} rejoint ${captainTeam.name}`,

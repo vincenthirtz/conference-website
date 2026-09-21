@@ -88,9 +88,18 @@ const FREEBOX_VM_ID = process.env.FREEBOX_VM_ID || '2';
 
 // --- Client HTTPS minimal vers l'API Freebox (CA épinglée) -----------------
 
+// La charge utile varie selon l'appel. Seuls les champs RÉELLEMENT lus sont
+// déclarés : `any` laissait passer `resp.result.status as string`, qui rendait
+// `undefined` déguisé en chaîne si la box répondait sans `status` — le statut
+// de VM était alors comparé à des valeurs qu'il ne pouvait jamais valoir, sans
+// erreur nulle part.
 type FreeboxResp = {
   success?: boolean;
-  result?: any;
+  result?: {
+    challenge?: string;
+    session_token?: string;
+    status?: string;
+  };
   error_code?: string;
   msg?: string;
 };
@@ -161,14 +170,16 @@ async function freeboxLogin(): Promise<string> {
       `login Freebox échoué: ${sess.error_code || sess.msg || 'inconnu'}`
     );
   }
-  return sess.result.session_token as string;
+  return sess.result.session_token;
 }
 
 async function vmStatus(session: string): Promise<string> {
   const resp = await freeboxRequest('GET', `/vm/${FREEBOX_VM_ID}`, { session });
-  if (!resp.success || !resp.result)
+  // `status` absent est un échec de lecture, pas un statut vide : le laisser
+  // remonter en `undefined` ferait échouer toutes les comparaisons en silence.
+  if (!resp.success || !resp.result?.status)
     throw new Error('lecture statut VM échouée');
-  return resp.result.status as string;
+  return resp.result.status;
 }
 
 // --- Telegram ---------------------------------------------------------------
@@ -257,7 +268,16 @@ export const handler: Handler = async (event) => {
     return { statusCode: 401, body: 'unauthorized' };
   }
 
-  let update: any;
+  // Corps envoyé par Telegram : entrée NON fiable. Déclarer la forme lue
+  // oblige à passer par les `?.` ci-dessous au lieu de déréférencer à l'aveugle.
+  type TelegramMessage = {
+    chat?: { id?: number | string };
+    text?: string;
+  };
+  let update: {
+    message?: TelegramMessage;
+    edited_message?: TelegramMessage;
+  };
   try {
     update = JSON.parse(event.body || '{}');
   } catch {

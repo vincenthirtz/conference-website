@@ -18,6 +18,7 @@ import {
   type StageStanding,
 } from './standings';
 import type { TiebreakerKey } from './tiebreakers';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
 
 /** Types de phase qui produisent un classement à points. */
 export const STANDINGS_STAGE_TYPES = ['round_robin', 'group', 'swiss'] as const;
@@ -185,8 +186,12 @@ export async function readPublicStandings(
   }
 
   const teams = new Map<string, TeamInfo>();
-  for (const row of (stageTeamsRes.data || []) as any[]) {
-    const team = Array.isArray(row.team) ? row.team[0] : row.team;
+  // `team` est un embed PostgREST : objet OU tableau selon ce que PostgREST
+  // juge unique. `oneRelation` dénoue les deux formes.
+  for (const row of (stageTeamsRes.data || []) as {
+    team: Relation<TeamInfo & { id: string }>;
+  }[]) {
+    const team = oneRelation(row.team);
     if (team?.id) teams.set(team.id, team);
   }
 

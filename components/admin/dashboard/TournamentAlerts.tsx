@@ -16,6 +16,11 @@ import ActionableAlert from './ActionableAlert';
 import RosterUnlockAlert from '@/components/admin/dashboard/RosterUnlockAlert';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentDashboard from '@/lib/i18n/locales/admin-fr/adminTournamentDashboard';
+// `import type` et pas `import` : le module d'où vient ce type touche
+// `supabaseAdmin`, et un import de valeur ferait entrer ~490 ko de polyfills
+// Node dans le bundle client sans la moindre erreur. Un import de type est
+// effacé à la compilation — il ne coûte rien à l'exécution.
+import type { DashboardSignals } from '@/utils/dashboard/buildTournamentDashboard';
 
 type Alert = { type?: string | null; message: string };
 
@@ -30,9 +35,15 @@ export default function TournamentAlerts({
   onRunCheckinProcessor,
   onRefresh,
 }: {
-  /** Signaux du payload dashboard (forme volontairement large : le dashboard
-   *  en est la seule source, et la figer ici la dupliquerait). */
-  sig: any;
+  /**
+   * Signaux du payload dashboard.
+   *
+   * C'était `any`, au motif que figer la forme ici la dupliquerait. Le motif
+   * était juste, la conclusion non : le type existe déjà et s'IMPORTE. Rien
+   * n'est dupliqué, et un champ renommé côté calcul casse maintenant la
+   * compilation au lieu d'afficher un panneau vide.
+   */
+  sig: DashboardSignals;
   alerts: Alert[];
   tournamentId: string;
   /** Date de verrouillage du roster, ou `null`. */
@@ -135,7 +146,7 @@ export default function TournamentAlerts({
                   : ''}
               </p>
               <ul className="space-y-1.5 text-xs">
-                {sig.conflictsList.map((c: any, i: number) => {
+                {sig.conflictsList.map((c, i) => {
                   const fmtTime = (iso: string) => {
                     try {
                       return new Date(iso).toLocaleTimeString('fr-FR', {
@@ -255,9 +266,7 @@ export default function TournamentAlerts({
               : tx.stagesReadyTitle_one,
             { count: sig.stagesReadyToAdvance.length }
           )}
-          message={sig.stagesReadyToAdvance
-            .map((s: any) => s.stageName)
-            .join(', ')}
+          message={sig.stagesReadyToAdvance.map((s) => s.stageName).join(', ')}
           cta={{
             label: tx.phasesTitle,
             href: `/admin/tournament/${tournamentId}/stages`,

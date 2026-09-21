@@ -89,7 +89,7 @@ export default withAuthRoute(async function handler(
   if (lockStatus.locked) {
     return res.status(409).json({
       error: rosterLockErrorMessage(lockStatus),
-    } as any);
+    });
   }
 
   const { userId, email, role, battleTag } = req.body || {};

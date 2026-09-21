@@ -16,6 +16,12 @@ type CastMember = {
   image_url: string | null;
 };
 
+/** Les trois formes que `/api/admin/cast-members` a portées selon les versions. */
+type CastMembersResponse =
+  | { items?: CastMember[]; castMembers?: CastMember[] }
+  | CastMember[]
+  | null;
+
 type Assignment = {
   id: string;
   match_id: string;
@@ -74,18 +80,19 @@ export default function MatchCastAssignments({ matchId }: Props) {
         adminFetchJson<{ assignments: Assignment[] }>(
           `/api/admin/matches/${matchId}/cast-assignments`
         ),
-        adminFetchJson<{ items?: CastMember[]; castMembers?: CastMember[] }>(
+        // Les trois formes réellement rencontrées sont déclarées ici plutôt
+        // que rattrapées par un cast : `as any` masquait le fait qu'un tableau
+        // nu est une réponse possible, et le jour où une quatrième forme
+        // apparaîtra, c'est la compilation qui le dira.
+        adminFetchJson<CastMembersResponse>(
           '/api/admin/cast-members?limit=200&includeInactive=true'
         ),
       ]);
       setAssignments(a?.assignments ?? []);
       // The cast-members endpoint returns rows under different keys depending
       // on version; accept both.
-      const list =
-        (c as any)?.castMembers ??
-        (c as any)?.items ??
-        (Array.isArray(c) ? c : []);
-      setCasters(list as CastMember[]);
+      const list = Array.isArray(c) ? c : (c?.castMembers ?? c?.items ?? []);
+      setCasters(list);
     } catch (e) {
       logger.error('[MatchCastAssignments] load', e);
       addToast(t.loadError, 'error');

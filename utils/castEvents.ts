@@ -12,6 +12,7 @@
 import { supabaseAdmin } from './supabase';
 import { logger } from './logger';
 import { emitBotEvent, type BotEventName } from './botEvents';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
 
 type CastEventName = Extract<BotEventName, `cast.${string}`>;
 
@@ -87,6 +88,18 @@ async function resolveCastMember(
   };
 }
 
+/** Recopie du `.select()` de `resolveMatch`, relations comprises. */
+type MatchSnapshotRow = {
+  id: string;
+  scheduled_at: string | null;
+  status: string | null;
+  team1: Relation<{ id: string; name: string; short_name: string | null }>;
+  team2: Relation<{ id: string; name: string; short_name: string | null }>;
+  tournament: Relation<{ id: string; name: string }>;
+  stage: Relation<{ id: string; name: string }>;
+  scrim: Relation<{ id: string; name: string; slug: string }>;
+};
+
 async function resolveMatch(matchId: string): Promise<MatchSnapshot | null> {
   if (!supabaseAdmin) return null;
   const { data, error } = await supabaseAdmin
@@ -108,31 +121,26 @@ async function resolveMatch(matchId: string): Promise<MatchSnapshot | null> {
   }
   if (!data) return null;
 
-  const team1 = (data as any).team1 as {
-    id: string;
-    name: string;
-    short_name: string | null;
-  } | null;
-  const team2 = (data as any).team2 as {
-    id: string;
-    name: string;
-    short_name: string | null;
-  } | null;
-  const tournament = (data as any).tournament as {
-    id: string;
-    name: string;
-  } | null;
-  const stage = (data as any).stage as { id: string; name: string } | null;
-  const scrim = (data as any).scrim as {
-    id: string;
-    name: string;
-    slug: string;
-  } | null;
+  // Les cinq relations passent par `oneRelation` et non par un cast.
+  //
+  // PostgREST rend un embed en OBJET quand il juge la jointure unique, en
+  // TABLEAU sinon — et ce jugement dépend des clés étrangères, pas du souhait
+  // de l'appelant : une migration qui touche un index peut faire changer la
+  // forme du même `select`. Les cinq `(data as any).team1 as {...} | null`
+  // affirmaient l'objet. Sur la variante tableau, `team1.id` sortait
+  // `undefined`, et l'événement partait au bot Discord avec une équipe sans
+  // identifiant — sans erreur nulle part.
+  const row = data as MatchSnapshotRow;
+  const team1 = oneRelation(row.team1);
+  const team2 = oneRelation(row.team2);
+  const tournament = oneRelation(row.tournament);
+  const stage = oneRelation(row.stage);
+  const scrim = oneRelation(row.scrim);
 
   return {
-    id: data.id as string,
-    scheduledAt: (data.scheduled_at as string | null) ?? null,
-    status: (data.status as string | null) ?? null,
+    id: row.id,
+    scheduledAt: row.scheduled_at ?? null,
+    status: row.status ?? null,
     team1: team1
       ? { id: team1.id, name: team1.name, shortName: team1.short_name }
       : null,

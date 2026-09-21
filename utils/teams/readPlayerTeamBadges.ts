@@ -19,6 +19,7 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
 
 /** Équipe affichée à côté d'une joueuse. */
 export type PlayerTeamBadge = {
@@ -35,6 +36,21 @@ export type PlayerTeamBadge = {
  * sur les initiales). Ne contient que les joueuses effectivement rattachées à
  * une équipe.
  */
+/**
+ * Recopie du `.select()` des deux lectures de ce module — `team_members` puis,
+ * en repli, `match_participants`. Les deux ont la même forme, d'où un seul type.
+ */
+type TeamBadgeRow = {
+  user_id: string | null;
+  created_at: string;
+  team: Relation<{
+    id: string;
+    name: string;
+    slug: string | null;
+    logo_url: string | null;
+  }>;
+};
+
 export async function readPlayerTeamBadges(
   tenantId: string,
   userIds: readonly string[]
@@ -56,10 +72,10 @@ export async function readPlayerTeamBadges(
   }
 
   // Tri DESC + premier gagnant : la ligne la plus récente par joueuse.
-  for (const row of (data ?? []) as any[]) {
-    const userId = row.user_id as string | null;
+  for (const row of (data ?? []) as TeamBadgeRow[]) {
+    const userId = row.user_id;
     if (!userId || out.has(userId)) continue;
-    const team = Array.isArray(row.team) ? (row.team[0] ?? null) : row.team;
+    const team = oneRelation(row.team);
     if (!team?.id) continue;
     out.set(userId, {
       teamId: team.id,
@@ -103,10 +119,10 @@ async function fillFromPastLineups(
     return;
   }
 
-  for (const row of (data ?? []) as any[]) {
-    const userId = row.user_id as string | null;
+  for (const row of (data ?? []) as TeamBadgeRow[]) {
+    const userId = row.user_id;
     if (!userId || out.has(userId)) continue;
-    const team = Array.isArray(row.team) ? (row.team[0] ?? null) : row.team;
+    const team = oneRelation(row.team);
     if (!team?.id) continue;
     out.set(userId, {
       teamId: team.id,

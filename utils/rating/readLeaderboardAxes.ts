@@ -24,6 +24,27 @@ import {
 import { readPlayerTeamBadges } from '@/utils/teams/readPlayerTeamBadges';
 import type { LeaderboardMover, LeaderboardSeason } from '@/types/rating';
 
+/** Recopies des `.select()` de ce module. */
+type PlayerRatingRow = {
+  user_id: string;
+  rating: number;
+  display_name: string | null;
+  battle_tag: string | null;
+  avatar_url: string | null;
+};
+
+type FeaturedLeagueRow = {
+  id: string;
+  name: string;
+  // NOT NULL en base (vérifié dans `information_schema`) : `LeaderboardSeason`
+  // promet bien une chaîne, et le lien /leagues/<slug> ne peut pas sortir
+  // « null ».
+  slug: string;
+  status: string;
+  start_date: string | null;
+  end_date: string | null;
+};
+
 /**
  * Plafond de lignes d'historique lues pour un axe.
  *
@@ -72,7 +93,7 @@ async function hydrateMovers(
   }
 
   const byUser = new Map(
-    (data ?? []).map((row: any) => [row.user_id as string, row])
+    ((data ?? []) as PlayerRatingRow[]).map((row) => [row.user_id, row])
   );
 
   // Repli d'avatar : logo d'équipe pour les joueuses sans photo de profil.
@@ -174,7 +195,7 @@ export async function readFeaturedSeason(
     return null;
   }
 
-  const league = (data ?? [])[0] as any;
+  const league = ((data ?? []) as FeaturedLeagueRow[])[0];
   if (!league) return null;
 
   return {
@@ -210,9 +231,9 @@ export async function readSeasonMovers(
     return [];
   }
 
-  const tournamentIds = (links ?? [])
-    .map((l: any) => l.tournament_id)
-    .filter((id: unknown): id is string => typeof id === 'string');
+  const tournamentIds = ((links ?? []) as { tournament_id: string | null }[])
+    .map((l) => l.tournament_id)
+    .filter((id): id is string => typeof id === 'string');
   if (tournamentIds.length === 0) return [];
 
   const { data, error } = await supabaseAdmin

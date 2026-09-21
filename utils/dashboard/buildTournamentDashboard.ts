@@ -11,9 +11,61 @@ import { DEFAULT_TENANT_ID } from '../tenant';
 import { hasNoStream } from '../matches/streamUrl';
 
 import { logger } from '../logger';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
 /* -----------------------------------------------------------
  * Types exportés
  * ---------------------------------------------------------*/
+
+/**
+ * Recopie du `.select()` des matchs du tournoi.
+ *
+ * Toutes les colonnes demandées y figurent, `next_match_*` comprises : c'est
+ * précisément leur absence du type inféré qui avait fait naître les `as any`.
+ */
+type DashboardMatchRow = {
+  id: string;
+  stage_id: string | null;
+  status: string;
+  round_number: number | null;
+  round_name: string | null;
+  scheduled_at: string | null;
+  stream_url: string | null;
+  team1_id: string | null;
+  team2_id: string | null;
+  winner_team_id: string | null;
+  is_bye: boolean | null;
+  bracket_side: string | null;
+  match_format: string | null;
+  team1_score: number | null;
+  team2_score: number | null;
+  dispute_reason: string | null;
+  dispute_opened_at: string | null;
+  next_match_win_id: string | null;
+  next_match_win_slot: number | null;
+  next_match_lose_id: string | null;
+  next_match_lose_slot: number | null;
+  team1_checked_in_at: string | null;
+  team2_checked_in_at: string | null;
+  forfeit_processed_at: string | null;
+  completed_at: string | null;
+};
+
+/** Recopie du `.select()` des phases candidates à l'avancement. */
+type StageSettingsRow = {
+  id: string;
+  name: string;
+  settings: unknown;
+};
+
+/** Recopie du `.select()` du journal staff (`staff` est un embed PostgREST). */
+type StaffLogRow = {
+  id: string;
+  action: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  created_at: string;
+  staff: Relation<{ display_name: string | null }>;
+};
 
 export type StageProgress = {
   id: string;
@@ -621,7 +673,11 @@ export async function fetchDashboardData(
     ]);
 
     const stages = stagesRes.data || [];
-    const matches = matchesRes.data || [];
+    // Recopie du `.select()` ci-dessus. Sans elle, supabase-js ne voyait pas
+    // les colonnes `next_match_*` (chaîne de select dynamique) et le code les
+    // lisait derrière `(d as any)` — donc sans rien vérifier, sur le calcul
+    // même qui décide quels matchs une dispute bloque en aval.
+    const matches = (matchesRes.data || []) as DashboardMatchRow[];
     const tournamentTeams = tournamentTeamsRes.data || [];
 
     // Stage teams counts
@@ -923,12 +979,8 @@ export async function fetchDashboardData(
       if (d.team2_id) teamsOfDispute.add(d.team2_id);
       const impacted: string[] = [];
 
-      const winId = (d as any).next_match_win_id as string | null | undefined;
-      const winSlot = (d as any).next_match_win_slot as
-        | 1
-        | 2
-        | null
-        | undefined;
+      const winId = d.next_match_win_id;
+      const winSlot = d.next_match_win_slot;
       if (winId && winSlot) {
         const wm = matchById.get(winId);
         if (wm && liveStatusesForBlock.has(wm.status)) {
@@ -937,12 +989,8 @@ export async function fetchDashboardData(
         }
       }
 
-      const loseId = (d as any).next_match_lose_id as string | null | undefined;
-      const loseSlot = (d as any).next_match_lose_slot as
-        | 1
-        | 2
-        | null
-        | undefined;
+      const loseId = d.next_match_lose_id;
+      const loseSlot = d.next_match_lose_slot;
       if (loseId && loseSlot) {
         const lm = matchById.get(loseId);
         if (lm && liveStatusesForBlock.has(lm.status)) {
@@ -1064,8 +1112,8 @@ export async function fetchDashboardData(
         .select('id, name, settings')
         .eq('tenant_id', tenantId)
         .in('id', candidateStageIds);
-      for (const s of stageSettings || []) {
-        if (hasValidAdvancementRules((s as any).settings)) {
+      for (const s of (stageSettings || []) as StageSettingsRow[]) {
+        if (hasValidAdvancementRules(s.settings)) {
           stagesReadyToAdvance.push({ stageId: s.id, stageName: s.name });
         }
       }
@@ -1147,21 +1195,21 @@ export async function fetchDashboardData(
      * Recent staff activity
      * ---------------------------------------------------------*/
 
-    const recentActivity: RecentActivity[] = (recentLogsRes.data ?? []).map(
-      (row: any) => {
-        const staffRel = Array.isArray(row.staff) ? row.staff[0] : row.staff;
-        return {
-          id: row.id,
-          staffName: staffRel?.display_name ?? null,
-          action: row.action,
-          readableAction:
-            STAFF_ACTION_LABEL[row.action as string] ?? (row.action as string),
-          entityType: row.entity_type ?? null,
-          entityId: row.entity_id ?? null,
-          createdAt: row.created_at,
-        };
-      }
-    );
+    const recentActivity: RecentActivity[] = (
+      (recentLogsRes.data ?? []) as StaffLogRow[]
+    ).map((row) => {
+      const staffRel = oneRelation(row.staff);
+      return {
+        id: row.id,
+        staffName: staffRel?.display_name ?? null,
+        action: row.action,
+        readableAction:
+          STAFF_ACTION_LABEL[row.action as string] ?? (row.action as string),
+        entityType: row.entity_type ?? null,
+        entityId: row.entity_id ?? null,
+        createdAt: row.created_at,
+      };
+    });
 
     /* -----------------------------------------------------------
      * Tickets breakdown (donut)

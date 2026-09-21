@@ -565,8 +565,9 @@ async function resolveBySeed(
 
   if (!stageTeams || stageTeams.length < 2) return null;
 
-  const t1 = stageTeams.find((st: any) => st.team_id === match.team1_id);
-  const t2 = stageTeams.find((st: any) => st.team_id === match.team2_id);
+  const seeds = stageTeams as { team_id: string; seed: number | null }[];
+  const t1 = seeds.find((st) => st.team_id === match.team1_id);
+  const t2 = seeds.find((st) => st.team_id === match.team2_id);
 
   if (!t1?.seed && !t2?.seed) return null; // Aucun seed défini
   if (!t1?.seed) return match.team2_id; // Seul team2 a un seed

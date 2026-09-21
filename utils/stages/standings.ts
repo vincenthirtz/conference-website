@@ -15,6 +15,7 @@ import {
   type TiebreakerKey,
   type TiebreakerMatch,
 } from './tiebreakers';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
 
 export type StageStanding = {
   teamId: string;
@@ -67,6 +68,19 @@ type StageTeamRow = {
  *   eviter toute fuite cross-tenant si jamais un stage_id collisionne entre
  *   deux tenants (peu probable avec des UUIDs mais defense-in-depth S5b-bis).
  */
+/**
+ * Recopie du `.select()` des deux lectures de `stage_teams` de ce module.
+ *
+ * `team` est un embed PostgREST : objet OU tableau. Le dénouement était recopié
+ * à la main aux deux endroits, sur des lignes `any` — `oneRelation` le fait une
+ * fois, et le type dit pourquoi la question se pose.
+ */
+type StageTeamQueryRow = {
+  team_id: string;
+  seed: number | null;
+  team: Relation<{ id: string; name: string; short_name: string | null }>;
+};
+
 export async function computeStageStandings(
   tenantId: string,
   stageId: string,
@@ -88,10 +102,12 @@ export async function computeStageStandings(
   }
 
   // Supabase may return `team` as an array (join) — normalize to single object
-  const stageTeams: StageTeamRow[] = (stageTeamsData || []).map((row: any) => ({
+  const stageTeams: StageTeamRow[] = (
+    (stageTeamsData || []) as StageTeamQueryRow[]
+  ).map((row) => ({
     team_id: row.team_id,
     seed: row.seed,
-    team: Array.isArray(row.team) ? (row.team[0] ?? null) : (row.team ?? null),
+    team: oneRelation(row.team),
   }));
 
   if (stageTeams.length === 0) {
@@ -271,10 +287,12 @@ export async function computeGroupedStandings(
     .eq('stage_id', stageId)
     .eq('tenant_id', tenantId);
 
-  const stageTeams: StageTeamRow[] = (stageTeamsData || []).map((row: any) => ({
+  const stageTeams: StageTeamRow[] = (
+    (stageTeamsData || []) as StageTeamQueryRow[]
+  ).map((row) => ({
     team_id: row.team_id,
     seed: row.seed,
-    team: Array.isArray(row.team) ? (row.team[0] ?? null) : (row.team ?? null),
+    team: oneRelation(row.team),
   }));
 
   const { data: matchesData } = await supabaseAdmin
