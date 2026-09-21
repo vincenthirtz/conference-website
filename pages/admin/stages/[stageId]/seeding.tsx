@@ -104,6 +104,8 @@ export const getServerSideProps = withStaffPage({
   permission: 'manage_tournaments',
 });
 
+type SlotPair = Partial<{ team1: CurrentSlot; team2: CurrentSlot }>;
+
 function SeedingComparatorPage(_: StaffProps) {
   const t = useAdminT(nsAdminStageSeeding);
   const router = useRouter();
@@ -214,15 +216,11 @@ function SeedingComparatorPage(_: StaffProps) {
   const locked = data?.lock.locked ?? false;
   const matches = useMemo(() => {
     if (!data) return [];
-    const map = new Map<
-      string,
-      Partial<{ team1: CurrentSlot; team2: CurrentSlot }>
-    >();
+    // `Partial` : les deux camps se remplissent l'un après l'autre, donc l'un
+    // des deux manque forcément à mi-parcours — ce que `{} as any` taisait.
+    const map = new Map<string, SlotPair>();
     for (const c of data.current) {
-      // `Partial` et non `{} as any` : les deux camps se remplissent l'un
-      // après l'autre, donc l'un des deux manque forcément à mi-parcours.
-      const slot: Partial<{ team1: CurrentSlot; team2: CurrentSlot }> =
-        map.get(c.matchId) ?? {};
+      const slot: SlotPair = map.get(c.matchId) ?? {};
       if (c.slot === 1) slot.team1 = c;
       else slot.team2 = c;
       map.set(c.matchId, slot);

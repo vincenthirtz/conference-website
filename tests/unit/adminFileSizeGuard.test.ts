@@ -25,6 +25,18 @@ const ROOTS = ['pages/admin', 'components/admin'];
  * Fichiers déjà au-dessus du plafond au 2026-09-01, avec leur taille du jour.
  * Un fichier listé ici passe TANT QU'IL NE GROSSIT PAS. Faire baisser un
  * chiffre est un progrès ; le monter fait échouer le test.
+ *
+ * UNE LIMITE DE CE COMPTEUR, découverte le 2026-09-21 et qu'il faut connaître
+ * avant de lire les `+1` ci-dessous : sortir un type ou un helper d'un fichier
+ * gelé y laisse une ligne d'`import`. Un compteur de lignes brut enregistre
+ * donc une CROISSANCE pour une extraction — exactement le geste que la règle
+ * A7 demande. `pages/admin/stages/[stageId].tsx` en est l'illustration : il
+ * est monté à 969 en typant quatre lectures, puis redescendu à 953 en sortant
+ * `StageOption` — soit +1 sur son gel, pour un fichier de 16 lignes plus
+ * court qu'au pire moment.
+ *
+ * Les relèvements datés de ce jour sont tous de cet ordre : des déclarations
+ * de type qui retirent un `any`, jamais de l'écran en plus.
  */
 const BASELINE: Record<string, number> = {
   // 2026-09-15 : passage de Prettier au formateur Biome. Les coupures de ligne
@@ -40,8 +52,10 @@ const BASELINE: Record<string, number> = {
   // descend jamais finit par ne plus rien geler.
   'pages/admin/tournament/[id]/matches.tsx': 2253,
   'components/admin/communications/CampaignsPanel.tsx': 1164,
-  'pages/admin/teams/my.tsx': 1750,
-  'pages/admin/demandes/index.tsx': 1614,
+  // 2026-09-21, +2 : `payload: any` → `DemandePayload` (lot 6).
+  'pages/admin/teams/my.tsx': 1752,
+  // 2026-09-21, +1 : `payload: any | null` → `DemandePayload | null` (lot 6).
+  'pages/admin/demandes/index.tsx': 1615,
   'pages/admin/tournament/[id]/dashboard.tsx': 1614,
   'pages/admin/teams/[teamId]/edit.tsx': 1503,
   'pages/admin/matches/[matchId]/edit.tsx': 1315,
@@ -57,7 +71,10 @@ const BASELINE: Record<string, number> = {
   // du PDF — le seul endroit qui s'en servait. Le gel suit la baisse : un
   // plafond qui ne descend jamais finit par ne plus rien geler.
   'pages/admin/tournament/[id]/edit.tsx': 859,
-  'pages/admin/stages/[stageId]/seeding.tsx': 964,
+  // 2026-09-21, +4 : `{} as any` → un `Partial` nommé (lot 6). Le cast cachait
+  // que les deux camps se remplissent l'un après l'autre, donc que l'un des
+  // deux manque forcément à mi-parcours.
+  'pages/admin/stages/[stageId]/seeding.tsx': 968,
   // 692 écrites : la liste des champs et le type de la config sont partis dans
   // `utils/discord/discordConfigFields.ts` — non pour gagner des lignes, mais
   // pour que le test de whitelist puisse les confronter au handler PUT sans
@@ -68,7 +85,9 @@ const BASELINE: Record<string, number> = {
   // `utils/discord/discordConfigFields.ts`. Le prochain qui ajoute un salon
   // paiera pareil : c'est le prix admis, pas une dérive.
   'pages/admin/tenants/[id]/discord-config/[guildId].tsx': 692,
-  'pages/admin/stages/[stageId].tsx': 952,
+  // 2026-09-21 : de 952 à 969 en typant quatre lectures, puis RAMENÉ à 953 en
+  // sortant `StageOption` dans `utils/stages/stageOption.ts` (règle A7).
+  'pages/admin/stages/[stageId].tsx': 953,
   'pages/admin/users/new.tsx': 903,
   'pages/admin/demandes/[id].tsx': 923,
   // 764 écrites : la fiche a rendu ses secrets bot à un panneau (T8), et le

@@ -42,21 +42,7 @@ import type { AdvanceStanding } from '@/components/admin/stages/[stageId]/Advanc
 
 import { logger } from '../../../utils/logger';
 import nsAdminStageDetail from '@/lib/i18n/locales/admin-fr/adminStageDetail';
-
-/**
- * Une phase telle que `/api/admin/tournament/[id]/stages` la rend, réduite aux
- * trois champs que cet écran consomme.
- *
- * Le même trio était relu quatre fois dans ce fichier derrière `(s: any)` :
- * phases sœurs, phases d'avancement, phases sources d'auto-seed, et la liste
- * des tournois. Le déclarer une fois fait que l'une d'elles ne peut plus
- * diverger des autres en silence.
- */
-type StageOption = {
-  id: string;
-  name: string;
-  stage_type: string | null;
-};
+import type { StageOption, TournamentOption } from '@/utils/stages/stageOption';
 
 type StageApiResponse = {
   stage: Stage;
@@ -269,12 +255,10 @@ function AdminStagePage(_props: StaffProps) {
       if (res.ok) {
         const json = await res.json();
         setAllTournaments(
-          ((json.tournaments || []) as { id: string; name: string }[]).map(
-            (tm) => ({
-              id: tm.id,
-              name: tm.name,
-            })
-          )
+          ((json.tournaments || []) as TournamentOption[]).map((tm) => ({
+            id: tm.id,
+            name: tm.name,
+          }))
         );
       }
     } catch (e) {

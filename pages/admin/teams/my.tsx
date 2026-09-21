@@ -866,9 +866,8 @@ function MyTeamPage({ staff }: StaffProps) {
   // Sync isJoinable state from team data
   useEffect(() => {
     if (data?.team) {
-      setIsJoinable(
-        (data.team as { is_joinable?: boolean | null }).is_joinable ?? false
-      );
+      const t = data.team as { is_joinable?: boolean | null };
+      setIsJoinable(t.is_joinable ?? false);
     }
   }, [data?.team]);
 
