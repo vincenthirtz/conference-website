@@ -111,7 +111,9 @@ async function updateComment(
       .json({ error: 'content must contain at least 3 characters' });
   }
 
-  const payload: any = {};
+  // Deux champs, tous deux des chaînes : le `any` ne servait qu'à éviter de
+  // les nommer, et acceptait donc n'importe quelle colonne au passage.
+  const payload: { content?: string; author_name?: string } = {};
   if (typeof content === 'string') payload.content = content.trim();
   if (typeof author_name === 'string') payload.author_name = author_name.trim();
 

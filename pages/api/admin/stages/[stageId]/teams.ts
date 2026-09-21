@@ -13,6 +13,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../utils/logger';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
 export default withStaffRoute(handler, { permission: 'manage_tournaments' });
 
 async function handler(
@@ -207,10 +208,14 @@ async function handlePost(
             .in('user_id', memberUserIds);
 
           if (duplicateMembers && duplicateMembers.length > 0) {
-            const duplicates = duplicateMembers.map((d: any) => {
-              const teamName = Array.isArray(d.teams)
-                ? d.teams[0]?.name
-                : d.teams?.name;
+            const duplicates = (
+              duplicateMembers as {
+                user_id: string;
+                team_id: string;
+                teams: Relation<{ name: string }>;
+              }[]
+            ).map((d) => {
+              const teamName = oneRelation(d.teams)?.name;
               return `user_id=${d.user_id} (équipe: ${teamName || d.team_id})`;
             });
             warnings.push(

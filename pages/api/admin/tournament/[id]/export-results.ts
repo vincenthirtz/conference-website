@@ -166,7 +166,7 @@ async function handler(
       'is_bye',
     ];
 
-    const escapeCsv = (v: string | number | null | undefined) => {
+    const escapeCsv = (v: unknown) => {
       const s = String(v ?? '');
       return s.includes(',') || s.includes('"') || s.includes('\n')
         ? `"${s.replace(/"/g, '""')}"`
@@ -174,7 +174,7 @@ async function handler(
     };
 
     const csvRows = rows.map((r) =>
-      header.map((h) => escapeCsv((r as any)[h])).join(',')
+      header.map((h) => escapeCsv((r as Record<string, unknown>)[h])).join(',')
     );
 
     const csv = [header.join(','), ...csvRows].join('\n');

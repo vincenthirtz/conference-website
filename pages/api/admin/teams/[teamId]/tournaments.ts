@@ -7,6 +7,35 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../utils/logger';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
+
+/** Ce qu'on retient d'une phase où l'équipe est inscrite. */
+type StageRegistration = {
+  stageId: string;
+  stageName?: string;
+  stageType?: string | null;
+};
+
+/** Recopie du `.select()` imbriqué ci-dessous. */
+type TeamStageRegistrationRow = {
+  stage_id: string;
+  team_id: string;
+  tournament_stages: Relation<{
+    id: string;
+    tournament_id: string;
+    name: string;
+    stage_type: string | null;
+    tournaments: Relation<{
+      id: string;
+      name: string;
+      slug: string | null;
+      game: string | null;
+      status: string;
+      start_date: string | null;
+      end_date: string | null;
+    }>;
+  }>;
+};
 /**
  * GET /api/admin/teams/[teamId]/tournaments
  * Retrieve tournaments a team is registered for and available tournaments
@@ -145,21 +174,25 @@ async function handleGet(
 
     // Group registrations by tournament
     const registeredTournamentIds = new Set<string>();
-    const tournamentRegistrations: Record<string, any[]> = {};
+    const tournamentRegistrations: Record<string, StageRegistration[]> = {};
 
-    registrations?.forEach((reg: any) => {
-      const tournament = reg.tournament_stages?.tournaments;
-      if (tournament) {
-        registeredTournamentIds.add(tournament.id);
-        if (!tournamentRegistrations[tournament.id]) {
-          tournamentRegistrations[tournament.id] = [];
-        }
-        tournamentRegistrations[tournament.id].push({
-          stageId: reg.stage_id,
-          stageName: reg.tournament_stages?.name,
-          stageType: reg.tournament_stages?.stage_type,
-        });
+    ((registrations ?? []) as TeamStageRegistrationRow[]).forEach((reg) => {
+      // Double embed : `tournament_stages` puis `tournaments`. Le code lisait
+      // `reg.tournament_stages?.tournaments` en supposant l'objet aux deux
+      // niveaux — sur la variante tableau, l'inscription disparaissait
+      // purement et simplement de la liste, sans erreur.
+      const stage = oneRelation(reg.tournament_stages);
+      const tournament = stage ? oneRelation(stage.tournaments) : null;
+      if (!tournament) return;
+      registeredTournamentIds.add(tournament.id);
+      if (!tournamentRegistrations[tournament.id]) {
+        tournamentRegistrations[tournament.id] = [];
       }
+      tournamentRegistrations[tournament.id].push({
+        stageId: reg.stage_id,
+        stageName: stage?.name,
+        stageType: stage?.stage_type,
+      });
     });
 
     // Separate registered and available tournaments

@@ -99,10 +99,15 @@ async function handleGet(
     return res.status(500).json({ error: 'Failed to load webhooks' });
   }
 
-  const scoped = (data || []).filter(
-    (w: any) => w.tournament_id === tournamentId
-  );
-  const globals = (data || []).filter((w: any) => w.tournament_id === null);
+  // Seul `tournament_id` est LU ici ; le reste de la ligne est relayé tel quel
+  // au client. `Record<string, unknown>` le dit, au lieu de prétendre connaître
+  // une forme qu'on ne consomme pas.
+  const rows = (data || []) as ({ tournament_id: string | null } & Record<
+    string,
+    unknown
+  >)[];
+  const scoped = rows.filter((w) => w.tournament_id === tournamentId);
+  const globals = rows.filter((w) => w.tournament_id === null);
 
   return res.status(200).json({
     channelTypes: VALID_CHANNEL_TYPES,

@@ -4,6 +4,28 @@ import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { sanitizeSearch, escapePostgrestValue } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../utils/logger';
+
+/** Les colonnes que la VUE de statistiques d'équipes rend réellement. */
+type TeamStatsViewRow = {
+  team_id: string;
+  team_name: string;
+  team_short_name: string | null;
+  team_logo_url: string | null;
+  tournament_id: string | null;
+  tournament_name: string | null;
+  tournament_slug: string | null;
+  matches_played: number | null;
+  wins: number | null;
+  losses: number | null;
+  draws: number | null;
+  maps_won: number | null;
+  maps_lost: number | null;
+  map_ties: number | null;
+  winrate: number | null;
+  map_winrate: number | null;
+  points: number | null;
+  last_match_at: string | null;
+};
 type TeamStatsRow = {
   team_id: string;
   team_name: string | null;
@@ -167,39 +189,41 @@ async function handler(
     return res.status(500).json({ error: 'Failed to load team stats.' });
   }
 
-  const stats: TeamStatsRow[] = (data || []).map((row: any) => ({
-    team_id: row.team_id,
-    team_name: row.team_name,
-    team_short_name: row.team_short_name,
-    team_logo_url: row.team_logo_url,
-    team: {
-      id: row.team_id,
-      name: row.team_name,
-      short_name: row.team_short_name,
-      logo_url: row.team_logo_url,
-    },
-    tournament_id: row.tournament_id,
-    tournament_name: row.tournament_name,
-    tournament_slug: row.tournament_slug,
-    tournament: row.tournament_id
-      ? {
-          id: row.tournament_id,
-          name: row.tournament_name,
-          slug: row.tournament_slug,
-        }
-      : null,
-    matches_played: row.matches_played ?? 0,
-    wins: row.wins ?? 0,
-    losses: row.losses ?? 0,
-    draws: row.draws ?? 0,
-    maps_won: row.maps_won ?? 0,
-    maps_lost: row.maps_lost ?? 0,
-    map_ties: row.map_ties ?? 0,
-    winrate: row.winrate,
-    map_winrate: row.map_winrate,
-    points: row.points ?? null,
-    last_match_at: row.last_match_at ?? null,
-  }));
+  const stats: TeamStatsRow[] = ((data || []) as TeamStatsViewRow[]).map(
+    (row) => ({
+      team_id: row.team_id,
+      team_name: row.team_name,
+      team_short_name: row.team_short_name,
+      team_logo_url: row.team_logo_url,
+      team: {
+        id: row.team_id,
+        name: row.team_name,
+        short_name: row.team_short_name,
+        logo_url: row.team_logo_url,
+      },
+      tournament_id: row.tournament_id,
+      tournament_name: row.tournament_name,
+      tournament_slug: row.tournament_slug,
+      tournament: row.tournament_id
+        ? {
+            id: row.tournament_id,
+            name: row.tournament_name,
+            slug: row.tournament_slug,
+          }
+        : null,
+      matches_played: row.matches_played ?? 0,
+      wins: row.wins ?? 0,
+      losses: row.losses ?? 0,
+      draws: row.draws ?? 0,
+      maps_won: row.maps_won ?? 0,
+      maps_lost: row.maps_lost ?? 0,
+      map_ties: row.map_ties ?? 0,
+      winrate: row.winrate,
+      map_winrate: row.map_winrate,
+      points: row.points ?? null,
+      last_match_at: row.last_match_at ?? null,
+    })
+  );
 
   // Export CSV si demandé
   if (exportFormat === 'csv') {

@@ -39,7 +39,7 @@ import { join } from 'node:path';
 /**
  * Plafonds par zone, au 2026-09-21. Un chiffre ne doit que DESCENDRE.
  *
- * SEPT ZONES SUR ONZE SONT À ZÉRO. Les trois premières (`player`, `cron`,
+ * HUIT ZONES SUR ONZE SONT À ZÉRO. Les trois premières (`player`, `cron`,
  * `webhooks`) le sont parce qu'elles ont été écrites après la convention
  * « déclarer la forme de la ligne ». Les quatre autres (`bot/v1`, `teams`,
  * `components`, `netlify`) y sont descendues à la main, et chaque descente a
@@ -49,6 +49,13 @@ import { join } from 'node:path';
  * `netlify/functions/builds` qui ne servaient plus à rien depuis que les
  * champs figuraient au type.
  *
+ * `pages/api/admin` y est descendu de 54 à 0 dans la foulée, et l'exercice y a
+ * trouvé mieux qu'un défaut de forme : `batch-scores` passait `entry.status`,
+ * une chaîne LIBRE du corps de requête, directement dans `matches.status`
+ * derrière un `as any`. Un appel avec `status: "termine"` l'aurait écrite
+ * telle quelle, et tous les filtres par statut auraient cessé de voir ce
+ * match. Le statut est désormais validé contre l'union, et refusé sinon.
+ *
  * Ce n'est pas un décompte d'hygiène : c'est ce que les zones restantes
  * cachent encore.
  */
@@ -57,7 +64,7 @@ const BUDGET: Record<string, number> = {
   // serait le trou par lequel le total remonte sans que rien ne le dise.
   pagesScreens: 59,
   'pages/api/bot/v1': 0,
-  'pages/api/admin': 54,
+  'pages/api/admin': 0,
   'pages/api/teams': 0,
   'pages/api/player': 0,
   'pages/api/cron': 0,
@@ -161,6 +168,7 @@ describe('cliquet des `any` — le code de production ne se dégrade pas', () =>
       'pages/api/webhooks',
       'pages/api/bot/v1',
       'pages/api/teams',
+      'pages/api/admin',
       'components',
       'netlify',
       'lib',

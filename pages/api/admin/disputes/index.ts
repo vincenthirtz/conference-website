@@ -38,6 +38,28 @@ import {
   type SLAClassification,
 } from '@/utils/disputes/slaBreaches';
 import { logger } from '../../../../utils/logger';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
+
+/**
+ * Recopie de `SELECT_COLUMNS`, embeds compris.
+ *
+ * Les trois relations sont dénouées par `oneRelation` juste après : le code
+ * lisait `m.tournament.id` en supposant l'objet, alors que PostgREST peut
+ * rendre un tableau. La conséquence aurait été un tableau de bord de litiges
+ * sans nom de tournoi ni nom d'équipe, sans la moindre erreur.
+ */
+type DisputeListRow = {
+  id: string;
+  tournament_id: string | null;
+  team1_id: string | null;
+  team2_id: string | null;
+  dispute_reason: string | null;
+  dispute_opened_at: string | null;
+  escalation_pinged_at: string | null;
+  team1: Relation<{ id: string; name: string | null }>;
+  team2: Relation<{ id: string; name: string | null }>;
+  tournament: Relation<{ id: string; name: string; slug: string | null }>;
+};
 
 function queryString(v: unknown): string | null {
   if (typeof v !== 'string') return null;
@@ -221,7 +243,13 @@ async function handler(
       return res.status(500).json({ error: 'Failed to fetch disputes' });
     }
 
-    const disputes = ((data ?? []) as any[]).map((m) => {
+    const disputes = ((data ?? []) as DisputeListRow[]).map((row) => {
+      const m = {
+        ...row,
+        team1: oneRelation(row.team1),
+        team2: oneRelation(row.team2),
+        tournament: oneRelation(row.tournament),
+      };
       const ageMinutes = ageInMinutes(m.dispute_opened_at, nowMs);
       return {
         matchId: m.id,

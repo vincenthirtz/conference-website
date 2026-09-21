@@ -98,7 +98,9 @@ async function handler(
       short_name: string | null;
       logo_url: string | null;
     };
-    const teamIds = (ttRes.data ?? []).map((r: any) => r.team_id as string);
+    const teamIds = ((ttRes.data ?? []) as { team_id: string }[]).map(
+      (r) => r.team_id
+    );
     const teamsById = new Map<string, TeamEmbed>();
     if (teamIds.length > 0) {
       const { data: teamRows } = await supabaseAdmin
@@ -106,7 +108,7 @@ async function handler(
         .select('id, name, short_name, logo_url')
         .in('id', teamIds)
         .eq('tenant_id', ctx.tenantId);
-      for (const t of (teamRows ?? []) as any[]) {
+      for (const t of (teamRows ?? []) as TeamEmbed[]) {
         teamsById.set(t.id, {
           id: t.id,
           name: t.name,

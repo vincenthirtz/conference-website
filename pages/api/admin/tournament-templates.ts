@@ -8,7 +8,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { logger } from '@/utils/logger';
-import type { TournamentTemplate } from '@/config/tournament-templates';
+import type {
+  TournamentTemplate,
+  TemplateStage,
+} from '@/config/tournament-templates';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 const SETTINGS_KEY = 'custom_tournament_templates';
@@ -134,7 +137,10 @@ async function handlePost(
     id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name: name.trim(),
     description: (description || '').trim(),
-    stages: stages.map((s: any) => ({
+    // `TemplateStage` plutôt que `any` : le type existe déjà, et il porte
+    // l'union fermée des `stage_type` — que la validation juste au-dessus
+    // vérifie à l'exécution, sans que rien ne relie les deux jusqu'ici.
+    stages: (stages as TemplateStage[]).map((s) => ({
       name: s.name,
       stage_type: s.stage_type,
       settings: s.settings || undefined,

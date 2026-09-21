@@ -11,7 +11,13 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../../utils/logger';
-type ApiResponse = { success: boolean } | { team: any } | { error: string };
+// La ligne d'inscription est relayée telle quelle au client ; seule sa
+// présence compte ici. `Record<string, unknown>` le dit, là où `any` laissait
+// croire que la route connaissait une forme qu'elle ne consomme pas.
+type ApiResponse =
+  | { success: boolean }
+  | { team: Record<string, unknown> }
+  | { error: string };
 
 export default withStaffRoute(handler, { permission: 'manage_tournaments' });
 
@@ -95,7 +101,7 @@ async function handleGet(
     return res.status(404).json({ error: 'Tournament team entry not found' });
   }
 
-  return res.status(200).json({ team: data });
+  return res.status(200).json({ team: data as Record<string, unknown> });
 }
 
 async function handlePatch(
@@ -181,7 +187,7 @@ async function handlePatch(
     }
   }
 
-  return res.status(200).json({ team: data });
+  return res.status(200).json({ team: data as Record<string, unknown> });
 }
 
 async function handleDelete(

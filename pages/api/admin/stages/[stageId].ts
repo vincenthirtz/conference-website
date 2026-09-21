@@ -242,7 +242,7 @@ async function handlePut(
 
   // Validation des settings avec le stage_type résolu (body ou existant en base)
   if ('settings' in body && body.settings !== null && !('stage_type' in body)) {
-    const resolvedType = (before as any).stage_type ?? 'other';
+    const resolvedType = (before as StageRow).stage_type ?? 'other';
     const settingsResult = validateStageSettings(resolvedType, body.settings);
     if (!settingsResult.valid) {
       return res.status(400).json({ error: settingsResult.error });
@@ -310,7 +310,7 @@ async function handlePut(
         action: 'update_stage',
         entity_type: 'stage',
         entity_id: id,
-        tournament_id: (data as any).tournament_id,
+        tournament_id: (data as StageRow).tournament_id,
         payload: {
           before,
           after: data,
@@ -351,7 +351,7 @@ async function handleDelete(
     return res.status(404).json({ error: 'Stage not found' });
   }
 
-  const tournamentId = (before as any).tournament_id ?? null;
+  const tournamentId = (before as StageRow).tournament_id ?? null;
 
   if (hard) {
     const { error } = await supabaseAdmin

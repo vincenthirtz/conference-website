@@ -28,7 +28,31 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../utils/logger';
+import type { MatchStatus } from '@/types/admin';
 export default withStaffRoute(handler, { permission: 'manage_tournaments' });
+
+/**
+ * Les valeurs que `matches.status` peut prendre, et la garde qui s'en assure.
+ *
+ * Recopier l'union en tableau n'est pas une duplication : `satisfies` lie les
+ * deux, et un statut ajouté au type sans l'être ici devient une erreur de
+ * compilation.
+ */
+const MATCH_STATUSES = [
+  'pending',
+  'ongoing',
+  'finished',
+  'cancelled',
+  'postponed',
+  'disputed',
+  'walkover',
+] as const satisfies readonly MatchStatus[];
+
+function isMatchStatus(v: unknown): v is MatchStatus {
+  return (
+    typeof v === 'string' && (MATCH_STATUSES as readonly string[]).includes(v)
+  );
+}
 
 type ScoreEntry = {
   matchId: string;
@@ -101,12 +125,32 @@ async function handler(
   }
 
   // Validate all matchIds upfront
+  //
+  // LE STATUT EST VALIDÉ ICI, ET C'EST NOUVEAU. `ScoreEntry.status` est une
+  // chaîne LIBRE issue du corps de requête ; elle partait vers
+  // `applyMatchScore` derrière un `as any`, donc directement dans la colonne
+  // `matches.status` sans que rien ne vérifie qu'elle en soit une valeur.
+  // Un appel avec `status: "termine"` l'aurait écrite telle quelle, et tous
+  // les filtres par statut auraient cessé de voir ce match.
+  const validated: Array<
+    Omit<ScoreEntry, 'status'> & { status?: MatchStatus }
+  > = [];
   for (const entry of scores) {
     if (!entry.matchId || !isValidUUID(entry.matchId)) {
       return res.status(400).json({
         error: `Invalid matchId: ${entry.matchId}`,
       });
     }
+    let status: MatchStatus | undefined;
+    if (entry.status !== undefined) {
+      if (!isMatchStatus(entry.status)) {
+        return res.status(400).json({
+          error: `Invalid status: ${entry.status}`,
+        });
+      }
+      status = entry.status;
+    }
+    validated.push({ ...entry, status });
   }
 
   // Verify all matches belong to this stage
@@ -121,7 +165,9 @@ async function handler(
   }
 
   const matchStageMap = new Map(
-    (matchRows || []).map((m: any) => [m.id, m.stage_id])
+    ((matchRows || []) as { id: string; stage_id: string | null }[]).map(
+      (m) => [m.id, m.stage_id]
+    )
   );
   for (const entry of scores) {
     if (matchStageMap.get(entry.matchId) !== stageId) {
@@ -136,7 +182,7 @@ async function handler(
   let successCount = 0;
   let failureCount = 0;
 
-  for (const entry of scores) {
+  for (const entry of validated) {
     try {
       const result = await applyMatchScore({
         tenantId: ctx.tenantId,
@@ -145,7 +191,7 @@ async function handler(
         team2Score: entry.team2Score,
         winnerTeamId: entry.winnerTeamId,
         forfeitTeamId: entry.forfeitTeamId,
-        status: entry.status as any,
+        status: entry.status,
         markFinished: !entry.status && !entry.forfeitTeamId,
         staffId: ctx.staff?.id ?? null,
         propagateBracket: entry.propagate !== false,

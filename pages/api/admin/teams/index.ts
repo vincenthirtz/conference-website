@@ -12,10 +12,18 @@ import {
 } from '@/utils/teams/adminTeamsFilters';
 
 import { logger } from '../../../../utils/logger';
+/**
+ * `unknown` et non `any` pour la signature d'index.
+ *
+ * Le `select` de cette route est composé dynamiquement, donc les colonnes
+ * varient : l'index reste. Mais `any` laissait AUSSI passer `team.nimporte.quoi`
+ * sans un mot, alors que `unknown` oblige à vérifier avant de lire — ce qui est
+ * exactement la situation réelle.
+ */
 export type TeamRow = {
   id: string;
   name: string;
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 type TeamsApiResponse =

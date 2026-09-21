@@ -18,6 +18,20 @@ import {
   generateSingleElim,
   generateDoubleElim,
 } from '@/utils/bracket/generateBracket';
+import type { BracketSide } from '@/types/admin';
+
+/** Recopie du `.select()` des matchs du graphe de bracket. */
+type BracketMatchRow = {
+  id: string;
+  tournament_id: string;
+  round_number: number | null;
+  // `BracketSide`, pas `string` : le graphe de bracket distingue les côtés,
+  // et une valeur libre n'y a aucun sens.
+  bracket_side: BracketSide | null;
+  group_key: string | null;
+  next_match_win_id: string | null;
+  next_match_lose_id: string | null;
+};
 
 export default withStaffRoute(handler, { permission: 'manage_tournaments' });
 
@@ -266,15 +280,17 @@ async function handleValidate(
     return res.status(500).json({ error: 'Failed to fetch matches' });
   }
 
-  const matches: MatchForGraph[] = (data || []).map((m: any) => ({
-    id: m.id,
-    tournament_id: m.tournament_id,
-    round_number: m.round_number ?? 0,
-    bracket_side: m.bracket_side ?? 'none',
-    group_key: m.group_key ?? null,
-    next_match_win_id: m.next_match_win_id ?? null,
-    next_match_lose_id: m.next_match_lose_id ?? null,
-  }));
+  const matches: MatchForGraph[] = ((data || []) as BracketMatchRow[]).map(
+    (m) => ({
+      id: m.id,
+      tournament_id: m.tournament_id,
+      round_number: m.round_number ?? 0,
+      bracket_side: m.bracket_side ?? 'none',
+      group_key: m.group_key ?? null,
+      next_match_win_id: m.next_match_win_id ?? null,
+      next_match_lose_id: m.next_match_lose_id ?? null,
+    })
+  );
 
   const graph = buildBracketGraph(matches);
   const validation = validateBracketGraph(graph);

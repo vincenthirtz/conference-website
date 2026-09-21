@@ -211,7 +211,7 @@ async function handler(
       return res.status(500).json({ error: 'Failed to insert group matches' });
     }
 
-    const createdMatchIds = inserted.map((m: any) => m.id);
+    const createdMatchIds = (inserted as { id: string }[]).map((m) => m.id);
 
     // 8) Log staff
     if (ctx?.staff?.id) {

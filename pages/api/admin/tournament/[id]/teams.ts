@@ -10,6 +10,7 @@ import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../../utils/logger';
 import type { RegistrationAnswers } from '@/utils/registrationFields';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
 type TournamentTeam = {
   id: string;
   tournament_id: string;
@@ -292,7 +293,10 @@ async function handlePost(
       tag: 'tournaments',
       excerpt: `${team.name} s'est inscrite au tournoi ${tournament.name}.`,
       content: `L'équipe ${team.name} est désormais inscrite au tournoi ${tournament.name}. Bonne chance !`,
-      image_url: (data as any)?.team?.logo_url ?? null,
+      image_url:
+        oneRelation(
+          (data as { team: Relation<{ logo_url: string | null }> } | null)?.team
+        )?.logo_url ?? null,
       team_id: team_id,
       status: 'published',
       published_at: new Date().toISOString(),

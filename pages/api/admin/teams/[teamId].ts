@@ -334,7 +334,7 @@ async function handlePut(
             .status(400)
             .json({ error: `${field} must be a valid http(s) URL` });
         }
-        (updatePayload as any)[field] = safe;
+        (updatePayload as Record<string, unknown>)[field] = safe;
       }
     }
   }

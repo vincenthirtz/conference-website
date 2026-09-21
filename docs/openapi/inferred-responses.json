@@ -3871,16 +3871,27 @@
       "items": {
        "type": "object",
        "properties": {
-        "matchId": {},
+        "matchId": {
+         "type": "string"
+        },
         "tournament": {
          "type": [
           "object",
           "null"
          ],
          "properties": {
-          "id": {},
-          "name": {},
-          "slug": {}
+          "id": {
+           "type": "string"
+          },
+          "name": {
+           "type": "string"
+          },
+          "slug": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
          },
          "required": [
           "id",
@@ -3894,8 +3905,15 @@
           "null"
          ],
          "properties": {
-          "id": {},
-          "name": {}
+          "id": {
+           "type": "string"
+          },
+          "name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
          },
          "required": [
           "id",
@@ -3908,17 +3926,39 @@
           "null"
          ],
          "properties": {
-          "id": {},
-          "name": {}
+          "id": {
+           "type": "string"
+          },
+          "name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
          },
          "required": [
           "id",
           "name"
          ]
         },
-        "disputeReason": {},
-        "disputeOpenedAt": {},
-        "escalationPingedAt": {},
+        "disputeReason": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "disputeOpenedAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "escalationPingedAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
         "ageMinutes": {
          "type": [
           "number",
@@ -15920,7 +15960,26 @@
        "properties": {
         "stages": {
          "type": "array",
-         "items": {}
+         "items": {
+          "type": "object",
+          "properties": {
+           "stageId": {
+            "type": "string"
+           },
+           "stageName": {
+            "type": "string"
+           },
+           "stageType": {
+            "type": [
+             "string",
+             "null"
+            ]
+           }
+          },
+          "required": [
+           "stageId"
+          ]
+         }
         },
         "id": {},
         "name": {},
@@ -19478,11 +19537,39 @@
      },
      "scoped": {
       "type": "array",
-      "items": {}
+      "items": {
+       "type": "object",
+       "properties": {
+        "tournament_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "tournament_id"
+       ],
+       "additionalProperties": {}
+      }
      },
      "globals": {
       "type": "array",
-      "items": {}
+      "items": {
+       "type": "object",
+       "properties": {
+        "tournament_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "tournament_id"
+       ],
+       "additionalProperties": {}
+      }
      }
     },
     "required": [
@@ -21088,7 +21175,12 @@
           "null"
          ]
         },
-        "stage_name": {},
+        "stage_name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
         "round_number": {
          "type": [
           "number",
@@ -21254,41 +21346,7 @@
     "properties": {
      "team": {
       "type": "object",
-      "properties": {
-       "id": {},
-       "tournament_id": {},
-       "team_id": {},
-       "seed": {},
-       "status": {},
-       "created_at": {},
-       "team": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "id": {},
-          "name": {},
-          "logo_url": {},
-          "is_active": {}
-         },
-         "required": [
-          "id",
-          "name",
-          "logo_url",
-          "is_active"
-         ]
-        }
-       }
-      },
-      "required": [
-       "id",
-       "tournament_id",
-       "team_id",
-       "seed",
-       "status",
-       "created_at",
-       "team"
-      ]
+      "additionalProperties": {}
      }
     },
     "required": [
@@ -49118,41 +49176,7 @@
     "properties": {
      "team": {
       "type": "object",
-      "properties": {
-       "id": {},
-       "tournament_id": {},
-       "team_id": {},
-       "seed": {},
-       "status": {},
-       "created_at": {},
-       "team": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "id": {},
-          "name": {},
-          "logo_url": {},
-          "is_active": {}
-         },
-         "required": [
-          "id",
-          "name",
-          "logo_url",
-          "is_active"
-         ]
-        }
-       }
-      },
-      "required": [
-       "id",
-       "tournament_id",
-       "team_id",
-       "seed",
-       "status",
-       "created_at",
-       "team"
-      ]
+      "additionalProperties": {}
      }
     },
     "required": [
@@ -55803,7 +55827,9 @@
        },
        "createdMatchIds": {
         "type": "array",
-        "items": {}
+        "items": {
+         "type": "string"
+        }
        },
        "groupCount": {
         "type": "number"

@@ -9,6 +9,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import type { MatchStatus } from '@/types/admin';
 
 import { logger } from '../../../../../utils/logger';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
 type MatchRow = {
   id: string;
   tournament_id: string;
@@ -109,9 +110,11 @@ async function handler(
       logger.error('admin stats teams error:', teErr);
     }
 
-    const teams: TeamMini[] = ((teamsData || []) as any[])
-      .map((t) => t.team)
-      .filter(Boolean);
+    const teams: TeamMini[] = (
+      (teamsData || []) as { team: Relation<TeamMini> }[]
+    )
+      .map((t) => oneRelation(t.team))
+      .filter((t): t is TeamMini => t !== null);
 
     const teamsMap = new Map<string, TeamMini>();
     teams.forEach((t) => teamsMap.set(t.id, t));
@@ -391,7 +394,8 @@ function computeClosestMatches(
     team1_score: m.team1_score ?? 0,
     team2_score: m.team2_score ?? 0,
     winner_team_id: m.winner_team_id,
-    stage_name: (m.stage as any)?.name || null,
+    stage_name:
+      oneRelation(m.stage as Relation<{ name: string }>)?.name || null,
     round_number: m.round_number,
   }));
 }

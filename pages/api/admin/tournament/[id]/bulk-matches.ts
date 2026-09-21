@@ -80,13 +80,27 @@ async function handler(
  * shift_round : decale tout un round
  * ---------------------------------------------------------*/
 
+/**
+ * Le corps de requête, tel qu'il ARRIVE : un objet de clés inconnues.
+ *
+ * Chaque poignée en extrait ce dont elle a besoin puis le valide — c'est déjà
+ * ce que faisait le code. `any` ne changeait rien à la validation, il retirait
+ * seulement au compilateur le moyen de voir qu'une clé mal orthographiée dans
+ * une déstructuration sort `undefined` et fait tomber la route en 400.
+ */
+type BulkBody = Record<string, unknown>;
+
 async function handleShiftRound(
   tournamentId: string,
-  body: any,
+  body: BulkBody,
   res: NextApiResponse<ApiResponse>,
   ctx: AuthenticatedStaffContext
 ) {
-  const { stageId, roundNumber, offsetMinutes } = body;
+  const { stageId, roundNumber, offsetMinutes } = body as {
+    stageId?: unknown;
+    roundNumber?: unknown;
+    offsetMinutes?: unknown;
+  };
 
   if (!stageId || typeof stageId !== 'string' || !isValidUUID(stageId)) {
     return res.status(400).json({ error: 'Invalid stageId' });
@@ -227,11 +241,14 @@ async function handleShiftRound(
 
 async function handleReassignStage(
   tournamentId: string,
-  body: any,
+  body: BulkBody,
   res: NextApiResponse<ApiResponse>,
   ctx: AuthenticatedStaffContext
 ) {
-  const { matchIds, targetStageId } = body;
+  const { matchIds, targetStageId } = body as {
+    matchIds?: unknown;
+    targetStageId?: unknown;
+  };
 
   if (!Array.isArray(matchIds) || matchIds.length === 0) {
     return res

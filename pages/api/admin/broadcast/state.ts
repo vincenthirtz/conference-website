@@ -83,16 +83,20 @@ async function handler(
         patch.lower_third = body.lower_third;
       }
       if (body.pip !== undefined) {
+        // La validation NARROWIT désormais, au lieu de caster : le
+        // `typeof … !== 'boolean'` sur une valeur `unknown` suffit à ce que la
+        // ligne suivante n'ait plus besoin d'affirmer quoi que ce soit.
+        const pip = body.pip as { enabled?: unknown } | null | undefined;
         if (
-          !body.pip ||
-          typeof body.pip !== 'object' ||
-          typeof (body.pip as any).enabled !== 'boolean'
+          !pip ||
+          typeof pip !== 'object' ||
+          typeof pip.enabled !== 'boolean'
         ) {
           return res
             .status(400)
             .json({ error: 'pip must be { enabled: boolean }' });
         }
-        patch.pip = { enabled: (body.pip as any).enabled };
+        patch.pip = { enabled: pip.enabled };
       }
       if (body.scene !== undefined) {
         if (

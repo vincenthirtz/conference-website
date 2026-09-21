@@ -11,6 +11,15 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../utils/logger';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
+
+/** L'embed `team` de `stage_teams`, dénoué par `oneRelation`. */
+type GroupTeamInfo = {
+  id: string;
+  name: string | null;
+  short_name: string | null;
+  logo_url: string | null;
+};
 type TeamInfo = {
   teamId: string;
   name: string;
@@ -101,7 +110,7 @@ async function handleGet(
   // Build team info map
   const teamInfoMap = new Map<string, TeamInfo>();
   for (const st of stageTeams || []) {
-    const team = st.team as any;
+    const team = oneRelation(st.team as Relation<GroupTeamInfo>);
     teamInfoMap.set(st.team_id, {
       teamId: st.team_id,
       name: team?.name || st.team_id.slice(0, 8),
@@ -342,7 +351,7 @@ async function handlePost(
 
   // Build ordered list
   let teams = stageTeams.map((st) => {
-    const team = st.team as any;
+    const team = oneRelation(st.team as Relation<GroupTeamInfo>);
     return {
       teamId: st.team_id,
       name: team?.name || st.team_id.slice(0, 8),

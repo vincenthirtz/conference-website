@@ -197,7 +197,7 @@ async function handler(
         if (propagate) {
           try {
             await propagateBracketForMatch(ctx.tenantId, matchId);
-          } catch (e: any) {
+          } catch (e: unknown) {
             logger.error(
               'auto-byes: propagateBracketForMatch error',
               matchId,

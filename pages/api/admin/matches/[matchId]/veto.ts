@@ -224,7 +224,9 @@ async function handlePost(
     .eq('tenant_id', ctx.tenantId)
     .eq('match_id', matchId);
 
-  const usedMaps = new Set((existing || []).map((e: any) => e.map_name));
+  const usedMaps = new Set(
+    ((existing || []) as { map_name: string }[]).map((e) => e.map_name)
+  );
   if (usedMaps.has(body.map_name)) {
     return res
       .status(400)

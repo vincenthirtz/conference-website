@@ -18,6 +18,9 @@ import { createBracketSnapshot } from '@/utils/bracket/snapshot';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../utils/logger';
+
+/** Recopie du `.select('team_id')` sur `stage_teams` : FK, donc NOT NULL. */
+type StageTeamIdRow = { team_id: string };
 type SeededSlot = {
   matchId: string;
   slot: 1 | 2;
@@ -185,7 +188,7 @@ async function handler(
       .eq('stage_id', targetStageId);
 
     const existingIds = new Set(
-      (existingTeams.data || []).map((t: any) => t.team_id)
+      ((existingTeams.data || []) as StageTeamIdRow[]).map((t) => t.team_id)
     );
 
     const newTeamInserts = teamsToSeed

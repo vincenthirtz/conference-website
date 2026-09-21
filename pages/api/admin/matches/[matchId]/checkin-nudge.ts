@@ -96,8 +96,15 @@ async function handler(
     // Ensure check-in tokens exist for every side we need. The cron also
     // generates them at T-60 but a manual nudge may fire earlier, so we
     // backfill here if missing (idempotent NOT NULL update).
-    let team1Token: string | null = (match as any).team1_checkin_token ?? null;
-    let team2Token: string | null = (match as any).team2_checkin_token ?? null;
+    // Les deux jetons sont nullables : le cron les pose à T-60, une relance
+    // manuelle peut partir avant. C'est exactement ce que le remplissage
+    // ci-dessous rattrape.
+    const tokens = match as {
+      team1_checkin_token: string | null;
+      team2_checkin_token: string | null;
+    };
+    let team1Token: string | null = tokens.team1_checkin_token ?? null;
+    let team2Token: string | null = tokens.team2_checkin_token ?? null;
     const tokenUpdates: Record<string, string> = {};
     if (sidesToNudge.includes(1) && !team1Token) {
       team1Token = generateCheckinToken();

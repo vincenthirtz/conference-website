@@ -58,7 +58,7 @@ async function handler(
     }
 
     const result = await applyAutoPickIfExpired({
-      draftId: (draftRow as any).id,
+      draftId: (draftRow as { id: string }).id,
       tenantId: ctx.tenantId,
     });
     if (!result) {

@@ -89,7 +89,12 @@ type MembersResponse =
       invite_url: string;
       email_sent: boolean;
     }
-  | { error: string };
+  // `code` fait partie du contrat : le client distingue un verrou de roster
+  // (`ROSTER_LOCKED`, qui ouvre la proposition de forcer) d'un refus ordinaire.
+  // Il manquait à l'union, et les cinq réponses concernées se rattrapaient par
+  // un `as any` — le champ sur lequel repose la bifurcation du client n'était
+  // donc garanti nulle part.
+  | { error: string; code?: string };
 
 export default withStaffRoute(handler, { permission: 'manage_teams' });
 
@@ -157,8 +162,13 @@ async function handler(
         .from('user_battlenet_links')
         .select('auth_user_id, battle_tag')
         .in('auth_user_id', memberUserIds);
-      (bnetLinks ?? []).forEach((row: any) => {
-        if (row?.auth_user_id && row?.battle_tag) {
+      (
+        (bnetLinks ?? []) as {
+          auth_user_id: string | null;
+          battle_tag: string | null;
+        }[]
+      ).forEach((row) => {
+        if (row.auth_user_id && row.battle_tag) {
           linkedTagByUser.set(row.auth_user_id, String(row.battle_tag));
         }
       });
@@ -208,7 +218,7 @@ async function handler(
     if (!addMode.ok) {
       return res
         .status(addMode.status)
-        .json({ error: addMode.error, code: addMode.code } as any);
+        .json({ error: addMode.error, code: addMode.code });
     }
 
     // Garde roster lock : refus si l'equipe est inscrite a un tournoi avec
@@ -219,7 +229,7 @@ async function handler(
         return res.status(409).json({
           error: rosterLockErrorMessage(lockStatus),
           code: 'ROSTER_LOCKED',
-        } as any);
+        });
       }
     }
 
@@ -310,7 +320,7 @@ async function handler(
         if (!invite.ok) {
           return res
             .status(invite.status)
-            .json({ error: invite.error, code: invite.code } as any);
+            .json({ error: invite.error, code: invite.code });
         }
         if (ctx?.staff?.id) {
           try {
@@ -509,7 +519,7 @@ async function handler(
         return res.status(409).json({
           error: rosterLockErrorMessage(lockStatus),
           code: 'ROSTER_LOCKED',
-        } as any);
+        });
       }
     }
 
@@ -590,7 +600,15 @@ async function handler(
     }
 
     // Standard update
-    const updatePayload: any = {};
+    // Trois colonnes, trois types connus. Le `any` n'évitait que de les
+    // nommer, en acceptant au passage n'importe quelle autre clé.
+    const updatePayload: {
+      role?: string;
+      battle_tag?: string | null;
+      specialty?: string | null;
+      skill_rating?: number | null;
+      is_substitute?: boolean;
+    } = {};
     if (typeof role === 'string') {
       updatePayload.role = validateRole(role);
     }
@@ -709,7 +727,7 @@ async function handler(
         return res.status(409).json({
           error: rosterLockErrorMessage(lockStatus),
           code: 'ROSTER_LOCKED',
-        } as any);
+        });
       }
     }
 

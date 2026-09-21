@@ -351,11 +351,11 @@ async function handlePut(
     'next_match_lose_slot',
   ];
 
-  const updatePayload: Record<string, any> = {};
+  const updatePayload: Record<string, unknown> = {};
 
   for (const key of metaFieldsWhitelist) {
     if (key in req.body) {
-      updatePayload[key] = (req.body as any)[key];
+      updatePayload[key] = (req.body as Record<string, unknown>)[key];
     }
   }
 
@@ -386,7 +386,14 @@ async function handlePut(
         code: 'USE_DISPUTE_ENDPOINT',
       });
     }
-    if (!VALID_MATCH_STATUSES_META.includes(updatePayload.status)) {
+    // `typeof !== 'string'` fait désormais partie du refus. Le payload est
+    // typé `unknown` depuis qu'il ne ment plus sur son origine (le corps de
+    // requête), et c'est une amélioration : un `status: 42` passait
+    // silencieusement le `includes` en JavaScript, il est maintenant rejeté.
+    if (
+      typeof updatePayload.status !== 'string' ||
+      !VALID_MATCH_STATUSES_META.includes(updatePayload.status)
+    ) {
       return res.status(400).json({
         error: `Invalid status. Allowed values: ${VALID_MATCH_STATUSES_META.join(', ')}`,
       });
@@ -405,7 +412,8 @@ async function handlePut(
   if (
     'bracket_side' in updatePayload &&
     updatePayload.bracket_side !== null &&
-    !VALID_BRACKET_SIDES.includes(updatePayload.bracket_side)
+    (typeof updatePayload.bracket_side !== 'string' ||
+      !VALID_BRACKET_SIDES.includes(updatePayload.bracket_side))
   ) {
     return res.status(400).json({
       error: `Invalid bracket_side. Allowed values: ${VALID_BRACKET_SIDES.join(', ')}`,
@@ -415,7 +423,8 @@ async function handlePut(
   if (
     'next_match_win_slot' in updatePayload &&
     updatePayload.next_match_win_slot !== null &&
-    ![1, 2].includes(updatePayload.next_match_win_slot)
+    updatePayload.next_match_win_slot !== 1 &&
+    updatePayload.next_match_win_slot !== 2
   ) {
     return res
       .status(400)
@@ -425,7 +434,8 @@ async function handlePut(
   if (
     'next_match_lose_slot' in updatePayload &&
     updatePayload.next_match_lose_slot !== null &&
-    ![1, 2].includes(updatePayload.next_match_lose_slot)
+    updatePayload.next_match_lose_slot !== 1 &&
+    updatePayload.next_match_lose_slot !== 2
   ) {
     return res
       .status(400)
@@ -854,7 +864,7 @@ async function handleDelete(
  * Helpers
  * ---------------------------------------------------------*/
 
-function hasScorePayload(body: any): boolean {
+function hasScorePayload(body: Record<string, unknown>): boolean {
   return (
     typeof body?.team1Score === 'number' && typeof body?.team2Score === 'number'
   );

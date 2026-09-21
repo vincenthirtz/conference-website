@@ -11,6 +11,27 @@ import type { MatchFormat } from '@/types/matches';
 import { DEFAULT_MATCH_DURATIONS_MINUTES } from '@/utils/matches/autoScheduler';
 
 import { logger } from '../../../../../utils/logger';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
+
+/**
+ * Recopie du `.select()` ci-dessous, embeds compris.
+ *
+ * `scheduled_at` est nullable : c'est exactement ce que le `.filter()` écarte,
+ * et le type le rend visible au lieu de laisser croire à une précaution vague.
+ */
+type ConflictMatchRow = {
+  id: string;
+  stage_id: string | null;
+  round_number: number | null;
+  match_format: string | null;
+  team1_id: string | null;
+  team2_id: string | null;
+  scheduled_at: string | null;
+  is_bye: boolean | null;
+  status: string;
+  team1: Relation<{ name: string }>;
+  team2: Relation<{ name: string }>;
+};
 type ScheduledMatch = {
   id: string;
   stage_id: string | null;
@@ -120,9 +141,17 @@ async function handler(
       }
     }
 
-    const matches: ScheduledMatch[] = (matchesData || [])
-      .filter((m: any) => !m.is_bye && m.scheduled_at)
-      .map((m: any) => {
+    const matches: ScheduledMatch[] = (
+      (matchesData || []) as ConflictMatchRow[]
+    )
+      // Prédicat de type, et pas un simple booléen : c'est ce qui fait savoir
+      // au compilateur que `scheduled_at` n'est plus nul dans le `.map()` —
+      // sinon le `new Date(...)` juste après reste une promesse non tenue.
+      .filter(
+        (m): m is ConflictMatchRow & { scheduled_at: string } =>
+          !m.is_bye && !!m.scheduled_at
+      )
+      .map((m) => {
         const format = (m.match_format || 'bo3') as MatchFormat;
         const durationMin = DURATION_DEFAULTS[format] ?? 45;
         const start = new Date(m.scheduled_at);
@@ -136,8 +165,8 @@ async function handler(
           match_format: m.match_format,
           team1_id: m.team1_id,
           team2_id: m.team2_id,
-          team1_name: m.team1?.name ?? null,
-          team2_name: m.team2?.name ?? null,
+          team1_name: oneRelation(m.team1)?.name ?? null,
+          team2_name: oneRelation(m.team2)?.name ?? null,
           scheduled_at: m.scheduled_at,
           estimated_end: end.toISOString(),
         };

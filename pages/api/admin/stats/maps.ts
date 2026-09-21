@@ -4,6 +4,21 @@ import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
 import { sanitizeSearch } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../utils/logger';
+
+/**
+ * Les colonnes que la VUE de statistiques de maps rend réellement.
+ *
+ * Une vue n'a pas de contrainte NOT NULL exploitable côté client : les
+ * agrégats peuvent sortir nuls, ce que tous les `?? 0` plus bas admettent
+ * déjà. Le type le dit, au lieu de laisser croire à de la superstition.
+ */
+type MapStatsViewRow = {
+  map_name: string;
+  games_played: number | null;
+  wins_team1: number | null;
+  wins_team2: number | null;
+  total_rounds: number | null;
+};
 type MapStatsRow = {
   map_name: string;
   tournament_id: string | null;
@@ -132,36 +147,38 @@ async function handler(
   }
 
   // Transformer les données de la vue vers le format attendu par le frontend
-  const stats: MapStatsRow[] = (data || []).map((row: any) => {
-    const gamesPlayed = row.games_played ?? 0;
-    const winsTeam1 = row.wins_team1 ?? 0;
-    const winsTeam2 = row.wins_team2 ?? 0;
-    const totalGames = winsTeam1 + winsTeam2;
+  const stats: MapStatsRow[] = ((data || []) as MapStatsViewRow[]).map(
+    (row) => {
+      const gamesPlayed = row.games_played ?? 0;
+      const winsTeam1 = row.wins_team1 ?? 0;
+      const winsTeam2 = row.wins_team2 ?? 0;
+      const totalGames = winsTeam1 + winsTeam2;
 
-    // Calculer les winrates à partir des données disponibles
-    const winrateTeam1 = totalGames > 0 ? winsTeam1 / totalGames : null;
-    const winrateTeam2 = totalGames > 0 ? winsTeam2 / totalGames : null;
+      // Calculer les winrates à partir des données disponibles
+      const winrateTeam1 = totalGames > 0 ? winsTeam1 / totalGames : null;
+      const winrateTeam2 = totalGames > 0 ? winsTeam2 / totalGames : null;
 
-    return {
-      map_name: row.map_name,
-      tournament_id: null,
-      tournament: null,
-      matches_played: gamesPlayed,
-      matches_won_attack: winsTeam1,
-      matches_won_defense: winsTeam2,
-      rounds_played: row.total_rounds ?? null,
-      rounds_won_attack: null,
-      rounds_won_defense: null,
-      match_winrate_attack: winrateTeam1,
-      match_winrate_defense: winrateTeam2,
-      round_winrate_attack: null,
-      round_winrate_defense: null,
-      avg_total_rounds:
-        gamesPlayed > 0 ? (row.total_rounds ?? 0) / gamesPlayed : null,
-      pick_rate: null,
-      ban_rate: null,
-    };
-  });
+      return {
+        map_name: row.map_name,
+        tournament_id: null,
+        tournament: null,
+        matches_played: gamesPlayed,
+        matches_won_attack: winsTeam1,
+        matches_won_defense: winsTeam2,
+        rounds_played: row.total_rounds ?? null,
+        rounds_won_attack: null,
+        rounds_won_defense: null,
+        match_winrate_attack: winrateTeam1,
+        match_winrate_defense: winrateTeam2,
+        round_winrate_attack: null,
+        round_winrate_defense: null,
+        avg_total_rounds:
+          gamesPlayed > 0 ? (row.total_rounds ?? 0) / gamesPlayed : null,
+        pick_rate: null,
+        ban_rate: null,
+      };
+    }
+  );
 
   // Export CSV si demandé
   if (exportFormat === 'csv') {

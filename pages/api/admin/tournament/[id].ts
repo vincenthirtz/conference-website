@@ -45,13 +45,17 @@ type TournamentDetail = {
 
 type ApiResponse =
   | { tournament: TournamentDetail }
-  | { error: string }
+  // `warnings` fait partie du contrat : les gardes de cohérence renvoient un
+  // refus ET la liste de ce qui cloche. Il manquait à l'union, et les deux
+  // appels concernés se rattrapaient par un `as any` — le client n'avait donc
+  // aucune garantie de type sur un champ qu'il affiche pourtant.
+  | { error: string; warnings?: string[] }
   | { success: boolean; tournament: TournamentDetail };
 
 // The DB stores publication state as `visibility` ('public' | 'private'), but
 // the edit UI consumes a boolean `is_public`. Map it on the way out so a full
 // round-trip (GET → edit form → PATCH) preserves the flag.
-function toTournamentDetail(row: Record<string, any>): TournamentDetail {
+function toTournamentDetail(row: Record<string, unknown>): TournamentDetail {
   const { visibility, ...rest } = row ?? {};
   return { ...rest, is_public: visibility === 'public' } as TournamentDetail;
 }
@@ -305,7 +309,7 @@ async function handlePatch(
       if (existingSlug) {
         return res.status(409).json({
           error: `Un tournoi avec le slug "${slug}" existe déjà.`,
-        } as any);
+        });
       }
     }
 
@@ -347,7 +351,7 @@ async function handlePatch(
       if (guards) {
         return res
           .status(400)
-          .json({ error: guards.error, warnings: guards.warnings } as any);
+          .json({ error: guards.error, warnings: guards.warnings });
       }
     }
 

@@ -23,6 +23,9 @@ import {
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../utils/logger';
+
+/** Recopie du `.select('team_id')` sur `stage_teams` : FK, donc NOT NULL. */
+type StageTeamIdRow = { team_id: string };
 type AdvancedTeam = { teamId: string; seed: number | null };
 
 type ApiResponse =
@@ -188,7 +191,7 @@ async function handler(
     }
 
     const sourceTeamIds = new Set(
-      (sourceTeams || []).map((t: any) => t.team_id)
+      ((sourceTeams || []) as StageTeamIdRow[]).map((t) => t.team_id)
     );
     const invalidTeams = teamIds.filter((id: string) => !sourceTeamIds.has(id));
 
@@ -206,7 +209,7 @@ async function handler(
       .eq('stage_id', targetStageId);
 
     const existingTargetIds = new Set(
-      (existingTargetTeams || []).map((t: any) => t.team_id)
+      ((existingTargetTeams || []) as StageTeamIdRow[]).map((t) => t.team_id)
     );
 
     const toAdvance = teamIds.filter(

@@ -11,6 +11,16 @@ import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 
 import { logger } from '../../../../../utils/logger';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
+
+/** Recopie du `.select()` des membres candidats au MVP. */
+type MvpMemberRow = {
+  id: string;
+  team_id: string;
+  battle_tag: string | null;
+  is_substitute: boolean;
+  team: Relation<{ id: string; name: string }>;
+};
 export default withStaffRoute(handler, 'caster');
 
 async function handler(
@@ -97,8 +107,8 @@ async function handleGet(
       .eq('tenant_id', ctx.tenantId)
       .in('team_id', teamIds);
 
-    candidates = (members || []).map((m: any) => {
-      const team = Array.isArray(m.team) ? m.team[0] : m.team;
+    candidates = ((members || []) as MvpMemberRow[]).map((m) => {
+      const team = oneRelation(m.team);
       return {
         id: m.id,
         teamId: m.team_id,

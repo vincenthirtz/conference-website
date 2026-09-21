@@ -23,6 +23,23 @@ import {
   resolvePlacementRoles,
   type PlacementRule,
 } from '@/utils/discord/placementRoles';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
+
+/**
+ * Recopie du `.select()` du palmarès figé.
+ *
+ * `teams` est un embed PostgREST — objet ou tableau. Le code lisait
+ * `r.teams?.name` en supposant l'objet : sur la variante tableau, le repli
+ * « Équipe inconnue » se serait déclenché pour TOUTES les lignes.
+ */
+type FinalRankingRow = {
+  team_id: string;
+  rank: number;
+  prize: string | null;
+  notes: string | null;
+  frozen_at: string;
+  teams: Relation<{ name: string }>;
+};
 
 /**
  * Les règles rang → rôle du tenant, prises sur la config Discord de ses guilds.
@@ -422,9 +439,9 @@ async function fetchRankingsWithNames(tournamentId: string): Promise<
     .eq('tournament_id', tournamentId)
     .order('rank', { ascending: true });
 
-  return (data ?? []).map((r: any) => ({
+  return ((data ?? []) as FinalRankingRow[]).map((r) => ({
     team_id: r.team_id,
-    team_name: r.teams?.name ?? 'Équipe inconnue',
+    team_name: oneRelation(r.teams)?.name ?? 'Équipe inconnue',
     rank: r.rank,
     prize: r.prize,
     notes: r.notes,
