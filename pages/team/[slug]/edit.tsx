@@ -40,6 +40,24 @@ import MemberProfileEditor, {
 import { useT, format } from '@/lib/i18n/useT';
 import nsTeamEdit from '@/lib/i18n/locales/fr/teamEdit';
 
+/** Recopie du `.select()` des membres modifiables. */
+type EditableMemberRow = {
+  id: string;
+  // NOT NULL en base (vérifié dans `information_schema`), comme `role`.
+  user_id: string;
+  battle_tag: string | null;
+  role: string;
+  is_substitute: boolean;
+  display_name: string | null;
+  specialty: string | null;
+  avatar_url: string | null;
+  pronouns: string | null;
+  tagline: string | null;
+  twitter: string | null;
+  twitch: string | null;
+  created_at: string;
+};
+
 type TeamEditDict = typeof nsTeamEdit.fr;
 
 type EditableTeam = {
@@ -176,7 +194,9 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
     | string
     | null
     | undefined;
-  const members: EditableMember[] = (rawMembers ?? []).map((m: any) => ({
+  const members: EditableMember[] = (
+    (rawMembers ?? []) as EditableMemberRow[]
+  ).map((m) => ({
     id: m.id,
     user_id: m.user_id,
     battle_tag: m.battle_tag ?? null,

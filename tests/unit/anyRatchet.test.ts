@@ -39,39 +39,47 @@ import { join } from 'node:path';
 /**
  * Plafonds par zone, au 2026-09-21. Un chiffre ne doit que DESCENDRE.
  *
- * HUIT ZONES SUR ONZE SONT À ZÉRO. Les trois premières (`player`, `cron`,
- * `webhooks`) le sont parce qu'elles ont été écrites après la convention
- * « déclarer la forme de la ligne ». Les quatre autres (`bot/v1`, `teams`,
- * `components`, `netlify`) y sont descendues à la main, et chaque descente a
- * sorti un défaut réel : un filtre tenant qui pouvait disparaître sans bruit
- * dans `bot/v1/cast/upcoming`, un statut de VM `undefined` déguisé en chaîne
- * dans `netlify/functions/telegram-vm`, et huit casts dans
- * `netlify/functions/builds` qui ne servaient plus à rien depuis que les
- * champs figuraient au type.
+ * TOUTES LES ZONES SONT À ZÉRO, sauf un `any` assumé dans `utils`. Le dépôt
+ * est passé de 391 occurrences à une seule.
  *
- * `pages/api/admin` y est descendu de 54 à 0 dans la foulée, et l'exercice y a
- * trouvé mieux qu'un défaut de forme : `batch-scores` passait `entry.status`,
- * une chaîne LIBRE du corps de requête, directement dans `matches.status`
- * derrière un `as any`. Un appel avec `status: "termine"` l'aurait écrite
- * telle quelle, et tous les filtres par statut auraient cessé de voir ce
- * match. Le statut est désormais validé contre l'union, et refusé sinon.
+ * CE QUE LA DESCENTE A SORTI, et c'est le vrai bilan — chacun de ces défauts
+ * était invisible, et aucun n'aurait produit d'erreur :
  *
- * Ce n'est pas un décompte d'hygiène : c'est ce que les zones restantes
- * cachent encore.
+ *   - un filtre `tenant_id` qui pouvait disparaître à l'exécution, exposant
+ *     tous les espaces à un bot auto-hébergé (`bot/v1/cast/upcoming`, puis le
+ *     même motif dans `utils/stages/autoAdvance`) ;
+ *   - un statut de match LIBRE, venu du corps de requête, écrit tel quel dans
+ *     `matches.status` (`stages/[stageId]/batch-scores`) ;
+ *   - le contexte SSR passé pour un contexte d'API dans toute la chaîne
+ *     d'authentification staff, qui n'aurait tenu que tant que personne n'y
+ *     appelait `res.status()` ;
+ *   - une dizaine d'embeds PostgREST lus en supposant l'objet : sur la
+ *     variante tableau, chacun perdait silencieusement un nom d'équipe, un
+ *     nom de tournoi, ou une entrée entière ;
+ *   - un statut de VM `undefined` déguisé en chaîne (`netlify/telegram-vm`) ;
+ *   - deux types `Team` voisins qui avaient divergé, l'un sans `slug` —
+ *     d'où un `(team as any).slug` pour rattraper le lien de retour.
+ *
+ * Et trois nullabilités inventées « par prudence », corrigées après
+ * vérification dans `information_schema` : `team_members.is_substitute`,
+ * `leagues.slug` et `partners.category` sont NOT NULL. Les déclarer nullables
+ * aurait créé des replis morts qui ressemblent à des cas réels.
+ *
+ * Ce n'est pas un décompte d'hygiène.
  */
 const BUDGET: Record<string, number> = {
   // `pages` HORS `pages/api` : les écrans. Compté à part, sinon cette zone
   // serait le trou par lequel le total remonte sans que rien ne le dise.
-  pagesScreens: 59,
+  pagesScreens: 0,
   'pages/api/bot/v1': 0,
   'pages/api/admin': 0,
   'pages/api/teams': 0,
   'pages/api/player': 0,
   'pages/api/cron': 0,
   'pages/api/webhooks': 0,
-  // Un seul, et assumé : la signature d'implémentation des overloads de
-  // `withBotRoute` (cf. le commentaire sur place — l'union et l'intersection
-  // ont été essayées, elles cassent les appelants).
+  // Le seul du dépôt, assumé et documenté sur place : la signature
+  // d'implémentation des overloads de `withBotRoute`. L'union et
+  // l'intersection ont été essayées, elles cassent les appelants.
   utils: 1,
   components: 0,
   lib: 0,
@@ -162,18 +170,9 @@ describe('cliquet des `any` — le code de production ne se dégrade pas', () =>
   it('les zones à zéro le restent', () => {
     // Elles sont la preuve que la convention tient. Une seule régression y
     // suffirait à la rendre discutable.
-    for (const zone of [
-      'pages/api/player',
-      'pages/api/cron',
-      'pages/api/webhooks',
-      'pages/api/bot/v1',
-      'pages/api/teams',
-      'pages/api/admin',
-      'components',
-      'netlify',
-      'lib',
-    ]) {
-      expect(countAny(sourceFiles(zone))).toBe(0);
+    for (const zone of Object.keys(BUDGET)) {
+      if (BUDGET[zone] !== 0) continue;
+      expect(countAny(filesOfZone(zone)), zone).toBe(0);
     }
   });
 });

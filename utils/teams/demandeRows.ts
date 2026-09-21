@@ -37,6 +37,35 @@ export type DemandePayload = {
    *  réelle du joueur — cette valeur-ci peut être périmée. */
   from_team_id?: string | null;
   from_team_name?: string | null;
+
+  // --- Champs lus par le tableau de bord des demandes (admin) --------------
+  //
+  // Le payload est POLYMORPHE : ce qu'il contient dépend du `type` de la
+  // demande. Ces cinq-là n'apparaissent pas sur une adhésion ou un transfert,
+  // et les routes capitaine ne les lisent jamais.
+  //
+  // Ils ont été découverts en typant `pages/admin/demandes/index.tsx`, qui les
+  // lisait derrière `payload: any`. C'est précisément ce que le cast coûtait :
+  // la liste des champs réellement portés par cette colonne n'existait nulle
+  // part, et rien ne reliait ce que l'admin affiche à ce que l'API écrit.
+  /** Équipe visée par une demande de scrim ou de rattachement. */
+  target_team_name?: string | null;
+  /** Créneau souhaité, tel que saisi — chaîne libre, pas une date validée. */
+  preferred_date?: string | null;
+  /** Discriminant du formulaire d'origine (création d'équipe, rattachement…). */
+  request_type?: string | null;
+  /** Équipe existante citée quand la demande n'en crée pas une nouvelle. */
+  existing_team_name?: string | null;
+  /** Nom d'équipe proposé à la création. */
+  team_name?: string | null;
+
+  /** Membres joints au dossier, affichés tels quels par la fiche admin. */
+  members?: Array<{
+    display_name?: string | null;
+    email?: string | null;
+    battle_tag?: string | null;
+    role?: string | null;
+  }>;
 };
 
 /**

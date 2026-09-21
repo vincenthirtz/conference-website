@@ -24,6 +24,7 @@ import { addMemberFeedbackToasts } from '@/components/admin/teams/myAddMemberFee
 import nsAdminTeamsMy from '@/lib/i18n/locales/admin-fr/adminTeamsMy';
 import { withTeamParam } from '@/utils/teamScopeParam';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';
+import type { DemandePayload } from '@/utils/teams/demandeRows';
 type StaffShape = {
   id: string;
   role: string;
@@ -131,7 +132,7 @@ function MyTeamPage({ staff }: StaffProps) {
     user_id: string;
     status: string;
     comment: string | null;
-    payload: any;
+    payload: DemandePayload | null;
     created_at: string;
     user: {
       id: string;
@@ -865,7 +866,9 @@ function MyTeamPage({ staff }: StaffProps) {
   // Sync isJoinable state from team data
   useEffect(() => {
     if (data?.team) {
-      setIsJoinable((data.team as any).is_joinable ?? false);
+      setIsJoinable(
+        (data.team as { is_joinable?: boolean | null }).is_joinable ?? false
+      );
     }
   }, [data?.team]);
 

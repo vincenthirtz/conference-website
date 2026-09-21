@@ -15,7 +15,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 
   // Auth (caster minimum, comme le dashboard cible)
   try {
-    await requireStaffRoleFromRequest(req as any, res as any, 'caster');
+    await requireStaffRoleFromRequest(req, res, 'caster');
   } catch (err: unknown) {
     if (err instanceof StaffUnauthenticatedError) {
       return { redirect: { destination: '/admin/login', permanent: false } };

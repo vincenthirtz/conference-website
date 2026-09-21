@@ -43,6 +43,21 @@ import type { AdvanceStanding } from '@/components/admin/stages/[stageId]/Advanc
 import { logger } from '../../../utils/logger';
 import nsAdminStageDetail from '@/lib/i18n/locales/admin-fr/adminStageDetail';
 
+/**
+ * Une phase telle que `/api/admin/tournament/[id]/stages` la rend, réduite aux
+ * trois champs que cet écran consomme.
+ *
+ * Le même trio était relu quatre fois dans ce fichier derrière `(s: any)` :
+ * phases sœurs, phases d'avancement, phases sources d'auto-seed, et la liste
+ * des tournois. Le déclarer une fois fait que l'une d'elles ne peut plus
+ * diverger des autres en silence.
+ */
+type StageOption = {
+  id: string;
+  name: string;
+  stage_type: string | null;
+};
+
 type StageApiResponse = {
   stage: Stage;
 };
@@ -184,9 +199,9 @@ function AdminStagePage(_props: StaffProps) {
               );
               if (stagesRes.ok) {
                 const stagesJson = await stagesRes.json();
-                const siblings = (stagesJson.stages || [])
-                  .filter((st: any) => st.id !== s.id)
-                  .map((st: any) => ({
+                const siblings = ((stagesJson.stages || []) as StageOption[])
+                  .filter((st) => st.id !== s.id)
+                  .map((st) => ({
                     id: st.id,
                     name: st.name,
                     stage_type: st.stage_type,
@@ -254,10 +269,12 @@ function AdminStagePage(_props: StaffProps) {
       if (res.ok) {
         const json = await res.json();
         setAllTournaments(
-          (json.tournaments || []).map((tm: any) => ({
-            id: tm.id,
-            name: tm.name,
-          }))
+          ((json.tournaments || []) as { id: string; name: string }[]).map(
+            (tm) => ({
+              id: tm.id,
+              name: tm.name,
+            })
+          )
         );
       }
     } catch (e) {
@@ -406,9 +423,9 @@ function AdminStagePage(_props: StaffProps) {
 
       if (stagesRes.ok) {
         const json = await stagesRes.json();
-        const others = (json.stages || [])
-          .filter((s: any) => s.id !== stageId)
-          .map((s: any) => ({
+        const others = ((json.stages || []) as StageOption[])
+          .filter((s) => s.id !== stageId)
+          .map((s) => ({
             id: s.id,
             name: s.name,
             stage_type: s.stage_type,
@@ -558,13 +575,13 @@ function AdminStagePage(_props: StaffProps) {
       );
       if (stagesRes.ok) {
         const json = await stagesRes.json();
-        const sources = (json.stages || [])
+        const sources = ((json.stages || []) as StageOption[])
           .filter(
-            (s: any) =>
+            (s) =>
               s.id !== stageId &&
-              ['swiss', 'group', 'round_robin'].includes(s.stage_type)
+              ['swiss', 'group', 'round_robin'].includes(s.stage_type ?? '')
           )
-          .map((s: any) => ({
+          .map((s) => ({
             id: s.id,
             name: s.name,
             stage_type: s.stage_type,

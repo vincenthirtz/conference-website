@@ -16,6 +16,13 @@ import { logger } from '../../../utils/logger';
 import nsTeamStats from '@/lib/i18n/locales/fr/teamStats';
 type Team = {
   id: string;
+  /**
+   * Il MANQUAIT, alors que le `select('*')` le rapporte — d'où le
+   * `(team as any).slug` du lien de retour. Le type voisin de
+   * `pages/team/[slug]/maps.tsx` le déclarait, lui : deux copies du même
+   * concept avaient déjà divergé.
+   */
+  slug?: string | null;
   name: string;
   short_name?: string | null;
   logo_url?: string | null;
@@ -98,7 +105,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   const tenantId = DEFAULT_TENANT_ID;
 
   // 1) Team — by slug first, fall back to id for legacy UUID URLs
-  let team: any = null;
+  let team: Team | null = null;
   ({ data: team } = await supabaseAdmin
     .from('teams')
     .select('*')
@@ -264,9 +271,7 @@ export default function TeamStatsPage({
             </div>
 
             <div className="flex flex-wrap gap-2 justify-end">
-              <Link
-                href={`/team/${encodeURIComponent((team as any).slug || team.id)}`}
-              >
+              <Link href={`/team/${encodeURIComponent(team.slug || team.id)}`}>
                 <Button
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"

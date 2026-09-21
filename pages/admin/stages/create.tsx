@@ -64,7 +64,10 @@ type CreateStageBody = {
   is_public?: boolean;
   start_date?: string | null;
   end_date?: string | null;
-  settings?: any | null;
+  // JSON libre saisi par l'admin : `unknown`, pas `any`. La différence
+  // compte ici — `any` laissait lire `settings.champ` sans vérification sur
+  // une valeur qui vient d'un `JSON.parse` de texte tapé à la main.
+  settings?: unknown;
 };
 
 type CreateStageResponse = {
@@ -187,7 +190,7 @@ function AdminStageCreatePage(_props: StaffProps) {
     fetchTournaments();
   }, [fetchTournaments]);
 
-  function parseSettings(): any | null {
+  function parseSettings(): unknown {
     const raw = form.settingsRaw.trim();
     if (!raw) return null;
     try {
@@ -229,7 +232,7 @@ function AdminStageCreatePage(_props: StaffProps) {
       }
     }
 
-    let settings: any | null = null;
+    let settings: unknown = null;
     try {
       settings = parseSettings();
     } catch (err: unknown) {

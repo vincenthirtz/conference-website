@@ -32,7 +32,14 @@ type FormattedStaffLog = {
   entity_type?: string | null;
   entity_id?: string | null;
   tournament_id?: string | null;
-  payload?: any;
+  /**
+   * Contenu du journal staff : JSON libre, sérialisé tel quel à l'affichage.
+   *
+   * `unknown` et non `any` — le seul usage est un `JSON.stringify`, et `any`
+   * aurait laissé passer `log.payload.champ` sans que rien ne garantisse que
+   * ce champ existe pour CE type d'action.
+   */
+  payload?: unknown;
   staff?: FormattedStaff | null;
   // formatStaffLog peut aussi renvoyer un champ "message" ou similaire
   message?: string;
@@ -246,7 +253,7 @@ function AdminTournamentHistoryPage(_props: StaffProps) {
                   )}
 
                   {/* Payload brut (mini) */}
-                  {log.payload && (
+                  {log.payload ? (
                     <details className="mt-1 text-xs text-neutral-400">
                       <summary className="cursor-pointer select-none hover:text-neutral-200">
                         {t.detailsPayload}
@@ -255,7 +262,7 @@ function AdminTournamentHistoryPage(_props: StaffProps) {
                         {JSON.stringify(log.payload, null, 2)}
                       </pre>
                     </details>
-                  )}
+                  ) : null}
 
                   {/* Liens rapides vers entités si possible */}
                   <div className="mt-1 flex flex-wrap gap-2 text-xs text-blue-300">

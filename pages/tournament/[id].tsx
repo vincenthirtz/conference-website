@@ -39,6 +39,7 @@ import type {
   LandingLeague,
   TournamentPhase,
 } from '@/components/tournament/landing/types';
+import { containsFfaStage } from '@/utils/stages/ffaStage';
 
 type TournamentPageProps = {
   tournament: LandingTournament & {
@@ -350,7 +351,7 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       totalTeams: teams.length,
       totalMatches,
       finishedMatchesCount,
-      hasFfaStage: stages.some((s) => s.stage_type === 'ffa'),
+      hasFfaStage: containsFfaStage(stages),
       leagues,
       seo: buildTournamentSeo(tournament),
     },

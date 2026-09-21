@@ -15,6 +15,14 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps, StageSummary, TournamentMini } from '@/types/admin';
 import nsAdminTournamentBulkOps from '@/lib/i18n/locales/admin-fr/adminTournamentBulkOps';
 
+/** Un match tel que l'écran d'opérations groupées le liste. */
+type BulkMatchRow = {
+  id: string;
+  round_name: string | null;
+  round_number: number | null;
+  status: string;
+};
+
 export const getServerSideProps = withStaffPage({
   permission: 'manage_tournaments',
 });
@@ -121,7 +129,7 @@ function BulkOpsPage(_: StaffProps) {
         if (!res.ok) return;
         const json = await res.json();
         if (cancelled) return;
-        const list = (json.matches || []).map((m: any) => ({
+        const list = ((json.matches || []) as BulkMatchRow[]).map((m) => ({
           id: m.id,
           round_name: m.round_name,
           round_number: m.round_number,
@@ -223,8 +231,10 @@ function BulkOpsPage(_: StaffProps) {
       );
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || t.errorGeneric);
-      const skippedReasons = (json.skipped || [])
-        .map((s: any) => `${s.matchId.slice(0, 6)}: ${s.reason}`)
+      const skippedReasons = (
+        (json.skipped || []) as { matchId: string; reason: string }[]
+      )
+        .map((s) => `${s.matchId.slice(0, 6)}: ${s.reason}`)
         .join(', ');
       addToast(
         format(t.toastMoved, { count: json.moved.length }) +
@@ -241,7 +251,7 @@ function BulkOpsPage(_: StaffProps) {
       if (refreshed.ok) {
         const j = await refreshed.json();
         setReassignMatches(
-          (j.matches || []).map((m: any) => ({
+          ((j.matches || []) as BulkMatchRow[]).map((m) => ({
             id: m.id,
             round_name: m.round_name,
             round_number: m.round_number,

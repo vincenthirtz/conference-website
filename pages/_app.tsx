@@ -66,7 +66,9 @@ function MyApp({ Component, pageProps, router, branding }: AppPropsWithSeo) {
   //   2. `Component.seo` — STATIC property on the page component (the historic
   //      mechanism, used by every static page).
   const dynamicSeo = (pageProps as { seo?: SeoProps } | undefined)?.seo;
-  const staticSeo = (Component as any)?.seo as SeoProps | undefined;
+  // La propriété statique `seo` n'existe pas sur le type de page de Next :
+  // on l'expose ici explicitement plutôt que d'éteindre la vérification.
+  const staticSeo = (Component as { seo?: SeoProps }).seo;
   const seo = dynamicSeo ?? staticSeo;
   const isAdmin = router.pathname.startsWith('/admin');
   const isCaster = router.pathname.startsWith('/caster');

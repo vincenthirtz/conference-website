@@ -22,11 +22,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   // --- Auth (même garde que withStaffPage) ---
   let tenantId: string;
   try {
-    const staffCtx = await requireStaffRoleFromRequest(
-      req as any,
-      res as any,
-      'admin'
-    );
+    const staffCtx = await requireStaffRoleFromRequest(req, res, 'admin');
     tenantId = staffCtx.tenantId;
   } catch (err: unknown) {
     if (err instanceof StaffUnauthenticatedError) {

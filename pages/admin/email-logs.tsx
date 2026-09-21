@@ -14,7 +14,7 @@ import {
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const { req, res } = ctx;
   try {
-    await requireStaffRoleFromRequest(req as any, res as any, 'admin');
+    await requireStaffRoleFromRequest(req, res, 'admin');
   } catch (err: unknown) {
     if (err instanceof StaffUnauthenticatedError) {
       return { redirect: { destination: '/admin/login', permanent: false } };

@@ -18,6 +18,31 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
 import nsTournamentMvp from '@/lib/i18n/locales/fr/tournamentMvp';
+import { containsFfaStage } from '@/utils/stages/ffaStage';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
+
+/** Recopie du `.select()` des matchs terminés, embed du sondage MVP compris. */
+type FinishedMatchRow = {
+  id: string;
+  round_name: string | null;
+  completed_at: string | null;
+  team1_id: string | null;
+  team2_id: string | null;
+  status: string;
+  mvp: Relation<{
+    winner_member_id: string | null;
+    winner_battle_tag: string | null;
+  }>;
+};
+
+/** Recopie du `.select()` des membres à identifier. */
+type MvpMemberRow = {
+  id: string;
+  team_id: string;
+  /** NOT NULL en base — vérifié, pas supposé. */
+  user_id: string;
+  display_name: string | null;
+};
 
 type LeaderboardEntry = {
   memberId: string | null;
@@ -104,9 +129,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     .select('stage_type')
     .eq('tenant_id', tenantId)
     .eq('tournament_id', tournamentId);
-  const hasFfaStage = (stagesRes.data || []).some(
-    (s: any) => s.stage_type === 'ffa'
-  );
+  const hasFfaStage = containsFfaStage(stagesRes.data);
 
   const matchesRes = await supabaseAdmin
     .from('matches')
@@ -138,19 +161,21 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     battleTag: string | null;
   };
 
-  const enriched: EnrichedRow[] = finishedMatches.map((m: any) => {
-    const poll = Array.isArray(m.mvp) ? (m.mvp[0] ?? null) : (m.mvp ?? null);
-    return {
-      matchId: m.id,
-      roundName: m.round_name ?? null,
-      completedAt: m.completed_at ?? null,
-      team1Id: m.team1_id ?? null,
-      team2Id: m.team2_id ?? null,
-      memberId: poll?.winner_member_id ?? null,
-      // Anonymat public : on masque l'ID numérique du BattleTag (après le « # »).
-      battleTag: maskBattleTag(poll?.winner_battle_tag ?? null),
-    };
-  });
+  const enriched: EnrichedRow[] = (finishedMatches as FinishedMatchRow[]).map(
+    (m) => {
+      const poll = oneRelation(m.mvp);
+      return {
+        matchId: m.id,
+        roundName: m.round_name ?? null,
+        completedAt: m.completed_at ?? null,
+        team1Id: m.team1_id ?? null,
+        team2Id: m.team2_id ?? null,
+        memberId: poll?.winner_member_id ?? null,
+        // Anonymat public : on masque l'ID numérique du BattleTag (après le « # »).
+        battleTag: maskBattleTag(poll?.winner_battle_tag ?? null),
+      };
+    }
+  );
 
   // Resoudre team_id par memberId
   const memberIds = Array.from(
@@ -170,7 +195,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       .select('id, team_id, user_id, display_name')
       .eq('tenant_id', tenantId)
       .in('id', memberIds);
-    const rows = (members || []) as any[];
+    const rows = (members || []) as MvpMemberRow[];
     const resolvedNames = await resolveMissingDisplayNames(rows);
     for (const m of rows) {
       memberToTeam.set(m.id, m.team_id);

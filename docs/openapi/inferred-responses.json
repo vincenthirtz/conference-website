@@ -44903,6 +44903,48 @@
             "string",
             "null"
            ]
+          },
+          "target_team_name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "preferred_date": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "request_type": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "existing_team_name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "team_name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "members": {
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "display_name": {},
+             "email": {},
+             "battle_tag": {},
+             "role": {}
+            }
+           }
           }
          }
         },
@@ -45655,6 +45697,48 @@
             "string",
             "null"
            ]
+          },
+          "target_team_name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "preferred_date": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "request_type": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "existing_team_name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "team_name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "members": {
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "display_name": {},
+             "email": {},
+             "battle_tag": {},
+             "role": {}
+            }
+           }
           }
          }
         },

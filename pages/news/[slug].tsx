@@ -3,7 +3,7 @@ import Heading from '@/components/Typography/heading';
 import Button from '@/components/Buttons/button';
 import Link from 'next/link';
 import { supabaseAdmin } from '@/utils/supabase';
-import { resolveNewsImage } from '@/utils/news/newsImage';
+import { resolveNewsImage, type NewsTeamEmbed } from '@/utils/news/newsImage';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useEffect, useRef, useState } from 'react';
 // Serveur seulement : n'est appelé que dans getStaticProps, que Next retire
@@ -25,6 +25,26 @@ import { newsTagLabel } from '@/utils/news/newsTag';
 import ArticleHero from '@/components/News/ArticleHero';
 import ShareArticle from '@/components/News/ShareArticle';
 import RelatedNews, { type RelatedItem } from '@/components/News/RelatedNews';
+
+/**
+ * Recopie du `.select()` des actualités, embed du logo d'équipe compris.
+ *
+ * `slug` et `created_at` sont NOT NULL en base (vérifié dans
+ * `information_schema`). Le `.filter((row) => row.slug)` de la liste est donc
+ * une garde MORTE — conservée telle quelle parce qu'elle ne coûte rien, mais
+ * il ne faut pas la lire comme la trace d'un cas réel.
+ */
+type NewsListRow = {
+  id: string;
+  title: string;
+  slug: string;
+  tag: string | null;
+  excerpt: string | null;
+  image_url: string | null;
+  published_at: string | null;
+  created_at: string;
+  teams?: NewsTeamEmbed | null;
+};
 
 // Idempotency-Key pour le POST de commentaire (public/anonyme). Stable par
 // intention tant que la publication n'a pas réussi : double-submit / retry
@@ -114,14 +134,16 @@ export const getStaticProps: GetStaticProps<NewsPageProps> = async (
     .order('published_at', { ascending: false, nullsFirst: false })
     .limit(3);
 
-  const related: RelatedItem[] = (relatedRows ?? []).map((row: any) => ({
-    id: row.id,
-    slug: row.slug,
-    title: row.title,
-    tag: row.tag ?? null,
-    imageUrl: resolveNewsImage(row.image_url, row.teams).url,
-    publishedAt: row.published_at ?? null,
-  }));
+  const related: RelatedItem[] = ((relatedRows ?? []) as NewsListRow[]).map(
+    (row) => ({
+      id: row.id,
+      slug: row.slug,
+      title: row.title,
+      tag: row.tag ?? null,
+      imageUrl: resolveNewsImage(row.image_url, row.teams).url,
+      publishedAt: row.published_at ?? null,
+    })
+  );
 
   const heroImage = resolveNewsImage(data.image_url, data.teams);
 

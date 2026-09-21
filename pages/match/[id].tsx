@@ -25,6 +25,18 @@ import { logger } from '../../utils/logger';
 import MatchPredictionCard from '@/components/predictions/MatchPredictionCard';
 import nsMatchDetail from '@/lib/i18n/locales/fr/matchDetail';
 
+/** Recopie du `.select()` des membres composant les compositions. */
+type LineupRow = {
+  id: string;
+  team_id: string;
+  /** `user_id` et `role` sont NOT NULL en base — vérifié, pas supposé. */
+  user_id: string;
+  display_name: string | null;
+  battle_tag: string | null;
+  role: string;
+  is_substitute: boolean;
+};
+
 type MatchDict = typeof nsMatchDetail.fr;
 type SimpleTeam = {
   id: string;
@@ -305,7 +317,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 
   // `data` est typé par les colonnes demandées : le tournoi embarqué peut être
   // null (match de scrim), d'où la lecture avant le cast vers `Match`.
-  const raw = data as any as Omit<Match, 'tournament'> & {
+  const raw = data as unknown as Omit<Match, 'tournament'> & {
     tournament: Tournament | null;
   };
 
@@ -407,7 +419,7 @@ async function readMatchLineups(match: Match): Promise<MatchLineups> {
     return { team1: [], team2: [] };
   }
 
-  const rows = (data || []) as any[];
+  const rows = (data || []) as LineupRow[];
   const resolved = await resolveMissingDisplayNames(rows);
 
   const toLineup = (team: SimpleTeam | null): LineupMember[] => {

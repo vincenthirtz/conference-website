@@ -10,7 +10,7 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
-import { resolveNewsImage } from '@/utils/news/newsImage';
+import { resolveNewsImage, type NewsTeamEmbed } from '@/utils/news/newsImage';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -19,6 +19,26 @@ import { logger } from '../../utils/logger';
 import nsNewsIndex from '@/lib/i18n/locales/fr/newsIndex';
 import nsNewsTags from '@/lib/i18n/locales/fr/newsTags';
 import { newsTagLabel } from '@/utils/news/newsTag';
+
+/**
+ * Recopie du `.select()` des actualités, embed du logo d'équipe compris.
+ *
+ * `slug` et `created_at` sont NOT NULL en base (vérifié dans
+ * `information_schema`). Le `.filter((row) => row.slug)` de la liste est donc
+ * une garde MORTE — conservée telle quelle parce qu'elle ne coûte rien, mais
+ * il ne faut pas la lire comme la trace d'un cas réel.
+ */
+type NewsListRow = {
+  id: string;
+  title: string;
+  slug: string;
+  tag: string | null;
+  excerpt: string | null;
+  image_url: string | null;
+  published_at: string | null;
+  created_at: string;
+  teams?: NewsTeamEmbed | null;
+};
 
 const PAGE_SIZE = 9;
 
@@ -63,9 +83,9 @@ export const getStaticProps: GetStaticProps<NewsIndexProps> = async () => {
       logger.error('[news index] fetch error', error);
       loadError = true;
     } else if (data) {
-      news = data
-        .filter((row: any) => row.slug)
-        .map((row: any) => {
+      news = (data as NewsListRow[])
+        .filter((row) => row.slug)
+        .map((row) => {
           const image = resolveNewsImage(row.image_url, row.teams);
           return {
             id: row.id,

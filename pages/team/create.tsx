@@ -275,9 +275,19 @@ export default function PublicCreateTeamPage() {
     fetch(`/api/tournaments`)
       .then((r) => r.json())
       .then((data) => {
-        const found = data.tournaments?.find(
-          (t: any) => t.id === tournamentIdParam
-        );
+        const found = (
+          data.tournaments as
+            | {
+                id: string;
+                name: string;
+                game: string | null;
+                start_date: string | null;
+                /** Champs d'inscription personnalisés ; absents des versions
+                 *  antérieures de l'API, d'où l'`Array.isArray` plus bas. */
+                registration_fields?: RegistrationField[];
+              }[]
+            | undefined
+        )?.find((t) => t.id === tournamentIdParam);
         if (found) {
           setTournamentInfo({
             id: found.id,
@@ -640,7 +650,7 @@ export default function PublicCreateTeamPage() {
 
       const json: CreateResponse = await res.json();
 
-      if (!res.ok || (json as any)?.error) {
+      if (!res.ok || json?.error) {
         // Le token captcha est à usage unique : on en récupère un nouveau pour
         // que l'utilisateur puisse réessayer sans recharger la page.
         refreshCaptcha();
@@ -652,9 +662,7 @@ export default function PublicCreateTeamPage() {
         // Priorité au code machine-readable localisé (contrat §1), fallback sur
         // le message FR du serveur puis un message générique.
         const message =
-          localizedCode(json?.code) ||
-          (json as any)?.error ||
-          t.errorCreateFailed;
+          localizedCode(json?.code) || json?.error || t.errorCreateFailed;
         throw new Error(message);
       }
 

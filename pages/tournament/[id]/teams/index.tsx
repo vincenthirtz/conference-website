@@ -24,6 +24,8 @@ import { logger } from '@/utils/logger';
 import { useT, format } from '@/lib/i18n/useT';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
 import nsTournamentTeams from '@/lib/i18n/locales/fr/tournamentTeams';
+import { containsFfaStage } from '@/utils/stages/ffaStage';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
 
 type Tournament = {
   id: string;
@@ -107,16 +109,15 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   if (teamsRes.error)
     logger.error('tournament teams list error:', teamsRes.error);
 
-  const hasFfaStage = (stagesRes.data || []).some(
-    (s: any) => s.stage_type === 'ffa'
-  );
+  const hasFfaStage = containsFfaStage(stagesRes.data);
 
   // La jointure `team:teams(...)` est typée en tableau par Supabase mais renvoie
   // un objet unique à l'exécution (relation 1-1 via la FK) — même traitement que
   // la page tournoi parente.
   const teamMap = new Map<string, Team>();
-  (teamsRes.data || []).forEach((row: any) => {
-    if (row.team) teamMap.set(row.team.id, row.team as Team);
+  ((teamsRes.data || []) as { team: Relation<Team> }[]).forEach((row) => {
+    const team = oneRelation(row.team);
+    if (team) teamMap.set(team.id, team);
   });
   const teams = Array.from(teamMap.values()).sort((a, b) =>
     a.name.localeCompare(b.name, 'fr')

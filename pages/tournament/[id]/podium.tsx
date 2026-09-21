@@ -19,6 +19,23 @@ import { useLocale } from '@/lib/i18n/useLocale';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
 import { logger } from '../../../utils/logger';
 import nsTournamentPodium from '@/lib/i18n/locales/fr/tournamentPodium';
+import { containsFfaStage } from '@/utils/stages/ffaStage';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
+
+/** Recopie du `.select()` du palmarès figé, embed compris. */
+type PodiumRankRow = {
+  team_id: string;
+  rank: number;
+  prize: string | null;
+  notes: string | null;
+  frozen_at: string;
+  teams: Relation<{
+    name: string;
+    short_name: string | null;
+    logo_url: string | null;
+    slug: string | null;
+  }>;
+};
 
 type PodiumDict = typeof nsTournamentPodium.fr;
 
@@ -129,25 +146,29 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     logger.error('public podium page query error:', error);
   }
 
-  const hasFfaStage = (stagesRes.data || []).some(
-    (s: any) => s.stage_type === 'ffa'
-  );
+  const hasFfaStage = containsFfaStage(stagesRes.data);
 
   if (!rankRows || rankRows.length === 0) {
     return { notFound: true, revalidate: 60 };
   }
 
-  const rankings: RankingRow[] = (rankRows as any[]).map((r) => ({
-    team_id: r.team_id,
-    rank: r.rank,
-    prize: r.prize,
-    notes: r.notes,
-    frozen_at: r.frozen_at,
-    team_name: r.teams?.name ?? null,
-    team_short_name: r.teams?.short_name ?? null,
-    team_logo_url: r.teams?.logo_url ?? null,
-    team_slug: r.teams?.slug ?? null,
-  }));
+  const rankings: RankingRow[] = (rankRows as PodiumRankRow[]).map((r) => {
+    // `teams` est un embed PostgREST : objet OU tableau. Le code lisait
+    // `r.teams?.name` en supposant l'objet — sur la variante tableau, le
+    // podium se serait affiché SANS aucun nom d'équipe.
+    const team = oneRelation(r.teams);
+    return {
+      team_id: r.team_id,
+      rank: r.rank,
+      prize: r.prize,
+      notes: r.notes,
+      frozen_at: r.frozen_at,
+      team_name: team?.name ?? null,
+      team_short_name: team?.short_name ?? null,
+      team_logo_url: team?.logo_url ?? null,
+      team_slug: team?.slug ?? null,
+    };
+  });
 
   return {
     props: {

@@ -28,6 +28,7 @@ import { logger } from '../../../utils/logger';
 import PrintExportButton from '@/components/PrintExportButton';
 import TeamAvatar from '@/components/Team/TeamAvatar';
 import nsTournamentMatches from '@/lib/i18n/locales/fr/tournamentMatches';
+import { containsFfaStage } from '@/utils/stages/ffaStage';
 
 // Fuseau de référence pour placer les matchs dans la grille mensuelle.
 const MATCHES_TZ = 'Europe/Paris';
@@ -172,7 +173,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     logger.error('matches page matches error:', mErr);
   }
 
-  const matches = (matchesData || []) as any as SimpleMatch[];
+  const matches = (matchesData || []) as unknown as SimpleMatch[];
 
   return {
     props: {
@@ -217,7 +218,7 @@ export default function TournamentMatchesPage({
   const statusColor = getStatusChipColor(tournament.status);
   const isCompleted =
     tournament.status === 'finished' || tournament.status === 'completed';
-  const hasFfaStage = stages.some((s) => s.stage_type === 'ffa');
+  const hasFfaStage = containsFfaStage(stages);
 
   const filteredMatches = useMemo(() => {
     return matches.filter((m) => {

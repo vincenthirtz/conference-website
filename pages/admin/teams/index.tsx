@@ -136,10 +136,12 @@ function AdminTeamsListPage({
       if (res.ok) {
         const json = await res.json();
         setTournamentOptions(
-          (json.tournaments || []).map((tour: any) => ({
-            id: tour.id,
-            name: tour.name,
-          }))
+          ((json.tournaments || []) as { id: string; name: string }[]).map(
+            (tour) => ({
+              id: tour.id,
+              name: tour.name,
+            })
+          )
         );
       }
     } catch {
@@ -262,7 +264,11 @@ function AdminTeamsListPage({
     setErrorMsg(null);
 
     try {
-      const body: any = {
+      const body: {
+        action: string;
+        teamIds: string[];
+        tournamentId?: string;
+      } = {
         action: bulkAction,
         teamIds: Array.from(selected),
       };

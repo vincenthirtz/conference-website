@@ -27,6 +27,7 @@ import { formatPlayDateShort } from '@/utils/maps/poolScope';
 
 import { logger } from '../../../utils/logger';
 import nsTournamentMaps from '@/lib/i18n/locales/fr/tournamentMaps';
+import { containsFfaStage } from '@/utils/stages/ffaStage';
 type MapsDict = typeof nsTournamentMaps.fr;
 type Tournament = {
   id: string;
@@ -293,7 +294,13 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     logger.error('maps page pool error:', poolRes.error);
   }
 
-  const pool: PoolMap[] = (poolRes.data || []).map((row: any) => ({
+  const pool: PoolMap[] = (
+    (poolRes.data || []) as {
+      map_name: string;
+      map_type: string | null;
+      image_url: string | null;
+    }[]
+  ).map((row) => ({
     name: row.map_name,
     type: row.map_type ?? null,
     image: row.image_url ?? null,
@@ -311,9 +318,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     tournamentId
   );
 
-  const hasFfaStage = (stagesRes.data || []).some(
-    (s: any) => s.stage_type === 'ffa'
-  );
+  const hasFfaStage = containsFfaStage(stagesRes.data);
 
   const allMatches = (matchesRes.data || []) as MatchRow[];
   const matches = allMatches.filter((m) => !m.is_bye);

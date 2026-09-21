@@ -284,8 +284,8 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       slug
     );
 
-  let team: any = null;
-  let teamError: any = null;
+  let team: Team | null = null;
+  let teamError: { message: string } | null = null;
 
   ({ data: team, error: teamError } = await supabaseAdmin
     .from('teams')

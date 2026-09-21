@@ -214,9 +214,15 @@ function SeedingComparatorPage(_: StaffProps) {
   const locked = data?.lock.locked ?? false;
   const matches = useMemo(() => {
     if (!data) return [];
-    const map = new Map<string, { team1: CurrentSlot; team2: CurrentSlot }>();
+    const map = new Map<
+      string,
+      Partial<{ team1: CurrentSlot; team2: CurrentSlot }>
+    >();
     for (const c of data.current) {
-      const slot = map.get(c.matchId) ?? ({} as any);
+      // `Partial` et non `{} as any` : les deux camps se remplissent l'un
+      // après l'autre, donc l'un des deux manque forcément à mi-parcours.
+      const slot: Partial<{ team1: CurrentSlot; team2: CurrentSlot }> =
+        map.get(c.matchId) ?? {};
       if (c.slot === 1) slot.team1 = c;
       else slot.team2 = c;
       map.set(c.matchId, slot);

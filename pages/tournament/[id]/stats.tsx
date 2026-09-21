@@ -19,6 +19,11 @@ import { computeHeroBanStats } from '@/utils/matches/heroBans';
 
 import { logger } from '../../../utils/logger';
 import nsTournamentStats from '@/lib/i18n/locales/fr/tournamentStats';
+import { containsFfaStage } from '@/utils/stages/ffaStage';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
+
+/** Recopie du `.select()` embarquant l'équipe depuis `stage_teams`. */
+type StageTeamEmbedRow = { team: Relation<SimpleTeam> };
 type StatsDict = typeof nsTournamentStats.fr;
 type Tournament = {
   id: string;
@@ -138,10 +143,10 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     logger.error('stats page matches error:', matchesRes.error);
   }
 
-  const hasFfaStage = (stagesRes.data || []).some(
-    (s: any) => s.stage_type === 'ffa'
+  const hasFfaStage = containsFfaStage(stagesRes.data);
+  const stageIds = ((stagesRes.data || []) as { id: string }[]).map(
+    (s) => s.id
   );
-  const stageIds = (stagesRes.data || []).map((s: any) => s.id);
   const matches = ((matchesRes.data || []) as MatchRow[]).filter(
     (m) => !m.is_bye
   );
@@ -164,7 +169,10 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
           )
           .eq('tenant_id', tenantId)
           .in('stage_id', stageIds)
-      : Promise.resolve({ data: null as any, error: null }),
+      : Promise.resolve({
+          data: null as StageTeamEmbedRow[] | null,
+          error: null,
+        }),
     matchIds.length > 0
       ? supabaseAdmin
           .from('games')
@@ -182,9 +190,14 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   }
 
   const teamMap = new Map<string, SimpleTeam>();
-  (stageTeamsRes.data || []).forEach((row: any) => {
-    if (!row.team) return;
-    teamMap.set(row.team.id, row.team);
+  ((stageTeamsRes.data || []) as StageTeamEmbedRow[]).forEach((row) => {
+    // `team` est un embed PostgREST : objet OU tableau. Le code lisait
+    // `row.team.id` en supposant l'objet — sur la variante tableau, la carte
+    // des équipes serait restée vide et la page aurait annoncé « aucune
+    // équipe » sur un tournoi qui en compte.
+    const team = oneRelation(row.team);
+    if (!team) return;
+    teamMap.set(team.id, team);
   });
   const teams = Array.from(teamMap.values());
 

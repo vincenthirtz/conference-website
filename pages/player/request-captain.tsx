@@ -208,7 +208,12 @@ export default function RequestCaptainPage() {
     setSubmitting(true);
 
     try {
-      const body: any = {
+      const body: {
+        message?: string;
+        existingTeamId?: string;
+        teamName?: string;
+        members?: { email: string; battleTag?: string }[];
+      } = {
         message: message.trim() || undefined,
       };
 

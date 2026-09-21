@@ -245,7 +245,7 @@ function AdminDemandeDetailPage() {
         teams?: ForwardCandidate[];
         data?: ForwardCandidate[];
       }>('/api/admin/teams?limit=200&isActive=true&includeTotal=0');
-      const teams = (json.teams || json.data || []).map((t: any) => ({
+      const teams = (json.teams || json.data || []).map((t) => ({
         id: t.id,
         name: t.name,
         short_name: t.short_name ?? null,
@@ -762,7 +762,7 @@ function AdminDemandeDetailPage() {
                     {format(t.membersCount, { count: payload.members.length })}
                   </div>
                   <ul className="space-y-1.5 text-sm">
-                    {payload.members.map((m: any, i: number) => (
+                    {payload.members.map((m, i) => (
                       <li
                         key={i}
                         className="px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-700"

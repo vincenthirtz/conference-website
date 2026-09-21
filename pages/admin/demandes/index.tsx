@@ -27,6 +27,7 @@ import {
   type DemandeType,
 } from '@/components/admin/demandes/demandeChips';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
+import type { DemandePayload } from '@/utils/teams/demandeRows';
 
 type TournamentMini = {
   id: string;
@@ -67,7 +68,7 @@ type Demande = {
   comment: string | null;
   staff_note: string | null;
   source: string | null;
-  payload: any | null;
+  payload: DemandePayload | null;
   processed_at: string | null;
   processed_by_staff_id: string | null;
 

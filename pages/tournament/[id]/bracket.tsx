@@ -27,6 +27,7 @@ import type {
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { logger } from '@/utils/logger';
 import nsTournamentBracket from '@/lib/i18n/locales/fr/tournamentBracket';
+import { containsFfaStage } from '@/utils/stages/ffaStage';
 
 type BracketDict = typeof nsTournamentBracket.fr;
 
@@ -156,7 +157,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     logger.error('bracket page matches error:', matchesResult.error);
 
   const stageTypes = (stagesResult.data || []) as { stage_type: string }[];
-  const hasFfaStage = stageTypes.some((s) => s.stage_type === 'ffa');
+  const hasFfaStage = containsFfaStage(stageTypes);
 
   const matches = (matchesResult.data || []) as unknown as ScheduleMatch[];
   // Le bracket = uniquement les matchs d'élimination (wb/lb/final). Les matchs

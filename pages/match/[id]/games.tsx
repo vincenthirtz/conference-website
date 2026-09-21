@@ -133,7 +133,10 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     return { notFound: true, revalidate: 60 };
   }
 
-  const match = data as any as Match;
+  // `as unknown as` et non `as any as` : la double conversion reste
+  // nécessaire (le type inféré du `select` dynamique ne recouvre pas `Match`),
+  // mais `unknown` ne contamine pas la variable — `match` est bien typé ensuite.
+  const match = data as unknown as Match;
 
   match.games =
     match.games?.slice().sort((a: Game, b: Game) => {
