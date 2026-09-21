@@ -18,6 +18,40 @@ import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff } from '@/utils/botActor';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
+
+/**
+ * LA FORME DE LA LECTURE, DÉCLARÉE UNE FOIS — elle recopie exactement le
+ * `.select()` plus bas.
+ *
+ * `payload` RESTE LIBRE, et c'est délibéré : c'est une colonne JSONB dont le
+ * contenu dépend du `type` de la demande (transfert, scrim, inscription…).
+ * Lui inventer une forme unique ferait mentir la déclaration ; les lecteurs en
+ * extraient les champs qu'ils connaissent, à leurs risques.
+ */
+type TeamRel = {
+  id: string;
+  name: string;
+  slug: string | null;
+  logo_url: string | null;
+};
+type TournamentRel = { id: string; name: string; slug: string | null };
+
+type DemandeRow = {
+  id: string;
+  user_id: string | null;
+  team_id: string | null;
+  tournament_id: string | null;
+  type: string;
+  status: string;
+  comment: string | null;
+  source: string | null;
+  payload: Record<string, unknown> | null;
+  created_at: string;
+  processed_at: string | null;
+  team: Relation<TeamRel>;
+  tournament: Relation<TournamentRel>;
+};
 
 const VALID_STATUSES = new Set([
   'pending',
@@ -88,24 +122,20 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     return res.status(500).json({ error: 'Erreur de lecture des demandes' });
   }
 
-  const demandes = (data ?? []).map((row) => {
-    const team = Array.isArray((row as any).team)
-      ? (row as any).team[0]
-      : (row as any).team;
-    const tournament = Array.isArray((row as any).tournament)
-      ? (row as any).tournament[0]
-      : (row as any).tournament;
-    const payload = (row as any).payload ?? null;
+  const demandes = ((data ?? []) as DemandeRow[]).map((row) => {
+    const team = oneRelation(row.team);
+    const tournament = oneRelation(row.tournament);
+    const payload = row.payload ?? null;
 
     return {
-      id: (row as any).id,
-      type: (row as any).type,
-      status: (row as any).status,
-      source: (row as any).source ?? null,
-      comment: (row as any).comment ?? null,
-      createdAt: (row as any).created_at,
-      processedAt: (row as any).processed_at ?? null,
-      userId: (row as any).user_id ?? null,
+      id: row.id,
+      type: row.type,
+      status: row.status,
+      source: row.source ?? null,
+      comment: row.comment ?? null,
+      createdAt: row.created_at,
+      processedAt: row.processed_at ?? null,
+      userId: row.user_id ?? null,
       team: team
         ? {
             id: team.id,

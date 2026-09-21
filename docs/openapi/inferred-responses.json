@@ -22714,18 +22714,42 @@
       "items": {
        "type": "object",
        "properties": {
-        "id": {},
-        "briefingAt": {},
-        "briefingReminderSentAt": {},
+        "id": {
+         "type": "string"
+        },
+        "briefingAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "briefingReminderSentAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
         "castMember": {
          "type": [
           "object",
           "null"
          ],
          "properties": {
-          "id": {},
-          "name": {},
-          "authUserId": {},
+          "id": {
+           "type": "string"
+          },
+          "name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "authUserId": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
           "discordUserId": {
            "type": [
             "string",
@@ -22746,20 +22770,51 @@
           "null"
          ],
          "properties": {
-          "id": {},
-          "status": {},
-          "scheduledAt": {},
-          "streamUrl": {},
-          "round": {},
-          "roundNumber": {},
+          "id": {
+           "type": "string"
+          },
+          "status": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "scheduledAt": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "streamUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "round": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "roundNumber": {
+           "type": [
+            "number",
+            "null"
+           ]
+          },
           "team1": {
            "type": [
             "object",
             "null"
            ],
            "properties": {
-            "id": {},
-            "name": {}
+            "id": {
+             "type": "string"
+            },
+            "name": {
+             "type": "string"
+            }
            },
            "required": [
             "id",
@@ -22772,8 +22827,12 @@
             "null"
            ],
            "properties": {
-            "id": {},
-            "name": {}
+            "id": {
+             "type": "string"
+            },
+            "name": {
+             "type": "string"
+            }
            },
            "required": [
             "id",
@@ -22786,9 +22845,18 @@
             "null"
            ],
            "properties": {
-            "id": {},
-            "name": {},
-            "slug": {}
+            "id": {
+             "type": "string"
+            },
+            "name": {
+             "type": "string"
+            },
+            "slug": {
+             "type": [
+              "string",
+              "null"
+             ]
+            }
            },
            "required": [
             "id",
@@ -22989,24 +23057,66 @@
       "items": {
        "type": "object",
        "properties": {
-        "id": {},
-        "type": {},
-        "status": {},
-        "source": {},
-        "comment": {},
-        "createdAt": {},
-        "processedAt": {},
-        "userId": {},
+        "id": {
+         "type": "string"
+        },
+        "type": {
+         "type": "string"
+        },
+        "status": {
+         "type": "string"
+        },
+        "source": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "comment": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "createdAt": {
+         "type": "string"
+        },
+        "processedAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "userId": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
         "team": {
          "type": [
           "object",
           "null"
          ],
          "properties": {
-          "id": {},
-          "name": {},
-          "slug": {},
-          "logoUrl": {}
+          "id": {
+           "type": "string"
+          },
+          "name": {
+           "type": "string"
+          },
+          "slug": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "logoUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
          },
          "required": [
           "id",
@@ -23021,9 +23131,18 @@
           "null"
          ],
          "properties": {
-          "id": {},
-          "name": {},
-          "slug": {}
+          "id": {
+           "type": "string"
+          },
+          "name": {
+           "type": "string"
+          },
+          "slug": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
          },
          "required": [
           "id",
@@ -23037,10 +23156,30 @@
           "null"
          ],
          "properties": {
-          "desiredRole": {},
-          "captainDiscordUserId": {},
-          "inviteeDiscordUserId": {},
-          "expiresAt": {}
+          "desiredRole": {
+           "type": [
+            "object",
+            "null"
+           ]
+          },
+          "captainDiscordUserId": {
+           "type": [
+            "object",
+            "null"
+           ]
+          },
+          "inviteeDiscordUserId": {
+           "type": [
+            "object",
+            "null"
+           ]
+          },
+          "expiresAt": {
+           "type": [
+            "object",
+            "null"
+           ]
+          }
          },
          "required": [
           "desiredRole",
@@ -23086,16 +23225,27 @@
         "items": {
          "type": "object",
          "properties": {
-          "matchId": {},
+          "matchId": {
+           "type": "string"
+          },
           "tournament": {
            "type": [
             "object",
             "null"
            ],
            "properties": {
-            "id": {},
-            "name": {},
-            "slug": {}
+            "id": {
+             "type": "string"
+            },
+            "name": {
+             "type": "string"
+            },
+            "slug": {
+             "type": [
+              "string",
+              "null"
+             ]
+            }
            },
            "required": [
             "id",
@@ -23103,19 +23253,48 @@
             "slug"
            ]
           },
-          "round": {},
-          "roundNumber": {},
-          "scheduledAt": {},
-          "reason": {},
-          "openedAt": {},
+          "round": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "roundNumber": {
+           "type": [
+            "number",
+            "null"
+           ]
+          },
+          "scheduledAt": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "reason": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "openedAt": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
           "team1": {
            "type": [
             "object",
             "null"
            ],
            "properties": {
-            "id": {},
-            "name": {}
+            "id": {
+             "type": "string"
+            },
+            "name": {
+             "type": "string"
+            }
            },
            "required": [
             "id",
@@ -23128,8 +23307,12 @@
             "null"
            ],
            "properties": {
-            "id": {},
-            "name": {}
+            "id": {
+             "type": "string"
+            },
+            "name": {
+             "type": "string"
+            }
            },
            "required": [
             "id",

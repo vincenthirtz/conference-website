@@ -17,6 +17,56 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { resolveActorPlayer } from '@/utils/botActor';
 import { logger } from '@/utils/logger';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
+
+/**
+ * LES FORMES DES DEUX LECTURES, déclarées une fois chacune — elles recopient
+ * exactement les `.select()` plus bas.
+ *
+ * Elles étaient lues derrière `as any`, un cast par accès : le compilateur
+ * éteint, et le mock Supabase des tests qui ne valide pas les noms de
+ * colonnes. Une colonne mal écrite passait au vert ici et ne cassait qu'en
+ * production, dans le bot.
+ */
+type TeamRel = { id: string; name: string };
+type TournamentRel = { id: string; name: string };
+
+type UpcomingMatchRow = {
+  id: string;
+  /**
+   * NON NULL ICI, alors que la colonne l'autorise — et ce n'est pas un
+   * raccourci : la requête filtre `scheduled_at` avec `.gte()` ET `.lte()`,
+   * et une comparaison avec NULL n'est jamais vraie en SQL. Les lignes sans
+   * date sont donc exclues par construction. Le déclarer nullable forcerait
+   * un repli dans la réponse, qui ressemblerait à un cas réel alors qu'il
+   * serait mort.
+   */
+  scheduled_at: string;
+  status: string;
+  is_bye: boolean | null;
+  team1_id: string | null;
+  team2_id: string | null;
+  team1_checked_in_at: string | null;
+  team2_checked_in_at: string | null;
+  team1: Relation<TeamRel>;
+  team2: Relation<TeamRel>;
+  tournament: Relation<TournamentRel>;
+};
+
+type StageTournamentRel = {
+  id: string;
+  name: string;
+  start_date: string | null;
+  status: string | null;
+};
+
+type StageTeamRow = {
+  team_id: string;
+  tournament_stages: Relation<{
+    tournament_id: string | null;
+    tournament: Relation<StageTournamentRel>;
+  }>;
+};
 
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
 const MATCH_LOOKAHEAD_MS = 48 * 60 * 60 * 1000; // 48h
@@ -105,33 +155,29 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       return res.status(500).json({ error: 'Erreur de chargement des matchs' });
     }
 
-    for (const m of matches ?? []) {
-      const captainSide: 1 | 2 = captainedTeamIds.includes((m as any).team1_id)
+    for (const m of (matches ?? []) as UpcomingMatchRow[]) {
+      const captainSide: 1 | 2 = captainedTeamIds.includes(m.team1_id ?? '')
         ? 1
         : 2;
-      const myTeamRel = captainSide === 1 ? (m as any).team1 : (m as any).team2;
-      const oppTeamRel =
-        captainSide === 1 ? (m as any).team2 : (m as any).team1;
-      const myTeam = Array.isArray(myTeamRel) ? myTeamRel[0] : myTeamRel;
-      const oppTeam = Array.isArray(oppTeamRel) ? oppTeamRel[0] : oppTeamRel;
-      const tournamentRel = (m as any).tournament;
+      const myTeam = oneRelation(captainSide === 1 ? m.team1 : m.team2);
+      const oppTeam = oneRelation(captainSide === 1 ? m.team2 : m.team1);
+      const tournamentRel = m.tournament;
       const tournament = Array.isArray(tournamentRel)
         ? tournamentRel[0]
         : tournamentRel;
       const isCheckedIn =
-        captainSide === 1
-          ? !!(m as any).team1_checked_in_at
-          : !!(m as any).team2_checked_in_at;
+        captainSide === 1 ? !!m.team1_checked_in_at : !!m.team2_checked_in_at;
 
       reminders.push({
         kind: 'match_checkin',
-        matchId: (m as any).id,
-        scheduledAt: (m as any).scheduled_at,
+        matchId: m.id,
+        scheduledAt: m.scheduled_at,
         teamId: myTeam?.id ?? '',
         teamName:
           myTeam?.name ??
+          // `team1_id`/`team2_id` sont nullables — un bye n'a qu'un camp.
           captainedTeamNameById.get(
-            captainSide === 1 ? (m as any).team1_id : (m as any).team2_id
+            (captainSide === 1 ? m.team1_id : m.team2_id) ?? ''
           ) ??
           '',
         opponentTeamId: oppTeam?.id ?? null,
@@ -164,10 +210,8 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     } else {
       // Dedup by (tournamentId, teamId)
       const seen = new Set<string>();
-      for (const r of stageRows ?? []) {
-        const stageRel = Array.isArray((r as any).tournament_stages)
-          ? (r as any).tournament_stages[0]
-          : (r as any).tournament_stages;
+      for (const r of (stageRows ?? []) as StageTeamRow[]) {
+        const stageRel = oneRelation(r.tournament_stages);
         const tournamentRel = stageRel?.tournament;
         const tournament = Array.isArray(tournamentRel)
           ? tournamentRel[0]
@@ -182,7 +226,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
         )
           continue;
 
-        const teamId = (r as any).team_id;
+        const teamId = r.team_id;
         const dedupKey = `${tournament.id}:${teamId}`;
         if (seen.has(dedupKey)) continue;
         seen.add(dedupKey);

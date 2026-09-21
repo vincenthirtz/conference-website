@@ -17,6 +17,51 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
+import { oneRelation, type Relation } from '@/utils/supabase/relation';
+
+/**
+ * LA FORME DE LA LECTURE, DÉCLARÉE UNE FOIS.
+ *
+ * Ces champs étaient lus derrière `as any`, un cast par accès. Le cast éteint
+ * le compilateur, et le mock Supabase des tests ne valide pas les noms de
+ * colonnes : une colonne mal orthographiée passait au vert et ne cassait qu'en
+ * production — sur une route que consomme le bot Discord, donc depuis un autre
+ * dépôt. Les champs ci-dessous recopient EXACTEMENT le `.select()` plus bas.
+ */
+type TeamRel = { id: string; name: string; short_name: string | null };
+type TournamentRel = { id: string; name: string; slug: string | null };
+
+type CastMemberRel = {
+  id: string;
+  name: string | null;
+  auth_user_id: string | null;
+  image_url: string | null;
+};
+
+type MatchRel = {
+  id: string;
+  status: string | null;
+  scheduled_at: string | null;
+  stream_url: string | null;
+  round_name: string | null;
+  round_number: number | null;
+  tournament_id: string | null;
+  team1: Relation<TeamRel>;
+  team2: Relation<TeamRel>;
+  tournament: Relation<TournamentRel>;
+};
+
+type AssignmentRow = {
+  id: string;
+  match_id: string | null;
+  briefing_at: string | null;
+  briefing_reminder_sent_at: string | null;
+  cast_member_id: string | null;
+  cast_member: Relation<CastMemberRel>;
+  match: Relation<MatchRel>;
+};
+
+type DiscordLinkRow = { auth_user_id: string; discord_user_id: string };
 
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 25;
@@ -87,24 +132,16 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   }
 
   // Filtre par tournoi cote app (jointure indirecte via match.tournament_id).
-  let rows = data ?? [];
+  let rows = (data ?? []) as AssignmentRow[];
   if (tournamentId) {
-    rows = rows.filter((r) => {
-      const matchRel = Array.isArray((r as any).match)
-        ? (r as any).match[0]
-        : (r as any).match;
-      return matchRel?.tournament_id === tournamentId;
-    });
+    rows = rows.filter(
+      (r) => oneRelation(r.match)?.tournament_id === tournamentId
+    );
   }
 
   // Enrichir avec discordUserId du caster (batch)
   const authIds = rows
-    .map((r) => {
-      const cm = Array.isArray((r as any).cast_member)
-        ? (r as any).cast_member[0]
-        : (r as any).cast_member;
-      return cm?.auth_user_id as string | undefined;
-    })
+    .map((r) => oneRelation(r.cast_member)?.auth_user_id ?? null)
     .filter((x): x is string => !!x);
   let discordByAuth = new Map<string, string>();
   if (authIds.length > 0) {
@@ -113,34 +150,24 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       .select('auth_user_id, discord_user_id')
       .in('auth_user_id', authIds);
     discordByAuth = new Map(
-      (links ?? []).map((l) => [
-        (l as any).auth_user_id,
-        (l as any).discord_user_id,
+      ((links ?? []) as DiscordLinkRow[]).map((l) => [
+        l.auth_user_id,
+        l.discord_user_id,
       ])
     );
   }
 
   const assignments = rows.map((r) => {
-    const cm = Array.isArray((r as any).cast_member)
-      ? (r as any).cast_member[0]
-      : (r as any).cast_member;
-    const matchRel = Array.isArray((r as any).match)
-      ? (r as any).match[0]
-      : (r as any).match;
-    const t1 = Array.isArray(matchRel?.team1)
-      ? matchRel.team1[0]
-      : matchRel?.team1;
-    const t2 = Array.isArray(matchRel?.team2)
-      ? matchRel.team2[0]
-      : matchRel?.team2;
-    const tn = Array.isArray(matchRel?.tournament)
-      ? matchRel.tournament[0]
-      : matchRel?.tournament;
+    const cm = oneRelation(r.cast_member);
+    const matchRel = oneRelation(r.match);
+    const t1 = oneRelation(matchRel?.team1);
+    const t2 = oneRelation(matchRel?.team2);
+    const tn = oneRelation(matchRel?.tournament);
 
     return {
-      id: (r as any).id,
-      briefingAt: (r as any).briefing_at,
-      briefingReminderSentAt: (r as any).briefing_reminder_sent_at,
+      id: r.id,
+      briefingAt: r.briefing_at,
+      briefingReminderSentAt: r.briefing_reminder_sent_at,
       castMember: cm
         ? {
             id: cm.id,
