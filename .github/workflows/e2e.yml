@@ -1,0 +1,97 @@
+# « e2e » — la suite Playwright, contre une Supabase JETABLE.
+#
+# POURQUOI CE FICHIER EXISTE.
+# La suite e2e ne tournait nulle part. Sur le Mac, elle fait chauffer la
+# machine ; en local, `.env` pointe sur la base de PRODUCTION, si bien que le
+# garde-fou de `tests/utils/supabaseTestClient.ts` interrompt toute spec qui
+# sème — elles sont donc ignorées, pas exécutées. Résultat : 87 specs écrites,
+# aucune jouée. Un runner GitHub règle les deux à la fois : il est froid, et sa
+# Supabase est locale au job, créée puis détruite avec lui.
+#
+# CE QUI MANQUE ENCORE, ET IL FAUT LE SAVOIR AVANT DE LANCER.
+# `database/migrations/` contient 340 fichiers SANS horodatage, nommés par
+# sujet. Leur ordre alphabétique n'est PAS leur ordre chronologique, et elles
+# dépendent les unes des autres — les rejouer dans cet ordre échoue. Il faut
+# donc un SOCLE : un dump de schéma de la production, figé une fois, sur lequel
+# les migrations futures (horodatées) s'empilent. La marche à suivre est dans
+# docs/E2E-LOCAL-SUPABASE.md ; elle demande le mot de passe base, que seul un
+# humain a.
+#
+# Tant que le socle n'est pas là, le job échoue AVEC UN MESSAGE explicite
+# plutôt que de partir dans un `db reset` qui casserait au 40e fichier sans
+# qu'on comprenne pourquoi.
+#
+# DÉCLENCHEMENT MANUEL ET NOCTURNE, pas à chaque push : la suite est longue, et
+# la CI rapide (typecheck + unitaires) reste le filet du quotidien.
+
+name: e2e
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 04:12 UTC — tôt, et pas à l'heure pile, pour éviter la cohue des runners.
+    - cron: '12 4 * * *'
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Vérifier la présence du socle de schéma
+        run: |
+          if [ ! -d supabase/migrations ] || [ -z "$(ls -A supabase/migrations 2>/dev/null)" ]; then
+            echo "::error::Aucun socle de schéma dans supabase/migrations/."
+            echo "Les 340 fichiers de database/migrations/ ne sont pas rejouables"
+            echo "en l'état (pas d'horodatage, donc pas d'ordre). Générez le socle"
+            echo "une fois — voir docs/E2E-LOCAL-SUPABASE.md — puis relancez."
+            exit 1
+          fi
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Démarrer une Supabase locale
+        run: supabase start
+
+      - name: Relever l'URL et les clés de l'instance
+        id: sb
+        run: |
+          # `supabase status -o env` rend des KEY="value" directement utilisables.
+          supabase status -o env >> "$GITHUB_ENV"
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Installer Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Jouer la suite
+        env:
+          # La suite ET le serveur Next visent la MÊME instance jetable. C'est
+          # tout l'intérêt : plus aucune spec n'a de raison d'être ignorée, et
+          # aucune ne peut atteindre la production.
+          TEST_SUPABASE_URL: ${{ env.API_URL }}
+          TEST_SUPABASE_SERVICE_ROLE_KEY: ${{ env.SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.API_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ env.SERVICE_ROLE_KEY }}
+          JWT_SECRET: e2e-jwt-secret-not-a-real-one
+          NODE_ENV: test
+        run: npx playwright test
+
+      - name: Conserver le rapport
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

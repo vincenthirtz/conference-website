@@ -14,34 +14,93 @@ const serviceRoleKey =
 //   - Supabase LOCALE (supabase start)      → autorisé
 //   - projet PROD (owwomenscup / yhfdhp…)    → REFUSÉ EN ABSOLU (aucun override)
 //   - tout autre remote (projet de test)     → refusé sauf ALLOW_E2E_REMOTE_SUPABASE=1
-const isLocalSupabase =
-  /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|kong)(:\d+)?/i.test(
-    supabaseUrl
-  ) || supabaseUrl.includes('.supabase.internal');
+//
+// LA DÉCISION EST SORTIE DANS UNE FONCTION PURE, et ce n'est pas de l'élégance :
+// la règle vivait dans un `if` au chargement du module, donc elle ne pouvait
+// être vérifiée qu'en important le module avec un environnement truqué — c'est
+//-à-dire jamais. Elle n'avait aucun test. Une règle qu'on ne peut pas exécuter
+// est une règle qu'on ne peut pas savoir cassée : il suffisait d'une refonte,
+// ou d'un nouveau ref de projet, pour qu'elle devienne décorative sans que rien
+// ne le signale. `tests/unit/e2eSeedGuard.test.ts` l'exerce maintenant cas par cas.
 
-// Ref/hôte du projet de PRODUCTION — jamais seedable par les e2e.
-const PROD_SUPABASE_MARKERS = ['yhfdhpqgmazfxyyklomp', 'owwomenscup'];
-const isProdSupabase = PROD_SUPABASE_MARKERS.some((m) =>
-  supabaseUrl.includes(m)
-);
+/** Ref/hôte du projet de PRODUCTION — jamais seedable par les e2e. */
+export const PROD_SUPABASE_MARKERS = ['yhfdhpqgmazfxyyklomp', 'owwomenscup'];
 
-if (serviceRoleKey && supabaseUrl && !isLocalSupabase) {
-  const masked = supabaseUrl.replace(/(https?:\/\/[a-z0-9]{6}).*/i, '$1…');
-  if (isProdSupabase) {
-    throw new Error(
-      `[tests] REFUS ABSOLU: les tests e2e ne doivent JAMAIS seeder la Supabase de PRODUCTION (${masked}). ` +
+export type SeedTargetVerdict =
+  | { allowed: true; reason: 'local' | 'remote-allowed' | 'no-credentials' }
+  | {
+      allowed: false;
+      reason: 'production' | 'remote-not-allowed';
+      message: string;
+    };
+
+export function isLocalSupabaseUrl(url: string): boolean {
+  // `(?=[:/?#]|$)` ancre la FIN du nom d'hôte, et ce n'est pas du zèle : sans
+  // cette ancre, `https://localhost.evil.example.com` passait pour local. Or
+  // « local » fait sauter TOUS les contrôles suivants, production comprise —
+  // le trou le plus large possible dans ce garde-fou, ouvert par une regex qui
+  // se contentait d'un préfixe.
+  return (
+    /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|kong)(:\d+)?(?=[/?#]|$)/i.test(
+      url
+    ) || /(^|\.)supabase\.internal(:\d+)?(?=[/?#]|$)/i.test(url)
+  );
+}
+
+/**
+ * La cible de seed est-elle autorisée ?
+ *
+ * PURE : elle ne lit ni `process.env` ni le réseau, tout lui est passé. C'est
+ * ce qui la rend testable — et donc ce qui rend la règle vérifiable.
+ *
+ * Sans clé service-role, aucune écriture n'est possible : le verdict est
+ * « autorisé » parce qu'il n'y a rien à interdire, et l'appelant n'instancie
+ * de toute façon aucun client.
+ */
+export function seedTargetVerdict(
+  url: string,
+  serviceRoleKey: string,
+  allowRemote: boolean
+): SeedTargetVerdict {
+  if (!serviceRoleKey || !url)
+    return { allowed: true, reason: 'no-credentials' };
+  if (isLocalSupabaseUrl(url)) return { allowed: true, reason: 'local' };
+
+  const masked = url.replace(/(https?:\/\/[a-z0-9]{6}).*/i, '$1…');
+
+  if (PROD_SUPABASE_MARKERS.some((m) => url.includes(m))) {
+    return {
+      allowed: false,
+      reason: 'production',
+      message:
+        `[tests] REFUS ABSOLU: les tests e2e ne doivent JAMAIS seeder la Supabase de PRODUCTION (${masked}). ` +
         'Lancez une Supabase LOCALE (`supabase start`) et pointez ' +
         'TEST_SUPABASE_URL + TEST_SUPABASE_SERVICE_ROLE_KEY dessus. ' +
-        'Aucun override ne débloque la prod.'
-    );
+        'Aucun override ne débloque la prod.',
+    };
   }
-  if (process.env.ALLOW_E2E_REMOTE_SUPABASE !== '1') {
-    throw new Error(
-      `[tests] REFUS: seed e2e contre une Supabase distante (${masked}). ` +
+
+  if (!allowRemote) {
+    return {
+      allowed: false,
+      reason: 'remote-not-allowed',
+      message:
+        `[tests] REFUS: seed e2e contre une Supabase distante (${masked}). ` +
         'Utilisez une Supabase LOCALE, ou un projet de TEST dédié avec ' +
-        'ALLOW_E2E_REMOTE_SUPABASE=1 (jamais la prod).'
-    );
+        'ALLOW_E2E_REMOTE_SUPABASE=1 (jamais la prod).',
+    };
   }
+
+  return { allowed: true, reason: 'remote-allowed' };
+}
+
+const verdict = seedTargetVerdict(
+  supabaseUrl,
+  serviceRoleKey,
+  process.env.ALLOW_E2E_REMOTE_SUPABASE === '1'
+);
+if (!verdict.allowed) {
+  throw new Error(verdict.message);
 }
 
 const envReady = Boolean(supabaseUrl && serviceRoleKey);
