@@ -2,12 +2,12 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { withStaffPage } from '@/utils/staff';
 import {
-  withStaffPage,
   STAFF_ROLES,
   STAFF_ROLE_RANK,
   type StaffRole,
-} from '@/utils/staff';
+} from '@/utils/staffRoles';
 import { useToast } from '@/components/Toast';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';

@@ -28,12 +28,12 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
+import { withStaffPage } from '@/utils/staff';
 import {
-  withStaffPage,
   STAFF_ROLE_RANK,
   hasAtLeastRole,
   type StaffRole,
-} from '@/utils/staff';
+} from '@/utils/staffRoles';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import EntityHistoryButton from '@/components/admin/EntityHistoryButton';

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import { DEFAULT_TENANT_ID } from '@/utils/tenantId';
 
 /* -----------------------------------------------------------
  * Catalogue des permissions team

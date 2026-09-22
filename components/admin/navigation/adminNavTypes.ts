@@ -10,7 +10,7 @@
 // habitent. `adminNav.ts` les ré-exporte, de sorte qu'aucun appelant n'a à
 // savoir que la découpe a eu lieu.
 
-import type { StaffRole } from '@/utils/staff';
+import type { StaffRole } from '@/utils/staffRoles';
 import type { StaffPermission } from '@/utils/staffPermissions';
 
 /** Clés d'icônes SVG. Le rendu JSX vit dans `pages/admin/index.tsx` (map ICON). */

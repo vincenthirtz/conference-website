@@ -1,5 +1,6 @@
 import Head from 'next/head';
-import { withStaffPage, hasAtLeastRole } from '@/utils/staff';
+import { withStaffPage } from '@/utils/staff';
+import { hasAtLeastRole } from '@/utils/staffRoles';
 import type { StaffRole } from '@/utils/staff';
 import { supabaseAdmin } from '@/utils/supabase';
 import { escapePostgrestValue, sanitizeSearch } from '@/utils/apiHelpers';

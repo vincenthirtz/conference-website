@@ -9,8 +9,8 @@
 // Les symboles publics sont ré-exportés par `adminNav.ts`, de sorte que les
 // appelants n'ont pas à savoir que la découpe a eu lieu.
 
-import { hasAtLeastRole } from '@/utils/staff';
-import type { StaffRole } from '@/utils/staff';
+import { hasAtLeastRole } from '@/utils/staffRoles';
+import type { StaffRole } from '@/utils/staffRoles';
 import {
   hasStaffPermission,
   type StaffPermission,

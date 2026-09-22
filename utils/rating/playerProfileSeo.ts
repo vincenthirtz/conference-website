@@ -12,7 +12,9 @@
 
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { PlayerProfileCore, PlayerProfileResponse } from '@/types/rating';
-import { supabaseAdmin } from '@/utils/supabase';
+// `supabaseAdmin` est chargé À LA DEMANDE dans `readProfileDiscoverable` : la
+// page profil importe aussi `coreLabel` dans son composant, et un import
+// statique de `@/utils/supabase` embarquerait le client serveur côté client.
 
 /** Libellé public d'une joueuse : nom affiché, sinon BattleTag masqué. */
 export function coreLabel(p: PlayerProfileCore): string {
@@ -31,6 +33,7 @@ export async function readProfileDiscoverable(
   userId: string
 ): Promise<boolean> {
   try {
+    const { supabaseAdmin } = await import('@/utils/supabase');
     if (!supabaseAdmin) return false;
     const { data } = await supabaseAdmin
       .from('player_discovery_profiles')

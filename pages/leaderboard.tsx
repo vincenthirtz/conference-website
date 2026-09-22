@@ -68,6 +68,7 @@ export default function LeaderboardPage({
   movers,
   season,
   seasonPlayers,
+  moversWindowDays,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
   const t = useT(nsLeaderboardPage);
   const hasInitial = initialPlayers.length > 0;
@@ -163,7 +164,7 @@ export default function LeaderboardPage({
         {axis === 'progress' ? (
           <MoverPanel
             players={movers}
-            caption={format(t.progressCaption, { days: MOVERS_WINDOW_DAYS })}
+            caption={format(t.progressCaption, { days: moversWindowDays })}
             emptyBody={t.progressEmpty}
             t={t}
           />
@@ -609,6 +610,10 @@ export const getStaticProps: GetStaticProps<{
   movers: LeaderboardMover[];
   season: LeaderboardSeason | null;
   seasonPlayers: LeaderboardMover[];
+  // En prop, pas en import : la constante vit dans un module serveur
+  // (`readLeaderboardAxes` importe `supabaseAdmin`), que l'importer dans le
+  // composant embarquerait côté client.
+  moversWindowDays: number;
   seo: SeoProps;
 }> = async () => {
   let players: LeaderboardPlayer[] = [];
@@ -628,6 +633,7 @@ export const getStaticProps: GetStaticProps<{
         movers: [],
         season: null,
         seasonPlayers: [],
+        moversWindowDays: MOVERS_WINDOW_DAYS,
         seo: leaderboardSeoFallback,
       },
       revalidate: 30,
@@ -650,6 +656,7 @@ export const getStaticProps: GetStaticProps<{
       movers,
       season,
       seasonPlayers,
+      moversWindowDays: MOVERS_WINDOW_DAYS,
       seo: buildLeaderboardSeo(players),
     },
     revalidate: 300,

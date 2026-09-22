@@ -1,5 +1,5 @@
 import type { AdminLink } from '@/types/components';
-import { hasAtLeastRole, type StaffRole } from '@/utils/staff';
+import { hasAtLeastRole, type StaffRole } from '@/utils/staffRoles';
 import {
   hasStaffPermission,
   type StaffPermission,

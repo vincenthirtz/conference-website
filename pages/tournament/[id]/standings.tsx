@@ -39,6 +39,9 @@ type Props = {
   tournament: Tournament;
   tables: PublicStandingsTable[];
   hasFfaStage: boolean;
+  // En prop, pas en import : `publicStandings` importe `supabaseAdmin`, et
+  // l'importer dans le composant embarquerait ce module côté client.
+  formLength: number;
   seo: SeoProps;
 };
 
@@ -96,6 +99,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       tournament,
       tables,
       hasFfaStage: stageTypes.includes('ffa'),
+      formLength: FORM_LENGTH,
       seo: buildStandingsSeo(tournament),
     },
     revalidate: 60,
@@ -106,6 +110,7 @@ export default function TournamentStandingsPage({
   tournament,
   tables,
   hasFfaStage,
+  formLength,
 }: Props) {
   const t = useT(nsTournamentStandings);
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
@@ -163,6 +168,7 @@ export default function TournamentStandingsPage({
                       ? table.stageName
                       : null
                 }
+                formLength={formLength}
                 t={t}
               />
             ))}
@@ -185,10 +191,12 @@ export default function TournamentStandingsPage({
 function StandingsTable({
   table,
   title,
+  formLength,
   t,
 }: {
   table: PublicStandingsTable;
   title: string | null;
+  formLength: number;
   t: StandingsDict;
 }) {
   const showDraws = table.rows.some((r) => r.draws > 0);
@@ -232,7 +240,7 @@ function StandingsTable({
                 <abbr title={t.colDiffTitle}>{t.colDiff}</abbr>
               </th>
               <th scope="col" className={`${th} hidden md:table-cell`}>
-                <abbr title={format(t.colFormTitle, { count: FORM_LENGTH })}>
+                <abbr title={format(t.colFormTitle, { count: formLength })}>
                   {t.colForm}
                 </abbr>
               </th>

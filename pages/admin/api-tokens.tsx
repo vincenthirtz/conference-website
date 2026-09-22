@@ -15,7 +15,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
-import { withStaffPage, hasAtLeastRole } from '@/utils/staff';
+import { withStaffPage } from '@/utils/staff';
+import { hasAtLeastRole } from '@/utils/staffRoles';
 import type { StaffRole } from '@/utils/staff';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';

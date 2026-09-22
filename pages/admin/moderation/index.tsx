@@ -1,7 +1,8 @@
 import Head from 'next/head';
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { withStaffPage, hasAtLeastRole } from '@/utils/staff';
+import { withStaffPage } from '@/utils/staff';
+import { hasAtLeastRole } from '@/utils/staffRoles';
 import type { StaffRole } from '@/utils/staff';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import Tabs, {

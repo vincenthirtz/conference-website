@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAdminFetch } from './useAdminFetch';
-import type { StaffRole } from '@/utils/staff';
+import type { StaffRole } from '@/utils/staffRoles';
 
 import { logger } from '../utils/logger';
 

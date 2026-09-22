@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import linksConfig from '@/config/links.json';
 import type { LinkItem } from '@/types/types';
 import type { AdminLink } from '@/types/components';
-import { formatStaffRoleLabel, type StaffRole } from '@/utils/staff';
+import { formatStaffRoleLabel, type StaffRole } from '@/utils/staffRoles';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 import { useDocumentVisible } from '@/hooks/useDocumentVisible';

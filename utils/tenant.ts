@@ -57,13 +57,10 @@ type RequestLike =
   | IncomingMessage
   | { headers: Record<string, string | string[] | undefined> };
 
-/**
- * Default tenant UUID — the "conference" tenant, hardcoded as a safety net
- * so the API keeps working even if the env var is unset on a freshly
- * provisioned environment. Mirrors the row in the `tenants` table.
- */
-export const DEFAULT_TENANT_ID: string =
-  process.env.DEFAULT_TENANT_ID ?? 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
+// Dans une feuille à part, importable côté client (cf. `./tenantId`).
+import { DEFAULT_TENANT_ID } from './tenantId';
+
+export { DEFAULT_TENANT_ID };
 
 /**
  * RFC 4122 UUID matcher. Accepts any version (v1-v5) but the bot is expected

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
-import { withStaffPage, hasAtLeastRole, type StaffRole } from '@/utils/staff';
+import { withStaffPage } from '@/utils/staff';
+import { hasAtLeastRole, type StaffRole } from '@/utils/staffRoles';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useActiveTenant } from '@/hooks/useActiveTenant';

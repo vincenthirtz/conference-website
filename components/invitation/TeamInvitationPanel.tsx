@@ -15,7 +15,7 @@ import { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useSession } from '@/hooks/useSession';
-import { supabaseClient } from '@/utils/supabase';
+import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useT, format } from '@/lib/i18n/useT';
 import nsInvitationLink from '@/lib/i18n/locales/fr/invitationLink';
 

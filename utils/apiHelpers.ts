@@ -2,8 +2,12 @@
 // Shared helpers for admin API routes to reduce boilerplate
 
 import type { NextApiRequest } from 'next';
-import { supabaseAdmin } from '@/utils/supabase';
 import { TEAM_ROLE_VALUES } from '@/utils/teamRoles';
+
+// PAS d'import statique de `@/utils/supabase` ici : ce module sert aussi au
+// code client (`isValidUUID`, `sanitizeUrl`), et `utils/supabase` crée ses
+// clients serveur au chargement — impossible à éliminer du bundle. La seule
+// fonction qui en a besoin le charge à la demande (cf. bundle-budget.mjs).
 
 /**
  * Extract and validate pagination parameters (limit + offset) from query string.
@@ -109,6 +113,7 @@ export async function validateExistingUserId(
       error: 'Invalid user id: a valid user UUID is required.',
     };
   }
+  const { supabaseAdmin } = await import('@/utils/supabase');
   if (!supabaseAdmin) {
     return { ok: false, status: 503, error: 'Service unavailable.' };
   }

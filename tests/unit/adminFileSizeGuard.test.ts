@@ -56,7 +56,9 @@ const BASELINE: Record<string, number> = {
   'pages/admin/teams/my.tsx': 1752,
   // 2026-09-21, +1 : `payload: any | null` → `DemandePayload | null` (lot 6).
   'pages/admin/demandes/index.tsx': 1615,
-  'pages/admin/tournament/[id]/dashboard.tsx': 1614,
+  // 2026-09-22, +1 : `hasAtLeastRole` importé de `utils/staffRoles` et non plus
+  // de `utils/staff`, qui embarquait le client Supabase serveur (lot 8).
+  'pages/admin/tournament/[id]/dashboard.tsx': 1615,
   'pages/admin/teams/[teamId]/edit.tsx': 1503,
   'pages/admin/matches/[matchId]/edit.tsx': 1315,
   'pages/admin/teams/index.tsx': 1445,

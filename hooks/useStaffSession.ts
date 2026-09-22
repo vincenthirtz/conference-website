@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useSession } from '@/hooks/useSession';
-import type { StaffRole } from '@/utils/staff';
+import type { StaffRole } from '@/utils/staffRoles';
 import { staffPermissionsFor } from '@/utils/staffPermissions';
 import type { TenantKind } from '@/utils/tenantKind';
 
