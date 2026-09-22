@@ -10,14 +10,19 @@ raison d'être et de ce qui les bloque.
 
 ## Actions humaines en attente
 
-Trois choses que personne d'autre ne peut faire. Elles bloquent des lots
+Deux choses que personne d'autre ne peut faire. Elles bloquent des lots
 entiers, et aucune ne se contourne par du code.
 
 | Quoi | Où | Pourquoi ça bloque |
 |---|---|---|
-| **Activer la protection contre les mots de passe compromis** | Console Supabase → Authentication → Password Protection (HaveIBeenPwned) | Pas pilotable en SQL ni via MCP. Vérifié encore désactivé le 2026-09-21. |
 | **Générer le socle de schéma** | `npx supabase db dump` — voir [E2E-LOCAL-SUPABASE.md](./E2E-LOCAL-SUPABASE.md) | Demande le mot de passe base. Sans lui, **les 87 specs e2e ne tournent nulle part**. |
 | **Faire tourner une rotation de secret bot** | Admin → secrets du tenant | Le webhook bot est en 401 : le secret de la Freebox a divergé de `tenant_secrets`. L'agent ne peut pas lire ni écrire ce secret. |
+
+**Écartée le 22 septembre : la protection Supabase contre les mots de passe
+compromis** (HaveIBeenPwned). Elle est réservée aux plans payants. Si le besoin
+revient, l'équivalent gratuit se fait côté code : l'API *Pwned Passwords*
+(`api.pwnedpasswords.com/range/<5 premiers caractères du SHA-1>`, k-anonymat,
+sans clé) appelée par nos routes d'inscription et de changement de mot de passe.
 
 ---
 
@@ -209,8 +214,11 @@ garde-fou. Les vrais chantiers de poids, mesurés :
 
 - **`_app` pèse 213 ko gzippés**, dont ~66 ko pour supabase-js *avec*
   Realtime. C'est le plancher de toutes les pages (médiane 235 ko).
-- **`/player/tcg-guide` : 323 ko**, 110 au-dessus de `_app`, soit la page la
-  plus lourde de loin. Elle est à regarder en premier.
+- `/player/tcg-guide` était à 323 ko : elle importait 4 constantes de
+  `utils/tcg/tradeRules`, qui construit ses schémas zod au chargement — donc
+  zod entier. Constantes sorties dans `utils/tcg/tradeLimits.ts` : **234 ko**.
+  Plus aucune page n'a de chunk propre au-dessus de 28 ko : le poids restant
+  est dans `_app`, c'est là qu'il faut chercher ensuite.
 
 La règle serveur a une limite, écrite dans le script : les chunks asynchrones
 sont exclus, sinon les `import()` à la demande la feraient échouer. Un
