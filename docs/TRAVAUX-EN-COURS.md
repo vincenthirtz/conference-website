@@ -15,7 +15,7 @@ entiers, et aucune ne se contourne par du code.
 
 | Quoi | Où | Pourquoi ça bloque |
 |---|---|---|
-| **Générer le socle de schéma** | `npx supabase db dump` — voir [E2E-LOCAL-SUPABASE.md](./E2E-LOCAL-SUPABASE.md) | Demande le mot de passe base. Sans lui, **les 87 specs e2e ne tournent nulle part**. |
+| **Générer le socle de schéma** | Dans l'ordre : `npx supabase login`, `init`, `link --project-ref yhfdhpqgmazfxyyklomp`, puis `db dump` — détail dans [E2E-LOCAL-SUPABASE.md](./E2E-LOCAL-SUPABASE.md). `db dump` seul échoue (« Cannot find project ref »), et il lui faut Docker Desktop démarré. | Demande le mot de passe base. Sans lui, **les 87 specs e2e ne tournent nulle part**. |
 | **Faire tourner une rotation de secret bot** | Admin → secrets du tenant | Le webhook bot est en 401 : le secret de la Freebox a divergé de `tenant_secrets`. L'agent ne peut pas lire ni écrire ce secret. |
 
 **Écartée le 22 septembre : la protection Supabase contre les mots de passe

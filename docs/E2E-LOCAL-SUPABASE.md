@@ -46,7 +46,12 @@ Le mot de passe se trouve dans la console Supabase, *Project Settings →
 Database → Connection string*. Il n'est pas dans le dépôt, et ne doit pas y
 entrer.
 
+Prérequis : **Docker Desktop démarré** — `db dump` exécute `pg_dump` dans un
+conteneur. Sans `link` préalable, `db dump` échoue sur « Cannot find project
+ref ».
+
 ```bash
+npx supabase login                      # jeton d'accès, via le navigateur
 npx supabase init                       # crée supabase/config.toml si absent
 npx supabase link --project-ref yhfdhpqgmazfxyyklomp
 
