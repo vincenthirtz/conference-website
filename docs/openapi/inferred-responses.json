@@ -20307,6 +20307,275 @@
     ]
    }
   },
+  "GET /api/admin/tournament/{id}/mvp-votes": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "matches": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "roundName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "scheduledAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "status": {
+         "type": "string"
+        },
+        "team1Name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team2Name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "state": {
+         "type": "string",
+         "enum": [
+          "closed",
+          "expired",
+          "none",
+          "open"
+         ]
+        },
+        "closesAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "closedAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "totalVotes": {
+         "type": "number"
+        },
+        "sources": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "source": {
+            "type": "string",
+            "enum": [
+             "discord",
+             "twitch"
+            ]
+           },
+           "total": {
+            "type": "number"
+           },
+           "rows": {
+            "type": "array",
+            "items": {
+             "type": "object",
+             "properties": {
+              "memberId": {
+               "type": "string"
+              },
+              "label": {
+               "type": "string"
+              },
+              "teamName": {
+               "type": [
+                "string",
+                "null"
+               ]
+              },
+              "votes": {
+               "type": "number"
+              },
+              "share": {
+               "type": "number"
+              }
+             },
+             "required": [
+              "memberId",
+              "label",
+              "teamName",
+              "votes",
+              "share"
+             ]
+            }
+           }
+          },
+          "required": [
+           "source",
+           "total",
+           "rows"
+          ]
+         }
+        },
+        "leader": {
+         "anyOf": [
+          {
+           "type": "object",
+           "properties": {
+            "memberId": {
+             "type": "string"
+            },
+            "label": {
+             "type": "string"
+            },
+            "source": {
+             "type": "string",
+             "enum": [
+              "discord",
+              "twitch"
+             ]
+            },
+            "votes": {
+             "type": "number"
+            },
+            "total": {
+             "type": "number"
+            }
+           },
+           "required": [
+            "memberId",
+            "label",
+            "source",
+            "votes",
+            "total"
+           ]
+          },
+          {
+           "type": "object",
+           "properties": {
+            "memberId": {
+             "type": "null"
+            },
+            "reason": {
+             "type": "string",
+             "enum": [
+              "no_votes",
+              "tie",
+              "too_few_votes"
+             ]
+            }
+           },
+           "required": [
+            "memberId",
+            "reason"
+           ]
+          }
+         ]
+        },
+        "winner": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "memberId": {
+           "type": "string"
+          },
+          "label": {
+           "type": "string"
+          },
+          "source": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "votes": {
+           "type": [
+            "number",
+            "null"
+           ]
+          },
+          "total": {
+           "type": [
+            "number",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "memberId",
+          "label",
+          "source",
+          "votes",
+          "total"
+         ]
+        }
+       },
+       "required": [
+        "id",
+        "roundName",
+        "scheduledAt",
+        "status",
+        "team1Name",
+        "team2Name",
+        "state",
+        "closesAt",
+        "closedAt",
+        "totalVotes",
+        "sources",
+        "leader",
+        "winner"
+       ]
+      }
+     },
+     "totals": {
+      "type": "object",
+      "properties": {
+       "votes": {
+        "type": "number"
+       },
+       "openPolls": {
+        "type": "number"
+       },
+       "matchesWithVotes": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "votes",
+       "openPolls",
+       "matchesWithVotes"
+      ]
+     },
+     "tournament": {
+      "type": "object",
+      "properties": {
+       "id": {},
+       "name": {}
+      },
+      "required": [
+       "id",
+       "name"
+      ]
+     }
+    },
+    "required": [
+     "matches",
+     "totals",
+     "tournament"
+    ]
+   }
+  },
   "GET /api/admin/tournament/{id}/podium-preview": {
    "200": {
     "type": "object",

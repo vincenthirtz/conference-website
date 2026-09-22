@@ -42,6 +42,7 @@ export default {
   subStatsOverview: 'Standings',
   subStatsAnalytics: 'Analytics',
   subStatsPodium: 'Podium',
+  subStatsMvp: 'MVP votes',
 
   tabStats: 'Results',
   tabMaps: 'Map pool',

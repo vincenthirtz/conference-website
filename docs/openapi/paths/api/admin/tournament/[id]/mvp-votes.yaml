@@ -1,0 +1,35 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: Live MVP vote board of a tournament, match by match.
+  description: |
+    For each match with an opened vote or recorded votes: poll state
+    (`open`, `expired`, `closed`), per-platform tally, who would win if the
+    vote were settled now (same rule as the settlement), and the frozen winner
+    once closed. Voter identifiers are never returned.
+  operationId: adminTournamentMvpVotes
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Vote board.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

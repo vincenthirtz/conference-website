@@ -31,6 +31,7 @@ import enAdminTournamentEdit from './adminTournamentEdit';
 import enAdminRegistrationFields from './adminRegistrationFields';
 import enAdminTournamentMatches from './adminTournamentMatches';
 import enAdminTournamentPodium from './adminTournamentPodium';
+import enAdminTournamentMvpVotes from './adminTournamentMvpVotes';
 import enAdminTournamentStats from './adminTournamentStats';
 import enAdminTournamentAnalytics from './adminTournamentAnalytics';
 import enAdminTournamentHistory from './adminTournamentHistory';
@@ -228,6 +229,7 @@ const adminEnDict = {
   adminRegistrationFields: enAdminRegistrationFields,
   adminTournamentMatches: enAdminTournamentMatches,
   adminTournamentPodium: enAdminTournamentPodium,
+  adminTournamentMvpVotes: enAdminTournamentMvpVotes,
   adminTournamentStats: enAdminTournamentStats,
   adminTournamentAnalytics: enAdminTournamentAnalytics,
   adminTournamentHistory: enAdminTournamentHistory,

@@ -1,7 +1,7 @@
 // pages/admin/tournament/[id]/stats.tsx
 // Merged stats route. Hosts the former /stats (standings), /analytics
-// (aggregated KPIs) and /podium (final ranking) as deep-linkable sub-tabs
-// (`?tab=overview|analytics|podium`). The old /analytics and /podium routes
+// (aggregated KPIs), /podium (final ranking) and the live MVP vote board as
+// deep-linkable sub-tabs (`?tab=overview|analytics|podium|mvp`). The old /analytics and /podium routes
 // redirect here.
 
 import Head from 'next/head';
@@ -17,6 +17,7 @@ import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import StatsOverviewPanel from '@/components/admin/tournament/StatsOverviewPanel';
 import StatsAnalyticsPanel from '@/components/admin/tournament/StatsAnalyticsPanel';
 import StatsPodiumPanel from '@/components/admin/tournament/StatsPodiumPanel';
+import StatsMvpPanel from '@/components/admin/tournament/StatsMvpPanel';
 import type { StaffProps } from '@/types/admin';
 import nsAdminTournamentNav from '@/lib/i18n/locales/admin-fr/adminTournamentNav';
 
@@ -36,6 +37,7 @@ export default function AdminTournamentStatsPage(_: StaffProps) {
     { id: 'overview', label: nav.subStatsOverview },
     { id: 'analytics', label: nav.subStatsAnalytics },
     { id: 'podium', label: nav.subStatsPodium },
+    { id: 'mvp', label: nav.subStatsMvp },
   ];
   const [active, setActive] = useQueryTab(tabs);
 
@@ -66,6 +68,7 @@ export default function AdminTournamentStatsPage(_: StaffProps) {
             {active === 'overview' && <StatsOverviewPanel />}
             {active === 'analytics' && <StatsAnalyticsPanel />}
             {active === 'podium' && <StatsPodiumPanel />}
+            {active === 'mvp' && <StatsMvpPanel />}
           </div>
         </div>
       </div>
