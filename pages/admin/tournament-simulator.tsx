@@ -31,7 +31,6 @@ import type {
   SimMatch,
   SimStage,
   ScheduleConfig,
-  CompetitivenessMetrics,
   MonteCarloResult,
 } from '@/utils/simulator';
 import {
@@ -65,6 +64,11 @@ import {
 } from '@/components/admin/simulator/EliminationView';
 import { SummaryCard } from '@/components/admin/simulator/SummaryCard';
 import { SimulatorTimelineTab } from '@/components/admin/simulator/SimulatorTimelineTab';
+import {
+  SimulatorHistoryTab,
+  type SimHistoryEntry,
+} from '@/components/admin/simulator/SimulatorHistoryTab';
+import { SimulatorMonteCarloTab } from '@/components/admin/simulator/SimulatorMonteCarloTab';
 import { SimulatorStatsTab } from '@/components/admin/simulator/SimulatorStatsTab';
 import { computeSimStats } from '@/utils/simulatorStats';
 import QuizMode, {
@@ -79,16 +83,6 @@ export const getServerSideProps = withStaffPage({
 /* ------------------------------------------------------------------ */
 /*  Simulation history                                                  */
 /* ------------------------------------------------------------------ */
-
-type SimHistoryEntry = {
-  id: number;
-  timestamp: number;
-  formatType: FormatType;
-  teamCount: number;
-  bestOf: number;
-  standings: { name: string; seed: number; wins: number; losses: number }[];
-  competitiveness: CompetitivenessMetrics;
-};
 
 const MAX_HISTORY = 20;
 const SIM_TABS_ID_BASE = 'tournament-simulator';
@@ -2638,343 +2632,22 @@ function TournamentSimulatorPage() {
                     )}
 
                     {activeTab === 'monte-carlo' && (
-                      <div className="space-y-6">
-                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-                          <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-                            {tx.monteCarloHeading}
-                          </h3>
-                          <p className="text-xs text-neutral-500 mb-4">
-                            {tx.monteCarloDesc}
-                            {stages
-                              .flatMap((s) => s.matches)
-                              .some((m) => m.locked) && (
-                              <span className="text-amber-400 ml-1">
-                                {tx.lockedPreserved}
-                              </span>
-                            )}
-                          </p>
-                          <div className="flex items-center gap-4 mb-6">
-                            <div>
-                              <label className="block text-[10px] uppercase tracking-wider text-neutral-500 font-semibold mb-1">
-                                {tx.iterationsLabel}
-                              </label>
-                              <div className="flex gap-2">
-                                {[100, 500, 1000, 5000].map((n) => (
-                                  <button
-                                    key={n}
-                                    type="button"
-                                    onClick={() => setMonteCarloIterations(n)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                                      monteCarloIterations === n
-                                        ? 'bg-purple-600 border-purple-500 text-white'
-                                        : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
-                                    }`}
-                                  >
-                                    {n >= 1000 ? `${n / 1000}k` : n}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                            <button
-                              onClick={handleMonteCarlo}
-                              disabled={monteCarloRunning}
-                              className={`px-6 py-3 rounded-lg text-sm font-semibold shadow transition-colors ${
-                                monteCarloRunning
-                                  ? 'bg-neutral-700 text-neutral-400 cursor-wait animate-pulse'
-                                  : 'bg-purple-600 hover:bg-purple-700 text-white'
-                              }`}
-                            >
-                              {monteCarloRunning
-                                ? tx.calcInProgress
-                                : format(tx.runSimulations, {
-                                    count: monteCarloIterations,
-                                  })}
-                            </button>
-                          </div>
-
-                          {monteCarloResult && (
-                            <div className="space-y-6">
-                              <p className="text-xs text-neutral-500">
-                                {format(tx.iterationsCompleted, {
-                                  count: monteCarloResult.iterations,
-                                })}
-                              </p>
-
-                              {/* Win probability ranking */}
-                              <div>
-                                <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-3">
-                                  {tx.winProbability}
-                                </h4>
-                                <div className="space-y-2">
-                                  {teams
-                                    .map((t) => ({
-                                      team: t,
-                                      prob:
-                                        monteCarloResult.winProbability.get(
-                                          t.id
-                                        ) ?? 0,
-                                      wins:
-                                        monteCarloResult.winCounts.get(t.id) ??
-                                        0,
-                                    }))
-                                    .sort((a, b) => b.prob - a.prob)
-                                    .map((row, i) => (
-                                      <div
-                                        key={row.team.id}
-                                        className="flex items-center gap-3"
-                                      >
-                                        <span className="w-6 text-xs font-bold text-neutral-500">
-                                          {i + 1}
-                                        </span>
-                                        <span
-                                          className={`inline-flex items-center justify-center w-5 h-5 rounded text-[9px] font-extrabold border ${
-                                            SEED_COLORS[row.team.seed] ??
-                                            'bg-neutral-500/20 text-neutral-400 border-neutral-500/30'
-                                          }`}
-                                        >
-                                          {row.team.seed}
-                                        </span>
-                                        <span className="text-sm font-medium w-40 truncate">
-                                          {row.team.name}
-                                        </span>
-                                        <div className="flex-1 h-3 bg-neutral-800 rounded-full overflow-hidden">
-                                          <div
-                                            className="h-full rounded-full transition-all bg-gradient-to-r from-purple-600 to-emerald-500"
-                                            style={{
-                                              width: `${row.prob * 100}%`,
-                                            }}
-                                          />
-                                        </div>
-                                        <span className="text-sm font-bold tabular-nums w-16 text-right text-white">
-                                          {(row.prob * 100).toFixed(1)}%
-                                        </span>
-                                        <span className="text-[10px] text-neutral-500 tabular-nums w-16 text-right">
-                                          {row.wins}/
-                                          {monteCarloResult.iterations}
-                                        </span>
-                                      </div>
-                                    ))}
-                                </div>
-                              </div>
-
-                              {/* Placement distribution for top 4 */}
-                              <div>
-                                <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-3">
-                                  {tx.placementDist}
-                                </h4>
-                                <div className="overflow-x-auto">
-                                  <table className="w-full text-xs">
-                                    <thead>
-                                      <tr className="border-b border-white/10">
-                                        <th
-                                          scope="col"
-                                          className="text-left py-2 pr-4 text-neutral-500 font-semibold"
-                                        >
-                                          {tx.thTeam}
-                                        </th>
-                                        {Array.from(
-                                          { length: Math.min(teams.length, 8) },
-                                          (_, i) => (
-                                            <th
-                                              scope="col"
-                                              key={i}
-                                              className="text-center py-2 px-2 text-neutral-500 font-semibold"
-                                            >
-                                              {i === 0
-                                                ? tx.placement1st
-                                                : i === 1
-                                                  ? tx.placement2nd
-                                                  : format(tx.placementNth, {
-                                                      n: i + 1,
-                                                    })}
-                                            </th>
-                                          )
-                                        )}
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {teams
-                                        .map((t) => ({
-                                          team: t,
-                                          dist:
-                                            monteCarloResult.placementDist.get(
-                                              t.id
-                                            ) ?? [],
-                                        }))
-                                        .sort(
-                                          (a, b) =>
-                                            (b.dist[0] ?? 0) - (a.dist[0] ?? 0)
-                                        )
-                                        .slice(0, 8)
-                                        .map((row) => (
-                                          <tr
-                                            key={row.team.id}
-                                            className="border-b border-white/[0.03]"
-                                          >
-                                            <td className="py-2 pr-4 font-medium">
-                                              {row.team.short_name}
-                                            </td>
-                                            {Array.from(
-                                              {
-                                                length: Math.min(
-                                                  teams.length,
-                                                  8
-                                                ),
-                                              },
-                                              (_, i) => {
-                                                const count = row.dist[i] ?? 0;
-                                                const pct =
-                                                  monteCarloResult.iterations >
-                                                  0
-                                                    ? Math.round(
-                                                        (count /
-                                                          monteCarloResult.iterations) *
-                                                          100
-                                                      )
-                                                    : 0;
-                                                return (
-                                                  <td
-                                                    key={i}
-                                                    className="text-center py-2 px-2"
-                                                  >
-                                                    <span
-                                                      className={`tabular-nums ${
-                                                        pct > 30
-                                                          ? 'text-emerald-400 font-bold'
-                                                          : pct > 15
-                                                            ? 'text-sky-400'
-                                                            : pct > 5
-                                                              ? 'text-neutral-300'
-                                                              : 'text-neutral-600'
-                                                      }`}
-                                                    >
-                                                      {pct > 0
-                                                        ? `${pct}%`
-                                                        : '-'}
-                                                    </span>
-                                                  </td>
-                                                );
-                                              }
-                                            )}
-                                          </tr>
-                                        ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      <SimulatorMonteCarloTab
+                        stages={stages}
+                        teams={teams}
+                        result={monteCarloResult}
+                        running={monteCarloRunning}
+                        iterations={monteCarloIterations}
+                        onIterationsChange={setMonteCarloIterations}
+                        onRun={handleMonteCarlo}
+                      />
                     )}
 
                     {activeTab === 'history' && (
-                      <div className="space-y-6">
-                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-                          <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-semibold uppercase tracking-wider text-neutral-400">
-                              {tx.historyHeading}
-                            </h3>
-                            {simHistory.length > 0 && (
-                              <button
-                                type="button"
-                                onClick={() => setSimHistory([])}
-                                className="text-[10px] text-neutral-500 hover:text-red-400 transition-colors"
-                              >
-                                {tx.clearHistory}
-                              </button>
-                            )}
-                          </div>
-                          {simHistory.length === 0 ? (
-                            <p className="text-sm text-neutral-500">
-                              {tx.historyEmpty}
-                            </p>
-                          ) : (
-                            <div className="space-y-4">
-                              {simHistory.map((entry, idx) => (
-                                <div
-                                  key={entry.id}
-                                  className="rounded-lg border border-white/10 bg-white/[0.01] p-4"
-                                >
-                                  <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-3">
-                                      <span className="text-xs font-bold text-neutral-500">
-                                        #{simHistory.length - idx}
-                                      </span>
-                                      <span className="text-xs text-neutral-400">
-                                        {new Date(
-                                          entry.timestamp
-                                        ).toLocaleString('fr-FR', {
-                                          hour: '2-digit',
-                                          minute: '2-digit',
-                                          second: '2-digit',
-                                        })}
-                                      </span>
-                                      <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                                        {FORMAT_LABELS[entry.formatType]}
-                                      </span>
-                                      <span className="text-[10px] text-neutral-500">
-                                        {format(tx.teamsBoLabel, {
-                                          count: entry.teamCount,
-                                          bo: entry.bestOf,
-                                        })}
-                                      </span>
-                                    </div>
-                                    <div className="flex gap-4 text-[10px]">
-                                      <span
-                                        className="text-amber-400"
-                                        title={tx.closeMatches}
-                                      >
-                                        {format(tx.closePct, {
-                                          pct: entry.competitiveness
-                                            .closeMatchPct,
-                                        })}
-                                      </span>
-                                      <span
-                                        className="text-rose-400"
-                                        title={tx.upsets}
-                                      >
-                                        {format(tx.upsetsCount, {
-                                          count: entry.competitiveness.upsets,
-                                        })}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  {/* Top 5 standings */}
-                                  <div className="flex gap-4 flex-wrap">
-                                    {entry.standings.slice(0, 5).map((s, i) => (
-                                      <div
-                                        key={i}
-                                        className="flex items-center gap-1.5"
-                                      >
-                                        <span
-                                          className={`text-xs font-bold ${
-                                            i === 0
-                                              ? 'text-amber-400'
-                                              : i === 1
-                                                ? 'text-neutral-300'
-                                                : i === 2
-                                                  ? 'text-orange-400'
-                                                  : 'text-neutral-500'
-                                          }`}
-                                        >
-                                          {i + 1}.
-                                        </span>
-                                        <span className="text-xs text-neutral-300">
-                                          {s.name}
-                                        </span>
-                                        <span className="text-[10px] text-neutral-600">
-                                          {s.wins}V-{s.losses}D
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      <SimulatorHistoryTab
+                        entries={simHistory}
+                        onClear={() => setSimHistory([])}
+                      />
                     )}
 
                     {activeTab === 'compare' && (
