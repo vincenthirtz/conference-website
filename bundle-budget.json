@@ -215,7 +215,7 @@
   "/player/scouting/[teamId]": 235,
   "/player/scrim-planning/[planningId]": 245,
   "/player/tcg": 258,
-  "/player/tcg-guide": 323,
+  "/player/tcg-guide": 234,
   "/player/tcg/echanges": 250,
   "/player/teams": 243,
   "/recrutement": 239,

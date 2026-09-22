@@ -40,14 +40,30 @@
 
 import { z } from 'zod';
 
-export const TRADE_MAX_CARDS_PER_SIDE = 5;
-export const TRADE_TTL_HOURS = 72;
-export const TRADE_MAX_PENDING_SENT = 5;
-export const TRADE_MAX_PENDING_RECEIVED = 10;
-export const TRADE_DECLINE_COOLDOWN_HOURS = 24;
-export const TRADE_MAX_ACCEPTED_PER_DAY = 3;
-export const TRADE_MIN_ACCOUNT_AGE_DAYS = 14;
-export const TRADE_MIN_COLLECTION_AGE_DAYS = 7;
+// Les plafonds chiffrés vivent dans `./tradeLimits`, sans zod : le guide
+// joueuse n'a besoin que d'eux, et importer ce module-ci lui faisait charger
+// zod entier (~95 ko gzippés, schémas construits au chargement du module).
+import {
+  TRADE_MAX_CARDS_PER_SIDE,
+  TRADE_TTL_HOURS,
+  TRADE_MAX_PENDING_SENT,
+  TRADE_MAX_PENDING_RECEIVED,
+  TRADE_DECLINE_COOLDOWN_HOURS,
+  TRADE_MAX_ACCEPTED_PER_DAY,
+  TRADE_MIN_ACCOUNT_AGE_DAYS,
+  TRADE_MIN_COLLECTION_AGE_DAYS,
+} from './tradeLimits';
+
+export {
+  TRADE_MAX_CARDS_PER_SIDE,
+  TRADE_TTL_HOURS,
+  TRADE_MAX_PENDING_SENT,
+  TRADE_MAX_PENDING_RECEIVED,
+  TRADE_DECLINE_COOLDOWN_HOURS,
+  TRADE_MAX_ACCEPTED_PER_DAY,
+  TRADE_MIN_ACCOUNT_AGE_DAYS,
+  TRADE_MIN_COLLECTION_AGE_DAYS,
+};
 
 /**
  * Origines de paquet dont les cartes sont ÉCHANGEABLES — miroir EXACT de

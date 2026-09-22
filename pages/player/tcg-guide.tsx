@@ -40,7 +40,7 @@ import {
   TRADE_MIN_ACCOUNT_AGE_DAYS,
   TRADE_MIN_COLLECTION_AGE_DAYS,
   TRADE_TTL_HOURS,
-} from '@/utils/tcg/tradeRules';
+} from '@/utils/tcg/tradeLimits';
 import nsGuidePlayerTcg from '@/lib/i18n/locales/fr/guidePlayerTcg';
 
 /** Le barème, tel que le rend `GET /api/player/tcg/packs`. */
