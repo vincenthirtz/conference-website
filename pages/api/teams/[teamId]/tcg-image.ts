@@ -33,6 +33,7 @@ import { hasTeamPermission } from '@/utils/teams/permissions';
 import { decodeImagePayload } from '@/utils/uploads/imageBytes';
 import { TCG_BUCKET, tcgTeamImagePrefix } from '@/utils/tcg/teamCardImage';
 import { logger } from '@/utils/logger';
+import { IMMUTABLE_UPLOAD_CACHE_CONTROL } from '@/utils/uploads/storageCache';
 
 export const config = {
   // 4 Mo de corps pour 2 Mio d'image : le base64 enfle d'un tiers.
@@ -140,6 +141,7 @@ export default withAuthRoute(async function handler(
     .upload(filePath, decoded.buffer, {
       contentType: mimeType as string,
       upsert: false,
+      cacheControl: IMMUTABLE_UPLOAD_CACHE_CONTROL,
     });
 
   if (uploadErr) {

@@ -44,6 +44,7 @@ import {
   decodeAudioPayload,
   AUDIO_MAX_BYTES,
 } from '@/utils/uploads/audioBytes';
+import { IMMUTABLE_UPLOAD_CACHE_CONTROL } from '@/utils/uploads/storageCache';
 
 /**
  * Le corps porte des fichiers en base64, et Next plafonne à 1 Mo par défaut.
@@ -249,6 +250,7 @@ async function patch(
           .upload(path, decoded.buffer, {
             contentType: frame.mimeType,
             upsert: false,
+            cacheControl: IMMUTABLE_UPLOAD_CACHE_CONTROL,
           });
         if (error) {
           logger.error(
@@ -286,6 +288,7 @@ async function patch(
           .upload(path, decoded.buffer, {
             contentType: sound.mimeType,
             upsert: false,
+            cacheControl: IMMUTABLE_UPLOAD_CACHE_CONTROL,
           });
         if (error) {
           logger.error('[admin/stream-alerts] envoi son: %s', error.message);

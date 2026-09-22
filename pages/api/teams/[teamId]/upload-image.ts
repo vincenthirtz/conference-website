@@ -13,6 +13,7 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { hasTeamPermission } from '@/utils/teams/permissions';
 import { SVG_MAX_BYTES, SVG_MIME, sanitizeSvg } from '@/utils/svgSanitize';
 import { logger } from '@/utils/logger';
+import { IMMUTABLE_UPLOAD_CACHE_CONTROL } from '@/utils/uploads/storageCache';
 
 export const config = {
   api: {
@@ -143,6 +144,7 @@ export default withAuthRoute(async function handler(
     .upload(filePath, buffer, {
       contentType: mimeType,
       upsert: false,
+      cacheControl: IMMUTABLE_UPLOAD_CACHE_CONTROL,
     });
 
   if (uploadError) {

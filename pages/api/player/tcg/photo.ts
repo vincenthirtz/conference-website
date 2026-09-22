@@ -38,6 +38,7 @@ import {
 import { revalidatePlayerCard } from '@/utils/tcg/revalidatePlayerCard';
 import { logger } from '@/utils/logger';
 import { enqueuePhotoPurge, tryPurgeNow } from '@/utils/tcg/photoPurge';
+import { IMMUTABLE_UPLOAD_CACHE_CONTROL } from '@/utils/uploads/storageCache';
 
 /** Même bucket public que les logos d'équipe, sous un préfixe dédié. */
 const BUCKET = 'teams-images';
@@ -211,6 +212,7 @@ async function submitPhoto(
     .upload(path, decoded.buffer, {
       contentType: mimeType as string,
       upsert: false,
+      cacheControl: IMMUTABLE_UPLOAD_CACHE_CONTROL,
     });
   if (uploadError) {
     logger.error('[tcg/photo] upload error: %s', uploadError.message);

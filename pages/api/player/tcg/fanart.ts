@@ -40,6 +40,7 @@ import {
 } from '@/utils/uploads/imageBytes';
 import { TCG_BUCKET } from '@/utils/tcg/teamCardImage';
 import { FANART_LIMITS, MAX_PENDING_FANART } from '@/utils/tcg/fanart';
+import { IMMUTABLE_UPLOAD_CACHE_CONTROL } from '@/utils/uploads/storageCache';
 
 const BUCKET = TCG_BUCKET;
 const PREFIX = 'tcg-fanart';
@@ -239,6 +240,7 @@ async function submit(
     .upload(path, decoded.buffer, {
       contentType: body.mimeType as string,
       upsert: false,
+      cacheControl: IMMUTABLE_UPLOAD_CACHE_CONTROL,
     });
   if (uploadError) {
     logger.error('[tcg/fanart] envoi impossible: %s', uploadError.message);

@@ -49,6 +49,7 @@ import {
   OVERLAY_POSITIONS,
   type OverlayTheme,
 } from '@/utils/tcg/overlayThemeShape';
+import { IMMUTABLE_UPLOAD_CACHE_CONTROL } from '@/utils/uploads/storageCache';
 
 export type TcgOverlayThemeState = {
   theme: OverlayTheme;
@@ -139,6 +140,7 @@ async function handler(
             .upload(path, decoded.buffer, {
               contentType: String(media?.mimeType),
               upsert: false,
+              cacheControl: IMMUTABLE_UPLOAD_CACHE_CONTROL,
             });
           if (uploadError) {
             logger.error(

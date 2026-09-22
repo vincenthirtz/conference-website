@@ -10,6 +10,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { SVG_MAX_BYTES, SVG_MIME, sanitizeSvg } from '@/utils/svgSanitize';
 
 import { logger } from '../../../utils/logger';
+import { IMMUTABLE_UPLOAD_CACHE_CONTROL } from '@/utils/uploads/storageCache';
 export const config = {
   api: {
     bodyParser: {
@@ -146,6 +147,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     .upload(filePath, buffer, {
       contentType: mimeType,
       upsert: false,
+      cacheControl: IMMUTABLE_UPLOAD_CACHE_CONTROL,
     });
 
   if (uploadError) {
