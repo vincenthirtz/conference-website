@@ -21,6 +21,44 @@ entiers, et aucune ne se contourne par du code.
 
 ---
 
+## Supabase — quota « Cached Egress » dépassé (échéance 20 octobre)
+
+Le cycle précédent a dépassé le quota : période de grâce jusqu'au
+**20 octobre 2026**, ensuite le Fair Use Policy s'applique et les requêtes
+peuvent répondre en 402. Le Cached Egress, c'est le trafic Storage servi par le
+CDN — pas la base.
+
+**Mesure du 22 septembre** (`edge_logs`, 24 h) : ~459 Mo/jour, soit ~13 Go par
+mois pour un quota de 5 Go. **96 % venaient de Netlify Image CDN**, qui
+retéléchargeait les originaux des logos de l'accueil : deux fichiers de 1,4 Mo
+et 757 Ko pour un affichage en 64 px faisaient à eux seuls ~85 % du total.
+
+Fait le jour même :
+
+- les 5 logos lourds de l'accueil (Chocomates, Éclypse, Shujaa Angel's,
+  Venom Valkyries, Team Positivité) sont recompressés en WebP de 512 px au
+  maximum : 2,5 Mo → 141 Ko. `teams.logo_url` pointe sur les nouveaux fichiers ;
+  **les anciens restent dans le bucket**, rien n'a été supprimé ;
+- chaque upload en `upsert: false` pose désormais un cache d'un an
+  ([`utils/uploads/storageCache.ts`](../utils/uploads/storageCache.ts)) au lieu
+  des 3 600 s par défaut.
+
+Ce qui reste, par ordre d'intérêt :
+
+1. **Vérifier la baisse** d'ici quelques jours : agrégat
+   `sum(response.headers.content_length)` sur `/storage/v1/object` dans
+   `edge_logs`, groupé par user-agent. Cible : moins de 5 Go/mois.
+2. **Rien ne redimensionne à l'upload.** Le prochain logo de 2 Mo refera le
+   même problème. `sharp` est déjà là en dépendance transitive de Next ; le
+   brancher dans `teams/[teamId]/upload-image`, `admin/upload`, `tcg-image` et
+   `player/tcg/photo` a été écarté pour l'instant.
+3. Photos TCG jusqu'à 2 Mo, affichées en `unoptimized` (`TcgPhotoCard`,
+   `TcgTeamImageCard`, …) : peu vues aujourd'hui, mais elles partent à plein
+   poids.
+4. Les 73 objets déjà en place gardent `max-age=3600`.
+
+---
+
 ## Lot 6 — supprimer les `any` du code de production
 
 **Terminé.** Il reste **un** `any` dans tout le dépôt, contre 391 au départ et
