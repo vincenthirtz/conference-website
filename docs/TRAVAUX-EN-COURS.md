@@ -24,6 +24,13 @@ revient, l'équivalent gratuit se fait côté code : l'API *Pwned Passwords*
 (`api.pwnedpasswords.com/range/<5 premiers caractères du SHA-1>`, k-anonymat,
 sans clé) appelée par nos routes d'inscription et de changement de mot de passe.
 
+**Décision en attente : faire de la CI une barrière.** Netlify publie `work`
+dès le push, la CI passe après : elle détecte, elle ne bloque pas. Piste :
+couper la publication automatique côté Netlify (« Stop auto publishing ») et
+laisser la CI publier le déploiement une fois tout vert. En prime,
+`core.autocrlf input` + renormalisation rendrait `biome ci` utilisable sous
+Windows.
+
 ---
 
 ## Supabase — quota « Cached Egress » dépassé (échéance 20 octobre)
@@ -154,16 +161,19 @@ deux morceaux — le chargement dans
 d'affichage dans
 [`components/Team/TeamPageParts.tsx`](../components/Team/TeamPageParts.tsx).
 
-Le simulateur (`pages/admin/tournament-simulator.tsx`) est passé de **3 878 à
-2 876 lignes** le 22 septembre. Quatre onglets sont sortis dans
-`components/admin/simulator/` : calendrier, statistiques, Monte-Carlo et
-historique. Le calcul des statistiques est devenu `utils/simulatorStats.ts`,
-une fonction pure testée pour la première fois ; le test a aussitôt trouvé un
-bug d'affichage (27 h affichées « 2j 3h »). Il en reste un seul composant de
-~2 800 lignes. Les onglets suivants à sortir, du moins au plus couplé :
-`maps` (36 lignes, `mapPool` + `stats`), `teams` (133, glisser-déposer des
-têtes de série), `bracket` (106) et `compare` (201), qui partagent
-`getStageHandlers` et `groupByRoundMemo`.
+Le 22 septembre, deux fichiers ont fondu :
+
+- **le simulateur** (`pages/admin/tournament-simulator.tsx`) : **3 878 →
+  2 433 lignes**. Ses huit onglets vivent dans `components/admin/simulator/`.
+  Le calcul des statistiques est devenu `utils/simulatorStats.ts`, une
+  fonction pure testée pour la première fois — et le test a aussitôt trouvé un
+  bug d'affichage (27 h affichées « 2j 3h »). Ce qui reste : la logique
+  (état, handlers) et le panneau de configuration ;
+- **le tableau de tâches** (`pages/admin/tasks/index.tsx`) : **3 265 → 2 683**.
+  Ses ~600 lignes de tête sont sorties à l'identique :
+  `components/admin/tasks/taskBoardModel.ts` (types et helpers purs,
+  désormais testables : tri des cartes, retard, regroupement de « mes
+  tâches ») et `TaskBoardParts.tsx` (quatre sous-composants).
 
 **La méthode qui a marché** : pour chaque onglet, lister les noms du composant
 qu'il référence (état, callbacks, valeurs dérivées). Ceux qui n'en touchent que
@@ -171,8 +181,7 @@ deux ou trois partent en un déplacement mécanique, sans risque. Une valeur
 dérivée lourde (`useMemo` de 80 lignes) se sort en fonction pure dans `utils/`,
 et elle devient enfin testable.
 
-Les prochains fichiers, par taille : `tasks/index.tsx` (3 265),
-`simulator` (2 876), `users/manage.tsx` (2 379),
+Les prochains fichiers, par taille : `users/manage.tsx` (2 379),
 `tournament/[id]/matches.tsx` (2 252), `PlayerManageTeamScreen.tsx` (2 202).
 
 ### La règle A7, et la limite de son garde-fou
