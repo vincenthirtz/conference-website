@@ -56,14 +56,16 @@ import {
   importConfigFromFile,
   generateResultsSummary,
 } from '@/utils/simulatorSerialization';
-import { SEED_COLORS } from '@/components/admin/simulator/SimMatchCard';
 import {
-  EliminationView,
   groupByRound,
   type RoundGroup,
 } from '@/components/admin/simulator/EliminationView';
 import { SummaryCard } from '@/components/admin/simulator/SummaryCard';
 import { SimulatorTimelineTab } from '@/components/admin/simulator/SimulatorTimelineTab';
+import { SimulatorCompareTab } from '@/components/admin/simulator/SimulatorCompareTab';
+import { SimulatorBracketTab } from '@/components/admin/simulator/SimulatorBracketTab';
+import { SimulatorMapsTab } from '@/components/admin/simulator/SimulatorMapsTab';
+import { SimulatorTeamsTab } from '@/components/admin/simulator/SimulatorTeamsTab';
 import {
   SimulatorHistoryTab,
   type SimHistoryEntry,
@@ -94,7 +96,6 @@ function TournamentSimulatorPage() {
   const [importError, setImportError] = useState<string | null>(null);
   const [animating, setAnimating] = useState(false);
   const animatingRef = useRef(false);
-  const [dragSeedIdx, setDragSeedIdx] = useState<number | null>(null);
   const [compareConfig, setCompareConfig] = useState<Partial<SimConfig> | null>(
     null
   );
@@ -659,9 +660,6 @@ function TournamentSimulatorPage() {
       return entry;
     };
   }, []);
-
-  // Stable no-op handlers for read-only bracket views (compare panel).
-  const noopSimAction = useCallback((_id: string) => {}, []);
 
   // Memoized groupByRound: caches per (matches ref, side). Unchanged stages
   // keep the same `matches` reference across renders, so this returns the same
@@ -2346,281 +2344,24 @@ function TournamentSimulatorPage() {
                     aria-labelledby={tabButtonId(SIM_TABS_ID_BASE, activeTab)}
                   >
                     {activeTab === 'bracket' && (
-                      <div className="space-y-8">
-                        {stages.map((stage, stageIdx) => (
-                          <div key={stage.id}>
-                            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                                {stage.stage_type}
-                              </span>
-                              {stage.name}
-                              <span className="text-sm text-neutral-500 font-normal">
-                                {format(tx.matchesCount, {
-                                  count: stage.matches.length,
-                                })}
-                              </span>
-                            </h3>
-
-                            {(stage.stage_type === 'bracket' ||
-                              stage.stage_type === 'showmatch') && (
-                              <>
-                                {/* WB */}
-                                <EliminationView
-                                  rounds={groupByRoundMemo(stage.matches, 'wb')}
-                                  onSimulate={
-                                    getStageHandlers(stageIdx).onSimulate
-                                  }
-                                  onReset={getStageHandlers(stageIdx).onReset}
-                                  onToggleLock={
-                                    getStageHandlers(stageIdx).onToggleLock
-                                  }
-                                  label={
-                                    stage.matches.some(
-                                      (m) => m.bracket_side === 'lb'
-                                    )
-                                      ? tx.winnersBracket
-                                      : undefined
-                                  }
-                                />
-                                {/* LB */}
-                                {stage.matches.some(
-                                  (m) => m.bracket_side === 'lb'
-                                ) && (
-                                  <div className="mt-6">
-                                    <EliminationView
-                                      rounds={groupByRoundMemo(
-                                        stage.matches,
-                                        'lb'
-                                      )}
-                                      onSimulate={
-                                        getStageHandlers(stageIdx).onSimulate
-                                      }
-                                      onReset={
-                                        getStageHandlers(stageIdx).onReset
-                                      }
-                                      onToggleLock={
-                                        getStageHandlers(stageIdx).onToggleLock
-                                      }
-                                      label={tx.losersBracket}
-                                      accentColor="text-red-300"
-                                    />
-                                  </div>
-                                )}
-                                {/* Grand Final */}
-                                {stage.matches.some(
-                                  (m) => m.bracket_side === 'final'
-                                ) && (
-                                  <div className="mt-6">
-                                    <EliminationView
-                                      rounds={groupByRoundMemo(
-                                        stage.matches,
-                                        'final'
-                                      )}
-                                      onSimulate={
-                                        getStageHandlers(stageIdx).onSimulate
-                                      }
-                                      onReset={
-                                        getStageHandlers(stageIdx).onReset
-                                      }
-                                      onToggleLock={
-                                        getStageHandlers(stageIdx).onToggleLock
-                                      }
-                                      label={tx.grandFinal}
-                                      accentColor="text-amber-300"
-                                    />
-                                  </div>
-                                )}
-                              </>
-                            )}
-
-                            {(stage.stage_type === 'swiss' ||
-                              stage.stage_type === 'round_robin' ||
-                              stage.stage_type === 'group') && (
-                              <EliminationView
-                                rounds={groupByRoundMemo(stage.matches)}
-                                onSimulate={
-                                  getStageHandlers(stageIdx).onSimulate
-                                }
-                                onReset={getStageHandlers(stageIdx).onReset}
-                                onToggleLock={
-                                  getStageHandlers(stageIdx).onToggleLock
-                                }
-                              />
-                            )}
-                          </div>
-                        ))}
-                      </div>
+                      <SimulatorBracketTab
+                        stages={stages}
+                        getStageHandlers={getStageHandlers}
+                        groupByRound={groupByRoundMemo}
+                      />
                     )}
 
                     {activeTab === 'teams' && (
-                      <div>
-                        <p className="text-xs text-neutral-500 mb-4">
-                          {tx.teamsDragHint}
-                        </p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                          {teams.map((team, teamIdx) => (
-                            <div
-                              key={team.id}
-                              draggable
-                              onDragStart={() => setDragSeedIdx(teamIdx)}
-                              onDragOver={(e) => {
-                                e.preventDefault();
-                                e.dataTransfer.dropEffect = 'move';
-                              }}
-                              onDrop={(e) => {
-                                e.preventDefault();
-                                if (
-                                  dragSeedIdx !== null &&
-                                  dragSeedIdx !== teamIdx
-                                ) {
-                                  handleReorderTeams(dragSeedIdx, teamIdx);
-                                }
-                                setDragSeedIdx(null);
-                              }}
-                              onDragEnd={() => setDragSeedIdx(null)}
-                              className={`rounded-xl border p-4 space-y-3 cursor-grab active:cursor-grabbing transition-all ${
-                                dragSeedIdx === teamIdx
-                                  ? 'border-purple-500/50 bg-purple-500/10 opacity-50 scale-95'
-                                  : dragSeedIdx !== null
-                                    ? 'border-purple-500/20 bg-white/[0.02] hover:border-purple-500/40 hover:bg-purple-500/5'
-                                    : 'border-white/10 bg-white/[0.02]'
-                              }`}
-                            >
-                              <div className="flex items-center gap-3">
-                                {/* Drag handle */}
-                                <div
-                                  className="flex flex-col gap-0.5 text-neutral-600 flex-shrink-0 cursor-grab"
-                                  title={tx.dragToReorder}
-                                >
-                                  <div className="flex gap-0.5">
-                                    <span className="w-1 h-1 rounded-full bg-current" />
-                                    <span className="w-1 h-1 rounded-full bg-current" />
-                                  </div>
-                                  <div className="flex gap-0.5">
-                                    <span className="w-1 h-1 rounded-full bg-current" />
-                                    <span className="w-1 h-1 rounded-full bg-current" />
-                                  </div>
-                                  <div className="flex gap-0.5">
-                                    <span className="w-1 h-1 rounded-full bg-current" />
-                                    <span className="w-1 h-1 rounded-full bg-current" />
-                                  </div>
-                                </div>
-                                <div
-                                  className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold border ${
-                                    SEED_COLORS[team.seed] ??
-                                    'bg-purple-500/20 text-purple-300 border-purple-500/30'
-                                  }`}
-                                >
-                                  {team.short_name}
-                                </div>
-                                <div>
-                                  <div className="text-sm font-semibold">
-                                    {team.name}
-                                  </div>
-                                  <div className="text-[10px] text-neutral-500">
-                                    {format(tx.seedLabel, { seed: team.seed })}
-                                  </div>
-                                </div>
-                                {stats.wins.has(team.id) && (
-                                  <div className="ml-auto text-right">
-                                    <div className="text-xs font-bold text-emerald-400">
-                                      {stats.wins.get(team.id)}W
-                                    </div>
-                                    <div className="text-xs font-bold text-red-400">
-                                      {stats.losses.get(team.id) ?? 0}L
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                              {/* Strength slider */}
-                              <div className="flex items-center gap-2 pt-1 border-t border-white/[0.05]">
-                                <span className="text-[10px] text-neutral-500 font-semibold w-10">
-                                  {tx.strengthLabel}
-                                </span>
-                                <input
-                                  type="range"
-                                  min={1}
-                                  max={100}
-                                  value={team.strength}
-                                  onChange={(e) =>
-                                    handleUpdateTeamStrength(
-                                      team.id,
-                                      parseInt(e.target.value)
-                                    )
-                                  }
-                                  onClick={(e) => e.stopPropagation()}
-                                  onMouseDown={(e) => e.stopPropagation()}
-                                  className="flex-1 accent-purple-500 h-1.5"
-                                  draggable={false}
-                                />
-                                <span
-                                  className={`text-xs font-bold tabular-nums w-8 text-right ${
-                                    team.strength >= 70
-                                      ? 'text-emerald-400'
-                                      : team.strength >= 45
-                                        ? 'text-amber-400'
-                                        : 'text-red-400'
-                                  }`}
-                                >
-                                  {team.strength}
-                                </span>
-                              </div>
-                              <div className="space-y-1">
-                                {team.players.map((p, i) => (
-                                  <div
-                                    key={i}
-                                    className="flex items-center justify-between text-xs"
-                                  >
-                                    <span className="text-neutral-300">
-                                      {p.name}
-                                    </span>
-                                    <span className="text-neutral-600 font-mono text-[10px]">
-                                      {p.battleTag}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                      <SimulatorTeamsTab
+                        teams={teams}
+                        stats={stats}
+                        onReorder={handleReorderTeams}
+                        onStrengthChange={handleUpdateTeamStrength}
+                      />
                     )}
 
                     {activeTab === 'maps' && (
-                      <div className="space-y-6">
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                          {mapPool.map((name) => {
-                            const count = stats.mapCount.get(name) ?? 0;
-                            const maxCount = Math.max(
-                              ...stats.mapCount.values(),
-                              1
-                            );
-                            return (
-                              <div
-                                key={name}
-                                className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-2"
-                              >
-                                <div className="text-sm font-semibold">
-                                  {name}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden">
-                                    <div
-                                      className="h-full bg-purple-500 rounded-full transition-all"
-                                      style={{
-                                        width: `${(count / maxCount) * 100}%`,
-                                      }}
-                                    />
-                                  </div>
-                                  <span className="text-xs text-neutral-400 tabular-nums w-8 text-right">
-                                    {count}x
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
+                      <SimulatorMapsTab mapPool={mapPool} stats={stats} />
                     )}
 
                     {activeTab === 'stats' && (
@@ -2651,205 +2392,21 @@ function TournamentSimulatorPage() {
                     )}
 
                     {activeTab === 'compare' && (
-                      <div className="space-y-6">
-                        {/* Config selector for comparison */}
-                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-                          <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-                            {tx.compareHeading}
-                          </h3>
-                          <p className="text-xs text-neutral-500 mb-4">
-                            {format(tx.compareDesc, {
-                              format: FORMAT_LABELS[config.formatType],
-                            })}
-                          </p>
-                          <div className="flex flex-wrap gap-2 mb-4">
-                            {(Object.keys(FORMAT_LABELS) as FormatType[])
-                              .filter(
-                                (f) =>
-                                  f !== config.formatType && f !== 'showmatch'
-                              )
-                              .map((f) => {
-                                const tc = validCountsFor(f).includes(
-                                  config.teamCount
-                                )
-                                  ? config.teamCount
-                                  : 8;
-                                return (
-                                  <button
-                                    key={f}
-                                    type="button"
-                                    onClick={() =>
-                                      handleCompare({
-                                        formatType: f,
-                                        teamCount: tc,
-                                        ...(f === 'double_elim'
-                                          ? { grandFinalReset: true }
-                                          : {}),
-                                      })
-                                    }
-                                    className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-colors ${
-                                      compareConfig?.formatType === f
-                                        ? 'bg-purple-600 border-purple-500 text-white'
-                                        : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
-                                    }`}
-                                  >
-                                    {tx.vs} {FORMAT_LABELS[f]}
-                                  </button>
-                                );
-                              })}
-                          </div>
-                          {compareConfig && (
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => handleCompare(compareConfig)}
-                                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-neutral-800 border border-neutral-700 text-neutral-300 hover:bg-neutral-700 transition-colors"
-                              >
-                                {tx.regenerate}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setCompareData(null);
-                                  setCompareConfig(null);
-                                }}
-                                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-neutral-800 border border-neutral-700 text-neutral-300 hover:bg-neutral-700 transition-colors"
-                              >
-                                {tx.clear}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Side-by-side display */}
-                        {compareData && (
-                          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            {/* Current config */}
-                            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-4">
-                              <div className="flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                                  {tx.badgeCurrent}
-                                </span>
-                                <span className="text-sm font-semibold">
-                                  {FORMAT_LABELS[config.formatType]}
-                                </span>
-                                <span className="text-xs text-neutral-500">
-                                  {format(tx.teamsBoLabel, {
-                                    count: teams.length,
-                                    bo: config.bestOf,
-                                  })}
-                                </span>
-                              </div>
-                              <div className="text-xs text-neutral-400 space-y-1">
-                                <div>
-                                  {format(tx.matchesColon, {
-                                    count: stages.flatMap((s) => s.matches)
-                                      .length,
-                                  })}
-                                </div>
-                                <div>
-                                  {format(tx.roundsColon, {
-                                    count: new Set(
-                                      stages
-                                        .flatMap((s) => s.matches)
-                                        .map(
-                                          (m) =>
-                                            `${m.bracket_side}-${m.round_number}`
-                                        )
-                                    ).size,
-                                  })}
-                                </div>
-                              </div>
-                              <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-                                {stages.map((stage, stageIdx) => (
-                                  <div key={stage.id} className="mb-4">
-                                    <p className="text-xs font-semibold text-purple-300 mb-2">
-                                      {stage.name}
-                                    </p>
-                                    <EliminationView
-                                      rounds={groupByRoundMemo(
-                                        stage.matches,
-                                        stage.stage_type === 'bracket'
-                                          ? 'wb'
-                                          : undefined
-                                      )}
-                                      onSimulate={
-                                        getStageHandlers(stageIdx).onSimulate
-                                      }
-                                      onReset={
-                                        getStageHandlers(stageIdx).onReset
-                                      }
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Compare config */}
-                            <div className="rounded-xl border border-sky-500/20 bg-sky-500/[0.02] p-4 space-y-4">
-                              <div className="flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-sky-500/10 text-sky-300 border border-sky-500/20">
-                                  {tx.badgeComparison}
-                                </span>
-                                <span className="text-sm font-semibold">
-                                  {
-                                    FORMAT_LABELS[
-                                      compareConfig?.formatType ??
-                                        config.formatType
-                                    ]
-                                  }
-                                </span>
-                                <span className="text-xs text-neutral-500">
-                                  {format(tx.teamsBoLabel, {
-                                    count: compareData.teams.length,
-                                    bo: config.bestOf,
-                                  })}
-                                </span>
-                              </div>
-                              <div className="text-xs text-neutral-400 space-y-1">
-                                <div>
-                                  {format(tx.matchesColon, {
-                                    count: compareData.stages.flatMap(
-                                      (s) => s.matches
-                                    ).length,
-                                  })}
-                                </div>
-                                <div>
-                                  {format(tx.roundsColon, {
-                                    count: new Set(
-                                      compareData.stages
-                                        .flatMap((s) => s.matches)
-                                        .map(
-                                          (m) =>
-                                            `${m.bracket_side}-${m.round_number}`
-                                        )
-                                    ).size,
-                                  })}
-                                </div>
-                              </div>
-                              <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-                                {compareData.stages.map((stage) => (
-                                  <div key={stage.id} className="mb-4">
-                                    <p className="text-xs font-semibold text-sky-300 mb-2">
-                                      {stage.name}
-                                    </p>
-                                    <EliminationView
-                                      rounds={groupByRoundMemo(
-                                        stage.matches,
-                                        stage.stage_type === 'bracket'
-                                          ? 'wb'
-                                          : undefined
-                                      )}
-                                      onSimulate={noopSimAction}
-                                      onReset={noopSimAction}
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      <SimulatorCompareTab
+                        config={config}
+                        stages={stages}
+                        teams={teams}
+                        compareConfig={compareConfig}
+                        compareData={compareData}
+                        validCountsFor={validCountsFor}
+                        getStageHandlers={getStageHandlers}
+                        groupByRound={groupByRoundMemo}
+                        onCompare={handleCompare}
+                        onClear={() => {
+                          setCompareData(null);
+                          setCompareConfig(null);
+                        }}
+                      />
                     )}
 
                     {activeTab === 'timeline' && occurrences.length > 1 && (
