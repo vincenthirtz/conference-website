@@ -34,7 +34,7 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import type { Dirent } from 'node:fs';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 
 /**
  * Plafonds par zone, au 2026-09-21. Un chiffre ne doit que DESCENDRE.
@@ -150,7 +150,11 @@ describe('cliquet des `any` — le code de production ne se dégrade pas', () =>
   /** `pagesScreens` n'est pas un dossier : c'est `pages` moins `pages/api`. */
   function filesOfZone(zone: string): string[] {
     if (zone !== 'pagesScreens') return sourceFiles(zone);
-    return sourceFiles('pages').filter((f) => !f.startsWith('pages/api'));
+    // Séparateurs normalisés : sous Windows, `join()` rend `pages\api\…`, et
+    // sans cela les routes API étaient comptées comme des écrans.
+    return sourceFiles('pages').filter(
+      (f) => !f.split(sep).join('/').startsWith('pages/api')
+    );
   }
 
   for (const [zone, budget] of Object.entries(BUDGET)) {
