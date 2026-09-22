@@ -45,7 +45,7 @@ const BASELINE: Record<string, number> = {
   // à la baisse. `tournaments/create.tsx` est entré à 801 par ce seul effet.
   'pages/admin/tournaments/create.tsx': 801,
   'pages/admin/tournament-simulator.tsx': 2434,
-  'pages/admin/tasks/index.tsx': 3292,
+  'pages/admin/tasks/index.tsx': 2684,
   'pages/admin/users/manage.tsx': 2421,
   // 2281 écrites : le flux de l'auto-scheduler est parti dans
   // `hooks/useAutoSchedule.tsx` (lot 6), et le plafond suit — un gel qui ne
