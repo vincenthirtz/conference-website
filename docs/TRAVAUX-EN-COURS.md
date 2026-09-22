@@ -154,8 +154,25 @@ deux morceaux — le chargement dans
 d'affichage dans
 [`components/Team/TeamPageParts.tsx`](../components/Team/TeamPageParts.tsx).
 
-Les prochains, par taille : `tournament-simulator.tsx` (3 878),
-`tasks/index.tsx` (3 265), `users/manage.tsx` (2 379),
+Le simulateur (`pages/admin/tournament-simulator.tsx`) est passé de **3 878 à
+2 876 lignes** le 22 septembre. Quatre onglets sont sortis dans
+`components/admin/simulator/` : calendrier, statistiques, Monte-Carlo et
+historique. Le calcul des statistiques est devenu `utils/simulatorStats.ts`,
+une fonction pure testée pour la première fois ; le test a aussitôt trouvé un
+bug d'affichage (27 h affichées « 2j 3h »). Il en reste un seul composant de
+~2 800 lignes. Les onglets suivants à sortir, du moins au plus couplé :
+`maps` (36 lignes, `mapPool` + `stats`), `teams` (133, glisser-déposer des
+têtes de série), `bracket` (106) et `compare` (201), qui partagent
+`getStageHandlers` et `groupByRoundMemo`.
+
+**La méthode qui a marché** : pour chaque onglet, lister les noms du composant
+qu'il référence (état, callbacks, valeurs dérivées). Ceux qui n'en touchent que
+deux ou trois partent en un déplacement mécanique, sans risque. Une valeur
+dérivée lourde (`useMemo` de 80 lignes) se sort en fonction pure dans `utils/`,
+et elle devient enfin testable.
+
+Les prochains fichiers, par taille : `tasks/index.tsx` (3 265),
+`simulator` (2 876), `users/manage.tsx` (2 379),
 `tournament/[id]/matches.tsx` (2 252), `PlayerManageTeamScreen.tsx` (2 202).
 
 ### La règle A7, et la limite de son garde-fou
