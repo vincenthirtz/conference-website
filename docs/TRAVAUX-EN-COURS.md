@@ -138,16 +138,45 @@ hors de son périmètre ont grossi pendant le lot 6 et personne ne l'a signalé 
 
 ## Lot 8 — performance front
 
-**Jamais commencé, aucun préalable.** C'est le lot le plus immédiatement
-attaquable.
+**Premier geste livré (22 septembre) : mesurer, puis geler.**
 
-Il n'existe **aucun budget par page**, alors qu'une régression de ~490 ko a
-déjà eu lieu : un composant client important un util serveur
-(`supabaseAdmin`, `crypto`) fait entrer les polyfills Node dans le bundle,
-sans la moindre erreur. Rien ne l'empêche de recommencer.
+[`scripts/bundle-budget.mjs`](../scripts/bundle-budget.mjs), lancé par la CI
+juste après `next build` (`npm run bundle:budget`), fait deux vérifications :
 
-Premier geste utile : mesurer, puis geler — un cliquet sur la taille des
-bundles, du même genre que `anyRatchet`.
+| Règle | Ce qu'elle empêche |
+|---|---|
+| Chaque page reste sous son gel de [`bundle-budget.json`](../bundle-budget.json), à 3 ko près | Qu'un import alourdisse une page sans que personne ne le voie. Next 16 (Turbopack) **n'affiche plus les tailles** en fin de build. |
+| Aucun chunk de premier chargement ne lit `SUPABASE_SERVICE_ROLE_KEY` | Qu'un module serveur reparte dans le bundle client. |
+
+Hausse voulue : `npm run bundle:budget -- --update`, et le diff du gel se
+relit dans le commit.
+
+**La première mesure a trouvé le motif redouté, installé dans `_app`**, donc
+payé par les 250 pages : navbar → `adminLinks` → `utils/staff` →
+`utils/supabase`, pour la seule fonction `hasAtLeastRole`. Le même chemin
+passait par `utils/tenant` (`DEFAULT_TENANT_ID`), `utils/apiHelpers`
+(`isValidUUID`), `playerProfileSeo` (`coreLabel`) et deux constantes. 31 pages
+touchées, aucune désormais. Remèdes, à réemployer :
+
+- partie pure sortie dans une feuille réexportée par le module serveur :
+  [`utils/staffRoles.ts`](../utils/staffRoles.ts), `utils/tenantId.ts` ;
+- `await import('@/utils/supabase')` dans la seule fonction asynchrone qui en
+  a besoin (`apiHelpers`, `playerProfileSeo`) ;
+- constante passée en prop par `getStaticProps` plutôt qu'importée dans le
+  composant (`leaderboard`, `standings`).
+
+**Le gain en octets est modeste** : 1 à 3 ko sur 68 pages, parce que
+supabase-js reste dans `_app` pour la session navigateur. L'essentiel est le
+garde-fou. Les vrais chantiers de poids, mesurés :
+
+- **`_app` pèse 213 ko gzippés**, dont ~66 ko pour supabase-js *avec*
+  Realtime. C'est le plancher de toutes les pages (médiane 235 ko).
+- **`/player/tcg-guide` : 323 ko**, 110 au-dessus de `_app`, soit la page la
+  plus lourde de loin. Elle est à regarder en premier.
+
+La règle serveur a une limite, écrite dans le script : les chunks asynchrones
+sont exclus, sinon les `import()` à la demande la feraient échouer. Un
+`dynamic()` qui tirerait un module serveur passerait donc.
 
 ---
 
@@ -172,10 +201,16 @@ Le Mac (i7 2014) surchauffe : **`npm run verify` ne se lance pas en local**.
 - Node 24 obligatoire (`nvm use 24`) : vitest 4 casse sous le 20.18.1 du
   `.nvmrc`.
 
-Deux pièges qui ont déjà coûté du temps :
+Trois pièges qui ont déjà coûté du temps :
 
 1. **Le code de sortie de `verify` ment.** Deux exécutions concurrentes font
    expirer un worker vitest et le code de sortie annonce 0. Lire la SORTIE.
-2. **Régénérer les réponses OpenAPI** après toute modification de types de
+2. **Sur le poste Windows**, `next build` passe (et permet `bundle:budget` en
+   local), mais `npx biome ci .` signale le format de *tous* les fichiers : le
+   dépôt est en CRLF (`core.autocrlf`) et Biome exige LF. Ce bruit n'est pas
+   une erreur ; vérifier ses propres fichiers avec `npx biome lint <fichiers>`.
+   Et `anyRatchet` y comptait les routes API comme des écrans (chemins en
+   `\`) : corrigé le 22 septembre.
+3. **Régénérer les réponses OpenAPI** après toute modification de types de
    route : `npm run openapi:responses`. La CI est rouge sinon, et c'est elle
    qui l'a attrapé deux fois pendant le lot 6.

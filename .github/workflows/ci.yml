@@ -87,3 +87,10 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-dummy-anon-key
+
+      # Cliquet sur le JS de premier chargement de chaque page, et interdiction
+      # d'un module serveur dans le bundle client. Next 16 n'affiche plus les
+      # tailles : sans cette étape, une régression de bundle ne se voit pas.
+      # Hausse voulue : `npm run bundle:budget -- --update`, et committer le gel.
+      - name: Bundle budget
+        run: npm run bundle:budget

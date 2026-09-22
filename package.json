@@ -10,6 +10,7 @@
     "contract:bot-inventory": "node --import ./scripts/register-ts.mjs scripts/openapi/bot-inventory.mjs",
     "openapi:responses": "node scripts/openapi/infer-responses.cjs",
     "tcg:audit": "node scripts/tcg-audit.mjs",
+    "bundle:budget": "node scripts/bundle-budget.mjs",
     "start": "next start",
     "format": "biome format --write .",
     "format:check": "biome format .",
