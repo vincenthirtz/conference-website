@@ -765,6 +765,34 @@
       "updated_at",
       "user_id"
     ],
+    "match_public_mvp_polls": [
+      "candidate_member_ids",
+      "closed_at",
+      "closes_at",
+      "created_at",
+      "discord_channel_id",
+      "discord_message_id",
+      "id",
+      "match_id",
+      "opened_at",
+      "settled_at",
+      "tenant_id",
+      "total_votes",
+      "updated_at",
+      "winner_battle_tag",
+      "winner_member_id",
+      "winner_votes"
+    ],
+    "match_public_mvp_votes": [
+      "created_at",
+      "id",
+      "match_id",
+      "member_id",
+      "source",
+      "tenant_id",
+      "updated_at",
+      "voter_key"
+    ],
     "match_score_reports": [
       "discord_user_id",
       "id",
@@ -2563,6 +2591,30 @@
     },
     "match_predictions_tenant_id_fkey": {
       "source": "match_predictions",
+      "target": "tenants"
+    },
+    "match_public_mvp_polls_match_id_fkey": {
+      "source": "match_public_mvp_polls",
+      "target": "matches"
+    },
+    "match_public_mvp_polls_tenant_id_fkey": {
+      "source": "match_public_mvp_polls",
+      "target": "tenants"
+    },
+    "match_public_mvp_polls_winner_member_id_fkey": {
+      "source": "match_public_mvp_polls",
+      "target": "team_members"
+    },
+    "match_public_mvp_votes_match_id_fkey": {
+      "source": "match_public_mvp_votes",
+      "target": "matches"
+    },
+    "match_public_mvp_votes_member_id_fkey": {
+      "source": "match_public_mvp_votes",
+      "target": "team_members"
+    },
+    "match_public_mvp_votes_tenant_id_fkey": {
+      "source": "match_public_mvp_votes",
       "target": "tenants"
     },
     "match_score_reports_match_id_fkey": {

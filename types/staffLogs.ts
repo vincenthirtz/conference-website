@@ -312,6 +312,11 @@ export type StaffLogAction =
   | 'update_api_token_comp'
   // --- MVP ---
   | 'import_mvp'
+  // Scrutin du PUBLIC (viewers Twitch + supporters Discord), piloté par la
+  // régie. Distinct du vote des équipes, qui n'est journalisé nulle part —
+  // celui-ci l'est parce qu'un humain décide QUAND il s'ouvre et se ferme.
+  | 'open_public_mvp'
+  | 'close_public_mvp'
   // --- Partenaires / paramètres ---
   | 'settings_update'
   // --- Documents de l'asso (Drive) ---

@@ -4305,6 +4305,7 @@
           "claim",
           "claim_guild_link",
           "clone_stage",
+          "close_public_mvp",
           "connect_social_account",
           "connect_twitch_broadcaster",
           "create",
@@ -4404,6 +4405,7 @@
           "match_rescheduled",
           "notify_scrim_captains",
           "open_match_dispute",
+          "open_public_mvp",
           "other",
           "prefill_event_segments_from_tournament",
           "process_demande",
@@ -5656,6 +5658,7 @@
           "claim",
           "claim_guild_link",
           "clone_stage",
+          "close_public_mvp",
           "connect_social_account",
           "connect_twitch_broadcaster",
           "create",
@@ -5755,6 +5758,7 @@
           "match_rescheduled",
           "notify_scrim_captains",
           "open_match_dispute",
+          "open_public_mvp",
           "other",
           "prefill_event_segments_from_tournament",
           "process_demande",
@@ -7608,6 +7612,7 @@
           "claim",
           "claim_guild_link",
           "clone_stage",
+          "close_public_mvp",
           "connect_social_account",
           "connect_twitch_broadcaster",
           "create",
@@ -7707,6 +7712,7 @@
           "match_rescheduled",
           "notify_scrim_captains",
           "open_match_dispute",
+          "open_public_mvp",
           "other",
           "prefill_event_segments_from_tournament",
           "process_demande",
@@ -8125,6 +8131,285 @@
      "matchStatus",
      "poll",
      "candidates"
+    ]
+   }
+  },
+  "GET /api/admin/matches/{matchId}/mvp-public": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "matchId": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     },
+     "roundName": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "team1Name": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "team2Name": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "candidates": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "memberId": {
+         "type": "string"
+        },
+        "teamId": {
+         "type": "string"
+        },
+        "teamName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "battleTag": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "displayName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "label": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "memberId",
+        "teamId",
+        "teamName",
+        "battleTag",
+        "displayName",
+        "label"
+       ]
+      }
+     },
+     "poll": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "match_id": {
+        "type": "string"
+       },
+       "opened_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "closes_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "closed_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "candidate_member_ids": {
+        "type": [
+         "array",
+         "null"
+        ],
+        "items": {
+         "type": "string"
+        }
+       },
+       "winner_member_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "winner_battle_tag": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "winner_votes": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "total_votes": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "settled_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "discord_channel_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "discord_message_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "id",
+       "match_id",
+       "opened_at",
+       "closes_at",
+       "closed_at",
+       "candidate_member_ids",
+       "winner_member_id",
+       "winner_battle_tag",
+       "winner_votes",
+       "total_votes",
+       "settled_at",
+       "discord_channel_id",
+       "discord_message_id"
+      ]
+     },
+     "isOpen": {
+      "type": "boolean"
+     },
+     "tallies": {
+      "type": "object",
+      "properties": {
+       "twitch": {
+        "type": "object",
+        "properties": {
+         "source": {
+          "type": "string",
+          "enum": [
+           "discord",
+           "twitch"
+          ]
+         },
+         "rows": {
+          "type": "array",
+          "items": {
+           "type": "object",
+           "properties": {
+            "memberId": {
+             "type": "string"
+            },
+            "votes": {
+             "type": "number"
+            },
+            "share": {
+             "type": "number"
+            }
+           },
+           "required": [
+            "memberId",
+            "votes",
+            "share"
+           ]
+          }
+         },
+         "total": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "source",
+         "rows",
+         "total"
+        ]
+       },
+       "discord": {
+        "type": "object",
+        "properties": {
+         "source": {
+          "type": "string",
+          "enum": [
+           "discord",
+           "twitch"
+          ]
+         },
+         "rows": {
+          "type": "array",
+          "items": {
+           "type": "object",
+           "properties": {
+            "memberId": {
+             "type": "string"
+            },
+            "votes": {
+             "type": "number"
+            },
+            "share": {
+             "type": "number"
+            }
+           },
+           "required": [
+            "memberId",
+            "votes",
+            "share"
+           ]
+          }
+         },
+         "total": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "source",
+         "rows",
+         "total"
+        ]
+       }
+      },
+      "required": [
+       "twitch",
+       "discord"
+      ]
+     }
+    },
+    "required": [
+     "matchId",
+     "status",
+     "roundName",
+     "team1Name",
+     "team2Name",
+     "candidates",
+     "poll",
+     "isOpen",
+     "tallies"
     ]
    }
   },
@@ -10386,6 +10671,7 @@
           "claim",
           "claim_guild_link",
           "clone_stage",
+          "close_public_mvp",
           "connect_social_account",
           "connect_twitch_broadcaster",
           "create",
@@ -10485,6 +10771,7 @@
           "match_rescheduled",
           "notify_scrim_captains",
           "open_match_dispute",
+          "open_public_mvp",
           "other",
           "prefill_event_segments_from_tournament",
           "process_demande",
@@ -15458,6 +15745,7 @@
           "claim",
           "claim_guild_link",
           "clone_stage",
+          "close_public_mvp",
           "connect_social_account",
           "connect_twitch_broadcaster",
           "create",
@@ -15557,6 +15845,7 @@
           "match_rescheduled",
           "notify_scrim_captains",
           "open_match_dispute",
+          "open_public_mvp",
           "other",
           "prefill_event_segments_from_tournament",
           "process_demande",
@@ -19661,6 +19950,7 @@
           "claim",
           "claim_guild_link",
           "clone_stage",
+          "close_public_mvp",
           "connect_social_account",
           "connect_twitch_broadcaster",
           "create",
@@ -19760,6 +20050,7 @@
           "match_rescheduled",
           "notify_scrim_captains",
           "open_match_dispute",
+          "open_public_mvp",
           "other",
           "prefill_event_segments_from_tournament",
           "process_demande",
@@ -55262,6 +55553,285 @@
     ]
    }
   },
+  "POST /api/admin/matches/{matchId}/mvp-public": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "matchId": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     },
+     "roundName": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "team1Name": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "team2Name": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "candidates": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "memberId": {
+         "type": "string"
+        },
+        "teamId": {
+         "type": "string"
+        },
+        "teamName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "battleTag": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "displayName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "label": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "memberId",
+        "teamId",
+        "teamName",
+        "battleTag",
+        "displayName",
+        "label"
+       ]
+      }
+     },
+     "poll": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "match_id": {
+        "type": "string"
+       },
+       "opened_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "closes_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "closed_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "candidate_member_ids": {
+        "type": [
+         "array",
+         "null"
+        ],
+        "items": {
+         "type": "string"
+        }
+       },
+       "winner_member_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "winner_battle_tag": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "winner_votes": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "total_votes": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "settled_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "discord_channel_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "discord_message_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "id",
+       "match_id",
+       "opened_at",
+       "closes_at",
+       "closed_at",
+       "candidate_member_ids",
+       "winner_member_id",
+       "winner_battle_tag",
+       "winner_votes",
+       "total_votes",
+       "settled_at",
+       "discord_channel_id",
+       "discord_message_id"
+      ]
+     },
+     "isOpen": {
+      "type": "boolean"
+     },
+     "tallies": {
+      "type": "object",
+      "properties": {
+       "twitch": {
+        "type": "object",
+        "properties": {
+         "source": {
+          "type": "string",
+          "enum": [
+           "discord",
+           "twitch"
+          ]
+         },
+         "rows": {
+          "type": "array",
+          "items": {
+           "type": "object",
+           "properties": {
+            "memberId": {
+             "type": "string"
+            },
+            "votes": {
+             "type": "number"
+            },
+            "share": {
+             "type": "number"
+            }
+           },
+           "required": [
+            "memberId",
+            "votes",
+            "share"
+           ]
+          }
+         },
+         "total": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "source",
+         "rows",
+         "total"
+        ]
+       },
+       "discord": {
+        "type": "object",
+        "properties": {
+         "source": {
+          "type": "string",
+          "enum": [
+           "discord",
+           "twitch"
+          ]
+         },
+         "rows": {
+          "type": "array",
+          "items": {
+           "type": "object",
+           "properties": {
+            "memberId": {
+             "type": "string"
+            },
+            "votes": {
+             "type": "number"
+            },
+            "share": {
+             "type": "number"
+            }
+           },
+           "required": [
+            "memberId",
+            "votes",
+            "share"
+           ]
+          }
+         },
+         "total": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "source",
+         "rows",
+         "total"
+        ]
+       }
+      },
+      "required": [
+       "twitch",
+       "discord"
+      ]
+     }
+    },
+    "required": [
+     "matchId",
+     "status",
+     "roundName",
+     "team1Name",
+     "team2Name",
+     "candidates",
+     "poll",
+     "isOpen",
+     "tallies"
+    ]
+   }
+  },
   "POST /api/admin/matches/{matchId}/veto": {
    "201": {
     "type": "object",
@@ -69049,6 +69619,9 @@
   "pages/api/admin/documents.ts:288",
   "pages/api/admin/matches/[matchId]/lineup.ts:168",
   "pages/api/admin/matches/[matchId]/lineup.ts:284",
+  "pages/api/admin/matches/[matchId]/mvp-public.ts:150",
+  "pages/api/admin/matches/[matchId]/mvp-public.ts:162",
+  "pages/api/admin/matches/[matchId]/mvp-public.ts:193",
   "pages/api/admin/tcg/fanart.ts:229",
   "pages/api/admin/tcg/welcome-gift.ts:72",
   "pages/api/cron/domain-verify.ts:123",

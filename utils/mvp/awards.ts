@@ -151,6 +151,87 @@ export function resolveMatchMvp(
   };
 }
 
+/** MVP du PUBLIC : un titre, deux plateformes qui votent ensemble. */
+export type PublicMvpAward = {
+  matchId: string;
+  roundName: string | null;
+  memberId: string;
+  winnerVotes: number;
+  totalVotes: number;
+  /** Ce que chaque plateforme a pesé — pour l'annonce et le panneau staff. */
+  bySource: { twitch: number; discord: number };
+};
+
+export type PublicMvpOutcome =
+  | { award: PublicMvpAward; reason: null }
+  | { award: null; reason: MvpNoAwardReason };
+
+/**
+ * Désigne la MVP DU PUBLIC : viewers Twitch et supporters Discord ADDITIONNÉS.
+ *
+ * ICI, PAS DE PRÉCÉDENCE — et c'est la différence de fond avec
+ * `resolveMatchMvp`. Là-bas, deux sources s'arbitrent parce qu'elles
+ * représentent deux jugements concurrents sur le même titre : le chat qui a
+ * regardé la partie passe devant. Ici les deux sources sont UN SEUL
+ * électorat, le public, réparti sur deux plateformes par accident de
+ * plomberie. Les faire s'arbitrer reviendrait à dire qu'une voix Discord ne
+ * vaut rien dès qu'une viewer s'exprime.
+ *
+ * Une personne présente des deux côtés peut donc peser deux fois. C'est le
+ * même compromis assumé qu'à côté : rapprocher les deux identités exigerait
+ * une inscription, et exiger une inscription tuerait le vote.
+ *
+ * Mêmes garde-fous que pour le vote des équipes : un seuil minimal, et aucun
+ * titre en cas d'égalité en tête. Pure, donc testable sans base.
+ */
+export function resolvePublicMvp(
+  match: { matchId: string; roundName?: string | null },
+  votes: readonly MvpVote[],
+  minVotes: number = MIN_VOTES_FOR_AWARD
+): PublicMvpOutcome {
+  const twitch = tallySource(votes, 'twitch');
+  const discord = tallySource(votes, 'discord');
+
+  const counts = new Map<string, number>();
+  for (const tally of [twitch, discord]) {
+    for (const row of tally.rows) {
+      counts.set(row.memberId, (counts.get(row.memberId) ?? 0) + row.votes);
+    }
+  }
+
+  const total = twitch.total + discord.total;
+  if (total === 0) return { award: null, reason: 'no_votes' };
+  if (total < minVotes) return { award: null, reason: 'too_few_votes' };
+
+  // Ordre TOTAL : à égalité de voix, le memberId tranche. Sans quoi le
+  // classement dépendrait de l'ordre d'insertion et changerait d'un rendu à
+  // l'autre.
+  const rows = Array.from(counts.entries())
+    .map(([memberId, votes_]) => ({ memberId, votes: votes_ }))
+    .sort((a, b) =>
+      b.votes !== a.votes
+        ? b.votes - a.votes
+        : a.memberId.localeCompare(b.memberId)
+    );
+
+  const [first, second] = rows;
+  if (second && second.votes === first.votes) {
+    return { award: null, reason: 'tie' };
+  }
+
+  return {
+    award: {
+      matchId: match.matchId,
+      roundName: match.roundName ?? null,
+      memberId: first.memberId,
+      winnerVotes: first.votes,
+      totalVotes: total,
+      bySource: { twitch: twitch.total, discord: discord.total },
+    },
+    reason: null,
+  };
+}
+
 /** MVP d'une journée : une MVP de match promue, avec sa part. */
 export type MvpMatchdayAward = {
   roundName: string;

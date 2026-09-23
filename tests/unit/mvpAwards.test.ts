@@ -4,6 +4,7 @@ import {
   buildMatchdayAwards,
   buildTournamentMvpRanking,
   resolveMatchMvp,
+  resolvePublicMvp,
   tallySource,
   type MvpMatchAward,
   type MvpVote,
@@ -220,5 +221,106 @@ describe('buildTournamentMvpRanking', () => {
 
   it('rend une liste vide sans aucun titre', () => {
     expect(buildTournamentMvpRanking([], [])).toEqual([]);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * MVP DU PUBLIC (2026-09-23) — viewers Twitch + supporters Discord.
+ *
+ * La différence de fond avec `resolveMatchMvp` : PAS de précédence. Là-bas,
+ * deux sources s'arbitrent pour le titre des équipes ; ici elles forment un
+ * seul électorat réparti sur deux plateformes. Ces tests tiennent surtout ça.
+ * -------------------------------------------------------------------------*/
+
+describe('resolvePublicMvp', () => {
+  const M = { matchId: 'm1', roundName: 'J1' };
+  const v = (
+    source: 'twitch' | 'discord',
+    voterKey: string,
+    memberId: string
+  ) => ({ matchId: 'm1', memberId, source, voterKey }) as const;
+
+  it('ADDITIONNE les deux plateformes au lieu de les arbitrer', () => {
+    // Une seule voix Twitch, trois Discord. `resolveMatchMvp` donnerait le
+    // titre à la voix Twitch seule ; ici tout se cumule.
+    const votes = [
+      v('twitch', 'viewer1', 'bea'),
+      v('discord', 'd1', 'alice'),
+      v('discord', 'd2', 'alice'),
+      v('discord', 'd3', 'alice'),
+    ];
+    const out = resolvePublicMvp(M, votes);
+    expect(out.award?.memberId).toBe('alice');
+    expect(out.award?.winnerVotes).toBe(3);
+    expect(out.award?.totalVotes).toBe(4);
+    expect(out.award?.bySource).toEqual({ twitch: 1, discord: 3 });
+  });
+
+  it('cumule les voix d’une même joueuse venues des deux côtés', () => {
+    const votes = [
+      v('twitch', 'viewer1', 'alice'),
+      v('twitch', 'viewer2', 'alice'),
+      v('discord', 'd1', 'alice'),
+      v('discord', 'd2', 'bea'),
+    ];
+    const out = resolvePublicMvp(M, votes);
+    expect(out.award?.memberId).toBe('alice');
+    expect(out.award?.winnerVotes).toBe(3);
+    expect(out.award?.totalVotes).toBe(4);
+  });
+
+  it('laisse une personne peser deux fois si elle est des deux côtés', () => {
+    // Compromis assumé : rapprocher les identités exigerait une inscription.
+    const votes = [
+      v('twitch', 'machine', 'alice'),
+      v('discord', 'machine', 'alice'),
+      v('discord', 'd2', 'bea'),
+    ];
+    const out = resolvePublicMvp(M, votes);
+    expect(out.award?.winnerVotes).toBe(2);
+    expect(out.award?.totalVotes).toBe(3);
+  });
+
+  it('une voix par personne et par plateforme, la dernière compte', () => {
+    const votes = [
+      v('twitch', 'viewer1', 'alice'),
+      v('twitch', 'viewer1', 'bea'),
+      v('twitch', 'viewer2', 'bea'),
+      v('twitch', 'viewer3', 'bea'),
+    ];
+    const out = resolvePublicMvp(M, votes);
+    expect(out.award?.memberId).toBe('bea');
+    expect(out.award?.totalVotes).toBe(3);
+  });
+
+  it('ne décerne rien sans voix, sous le seuil, ou à égalité', () => {
+    expect(resolvePublicMvp(M, []).reason).toBe('no_votes');
+    expect(
+      resolvePublicMvp(M, [
+        v('twitch', 'a', 'alice'),
+        v('twitch', 'b', 'alice'),
+      ]).reason
+    ).toBe('too_few_votes');
+    expect(
+      resolvePublicMvp(M, [
+        v('twitch', 'a', 'alice'),
+        v('discord', 'b', 'alice'),
+        v('twitch', 'c', 'bea'),
+        v('discord', 'd', 'bea'),
+      ]).reason
+    ).toBe('tie');
+  });
+
+  it('départage à memberId égal de voix : ordre total, donc stable', () => {
+    const votes = [
+      v('twitch', 'a', 'zoe'),
+      v('twitch', 'b', 'zoe'),
+      v('twitch', 'c', 'anna'),
+    ];
+    const out = resolvePublicMvp(M, votes);
+    expect(out.award?.memberId).toBe('zoe');
+    // Et l'inverse ne dépend pas de l'ordre d'insertion.
+    const meme = resolvePublicMvp(M, [...votes].reverse());
+    expect(meme.award?.memberId).toBe('zoe');
   });
 });

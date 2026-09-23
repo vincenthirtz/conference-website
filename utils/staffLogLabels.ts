@@ -279,6 +279,8 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   update_api_token_comp: 'Modification token API',
   // MVP
   import_mvp: 'MVP importé',
+  open_public_mvp: 'Vote du public ouvert',
+  close_public_mvp: 'Vote du public clos',
   // Partenaires / paramètres
   settings_update: 'Mise à jour paramètres',
   read_association_documents: 'Consultation des documents de l’asso',
