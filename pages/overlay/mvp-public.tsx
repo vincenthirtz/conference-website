@@ -7,6 +7,7 @@
 //   /overlay/mvp-public
 //
 // Paramètres :
+//   position  top · center (défaut) · bottom
 //   scale   0.5 → 2
 //   accent  RRGGBB (défaut : le violet du scrutin public)
 //   limit   nombre de candidates affichées (défaut 10)
@@ -56,6 +57,10 @@ function parseAccent(raw: string | undefined): string {
   return /^[0-9a-fA-F]{6}$/.test(value) ? `#${value}` : DEFAULT_ACCENT;
 }
 
+function parsePosition(raw: string | undefined): 'top' | 'center' | 'bottom' {
+  return raw === 'top' || raw === 'bottom' ? raw : 'center';
+}
+
 function parseLimit(raw: string | undefined): number {
   const n = Number.parseInt(raw ?? '', 10);
   if (!Number.isFinite(n)) return 10;
@@ -103,6 +108,7 @@ export default function PublicMvpOverlayPage() {
             scale={parseScale(firstParam(router.query.scale))}
             accent={parseAccent(firstParam(router.query.accent))}
             limit={parseLimit(firstParam(router.query.limit))}
+            position={parsePosition(firstParam(router.query.position))}
           />
         )}
       </div>

@@ -39,6 +39,12 @@ type Props = {
   accent?: string;
   /** Combien de candidates afficher. Dix tiennent à l'écran, pas vingt. */
   limit?: number;
+  /**
+   * Où poser la carte dans la source. Une carte figée au centre oblige à
+   * recadrer la source dans OBS ; les autres overlays du dépôt acceptent tous
+   * ce réglage, celui-ci doit faire pareil.
+   */
+  position?: 'top' | 'center' | 'bottom';
 };
 
 /** Largeur « de conception » de la carte, à l'échelle 1. */
@@ -76,6 +82,7 @@ export function PublicMvpSource({
   scale = 1,
   accent = '#ba18ff',
   limit = 10,
+  position = 'center',
 }: Props) {
   const t = useT(nsOverlay);
   const countdown = useCountdown(poll?.closesAt ?? null, !!poll?.isOpen);
@@ -91,7 +98,15 @@ export function PublicMvpSource({
 
   return (
     <div
-      className="flex h-full w-full items-center justify-center"
+      className="flex h-full w-full justify-center"
+      style={{
+        alignItems:
+          position === 'top'
+            ? 'flex-start'
+            : position === 'bottom'
+              ? 'flex-end'
+              : 'center',
+      }}
       role="status"
       aria-live="polite"
     >
