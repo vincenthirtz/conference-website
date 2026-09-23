@@ -1,0 +1,59 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+post:
+  summary: Saisie de score par le STAFF — le score s'impose.
+  description: >-
+    A NE PAS CONFONDRE avec `/report`, qui est la voie des CAPITAINES : la-bas
+    deux reports doivent concorder et un desaccord met le match en litige. Ici
+    le score s'impose — match finalise, bracket propage, resultat annonce.
+    C'est ce qu'on veut quand personne ne reporte, ou qu'un litige traine
+    pendant la diffusion.
+
+
+    L'identite n'est pas declaree mais PROUVEE : `actorDiscordUserId` est
+    remonte via `user_discord_links` jusqu'a `staff.role`, et seuls `admin` et
+    `owner` passent. Un `caster` est refuse.
+
+
+    Chaque saisie laisse une entree au journal staff (`update_match`,
+    `action_type: staff_score`). Sans elle, un score autoritaire serait
+    indiscernable d'un resultat venu des equipes.
+
+
+    Le controle de format reste actif par defaut — un 4-0 sur un Bo3 est
+    presque toujours une faute de frappe. `allowIncompleteSeries` permet de
+    saisir une serie abandonnee en cours, en le disant.
+  operationId: botSetMatchScore
+  x-zod-query: bot.matches/[matchId]/score.query
+  tags:
+    - bot/matches
+  security:
+    - BotApiKey: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: bot.matches/[matchId]/score
+  responses:
+    '200':
+      description: Score applique, match finalise.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      description: >-
+        Score impossible pour le format, egalite, match bye, equipes
+        manquantes, ou echec d'application.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

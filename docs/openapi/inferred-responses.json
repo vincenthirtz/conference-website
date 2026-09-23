@@ -63872,6 +63872,46 @@
     ]
    }
   },
+  "POST /api/bot/v1/matches/{matchId}/score": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "success": {
+      "type": "boolean"
+     },
+     "matchId": {
+      "type": "string"
+     },
+     "team1Score": {
+      "type": "number"
+     },
+     "team2Score": {
+      "type": "number"
+     },
+     "winnerTeamId": {
+      "type": "string"
+     },
+     "status": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "resolvedDispute": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "success",
+     "matchId",
+     "team1Score",
+     "team2Score",
+     "winnerTeamId",
+     "status",
+     "resolvedDispute"
+    ]
+   }
+  },
   "POST /api/bot/v1/matches/{matchId}/veto": {
    "201": {
     "type": "object",
