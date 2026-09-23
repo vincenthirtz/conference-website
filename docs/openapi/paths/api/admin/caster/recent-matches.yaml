@@ -1,0 +1,49 @@
+get:
+  summary: Les derniers matchs termines, pour le cockpit regie.
+  description: >-
+    Alimente le selecteur qui rattache un scrutin MVP du public a un vrai
+    match. Route ETROITE et volontairement distincte de
+    `/api/admin/matches/search` : celle-ci est gardee par la permission
+    `arbitrate_matches`, qu'un caster n'a pas — il n'a que `use_cast_cockpit`.
+    Elargir cette permission pour un menu deroulant aurait ete un
+    elargissement de droits fait en passant.
+
+
+    Forfaits et byes sont ecartes : il n'y a pas eu de partie, donc personne a
+    elire. Pas de pagination — vingt-cinq lignes couvrent une soiree.
+  operationId: adminCasterRecentMatches
+  tags:
+    - admin/caster
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Matchs termines, du plus recent au plus ancien.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              matches:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    roundName:
+                      type: [string, 'null']
+                    team1Name:
+                      type: [string, 'null']
+                    team2Name:
+                      type: [string, 'null']
+                    completedAt:
+                      type: [string, 'null']
+                      format: date-time
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '500':
+      $ref: '#/components/responses/ServerError'

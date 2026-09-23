@@ -4,7 +4,17 @@
 // chat Twitch, et publie le tally dans `caster_scenes.data` (l'overlay MVP le
 // lit déjà comme snapshot).
 
-export type MvpTallyCandidate = { id: string; label: string };
+export type MvpTallyCandidate = {
+  id: string;
+  label: string;
+  /**
+   * La joueuse derrière le libellé, quand le scrutin est rattaché à un vrai
+   * match. `undefined` pour un poll libre — le cockpit sait alors compter,
+   * mais pas persister : sans `memberId`, un vote ne désigne personne dans la
+   * base, seulement une ligne de texte.
+   */
+  memberId?: string;
+};
 
 export type MvpTallyRow = MvpTallyCandidate & {
   count: number;
@@ -26,11 +36,19 @@ export function normalizeCandidates(rawList: unknown): MvpTallyCandidate[] {
   const arr = Array.isArray(rawList) ? rawList : [];
   const next: MvpTallyCandidate[] = [];
   for (let i = 0; i < arr.length; i++) {
-    const raw = arr[i] as { id?: unknown; label?: unknown; name?: unknown };
+    const raw = arr[i] as {
+      id?: unknown;
+      label?: unknown;
+      name?: unknown;
+      memberId?: unknown;
+    };
     const label = String(raw?.label || raw?.name || '').trim();
     if (!label) continue;
     const id = String(raw?.id || i + 1);
-    next.push({ id, label });
+    // `memberId` traverse la normalisation sans être exigé : un poll libre
+    // (candidates saisies à la main) n'en a pas, et doit continuer de marcher.
+    const memberId = String(raw?.memberId || '').trim();
+    next.push(memberId ? { id, label, memberId } : { id, label });
   }
   return next;
 }

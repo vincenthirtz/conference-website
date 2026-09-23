@@ -2942,6 +2942,58 @@
   "GET /api/admin/cast-members/{id}": {
    "200": {}
   },
+  "GET /api/admin/caster/recent-matches": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "matches": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "roundName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team1Name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team2Name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "completedAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "id",
+        "roundName",
+        "team1Name",
+        "team2Name",
+        "completedAt"
+       ]
+      }
+     }
+    },
+    "required": [
+     "matches"
+    ]
+   }
+  },
   "GET /api/admin/circuit-partners": {
    "200": {
     "type": "object",

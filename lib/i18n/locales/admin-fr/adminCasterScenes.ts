@@ -144,6 +144,17 @@ export default adminNs('adminCasterScenes', {
   mvpPollOpen: '● Poll en cours',
   mvpPollClosed: 'Poll fermé',
   mvpPollTotal: '{total} vote(s)',
+  // Persistance : dire lequel des deux régimes est actif, parce qu'un scrutin
+  // qui compte sans rien enregistrer est indiscernable d'un scrutin qui marche.
+  mvpPollPersisted: 'enregistré',
+  mvpPollNotPersisted: 'non enregistré',
+  mvpPollRelayPending: '{count} en attente d’envoi',
+  mvpPollRelayError: 'envoi impossible — les voix restent en file',
+  mvpPollMatchLabel: 'Match',
+  mvpPollMatchNone: 'Aucun (vote libre, non enregistré)',
+  mvpPollMatchLocked: 'verrouillé pendant le vote',
+  mvpPollLinked: 'Scrutin rattaché au match : les voix seront enregistrées.',
+  mvpPollUnlinked: 'Scrutin détaché : les voix ne seront plus enregistrées.',
   mvpPollPanelNote:
     'État du poll en lecture seule ici — le pilotage live (démarrer / arrêter / votes) se fait dans le panneau « Poll MVP » en bas de page, qui reste actif même si tu changes de scène.',
   mvpHint:

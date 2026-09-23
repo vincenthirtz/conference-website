@@ -144,6 +144,15 @@ export default {
   mvpPollOpen: '● Poll running',
   mvpPollClosed: 'Poll closed',
   mvpPollTotal: '{total} vote(s)',
+  mvpPollPersisted: 'recorded',
+  mvpPollNotPersisted: 'not recorded',
+  mvpPollRelayPending: '{count} waiting to send',
+  mvpPollRelayError: 'cannot send — votes stay queued',
+  mvpPollMatchLabel: 'Match',
+  mvpPollMatchNone: 'None (free poll, not recorded)',
+  mvpPollMatchLocked: 'locked while voting',
+  mvpPollLinked: 'Poll linked to the match: votes will be recorded.',
+  mvpPollUnlinked: 'Poll unlinked: votes are no longer recorded.',
   mvpPollPanelNote:
     'Poll state is read-only here — start/stop and live votes are driven from the “MVP poll” panel at the bottom of the page, which stays active when you switch scenes.',
   mvpHint:

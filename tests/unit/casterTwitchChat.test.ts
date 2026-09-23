@@ -177,6 +177,37 @@ describe('MVP — candidats et votes', () => {
     expect(normalizeCandidates(null)).toEqual([]);
   });
 
+  it('laisse passer le memberId quand le scrutin vise un vrai match', () => {
+    // C'est lui qui transforme `!mvp 3` en une voix pour une joueuse
+    // identifiée. Sans lui, le cockpit compte une ligne de texte.
+    expect(
+      normalizeCandidates([
+        { name: 'Alice', memberId: 'm-1' },
+        { label: 'Bea', memberId: 'm-2' },
+      ])
+    ).toEqual([
+      { id: '1', label: 'Alice', memberId: 'm-1' },
+      { id: '2', label: 'Bea', memberId: 'm-2' },
+    ]);
+  });
+
+  it('n’invente pas de memberId pour un poll libre', () => {
+    // Un poll à candidates saisies à la main doit continuer de marcher : il
+    // compte et alimente l'overlay, il ne persiste rien.
+    const libre = normalizeCandidates([{ name: 'Alice' }, { name: 'Bea' }]);
+    expect(libre).toEqual([
+      { id: '1', label: 'Alice' },
+      { id: '2', label: 'Bea' },
+    ]);
+    expect(libre.every((c) => c.memberId === undefined)).toBe(true);
+  });
+
+  it('ignore un memberId vide plutôt que de porter une chaîne vide', () => {
+    expect(normalizeCandidates([{ name: 'Alice', memberId: '  ' }])).toEqual([
+      { id: '1', label: 'Alice' },
+    ]);
+  });
+
   it('resolveVoteTarget par index 1-based puis par sous-chaîne', () => {
     const list = [
       { id: '1', label: 'Alpha' },

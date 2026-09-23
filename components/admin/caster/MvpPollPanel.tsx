@@ -23,7 +23,14 @@ import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { logCasterAction } from '@/utils/caster/auditClient';
-import { normalizeCandidates, parseVoteCommand } from '@/utils/caster/mvpTally';
+import {
+  normalizeCandidates,
+  parseVoteCommand,
+  resolveVoteTarget,
+} from '@/utils/caster/mvpTally';
+import { useMvpPublicRelay } from '@/hooks/useMvpPublicRelay';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
+import type { CasterRecentMatch } from '@/pages/api/admin/caster/recent-matches';
 import {
   MIN_CANDIDATES,
   buildPollSnapshot,
@@ -79,6 +86,41 @@ export default function MvpPollPanel({
   );
   const title = String(rawData.title || 'Vote MVP');
 
+  // Le match auquel ce scrutin est rattaché, posé par `MvpSceneEditor`. Sans
+  // lui le poll reste LIBRE : le cockpit compte et alimente l'overlay, mais
+  // rien n'est persisté — un libellé de texte ne désigne aucune joueuse.
+  const matchId =
+    typeof rawData.matchId === 'string' && rawData.matchId
+      ? rawData.matchId
+      : null;
+  const relay = useMvpPublicRelay(matchId);
+  const { adminFetch } = useAdminFetch();
+
+  // Les derniers matchs terminés, pour rattacher le scrutin. Chargés une fois :
+  // une soirée en produit quelques-uns, pas assez pour justifier un rafraîchi
+  // périodique qui bavarderait six heures durant.
+  const [matches, setMatches] = useState<CasterRecentMatch[]>([]);
+  const [linking, setLinking] = useState(false);
+
+  useEffect(() => {
+    let annule = false;
+    void (async () => {
+      try {
+        const res = await adminFetch('/api/admin/caster/recent-matches');
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!annule) setMatches(json?.matches ?? []);
+      } catch {
+        // Silencieux : ne pas pouvoir proposer la liste n'empêche pas de tenir
+        // un poll libre, et un toast d'erreur au chargement du cockpit serait
+        // du bruit en pleine mise en place.
+      }
+    })();
+    return () => {
+      annule = true;
+    };
+  }, [adminFetch]);
+
   // Signature stable de la liste : évite de re-synchroniser (et de republier) à
   // chaque écho Realtime qui recrée un tableau identique.
   const candidatesKey = candidates.map((c) => `${c.id}:${c.label}`).join('|');
@@ -97,6 +139,11 @@ export default function MvpPollPanel({
   onSaveRef.current = onSave;
   const tRef = useRef(t);
   tRef.current = t;
+  // Ref plutôt que dépendance : l'abonnement au chat est SYNCHRONE et ne doit
+  // pas se recréer à chaque rendu, sous peine de perdre des messages entre
+  // deux abonnements.
+  const relayRef = useRef(relay);
+  relayRef.current = relay;
 
   const alive = useRef(true);
   useEffect(() => {
@@ -191,6 +238,12 @@ export default function MvpPollPanel({
       stateRef.current = res.state;
       setPoll(res.state);
       schedulePublish();
+
+      // Persistance : indépendante de l'affichage, et volontairement APRÈS
+      // lui. L'overlay ne doit jamais attendre le réseau — une API lente
+      // figerait le décompte à l'antenne.
+      const cible = resolveVoteTarget(candidatesRef.current, arg);
+      if (cible?.memberId) relayRef.current.relayVote(user, cible.memberId);
     });
     return off;
   }, [subscribeMessages, schedulePublish]);
@@ -205,6 +258,60 @@ export default function MvpPollPanel({
     schedulePublish();
   }, [candidatesKey, schedulePublish]);
 
+  /**
+   * Rattache le scrutin à un match — ou l'en détache.
+   *
+   * Écrit les candidates RÉELLES (avec leur `memberId`) dans la scène : c'est
+   * ce qui transforme `!mvp 3` en une voix pour une joueuse identifiée, au
+   * lieu d'un compteur sur une ligne de texte. L'overlay y gagne aussi les
+   * vrais noms, sans ressaisie.
+   */
+  async function onPickMatch(id: string) {
+    const sceneId = sceneIdRef.current;
+    if (!sceneId) return;
+    setLinking(true);
+    try {
+      if (!id) {
+        await onSaveRef.current(sceneId, { ...rawRef.current, matchId: null });
+        addToast(t.mvpPollUnlinked, 'info');
+        return;
+      }
+      const res = await adminFetch(`/api/admin/matches/${id}/mvp-public`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      const cands = (json?.candidates ?? []).map(
+        (c: { label: string; memberId: string }, i: number) => ({
+          id: String(i + 1),
+          label: c.label,
+          memberId: c.memberId,
+        })
+      );
+      if (cands.length < MIN_CANDIDATES) {
+        addToast(
+          format(t.mvpPollNeedCandidates, { min: MIN_CANDIDATES }),
+          'error'
+        );
+        return;
+      }
+      await onSaveRef.current(sceneId, {
+        ...rawRef.current,
+        matchId: id,
+        title: `${json?.team1Name ?? '?'} vs ${json?.team2Name ?? '?'}`,
+        candidates: cands,
+      });
+      addToast(t.mvpPollLinked, 'success');
+    } catch (err) {
+      addToast(
+        format(t.mvpPollPublishError, {
+          message: (err as Error)?.message || '',
+        }),
+        'error'
+      );
+    } finally {
+      setLinking(false);
+    }
+  }
+
   // --- Actions --------------------------------------------------------------
 
   function onStart() {
@@ -218,6 +325,11 @@ export default function MvpPollPanel({
     }
     applyState(next, true);
     addToast(t.mvpPollStarted, 'success');
+    // Le scrutin s'ouvre AUSSI en base quand un match est rattaché. L'échec
+    // n'annule pas l'ouverture à l'antenne : mieux vaut un vote affiché mais
+    // non persisté qu'un overlay figé parce que l'API tousse. Le relais
+    // affiche l'erreur, et les voix restent en file.
+    if (matchId) void relay.openVote();
     // Journal (lot 5) : ouvrir/fermer le vote change ce que voit le public.
     logCasterAction({
       action: 'caster_poll_toggle',
@@ -232,6 +344,9 @@ export default function MvpPollPanel({
   function onStop() {
     applyState(stopPoll(stateRef.current), true);
     addToast(t.mvpPollStopped, 'info');
+    // `closeVote` vide d'abord la file : les dernières secondes d'un scrutin
+    // sont souvent les plus nourries, elles doivent compter.
+    if (matchId) void relay.closeVote();
     logCasterAction({
       action: 'caster_poll_toggle',
       entityId: scene?.id ?? null,
@@ -284,6 +399,62 @@ export default function MvpPollPanel({
         <span className="text-xs text-neutral-300 tabular-nums">
           {format(t.mvpPollTotal, { total: snapshot.total })}
         </span>
+        {/* La régie doit savoir si ses voix ATTERRISSENT. Un scrutin qui
+            compte joliment à l'écran sans rien persister ressemble en tout
+            point à un scrutin qui marche — c'est exactement ce qui s'est passé
+            pendant deux éditions. */}
+        <span
+          className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${
+            matchId
+              ? 'bg-sky-500/15 border-sky-500/40 text-sky-300'
+              : 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+          }`}
+          data-testid="caster-mvp-poll-persist"
+        >
+          {matchId ? t.mvpPollPersisted : t.mvpPollNotPersisted}
+        </span>
+        {relay.pending > 0 && (
+          <span className="text-[11px] text-neutral-500 tabular-nums">
+            {format(t.mvpPollRelayPending, { count: relay.pending })}
+          </span>
+        )}
+        {relay.lastError && (
+          <span className="text-[11px] text-red-300">
+            {t.mvpPollRelayError}
+          </span>
+        )}
+      </div>
+
+      {/* Rattachement à un match. Tant qu'aucun n'est choisi, le scrutin reste
+          LIBRE : il compte et alimente l'overlay, mais rien n'est enregistré.
+          Le sélecteur est verrouillé pendant qu'un vote est ouvert — changer
+          de match en cours de scrutin mélangerait deux urnes. */}
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <label htmlFor="caster-mvp-match" className="text-xs text-neutral-400">
+          {t.mvpPollMatchLabel}
+        </label>
+        <select
+          id="caster-mvp-match"
+          value={matchId ?? ''}
+          disabled={linking || poll.isOpen}
+          onChange={(e) => void onPickMatch(e.target.value)}
+          className="rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-white disabled:opacity-50"
+          data-testid="caster-mvp-match-select"
+        >
+          <option value="">{t.mvpPollMatchNone}</option>
+          {matches.map((m) => (
+            <option key={m.id} value={m.id}>
+              {[m.roundName, `${m.team1Name ?? '?'} vs ${m.team2Name ?? '?'}`]
+                .filter(Boolean)
+                .join(' — ')}
+            </option>
+          ))}
+        </select>
+        {poll.isOpen && matchId && (
+          <span className="text-[11px] text-neutral-500">
+            {t.mvpPollMatchLocked}
+          </span>
+        )}
         {publishing && (
           <span className="text-[11px] text-neutral-500">
             {t.mvpPollPublishing}
