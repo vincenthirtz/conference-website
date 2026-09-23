@@ -440,6 +440,20 @@ export type SettleResult = {
     discord: ReturnType<typeof tallySource>;
     twitch: ReturnType<typeof tallySource>;
   };
+  /**
+   * Les équipes du match, remontées pour le BOT.
+   *
+   * Il compose deux messages à la clôture — l'édition du post de vote et
+   * l'annonce de la gagnante — et les deux nomment le match. Il n'obtient ces
+   * noms que par la liste des votes échus, donc uniquement quand c'est le
+   * poller qui clôt. Sur une clôture DEMANDÉE (`/mvp clore`), qui n'y figure
+   * pas par définition, il affichait « Équipe 1 vs Équipe 2 ».
+   *
+   * On les rend ici parce que `settleMatchMvp` a déjà le match en main : c'est
+   * gratuit, là où un aller-retour de plus depuis le bot ne l'est pas.
+   */
+  team1Name: string | null;
+  team2Name: string | null;
 };
 
 /**
@@ -469,13 +483,18 @@ export async function settleMatchMvp(
     twitch: tallySource(votes, 'twitch'),
   };
 
+  const teams = {
+    team1Name: match.team1Name ?? null,
+    team2Name: match.team2Name ?? null,
+  };
+
   const poll = await readMvpPoll(tenantId, matchId);
   if (!poll) {
-    return { award: outcome.award, reason: outcome.reason, tallies };
+    return { award: outcome.award, reason: outcome.reason, tallies, ...teams };
   }
 
   if (poll.winner_source === 'manual') {
-    return { award: outcome.award, reason: outcome.reason, tallies };
+    return { award: outcome.award, reason: outcome.reason, tallies, ...teams };
   }
 
   const nowIso = new Date().toISOString();
@@ -514,7 +533,7 @@ export async function settleMatchMvp(
 
   if (error) logger.error('[mvp] settleMatchMvp update error:', error);
 
-  return { award: outcome.award, reason: outcome.reason, tallies };
+  return { award: outcome.award, reason: outcome.reason, tallies, ...teams };
 }
 
 export type TournamentMvpData = {

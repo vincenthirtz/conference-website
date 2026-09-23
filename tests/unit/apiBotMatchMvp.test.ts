@@ -366,6 +366,33 @@ describe('/api/bot/v1/matches/[matchId]/mvp', () => {
     expect(poll.closed_at).toBeTruthy();
   });
 
+  it('rend les équipes du match : le bot les nomme, et ne les a pas', async () => {
+    // Le bot compose DEUX messages à la clôture — l'édition du post de vote et
+    // l'annonce de la gagnante — et les deux nomment le match. Il n'obtient ces
+    // noms que par la liste des votes échus ; une clôture demandée
+    // (`/mvp clore`) n'y figure pas, et affichait « Équipe 1 vs Équipe 2 ».
+    await open();
+    await vote('900000000000000001', ALICE);
+    await vote('900000000000000002', ALICE);
+    await vote('900000000000000003', ALICE);
+
+    const res = await close();
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).team1Name).toBe('Les Alpines');
+    expect((res.body as any).team2Name).toBe('Les Bravos');
+  });
+
+  it('rend les équipes même quand personne n’est élue', async () => {
+    // Le message du vote est édité dans ce cas aussi, et il nomme le match.
+    await open();
+    await vote('900000000000000001', ALICE);
+
+    const res = await close();
+    expect((res.body as any).award).toBeNull();
+    expect((res.body as any).team1Name).toBe('Les Alpines');
+    expect((res.body as any).team2Name).toBe('Les Bravos');
+  });
+
   it('ne décerne rien sous le seuil de voix, et le dit', async () => {
     await open();
     await vote('900000000000000001', ALICE);

@@ -62572,6 +62572,18 @@
          "string",
          "null"
         ]
+       },
+       "team1Name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "team2Name": {
+        "type": [
+         "string",
+         "null"
+        ]
        }
       },
       "required": [
@@ -62581,7 +62593,9 @@
        "reason",
        "tallies",
        "channelId",
-       "messageId"
+       "messageId",
+       "team1Name",
+       "team2Name"
       ]
      },
      {

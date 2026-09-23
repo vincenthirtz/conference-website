@@ -106,6 +106,15 @@ post:
                 type: [string, 'null']
               messageId:
                 type: [string, 'null']
+              team1Name:
+                description: >-
+                  Equipes du match, rendues a la cloture. Le bot les nomme dans
+                  ses deux messages (edition du post de vote, annonce de la
+                  gagnante) et ne les obtient autrement que par la liste des
+                  votes echus — ou une cloture demandee ne figure pas.
+                type: [string, 'null']
+              team2Name:
+                type: [string, 'null']
     '400':
       $ref: '#/components/responses/BadRequest'
     '404':

@@ -169,6 +169,12 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     tallies: settled.tallies,
     channelId: poll?.discord_channel_id ?? null,
     messageId: poll?.discord_message_id ?? null,
+    // Les équipes, pour la même raison que l'ancrage juste au-dessus : le bot
+    // nomme le match dans ses DEUX messages de clôture, et il n'obtient ces
+    // noms que par la liste des votes échus. Une clôture demandée (`/mvp
+    // clore`) n'y figure pas, et affichait « Équipe 1 vs Équipe 2 ».
+    team1Name: settled.team1Name,
+    team2Name: settled.team2Name,
   });
 }
 
