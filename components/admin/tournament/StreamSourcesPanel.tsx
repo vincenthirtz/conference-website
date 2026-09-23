@@ -44,6 +44,11 @@ const SOURCES = [
   // Pas liée au tournoi : les scrims publics de tout l'espace.
   { key: 'scrims', size: '1920×1080' },
   { key: 'scrimResult', size: '1920×1080' },
+  // Le scrutin MVP du public : pas une source « par match » non plus. Elle
+  // suit le vote OUVERT du moment, quel que soit le match — c'est la régie qui
+  // l'ouvre depuis le cockpit, et on ne recolle pas une URL entre deux
+  // rencontres.
+  { key: 'mvpPublic', size: '1920×1080' },
   // Les alertes de LA CHAÎNE (Twitch + dons de l'association) : même règle que
   // le QR de don. Elles se règlent dans le panneau juste en dessous.
   { key: 'alerts', size: '1920×1080' },
@@ -69,6 +74,7 @@ function sourceUrl(baseUrl: string, tournamentRef: string, key: string) {
   if (key === 'day') return `${baseUrl}/overlay/day?tournament=${tournament}`;
   if (key === 'scrims') return `${baseUrl}/overlay/scrims`;
   if (key === 'scrimResult') return `${baseUrl}/overlay/scrim-result`;
+  if (key === 'mvpPublic') return `${baseUrl}/overlay/mvp-public`;
   if (key === 'partners') return `${baseUrl}/overlay/partenaires`;
   if (key === 'alerts') return `${baseUrl}/overlay/alertes`;
   if (key === 'don') return `${baseUrl}/overlay/don`;

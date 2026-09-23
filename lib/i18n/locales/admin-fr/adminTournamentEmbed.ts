@@ -61,6 +61,9 @@ export default adminNs('adminTournamentEmbed', {
   source_donAlert_name: 'Alerte don (HelloAsso)',
   source_donAlert_desc:
     'Une alerte « Merci pour ce don de 10 € ! » à chaque don HelloAsso reçu par l’association, sur fond transparent — à poser à côté de Streamlabs, qui ne connaît pas HelloAsso. Montant seulement : le nom du donateur n’est jamais affiché (il le saisit pour son reçu fiscal, pas pour l’antenne). Les dons déjà reçus à l’ouverture de la source ne sont pas rejoués. &goal=500 ajoute une jauge (total depuis minuit, ou depuis &from=AAAA-MM-JJ), &gauge=only n’affiche que la jauge, &duration=8 règle la durée d’une alerte (3 à 30 s), &demo=1 envoie de faux dons pour régler la scène.',
+  source_mvpPublic_name: 'Coup de cœur du public',
+  source_mvpPublic_desc:
+    'Le vote MVP du public en direct : les candidates, leurs barres, le temps qui reste, puis l’élue une fois le scrutin clos. Les voix du chat Twitch (!mvp <numéro>) et des supporters Discord s’additionnent — c’est un seul public sur deux plateformes. La source suit le vote OUVERT du moment : collez-la une fois pour la soirée, elle n’affiche rien tant qu’aucun scrutin n’est en cours, et garde le résultat trois minutes après la clôture. Le vote s’ouvre et se ferme depuis le cockpit régie, pas d’ici. &position=top ou bottom, &scale=1.4, &limit=6 pour n’afficher que les six premières, &accent=BA18FF.',
   source_alerts_name: 'Boîte d’alertes (Twitch + dons)',
   source_alerts_desc:
     'Subs, réabos, abonnements offerts, bits, follows, raids et dons HelloAsso dans un seul habillage animé, sur fond transparent. Une alerte à la fois, jamais deux fois la même, et rien de ce qui s’est passé avant l’ouverture de la source. Ce qu’elle annonce se règle juste en dessous. Ajoutez &demo=1 pour faire défiler un exemple de chaque type et cadrer la scène, &position=top ou bottom, &scale=1.4.',

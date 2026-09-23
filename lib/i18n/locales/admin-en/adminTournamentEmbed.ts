@@ -58,6 +58,9 @@ export default {
   source_donAlert_name: 'Donation alert (HelloAsso)',
   source_donAlert_desc:
     'A “Thank you for this donation of €10!” alert for every HelloAsso donation the association receives, on a transparent background — to sit next to Streamlabs, which has no HelloAsso integration. Amount only: the donor’s name is never shown (they type it for their tax receipt, not for the stream). Donations already received when the source opens are not replayed. &goal=500 adds a gauge (total since midnight, or since &from=YYYY-MM-DD), &gauge=only shows just the gauge, &duration=8 sets how long an alert stays (3 to 30 s), &demo=1 sends fake donations to set up the scene.',
+  source_mvpPublic_name: 'Crowd favourite',
+  source_mvpPublic_desc:
+    'The crowd MVP vote, live: candidates, bars, remaining time, then the winner once the poll closes. Twitch chat votes (!mvp <number>) and Discord supporters add up — one crowd on two platforms. The source follows whichever poll is OPEN: paste it once for the evening, it shows nothing while no poll runs, and keeps the result on screen for three minutes after closing. The poll is opened and closed from the caster cockpit, not here. &position=top or bottom, &scale=1.4, &limit=6 to show only the top six, &accent=BA18FF.',
   source_alerts_name: 'Alert box (Twitch + donations)',
   source_alerts_desc:
     'Subs, resubs, gifted subs, bits, follows, raids and HelloAsso donations in a single animated frame, on a transparent background. One alert at a time, never the same twice, and nothing that happened before the source was opened. What it announces is configured just below. Add &demo=1 to cycle through one example per type while you frame the scene, &position=top or bottom, &scale=1.4.',
