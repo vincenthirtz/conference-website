@@ -237,7 +237,14 @@ export default function RegieOverlayPage() {
                 className={`absolute ${
                   donEnCarte
                     ? 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2'
-                    : 'bottom-28 right-10'
+                    : // LE QR MONTE QUAND LE BANDEAU EST LÀ. À sa hauteur
+                      // habituelle, il recouvrait la dernière pastille
+                      // partenaire — constaté au rendu, invisible dans le
+                      // code. Un partenaire à moitié caché sur six heures de
+                      // direct, c'est un partenaire mécontent.
+                      avecPartenaires
+                      ? 'bottom-60 right-10'
+                      : 'bottom-16 right-10'
                 } flex items-center gap-4 rounded-2xl border border-white/10 bg-black/85 p-4 pr-6 shadow-2xl`}
                 style={{
                   transform: scale !== 1 ? `scale(${scale})` : undefined,
